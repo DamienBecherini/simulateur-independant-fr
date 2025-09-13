@@ -1,26 +1,16 @@
-// src/calculsEURL.js
+// src/calculsEURL.js - VERSION PRO
 const config = require("../config.json")
 const { calculerIR } = require("./calculsIR.js")
 
-/**
- * Simule le statut de EURL à l'IS.
- * @param {object} inputs Les données d'entrée.
- * @param {number} inputs.chiffreAffaires
- * @param {number} inputs.chargesDeductibles
- * @param {number} inputs.remunerationNetteVisee La rémunération nette que le gérant souhaite se verser.
- * @param {number} inputs.autresRevenusImposablesFoyer
- * @param {number} inputs.partsFiscales
- * @returns {object} Un objet détaillé avec tous les résultats de la simulation.
- */
 function simulerEURL(inputs) {
   const { chiffreAffaires = 0, chargesDeductibles = 0, remunerationNetteVisee = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1 } = inputs
 
-  // 1. Calcul des cotisations sociales (TNS - Travailleur Non Salarié)
-  // Approximation : on applique un taux sur la rémunération nette.
-  const cotisationsSociales = remunerationNetteVisee * config.EURL.cotisations_tns.taux_approx_sur_remuneration
-  const coutTotalRemuneration = remunerationNetteVisee + cotisationsSociales
+  // --- Rémunération (TNS) ---
+  const cotisationsSocialesApprox = remunerationNetteVisee * config.EURL.cotisations_tns.taux_approx_sur_remuneration
+  const remuBruteApprox = remunerationNetteVisee // En TNS, Net ≈ Brut (simplification)
+  const coutTotalRemuneration = remunerationNetteVisee + cotisationsSocialesApprox
 
-  // 2. Calcul du bénéfice et de l'Impôt sur les Sociétés (IS) - IDENTIQUE À LA SASU
+  // --- IS (identique SASU) ---
   const beneficeAvantIS = chiffreAffaires - chargesDeductibles - coutTotalRemuneration
   let impotSocietes = 0
   if (beneficeAvantIS > 0) {
@@ -30,33 +20,63 @@ function simulerEURL(inputs) {
   }
   const beneficeApresIS = beneficeAvantIS > 0 ? beneficeAvantIS - impotSocietes : 0
 
-  // 3. Calcul des dividendes et de leur imposition - IDENTIQUE À LA SASU (pour cette simulation MVP)
-  // NOTE: En réalité, les dividendes en EURL sont soumis aux cotisations sociales TNS au-delà de 10% du capital.
-  // Pour le MVP, nous appliquons la Flat Tax comme en SASU pour simplifier, mais c'est un point à affiner plus tard.
+  // --- Dividendes (identique SASU pour la simulation) ---
   const dividendesBruts = beneficeApresIS
-  const impositionDividendes = dividendesBruts * config.SASU.dividendes.pru_taux_global
-  const dividendesNets = dividendesBruts - impositionDividendes
+  const prelevementsSociauxDividendes = dividendesBruts * config.SASU.dividendes.pru_taux_ps
+  const impotDividendesPFU = dividendesBruts * config.SASU.dividendes.pru_taux_ir
+  const coutTotalDividendesPFU = prelevementsSociauxDividendes + impotDividendesPFU
+  const dividendesNetsPFU = dividendesBruts - coutTotalDividendesPFU
+  const dividendesImposablesBareme = dividendesBruts * 0.6
+  const revenuGlobalBareme = remunerationNetteVisee + autresRevenusImposablesFoyer + dividendesImposablesBareme
+  const irTotalOptionBareme = calculerIR({ revenuNetGlobalImposable: revenuGlobalBareme, partsFiscales })
+  const irSansDividendes = calculerIR({ revenuNetGlobalImposable: remunerationNetteVisee + autresRevenusImposablesFoyer, partsFiscales })
+  const surcoutIRDividendesBareme = irTotalOptionBareme - irSansDividendes
+  const coutTotalDividendesBareme = prelevementsSociauxDividendes + surcoutIRDividendesBareme
+  const dividendesNetsBareme = dividendesBruts - coutTotalDividendesBareme
 
-  // 4. Calcul de l'Impôt sur le Revenu (IR) - IDENTIQUE À LA SASU
-  const revenuNetGlobalImposableFoyer = remunerationNetteVisee + autresRevenusImposablesFoyer
-  const impotRevenuTotal = calculerIR({ revenuNetGlobalImposable: revenuNetGlobalImposableFoyer, partsFiscales })
+  // --- IR sur la rémunération (identique SASU) ---
+  const revenuImposableRemu = remunerationNetteVisee
+  const irTotalRemu = calculerIR({ revenuNetGlobalImposable: revenuImposableRemu + autresRevenusImposablesFoyer, partsFiscales })
   const irSansActivite = calculerIR({ revenuNetGlobalImposable: autresRevenusImposablesFoyer, partsFiscales })
-  const surcoutIR = impotRevenuTotal - irSansActivite
+  const surcoutIRRemu = irTotalRemu - irSansActivite
 
-  // 5. Calcul du "Net dans la poche" final - IDENTIQUE À LA SASU
-  const netDansLaPoche = remunerationNetteVisee + dividendesNets - surcoutIR
+  // --- TVA ---
+  const { ca_services = 0, ca_vente = 0 } = inputs
+  const totalCA = ca_services + ca_vente
+  let statutTVA = "En franchise"
+  const seuilsVente = config.TVA.vente
+  const seuilsServices = config.TVA.services
+
+  if (totalCA > seuilsVente.seuil_majore || ca_services > seuilsServices.seuil_majore) {
+    statutTVA = "Assujetti (dépassement seuil majoré)"
+  } else if (totalCA > seuilsVente.franchise_base || ca_services > seuilsServices.franchise_base) {
+    statutTVA = "Seuil de base dépassé / Tolérance"
+  }
+
+  const meilleureOptionDividendes = Math.max(dividendesNetsPFU, dividendesNetsBareme)
+  const netDansLaPoche = remunerationNetteVisee + meilleureOptionDividendes - surcoutIRRemu
 
   return {
     statut: "EURL (IS)",
     chiffreAffaires,
-    remunerationNette: remunerationNetteVisee,
-    cotisationsSociales: Math.round(cotisationsSociales),
-    beneficeAvantIS: Math.round(beneficeAvantIS),
+    chargesReelles: chargesDeductibles,
+    remuneration: {
+      net: remunerationNetteVisee,
+      brut: remuBruteApprox,
+      chargesSalariales: 0, // Pas de charges salariales en TNS
+      chargesPatronales: cotisationsSocialesApprox,
+      coutTotal: coutTotalRemuneration
+    },
     impotSocietes: Math.round(impotSocietes),
-    dividendesBruts: Math.round(dividendesBruts),
-    dividendesNets: Math.round(dividendesNets),
-    surcoutIR: Math.round(surcoutIR),
-    netDansLaPoche: Math.round(netDansLaPoche)
+    dividendes: {
+      bruts: dividendesBruts,
+      pfu: { net: Math.round(dividendesNetsPFU), cout: Math.round(coutTotalDividendesPFU) },
+      bareme: { net: Math.round(dividendesNetsBareme), cout: Math.round(coutTotalDividendesBareme) }
+    },
+    revenuImposable: revenuImposableRemu,
+    surcoutIR: Math.round(surcoutIRRemu),
+    netDansLaPoche: Math.round(netDansLaPoche),
+    statutTVA: statutTVA
   }
 }
 

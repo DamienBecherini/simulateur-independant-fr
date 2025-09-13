@@ -1,0 +1,57 @@
+// ui/scss/components/_accordion.scss
+details {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-top: 2em;
+}
+
+details > summary {
+  padding: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  background-color: var(--header-bg-color);
+}
+
+.details-content {
+  padding: 1em;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2em;
+
+  h3 {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5em;
+  }
+
+  ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5em 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  li span:last-child {
+    font-weight: bold;
+  }
+
+  li[style*="background-color"] {
+    background-color: var(--success-bg-color) !important;
+  }
+}
+
+.warning-message {
+  padding: 1em;
+  background-color: var(--header-bg-color);
+  border-left: 4px solid var(--primary-color);
+  margin: 0;
+}

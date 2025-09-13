@@ -1,23 +1,33 @@
-// src/calculsAE.test.js
-const { simulerMicroEntreprise } = require('./calculsAE');
+// src/calculsAE.test.js - VERSION FINALE CORRIGÉE
+const { simulerMicroEntreprise } = require("./calculsAE")
 
-describe('Calculs pour la Micro-Entreprise', () => {
+describe("Calculs pour la Micro-Entreprise", () => {
+  test("devrait calculer correctement tous les indicateurs", () => {
+    const inputs = {
+      ca_services: 50000,
+      ca_vente: 0,
+      chargesDeductibles: 5000,
+      autresRevenusImposablesFoyer: 0,
+      partsFiscales: 1
+    }
+    const resultat = simulerMicroEntreprise(inputs)
 
-  test('devrait calculer correctement les cotisations et le revenu pour BNC', () => {
-    const inputs = { ca_services: 50000, ca_vente: 0 };
-    const resultat = simulerMicroEntreprise(inputs);
+    // Assertions mises à jour
+    expect(resultat.chiffreAffaires).toBe(50000)
+    expect(resultat.cotisationsSociales).toBeCloseTo(10550)
+    expect(resultat.revenuImposable).toBeCloseTo(33000)
+    expect(resultat.surcoutIR).toBe(3186)
 
-    expect(resultat.chiffreAffaires).toBe(50000);
-    expect(resultat.cotisationsSociales).toBeCloseTo(50000 * 0.211);
-    expect(resultat.revenuNetAvantIR).toBeCloseTo(50000 - (50000 * 0.211));
-    expect(resultat.revenuImposable).toBeCloseTo(50000 * (1 - 0.34));
-  });
+    // Le test attend maintenant la bonne valeur pour la TVA.
+    expect(resultat.statutTVA).toBe("Assujetti (dépassement seuil majoré)")
 
-  test('devrait gérer un CA nul', () => {
-      const inputs = { ca_services: 0, ca_vente: 0 };
-      const resultat = simulerMicroEntreprise(inputs);
-      expect(resultat.chiffreAffaires).toBe(0);
-      expect(resultat.cotisationsSociales).toBe(0);
-      expect(resultat.revenuImposable).toBe(0);
-  });
-});
+    expect(resultat.netDansLaPoche).toBe(31264)
+  })
+
+  test("devrait gérer un CA nul", () => {
+    const inputs = { ca_services: 0, ca_vente: 0 }
+    const resultat = simulerMicroEntreprise(inputs)
+    expect(resultat.netDansLaPoche).toBe(0)
+    expect(resultat.statutTVA).toBe("En franchise")
+  })
+})

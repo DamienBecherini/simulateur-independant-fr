@@ -1,0 +1,33 @@
+// ui/scss/components/_results-table.scss
+#resultats-container {
+  margin-top: 2em;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1em;
+}
+
+th,
+td {
+  border: 1px solid var(--border-color);
+  padding: 0.8em;
+  text-align: right;
+}
+
+th {
+  background-color: var(--header-bg-color);
+  text-align: left;
+}
+
+td.statut {
+  font-weight: bold;
+  text-align: left;
+}
+
+.warning-tooltip {
+  margin-left: 8px;
+  cursor: help;
+  font-size: 1.2em;
+}

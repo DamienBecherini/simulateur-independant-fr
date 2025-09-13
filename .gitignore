@@ -3,6 +3,7 @@
 # Dépendances
 # Le dossier le plus important à ignorer. Il est généré par `npm install`.
 node_modules/
+.git/
 
 # Fichiers de log
 npm-debug.log*

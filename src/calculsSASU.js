@@ -1,26 +1,17 @@
-// src/calculsSASU.js
+// src/calculsSASU.js - VERSION PRO
 const config = require("../config.json")
 const { calculerIR } = require("./calculsIR.js")
 
-/**
- * Simule le statut de SASU à l'IS.
- * @param {object} inputs Les données d'entrée.
- * @param {number} inputs.chiffreAffaires
- * @param {number} inputs.chargesDeductibles
- * @param {number} inputs.remunerationNetteVisee La rémunération nette que le président souhaite se verser.
- * @param {number} inputs.autresRevenusImposablesFoyer Revenus du foyer hors activité (salaire conjoint, etc.).
- * @param {number} inputs.partsFiscales
- * @returns {object} Un objet détaillé avec tous les résultats de la simulation.
- */
 function simulerSASU(inputs) {
   const { chiffreAffaires = 0, chargesDeductibles = 0, remunerationNetteVisee = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1 } = inputs
 
-  // 1. Calcul de la rémunération et des cotisations (Approximation)
-  // On part du net visé pour estimer le coût total pour l'entreprise.
+  // --- Rémunération (détail) ---
+  const remuBruteApprox = remunerationNetteVisee / 0.78
+  const chargesSalarialesApprox = remuBruteApprox - remunerationNetteVisee
   const coutTotalRemuneration = remunerationNetteVisee * config.SASU.cotisations_asssimile_salarie.ratio_cout_total_sur_net
-  const cotisationsSociales = coutTotalRemuneration - remunerationNetteVisee
+  const chargesPatronalesApprox = coutTotalRemuneration - remuBruteApprox
 
-  // 2. Calcul du bénéfice et de l'Impôt sur les Sociétés (IS)
+  // --- IS ---
   const beneficeAvantIS = chiffreAffaires - chargesDeductibles - coutTotalRemuneration
   let impotSocietes = 0
   if (beneficeAvantIS > 0) {
@@ -30,36 +21,68 @@ function simulerSASU(inputs) {
   }
   const beneficeApresIS = beneficeAvantIS > 0 ? beneficeAvantIS - impotSocietes : 0
 
-  // 3. Calcul des dividendes et de leur imposition (Flat Tax par défaut)
-  // On suppose que tout le bénéfice après IS est distribué en dividendes.
+  // --- Dividendes : Calcul des 2 options ---
   const dividendesBruts = beneficeApresIS
-  const impositionDividendes = dividendesBruts * config.SASU.dividendes.pru_taux_global
-  const dividendesNets = dividendesBruts - impositionDividendes
+  const prelevementsSociauxDividendes = dividendesBruts * config.SASU.dividendes.pru_taux_ps
 
-  // 4. Calcul de l'Impôt sur le Revenu (IR)
-  // Le revenu imposable de l'activité est la rémunération nette (les dividendes sont déjà taxés via la Flat Tax).
-  const revenuNetGlobalImposableFoyer = remunerationNetteVisee + autresRevenusImposablesFoyer
-  const impotRevenuTotal = calculerIR({ revenuNetGlobalImposable: revenuNetGlobalImposableFoyer, partsFiscales })
+  // Option 1: PFU (Flat Tax)
+  const impotDividendesPFU = dividendesBruts * config.SASU.dividendes.pru_taux_ir
+  const coutTotalDividendesPFU = prelevementsSociauxDividendes + impotDividendesPFU
+  const dividendesNetsPFU = dividendesBruts - coutTotalDividendesPFU
 
-  // Pour isoler l'impact de l'activité, on calcule l'IR qu'aurait payé le foyer sans cette activité.
+  // Option 2: Barème Progressif
+  const dividendesImposablesBareme = dividendesBruts * 0.6 // Abattement 40%
+  const revenuGlobalBareme = remunerationNetteVisee + autresRevenusImposablesFoyer + dividendesImposablesBareme
+  const irTotalOptionBareme = calculerIR({ revenuNetGlobalImposable: revenuGlobalBareme, partsFiscales })
+  const irSansDividendes = calculerIR({ revenuNetGlobalImposable: remunerationNetteVisee + autresRevenusImposablesFoyer, partsFiscales })
+  const surcoutIRDividendesBareme = irTotalOptionBareme - irSansDividendes
+  const coutTotalDividendesBareme = prelevementsSociauxDividendes + surcoutIRDividendesBareme
+  const dividendesNetsBareme = dividendesBruts - coutTotalDividendesBareme
+
+  // --- IR sur la rémunération ---
+  const revenuImposableRemu = remunerationNetteVisee
+  const irTotalRemu = calculerIR({ revenuNetGlobalImposable: revenuImposableRemu + autresRevenusImposablesFoyer, partsFiscales })
   const irSansActivite = calculerIR({ revenuNetGlobalImposable: autresRevenusImposablesFoyer, partsFiscales })
-  const surcoutIR = impotRevenuTotal - irSansActivite
+  const surcoutIRRemu = irTotalRemu - irSansActivite
 
-  // 5. Calcul du "Net dans la poche" final
-  // C'est la somme de ce que le dirigeant touche (rémunération + dividendes) moins le surcoût d'IR.
-  const netDansLaPoche = remunerationNetteVisee + dividendesNets - surcoutIR
+  // --- TVA ---
+  const { ca_services = 0, ca_vente = 0 } = inputs
+  const totalCA = ca_services + ca_vente
+  let statutTVA = "En franchise"
+  const seuilsVente = config.TVA.vente
+  const seuilsServices = config.TVA.services
+
+  if (totalCA > seuilsVente.seuil_majore || ca_services > seuilsServices.seuil_majore) {
+    statutTVA = "Assujetti (dépassement seuil majoré)"
+  } else if (totalCA > seuilsVente.franchise_base || ca_services > seuilsServices.franchise_base) {
+    statutTVA = "Seuil de base dépassé / Tolérance"
+  }
+
+  // On prend la meilleure option pour le "Net dans la poche"
+  const meilleureOptionDividendes = Math.max(dividendesNetsPFU, dividendesNetsBareme)
+  const netDansLaPoche = remunerationNetteVisee + meilleureOptionDividendes - surcoutIRRemu
 
   return {
     statut: "SASU (IS)",
     chiffreAffaires,
-    remunerationNette: remunerationNetteVisee,
-    cotisationsSociales: Math.round(cotisationsSociales),
-    beneficeAvantIS: Math.round(beneficeAvantIS),
+    chargesReelles: chargesDeductibles,
+    remuneration: {
+      net: remunerationNetteVisee,
+      brut: remuBruteApprox,
+      chargesSalariales: chargesSalarialesApprox,
+      chargesPatronales: chargesPatronalesApprox,
+      coutTotal: coutTotalRemuneration
+    },
     impotSocietes: Math.round(impotSocietes),
-    dividendesBruts: Math.round(dividendesBruts),
-    dividendesNets: Math.round(dividendesNets),
-    surcoutIR: Math.round(surcoutIR),
-    netDansLaPoche: Math.round(netDansLaPoche)
+    dividendes: {
+      bruts: dividendesBruts,
+      pfu: { net: Math.round(dividendesNetsPFU), cout: Math.round(coutTotalDividendesPFU) },
+      bareme: { net: Math.round(dividendesNetsBareme), cout: Math.round(coutTotalDividendesBareme) }
+    },
+    revenuImposable: revenuImposableRemu,
+    surcoutIR: Math.round(surcoutIRRemu),
+    netDansLaPoche: Math.round(netDansLaPoche),
+    statutTVA: statutTVA
   }
 }
 

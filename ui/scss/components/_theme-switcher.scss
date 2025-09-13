@@ -1,0 +1,72 @@
+// ui/scss/components/_theme-switcher.scss
+.theme-switcher {
+  position: absolute;
+  top: 1em;
+  right: 1em;
+}
+
+#theme-toggle-checkbox {
+  display: none;
+}
+
+.theme-toggle-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 50px;
+  height: 26px;
+  background-color: #f0c427; /* Jaune soleil */
+  border-radius: 13px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.3s;
+
+  // Le cercle blanc
+  &::after {
+    content: "";
+    width: 22px;
+    height: 22px;
+    background-color: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s ease;
+    z-index: 1;
+  }
+
+  // Les icônes
+  svg {
+    width: 16px;
+    height: 16px;
+    margin: 0 5px;
+    color: white;
+    position: relative;
+    z-index: 2; // Pour être au-dessus du cercle
+    transition: opacity 0.3s ease; // Transition douce
+  }
+}
+
+// Logique d'affichage en mode Clair (par défaut)
+.sun {
+  opacity: 1;
+}
+.moon {
+  opacity: 0;
+}
+
+// Logique d'affichage quand la checkbox est cochée (mode Sombre)
+#theme-toggle-checkbox:checked + .theme-toggle-label {
+  background-color: #6a85b6; /* Bleu nuit */
+
+  &::after {
+    transform: translateX(24px);
+  }
+
+  .sun {
+    opacity: 0;
+  }
+  .moon {
+    opacity: 1;
+  }
+}
