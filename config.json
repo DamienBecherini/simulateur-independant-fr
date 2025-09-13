@@ -1,0 +1,86 @@
+{
+  "annee": 2025,
+  "derniereMiseAJour": "2025-09-13",
+  "IR": {
+    "description": "Barème progressif de l'Impôt sur le Revenu 2025 (sur les revenus de 2024)",
+    "source": "https://www.service-public.fr/particuliers/vosdroits/F1419",
+    "bareme": [
+      { "trancheJusqua": 11294, "taux": 0 },
+      { "trancheJusqua": 28797, "taux": 0.11 },
+      { "trancheJusqua": 82341, "taux": 0.30 },
+      { "trancheJusqua": 177106, "taux": 0.41 },
+      { "trancheJusqua": "Infinity", "taux": 0.45 }
+    ]
+  },
+  "microEntreprise": {
+    "plafonds": {
+      "description": "Plafonds de CA pour bénéficier du régime micro. Valables pour 2023, 2024 et 2025.",
+      "source": "https://entreprendre.service-public.fr/vosdroits/F23267",
+      "services": 77700,
+      "vente": 188700
+    },
+    "cotisations": {
+      "description": "Taux de cotisations sociales sur le CA.",
+      "source": "https://www.autoentrepreneur.urssaf.fr/",
+      "vente_bic": 0.123,
+      "services_bic": 0.212,
+      "services_bnc_regime_general": 0.211,
+      "professions_liberales_cipav": 0.212
+    },
+    "abattement": {
+      "description": "Abattement forfaitaire pour frais professionnels avant calcul de l'IR.",
+      "vente_bic": 0.71,
+      "services_bic": 0.50,
+      "services_bnc": 0.34,
+      "minimum": 305
+    },
+    "ACRE": {
+      "description": "Taux de cotisations réduits de 50% pour la première année avec l'ACRE.",
+      "vente_bic": 0.062,
+      "services_bic": 0.106,
+      "services_bnc_regime_general": 0.106,
+      "professions_liberales_cipav": 0.121
+    },
+    "VFL": {
+      "description": "Versement Forfaitaire Libératoire de l'impôt sur le revenu.",
+      "plafond_RFR_par_part": {
+        "valeur": 27478,
+        "commentaire": "Plafond du Revenu Fiscal de Référence de l'année N-2 (2023 pour une option en 2025). Valeur 2024 connue, en attente de la valeur officielle 2025. Utilisation de la valeur de 2024 (revenus 2022)."
+      },
+      "taux": {
+        "vente_bic": 0.01,
+        "services_bic": 0.017,
+        "services_bnc": 0.022
+      }
+    }
+  },
+  "SASU": {
+    "IS": {
+      "description": "Impôt sur les Sociétés.",
+      "source": "https://www.economie.gouv.fr/entreprises/impot-sur-les-societes-is",
+      "taux_reduit": 0.15,
+      "plafond_reduit": 42500,
+      "taux_normal": 0.25
+    },
+    "cotisations_asssimile_salarie": {
+      "commentaire": "Les cotisations sur la rémunération du président de SASU sont complexes et varient (salaire, ACRE, etc.). Ce chiffre est une approximation MOYENNE du coût total pour l'entreprise par rapport au salaire net versé. Un vrai bulletin de paie est plus complexe.",
+      "ratio_cout_total_sur_net": 1.80
+    },
+    "dividendes": {
+      "description": "Prélèvement Forfaitaire Unique (Flat Tax) sur les dividendes.",
+      "pru_taux_global": 0.30,
+      "pru_taux_ir": 0.128,
+      "pru_taux_ps": 0.172
+    }
+  },
+  "EURL": {
+    "cotisations_tns": {
+      "commentaire": "Les cotisations TNS (gérant EURL) sont complexes et dépendent du revenu. Ce taux de 45% est une approximation commune pour un revenu moyen. Le calcul réel est progressif.",
+      "taux_approx_sur_remuneration": 0.45
+    },
+    "dividendes_ps_sur_part_sup_10_capital": {
+      "commentaire": "La part des dividendes supérieure à 10% du capital social est soumise aux cotisations sociales TNS (~45%) au lieu des prélèvements sociaux (~17.2%). C'est une différence majeure avec la SASU.",
+      "taux_approx": 0.45
+    }
+  }
+}

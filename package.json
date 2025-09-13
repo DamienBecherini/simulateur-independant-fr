@@ -1,0 +1,17 @@
+{
+  "name": "simulateur-independant-fr",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "test": "jest",
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Un simulateur de revenus et de statut pour les travailleurs indépendants en France.",
+  "devDependencies": {
+    "electron": "^38.1.0",
+    "jest": "^30.1.3"
+  }
+}

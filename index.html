@@ -1,0 +1,143 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    <title>Simulateur Indépendant</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 2em;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 2em;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #005a9e;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5em;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 0.5em;
+        }
+
+        input {
+            padding: 0.8em;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+        button {
+            grid-column: 1 / -1;
+            padding: 1em;
+            font-size: 1.2em;
+            background-color: #005a9e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #003d6b;
+        }
+
+        #resultats-container {
+            margin-top: 2em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1em;
+        }
+
+        th,
+        td {
+            border: 1px solid #dee2e6;
+            padding: 0.8em;
+            text-align: right;
+        }
+
+        th {
+            background-color: #e9ecef;
+            text-align: left;
+        }
+
+        td.statut {
+            font-weight: bold;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Simulateur de revenus pour indépendants</h1>
+
+        <form id="simulation-form">
+            <div class="form-grid">
+                <!-- F1.1 : Profil -->
+                <div class="form-group">
+                    <label for="parts-fiscales">Parts Fiscales du Foyer</label>
+                    <input type="number" id="parts-fiscales" value="1" step="0.5" required>
+                </div>
+
+                <!-- F1.3 : Revenus -->
+                <div class="form-group">
+                    <label for="salaire-net">Autres Salaires Nets Imposables (Annuel)</label>
+                    <input type="number" id="salaire-net" value="0" step="100">
+                </div>
+                <div class="form-group">
+                    <label for="ca-services">Chiffre d'Affaires - Services (Annuel)</label>
+                    <input type="number" id="ca-services" value="50000" step="1000" required>
+                </div>
+                <div class="form-group">
+                    <label for="ca-vente">Chiffre d'Affaires - Vente (Annuel)</label>
+                    <input type="number" id="ca-vente" value="0" step="1000">
+                </div>
+
+                <!-- F1.3 : Charges -->
+                <div class="form-group">
+                    <label for="charges-deductibles">Charges Professionnelles (Annuel)</label>
+                    <input type="number" id="charges-deductibles" value="5000" step="100">
+                </div>
+
+                <button type="submit">Lancer la Simulation</button>
+            </div>
+        </form>
+
+        <div id="resultats-container">
+            <!-- Les résultats du calcul seront injectés ici par le JavaScript -->
+        </div>
+    </div>
+
+    <!-- On lie le script qui fera le lien entre l'UI et le moteur de calcul -->
+    <script src="./renderer.js"></script>
+</body>
+
+</html>
