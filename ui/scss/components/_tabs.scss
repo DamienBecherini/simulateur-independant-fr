@@ -1,10 +1,31 @@
 .tabs-container {
   margin-top: 2em;
 }
+
 .tabs-nav {
   display: flex;
   border-bottom: 2px solid var(--border-color);
+  // height: 68px;
+
+  // AJOUTS POUR LE RESPONSIVE :
+  overflow-x: auto; // Ajoute une barre de défilement horizontal si nécessaire
+  overflow-y: hidden;
+  white-space: nowrap; // Empêche les onglets de passer à la ligne
+
+  // Bonus : Amélioration visuelle de la barre de défilement pour les navigateurs WebKit (Chrome, Safari, Electron)
+  &::-webkit-scrollbar {
+    height: 4px; // Une barre de défilement très fine
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 4px;
+  }
+
+  button.active {
+    border-bottom: 6px solid currentColor;
+  }
 }
+
 .tab-link {
   padding: 0.8em 1.2em;
   cursor: pointer;
@@ -31,12 +52,6 @@
   &.active {
     display: block;
   }
-}
-
-// --- MISE EN PAGE DE LA VUE DÉTAILLÉE ---
-.status-detail-view {
-  // Cette structure contient le tableau des résultats et le guide.
-  // On peut l'utiliser pour définir une mise en page plus complexe plus tard.
 }
 
 .guide-section {

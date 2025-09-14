@@ -90,10 +90,23 @@ app.whenReady().then(() => {
     return { results, config: currentConfig, content: pedagogicalContent }
   })
 
-  ipcMain.handle("list-backups", () => backupManager.listBackups())
+  // MODIFIÉ : On récupère l'ordre sauvegardé et on le passe à listBackups
+  ipcMain.handle("list-backups", () => {
+    const savedOrder = stateManager.getState().ui.backupOrder || []
+    return backupManager.listBackups(savedOrder)
+  })
+
   ipcMain.handle("create-backup", (event, backupName) => backupManager.createBackup(backupName))
   ipcMain.handle("delete-backup", (event, backupName) => backupManager.deleteBackup(backupName))
   ipcMain.handle("export-backup", (event, backupName) => backupManager.exportBackup(backupName, mainWindow))
+
+  // NOUVEAU : Gestionnaire pour sauvegarder l'ordre des backups
+  ipcMain.handle("save-backup-order", (event, newOrder) => {
+    const currentState = stateManager.getState()
+    currentState.ui.backupOrder = newOrder
+    stateManager.updateState(currentState)
+    // Pas besoin de saveStateSync() ici, ce sera fait à la fermeture comme pour le reste
+  })
 
   ipcMain.handle("load-backup", (event, backupName) => {
     const result = backupManager.loadBackup(backupName)

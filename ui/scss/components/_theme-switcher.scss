@@ -1,9 +1,10 @@
 // ui/scss/components/_theme-switcher.scss
 
 .theme-switcher {
-  position: absolute;
+  position: fixed;
   top: 1em;
   right: 1em;
+  z-index: 900;
 }
 
 #theme-toggle-checkbox {

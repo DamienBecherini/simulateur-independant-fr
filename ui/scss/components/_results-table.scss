@@ -6,10 +6,25 @@
   margin-top: 2em;
 }
 
+// NOUVEAU : Styles pour le conteneur responsive
+.table-container {
+  overflow-x: auto; // Active le défilement horizontal si le contenu dépasse
+
+  // Amélioration de la barre de défilement
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 6px;
+  }
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1em;
+  min-width: 600px;
 }
 
 th,

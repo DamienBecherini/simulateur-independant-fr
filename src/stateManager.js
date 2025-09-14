@@ -21,7 +21,9 @@ function getDefaultState() {
       },
       activeTab: "tab-comparator",
       theme: "light",
-      configName: "Ma Simulation"
+      configName: "Ma Simulation",
+      // NOUVEAU : On ajoute un tableau pour mémoriser l'ordre des sauvegardes
+      backupOrder: []
     }
   }
 }
@@ -31,6 +33,10 @@ function loadState() {
     if (fs.existsSync(stateFilePath)) {
       const rawData = fs.readFileSync(stateFilePath, "utf-8")
       appState = JSON.parse(rawData)
+      // On s'assure que la nouvelle clé existe pour les utilisateurs existants
+      if (!appState.ui.backupOrder) {
+        appState.ui.backupOrder = []
+      }
     } else {
       appState = getDefaultState()
       saveStateSync()
@@ -59,17 +65,13 @@ function saveStateSync() {
 }
 
 function getState() {
-  // Si l'état n'est pas en mémoire, on le charge.
-  // Ne devrait arriver qu'au tout premier appel.
   if (!appState) {
     return loadState()
   }
   return appState
 }
 
-// Met à jour l'état en mémoire SANS écrire sur le disque.
 function updateState(newState) {
-  // Fusionne le nouvel état avec l'ancien pour ne pas écraser des clés non liées
   appState = { ...appState, ...newState }
 }
 

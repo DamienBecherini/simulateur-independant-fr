@@ -12,33 +12,37 @@ function renderMicroTable(res, config) {
 
   // Cas normal : le tableau de synthèse
   return `
-    <table class="details-summary-table">
-      <thead><tr><th colspan="2">Synthèse Micro-Entreprise</th></tr></thead>
-      <tbody>
-        <tr><td>Chiffre d'Affaires</td><td>${formatCurrency(res.chiffreAffaires)}</td></tr>
-        <tr><td>(-) Cotisations Sociales (${((res.cotisationsSociales / res.chiffreAffaires) * 100).toFixed(1)}%)</td><td>${formatCurrency(-res.cotisationsSociales)}</td></tr>
-        <tr><td><strong>Revenu Net de cotisations</strong></td><td><strong>${formatCurrency(res.revenuNetApresCotisations)}</strong></td></tr>
-        <tr><td>Revenu Imposable (après abattement)</td><td>${formatCurrency(res.revenuImposable)}</td></tr>
-        <tr><td>(-) Surcoût Impôt sur le Revenu</td><td>${formatCurrency(-res.surcoutIR)}</td></tr>
-        <tr><td>(-) Charges pro. (pour info, non déduites)</td><td>${formatCurrency(-res.chargesReelles)}</td></tr>
-        <tr class="final-result"><td ><strong>= Net dans la poche final</strong></td><td><strong>${formatCurrency(res.netDansLaPoche)}</strong></td></tr>
-      </tbody>
-    </table>`
+    <div class="table-container">
+      <table class="details-summary-table">
+        <thead><tr><th colspan="2">Synthèse Micro-Entreprise</th></tr></thead>
+        <tbody>
+          <tr><td>Chiffre d'Affaires</td><td>${formatCurrency(res.chiffreAffaires)}</td></tr>
+          <tr><td>(-) Cotisations Sociales (${((res.cotisationsSociales / res.chiffreAffaires) * 100).toFixed(1)}%)</td><td>${formatCurrency(-res.cotisationsSociales)}</td></tr>
+          <tr><td><strong>Revenu Net de cotisations</strong></td><td><strong>${formatCurrency(res.revenuNetApresCotisations)}</strong></td></tr>
+          <tr><td>Revenu Imposable (après abattement)</td><td>${formatCurrency(res.revenuImposable)}</td></tr>
+          <tr><td>(-) Surcoût Impôt sur le Revenu</td><td>${formatCurrency(-res.surcoutIR)}</td></tr>
+          <tr><td>(-) Charges pro. (pour info, non déduites)</td><td>${formatCurrency(-res.chargesReelles)}</td></tr>
+          <tr class="final-result"><td ><strong>= Net dans la poche final</strong></td><td><strong>${formatCurrency(res.netDansLaPoche)}</strong></td></tr>
+        </tbody>
+      </table>
+    </div>`
 }
 
 function renderEITable(res) {
   return `
-    <table class="details-summary-table">
-      <thead><tr><th colspan="2">Synthèse EI (Régime Réel)</th></tr></thead>
-      <tbody>
-        <tr><td>Chiffre d'Affaires</td><td>${formatCurrency(res.chiffreAffaires)}</td></tr>
-        <tr><td>(-) Charges Professionnelles</td><td>${formatCurrency(-res.chargesReelles)}</td></tr>
-        <tr><td><strong>= Bénéfice Réel (Base de calcul)</strong></td><td><strong>${formatCurrency(res.revenuImposable)}</strong></td></tr>
-        <tr><td>(-) Cotisations Sociales TNS (~45%)</td><td>${formatCurrency(-res.cotisationsSociales)}</td></tr>
-        <tr><td>(-) Surcoût Impôt sur le Revenu</td><td>${formatCurrency(-res.surcoutIR)}</td></tr>
-        <tr class="final-result"><td><strong>= Net dans la poche final</strong></td><td><strong>${formatCurrency(res.netDansLaPoche)}</strong></td></tr>
-      </tbody>
-    </table>`
+    <div class="table-container">
+      <table class="details-summary-table">
+        <thead><tr><th colspan="2">Synthèse EI (Régime Réel)</th></tr></thead>
+        <tbody>
+          <tr><td>Chiffre d'Affaires</td><td>${formatCurrency(res.chiffreAffaires)}</td></tr>
+          <tr><td>(-) Charges Professionnelles</td><td>${formatCurrency(-res.chargesReelles)}</td></tr>
+          <tr><td><strong>= Bénéfice Réel (Base de calcul)</strong></td><td><strong>${formatCurrency(res.revenuImposable)}</strong></td></tr>
+          <tr><td>(-) Cotisations Sociales TNS (~45%)</td><td>${formatCurrency(-res.cotisationsSociales)}</td></tr>
+          <tr><td>(-) Surcoût Impôt sur le Revenu</td><td>${formatCurrency(-res.surcoutIR)}</td></tr>
+          <tr class="final-result"><td><strong>= Net dans la poche final</strong></td><td><strong>${formatCurrency(res.netDansLaPoche)}</strong></td></tr>
+        </tbody>
+      </table>
+    </div>`
 }
 
 function renderSocieteTable(res) {
@@ -48,28 +52,30 @@ function renderSocieteTable(res) {
   const dividendesNets = meilleureOption === "pfu" ? res.dividendes.pfu.net : res.dividendes.bareme.net
 
   return `
-    <table class="details-summary-table">
-        <thead><tr><th colspan="2">Parcours de l'argent : de l'entreprise à votre poche</th></tr></thead>
-        <tbody>
-            <tr class="section-header"><td colspan="2">1. Au niveau de la Société</td></tr>
-            <tr><td>Chiffre d'Affaires</td><td>${formatCurrency(res.chiffreAffaires)}</td></tr>
-            <tr><td>(-) Charges Professionnelles</td><td>${formatCurrency(-res.chargesReelles)}</td></tr>
-            <tr><td>(-) Coût total de la rémunération</td><td>${formatCurrency(-res.remuneration.coutTotal)}</td></tr>
-            <tr><td><strong>= Bénéfice avant Impôt Société</strong></td><td><strong>${formatCurrency(beneficeAvantIS)}</strong></td></tr>
-            <tr><td>(-) Impôt sur les Sociétés (IS)</td><td>${formatCurrency(-res.impotSocietes)}</td></tr>
-            <tr><td><strong>= Argent distribuable en dividendes</strong></td><td><strong>${formatCurrency(res.dividendes.bruts)}</strong></td></tr>
-            
-            <tr class="section-header"><td colspan="2">2. Au niveau du Dirigeant</td></tr>
-            <tr><td>(+) Rémunération Nette (avant IR)</td><td>${formatCurrency(res.remuneration.net)}</td></tr>
-            <tr><td>(+) Dividendes Bruts</td><td>${formatCurrency(res.dividendes.bruts)}</td></tr>
-            <tr><td>(-) Fiscalité sur dividendes (IR + PS)</td><td>${formatCurrency(-fiscaliteDividendes)}</td></tr>
-            <tr><td><em>&nbsp;&nbsp;&nbsp;↳ Dividendes Nets (après fiscalité)</em></td><td><em>${formatCurrency(dividendesNets)}</em></td></tr>
-            <tr><td>(-) Surcoût d'IR sur la rémunération</td><td>${formatCurrency(-res.surcoutIR)}</td></tr>
+    <div class="table-container">
+      <table class="details-summary-table">
+          <thead><tr><th colspan="2">Parcours de l'argent : de l'entreprise à votre poche</th></tr></thead>
+          <tbody>
+              <tr class="section-header"><td colspan="2">1. Au niveau de la Société</td></tr>
+              <tr><td>Chiffre d'Affaires</td><td>${formatCurrency(res.chiffreAffaires)}</td></tr>
+              <tr><td>(-) Charges Professionnelles</td><td>${formatCurrency(-res.chargesReelles)}</td></tr>
+              <tr><td>(-) Coût total de la rémunération</td><td>${formatCurrency(-res.remuneration.coutTotal)}</td></tr>
+              <tr><td><strong>= Bénéfice avant Impôt Société</strong></td><td><strong>${formatCurrency(beneficeAvantIS)}</strong></td></tr>
+              <tr><td>(-) Impôt sur les Sociétés (IS)</td><td>${formatCurrency(-res.impotSocietes)}</td></tr>
+              <tr><td><strong>= Argent distribuable en dividendes</strong></td><td><strong>${formatCurrency(res.dividendes.bruts)}</strong></td></tr>
+              
+              <tr class="section-header"><td colspan="2">2. Au niveau du Dirigeant</td></tr>
+              <tr><td>(+) Rémunération Nette (avant IR)</td><td>${formatCurrency(res.remuneration.net)}</td></tr>
+              <tr><td>(+) Dividendes Bruts</td><td>${formatCurrency(res.dividendes.bruts)}</td></tr>
+              <tr><td>(-) Fiscalité sur dividendes (IR + PS)</td><td>${formatCurrency(-fiscaliteDividendes)}</td></tr>
+              <tr><td><em>&nbsp;&nbsp;&nbsp;↳ Dividendes Nets (après fiscalité)</em></td><td><em>${formatCurrency(dividendesNets)}</em></td></tr>
+              <tr><td>(-) Surcoût d'IR sur la rémunération</td><td>${formatCurrency(-res.surcoutIR)}</td></tr>
 
-            <tr class="section-header"><td colspan="2">3. Résultat Final</td></tr>
-            <tr class="final-result"><td><strong>= Net dans la poche total</strong></td><td><strong>${formatCurrency(res.netDansLaPoche)}</strong></td></tr>
-        </tbody>
-    </table>`
+              <tr class="section-header"><td colspan="2">3. Résultat Final</td></tr>
+              <tr class="final-result"><td><strong>= Net dans la poche total</strong></td><td><strong>${formatCurrency(res.netDansLaPoche)}</strong></td></tr>
+          </tbody>
+      </table>
+    </div>`
 }
 
 // --- Fonction d'initialisation (inchangée) ---

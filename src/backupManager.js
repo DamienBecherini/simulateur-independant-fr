@@ -2,20 +2,19 @@
 const { app, dialog } = require("electron")
 const path = require("path")
 const fs = require("fs")
-const stateManager = require("./stateManager") // stateManager est déjà importé ici
+const stateManager = require("./stateManager")
 
 const stateFilePath = path.join(app.getPath("userData"), "app-state.json")
 const backupsDirPath = path.join(app.getPath("userData"), "backups")
-
-// S'assure que le dossier des sauvegardes existe
 if (!fs.existsSync(backupsDirPath)) {
   fs.mkdirSync(backupsDirPath)
 }
 
-const listBackups = () => {
+// MODIFIÉ : La fonction accepte maintenant un ordre de tri
+const listBackups = (savedOrder = []) => {
   try {
     const files = fs.readdirSync(backupsDirPath)
-    return files
+    const backups = files
       .filter(file => file.endsWith(".json"))
       .map(file => {
         const stats = fs.statSync(path.join(backupsDirPath, file))
@@ -24,7 +23,23 @@ const listBackups = () => {
           modified: stats.mtime.toISOString()
         }
       })
-      .sort((a, b) => new Date(b.modified) - new Date(a.modified))
+
+    // NOUVEAU : Logique de tri personnalisée
+    backups.sort((a, b) => {
+      const indexA = savedOrder.indexOf(a.name)
+      const indexB = savedOrder.indexOf(b.name)
+
+      if (indexA === -1 && indexB === -1) {
+        // Si les deux sont nouvelles, tri par date
+        return new Date(b.modified) - new Date(a.modified)
+      }
+      if (indexA === -1) return -1 // a est nouvelle, elle passe avant
+      if (indexB === -1) return 1 // b est nouvelle, elle passe avant
+
+      return indexA - indexB // Tri selon l'ordre sauvegardé
+    })
+
+    return backups
   } catch (error) {
     console.error("Impossible de lister les sauvegardes:", error)
     return []
