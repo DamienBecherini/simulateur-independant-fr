@@ -1,4 +1,5 @@
 // ui/scss/components/_theme-switcher.scss
+
 .theme-switcher {
   position: absolute;
   top: 1em;
@@ -6,7 +7,7 @@
 }
 
 #theme-toggle-checkbox {
-  display: none;
+  display: none; // La case à cocher reste invisible
 }
 
 .theme-toggle-label {
@@ -15,13 +16,13 @@
   justify-content: space-between;
   width: 50px;
   height: 26px;
-  background-color: #f0c427; /* Jaune soleil */
+  background-color: #6a85b6; // Bleu nuit par défaut (logique pour le thème sombre)
   border-radius: 13px;
   position: relative;
   cursor: pointer;
   transition: background-color 0.3s;
 
-  // Le cercle blanc
+  // Le cercle blanc qui se déplace
   &::after {
     content: "";
     width: 22px;
@@ -35,38 +36,46 @@
     z-index: 1;
   }
 
-  // Les icônes
+  // Conteneur pour les icônes
   svg {
     width: 16px;
     height: 16px;
     margin: 0 5px;
     color: white;
     position: relative;
-    z-index: 2; // Pour être au-dessus du cercle
-    transition: opacity 0.3s ease; // Transition douce
+    z-index: 2;
+    transition: opacity 0.3s ease;
   }
 }
 
-// Logique d'affichage en mode Clair (par défaut)
-.sun {
+// --- LA LOGIQUE CORRIGÉE ---
+
+// Par défaut (thème sombre) : la lune est visible, le soleil est caché.
+.moon {
   opacity: 1;
 }
-.moon {
+.sun {
   opacity: 0;
 }
 
-// Logique d'affichage quand la checkbox est cochée (mode Sombre)
-#theme-toggle-checkbox:checked + .theme-toggle-label {
-  background-color: #6a85b6; /* Bleu nuit */
+// Quand la case N'EST PAS cochée (attribut ajouté par JS pour le thème clair)
+body:not(.dark-mode) {
+  .theme-toggle-label {
+    background-color: #f0c427; // Jaune soleil
 
-  &::after {
-    transform: translateX(24px);
-  }
+    &::after {
+      transform: translateX(24px);
+    }
 
-  .sun {
-    opacity: 0;
-  }
-  .moon {
-    opacity: 1;
+    .moon {
+      opacity: 0;
+    }
+    .sun {
+      opacity: 1;
+    }
   }
 }
+
+// NOTE: Le JS devra juste s'assurer de mettre/enlever la classe .dark-mode sur le body.
+// La logique de la checkbox est maintenant gérée par la présence de cette classe.
+// On va simplifier le JS en conséquence.

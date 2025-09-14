@@ -10,18 +10,87 @@
 </head>
 
 <body>
+    <!-- ========= Menu Latéral de Configuration ========= -->
+    <button id="settings-open-btn" class="settings-trigger-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <path fill="currentColor"
+                d="M19.5 12c0-.23-.01-.45-.03-.68l1.86-1.41c.4-.3.51-.86.26-1.3l-1.87-3.23a.987.987 0 0 0-1.25-.42l-2.15.91c-.37-.26-.76-.49-1.17-.68l-.29-2.31c-.06-.5-.49-.88-.99-.88h-3.73c-.51 0-.94.38-1 .88l-.29 2.31c-.41.19-.8.42-1.17.68l-2.15-.91c-.46-.2-1-.02-1.25.42L2.41 8.62c-.25.44-.14.99.26 1.3l1.86 1.41a7.3 7.3 0 0 0 0 1.35l-1.86 1.41c-.4.3-.51.86-.26 1.3l1.87 3.23c.25.44.79.62 1.25.42l2.15-.91c.37.26.76.49 1.17.68l.29 2.31c.06.5.49.88.99.88h3.73c.5 0 .93-.38.99-.88l.29-2.31c.41-.19.8-.42 1.17-.68l2.15.91c.46.2 1 .02 1.25-.42l1.87-3.23c.25-.44.14-.99-.26-1.3l-1.86-1.41c.03-.23.04-.45.04-.68m-7.46 3.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5" />
+        </svg>
+    </button>
+
+    <div id="settings-overlay" class="settings-overlay">
+        <aside id="settings-menu" class="settings-menu">
+            <div class="settings-menu-header">
+                <h2 id="settings-title">Configuration</h2>
+                <button id="settings-close-btn" class="settings-close-btn">&times;</button>
+            </div>
+
+            <!-- Vue Principale du Menu -->
+            <div id="settings-main-view" class="settings-menu-content">
+                <div class="form-group">
+                    <label for="config-name">Nom de la configuration</label>
+                    <input type="text" id="config-name" value="Ma Simulation">
+                </div>
+                <div class="settings-actions">
+                    <button id="save-config-btn" class="btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                            <path fill="currentColor"
+                                d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm7-3q.825 0 1.413-.587T14 16V9.85l1.5 1.5l1.4-1.425L12 5L7.1 9.925L8.5 11.35l1.5-1.5V16q0 .825.588 1.413T12 18" />
+                        </svg>
+                        Enregistrer
+                    </button>
+                    <button id="load-config-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                            <path fill="currentColor"
+                                d="M11 20V7.825l-1.6 1.6L8 8l4-4l4 4l-1.4 1.425l-1.6-1.6V20zM4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h4v2H4v12h16V6h-4V4h4q.825 0 1.413.588T22 6v12q0 .825-.587 1.413T20 20z" />
+                        </svg>
+                        Charger
+                    </button>
+                    <button id="reset-config-btn" class="btn-danger">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                            <path fill="currentColor"
+                                d="M12 22q-2.075 0-3.9-.788t-3.175-2.137q-1.35-1.35-2.137-3.175T2 12q0-2.075.788-3.9t2.137-3.175q1.35-1.35 3.175-2.138T12 2q2.075 0 3.9.788t3.175 2.138q1.35 1.35 2.138 3.175T22 12q0 2.075-.788 3.9t-2.138 3.175q-1.35 1.35-3.175 2.137T12 22m-1-8.6l2.1-2.1l2.1 2.1l1.4-1.4l-2.1-2.1l2.1-2.1l-1.4-1.4l-2.1 2.1l-2.1-2.1l-1.4 1.4l2.1 2.1l-2.1 2.1z" />
+                        </svg>
+                        Réinitialiser
+                    </button>
+                </div>
+                <div class="divider"></div>
+                <div class="settings-menu-content-inner">
+                    <!-- L'éditeur de config viendra ici en Phase 5 -->
+                    <p>L'éditeur de configuration sera bientôt disponible.</p>
+                </div>
+            </div>
+
+            <!-- Vue de Chargement des Sauvegardes (cachée par défaut) -->
+            <div id="settings-load-view" class="settings-menu-content is-hidden">
+                <button id="back-to-main-settings-btn" class="back-btn">&larr; Retour</button>
+
+                <ul id="backups-list" class="backups-list">
+                    <!-- La liste des sauvegardes sera générée ici par le JS -->
+                </ul>
+            </div>
+        </aside>
+    </div>
     <!-- ========= Interrupteur de Thème ========= -->
     <div class="theme-switcher">
         <input type="checkbox" id="theme-toggle-checkbox">
         <label for="theme-toggle-checkbox" class="theme-toggle-label">
-            <svg class="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                    d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.106a.75.75 0 010 1.06l-1.591 1.59a.75.75 0 11-1.06-1.06l1.59-1.59a.75.75 0 011.06 0zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.803 17.803a.75.75 0 01-1.06 0l-1.59-1.591a.75.75 0 111.06-1.06l1.59 1.59a.75.75 0 010 1.06zM12 21a.75.75 0 01-.75-.75v-2.25a.75.75 0 011.5 0v2.25a.75.75 0 01-.75.75zM4.197 17.803a.75.75 0 010-1.06l1.59-1.591a.75.75 0 111.06 1.06l-1.59 1.59a.75.75 0 01-1.06 0zM3 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3.75A.75.75 0 013 12zM6.106 6.106a.75.75 0 011.06 0l1.591 1.59a.75.75 0 01-1.06 1.06L6.106 7.167a.75.75 0 010-1.06z" />
+            <svg class="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                <g fill="none">
+                    <g fill="currentColor" clip-path="url(#SVGXv8lpc2Y)">
+                        <path
+                            d="M12 0a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V1a1 1 0 0 1 1-1M0 12a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2H1a1 1 0 0 1-1-1m21-1a1 1 0 1 0 0 2h2a1 1 0 1 0 0-2zm-8 10a1 1 0 1 0-2 0v2a1 1 0 1 0 2 0zm-6.657-3.343a1 1 0 0 1 0 1.414L4.93 20.485a1 1 0 1 1-1.414-1.414l1.414-1.414a1 1 0 0 1 1.414 0M20.485 3.515a1 1 0 0 1 0 1.414l-1.414 1.414a1 1 0 1 1-1.414-1.414l1.414-1.414a1 1 0 0 1 1.414 0m-16.97 0a1 1 0 0 1 1.414 0l1.414 1.414A1 1 0 1 1 4.93 6.343L3.515 4.93a1 1 0 0 1 0-1.414m14.142 14.141a1 1 0 0 1 1.414 0l1.414 1.414a1 1 0 1 1-1.414 1.414l-1.414-1.414a1 1 0 0 1 0-1.414M5 12a7 7 0 1 1 14 0a7 7 0 0 1-14 0" />
+                    </g>
+                    <defs>
+                        <clipPath id="SVGXv8lpc2Y">
+                            <path fill="#fff" d="M0 0h24v24H0z" />
+                        </clipPath>
+                    </defs>
+                </g>
             </svg>
-            <svg class="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path fill-rule="evenodd"
-                    d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 004.463-.949a.75.75 0 01.981.652A11.25 11.25 0 0112 21a11.25 11.25 0 01-11.25-11.25 11.25 11.25 0 011.718-6.052a.75.75 0 01.652.981z"
-                    clip-rule="evenodd" />
+            <svg class="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                <path fill="currentColor"
+                    d="M9.272 2.406a1 1 0 0 0-1.23-1.355C6.59 1.535 5.432 2.488 4.37 3.55a11.4 11.4 0 0 0 0 16.182c4.518 4.519 11.51 4.261 15.976-.205c1.062-1.062 2.014-2.22 2.498-3.673A1 1 0 0 0 21.55 14.6c-3.59 1.322-7.675.734-10.433-2.025C8.35 9.808 7.788 5.744 9.272 2.406" />
             </svg>
         </label>
     </div>
@@ -95,6 +164,8 @@
             <div id="modal-body"></div>
         </div>
     </div>
+
+    <div id="toast-container" class="toast-container"></div>
 
     <!-- ========= Scripts ========= -->
     <script type="module" src="./renderer.js"></script>
