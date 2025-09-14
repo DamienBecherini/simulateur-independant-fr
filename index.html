@@ -1,45 +1,40 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html>
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
     <title>Simulateur Indépendant</title>
     <link rel="stylesheet" href="./ui/css/main.css">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
 </head>
 
 <body>
+    <!-- ========= Interrupteur de Thème ========= -->
     <div class="theme-switcher">
-        <div class="theme-switcher">
-            <input type="checkbox" id="theme-toggle-checkbox">
-            <label for="theme-toggle-checkbox" class="theme-toggle-label">
-                <!-- Icônes SVG pour le soleil et la lune -->
-                <svg class="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                        d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.106a.75.75 0 010 1.06l-1.591 1.59a.75.75 0 11-1.06-1.06l1.59-1.59a.75.75 0 011.06 0zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.803 17.803a.75.75 0 01-1.06 0l-1.59-1.591a.75.75 0 111.06-1.06l1.59 1.59a.75.75 0 010 1.06zM12 21a.75.75 0 01-.75-.75v-2.25a.75.75 0 011.5 0v2.25a.75.75 0 01-.75.75zM4.197 17.803a.75.75 0 010-1.06l1.59-1.591a.75.75 0 111.06 1.06l-1.59 1.59a.75.75 0 01-1.06 0zM3 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3.75A.75.75 0 013 12zM6.106 6.106a.75.75 0 011.06 0l1.591 1.59a.75.75 0 01-1.06 1.06L6.106 7.167a.75.75 0 010-1.06z" />
-                </svg>
-                <svg class="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path fill-rule="evenodd"
-                        d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 004.463-.949a.75.75 0 01.981.652A11.25 11.25 0 0112 21a11.25 11.25 0 01-11.25-11.25 11.25 11.25 0 011.718-6.052a.75.75 0 01.652.981z"
-                        clip-rule="evenodd" />
-                </svg>
-            </label>
-        </div>
+        <input type="checkbox" id="theme-toggle-checkbox">
+        <label for="theme-toggle-checkbox" class="theme-toggle-label">
+            <svg class="sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                    d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.106a.75.75 0 010 1.06l-1.591 1.59a.75.75 0 11-1.06-1.06l1.59-1.59a.75.75 0 011.06 0zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.803 17.803a.75.75 0 01-1.06 0l-1.59-1.591a.75.75 0 111.06-1.06l1.59 1.59a.75.75 0 010 1.06zM12 21a.75.75 0 01-.75-.75v-2.25a.75.75 0 011.5 0v2.25a.75.75 0 01-.75.75zM4.197 17.803a.75.75 0 010-1.06l1.59-1.591a.75.75 0 111.06 1.06l-1.59 1.59a.75.75 0 01-1.06 0zM3 12a.75.75 0 01.75-.75h2.25a.75.75 0 010 1.5H3.75A.75.75 0 013 12zM6.106 6.106a.75.75 0 011.06 0l1.591 1.59a.75.75 0 01-1.06 1.06L6.106 7.167a.75.75 0 010-1.06z" />
+            </svg>
+            <svg class="moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd"
+                    d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 004.463-.949a.75.75 0 01.981.652A11.25 11.25 0 0112 21a11.25 11.25 0 01-11.25-11.25 11.25 11.25 0 011.718-6.052a.75.75 0 01.652.981z"
+                    clip-rule="evenodd" />
+            </svg>
+        </label>
     </div>
-    <div class="container">
-        <h1>Simulateur de revenus pour indépendants</h1>
 
+    <div class="container">
+        <!-- ========= Formulaire de Saisie ========= -->
+        <h1>Simulateur de revenus pour indépendants</h1>
         <form id="simulation-form">
             <div class="form-grid">
-                <!-- F1.1 : Profil -->
                 <div class="form-group">
                     <label for="parts-fiscales">Parts Fiscales du Foyer</label>
                     <input type="number" id="parts-fiscales" value="1" step="0.5" required>
                 </div>
-
-                <!-- F1.3 : Revenus -->
                 <div class="form-group">
                     <label for="salaire-net">Autres Salaires Nets Imposables (Annuel)</label>
                     <input type="number" id="salaire-net" value="0" step="100">
@@ -52,30 +47,40 @@
                     <label for="ca-vente">Chiffre d'Affaires - Vente (Annuel)</label>
                     <input type="number" id="ca-vente" value="0" step="1000">
                 </div>
-
-                <!-- F1.3 : Charges -->
                 <div class="form-group">
                     <label for="charges-deductibles">Charges Professionnelles (Annuel)</label>
                     <input type="number" id="charges-deductibles" value="5000" step="100">
                 </div>
-
                 <button type="submit">Lancer la Simulation</button>
             </div>
         </form>
 
-        <!-- Accordéon pour les détails -->
-        <details id="details-accordion" style="display: none;">
-            <summary>Détails du Calcul</summary>
-            <div id="details-container" class="details-content">
-                <!-- Les détails seront injectés ici -->
+        <!-- ========= Structure à Onglets ========= -->
+        <div class="tabs-container">
+            <nav class="tabs-nav" id="tabs-nav">
+                <button class="tab-link active" data-tab="tab-comparator">Comparatif</button>
+                <button class="tab-link" data-tab="tab-me">Micro-Entreprise</button>
+                <button class="tab-link" data-tab="tab-ei">EI (Réel)</button>
+                <button class="tab-link" data-tab="tab-sasu">SASU (IS)</button>
+                <button class="tab-link" data-tab="tab-eurl">EURL (IS)</button>
+            </nav>
+            <div class="tabs-content">
+                <div id="tab-comparator" class="tab-pane active">
+                    <div class="placeholder-text">
+                        <h2>Bienvenue sur le Simulateur Indépendant !</h2>
+                        <p>Remplissez les champs du formulaire ci-dessus et cliquez sur "Lancer la Simulation" pour
+                            comparer les différents
+                            statuts juridiques.</p>
+                    </div>
+                </div>
+                <div id="tab-me" class="tab-pane"></div>
+                <div id="tab-ei" class="tab-pane"></div>
+                <div id="tab-sasu" class="tab-pane"></div>
+                <div id="tab-eurl" class="tab-pane"></div>
             </div>
-        </details>
-
-        <div id="resultats-container">
-            <!-- Les résultats du calcul seront injectés ici par le JavaScript -->
         </div>
 
-        <!-- Zone pour afficher les erreurs -->
+        <!-- ========= Zone d'Erreur ========= -->
         <div id="error-container" class="error-box">
             <h3>Une erreur est survenue</h3>
             <pre id="error-message"></pre>
@@ -83,17 +88,15 @@
         </div>
     </div>
 
-    <!-- Structure de la Modale (cachée par défaut) -->
+    <!-- ========= Modale d'Information ========= -->
     <div id="info-modal" class="modal-overlay">
         <div class="modal-content">
             <button id="modal-close-btn" class="modal-close-btn">&times;</button>
-            <div id="modal-body">
-                <!-- Le contenu dynamique sera injecté ici -->
-            </div>
+            <div id="modal-body"></div>
         </div>
     </div>
 
-    <!-- On lie le script qui fera le lien entre l'UI et le moteur de calcul -->
+    <!-- ========= Scripts ========= -->
     <script type="module" src="./renderer.js"></script>
 </body>
 

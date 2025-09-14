@@ -1,12 +1,12 @@
-// concat_code.js - VERSION FINALE AVEC SORTIE CONSOLE AMÉLIORÉE
+// concat_code.js - VERSION FINALE ET CORRIGÉE
 const fs = require("fs")
 const path = require("path")
 const { globby } = require("globby")
 const tree = require("tree-node-cli")
 
 // --- CONFIGURATION CENTRALE DES EXCLUSIONS ---
-const ignoreGlobs = ["**/node_modules/**", "**/package-lock.json", "**/build/**", "**/dist/**", "**/out/**", "**/release/**", "**/create_sass_structure.sh", "**/concat_code.js"]
-const ignoreRegex = [/node_modules/, /build/, /dist/, /out/, /release/, /project_context.*\.md/]
+const ignoreGlobs = ["**/node_modules/**", "**/package-lock.json", "**/build/**", "**/dist/**", "**/out/**", "**/.git/**", "**/release/**", "**/create_sass_structure.sh", "**/concat_code.js"]
+const ignoreRegex = [/node_modules/, /build/, /dist/, /out/, /release/, /\.git/, /project_context.*\.md/]
 
 // --- GESTION DES ARGUMENTS ET DU NOM DE FICHIER ---
 const noTimestamp = process.argv.includes("--no-timestamp")
@@ -23,7 +23,6 @@ async function concatenateProjectFiles() {
   try {
     console.log("🔍 Analyse du projet et collecte des fichiers...")
 
-    // --- 1. COLLECTE ET PRÉPARATION DES DONNÉES ---
     const files = await globby(["**/*"], { gitignore: true, ignore: ignoreGlobs, dot: true })
 
     let totalCharacters = 0
@@ -34,9 +33,8 @@ async function concatenateProjectFiles() {
     })
 
     const estimatedTokens = Math.round(totalCharacters / 4)
-    const fileTree = tree(".", { exclude: ignoreRegex, allFiles: true })
+    const fileTree = tree(".", { exclude: ignoreRegex, allFiles: true }) // Utilise la regex unifiée
 
-    // --- 2. PRÉPARATION DES BLOCS DE TEXTE ---
     const statsBlock = `## STATISTIQUES
 - Nombre de fichiers inclus : ${files.length}
 - Nombre total de caractères : ${totalCharacters.toLocaleString("fr-FR")}
@@ -45,13 +43,9 @@ async function concatenateProjectFiles() {
 
     const fileHeader = `# CONTEXTE DU PROJET : simulateur-independant-fr
 - Date de génération : ${new Date().toLocaleString("fr-FR")}
-
 ${statsBlock}
+## ARBORESCENCE DU PROJET (contenu du fichier)`
 
-## ARBORESCENCE DU PROJET (contenu du fichier)
-`
-
-    // --- 3. AFFICHAGE DANS LA CONSOLE (DANS L'ORDRE DEMANDÉ) ---
     console.log("----------------------------------------------------")
     console.log("ARBORESCENCE DU PROJET")
     console.log("----------------------------------------------------")
@@ -60,7 +54,6 @@ ${statsBlock}
     console.log(statsBlock)
     console.log("----------------------------------------------------")
 
-    // --- 4. ÉCRITURE DU FICHIER DE SORTIE ---
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true })
 
     fs.writeFileSync(outputFile, fileHeader.trim() + "\n\n")

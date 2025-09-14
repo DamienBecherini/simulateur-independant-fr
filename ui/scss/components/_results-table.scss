@@ -1,4 +1,7 @@
 // ui/scss/components/_results-table.scss
+// CE FICHIER CONTIENT LES STYLES POUR LES DEUX TYPES DE TABLEAUX
+
+// --- Styles pour le tableau comparatif principal ---
 #resultats-container {
   margin-top: 2em;
 }
@@ -30,4 +33,46 @@ td.statut {
   margin-left: 8px;
   cursor: help;
   font-size: 1.2em;
+}
+
+// --- NOUVEAUX STYLES pour les tableaux de synthèse dans les onglets ---
+.details-summary-table {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-collapse: collapse; // Assure que les bordures fusionnent bien
+
+  th,
+  td {
+    padding: 0.8em;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  thead th {
+    background-color: var(--header-bg-color);
+    text-align: center;
+    font-size: 1.1em;
+    color: var(--primary-color);
+  }
+
+  tbody td:first-child {
+    text-align: left;
+  }
+  tbody td:last-child {
+    text-align: right;
+    font-weight: bold;
+  }
+
+  .section-header td {
+    background-color: var(--header-bg-color);
+    font-weight: bold;
+    font-style: italic;
+    color: var(--primary-color);
+    padding-top: 1em;
+    padding-bottom: 1em;
+  }
+
+  .final-result {
+    background-color: var(--success-bg-color);
+    font-size: 1.1em;
+  }
 }

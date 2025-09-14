@@ -1,25 +1,35 @@
 // ui/scss/components/_modal.scss
+// VERSION CORRIGÉE AVEC SCROLL INTERNE
+
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 100vh;
   background-color: rgba(0, 0, 0, 0.6);
-  display: none; // Caché par défaut
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  // On retire le padding qui causait le débordement global
 }
 
 .modal-content {
   background-color: var(--surface-color);
-  padding: 2em;
   border-radius: 8px;
   width: 90%;
-  max-width: 600px;
+  max-width: 700px;
   position: relative;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+
+  // La hauteur max est calculée par rapport à la hauteur de la fenêtre (vh),
+  // en laissant un espace de 4em (2em en haut, 2em en bas).
+  max-height: 80vh;
+  min-height: 30vh;
+  overflow-y: hidden;
 }
 
 .modal-close-btn {
@@ -33,9 +43,23 @@
   cursor: pointer;
   line-height: 1;
   padding: 0;
+  z-index: 10;
+}
+
+#modal-body {
+  max-height: 80vh;
+  overflow-y: auto; // Le corps scrolle si son contenu dépasse la max-height du parent.
+
+  .warning-block {
+    max-height: 80vh;
+    overflow: auto;
+    box-sizing: border-box;
+  }
 }
 
 .modal-body {
+  padding: 2.5em;
+
   h4 {
     color: var(--primary-color);
     border-bottom: 2px solid var(--border-color);

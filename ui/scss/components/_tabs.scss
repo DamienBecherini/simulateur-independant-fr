@@ -1,0 +1,44 @@
+.tabs-container {
+  margin-top: 2em;
+}
+.tabs-nav {
+  display: flex;
+  border-bottom: 2px solid var(--border-color);
+}
+.tab-link {
+  padding: 0.8em 1.2em;
+  cursor: pointer;
+  border: none;
+  background-color: transparent;
+  color: var(--text-color);
+  font-size: 1em;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+
+  &.active {
+    font-weight: bold;
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+  }
+  &:hover:not(.active) {
+    background-color: var(--header-bg-color);
+  }
+}
+
+.tab-pane {
+  display: none;
+  padding: 2em 0;
+  &.active {
+    display: block;
+  }
+}
+
+// --- MISE EN PAGE DE LA VUE DÉTAILLÉE ---
+.status-detail-view {
+  // Cette structure contient le tableau des résultats et le guide.
+  // On peut l'utiliser pour définir une mise en page plus complexe plus tard.
+}
+
+.guide-section {
+  margin-top: 2.5em; // Ajoute un espacement clair au-dessus des guides
+}

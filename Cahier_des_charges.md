@@ -123,3 +123,58 @@ Le projet est déjà très puissant. Pour la suite, je suggère de nous concentr
 **Ma proposition :** concentrons-nous sur le premier bloc (Slider, ACRE, Info-bulles, Règle EURL). Cela nous donnera une version de l'application extrêmement complète et fidèle à votre vision initiale.
 
 Quelles sont les améliorations qui vous semblent les plus pertinentes pour la prochaine étape ? Une fois que vous aurez fait votre choix, je pourrai rédiger la roadmap mise à jour.
+
+4. Proposition de Roadmap Mise à Jour
+
+Maintenant que nous sommes d'accord sur la vision, voici une roadmap concrète pour y parvenir.
+Phase 2 (Finalisation) : Devenir un Outil Pédagogique
+
+    Objectif : Implémenter le système d'onglets et le contenu pédagogique.
+
+    Tâches :
+
+        (Urgent) Débogage de la Modale : Appliquer le correctif ci-dessus.
+
+        Création du Contenu Pédagogique :
+
+            Créer un nouveau fichier (ex: src/guides.js) qui contiendra tout le texte explicatif (avantages, inconvénients, règles clés, formules) pour chaque statut. Le centraliser ici le rendra facile à mettre à jour.
+
+        Refactorisation de l'Interface (HTML/SASS) :
+
+            Modifier index.html pour créer la structure des onglets : un onglet "Comparatif", un "Micro-Entreprise", "EI", "SASU", "EURL".
+
+            Créer un nouveau composant SASS (_tabs.scss) pour styliser la navigation.
+
+        Refactorisation du renderer.js :
+
+            Ajouter la logique pour gérer le changement d'onglet (afficher/cacher le bon contenu).
+
+            Le formulaire de saisie restera visible en permanence en haut de la page.
+
+        Création de la Vue Détaillée dans display.js :
+
+            Créer une nouvelle fonction renderStatutDetailView(resultat, guideContent) qui prendra les résultats d'UNE seule simulation et le contenu pédagogique correspondant.
+
+            Cette fonction générera le HTML pour un onglet de statut, affichant :
+
+                Le tableau de résultats détaillé que nous avons déjà.
+
+                Les sections "Avantages", "Inconvénients", "Règles Clés" tirées de guides.js.
+
+        Intégration des Info-bulles : En parallèle, nous ajouterons les icônes ? avec des définitions simples à côté des termes techniques.
+
+Phase 3 : Améliorer l'Interaction et la Fiabilité
+
+    Objectif : Rendre l'application plus interactive et les calculs encore plus précis.
+
+    Tâches :
+
+        Slider Rémunération / Dividendes : Remplacer notre calcul fixe par un slider interactif. C'est la plus grosse plus-value de cette phase.
+
+        Gestion de l'ACRE : Ajouter la case à cocher "Bénéficiaire de l'ACRE".
+
+        Règle Spécifique des Dividendes en EURL : Ajouter un champ "Capital Social" et implémenter la règle des 10% pour une simulation parfaitement fidèle.
+
+Phase 4 : Finalisation et Distribution (inchangée)
+
+    Polissage, packaging, mise en Open Source, etc.
