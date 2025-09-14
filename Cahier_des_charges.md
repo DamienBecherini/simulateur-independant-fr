@@ -1,14 +1,6 @@
-Excellent. C'est le moment parfait pour faire une pause, prendre du recul et consolider notre vision. Le projet a évolué organiquement, et formaliser cela dans un cahier des charges mis à jour est une étape cruciale pour la suite.
+## **Partie I : Cahier des Charges - Projet "Simulateur Indépendant" (v1.0)**
 
-Vous avez raison, nous allons d'abord définir la vision et les prochaines étapes, puis je rédigerai la roadmap en conséquence.
-
-Voici une proposition de cahier des charges complet qui intègre tout notre travail, suivie d'une discussion sur les améliorations possibles.
-
----
-
-### **Partie I : Cahier des Charges - Projet "Simulateur Indépendant" (v1.0)**
-
-#### **1. Introduction et Objectifs**
+### **1. Introduction et Objectifs**
 
 - **Nom du projet :** Simulateur Indépendant
 - **Mission :** Fournir un outil de simulation gratuit, open-source, et fonctionnant hors-ligne pour aider les travailleurs indépendants en France à prendre des décisions éclairées sur leur statut juridique, anticiper leurs revenus, impôts et cotisations, et comprendre les implications de leurs choix.
@@ -19,7 +11,7 @@ Voici une proposition de cahier des charges complet qui intègre tout notre trav
   - **Pédagogie :** L'interface et les résultats doivent être clairs, même pour un non-expert, avec des aides contextuelles.
   - **Maintenabilité :** Architecture modulaire et configuration centralisée pour faciliter les mises à jour annuelles.
 
-#### **2. Périmètre Fonctionnel (Features Implémentées)**
+### **2. Périmètre Fonctionnel (Features Implémentées)**
 
 **F1 : Saisie des Données Utilisateur (Annuelle)**
 
@@ -82,7 +74,7 @@ Voici une proposition de cahier des charges complet qui intègre tout notre trav
 
 ---
 
-### **Partie II : Propositions d'Améliorations**
+## **Partie II : Propositions d'Améliorations**
 
 Voici une liste d'évolutions possibles, classées par ordre de pertinence à mon avis. C'est sur cette base que nous allons construire la future roadmap.
 
@@ -105,7 +97,7 @@ Voici une liste d'évolutions possibles, classées par ordre de pertinence à mo
 
 ---
 
-### **Partie III : Discussion : Que Fait-on Maintenant ?**
+## **Partie III : Discussion : Que Fait-on Maintenant ?**
 
 Le projet est déjà très puissant. Pour la suite, je suggère de nous concentrer sur ce qui apporte le plus de valeur à l'utilisateur final pour un effort de développement raisonnable.
 
@@ -127,7 +119,8 @@ Quelles sont les améliorations qui vous semblent les plus pertinentes pour la p
 4. Proposition de Roadmap Mise à Jour
 
 Maintenant que nous sommes d'accord sur la vision, voici une roadmap concrète pour y parvenir.
-Phase 2 (Finalisation) : Devenir un Outil Pédagogique
+
+#### Phase 2 (Finalisation) : Devenir un Outil Pédagogique
 
     Objectif : Implémenter le système d'onglets et le contenu pédagogique.
 
@@ -163,7 +156,7 @@ Phase 2 (Finalisation) : Devenir un Outil Pédagogique
 
         Intégration des Info-bulles : En parallèle, nous ajouterons les icônes ? avec des définitions simples à côté des termes techniques.
 
-Phase 3 : Améliorer l'Interaction et la Fiabilité
+#### Phase 3 : Améliorer l'Interaction et la Fiabilité
 
     Objectif : Rendre l'application plus interactive et les calculs encore plus précis.
 
@@ -175,6 +168,61 @@ Phase 3 : Améliorer l'Interaction et la Fiabilité
 
         Règle Spécifique des Dividendes en EURL : Ajouter un champ "Capital Social" et implémenter la règle des 10% pour une simulation parfaitement fidèle.
 
-Phase 4 : Finalisation et Distribution (inchangée)
+####Phase 4 : Finalisation et Distribution (inchangée)
 
     Polissage, packaging, mise en Open Source, etc.
+
+## 2. Roadmap Mise à Jour (Post-Refactorisation)
+
+Nous venons de terminer une phase intensive de stabilisation et d'amélioration de l'interface qui n'était pas initialement planifiée avec ce niveau de détail. Il est temps d'officialiser ces accomplissements et de tracer une nouvelle voie claire pour la suite.
+Phase 2 (Terminée) : Stabilisation & Modernisation de l'Interface
+
+    Objectif atteint : Transformer le prototype fonctionnel en une application robuste, intuitive et agréable à utiliser.
+
+    Réalisations clés :
+
+        Refactorisation complète du renderer.js en une architecture modulaire et maintenable.
+
+        Correction de tous les bugs critiques de sauvegarde, chargement et réinitialisation.
+
+        Implémentation d'un design adaptatif complet (formulaire, onglets, tableaux).
+
+        Amélioration significative de l'expérience utilisateur (boutons sticky, indicateurs de scroll, contraste des thèmes, gestion de la modale).
+
+        Mise en place d'un système de réorganisation des sauvegardes par glisser-déposer.
+
+Phase 3 (À venir) : Fiabilisation et Interactivité du Moteur de Calcul
+
+    Objectif : Rendre les simulations encore plus précises et donner à l'utilisateur le contrôle sur les variables clés de l'optimisation. C'est le cœur de la valeur ajoutée de l'outil.
+
+    Tâches :
+
+        (Priorité #1) Slider Rémunération / Dividendes : Remplacer le calcul fixe actuel par un slider interactif pour la SASU et l'EURL. L'utilisateur pourra ajuster la répartition et voir en temps réel l'impact sur son "net dans la poche".
+
+        Gestion de l'ACRE : Ajouter une simple case à cocher "Bénéficiaire de l'ACRE" qui appliquera les taux de cotisations réduits de la première année.
+
+        Règle Spécifique des Dividendes en EURL : Implémenter la règle des 10% du capital social. Cela nécessitera d'ajouter un champ "Capital Social" (uniquement visible pour l'EURL) et de rendre la comparaison SASU/EURL parfaitement fidèle à la réalité.
+
+Phase 4 (Future) : Fonctions de Confort et d'Analyse
+
+    Objectif : Ajouter des fonctionnalités qui aident l'utilisateur à analyser les résultats et à les conserver.
+
+    Tâches :
+
+        Calcul des Trimestres de Retraite : Afficher un indicateur simple (ex: "4/4 trimestres validés") pour chaque statut, basé sur le revenu généré.
+
+        Export des Résultats : Ajouter un bouton pour exporter le tableau comparatif au format CSV ou PDF simple, pour un archivage ou un partage facile avec un comptable.
+
+Phase 5 (Finale) : Packaging et Distribution
+
+    Objectif : Préparer l'application pour une distribution publique.
+
+    Tâches :
+
+        Polissage Final : Derniers ajustements de l'interface, vérification des textes et des infobulles.
+
+        Tests Multi-plateformes : S'assurer que l'application se comporte bien sur Windows, macOS et Linux.
+
+        Packaging de l'Application : Utiliser Electron Builder pour créer les installateurs (.exe, .dmg, etc.).
+
+        Mise en Open Source : Nettoyer le dépôt Git, rédiger un README.md complet, ajouter une licence et des instructions de contribution (CONTRIBUTING.md).
