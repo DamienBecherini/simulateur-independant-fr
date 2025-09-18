@@ -8,7 +8,8 @@ export const saveCurrentUIState = () => {
   const formInputs = {
     partsFiscales: parseFloat(DOM.form["parts-fiscales"].value) || 1,
     salaireNet: parseFloat(DOM.form["salaire-net"].value) || 0,
-    caServices: parseFloat(DOM.form["ca-services"].value) || 0,
+    caServicesBic: parseFloat(DOM.form["ca-services-bic"].value) || 0,
+    caServicesBnc: parseFloat(DOM.form["ca-services-bnc"].value) || 0,
     caVente: parseFloat(DOM.form["ca-vente"].value) || 0,
     chargesDeductibles: parseFloat(DOM.form["charges-deductibles"].value) || 0
   }
@@ -32,7 +33,10 @@ export async function initializeAppUI() {
   // Remplissage du formulaire
   DOM.form["parts-fiscales"].value = formInputs.partsFiscales || 1
   DOM.form["salaire-net"].value = formInputs.salaireNet || 0
-  DOM.form["ca-services"].value = formInputs.caServices || 0
+  // On gère les deux nouveaux champs. On utilise l'ancien "caServices" pour la rétrocompatibilité
+  // si un ancien état est chargé, en l'assignant au champ BNC.
+  DOM.form["ca-services-bic"].value = formInputs.caServicesBic || 0
+  DOM.form["ca-services-bnc"].value = formInputs.caServicesBnc || formInputs.caServices || 0
   DOM.form["ca-vente"].value = formInputs.caVente || 0
   DOM.form["charges-deductibles"].value = formInputs.chargesDeductibles || 0
   DOM.configNameInput.value = savedUIState.configName || "Ma Simulation"

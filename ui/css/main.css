@@ -81,6 +81,16 @@ body.dark-mode .error-box {
   margin-top: 0;
   color: var(--primary-color);
 }
+.placeholder-text .legal-disclaimer {
+  max-width: 900px;
+  margin: 2em auto;
+  padding: 1em 2em 0 2em;
+  text-align: center;
+  font-size: 0.8em;
+  color: var(--text-color);
+  opacity: 0.7;
+  border-top: 1px solid var(--border-color);
+}
 
 .form-grid {
   display: grid;
@@ -460,6 +470,30 @@ body:not(.dark-mode) .theme-toggle-label .sun {
   padding: 1em;
   background-color: var(--header-bg-color);
   border-left: 4px solid var(--primary-color);
+}
+
+.confirmation-dialog {
+  max-width: 450px;
+  padding: 2em;
+  text-align: center;
+}
+.confirmation-dialog h3 {
+  margin-top: 0;
+  color: var(--primary-color);
+}
+
+.confirmation-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1em;
+  margin-top: 2em;
+}
+.confirmation-actions button {
+  padding: 0.8em 1.5em;
+  font-size: 1em;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
 }
 
 .tabs-container {

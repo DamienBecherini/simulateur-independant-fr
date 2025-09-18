@@ -10,15 +10,35 @@ import { displayStatusDetailView, generateWarningContentHTML, attachTooltips } f
 import { manageScrollShadowsWithObserver } from "./utils/scrollManager.js"
 
 // Helper pour collecter les données du formulaire
-const collectInputs = () => ({
-  partsFiscales: parseFloat(DOM.form["parts-fiscales"].value) || 1,
-  autresRevenusImposablesFoyer: parseFloat(DOM.form["salaire-net"].value) || 0,
-  ca_services: parseFloat(DOM.form["ca-services"].value) || 0,
-  ca_vente: parseFloat(DOM.form["ca-vente"].value) || 0,
-  chargesDeductibles: parseFloat(DOM.form["charges-deductibles"].value) || 0,
-  chiffreAffaires: (parseFloat(DOM.form["ca-services"].value) || 0) + (parseFloat(DOM.form["ca-vente"].value) || 0),
-  remunerationNetteVisee: ((parseFloat(DOM.form["ca-services"].value) || 0) + (parseFloat(DOM.form["ca-vente"].value) || 0) - (parseFloat(DOM.form["charges-deductibles"].value) || 0)) * 0.5
-})
+const collectInputs = () => {
+  // DÉBUT DE L'AJOUT : Récupérer les nouveaux CA
+  const ca_services_bic = parseFloat(DOM.form["ca-services-bic"].value) || 0
+  const ca_services_bnc = parseFloat(DOM.form["ca-services-bnc"].value) || 0
+  const ca_vente = parseFloat(DOM.form["ca-vente"].value) || 0
+  // FIN DE L'AJOUT
+
+  return {
+    partsFiscales: parseFloat(DOM.form["parts-fiscales"].value) || 1,
+    autresRevenusImposablesFoyer: parseFloat(DOM.form["salaire-net"].value) || 0,
+
+    // DÉBUT DE LA MODIFICATION : Utiliser les nouvelles variables
+    ca_services_bic: ca_services_bic,
+    ca_services_bnc: ca_services_bnc,
+    ca_vente: ca_vente,
+    // FIN DE LA MODIFICATION
+
+    chargesDeductibles: parseFloat(DOM.form["charges-deductibles"].value) || 0,
+
+    // IMPORTANT : On garde ces totaux pour les autres simulations (EI, SASU...) qui n'ont pas besoin de ce détail
+    chiffreAffaires: ca_vente + ca_services_bic + ca_services_bnc,
+    ca_services: ca_services_bic + ca_services_bnc, // Total des services
+
+    remunerationNetteVisee: (ca_vente + ca_services_bic + ca_services_bnc - (parseFloat(DOM.form["charges-deductibles"].value) || 0)) * 0.5,
+    capitalSocial: parseFloat(DOM.form["capital-social"].value) || 0,
+    beneficieACRE: document.getElementById("acre-checkbox").checked,
+    opteVFL: document.getElementById("vfl-checkbox").checked
+  }
+}
 
 export function setupEventListeners() {
   window.lastSimulationData = {}

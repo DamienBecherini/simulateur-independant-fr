@@ -46,6 +46,13 @@
                         </svg>
                         Charger
                     </button>
+                    <button id="import-config-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                            <path fill="currentColor"
+                                d="M9 16V4.825L7.4 6.4L6 5l6-6l6 6l-1.4 1.4L15 4.825V16zm-5 4q-.825 0-1.412-.587T2 18v-3h2v3h16v-3h2v3q0 .825-.587 1.413T20 20z" />
+                        </svg>
+                        Importer
+                    </button>
                     <button id="reset-config-btn" class="btn-danger">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
                             <path fill="currentColor"
@@ -112,8 +119,12 @@
                     <input type="number" id="salaire-net" value="0" step="100">
                 </div>
                 <div class="form-group">
-                    <label for="ca-services">Chiffre d'Affaires - Services (Annuel)</label>
-                    <input type="number" id="ca-services" value="50000" step="1000" required>
+                    <label for="ca-services-bic">CA Services Artisanaux/Commerciaux (BIC)</label>
+                    <input type="number" id="ca-services-bic" value="0" step="1000">
+                </div>
+                <div class="form-group">
+                    <label for="ca-services-bnc">CA Services Libéraux (BNC)</label>
+                    <input type="number" id="ca-services-bnc" value="50000" step="1000">
                 </div>
                 <div class="form-group">
                     <label for="ca-vente">Chiffre d'Affaires - Vente (Annuel)</label>
@@ -123,6 +134,21 @@
                     <label for="charges-deductibles">Charges Professionnelles (Annuel)</label>
                     <input type="number" id="charges-deductibles" value="5000" step="100">
                 </div>
+                <div class="form-group">
+                    <label for="capital-social">Capital Social de la société</label>
+                    <input type="number" id="capital-social" value="1000" step="100">
+                </div>
+                <div class="form-group options-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="acre-checkbox">
+                        <label for="acre-checkbox">Bénéficiaire de l'ACRE (1ère année)</label>
+                    </div>
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="vfl-checkbox">
+                        <label for="vfl-checkbox">Opter pour le Versement Libératoire (VFL)</label>
+                    </div>
+                </div>
+
                 <button type="submit">Lancer la Simulation</button>
             </div>
         </form>
@@ -172,6 +198,26 @@
 
     <!-- ========= Scripts ========= -->
     <script type="module" src="./renderer.js"></script>
+
+    <div id="confirmation-modal" class="modal-overlay">
+        <div class="modal-content confirmation-dialog">
+            <h3 id="confirmation-title"></h3>
+            <p id="confirmation-message"></p>
+            <div class="confirmation-actions">
+                <button id="confirm-btn" class="btn-danger">Confirmer</button>
+                <button id="cancel-btn" class="btn-secondary">Annuler</button>
+            </div>
+        </div>
+    </div>
+    <footer class="legal-disclaimer">
+        <p>
+            Ce simulateur fournit des estimations à but purement pédagogique. Les calculs sont basés sur des
+            approximations
+            et ne remplacent en aucun cas les conseils d'un professionnel (expert-comptable, avocat fiscaliste). Les
+            taux et
+            barèmes sont ceux configurés pour l'année 2025.
+        </p>
+    </footer>
 </body>
 
 </html>

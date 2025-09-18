@@ -15,15 +15,15 @@ function getDefaultState() {
       formInputs: {
         partsFiscales: 1,
         salaireNet: 0,
-        caServices: 50000,
+        caServicesBic: 0,
+        caServicesBnc: 50000,
         caVente: 0,
         chargesDeductibles: 5000
       },
       activeTab: "tab-comparator",
       theme: "light",
       configName: "Ma Simulation",
-      // NOUVEAU : On ajoute un tableau pour mémoriser l'ordre des sauvegardes
-      backupOrder: []
+      backupOrder: [] // tableau pour mémoriser l'ordre des sauvegardes
     }
   }
 }

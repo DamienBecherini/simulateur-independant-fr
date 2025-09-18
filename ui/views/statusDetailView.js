@@ -78,6 +78,34 @@ function renderSocieteTable(res) {
     </div>`
 }
 
+function renderEURLTable(res) {
+  const beneficeAvantIS = res.chiffreAffaires - res.chargesReelles - (res.remuneration?.coutTotal || 0)
+
+  return `
+    <div class="table-container">
+      <table class="details-summary-table">
+          <thead><tr><th colspan="2">Parcours de l'argent : de l'entreprise à votre poche (EURL)</th></tr></thead>
+          <tbody>
+              <tr class="section-header"><td colspan="2">1. Au niveau de la Société</td></tr>
+              <tr><td>Chiffre d'Affaires</td><td>${formatCurrency(res.chiffreAffaires)}</td></tr>
+              <tr><td>(-) Charges Professionnelles</td><td>${formatCurrency(-res.chargesReelles)}</td></tr>
+              <tr><td>(-) Coût total de la rémunération</td><td>${formatCurrency(-res.remuneration.coutTotal)}</td></tr>
+              <tr><td><strong>= Bénéfice avant Impôt Société</strong></td><td><strong>${formatCurrency(beneficeAvantIS)}</strong></td></tr>
+              <tr><td>(-) Impôt sur les Sociétés (IS)</td><td>${formatCurrency(-res.impotSocietes)}</td></tr>
+              <tr><td><strong>= Argent distribuable en dividendes (Bruts)</strong></td><td><strong>${formatCurrency(res.dividendes.bruts)}</strong></td></tr>
+
+              <tr class="section-header"><td colspan="2">2. Au niveau du Gérant</td></tr>
+              <tr><td>(+) Rémunération Nette (avant IR)</td><td>${formatCurrency(res.remuneration.net)}</td></tr>
+              <tr><td>(+) Dividendes Nets (après cotisations et fiscalité)</td><td>${formatCurrency(res.dividendes.nets)}</td></tr>
+              <tr><td>(-) Surcoût d'Impôt sur le Revenu (sur Rémunération + part des dividendes imposables)</td><td>${formatCurrency(-res.surcoutIR)}</td></tr>
+
+              <tr class="section-header"><td colspan="2">3. Résultat Final</td></tr>
+              <tr class="final-result"><td><strong>= Net dans la poche total</strong></td><td><strong>${formatCurrency(res.netDansLaPoche)}</strong></td></tr>
+          </tbody>
+      </table>
+    </div>`
+}
+
 // --- Fonction d'initialisation (inchangée) ---
 
 export async function initializeStatusTabs(content, panes) {
@@ -113,14 +141,16 @@ export function displayStatusDetailView(res, container, config) {
 
   switch (res.statut) {
     case "Micro-Entreprise":
-      summaryTableHTML = renderMicroTable(res, config) // On passe config
+      summaryTableHTML = renderMicroTable(res, config)
       break
     case "EI (Régime Réel)":
       summaryTableHTML = renderEITable(res)
       break
-    case "SASU (IS)":
-    case "EURL (IS)":
+    case "SASU (IS)": // Appelle toujours l'ancienne fonction
       summaryTableHTML = renderSocieteTable(res)
+      break
+    case "EURL (IS)": // Appelle la NOUVELLE fonction dédiée
+      summaryTableHTML = renderEURLTable(res)
       break
   }
 

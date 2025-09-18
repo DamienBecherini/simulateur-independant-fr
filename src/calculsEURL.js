@@ -3,14 +3,12 @@ const config = require("../config.json")
 const { calculerIR } = require("./calculsIR.js")
 
 function simulerEURL(inputs) {
-  const { chiffreAffaires = 0, chargesDeductibles = 0, remunerationNetteVisee = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1 } = inputs
+  // AJOUT : capitalSocial est maintenant requis pour les calculs
+  const { chiffreAffaires = 0, chargesDeductibles = 0, remunerationNetteVisee = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1, capitalSocial = 0 } = inputs
 
-  // --- Rémunération (TNS) ---
-  const cotisationsSocialesApprox = remunerationNetteVisee * config.EURL.cotisations_tns.taux_approx_sur_remuneration
-  const remuBruteApprox = remunerationNetteVisee // En TNS, Net ≈ Brut (simplification)
-  const coutTotalRemuneration = remunerationNetteVisee + cotisationsSocialesApprox
-
-  // --- IS (identique SASU) ---
+  // --- Calcul Rémunération et IS (inchangé) ---
+  const cotisationsSocialesRemu = remunerationNetteVisee * config.EURL.cotisations_tns.taux_approx_sur_remuneration
+  const coutTotalRemuneration = remunerationNetteVisee + cotisationsSocialesRemu
   const beneficeAvantIS = chiffreAffaires - chargesDeductibles - coutTotalRemuneration
   let impotSocietes = 0
   if (beneficeAvantIS > 0) {
@@ -19,42 +17,65 @@ function simulerEURL(inputs) {
     impotSocietes = beneficePartTauxReduit * config.SASU.IS.taux_reduit + beneficePartTauxNormal * config.SASU.IS.taux_normal
   }
   const beneficeApresIS = beneficeAvantIS > 0 ? beneficeAvantIS - impotSocietes : 0
-
-  // --- Dividendes (identique SASU pour la simulation) ---
   const dividendesBruts = beneficeApresIS
-  const prelevementsSociauxDividendes = dividendesBruts * config.SASU.dividendes.pru_taux_ps
-  const impotDividendesPFU = dividendesBruts * config.SASU.dividendes.pru_taux_ir
-  const coutTotalDividendesPFU = prelevementsSociauxDividendes + impotDividendesPFU
-  const dividendesNetsPFU = dividendesBruts - coutTotalDividendesPFU
-  const dividendesImposablesBareme = dividendesBruts * 0.6
-  const revenuGlobalBareme = remunerationNetteVisee + autresRevenusImposablesFoyer + dividendesImposablesBareme
-  const irTotalOptionBareme = calculerIR({ revenuNetGlobalImposable: revenuGlobalBareme, partsFiscales })
-  const irSansDividendes = calculerIR({ revenuNetGlobalImposable: remunerationNetteVisee + autresRevenusImposablesFoyer, partsFiscales })
-  const surcoutIRDividendesBareme = irTotalOptionBareme - irSansDividendes
-  const coutTotalDividendesBareme = prelevementsSociauxDividendes + surcoutIRDividendesBareme
-  const dividendesNetsBareme = dividendesBruts - coutTotalDividendesBareme
 
-  // --- IR sur la rémunération (identique SASU) ---
-  const revenuImposableRemu = remunerationNetteVisee
-  const irTotalRemu = calculerIR({ revenuNetGlobalImposable: revenuImposableRemu + autresRevenusImposablesFoyer, partsFiscales })
+  // --- DÉBUT DE LA NOUVELLE LOGIQUE POUR LES DIVIDENDES EURL ---
+  const seuilDividendesSoumisPS = capitalSocial * 0.1
+
+  // On sépare les dividendes en deux parts
+  const partDividendesPourPS = Math.min(dividendesBruts, seuilDividendesSoumisPS)
+  const partDividendesPourTNS = dividendesBruts - partDividendesPourPS
+
+  // On calcule les cotisations sur la part excédentaire
+  const cotisationsTNSsurDividendes = partDividendesPourTNS * config.EURL.cotisations_tns.taux_approx_sur_remuneration
+
+  // La part TNS des dividendes est traitée comme un revenu, donc elle sera ajoutée au revenu imposable.
+  const dividendesNetsPartTNS = partDividendesPourTNS - cotisationsTNSsurDividendes
+
+  // L'autre part est soumise à la fiscalité classique des dividendes (PFU ou barème)
+  const prelevementsSociaux = partDividendesPourPS * config.SASU.dividendes.pru_taux_ps
+
+  // Option 1 : PFU (Flat Tax) sur la part non-TNS
+  const impotDividendesPFU = partDividendesPourPS * config.SASU.dividendes.pru_taux_ir
+  const dividendesNetsPartPS_PFU = partDividendesPourPS - prelevementsSociaux - impotDividendesPFU
+
+  // Option 2 : Barème sur la part non-TNS
+  const dividendesImposablesBareme = partDividendesPourPS * 0.6 // Abattement 40%
+
+  // Le revenu imposable total inclut : la rémunération, les revenus du foyer, ET la part des dividendes soumise aux TNS
+  const revenuImposableBase = remunerationNetteVisee + autresRevenusImposablesFoyer + dividendesNetsPartTNS
+
+  const irTotalOptionBareme = calculerIR({ revenuNetGlobalImposable: revenuImposableBase + dividendesImposablesBareme, partsFiscales })
+  const irSansDividendesPartPS = calculerIR({ revenuNetGlobalImposable: revenuImposableBase, partsFiscales })
+
+  const surcoutIRDividendesBareme = irTotalOptionBareme - irSansDividendesPartPS
+  const dividendesNetsPartPS_Bareme = partDividendesPourPS - prelevementsSociaux - surcoutIRDividendesBareme
+
+  // On choisit la meilleure option pour la part soumise aux PS
+  const meilleureOptionDividendesPartPS = Math.max(dividendesNetsPartPS_PFU, dividendesNetsPartPS_Bareme)
+
+  // Le revenu total net des dividendes est la somme des deux parts nettes
+  const dividendesNetsTotal = dividendesNetsPartTNS + meilleureOptionDividendesPartPS
+  // --- FIN DE LA NOUVELLE LOGIQUE ---
+
+  // --- Calcul de l'IR sur la rémunération (maintenant il doit aussi inclure la part TNS des dividendes) ---
+  const revenuImposableTotalActivite = remunerationNetteVisee + dividendesNetsPartTNS
+
+  const irTotalRemuEtDivTNS = calculerIR({ revenuNetGlobalImposable: revenuImposableTotalActivite + autresRevenusImposablesFoyer, partsFiscales })
   const irSansActivite = calculerIR({ revenuNetGlobalImposable: autresRevenusImposablesFoyer, partsFiscales })
-  const surcoutIRRemu = irTotalRemu - irSansActivite
+  const surcoutIRRemu = irTotalRemuEtDivTNS - irSansActivite
 
-  // --- TVA ---
-  const { ca_services = 0, ca_vente = 0 } = inputs
-  const totalCA = ca_services + ca_vente
+  // Le net dans la poche est la rémunération nette + les dividendes nets totaux - le surcoût d'IR global
+  const netDansLaPoche = remunerationNetteVisee + dividendesNetsTotal - surcoutIRRemu
+
+  // --- TVA (inchangé) ---
+  const { ca_services = 0 } = inputs
   let statutTVA = "En franchise"
-  const seuilsVente = config.TVA.vente
-  const seuilsServices = config.TVA.services
-
-  if (totalCA > seuilsVente.seuil_majore || ca_services > seuilsServices.seuil_majore) {
+  if (chiffreAffaires > config.TVA.vente.seuil_majore || ca_services > config.TVA.services.seuil_majore) {
     statutTVA = "Assujetti (dépassement seuil majoré)"
-  } else if (totalCA > seuilsVente.franchise_base || ca_services > seuilsServices.franchise_base) {
+  } else if (chiffreAffaires > config.TVA.vente.franchise_base || ca_services > config.TVA.services.franchise_base) {
     statutTVA = "Seuil de base dépassé / Tolérance"
   }
-
-  const meilleureOptionDividendes = Math.max(dividendesNetsPFU, dividendesNetsBareme)
-  const netDansLaPoche = remunerationNetteVisee + meilleureOptionDividendes - surcoutIRRemu
 
   return {
     statut: "EURL (IS)",
@@ -62,18 +83,15 @@ function simulerEURL(inputs) {
     chargesReelles: chargesDeductibles,
     remuneration: {
       net: remunerationNetteVisee,
-      brut: remuBruteApprox,
-      chargesSalariales: 0, // Pas de charges salariales en TNS
-      chargesPatronales: cotisationsSocialesApprox,
       coutTotal: coutTotalRemuneration
     },
     impotSocietes: Math.round(impotSocietes),
     dividendes: {
+      // Structure simplifiée car le détail PFU/Barème devient trop complexe à afficher simplement
       bruts: dividendesBruts,
-      pfu: { net: Math.round(dividendesNetsPFU), cout: Math.round(coutTotalDividendesPFU) },
-      bareme: { net: Math.round(dividendesNetsBareme), cout: Math.round(coutTotalDividendesBareme) }
+      nets: Math.round(dividendesNetsTotal)
     },
-    revenuImposable: revenuImposableRemu,
+    revenuImposable: Math.round(revenuImposableTotalActivite), // Revenu imposable = Rémunération + part TNS des dividendes
     surcoutIR: Math.round(surcoutIRRemu),
     netDansLaPoche: Math.round(netDansLaPoche),
     statutTVA: statutTVA

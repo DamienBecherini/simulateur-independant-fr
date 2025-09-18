@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld("api", {
   deleteBackup: name => ipcRenderer.invoke("delete-backup", name),
   loadBackup: name => ipcRenderer.invoke("load-backup", name),
   exportBackup: name => ipcRenderer.invoke("export-backup", name),
+  importBackup: () => ipcRenderer.invoke("import-backup"),
   resetToFactory: () => ipcRenderer.invoke("reset-to-factory"),
 
   // NOUVEAU : Fonction pour sauvegarder le nouvel ordre

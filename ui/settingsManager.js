@@ -2,6 +2,7 @@
 import * as DOM from "./domElements.js"
 import { showToast } from "./toast.js"
 import { formatDate } from "./utils/formatters.js"
+import { showConfirmation } from "./confirmationModal.js"
 
 // Fonction utilitaire pour le drag-and-drop
 const getDragAfterElement = (container, y) => {
@@ -94,8 +95,20 @@ export function initializeSettingsMenu() {
     }
   })
 
-  DOM.resetConfigBtn.addEventListener("click", () => {
-    if (confirm("Êtes-vous sûr de vouloir réinitialiser la configuration ? Cette action est irréversible.")) {
+  const importBtn = document.getElementById("import-config-btn")
+  importBtn.addEventListener("click", async () => {
+    const result = await window.api.importBackup()
+    if (result.success) {
+      // Le rechargement est géré par main.js, pas besoin d'afficher de toast ici.
+    } else if (!result.canceled) {
+      showToast(`Erreur d'importation : ${result.error}`, "error")
+    }
+  })
+
+  // MODIFIÉ : On utilise notre nouvelle modale pour la réinitialisation
+  DOM.resetConfigBtn.addEventListener("click", async () => {
+    const confirmed = await showConfirmation("Réinitialiser la configuration", "Toutes vos données et sauvegardes seront perdues. Cette action est irréversible. Êtes-vous sûr de vouloir continuer ?")
+    if (confirmed) {
       window.api.resetToFactory()
     }
   })

@@ -106,7 +106,34 @@ const exportBackup = async (backupName, browserWindow) => {
   }
 }
 
-// --- CORRECTION POUR LE BUG #2 ---
+const importBackup = async browserWindow => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog(browserWindow, {
+      title: "Importer une configuration",
+      filters: [{ name: "JSON Files", extensions: ["json"] }],
+      properties: ["openFile"]
+    })
+
+    if (canceled || filePaths.length === 0) {
+      return { success: false, canceled: true }
+    }
+
+    const filePath = filePaths[0]
+    const fileContent = fs.readFileSync(filePath, "utf-8")
+
+    // Validation simple pour s'assurer que c'est bien un fichier de config
+    JSON.parse(fileContent) // Lève une erreur si ce n'est pas du JSON valide
+
+    // On remplace le fichier d'état actuel par le fichier importé
+    fs.writeFileSync(stateFilePath, fileContent, "utf-8")
+
+    return { success: true }
+  } catch (error) {
+    console.error("Impossible d'importer la sauvegarde :", error)
+    return { success: false, error: error.message }
+  }
+}
+
 // On retire le paramètre "stateManager" qui était inutile et causait le crash.
 // La fonction utilisera maintenant le module "stateManager" importé en haut du fichier.
 const resetToFactory = () => {
@@ -127,5 +154,6 @@ module.exports = {
   deleteBackup,
   loadBackup,
   exportBackup,
+  importBackup,
   resetToFactory
 }

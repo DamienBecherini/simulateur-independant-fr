@@ -100,6 +100,15 @@ app.whenReady().then(() => {
   ipcMain.handle("delete-backup", (event, backupName) => backupManager.deleteBackup(backupName))
   ipcMain.handle("export-backup", (event, backupName) => backupManager.exportBackup(backupName, mainWindow))
 
+  ipcMain.handle("import-backup", async () => {
+    const result = await backupManager.importBackup(mainWindow)
+    if (result.success) {
+      stateManager.reloadStateFromDisk()
+      mainWindow.webContents.reload()
+    }
+    return result
+  })
+
   // NOUVEAU : Gestionnaire pour sauvegarder l'ordre des backups
   ipcMain.handle("save-backup-order", (event, newOrder) => {
     const currentState = stateManager.getState()

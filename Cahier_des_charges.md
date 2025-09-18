@@ -74,155 +74,244 @@
 
 ---
 
-## **Partie II : Propositions d'Améliorations**
+# **Cahier des Charges & Roadmap Stratégique v5.0**
 
-Voici une liste d'évolutions possibles, classées par ordre de pertinence à mon avis. C'est sur cette base que nous allons construire la future roadmap.
-
-**Axe 1 : Affiner la Précision et les Cas d'Usage**
-
-1.  **Gestion de l'ACRE :** Ajouter une simple case à cocher "Bénéficiaire de l'ACRE" qui divise les taux de cotisations la première année. C'est une fonctionnalité à très haute valeur pour les créateurs.
-2.  **Règle Spécifique des Dividendes en EURL :** Actuellement, nous simplifions. La vraie règle est que les dividendes supérieurs à 10% du capital social sont soumis aux cotisations sociales TNS (~45%). L'implémenter ajouterait un champ "Capital Social" et rendrait la comparaison EURL/SASU beaucoup plus fidèle.
-3.  **Calcul (Simplifié) des Trimestres de Retraite :** Afficher pour chaque statut si le revenu généré permet de valider les 4 trimestres de retraite pour l'année. C'est un indicateur non-financier très important.
-
-**Axe 2 : Améliorer l'Ergonomie et l'Interaction**
-
-4.  **Slider Rémunération / Dividendes :** Remplacer notre règle arbitraire (50% du CA) par un slider interactif pour la SASU/EURL. L'utilisateur pourrait ainsi faire varier la répartition et voir en temps réel l'impact sur le "Net dans la poche", ce qui est le cœur de l'optimisation.
-5.  **Info-bulles Pédagogiques :** Ajouter des petites icônes `?` à côté des termes techniques (ACRE, Flat Tax, TNS, BNC...) qui affichent une courte définition au survol.
-6.  **Saisie Mensuelle Détaillée :** Implémenter le second mode de saisie prévu dans la roadmap initiale, permettant de simuler des revenus fluctuants au cours de l'année.
-
-**Axe 3 : Ajouter des Fonctionnalités de Confort**
-
-7.  **Sauvegarde de Simulation :** Permettre à l'utilisateur de sauvegarder une ou plusieurs simulations (via le `localStorage`) pour les retrouver au prochain lancement.
-8.  **Export des Résultats :** Ajouter un bouton pour exporter le tableau de résultats en format simple (CSV ou PDF) pour pouvoir le partager avec un comptable ou l'archiver.
+- **Document de Référence : L'Assistant Complet de la Transition Professionnelle**
+- Date de dernière mise à jour : 17/09/2025
 
 ---
 
-## **Partie III : Discussion : Que Fait-on Maintenant ?**
+## **Partie I : État Actuel (v1.0 - Socle Existant)**
 
-Le projet est déjà très puissant. Pour la suite, je suggère de nous concentrer sur ce qui apporte le plus de valeur à l'utilisateur final pour un effort de développement raisonnable.
+_Cette section décrit le périmètre fonctionnel de l'application qui sert de base à toutes les évolutions futures._
 
-**Ce qui me semble prioritaire (finalisation de la Phase 2 de votre roadmap) :**
+### **1. Introduction et Objectifs**
 
-- **Le Slider Rémunération / Dividendes (n°4) :** C'est la fonctionnalité interactive la plus importante qui manque.
-- **La Gestion de l'ACRE (n°1) :** C'est un cas d'usage extrêmement courant pour la cible.
-- **Les Info-bulles (n°5) :** C'est un effort faible pour un gain pédagogique énorme.
-- **La Règle Spécifique EURL (n°2) :** Important pour la fiabilité de la comparaison.
+- **Nom du projet :** Simulateur Indépendant
+- **Mission :** Fournir un outil de simulation gratuit, open-source, et fonctionnant hors-ligne pour aider les travailleurs indépendants en France à prendre des décisions éclairées.
+- **Principes Clés :** Fiabilité, Confidentialité, Pédagogie, Maintenabilité.
 
-**Pour aller plus loin (Phase 3 et au-delà) :**
+### **2. Périmètre Fonctionnel Implémenté**
 
-- La Saisie Mensuelle (n°6), la Sauvegarde (n°7) et l'Export (n°8).
+- **F1 : Saisie des Données (Annuelle) :** Profil fiscal du foyer, CA (Services/Vente), Charges professionnelles.
+- **F2 : Moteur de Calcul (Base Annuelle) :**
+  - **Statuts :** Micro-Entreprise, EI au Réel, SASU (IS), EURL (IS).
+  - **Logiques Clés :** Cotisations, abattement, IS, double simulation (PFU/Barème) pour dividendes, détection des dépassements de plafonds annuels.
+  - **TVA :** Détermination du régime basé sur les seuils annuels.
+- **F3 : Restitution des Résultats :** Tableau comparatif, vues détaillées par statut, contenu pédagogique, modale d'avertissement.
+- **F4 : Interface et Expérience Utilisateur :** Application Electron, thème Sombre/Clair, système de sauvegarde/import/export.
 
-**Ma proposition :** concentrons-nous sur le premier bloc (Slider, ACRE, Info-bulles, Règle EURL). Cela nous donnera une version de l'application extrêmement complète et fidèle à votre vision initiale.
+---
 
-Quelles sont les améliorations qui vous semblent les plus pertinentes pour la prochaine étape ? Une fois que vous aurez fait votre choix, je pourrai rédiger la roadmap mise à jour.
+## **Partie II : Roadmap Stratégique (La Vision Future)**
 
-4. Proposition de Roadmap Mise à Jour
+_Cette roadmap transforme le simulateur d'un comparateur stratégique en un **assistant prévisionnel complet**. Chaque phase s'appuie sur la précédente pour livrer de la valeur de manière incrémentale._
 
-Maintenant que nous sommes d'accord sur la vision, voici une roadmap concrète pour y parvenir.
+### **Phase 3 : Fiabilisation et Confiance**
 
-#### Phase 2 (Finalisation) : Devenir un Outil Pédagogique
+**Objectif :** Rendre chaque calcul fourni par le simulateur absolument irréprochable. La confiance de l'utilisateur est le socle de tout.
 
-    Objectif : Implémenter le système d'onglets et le contenu pédagogique.
+**Fonctionnalités Clés :**
 
-    Tâches :
+1.  **Correction du Calcul des Dividendes en EURL :**
 
-        (Urgent) Débogage de la Modale : Appliquer le correctif ci-dessus.
+    - **Description :** Implémenter la règle spécifique où la part des dividendes supérieure à 10% du capital social est soumise aux cotisations sociales TNS (~45%) au lieu des prélèvements sociaux (17.2%).
+    - **Impact :** Corrige l'incohérence la plus critique du simulateur. La comparaison SASU/EURL deviendra enfin juste et fiable.
+    - **Dépendance Technique :** Ajout d'un champ "Capital Social" dans le formulaire de saisie.
 
-        Création du Contenu Pédagogique :
+2.  **Simulation du Versement Libératoire (VFL) :**
 
-            Créer un nouveau fichier (ex: src/guides.js) qui contiendra tout le texte explicatif (avantages, inconvénients, règles clés, formules) pour chaque statut. Le centraliser ici le rendra facile à mettre à jour.
+    - **Description :** Ajouter une case à cocher "Opter pour le VFL" pour la Micro-Entreprise. La case ne sera active que si les conditions de revenu (RFR N-2 par part) sont respectées.
+    - **Impact :** Ajoute une simulation à très haute valeur pour les indépendants qui débutent et s'interrogent sur ce choix fiscal majeur.
 
-        Refactorisation de l'Interface (HTML/SASS) :
+3.  **Gestion de l'ACRE :**
 
-            Modifier index.html pour créer la structure des onglets : un onglet "Comparatif", un "Micro-Entreprise", "EI", "SASU", "EURL".
+    - **Description :** Ajouter une case à cocher "Bénéficiaire de l'ACRE" qui applique les taux de cotisations réduits de la première année d'activité.
+    - **Impact :** Couvre un cas d'usage extrêmement fréquent et essentiel pour les créateurs d'entreprise.
 
-            Créer un nouveau composant SASS (_tabs.scss) pour styliser la navigation.
+4.  **Ajout d'un Avertissement Légal :**
+    - **Description :** Intégrer un disclaimer clair et visible (ex: en pied de page) précisant que l'outil fournit des estimations à but pédagogique et ne remplace pas un conseil professionnel (expert-comptable, etc.).
+    - **Impact :** Renforce le professionnalisme, la transparence et la crédibilité de l'application.
 
-        Refactorisation du renderer.js :
+### **Phase 4 : L'Analyse Visuelle et Stratégique**
 
-            Ajouter la logique pour gérer le changement d'onglet (afficher/cacher le bon contenu).
+**Objectif :** Transformer les chiffres bruts en un outil d'aide à la décision visuel et interactif, permettant à l'utilisateur de comprendre les stratégies d'optimisation.
 
-            Le formulaire de saisie restera visible en permanence en haut de la page.
+**Fonctionnalités Clés :**
 
-        Création de la Vue Détaillée dans display.js :
+1.  **Graphique d'Optimisation Rémunération/Dividendes :**
 
-            Créer une nouvelle fonction renderStatutDetailView(resultat, guideContent) qui prendra les résultats d'UNE seule simulation et le contenu pédagogique correspondant.
+    - **Description :** Pour SASU et EURL, créer un graphique interactif montrant l'évolution du "Net dans la poche" en fonction de la répartition Rémunération/Dividendes.
+    - **Impact :** Fournit la fonctionnalité "wow" la plus recherchée en matière d'optimisation fiscale, en matérialisant le point optimal de répartition.
 
-            Cette fonction générera le HTML pour un onglet de statut, affichant :
+2.  **Graphique Comparatif des Points de Bascule :**
 
-                Le tableau de résultats détaillé que nous avons déjà.
+    - **Description :** Développer un graphique qui trace une courbe de "Net dans la poche" pour chaque statut en fonction du Chiffre d'Affaires.
+    - **Impact :** Permet de visualiser immédiatement à partir de quel niveau de revenu un statut devient plus intéressant qu'un autre.
 
-                Les sections "Avantages", "Inconvénients", "Règles Clés" tirées de guides.js.
+3.  **Simulation EURL : IS vs. IR :**
+    - **Description :** Ajouter la possibilité de simuler l'EURL à l'Impôt sur le Revenu (IR), en plus de l'IS.
+    - **Impact :** Couvre un choix stratégique fondamental lors de la création d'une EURL, rendant le comparateur exhaustif.
 
-        Intégration des Info-bulles : En parallèle, nous ajouterons les icônes ? avec des définitions simples à côté des termes techniques.
+### **Phase 5 : La Simulation Dynamique et Mensualisée**
 
-#### Phase 3 : Améliorer l'Interaction et la Fiabilité
+**Objectif :** Implémenter la saisie mensuelle pour passer d'une projection annuelle à une simulation fine, reflétant la réalité opérationnelle fluctuante d'un indépendant (saisonnalité, revenus multiples).
 
-    Objectif : Rendre l'application plus interactive et les calculs encore plus précis.
+**Fonctionnalités Clés :**
 
-    Tâches :
+1.  **Refonte de l'Interface de Saisie :**
 
-        Slider Rémunération / Dividendes : Remplacer notre calcul fixe par un slider interactif. C'est la plus grosse plus-value de cette phase.
+    - **Description :** Créer une nouvelle interface de saisie mensuelle (ex: une grille sur 12 mois). L'utilisateur pourra y détailler pour chaque mois :
+      - **Gains :** Lignes multiples pour "Salaire", "CA BIC (vente)", "CA BIC (artisanat)", "CA BNC (libéral)", etc.
+      - **Dépenses Pro :** Lignes multiples pour "Déplacements", "Logiciels", "Repas", etc.
+    - **Ergonomie :** Intégrer un bouton **"Dupliquer ce mois"** pour propager facilement une saisie sur les mois suivants.
 
-        Gestion de l'ACRE : Ajouter la case à cocher "Bénéficiaire de l'ACRE".
+2.  **Évolution Majeure du Moteur de Calcul :**
 
-        Règle Spécifique des Dividendes en EURL : Ajouter un champ "Capital Social" et implémenter la règle des 10% pour une simulation parfaitement fidèle.
+    - **Description :** Adapter toutes les fonctions de simulation pour qu'elles acceptent un tableau de 12 mois de données en entrée. Le moteur devra agréger les données pour les calculs annuels tout en analysant la chronologie.
+    - **Impact :** Permet une précision inégalée, notamment pour la détection du **mois exact de dépassement des seuils** (TVA, Micro-Entreprise) et l'affichage d'alertes contextuelles.
 
-####Phase 4 : Finalisation et Distribution (inchangée)
+3.  **Simulation de Scénarios Avancés :**
+    - **Description :** Gérer nativement un **début d'activité en cours d'année** (ex: les premiers mois sont à zéro) et appliquer automatiquement les calculs de **prorata temporis** sur les plafonds et seuils.
 
-    Polissage, packaging, mise en Open Source, etc.
+### **Phase 6 : Simulation de la Transition avec Maintien des Droits (ARE)**
 
-## 2. Roadmap Mise à Jour (Post-Refactorisation)
+**Objectif :** Simuler le cumul des revenus d'indépendant avec l'Aide au Retour à l'Emploi (ARE), pour sécuriser financièrement la phase de lancement.
 
-Nous venons de terminer une phase intensive de stabilisation et d'amélioration de l'interface qui n'était pas initialement planifiée avec ce niveau de détail. Il est temps d'officialiser ces accomplissements et de tracer une nouvelle voie claire pour la suite.
-Phase 2 (Terminée) : Stabilisation & Modernisation de l'Interface
+**Fonctionnalités Clés :**
 
-    Objectif atteint : Transformer le prototype fonctionnel en une application robuste, intuitive et agréable à utiliser.
+1.  **Module de Calcul de l'ARE :**
 
-    Réalisations clés :
+    - **Description :** Créer une fonction qui estime le montant de l'ARE mensuelle à partir du salaire brut moyen des 24 derniers mois.
+    - **Dépendance Technique :** Nécessite une nouvelle section dans l'interface de saisie (mensualisée) pour renseigner l'ancien salaire brut.
 
-        Refactorisation complète du renderer.js en une architecture modulaire et maintenable.
+2.  **Simulation du Maintien Partiel des Droits :**
 
-        Correction de tous les bugs critiques de sauvegarde, chargement et réinitialisation.
+    - **Description :** Le moteur de calcul appliquera, pour chaque mois de la simulation, les règles de cumul ARE + revenus d'indépendant, en distinguant :
+      - Le calcul pour la **Micro-Entreprise** (basé sur le CA après abattement).
+      - Le calcul pour les **Sociétés** (basé uniquement sur la rémunération versée, ignorant les dividendes).
+    - **Impact :** Révèle des stratégies d'optimisation majeures pour les créateurs d'entreprise en transition (ex: 0€ de rémunération en SASU pour maintenir 100% de l'ARE).
 
-        Implémentation d'un design adaptatif complet (formulaire, onglets, tableaux).
+3.  **Restitution Consolidée :**
+    - **Description :** Le résultat final "Net dans la poche" affichera la somme du revenu net de l'activité ET de l'ARE recalculée, offrant une vision complète et réaliste de la trésorerie personnelle.
 
-        Amélioration significative de l'expérience utilisateur (boutons sticky, indicateurs de scroll, contraste des thèmes, gestion de la modale).
+### **Phase 7 : Confort et Partage**
 
-        Mise en place d'un système de réorganisation des sauvegardes par glisser-déposer.
+**Objectif :** Peaufiner l'expérience utilisateur, faciliter la prise en main pour les débutants et permettre l'utilisation concrète des résultats.
 
-Phase 3 (À venir) : Fiabilisation et Interactivité du Moteur de Calcul
+**Fonctionnalités Clés :**
 
-    Objectif : Rendre les simulations encore plus précises et donner à l'utilisateur le contrôle sur les variables clés de l'optimisation. C'est le cœur de la valeur ajoutée de l'outil.
+1.  **Ajout de Profils-Types :**
 
-    Tâches :
+    - **Description :** Créer des boutons "Pré-remplir pour..." (ex: Développeur Web, Consultant) qui remplissent la simulation (annuelle ou mensuelle) avec des données moyennes.
+    - **Impact :** Réduit drastiquement la friction pour les nouveaux utilisateurs.
 
-        (Priorité #1) Slider Rémunération / Dividendes : Remplacer le calcul fixe actuel par un slider interactif pour la SASU et l'EURL. L'utilisateur pourra ajuster la répartition et voir en temps réel l'impact sur son "net dans la poche".
+2.  **Calcul des Trimestres de Retraite :**
 
-        Gestion de l'ACRE : Ajouter une simple case à cocher "Bénéficiaire de l'ACRE" qui appliquera les taux de cotisations réduits de la première année.
+    - **Description :** Afficher un indicateur simple (ex: "4/4 trimestres validés") pour chaque statut, basé sur le revenu généré.
+    - **Impact :** Ajoute une dimension non-financière importante à la décision.
 
-        Règle Spécifique des Dividendes en EURL : Implémenter la règle des 10% du capital social. Cela nécessitera d'ajouter un champ "Capital Social" (uniquement visible pour l'EURL) et de rendre la comparaison SASU/EURL parfaitement fidèle à la réalité.
+3.  **Export des Résultats et Graphiques :**
+    - **Description :** Permettre l'export des tableaux (CSV/PDF) et des graphiques (PNG).
+    - **Impact :** Permet à l'utilisateur de conserver, partager ou discuter des résultats avec son comptable.
 
-Phase 4 (Future) : Fonctions de Confort et d'Analyse
+### **Phase 8 : Lancement et Distribution Open Source**
 
-    Objectif : Ajouter des fonctionnalités qui aident l'utilisateur à analyser les résultats et à les conserver.
+**Objectif :** Préparer une distribution publique de haute qualité et faire de la nature open-source du projet un argument de confiance et de collaboration.
 
-    Tâches :
+**Fonctionnalités Clés :**
 
-        Calcul des Trimestres de Retraite : Afficher un indicateur simple (ex: "4/4 trimestres validés") pour chaque statut, basé sur le revenu généré.
+1.  **Polissage Final & Tests Multi-plateformes.**
+2.  **Packaging de l'Application** (via Electron Builder pour .exe, .dmg, etc.).
+3.  **Mise en Open Source Stratégique :**
+    - **Description :** Rédiger un `README.md` très complet, expliquer la mission du projet, ajouter une licence et un guide de contribution (`CONTRIBUTING.md`).
+    - **Impact :** Utiliser la transparence comme un argument marketing majeur pour bâtir une communauté et renforcer la confiance.
 
-        Export des Résultats : Ajouter un bouton pour exporter le tableau comparatif au format CSV ou PDF simple, pour un archivage ou un partage facile avec un comptable.
+### **Phase 9 : Vision Long Terme - Simulation de Cumul d'Activités**
 
-Phase 5 (Finale) : Packaging et Distribution
+**Objectif :** Devenir le seul outil capable de simuler des montages juridiques hybrides, répondant aux cas d'usage les plus avancés des entrepreneurs multi-activités (ex: une Micro-Entreprise pour une activité B2C + une SASU pour une activité B2B).
 
-    Objectif : Préparer l'application pour une distribution publique.
+**Fonctionnalités Clés :**
 
-    Tâches :
+1.  **Mode de Simulation "Cumul d'Activités" :**
+    - **Description :** Ajouter un choix à l'utilisateur : "Simuler une activité unique" (comportement par défaut) ou "Simuler un cumul d'activités".
+2.  **Interface de Saisie Multi-Activités :**
+    - **Description :** Développer une interface dédiée permettant d'isoler les revenus et charges de chaque activité et d'assigner un statut à chacune.
+3.  **Moteur de Calcul par Consolidation :**
+    - **Description :** Créer un "méta-simulateur" capable d'exécuter les simulations en parallèle et d'agréger les revenus pour un calcul fiscal et social consolidé.
+4.  **Restitution des Résultats Comparatifs de Combinaisons :**
+    - **Description :** Le tableau final comparera des combinaisons (ex: "Micro + SASU", "Micro + EI", etc.).
 
-        Polissage Final : Derniers ajustements de l'interface, vérification des textes et des infobulles.
+Absolument ! C'est une excellente idée d'évolution qui transforme votre simulateur d'un outil individuel en un puissant assistant de stratégie fiscale pour les couples, ce qui est un cas d'usage extrêmement courant et à très forte valeur ajoutée.
 
-        Tests Multi-plateformes : S'assurer que l'application se comporte bien sur Windows, macOS et Linux.
+Après avoir analysé en profondeur votre `Cahier_des_charges.md` et la structure de votre code, je vous propose une feuille de route détaillée pour intégrer cette fonctionnalité. Votre projet est déjà très bien structuré (calculs modulaires, configuration centralisée), ce qui facilitera grandement cette évolution.
 
-        Packaging de l'Application : Utiliser Electron Builder pour créer les installateurs (.exe, .dmg, etc.).
+Je suggère de positionner cette fonctionnalité comme une **Phase 10**, car elle s'appuie logiquement sur les fondations des phases précédentes, notamment la simulation de cumul d'activités de la Phase 9.
 
-        Mise en Open Source : Nettoyer le dépôt Git, rédiger un README.md complet, ajouter une licence et des instructions de contribution (CONTRIBUTING.md).
+Voici une proposition de rédaction pour cette nouvelle phase, conçue pour s'intégrer parfaitement à votre roadmap existante.
+
+### **Phase 10 : L'Assistant Familial - Simulation pour les Couples**
+
+**Objectif :** Répondre à une question fondamentale pour des millions de foyers : "Est-il plus avantageux de nous marier/pacser, ou de rester en déclarations séparées ?". Cette phase fait évoluer le simulateur en un outil de planification financière pour le foyer.
+
+**Fonctionnalités Clés :**
+
+#### **1. Refonte Majeure de l'Interface de Saisie**
+
+- **Description :** L'interface doit permettre de simuler deux personnes simultanément.
+
+  - Un sélecteur initial permettra de choisir entre "Simulation Individuelle" (comportement actuel) et "Simulation pour un Couple".
+  - En mode "Couple", le formulaire affichera deux colonnes ou deux sections distinctes : "Partenaire A" et "Partenaire B".
+  - Pour chaque partenaire, un menu déroulant permettra de définir sa situation :
+    - Salarié(e) (avec un simple champ "Salaire net imposable")
+    - Micro-Entreprise
+    - EI au Réel
+    - SASU (IS)
+    - EURL (IS)
+  - Les champs de saisie (CA, charges, etc.) apparaîtront dynamiquement sous chaque partenaire en fonction du statut choisi.
+  - Un champ global "Nombre d'enfants à charge" permettra de calculer le nombre de parts total pour la déclaration commune.
+
+- **Impact Technique :**
+  - **`index.html`** : Nécessite une restructuration importante du `<form id="simulation-form">`.
+  - **`ui/eventListeners.js`** : La fonction `collectInputs()` devra être entièrement repensée pour agréger les données des deux partenaires.
+  - **`src/stateManager.js`** : La structure de `ui.formInputs` dans l'état de l'application devra être modifiée pour accueillir un objet `partnerA` et `partnerB`.
+
+#### **2. Évolution du Moteur : Le "Méta-Simulateur"**
+
+- **Description :** Le cœur de cette phase est un nouveau "méta-simulateur" qui orchestrera les calculs existants.
+
+  - Une nouvelle fonction, par exemple `simulerCouple(inputs)`, sera créée dans `main.js`.
+  - Cette fonction exécutera deux simulations en parallèle :
+    1.  **Scénario 1 : Déclaration Commune (Mariés/Pacsés)**
+        - Lancer la simulation individuelle pour le Partenaire A (en utilisant les `calculsAE.js`, `calculsSASU.js`, etc.) pour déterminer son revenu imposable.
+        - Faire de même pour le Partenaire B.
+        - Agréger tous les revenus imposables du foyer (Revenu imposable A + Revenu imposable B + Autres revenus du foyer).
+        - Appeler `calculerIR()` **une seule fois** avec le revenu total et le nombre de parts du couple (ex: 2 parts + enfants).
+        - Calculer le "Net dans la poche" total du foyer.
+    2.  **Scénario 2 : Déclarations Séparées (Célibataires)**
+        - Lancer la simulation individuelle pour le Partenaire A.
+        - Appeler `calculerIR()` une première fois, uniquement avec les revenus du Partenaire A et ses parts (généralement 1).
+        - Lancer la simulation individuelle pour le Partenaire B.
+        - Appeler `calculerIR()` une seconde fois, uniquement avec les revenus du Partenaire B et ses parts.
+        - Additionner les deux impôts pour obtenir l'impôt total payé par le couple.
+        - Additionner les deux "Net dans la poche" pour obtenir le revenu net total du foyer.
+
+- **Impact Technique :**
+  - **`main.js`** : Création d'un nouveau `ipcMain.handle("run-couple-simulation", ...)` qui appellera ce méta-simulateur.
+  - Les modules `calculsAE.js`, `calculsEI.js`, etc., n'auront **presque pas besoin d'être modifiés**. C'est la force de votre architecture actuelle. Ils seront simplement utilisés comme des briques de base.
+  - **`calculsIR.js`** : Aucune modification nécessaire, il sera simplement appelé avec des paramètres différents.
+
+#### **3. Restitution des Résultats : Le Comparatif Décisionnel**
+
+- **Description :** Le résultat ne sera plus un simple tableau comparatif des statuts, mais une comparaison des deux scénarios fiscaux.
+
+  - Le tableau de résultats principal affichera :
+    - **Ligne 1 : Impôt sur le Revenu Total** (colonne "Déclaration Commune" vs colonne "Déclarations Séparées").
+    - **Ligne 2 : Net dans la poche (Partenaire A)**.
+    - **Ligne 3 : Net dans la poche (Partenaire B)**.
+    - **Ligne 4 : Net dans la poche (Total Foyer)**.
+    - **Ligne 5 (mise en évidence) : Économie d'impôt annuelle** (différence entre les deux scénarios).
+
+- **Impact Technique :**
+  - **`ui/views/comparatorView.js`** : Création d'une nouvelle fonction `displayCoupleComparatorView()` pour générer ce tableau spécifique.
+  - Les vues détaillées par statut pourraient être adaptées pour montrer le détail du calcul pour chaque partenaire.

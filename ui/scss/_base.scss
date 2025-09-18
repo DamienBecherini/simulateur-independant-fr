@@ -61,4 +61,15 @@ body.dark-mode .error-box {
     margin-top: 0;
     color: var(--primary-color);
   }
+
+  .legal-disclaimer {
+    max-width: 900px;
+    margin: 2em auto;
+    padding: 1em 2em 0 2em;
+    text-align: center;
+    font-size: 0.8em;
+    color: var(--text-color);
+    opacity: 0.7;
+    border-top: 1px solid var(--border-color);
+  }
 }

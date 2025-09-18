@@ -3,10 +3,10 @@ const config = require("../config.json")
 const { calculerIR } = require("./calculsIR.js")
 
 function simulerMicroEntreprise(inputs) {
-  const { ca_services = 0, ca_vente = 0, chargesDeductibles = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1 } = inputs
-  const totalCA = ca_services + ca_vente
+  const { ca_services_bic = 0, ca_services_bnc = 0, ca_vente = 0, chargesDeductibles = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1, beneficieACRE = false, opteVFL = false } = inputs
+  const totalCA = ca_services_bic + ca_services_bnc + ca_vente
 
-  const plafond = ca_vente > ca_services ? config.microEntreprise.plafonds.vente : config.microEntreprise.plafonds.services
+  const plafond = ca_vente > ca_services_bic + ca_services_bnc ? config.microEntreprise.plafonds.vente : config.microEntreprise.plafonds.services
 
   // --- CLAUSE DE GARDE POUR LE DÉPASSEMENT ---
   // Si on dépasse, on retourne immédiatement l'objet d'avertissement et la fonction s'arrête ici.
@@ -25,16 +25,42 @@ function simulerMicroEntreprise(inputs) {
   }
 
   // --- LE RESTE DU CODE NE S'EXÉCUTE QUE SI LE PLAFOND EST RESPECTÉ ---
-  const cotisationsSociales = ca_services * config.microEntreprise.cotisations.services_bnc_regime_general + ca_vente * config.microEntreprise.cotisations.vente_bic
+
+  // On choisit le bon objet de taux en fonction de l'option ACRE
+  const tauxCotisations = beneficieACRE ? config.microEntreprise.ACRE : config.microEntreprise.cotisations
+
+  const cotisationsSociales = ca_vente * tauxCotisations.vente_bic + ca_services_bic * tauxCotisations.services_bic + ca_services_bnc * tauxCotisations.services_bnc_regime_general
+
   const revenuNetApresCotisations = totalCA - cotisationsSociales
-  const ca_imposable_services = ca_services * (1 - config.microEntreprise.abattement.services_bnc)
-  const ca_imposable_vente = ca_vente * (1 - config.microEntreprise.abattement.vente_bic)
-  const revenuImposable = Math.max(ca_imposable_services + ca_imposable_vente, totalCA > 0 ? config.microEntreprise.abattement.minimum : 0)
-  const revenuNetGlobalImposableFoyer = revenuImposable + autresRevenusImposablesFoyer
-  const impotRevenuTotal = calculerIR({ revenuNetGlobalImposable: revenuNetGlobalImposableFoyer, partsFiscales })
-  const irSansActivite = calculerIR({ revenuNetGlobalImposable: autresRevenusImposablesFoyer, partsFiscales })
-  const surcoutIR = impotRevenuTotal - irSansActivite
+
+  let revenuImposable = 0
+  let surcoutIR = 0
+
+  if (opteVFL) {
+    // Calcul du VFL par type d'activité
+    // Si VFL, l'impôt est un pourcentage du CA.
+    const impotLiberatoire = ca_vente * config.microEntreprise.VFL.taux.vente_bic + ca_services_bic * config.microEntreprise.VFL.taux.services_bic + ca_services_bnc * config.microEntreprise.VFL.taux.services_bnc
+
+    surcoutIR = impotLiberatoire
+    revenuImposable = 0
+  } else {
+    // Calcul de l'abattement par type d'activité
+    const ca_imposable_vente = ca_vente * (1 - config.microEntreprise.abattement.vente_bic)
+    const ca_imposable_services_bic = ca_services_bic * (1 - config.microEntreprise.abattement.services_bic)
+    const ca_imposable_services_bnc = ca_services_bnc * (1 - config.microEntreprise.abattement.services_bnc)
+
+    revenuImposable = Math.max(ca_imposable_vente + ca_imposable_services_bic + ca_imposable_services_bnc, totalCA > 0 ? config.microEntreprise.abattement.minimum : 0)
+
+    const revenuNetGlobalImposableFoyer = revenuImposable + autresRevenusImposablesFoyer
+    const impotRevenuTotal = calculerIR({ revenuNetGlobalImposable: revenuNetGlobalImposableFoyer, partsFiscales })
+    const irSansActivite = calculerIR({ revenuNetGlobalImposable: autresRevenusImposablesFoyer, partsFiscales })
+    surcoutIR = impotRevenuTotal - irSansActivite
+  }
+
   const netDansLaPoche = revenuNetApresCotisations - chargesDeductibles - surcoutIR
+
+  // Pour le calcul de la TVA
+  const ca_services = ca_services_bic + ca_services_bnc
 
   let statutTVA = "En franchise"
   if (totalCA > config.TVA.vente.seuil_majore || ca_services > config.TVA.services.seuil_majore) {
