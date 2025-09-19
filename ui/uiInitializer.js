@@ -11,7 +11,9 @@ export const saveCurrentUIState = () => {
     caServicesBic: parseFloat(DOM.form["ca-services-bic"].value) || 0,
     caServicesBnc: parseFloat(DOM.form["ca-services-bnc"].value) || 0,
     caVente: parseFloat(DOM.form["ca-vente"].value) || 0,
-    chargesDeductibles: parseFloat(DOM.form["charges-deductibles"].value) || 0
+    chargesDeductibles: parseFloat(DOM.form["charges-deductibles"].value) || 0,
+    beneficieACRE: document.getElementById("acre-checkbox").checked,
+    opteVFL: document.getElementById("vfl-checkbox").checked
   }
   const activeTab = DOM.tabsNav.querySelector(".active")?.dataset.tab || "tab-comparator"
   const theme = document.body.classList.contains("dark-mode") ? "dark" : "light"
@@ -40,6 +42,9 @@ export async function initializeAppUI() {
   DOM.form["ca-vente"].value = formInputs.caVente || 0
   DOM.form["charges-deductibles"].value = formInputs.chargesDeductibles || 0
   DOM.configNameInput.value = savedUIState.configName || "Ma Simulation"
+
+  document.getElementById("acre-checkbox").checked = formInputs.beneficieACRE || false
+  document.getElementById("vfl-checkbox").checked = formInputs.opteVFL || false
 
   // Définition de l'onglet actif
   const activeTabId = savedUIState.activeTab || "tab-comparator"
