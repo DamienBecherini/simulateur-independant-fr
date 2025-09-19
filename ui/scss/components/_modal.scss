@@ -105,3 +105,63 @@
     border: none;
   }
 }
+
+/* A ajouter à votre fichier SCSS */
+
+/* Styles pour la nouvelle modale de configuration */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1em 1.5em;
+  border-bottom: 1px solid var(--border-color);
+
+  h3 {
+    margin: 0;
+    color: var(--primary-color);
+  }
+}
+
+.modal-body {
+  padding: 1.5em;
+  overflow-y: auto;
+}
+
+/* Styles pour le formulaire dans la modale */
+#entity-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+
+  fieldset {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1em;
+  }
+
+  legend {
+    font-weight: bold;
+    padding: 0 0.5em;
+    color: var(--primary-color);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1em;
+  }
+
+  button[type="submit"] {
+    padding: 0.8em;
+    font-size: 1em;
+    color: white;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--primary-color-hover);
+    }
+  }
+}

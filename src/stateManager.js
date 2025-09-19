@@ -10,20 +10,47 @@ let appState = null // Cache en mémoire
 
 function getDefaultState() {
   return {
-    config: JSON.parse(JSON.stringify(factoryConfig)),
+    // Les paramètres qui ne changent pas souvent, chargés depuis config.json
+    parameters: JSON.parse(JSON.stringify(factoryConfig)),
+
+    // L'état de la simulation en cours, entièrement réinitialisable
+    simulation: {
+      entities: [
+        {
+          id: `person-${Date.now()}`, // ID unique simple pour commencer
+          type: "person",
+          name: "Personne 1",
+          properties: {
+            partsFiscales: 1,
+            are: { dailyRate: 0, daysPerMonth: 0 }
+          }
+        }
+      ],
+      relationships: [],
+      monthlyData: Array(12)
+        .fill(null)
+        .map((_, index) => ({
+          month: index,
+          incomes: [],
+          expenses: [],
+          remunerations: []
+        })),
+      globalSettings: {
+        applyACRE: false,
+        simulationMode: "single", // 'single', 'couple_married', 'couple_separate'
+        dividendDistribution: {
+          percentage: 100, // Par défaut, tout est distribuable en dividende
+          strategy: "auto"
+        }
+      }
+    },
+
+    // La partie UI est conservée pour le thème, l'onglet actif, etc.
     ui: {
-      formInputs: {
-        partsFiscales: 1,
-        salaireNet: 0,
-        caServicesBic: 0,
-        caServicesBnc: 50000,
-        caVente: 0,
-        chargesDeductibles: 5000
-      },
-      activeTab: "tab-comparator",
       theme: "light",
-      configName: "Ma Simulation",
-      backupOrder: [] // tableau pour mémoriser l'ordre des sauvegardes
+      activeTab: "tab-simulation", // On changera les noms d'onglets plus tard
+      configName: "Nouvelle Simulation",
+      backupOrder: []
     }
   }
 }
@@ -33,6 +60,15 @@ function loadState() {
     if (fs.existsSync(stateFilePath)) {
       const rawData = fs.readFileSync(stateFilePath, "utf-8")
       appState = JSON.parse(rawData)
+
+      // Si l'état chargé n'a pas la nouvelle structure (pas de clé 'simulation'),
+      // on considère que c'est un ancien état invalide et on réinitialise.
+      if (!appState.simulation) {
+        console.warn("Ancienne structure de l'état détectée. Réinitialisation à l'état par défaut.")
+        appState = getDefaultState()
+        saveStateSync() // On sauvegarde immédiatement le nouvel état propre.
+      }
+
       // On s'assure que la nouvelle clé existe pour les utilisateurs existants
       if (!appState.ui.backupOrder) {
         appState.ui.backupOrder = []

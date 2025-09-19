@@ -106,84 +106,37 @@
     </div>
 
     <div class="container">
-        <!-- ========= Formulaire de Saisie ========= -->
-        <h1>Simulateur de revenus pour indépendants</h1>
-        <form id="simulation-form">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="parts-fiscales">Parts Fiscales du Foyer</label>
-                    <input type="number" id="parts-fiscales" value="1" step="0.5" required>
-                </div>
-                <div class="form-group">
-                    <label for="salaire-net">Autres Salaires Nets Imposables (Annuel)</label>
-                    <input type="number" id="salaire-net" value="0" step="100">
-                </div>
-                <div class="form-group">
-                    <label for="ca-services-bic">CA Services Artisanaux/Commerciaux (BIC)</label>
-                    <input type="number" id="ca-services-bic" value="0" step="1000">
-                </div>
-                <div class="form-group">
-                    <label for="ca-services-bnc">CA Services Libéraux (BNC)</label>
-                    <input type="number" id="ca-services-bnc" value="50000" step="1000">
-                </div>
-                <div class="form-group">
-                    <label for="ca-vente">Chiffre d'Affaires - Vente (Annuel)</label>
-                    <input type="number" id="ca-vente" value="0" step="1000">
-                </div>
-                <div class="form-group">
-                    <label for="charges-deductibles">Charges Professionnelles (Annuel)</label>
-                    <input type="number" id="charges-deductibles" value="5000" step="100">
-                </div>
-                <div class="form-group">
-                    <label for="capital-social">Capital Social de la société</label>
-                    <input type="number" id="capital-social" value="1000" step="100">
-                </div>
-                <div class="form-group options-group">
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="acre-checkbox">
-                        <label for="acre-checkbox">Bénéficiaire de l'ACRE (1ère année)</label>
-                    </div>
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="vfl-checkbox">
-                        <label for="vfl-checkbox">Opter pour le Versement Libératoire (VFL)</label>
-                    </div>
-                </div>
+        <h1>Simulateur Avancé (v2)</h1>
 
-                <button type="submit">Lancer la Simulation</button>
-            </div>
-        </form>
-
-        <!-- ========= Structure à Onglets ========= -->
-        <div class="tabs-container">
-            <nav class="tabs-nav" id="tabs-nav">
-                <button class="tab-link active" data-tab="tab-comparator">Comparatif</button>
-                <button class="tab-link" data-tab="tab-me">Micro-Entreprise</button>
-                <button class="tab-link" data-tab="tab-ei">EI (Réel)</button>
-                <button class="tab-link" data-tab="tab-sasu">SASU (IS)</button>
-                <button class="tab-link" data-tab="tab-eurl">EURL (IS)</button>
-            </nav>
-            <div class="tabs-content">
-                <div id="tab-comparator" class="tab-pane active">
-                    <div class="placeholder-text">
-                        <h2>Bienvenue sur le Simulateur Indépendant !</h2>
-                        <p>Remplissez les champs du formulaire ci-dessus et cliquez sur "Lancer la Simulation" pour
-                            comparer les différents
-                            statuts juridiques.</p>
-                    </div>
-                </div>
-                <div id="tab-me" class="tab-pane"></div>
-                <div id="tab-ei" class="tab-pane"></div>
-                <div id="tab-sasu" class="tab-pane"></div>
-                <div id="tab-eurl" class="tab-pane"></div>
+        <!-- ZONE 1 : GESTION DES ENTITÉS -->
+        <div class="entities-manager">
+            <h2>Entités</h2>
+            <ul id="entities-list">
+                <!-- Les entités seront ajoutées ici par le JS -->
+                <li>
+                    <span>Alex Durand (Personne)</span>
+                    <button>Configurer</button>
+                </li>
+            </ul>
+            <div class="entities-actions">
+                <button id="add-person-btn">+ Ajouter une personne</button>
+                <button id="add-company-btn">+ Ajouter une société</button>
             </div>
         </div>
 
-        <!-- ========= Zone d'Erreur ========= -->
-        <div id="error-container" class="error-box">
-            <h3>Une erreur est survenue</h3>
-            <pre id="error-message"></pre>
-            <button id="copy-error-btn">Copier l'erreur</button>
+        <!-- ZONE 2 : GRILLE MENSUELLE (viendra plus tard) -->
+        <div class="monthly-grid-placeholder">
+            <h2>Prévisionnel Mensuel</h2>
+            <p>(La grille de saisie viendra ici...)</p>
         </div>
+
+        <!-- ZONE 3 : RÉGLAGES GLOBAUX ET SIMULATION -->
+        <div class="global-settings">
+            <h2>Options</h2>
+            <!-- Les options comme ACRE, etc., viendront ici -->
+            <button id="run-simulation-btn" type="submit">Lancer la Simulation</button>
+        </div>
+
     </div>
 
     <!-- ========= Modale d'Information ========= -->
@@ -206,6 +159,17 @@
             <div class="confirmation-actions">
                 <button id="confirm-btn" class="btn-danger">Confirmer</button>
                 <button id="cancel-btn" class="btn-secondary">Annuler</button>
+            </div>
+        </div>
+    </div>
+    <div id="config-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="config-modal-title"></h3>
+                <button id="config-modal-close-btn" class="modal-close-btn">&times;</button>
+            </div>
+            <div id="config-modal-body" class="modal-body">
+                <!-- Le formulaire de configuration sera injecté ici -->
             </div>
         </div>
     </div>
