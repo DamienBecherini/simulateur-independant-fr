@@ -3,7 +3,10 @@
 # Dépendances
 # Le dossier le plus important à ignorer. Il est généré par `npm install`.
 node_modules/
-.git/
+
+# Fichiers de build CSS
+# Seuls les fichiers sources (.scss) doivent être versionnés.
+/ui/css/
 
 # Fichiers de log
 npm-debug.log*
@@ -17,6 +20,7 @@ out/
 release/
 build/
 
+
 # Fichiers de l'éditeur de code
 # Pour éviter de partager les préférences personnelles de VS Code.
 .vscode/
@@ -24,3 +28,7 @@ build/
 # Fichiers système
 .DS_Store
 Thumbs.db
+
+
+# Fichier de cache interne
+.cache/
