@@ -145,6 +145,7 @@ button[type=submit]:hover {
   margin: 0;
 }
 #entities-list li {
+  cursor: pointer;
   background-color: var(--surface-color);
   padding: 0.8em 1em;
   border-radius: 6px;
@@ -153,6 +154,12 @@ button[type=submit]:hover {
   justify-content: space-between;
   align-items: center;
   border: 1px solid var(--border-color);
+  gap: 1em;
+  flex-wrap: wrap;
+}
+#entities-list li.dragging {
+  opacity: 0.5;
+  background-color: var(--primary-color-hover);
 }
 #entities-list .entity-name {
   font-weight: bold;
@@ -163,10 +170,41 @@ button[type=submit]:hover {
   margin-left: 0.5em;
 }
 
+.entity-info {
+  flex-shrink: 0; /* Empêche ce bloc de rétrécir */
+}
+
+.entity-details {
+  display: flex;
+  gap: 0.75em;
+  flex-grow: 1; /* Prend l'espace disponible au milieu */
+  justify-content: flex-start; /* Aligne les détails à gauche */
+  font-size: 0.8em;
+  flex-wrap: wrap; /* Permet aux "pills" de passer à la ligne */
+}
+.entity-details span {
+  background-color: var(--header-bg-color);
+  padding: 0.2em 0.6em;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
 .entities-actions {
   margin-top: 1em;
   display: flex;
   gap: 1em;
+  flex-shrink: 0;
+}
+.entities-actions button {
+  padding: 0.5em;
+  line-height: 1;
+}
+
+.drag-handle {
+  cursor: grab; /* Indique qu'on peut attraper cet élément */
+  color: var(--text-color);
+  opacity: 0.5;
+  padding-right: 0.5em;
 }
 
 @media (max-width: 768px) {

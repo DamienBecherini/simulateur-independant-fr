@@ -74,10 +74,19 @@ app.whenReady().then(() => {
     return stateManager.getState()
   })
 
-  // Pour mettre à jour l'état DEPUIS le renderer (ne sauvegarde pas sur disque)
-  ipcMain.handle("update-ui-state", (event, uiState) => {
+  ipcMain.handle("update-state", (event, newState) => {
     const currentState = stateManager.getState()
-    currentState.ui = uiState // On ne met à jour que la partie UI
+
+    // On met à jour les parties "simulation" et "ui" de l'état principal
+    // avec les nouvelles données reçues du renderer.
+    if (newState.simulation) {
+      currentState.simulation = newState.simulation
+    }
+    if (newState.ui) {
+      currentState.ui = newState.ui
+    }
+
+    // On met à jour l'état en mémoire dans le stateManager
     stateManager.updateState(currentState)
   })
 
@@ -90,7 +99,7 @@ app.whenReady().then(() => {
     return { results, config: currentConfig, content: pedagogicalContent }
   })
 
-  // MODIFIÉ : On récupère l'ordre sauvegardé et on le passe à listBackups
+  // On récupère l'ordre sauvegardé et on le passe à listBackups
   ipcMain.handle("list-backups", () => {
     const savedOrder = stateManager.getState().ui.backupOrder || []
     return backupManager.listBackups(savedOrder)

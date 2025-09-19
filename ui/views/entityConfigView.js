@@ -20,8 +20,8 @@ function generatePersonForm(entity) {
                         <input type="number" id="are-daily-rate" name="areDailyRate" value="${p.are?.dailyRate || 0}" min="0">
                     </div>
                     <div class="form-group">
-                        <label for="are-days-month">Jours indemnisés / mois</label>
-                        <input type="number" id="are-days-month" name="areDaysPerMonth" value="${p.are?.daysPerMonth || 0}" min="0" max="31">
+                        <label for="are-remaining-days">Jours d'ARE restants</label>
+                        <input type="number" id="are-remaining-days" name="areRemainingDays" value="${p.are?.remainingDays || 0}" min="0">
                     </div>
                 </div>
             </fieldset>

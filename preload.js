@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld("api", {
 
   // Fonctions pour la gestion de l'état
   getState: () => ipcRenderer.invoke("get-state"),
-  updateUIState: uiState => ipcRenderer.invoke("update-ui-state", uiState),
+  updateState: newState => ipcRenderer.invoke("update-state", newState),
 
   // Fonctions de gestion des backups
   listBackups: () => ipcRenderer.invoke("list-backups"),

@@ -22,7 +22,7 @@ function getDefaultState() {
           name: "Personne 1",
           properties: {
             partsFiscales: 1,
-            are: { dailyRate: 0, daysPerMonth: 0 }
+            are: { dailyRate: 0, remainingDays: 0 }
           }
         }
       ],
