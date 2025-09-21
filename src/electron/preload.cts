@@ -1,19 +1,16 @@
-import electron from "electron";
+// src/electron/preload.cts
 
-electron.contextBridge.exposeInMainWorld("electron", {
-    subscribeStatistics: (callback) =>
-        ipcOn("statistics", stats => {
-            callback(stats);
-        }),
-    getStaticData: () => ipcInvoke("getStaticData")
-} satisfies Window['electron'])
+import { contextBridge, ipcRenderer } from "electron"
 
-function ipcInvoke<Key extends keyof EventPayloadMapping>(key: Key): Promise<EventPayloadMapping[Key]> {
-    return electron.ipcRenderer.invoke(key);
+// --- AJOUT : Définissez l'API que vous exposez ---
+const api = {
+  // Le nom de la fonction que vous appellerez depuis React
+  runTestSimulation: () => ipcRenderer.invoke("run-test-simulation")
 }
 
-function ipcOn<Key extends keyof EventPayloadMapping>(key: Key, callback: (payload: EventPayloadMapping[Key]) => void) {
-    const cb = (_: Electron.IpcRendererEvent, payload: any) => callback(payload)
-    electron.ipcRenderer.on(key, cb);
-    return () => electron.ipcRenderer.off(key, cb)
+// --- AJOUT : Exposez l'API de manière sécurisée ---
+try {
+  contextBridge.exposeInMainWorld("api", api)
+} catch (error) {
+  console.error(error)
 }

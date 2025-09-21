@@ -1,25 +1,27 @@
-type Statistics = {
-    cpuUsage: number;
-    ramUsage: number;
-    storageData: number;
+// types.d.ts
+
+interface SimulationInputs {
+  ca_services_bic?: number
+  ca_services_bnc?: number
+  ca_vente?: number
+  chiffreAffaires?: number
+  chargesDeductibles?: number
+  remunerationNetteVisee?: number
+  capitalSocial?: number
+  autresRevenusImposablesFoyer?: number
+  partsFiscales?: number
+  beneficieACRE?: boolean
+  opteVFL?: boolean
 }
 
-type StaticData = {
-    totalStorage: number;
-    cpuModel: string;
-    totalMemoryGB: number;
+interface SimulationResult {
+  statut: string
+  chiffreAffaires: number
+  netDansLaPoche: number
+  warning?: string
+  error?: string
 }
-
-type UnsubscribeFunction = () => void;
 
 type EventPayloadMapping = {
-    statistics: Statistics;
-    getStaticData: StaticData;
-}
-
-interface Window {
-    electron: {
-        subscribeStatistics: (callback: (statistics: Statistics) => void) => UnsubscribeFunction;
-        getStaticData: () => Promise<StaticData>;
-    }
+  runTestSimulation: () => Promise<SimulationResult>
 }
