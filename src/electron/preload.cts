@@ -1,16 +1,16 @@
 // src/electron/preload.cts
 
-import { contextBridge, ipcRenderer } from "electron"
+/// <reference path="../../types.d.ts" />
 
-// --- AJOUT : Définissez l'API que vous exposez ---
-const api = {
-  // Le nom de la fonction que vous appellerez depuis React
-  runTestSimulation: () => ipcRenderer.invoke("run-test-simulation")
-}
+const { contextBridge, ipcRenderer } = require("electron")
 
-// --- AJOUT : Exposez l'API de manière sécurisée ---
-try {
-  contextBridge.exposeInMainWorld("api", api)
-} catch (error) {
-  console.error(error)
-}
+// La liste des canaux (fonctions) valides que nous exposons
+const validChannels: (keyof EventPayloadMapping)[] = ["runTestSimulation", "getState", "saveState"]
+
+contextBridge.exposeInMainWorld("api", {
+  // On boucle sur la liste pour créer dynamiquement les fonctions exposées
+  ...validChannels.reduce((acc, channelName) => {
+    acc[channelName] = (...args: any[]) => ipcRenderer.invoke(channelName, ...args)
+    return acc
+  }, {} as any)
+})

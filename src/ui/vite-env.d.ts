@@ -6,8 +6,6 @@
 // Cette partie étend l'objet Window pour que TypeScript connaisse notre API Electron.
 declare global {
   interface Window {
-    api: {
-      runTestSimulation: () => Promise<SimulationResult>
-    }
+    api: EventPayloadMapping
   }
 }

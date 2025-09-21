@@ -7,10 +7,10 @@
     "module": "NodeNext",
     "outDir": "../../dist-electron",
     "skipLibCheck": true,
-    // MODIFIÉ : Ajout de ces deux lignes cruciales
     "resolveJsonModule": true,
-    "esModuleInterop": true,
-    // add global types
-    "types": ["../../types"]
-  }
+    "esModuleInterop": true
+  },
+  // On inclut explicitement tous les fichiers .ts du dossier
+  // ET le fichier de déclarations globales.
+  "include": ["./**/*", "../../types.d.ts"]
 }

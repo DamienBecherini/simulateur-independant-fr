@@ -1,5 +1,23 @@
 // types.d.ts
 
+// 1. DÉFINITIONS DES ENTITÉS (au lieu de les importer)
+interface Person {
+  id: string
+  type: "person"
+  name: string
+  fiscalParts: number
+}
+
+interface Company {
+  id: string
+  type: "company"
+  name: string
+  legalStatus: "SASU" | "EURL"
+}
+
+type Entity = Person | Company
+
+// 2. TYPES POUR LES SIMULATIONS (inchangé)
 interface SimulationInputs {
   ca_services_bic?: number
   ca_services_bnc?: number
@@ -22,6 +40,9 @@ interface SimulationResult {
   error?: string
 }
 
+// 3. TYPES POUR LA COMMUNICATION (inchangé)
 type EventPayloadMapping = {
   runTestSimulation: () => Promise<SimulationResult>
+  getState: () => Promise<Entity[]>
+  saveState: (entities: Entity[]) => Promise<void>
 }

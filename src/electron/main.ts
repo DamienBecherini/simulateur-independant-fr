@@ -4,6 +4,36 @@ import { app, BrowserWindow } from "electron"
 import { ipcMainHandle, isDev } from "./util.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import { simulerMicroEntreprise } from "./logic/calculsAE.js"
+import path from "path"
+import fs from "fs/promises"
+
+// --- DÉBUT DE LA NOUVELLE LOGIQUE DE SAUVEGARDE ---
+
+// On définit un chemin de sauvegarde sécurisé dans le dossier de l'application de l'utilisateur
+const stateFilePath = path.join(app.getPath("userData"), "appState.json")
+
+// Fonction pour lire l'état depuis le fichier JSON
+async function readStateFromFile() {
+  try {
+    const data = await fs.readFile(stateFilePath, "utf-8")
+    return JSON.parse(data)
+  } catch (error) {
+    // Si le fichier n'existe pas ou est corrompu, on retourne un état vide
+    console.log("Aucun fichier d'état trouvé, démarrage avec un état vide.", error)
+    return []
+  }
+}
+
+// Fonction pour écrire l'état dans le fichier JSON
+async function writeStateToFile(entities: Entity[]) {
+  try {
+    await fs.writeFile(stateFilePath, JSON.stringify(entities, null, 2))
+  } catch (error) {
+    console.error("Erreur lors de la sauvegarde de l'état:", error)
+  }
+}
+
+// --- FIN DE LA NOUVELLE LOGIQUE DE SAUVEGARDE ---
 
 app.on("ready", () => {
   const mainWindow = new BrowserWindow({
@@ -48,4 +78,24 @@ app.on("ready", () => {
       }
     }
   })
+
+  // Quand le frontend demande l'état, on le lit depuis le fichier
+  ipcMainHandle("getState", async () => {
+    console.log("IPC: 'getState' a été appelé !")
+    return await readStateFromFile()
+  })
+
+  ipcMainHandle("saveState", async entities => {
+    console.log("IPC: 'saveState' a été appelé avec de nouvelles données.")
+    await writeStateToFile(entities)
+    // ipcMain.handle ATTEND une promesse en retour.
+    // Comme writeStateToFile ne retourne rien, la promesse se résout en 'void'. C'est parfait.
+  })
+})
+
+// Ce bout de code est nécessaire pour corriger une limitation de ipcMain.on avec le preload
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit()
+  }
 })

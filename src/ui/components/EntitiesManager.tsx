@@ -1,31 +1,38 @@
 // src/ui/components/EntitiesManager.tsx
 
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import EditEntityModal from "./EditEntityModal"
-
-// Les types n'ont pas changé
-export interface Person {
-  id: string
-  type: "person"
-  name: string
-  fiscalParts: number
-}
-
-export interface Company {
-  id: string
-  type: "company"
-  name: string
-  legalStatus: "SASU" | "EURL"
-}
-
-export type Entity = Person | Company
 
 function EntitiesManager() {
   const [entities, setEntities] = useState<Entity[]>([])
-  // --- 3. AJOUTER L'ÉTAT POUR GÉRER LA MODALE ---
-  // Il contiendra l'entité en cours d'édition, ou null si la modale est fermée.
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
+
+  // --- DÉBUT DE LA NOUVELLE LOGIQUE DE PERSISTANCE ---
+
+  // 1. CHARGEMENT INITIAL
+  // Ce useEffect s'exécute UNE SEULE FOIS au chargement du composant
+  useEffect(() => {
+    const loadState = async () => {
+      console.log("Demande de l'état initial au backend...")
+      const savedEntities = await window.api.getState()
+      setEntities(savedEntities)
+      console.log("État initial chargé :", savedEntities)
+    }
+    loadState()
+  }, []) // Le tableau de dépendances vide signifie "exécute seulement au montage"
+
+  // 2. SAUVEGARDE AUTOMATIQUE
+  // Ce useEffect s'exécute À CHAQUE FOIS que la variable 'entities' change
+  useEffect(() => {
+    // On ne sauvegarde pas lors du premier rendu (quand la liste est vide et qu'on attend les données)
+    if (entities.length > 0) {
+      console.log("L'état a changé, envoi des nouvelles données au backend...")
+      window.api.saveState(entities)
+    }
+  }, [entities]) // Le tableau de dépendances contient 'entities'
+
+  // --- FIN DE LA NOUVELLE LOGIQUE DE PERSISTANCE ---
 
   const addPerson = () => {
     const newPerson: Person = {

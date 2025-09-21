@@ -6,8 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect } from "react"
-// On importe les types depuis leur fichier d'origine
-import type { Entity, Person, Company } from "./EntitiesManager"
 
 // On définit les "props" que notre modale attend
 interface EditEntityModalProps {
