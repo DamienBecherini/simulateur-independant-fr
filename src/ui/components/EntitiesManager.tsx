@@ -2,26 +2,30 @@
 
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
+import EditEntityModal from "./EditEntityModal"
 
 // Les types n'ont pas changé
-interface Person {
+export interface Person {
   id: string
   type: "person"
   name: string
   fiscalParts: number
 }
 
-interface Company {
+export interface Company {
   id: string
   type: "company"
   name: string
   legalStatus: "SASU" | "EURL"
 }
 
-type Entity = Person | Company
+export type Entity = Person | Company
 
 function EntitiesManager() {
   const [entities, setEntities] = useState<Entity[]>([])
+  // --- 3. AJOUTER L'ÉTAT POUR GÉRER LA MODALE ---
+  // Il contiendra l'entité en cours d'édition, ou null si la modale est fermée.
+  const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
 
   const addPerson = () => {
     const newPerson: Person = {
@@ -43,13 +47,21 @@ function EntitiesManager() {
     setEntities(prevEntities => [...prevEntities, newCompany])
   }
 
-  // --- NOUVELLE FONCTION ---
   // Prend en argument l'ID de l'entité à supprimer
   const deleteEntity = (idToDelete: string) => {
     // setEntities va recevoir une nouvelle liste
     // On utilise .filter() pour créer une nouvelle liste qui contient
     // toutes les entités SAUF celle dont l'id correspond à celui à supprimer.
     setEntities(prevEntities => prevEntities.filter(entity => entity.id !== idToDelete))
+  }
+
+  // --- 4. AJOUTER LA FONCTION DE MISE À JOUR ---
+  const handleUpdateEntity = (updatedEntity: Entity) => {
+    setEntities(prevEntities =>
+      // On parcourt la liste et on remplace l'ancienne version de l'entité par la nouvelle
+      prevEntities.map(entity => (entity.id === updatedEntity.id ? updatedEntity : entity))
+    )
+    setEditingEntity(null) // On ferme la modale après avoir sauvegardé
   }
 
   return (
@@ -68,21 +80,31 @@ function EntitiesManager() {
           <p className="text-slate-500">Aucune entité pour le moment. Commencez par en ajouter une !</p>
         ) : (
           entities.map(entity => (
-            <div key={entity.id} className="p-4 border rounded-md flex justify-between items-center">
+            <div key={entity.id} className="p-4 border rounded-md flex justify-between items-center transition-all hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer" onClick={() => setEditingEntity(entity)}>
               <div>
                 <p className="font-bold">{entity.name}</p>
                 <p className="text-sm text-slate-400">{entity.type === "person" ? `Personne physique - Parts: ${entity.fiscalParts}` : `Société - Statut: ${entity.legalStatus}`}</p>
               </div>
-              {/* --- MODIFICATION ICI --- */}
-              {/* On appelle notre nouvelle fonction deleteEntity au clic, */}
-              {/* en lui passant l'id de l'entité de cette ligne. */}
-              <Button variant="destructive" size="sm" onClick={() => deleteEntity(entity.id)}>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={e => {
+                  e.stopPropagation() // Empêche le clic de se propager et d'ouvrir la modale
+                  deleteEntity(entity.id)
+                }}
+              >
                 Supprimer
               </Button>
             </div>
           ))
         )}
       </div>
+      <EditEntityModal
+        isOpen={!!editingEntity} // La modale est ouverte si editingEntity n'est pas null
+        entity={editingEntity}
+        onClose={() => setEditingEntity(null)} // Pour fermer la modale
+        onSave={handleUpdateEntity} // Pour sauvegarder les changements
+      />
     </div>
   )
 }
