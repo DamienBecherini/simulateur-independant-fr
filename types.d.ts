@@ -18,18 +18,38 @@ interface Company {
 
 type Entity = Person | Company
 
+// --- NOUVEAUX TYPES ---
+// Représente une ligne de transaction (revenu, dépense, etc.)
+interface FinancialFlow {
+  id: string
+  label: string
+  amount: number
+  // Le type 'salary' sera utile plus tard pour l'arbitrage rémunération/dividendes
+  type: "income" | "expense" | "salary"
+  // ID de la Personne ou Société à laquelle ce flux est rattaché
+  entityId: string
+}
+
+// Un tableau de 12 objets, un pour chaque mois (0 = Janvier)
+type MonthlyGridData = Array<{
+  month: number
+  flows: FinancialFlow[]
+}>
+// --- FIN DES NOUVEAUX TYPES ---
+
 interface SaveSlot {
   id: string
   name: string
   lastModified: number
   entities: Entity[]
+  monthlyData: MonthlyGridData // <-- AJOUT
 }
 
-// --- NOUVEAU TYPE : L'ÉTAT DE LA SESSION ---
-// Représente la simulation sur laquelle l'utilisateur travaille en ce moment.
+// L'état de la session de travail inclut maintenant la grille
 interface SessionState {
   name: string
   entities: Entity[]
+  monthlyData: MonthlyGridData // <-- AJOUT
 }
 
 interface SimulationInputs {
@@ -54,26 +74,17 @@ interface SimulationResult {
   error?: string
 }
 
-// Un objet pour stocker toutes les futures préférences. Pour l'instant, juste l'ordre des slots.
 interface UserPreferences {
   slotOrder: string[]
 }
 
-// --- MISE À JOUR MAJEURE DE L'API DE COMMUNICATION ---
 type EventPayloadMapping = {
-  // Fonctions pour gérer la session de travail (sauvegarde auto)
   getCurrentSession: () => Promise<SessionState>
   saveCurrentSession: (session: SessionState) => Promise<void>
-
-  // Fonctions pour gérer les slots de sauvegarde (sauvegarde manuelle)
   getSaveSlots: () => Promise<SaveSlot[]>
   saveSlots: (slots: SaveSlot[]) => Promise<void>
-
-  // Fonctions pour l'import/export d'une simulation unique
-  exportState: (entities: Entity[]) => Promise<void>
-  importState: () => Promise<{ data?: Entity[]; error?: string }>
-
-  // --- NOUVELLES FONCTIONS POUR LES PRÉFÉRENCES ---
+  exportState: (state: { entities: Entity[]; monthlyData: MonthlyGridData }) => Promise<void> // <-- MISE À JOUR
+  importState: () => Promise<{ data?: { entities: Entity[]; monthlyData: MonthlyGridData }; error?: string }> // <-- MISE À JOUR
   getUserPreferences: () => Promise<UserPreferences>
   saveUserPreferences: (prefs: UserPreferences) => Promise<void>
 }

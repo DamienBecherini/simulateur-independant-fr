@@ -1,14 +1,13 @@
 // src/ui/components/SettingsSheet.tsx
 
-import { useState, Dispatch, SetStateAction, useMemo } from "react"
+import { useState, Dispatch, SetStateAction, useMemo, useEffect } from "react" // <-- Importer useEffect
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
-import { Save, CopyPlus, Upload, Download, Trash2, ChevronLeft, RefreshCcw } from "lucide-react"
+import { Save, Upload, Download, Trash2, ChevronLeft, RefreshCcw } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
 
-// Imports pour le Drag and Drop
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
@@ -26,7 +25,6 @@ interface SettingsSheetProps {
   setSlotOrder: Dispatch<SetStateAction<string[]>>
 }
 
-// --- SOUS-COMPOSANT DÉDIÉ POUR UN ÉLÉMENT DE LA LISTE DE SAUVEGARDE ---
 function SaveSlotItem({ slot, onDelete, onExport, onLoad }: { slot: SaveSlot; onDelete: () => void; onExport: () => void; onLoad: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: slot.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
@@ -63,6 +61,15 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
   const [isOverwriteAlertOpen, setOverwriteAlertOpen] = useState(false)
   const [slotToOverwrite, setSlotToOverwrite] = useState<SaveSlot | null>(null)
 
+  // --- NOUVEAU BLOC useEffect ---
+  // Se déclenche à chaque fois que le panneau est ouvert ou fermé.
+  useEffect(() => {
+    // Si le panneau vient d'être ouvert, on force la vue à revenir sur "main".
+    if (isOpen) {
+      setView("main")
+    }
+  }, [isOpen]) // La dépendance est la prop 'isOpen'
+
   const handleSave = () => {
     const existingSlot = allSaveSlots.find(slot => slot.name === currentSession.name)
     if (existingSlot) {
@@ -78,11 +85,11 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
       id: `slot-${Date.now()}`,
       name: currentSession.name,
       entities: currentSession.entities,
+      monthlyData: currentSession.monthlyData,
       lastModified: Date.now()
     }
     const updatedSlots = [...allSaveSlots, newSlot]
     setAllSaveSlots(updatedSlots)
-    // On ajoute le nouvel ID au début de la liste d'ordre pour qu'il apparaisse en haut
     setSlotOrder(prevOrder => [newSlot.id, ...prevOrder])
     window.api.saveSlots(updatedSlots)
     onOpenChange(false)
@@ -90,7 +97,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
 
   const performOverwrite = () => {
     if (!slotToOverwrite) return
-    const updatedSlots = allSaveSlots.map(slot => (slot.id === slotToOverwrite.id ? { ...slot, name: currentSession.name, entities: currentSession.entities, lastModified: Date.now() } : slot))
+    const updatedSlots = allSaveSlots.map(slot => (slot.id === slotToOverwrite.id ? { ...slot, name: currentSession.name, entities: currentSession.entities, monthlyData: currentSession.monthlyData, lastModified: Date.now() } : slot))
     setAllSaveSlots(updatedSlots)
     window.api.saveSlots(updatedSlots)
     setOverwriteAlertOpen(false)
@@ -99,18 +106,23 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
   }
 
   const handleDeleteSlot = (idToDelete: string) => {
-    setAllSaveSlots(prev => prev.filter(slot => slot.id !== idToDelete))
+    const updatedSlots = allSaveSlots.filter(slot => slot.id !== idToDelete)
+    setAllSaveSlots(updatedSlots)
+    window.api.saveSlots(updatedSlots)
     setSlotOrder(prev => prev.filter(id => id !== idToDelete))
   }
 
-  const handleExportSlot = (entitiesToExport: Entity[]) => {
-    window.api.exportState(entitiesToExport)
+  const handleExportSlot = (slotToExport: SaveSlot) => {
+    window.api.exportState({
+      entities: slotToExport.entities,
+      monthlyData: slotToExport.monthlyData
+    })
   }
 
   const handleImport = async () => {
     const result = await window.api.importState()
     if (result.data) {
-      setCurrentSession({ name: "Simulation importée", entities: result.data })
+      setCurrentSession({ name: "Simulation importée", entities: result.data.entities, monthlyData: result.data.monthlyData })
       onOpenChange(false)
       setView("main")
     }
@@ -129,25 +141,16 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
 
   const sortedSlots = useMemo(() => {
     const slotMap = new Map(allSaveSlots.map(s => [s.id, s]))
-    const currentOrderInSlots = slotOrder.filter(id => slotMap.has(id))
-    const newSlots = allSaveSlots.filter(s => !slotOrder.includes(s.id))
-
-    if (newSlots.length > 0 || currentOrderInSlots.length !== slotOrder.length) {
-      const combinedOrder = [...currentOrderInSlots, ...newSlots.map(s => s.id)]
-      setSlotOrder(combinedOrder)
-    }
-
     return slotOrder.map(id => slotMap.get(id)).filter((slot): slot is SaveSlot => slot !== undefined)
-  }, [allSaveSlots, slotOrder, setSlotOrder])
+  }, [allSaveSlots, slotOrder])
 
   return (
     <>
       <Sheet
         open={isOpen}
-        onOpenChange={open => {
-          if (!open) setView("main")
-          onOpenChange(open)
-        }}
+        // --- onOpenChange SIMPLIFIÉ ---
+        // On se contente de propager l'événement au parent.
+        onOpenChange={onOpenChange}
       >
         <SheetContent className="p-0 flex flex-col" side="left">
           {view === "main" && (
@@ -184,7 +187,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
               <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <div className="flex-grow overflow-y-auto p-6 space-y-3">
                   <SortableContext items={slotOrder} strategy={verticalListSortingStrategy}>
-                    {sortedSlots.length > 0 ? sortedSlots.map(slot => <SaveSlotItem key={slot.id} slot={slot} onLoad={() => onLoadSlot(slot)} onDelete={() => handleDeleteSlot(slot.id)} onExport={() => handleExportSlot(slot.entities)} />) : <p className="text-center text-slate-500 pt-8">Aucune sauvegarde trouvée.</p>}
+                    {sortedSlots.length > 0 ? sortedSlots.map(slot => <SaveSlotItem key={slot.id} slot={slot} onLoad={() => onLoadSlot(slot)} onDelete={() => handleDeleteSlot(slot.id)} onExport={() => handleExportSlot(slot)} />) : <p className="text-center text-slate-500 pt-8">Aucune sauvegarde trouvée.</p>}
                   </SortableContext>
                 </div>
               </DndContext>

@@ -9,44 +9,46 @@ import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
 import { useDebouncedSave } from "./hooks/useDebouncedSave"
 
-function App() {
-  const [currentSession, setCurrentSession] = useState<SessionState>({ name: "Nouvelle Simulation", entities: [] })
-  const [allSaveSlots, setAllSaveSlots] = useState<SaveSlot[]>([])
-  // --- NOUVEL ÉTAT POUR GÉRER L'ORDRE ---
-  const [slotOrder, setSlotOrder] = useState<string[]>([])
+// --- NOUVEL IMPORT ---
+import MonthlyGrid from "./components/MonthlyGrid"
 
+// --- NOUVELLE FONCTION HELPER ---
+function getInitialSessionState(): SessionState {
+  return {
+    name: "Nouvelle Simulation",
+    entities: [],
+    monthlyData: Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
+  }
+}
+
+function App() {
+  const [currentSession, setCurrentSession] = useState<SessionState>(getInitialSessionState())
+  const [allSaveSlots, setAllSaveSlots] = useState<SaveSlot[]>([])
+  const [slotOrder, setSlotOrder] = useState<string[]>([])
   const [isSettingsOpen, setSettingsOpen] = useState(false)
 
-  // --- DEUX SAUVEGARDES AUTOMATIQUES DISTINCTES ---
-  // Sauvegarde la session de travail quand elle change
   useDebouncedSave(currentSession, 1000, window.api.saveCurrentSession)
-  // Sauvegarde les préférences (juste l'ordre pour l'instant) quand elles changent
   useDebouncedSave({ slotOrder }, 1000, window.api.saveUserPreferences)
 
-  // --- CHARGEMENT INITIAL (maintenant 3 requêtes) ---
   useEffect(() => {
     Promise.all([window.api.getCurrentSession(), window.api.getSaveSlots(), window.api.getUserPreferences()]).then(([sessionData, slotsData, prefsData]) => {
-      setCurrentSession(sessionData)
+      // On s'assure que même une session vide du backend est correctement initialisée
+      setCurrentSession(prev => ({ ...prev, ...sessionData }))
       setAllSaveSlots(slotsData)
       setSlotOrder(prefsData.slotOrder)
-
-      // Logique de chargement au démarrage (inchangée)
-      if (slotsData.length > 0 && sessionData.entities.length === 0) {
-        // Optionnel : si la session est vide mais qu'il y a des slots, on pourrait charger le premier.
-        // Pour l'instant, on laisse la session telle quelle.
-      }
     })
   }, [])
 
   const handleResetSession = () => {
-    setCurrentSession({ name: "Nouvelle Simulation", entities: [] })
+    setCurrentSession(getInitialSessionState())
     setSettingsOpen(false)
   }
 
   const handleLoadSlot = (slotToLoad: SaveSlot) => {
     setCurrentSession({
       name: slotToLoad.name,
-      entities: slotToLoad.entities
+      entities: slotToLoad.entities,
+      monthlyData: slotToLoad.monthlyData || getInitialSessionState().monthlyData // Rétrocompatibilité
     })
     setSettingsOpen(false)
   }
@@ -78,23 +80,19 @@ function App() {
             }
           }}
         />
+        {/* --- INTÉGRATION DE LA GRILLE --- */}
+        <MonthlyGrid
+          entities={currentSession.entities}
+          monthlyData={currentSession.monthlyData}
+          setMonthlyData={newMonthlyData => {
+            setCurrentSession(prev => ({ ...prev, monthlyData: newMonthlyData }))
+          }}
+        />
       </main>
 
       <Footer />
 
-      <SettingsSheet
-        isOpen={isSettingsOpen}
-        onOpenChange={setSettingsOpen}
-        allSaveSlots={allSaveSlots}
-        setAllSaveSlots={setAllSaveSlots}
-        currentSession={currentSession}
-        setCurrentSession={setCurrentSession}
-        onReset={handleResetSession}
-        onLoadSlot={handleLoadSlot}
-        // --- On passe le nouvel état et sa fonction de mise à jour ---
-        slotOrder={slotOrder}
-        setSlotOrder={setSlotOrder}
-      />
+      <SettingsSheet isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} allSaveSlots={allSaveSlots} setAllSaveSlots={setAllSaveSlots} currentSession={currentSession} setCurrentSession={setCurrentSession} onReset={handleResetSession} onLoadSlot={handleLoadSlot} slotOrder={slotOrder} setSlotOrder={setSlotOrder} />
     </div>
   )
 }

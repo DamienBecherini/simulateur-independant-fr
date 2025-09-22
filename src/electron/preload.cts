@@ -1,24 +1,27 @@
 // src/electron/preload.cts
 
-/// <reference path="../../types.d.ts" />
-
-const { contextBridge, ipcRenderer } = require("electron")
+import { contextBridge, ipcRenderer } from "electron"
 
 const api: EventPayloadMapping = {
-  // Fonctions pour la session de travail
+  // Fonctions pour la session
   getCurrentSession: () => ipcRenderer.invoke("getCurrentSession"),
   saveCurrentSession: (session: SessionState) => ipcRenderer.invoke("saveCurrentSession", session),
 
-  // Fonctions pour les slots de sauvegarde
+  // Fonctions pour les slots
   getSaveSlots: () => ipcRenderer.invoke("getSaveSlots"),
   saveSlots: (slots: SaveSlot[]) => ipcRenderer.invoke("saveSlots", slots),
 
-  // Fonctions pour l'import/export
-  exportState: (entities: Entity[]) => ipcRenderer.invoke("exportState", entities),
+  // La fonction attend maintenant un objet 'state'
+  exportState: (state: { entities: Entity[]; monthlyData: MonthlyGridData }) => ipcRenderer.invoke("exportState", state),
+
+  // L'appel reste le même
   importState: () => ipcRenderer.invoke("importState"),
 
+  // Fonctions pour les préférences
   getUserPreferences: () => ipcRenderer.invoke("getUserPreferences"),
   saveUserPreferences: (prefs: UserPreferences) => ipcRenderer.invoke("saveUserPreferences", prefs)
 }
 
 contextBridge.exposeInMainWorld("api", api)
+
+// PAS D'EXPORT ICI. Le type est déjà global.

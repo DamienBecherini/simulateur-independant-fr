@@ -6,21 +6,31 @@ import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
 import fs from "fs/promises"
 
-// --- FICHIERS DE SAUVEGARDE ---
 const sessionStatePath = path.join(app.getPath("userData"), "sessionState.json")
 const slotsFilePath = path.join(app.getPath("userData"), "simulationSlots.json")
 const userPreferencesPath = path.join(app.getPath("userData"), "userPreferences.json")
 
-// --- FONCTIONS DE LECTURE/ÉCRITURE ---
+// --- MISE À JOUR DE LA VALEUR PAR DÉFAUT ---
+function getDefaultSessionState(): SessionState {
+  return {
+    name: "Nouvelle Simulation",
+    entities: [],
+    monthlyData: Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
+  }
+}
 
-// Gère la session de travail
 async function readSessionFromFile(): Promise<SessionState> {
   try {
     const data = await fs.readFile(sessionStatePath, "utf-8")
-    return JSON.parse(data)
+    const parsedData = JSON.parse(data)
+    // On s'assure que les anciennes sessions sans monthlyData sont compatibles
+    if (!parsedData.monthlyData) {
+      return { ...parsedData, ...getDefaultSessionState() }
+    }
+    return parsedData
   } catch (error) {
     console.log("Aucun fichier de session trouvé, démarrage avec une session vide.", error)
-    return { name: "Nouvelle Simulation", entities: [] } // Valeur par défaut
+    return getDefaultSessionState()
   }
 }
 
@@ -32,7 +42,6 @@ async function writeSessionToFile(session: SessionState) {
   }
 }
 
-// Gère les slots de sauvegarde nommés
 async function readSlotsFromFile(): Promise<SaveSlot[]> {
   try {
     const data = await fs.readFile(slotsFilePath, "utf-8")
@@ -52,14 +61,13 @@ async function writeSlotsToFile(slots: SaveSlot[]) {
   }
 }
 
-// --- FONCTIONS POUR LES PRÉFÉRENCES ---
 async function readPrefsFromFile(): Promise<UserPreferences> {
   try {
     const data = await fs.readFile(userPreferencesPath, "utf-8")
     return JSON.parse(data)
   } catch (error) {
     console.log("Aucun fichier de préférences trouvé, retour aux valeurs par défaut.", error)
-    return { slotOrder: [] } // Valeur par défaut
+    return { slotOrder: [] }
   }
 }
 
@@ -71,7 +79,6 @@ async function writePrefsToFile(prefs: UserPreferences) {
   }
 }
 
-// --- GESTION DES FENÊTRES ---
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
 
@@ -114,19 +121,18 @@ function createMainWindow() {
   })
 }
 
-// --- POINT D'ENTRÉE ---
 app.on("ready", () => {
   createSplashWindow()
   createMainWindow()
 
-  // --- HANDLERS IPC ---
   ipcMainHandle("getCurrentSession", async () => await readSessionFromFile())
   ipcMainHandle("saveCurrentSession", async (session: SessionState) => await writeSessionToFile(session))
 
   ipcMainHandle("getSaveSlots", async () => await readSlotsFromFile())
   ipcMainHandle("saveSlots", async (slots: SaveSlot[]) => await writeSlotsToFile(slots))
 
-  ipcMainHandle("exportState", async (entities: Entity[]) => {
+  // --- MISE À JOUR DE L'EXPORT/IMPORT ---
+  ipcMainHandle("exportState", async (state: { entities: Entity[]; monthlyData: MonthlyGridData }) => {
     if (!mainWindow) return
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
       title: "Exporter la simulation",
@@ -135,7 +141,7 @@ app.on("ready", () => {
     })
     if (!canceled && filePath) {
       try {
-        await fs.writeFile(filePath, JSON.stringify(entities, null, 2))
+        await fs.writeFile(filePath, JSON.stringify(state, null, 2))
       } catch (error) {
         console.error("Erreur lors de l'exportation :", error)
         dialog.showErrorBox("Erreur d'exportation", "Impossible d'enregistrer le fichier.")
@@ -151,19 +157,24 @@ app.on("ready", () => {
     })
     if (!canceled && filePaths.length > 0) {
       try {
-        const data = await fs.readFile(filePaths[0], "utf-8")
-        const entities = JSON.parse(data)
-        return { data: entities }
+        const fileContent = await fs.readFile(filePaths[0], "utf-8")
+        const importedData = JSON.parse(fileContent)
+
+        // Validation basique de la structure
+        const dataToReturn = {
+          entities: importedData.entities || (Array.isArray(importedData) ? importedData : []),
+          monthlyData: importedData.monthlyData || Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
+        }
+        return { data: dataToReturn }
       } catch (error) {
         console.error("Erreur lors de l'importation :", error)
         dialog.showErrorBox("Erreur d'importation", "Le fichier sélectionné est invalide ou corrompu.")
         return { error: "Erreur de lecture du fichier." }
       }
     }
-    return { data: null }
+    return { data: undefined }
   })
 
-  // --- HANDLERS POUR LES PRÉFÉRENCES ---
   ipcMainHandle("getUserPreferences", async () => await readPrefsFromFile())
   ipcMainHandle("saveUserPreferences", async (prefs: UserPreferences) => await writePrefsToFile(prefs))
 })

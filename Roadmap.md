@@ -1,90 +1,60 @@
-# Roadmap de Développement Détaillée v2.1
+# Roadmap de Développement Détaillée v2.2
 - **Dernière mise à jour :** 22/09/2025
 
 ## **État Actuel du Projet**
-La base technique de l'application est maintenant complète, stable et robuste. Le système de gestion des données (session de travail, sauvegardes multiples, import/export) est fonctionnel et l'expérience utilisateur a été grandement améliorée (splash screen, interface peaufinée). Le projet est prêt à accueillir ses fonctionnalités métier principales.
+La base technique (Electron/React/TS), le système de gestion de données (session/slots), et l'UX de base (gestionnaire d'entités simple, splash screen) sont fonctionnels et robustes. Le projet est prêt à intégrer sa logique de modélisation avancée.
 
 ---
 
-### **Phase 1 : Socle Technique & Transplantation de la Logique [Terminé ✅]**
+### **Phase 1 & 2.5 : Socle Technique & UX de Base [Terminé ✅]**
 
-**Objectif :** Intégrer notre logique de calcul existante dans le nouveau projet et la rendre accessible.
+*   Logique de calcul, IPC, gestion des entités (CRUD, D&D), et système de sauvegarde/import/export sont en place.
 
-*   **Action 1.1 :** Logique de calcul et fichier de configuration intégrés. `[✅]`
-*   **Action 1.2 :** Fichiers de logique convertis en modules ES (`.ts` avec `import`/`export`). `[✅]`
-*   **Action 1.3 :** Le pont de communication (IPC) entre le frontend et le backend est entièrement fonctionnel, sécurisé et typé. `[✅]`
+---
 
-### **Phase 2 : Le Gestionnaire d'Entités [Terminé ✅]**
+### **Phase 3 : Les Fondations du Graphe [À FAIRE ⏳]**
 
-**Objectif :** Construire l'interface permettant à l'utilisateur de créer et configurer les acteurs de sa simulation.
+**Objectif :** Mettre en place la structure de données et l'interface utilisateur pour gérer un graphe d'entités et de relations, la nouvelle pierre angulaire du simulateur.
 
-*   **Action 2.1 :** Le composant `EntitiesManager.tsx` est créé et fonctionnel. `[✅]`
-*   **Action 2.2 :** Les fonctionnalités CRUD (Créer, Lire, Mettre à jour, Supprimer) sont implémentées. `[✅]`
-*   **Action 2.3 :** La modale de configuration des entités est fonctionnelle. `[✅]`
-*   **Action 2.4 (Bonus) :** Ajout du réagencement des entités par glisser-déposer (Drag & Drop). `[✅]`
-*   **Action 2.5 (Bonus) :** Ajout d'un système de verrouillage pour empêcher la suppression accidentelle. `[✅]`
+1.  **Action 3.1 :** Mettre à jour le modèle de données central dans `types.d.ts` pour inclure les `relationships`, le type `Avatar`, et des `flowType` plus précis pour les flux financiers.
+2.  **Action 3.2 :** Adapter le backend (`main.ts`) et l'état principal du frontend (`App.tsx`) pour initialiser, sauvegarder et charger ce nouveau modèle de données complet (`entities`, `relationships`, `monthlyData`).
+3.  **Action 3.3 :** Faire évoluer `EditEntityModal.tsx` pour permettre la sélection d'un avatar (icône/couleur) pour chaque entité.
+4.  **Action 3.4 :** Créer l'interface de gestion des relations. Cela pourrait être une nouvelle modale ou une section dans le `EntitiesManager` permettant de créer un lien (`Président`, `Gérant`, etc.) entre une personne et une société.
 
-### **Phase 2.5 : Expérience Utilisateur & Gestion de Données [Terminé ✅]**
+### **Phase 4 : La Grille de Saisie Contextuelle [Planifié 🗓️]**
 
-**Objectif :** Assurer une expérience utilisateur professionnelle et mettre en place un système de sauvegarde robuste inspiré de la V1.
+**Objectif :** Remplacer la saisie de test par une expérience utilisateur intelligente et guidée, basée sur le graphe.
 
-*   **Action 2.5.1 :** Élimination de l'écran blanc au démarrage via un **splash screen** de chargement. `[✅]`
-*   **Action 2.5.2 :** Mise en place d'un système de **sauvegarde par "slots"** permettant de conserver plusieurs simulations distinctes. `[✅]`
-*   **Action 2.5.3 :** **Séparation de la session de travail** (sauvegardée automatiquement) des slots de sauvegarde (gérés manuellement). `[✅]`
-*   **Action 2.5.4 :** Implémentation de l'**import/export** contextuel pour des simulations uniques. `[✅]`
-*   **Action 2.5.5 :** Implémentation de la **persistance de l'ordre des sauvegardes** via les préférences utilisateur. `[✅]`
-*   **Action 2.5.6 :** Peaufinage de l'interface : **interrupteur de thème** personnalisé, alignement des boutons et icônes. `[✅]`
+1.  **Action 4.1 :** Créer le composant `EditFlowModal.tsx`. Cette modale permettra d'ajouter ou de modifier un flux financier.
+2.  **Action 4.2 :** Implémenter la logique contextuelle dans la modale :
+    -   L'utilisateur choisit d'abord l'entité source (ex: "Ma SASU").
+    -   Une deuxième liste déroulante s'affiche avec les types de flux pertinents pour une société (Chiffre d'Affaires, Dépense, Rémunération...).
+    -   L'utilisateur choisit l'entité source "Moi-même", la liste propose alors "ARE", "Salaire Tiers", "Autre Revenu Imposable", etc.
+3.  **Action 4.3 :** Mettre à jour `MonthlyGrid.tsx` pour afficher les flux saisis de manière détaillée (par exemple, en cliquant sur une case pour voir le détail des flux du mois) et pour appeler la modale `EditFlowModal.tsx`.
 
-### **Phase 3 : La Grille de Saisie Mensuelle [À FAIRE ⏳]**
+### **Phase 5 : Le Moteur de Méta-Simulation v2 [Planifié 🗓️]**
 
-**Objectif :** Permettre à l'utilisateur de saisir ses flux financiers mois par mois.
+**Objectif :** Orchestrer les calculs en interprétant le graphe d'entités et la grille de flux.
 
-1.  **Action 3.1 :** Créer le composant React `MonthlyGrid.tsx`.
-2.  **Action 3.2 :** Afficher un tableau de 12 colonnes (mois) et des lignes pour les revenus/dépenses.
-3.  **Action 3.3 :** Implémenter la modale d'ajout de flux, qui permettra de saisir un montant, un type, et de l'associer à une entité existante via une liste déroulante.
+1.  **Action 5.1 :** Refondre la fonction `runSimulation` dans `main.ts`. Cette fonction devra :
+    -   Agréger les 12 mois de flux de `monthlyData` pour chaque entité afin d'obtenir les totaux annuels (CA total, charges totales, rémunération totale...).
+    -   Utiliser le tableau `relationships` pour router les flux (ex: la "Rémunération" de la SASU devient un revenu pour la personne qui a la relation "Président").
+    -   Préparer l'objet `SimulationInputs` pour chaque module de calcul (`simulerSASU`, `simulerEURL`...) avec les données agrégées.
+    -   Calculer l'impôt sur le revenu au niveau du foyer fiscal.
+2.  **Action 5.2 :** Créer un composant `Results.tsx` qui affiche un premier tableau de résultats synthétiques (Net dans la poche par personne, impôts...).
 
-### **Phase 4 : Le Moteur de Méta-Simulation (v1) [Planifié 🗓️]**
+### **Phase 6 : L'Optimisation Visuelle (Rémunération/Dividendes) [Planifié 🗓️]**
 
-**Objectif :** Faire fonctionner le calcul de bout en bout pour un scénario simple (1 personne + 1 société).
+*   **Objectif :** Implémenter la fonctionnalité interactive d'arbitrage pour les sociétés à l'IS (reprise de l'ancienne Phase 5).
 
-1.  **Action 4.1 :** Développer la fonction `runSimulation` dans `main.ts`. Elle lira l'état complet (entités, grille), agrégera les données annuelles, et orchestrera les appels aux modules de calcul.
-2.  **Action 4.2 :** Créer un composant `Results.tsx` qui affiche un premier tableau de résultats synthétiques.
+### **Phase 7 : La Simulation de Couple & Foyers Fiscaux [Planifié 🗓️]**
 
-### **Phase 5 : L'Optimisation Visuelle (Rémunération/Dividendes) [Planifié 🗓️]**
+*   **Objectif :** Gérer la fiscalité du foyer en utilisant les relations de type "Marié(e)" / "PACSé(e)" pour regrouper les revenus avant le calcul de l'IR.
 
-**Objectif :** Implémenter la fonctionnalité interactive d'arbitrage pour les sociétés à l'IS.
+### **Phase 8 : Le Comparateur Stratégique (Entité "???") [Planifié 🗓️]**
 
-1.  **Action 5.1 :** Créer un composant `DividendSlider.tsx`.
-2.  **Action 5.2 :** Mettre en place la logique bi-directionnelle : le curseur met à jour la répartition Rémunération/Dividendes dans les résultats, et la modification manuelle d'une rémunération dans la grille met à jour le curseur.
+*   **Objectif :** Réintégrer la fonctionnalité phare de la v1 en s'appuyant sur le nouveau moteur.
 
-### **Phase 6 : La Simulation de Couple [Planifié 🗓️]**
+### **Phase 9 : Scénarios Avancés & Finalisation [Planifié 🗓️]**
 
-**Objectif :** Gérer la fiscalité du foyer et permettre la comparaison stratégique Mariage/PACS vs. Union libre.
-
-1.  **Action 6.1 :** Adapter l'interface pour gérer un mode "Couple".
-2.  **Action 6.2 :** Étoffer le moteur de simulation pour qu'il exécute deux calculs en parallèle.
-3.  **Action 6.3 :** Créer une vue de résultats comparative dédiée.
-
-### **Phase 7 : Le Comparateur Stratégique (Entité "???") [Planifié 🗓️]**
-
-**Objectif :** Réintégrer la fonctionnalité phare de la v1 de manière élégante.
-
-1.  **Action 7.1 :** Permettre la création d'une entité spéciale de type "Projet" ou "???".
-2.  **Action 7.2 :** Le moteur de simulation exécutera les calculs pour tous les statuts compatibles.
-3.  **Action 7.3 :** Afficher le tableau comparatif initial.
-
-### **Phase 8 : Scénarios Avancés & Qualité de Vie [Planifié 🗓️]**
-
-**Objectif :** Couvrir les cas d'usages les plus courants pour les créateurs d'entreprise.
-
-1.  **Action 8.1 :** Intégrer la gestion de l'**ACRE**, du **VFL** et de l'**ARE**.
-2.  **Action 8.2 :** Gérer le **prorata temporis** pour les débuts d'activité.
-3.  **Action 8.3 :** Ajouter des profils-types pour pré-remplir la simulation.
-
-### **Phase 9 : Finalisation & Distribution [Planifié 🗓️]**
-
-**Objectif :** Préparer l'application pour une diffusion publique.
-
-1.  **Action 9.1 :** Polissage de l'interface, gestion des erreurs, ajout d'infobulles.
-2.  **Action 9.2 :** Utiliser `electron-builder` pour créer les installeurs.
-3.  **Action 9.3 :** Rédiger un `README.md` complet pour le dépôt GitHub.
+*   **Objectif :** Intégrer la gestion de l'ACRE, du VFL, du prorata temporis, et préparer la distribution de l'application.
