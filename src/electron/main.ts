@@ -1,42 +1,66 @@
 // src/electron/main.ts
 
-import { app, BrowserWindow } from "electron"
+import { app, BrowserWindow, dialog } from "electron"
 import { ipcMainHandle, isDev } from "./util.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
-import { simulerMicroEntreprise } from "./logic/calculsAE.js"
 import path from "path"
 import fs from "fs/promises"
+import { fileURLToPath } from "url"
 
-// --- DÉBUT DE LA NOUVELLE LOGIQUE DE SAUVEGARDE ---
+// --- CORRECTION : On définit __dirname manuellement pour la compatibilité ESM ---
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-// On définit un chemin de sauvegarde sécurisé dans le dossier de l'application de l'utilisateur
+// --- Début de la logique de sauvegarde de l'état ---
+
 const stateFilePath = path.join(app.getPath("userData"), "appState.json")
 
-// Fonction pour lire l'état depuis le fichier JSON
 async function readStateFromFile() {
   try {
     const data = await fs.readFile(stateFilePath, "utf-8")
     return JSON.parse(data)
   } catch (error) {
-    // Si le fichier n'existe pas ou est corrompu, on retourne un état vide
-    console.log("Aucun fichier d'état trouvé, démarrage avec un état vide.", error)
+    // --- CORRECTION ICI ---
+    // On affiche l'erreur pour savoir pourquoi la lecture a échoué.
+    // Cela résout l'avertissement "variable non utilisée".
+    console.log("Aucun fichier d'état trouvé ou erreur de lecture, démarrage avec un état vide. Détails:", error)
     return []
   }
 }
 
-// Fonction pour écrire l'état dans le fichier JSON
 async function writeStateToFile(entities: Entity[]) {
   try {
     await fs.writeFile(stateFilePath, JSON.stringify(entities, null, 2))
+    console.log("État sauvegardé avec succès dans:", stateFilePath)
   } catch (error) {
     console.error("Erreur lors de la sauvegarde de l'état:", error)
   }
 }
 
-// --- FIN DE LA NOUVELLE LOGIQUE DE SAUVEGARDE ---
+// --- Fin de la logique de sauvegarde de l'état ---
 
-app.on("ready", () => {
-  const mainWindow = new BrowserWindow({
+// --- Début de la gestion des fenêtres (Splash & Main) ---
+
+let mainWindow: BrowserWindow | null = null
+let splashWindow: BrowserWindow | null = null
+
+function createSplashWindow() {
+  splashWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    center: true
+  })
+  splashWindow.loadFile(path.join(__dirname, "../../splash.html"))
+}
+
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
+    show: false,
+    backgroundColor: "#111827",
     webPreferences: {
       preload: getPreloadPath()
     }
@@ -44,56 +68,88 @@ app.on("ready", () => {
 
   if (isDev()) {
     mainWindow.loadURL("http://localhost:3524")
-    // mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(getUIPath())
   }
 
-  // C'est notre seule et unique fonction de communication pour le moment.
-  // Tout le code d'exemple du template a été retiré.
-  ipcMainHandle("runTestSimulation", async () => {
-    console.log("IPC: 'run-test-simulation' a été appelé !")
-
-    const testInputs: SimulationInputs = {
-      // Utilise le type global
-      ca_services_bnc: 50000,
-      chargesDeductibles: 2000,
-      autresRevenusImposablesFoyer: 0,
-      partsFiscales: 1
+  mainWindow.once("ready-to-show", () => {
+    if (splashWindow) {
+      splashWindow.close()
+      splashWindow = null
     }
-
-    try {
-      // Note: simulerMicroEntreprise est synchrone, mais le handler est async
-      // pour retourner une Promise, ce qui est parfait.
-      const result = simulerMicroEntreprise(testInputs)
-      console.log("Résultat du calcul:", result)
-      return result
-    } catch (error) {
-      console.error("Erreur dans le moteur de calcul:", error)
-      return {
-        statut: "Erreur",
-        chiffreAffaires: 0,
-        netDansLaPoche: 0,
-        error: (error as Error).message
-      }
+    if (mainWindow) {
+      mainWindow.show()
+      // if (isDev()) {
+      //   mainWindow.webContents.openDevTools();
+      // }
     }
   })
+}
 
-  // Quand le frontend demande l'état, on le lit depuis le fichier
+// --- Fin de la gestion des fenêtres ---
+
+// --- Point d'entrée de l'application Electron ---
+
+app.on("ready", () => {
+  createSplashWindow()
+  createMainWindow()
+
   ipcMainHandle("getState", async () => {
     console.log("IPC: 'getState' a été appelé !")
     return await readStateFromFile()
   })
 
-  ipcMainHandle("saveState", async entities => {
-    console.log("IPC: 'saveState' a été appelé avec de nouvelles données.")
+  ipcMainHandle("saveState", async (entities: Entity[]) => {
+    console.log("IPC: 'saveState' a été appelé.")
     await writeStateToFile(entities)
-    // ipcMain.handle ATTEND une promesse en retour.
-    // Comme writeStateToFile ne retourne rien, la promesse se résout en 'void'. C'est parfait.
+  })
+
+  ipcMainHandle("exportState", async (entities: Entity[]) => {
+    if (!mainWindow) return // S'assure que la fenêtre principale existe
+
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: "Exporter la configuration",
+      defaultPath: `simulateur-config-${Date.now()}.json`,
+      filters: [{ name: "Fichiers JSON", extensions: ["json"] }]
+    })
+
+    if (!canceled && filePath) {
+      try {
+        await fs.writeFile(filePath, JSON.stringify(entities, null, 2))
+        console.log(`Configuration exportée avec succès vers : ${filePath}`)
+      } catch (error) {
+        console.error("Erreur lors de l'exportation :", error)
+        dialog.showErrorBox("Erreur d'exportation", "Impossible d'enregistrer le fichier.")
+      }
+    }
+  })
+
+  // --- NOUVEAU HANDLER POUR L'IMPORTATION ---
+  ipcMainHandle("importState", async () => {
+    if (!mainWindow) return { error: "La fenêtre principale n'est pas disponible." }
+
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: "Importer une configuration",
+      properties: ["openFile"],
+      filters: [{ name: "Fichiers JSON", extensions: ["json"] }]
+    })
+
+    if (!canceled && filePaths.length > 0) {
+      try {
+        const data = await fs.readFile(filePaths[0], "utf-8")
+        const entities = JSON.parse(data)
+        // On pourrait ajouter une validation ici pour s'assurer que le fichier est correct
+        return { data: entities }
+      } catch (error) {
+        console.error("Erreur lors de l'importation :", error)
+        dialog.showErrorBox("Erreur d'importation", "Le fichier sélectionné est invalide ou corrompu.")
+        return { error: "Erreur de lecture du fichier." }
+      }
+    }
+    return { data: null } // L'utilisateur a annulé
   })
 })
 
-// Ce bout de code est nécessaire pour corriger une limitation de ipcMain.on avec le preload
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit()

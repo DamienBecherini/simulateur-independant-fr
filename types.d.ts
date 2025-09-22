@@ -6,6 +6,7 @@ interface Person {
   type: "person"
   name: string
   fiscalParts: number
+  locked?: boolean
 }
 
 interface Company {
@@ -13,6 +14,7 @@ interface Company {
   type: "company"
   name: string
   legalStatus: "SASU" | "EURL"
+  locked?: boolean
 }
 
 type Entity = Person | Company
@@ -45,4 +47,6 @@ type EventPayloadMapping = {
   runTestSimulation: () => Promise<SimulationResult>
   getState: () => Promise<Entity[]>
   saveState: (entities: Entity[]) => Promise<void>
+  exportState: (entities: Entity[]) => Promise<void>
+  importState: () => Promise<{ data?: Entity[]; error?: string }>
 }

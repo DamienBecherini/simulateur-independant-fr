@@ -2,13 +2,24 @@
 
 import EntitiesManager from "./components/EntitiesManager"
 import ThemeSwitcher from "./components/ThemeSwitcher"
-import Footer from "./components/Footer" // <-- AJOUTER CET IMPORT
+import Footer from "./components/Footer"
+import { Settings } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { SettingsSheet } from "./components/SettingsSheet"
+import { useState } from "react"
 
 function App() {
+  // L'état 'entities' est maintenant géré ici, au plus haut niveau
+  const [entities, setEntities] = useState<Entity[]>([])
+  const [isSettingsOpen, setSettingsOpen] = useState(false)
+
   return (
-    // On ajoute 'relative' pour que le positionnement 'absolute' du ThemeSwitcher fonctionne bien
     <div className="container mx-auto p-8 relative min-h-screen flex flex-col">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex gap-2">
+        {/* Bouton pour ouvrir le panneau de configuration */}
+        <Button variant="outline" size="icon" onClick={() => setSettingsOpen(true)}>
+          <Settings className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         <ThemeSwitcher />
       </div>
 
@@ -17,13 +28,15 @@ function App() {
         <p className="text-lg text-slate-500">Votre bac à sable financier, juridique et fiscal</p>
       </header>
 
-      {/* 'flex-grow' permet au contenu principal de pousser le footer vers le bas */}
       <main className="flex-grow">
-        <EntitiesManager />
+        {/* On passe l'état et la fonction pour le modifier à EntitiesManager */}
+        <EntitiesManager entities={entities} setEntities={setEntities} />
       </main>
 
-      {/* On ajoute notre nouveau composant juste avant la fin */}
       <Footer />
+
+      {/* On inclut notre panneau latéral */}
+      <SettingsSheet isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} entities={entities} onStateImported={setEntities} />
     </div>
   )
 }
