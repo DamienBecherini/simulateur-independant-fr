@@ -5,42 +5,73 @@ import { ipcMainHandle, isDev } from "./util.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
 import fs from "fs/promises"
-import { fileURLToPath } from "url"
 
-// --- CORRECTION : On définit __dirname manuellement pour la compatibilité ESM ---
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// --- FICHIERS DE SAUVEGARDE ---
+const sessionStatePath = path.join(app.getPath("userData"), "sessionState.json")
+const slotsFilePath = path.join(app.getPath("userData"), "simulationSlots.json")
+const userPreferencesPath = path.join(app.getPath("userData"), "userPreferences.json")
 
-// --- Début de la logique de sauvegarde de l'état ---
+// --- FONCTIONS DE LECTURE/ÉCRITURE ---
 
-const stateFilePath = path.join(app.getPath("userData"), "appState.json")
-
-async function readStateFromFile() {
+// Gère la session de travail
+async function readSessionFromFile(): Promise<SessionState> {
   try {
-    const data = await fs.readFile(stateFilePath, "utf-8")
+    const data = await fs.readFile(sessionStatePath, "utf-8")
     return JSON.parse(data)
   } catch (error) {
-    // --- CORRECTION ICI ---
-    // On affiche l'erreur pour savoir pourquoi la lecture a échoué.
-    // Cela résout l'avertissement "variable non utilisée".
-    console.log("Aucun fichier d'état trouvé ou erreur de lecture, démarrage avec un état vide. Détails:", error)
+    console.log("Aucun fichier de session trouvé, démarrage avec une session vide.", error)
+    return { name: "Nouvelle Simulation", entities: [] } // Valeur par défaut
+  }
+}
+
+async function writeSessionToFile(session: SessionState) {
+  try {
+    await fs.writeFile(sessionStatePath, JSON.stringify(session, null, 2))
+  } catch (error) {
+    console.error("Erreur lors de la sauvegarde de la session:", error)
+  }
+}
+
+// Gère les slots de sauvegarde nommés
+async function readSlotsFromFile(): Promise<SaveSlot[]> {
+  try {
+    const data = await fs.readFile(slotsFilePath, "utf-8")
+    return JSON.parse(data)
+  } catch (error) {
+    console.log("Aucun fichier de slots trouvé, démarrage avec un état vide. Détails:", error)
     return []
   }
 }
 
-async function writeStateToFile(entities: Entity[]) {
+async function writeSlotsToFile(slots: SaveSlot[]) {
   try {
-    await fs.writeFile(stateFilePath, JSON.stringify(entities, null, 2))
-    console.log("État sauvegardé avec succès dans:", stateFilePath)
+    await fs.writeFile(slotsFilePath, JSON.stringify(slots, null, 2))
+    console.log("Slots de sauvegarde enregistrés avec succès dans:", slotsFilePath)
   } catch (error) {
-    console.error("Erreur lors de la sauvegarde de l'état:", error)
+    console.error("Erreur lors de la sauvegarde des slots:", error)
   }
 }
 
-// --- Fin de la logique de sauvegarde de l'état ---
+// --- FONCTIONS POUR LES PRÉFÉRENCES ---
+async function readPrefsFromFile(): Promise<UserPreferences> {
+  try {
+    const data = await fs.readFile(userPreferencesPath, "utf-8")
+    return JSON.parse(data)
+  } catch (error) {
+    console.log("Aucun fichier de préférences trouvé, retour aux valeurs par défaut.", error)
+    return { slotOrder: [] } // Valeur par défaut
+  }
+}
 
-// --- Début de la gestion des fenêtres (Splash & Main) ---
+async function writePrefsToFile(prefs: UserPreferences) {
+  try {
+    await fs.writeFile(userPreferencesPath, JSON.stringify(prefs, null, 2))
+  } catch (error) {
+    console.error("Erreur lors de la sauvegarde des préférences:", error)
+  }
+}
 
+// --- GESTION DES FENÊTRES ---
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
 
@@ -54,7 +85,7 @@ function createSplashWindow() {
     resizable: false,
     center: true
   })
-  splashWindow.loadFile(path.join(__dirname, "../../splash.html"))
+  splashWindow.loadFile(path.join(app.getAppPath(), "splash.html"))
 }
 
 function createMainWindow() {
@@ -79,66 +110,49 @@ function createMainWindow() {
     }
     if (mainWindow) {
       mainWindow.show()
-      // if (isDev()) {
-      //   mainWindow.webContents.openDevTools();
-      // }
     }
   })
 }
 
-// --- Fin de la gestion des fenêtres ---
-
-// --- Point d'entrée de l'application Electron ---
-
+// --- POINT D'ENTRÉE ---
 app.on("ready", () => {
   createSplashWindow()
   createMainWindow()
 
-  ipcMainHandle("getState", async () => {
-    console.log("IPC: 'getState' a été appelé !")
-    return await readStateFromFile()
-  })
+  // --- HANDLERS IPC ---
+  ipcMainHandle("getCurrentSession", async () => await readSessionFromFile())
+  ipcMainHandle("saveCurrentSession", async (session: SessionState) => await writeSessionToFile(session))
 
-  ipcMainHandle("saveState", async (entities: Entity[]) => {
-    console.log("IPC: 'saveState' a été appelé.")
-    await writeStateToFile(entities)
-  })
+  ipcMainHandle("getSaveSlots", async () => await readSlotsFromFile())
+  ipcMainHandle("saveSlots", async (slots: SaveSlot[]) => await writeSlotsToFile(slots))
 
   ipcMainHandle("exportState", async (entities: Entity[]) => {
-    if (!mainWindow) return // S'assure que la fenêtre principale existe
-
+    if (!mainWindow) return
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-      title: "Exporter la configuration",
-      defaultPath: `simulateur-config-${Date.now()}.json`,
+      title: "Exporter la simulation",
+      defaultPath: `simulateur-export-${Date.now()}.json`,
       filters: [{ name: "Fichiers JSON", extensions: ["json"] }]
     })
-
     if (!canceled && filePath) {
       try {
         await fs.writeFile(filePath, JSON.stringify(entities, null, 2))
-        console.log(`Configuration exportée avec succès vers : ${filePath}`)
       } catch (error) {
         console.error("Erreur lors de l'exportation :", error)
         dialog.showErrorBox("Erreur d'exportation", "Impossible d'enregistrer le fichier.")
       }
     }
   })
-
-  // --- NOUVEAU HANDLER POUR L'IMPORTATION ---
   ipcMainHandle("importState", async () => {
     if (!mainWindow) return { error: "La fenêtre principale n'est pas disponible." }
-
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-      title: "Importer une configuration",
+      title: "Importer une simulation",
       properties: ["openFile"],
       filters: [{ name: "Fichiers JSON", extensions: ["json"] }]
     })
-
     if (!canceled && filePaths.length > 0) {
       try {
         const data = await fs.readFile(filePaths[0], "utf-8")
         const entities = JSON.parse(data)
-        // On pourrait ajouter une validation ici pour s'assurer que le fichier est correct
         return { data: entities }
       } catch (error) {
         console.error("Erreur lors de l'importation :", error)
@@ -146,8 +160,12 @@ app.on("ready", () => {
         return { error: "Erreur de lecture du fichier." }
       }
     }
-    return { data: null } // L'utilisateur a annulé
+    return { data: null }
   })
+
+  // --- HANDLERS POUR LES PRÉFÉRENCES ---
+  ipcMainHandle("getUserPreferences", async () => await readPrefsFromFile())
+  ipcMainHandle("saveUserPreferences", async (prefs: UserPreferences) => await writePrefsToFile(prefs))
 })
 
 app.on("window-all-closed", () => {

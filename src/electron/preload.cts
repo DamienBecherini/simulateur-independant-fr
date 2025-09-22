@@ -4,13 +4,21 @@
 
 const { contextBridge, ipcRenderer } = require("electron")
 
-// La liste des canaux (fonctions) valides que nous exposons
-const validChannels: (keyof EventPayloadMapping)[] = ["runTestSimulation", "getState", "saveState"]
+const api: EventPayloadMapping = {
+  // Fonctions pour la session de travail
+  getCurrentSession: () => ipcRenderer.invoke("getCurrentSession"),
+  saveCurrentSession: (session: SessionState) => ipcRenderer.invoke("saveCurrentSession", session),
 
-contextBridge.exposeInMainWorld("api", {
-  // On boucle sur la liste pour créer dynamiquement les fonctions exposées
-  ...validChannels.reduce((acc, channelName) => {
-    acc[channelName] = (...args: any[]) => ipcRenderer.invoke(channelName, ...args)
-    return acc
-  }, {} as any)
-})
+  // Fonctions pour les slots de sauvegarde
+  getSaveSlots: () => ipcRenderer.invoke("getSaveSlots"),
+  saveSlots: (slots: SaveSlot[]) => ipcRenderer.invoke("saveSlots", slots),
+
+  // Fonctions pour l'import/export
+  exportState: (entities: Entity[]) => ipcRenderer.invoke("exportState", entities),
+  importState: () => ipcRenderer.invoke("importState"),
+
+  getUserPreferences: () => ipcRenderer.invoke("getUserPreferences"),
+  saveUserPreferences: (prefs: UserPreferences) => ipcRenderer.invoke("saveUserPreferences", prefs)
+}
+
+contextBridge.exposeInMainWorld("api", api)
