@@ -15,6 +15,7 @@ function getDefaultSessionState(): SessionState {
   return {
     name: "Nouvelle Simulation",
     entities: [],
+    relationships: [], // <-- MODIFIÉ
     monthlyData: Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
   }
 }
@@ -23,9 +24,15 @@ async function readSessionFromFile(): Promise<SessionState> {
   try {
     const data = await fs.readFile(sessionStatePath, "utf-8")
     const parsedData = JSON.parse(data)
-    // On s'assure que les anciennes sessions sans monthlyData sont compatibles
-    if (!parsedData.monthlyData) {
-      return { ...parsedData, ...getDefaultSessionState() }
+    // On s'assure que les anciennes sessions sont compatibles
+    if (!parsedData.monthlyData || !parsedData.relationships) {
+      const defaults = getDefaultSessionState()
+      return {
+        ...defaults,
+        ...parsedData,
+        monthlyData: parsedData.monthlyData || defaults.monthlyData,
+        relationships: parsedData.relationships || defaults.relationships
+      }
     }
     return parsedData
   } catch (error) {
@@ -132,7 +139,7 @@ app.on("ready", () => {
   ipcMainHandle("saveSlots", async (slots: SaveSlot[]) => await writeSlotsToFile(slots))
 
   // --- MISE À JOUR DE L'EXPORT/IMPORT ---
-  ipcMainHandle("exportState", async (state: { entities: Entity[]; monthlyData: MonthlyGridData }) => {
+  ipcMainHandle("exportState", async (state: ExportableState) => {
     if (!mainWindow) return
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
       title: "Exporter la simulation",
@@ -160,9 +167,10 @@ app.on("ready", () => {
         const fileContent = await fs.readFile(filePaths[0], "utf-8")
         const importedData = JSON.parse(fileContent)
 
-        // Validation basique de la structure
-        const dataToReturn = {
-          entities: importedData.entities || (Array.isArray(importedData) ? importedData : []),
+        // Validation et ajout des valeurs par défaut pour la robustesse
+        const dataToReturn: ExportableState = {
+          entities: importedData.entities || [],
+          relationships: importedData.relationships || [], // <-- MODIFIÉ
           monthlyData: importedData.monthlyData || Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
         }
         return { data: dataToReturn }

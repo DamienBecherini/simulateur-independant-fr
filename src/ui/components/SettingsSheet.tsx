@@ -1,17 +1,23 @@
 // src/ui/components/SettingsSheet.tsx
 
-import { useState, Dispatch, SetStateAction, useMemo, useEffect } from "react" // <-- Importer useEffect
+import { useState, Dispatch, SetStateAction, useMemo, useEffect } from "react"
+// TypeScript augmentation for window.api
+declare global {
+  interface Window {
+    api: EventPayloadMapping
+  }
+}
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Save, Upload, Download, Trash2, ChevronLeft, RefreshCcw } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
-
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
+// ... (Interface SettingsSheetProps et composant SaveSlotItem ne changent pas)
 interface SettingsSheetProps {
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
@@ -29,6 +35,7 @@ function SaveSlotItem({ slot, onDelete, onExport, onLoad }: { slot: SaveSlot; on
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: slot.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
+  // ... (Le JSX de SaveSlotItem ne change pas)
   return (
     <div ref={setNodeRef} style={style} className="p-4 border rounded-md flex flex-col gap-3 bg-background touch-none">
       <div className="flex justify-between items-start">
@@ -61,14 +68,11 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
   const [isOverwriteAlertOpen, setOverwriteAlertOpen] = useState(false)
   const [slotToOverwrite, setSlotToOverwrite] = useState<SaveSlot | null>(null)
 
-  // --- NOUVEAU BLOC useEffect ---
-  // Se déclenche à chaque fois que le panneau est ouvert ou fermé.
   useEffect(() => {
-    // Si le panneau vient d'être ouvert, on force la vue à revenir sur "main".
     if (isOpen) {
       setView("main")
     }
-  }, [isOpen]) // La dépendance est la prop 'isOpen'
+  }, [isOpen])
 
   const handleSave = () => {
     const existingSlot = allSaveSlots.find(slot => slot.name === currentSession.name)
@@ -85,6 +89,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
       id: `slot-${Date.now()}`,
       name: currentSession.name,
       entities: currentSession.entities,
+      relationships: currentSession.relationships, // <-- CORRECTION 1 : Ajout de la propriété manquante
       monthlyData: currentSession.monthlyData,
       lastModified: Date.now()
     }
@@ -97,7 +102,18 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
 
   const performOverwrite = () => {
     if (!slotToOverwrite) return
-    const updatedSlots = allSaveSlots.map(slot => (slot.id === slotToOverwrite.id ? { ...slot, name: currentSession.name, entities: currentSession.entities, monthlyData: currentSession.monthlyData, lastModified: Date.now() } : slot))
+    const updatedSlots = allSaveSlots.map(slot =>
+      slot.id === slotToOverwrite.id
+        ? {
+            ...slot,
+            name: currentSession.name,
+            entities: currentSession.entities,
+            relationships: currentSession.relationships, // <-- CORRECTION 2 : Ajout de la propriété manquante
+            monthlyData: currentSession.monthlyData,
+            lastModified: Date.now()
+          }
+        : slot
+    )
     setAllSaveSlots(updatedSlots)
     window.api.saveSlots(updatedSlots)
     setOverwriteAlertOpen(false)
@@ -113,8 +129,10 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
   }
 
   const handleExportSlot = (slotToExport: SaveSlot) => {
+    // CORRECTION 3 : L'objet exporté doit correspondre au type ExportableState
     window.api.exportState({
       entities: slotToExport.entities,
+      relationships: slotToExport.relationships,
       monthlyData: slotToExport.monthlyData
     })
   }
@@ -122,7 +140,13 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
   const handleImport = async () => {
     const result = await window.api.importState()
     if (result.data) {
-      setCurrentSession({ name: "Simulation importée", entities: result.data.entities, monthlyData: result.data.monthlyData })
+      // CORRECTION 4 : L'objet de session doit correspondre au type SessionState
+      setCurrentSession({
+        name: "Simulation importée",
+        entities: result.data.entities,
+        relationships: result.data.relationships,
+        monthlyData: result.data.monthlyData
+      })
       onOpenChange(false)
       setView("main")
     }
@@ -146,13 +170,9 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
 
   return (
     <>
-      <Sheet
-        open={isOpen}
-        // --- onOpenChange SIMPLIFIÉ ---
-        // On se contente de propager l'événement au parent.
-        onOpenChange={onOpenChange}
-      >
+      <Sheet open={isOpen} onOpenChange={onOpenChange}>
         <SheetContent className="p-0 flex flex-col" side="left">
+          {/* ... Le JSX du return ne change pas ... */}
           {view === "main" && (
             <>
               <SheetHeader className="p-6 pb-4">

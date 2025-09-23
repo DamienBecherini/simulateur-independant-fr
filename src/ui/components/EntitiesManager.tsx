@@ -6,17 +6,18 @@ import EditEntityModal from "./EditEntityModal"
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { EntityItem } from "./EntityItem"
+import { SelectEntityTypeModal, BusinessEntityType } from "./SelectEntityTypeModal"
 
-// La signature de la prop a été mise à jour pour accepter la signature complète de React
-// pour une fonction de mise à jour d'état.
 interface EntitiesManagerProps {
   entities: Entity[]
   setEntities: Dispatch<SetStateAction<Entity[]>>
+  relationships: Relationship[]
+  setRelationships: Dispatch<SetStateAction<Relationship[]>>
 }
 
-function EntitiesManager({ entities, setEntities }: EntitiesManagerProps) {
+function EntitiesManager({ entities, setEntities, relationships, setRelationships }: EntitiesManagerProps) {
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
-
+  const [isSelectModalOpen, setSelectModalOpen] = useState(false)
   const entityIds = useMemo(() => entities.map(e => e.id), [entities])
 
   const addPerson = () => {
@@ -25,24 +26,53 @@ function EntitiesManager({ entities, setEntities }: EntitiesManagerProps) {
       type: "person",
       name: "Nouvelle Personne",
       fiscalParts: 1,
+      avatar: { type: "initials", value: "NP", color: "#3b82f6" },
       locked: false
     }
     setEntities(prevEntities => [...prevEntities, newPerson])
   }
 
-  const addCompany = () => {
-    const newCompany: Company = {
-      id: `company-${Date.now()}`,
-      type: "company",
-      name: "Nouvelle Société",
-      legalStatus: "SASU",
-      locked: false
+  const handleAddBusiness = (type: BusinessEntityType) => {
+    let newEntity: Company | MicroEntreprise
+    switch (type) {
+      case "MicroEntreprise":
+        newEntity = {
+          id: `micro-${Date.now()}`,
+          type: "micro-entreprise",
+          name: "Ma Micro-Entreprise",
+          beneficieACRE: false,
+          opteVFL: false,
+          avatar: { type: "icon", value: "Store", color: "#3b82f6" },
+          locked: false
+        }
+        break
+      case "SASU":
+        newEntity = {
+          id: `company-${Date.now()}`,
+          type: "company",
+          name: "Ma SASU",
+          legalStatus: "SASU",
+          avatar: { type: "icon", value: "Briefcase", color: "#ef4444" },
+          locked: false
+        }
+        break
+      case "EURL":
+        newEntity = {
+          id: `company-${Date.now()}`,
+          type: "company",
+          name: "Mon EURL",
+          legalStatus: "EURL",
+          avatar: { type: "icon", value: "Building", color: "#22c55e" },
+          locked: false
+        }
+        break
     }
-    setEntities(prevEntities => [...prevEntities, newCompany])
+    setEntities(prevEntities => [...prevEntities, newEntity])
   }
 
   const deleteEntity = (idToDelete: string) => {
-    setEntities(prevEntities => prevEntities.filter(entity => entity.id !== idToDelete))
+    setEntities(prev => prev.filter(e => e.id !== idToDelete))
+    setRelationships(prev => prev.filter(rel => rel.fromId !== idToDelete && rel.toId !== idToDelete))
   }
 
   const toggleLock = (idToToggle: string) => {
@@ -67,22 +97,22 @@ function EntitiesManager({ entities, setEntities }: EntitiesManagerProps) {
 
   return (
     <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold mb-4">Gestion des Entités</h2>
-
+      <h2 className="text-2xl font-semibold mb-4">Acteurs de la Simulation</h2>
       <div className="flex gap-4 mb-6">
         <Button onClick={addPerson}>+ Ajouter une Personne</Button>
-        <Button onClick={addCompany} variant="secondary">
-          + Ajouter une Société
+        <Button onClick={() => setSelectModalOpen(true)} variant="secondary">
+          + Ajouter une Activité
         </Button>
       </div>
-
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={entityIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-4">{entities.length === 0 ? <p className="text-slate-500">Aucune entité. Commencez par en ajouter une !</p> : entities.map(entity => <EntityItem key={entity.id} entity={entity} onDelete={deleteEntity} onToggleLock={toggleLock} onSelect={setEditingEntity} />)}</div>
+          <div className="space-y-4">{entities.length === 0 ? <p className="text-slate-500">Aucune entité. Commencez par en ajouter une !</p> : entities.map(entity => <EntityItem key={entity.id} entity={entity} allEntities={entities} relationships={relationships} onDelete={deleteEntity} onToggleLock={toggleLock} onSelect={setEditingEntity} />)}</div>
         </SortableContext>
       </DndContext>
 
-      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleUpdateEntity} />
+      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleUpdateEntity} allEntities={entities} relationships={relationships} setRelationships={setRelationships} />
+
+      <SelectEntityTypeModal isOpen={isSelectModalOpen} onClose={() => setSelectModalOpen(false)} onSelect={handleAddBusiness} />
     </div>
   )
 }
