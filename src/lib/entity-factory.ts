@@ -1,5 +1,7 @@
 // src/lib/entity-factory.ts
 
+import type { Person, Company, MicroEntreprise } from "@/types"
+
 // On peut même centraliser les couleurs par défaut ici
 const defaultColors = {
   person: "#3b82f6",

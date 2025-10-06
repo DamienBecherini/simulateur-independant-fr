@@ -11,9 +11,9 @@
 1.  **De Comparateur à Modélisateur de Scénarios :** L'outil évolue d'un simple comparateur vers un véritable bac à sable (`sandbox`) financier. L'utilisateur ne remplit plus un formulaire, il construit un modèle de sa réalité professionnelle et personnelle.
 2.  **Architecture en Graphe :** Le cœur du système est un graphe d'objets. L'utilisateur crée des briques fondamentales (les "nœuds" : Personnes, Sociétés) et établit des liens entre elles (les "arêtes" : Gérant, Président, Salarié). C'est ce graphe qui permet au simulateur de comprendre les flux financiers.
 3.  **Identification Visuelle :** Pour faciliter la navigation dans des simulations complexes, chaque entité est identifiable visuellement par un avatar (initiales pour les personnes, icônes pour les sociétés) et une couleur personnalisable.
-4.  **Confidentialité Absolue :** L'application reste 100% hors-ligne. Aucune donnée ne quitte la machine de l'utilisateur.
-5.  **Pédagogie Interactive & Saisie Contextuelle :** Les résultats sont visuels (graphiques, curseurs). La saisie des données est intelligente : l'interface propose des options pertinentes en fonction de l'entité sélectionnée (le Chiffre d'Affaires pour une société, l'ARE pour une personne).
-6.  **Maintenabilité :** Tous les taux, seuils et barèmes légaux sont externalisés dans un fichier de configuration unique pour faciliter les mises à jour annuelles.
+4.  **Confidentialité & Pérennité Absolues :** L'application reste 100% hors-ligne. Pour garantir la longévité des données de l'utilisateur sur sa machine, les sauvegardes intègrent un **système de versionnage** permettant de gérer les évolutions futures du format de données.
+5.  **Pédagogie Interactive & Feedback Clair :** Les résultats sont visuels. La saisie est contextuelle. L'application communique de manière proactive avec l'utilisateur via un **système de notifications non-intrusif (toasts)** pour l'informer des actions en arrière-plan (sauvegardes, corrections de données, etc.).
+6.  **Maintenabilité & Fiabilité par Conception :** Tous les taux sont externalisés. De plus, la structure de toutes les données est définie par des **schémas de validation (Zod)**. Ces schémas agissent comme une source de vérité unique, garantissant que le code, la validation et les données ne peuvent jamais être désynchronisés, et permettant de réparer automatiquement les sauvegardes obsolètes.
 
 ---
 

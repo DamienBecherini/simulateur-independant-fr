@@ -1,6 +1,7 @@
 // src/ui/components/EntityItem.tsx
 
 import { Button } from "@/components/ui/button"
+import type { Entity, Relationship } from "@/types"
 import { Lock, Unlock, ArrowRight } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"

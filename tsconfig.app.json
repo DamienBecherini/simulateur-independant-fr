@@ -23,11 +23,7 @@
     "paths": {
       "@/*": ["./src/*"]
     }
-    // La section "types" a été retirée, nous allons être plus explicites
   },
-  "include": [
-    "src",
-    "./types.d.ts" // <-- AJOUT CRUCIAL : Inclut le fichier de types globaux
-  ],
+  "include": ["src"],
   "exclude": ["src/electron"]
 }

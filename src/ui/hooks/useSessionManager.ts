@@ -1,6 +1,7 @@
 // src/ui/hooks/useSessionManager.ts
 
 import { useState, useEffect } from "react"
+import type { SessionState, SaveSlot, SanitizationReport } from "@/types"
 import * as SessionService from "@/lib/session-service"
 import { useDebouncedSave } from "./useDebouncedSave"
 

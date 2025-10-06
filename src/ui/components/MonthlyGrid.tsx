@@ -1,6 +1,7 @@
 // src/ui/components/MonthlyGrid.tsx
 
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
+import type { Entity, MonthlyGridData, FinancialFlow } from "@/types"
 import { Button } from "@/components/ui/button"
 import { PlusCircle } from "lucide-react"
 

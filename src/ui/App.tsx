@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager" // <-- 1. On importe le hook
+import type { SaveSlot } from "@/types"
 
 function App() {
   // Le seul état local de App.tsx est maintenant celui qui gère l'ouverture de l'interface

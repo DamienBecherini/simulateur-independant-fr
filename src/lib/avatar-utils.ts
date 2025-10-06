@@ -1,5 +1,7 @@
 // src/lib/avatar-utils.ts
 
+import type { Avatar } from "@/types"
+
 /**
  * Génère les initiales à partir d'un nom complet.
  * @param name - Le nom de la personne.

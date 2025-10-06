@@ -1,6 +1,7 @@
 // src/electron/main.ts
 
 import { app, BrowserWindow, dialog } from "electron"
+import type { SessionState, SaveSlot, UserPreferences, ExportableState } from "@/types.js"
 import { ipcMainHandle, isDev } from "./util.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
@@ -60,8 +61,22 @@ async function readSessionFromFile(): Promise<SessionState> {
 async function writeSessionToFile(session: SessionState) {
   try {
     await fs.writeFile(sessionStatePath, JSON.stringify(session, null, 2))
+    // On envoie une notification de succès au frontend
+    // if (mainWindow) {
+    //   mainWindow.webContents.send("show-notification", {
+    //     message: "Sauvegarde automatique réussie.",
+    //     type: "success"
+    //   })
+    // }
   } catch (error) {
     console.error("Erreur lors de la sauvegarde de la session:", error)
+    // On notifie l'échec
+    if (mainWindow) {
+      mainWindow.webContents.send("show-notification", {
+        message: "Échec de la sauvegarde automatique.",
+        type: "error"
+      })
+    }
   }
 }
 
@@ -162,7 +177,16 @@ app.on("ready", () => {
   ipcMainHandle("saveCurrentSession", async (session: SessionState) => await writeSessionToFile(session))
 
   ipcMainHandle("getSaveSlots", async () => await readSlotsFromFile())
-  ipcMainHandle("saveSlots", async (slots: SaveSlot[]) => await writeSlotsToFile(slots))
+
+  ipcMainHandle("saveSlots", async (slots: SaveSlot[]) => {
+    await writeSlotsToFile(slots)
+    if (mainWindow) {
+      mainWindow.webContents.send("show-notification", {
+        message: "Sauvegarde réussie !",
+        type: "success"
+      })
+    }
+  })
 
   ipcMainHandle("exportState", async (state: ExportableState) => {
     if (!mainWindow) return
@@ -195,6 +219,18 @@ app.on("ready", () => {
         const importedData = JSON.parse(fileContent)
 
         const { safeState, report } = sanitizeStateAndFillDefaults(importedData)
+
+        if (mainWindow && (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0)) {
+          mainWindow.webContents.send("show-notification", {
+            message: "Fichier importé avec des corrections. Voir la modale pour les détails.",
+            type: "warning"
+          })
+        } else if (mainWindow) {
+          mainWindow.webContents.send("show-notification", {
+            message: "Simulation importée avec succès !",
+            type: "success"
+          })
+        }
 
         // On renvoie l'état ET le rapport au frontend
         return {

@@ -1,6 +1,7 @@
 // src/ui/components/EntitiesManager.tsx
 
 import { createPerson, createCompany, createMicroEntreprise } from "@/lib/entity-factory"
+import type { Entity, Relationship, Company, MicroEntreprise } from "@/types"
 import { Button } from "@/components/ui/button"
 import { useState, useMemo, Dispatch, SetStateAction } from "react"
 import EditEntityModal from "./EditEntityModal"

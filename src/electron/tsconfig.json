@@ -8,9 +8,12 @@
     "outDir": "../../dist-electron",
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": "../../",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
-  // On inclut explicitement tous les fichiers .ts du dossier
-  // ET le fichier de déclarations globales.
-  "include": ["./**/*", "../../types.d.ts"]
+  // On inclut les fichiers du backend, notre nouveau fichier de types, et le fichier de déclarations globales.
+  "include": ["./**/*", "../types.ts", "../globals.d.ts"]
 }

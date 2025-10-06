@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect, useMemo, Dispatch, SetStateAction } from "react"
+import type { Entity, Relationship, Person, Company, Avatar } from "@/types"
 import { Trash2, PlusCircle, ArrowRight } from "lucide-react"
 import { getAvailableRelationships } from "@/lib/graph-logic"
-import { AvatarDisplay, availableIconsSmall } from "./AvatarDisplay"
+import { AvatarDisplay } from "./AvatarDisplay"
+import { availableIconsSmall } from "@/lib/avatar-constants"
 import { updatePersonAvatar } from "@/lib/avatar-utils"
 
 interface EditEntityModalProps {
@@ -27,7 +29,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
   const [formData, setFormData] = useState<Entity | null>(null)
   const [addingRelation, setAddingRelation] = useState(false)
   const [targetId, setTargetId] = useState<string | undefined>()
-  const [relationshipType, setRelationshipType] = useState<string | undefined>()
+  const [relationshipType, setRelationshipType] = useState<Relationship["type"] | undefined>()
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false)
   const [relationToDelete, setRelationToDelete] = useState<Relationship | null>(null)
 
@@ -84,7 +86,12 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
 
   const handleAddRelationship = () => {
     if (!entity || !targetId || !relationshipType) return
-    const newRelationship: Relationship = { id: `rel-${Date.now()}`, fromId: entity.id, toId: targetId, type: relationshipType as any }
+    const newRelationship: Relationship = {
+      id: `rel-${Date.now()}`,
+      fromId: entity.id,
+      toId: targetId,
+      type: relationshipType // Plus besoin de 'as any' !
+    }
     setRelationships(prev => [...prev, newRelationship])
     setAddingRelation(false)
     setTargetId(undefined)
@@ -212,7 +219,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                         ))}
                       </SelectContent>
                     </Select>
-                    <Select value={relationshipType} onValueChange={setRelationshipType} disabled={!targetId || availableTypes.length === 0}>
+                    <Select value={relationshipType} onValueChange={(value: Relationship["type"]) => setRelationshipType(value)} disabled={!targetId || availableTypes.length === 0}>
                       <SelectTrigger>
                         <SelectValue placeholder="Type de relation..." />
                       </SelectTrigger>

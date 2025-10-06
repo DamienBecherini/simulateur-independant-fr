@@ -1,23 +1,11 @@
 // src/ui/components/AvatarDisplay.tsx
-
-import { Briefcase, Building, Store, User } from "lucide-react"
+import { Briefcase } from "lucide-react" // Gardez un import par défaut
 import { cn } from "@/lib/utils"
+import type { Avatar } from "@/types"
+// 1. Importez les constantes depuis leur nouveau fichier
+import { availableIcons, availableIconsSmall } from "@/lib/avatar-constants"
 
-// On centralise les icônes ici, elles n'auront plus besoin d'être dans les autres fichiers.
-export const availableIcons: { [key: string]: React.ReactNode } = {
-  Briefcase: <Briefcase size={20} />,
-  Building: <Building size={20} />,
-  Store: <Store size={20} />,
-  User: <User size={20} />
-}
-
-// On peut aussi exporter une version plus petite si besoin
-export const availableIconsSmall: { [key: string]: React.ReactNode } = {
-  Briefcase: <Briefcase size={16} />,
-  Building: <Building size={16} />,
-  Store: <Store size={16} />,
-  User: <User size={16} />
-}
+// Les constantes ont été déplacées. Ce fichier est maintenant "pur".
 
 interface AvatarDisplayProps {
   avatar: Avatar
@@ -33,6 +21,7 @@ export function AvatarDisplay({ avatar, size = "md" }: AvatarDisplayProps) {
     lg: "h-12 w-12 text-xl"
   }
 
+  // 2. Le code ici ne change pas, il utilise juste les constantes importées
   const icons = size === "sm" ? availableIconsSmall : availableIcons
 
   return (

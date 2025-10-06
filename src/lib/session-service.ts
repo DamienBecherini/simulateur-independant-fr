@@ -1,4 +1,7 @@
 // src/lib/session-service.ts
+import type { SessionState, SaveSlot, Entity, Relationship, MonthlyGridData, ExportableState, SanitizationReport } from "@/types"
+import type { EventPayloadMapping } from "@/globals"
+
 // TypeScript augmentation for window.api
 declare global {
   interface Window {
