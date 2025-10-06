@@ -1,5 +1,6 @@
 // src/ui/components/EntitiesManager.tsx
 
+import { createPerson, createCompany, createMicroEntreprise } from "@/lib/entity-factory"
 import { Button } from "@/components/ui/button"
 import { useState, useMemo, Dispatch, SetStateAction } from "react"
 import EditEntityModal from "./EditEntityModal"
@@ -21,14 +22,7 @@ function EntitiesManager({ entities, setEntities, relationships, setRelationship
   const entityIds = useMemo(() => entities.map(e => e.id), [entities])
 
   const addPerson = () => {
-    const newPerson: Person = {
-      id: `person-${Date.now()}`,
-      type: "person",
-      name: "Nouvelle Personne",
-      fiscalParts: 1,
-      avatar: { type: "initials", value: "NP", color: "#3b82f6" },
-      locked: false
-    }
+    const newPerson = createPerson()
     setEntities(prevEntities => [...prevEntities, newPerson])
   }
 
@@ -36,35 +30,13 @@ function EntitiesManager({ entities, setEntities, relationships, setRelationship
     let newEntity: Company | MicroEntreprise
     switch (type) {
       case "MicroEntreprise":
-        newEntity = {
-          id: `micro-${Date.now()}`,
-          type: "micro-entreprise",
-          name: "Ma Micro-Entreprise",
-          beneficieACRE: false,
-          opteVFL: false,
-          avatar: { type: "icon", value: "Store", color: "#3b82f6" },
-          locked: false
-        }
+        newEntity = createMicroEntreprise()
         break
       case "SASU":
-        newEntity = {
-          id: `company-${Date.now()}`,
-          type: "company",
-          name: "Ma SASU",
-          legalStatus: "SASU",
-          avatar: { type: "icon", value: "Briefcase", color: "#ef4444" },
-          locked: false
-        }
+        newEntity = createCompany("SASU")
         break
       case "EURL":
-        newEntity = {
-          id: `company-${Date.now()}`,
-          type: "company",
-          name: "Mon EURL",
-          legalStatus: "EURL",
-          avatar: { type: "icon", value: "Building", color: "#22c55e" },
-          locked: false
-        }
+        newEntity = createCompany("EURL")
         break
     }
     setEntities(prevEntities => [...prevEntities, newEntity])

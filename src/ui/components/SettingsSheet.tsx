@@ -1,41 +1,61 @@
-// src/ui/components/SettingsSheet.tsx
+/**
+ * @file SettingsSheet.tsx
+ * @description Composant de présentation ("dumb component") pour le panneau latéral des paramètres.
+ *
+ * Ce composant est responsable de l'affichage de l'interface de gestion de la session et des sauvegardes.
+ * Il ne contient aucune logique métier complexe. Il reçoit toutes ses données et les fonctions
+ * à exécuter via ses props, ce qui le rend entièrement contrôlé par son composant parent (`App.tsx`).
+ *
+ * Il gère un état interne minimal, uniquement pour la navigation entre les vues ("principal" et "charger").
+ */
 
 import { useState, Dispatch, SetStateAction, useMemo, useEffect } from "react"
-// TypeScript augmentation for window.api
-declare global {
-  interface Window {
-    api: EventPayloadMapping
-  }
-}
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Save, Upload, Download, Trash2, ChevronLeft, RefreshCcw } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import * as SessionService from "@/lib/session-service"
 
-// ... (Interface SettingsSheetProps et composant SaveSlotItem ne changent pas)
+/**
+ * Props pour le composant SettingsSheet.
+ */
 interface SettingsSheetProps {
+  // Gestion de l'ouverture/fermeture du panneau
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
+
+  // Données de session et de sauvegardes
   allSaveSlots: SaveSlot[]
   setAllSaveSlots: Dispatch<SetStateAction<SaveSlot[]>>
   currentSession: SessionState
   setCurrentSession: Dispatch<SetStateAction<SessionState>>
-  onReset: () => void
-  onLoadSlot: (slot: SaveSlot) => void
   slotOrder: string[]
   setSlotOrder: Dispatch<SetStateAction<string[]>>
+
+  // Fonctions de rappel pour les actions principales
+  onReset: () => void
+  onLoadSlot: (slot: SaveSlot) => void
+  onImport: () => Promise<void>
+
+  // Props pour le flux de confirmation d'import
+  importConfirmation: { session: SessionState; report: SanitizationReport } | null
+  onConfirmImport: () => void
+  onCancelImport: () => void
 }
 
+/**
+ * Sous-composant pour afficher un élément de sauvegarde dans la liste.
+ * Gère sa propre logique de tri via `useSortable`.
+ */
 function SaveSlotItem({ slot, onDelete, onExport, onLoad }: { slot: SaveSlot; onDelete: () => void; onExport: () => void; onLoad: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: slot.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
-  // ... (Le JSX de SaveSlotItem ne change pas)
   return (
     <div ref={setNodeRef} style={style} className="p-4 border rounded-md flex flex-col gap-3 bg-background touch-none">
       <div className="flex justify-between items-start">
@@ -63,11 +83,12 @@ function SaveSlotItem({ slot, onDelete, onExport, onLoad }: { slot: SaveSlot; on
   )
 }
 
-export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder }: SettingsSheetProps) {
+export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, importConfirmation, onConfirmImport, onCancelImport }: SettingsSheetProps) {
   const [view, setView] = useState<"main" | "load">("main")
   const [isOverwriteAlertOpen, setOverwriteAlertOpen] = useState(false)
   const [slotToOverwrite, setSlotToOverwrite] = useState<SaveSlot | null>(null)
 
+  // Remet la vue à "main" à chaque fois que le panneau s'ouvre.
   useEffect(() => {
     if (isOpen) {
       setView("main")
@@ -80,42 +101,21 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
       setSlotToOverwrite(existingSlot)
       setOverwriteAlertOpen(true)
     } else {
-      createNewSlot()
+      const newSlot = SessionService.createNewSlotFromSession(currentSession)
+      const updatedSlots = [...allSaveSlots, newSlot]
+      setAllSaveSlots(updatedSlots)
+      setSlotOrder(prevOrder => [newSlot.id, ...prevOrder])
+      SessionService.saveAllSlots(updatedSlots)
+      onOpenChange(false)
     }
-  }
-
-  const createNewSlot = () => {
-    const newSlot: SaveSlot = {
-      id: `slot-${Date.now()}`,
-      name: currentSession.name,
-      entities: currentSession.entities,
-      relationships: currentSession.relationships, // <-- CORRECTION 1 : Ajout de la propriété manquante
-      monthlyData: currentSession.monthlyData,
-      lastModified: Date.now()
-    }
-    const updatedSlots = [...allSaveSlots, newSlot]
-    setAllSaveSlots(updatedSlots)
-    setSlotOrder(prevOrder => [newSlot.id, ...prevOrder])
-    window.api.saveSlots(updatedSlots)
-    onOpenChange(false)
   }
 
   const performOverwrite = () => {
     if (!slotToOverwrite) return
-    const updatedSlots = allSaveSlots.map(slot =>
-      slot.id === slotToOverwrite.id
-        ? {
-            ...slot,
-            name: currentSession.name,
-            entities: currentSession.entities,
-            relationships: currentSession.relationships, // <-- CORRECTION 2 : Ajout de la propriété manquante
-            monthlyData: currentSession.monthlyData,
-            lastModified: Date.now()
-          }
-        : slot
-    )
+    const updatedSlot = SessionService.updateSlotWithSession(slotToOverwrite, currentSession)
+    const updatedSlots = allSaveSlots.map(slot => (slot.id === slotToOverwrite.id ? updatedSlot : slot))
     setAllSaveSlots(updatedSlots)
-    window.api.saveSlots(updatedSlots)
+    SessionService.saveAllSlots(updatedSlots)
     setOverwriteAlertOpen(false)
     setSlotToOverwrite(null)
     onOpenChange(false)
@@ -124,32 +124,12 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
   const handleDeleteSlot = (idToDelete: string) => {
     const updatedSlots = allSaveSlots.filter(slot => slot.id !== idToDelete)
     setAllSaveSlots(updatedSlots)
-    window.api.saveSlots(updatedSlots)
+    SessionService.saveAllSlots(updatedSlots)
     setSlotOrder(prev => prev.filter(id => id !== idToDelete))
   }
 
   const handleExportSlot = (slotToExport: SaveSlot) => {
-    // CORRECTION 3 : L'objet exporté doit correspondre au type ExportableState
-    window.api.exportState({
-      entities: slotToExport.entities,
-      relationships: slotToExport.relationships,
-      monthlyData: slotToExport.monthlyData
-    })
-  }
-
-  const handleImport = async () => {
-    const result = await window.api.importState()
-    if (result.data) {
-      // CORRECTION 4 : L'objet de session doit correspondre au type SessionState
-      setCurrentSession({
-        name: "Simulation importée",
-        entities: result.data.entities,
-        relationships: result.data.relationships,
-        monthlyData: result.data.monthlyData
-      })
-      onOpenChange(false)
-      setView("main")
-    }
+    SessionService.exportState(slotToExport)
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -172,7 +152,6 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
     <>
       <Sheet open={isOpen} onOpenChange={onOpenChange}>
         <SheetContent className="p-0 flex flex-col" side="left">
-          {/* ... Le JSX du return ne change pas ... */}
           {view === "main" && (
             <>
               <SheetHeader className="p-6 pb-4">
@@ -212,7 +191,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                 </div>
               </DndContext>
               <SheetFooter className="border-t p-6 bg-slate-50 dark:bg-slate-900">
-                <Button onClick={handleImport} variant="secondary" className="w-full">
+                <Button onClick={onImport} variant="secondary" className="w-full">
                   <Upload className="mr-2 h-4 w-4" /> Importer une simulation...
                 </Button>
               </SheetFooter>
@@ -228,10 +207,33 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
             <DialogDescription>Une sauvegarde nommée "{slotToOverwrite?.name}" existe déjà. Voulez-vous la remplacer par la version actuelle ?</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Annuler</Button>
-            </DialogClose>
+            <Button variant="outline" onClick={() => setOverwriteAlertOpen(false)}>
+              Annuler
+            </Button>
             <Button onClick={performOverwrite}>Écraser</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!importConfirmation} onOpenChange={onCancelImport}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Fichier de sauvegarde nettoyé</DialogTitle>
+            <DialogDescription>
+              Le fichier a été chargé, mais des données corrompues ou obsolètes ont été détectées et supprimées pour éviter de faire planter l'application.
+              <div className="mt-4 font-mono text-sm bg-slate-100 dark:bg-slate-800 p-3 rounded-md">
+                <p>Entités invalides supprimées : {importConfirmation?.report.entitiesRemoved}</p>
+                <p>Relations invalides supprimées : {importConfirmation?.report.relationshipsRemoved}</p>
+                <p>Flux financiers orphelins supprimés : {importConfirmation?.report.flowsRemoved}</p>
+              </div>
+              <p className="mt-4">Voulez-vous continuer avec cette version nettoyée de la simulation ?</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={onCancelImport}>
+              Annuler
+            </Button>
+            <Button onClick={onConfirmImport}>Oui, continuer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

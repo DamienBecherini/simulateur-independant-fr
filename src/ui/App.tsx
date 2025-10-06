@@ -1,64 +1,47 @@
 // src/ui/App.tsx
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
 import { Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
-import { useDebouncedSave } from "./hooks/useDebouncedSave"
-
 import MonthlyGrid from "./components/MonthlyGrid"
-
-function getInitialSessionState(): SessionState {
-  return {
-    name: "Nouvelle Simulation",
-    entities: [],
-    relationships: [], // Cette ligne existe déjà, c'est parfait
-    monthlyData: Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
-  }
-}
+import { useSessionManager } from "./hooks/useSessionManager" // <-- 1. On importe le hook
 
 function App() {
-  const [currentSession, setCurrentSession] = useState<SessionState>(getInitialSessionState())
-  // ... (les autres useState ne changent pas)
-  const [allSaveSlots, setAllSaveSlots] = useState<SaveSlot[]>([])
-  const [slotOrder, setSlotOrder] = useState<string[]>([])
+  // Le seul état local de App.tsx est maintenant celui qui gère l'ouverture de l'interface
   const [isSettingsOpen, setSettingsOpen] = useState(false)
 
-  useDebouncedSave(currentSession, 1000, window.api.saveCurrentSession)
-  useDebouncedSave({ slotOrder }, 1000, window.api.saveUserPreferences)
+  // 2. On appelle notre hook customisé qui centralise toute la logique de session
+  const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession } = useSessionManager()
 
-  useEffect(() => {
-    // ... (cette fonction ne change pas)
-    Promise.all([window.api.getCurrentSession(), window.api.getSaveSlots(), window.api.getUserPreferences()]).then(([sessionData, slotsData, prefsData]) => {
-      setCurrentSession(prev => ({ ...prev, ...sessionData }))
-      setAllSaveSlots(slotsData)
-      setSlotOrder(prefsData.slotOrder)
-    })
-  }, [])
-
-  const handleResetSession = () => {
-    // ... (cette fonction ne change pas)
-    setCurrentSession(getInitialSessionState())
-    setSettingsOpen(false)
-  }
-
+  // Cette fonction reste ici car elle a besoin de `setCurrentSession` (du hook)
+  // et `setSettingsOpen` (de l'état local de App.tsx)
   const handleLoadSlot = (slotToLoad: SaveSlot) => {
-    // ... (cette fonction ne change pas)
     setCurrentSession({
       name: slotToLoad.name,
       entities: slotToLoad.entities,
       relationships: slotToLoad.relationships || [],
-      monthlyData: slotToLoad.monthlyData || getInitialSessionState().monthlyData
+      monthlyData: slotToLoad.monthlyData || Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
     })
+    setSettingsOpen(false)
+  }
+
+  // On crée des gestionnaires qui combinent la logique du hook avec la fermeture de la modale
+  const handleConfirmImportAndClose = () => {
+    proceedWithImport()
+    setSettingsOpen(false)
+  }
+
+  const handleResetAndClose = () => {
+    handleResetSession()
     setSettingsOpen(false)
   }
 
   return (
     <div className="container mx-auto p-8 relative min-h-screen flex flex-col">
-      {/* ... (la partie <div className="absolute ..."> ne change pas) */}
       <div className="absolute top-4 left-4 flex items-center" style={{ height: "2rem" }}>
         <Button variant="ghost" size="icon" className="h-10 w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
           <Settings className="text-slate-500" />
@@ -69,13 +52,12 @@ function App() {
       </div>
 
       <header className="text-center mb-10 mt-6">
-        {/* ... (le header ne change pas) */}
         <h1 className="text-4xl font-bold">{currentSession.name}</h1>
         <p className="text-lg text-slate-500">Votre bac à sable financier, juridique et fiscal</p>
       </header>
 
       <main className="flex-grow">
-        {/* MISE À JOUR DE L'APPEL AU COMPOSANT */}
+        {/* 3. On passe l'état et les fonctions de mise à jour aux composants enfants */}
         <EntitiesManager
           entities={currentSession.entities}
           setEntities={newEntitiesOrUpdater => {
@@ -85,7 +67,6 @@ function App() {
               setCurrentSession(prevSession => ({ ...prevSession, entities: newEntitiesOrUpdater }))
             }
           }}
-          // On ajoute les nouvelles props ici
           relationships={currentSession.relationships}
           setRelationships={newRelationshipsOrUpdater => {
             if (typeof newRelationshipsOrUpdater === "function") {
@@ -107,8 +88,8 @@ function App() {
 
       <Footer />
 
-      {/* ... (la SettingsSheet ne change pas) */}
-      <SettingsSheet isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} allSaveSlots={allSaveSlots} setAllSaveSlots={setAllSaveSlots} currentSession={currentSession} setCurrentSession={setCurrentSession} onReset={handleResetSession} onLoadSlot={handleLoadSlot} slotOrder={slotOrder} setSlotOrder={setSlotOrder} />
+      {/* 4. La SettingsSheet reçoit tout ce dont elle a besoin via les props */}
+      <SettingsSheet isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} allSaveSlots={allSaveSlots} setAllSaveSlots={setAllSaveSlots} currentSession={currentSession} setCurrentSession={setCurrentSession} onReset={handleResetAndClose} onLoadSlot={handleLoadSlot} slotOrder={slotOrder} setSlotOrder={setSlotOrder} onImport={handleImport} importConfirmation={importConfirmation} onConfirmImport={handleConfirmImportAndClose} onCancelImport={cancelImport} />
     </div>
   )
 }

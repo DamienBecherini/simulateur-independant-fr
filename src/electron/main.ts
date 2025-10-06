@@ -5,6 +5,7 @@ import { ipcMainHandle, isDev } from "./util.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
 import fs from "fs/promises"
+import { sanitizeStateAndFillDefaults, sanitizeSlots } from "./logic/data-sanitizer.js"
 
 const sessionStatePath = path.join(app.getPath("userData"), "sessionState.json")
 const slotsFilePath = path.join(app.getPath("userData"), "simulationSlots.json")
@@ -24,19 +25,34 @@ async function readSessionFromFile(): Promise<SessionState> {
   try {
     const data = await fs.readFile(sessionStatePath, "utf-8")
     const parsedData = JSON.parse(data)
-    // On s'assure que les anciennes sessions sont compatibles
-    if (!parsedData.monthlyData || !parsedData.relationships) {
-      const defaults = getDefaultSessionState()
-      return {
-        ...defaults,
-        ...parsedData,
-        monthlyData: parsedData.monthlyData || defaults.monthlyData,
-        relationships: parsedData.relationships || defaults.relationships
-      }
+
+    const { safeState, report } = sanitizeStateAndFillDefaults(parsedData)
+
+    // Si le rapport indique des suppressions, on prévient l'utilisateur
+    if (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0) {
+      const message = `Votre session précédente a été chargée, mais des données corrompues ont dû être nettoyées :\n\n- Entités invalides supprimées : ${report.entitiesRemoved}\n- Relations invalides supprimées : ${report.relationshipsRemoved}\n\nVeuillez vérifier votre simulation.`
+      dialog
+        .showMessageBox({
+          type: "info",
+          title: "Nettoyage de la session",
+          message: message
+        })
+        .catch()
     }
-    return parsedData
+    return safeState
   } catch (error) {
-    console.log("Aucun fichier de session trouvé, démarrage avec une session vide.", error)
+    const errorMessage = error instanceof Error ? error.message : "Erreur inconnue."
+    console.warn(`Échec du chargement de la session : ${errorMessage}. Démarrage avec une session par défaut.`)
+
+    // AVERTIR L'UTILISATEUR AU DÉMARRAGE (BONUS)
+    dialog
+      .showMessageBox({
+        type: "warning",
+        title: "Chargement échoué",
+        message: "Impossible de charger votre session précédente car le fichier est peut-être corrompu ou obsolète. L'application a démarré avec une nouvelle simulation vierge."
+      })
+      .catch() // On ignore l'erreur si la dialog ne peut pas s'afficher
+
     return getDefaultSessionState()
   }
 }
@@ -52,9 +68,19 @@ async function writeSessionToFile(session: SessionState) {
 async function readSlotsFromFile(): Promise<SaveSlot[]> {
   try {
     const data = await fs.readFile(slotsFilePath, "utf-8")
-    return JSON.parse(data)
+    const parsedData = JSON.parse(data)
+
+    // ON PASSE LES DONNÉES BRUTES DANS NOTRE NOUVEAU NETTOYEUR DE SLOTS
+    const cleanSlots = sanitizeSlots(parsedData)
+
+    // On pourrait même vérifier si des slots ont été supprimés et le logger
+    if (cleanSlots.length < (parsedData as unknown[]).length) {
+      console.warn("Certains slots de sauvegarde étaient corrompus et ont été ignorés.")
+    }
+
+    return cleanSlots
   } catch (error) {
-    console.log("Aucun fichier de slots trouvé, démarrage avec un état vide. Détails:", error)
+    console.log("Aucun fichier de slots trouvé ou fichier illisible, démarrage avec un état vide.")
     return []
   }
 }
@@ -138,7 +164,6 @@ app.on("ready", () => {
   ipcMainHandle("getSaveSlots", async () => await readSlotsFromFile())
   ipcMainHandle("saveSlots", async (slots: SaveSlot[]) => await writeSlotsToFile(slots))
 
-  // --- MISE À JOUR DE L'EXPORT/IMPORT ---
   ipcMainHandle("exportState", async (state: ExportableState) => {
     if (!mainWindow) return
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
@@ -155,6 +180,8 @@ app.on("ready", () => {
       }
     }
   })
+
+  // --- GESTION DE L'IMPORT MANUEL ---
   ipcMainHandle("importState", async () => {
     if (!mainWindow) return { error: "La fenêtre principale n'est pas disponible." }
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
@@ -167,17 +194,22 @@ app.on("ready", () => {
         const fileContent = await fs.readFile(filePaths[0], "utf-8")
         const importedData = JSON.parse(fileContent)
 
-        // Validation et ajout des valeurs par défaut pour la robustesse
-        const dataToReturn: ExportableState = {
-          entities: importedData.entities || [],
-          relationships: importedData.relationships || [], // <-- MODIFIÉ
-          monthlyData: importedData.monthlyData || Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
+        const { safeState, report } = sanitizeStateAndFillDefaults(importedData)
+
+        // On renvoie l'état ET le rapport au frontend
+        return {
+          data: {
+            entities: safeState.entities,
+            relationships: safeState.relationships,
+            monthlyData: safeState.monthlyData
+          },
+          report: report // Le frontend saura quoi faire de cette information
         }
-        return { data: dataToReturn }
       } catch (error) {
-        console.error("Erreur lors de l'importation :", error)
-        dialog.showErrorBox("Erreur d'importation", "Le fichier sélectionné est invalide ou corrompu.")
-        return { error: "Erreur de lecture du fichier." }
+        const errorMessage = error instanceof Error ? error.message : "Erreur inconnue."
+        console.error("Erreur lors de l'importation :", errorMessage)
+        dialog.showErrorBox("Erreur d'importation", `Le fichier sélectionné est invalide, corrompu ou d'une version non compatible.\n\nDétails : ${errorMessage}`)
+        return { error: errorMessage }
       }
     }
     return { data: undefined }

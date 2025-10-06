@@ -6,26 +6,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect, useMemo, Dispatch, SetStateAction } from "react"
-import { Briefcase, Building, Store, User, Trash2, PlusCircle, ArrowRight } from "lucide-react"
-import { cn } from "@/lib/utils"
-
-// --- COMPOSANT HELPER (déplacé de EntityItem pour être réutilisé ici) ---
-const availableIcons: { [key: string]: React.ReactNode } = {
-  Briefcase: <Briefcase size={16} />,
-  Building: <Building size={16} />,
-  Store: <Store size={16} />,
-  User: <User size={16} />
-}
-function AvatarDisplay({ avatar, size = "md" }: { avatar: Avatar; size?: "sm" | "md" }) {
-  const isIcon = avatar.type === "icon"
-  const sizeClasses = size === "md" ? "h-10 w-10 text-lg" : "h-8 w-8 text-sm"
-  return (
-    <div className={cn("rounded-md flex items-center justify-center font-bold text-white shrink-0", sizeClasses)} style={{ backgroundColor: avatar.color }}>
-      {isIcon ? availableIcons[avatar.value] || <Briefcase size={16} /> : avatar.value}
-    </div>
-  )
-}
-// --- FIN COMPOSANT HELPER ---
+import { Trash2, PlusCircle, ArrowRight } from "lucide-react"
+import { getAvailableRelationships } from "@/lib/graph-logic"
+import { AvatarDisplay, availableIconsSmall } from "./AvatarDisplay"
+import { updatePersonAvatar } from "@/lib/avatar-utils"
 
 interface EditEntityModalProps {
   entity: Entity | null
@@ -57,14 +41,11 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
   const availableTargets = useMemo(() => allEntities.filter(e => e.id !== entity?.id), [allEntities, entity])
   const targetEntity = useMemo(() => allEntities.find(e => e.id === targetId), [allEntities, targetId])
   const availableTypes = useMemo(() => {
+    // Si l'une des entités n'est pas définie, il n'y a pas de types disponibles.
     if (!entity || !targetEntity) return []
-    const [person, other] = entity.type === "person" ? [entity, targetEntity] : [targetEntity, entity]
-    if (person?.type !== "person") return []
-    if (other?.type === "company") return ["Président", "Gérant", "Associé"]
-    if (other?.type === "person") return ["Marié(e)", "PACSé(e)", "Enfant"]
-    if (other?.type === "micro-entreprise") return ["Titulaire"]
-    return []
-  }, [entity, targetEntity])
+    // 2. APPELER le service centralisé pour obtenir la liste des relations valides
+    return getAvailableRelationships(entity, targetEntity, relationships)
+  }, [entity, targetEntity, relationships]) // On s'assure que relationships est bien dans les dépendances
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -88,13 +69,8 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
   const handleSave = () => {
     if (formData) {
       if (formData.type === "person") {
-        const initials = formData.name
-          .split(" ")
-          .map(n => n[0])
-          .join("")
-          .substring(0, 2)
-          .toUpperCase()
-        onSave({ ...formData, avatar: { ...formData.avatar, value: initials || "NP" } })
+        const updatedAvatar = updatePersonAvatar(formData.avatar, formData.name)
+        onSave({ ...formData, avatar: updatedAvatar })
       } else {
         onSave(formData)
       }
@@ -182,7 +158,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right">Icône</Label>
                   <div className="col-span-3 flex gap-2">
-                    {Object.entries(availableIcons).map(([key, icon]) => (
+                    {Object.entries(availableIconsSmall).map(([key, icon]) => (
                       <button type="button" key={key} onClick={() => handleAvatarChange({ value: key, type: "icon" })} className={`flex h-10 w-10 items-center justify-center rounded-md border-2 transition-all ${formData.avatar.value === key ? "border-primary ring-2 ring-ring bg-secondary" : "border-transparent hover:bg-secondary/80"}`}>
                         {icon}
                       </button>

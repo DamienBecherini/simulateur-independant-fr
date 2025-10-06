@@ -115,6 +115,16 @@ interface SaveSlot {
   monthlyData: MonthlyGridData
 }
 
+// DONNÉES BRUTES ET NON FIABLES
+type RawSaveSlot = {
+  id: string
+  name: string
+  lastModified: number
+  entities?: unknown // Peut être manquant ou de n'importe quel type
+  relationships?: unknown
+  monthlyData?: unknown
+}
+
 interface SessionState {
   name: string
   entities: Entity[]
@@ -148,6 +158,13 @@ interface UserPreferences {
   slotOrder: string[]
 }
 
+// Décrit les corrections effectuées par le sanitizer.
+interface SanitizationReport {
+  entitiesRemoved: number
+  relationshipsRemoved: number
+  flowsRemoved: number
+}
+
 type ExportableState = { entities: Entity[]; relationships: Relationship[]; monthlyData: MonthlyGridData }
 
 type EventPayloadMapping = {
@@ -156,7 +173,7 @@ type EventPayloadMapping = {
   getSaveSlots: () => Promise<SaveSlot[]>
   saveSlots: (slots: SaveSlot[]) => Promise<void>
   exportState: (state: ExportableState) => Promise<void>
-  importState: () => Promise<{ data?: ExportableState; error?: string }>
+  importState: () => Promise<{ data?: ExportableState; report?: SanitizationReport; error?: string }>
   getUserPreferences: () => Promise<UserPreferences>
   saveUserPreferences: (prefs: UserPreferences) => Promise<void>
 }

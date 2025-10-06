@@ -1,26 +1,10 @@
 // src/ui/components/EntityItem.tsx
 
 import { Button } from "@/components/ui/button"
-import { Lock, Unlock, Briefcase, Building, Store, User, ArrowRight } from "lucide-react"
+import { Lock, Unlock, ArrowRight } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { cn } from "@/lib/utils"
-
-const availableIcons: { [key: string]: React.ReactNode } = {
-  Briefcase: <Briefcase size={20} />,
-  Building: <Building size={20} />,
-  Store: <Store size={20} />,
-  User: <User size={20} />
-}
-
-function AvatarDisplay({ avatar }: { avatar: Avatar }) {
-  const isIcon = avatar.type === "icon"
-  return (
-    <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center font-bold", isIcon ? "text-white" : "text-lg text-white")} style={{ backgroundColor: avatar.color }}>
-      {isIcon ? availableIcons[avatar.value] || <Briefcase size={20} /> : avatar.value}
-    </div>
-  )
-}
+import { AvatarDisplay } from "./AvatarDisplay"
 
 interface EntityItemProps {
   entity: Entity
