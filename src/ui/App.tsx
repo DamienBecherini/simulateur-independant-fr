@@ -1,25 +1,45 @@
 // src/ui/App.tsx
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
-import { Settings } from "lucide-react"
+import { Settings, Undo2, Redo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
-import { useSessionManager } from "./hooks/useSessionManager" // <-- 1. On importe le hook
+import { useSessionManager } from "./hooks/useSessionManager"
 import type { SaveSlot } from "@/types"
 
 function App() {
-  // Le seul état local de App.tsx est maintenant celui qui gère l'ouverture de l'interface
   const [isSettingsOpen, setSettingsOpen] = useState(false)
 
-  // 2. On appelle notre hook customisé qui centralise toute la logique de session
-  const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession } = useSessionManager()
+  const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo } = useSessionManager()
 
-  // Cette fonction reste ici car elle a besoin de `setCurrentSession` (du hook)
-  // et `setSettingsOpen` (de l'état local de App.tsx)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
+      const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey
+
+      if (ctrlOrCmd && event.key.toLowerCase() === "z") {
+        event.preventDefault()
+        if (event.shiftKey) {
+          if (canRedo) redo()
+        } else {
+          if (canUndo) undo()
+        }
+      } else if (ctrlOrCmd && event.key.toLowerCase() === "y" && !isMac) {
+        event.preventDefault()
+        if (canRedo) redo()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [undo, redo, canUndo, canRedo])
+
   const handleLoadSlot = (slotToLoad: SaveSlot) => {
     setCurrentSession({
       name: slotToLoad.name,
@@ -30,7 +50,6 @@ function App() {
     setSettingsOpen(false)
   }
 
-  // On crée des gestionnaires qui combinent la logique du hook avec la fermeture de la modale
   const handleConfirmImportAndClose = () => {
     proceedWithImport()
     setSettingsOpen(false)
@@ -43,9 +62,15 @@ function App() {
 
   return (
     <div className="container mx-auto p-8 relative min-h-screen flex flex-col">
-      <div className="absolute top-4 left-4 flex items-center" style={{ height: "2rem" }}>
+      <div className="absolute top-4 left-4 flex items-center gap-2" style={{ height: "2rem" }}>
         <Button variant="ghost" size="icon" className="h-10 w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
           <Settings className="text-slate-500" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} className="h-10 w-10 [&_svg]:size-6">
+          <Undo2 />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} className="h-10 w-10 [&_svg]:size-6">
+          <Redo2 />
         </Button>
       </div>
       <div className="absolute top-4 right-4 flex items-center" style={{ height: "2rem" }}>
@@ -58,38 +83,45 @@ function App() {
       </header>
 
       <main className="flex-grow">
-        {/* 3. On passe l'état et les fonctions de mise à jour aux composants enfants */}
         <EntitiesManager
+          sessionName={currentSession.name}
           entities={currentSession.entities}
           setEntities={newEntitiesOrUpdater => {
-            if (typeof newEntitiesOrUpdater === "function") {
-              setCurrentSession(prevSession => ({ ...prevSession, entities: newEntitiesOrUpdater(prevSession.entities) }))
-            } else {
-              setCurrentSession(prevSession => ({ ...prevSession, entities: newEntitiesOrUpdater }))
-            }
+            setCurrentSession(prevSession => ({
+              ...prevSession,
+              entities: typeof newEntitiesOrUpdater === "function" ? newEntitiesOrUpdater(prevSession.entities) : newEntitiesOrUpdater
+            }))
           }}
           relationships={currentSession.relationships}
           setRelationships={newRelationshipsOrUpdater => {
-            if (typeof newRelationshipsOrUpdater === "function") {
-              setCurrentSession(prev => ({ ...prev, relationships: newRelationshipsOrUpdater(prev.relationships) }))
-            } else {
-              setCurrentSession(prev => ({ ...prev, relationships: newRelationshipsOrUpdater }))
-            }
+            setCurrentSession(prev => ({
+              ...prev,
+              relationships: typeof newRelationshipsOrUpdater === "function" ? newRelationshipsOrUpdater(prev.relationships) : newRelationshipsOrUpdater
+            }))
+          }}
+          monthlyData={currentSession.monthlyData}
+          setMonthlyData={newMonthlyDataOrUpdater => {
+            setCurrentSession(prev => ({
+              ...prev,
+              monthlyData: typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(prev.monthlyData) : newMonthlyDataOrUpdater
+            }))
           }}
         />
 
         <MonthlyGrid
           entities={currentSession.entities}
           monthlyData={currentSession.monthlyData}
-          setMonthlyData={newMonthlyData => {
-            setCurrentSession(prev => ({ ...prev, monthlyData: newMonthlyData }))
+          setMonthlyData={newMonthlyDataOrUpdater => {
+            setCurrentSession(prev => ({
+              ...prev,
+              monthlyData: typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(prev.monthlyData) : newMonthlyDataOrUpdater
+            }))
           }}
         />
       </main>
 
       <Footer />
 
-      {/* 4. La SettingsSheet reçoit tout ce dont elle a besoin via les props */}
       <SettingsSheet isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} allSaveSlots={allSaveSlots} setAllSaveSlots={setAllSaveSlots} currentSession={currentSession} setCurrentSession={setCurrentSession} onReset={handleResetAndClose} onLoadSlot={handleLoadSlot} slotOrder={slotOrder} setSlotOrder={setSlotOrder} onImport={handleImport} importConfirmation={importConfirmation} onConfirmImport={handleConfirmImportAndClose} onCancelImport={cancelImport} />
     </div>
   )

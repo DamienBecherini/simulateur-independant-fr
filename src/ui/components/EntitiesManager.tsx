@@ -1,7 +1,7 @@
 // src/ui/components/EntitiesManager.tsx
 
 import { createPerson, createCompany, createMicroEntreprise } from "@/lib/entity-factory"
-import type { Entity, Relationship, Company, MicroEntreprise } from "@/types"
+import type { Entity, Relationship, Company, MicroEntreprise, SessionState } from "@/types"
 import { Button } from "@/components/ui/button"
 import { useState, useMemo, Dispatch, SetStateAction } from "react"
 import EditEntityModal from "./EditEntityModal"
@@ -9,15 +9,19 @@ import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { EntityItem } from "./EntityItem"
 import { SelectEntityTypeModal, BusinessEntityType } from "./SelectEntityTypeModal"
+import { sanitizeFlowsAfterRelationshipChange } from "@/lib/business-logic"
 
 interface EntitiesManagerProps {
+  sessionName: string // <-- 1. Nouvelle prop ajoutée ici
   entities: Entity[]
   setEntities: Dispatch<SetStateAction<Entity[]>>
   relationships: Relationship[]
   setRelationships: Dispatch<SetStateAction<Relationship[]>>
+  monthlyData: SessionState["monthlyData"]
+  setMonthlyData: Dispatch<SetStateAction<SessionState["monthlyData"]>>
 }
 
-function EntitiesManager({ entities, setEntities, relationships, setRelationships }: EntitiesManagerProps) {
+function EntitiesManager({ sessionName, entities, setEntities, relationships, setRelationships, monthlyData, setMonthlyData }: EntitiesManagerProps) {
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
   const [isSelectModalOpen, setSelectModalOpen] = useState(false)
   const entityIds = useMemo(() => entities.map(e => e.id), [entities])
@@ -52,8 +56,22 @@ function EntitiesManager({ entities, setEntities, relationships, setRelationship
     setEntities(prevEntities => prevEntities.map(entity => (entity.id === idToToggle ? { ...entity, locked: !entity.locked } : entity)))
   }
 
-  const handleUpdateEntity = (updatedEntity: Entity) => {
+  const handleUpdateEntity = (updatedEntity: Entity, updatedRelationships: Relationship[]) => {
     setEntities(prevEntities => prevEntities.map(entity => (entity.id === updatedEntity.id ? updatedEntity : entity)))
+    setRelationships(updatedRelationships)
+
+    // 2. Construire un état de session temporaire complet
+    const nextSessionState: SessionState = {
+      name: sessionName, // <-- 3. On utilise la nouvelle prop ici
+      entities: entities.map(entity => (entity.id === updatedEntity.id ? updatedEntity : entity)),
+      relationships: updatedRelationships,
+      monthlyData
+    }
+
+    const sanitizedMonthlyData = sanitizeFlowsAfterRelationshipChange(nextSessionState)
+
+    setMonthlyData(sanitizedMonthlyData)
+
     setEditingEntity(null)
   }
 
@@ -83,7 +101,7 @@ function EntitiesManager({ entities, setEntities, relationships, setRelationship
         </SortableContext>
       </DndContext>
 
-      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleUpdateEntity} allEntities={entities} relationships={relationships} setRelationships={setRelationships} />
+      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleUpdateEntity} allEntities={entities} relationships={relationships} />
 
       <SelectEntityTypeModal isOpen={isSelectModalOpen} onClose={() => setSelectModalOpen(false)} onSelect={handleAddBusiness} />
     </div>

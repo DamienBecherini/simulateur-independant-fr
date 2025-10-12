@@ -1,6 +1,7 @@
 // src/ui/components/MonthlyGrid.tsx
 
-import { useState, useMemo } from "react"
+// 1. Importer Dispatch et SetStateAction depuis React
+import { useState, useMemo, Dispatch, SetStateAction } from "react"
 import type { Entity, MonthlyGridData, FinancialFlow } from "@/types"
 import { EditFlowModal } from "./EditFlowModal"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
@@ -9,24 +10,18 @@ import { cn } from "@/lib/utils"
 interface MonthlyGridProps {
   entities: Entity[]
   monthlyData: MonthlyGridData
-  setMonthlyData: (data: MonthlyGridData) => void
+  // 2. Mettre à jour la signature pour correspondre à ce que App.tsx envoie
+  setMonthlyData: Dispatch<SetStateAction<MonthlyGridData>>
 }
 
 const months = ["Janv", "Févr", "Mars", "Avril", "Mai", "Juin", "Juil", "Août", "Sept", "Oct", "Nov", "Déc"]
 const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 
 function MonthlyGrid({ entities, monthlyData, setMonthlyData }: MonthlyGridProps) {
-  // --- GESTION DES MODALES ---
   const [isListModalOpen, setListModalOpen] = useState(false)
   const [isEditModalOpen, setEditModalOpen] = useState(false)
-
-  // Contexte : quelle entité et quel mois sont sélectionnés
   const [context, setContext] = useState<{ entityId: string; monthIndex: number } | null>(null)
-
-  // Stocke le flux à éditer
   const [flowToEdit, setFlowToEdit] = useState<FinancialFlow | null>(null)
-
-  // --- FONCTIONS D'INTERACTION ---
 
   const openFlowsList = (entityId: string, monthIndex: number) => {
     setContext({ entityId, monthIndex })
@@ -49,46 +44,50 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData }: MonthlyGridProps
     if (!context) return
     const { monthIndex } = context
 
-    const newData = monthlyData.map((monthData, index) => {
-      if (index === monthIndex) {
-        return { ...monthData, flows: monthData.flows.filter(f => f.id !== flowId) }
-      }
-      return monthData
-    })
-    setMonthlyData(newData)
+    // On utilise maintenant la forme fonctionnelle pour mettre à jour l'état
+    setMonthlyData(prevData =>
+      prevData.map((monthData, index) => {
+        if (index === monthIndex) {
+          return { ...monthData, flows: monthData.flows.filter(f => f.id !== flowId) }
+        }
+        return monthData
+      })
+    )
   }
 
   const handleSaveFlow = (savedFlow: FinancialFlow, isEditing: boolean) => {
     if (!context) return
     const { monthIndex } = context
 
-    const newData = monthlyData.map((monthData, index) => {
-      if (index === monthIndex) {
-        if (isEditing) {
-          return { ...monthData, flows: monthData.flows.map(f => (f.id === savedFlow.id ? savedFlow : f)) }
-        } else {
-          return { ...monthData, flows: [...monthData.flows, savedFlow] }
+    setMonthlyData(prevData =>
+      prevData.map((monthData, index) => {
+        if (index === monthIndex) {
+          if (isEditing) {
+            return { ...monthData, flows: monthData.flows.map(f => (f.id === savedFlow.id ? savedFlow : f)) }
+          } else {
+            return { ...monthData, flows: [...monthData.flows, savedFlow] }
+          }
         }
-      }
-      return monthData
-    })
-    setMonthlyData(newData)
+        return monthData
+      })
+    )
     setEditModalOpen(false)
-    setListModalOpen(true) // Rouvrir la liste pour voir le changement
+    setListModalOpen(true)
   }
 
   const handleReorderFlows = (reorderedFlows: FinancialFlow[]) => {
     if (!context) return
     const { monthIndex, entityId } = context
 
-    const newData = monthlyData.map((monthData, index) => {
-      if (index === monthIndex) {
-        const otherEntityFlows = monthData.flows.filter(f => f.entityId !== entityId)
-        return { ...monthData, flows: [...otherEntityFlows, ...reorderedFlows] }
-      }
-      return monthData
-    })
-    setMonthlyData(newData)
+    setMonthlyData(prevData =>
+      prevData.map((monthData, index) => {
+        if (index === monthIndex) {
+          const otherEntityFlows = monthData.flows.filter(f => f.entityId !== entityId)
+          return { ...monthData, flows: [...otherEntityFlows, ...reorderedFlows] }
+        }
+        return monthData
+      })
+    )
   }
 
   const gridData = useMemo(() => {
