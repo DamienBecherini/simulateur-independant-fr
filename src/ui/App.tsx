@@ -1,6 +1,6 @@
 // src/ui/App.tsx
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
@@ -73,6 +73,21 @@ function App() {
   const zoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2)) // Plafond à 200%
   const zoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5)) // Plancher à 50%
 
+  // Calcul centralisé de la carte de numérotation
+  const flowTypeToNumberMap = useMemo(() => {
+    const types = new Set<string>()
+    currentSession.monthlyData.forEach(month => {
+      month.flows.forEach(flow => types.add(flow.type))
+    })
+    const sortedTypes = Array.from(types).sort() // On trie pour une numérotation stable
+
+    const map = new Map<string, number>()
+    sortedTypes.forEach((type, index) => {
+      map.set(type, index + 1) // Numérotation commence à 1
+    })
+    return map
+  }, [currentSession.monthlyData])
+
   return (
     <div className="container mx-auto p-8 min-h-screen flex flex-col">
       {/* Barre de menu sticky */}
@@ -144,9 +159,10 @@ function App() {
             }))
           }}
           preferences={userPreferences}
+          flowTypeToNumberMap={flowTypeToNumberMap}
         />
 
-        <FlowLegend monthlyData={currentSession.monthlyData} preferences={userPreferences} onPreferencesChange={setUserPreferences} />
+        <FlowLegend monthlyData={currentSession.monthlyData} preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
       </main>
 
       <Footer />

@@ -15,13 +15,14 @@ interface MonthlyGridProps {
   monthlyData: MonthlyGridData
   setMonthlyData: Dispatch<SetStateAction<MonthlyGridData>>
   preferences: UserPreferences
+  flowTypeToNumberMap: Map<string, number>
 }
 
 // Constantes pour les labels des mois, en version courte et longue
 const months = ["Janv", "Févr", "Mars", "Avril", "Mai", "Juin", "Juil", "Août", "Sept", "Oct", "Nov", "Déc"]
 const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 
-function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences }: MonthlyGridProps) {
+function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap }: MonthlyGridProps) {
   // --- GESTION DE L'ÉTAT DES MODALES ---
 
   // Gère l'ouverture de la modale qui liste les flux d'un mois pour une entité
@@ -124,17 +125,19 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences }: Mon
     // ÉTAPE 1: Calculer une échelle de hauteur unifiée pour chaque LIGNE d'entité.
     const entitiesWithScale = entities.map(entity => {
       // MODIFICATION : On cherche maintenant la plus grande valeur d'UN SEUL flux sur toute l'année.
-      let maxIndividualFlowValue = 0
+      let maxMonthlyTotal = 0
       monthlyData.forEach(month => {
-        month.flows
-          .filter(flow => flow.entityId === entity.id)
-          .forEach(flow => {
-            maxIndividualFlowValue = Math.max(maxIndividualFlowValue, flow.amount)
-          })
+        const relevantFlows = month.flows.filter(flow => flow.entityId === entity.id)
+
+        const monthlyGains = relevantFlows.filter(flow => !["deductible_expense", "expense"].includes(flow.type)).reduce((sum, flow) => sum + flow.amount, 0)
+
+        const monthlyExpenses = relevantFlows.filter(flow => ["deductible_expense", "expense"].includes(flow.type)).reduce((sum, flow) => sum + flow.amount, 0)
+
+        maxMonthlyTotal = Math.max(maxMonthlyTotal, monthlyGains, monthlyExpenses)
       })
 
-      // L'échelle est maintenant basée sur ce flux individuel maximum.
-      return { ...entity, absoluteMaxValue: maxIndividualFlowValue > 0 ? maxIndividualFlowValue * 1.1 : 1 }
+      // L'échelle est maintenant basée sur le total mensuel maximum, avec une petite marge.
+      return { ...entity, absoluteMaxValue: maxMonthlyTotal > 0 ? maxMonthlyTotal * 1.1 : 1 }
     })
 
     // ÉTAPE 2: Préparer les données spécifiques à chaque CELLULE de la grille.
@@ -148,9 +151,10 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences }: Mon
         let totalExpenses = 0
 
         relevantFlows.forEach(flow => {
-          const segment = {
+          const segment: FlowSegment = {
             amount: flow.amount,
-            color: finalColors[flow.type as keyof typeof finalColors] || "#cccccc"
+            color: finalColors[flow.type as keyof typeof finalColors] || "#cccccc",
+            number: flowTypeToNumberMap.get(flow.type) || 0
           }
           if (["deductible_expense", "expense"].includes(flow.type)) {
             expenses.push(segment)
@@ -165,7 +169,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences }: Mon
       })
       return { entity, monthlyCellData }
     })
-  }, [monthlyData, entities, preferences])
+  }, [monthlyData, entities, preferences, flowTypeToNumberMap])
 
   // --- RENDU JSX DU COMPOSANT ---
 
