@@ -1,7 +1,7 @@
 // concat_code.js - VERSION FINALE ET CORRIGÉE
 const fs = require("fs")
 const path = require("path")
-const { globby } = require("globby")
+// const { globby } = require("globby")
 const tree = require("tree-node-cli")
 
 // --- CONFIGURATION CENTRALE DES EXCLUSIONS ---
@@ -21,6 +21,7 @@ const outputFile = path.join(outputDir, outputFilename)
 
 async function concatenateProjectFiles() {
   try {
+    const { globby } = await import("globby")
     console.log("🔍 Analyse du projet et collecte des fichiers...")
 
     const files = await globby(["**/*"], { gitignore: true, ignore: ignoreGlobs, dot: true })
