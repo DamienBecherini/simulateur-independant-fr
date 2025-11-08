@@ -1,7 +1,7 @@
 // src/ui/hooks/useSessionManager.ts
 
 import { useState, useEffect, useCallback } from "react"
-import type { SessionState, SaveSlot, SanitizationReport } from "@/types"
+import type { SessionState, SaveSlot, SanitizationReport, UserPreferences } from "@/types"
 import * as SessionService from "@/lib/session-service"
 import { useDebouncedSave } from "./useDebouncedSave"
 
@@ -32,8 +32,8 @@ export function useSessionManager() {
   const [sessionForSaving, setSessionForSaving] = useState<SessionState>(getInitialSessionState())
 
   const [allSaveSlots, setAllSaveSlots] = useState<SaveSlot[]>([])
-  const [slotOrder, setSlotOrder] = useState<string[]>([])
   const [importConfirmation, setImportConfirmation] = useState<{ session: SessionState; report: SanitizationReport } | null>(null)
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>({ slotOrder: [] })
 
   // Chargement initial
   useEffect(() => {
@@ -41,13 +41,14 @@ export function useSessionManager() {
       setHistory({ past: [], present: sessionData, future: [] })
       setSessionForSaving(sessionData) // On initialise aussi l'état pour la sauvegarde
       setAllSaveSlots(slotsData)
-      setSlotOrder(prefsData.slotOrder)
+      // On initialise l'état complet des préférences
+      setUserPreferences(prefsData || { slotOrder: [], flowTypeColors: {} })
     })
   }, [])
 
   // La sauvegarde automatique n'écoute QUE `sessionForSaving`
   useDebouncedSave(sessionForSaving, 1000, window.api.saveCurrentSession)
-  useDebouncedSave({ slotOrder }, 1000, window.api.saveUserPreferences)
+  useDebouncedSave(userPreferences, 1000, window.api.saveUserPreferences)
 
   // La nouvelle fonction que les composants devront appeler pour mettre à jour l'état
   const setSession = useCallback((newSession: SessionState | ((prevState: SessionState) => SessionState)) => {
@@ -131,14 +132,25 @@ export function useSessionManager() {
     setSessionForSaving(getInitialSessionState())
   }
 
+  const updateSlotOrder = useCallback((newOrder: string[] | ((prev: string[]) => string[])) => {
+    setUserPreferences(currentPrefs => ({
+      ...currentPrefs,
+      slotOrder: typeof newOrder === "function" ? newOrder(currentPrefs.slotOrder) : newOrder
+    }))
+  }, [])
+
   // On expose l'état présent, les nouvelles fonctions, et l'état des piles
   return {
     currentSession: history.present,
     setCurrentSession: setSession, // IMPORTANT: on renomme notre nouvelle fonction
     allSaveSlots,
     setAllSaveSlots,
-    slotOrder,
-    setSlotOrder,
+    // Expose l'état des préférences et sa fonction de mise à jour
+    userPreferences,
+    setUserPreferences,
+    slotOrder: userPreferences.slotOrder,
+    setSlotOrder: updateSlotOrder,
+
     importConfirmation,
     handleImport,
     proceedWithImport,

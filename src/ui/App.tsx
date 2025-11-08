@@ -10,6 +10,7 @@ import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
 import type { SaveSlot } from "@/types"
+import { FlowLegend } from "./components/FlowLegend"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
@@ -17,7 +18,7 @@ function App() {
   // L'état du niveau de zoom (1 = 100%)
   const [zoomLevel, setZoomLevel] = useState(1)
 
-  const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo } = useSessionManager()
+  const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo } = useSessionManager()
 
   // Effet pour appliquer le zoom au corps du document quand l'état change
   useEffect(() => {
@@ -142,7 +143,10 @@ function App() {
               monthlyData: typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(prev.monthlyData) : newMonthlyDataOrUpdater
             }))
           }}
+          preferences={userPreferences}
         />
+
+        <FlowLegend monthlyData={currentSession.monthlyData} preferences={userPreferences} onPreferencesChange={setUserPreferences} />
       </main>
 
       <Footer />
