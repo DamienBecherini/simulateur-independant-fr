@@ -1,0 +1,29 @@
+{
+  "include": [
+    "**/*.js",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.html",
+    "**/*.css",
+    "**/*.scss",
+    "**/*.md",
+    "**/*.json",
+    ".gitignore",
+    ".prettierignore"
+  ],
+  "exclude": [
+    "node_modules/**",
+    "frontend/dist/**",
+    "build/**",
+    ".git/**",
+    "package-lock.json",
+    "**/vite.svg",
+    "**/react.svg",
+    "**/*.test.js",
+    "frontend/eslint.config.js",
+    "frontend/tsconfig.json",
+    "frontend/tsconfig.app.json",
+    "frontend/tsconfig.node.json",
+    "frontend/vite.config.ts"
+  ]
+}

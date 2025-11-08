@@ -1,0 +1,17 @@
+{
+  "appId": "fr.independant.simulateur",
+  "productName": "Simulateur Indépendant FR",
+  "files": ["dist-electron", "dist-react", "splash.html"],
+  "extraResources": ["dist-electron/backend/preload.cjs"],
+  "icon": "./templateIcon.png",
+  "mac": {
+    "target": "dmg"
+  },
+  "linux": {
+    "target": "AppImage",
+    "category": "Utility"
+  },
+  "win": {
+    "target": ["portable", "msi"]
+  }
+}

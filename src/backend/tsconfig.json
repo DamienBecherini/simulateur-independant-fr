@@ -1,0 +1,20 @@
+// src/electron/tsconfig.json
+
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ESNext",
+    "module": "NodeNext",
+    "outDir": "../../dist-electron",
+    "rootDir": "../",
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "baseUrl": "../../",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  // On inclut les fichiers du backend, notre nouveau fichier de types, et le fichier de déclarations globales.
+  "include": ["./**/*", "../types.ts", "../globals.d.ts"]
+}

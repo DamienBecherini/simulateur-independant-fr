@@ -1,0 +1,10 @@
+# Fichiers de configuration JSON à formater manuellement
+.concatrc.json
+**/*.md
+
+# Vous pourriez aussi ignorer tous les fichiers de config si besoin
+# **/*.config.json
+
+# Ignorez les fichiers générés
+build/
+dist/

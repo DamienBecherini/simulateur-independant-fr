@@ -1,7 +1,0 @@
-{
-  "ACRE": "Aide à la Création ou à la Reprise d'une Entreprise. Permet une exonération partielle de cotisations sociales la première année.",
-  "FLAT_TAX": "Prélèvement Forfaitaire Unique (PFU) de 30% appliqué par défaut sur les dividendes. Il inclut l'impôt sur le revenu (12.8%) et les prélèvements sociaux (17.2%).",
-  "TNS": "Travailleur Non Salarié. Régime de cotisations sociales des gérants d'EURL et des entrepreneurs en EI. Moins cher que le régime salarié, mais avec une protection sociale légèrement inférieure.",
-  "IS": "Impôt sur les Sociétés. Impôt payé par la société sur ses bénéfices, avant toute distribution de dividendes.",
-  "EI_REEL": "Entreprise Individuelle au Régime Réel. Statut où les charges sont déduites du CA pour calculer un bénéfice. Ce bénéfice est ensuite soumis à l'impôt sur le revenu."
-}
