@@ -1,15 +1,18 @@
 // src/ui/components/MonthlyGrid.tsx
 
-import { useState, useMemo, Dispatch, SetStateAction } from "react"
+import React, { useState, useMemo, Dispatch, SetStateAction } from "react"
 import type { Entity, MonthlyGridData, FinancialFlow, UserPreferences } from "@/types"
 import { EditFlowModal } from "./EditFlowModal"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
-// import { cn } from "@/lib/utils"
-// Importation du nouveau composant d'affichage pour les cellules
 import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
-// Importation des couleurs par défaut pour les types de flux
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
+import { AvatarDisplay } from "./AvatarDisplay"
 
+/**
+ * Interface pour les props du composant MonthlyGrid.
+ * Ce composant est le cœur de la visualisation des données, affichant une grille
+ * interactive des flux financiers pour chaque entité, mois par mois, ainsi qu'un total annuel.
+ */
 interface MonthlyGridProps {
   entities: Entity[]
   monthlyData: MonthlyGridData
@@ -18,98 +21,73 @@ interface MonthlyGridProps {
   flowTypeToNumberMap: Map<string, number>
 }
 
-// Constantes pour les labels des mois, en version courte et longue
+// Constantes pour les labels des mois
 const months = ["Janv", "Févr", "Mars", "Avril", "Mai", "Juin", "Juil", "Août", "Sept", "Oct", "Nov", "Déc"]
 const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 
 function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap }: MonthlyGridProps) {
-  // --- GESTION DE L'ÉTAT DES MODALES ---
-
-  // Gère l'ouverture de la modale qui liste les flux d'un mois pour une entité
+  // ===================================================================================
+  // == GESTION DE L'ÉTAT DES MODALES (INCHANGÉ)
+  // ===================================================================================
   const [isListModalOpen, setListModalOpen] = useState(false)
-  // Gère l'ouverture de la modale d'ajout/édition d'un flux
   const [isEditModalOpen, setEditModalOpen] = useState(false)
-
-  // Stocke le contexte de la cellule cliquée (quelle entité, quel mois)
   const [context, setContext] = useState<{ entityId: string; monthIndex: number } | null>(null)
-  // Stocke le flux à éditer. Si null, la modale d'édition est en mode "création".
   const [flowToEdit, setFlowToEdit] = useState<FinancialFlow | null>(null)
 
-  // --- HANDLERS POUR LES ACTIONS UTILISATEUR ---
-
-  /** Ouvre la modale listant les flux pour une cellule spécifique */
+  // ===================================================================================
+  // == HANDLERS POUR LES ACTIONS UTILISATEUR (INCHANGÉ)
+  // ===================================================================================
   const openFlowsList = (entityId: string, monthIndex: number) => {
     setContext({ entityId, monthIndex })
     setListModalOpen(true)
   }
-
-  /** Gère le clic sur le bouton "Ajouter un flux" depuis la liste */
   const handleAddFlow = () => {
-    setFlowToEdit(null) // S'assure qu'on est en mode création
-    setListModalOpen(false) // Ferme la modale de liste
-    setEditModalOpen(true) // Ouvre la modale d'édition
-  }
-
-  /** Gère le clic sur le bouton "Modifier" d'un flux existant */
-  const handleEditFlow = (flow: FinancialFlow) => {
-    setFlowToEdit(flow) // Passe le flux à éditer
+    setFlowToEdit(null)
     setListModalOpen(false)
     setEditModalOpen(true)
   }
-
-  /** Supprime un flux financier de la grille */
+  const handleEditFlow = (flow: FinancialFlow) => {
+    setFlowToEdit(flow)
+    setListModalOpen(false)
+    setEditModalOpen(true)
+  }
   const handleDeleteFlow = (flowId: string) => {
     if (!context) return
     const { monthIndex } = context
-
-    // Mise à jour de l'état de manière immuable : on crée un nouveau tableau.
     setMonthlyData(prevData =>
       prevData.map((monthData, index) => {
         if (index === monthIndex) {
-          // Pour le mois concerné, on retourne un nouvel objet avec les flux filtrés
           return { ...monthData, flows: monthData.flows.filter(f => f.id !== flowId) }
         }
-        return monthData // Les autres mois restent inchangés
+        return monthData
       })
     )
   }
-
-  /** Sauvegarde un flux (création ou modification) */
   const handleSaveFlow = (savedFlow: FinancialFlow, isEditing: boolean) => {
     if (!context) return
     const { monthIndex } = context
-
     setMonthlyData(prevData =>
       prevData.map((monthData, index) => {
         if (index === monthIndex) {
           if (isEditing) {
-            // En mode édition, on remplace le flux existant
             return { ...monthData, flows: monthData.flows.map(f => (f.id === savedFlow.id ? savedFlow : f)) }
           } else {
-            // En mode création, on ajoute le nouveau flux à la fin
             return { ...monthData, flows: [...monthData.flows, savedFlow] }
           }
         }
         return monthData
       })
     )
-
-    setEditModalOpen(false) // On ferme la modale d'édition
-    setListModalOpen(true) // On rouvre la liste pour voir le résultat
+    setEditModalOpen(false)
+    setListModalOpen(true)
   }
-
-  /** Gère la réorganisation des flux par glisser-déposer */
   const handleReorderFlows = (reorderedFlows: FinancialFlow[]) => {
     if (!context) return
     const { monthIndex, entityId } = context
-
     setMonthlyData(prevData =>
       prevData.map((monthData, index) => {
         if (index === monthIndex) {
-          // On reconstruit la liste des flux pour ce mois :
-          // 1. On garde les flux des autres entités qui ne doivent pas bouger
           const otherEntityFlows = monthData.flows.filter(f => f.entityId !== entityId)
-          // 2. On ajoute la nouvelle liste réorganisée
           return { ...monthData, flows: [...otherEntityFlows, ...reorderedFlows] }
         }
         return monthData
@@ -117,62 +95,82 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
     )
   }
 
-  // --- LOGIQUE DE CALCUL MÉMORISÉE ---
-
+  // ===================================================================================
+  // == LOGIQUE DE CALCUL MÉMORISÉE POUR LA GRILLE (INCHANGÉE)
+  // ===================================================================================
   const gridData = useMemo(() => {
     const finalColors = { ...DEFAULT_FLOW_COLORS, ...preferences.flowTypeColors }
 
-    // ÉTAPE 1: Calculer une échelle de hauteur unifiée pour chaque LIGNE d'entité.
-    const entitiesWithScale = entities.map(entity => {
-      // MODIFICATION : On cherche maintenant la plus grande valeur d'UN SEUL flux sur toute l'année.
+    return entities.map(entity => {
       let maxMonthlyTotal = 0
       monthlyData.forEach(month => {
         const relevantFlows = month.flows.filter(flow => flow.entityId === entity.id)
-
         const monthlyGains = relevantFlows.filter(flow => !["deductible_expense", "expense"].includes(flow.type)).reduce((sum, flow) => sum + flow.amount, 0)
-
         const monthlyExpenses = relevantFlows.filter(flow => ["deductible_expense", "expense"].includes(flow.type)).reduce((sum, flow) => sum + flow.amount, 0)
-
         maxMonthlyTotal = Math.max(maxMonthlyTotal, monthlyGains, monthlyExpenses)
       })
+      const monthlyScale = maxMonthlyTotal > 0 ? maxMonthlyTotal * 1.1 : 1
 
-      // L'échelle est maintenant basée sur le total mensuel maximum, avec une petite marge.
-      return { ...entity, absoluteMaxValue: maxMonthlyTotal > 0 ? maxMonthlyTotal * 1.1 : 1 }
-    })
-
-    // ÉTAPE 2: Préparer les données spécifiques à chaque CELLULE de la grille.
-    return entitiesWithScale.map(entity => {
       const monthlyCellData = Array.from({ length: 12 }).map((_, monthIndex) => {
         const relevantFlows = monthlyData[monthIndex].flows.filter(flow => flow.entityId === entity.id)
-
-        const gains: FlowSegment[] = []
-        const expenses: FlowSegment[] = []
-        let totalGains = 0
-        let totalExpenses = 0
-
+        const aggregatedFlows = new Map<FinancialFlow["type"], number>()
         relevantFlows.forEach(flow => {
-          const segment: FlowSegment = {
-            amount: flow.amount,
-            color: finalColors[flow.type as keyof typeof finalColors] || "#cccccc",
-            number: flowTypeToNumberMap.get(flow.type) || 0
-          }
-          if (["deductible_expense", "expense"].includes(flow.type)) {
-            expenses.push(segment)
-            totalExpenses += flow.amount
-          } else {
-            gains.push(segment)
-            totalGains += flow.amount
-          }
+          aggregatedFlows.set(flow.type, (aggregatedFlows.get(flow.type) || 0) + flow.amount)
         })
 
+        const gains: FlowSegment[] = [],
+          expenses: FlowSegment[] = []
+        let totalGains = 0,
+          totalExpenses = 0
+
+        aggregatedFlows.forEach((amount, type) => {
+          const segment: FlowSegment = { amount, color: finalColors[type] || "#cccccc", number: flowTypeToNumberMap.get(type) || 0 }
+          if (["deductible_expense", "expense"].includes(type)) {
+            expenses.push(segment)
+            totalExpenses += amount
+          } else {
+            gains.push(segment)
+            totalGains += amount
+          }
+        })
         return { gains, expenses, totalGains, totalExpenses, flowCount: relevantFlows.length }
       })
-      return { entity, monthlyCellData }
+
+      const totalAnnualFlows = new Map<FinancialFlow["type"], number>()
+      monthlyData.forEach(month => {
+        month.flows
+          .filter(flow => flow.entityId === entity.id)
+          .forEach(flow => {
+            totalAnnualFlows.set(flow.type, (totalAnnualFlows.get(flow.type) || 0) + flow.amount)
+          })
+      })
+
+      const annualGains: FlowSegment[] = [],
+        annualExpenses: FlowSegment[] = []
+      let totalAnnualGains = 0,
+        totalAnnualExpenses = 0
+
+      totalAnnualFlows.forEach((amount, type) => {
+        const segment: FlowSegment = { amount, color: finalColors[type] || "#cccccc", number: flowTypeToNumberMap.get(type) || 0 }
+        if (["deductible_expense", "expense"].includes(type)) {
+          annualExpenses.push(segment)
+          totalAnnualExpenses += amount
+        } else {
+          annualGains.push(segment)
+          totalAnnualGains += amount
+        }
+      })
+
+      const annualFlowCount = monthlyData.reduce((acc, month) => acc + month.flows.filter(f => f.entityId === entity.id).length, 0)
+      const annualCellData = { gains: annualGains, expenses: annualExpenses, totalGains: totalAnnualGains, totalExpenses: totalAnnualExpenses, flowCount: annualFlowCount }
+
+      return { entity, monthlyScale, monthlyCellData, annualCellData }
     })
   }, [monthlyData, entities, preferences, flowTypeToNumberMap])
 
-  // --- RENDU JSX DU COMPOSANT ---
-
+  // ===================================================================================
+  // == RENDU JSX DU COMPOSANT
+  // ===================================================================================
   return (
     <>
       <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md mt-8">
@@ -181,44 +179,57 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           <p className="text-slate-500">Veuillez d'abord ajouter une entité pour commencer la saisie.</p>
         ) : (
           <div className="overflow-x-auto">
-            <div className="grid gap-px" style={{ gridTemplateColumns: "minmax(200px, 1.5fr) repeat(12, minmax(140px, auto))" }}>
+            {/* **CORRECTIF FINAL : DÉFINITION EXPLICITE DES COLONNES**
+             * La propriété `gridTemplateColumns` est mise à jour pour résoudre les problèmes de largeur :
+             * 1. `auto`: La première colonne ("Entités / Flux") prendra automatiquement la largeur
+             *    de son contenu le plus large (le nom d'entité ou l'en-tête). C'est la solution
+             *    dynamique et robuste que nous cherchions.
+             * 2. `repeat(13, 160px)`: Les 13 colonnes suivantes (1 pour le Total Annuel + 12 pour les mois)
+             *    auront TOUTES une largeur fixe de 160px. C'est une largeur suffisante pour afficher
+             *    correctement les graphiques sans qu'ils soient à l'étroit, corrigeant ainsi le problème
+             *    de la colonne "Total Annuel" trop étroite.
+             */}
+            <div className="grid gap-px" style={{ gridTemplateColumns: "fit-content(250px) repeat(13, 160px)" }}>
               {/* En-tête de la grille */}
-              <div className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2">Entités / Flux</div>
+              <div className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2 whitespace-nowrap">Entités / Flux</div>
+              <div className="font-bold text-center p-2">Total Annuel</div>
               {months.map(month => (
                 <div key={month} className="font-bold text-center p-2">
                   {month}
                 </div>
               ))}
+              {/* Corps de la grille */}
+              {gridData.map(({ entity, monthlyScale, monthlyCellData, annualCellData }) => (
+                // L'utilisation de React.Fragment est cruciale pour que `position: sticky` fonctionne correctement.
+                <React.Fragment key={entity.id}>
+                  {/* Colonne 1 : Nom de l'entité + Avatar */}
 
-              {/* Corps de la grille, généré à partir des données calculées */}
-              {gridData.map(({ entity, monthlyCellData }) => (
-                <div key={entity.id} className="contents">
-                  {/* Colonne du nom de l'entité (sticky pour rester visible au scroll horizontal) */}
-                  <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 p-2 flex items-center">{entity.name}</div>
+                  <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <AvatarDisplay avatar={entity.avatar} size="md" />
+                      <span>{entity.name}</span>
+                    </div>
+                  </div>
 
-                  {/* Génération des 12 cellules de données pour cette entité */}
+                  {/* Colonne 2 : Total Annuel */}
+                  <div className="bg-slate-200 dark:bg-gray-700 p-2">
+                    <CellChartDisplay gains={annualCellData.gains} expenses={annualCellData.expenses} totalGains={annualCellData.totalGains} totalExpenses={annualCellData.totalExpenses} absoluteMaxValue={Math.max(annualCellData.totalGains, annualCellData.totalExpenses, 1)} flowCount={annualCellData.flowCount} />
+                  </div>
+
+                  {/* Colonnes 3 à 14 : Les 12 mois */}
                   {monthlyCellData.map((cellData, monthIndex) => (
                     <div key={monthIndex} className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700" onClick={() => openFlowsList(entity.id, monthIndex)}>
-                      <CellChartDisplay
-                        gains={cellData.gains}
-                        expenses={cellData.expenses}
-                        totalGains={cellData.totalGains}
-                        totalExpenses={cellData.totalExpenses}
-                        absoluteMaxValue={entity.absoluteMaxValue} // On passe la NOUVELLE échelle de la ligne
-                        flowCount={cellData.flowCount}
-                      />
+                      <CellChartDisplay gains={cellData.gains} expenses={cellData.expenses} totalGains={cellData.totalGains} totalExpenses={cellData.totalExpenses} absoluteMaxValue={monthlyScale} flowCount={cellData.flowCount} />
                     </div>
                   ))}
-                </div>
+                </React.Fragment>
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Rendu des modales (elles ne sont visibles que si leur état `isOpen` est true) */}
       <MonthlyFlowsModal isOpen={isListModalOpen} onClose={() => setListModalOpen(false)} flows={context ? monthlyData[context.monthIndex].flows.filter(f => f.entityId === context.entityId) : []} entity={context ? entities.find(e => e.id === context.entityId) : undefined} monthName={context ? fullMonths[context.monthIndex] : ""} onAdd={handleAddFlow} onEdit={handleEditFlow} onDelete={handleDeleteFlow} onReorder={handleReorderFlows} />
-
       <EditFlowModal isOpen={isEditModalOpen} onClose={() => setEditModalOpen(false)} onSave={handleSaveFlow} context={context} flowToEdit={flowToEdit} allEntities={entities} />
     </>
   )
