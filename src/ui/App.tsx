@@ -9,18 +9,17 @@ import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
-import type { SaveSlot } from "@/types"
+import type { SaveSlot } from "@/types" // Gardé pour la signature de la fonction
 import { FlowLegend } from "./components/FlowLegend"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
-
-  // L'état du niveau de zoom (1 = 100%)
   const [zoomLevel, setZoomLevel] = useState(1)
 
-  const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo } = useSessionManager()
+  // --- MODIFICATION : Récupération des nouveaux états et fonctions du hook ---
+  // On récupère tout ce dont on a besoin depuis le "cerveau" de l'application.
+  const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
 
-  // Effet pour appliquer le zoom au corps du document quand l'état change
   useEffect(() => {
     document.body.style.zoom = `${zoomLevel}`
   }, [zoomLevel])
@@ -49,15 +48,8 @@ function App() {
     }
   }, [undo, redo, canUndo, canRedo])
 
-  const handleLoadSlot = (slotToLoad: SaveSlot) => {
-    setCurrentSession({
-      name: slotToLoad.name,
-      entities: slotToLoad.entities,
-      relationships: slotToLoad.relationships || [],
-      monthlyData: slotToLoad.monthlyData || Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
-    })
-    setSettingsOpen(false)
-  }
+  // --- SUPPRESSION : La logique de chargement est maintenant entièrement dans le hook useSessionManager ---
+  // L'ancienne fonction handleLoadSlot qui était ici est supprimée.
 
   const handleConfirmImportAndClose = () => {
     proceedWithImport()
@@ -69,21 +61,26 @@ function App() {
     setSettingsOpen(false)
   }
 
-  // Fonctions pour gérer le zoom
-  const zoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2)) // Plafond à 200%
-  const zoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5)) // Plancher à 50%
+  // --- MODIFICATION : On utilise la fonction de chargement du hook et on ferme le panneau. ---
+  // Cette fonction "wrapper" permet de coupler l'action de chargement avec la fermeture de l'UI.
+  const handleLoadAndClose = (slotToLoad: SaveSlot) => {
+    handleLoadSlot(slotToLoad)
+    setSettingsOpen(false)
+  }
 
-  // Calcul centralisé de la carte de numérotation
+  const zoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2))
+  const zoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5))
+
   const flowTypeToNumberMap = useMemo(() => {
     const types = new Set<string>()
     currentSession.monthlyData.forEach(month => {
       month.flows.forEach(flow => types.add(flow.type))
     })
-    const sortedTypes = Array.from(types).sort() // On trie pour une numérotation stable
+    const sortedTypes = Array.from(types).sort()
 
     const map = new Map<string, number>()
     sortedTypes.forEach((type, index) => {
-      map.set(type, index + 1) // Numérotation commence à 1
+      map.set(type, index + 1)
     })
     return map
   }, [currentSession.monthlyData])
@@ -167,7 +164,28 @@ function App() {
 
       <Footer />
 
-      <SettingsSheet isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} allSaveSlots={allSaveSlots} setAllSaveSlots={setAllSaveSlots} currentSession={currentSession} setCurrentSession={setCurrentSession} onReset={handleResetAndClose} onLoadSlot={handleLoadSlot} slotOrder={slotOrder} setSlotOrder={setSlotOrder} onImport={handleImport} importConfirmation={importConfirmation} onConfirmImport={handleConfirmImportAndClose} onCancelImport={cancelImport} />
+      {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
+      {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
+          le panneau de configuration ait tout le contexte nécessaire. */}
+      <SettingsSheet
+        isOpen={isSettingsOpen}
+        onOpenChange={setSettingsOpen}
+        allSaveSlots={allSaveSlots}
+        setAllSaveSlots={setAllSaveSlots}
+        currentSession={currentSession}
+        setCurrentSession={setCurrentSession}
+        onReset={handleResetAndClose}
+        onLoadSlot={handleLoadAndClose} // On passe la nouvelle fonction wrapper
+        slotOrder={slotOrder}
+        setSlotOrder={setSlotOrder}
+        onImport={handleImport}
+        importConfirmation={importConfirmation}
+        onConfirmImport={handleConfirmImportAndClose}
+        onCancelImport={cancelImport}
+        // Ajout des props cruciales pour la nouvelle logique
+        loadedSlotId={loadedSlotId}
+        setLoadedSlotId={setLoadedSlotId}
+      />
     </div>
   )
 }

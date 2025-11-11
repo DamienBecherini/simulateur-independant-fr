@@ -7,6 +7,7 @@
  * à exécuter via ses props, ce qui le rend entièrement contrôlé par son composant parent (`App.tsx`).
  *
  * Il gère un état interne minimal, uniquement pour la navigation entre les vues ("principal" et "charger").
+ * Il reçoit maintenant le contexte du slot chargé pour prendre des décisions de sauvegarde intelligentes.
  */
 
 import { useState, Dispatch, SetStateAction, useMemo, useEffect } from "react"
@@ -47,6 +48,9 @@ interface SettingsSheetProps {
   importConfirmation: { session: SessionState; report: SanitizationReport } | null
   onConfirmImport: () => void
   onCancelImport: () => void
+
+  loadedSlotId: string | null
+  setLoadedSlotId: Dispatch<SetStateAction<string | null>>
 }
 
 /**
@@ -84,39 +88,68 @@ function SaveSlotItem({ slot, onDelete, onExport, onLoad }: { slot: SaveSlot; on
   )
 }
 
-export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, importConfirmation, onConfirmImport, onCancelImport }: SettingsSheetProps) {
+// --- MODIFICATION : Réception des nouvelles props ---
+export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId }: SettingsSheetProps) {
   const [view, setView] = useState<"main" | "load">("main")
   const [isOverwriteAlertOpen, setOverwriteAlertOpen] = useState(false)
   const [slotToOverwrite, setSlotToOverwrite] = useState<SaveSlot | null>(null)
 
-  // Remet la vue à "main" à chaque fois que le panneau s'ouvre.
   useEffect(() => {
     if (isOpen) {
       setView("main")
     }
   }, [isOpen])
 
+  // --- LOGIQUE DE SAUVEGARDE ENTIÈREMENT RÉÉCRITE ---
   const handleSave = () => {
-    const existingSlot = allSaveSlots.find(slot => slot.name === currentSession.name)
-    if (existingSlot) {
-      setSlotToOverwrite(existingSlot)
+    // On récupère le slot qui est actuellement chargé en mémoire (s'il y en a un)
+    const loadedSlot = loadedSlotId ? allSaveSlots.find(s => s.id === loadedSlotId) : null
+
+    // CAS 1: MISE À JOUR (comportement "Save")
+    // Si un slot est "chargé" ET que son nom n'a PAS changé.
+    if (loadedSlot && loadedSlot.name === currentSession.name) {
+      // C'est une simple mise à jour, on écrase directement sans poser de question.
+      const updatedSlot = SessionService.updateSlotWithSession(loadedSlot, currentSession)
+      const updatedSlots = allSaveSlots.map(s => (s.id === loadedSlot.id ? updatedSlot : s))
+      setAllSaveSlots(updatedSlots)
+      SessionService.saveAllSlots(updatedSlots)
+      onOpenChange(false) // On ferme le panneau, la sauvegarde est réussie.
+      return // On arrête l'exécution de la fonction ici.
+    }
+
+    // CAS 2: CRÉATION ou "SAUVEGARDER SOUS..." (comportement "Save As")
+    // Ce cas se produit si aucun slot n'était chargé OU si l'utilisateur a modifié le nom de la session.
+    const existingSlotByName = allSaveSlots.find(slot => slot.name === currentSession.name)
+
+    if (existingSlotByName) {
+      // Un conflit de nom existe, on demande à l'utilisateur s'il veut écraser.
+      setSlotToOverwrite(existingSlotByName)
       setOverwriteAlertOpen(true)
     } else {
+      // Pas de conflit, on peut créer une nouvelle sauvegarde en toute sécurité.
       const newSlot = SessionService.createNewSlotFromSession(currentSession)
       const updatedSlots = [...allSaveSlots, newSlot]
       setAllSaveSlots(updatedSlots)
-      setSlotOrder(prevOrder => [newSlot.id, ...prevOrder])
+      setSlotOrder(prevOrder => [newSlot.id, ...prevOrder]) // On ajoute le nouvel slot en haut de la liste
       SessionService.saveAllSlots(updatedSlots)
+      // ACTION CRUCIALE: Le nouveau slot devient le "slot chargé" pour les prochaines sauvegardes.
+      setLoadedSlotId(newSlot.id)
       onOpenChange(false)
     }
   }
 
+  // --- LOGIQUE D'ÉCRASEMENT MISE À JOUR ---
   const performOverwrite = () => {
     if (!slotToOverwrite) return
     const updatedSlot = SessionService.updateSlotWithSession(slotToOverwrite, currentSession)
     const updatedSlots = allSaveSlots.map(slot => (slot.id === slotToOverwrite.id ? updatedSlot : slot))
     setAllSaveSlots(updatedSlots)
     SessionService.saveAllSlots(updatedSlots)
+
+    // ACTION CRUCIALE: Le slot qui vient d'être écrasé devient le nouveau "slot chargé".
+    // Cela garantit que la prochaine sauvegarde (sans changer de nom) mettra à jour ce même slot.
+    setLoadedSlotId(updatedSlot.id)
+
     setOverwriteAlertOpen(false)
     setSlotToOverwrite(null)
     onOpenChange(false)
