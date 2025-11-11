@@ -1,7 +1,7 @@
 // src/electron/logic/calculsEI.ts
 
 // MODIFIÉ : Syntaxe d'import avec 'with'
-import config from "../config.json" assert { type: "json" }
+import config from "../config.json" with { type: "json" }
 import { calculerIR } from "./calculsIR.js"
 import type { SimulationInputs } from "@/types.js"
 

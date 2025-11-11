@@ -1,5 +1,5 @@
 // src/globals.d.ts
-import type { SessionState, SaveSlot, UserPreferences, ExportableState, SanitizationReport, NotificationPayload } from "./types.js"
+import type { SessionState, SaveSlot, UserPreferences, ExportableState, SanitizationReport, NotificationPayload, SimulationOutput } from "./types.js"
 
 // On importe les types depuis notre nouveau module `types.ts` pour les utiliser ici.
 export type EventPayloadMapping = {
@@ -11,6 +11,8 @@ export type EventPayloadMapping = {
   importState: () => Promise<{ data?: ExportableState; report?: SanitizationReport; error?: string }>
   getUserPreferences: () => Promise<UserPreferences>
   saveUserPreferences: (prefs: UserPreferences) => Promise<void>
+  // --- NOUVELLE LIGNE POUR LA SIMULATION ---
+  runSimulation: (session: SessionState) => Promise<SimulationOutput>
   onShowNotification: (callback: (payload: NotificationPayload) => void) => () => void
 }
 

@@ -39,51 +39,53 @@
     - La légende des flux (`FlowLegend`) est dynamique et assigne un numéro unique à chaque type de flux.
     - Les numéros de la légende sont reportés au-dessus des barres dans la grille pour une identification claire et accessible.
 
----
-
-### **Phase 5.5 : Corrections & Améliorations de l'UX [À FAIRE 🎯 - NOUVELLE PRIORITÉ]**
+#### **Phase 5.5 : Corrections & Améliorations de l'UX [Terminé ✅]**
 
 **Objectif :** Résoudre les problèmes fonctionnels et les bugs identifiés lors de l'utilisation de la grille et de la gestion des sauvegardes pour rendre l'expérience fluide et complète.
 
-1.  **Action 5.5.1 : Enrichir et Clarifier les Types de Dépenses Disponibles :**
-
-    - **Problème :** Les types de flux de dépenses disponibles sont trop restrictifs. Il est impossible pour une personne physique ou une micro-entreprise d'enregistrer une sortie d'argent, ce qui bloque la simulation de leur trésorerie réelle.
-
-    - **Clarification (suite à l'analyse) :** Une distinction sémantique cruciale doit être faite. Le régime de la micro-entreprise étant forfaitaire, ses dépenses réelles ne sont **pas déductibles** de son assiette fiscale (contrairement à une société à l'IS). Le type `deductible_expense` est donc sémantiquement incorrect pour ce statut. Il faut utiliser le type `expense` pour représenter une sortie de trésorerie sans avantage fiscal, à la fois pour les personnes et les micro-entreprises.
-
-    - **Plan d'action :**
-
-      - **Étape 1 (Clarification) :** Renommer le libellé du type de flux `expense` de `"Dépense (Test)"` à `"Dépense (non déductible)"` dans les dictionnaires de l'interface (`flowTypeLabels`) pour le rendre non ambigu pour l'utilisateur.
-      - **Étape 2 (Logique) :** Mettre à jour la logique du composant `src/ui/components/EditFlowModal.tsx`. Le `useMemo` qui calcule `availableFlowTypes` doit être modifié pour inclure :
-        - `expense` (Dépense non déductible) pour les entités de type `Person`.
-        - `expense` (Dépense non déductible) pour les entités de type `MicroEntreprise`.
-        - `deductible_expense` (Charge déductible) doit rester disponible **uniquement** pour les entités de type `Company` (SASU/EURL).
-
-    - **Résultat attendu :** L'utilisateur est guidé vers le bon type de saisie en fonction du statut juridique, rendant la simulation plus précise et pédagogique.
-
-2.  **Action 5.5.2 : Agréger les Barres par Type de Flux :**
-
-    - **Problème :** Si un utilisateur ajoute deux gains du même type (ex: deux salaires) dans le même mois, la grille affiche actuellement deux barres distinctes côte à côte. Le comportement attendu est que ces deux montants soient additionnés et représentés par une seule barre plus haute.
-    - **Plan d'action :** Refondre la logique d'agrégation dans le `useMemo` du composant `src/ui/components/MonthlyGrid.tsx`. Pour chaque cellule, au lieu d'itérer sur les flux et de créer un segment par flux, il faudra d'abord regrouper les flux par `type`, sommer leurs `amount`, puis créer un seul `FlowSegment` par type.
-
-3.  **Action 5.5.3 : Corriger la Logique de Sauvegarde "Écraser vs. Créer" :**
-    - **Problème :** Si on charge un slot, qu'on modifie le nom de la session dans le panneau latéral, puis qu'on clique sur "Sauvegarder", le système propose d'écraser un ancien slot qui porterait ce nouveau nom, au lieu de créer un nouveau slot. Renommer une session devrait "casser" le lien avec son slot d'origine et indiquer une intention de "Sauvegarder sous...".
-    - **Plan d'action :**
-      - **Étape 1 :** Dans le hook `useSessionManager`, ajouter un état pour mémoriser l'ID du slot qui a été chargé (ex: `loadedSlotId: string | null`). Cet ID est mis à jour lors d'un `handleLoadSlot` et réinitialisé à `null` lors d'un `handleResetSession` ou d'un import.
-      - **Étape 2 :** Dans `SettingsSheet.tsx`, la logique de la fonction `handleSave` doit être modifiée. Au lieu de juste chercher un slot par son nom, elle devra vérifier si `loadedSlotId` existe ET si le `currentSession.name` n'a pas changé. Si le nom a changé ou s'il n'y a pas de `loadedSlotId`, la sauvegarde doit être traitée comme une création de nouveau slot (en vérifiant les conflits de nom comme maintenant).
+1.  **Action 5.5.1 : Logique des Dépenses Clarifiée :** [✅]
+    - La distinction a été faite entre les **charges déductibles** (pour les sociétés à l'IS) et les **dépenses non déductibles**, qui sont maintenant correctement disponibles pour les personnes physiques et les micro-entreprises, rendant la simulation de trésorerie possible pour tous les statuts.
+2.  **Action 5.5.2 : Agrégation Visuelle des Flux :** [✅]
+    - Les flux de même type saisis dans un même mois sont désormais **fusionnés en une seule barre visuelle** dans la grille, dont la hauteur représente la somme des montants.
+3.  **Action 5.5.3 : Logique de Sauvegarde Corrigée :** [✅]
+    - Renommer une session charge une intention de **"Sauvegarder sous..."**. Le système propose maintenant de créer une nouvelle sauvegarde au lieu de chercher à écraser un ancien slot, ce qui rend le comportement plus intuitif et sécurisé.
 
 ---
 
-### **Phase 6 : Le Moteur de Méta-Simulation v2 [Planifié 🗓️]**
+### **Phase 6 : Le Moteur de Méta-Simulation v2 [À FAIRE 🎯 - NOUVELLE PRIORITÉ]**
 
-**Objectif :** Orchestrer les calculs en interprétant le graphe d'entités et la grille de flux.
+**Objectif :** Remplacer le prototype de calcul par un moteur de simulation robuste capable de produire un rapport détaillé et pédagogique. Le principe fondamental est de **distinguer systématiquement les flux de trésorerie réels (ce qu'il reste dans la poche) des assiettes fiscales et sociales (ce qui sert de base aux calculs administratifs)**.
 
-1.  **Action 6.1 :** Refondre la fonction `runSimulation` dans `main.ts`. Cette fonction devra :
-    - Agréger les 12 mois de flux de `monthlyData` pour chaque entité afin d'obtenir les totaux annuels (CA total, charges totales, rémunération totale...).
-    - Utiliser le tableau `relationships` pour router les flux (ex: la "Rémunération" de la SASU devient un revenu pour la personne qui a la relation "Président").
-    - Préparer l'objet `SimulationInputs` pour chaque module de calcul (`simulerSASU`, `simulerEURL`...) avec les données agrégées.
-    - Calculer l'impôt sur le revenu au niveau du foyer fiscal.
-2.  **Action 6.2 :** Créer un composant `Results.tsx` qui affiche un premier tableau de résultats synthétiques (Net dans la poche par personne, impôts...).
+1.  **Action 6.1 : Refondre la Structure des Résultats (`SimulationOutput`) :**
+
+    - **Problème :** La structure de retour actuelle est trop simple et fusionne des concepts différents (ex: `netProfit` pour une micro-entreprise est ambigu).
+    - **Plan d'action :**
+      - Modifier les types dans `src/types.ts`. L'interface `SimulationOutput` et ses sous-interfaces (`CompanyResult`, `PersonResult`) doivent être enrichies pour contenir tous les détails nécessaires à un rapport complet.
+      - **Pour `CompanyResult` (spécifiquement pour la Micro-Entreprise) :** Ajouter des champs pour le `totalCA`, le détail du CA par catégorie (`caBic`, `caBnc`, `caVente`), le détail des cotisations sociales (`cotisationsBic`, `cotisationsBnc`, etc.), le `revenuImposableApresAbattement`, et un `resultatNetTresorerie` (CA - Cotisations - Dépenses réelles).
+      - **Pour `PersonResult` :** Ajouter des champs pour le `totalRevenuImposable` (qui inclut les salaires ET le revenu imposable des activités), et conserver un `netInPocket` qui représentera le flux de trésorerie final.
+
+2.  **Action 6.2 : Mettre à Jour les Modules de Calcul Individuels :**
+
+    - **Problème :** Les fonctions comme `simulerMicroEntreprise` retournent un résultat trop simple.
+    - **Plan d'action :**
+      - Modifier chaque module de calcul dans `src/backend/logic/` (`calculsAE.ts`, `calculsSASU.ts`, etc.) pour qu'ils retournent la nouvelle structure de résultat détaillée définie à l'étape 6.1.
+      - Le calcul pour la micro-entreprise devra explicitement calculer et retourner séparément les cotisations sociales, le revenu imposable après abattement forfaitaire, et le résultat net de trésorerie.
+
+3.  **Action 6.3 : Réécrire l'Orchestrateur de Simulation (`simulationOrchestrator.ts`) :**
+
+    - **Problème :** L'orchestrateur actuel ne gère pas correctement la propagation des revenus et le calcul au niveau du foyer.
+    - **Plan d'action :** La fonction `runSimulation` devra suivre une logique stricte :
+      1.  **Calculer les résultats individuels** pour chaque activité (société, micro) en appelant les modules mis à jour.
+      2.  **Identifier les foyers fiscaux** en se basant sur les relations "Marié(e)" / "PACSé(e)".
+      3.  **Agréger les revenus IMPOSABLES** pour chaque foyer. Cela signifie cumuler les salaires des personnes et le **`revenuImposableApresAbattement`** de leurs activités (et non le CA !).
+      4.  **Calculer l'Impôt sur le Revenu (IR)** pour chaque foyer en se basant sur le total des revenus imposables et la somme des parts fiscales.
+      5.  **Calculer le "Net dans la Poche" final** au niveau du foyer. Ce calcul se base sur la trésorerie réelle : (Total des salaires + Total des `resultatNetTresorerie` des activités) - (IR du foyer).
+
+4.  **Action 6.4 : Mettre à Jour le Composant d'Affichage (`Results.tsx`) :**
+    - **Problème :** Le composant affiche actuellement un simple JSON brut.
+    - **Plan d'action :**
+      - Modifier le composant pour qu'il consomme la nouvelle structure de données `SimulationOutput`.
+      - Présenter les résultats de manière hiérarchisée et claire, en séparant bien les résultats par entité, et en affichant les détails clés (détail du CA, de l'URSSAF, de l'impôt, etc.).
 
 ---
 
@@ -108,3 +110,7 @@
 ### **Phase 10 : Scénarios Avancés & Finalisation [Planifié 🗓️]**
 
 - **Objectif :** Intégrer la gestion de l'ACRE, du VFL, du prorata temporis, et préparer la distribution de l'application.
+
+Notes supplémentaires :
+
+Ajouter une option qui permet d'ajouter un certain pourcentage (on doit pouvoir régler des dixiemes d'unité) de taxe Urssaf supplémentaires pour les auto entreprenneur avec comme légende : Formation obligatoire, Taxe CMA / Frais de Chambre Consulaire, etc. Une nouvelle ligne devra apparaitre dans le détail des calculs des taxes.

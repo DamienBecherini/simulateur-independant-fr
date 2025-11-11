@@ -8,6 +8,8 @@ import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
 import fs from "fs/promises"
 import { sanitizeStateAndFillDefaults, sanitizeSlots } from "./logic/data-sanitizer.js"
+// --- 1. IMPORTER LA NOUVELLE FONCTION ---
+import { runSimulation } from "./logic/simulationOrchestrator.js"
 
 const sessionStatePath = path.join(app.getPath("userData"), "sessionState.json")
 const slotsFilePath = path.join(app.getPath("userData"), "simulationSlots.json")
@@ -254,6 +256,13 @@ app.on("ready", () => {
 
   ipcMainHandle("getUserPreferences", async () => await readPrefsFromFile())
   ipcMainHandle("saveUserPreferences", async (prefs: UserPreferences) => await writePrefsToFile(prefs))
+
+  // --- 2. AJOUTER LE HANDLER POUR LA SIMULATION ---
+  // Il reçoit la session depuis le frontend, la passe à notre orchestrateur,
+  // et retourne le résultat de la simulation.
+  ipcMainHandle("runSimulation", async (session: SessionState) => {
+    return await runSimulation(session)
+  })
 })
 
 app.on("window-all-closed", () => {

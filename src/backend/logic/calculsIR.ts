@@ -1,7 +1,7 @@
 // src/electron/logic/calculsIR.ts
 
 // MODIFIÉ : Syntaxe d'import avec 'with' au lieu de 'assert'
-import config from "../config.json" assert { type: "json" }
+import config from "../config.json" with { type: "json" }
 
 export function calculerIR({ revenuNetGlobalImposable, partsFiscales }: { revenuNetGlobalImposable: number; partsFiscales: number }): number {
   if (revenuNetGlobalImposable <= 0 || !partsFiscales || partsFiscales <= 0) {

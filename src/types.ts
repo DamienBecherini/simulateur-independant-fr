@@ -134,14 +134,8 @@ export interface SimulationInputs {
   partsFiscales?: number
   beneficieACRE?: boolean
   opteVFL?: boolean
-}
-
-export interface SimulationResult {
-  statut: string
-  chiffreAffaires: number
-  netDansLaPoche: number
-  warning?: string
-  error?: string
+  // Ajout pour la trésorerie de la micro
+  depensesReelles?: number
 }
 
 export interface SanitizationReport {
@@ -159,4 +153,91 @@ export type ExportableState = {
 export type NotificationPayload = {
   message: string
   type?: "success" | "info" | "warning" | "error"
+}
+
+// --- NOUVEAUX TYPES POUR LES RÉSULTATS DE SIMULATION (PHASE 6) ---
+
+/**
+ * Détail des résultats pour une Micro-Entreprise.
+ */
+export interface MicroEntrepriseResult {
+  turnover: { total: number; servicesBic: number; servicesBnc: number; sales: number }
+  socialContributions: { total: number; servicesBic: number; servicesBnc: number; sales: number }
+  realExpenses: number
+  taxableIncomeAfterAbattement: number
+  netCashFlow: number // Ce qui est réellement disponible pour la personne (CA - cotisations - dépenses réelles)
+  vflTax: number // Montant de l'impôt si VFL, sinon 0
+  warning?: string
+}
+
+/**
+ * Détail des résultats pour une Société à l'IS (SASU ou EURL).
+ */
+export interface CompanyISResult {
+  turnover: number
+  deductibleExpenses: number
+  directorRemunerationCost: number // Coût total de la rémunération pour l'entreprise
+  taxableProfit: number
+  corporateTax: number
+  netProfitAfterCorpTax: number
+  distributableDividends: number
+  dividendsSocialContributions: number // Cotisations sur les dividendes (pour EURL)
+  netDividendsPaidToDirector: number // Dividendes nets après toutes taxes et cotisations
+}
+
+// Union pour tous les types de résultats d'entreprise
+export type CompanyResult = { id: string; name: string; type: "MicroEntreprise" | "SASU" | "EURL" } & ({ type: "MicroEntreprise"; details: MicroEntrepriseResult } | { type: "SASU" | "EURL"; details: CompanyISResult })
+
+/**
+ * Interface pour le détail des revenus provenant d'une activité.
+ */
+export interface IncomeFromCompany {
+  companyId: string
+  companyName: string
+  avatar: Avatar
+  amount: number
+}
+
+/**
+ * Détail des résultats pour une Personne physique.
+ */
+export interface PersonResult {
+  id: string
+  name: string
+  // Détail des revenus pour la trésorerie
+  cashInflows: {
+    salaries: number
+    unemploymentBenefits: number
+    otherTaxableIncome: number
+    // MODIFICATION : C'est maintenant un tableau détaillé
+    fromOwnedCompanies: IncomeFromCompany[]
+  }
+  // NOUVEAU : Ajout des dépenses personnelles
+  personalExpenses: number
+  // Total des revenus imposables qui sera agrégé au niveau du foyer
+  totalTaxableIncome: number
+}
+
+/**
+ * Détail des résultats pour un Foyer fiscal.
+ */
+export interface HouseholdResult {
+  id: string
+  personIds: string[]
+  personNames: string[]
+  totalTaxableIncome: number
+  totalFiscalParts: number
+  incomeTax: number
+  // Le "Net dans la poche" final pour tout le foyer
+  finalNetInPocket: number
+}
+
+/**
+ * L'objet complet retourné par le moteur de simulation.
+ */
+export interface SimulationOutput {
+  companyResults: CompanyResult[]
+  personResults: PersonResult[]
+  householdResults: HouseholdResult[]
+  errors: string[]
 }

@@ -1,15 +1,18 @@
 // src/electron/logic/calculsEURL.ts
 
 // MODIFIÉ : Syntaxe d'import avec 'with'
-import config from "../config.json" assert { type: "json" }
+import config from "../config.json" with { type: "json" }
 import { calculerIR } from "./calculsIR.js"
-import type { SimulationInputs } from "@/types.js"
+import type { SimulationInputs, CompanyISResult } from "@/types.js"
 
-export function simulerEURL(inputs: SimulationInputs) {
-  const { chiffreAffaires = 0, chargesDeductibles = 0, remunerationNetteVisee = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1, capitalSocial = 0 } = inputs
+export function simulerEURL(inputs: SimulationInputs): CompanyISResult {
+  const { chiffreAffaires = 0, chargesDeductibles = 0, remunerationNetteVisee = 0, capitalSocial = 1 } = inputs // capitalSocial à 1 pour éviter division par 0
 
+  // Coût de la rémunération pour la société
   const cotisationsSocialesRemu = remunerationNetteVisee * config.EURL.cotisations_tns.taux_approx_sur_remuneration
   const coutTotalRemuneration = remunerationNetteVisee + cotisationsSocialesRemu
+
+  // Calcul du bénéfice et de l'IS
   const beneficeAvantIS = chiffreAffaires - chargesDeductibles - coutTotalRemuneration
   let impotSocietes = 0
   if (beneficeAvantIS > 0) {
@@ -18,32 +21,30 @@ export function simulerEURL(inputs: SimulationInputs) {
     impotSocietes = beneficePartTauxReduit * config.SASU.IS.taux_reduit + beneficePartTauxNormal * config.SASU.IS.taux_normal
   }
   const beneficeApresIS = beneficeAvantIS > 0 ? beneficeAvantIS - impotSocietes : 0
+
+  // Dividendes
   const dividendesBruts = beneficeApresIS
-  const seuilDividendesSoumisPS = capitalSocial * 0.1
-  const partDividendesPourPS = Math.min(dividendesBruts, seuilDividendesSoumisPS)
-  const partDividendesPourTNS = dividendesBruts - partDividendesPourPS
-  const cotisationsTNSsurDividendes = partDividendesPourTNS * config.EURL.cotisations_tns.taux_approx_sur_remuneration
-  const dividendesNetsPartTNS = partDividendesPourTNS - cotisationsTNSsurDividendes
-  const prelevementsSociaux = partDividendesPourPS * config.SASU.dividendes.pru_taux_ps
-  const impotDividendesPFU = partDividendesPourPS * config.SASU.dividendes.pru_taux_ir
-  const dividendesNetsPartPS_PFU = partDividendesPourPS - prelevementsSociaux - impotDividendesPFU
-  const dividendesImposablesBareme = partDividendesPourPS * 0.6
-  const revenuImposableBase = remunerationNetteVisee + autresRevenusImposablesFoyer + dividendesNetsPartTNS
-  const irTotalOptionBareme = calculerIR({ revenuNetGlobalImposable: revenuImposableBase + dividendesImposablesBareme, partsFiscales: partsFiscales })
-  const irSansDividendesPartPS = calculerIR({ revenuNetGlobalImposable: revenuImposableBase, partsFiscales: partsFiscales })
-  const surcoutIRDividendesBareme = irTotalOptionBareme - irSansDividendesPartPS
-  const dividendesNetsPartPS_Bareme = partDividendesPourPS - prelevementsSociaux - surcoutIRDividendesBareme
-  const meilleureOptionDividendesPartPS = Math.max(dividendesNetsPartPS_PFU, dividendesNetsPartPS_Bareme)
-  const dividendesNetsTotal = dividendesNetsPartTNS + meilleureOptionDividendesPartPS
-  const revenuImposableTotalActivite = remunerationNetteVisee + dividendesNetsPartTNS
-  const irTotalRemuEtDivTNS = calculerIR({ revenuNetGlobalImposable: revenuImposableTotalActivite + autresRevenusImposablesFoyer, partsFiscales: partsFiscales })
-  const irSansActivite = calculerIR({ revenuNetGlobalImposable: autresRevenusImposablesFoyer, partsFiscales: partsFiscales })
-  const surcoutIRRemu = irTotalRemuEtDivTNS - irSansActivite
-  const netDansLaPoche = remunerationNetteVisee + dividendesNetsTotal - surcoutIRRemu
+  const seuilDividendesSoumisTNS = capitalSocial * 0.1
+  const partDividendesSoumisPS = Math.min(dividendesBruts, seuilDividendesSoumisTNS)
+  const partDividendesSoumisTNS = dividendesBruts - partDividendesSoumisPS
+
+  // Calcul des cotisations sur les dividendes
+  const cotisationsTNSsurDividendes = partDividendesSoumisTNS * config.EURL.dividendes_ps_sur_part_sup_10_capital.taux_approx
+  const prelevementsSociauxSurDividendes = partDividendesSoumisPS * config.SASU.dividendes.pru_taux_ps
+  const totalCotisationsDividendes = cotisationsTNSsurDividendes + prelevementsSociauxSurDividendes
+
+  // Calcul des dividendes nets (ce qui est versé à la personne avant son IR personnel)
+  const dividendesNetsVerses = dividendesBruts - totalCotisationsDividendes
 
   return {
-    statut: "EURL (IS)",
-    chiffreAffaires,
-    netDansLaPoche: Math.round(netDansLaPoche)
+    turnover: chiffreAffaires,
+    deductibleExpenses: chargesDeductibles,
+    directorRemunerationCost: coutTotalRemuneration,
+    taxableProfit: Math.max(0, beneficeAvantIS),
+    corporateTax: impotSocietes,
+    netProfitAfterCorpTax: beneficeApresIS,
+    distributableDividends: dividendesBruts,
+    dividendsSocialContributions: totalCotisationsDividendes,
+    netDividendsPaidToDirector: dividendesNetsVerses
   }
 }

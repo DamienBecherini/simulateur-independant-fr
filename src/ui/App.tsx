@@ -11,6 +11,8 @@ import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
 import type { SaveSlot } from "@/types" // Gardé pour la signature de la fonction
 import { FlowLegend } from "./components/FlowLegend"
+// --- 1. IMPORTER LE NOUVEAU COMPOSANT ---
+import { Results } from "./components/Results.tsx"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
@@ -159,7 +161,11 @@ function App() {
           flowTypeToNumberMap={flowTypeToNumberMap}
         />
 
-        <FlowLegend monthlyData={currentSession.monthlyData} preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
+        <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
+
+        {/* --- 2. PLACER LE COMPOSANT DANS L'INTERFACE --- */}
+        {/* On lui passe la session actuelle pour qu'il puisse l'envoyer au backend. */}
+        <Results currentSession={currentSession} />
       </main>
 
       <Footer />

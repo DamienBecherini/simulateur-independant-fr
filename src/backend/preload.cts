@@ -22,6 +22,8 @@ const api: import("../globals.js", { with: { "resolution-mode": "import" } }).Ev
   getUserPreferences: () => ipcRenderer.invoke("getUserPreferences"),
   saveUserPreferences: (prefs: import('../types.js', { with: { "resolution-mode": "import" } }).UserPreferences) => ipcRenderer.invoke("saveUserPreferences", prefs),
 
+  runSimulation: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState) => ipcRenderer.invoke("runSimulation", session),
+
   // Gestionnaire d'événements pour les notifications
   onShowNotification: (callback) => {
     const listener = (
