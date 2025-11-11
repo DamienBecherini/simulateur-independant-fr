@@ -6,7 +6,7 @@
 import { SessionStateSchema, SaveSlotSchema } from "@/types.js"
 import type { SessionState, SaveSlot, SanitizationReport, Entity } from "@/types.js"
 // NOUVEAU: Import des listes de flux par défaut
-import { defaultPersonFlows, defaultCompanyFlows, defaultMicroFlows } from "@/lib/entity-factory.js"
+import { defaultPersonFlows, defaultCompanyFlows, defaultMicroFlows } from "../../lib/entity-factory.js"
 
 interface SanitizationResult {
   safeState: SessionState

@@ -1,6 +1,6 @@
 // src/lib/entity-factory.ts
 
-import type { Person, Company, MicroEntreprise, FinancialFlow } from "@/types"
+import type { Person, Company, MicroEntreprise, FinancialFlow } from "../types.js"
 
 // Centralisation des listes de flux par défaut - MAINTENANT EXPORTÉES
 export const defaultPersonFlows: FinancialFlow["type"][] = ["are", "salary", "other_taxable_income", "expense"]
