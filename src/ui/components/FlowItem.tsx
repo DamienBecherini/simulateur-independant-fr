@@ -2,7 +2,8 @@
 
 import type { FinancialFlow } from "@/types"
 import { Button } from "@/components/ui/button"
-import { Edit, Trash2 } from "lucide-react"
+// L'icône 'Edit' n'est plus nécessaire car le bouton est supprimé.
+import { Trash2 } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
@@ -47,9 +48,11 @@ export function FlowItem({ flow, onEdit, onDelete }: FlowItemProps) {
     transition
   }
 
+  // MODIFICATION 1 : Le conteneur principal devient cliquable pour l'édition.
+  // - Ajout de `onClick={() => onEdit(flow)}`
+  // - Ajout de `cursor-pointer` pour indiquer visuellement l'interactivité.
   return (
-    // L'élément principal reçoit la ref et le style pour le D&D. `touch-none` est important pour la compatibilité mobile.
-    <div ref={setNodeRef} style={style} className="flex items-center justify-between p-3 rounded-md border bg-slate-50 dark:bg-gray-800 touch-none">
+    <div ref={setNodeRef} style={style} className="flex items-center justify-between p-3 rounded-md border bg-slate-50 dark:bg-gray-800 touch-none cursor-pointer hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors" onClick={() => onEdit(flow)}>
       <div className="flex items-center gap-2 flex-grow min-w-0">
         {/* Poignée de Drag & Drop : les `listeners` et `attributes` de dnd-kit sont appliqués ici. */}
         <div {...attributes} {...listeners} className="cursor-grab p-2 -ml-2 text-slate-400">
@@ -69,12 +72,20 @@ export function FlowItem({ flow, onEdit, onDelete }: FlowItemProps) {
         <span className={`font-mono text-lg ${flow.type.includes("expense") ? "text-red-500" : "text-green-600"}`}>
           {flow.type.includes("expense") ? "-" : "+"} {flow.amount.toLocaleString("fr-FR")} €
         </span>
-        {/* Boutons d'action pour modifier ou supprimer le flux. */}
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(flow)}>
-          <Edit className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(flow.id)}>
-          <Trash2 className="h-4 w-4" />
+
+        {/* MODIFICATION 2 : Le bouton d'édition est supprimé. */}
+
+        {/* MODIFICATION 3 : Le bouton de suppression est plus grand et stoppe la propagation du clic. */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 text-destructive hover:text-destructive" // Zone de clic plus grande
+          onClick={e => {
+            e.stopPropagation() // Empêche le clic de remonter au conteneur parent
+            onDelete(flow.id)
+          }}
+        >
+          <Trash2 className="h-5 w-5" />
         </Button>
       </div>
     </div>

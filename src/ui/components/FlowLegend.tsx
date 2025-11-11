@@ -1,7 +1,7 @@
 // src/ui/components/FlowLegend.tsx
 
 import { useMemo, useState } from "react"
-import type { /*MonthlyGridData,*/ UserPreferences, FinancialFlow } from "@/types"
+import type { UserPreferences, FinancialFlow } from "@/types"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
 import { Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,10 @@ const flowTypeLabels: Record<string, string> = {
   income: "Revenu (Test)",
   expense: "Dépense (non déductible)"
 }
+
+// MODIFICATION 1 : Définition des types de flux considérés comme des dépenses.
+// Cette liste nous servira à séparer la légende en deux groupes distincts.
+const expenseTypes: ReadonlyArray<string> = ["deductible_expense", "expense"]
 
 /**
  * Interface pour les props du composant FlowLegend.
@@ -54,6 +58,10 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
   // Détermine les types de flux actuellement utilisés en extrayant les clés de la map passée en props.
   const usedFlowTypes = Array.from(flowTypeToNumberMap.keys()) as FinancialFlow["type"][]
 
+  // MODIFICATION 2 : On filtre les types de flux en deux listes distinctes : gains et dépenses.
+  const gainTypes = useMemo(() => usedFlowTypes.filter(type => !expenseTypes.includes(type)), [usedFlowTypes])
+  const expenseTypesFiltered = useMemo(() => usedFlowTypes.filter(type => expenseTypes.includes(type)), [usedFlowTypes])
+
   // Gère la mise à jour d'une couleur directement depuis la légende.
   const handleColorChange = (flowType: FinancialFlow["type"], newColor: string) => {
     const newColors = { ...finalColors, [flowType]: newColor }
@@ -62,6 +70,19 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
 
   // Si aucun flux n'est présent dans la simulation, la légende ne s'affiche pas.
   if (usedFlowTypes.length === 0) return null
+
+  // Fonction de rendu pour un élément de la légende afin d'éviter la répétition du code.
+  const renderLegendItem = (type: FinancialFlow["type"]) => (
+    <div key={type} className="flex items-center gap-2 group">
+      {/* Le carré de couleur contient le numéro du flux. */}
+      <div className="h-6 w-6 rounded relative border flex items-center justify-center" style={{ backgroundColor: finalColors[type] || "#ccc" }}>
+        <span className="text-white text-xs font-bold [text-shadow:0_0_2px_rgba(0,0,0,0.7)]">{flowTypeToNumberMap.get(type)}</span>
+        {/* Astuce UX : un input de type "color" est superposé et invisible, permettant un clic direct pour changer la couleur. */}
+        <input type="color" value={finalColors[type] || "#ffffff"} onChange={e => handleColorChange(type, e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title={`Changer la couleur pour ${flowTypeLabels[type]}`} />
+      </div>
+      <span className="text-sm text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors pr-2">{flowTypeLabels[type] || type}</span>
+    </div>
+  )
 
   return (
     <>
@@ -73,22 +94,21 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
             Gérer les couleurs
           </Button>
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-2">
-          {/* Itère sur les types de flux utilisés pour construire la légende. */}
-          {usedFlowTypes.map(type => (
-            <div key={type} className="flex items-center gap-2 group">
-              {/* Le carré de couleur contient le numéro du flux. */}
-              <div className="h-6 w-6 rounded relative border flex items-center justify-center" style={{ backgroundColor: finalColors[type] || "#ccc" }}>
-                <span className="text-white text-xs font-bold [text-shadow:0_0_2px_rgba(0,0,0,0.7)]">{flowTypeToNumberMap.get(type)}</span>
-                {/* Astuce UX : un input de type "color" est superposé et invisible, permettant un clic direct pour changer la couleur. */}
-                <input type="color" value={finalColors[type] || "#ffffff"} onChange={e => handleColorChange(type, e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title={`Changer la couleur pour ${flowTypeLabels[type]}`} />
-              </div>
-              <span className="text-sm text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors pr-2">{flowTypeLabels[type] || type}</span>
-            </div>
-          ))}
+        {/* MODIFICATION 3 : La structure d'affichage est maintenant une grille à deux colonnes. */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+          {/* Section pour les Gains */}
+          <div>
+            <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 border-b pb-1">Gains</h4>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">{gainTypes.length > 0 ? gainTypes.map(renderLegendItem) : <p className="text-sm text-slate-500 italic">Aucun gain ce mois-ci.</p>}</div>
+          </div>
+          {/* Section pour les Dépenses */}
+          <div>
+            <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 border-b pb-1">Dépenses</h4>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">{expenseTypesFiltered.length > 0 ? expenseTypesFiltered.map(renderLegendItem) : <p className="text-sm text-slate-500 italic">Aucune dépense ce mois-ci.</p>}</div>
+          </div>
         </div>
       </div>
-      {/* La modale de gestion des couleurs, contrôlée par l'état `isModalOpen`. */}
+      {/* La modale de gestion des couleurs, qui reste inchangée. */}
       <ColorSettingsModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} preferences={preferences} onSave={onPreferencesChange} />
     </>
   )

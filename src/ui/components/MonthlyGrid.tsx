@@ -96,12 +96,13 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
   }
 
   // ===================================================================================
-  // == LOGIQUE DE CALCUL MÉMORISÉE POUR LA GRILLE (INCHANGÉE)
+  // == LOGIQUE DE CALCUL MÉMORISÉE POUR LA GRILLE
   // ===================================================================================
   const gridData = useMemo(() => {
     const finalColors = { ...DEFAULT_FLOW_COLORS, ...preferences.flowTypeColors }
 
     return entities.map(entity => {
+      // Logique pour le 'monthlyScale' des mois
       let maxMonthlyTotal = 0
       monthlyData.forEach(month => {
         const relevantFlows = month.flows.filter(flow => flow.entityId === entity.id)
@@ -111,6 +112,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       })
       const monthlyScale = maxMonthlyTotal > 0 ? maxMonthlyTotal * 1.1 : 1
 
+      // Logique pour monthlyCellData
       const monthlyCellData = Array.from({ length: 12 }).map((_, monthIndex) => {
         const relevantFlows = monthlyData[monthIndex].flows.filter(flow => flow.entityId === entity.id)
         const aggregatedFlows = new Map<FinancialFlow["type"], number>()
@@ -136,6 +138,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         return { gains, expenses, totalGains, totalExpenses, flowCount: relevantFlows.length }
       })
 
+      // Logique pour calculer 'totalAnnualFlows' et 'annualGains'/'annualExpenses'
       const totalAnnualFlows = new Map<FinancialFlow["type"], number>()
       monthlyData.forEach(month => {
         month.flows
@@ -161,10 +164,26 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         }
       })
 
-      const annualFlowCount = monthlyData.reduce((acc, month) => acc + month.flows.filter(f => f.entityId === entity.id).length, 0)
-      const annualCellData = { gains: annualGains, expenses: annualExpenses, totalGains: totalAnnualGains, totalExpenses: totalAnnualExpenses, flowCount: annualFlowCount }
+      // --- LOGIQUE SPÉCIFIQUE POUR L'ÉCHELLE ANNUELLE ---
+      // On trouve la valeur du plus grand segment individuel (gain ou dépense) sur toute l'année.
+      const maxAnnualSegmentValue = Math.max(
+        ...annualGains.map(s => s.amount),
+        ...annualExpenses.map(s => s.amount),
+        1 // On ajoute 1 pour éviter une division par zéro si tout est à 0
+      )
 
-      return { entity, monthlyScale, monthlyCellData, annualCellData }
+      const annualFlowCount = monthlyData.reduce((acc, month) => acc + month.flows.filter(f => f.entityId === entity.id).length, 0)
+
+      // On assemble les données annuelles
+      const annualCellData = {
+        gains: annualGains,
+        expenses: annualExpenses,
+        totalGains: totalAnnualGains,
+        totalExpenses: totalAnnualExpenses,
+        flowCount: annualFlowCount
+      }
+
+      return { entity, monthlyScale, monthlyCellData, annualCellData, annualScale: maxAnnualSegmentValue * 1.1 }
     })
   }, [monthlyData, entities, preferences, flowTypeToNumberMap])
 
@@ -179,17 +198,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           <p className="text-slate-500">Veuillez d'abord ajouter une entité pour commencer la saisie.</p>
         ) : (
           <div className="overflow-x-auto">
-            {/* **CORRECTIF FINAL : DÉFINITION EXPLICITE DES COLONNES**
-             * La propriété `gridTemplateColumns` est mise à jour pour résoudre les problèmes de largeur :
-             * 1. `auto`: La première colonne ("Entités / Flux") prendra automatiquement la largeur
-             *    de son contenu le plus large (le nom d'entité ou l'en-tête). C'est la solution
-             *    dynamique et robuste que nous cherchions.
-             * 2. `repeat(13, 160px)`: Les 13 colonnes suivantes (1 pour le Total Annuel + 12 pour les mois)
-             *    auront TOUTES une largeur fixe de 160px. C'est une largeur suffisante pour afficher
-             *    correctement les graphiques sans qu'ils soient à l'étroit, corrigeant ainsi le problème
-             *    de la colonne "Total Annuel" trop étroite.
-             */}
-            <div className="grid gap-px" style={{ gridTemplateColumns: "fit-content(250px) repeat(13, 160px)" }}>
+            <div className="grid gap-px" style={{ gridTemplateColumns: "auto repeat(13, auto)" }}>
               {/* En-tête de la grille */}
               <div className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2 whitespace-nowrap">Entités / Flux</div>
               <div className="font-bold text-center p-2">Total Annuel</div>
@@ -199,26 +208,32 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                 </div>
               ))}
               {/* Corps de la grille */}
-              {gridData.map(({ entity, monthlyScale, monthlyCellData, annualCellData }) => (
+              {gridData.map(({ entity, monthlyScale, monthlyCellData, annualCellData, annualScale }) => (
                 // L'utilisation de React.Fragment est cruciale pour que `position: sticky` fonctionne correctement.
                 <React.Fragment key={entity.id}>
                   {/* Colonne 1 : Nom de l'entité + Avatar */}
-
                   <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-col items-center gap-2 pt-1 pb-1 ml-3 mr-3">
                       <AvatarDisplay avatar={entity.avatar} size="md" />
-                      <span>{entity.name}</span>
+                      <span className="text-center">{entity.name}</span>
                     </div>
                   </div>
 
                   {/* Colonne 2 : Total Annuel */}
-                  <div className="bg-slate-200 dark:bg-gray-700 p-2">
-                    <CellChartDisplay gains={annualCellData.gains} expenses={annualCellData.expenses} totalGains={annualCellData.totalGains} totalExpenses={annualCellData.totalExpenses} absoluteMaxValue={Math.max(annualCellData.totalGains, annualCellData.totalExpenses, 1)} flowCount={annualCellData.flowCount} />
+                  <div className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start">
+                    <CellChartDisplay
+                      gains={annualCellData.gains}
+                      expenses={annualCellData.expenses}
+                      totalGains={annualCellData.totalGains}
+                      totalExpenses={annualCellData.totalExpenses}
+                      absoluteMaxValue={annualScale} // <-- Utilisation de la nouvelle échelle
+                      flowCount={annualCellData.flowCount}
+                    />
                   </div>
 
                   {/* Colonnes 3 à 14 : Les 12 mois */}
                   {monthlyCellData.map((cellData, monthIndex) => (
-                    <div key={monthIndex} className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700" onClick={() => openFlowsList(entity.id, monthIndex)}>
+                    <div key={monthIndex} className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start" onClick={() => openFlowsList(entity.id, monthIndex)}>
                       <CellChartDisplay gains={cellData.gains} expenses={cellData.expenses} totalGains={cellData.totalGains} totalExpenses={cellData.totalExpenses} absoluteMaxValue={monthlyScale} flowCount={cellData.flowCount} />
                     </div>
                   ))}

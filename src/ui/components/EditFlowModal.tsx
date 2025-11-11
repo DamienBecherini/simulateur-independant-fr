@@ -150,16 +150,9 @@ export function EditFlowModal({ isOpen, onClose, onSave, context, flowToEdit, al
               Type
             </Label>
             <Select value={formData.type} onValueChange={value => setFormData(prev => ({ ...prev, type: value as FinancialFlow["type"] }))}>
-              {/* 3. MISE À JOUR DU `SelectTrigger` (le bouton cliquable qui affiche la valeur sélectionnée) */}
+              {/* Bouton cliquable qui affiche la valeur sélectionnée */}
               <SelectTrigger className="col-span-3">
-                {/* On utilise un conteneur flex pour afficher l'icône à côté du texte. */}
                 <div className="flex items-center gap-2">
-                  {/*
-                   * Affichage conditionnel de l'icône, uniquement si un type a été sélectionné.
-                   * La classe `stroke-[3px]` de TailwindCSS rend l'icône plus épaisse.
-                   * `flex-shrink-0` empêche l'icône d'être écrasée si le texte est long.
-                   */}
-                  {formData.type && (expenseTypes.includes(formData.type as FinancialFlow["type"]) ? <ChevronDown className="h-4 w-4 text-red-500 stroke-[3px] flex-shrink-0" /> : <ChevronUp className="h-4 w-4 text-green-500 stroke-[3px] flex-shrink-0" />)}
                   <SelectValue placeholder="Choisir un type de flux..." />
                 </div>
               </SelectTrigger>

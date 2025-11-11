@@ -25,7 +25,7 @@ export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, a
     return <div className="text-slate-400 group-hover:text-slate-600 transition-colors py-3">+ Ajouter</div>
   }
 
-  const renderBarGroup = (segments: FlowSegment[], alignment: "left" | "right" = "right") => (
+  const renderBarGroup = (segments: FlowSegment[], alignment: "left" | "right" = "left") => (
     // On ajoute un alignement pour les barres aussi
     <div className={cn("h-14 w-full flex items-end gap-px", alignment === "right" ? "justify-end" : "justify-start")}>
       {segments.map((segment, index) => {
@@ -51,8 +51,8 @@ export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, a
       </div>
 
       {/* --- GROUPE DÉPENSES (aligné à droite) --- */}
-      <div className="flex flex-col min-w-[68px] flex-1 items-start">
-        {renderBarGroup(expenses, "left")}
+      <div className="flex flex-col min-w-[68px] flex-1 items-end">
+        {renderBarGroup(expenses, "right")}
         <div className={cn("flex items-center gap-1 p-1 rounded whitespace-nowrap mt-1 text-sm font-mono", totalExpenses > 0 ? "text-red-700 dark:text-red-400 bg-red-500/10" : "text-slate-500")}>
           <ArrowDown size={12} /> {totalExpenses.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
         </div>
