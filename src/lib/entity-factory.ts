@@ -1,8 +1,12 @@
 // src/lib/entity-factory.ts
 
-import type { Person, Company, MicroEntreprise } from "@/types"
+import type { Person, Company, MicroEntreprise, FinancialFlow } from "@/types"
 
-// On peut même centraliser les couleurs par défaut ici
+// Centralisation des listes de flux par défaut - MAINTENANT EXPORTÉES
+export const defaultPersonFlows: FinancialFlow["type"][] = ["are", "salary", "other_taxable_income", "expense"]
+export const defaultCompanyFlows: FinancialFlow["type"][] = ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"]
+export const defaultMicroFlows: FinancialFlow["type"][] = ["ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "expense"]
+
 const defaultColors = {
   person: "#3b82f6",
   sasu: "#ef4444",
@@ -10,9 +14,6 @@ const defaultColors = {
   micro: "#f97316"
 }
 
-/**
- * Crée une nouvelle entité Personne avec des valeurs par défaut.
- */
 export function createPerson(): Person {
   return {
     id: `person-${Date.now()}`,
@@ -20,14 +21,11 @@ export function createPerson(): Person {
     name: "Nouvelle Personne",
     fiscalParts: 1,
     avatar: { type: "initials", value: "NP", color: defaultColors.person },
-    locked: false
+    locked: false,
+    enabledFlowTypes: [...defaultPersonFlows]
   }
 }
 
-/**
- * Crée une nouvelle entité Company (SASU ou EURL) avec des valeurs par défaut.
- * @param legalStatus - Le statut juridique de la société.
- */
 export function createCompany(legalStatus: "SASU" | "EURL"): Company {
   const isSASU = legalStatus === "SASU"
   return {
@@ -40,13 +38,11 @@ export function createCompany(legalStatus: "SASU" | "EURL"): Company {
       value: isSASU ? "Briefcase" : "Building",
       color: isSASU ? defaultColors.sasu : defaultColors.eurl
     },
-    locked: false
+    locked: false,
+    enabledFlowTypes: [...defaultCompanyFlows]
   }
 }
 
-/**
- * Crée une nouvelle entité Micro-Entreprise avec des valeurs par défaut.
- */
 export function createMicroEntreprise(): MicroEntreprise {
   return {
     id: `micro-${Date.now()}`,
@@ -55,6 +51,7 @@ export function createMicroEntreprise(): MicroEntreprise {
     beneficieACRE: false,
     opteVFL: false,
     avatar: { type: "icon", value: "Store", color: defaultColors.micro },
-    locked: false
+    locked: false,
+    enabledFlowTypes: [...defaultMicroFlows]
   }
 }

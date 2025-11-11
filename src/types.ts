@@ -1,6 +1,28 @@
 // src/types.ts
 import { z } from "zod"
 
+// --- DÉFINITION D'UN TYPE ZOD POUR LES FLUX FINANCIERS ---
+// Cela évite la répétition et garantit la cohérence
+const FinancialFlowTypeEnum = z.enum([
+  // Person
+  "are",
+  "salary",
+  "other_taxable_income",
+  // Company
+  "ca_services",
+  "ca_vente",
+  "deductible_expense",
+  "director_remuneration",
+  "dividends_payment",
+  // Micro-entreprise
+  "ca_micro_services_bic",
+  "ca_micro_services_bnc",
+  "ca_micro_vente",
+  // Types temporaires pour la grille de test
+  "income",
+  "expense"
+])
+
 // ===================================================================================
 // == 1. DÉFINITION DES SCHÉMAS DE VALIDATION (LA SOURCE DE VÉRITÉ)
 // ===================================================================================
@@ -17,7 +39,9 @@ export const PersonSchema = z.object({
   name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle Personne"),
   fiscalParts: z.number().positive().default(1),
   avatar: AvatarSchema,
-  locked: z.boolean().default(false)
+  locked: z.boolean().default(false),
+  // NOUVELLE PROPRIÉTÉ
+  enabledFlowTypes: z.array(FinancialFlowTypeEnum).default([])
 })
 
 export const CompanySchema = z.object({
@@ -26,7 +50,9 @@ export const CompanySchema = z.object({
   name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle Société"),
   legalStatus: z.enum(["SASU", "EURL"]),
   avatar: AvatarSchema,
-  locked: z.boolean().default(false)
+  locked: z.boolean().default(false),
+  // NOUVELLE PROPRIÉTÉ
+  enabledFlowTypes: z.array(FinancialFlowTypeEnum).default([])
 })
 
 export const MicroEntrepriseSchema = z.object({
@@ -36,7 +62,9 @@ export const MicroEntrepriseSchema = z.object({
   beneficieACRE: z.boolean().default(false),
   opteVFL: z.boolean().default(false),
   avatar: AvatarSchema,
-  locked: z.boolean().default(false)
+  locked: z.boolean().default(false),
+  // NOUVELLE PROPRIÉTÉ
+  enabledFlowTypes: z.array(FinancialFlowTypeEnum).default([])
 })
 
 export const EntitySchema = z.union([PersonSchema, CompanySchema, MicroEntrepriseSchema])
@@ -53,25 +81,7 @@ export const FinancialFlowSchema = z.object({
   label: z.string(),
   amount: z.number().default(0),
   entityId: z.string(),
-  type: z.enum([
-    // Person
-    "are",
-    "salary",
-    "other_taxable_income",
-    // Company
-    "ca_services",
-    "ca_vente",
-    "deductible_expense",
-    "director_remuneration",
-    "dividends_payment",
-    // Micro-entreprise
-    "ca_micro_services_bic",
-    "ca_micro_services_bnc",
-    "ca_micro_vente",
-    // Types temporaires pour la grille de test
-    "income",
-    "expense"
-  ])
+  type: FinancialFlowTypeEnum
 })
 
 export const MonthlyGridDataSchema = z
@@ -98,7 +108,6 @@ export const SaveSlotSchema = SessionStateSchema.extend({
 
 export const UserPreferencesSchema = z.object({
   slotOrder: z.array(z.string()).default([]),
-  // La clé (type de flux) est une string, la valeur (couleur) est une string
   flowTypeColors: z.record(z.string(), z.string()).optional()
 })
 
@@ -134,7 +143,6 @@ export interface SimulationInputs {
   partsFiscales?: number
   beneficieACRE?: boolean
   opteVFL?: boolean
-  // Ajout pour la trésorerie de la micro
   depensesReelles?: number
 }
 
@@ -155,42 +163,32 @@ export type NotificationPayload = {
   type?: "success" | "info" | "warning" | "error"
 }
 
-// --- NOUVEAUX TYPES POUR LES RÉSULTATS DE SIMULATION (PHASE 6) ---
+// --- TYPES POUR LES RÉSULTATS DE SIMULATION (PHASE 6) ---
 
-/**
- * Détail des résultats pour une Micro-Entreprise.
- */
 export interface MicroEntrepriseResult {
   turnover: { total: number; servicesBic: number; servicesBnc: number; sales: number }
   socialContributions: { total: number; servicesBic: number; servicesBnc: number; sales: number }
   realExpenses: number
   taxableIncomeAfterAbattement: number
-  netCashFlow: number // Ce qui est réellement disponible pour la personne (CA - cotisations - dépenses réelles)
-  vflTax: number // Montant de l'impôt si VFL, sinon 0
+  netCashFlow: number
+  vflTax: number
   warning?: string
 }
 
-/**
- * Détail des résultats pour une Société à l'IS (SASU ou EURL).
- */
 export interface CompanyISResult {
   turnover: number
   deductibleExpenses: number
-  directorRemunerationCost: number // Coût total de la rémunération pour l'entreprise
+  directorRemunerationCost: number
   taxableProfit: number
   corporateTax: number
   netProfitAfterCorpTax: number
   distributableDividends: number
-  dividendsSocialContributions: number // Cotisations sur les dividendes (pour EURL)
-  netDividendsPaidToDirector: number // Dividendes nets après toutes taxes et cotisations
+  dividendsSocialContributions: number
+  netDividendsPaidToDirector: number
 }
 
-// Union pour tous les types de résultats d'entreprise
 export type CompanyResult = { id: string; name: string; type: "MicroEntreprise" | "SASU" | "EURL" } & ({ type: "MicroEntreprise"; details: MicroEntrepriseResult } | { type: "SASU" | "EURL"; details: CompanyISResult })
 
-/**
- * Interface pour le détail des revenus provenant d'une activité.
- */
 export interface IncomeFromCompany {
   companyId: string
   companyName: string
@@ -198,29 +196,19 @@ export interface IncomeFromCompany {
   amount: number
 }
 
-/**
- * Détail des résultats pour une Personne physique.
- */
 export interface PersonResult {
   id: string
   name: string
-  // Détail des revenus pour la trésorerie
   cashInflows: {
     salaries: number
     unemploymentBenefits: number
     otherTaxableIncome: number
-    // MODIFICATION : C'est maintenant un tableau détaillé
     fromOwnedCompanies: IncomeFromCompany[]
   }
-  // NOUVEAU : Ajout des dépenses personnelles
   personalExpenses: number
-  // Total des revenus imposables qui sera agrégé au niveau du foyer
   totalTaxableIncome: number
 }
 
-/**
- * Détail des résultats pour un Foyer fiscal.
- */
 export interface HouseholdResult {
   id: string
   personIds: string[]
@@ -228,13 +216,9 @@ export interface HouseholdResult {
   totalTaxableIncome: number
   totalFiscalParts: number
   incomeTax: number
-  // Le "Net dans la poche" final pour tout le foyer
   finalNetInPocket: number
 }
 
-/**
- * L'objet complet retourné par le moteur de simulation.
- */
 export interface SimulationOutput {
   companyResults: CompanyResult[]
   personResults: PersonResult[]

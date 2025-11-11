@@ -8,35 +8,24 @@ import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
 import { AvatarDisplay } from "./AvatarDisplay"
 
-/**
- * Interface pour les props du composant MonthlyGrid.
- * Ce composant est le cœur de la visualisation des données, affichant une grille
- * interactive des flux financiers pour chaque entité, mois par mois, ainsi qu'un total annuel.
- */
 interface MonthlyGridProps {
   entities: Entity[]
   monthlyData: MonthlyGridData
   setMonthlyData: Dispatch<SetStateAction<MonthlyGridData>>
   preferences: UserPreferences
   flowTypeToNumberMap: Map<string, number>
+  onEditEntity: (entity: Entity) => void // NOUVELLE PROP
 }
 
-// Constantes pour les labels des mois
 const months = ["Janv", "Févr", "Mars", "Avril", "Mai", "Juin", "Juil", "Août", "Sept", "Oct", "Nov", "Déc"]
 const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 
-function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap }: MonthlyGridProps) {
-  // ===================================================================================
-  // == GESTION DE L'ÉTAT DES MODALES (INCHANGÉ)
-  // ===================================================================================
+function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, onEditEntity }: MonthlyGridProps) {
   const [isListModalOpen, setListModalOpen] = useState(false)
   const [isEditModalOpen, setEditModalOpen] = useState(false)
   const [context, setContext] = useState<{ entityId: string; monthIndex: number } | null>(null)
   const [flowToEdit, setFlowToEdit] = useState<FinancialFlow | null>(null)
 
-  // ===================================================================================
-  // == HANDLERS POUR LES ACTIONS UTILISATEUR (INCHANGÉ)
-  // ===================================================================================
   const openFlowsList = (entityId: string, monthIndex: number) => {
     setContext({ entityId, monthIndex })
     setListModalOpen(true)
@@ -95,14 +84,10 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
     )
   }
 
-  // ===================================================================================
-  // == LOGIQUE DE CALCUL MÉMORISÉE POUR LA GRILLE
-  // ===================================================================================
   const gridData = useMemo(() => {
     const finalColors = { ...DEFAULT_FLOW_COLORS, ...preferences.flowTypeColors }
 
     return entities.map(entity => {
-      // Logique pour le 'monthlyScale' des mois
       let maxMonthlyTotal = 0
       monthlyData.forEach(month => {
         const relevantFlows = month.flows.filter(flow => flow.entityId === entity.id)
@@ -112,7 +97,6 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       })
       const monthlyScale = maxMonthlyTotal > 0 ? maxMonthlyTotal * 1.1 : 1
 
-      // Logique pour monthlyCellData
       const monthlyCellData = Array.from({ length: 12 }).map((_, monthIndex) => {
         const relevantFlows = monthlyData[monthIndex].flows.filter(flow => flow.entityId === entity.id)
         const aggregatedFlows = new Map<FinancialFlow["type"], number>()
@@ -138,7 +122,6 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         return { gains, expenses, totalGains, totalExpenses, flowCount: relevantFlows.length }
       })
 
-      // Logique pour calculer 'totalAnnualFlows' et 'annualGains'/'annualExpenses'
       const totalAnnualFlows = new Map<FinancialFlow["type"], number>()
       monthlyData.forEach(month => {
         month.flows
@@ -164,17 +147,10 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         }
       })
 
-      // --- LOGIQUE SPÉCIFIQUE POUR L'ÉCHELLE ANNUELLE ---
-      // On trouve la valeur du plus grand segment individuel (gain ou dépense) sur toute l'année.
-      const maxAnnualSegmentValue = Math.max(
-        ...annualGains.map(s => s.amount),
-        ...annualExpenses.map(s => s.amount),
-        1 // On ajoute 1 pour éviter une division par zéro si tout est à 0
-      )
+      const maxAnnualSegmentValue = Math.max(...annualGains.map(s => s.amount), ...annualExpenses.map(s => s.amount), 1)
 
       const annualFlowCount = monthlyData.reduce((acc, month) => acc + month.flows.filter(f => f.entityId === entity.id).length, 0)
 
-      // On assemble les données annuelles
       const annualCellData = {
         gains: annualGains,
         expenses: annualExpenses,
@@ -187,9 +163,6 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
     })
   }, [monthlyData, entities, preferences, flowTypeToNumberMap])
 
-  // ===================================================================================
-  // == RENDU JSX DU COMPOSANT
-  // ===================================================================================
   return (
     <>
       <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md mt-8">
@@ -199,7 +172,6 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         ) : (
           <div className="overflow-x-auto">
             <div className="grid gap-px" style={{ gridTemplateColumns: "auto repeat(13, auto)" }}>
-              {/* En-tête de la grille */}
               <div className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2 whitespace-nowrap">Entités / Flux</div>
               <div className="font-bold text-center p-2">Total Annuel</div>
               {months.map(month => (
@@ -207,31 +179,20 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                   {month}
                 </div>
               ))}
-              {/* Corps de la grille */}
               {gridData.map(({ entity, monthlyScale, monthlyCellData, annualCellData, annualScale }) => (
-                // L'utilisation de React.Fragment est cruciale pour que `position: sticky` fonctionne correctement.
                 <React.Fragment key={entity.id}>
-                  {/* Colonne 1 : Nom de l'entité + Avatar */}
-                  <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center">
+                  {/* MODIFICATION: Cellule cliquable */}
+                  <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 transition-colors" onClick={() => onEditEntity(entity)}>
                     <div className="flex flex-col items-center gap-2 pt-1 pb-1 ml-3 mr-3">
                       <AvatarDisplay avatar={entity.avatar} size="md" />
                       <span className="text-center">{entity.name}</span>
                     </div>
                   </div>
 
-                  {/* Colonne 2 : Total Annuel */}
                   <div className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start">
-                    <CellChartDisplay
-                      gains={annualCellData.gains}
-                      expenses={annualCellData.expenses}
-                      totalGains={annualCellData.totalGains}
-                      totalExpenses={annualCellData.totalExpenses}
-                      absoluteMaxValue={annualScale} // <-- Utilisation de la nouvelle échelle
-                      flowCount={annualCellData.flowCount}
-                    />
+                    <CellChartDisplay gains={annualCellData.gains} expenses={annualCellData.expenses} totalGains={annualCellData.totalGains} totalExpenses={annualCellData.totalExpenses} absoluteMaxValue={annualScale} flowCount={annualCellData.flowCount} />
                   </div>
 
-                  {/* Colonnes 3 à 14 : Les 12 mois */}
                   {monthlyCellData.map((cellData, monthIndex) => (
                     <div key={monthIndex} className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start" onClick={() => openFlowsList(entity.id, monthIndex)}>
                       <CellChartDisplay gains={cellData.gains} expenses={cellData.expenses} totalGains={cellData.totalGains} totalExpenses={cellData.totalExpenses} absoluteMaxValue={monthlyScale} flowCount={cellData.flowCount} />

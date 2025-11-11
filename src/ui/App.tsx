@@ -9,17 +9,19 @@ import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
-import type { SaveSlot } from "@/types" // Gardé pour la signature de la fonction
+import type { SaveSlot, Entity, Relationship } from "@/types"
 import { FlowLegend } from "./components/FlowLegend"
-// --- 1. IMPORTER LE NOUVEAU COMPOSANT ---
 import { Results } from "./components/Results.tsx"
+// 1. IMPORTER LA MODALE D'ÉDITION
+import EditEntityModal from "./components/EditEntityModal.tsx"
+import { sanitizeFlowsAfterRelationshipChange } from "@/lib/business-logic.ts"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
+  // 2. GÉRER L'ÉTAT DE LA MODALE D'ÉDITION ICI
+  const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
 
-  // --- MODIFICATION : Récupération des nouveaux états et fonctions du hook ---
-  // On récupère tout ce dont on a besoin depuis le "cerveau" de l'application.
   const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
 
   useEffect(() => {
@@ -50,9 +52,6 @@ function App() {
     }
   }, [undo, redo, canUndo, canRedo])
 
-  // --- SUPPRESSION : La logique de chargement est maintenant entièrement dans le hook useSessionManager ---
-  // L'ancienne fonction handleLoadSlot qui était ici est supprimée.
-
   const handleConfirmImportAndClose = () => {
     proceedWithImport()
     setSettingsOpen(false)
@@ -63,11 +62,20 @@ function App() {
     setSettingsOpen(false)
   }
 
-  // --- MODIFICATION : On utilise la fonction de chargement du hook et on ferme le panneau. ---
-  // Cette fonction "wrapper" permet de coupler l'action de chargement avec la fermeture de l'UI.
   const handleLoadAndClose = (slotToLoad: SaveSlot) => {
     handleLoadSlot(slotToLoad)
     setSettingsOpen(false)
+  }
+
+  // 3. CRÉER LA FONCTION DE SAUVEGARDE DE L'ENTITÉ
+  const handleUpdateEntity = (updatedEntity: Entity, updatedRelationships: Relationship[]) => {
+    setCurrentSession(prevSession => {
+      const updatedEntities = prevSession.entities.map(entity => (entity.id === updatedEntity.id ? updatedEntity : entity))
+      const tempState = { ...prevSession, entities: updatedEntities, relationships: updatedRelationships }
+      const sanitizedMonthlyData = sanitizeFlowsAfterRelationshipChange(tempState)
+      return { ...tempState, monthlyData: sanitizedMonthlyData }
+    })
+    setEditingEntity(null) // Ferme la modale
   }
 
   const zoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2))
@@ -89,10 +97,8 @@ function App() {
 
   return (
     <div className="container mx-auto p-8 min-h-screen flex flex-col">
-      {/* Barre de menu sticky */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
         <div className="container mx-auto flex items-center justify-between px-8 py-2">
-          {/* Groupe de boutons de gauche */}
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" className="h-10 w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
               <Settings className="text-slate-500" />
@@ -104,7 +110,6 @@ function App() {
               <Redo2 className="dark:text-slate-300" />
             </Button>
           </div>
-          {/* Groupe de boutons de droite */}
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={zoomOut} className="h-10 w-10 [&_svg]:size-6">
               <ZoomOut className="text-slate-500" />
@@ -123,31 +128,10 @@ function App() {
       </header>
 
       <main className="flex-grow">
-        <EntitiesManager
-          sessionName={currentSession.name}
-          entities={currentSession.entities}
-          setEntities={newEntitiesOrUpdater => {
-            setCurrentSession(prevSession => ({
-              ...prevSession,
-              entities: typeof newEntitiesOrUpdater === "function" ? newEntitiesOrUpdater(prevSession.entities) : newEntitiesOrUpdater
-            }))
-          }}
-          relationships={currentSession.relationships}
-          setRelationships={newRelationshipsOrUpdater => {
-            setCurrentSession(prev => ({
-              ...prev,
-              relationships: typeof newRelationshipsOrUpdater === "function" ? newRelationshipsOrUpdater(prev.relationships) : newRelationshipsOrUpdater
-            }))
-          }}
-          monthlyData={currentSession.monthlyData}
-          setMonthlyData={newMonthlyDataOrUpdater => {
-            setCurrentSession(prev => ({
-              ...prev,
-              monthlyData: typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(prev.monthlyData) : newMonthlyDataOrUpdater
-            }))
-          }}
-        />
+        {/* 4. PASSER LA FONCTION POUR OUVRIR LA MODALE */}
+        <EntitiesManager onEditEntity={setEditingEntity} session={currentSession} setCurrentSession={setCurrentSession} />
 
+        {/* 5. PASSER LA FONCTION POUR OUVRIR LA MODALE */}
         <MonthlyGrid
           entities={currentSession.entities}
           monthlyData={currentSession.monthlyData}
@@ -159,39 +143,20 @@ function App() {
           }}
           preferences={userPreferences}
           flowTypeToNumberMap={flowTypeToNumberMap}
+          onEditEntity={setEditingEntity}
         />
 
         <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
 
-        {/* --- 2. PLACER LE COMPOSANT DANS L'INTERFACE --- */}
-        {/* On lui passe la session actuelle pour qu'il puisse l'envoyer au backend. */}
         <Results currentSession={currentSession} />
       </main>
 
       <Footer />
 
-      {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
-      {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
-          le panneau de configuration ait tout le contexte nécessaire. */}
-      <SettingsSheet
-        isOpen={isSettingsOpen}
-        onOpenChange={setSettingsOpen}
-        allSaveSlots={allSaveSlots}
-        setAllSaveSlots={setAllSaveSlots}
-        currentSession={currentSession}
-        setCurrentSession={setCurrentSession}
-        onReset={handleResetAndClose}
-        onLoadSlot={handleLoadAndClose} // On passe la nouvelle fonction wrapper
-        slotOrder={slotOrder}
-        setSlotOrder={setSlotOrder}
-        onImport={handleImport}
-        importConfirmation={importConfirmation}
-        onConfirmImport={handleConfirmImportAndClose}
-        onCancelImport={cancelImport}
-        // Ajout des props cruciales pour la nouvelle logique
-        loadedSlotId={loadedSlotId}
-        setLoadedSlotId={setLoadedSlotId}
-      />
+      <SettingsSheet isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} allSaveSlots={allSaveSlots} setAllSaveSlots={setAllSaveSlots} currentSession={currentSession} setCurrentSession={setCurrentSession} onReset={handleResetAndClose} onLoadSlot={handleLoadAndClose} slotOrder={slotOrder} setSlotOrder={setSlotOrder} onImport={handleImport} importConfirmation={importConfirmation} onConfirmImport={handleConfirmImportAndClose} onCancelImport={cancelImport} loadedSlotId={loadedSlotId} setLoadedSlotId={setLoadedSlotId} />
+
+      {/* 6. AFFICHER LA MODALE ICI */}
+      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleUpdateEntity} allEntities={currentSession.entities} relationships={currentSession.relationships} />
     </div>
   )
 }
