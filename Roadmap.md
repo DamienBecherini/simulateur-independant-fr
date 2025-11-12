@@ -111,6 +111,29 @@
 
 - **Objectif :** Intégrer la gestion de l'ACRE, du VFL, du prorata temporis, et préparer la distribution de l'application.
 
+### **Phase 11 : Le Canvas de Modélisation Interactif [Planifié 🗓️]**
+
+**Objectif :** Remplacer la gestion des acteurs, actuellement une liste verticale, par un canvas de modélisation libre. Cette refonte a pour but de représenter visuellement et spatialement le graphe des relations, transformant l'interface en un véritable outil de "mind mapping" financier et structurel.
+
+1.  **Problématique : La Limite de la Liste Verticale**
+
+    - **Manque de clarté :** Avec plusieurs entités et relations croisées, la liste actuelle devient difficile à lire. Il est impossible de visualiser la structure globale du montage (qui est lié à qui) d'un seul coup d'œil.
+    - **Redondance de l'information :** Une relation (ex: "Marié(e)") est affichée sur les deux fiches personnes, créant une répétition inutile.
+    - **Encombrement :** Comme souligné, les fiches prennent beaucoup de place en hauteur, ce qui rend la gestion de plus de 4 ou 5 entités peu pratique.
+    - **Statique et non-intuitive :** L'interface ne reflète pas la nature dynamique et interconnectée d'un graphe. L'utilisateur ne peut pas organiser spatialement les acteurs d'une manière qui correspond à sa propre carte mentale.
+
+2.  **Plan d'action : Implémentation d'un Éditeur de Graphe**
+    - **Action 8.1 : Intégrer une bibliothèque de graphes.** Remplacer la bibliothèque de tri `dnd-kit` par une solution spécialisée comme **`React Flow`**. Cette bibliothèque fournit la base technique pour le canvas, le zoom, le déplacement des nœuds et le tracé des arêtes.
+    - **Action 8.2 : Transformer les entités en "Nœuds" déplaçables.**
+      - Chaque entité (`Person`, `Company`, etc.) deviendra un "nœud" flottant sur le canvas.
+      - L'utilisateur pourra glisser-déposer chaque nœud pour le positionner librement, lui permettant d'organiser son espace de travail.
+      - La fiche de l'entité sera allégée au maximum (avatar, nom, type, boutons d'action) pour un affichage compact. Le bouton "Supprimer" sera remplacé par une icône Corbeille.
+    - **Action 8.3 : Transformer les relations en "Arêtes" visuelles.**
+      - Les relations ne seront plus affichées dans les fiches, mais comme des flèches ou des lignes connectant les nœuds. Le type de relation ("Président", "Marié(e)") sera affiché comme une étiquette sur la ligne.
+      - L'ensemble du montage deviendra instantanément lisible.
+    - **Action 8.4 : Permettre la création de relations interactives.** Implémenter la fonctionnalité phare : l'utilisateur pourra cliquer sur le bord d'un nœud, étirer une ligne jusqu'à un autre nœud, et à la connexion, une modale s'ouvrira pour lui permettre de choisir le type de relation à créer.
+    - **Action 8.5 : Assurer la persistance des positions.** La position (x, y) de chaque nœud sur le canvas sera sauvegardée avec l'entité. Ainsi, lorsque l'utilisateur recharge sa simulation, sa mise en page personnalisée est restaurée.
+
 Notes supplémentaires :
 
 Ajouter une option qui permet d'ajouter un certain pourcentage (on doit pouvoir régler des dixiemes d'unité) de taxe Urssaf supplémentaires pour les auto entreprenneur avec comme légende : Formation obligatoire, Taxe CMA / Frais de Chambre Consulaire, etc. Une nouvelle ligne devra apparaitre dans le détail des calculs des taxes.

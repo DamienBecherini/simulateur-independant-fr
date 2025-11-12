@@ -7,6 +7,8 @@ import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
 import { AvatarDisplay } from "./AvatarDisplay"
+// MODIFICATION 1 : On importe notre nouveau composant
+import { ScrollableGridContainer } from "./ScrollableGridContainer"
 
 interface MonthlyGridProps {
   entities: Entity[]
@@ -14,13 +16,14 @@ interface MonthlyGridProps {
   setMonthlyData: Dispatch<SetStateAction<MonthlyGridData>>
   preferences: UserPreferences
   flowTypeToNumberMap: Map<string, number>
-  onEditEntity: (entity: Entity) => void // NOUVELLE PROP
+  onEditEntity: (entity: Entity) => void
 }
 
 const months = ["Janv", "Févr", "Mars", "Avril", "Mai", "Juin", "Juil", "Août", "Sept", "Oct", "Nov", "Déc"]
 const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 
 function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, onEditEntity }: MonthlyGridProps) {
+  // ... (tout le code interne du composant reste EXACTEMENT le même)
   const [isListModalOpen, setListModalOpen] = useState(false)
   const [isEditModalOpen, setEditModalOpen] = useState(false)
   const [context, setContext] = useState<{ entityId: string; monthIndex: number } | null>(null)
@@ -170,8 +173,9 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         {entities.length === 0 ? (
           <p className="text-slate-500">Veuillez d'abord ajouter une entité pour commencer la saisie.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <div className="grid gap-px" style={{ gridTemplateColumns: "auto repeat(13, auto)" }}>
+          // MODIFICATION 2 : On enveloppe la grille dans notre nouveau conteneur.
+          <ScrollableGridContainer>
+            <div className="grid gap-px" style={{ gridTemplateColumns: "auto repeat(13, minmax(150px, 1fr))" }}>
               <div className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2 whitespace-nowrap">Entités / Flux</div>
               <div className="font-bold text-center p-2">Total Annuel</div>
               {months.map(month => (
@@ -181,7 +185,6 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
               ))}
               {gridData.map(({ entity, monthlyScale, monthlyCellData, annualCellData, annualScale }) => (
                 <React.Fragment key={entity.id}>
-                  {/* MODIFICATION: Cellule cliquable */}
                   <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 transition-colors" onClick={() => onEditEntity(entity)}>
                     <div className="flex flex-col items-center gap-2 pt-1 pb-1 ml-3 mr-3">
                       <AvatarDisplay avatar={entity.avatar} size="md" />
@@ -201,7 +204,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                 </React.Fragment>
               ))}
             </div>
-          </div>
+          </ScrollableGridContainer>
         )}
       </div>
 

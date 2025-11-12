@@ -4,8 +4,8 @@ import { createPerson, createCompany, createMicroEntreprise } from "@/lib/entity
 import type { Entity, SessionState, Company, MicroEntreprise } from "@/types"
 import { Button } from "@/components/ui/button"
 import { useState, useMemo, Dispatch, SetStateAction } from "react"
-// EditEntityModal n'est plus géré ici
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
+// MODIFIÉ : On repasse à une stratégie verticale qui fonctionne mieux avec le wrapping
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { EntityItem } from "./EntityItem"
 import { SelectEntityTypeModal, BusinessEntityType } from "./SelectEntityTypeModal"
@@ -13,7 +13,7 @@ import { SelectEntityTypeModal, BusinessEntityType } from "./SelectEntityTypeMod
 interface EntitiesManagerProps {
   session: SessionState
   setCurrentSession: Dispatch<SetStateAction<SessionState>>
-  onEditEntity: (entity: Entity) => void // Callback pour ouvrir la modale
+  onEditEntity: (entity: Entity) => void
 }
 
 function EntitiesManager({ session, setCurrentSession, onEditEntity }: EntitiesManagerProps) {
@@ -64,9 +64,6 @@ function EntitiesManager({ session, setCurrentSession, onEditEntity }: EntitiesM
     setEntities(prevEntities => prevEntities.map(entity => (entity.id === idToToggle ? { ...entity, locked: !entity.locked } : entity)))
   }
 
-  // La fonction de sauvegarde a été remontée dans App.tsx
-  // const handleUpdateEntity = ...
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (over && active.id !== over.id) {
@@ -89,12 +86,10 @@ function EntitiesManager({ session, setCurrentSession, onEditEntity }: EntitiesM
       </div>
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={entityIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-4">{session.entities.length === 0 ? <p className="text-slate-500">Aucune entité. Commencez par en ajouter une !</p> : session.entities.map(entity => <EntityItem key={entity.id} entity={entity} allEntities={session.entities} relationships={session.relationships} onDelete={deleteEntity} onToggleLock={toggleLock} onSelect={onEditEntity} />)}</div>
+          {/* MODIFIÉ : On remplace 'overflow-x-auto' par 'flex-wrap' pour le retour à la ligne */}
+          <div className="flex gap-4 flex-wrap">{session.entities.length === 0 ? <p className="text-slate-500">Aucune entité. Commencez par en ajouter une !</p> : session.entities.map(entity => <EntityItem key={entity.id} entity={entity} allEntities={session.entities} relationships={session.relationships} onDelete={deleteEntity} onToggleLock={toggleLock} onSelect={onEditEntity} />)}</div>
         </SortableContext>
       </DndContext>
-
-      {/* La modale est maintenant gérée par App.tsx */}
-      {/* <EditEntityModal ... /> */}
 
       <SelectEntityTypeModal isOpen={isSelectModalOpen} onClose={() => setSelectModalOpen(false)} onSelect={handleAddBusiness} />
     </div>
