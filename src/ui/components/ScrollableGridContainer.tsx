@@ -5,11 +5,13 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-interface ScrollableGridContainerProps {
+// MODIFICATION : L'interface accepte maintenant toutes les props d'un div HTML.
+interface ScrollableGridContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
 }
 
-export function ScrollableGridContainer({ children }: ScrollableGridContainerProps) {
+// MODIFICATION : On récupère className, style, et les autres props pour les passer au conteneur.
+export function ScrollableGridContainer({ children, className, style, ...props }: ScrollableGridContainerProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
@@ -78,47 +80,18 @@ export function ScrollableGridContainer({ children }: ScrollableGridContainerPro
 
   return (
     <div className="relative group">
-      {" "}
-      {/* Ajout de la classe "group" pour le hover */}
-      {/* MODIFIÉ : Flèche Gauche */}
-      <Button
-        variant="outline"
-        size="icon"
-        className={cn(
-          "absolute left-0 top-1/2 -translate-y-1/2 z-20",
-          "-translate-x-3/4", // MODIFIÉ : Positionnement à 50% pour la robustesse
-          "h-24 w-14 rounded-lg shadow-lg",
-          // MODIFIÉ : Nouvelles couleurs et effet de transition + backdrop-blur
-          "bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700",
-          "hover:bg-slate-200/90 dark:hover:bg-slate-800/90",
-          // MODIFIÉ : L'opacité est maintenant gérée par l'état et le hover du parent "group"
-          "transition-opacity duration-300",
-          canScrollLeft ? "opacity-100" : "opacity-0 group-hover:opacity-100 pointer-events-none"
-        )}
-        onClick={() => handleScroll("left")}
-      >
+      {/* Bouton Gauche (inchangé) */}
+      <Button variant="outline" size="icon" className={cn("absolute left-0 top-1/2 -translate-y-1/2 z-20", "-translate-x-3/4", "h-24 w-14 rounded-lg shadow-lg", "bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700", "hover:bg-slate-200/90 dark:hover:bg-slate-800/90", "transition-opacity duration-300", canScrollLeft ? "opacity-100" : "opacity-0 group-hover:opacity-100 pointer-events-none")} onClick={() => handleScroll("left")}>
         <ChevronLeft className="h-8 w-8" />
       </Button>
-      <div ref={scrollContainerRef} className="overflow-x-auto" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+
+      {/* MODIFICATION : Le div qui défile reçoit maintenant les classes et styles de la grille. */}
+      <div ref={scrollContainerRef} className={cn("overflow-x-auto", className)} style={style} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} {...props}>
         {children}
       </div>
-      {/* MODIFIÉ : Flèche Droite */}
-      <Button
-        variant="outline"
-        size="icon"
-        className={cn(
-          "absolute right-0 top-1/2 -translate-y-1/2 z-20",
-          "translate-x-3/4", // MODIFIÉ : Positionnement à 50% pour la robustesse
-          "h-24 w-14 rounded-lg shadow-lg",
-          // MODIFIÉ : Nouvelles couleurs et effet de transition + backdrop-blur
-          "bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700",
-          "hover:bg-slate-200/90 dark:hover:bg-slate-800/90",
-          // MODIFIÉ : L'opacité est maintenant gérée par l'état et le hover du parent "group"
-          "transition-opacity duration-300",
-          canScrollRight ? "opacity-100" : "opacity-0 group-hover:opacity-100 pointer-events-none"
-        )}
-        onClick={() => handleScroll("right")}
-      >
+
+      {/* Bouton Droit (inchangé) */}
+      <Button variant="outline" size="icon" className={cn("absolute right-0 top-1/2 -translate-y-1/2 z-20", "translate-x-3/4", "h-24 w-14 rounded-lg shadow-lg", "bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-700", "hover:bg-slate-200/90 dark:hover:bg-slate-800/90", "transition-opacity duration-300", canScrollRight ? "opacity-100" : "opacity-0 group-hover:opacity-100 pointer-events-none")} onClick={() => handleScroll("right")}>
         <ChevronRight className="h-8 w-8" />
       </Button>
     </div>
