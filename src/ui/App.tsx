@@ -1,6 +1,6 @@
 // src/ui/App.tsx
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
@@ -12,17 +12,46 @@ import { useSessionManager } from "./hooks/useSessionManager"
 import type { SaveSlot, Entity, Relationship } from "@/types"
 import { FlowLegend } from "./components/FlowLegend"
 import { Results } from "./components/Results.tsx"
-// 1. IMPORTER LA MODALE D'ÉDITION
 import EditEntityModal from "./components/EditEntityModal.tsx"
 import { sanitizeFlowsAfterRelationshipChange } from "@/lib/business-logic.ts"
+import { cn } from "@/lib/utils.ts"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
-  // 2. GÉRER L'ÉTAT DE LA MODALE D'ÉDITION ICI
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
 
+  const [isNavHidden, setIsNavHidden] = useState(false)
+  const lastScrollY = useRef(0)
+
   const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      const scrollThreshold = 10
+
+      if (currentScrollY <= scrollThreshold) {
+        setIsNavHidden(false)
+        lastScrollY.current = currentScrollY
+        return
+      }
+
+      if (currentScrollY > lastScrollY.current) {
+        setIsNavHidden(true)
+      } else {
+        setIsNavHidden(false)
+      }
+
+      lastScrollY.current = currentScrollY
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true })
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+    }
+  }, [])
 
   useEffect(() => {
     document.body.style.zoom = `${zoomLevel}`
@@ -67,7 +96,6 @@ function App() {
     setSettingsOpen(false)
   }
 
-  // 3. CRÉER LA FONCTION DE SAUVEGARDE DE L'ENTITÉ
   const handleUpdateEntity = (updatedEntity: Entity, updatedRelationships: Relationship[]) => {
     setCurrentSession(prevSession => {
       const updatedEntities = prevSession.entities.map(entity => (entity.id === updatedEntity.id ? updatedEntity : entity))
@@ -75,7 +103,7 @@ function App() {
       const sanitizedMonthlyData = sanitizeFlowsAfterRelationshipChange(tempState)
       return { ...tempState, monthlyData: sanitizedMonthlyData }
     })
-    setEditingEntity(null) // Ferme la modale
+    setEditingEntity(null)
   }
 
   const zoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2))
@@ -97,7 +125,26 @@ function App() {
 
   return (
     <div className="container mx-auto p-8 min-h-screen flex flex-col">
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
+      <nav
+        className={cn(
+          "fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b",
+          // ====================================================================
+          // === DÉBUT DE LA MODIFICATION ===
+          // ====================================================================
+          // La transition s'applique maintenant à TOUTES les propriétés animables (transform et box-shadow)
+          "transition-all duration-300 ease-in-out",
+          // On utilise un objet pour appliquer les classes de manière conditionnelle
+          {
+            // Styles pour l'état VISIBLE (!isNavHidden)
+            "shadow-lg dark:shadow-[0_4px_14px_0_rgba(253,230,138,0.12)]": !isNavHidden,
+            // Styles pour l'état CACHÉ (isNavHidden)
+            "shadow-md dark:shadow-[0_2px_8px_0_rgba(253,230,138,0.5)] slide-up": isNavHidden
+          }
+          // ====================================================================
+          // === FIN DE LA MODIFICATION ===
+          // ====================================================================
+        )}
+      >
         <div className="container mx-auto flex items-center justify-between px-8 py-2">
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" className="h-10 w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
@@ -128,10 +175,8 @@ function App() {
       </header>
 
       <main className="flex-grow">
-        {/* 4. PASSER LA FONCTION POUR OUVRIR LA MODALE */}
         <EntitiesManager onEditEntity={setEditingEntity} session={currentSession} setCurrentSession={setCurrentSession} />
 
-        {/* 5. PASSER LA FONCTION POUR OUVRIR LA MODALE */}
         <MonthlyGrid
           entities={currentSession.entities}
           monthlyData={currentSession.monthlyData}
@@ -155,7 +200,6 @@ function App() {
 
       <SettingsSheet isOpen={isSettingsOpen} onOpenChange={setSettingsOpen} allSaveSlots={allSaveSlots} setAllSaveSlots={setAllSaveSlots} currentSession={currentSession} setCurrentSession={setCurrentSession} onReset={handleResetAndClose} onLoadSlot={handleLoadAndClose} slotOrder={slotOrder} setSlotOrder={setSlotOrder} onImport={handleImport} importConfirmation={importConfirmation} onConfirmImport={handleConfirmImportAndClose} onCancelImport={cancelImport} loadedSlotId={loadedSlotId} setLoadedSlotId={setLoadedSlotId} />
 
-      {/* 6. AFFICHER LA MODALE ICI */}
       <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleUpdateEntity} allEntities={currentSession.entities} relationships={currentSession.relationships} />
     </div>
   )

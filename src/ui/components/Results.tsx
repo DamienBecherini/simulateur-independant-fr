@@ -130,7 +130,7 @@ export function Results({ currentSession }: ResultsProps) {
   const isButtonDisabled = isLoading || currentSession.entities.length === 0
 
   return (
-    <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md mt-8">
+    <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md mt-8 dark:shadow-[0_0_24px_2px_rgba(100,100,100,0.14)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
         <div>
           <h2 className="text-2xl font-semibold">Résultats de la Simulation</h2>

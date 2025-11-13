@@ -86,7 +86,7 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
 
   return (
     <>
-      <div className="p-4 mt-4 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md">
+      <div className="p-4 mt-4 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md dark:shadow-[0_0_24px_2px_rgba(100,100,100,0.14)]">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-semibold">Légende des Flux</h3>
           <Button variant="ghost" size="sm" onClick={() => setModalOpen(true)}>

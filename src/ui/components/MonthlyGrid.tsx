@@ -166,19 +166,22 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
 
   return (
     <>
-      <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md mt-8">
+      <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md mt-8 dark:shadow-[0_0_24px_2px_rgba(100,100,100,0.14)]">
         <h2 className="text-2xl font-semibold mb-4">Grille de Saisie Annuelle</h2>
         {entities.length === 0 ? (
           <p className="text-slate-500">Veuillez d'abord ajouter une entité pour commencer la saisie.</p>
         ) : (
-          <ScrollableGridContainer className="grid gap-px" style={{ gridTemplateColumns: "auto repeat(13, 160px)" }}>
+          <ScrollableGridContainer className="grid gap-px" style={{ gridTemplateColumns: "auto repeat(12, 160px) 160px" }}>
             <div className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2 whitespace-nowrap">Entités / Flux</div>
-            <div className="font-bold text-center p-2">Total Annuel</div>
+
             {months.map(month => (
               <div key={month} className="font-bold text-center p-2">
                 {month}
               </div>
             ))}
+
+            <div className="font-bold text-center p-2 sticky right-0 bg-slate-50 dark:bg-gray-950 z-10">Total Annuel</div>
+
             {gridData.map(({ entity, monthlyScale, monthlyCellData, annualCellData, annualScale }) => (
               <React.Fragment key={entity.id}>
                 <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 transition-colors" onClick={() => onEditEntity(entity)}>
@@ -188,15 +191,15 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                   </div>
                 </div>
 
-                <div className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start">
-                  <CellChartDisplay gains={annualCellData.gains} expenses={annualCellData.expenses} totalGains={annualCellData.totalGains} totalExpenses={annualCellData.totalExpenses} absoluteMaxValue={annualScale} flowCount={annualCellData.flowCount} />
-                </div>
-
                 {monthlyCellData.map((cellData, monthIndex) => (
                   <div key={monthIndex} className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start" onClick={() => openFlowsList(entity.id, monthIndex)}>
                     <CellChartDisplay gains={cellData.gains} expenses={cellData.expenses} totalGains={cellData.totalGains} totalExpenses={cellData.totalExpenses} absoluteMaxValue={monthlyScale} flowCount={cellData.flowCount} />
                   </div>
                 ))}
+
+                <div className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start sticky right-0 z-10">
+                  <CellChartDisplay gains={annualCellData.gains} expenses={annualCellData.expenses} totalGains={annualCellData.totalGains} totalExpenses={annualCellData.totalExpenses} absoluteMaxValue={annualScale} flowCount={annualCellData.flowCount} />
+                </div>
               </React.Fragment>
             ))}
           </ScrollableGridContainer>

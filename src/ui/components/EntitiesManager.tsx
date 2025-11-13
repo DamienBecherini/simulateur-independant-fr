@@ -76,7 +76,7 @@ function EntitiesManager({ session, setCurrentSession, onEditEntity }: EntitiesM
   }
 
   return (
-    <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md">
+    <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md dark:shadow-[0_0_24px_2px_rgba(100,100,100,0.14)]">
       <h2 className="text-2xl font-semibold mb-4">Acteurs de la Simulation</h2>
       <div className="flex gap-4 mb-6">
         <Button onClick={addPerson}>+ Ajouter une Personne</Button>

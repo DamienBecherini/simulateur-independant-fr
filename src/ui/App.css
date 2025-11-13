@@ -98,3 +98,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* NOUVEAU: Ajout de la classe personnalisée 'slide-up' */
+@layer components {
+  .slide-up {
+    /* Applique une translation verticale de -100% de la hauteur de l'élément */
+    @apply -translate-y-full;
+  }
+}
