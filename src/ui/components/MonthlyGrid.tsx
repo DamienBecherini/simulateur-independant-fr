@@ -8,6 +8,9 @@ import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { ScrollableGridContainer } from "./ScrollableGridContainer"
+// NOUVEAU 1/4: Import des icônes et de l'utilitaire de classes
+import { Pin, PinOff } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface MonthlyGridProps {
   entities: Entity[]
@@ -27,6 +30,11 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
   const [context, setContext] = useState<{ entityId: string; monthIndex: number } | null>(null)
   const [flowToEdit, setFlowToEdit] = useState<FinancialFlow | null>(null)
 
+  // NOUVEAU 2/4: États pour contrôler l'adhérence des colonnes
+  const [isEntitiesSticky, setIsEntitiesSticky] = useState(true)
+  const [isTotalSticky, setIsTotalSticky] = useState(true)
+
+  // ... (toute la logique des modales et des données reste INCHANGÉE)
   const openFlowsList = (entityId: string, monthIndex: number) => {
     setContext({ entityId, monthIndex })
     setListModalOpen(true)
@@ -172,7 +180,20 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           <p className="text-slate-500">Veuillez d'abord ajouter une entité pour commencer la saisie.</p>
         ) : (
           <ScrollableGridContainer className="grid gap-px" style={{ gridTemplateColumns: "auto repeat(12, 160px) 160px" }}>
-            <div className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2 whitespace-nowrap">Entités / Flux</div>
+            {/* MODIFIÉ 3/4: La structure des en-têtes est mise à jour pour inclure les icônes et les classes conditionnelles */}
+            <div
+              className={cn(
+                "font-bold left-0 bg-slate-50 dark:bg-gray-950 z-20 p-2 whitespace-nowrap",
+                { "[@media(min-width:550px)]:sticky": isEntitiesSticky } // Sticky uniquement si l'état est `true` et la largeur > 550px
+              )}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <span>Entités / Flux</span>
+                <button onClick={() => setIsEntitiesSticky(prev => !prev)} className="p-1 hidden md:inline-flex hover:bg-slate-200 dark:hover:bg-slate-700 rounded" title={isEntitiesSticky ? "Détacher la colonne" : "Épingler la colonne"}>
+                  {isEntitiesSticky ? <PinOff className="h-4 w-4 text-slate-500" /> : <Pin className="h-4 w-4 text-slate-500" />}
+                </button>
+              </div>
+            </div>
 
             {months.map(month => (
               <div key={month} className="font-bold text-center p-2">
@@ -180,11 +201,24 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
               </div>
             ))}
 
-            <div className="font-bold text-center p-2 sticky right-0 bg-slate-50 dark:bg-gray-950 z-10">Total Annuel</div>
+            <div
+              className={cn(
+                "font-bold text-center right-0 bg-slate-50 dark:bg-gray-950 z-20 p-2",
+                { "md:sticky": isTotalSticky } // Sticky uniquement si l'état est `true` et la largeur > md (768px)
+              )}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span>Total Annuel</span>
+                <button onClick={() => setIsTotalSticky(prev => !prev)} className="p-1 hidden md:inline-flex hover:bg-slate-200 dark:hover:bg-slate-700 rounded" title={isTotalSticky ? "Détacher la colonne" : "Épingler la colonne"}>
+                  {isTotalSticky ? <PinOff className="h-4 w-4 text-slate-500" /> : <Pin className="h-4 w-4 text-slate-500" />}
+                </button>
+              </div>
+            </div>
 
+            {/* MODIFIÉ 4/4: Les cellules de données reçoivent les mêmes classes conditionnelles que leurs en-têtes */}
             {gridData.map(({ entity, monthlyScale, monthlyCellData, annualCellData, annualScale }) => (
               <React.Fragment key={entity.id}>
-                <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 transition-colors" onClick={() => onEditEntity(entity)}>
+                <div className={cn("font-bold col-span-1 left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 transition-colors", { "[@media(min-width:550px)]:sticky": isEntitiesSticky })} onClick={() => onEditEntity(entity)}>
                   <div className="flex flex-col items-center gap-2 pt-1 pb-1 ml-3 mr-3">
                     <AvatarDisplay avatar={entity.avatar} size="md" />
                     <span className="text-center">{entity.name}</span>
@@ -197,7 +231,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                   </div>
                 ))}
 
-                <div className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start sticky right-0 z-10">
+                <div className={cn("bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start right-0 z-10", { "md:sticky": isTotalSticky })}>
                   <CellChartDisplay gains={annualCellData.gains} expenses={annualCellData.expenses} totalGains={annualCellData.totalGains} totalExpenses={annualCellData.totalExpenses} absoluteMaxValue={annualScale} flowCount={annualCellData.flowCount} />
                 </div>
               </React.Fragment>
