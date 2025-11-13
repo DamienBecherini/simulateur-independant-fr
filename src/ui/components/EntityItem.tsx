@@ -2,31 +2,55 @@
 
 import { Button } from "@/components/ui/button"
 import type { Entity, Relationship } from "@/types"
-import { Lock, Unlock, ArrowRight, Trash2 } from "lucide-react"
+import { ArrowRight, Trash2 } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { AvatarDisplay } from "./AvatarDisplay"
+import { cn } from "@/lib/utils"
 
 interface EntityItemProps {
   entity: Entity
   allEntities: Entity[]
   relationships: Relationship[]
   onDelete: (id: string) => void
-  onToggleLock: (id: string) => void
   onSelect: (entity: Entity) => void
+  areEntitiesLocked: boolean
 }
 
-export function EntityItem({ entity, allEntities, relationships, onDelete, onToggleLock, onSelect }: EntityItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: entity.id })
+export function EntityItem({ entity, allEntities, relationships, onDelete, onSelect, areEntitiesLocked }: EntityItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: entity.id,
+    disabled: areEntitiesLocked
+  })
+
   const style = { transform: CSS.Transform.toString(transform), transition }
   const relevantRelationships = relationships.filter(r => r.fromId === entity.id || r.toId === entity.id)
 
   return (
-    // MODIFIÉ : La classe `flex-shrink-0` a été supprimée pour permettre le wrapping.
-    <div ref={setNodeRef} style={style} className="p-3 border rounded-lg flex flex-col gap-3 transition-shadow hover:shadow-lg bg-white dark:bg-gray-900 w-80">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "p-3 border rounded-lg flex flex-col gap-3 w-80 transition-shadow transition-colors", // Classes de base
+        {
+          // Styles si verrouillé : fond légèrement différent, pas d'ombre au survol
+          "bg-slate-100 dark:bg-gray-950 cursor-not-allowed": areEntitiesLocked,
+          // Styles si déverrouillé : fond blanc, ombre au survol
+          "bg-white dark:bg-gray-900 hover:shadow-lg cursor-pointer": !areEntitiesLocked
+        }
+      )}
+      onClick={() => !areEntitiesLocked && onSelect(entity)}
+    >
       <div className="flex justify-between items-start">
-        <div className="flex-grow flex items-center gap-3 cursor-pointer" onClick={() => onSelect(entity)}>
-          <div {...attributes} {...listeners} className="cursor-grab touch-none p-2 -ml-2 self-start">
+        <div className="flex-grow flex items-center gap-3">
+          <div
+            {...attributes}
+            {...listeners}
+            className={cn("p-2 -ml-2 self-start touch-none", {
+              "cursor-grab": !areEntitiesLocked,
+              "cursor-not-allowed": areEntitiesLocked
+            })}
+          >
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="text-slate-400">
               <path d="M5.5 4.625C5.01421 4.625 4.625 5.01421 4.625 5.5C4.625 5.98579 5.01421 6.375 5.5 6.375C5.98579 6.375 6.375 5.98579 6.375 5.5C6.375 5.01421 5.98579 4.625 5.5 4.625ZM9.5 4.625C9.01421 4.625 8.625 5.01421 8.625 5.5C8.625 5.98579 9.01421 6.375 9.5 6.375C9.98579 6.375 10.375 5.98579 10.375 5.5C10.375 5.01421 9.98579 4.625 9.5 4.625ZM6.375 9.5C6.375 9.01421 5.98579 8.625 5.5 8.625C5.01421 8.625 4.625 9.01421 4.625 9.5C4.625 9.98579 5.01421 10.375 5.5 10.375C5.98579 10.375 6.375 9.98579 6.375 9.5ZM9.5 8.625C9.01421 8.625 8.625 9.01421 8.625 9.5C8.625 9.98579 9.01421 10.375 9.5 10.375C9.98579 10.375 10.375 9.98579 10.375 9.5C10.375 9.01421 9.98579 8.625 9.5 8.625Z" fill="currentColor"></path>
             </svg>
@@ -38,10 +62,7 @@ export function EntityItem({ entity, allEntities, relationships, onDelete, onTog
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={e => (e.stopPropagation(), onToggleLock(entity.id))}>
-            {entity.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-slate-500" />}
-          </Button>
-          <Button variant="ghost" size="icon" disabled={entity.locked} onClick={e => (e.stopPropagation(), onDelete(entity.id))} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+          <Button variant="ghost" size="icon" disabled={areEntitiesLocked} onClick={e => (e.stopPropagation(), onDelete(entity.id))} className="text-destructive hover:text-destructive hover:bg-destructive/10">
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>

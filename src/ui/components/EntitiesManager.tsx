@@ -5,20 +5,22 @@ import type { Entity, SessionState, Company, MicroEntreprise } from "@/types"
 import { Button } from "@/components/ui/button"
 import { useState, useMemo, Dispatch, SetStateAction } from "react"
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
-// MODIFIÉ : On repasse à une stratégie verticale qui fonctionne mieux avec le wrapping
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { EntityItem } from "./EntityItem"
 import { SelectEntityTypeModal, BusinessEntityType } from "./SelectEntityTypeModal"
+import { Lock, Unlock } from "lucide-react"
 
 interface EntitiesManagerProps {
   session: SessionState
   setCurrentSession: Dispatch<SetStateAction<SessionState>>
   onEditEntity: (entity: Entity) => void
+  onToggleEntitiesLock: () => void
 }
 
-function EntitiesManager({ session, setCurrentSession, onEditEntity }: EntitiesManagerProps) {
+function EntitiesManager({ session, setCurrentSession, onEditEntity, onToggleEntitiesLock }: EntitiesManagerProps) {
   const [isSelectModalOpen, setSelectModalOpen] = useState(false)
   const entityIds = useMemo(() => session.entities.map(e => e.id), [session.entities])
+  const areEntitiesLocked = session.areEntitiesLocked
 
   const setEntities = (updater: SetStateAction<Entity[]>) => {
     setCurrentSession(prev => ({
@@ -60,10 +62,6 @@ function EntitiesManager({ session, setCurrentSession, onEditEntity }: EntitiesM
     setRelationships(prev => prev.filter(rel => rel.fromId !== idToDelete && rel.toId !== idToDelete))
   }
 
-  const toggleLock = (idToToggle: string) => {
-    setEntities(prevEntities => prevEntities.map(entity => (entity.id === idToToggle ? { ...entity, locked: !entity.locked } : entity)))
-  }
-
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (over && active.id !== over.id) {
@@ -77,17 +75,24 @@ function EntitiesManager({ session, setCurrentSession, onEditEntity }: EntitiesM
 
   return (
     <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md dark:shadow-[0_0_24px_2px_rgba(100,100,100,0.14)]">
-      <h2 className="text-2xl font-semibold mb-4">Acteurs de la Simulation</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold">Acteurs de la Simulation</h2>
+        <Button onClick={onToggleEntitiesLock} variant="ghost" size="icon" className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+          {areEntitiesLocked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
+        </Button>
+      </div>
       <div className="flex gap-4 mb-6">
-        <Button onClick={addPerson}>+ Ajouter une Personne</Button>
-        <Button onClick={() => setSelectModalOpen(true)} variant="secondary">
+        <Button onClick={addPerson} disabled={areEntitiesLocked}>
+          + Ajouter une Personne
+        </Button>
+        <Button onClick={() => setSelectModalOpen(true)} variant="secondary" disabled={areEntitiesLocked}>
           + Ajouter une Activité
         </Button>
       </div>
+      {/* La prop 'disabled' a été retirée d'ici */}
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={entityIds} strategy={verticalListSortingStrategy}>
-          {/* MODIFIÉ : On remplace 'overflow-x-auto' par 'flex-wrap' pour le retour à la ligne */}
-          <div className="flex gap-4 flex-wrap">{session.entities.length === 0 ? <p className="text-slate-500">Aucune entité. Commencez par en ajouter une !</p> : session.entities.map(entity => <EntityItem key={entity.id} entity={entity} allEntities={session.entities} relationships={session.relationships} onDelete={deleteEntity} onToggleLock={toggleLock} onSelect={onEditEntity} />)}</div>
+          <div className="flex gap-4 flex-wrap">{session.entities.length === 0 ? <p className="text-slate-500">Aucune entité. Commencez par en ajouter une !</p> : session.entities.map(entity => <EntityItem key={entity.id} entity={entity} allEntities={session.entities} relationships={session.relationships} onDelete={deleteEntity} onSelect={onEditEntity} areEntitiesLocked={areEntitiesLocked} />)}</div>
         </SortableContext>
       </DndContext>
 

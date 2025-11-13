@@ -39,8 +39,7 @@ export const PersonSchema = z.object({
   name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle Personne"),
   fiscalParts: z.number().positive().default(1),
   avatar: AvatarSchema,
-  locked: z.boolean().default(false),
-  // NOUVELLE PROPRIÉTÉ
+  // La propriété 'locked' a été supprimée d'ici
   enabledFlowTypes: z.array(FinancialFlowTypeEnum).default([])
 })
 
@@ -50,8 +49,7 @@ export const CompanySchema = z.object({
   name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle Société"),
   legalStatus: z.enum(["SASU", "EURL"]),
   avatar: AvatarSchema,
-  locked: z.boolean().default(false),
-  // NOUVELLE PROPRIÉTÉ
+  // La propriété 'locked' a été supprimée d'ici
   enabledFlowTypes: z.array(FinancialFlowTypeEnum).default([])
 })
 
@@ -62,8 +60,7 @@ export const MicroEntrepriseSchema = z.object({
   beneficieACRE: z.boolean().default(false),
   opteVFL: z.boolean().default(false),
   avatar: AvatarSchema,
-  locked: z.boolean().default(false),
-  // NOUVELLE PROPRIÉTÉ
+  // La propriété 'locked' a été supprimée d'ici
   enabledFlowTypes: z.array(FinancialFlowTypeEnum).default([])
 })
 
@@ -98,7 +95,10 @@ export const SessionStateSchema = z.object({
   name: z.string().default("Nouvelle Simulation"),
   entities: z.array(EntitySchema).default([]),
   relationships: z.array(RelationshipSchema).default([]),
-  monthlyData: MonthlyGridDataSchema.default(() => Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] })))
+  monthlyData: MonthlyGridDataSchema.default(() => Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))),
+  // AJOUT DES VERROUS GLOBAUX
+  areEntitiesLocked: z.boolean().default(false),
+  isGridLocked: z.boolean().default(false)
 })
 
 export const SaveSlotSchema = SessionStateSchema.extend({

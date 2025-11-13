@@ -26,6 +26,16 @@ function App() {
 
   const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
 
+  // --- NOUVELLES FONCTIONS DE VERROUILLAGE ---
+  const toggleEntitiesLock = () => {
+    setCurrentSession(prev => ({ ...prev, areEntitiesLocked: !prev.areEntitiesLocked }))
+  }
+
+  const toggleGridLock = () => {
+    setCurrentSession(prev => ({ ...prev, isGridLocked: !prev.isGridLocked }))
+  }
+  // ------------------------------------------
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
@@ -126,24 +136,10 @@ function App() {
   return (
     <div className="container mx-auto p-8 min-h-screen flex flex-col">
       <nav
-        className={cn(
-          "fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b",
-          // ====================================================================
-          // === DÉBUT DE LA MODIFICATION ===
-          // ====================================================================
-          // La transition s'applique maintenant à TOUTES les propriétés animables (transform et box-shadow)
-          "transition-all duration-300 ease-in-out",
-          // On utilise un objet pour appliquer les classes de manière conditionnelle
-          {
-            // Styles pour l'état VISIBLE (!isNavHidden)
-            "shadow-lg dark:shadow-[0_4px_14px_0_rgba(253,230,138,0.12)]": !isNavHidden,
-            // Styles pour l'état CACHÉ (isNavHidden)
-            "shadow-md dark:shadow-[0_2px_8px_0_rgba(253,230,138,0.5)] slide-up": isNavHidden
-          }
-          // ====================================================================
-          // === FIN DE LA MODIFICATION ===
-          // ====================================================================
-        )}
+        className={cn("fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b", "transition-all duration-300 ease-in-out", {
+          "shadow-lg dark:shadow-[0_4px_14px_0_rgba(253,230,138,0.12)]": !isNavHidden,
+          "shadow-md dark:shadow-[0_2px_8px_0_rgba(253,230,138,0.5)] slide-up": isNavHidden
+        })}
       >
         <div className="container mx-auto flex items-center justify-between px-8 py-2">
           <div className="flex items-center gap-1">
@@ -175,7 +171,8 @@ function App() {
       </header>
 
       <main className="flex-grow">
-        <EntitiesManager onEditEntity={setEditingEntity} session={currentSession} setCurrentSession={setCurrentSession} />
+        {/* --- PASSAGE DES NOUVELLES PROPS --- */}
+        <EntitiesManager onEditEntity={setEditingEntity} session={currentSession} setCurrentSession={setCurrentSession} onToggleEntitiesLock={toggleEntitiesLock} />
 
         <MonthlyGrid
           entities={currentSession.entities}
@@ -189,6 +186,10 @@ function App() {
           preferences={userPreferences}
           flowTypeToNumberMap={flowTypeToNumberMap}
           onEditEntity={setEditingEntity}
+          // --- PASSAGE DES NOUVELLES PROPS ---
+          areEntitiesLocked={currentSession.areEntitiesLocked}
+          isGridLocked={currentSession.isGridLocked}
+          onToggleGridLock={toggleGridLock}
         />
 
         <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />

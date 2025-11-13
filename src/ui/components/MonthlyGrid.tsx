@@ -8,8 +8,8 @@ import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { ScrollableGridContainer } from "./ScrollableGridContainer"
-// NOUVEAU 1/4: Import des icônes et de l'utilitaire de classes
-import { Pin, PinOff } from "lucide-react"
+import { Pin, PinOff, Lock, Unlock } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 interface MonthlyGridProps {
@@ -19,26 +19,28 @@ interface MonthlyGridProps {
   preferences: UserPreferences
   flowTypeToNumberMap: Map<string, number>
   onEditEntity: (entity: Entity) => void
+  areEntitiesLocked: boolean
+  isGridLocked: boolean
+  onToggleGridLock: () => void
 }
 
 const months = ["Janv", "Févr", "Mars", "Avril", "Mai", "Juin", "Juil", "Août", "Sept", "Oct", "Nov", "Déc"]
 const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 
-function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, onEditEntity }: MonthlyGridProps) {
+function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, onEditEntity, areEntitiesLocked, isGridLocked, onToggleGridLock }: MonthlyGridProps) {
   const [isListModalOpen, setListModalOpen] = useState(false)
   const [isEditModalOpen, setEditModalOpen] = useState(false)
   const [context, setContext] = useState<{ entityId: string; monthIndex: number } | null>(null)
   const [flowToEdit, setFlowToEdit] = useState<FinancialFlow | null>(null)
-
-  // NOUVEAU 2/4: États pour contrôler l'adhérence des colonnes
   const [isEntitiesSticky, setIsEntitiesSticky] = useState(true)
   const [isTotalSticky, setIsTotalSticky] = useState(true)
 
-  // ... (toute la logique des modales et des données reste INCHANGÉE)
   const openFlowsList = (entityId: string, monthIndex: number) => {
+    if (isGridLocked) return
     setContext({ entityId, monthIndex })
     setListModalOpen(true)
   }
+
   const handleAddFlow = () => {
     setFlowToEdit(null)
     setListModalOpen(false)
@@ -131,6 +133,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         return { gains, expenses, totalGains, totalExpenses, flowCount: relevantFlows.length }
       })
 
+      // ... (le reste de la logique de calcul de `gridData` est inchangé)
       const totalAnnualFlows = new Map<FinancialFlow["type"], number>()
       monthlyData.forEach(month => {
         month.flows
@@ -157,9 +160,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       })
 
       const maxAnnualSegmentValue = Math.max(...annualGains.map(s => s.amount), ...annualExpenses.map(s => s.amount), 1)
-
       const annualFlowCount = monthlyData.reduce((acc, month) => acc + month.flows.filter(f => f.entityId === entity.id).length, 0)
-
       const annualCellData = {
         gains: annualGains,
         expenses: annualExpenses,
@@ -167,7 +168,6 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         totalExpenses: totalAnnualExpenses,
         flowCount: annualFlowCount
       }
-
       return { entity, monthlyScale, monthlyCellData, annualCellData, annualScale: maxAnnualSegmentValue * 1.1 }
     })
   }, [monthlyData, entities, preferences, flowTypeToNumberMap])
@@ -175,18 +175,17 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
   return (
     <>
       <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md mt-8 dark:shadow-[0_0_24px_2px_rgba(100,100,100,0.14)]">
-        <h2 className="text-2xl font-semibold mb-4">Grille de Saisie Annuelle</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-semibold">Grille de Saisie Annuelle</h2>
+          <Button onClick={onToggleGridLock} variant="ghost" size="icon" className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+            {isGridLocked ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
+          </Button>
+        </div>
         {entities.length === 0 ? (
           <p className="text-slate-500">Veuillez d'abord ajouter une entité pour commencer la saisie.</p>
         ) : (
           <ScrollableGridContainer className="grid gap-px" style={{ gridTemplateColumns: "auto repeat(12, 160px) 160px" }}>
-            {/* MODIFIÉ 3/4: La structure des en-têtes est mise à jour pour inclure les icônes et les classes conditionnelles */}
-            <div
-              className={cn(
-                "font-bold left-0 bg-slate-50 dark:bg-gray-950 z-20 p-2 whitespace-nowrap",
-                { "[@media(min-width:550px)]:sticky": isEntitiesSticky } // Sticky uniquement si l'état est `true` et la largeur > 550px
-              )}
-            >
+            <div className={cn("font-bold left-0 bg-slate-50 dark:bg-gray-950 z-20 p-2 whitespace-nowrap", { "[@media(min-width:550px)]:sticky": isEntitiesSticky })}>
               <div className="flex items-center justify-between gap-4">
                 <span>Entités / Flux</span>
                 <button onClick={() => setIsEntitiesSticky(prev => !prev)} className="p-1 hidden md:inline-flex hover:bg-slate-200 dark:hover:bg-slate-700 rounded" title={isEntitiesSticky ? "Détacher la colonne" : "Épingler la colonne"}>
@@ -201,12 +200,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
               </div>
             ))}
 
-            <div
-              className={cn(
-                "font-bold text-center right-0 bg-slate-50 dark:bg-gray-950 z-20 p-2",
-                { "md:sticky": isTotalSticky } // Sticky uniquement si l'état est `true` et la largeur > md (768px)
-              )}
-            >
+            <div className={cn("font-bold text-center right-0 bg-slate-50 dark:bg-gray-950 z-20 p-2", { "md:sticky": isTotalSticky })}>
               <div className="flex items-center justify-center gap-2">
                 <span>Total Annuel</span>
                 <button onClick={() => setIsTotalSticky(prev => !prev)} className="p-1 hidden md:inline-flex hover:bg-slate-200 dark:hover:bg-slate-700 rounded" title={isTotalSticky ? "Détacher la colonne" : "Épingler la colonne"}>
@@ -215,18 +209,36 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
               </div>
             </div>
 
-            {/* MODIFIÉ 4/4: Les cellules de données reçoivent les mêmes classes conditionnelles que leurs en-têtes */}
             {gridData.map(({ entity, monthlyScale, monthlyCellData, annualCellData, annualScale }) => (
               <React.Fragment key={entity.id}>
-                <div className={cn("font-bold col-span-1 left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 transition-colors", { "[@media(min-width:550px)]:sticky": isEntitiesSticky })} onClick={() => onEditEntity(entity)}>
+                <div
+                  className={cn("font-bold col-span-1 left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center transition-colors relative", {
+                    "[@media(min-width:550px)]:sticky": isEntitiesSticky,
+                    // Styles si NON verrouillé
+                    "hover:bg-slate-200 dark:hover:bg-gray-700 cursor-pointer": !areEntitiesLocked,
+                    // Styles si verrouillé : on remplace l'opacité par un fond plus foncé
+                    "bg-slate-200 dark:bg-gray-700 cursor-not-allowed": areEntitiesLocked
+                  })}
+                  onClick={() => !areEntitiesLocked && onEditEntity(entity)}
+                >
                   <div className="flex flex-col items-center gap-2 pt-1 pb-1 ml-3 mr-3">
                     <AvatarDisplay avatar={entity.avatar} size="md" />
                     <span className="text-center">{entity.name}</span>
                   </div>
+                  {areEntitiesLocked && <Lock className="h-4 w-4 text-slate-500 absolute bottom-2 right-2" />}
                 </div>
 
                 {monthlyCellData.map((cellData, monthIndex) => (
-                  <div key={monthIndex} className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start" onClick={() => openFlowsList(entity.id, monthIndex)}>
+                  <div
+                    key={monthIndex}
+                    className={cn("bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] flex flex-col justify-start", {
+                      // Styles si NON verrouillé
+                      "cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700": !isGridLocked,
+                      // Styles si verrouillé : on retire l'opacité et on garde juste le curseur
+                      "cursor-not-allowed": isGridLocked
+                    })}
+                    onClick={() => openFlowsList(entity.id, monthIndex)}
+                  >
                     <CellChartDisplay gains={cellData.gains} expenses={cellData.expenses} totalGains={cellData.totalGains} totalExpenses={cellData.totalExpenses} absoluteMaxValue={monthlyScale} flowCount={cellData.flowCount} />
                   </div>
                 ))}
