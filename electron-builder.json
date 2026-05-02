@@ -2,7 +2,7 @@
   "appId": "fr.independant.simulateur",
   "productName": "Simulateur Indépendant FR",
   "files": ["dist-electron", "dist-react", "splash.html"],
-  "extraResources": ["dist-electron/preload.cjs"],
+  "extraResources": ["dist-electron/electron/preload.cjs"],
   "icon": "./templateIcon.png",
   "mac": {
     "target": "dmg"

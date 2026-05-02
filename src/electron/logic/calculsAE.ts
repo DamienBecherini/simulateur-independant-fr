@@ -3,7 +3,7 @@
 // MODIFIÉ : Syntaxe d'import avec 'with'
 import config from '../config.json' with { type: 'json' };
 import { calculerIR } from "./calculsIR.js";
-import type { SimulationInputs } from '@/types.js';
+import type { SimulationInputs } from "../../types.js"
 
 export function simulerMicroEntreprise(inputs: SimulationInputs) {
   const { ca_services_bic = 0, ca_services_bnc = 0, ca_vente = 0, chargesDeductibles = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1, beneficieACRE = false, opteVFL = false } = inputs;

@@ -3,7 +3,7 @@
 import { ipcMain, WebFrameMain } from "electron"
 import { getUIPath } from "./pathResolver.js"
 import { pathToFileURL } from "url"
-import type { EventPayloadMapping } from "@/globals.js"
+import type { EventPayloadMapping } from "../globals.js"
 
 export function isDev(): boolean {
   return process.env.NODE_ENV === "development"

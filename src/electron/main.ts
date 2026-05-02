@@ -1,7 +1,7 @@
 // src/electron/main.ts
 
 import { app, BrowserWindow, dialog } from "electron"
-import type { SessionState, SaveSlot, UserPreferences, ExportableState } from "@/types.js"
+import type { SessionState, SaveSlot, UserPreferences, ExportableState } from "../types.js"
 import { ipcMainHandle, isDev } from "./util.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"

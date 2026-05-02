@@ -3,8 +3,8 @@
  * @description Version finale du sanitizer utilisant Zod comme source de vérité pour la structure des données,
  * et ajoutant une passe de validation sémantique pour garantir la cohérence (ex: pas de relations orphelines).
  */
-import { SessionStateSchema, SaveSlotSchema } from "@/types.js"
-import type { SessionState, SaveSlot, SanitizationReport } from "@/types.js"
+import { SessionStateSchema, SaveSlotSchema } from "../../types.js"
+import type { SessionState, SaveSlot, SanitizationReport } from "../../types.js"
 
 interface SanitizationResult {
   safeState: SessionState
