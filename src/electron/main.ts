@@ -2,6 +2,8 @@
 
 import { app, BrowserWindow, dialog } from "electron"
 import type { SessionState, SaveSlot, UserPreferences, ExportableState } from "../types.js"
+import { SessionStateSchema } from "../types.js"
+import { runMetaSimulation } from "./logic/simulation-engine.js"
 import { ipcMainHandle, isDev } from "./util.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
@@ -94,7 +96,7 @@ async function readSlotsFromFile(): Promise<SaveSlot[]> {
     }
 
     return cleanSlots
-  } catch (error) {
+  } catch {
     console.log("Aucun fichier de slots trouvé ou fichier illisible, démarrage avec un état vide.")
     return []
   }
@@ -175,6 +177,15 @@ app.on("ready", () => {
 
   ipcMainHandle("getCurrentSession", async () => await readSessionFromFile())
   ipcMainHandle("saveCurrentSession", async (session: SessionState) => await writeSessionToFile(session))
+
+  ipcMainHandle("runMetaSimulation", async (session: SessionState) => {
+    const parsed = SessionStateSchema.safeParse(session)
+    if (!parsed.success) {
+      console.warn("runMetaSimulation: session invalide, utilisation des valeurs par défaut du schéma", parsed.error.flatten())
+    }
+    const safeSession = parsed.success ? parsed.data : SessionStateSchema.parse({})
+    return runMetaSimulation(safeSession)
+  })
 
   ipcMainHandle("getSaveSlots", async () => await readSlotsFromFile())
 

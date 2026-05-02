@@ -1,20 +1,52 @@
 // src/ui/App.tsx
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
-import { Settings, Undo2, Redo2 } from "lucide-react"
+import { Settings, Undo2, Redo2, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
-import type { SaveSlot } from "@/types"
+import type { SaveSlot, SimulationReport } from "@/types"
+import { ResultsPanel } from "./components/ResultsPanel"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
+  const [simulationReport, setSimulationReport] = useState<SimulationReport | null>(null)
+  const [simulationLoading, setSimulationLoading] = useState(false)
+  const [simulationError, setSimulationError] = useState<string | null>(null)
 
   const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo } = useSessionManager()
+
+  const handleRunMetaSimulation = useCallback(async () => {
+    setSimulationLoading(true)
+    setSimulationError(null)
+    try {
+      const report = await window.api.runMetaSimulation(currentSession)
+      setSimulationReport(report)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "La simulation a échoué."
+      setSimulationError(message)
+      setSimulationReport(null)
+    } finally {
+      setSimulationLoading(false)
+    }
+  }, [currentSession])
+
+  const handleExportAll = useCallback(async () => {
+    const exportPayload = {
+      entities: currentSession.entities,
+      relationships: currentSession.relationships,
+      monthlyData: currentSession.monthlyData,
+      simulationReport,
+      simulationError,
+      exportedAt: new Date().toISOString()
+    }
+
+    await window.api.exportState(exportPayload)
+  }, [currentSession, simulationReport, simulationError])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -73,7 +105,11 @@ function App() {
           <Redo2 />
         </Button>
       </div>
-      <div className="absolute top-4 right-4 flex items-center" style={{ height: "2rem" }}>
+      <div className="absolute top-4 right-4 flex items-center gap-2" style={{ height: "2rem" }}>
+        <Button variant="outline" size="sm" className="h-8 gap-2" onClick={handleExportAll}>
+          <Download className="size-4" />
+          Exporter
+        </Button>
         <ThemeToggle />
       </div>
 
@@ -117,6 +153,14 @@ function App() {
               monthlyData: typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(prev.monthlyData) : newMonthlyDataOrUpdater
             }))
           }}
+        />
+
+        <ResultsPanel
+          entities={currentSession.entities}
+          report={simulationReport}
+          loading={simulationLoading}
+          error={simulationError}
+          onRunSimulation={handleRunMetaSimulation}
         />
       </main>
 

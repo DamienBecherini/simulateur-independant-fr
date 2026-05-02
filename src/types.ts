@@ -137,6 +137,29 @@ export interface SimulationResult {
   error?: string
 }
 
+export interface EntityResult {
+  entityId: string
+  name: string
+  type: Entity["type"]
+  chiffreAffaires: number
+  netDansLaPoche: number
+  impotsEtCotisations: number
+  warnings: string[]
+}
+
+export interface FoyerFiscalResult {
+  personIds: string[]
+  totalParts: number
+  revenuImposableGlobal: number
+  impotSurLeRevenu: number
+}
+
+export interface SimulationReport {
+  entities: EntityResult[]
+  foyers: FoyerFiscalResult[]
+  globalNet: number
+}
+
 export interface UserPreferences {
   slotOrder: string[]
 }
@@ -151,6 +174,9 @@ export type ExportableState = {
   entities: Entity[]
   relationships: Relationship[]
   monthlyData: MonthlyGridData
+  simulationReport?: SimulationReport | null
+  simulationError?: string | null
+  exportedAt?: string
 }
 
 export type NotificationPayload = {
