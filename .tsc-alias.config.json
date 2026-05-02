@@ -1,0 +1,10 @@
+{
+  "resolveFullPaths": true,
+  "verbose": false,
+  "replacers": [
+    {
+      "regex": "^electron$",
+      "replacement": "electron"
+    }
+  ]
+}
