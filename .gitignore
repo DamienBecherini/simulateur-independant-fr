@@ -1,6 +1,11 @@
-# Logs
-logs
-*.log
+# Fichier .gitignore pour un projet Node.js / Electron
+
+# Dépendances
+node_modules/
+node_modules*/
+.git/
+
+# Fichiers de log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
