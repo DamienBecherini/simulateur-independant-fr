@@ -49,6 +49,10 @@ function App() {
   }, [currentSession, simulationReport, simulationError])
 
   useEffect(() => {
+    setSimulationReport(null)
+  }, [currentSession.entities, currentSession.relationships, currentSession.monthlyData])
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
       const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey

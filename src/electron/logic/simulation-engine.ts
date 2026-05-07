@@ -196,12 +196,13 @@ export function runMetaSimulation(session: SessionState): SimulationReport {
     if (ent.type === "person") {
       const flows = totals
       const netApprox = directTaxableAnnualPerson(flows)
+      const remunerationTransferee = routedRemuneration.get(ent.id) ?? 0
       entities.push({
         entityId: ent.id,
         name: ent.name,
         type: "person",
         chiffreAffaires: 0,
-        netDansLaPoche: Math.round(netApprox),
+        netDansLaPoche: Math.round(netApprox + remunerationTransferee),
         impotsEtCotisations: 0,
         warnings
       })

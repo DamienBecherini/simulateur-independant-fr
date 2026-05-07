@@ -9,6 +9,11 @@ Pour comprendre la vision et l'architecture du projet, je vous invite à lire le
 - [1. Cahier des charges & Architecture Globale](./Cahier%20des%20charges.md)
 - [2. Roadmap Itérative](./Roadmap.md)
 
+## 🤖 DevX & "AI-First" Workflow (Context Engineering)
+Ce projet est développé avec une méthodologie augmentée par l'IA. Pour maximiser la pertinence des LLMs (Google AI Studio, Cursor) sans polluer leur fenêtre de contexte, j'ai développé mon propre outil d'injection de contexte :
+- **`npm run concat`** : Exécute le script `concat_code.cjs` qui lit les règles d'inclusion/exclusion strictes dans `.concatrc.json`.
+- **Résultat :** Cela génère un dump instantané, propre et "token-optimized" de l'intégralité de la base de code (~35 000 tokens actuels), prêt à être ingéré par un LLM à grande fenêtre de contexte (1M+ tokens) pour des revues d'architecture globales ou la génération de PRD complexes.
+
 ## 🛠️ Stack Technique Principale
 - **UI & State :** React 19, Custom Hooks (Undo/Redo, Debounce).
 - **Typage & Validation :** TypeScript strict, Zod (Single Source of Truth).
