@@ -43,7 +43,7 @@ export function useSessionManager() {
       // Ce bloc garantit que la liste d'affichage (`slotOrder`) est toujours synchronisée avec les données réelles des sauvegardes (`slotsData`).
       const validPrefs = prefsData || { slotOrder: [], flowTypeColors: {} }
       const slotIdsFromFile = new Set(slotsData.map(s => s.id))
-      let order = validPrefs.slotOrder || []
+      const order = validPrefs.slotOrder || []
 
       // 1. On retire de `slotOrder` les IDs qui n'existent plus dans les sauvegardes (slots "fantômes" dans la liste d'ordre).
       const cleanOrder = order.filter(id => slotIdsFromFile.has(id))
