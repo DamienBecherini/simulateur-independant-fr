@@ -1,6 +1,6 @@
 const fs = require("fs")
 const path = require("path")
-const { globby } = require("globby")
+// const { globby } = require("globby")
 
 const CONFIG_FILE = ".concatrc.json"
 const BUILD_DIR = "build"
@@ -47,6 +47,7 @@ function generateProjectTreeFromPaths(files) {
 }
 
 async function concatenateFiles() {
+  const { globby } = await import("globby")
   console.log("Démarrage du script de contextualisation avancé...")
 
   if (!fs.existsSync(BUILD_DIR)) {

@@ -1,10 +1,11 @@
-// src/electron/main.ts
+// src/backend/main.ts
 
 import { app, BrowserWindow, dialog } from "electron"
-import type { SessionState, SaveSlot, UserPreferences, ExportableState } from "../types.js"
-import { SessionStateSchema } from "../types.js"
+import type { SessionState, SaveSlot, UserPreferences, ExportableState } from "@/types.js"
+import { SessionStateSchema } from "@/types.js"
 import { runMetaSimulation } from "./logic/simulation-engine.js"
-import { ipcMainHandle, isDev } from "./util.js"
+import { ipcMainHandle } from "./util.js"
+import { isDev } from "./isDev.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
 import fs from "fs/promises"

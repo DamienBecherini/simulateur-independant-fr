@@ -1,4 +1,4 @@
-// src/electron/logic/simulation-engine.ts
+// src/backend/logic/simulation-engine.ts
 
 import config from "../config.json" with { type: "json" }
 import type { Entity, MicroEntreprise, Person, Relationship, SessionState, SimulationReport, EntityResult, FoyerFiscalResult, SimulationInputs, SimulationResult } from "../../types.js"

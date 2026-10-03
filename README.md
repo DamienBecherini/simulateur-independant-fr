@@ -1,26 +1,74 @@
 # Simulateur Indépendant FR (Proof of Concept)
 
-Application Desktop (React / Electron / TypeScript) conçue comme un bac à sable financier, juridique et fiscal pour les indépendants. 
+Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un bac à sable financier, juridique et fiscal pour les indépendants : on modélise personnes, sociétés et micro-entreprises, leurs liens et leurs flux mensuels, puis on compare les statuts (SASU, EURL, micro-entreprise) et l'impôt du foyer.
 
-*Ce dépôt est un extrait de mon travail, partagé dans le cadre d'un processus de recrutement pour démontrer mes standards de code Frontend et ma vision Produit.*
+*Projet personnel, né d'un besoin d'entrepreneur, partagé dans le cadre de processus de recrutement pour montrer mes standards de code et ma vision produit. Ce n'est pas un logiciel de conseil fiscal : les résultats illustrent l'ingénierie, ils n'ont pas été validés par un expert-comptable.*
 
-## 📖 Documentation Produit & Technique
-Pour comprendre la vision et l'architecture du projet, je vous invite à lire les documents fondateurs :
-- [1. Cahier des charges & Architecture Globale](./Cahier%20des%20charges.md)
-- [2. Roadmap Itérative](./Roadmap.md)
+## ✨ Fonctionnalités
 
-## 🤖 DevX & "AI-First" Workflow (Context Engineering)
-Ce projet est développé avec une méthodologie augmentée par l'IA. Pour maximiser la pertinence des LLMs (Google AI Studio, Cursor) sans polluer leur fenêtre de contexte, j'ai développé mon propre outil d'injection de contexte :
-- **`npm run concat`** : Exécute le script `concat_code.cjs` qui lit les règles d'inclusion/exclusion strictes dans `.concatrc.json`.
-- **Résultat :** Cela génère un dump instantané, propre et "token-optimized" de l'intégralité de la base de code (~35 000 tokens actuels), prêt à être ingéré par un LLM à grande fenêtre de contexte (1M+ tokens) pour des revues d'architecture globales ou la génération de PRD complexes.
+- **Modélisation par graphe** : entités (personnes, sociétés, micro-entreprises) reliées par des relations (Marié(e), PACSé(e), Enfant, Président, Gérant…).
+- **Grille annuelle visuelle** : saisie des flux mois par mois, légende numérotée et couleurs personnalisables.
+- **Méta-simulation** : agrégation des flux par entité, regroupement des foyers fiscaux, routage de la rémunération du dirigeant vers la personne liée, calcul par statut et impôt sur le revenu du foyer.
+- **Scénarios** : sauvegardes nommées, chargement, import / export JSON.
+- **Pérennité des données** : validation Zod et réparation automatique des sessions à l'ouverture.
+- **Confort d'édition** : undo / redo (Ctrl+Z / Ctrl+Y, Cmd+Shift+Z), sauvegarde automatique, glisser-déposer, zoom.
+- **100 % hors-ligne** : aucune donnée ne quitte la machine.
 
-## 🛠️ Stack Technique Principale
-- **UI & State :** React 19, Custom Hooks (Undo/Redo, Debounce).
-- **Typage & Validation :** TypeScript strict, Zod (Single Source of Truth).
-- **Design System :** TailwindCSS v4, ShadCN/UI, Lucide Icons, dnd-kit (Drag&Drop).
-- **Build :** Vite, Electron-Builder.
+## 📖 Documentation
 
-## ✨ Points d'intérêts dans le code
-- `src/types.ts` : Modélisation des données via Zod.
-- `src/ui/hooks/useSessionManager.ts` : Gestion complexe de l'état (Historique, Undo/Redo, Sauvegarde asynchrone).
-- `src/lib/business-logic.ts` : Algorithmique de nettoyage du graphe lors de la rupture de relations entre entités.
+- [Cahier des charges & architecture globale](./Cahier%20des%20charges.md)
+- [Roadmap itérative](./Roadmap.md)
+- [Guide développeur](./documentation/GUIDE_DEVELOPPEUR.md)
+- [Décisions d'architecture (ADR)](./documentation/adr/)
+
+## 🛠️ Stack technique
+
+- **Application :** Electron (process principal Node.js, IPC typé via `contextBridge`).
+- **Interface :** React 19, hooks maison (historique undo/redo, sauvegarde debounced).
+- **Typage & validation :** TypeScript strict, Zod comme source de vérité unique.
+- **Design system :** Tailwind CSS v4, ShadCN/UI, Lucide, dnd-kit.
+- **Build :** Vite, electron-builder.
+
+## ✨ Points d'intérêt dans le code
+
+- `src/backend/logic/simulation-engine.ts` : moteur de méta-simulation (agrégation des flux, foyers fiscaux par Union-Find, routage de la rémunération du dirigeant).
+- `src/backend/logic/data-sanitizer.ts` : validation et réparation des sessions (relations et flux orphelins).
+- `src/backend/util.ts` + `src/backend/preload.cts` : contrat IPC typé de bout en bout, sans `any` sur la surface exposée.
+- `src/types.ts` : schémas Zod et types dérivés.
+- `src/ui/hooks/useSessionManager.ts` : état de session, historique, sauvegarde asynchrone.
+- `src/lib/business-logic.ts` : nettoyage du graphe lors de la rupture d'une relation.
+
+## 🤖 Workflow « AI-first » (context engineering)
+
+Le projet est développé avec des assistants IA, sous relecture humaine. Pour leur donner une vue d'ensemble sans polluer leur fenêtre de contexte :
+
+- **`npm run concat`** exécute `concat_code.cjs`, qui applique les règles d'inclusion / exclusion de `.concatrc.json`.
+- Le résultat est un dump propre et optimisé en tokens de toute la base de code, prêt pour une revue d'architecture globale par un LLM à grande fenêtre de contexte.
+
+## 🚀 Démarrage rapide
+
+Prérequis : Node.js 20 ou supérieur, npm.
+
+```sh
+git clone https://github.com/DamienBecherini/simulateur-independant-fr.git
+cd simulateur-independant-fr
+npm install
+npm run dev
+```
+
+`npm run dev` lance Vite et Electron avec rechargement à chaud. Pour un exécutable : `npm run dist:win`, `npm run dist:mac` ou `npm run dist:linux`.
+
+## 🗂️ Structure du projet
+
+- `documentation/` : guide développeur et ADR.
+- `src/backend/` : process principal Electron (logique métier, calculs fiscaux, accès fichiers, IPC).
+- `src/ui/` : application React (composants, hooks, interface).
+- `src/lib/` : fonctions utilitaires et logique pure partagée.
+- `src/types.ts` : schémas Zod et types centraux.
+
+## ⚠️ Limites connues
+
+- POC : barèmes simplifiés, non validés par un expert-comptable.
+- Le calcul « EI au réel » (`calculsEI.ts`) existe mais n'est pas encore branché au moteur.
+- Les versements de dividendes saisis dans la grille ne sont pas encore pris en compte (un avertissement le signale).
+- Pas encore de tests automatisés.

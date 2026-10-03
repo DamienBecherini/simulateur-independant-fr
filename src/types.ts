@@ -96,6 +96,12 @@ export const SaveSlotSchema = SessionStateSchema.extend({
   lastModified: z.number()
 })
 
+export const UserPreferencesSchema = z.object({
+  slotOrder: z.array(z.string()).default([]),
+  // La clé (type de flux) est une string, la valeur (couleur) est une string
+  flowTypeColors: z.record(z.string(), z.string()).optional()
+})
+
 // ===================================================================================
 // == 2. DÉDUCTION DES TYPES TYPESCRIPT (PLUS DE MAINTENANCE MANUELLE)
 // ===================================================================================
@@ -110,6 +116,7 @@ export type FinancialFlow = z.infer<typeof FinancialFlowSchema>
 export type MonthlyGridData = z.infer<typeof MonthlyGridDataSchema>
 export type SessionState = z.infer<typeof SessionStateSchema>
 export type SaveSlot = z.infer<typeof SaveSlotSchema>
+export type UserPreferences = z.infer<typeof UserPreferencesSchema>
 
 // ===================================================================================
 // == 3. TYPES NON LIÉS À LA VALIDATION (API, ÉTATS VOLATILES, ETC.)
@@ -158,10 +165,6 @@ export interface SimulationReport {
   entities: EntityResult[]
   foyers: FoyerFiscalResult[]
   globalNet: number
-}
-
-export interface UserPreferences {
-  slotOrder: string[]
 }
 
 export interface SanitizationReport {
