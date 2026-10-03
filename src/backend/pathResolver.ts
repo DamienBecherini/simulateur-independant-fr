@@ -1,9 +1,9 @@
-import { isDev } from "./isDev.js"
 import path from "path"
 import { app } from "electron"
 
 export function getPreloadPath() {
-  return path.join(app.getAppPath(), isDev() ? "./" : "../", "/dist-electron/backend/preload.cjs")
+  // Une fois packagé, preload.cjs est copié hors de l'archive asar (extraResources d'electron-builder.json).
+  return path.join(app.getAppPath(), app.isPackaged ? "../" : "./", "/dist-electron/backend/preload.cjs")
 }
 
 export function getUIPath() {
