@@ -17,6 +17,7 @@ import { DevWindowSize } from "./components/DevWindowSize"
 import { BandeauDemo } from "@/web/BandeauDemo"
 import { useZoom } from "./hooks/useZoom"
 import { ExportDialog } from "./components/ExportDialog"
+import { dateDuDocument, styleDesPages } from "./impression"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
@@ -123,13 +124,13 @@ function App() {
   }, [currentSession.monthlyData])
 
   return (
-    <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col">
+    <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col print:min-h-0 print:max-w-none print:p-0">
       {/* Barre de menu sticky */}
       {/* Lien d'évitement : invisible tant qu'il n'a pas le focus, il mène au contenu sans traverser la barre d'outils. */}
-      <a href="#contenu" className="sr-only z-[60] rounded-md bg-background px-4 py-2 font-medium shadow-md focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
+      <a href="#contenu" className="print:hidden sr-only z-[60] rounded-md bg-background px-4 py-2 font-medium shadow-md focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
         Aller au contenu
       </a>
-      <nav aria-label="Barre d'outils" className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
+      <nav aria-label="Barre d'outils" className="print:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
         <div className="container mx-auto flex items-center justify-between px-0 py-2 sm:px-8">
           {/* Groupe de boutons de gauche */}
           <div className="flex items-center gap-1">
@@ -161,9 +162,12 @@ function App() {
         </div>
       </nav>
 
-      <header className="text-center mb-10 pt-16">
+      <header className="text-center mb-10 pt-16 print:mb-6 print:pt-0">
         <h1 className="text-4xl font-bold">{currentSession.name}</h1>
         <p className="text-lg text-slate-600 dark:text-slate-400">Votre bac à sable financier, juridique et fiscal</p>
+        {/* Sur papier, la date du document (les chiffres valent pour les données de ce jour-là), et l'en-tête des pages suivantes. */}
+        <p className="hidden text-sm text-slate-600 print:block">Document du {dateDuDocument()}</p>
+        <style>{styleDesPages(currentSession.name, dateDuDocument())}</style>
         {import.meta.env.VITE_CIBLE === "web" && <BandeauDemo />}
       </header>
 

@@ -49,7 +49,7 @@ export function NewRelationshipForm({ entity, allEntities, relationships, onAdd 
 
   if (!isOpen) {
     return (
-      <button type="button" className="flex min-h-6 items-center gap-1 rounded-md border border-dashed px-2 py-1 text-sm pointer-coarse:min-h-11 text-slate-600 dark:text-slate-400 hover:border-solid hover:text-slate-800 dark:hover:text-slate-200" onClick={() => setOpen(true)}>
+      <button type="button" className="print:hidden flex min-h-6 items-center gap-1 rounded-md border border-dashed px-2 py-1 text-sm pointer-coarse:min-h-11 text-slate-600 dark:text-slate-400 hover:border-solid hover:text-slate-800 dark:hover:text-slate-200" onClick={() => setOpen(true)}>
         <Plus className="h-3.5 w-3.5" />
         Relation
       </button>
@@ -57,7 +57,7 @@ export function NewRelationshipForm({ entity, allEntities, relationships, onAdd 
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 print:hidden">
       <Select value={targetId} onValueChange={handleTargetChange}>
         <SelectTrigger className="h-8 w-48" aria-label="Avec qui">
           <SelectValue placeholder="Avec…" />
