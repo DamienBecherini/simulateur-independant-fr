@@ -5,11 +5,13 @@ import type { SessionState, SaveSlot, UserPreferences, ExportableState, Comparai
 import { SessionStateSchema } from "@/types.js"
 import { runMetaSimulation } from "./logic/simulation-engine.js"
 import { comparerStatuts } from "./logic/comparateur.js"
-import { ipcMainHandle } from "./util.js"
+import { ipcMainHandle, validateEventFrame } from "./util.js"
 import { isDev } from "./isDev.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
 import fs from "fs/promises"
+import { writeFileSync } from "fs"
+import { ipcMain } from "electron"
 import { sanitizeStateAndFillDefaults, sanitizeSlots } from "./logic/data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
 
@@ -82,6 +84,9 @@ async function readSessionFromFile(): Promise<SessionState> {
     }
     return safeState
   } catch (error) {
+    // Premier lancement : il n'y a simplement pas encore de session, ce n'est pas une erreur.
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return getDefaultSessionState()
+
     const errorMessage = error instanceof Error ? error.message : "Erreur inconnue."
     console.warn(`Échec du chargement de la session : ${errorMessage}. Démarrage avec une session par défaut.`)
 
@@ -238,6 +243,19 @@ app.on("ready", () => {
 
   ipcMainHandle("getCurrentSession", async () => await readSessionFromFile())
   ipcMainHandle("saveCurrentSession", async (session: SessionState) => await writeSessionToFile(session))
+
+  // Enregistrement synchrone, appelé par l'interface quand la fenêtre se ferme : la sauvegarde automatique
+  // est différée d'une seconde, et une modification faite juste avant la fermeture serait sinon perdue.
+  ipcMain.on("saveCurrentSessionSync", (event, session: SessionState) => {
+    if (event.senderFrame) validateEventFrame(event.senderFrame)
+    try {
+      writeFileSync(sessionStatePath, JSON.stringify(withFormatVersion(session), null, 2))
+      event.returnValue = true
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde de la session à la fermeture :", error)
+      event.returnValue = false
+    }
+  })
 
   ipcMainHandle("runMetaSimulation", async (session: SessionState) => runMetaSimulation(validatedSession(session, "runMetaSimulation")))
 

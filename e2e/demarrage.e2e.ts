@@ -20,11 +20,8 @@ test("au démarrage, la fenêtre principale s'ouvre avec le preload chargé et s
   expect(erreursConsole).toEqual([])
 })
 
-// Anomalie connue, non corrigée : sans fichier de session (tout premier lancement), le chargement échoue comme
-// pour un fichier corrompu, et une boîte « Chargement échoué » s'affiche. Ce test est marqué comme devant échouer :
-// il signalera la correction en se mettant à passer.
+// Sans fichier de session (tout premier lancement), l'application démarre sur une simulation vierge, sans alerte.
 test("au tout premier lancement, aucune boîte de dialogue d'erreur ne s'affiche", async ({ lancer }) => {
-  test.fail(true, "Le premier lancement affiche « Chargement échoué » (fichier de session absent traité comme corrompu)")
   const { dialogues } = await lancer()
   expect(await dialogues()).toEqual([])
 })

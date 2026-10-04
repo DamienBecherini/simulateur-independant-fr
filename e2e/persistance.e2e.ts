@@ -30,6 +30,19 @@ test("la session est sauvegardée automatiquement et retrouvée au lancement sui
   expect(await second.dialogues()).toEqual([])
 })
 
+test("une modification faite juste avant la fermeture n'est pas perdue", async ({ lancer }) => {
+  const premier = await lancer()
+  await premier.page.getByRole("button", { name: "+ Ajouter une Personne" }).click()
+  const nom = premier.page.getByRole("textbox", { name: "Nom" })
+  await nom.fill("Claire Moreau")
+  await nom.press("Enter")
+  // Fermeture immédiate, avant la sauvegarde automatique différée d'une seconde.
+  await premier.electronApp.close()
+
+  const second = await lancer()
+  await expect(second.page.getByRole("textbox", { name: "Nom" })).toHaveValue("Claire Moreau")
+})
+
 test("une session au format 1 est convertie au format actuel, après copie de l'original", async ({ dossierDonnees, lancer }) => {
   // Format 1 : pas de numéro de format. Une EURL, dont la conversion appelle un point à vérifier.
   const ancienneSession = {

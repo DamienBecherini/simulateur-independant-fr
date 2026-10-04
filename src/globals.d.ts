@@ -5,6 +5,8 @@ import type { SessionState, SaveSlot, UserPreferences, ExportableState, Sanitiza
 export type EventPayloadMapping = {
   getCurrentSession: () => Promise<SessionState>
   saveCurrentSession: (session: SessionState) => Promise<void>
+  /** Enregistre la session immédiatement, de façon synchrone : réservé à la fermeture de la fenêtre. */
+  saveCurrentSessionSync: (session: SessionState) => void
   runMetaSimulation: (session: SessionState) => Promise<SimulationReport>
   compareStatuts: (session: SessionState, options: ComparaisonOptions) => Promise<ComparaisonResult>
   getSaveSlots: () => Promise<SaveSlot[]>

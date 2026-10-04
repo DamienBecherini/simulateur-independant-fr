@@ -1,6 +1,6 @@
 // src/ui/hooks/useSessionManager.ts
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import type { SessionState, SaveSlot, SanitizationReport, UserPreferences } from "@/types"
 import * as SessionService from "@/lib/session-service"
 import { useDebouncedSave } from "./useDebouncedSave"
@@ -32,6 +32,8 @@ export function useSessionManager() {
   const [importConfirmation, setImportConfirmation] = useState<{ session: SessionState; report: SanitizationReport } | null>(null)
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({ slotOrder: [] })
   const [loadedSlotId, setLoadedSlotId] = useState<string | null>(null)
+
+  const [isLoaded, setLoaded] = useState(false)
 
   // Effet principal qui se déclenche une seule fois au démarrage de l'application.
   useEffect(() => {
@@ -68,6 +70,7 @@ export function useSessionManager() {
 
       // On initialise les états React avec les données chargées et fraîchement synchronisées.
       setHistory({ past: [], present: sessionData, future: [] })
+      setLoaded(true)
       setAllSaveSlots(slotsData)
       setUserPreferences(finalPreferences) // On utilise les préférences potentiellement corrigées.
     })
@@ -75,6 +78,20 @@ export function useSessionManager() {
 
   // Hooks pour la sauvegarde automatique décalée (debounced).
   useDebouncedSave(history.present, 1000, window.api.saveCurrentSession)
+
+  // À la fermeture de la fenêtre, la session est enregistrée tout de suite, sans attendre la sauvegarde différée.
+  // On attend le premier chargement : sinon une session vide remplacerait celle sur le disque.
+  const latestSession = useRef<SessionState | null>(null)
+  useEffect(() => {
+    latestSession.current = isLoaded ? history.present : null
+  }, [history.present, isLoaded])
+  useEffect(() => {
+    const saveNow = () => {
+      if (latestSession.current) window.api.saveCurrentSessionSync(latestSession.current)
+    }
+    window.addEventListener("beforeunload", saveNow)
+    return () => window.removeEventListener("beforeunload", saveNow)
+  }, [])
   useDebouncedSave(userPreferences, 1000, window.api.saveUserPreferences)
 
   // Fonction pour mettre à jour l'état de la session tout en gérant l'historique.

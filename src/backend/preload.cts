@@ -9,6 +9,9 @@ const api: import("../globals.js", { with: { "resolution-mode": "import" } }).Ev
   // Fonctions pour la session
   getCurrentSession: () => ipcRenderer.invoke("getCurrentSession"),
   saveCurrentSession: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState) => ipcRenderer.invoke("saveCurrentSession", session),
+  saveCurrentSessionSync: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState) => {
+    ipcRenderer.sendSync("saveCurrentSessionSync", session)
+  },
   runMetaSimulation: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState) => ipcRenderer.invoke("runMetaSimulation", session),
   compareStatuts: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState, options: import('../types.js', { with: { "resolution-mode": "import" } }).ComparaisonOptions) => ipcRenderer.invoke("compareStatuts", session, options),
 
