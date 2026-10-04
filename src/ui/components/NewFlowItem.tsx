@@ -3,13 +3,14 @@
 import { useRef, useState, type KeyboardEvent, type RefObject } from "react"
 import type { FinancialFlow } from "@/types"
 import { Input } from "@/components/ui/input"
-import { parseAmount } from "@/lib/amount-utils"
+import { formatAmount, parseAmount } from "@/lib/amount-utils"
 import { flowTypeLabels, type FlowType } from "@/lib/flow-constants"
+import { DEFAULT_NET_RATIO, formatPercent, grossFromNet, netFromGross, parsePercent } from "@/lib/salary-utils"
 import { Plus } from "lucide-react"
 import { FlowTypeSelect } from "./FlowTypeSelect"
 
 /** Valeurs saisies pour un nouveau flux. */
-export type NewFlowValues = Pick<FinancialFlow, "type" | "label" | "amount">
+export type NewFlowValues = Pick<FinancialFlow, "type" | "label" | "amount" | "grossAmount">
 
 /**
  * Interface pour les props du composant NewFlowItem.
@@ -30,6 +31,29 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
   const [isAmountInvalid, setAmountInvalid] = useState(false)
   const amountInputRef = useRef<HTMLInputElement>(null)
 
+  // Pour un salaire, le brut et le pourcentage sont facultatifs. Tant que le net n'a pas été saisi à la main,
+  // il est calculé à partir du brut et du pourcentage (78 % par défaut).
+  const isSalary = type === "salary"
+  const [gross, setGross] = useState("")
+  const [ratio, setRatio] = useState("")
+  const [isNetComputed, setNetComputed] = useState(false)
+
+  const computeNet = (grossText: string, ratioText: string) => {
+    const grossAmount = parseAmount(grossText)
+    if (grossAmount === null || (amount.trim() !== "" && !isNetComputed)) return
+    setAmount(formatAmount(netFromGross(grossAmount, parsePercent(ratioText) ?? DEFAULT_NET_RATIO)))
+    setNetComputed(true)
+    setAmountInvalid(false)
+  }
+
+  /** Brut à enregistrer avec le net : celui saisi, sinon celui déduit du pourcentage ; rien s'il est incohérent. */
+  const resolveGross = (net: number): number | undefined => {
+    if (!isSalary) return undefined
+    const typedRatio = parsePercent(ratio)
+    const grossAmount = parseAmount(gross) ?? (typedRatio !== null ? grossFromNet(net, typedRatio) : null)
+    return grossAmount !== null && grossAmount >= net ? grossAmount : undefined
+  }
+
   // Seul point de création du flux : la perte de focus du champ montant.
   const handleAmountBlur = () => {
     if (amount.trim() === "") return
@@ -38,10 +62,14 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
       setAmountInvalid(true)
       return
     }
-    onCreate({ type, label: label.trim() || flowTypeLabels[type], amount: parsedAmount })
+    const grossAmount = resolveGross(parsedAmount)
+    onCreate({ type, label: label.trim() || flowTypeLabels[type], amount: parsedAmount, ...(grossAmount !== undefined ? { grossAmount } : {}) })
     // La ligne redevient vide ; le type est conservé pour la saisie suivante.
     setLabel("")
     setAmount("")
+    setGross("")
+    setRatio("")
+    setNetComputed(false)
   }
 
   const handleAmountKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -56,17 +84,18 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
       labelInputRef.current?.focus()
     } else if (event.key === "Escape") {
       setAmount("")
+      setNetComputed(false)
       setAmountInvalid(false)
     }
   }
 
-  const handleLabelKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+  // Entrée passe au champ suivant, comme Tab ; Échap vide le champ.
+  const handleOptionalFieldKeyDown = (clear: () => void) => (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
-      // Entrée passe au montant, comme Tab.
       event.preventDefault()
       amountInputRef.current?.focus()
     } else if (event.key === "Escape") {
-      setLabel("")
+      clear()
     }
   }
 
@@ -76,19 +105,53 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
 
       <FlowTypeSelect value={type} options={allowedTypes} onChange={onTypeChange} />
 
-      <Input ref={labelInputRef} className="min-w-0 flex-1 bg-background" aria-label="Libellé du nouveau flux" placeholder="Libellé (optionnel)" value={label} data-editing={label !== ""} onChange={e => setLabel(e.target.value)} onKeyDown={handleLabelKeyDown} />
+      <Input ref={labelInputRef} className="min-w-0 flex-1 bg-background" aria-label="Libellé du nouveau flux" placeholder="Libellé (optionnel)" value={label} data-editing={label !== ""} onChange={e => setLabel(e.target.value)} onKeyDown={handleOptionalFieldKeyDown(() => setLabel(""))} />
+
+      {isSalary && (
+        <>
+          <Input
+            className="w-24 shrink-0 bg-background text-right font-mono"
+            aria-label="Salaire brut du nouveau flux"
+            title="Salaire brut (optionnel) : le net est calculé si vous ne le saisissez pas."
+            placeholder="Brut"
+            inputMode="decimal"
+            value={gross}
+            data-editing={gross !== ""}
+            onChange={e => {
+              setGross(e.target.value)
+              computeNet(e.target.value, ratio)
+            }}
+            onKeyDown={handleOptionalFieldKeyDown(() => setGross(""))}
+          />
+          <Input
+            className="w-16 shrink-0 bg-background text-right font-mono"
+            aria-label="Part du net dans le brut du nouveau flux, en pourcentage"
+            title="Part du net dans le brut. Avec le net seul, elle sert à calculer le brut."
+            placeholder={`${formatPercent(DEFAULT_NET_RATIO)} %`}
+            inputMode="decimal"
+            value={ratio}
+            data-editing={ratio !== ""}
+            onChange={e => {
+              setRatio(e.target.value)
+              computeNet(gross, e.target.value)
+            }}
+            onKeyDown={handleOptionalFieldKeyDown(() => setRatio(""))}
+          />
+        </>
+      )}
 
       <Input
         ref={amountInputRef}
         className="w-28 shrink-0 bg-background text-right font-mono"
-        aria-label="Montant du nouveau flux"
+        aria-label={isSalary ? "Salaire net du nouveau flux" : "Montant du nouveau flux"}
         aria-invalid={isAmountInvalid}
         inputMode="decimal"
-        placeholder="Montant"
+        placeholder={isSalary ? "Net" : "Montant"}
         value={amount}
         data-editing={amount !== ""}
         onChange={e => {
           setAmount(e.target.value)
+          setNetComputed(false)
           setAmountInvalid(false)
         }}
         onBlur={handleAmountBlur}

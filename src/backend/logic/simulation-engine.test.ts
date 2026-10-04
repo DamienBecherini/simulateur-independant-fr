@@ -30,7 +30,7 @@ function foyerDe(report: SimulationReport, personId: string) {
 describe("runMetaSimulation", () => {
   describe("structure du rapport", () => {
     it("renvoie un rapport vide pour une session vide", () => {
-      const bilanVide = { chiffreAffaires: 0, charges: 0, revenusDirects: 0, revenusAvantPrelevements: 0, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, totalPrelevements: 0, resultatConserve: 0, nonRattache: 0 }
+      const bilanVide = { chiffreAffaires: 0, charges: 0, revenusDirects: 0, cotisationsSalariales: 0, revenusAvantPrelevements: 0, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, totalPrelevements: 0, resultatConserve: 0, nonRattache: 0 }
 
       expect(simuler([])).toEqual({ annee: 2000, bilan: bilanVide, activities: [], persons: [], foyers: [], totalNetApresImpots: 0 })
     })
@@ -67,6 +67,7 @@ describe("runMetaSimulation", () => {
         chiffreAffaires: 100000,
         charges: 10000,
         revenusDirects: 10000,
+        cotisationsSalariales: 0,
         revenusAvantPrelevements: 100000,
         cotisationsSociales: 24000,
         impotSocietes: 5400,
@@ -139,6 +140,20 @@ describe("runMetaSimulation", () => {
       // Base : 40 000 - 4 000 + 4 000 = 40 000 € ; impôt : 2 000 + 10 000 x 30 % = 5 000 €.
       expect(report.persons[0].detail).toEqual({ salaires: 30000, allocationsChomage: 10000, autresRevenus: 4000, remunerationsDirigeant: 0, dividendes: 0, benefices: 0 })
       expect(foyerDe(report, "alice")).toMatchObject({ revenusEncaisses: 44000, revenuImposableGlobal: 40000, impotSurLeRevenu: 5000, prelevementsSociaux: 0, optionDividendes: null, netApresImpots: 39000 })
+    })
+
+    it("compte l'écart entre brut et net comme cotisations salariales, sans changer l'impôt", () => {
+      const donnees = session([personne("alice")], [], [["alice", "salary", 30000]])
+      donnees.monthlyData[0].flows[0].grossAmount = 40000
+      donnees.monthlyData[1].flows.push({ id: "sans-brut", label: "Prime", amount: 2000, entityId: "alice", type: "salary" })
+      donnees.monthlyData[2].flows.push({ id: "incoherent", label: "Erreur", amount: 1000, grossAmount: 500, entityId: "alice", type: "salary" })
+
+      const report = runMetaSimulation(donnees, reglesDeTest)
+
+      // Net : 33 000 €, imposable après abattement : 29 700 €, soit 1 970 € d'impôt. Un brut inférieur au net est ignoré.
+      expect(report.persons[0]).toMatchObject({ revenusDirects: 33000, cotisationsSalariales: 10000 })
+      expect(foyerDe(report, "alice")).toMatchObject({ revenusEncaisses: 33000, impotSurLeRevenu: 1970, netApresImpots: 31030, revenusAvantPrelevements: 43000, totalPrelevements: 11970 })
+      expect(report.bilan).toMatchObject({ revenusDirects: 33000, cotisationsSalariales: 10000, revenusAvantPrelevements: 43000, cotisationsSociales: 0, totalPrelevements: 11970 })
     })
 
     it("applique le minimum et le maximum de l'abattement", () => {

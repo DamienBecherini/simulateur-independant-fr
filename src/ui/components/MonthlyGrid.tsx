@@ -64,7 +64,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       const current = flows.find(f => f.id === flowId)
       if (!current) return flows
       const updated = { ...current, ...changes }
-      if (updated.type === current.type && updated.label === current.label && updated.amount === current.amount) return flows
+      if (updated.type === current.type && updated.label === current.label && updated.amount === current.amount && updated.grossAmount === current.grossAmount) return flows
       return flows.map(f => (f.id === flowId ? updated : f))
     })
   }

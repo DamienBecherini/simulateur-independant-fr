@@ -64,7 +64,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate,
   return (
     <Dialog open onOpenChange={open => !open && handleClose()}>
       <DialogContent
-        className="sm:max-w-3xl"
+        className="sm:max-w-4xl"
         // À l'ouverture, le focus va sur la ligne d'ajout pour saisir sans clic supplémentaire.
         onOpenAutoFocus={event => {
           event.preventDefault()
@@ -80,7 +80,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate,
             <span>Opérations de {monthName}</span>
             <span className="text-base font-normal text-slate-500">/ {entity.name}</span>
           </DialogTitle>
-          <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant.</DialogDescription>
+          <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant. Pour un salaire, le brut est facultatif : il fait apparaître les cotisations salariales dans le bilan.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2 py-2">

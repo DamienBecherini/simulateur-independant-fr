@@ -47,6 +47,8 @@ interface Contexte {
   session: SessionState
   regles: ReglesFiscales
   flux: Map<string, FlowTotals>
+  /** Cotisations salariales par personne : écart entre brut et net des salaires dont le brut est renseigné. */
+  cotisationsSalariales: Map<string, number>
   revenus: Map<string, RevenusDActivite>
   /** Revenus versés par des activités qu'aucune relation ne rattache à une personne. */
   nonRattache: number
@@ -64,6 +66,15 @@ function aggregateAnnualFlowsByEntity(session: SessionState): Map<string, FlowTo
       totals[flow.type] = (totals[flow.type] ?? 0) + flow.amount
       map.set(flow.entityId, totals)
     }
+  }
+  return map
+}
+
+function aggregateSalaryContributions(session: SessionState): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const flow of session.monthlyData.flatMap(month => month.flows)) {
+    if (flow.type !== "salary" || flow.grossAmount === undefined) continue
+    map.set(flow.entityId, (map.get(flow.entityId) ?? 0) + Math.max(0, flow.grossAmount - flow.amount))
   }
   return map
 }
@@ -282,6 +293,7 @@ function resultatPersonne(ctx: Contexte, personne: Person): PersonResult {
       dividendes: Math.round(revenus.dividendesEncaisses),
       benefices: Math.round(revenus.beneficesEncaisses)
     },
+    cotisationsSalariales: Math.round(ctx.cotisationsSalariales.get(personne.id) ?? 0),
     depenses: Math.round(total(ctx, personne.id, "expense"))
   }
 }
@@ -306,7 +318,7 @@ function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
     cumul.versementLiberatoire += revenus.versementLiberatoire
     cumul.encaisse += total(ctx, personId, "salary", "are", "other_taxable_income") + encaisse(revenus)
     cumul.depenses += total(ctx, personId, "expense")
-    cumul.prelevementsActivites += revenus.prelevementsActivites
+    cumul.prelevementsActivites += revenus.prelevementsActivites + (ctx.cotisationsSalariales.get(personId) ?? 0)
     cumul.resultatConserve += revenus.resultatConserve
   }
   return cumul
@@ -358,6 +370,7 @@ function calculerBilan(ctx: Contexte, activities: ActivityResult[], persons: Per
   const chiffreAffaires = somme(activities, a => a.chiffreAffaires)
   const charges = somme(activities, a => a.charges)
   const revenusDirects = somme(persons, p => p.revenusDirects)
+  const cotisationsSalariales = somme(persons, p => p.cotisationsSalariales)
   const cotisationsSociales = somme(activities, a => a.cotisationsSociales)
   const impotSocietes = somme(activities, a => a.impotSocietes)
   const impotSurLeRevenu = somme(foyers, f => f.impotSurLeRevenu)
@@ -367,19 +380,20 @@ function calculerBilan(ctx: Contexte, activities: ActivityResult[], persons: Per
     chiffreAffaires,
     charges,
     revenusDirects,
-    revenusAvantPrelevements: chiffreAffaires - charges + revenusDirects,
+    cotisationsSalariales,
+    revenusAvantPrelevements: chiffreAffaires - charges + revenusDirects + cotisationsSalariales,
     cotisationsSociales,
     impotSocietes,
     impotSurLeRevenu,
     prelevementsSociaux,
-    totalPrelevements: cotisationsSociales + impotSocietes + impotSurLeRevenu + prelevementsSociaux,
+    totalPrelevements: cotisationsSociales + cotisationsSalariales + impotSocietes + impotSurLeRevenu + prelevementsSociaux,
     resultatConserve: somme(activities, a => a.resultatConserve),
     nonRattache: Math.round(ctx.nonRattache)
   }
 }
 
 export function runMetaSimulation(session: SessionState, regles: ReglesFiscales = reglesEnVigueur): SimulationReport {
-  const ctx: Contexte = { session, regles, flux: aggregateAnnualFlowsByEntity(session), revenus: new Map(), nonRattache: 0 }
+  const ctx: Contexte = { session, regles, flux: aggregateAnnualFlowsByEntity(session), cotisationsSalariales: aggregateSalaryContributions(session), revenus: new Map(), nonRattache: 0 }
 
   // Les activités d'abord : elles alimentent les revenus des personnes, dont dépend l'impôt des foyers.
   const activities = session.entities.filter((e): e is Company | MicroEntreprise => e.type !== "person").map(activite => arrondirActivite(simulerActivite(ctx, activite)))

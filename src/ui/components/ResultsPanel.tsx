@@ -37,7 +37,7 @@ function BilanCard({ report }: { report: SimulationReport }) {
   const base = bilan.revenusAvantPrelevements
   const percent = (amount: number) => (base > 0 ? (amount / base).toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 }) : null)
   const amounts = { net: report.totalNetApresImpots, conserve: bilan.resultatConserve, prelevements: bilan.totalPrelevements, nonRattache: bilan.nonRattache }
-  const origin = [`chiffre d'affaires ${formatMoney(bilan.chiffreAffaires)}`, bilan.charges > 0 ? `charges ${formatMoney(bilan.charges)}` : null, bilan.revenusDirects > 0 ? `salaires et autres revenus ${formatMoney(bilan.revenusDirects)}` : null].filter(Boolean).join(" · ")
+  const origin = [`chiffre d'affaires ${formatMoney(bilan.chiffreAffaires)}`, bilan.charges > 0 ? `charges ${formatMoney(bilan.charges)}` : null, bilan.revenusDirects > 0 ? `salaires et autres revenus ${formatMoney(bilan.revenusDirects + bilan.cotisationsSalariales)}` : null].filter(Boolean).join(" · ")
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
@@ -64,7 +64,8 @@ function BilanCard({ report }: { report: SimulationReport }) {
       <dl className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
         <div className="space-y-1">
           <Row label="Revenus avant prélèvements" value={formatMoney(base)} hint={origin} />
-          <Row label="Cotisations sociales" value={`− ${formatMoney(bilan.cotisationsSociales)}`} />
+          <Row label="Cotisations sociales des activités" value={`− ${formatMoney(bilan.cotisationsSociales)}`} />
+          {bilan.cotisationsSalariales > 0 ? <Row label="Cotisations salariales" value={`− ${formatMoney(bilan.cotisationsSalariales)}`} /> : null}
           {bilan.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(bilan.impotSocietes)}`} /> : null}
           <Row label="Impôt sur le revenu" value={`− ${formatMoney(bilan.impotSurLeRevenu)}`} />
           {bilan.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(bilan.prelevementsSociaux)}`} /> : null}
@@ -82,7 +83,7 @@ function BilanCard({ report }: { report: SimulationReport }) {
           )}
         </div>
       </dl>
-      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les salaires sont saisis nets : leurs cotisations ne sont pas comptées ici.</p>
+      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les cotisations d'un salaire ne sont comptées que si son brut est saisi, et seulement pour leur part salariale.</p>
       {bilan.resultatConserve > 0 ? (
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Le bénéfice conservé dans une société a payé l'impôt sur les sociétés, mais pas encore l'impôt personnel : il sera imposé le jour où il sera versé (dividendes, vente ou liquidation). Le taux de prélèvement affiché est donc provisoire pour cette part, et un scénario qui conserve davantage paraît moins taxé sans que cet argent soit disponible.

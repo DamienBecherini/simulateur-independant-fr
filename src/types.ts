@@ -54,6 +54,9 @@ export const FinancialFlowSchema = z.object({
   id: z.string(),
   label: z.string(),
   amount: z.number().default(0),
+  // Salaire brut, facultatif et propre aux flux de type « salary » : `amount` reste le net,
+  // et l'écart entre les deux compte comme cotisations salariales.
+  grossAmount: z.number().min(0).optional(),
   entityId: z.string(),
   type: z.enum([
     // Person
@@ -162,6 +165,8 @@ export interface PersonResult {
     /** Bénéfices de micro-entreprise ou d'entreprise individuelle, nets de cotisations. */
     benefices: number
   }
+  /** Écart entre le brut et le net des salaires dont le brut est renseigné. */
+  cotisationsSalariales: number
   depenses: number
 }
 
@@ -204,13 +209,16 @@ export interface SimulationBilan {
   charges: number
   /** Salaires, allocations et autres revenus saisis sur les personnes. */
   revenusDirects: number
-  /** Chiffre d'affaires moins charges, plus revenus directs. */
+  /** Cotisations salariales des salaires dont le brut est renseigné. */
+  cotisationsSalariales: number
+  /** Chiffre d'affaires moins charges, plus revenus directs et cotisations salariales. */
   revenusAvantPrelevements: number
+  /** Cotisations sociales payées par les activités. */
   cotisationsSociales: number
   impotSocietes: number
   impotSurLeRevenu: number
   prelevementsSociaux: number
-  /** Cotisations sociales, impôt sur les sociétés, impôt sur le revenu et prélèvements sociaux. */
+  /** Cotisations (activités et salaires), impôt sur les sociétés, impôt sur le revenu et prélèvements sociaux. */
   totalPrelevements: number
   /** Bénéfices laissés dans les sociétés (négatif en cas de déficit). */
   resultatConserve: number
