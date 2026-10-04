@@ -21,9 +21,11 @@ const DATA_FILES = ["sessionState.json", "simulationSlots.json", "userPreference
 /**
  * Le dossier de données suit le nom du paquet. Jusqu'à la version 0.9, ce nom était « electron-vite-template » :
  * au premier lancement, si le nouveau dossier ne contient encore aucune donnée, on y recopie l'ancien.
- * L'ancien dossier n'est pas supprimé.
+ * L'ancien dossier n'est pas supprimé. Un dossier imposé au lancement (--user-data-dir, comme dans les tests
+ * de bout en bout) n'est jamais concerné : il doit rester tel qu'on le fournit.
  */
 function recopierAncienDossierDeDonnees() {
+  if (app.commandLine.hasSwitch("user-data-dir")) return
   const dossier = app.getPath("userData")
   const ancien = path.join(app.getPath("appData"), "electron-vite-template")
   if (ancien === dossier || !existsSync(ancien) || DATA_FILES.some(f => existsSync(path.join(dossier, f)))) return
