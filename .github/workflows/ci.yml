@@ -17,9 +17,15 @@ jobs:
     name: Lint, types, tests et build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # Facultatif : sans ce secret, l'analyse SonarQube est sautée et remplacée par la détection de duplication.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v4
+        with:
+          # Historique complet : SonarQube s'en sert pour attribuer les nouvelles lignes.
+          fetch-depth: 0
 
       - name: Installer Node.js
         uses: actions/setup-node@v4
@@ -47,3 +53,11 @@ jobs:
 
       - name: Build de l'interface
         run: npx vite build
+
+      - name: Analyse SonarQube Cloud
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v5
+
+      - name: Détection de code dupliqué (sans SonarQube)
+        if: env.SONAR_TOKEN == ''
+        run: npm run duplication

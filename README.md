@@ -73,6 +73,7 @@ npm run test:e2e       # compile l'application, puis tests de bout en bout (Play
 npm run test:e2e:visible  # les mêmes, fenêtres affichées pour suivre les tests
 npm run test:all       # tout : tests avec couverture, puis tests de bout en bout
 npm run lint           # ESLint, dont la complexité cyclomatique
+npm run duplication    # détection de code dupliqué (jscpd)
 npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutation/
 ```
 
@@ -84,6 +85,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - **Complexité** : règle ESLint `complexity` plafonnée à 15 sur `src/`, sans exception.
 - **Mutation** : Stryker sur `src/backend/logic/` (score d'environ 86 %), lancé chaque semaine et à la demande ; nécessite Node.js 22 ou supérieur.
 - **Intégration continue** : GitHub Actions exécute lint, vérification des types, tests avec couverture et build à chaque push et pull request.
+- **SonarQube Cloud** (facultatif) : quand le secret `SONAR_TOKEN` est configuré, la CI envoie le code et la couverture à SonarQube Cloud (`sonar-project.properties`) ; sinon, elle se contente de la détection de code dupliqué.
 
 ## 🗂️ Structure du projet
 
