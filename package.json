@@ -13,6 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && playwright test",
+    "test:all": "npm run test:coverage && npm run test:e2e",
     "test:mutation": "stryker run",
     "typecheck:tests": "tsc --project src/backend/tsconfig.test.json",
     "preview": "vite preview",
@@ -47,6 +49,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@playwright/test": "^1.63.0",
     "@stryker-mutator/core": "^10.0.0",
     "@stryker-mutator/vitest-runner": "^10.0.0",
     "@testing-library/dom": "^10.4.2",
