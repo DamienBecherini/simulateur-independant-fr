@@ -218,7 +218,21 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
 
                   {/* Colonnes 3 à 14 : Les 12 mois */}
                   {monthlyCellData.map((cellData, monthIndex) => (
-                    <div key={monthIndex} className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start" onClick={() => setOpenCell({ entityId: entity.id, monthIndex })}>
+                    <div
+                      key={monthIndex}
+                      className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Flux de ${fullMonths[monthIndex].toLowerCase()} : ${entity.name}`}
+                      onClick={() => setOpenCell({ entityId: entity.id, monthIndex })}
+                      onKeyDown={event => {
+                        // Une case s'ouvre aussi au clavier, comme un bouton.
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault()
+                          setOpenCell({ entityId: entity.id, monthIndex })
+                        }
+                      }}
+                    >
                       <CellChartDisplay gains={cellData.gains} expenses={cellData.expenses} totalGains={cellData.totalGains} totalExpenses={cellData.totalExpenses} absoluteMaxValue={monthlyScale} flowCount={cellData.flowCount} />
                     </div>
                   ))}

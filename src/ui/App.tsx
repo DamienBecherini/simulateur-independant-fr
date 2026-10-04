@@ -130,13 +130,13 @@ function App() {
         <div className="container mx-auto flex items-center justify-between px-8 py-2">
           {/* Groupe de boutons de gauche */}
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-10 w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
+            <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
               <Settings className="text-slate-500" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} className="h-10 w-10 [&_svg]:size-6 ml-2">
+            <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z)" onClick={undo} disabled={!canUndo} className="h-10 w-10 [&_svg]:size-6 ml-2">
               <Undo2 className="dark:text-slate-300" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} className="h-10 w-10 [&_svg]:size-6">
+            <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y)" onClick={redo} disabled={!canRedo} className="h-10 w-10 [&_svg]:size-6">
               <Redo2 className="dark:text-slate-300" />
             </Button>
           </div>
@@ -146,10 +146,10 @@ function App() {
               <Download className="size-4" />
               Exporter
             </Button>
-            <Button variant="ghost" size="icon" onClick={zoomOut} className="h-10 w-10 [&_svg]:size-6">
+            <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} className="h-10 w-10 [&_svg]:size-6">
               <ZoomOut className="text-slate-500" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={zoomIn} className="h-10 w-10 [&_svg]:size-6 mr-4">
+            <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} className="h-10 w-10 [&_svg]:size-6 mr-4">
               <ZoomIn className="text-slate-500" />
             </Button>
             <ThemeToggle />
