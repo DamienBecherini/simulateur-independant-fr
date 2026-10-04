@@ -4,7 +4,7 @@
 
 ## **État Actuel du Projet**
 
-Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue, le moteur de simulation par foyer fiscal, le comparateur de statuts et l'arbitrage rémunération / dividendes sont en place, avec une démo web publiée sur GitHub Pages. L'accessibilité (WCAG 2.2 AA) est vérifiée automatiquement. Les chiffres s'exportent en CSV, en PDF et en rapport Markdown. La prochaine étape est le **calcul ligne à ligne du président de SASU et le statut de salarié** (Phase 12).
+Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue, le moteur de simulation par foyer fiscal, le comparateur de statuts et l'arbitrage rémunération / dividendes sont en place, avec une démo web publiée sur GitHub Pages. L'accessibilité (WCAG 2.2 AA) est vérifiée automatiquement. Les chiffres s'exportent en CSV, en PDF et en rapport Markdown. Les cotisations du président de SASU et des salariés sont calculées ligne à ligne. La prochaine étape est **plusieurs années** (Phase 13), dont les règles 2024 et 2025 sont déjà collectées.
 
 > **Changement d'ordre par rapport à la v2.2 :** le comparateur de statuts passe avant l'arbitrage rémunération / dividendes, et la gestion des foyers fiscaux est intégrée à la refonte du moteur.
 
@@ -147,12 +147,14 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
-### **Phase 12 : Cotisations du président de SASU et statut de salarié [Planifié 🗓️]**
+### **Phase 12 : Cotisations du président de SASU et statut de salarié [Terminé ✅]**
 
 - **Objectif :** des rémunérations en société calculées comme sur un bulletin de paie, et le cas du conjoint salarié de la société.
 
 1.  **Président de SASU ligne à ligne :** remplacer le ratio moyen (coût total = 1,8 fois le net) par les cotisations salariales et patronales d'un assimilé salarié : taux et assiettes (plafonnée au PASS ou non), tranches 1 et 2 de la retraite complémentaire, taux réduits maladie et allocations familiales pour les rémunérations modestes (à confirmer pour un mandataire social), sans assurance chômage ni réduction générale des cotisations patronales. Brut retrouvé par dichotomie à partir du net, comme pour l'EURL ; cas de référence dérivés des barèmes Urssaf. Rend plus juste l'arbitrage rémunération / dividendes, surtout pour les petites rémunérations.
 2.  **Relation « Salarié de » :** une personne salariée d'une société de la simulation (par exemple le conjoint du président), avec le coût employeur complet : cotisations patronales, assurance chômage, et réduction générale dégressive des cotisations patronales (paramètres 2026 à vérifier sur l'Urssaf). Avertissement sur les conditions (lien de subordination réel, pas de gérance de fait). L'allocation chômage elle-même n'est pas modélisée.
+
+- **Réalisé :** taux 2026 du régime général sourcés (Urssaf, Agirc-Arrco, Légifrance) et calculés ligne à ligne ; les taux réduits maladie et allocations familiales ont été supprimés au 1er janvier 2026 (LFSS 2025), la question de leur application au président ne se pose donc plus. Président : sans chômage, AGS, APEC ni réduction générale, affilié cadre ; brut retrouvé par dichotomie à partir du net ; trimestres comptés sur le vrai brut (seuil de 4 trimestres : 7 212 € bruts, soit 5 709 € nets, 5 800 € à la centaine dans l'optimiseur). Relation « Salarié » : le salaire reste saisi en net sur la personne, l'activité supporte le coût employeur (brut, cotisations patronales, réduction générale dégressive unique 2026 déduite) ; non proposée pour une micro-entreprise. Cas de référence dérivés à la main (président à 5 700, 30 000 et 60 000 € nets ; salarié au SMIC, à 1,6 et 2,5 SMIC). **À confirmer :** le gel du SMIC à 12,02 € pour toute l'année 2026, trouvé dans une seule source secondaire.
 
 ---
 
