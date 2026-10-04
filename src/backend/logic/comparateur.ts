@@ -175,6 +175,7 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: { report: 
     impotSurLeRevenu: bilan.impotSurLeRevenu,
     prelevementsSociaux: bilan.prelevementsSociaux,
     resultatConserve: bilan.resultatConserve,
+    resultatConserveActivite: Math.round(activite?.resultatConserve ?? 0),
     warnings: activite?.warnings ?? []
   }
 }

@@ -7,7 +7,7 @@ import { emptySession, makeCompany, makeMicro, makePerson } from "@/ui/testing/f
 import { ComparatorPanel } from "./ComparatorPanel"
 
 function scenario(statut: StatutCompare, libelle: string, net: number, overrides: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return { statut, libelle, actuel: false, fraisFonctionnement: 0, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
+  return { statut, libelle, actuel: false, fraisFonctionnement: 0, resultatConserveActivite: 0, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
 }
 
 function comparison(overrides: Partial<ComparaisonResult> = {}): ComparaisonResult {
@@ -70,6 +70,8 @@ describe("ComparatorPanel", () => {
     render(<ComparatorPanel session={withActivity()} />)
 
     expect(await screen.findByText("Seuil à vérifier.")).toBeInTheDocument()
+    expect(screen.getByText(/« Mon atelier » en Micro \+ versement libératoire :/)).toBeInTheDocument()
+    expect(screen.getByRole("row", { name: /^Conservé dans « Mon atelier »/ })).toBeInTheDocument()
   })
 
   it("compare un couple en union libre avec une imposition commune, même sans activité", async () => {

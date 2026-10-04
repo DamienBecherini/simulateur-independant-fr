@@ -60,7 +60,8 @@ export function calculerResultatSociete(entrees: EntreesSociete, cotisationsRemu
   if (beneficeAvantIS < 0) {
     warnings.push(`La société est déficitaire de ${euros(-beneficeAvantIS)} : les charges et la rémunération (cotisations comprises) dépassent le chiffre d'affaires.`)
   }
-  if (dividendesDemandes > beneficeDistribuable) {
+  // Tolérance d'un demi-euro : le comparateur demande exactement le bénéfice distribuable, aux arrondis près.
+  if (dividendesDemandes > beneficeDistribuable + 0.5) {
     warnings.push(`Dividendes saisis (${euros(dividendesDemandes)}) supérieurs au bénéfice distribuable (${euros(beneficeDistribuable)}) : seul ce dernier est retenu.`)
   }
 

@@ -36,8 +36,8 @@ function rate(scenario: ScenarioStatut): string {
   return (scenario.totalPrelevements / scenario.revenusAvantPrelevements).toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 })
 }
 
-/** Lignes du tableau : libellé et valeur d'une colonne. */
-const rows: { label: string; value: (s: ScenarioStatut) => string; strong?: boolean }[] = [
+/** Lignes du tableau : libellé et valeur d'une colonne. Seule la dernière porte sur l'activité comparée. */
+const rows = (activityName: string): { label: string; value: (s: ScenarioStatut) => string; strong?: boolean }[] => [
   { label: "Net dans la poche", value: s => formatMoney(s.netApresImpots), strong: true },
   { label: "Taux global de prélèvement", value: rate },
   { label: "Frais de fonctionnement", value: s => formatMoney(s.fraisFonctionnement) },
@@ -45,7 +45,7 @@ const rows: { label: string; value: (s: ScenarioStatut) => string; strong?: bool
   { label: "Impôt sur les sociétés", value: s => formatMoney(s.impotSocietes) },
   { label: "Impôt sur le revenu", value: s => formatMoney(s.impotSurLeRevenu) },
   { label: "Prélèvements sociaux", value: s => formatMoney(s.prelevementsSociaux) },
-  { label: "Conservé en société", value: s => formatMoney(s.resultatConserve) }
+  { label: `Conservé dans « ${activityName} »`, value: s => formatMoney(s.resultatConserveActivite) }
 ]
 
 /** Étoiles pleines et vides, sur 5. */
@@ -161,7 +161,7 @@ function ComparatorControls({ activities, selected, options, onSelect, onChange 
   )
 }
 
-function ComparisonTable({ result }: { result: ComparaisonResult }) {
+function ComparisonTable({ result, activityName }: { result: ComparaisonResult; activityName: string }) {
   if (result.scenarios.length === 0) return null
   const current = result.scenarios.find(s => s.actuel)
   const best = (s: ScenarioStatut) => s.statut === result.meilleur
@@ -183,7 +183,7 @@ function ComparisonTable({ result }: { result: ComparaisonResult }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map(row => (
+          {rows(activityName).map(row => (
             <tr key={row.label} className="border-t border-slate-200 dark:border-slate-700">
               <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
                 {row.label}
@@ -259,14 +259,17 @@ function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
   )
 }
 
-function ScenarioWarnings({ scenarios }: { scenarios: ScenarioStatut[] }) {
+function ScenarioWarnings({ scenarios, activityName }: { scenarios: ScenarioStatut[]; activityName: string }) {
   const withWarnings = scenarios.filter(s => s.warnings.length > 0)
   if (withWarnings.length === 0) return null
   return (
     <div className="space-y-1 text-xs text-amber-800 dark:text-amber-200/90">
       {withWarnings.map(s => (
         <p key={s.statut}>
-          <span className="font-medium">{s.libelle} :</span> {s.warnings.join(" ")}
+          <span className="font-medium">
+            « {activityName} » en {s.libelle} :
+          </span>{" "}
+          {s.warnings.join(" ")}
         </p>
       ))}
     </div>
@@ -286,6 +289,16 @@ function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[
         )
       })}
     </div>
+  )
+}
+
+function ComparisonResults({ result, activityName }: { result: ComparaisonResult; activityName: string }) {
+  return (
+    <>
+      <ComparisonTable result={result} activityName={activityName} />
+      <ProtectionDetails scenarios={result.scenarios} />
+      <ScenarioWarnings scenarios={result.scenarios} activityName={activityName} />
+    </>
   )
 }
 
@@ -343,7 +356,7 @@ export function ComparatorPanel({ session }: ComparatorPanelProps) {
         <h2 id="comparateur-titre" className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
           Comparateur de statuts
         </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation.</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée.</p>
       </div>
 
       {selected ? (
@@ -356,13 +369,7 @@ export function ComparatorPanel({ session }: ComparatorPanelProps) {
 
       {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 
-      {result ? (
-        <>
-          <ComparisonTable result={result} />
-          <ProtectionDetails scenarios={result.scenarios} />
-          <ScenarioWarnings scenarios={result.scenarios} />
-        </>
-      ) : null}
+      {result ? <ComparisonResults result={result} activityName={selected?.name ?? ""} /> : null}
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
     </section>
   )

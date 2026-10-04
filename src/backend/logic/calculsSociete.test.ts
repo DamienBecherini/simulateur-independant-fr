@@ -58,6 +58,11 @@ describe("calculerSASU", () => {
     expect(resultat.warnings[0]).toContain("supérieurs au bénéfice distribuable")
   })
 
+  it("ne signale pas des dividendes égaux au bénéfice distribuable, aux arrondis près", () => {
+    // Bénéfice distribuable : 30 600 €.
+    expect(calculerSASU({ ...activite, dividendesDemandes: 30600.4 }, reglesDeTest).warnings).toEqual([])
+  })
+
   it("signale une société déficitaire, sans IS ni dividendes", () => {
     const resultat = calculerSASU({ chiffreAffaires: 20000, chargesDeductibles: 0, remunerationNette: 30000, dividendesDemandes: 1000 }, reglesDeTest)
 

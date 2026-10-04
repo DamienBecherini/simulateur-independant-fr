@@ -311,6 +311,8 @@ export interface ScenarioStatut {
   actuel: boolean
   /** Frais de fonctionnement annuels ajoutés pour ce statut. */
   fraisFonctionnement: number
+  /** Bénéfice laissé dans l'activité comparée (négatif si elle est déficitaire) ; les autres montants portent sur toute la simulation. */
+  resultatConserveActivite: number
   protectionSociale: ProtectionSociale
   /** Indicateurs de toute la simulation, l'activité ayant pris ce statut. */
   netApresImpots: number
