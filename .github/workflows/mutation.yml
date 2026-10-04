@@ -1,0 +1,44 @@
+name: Tests de mutation
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Tous les lundis à 05:00 UTC.
+    - cron: "0 5 * * 1"
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  stryker:
+    name: Stryker (moteur fiscal)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Lancer les tests de mutation
+        run: npm run test:mutation
+
+      - name: Publier le rapport
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-mutation
+          path: reports/mutation
+          if-no-files-found: warn
+          retention-days: 30
