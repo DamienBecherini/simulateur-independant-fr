@@ -252,12 +252,31 @@ describe("sanitizeSlots", () => {
     expect(resultat.lastModified).toBe(1_700_000_000_000)
   })
 
-  it("rejette toute la liste dès qu'un slot est structurellement invalide", () => {
+  it("ignore uniquement les slots corrompus, comme l'annonce le message d'avertissement", () => {
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const autre = { ...slot, id: "slot-2", name: "Scénario B" }
 
-    expect(sanitizeSlots([slot, { name: "Slot sans identifiant" }])).toEqual([])
+    const resultat = sanitizeSlots([
+      slot,
+      { name: "Slot sans identifiant" },
+      { ...slot, id: "slot-sans-date", lastModified: "hier" },
+      { ...slot, id: "slot-grille-tronquee", monthlyData: grille().slice(0, 11) },
+      null,
+      autre
+    ])
+
+    expect(resultat).toEqual([slot, autre])
     expect(consoleWarn).toHaveBeenCalledOnce()
+    expect(consoleWarn).toHaveBeenCalledWith(expect.stringContaining("4 sur 6"))
   })
 
-  it.todo("ignore uniquement les slots corrompus, comme l'annonce le message d'avertissement (aujourd'hui un seul slot invalide fait perdre tous les autres)")
+  it("conserve un slot dont seul un élément est invalide, en écartant cet élément", () => {
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+    const [resultat] = sanitizeSlots([{ ...slot, entities: [alice, { id: "x1", type: "association" }] }])
+
+    expect(resultat).toEqual(slot)
+    expect(consoleWarn).not.toHaveBeenCalled()
+  })
 })

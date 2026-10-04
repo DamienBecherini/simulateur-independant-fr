@@ -135,28 +135,38 @@ export function sanitizeStateAndFillDefaults(rawData: unknown): SanitizationResu
   }
 }
 
+/** Les deux champs qu'un slot ajoute à une session. */
+const SlotIdentitySchema = SaveSlotSchema.pick({ id: true, lastModified: true })
+
+/**
+ * Nettoie un slot comme une session, en conservant son identifiant et sa date.
+ * @returns Le slot nettoyé, ou `null` s'il est irrécupérable (identité manquante ou session inutilisable).
+ */
+function sanitizeSlot(rawSlot: unknown): SaveSlot | null {
+  const identity = SlotIdentitySchema.safeParse(rawSlot)
+  if (!identity.success) return null
+
+  const session = sanitizeSession(rawSlot)
+  if (!session) return null
+
+  return { ...session.safeState, ...identity.data }
+}
+
 /**
  * Prend un tableau de slots potentiellement corrompus et retourne un tableau de slots propres.
+ * Chaque slot est validé individuellement : un slot corrompu est écarté sans faire perdre les autres.
  * @param rawSlotsData - Un tableau de données brutes.
- * @returns Un tableau de `SaveSlot` propres et garantis d'être complets.
+ * @returns Les `SaveSlot` récupérables, nettoyés et garantis d'être complets, dans leur ordre d'origine.
  */
 export function sanitizeSlots(rawSlotsData: unknown): SaveSlot[] {
   if (!Array.isArray(rawSlotsData)) return []
 
-  const validatedSlots = SaveSlotSchema.array().safeParse(rawSlotsData)
+  const safeSlots = rawSlotsData.map(sanitizeSlot).filter(slot => slot !== null)
 
-  if (!validatedSlots.success) {
-    console.warn("Certains slots de sauvegarde étaient corrompus et ont été ignorés.", validatedSlots.error.flatten())
-    return []
+  const ignoredCount = rawSlotsData.length - safeSlots.length
+  if (ignoredCount > 0) {
+    console.warn(`Slots de sauvegarde corrompus ignorés : ${ignoredCount} sur ${rawSlotsData.length}.`)
   }
 
-  // On applique en plus notre validation sémantique sur chaque slot valide
-  return validatedSlots.data.map(slot => {
-    const { safeState } = sanitizeStateAndFillDefaults(slot)
-    return {
-      ...safeState,
-      id: slot.id,
-      lastModified: slot.lastModified
-    }
-  })
+  return safeSlots
 }

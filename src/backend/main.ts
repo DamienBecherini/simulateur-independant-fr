@@ -88,15 +88,8 @@ async function readSlotsFromFile(): Promise<SaveSlot[]> {
     const data = await fs.readFile(slotsFilePath, "utf-8")
     const parsedData = JSON.parse(data)
 
-    // ON PASSE LES DONNÉES BRUTES DANS NOTRE NOUVEAU NETTOYEUR DE SLOTS
-    const cleanSlots = sanitizeSlots(parsedData)
-
-    // On pourrait même vérifier si des slots ont été supprimés et le logger
-    if (cleanSlots.length < (parsedData as unknown[]).length) {
-      console.warn("Certains slots de sauvegarde étaient corrompus et ont été ignorés.")
-    }
-
-    return cleanSlots
+    // Les slots corrompus sont écartés (et signalés dans la console) par le nettoyeur, les autres sont conservés.
+    return sanitizeSlots(parsedData)
   } catch {
     console.log("Aucun fichier de slots trouvé ou fichier illisible, démarrage avec un état vide.")
     return []
