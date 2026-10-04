@@ -66,9 +66,11 @@ npm run dev
 ## ✅ Qualité
 
 ```sh
-npm test               # tests unitaires (Vitest), exécution unique
+npm test               # rapide : tests de la logique et des composants (Vitest)
 npm run test:watch     # tests en mode interactif
 npm run test:coverage  # tests + couverture (v8), rapport dans coverage/
+npm run test:e2e       # compile l'application, puis tests de bout en bout (Playwright + Electron)
+npm run test:all       # tout : tests avec couverture, puis tests de bout en bout
 npm run lint           # ESLint, dont la complexité cyclomatique
 npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutation/
 ```
@@ -76,6 +78,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - **Tests** : fichiers `*.test.ts` placés à côté du code testé ; le moteur est testé avec des règles fictives aux chiffres ronds (`src/backend/logic/testing/`), pour que les montants attendus se vérifient de tête et ne dépendent pas du barème de l'année.
 - **Cas de référence 2026** : `src/backend/logic/references/` fait tourner le moteur avec les règles réelles de `config.json` sur une soixantaine de situations (micro-entreprise, SASU, EURL, EI, salaires, familles, comparateur), dont chaque montant attendu est dérivé à la main des règles officielles ; ils échouent explicitement si `config.json` change d'année.
 - **Tests de composants** : fichiers `*.test.tsx` (React Testing Library, user-event, jsdom) qui rejouent les parcours de saisie au clavier, la fenêtre des flux, les cartes d'entités, les résultats et l'historique d'annulation ; `window.api` y est simulé (`src/ui/testing/`).
+- **Tests de bout en bout** (optionnels) : fichiers `e2e/*.e2e.ts`, où Playwright pilote l'application Electron compilée (création d'entités, saisie dans la grille, résultats, historique, sauvegarde automatique, conversion d'un ancien format, sauvegardes nommées). Chaque test lance l'application sur un dossier de données temporaire (`--user-data-dir`), sans toucher aux vraies données ; aucun navigateur à télécharger. En intégration continue, ils tournent sur `main` et à la demande.
 - **Couverture** : seuil bloquant de 90 % (instructions, branches, fonctions, lignes) sur `src/backend/logic/` et `src/lib/`.
 - **Complexité** : règle ESLint `complexity` plafonnée à 15 sur `src/`, sans exception.
 - **Mutation** : Stryker sur `src/backend/logic/` (score d'environ 86 %), lancé chaque semaine et à la demande ; nécessite Node.js 22 ou supérieur.
