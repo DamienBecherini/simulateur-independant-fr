@@ -31,11 +31,11 @@ interface LocalState {
 // Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
 const availableColors = [
   { color: "#3b82f6", name: "Bleu" },
-  { color: "#ef4444", name: "Rouge" },
-  { color: "#22c55e", name: "Vert" },
-  { color: "#eab308", name: "Jaune" },
-  { color: "#8b5cf6", name: "Violet" },
-  { color: "#f97316", name: "Orange" }
+  { color: "#b91c1c", name: "Rouge" },
+  { color: "#16a34a", name: "Vert" },
+  { color: "#7e22ce", name: "Violet" },
+  { color: "#d97706", name: "Orange" },
+  { color: "#ec4899", name: "Rose" }
 ]
 
 const iconNames: Record<string, string> = { Briefcase: "Mallette", Building: "Immeuble", Store: "Boutique", User: "Personne" }

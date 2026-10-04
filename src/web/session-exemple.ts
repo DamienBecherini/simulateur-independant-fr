@@ -7,11 +7,11 @@ import type { Company, FinancialFlow, MicroEntreprise, Person, Relationship, Ses
 const personne = (id: string, name: string, initiales: string, color: string): Person => ({ id, type: "person", name, fiscalParts: 1, avatar: { type: "initials", value: initiales, color }, locked: false })
 
 const camille = personne("person-camille", "Camille Martin", "CM", "#3b82f6")
-const julien = personne("person-julien", "Julien Martin", "JM", "#22c55e")
-const lea = personne("person-lea", "Léa Martin", "LM", "#f59e0b")
+const julien = personne("person-julien", "Julien Martin", "JM", "#16a34a")
+const lea = personne("person-lea", "Léa Martin", "LM", "#ec4899")
 
-const atelier: MicroEntreprise = { id: "micro-atelier", type: "micro-entreprise", name: "Atelier de Camille", beneficieACRE: false, opteVFL: true, rfrN2: 38000, avatar: { type: "icon", value: "Store", color: "#f97316" }, locked: false }
-const conseil: Company = { id: "company-conseil", type: "company", name: "Conseil SASU", legalStatus: "SASU", capitalSocial: 1000, avatar: { type: "icon", value: "Briefcase", color: "#ef4444" }, locked: false }
+const atelier: MicroEntreprise = { id: "micro-atelier", type: "micro-entreprise", name: "Atelier de Camille", beneficieACRE: false, opteVFL: true, rfrN2: 38000, avatar: { type: "icon", value: "Store", color: "#d97706" }, locked: false }
+const conseil: Company = { id: "company-conseil", type: "company", name: "Conseil SASU", legalStatus: "SASU", capitalSocial: 1000, avatar: { type: "icon", value: "Briefcase", color: "#b91c1c" }, locked: false }
 
 const relations: Relationship[] = [
   { id: "rel-titulaire", fromId: camille.id, toId: atelier.id, type: "Titulaire" },

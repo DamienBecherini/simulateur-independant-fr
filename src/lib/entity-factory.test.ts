@@ -48,7 +48,7 @@ describe("createCompany", () => {
       name: "Ma SASU",
       legalStatus: "SASU",
       capitalSocial: 1000,
-      avatar: { type: "icon", value: "Briefcase", color: "#ef4444" },
+      avatar: { type: "icon", value: "Briefcase", color: "#b91c1c" },
       locked: false
     })
   })
@@ -60,7 +60,7 @@ describe("createCompany", () => {
       name: "Mon EURL",
       legalStatus: "EURL",
       capitalSocial: 1000,
-      avatar: { type: "icon", value: "Building", color: "#22c55e" },
+      avatar: { type: "icon", value: "Building", color: "#16a34a" },
       locked: false
     })
   })
@@ -72,7 +72,7 @@ describe("createCompany", () => {
       name: "Mon entreprise individuelle",
       legalStatus: "EI",
       capitalSocial: 0,
-      avatar: { type: "icon", value: "User", color: "#8b5cf6" },
+      avatar: { type: "icon", value: "User", color: "#7e22ce" },
       locked: false
     })
   })
@@ -92,7 +92,7 @@ describe("createMicroEntreprise", () => {
       name: "Ma Micro-Entreprise",
       beneficieACRE: false,
       opteVFL: false,
-      avatar: { type: "icon", value: "Store", color: "#f97316" },
+      avatar: { type: "icon", value: "Store", color: "#d97706" },
       locked: false
     })
   })

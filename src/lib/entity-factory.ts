@@ -3,13 +3,14 @@
 import type { Person, Company, MicroEntreprise } from "@/types"
 import { createId } from "@/lib/id"
 
-// On peut même centraliser les couleurs par défaut ici
+// Couleurs par défaut des pastilles, prises dans la palette de la fenêtre d'édition (EditEntityModal) :
+// distinctes deux à deux et lisibles avec des initiales ou une icône en blanc.
 const defaultColors = {
   person: "#3b82f6",
-  sasu: "#ef4444",
-  eurl: "#22c55e",
-  ei: "#8b5cf6",
-  micro: "#f97316"
+  sasu: "#b91c1c",
+  eurl: "#16a34a",
+  ei: "#7e22ce",
+  micro: "#d97706"
 }
 
 /**
