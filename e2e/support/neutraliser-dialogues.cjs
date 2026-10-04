@@ -29,3 +29,17 @@ dialog.showMessageBoxSync = (...args) => {
 dialog.showErrorBox = (title, content) => {
   globalThis.__dialoguesE2E.push({ type: "erreur", title, message: content })
 }
+
+// Fenêtres d'enregistrement et d'ouverture de fichier : elles renvoient les chemins que le test a choisis
+// (`electronApp.evaluate`, voir `choisirFichiers` dans fixtures.ts), ou une annulation s'il n'en a pas choisi.
+globalThis.__fichiersE2E = { enregistrer: null, ouvrir: null }
+
+dialog.showSaveDialog = async () => {
+  const chemin = globalThis.__fichiersE2E.enregistrer
+  return chemin ? { canceled: false, filePath: chemin } : { canceled: true, filePath: "" }
+}
+
+dialog.showOpenDialog = async () => {
+  const chemin = globalThis.__fichiersE2E.ouvrir
+  return chemin ? { canceled: false, filePaths: [chemin] } : { canceled: true, filePaths: [] }
+}

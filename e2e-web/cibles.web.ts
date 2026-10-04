@@ -49,6 +49,13 @@ function tropPetites(cibles: Cible[], minimum: number): string[] {
 async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]> {
   const fenetres: [string, () => Promise<void>][] = [
     ["paramètres", () => page.getByRole("button", { name: "Paramètres" }).click()],
+    [
+      "liste des sauvegardes",
+      async () => {
+        await page.getByRole("button", { name: "Paramètres" }).click()
+        await page.getByRole("button", { name: "Charger une sauvegarde..." }).click()
+      }
+    ],
     ["réglages d'une entité", () => page.getByRole("button", { name: "Modifier les autres réglages" }).first().click()],
     ["choix du type d'activité", () => page.getByRole("button", { name: "+ Ajouter une Activité" }).click()],
     ["flux d'un mois", () => page.getByRole("button", { name: /^Flux de janvier/ }).last().click()],

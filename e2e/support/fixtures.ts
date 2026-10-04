@@ -88,6 +88,14 @@ export async function deposerSauvegardes(dossierDonnees: string, slots: SaveSlot
   await fs.writeFile(path.join(dossierDonnees, "simulationSlots.json"), JSON.stringify(slots.map(auFormatActuel), null, 2))
 }
 
+/** Chemins que renverront les fenêtres d'enregistrement et d'ouverture de fichier ; `null` simule une annulation. */
+export async function choisirFichiers(electronApp: ElectronApplication, chemins: { enregistrer?: string | null; ouvrir?: string | null }) {
+  await electronApp.evaluate((_electron, choix) => {
+    const fichiers = (globalThis as unknown as { __fichiersE2E: Record<string, string | null> }).__fichiersE2E
+    Object.assign(fichiers, choix)
+  }, chemins)
+}
+
 /** Lit un fichier JSON du dossier de données ; `null` s'il n'existe pas encore. */
 export async function lireFichier<T = unknown>(dossierDonnees: string, nom: string): Promise<T | null> {
   try {
