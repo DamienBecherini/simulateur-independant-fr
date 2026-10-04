@@ -147,7 +147,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                       })
                     }
                   />
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Hors enfants reliés : leurs parts s'ajoutent automatiquement. À modifier pour un cas particulier (parent isolé, invalidité…).</p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Hors enfants reliés : leurs parts s'ajoutent automatiquement. À modifier pour un cas particulier (parent isolé, invalidité…).</p>
                 </div>
               </div>
             )}
@@ -306,7 +306,7 @@ function StatusSpecificFields({ entity, onChange }: { entity: Entity; onChange: 
                 onChange({ ...entity, rfrN2: Number.isFinite(value) && value >= 0 ? value : undefined })
               }}
             />
-            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Revenu fiscal de référence du foyer d'il y a deux ans (avis d'imposition) : il décide de l'accès au versement libératoire.</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Revenu fiscal de référence du foyer d'il y a deux ans (avis d'imposition) : il décide de l'accès au versement libératoire.</p>
           </div>
         </div>
       )}
@@ -325,7 +325,7 @@ function StatusSpecificFields({ entity, onChange }: { entity: Entity; onChange: 
               value={entity.capitalSocial}
               onChange={e => onChange({ ...entity, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })}
             />
-            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
           </div>
         </div>
       )}

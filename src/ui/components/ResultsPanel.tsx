@@ -79,9 +79,9 @@ function BilanCard({ report }: { report: SimulationReport }) {
           )}
         </dl>
       </div>
-      <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les cotisations d'un salaire ne sont comptées que si son brut est saisi, et seulement pour leur part salariale.</p>
+      <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les cotisations d'un salaire ne sont comptées que si son brut est saisi, et seulement pour leur part salariale.</p>
       {bilan.resultatConserve > 0 ? (
-        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           Le bénéfice conservé dans une société a payé l'impôt sur les sociétés, mais pas encore l'impôt personnel : il sera imposé le jour où il sera versé (dividendes, vente ou liquidation). Le taux de prélèvement affiché est donc provisoire pour cette part, et un scénario qui conserve davantage paraît moins taxé sans que cet argent soit disponible.
         </p>
       ) : null}
@@ -104,7 +104,7 @@ function Row({ label, value, hint, strong = false, pastille }: { label: string; 
         {label}
       </dt>
       <dd className={`text-right tabular-nums ${strong ? "font-semibold text-emerald-700 dark:text-emerald-400" : "font-medium"}`}>
-        {value}
+        <span className="whitespace-nowrap">{value}</span>
         {hint ? <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{hint}</span> : null}
       </dd>
     </div>
@@ -120,7 +120,7 @@ function Card({ title, subtitle, warnings, children }: { title: string; subtitle
       </header>
       {children}
       {warnings.length > 0 ? (
-        <ul className="mt-3 list-inside list-disc text-xs text-amber-800 dark:text-amber-200/90">
+        <ul className="mt-3 list-inside list-disc text-sm text-amber-800 dark:text-amber-200/90">
           {warnings.map((warning, i) => (
             <li key={i}>{warning}</li>
           ))}
@@ -191,7 +191,7 @@ function FoyerCard({ foyer, persons, showRates }: { foyer: FoyerFiscalResult; pe
         {foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={formatMoney(foyer.netApresImpots - foyer.depenses)} hint={`${formatMoney(foyer.depenses)} de dépenses`} /> : null}
       </dl>
       {showRates ? <FoyerRates foyer={foyer} /> : null}
-      {foyer.optionDividendes ? <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">{dividendOptionLabels[foyer.optionDividendes]}</p> : null}
+      {foyer.optionDividendes ? <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{dividendOptionLabels[foyer.optionDividendes]}</p> : null}
     </Card>
   )
 }
@@ -202,7 +202,7 @@ function VersementLiberatoireNote({ info }: { info: VersementLiberatoireInfo }) 
   const status = info.eligible === null ? "RFR N-2 non renseigné (fiche de la micro-entreprise)" : info.eligible ? `votre RFR N-2 de ${formatMoney(info.rfrN2 ?? 0)} y donne accès` : `votre RFR N-2 de ${formatMoney(info.rfrN2 ?? 0)} le dépasse`
 
   return (
-    <div className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
+    <div className="mt-3 border-t border-slate-100 pt-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
       <p>
         <span className="font-medium text-slate-700 dark:text-slate-200">Versement libératoire</span> {info.applique ? "(appliqué)" : "(non appliqué)"} : seuil de {formatMoney(info.plafondRfr)} de revenu fiscal de référence N-2 pour {parts} {info.partsFiscales > 1 ? "parts" : "part"} ;{" "}
         <span className={info.eligible === false ? "text-rose-700 dark:text-rose-400" : info.eligible ? "text-emerald-700 dark:text-emerald-400" : undefined}>{status}</span>.
@@ -252,7 +252,7 @@ export function ResultsPanel({ report, error }: ResultsPanelProps) {
         <div className="space-y-3">
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
           {sharedCompanies.length > 0 ? (
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               {sharedCompanies.map(a => `« ${a.name} »`).join(", ")} : l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les associés, comme les dividendes. La répartition réelle du capital n'est pas encore modélisée.
             </p>
           ) : null}

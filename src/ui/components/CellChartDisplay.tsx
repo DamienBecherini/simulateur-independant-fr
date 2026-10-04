@@ -36,7 +36,7 @@ export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, a
         const heightStyle = `max(min(${percentage}%, 100%), ${MIN_HEIGHT_PX}px)`
         return (
           <div key={index} className="relative w-5 rounded-t-[2px]" style={{ height: heightStyle, backgroundColor: segment.color }}>
-            <div className="absolute bottom-full mb-0.5 w-full text-center text-[12px] font-bold text-slate-600 dark:text-slate-400">{segment.number}</div>
+            <div className="absolute bottom-full mb-0.5 w-full text-center text-xs font-bold text-slate-600 dark:text-slate-400">{segment.number}</div>
           </div>
         )
       })}

@@ -163,7 +163,7 @@ function Courbe({ resultat, remunerationActuelle }: CourbeProps) {
               {montantCourt(t)}
             </text>
           ))}
-          <text x={largeur - MARGES.droite} y={HAUTEUR - 4} textAnchor="end" className="fill-slate-500 dark:fill-slate-400">
+          <text x={largeur - MARGES.droite} y={HAUTEUR - 4} textAnchor="end" className="fill-slate-600 dark:fill-slate-300">
             Rémunération nette annuelle
           </text>
 

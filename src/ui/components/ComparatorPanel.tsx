@@ -69,7 +69,7 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
 
   return (
     <Depliable titre="Frais de fonctionnement annuels par statut" className="rounded-lg border border-slate-200 p-4 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200">
-      <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
         Ordres de grandeur, à ajuster à votre situation. Ils s'ajoutent aux charges de l'activité dans chaque colonne, statut actuel compris : si vous les avez déjà saisis dans la grille, mettez-les à 0. Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune et n'est pas due l'année de création.
       </p>
       <div className="relative mt-3 overflow-x-auto">
@@ -232,7 +232,7 @@ function ComparisonTable({ result, activityName }: { result: ComparaisonResult; 
 function WarningList({ warnings }: { warnings: string[] }) {
   if (warnings.length === 0) return null
   return (
-    <ul className="list-inside list-disc text-xs text-amber-800 dark:text-amber-200/90">
+    <ul className="list-inside list-disc text-sm text-amber-800 dark:text-amber-200/90">
       {warnings.map((warning, i) => (
         <li key={i}>{warning}</li>
       ))}
@@ -244,7 +244,7 @@ function WarningList({ warnings }: { warnings: string[] }) {
 function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
   if (scenarios.length === 0) return null
   return (
-    <Depliable titre="Ce que recouvre la note de protection sociale" className="text-xs text-slate-600 dark:text-slate-300">
+    <Depliable titre="Ce que recouvre la note de protection sociale" className="text-sm text-slate-600 dark:text-slate-300">
       <ul className="mt-2 space-y-1">
         {scenarios.map(s => (
           <li key={s.statut}>
@@ -264,7 +264,7 @@ function ScenarioWarnings({ scenarios, activityName }: { scenarios: ScenarioStat
   const withWarnings = scenarios.filter(s => s.warnings.length > 0)
   if (withWarnings.length === 0) return null
   return (
-    <div className="space-y-1 text-xs text-amber-800 dark:text-amber-200/90">
+    <div className="space-y-1 text-sm text-amber-800 dark:text-amber-200/90">
       {withWarnings.map(s => (
         <p key={s.statut}>
           <span className="font-medium">
