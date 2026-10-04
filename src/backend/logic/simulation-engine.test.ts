@@ -206,6 +206,9 @@ describe("runMetaSimulation", () => {
         prelevementsSociaux: 3600,
         optionDividendes: "pfu",
         netApresImpots: 42300,
+        revenusAvantPrelevements: 90000,
+        totalPrelevements: 37100,
+        resultatConserve: 10600,
         depenses: 0,
         warnings: []
       })
@@ -423,6 +426,42 @@ describe("runMetaSimulation", () => {
       // Base : 36 000 + 4 500 = 40 500 € pour 1,5 part ; l'avantage de la demi-part est plafonné à 1 500 €.
       expect(report.foyers).toHaveLength(1)
       expect(report.foyers[0]).toMatchObject({ personIds: ["parent", "enfant"], totalParts: 1.5, revenuImposableGlobal: 40500, impotSurLeRevenu: 3650 })
+    })
+
+    it("attribue à chaque foyer sa part des prélèvements et du bénéfice conservé d'une société partagée", () => {
+      const report = simuler(
+        [personne("alice"), personne("bob"), societe("sasu")],
+        [relation("alice", "sasu", "Président"), relation("bob", "sasu", "Associé")],
+        [
+          ["sasu", "ca_services", 100000],
+          ["sasu", "director_remuneration", 30000],
+          ["sasu", "dividends_payment", 20000]
+        ]
+      )
+
+      // Société : 24 000 € de cotisations, 7 500 € d'IS, 20 000 € de dividendes, 18 500 € conservés.
+      // Alice reçoit la rémunération et ses cotisations, puis la moitié du reste ; Bob l'autre moitié.
+      expect(foyerDe(report, "alice")).toMatchObject({ revenusAvantPrelevements: 77000, totalPrelevements: 32240, resultatConserve: 9250, netApresImpots: 35510, optionDividendes: "bareme" })
+      expect(foyerDe(report, "bob")).toMatchObject({ revenusAvantPrelevements: 23000, totalPrelevements: 5550, resultatConserve: 9250, netApresImpots: 8200 })
+      for (const foyer of report.foyers) {
+        expect(foyer.totalPrelevements + foyer.resultatConserve + foyer.netApresImpots).toBe(foyer.revenusAvantPrelevements)
+      }
+      expect(report.foyers[0].revenusAvantPrelevements + report.foyers[1].revenusAvantPrelevements).toBe(report.bilan.revenusAvantPrelevements)
+    })
+
+    it("mesure les prélèvements d'une micro-entreprise et d'une entreprise individuelle dans le foyer du titulaire", () => {
+      const report = simuler(
+        [personne("bob"), micro("m1"), societe("ei", "EI")],
+        [relation("bob", "m1", "Titulaire"), relation("bob", "ei", "Titulaire")],
+        [
+          ["m1", "ca_micro_vente", 20000],
+          ["ei", "ca_services", 60000],
+          ["ei", "deductible_expense", 15000]
+        ]
+      )
+
+      // Cotisations : 2 000 € (micro) + 15 000 € (EI). Base imposable : 6 000 + 30 000 = 36 000 €, soit 3 800 € d'impôt.
+      expect(foyerDe(report, "bob")).toMatchObject({ revenusAvantPrelevements: 65000, totalPrelevements: 20800, resultatConserve: 0, netApresImpots: 44200 })
     })
 
     it("additionne les nets de tous les foyers", () => {

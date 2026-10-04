@@ -180,6 +180,15 @@ export interface FoyerFiscalResult {
   /** Imposition des dividendes la plus favorable au foyer ; `null` s'il n'en reçoit pas. */
   optionDividendes: "pfu" | "bareme" | null
   netApresImpots: number
+  /**
+   * Part du foyer dans ce que produisent ses activités (chiffre d'affaires moins charges), plus ses revenus directs.
+   * Dans une société à plusieurs associés, l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales.
+   */
+  revenusAvantPrelevements: number
+  /** Cotisations sociales et impôt sur les sociétés attribués au foyer, impôt sur le revenu et prélèvements sociaux. */
+  totalPrelevements: number
+  /** Part du foyer dans les bénéfices laissés dans les sociétés. */
+  resultatConserve: number
   /** Dépenses personnelles saisies : elles ne réduisent pas l'impôt. */
   depenses: number
   warnings: string[]

@@ -32,6 +32,10 @@ interface RevenusDActivite {
   dividendesEncaisses: number
   /** Bénéfices réellement encaissés (micro-entreprise, entreprise individuelle), nets de cotisations. */
   beneficesEncaisses: number
+  /** Cotisations sociales et impôt sur les sociétés payés par ses activités, pour la part qui lui revient. */
+  prelevementsActivites: number
+  /** Sa part des bénéfices laissés dans les sociétés. */
+  resultatConserve: number
 }
 
 /** Total encaissé par une personne depuis ses activités, net de cotisations. */
@@ -84,14 +88,14 @@ function personnesLiees(ctx: Contexte, entityId: string, types: Relationship["ty
 function revenusDe(ctx: Contexte, personId: string): RevenusDActivite {
   let revenus = ctx.revenus.get(personId)
   if (!revenus) {
-    revenus = { remunerations: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, dividendesEncaisses: 0, beneficesEncaisses: 0 }
+    revenus = { remunerations: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, dividendesEncaisses: 0, beneficesEncaisses: 0, prelevementsActivites: 0, resultatConserve: 0 }
     ctx.revenus.set(personId, revenus)
   }
   return revenus
 }
 
 /** La rémunération du dirigeant est versée à la première personne reliée par « Président » ou « Gérant ». */
-function verserRemuneration(ctx: Contexte, societe: Company, remuneration: number, warnings: string[]) {
+function verserRemuneration(ctx: Contexte, societe: Company, remuneration: number, cotisations: number, warnings: string[]) {
   if (remuneration <= 0) return
   const dirigeants = personnesLiees(ctx, societe.id, RELATIONS_DE_DIRECTION)
   if (dirigeants.length === 0) {
@@ -102,7 +106,22 @@ function verserRemuneration(ctx: Contexte, societe: Company, remuneration: numbe
   if (dirigeants.length > 1) {
     warnings.push("Plusieurs dirigeants liés : la rémunération est attribuée au premier pour le routage fiscal simplifié.")
   }
-  revenusDe(ctx, dirigeants[0]).remunerations += remuneration
+  const revenus = revenusDe(ctx, dirigeants[0])
+  revenus.remunerations += remuneration
+  revenus.prelevementsActivites += cotisations
+}
+
+/**
+ * L'impôt sur les sociétés, les cotisations sur dividendes et le bénéfice conservé sont attribués
+ * à parts égales aux personnes reliées à la société, pour mesurer ce que chaque foyer supporte.
+ */
+function attribuerResultatSociete(ctx: Contexte, societe: Company, resultat: { impotSocietes: number; cotisationsSurDividendes: number; resultatConserve: number }) {
+  const associes = personnesLiees(ctx, societe.id, RELATIONS_D_ASSOCIE)
+  for (const associe of associes) {
+    const revenus = revenusDe(ctx, associe)
+    revenus.prelevementsActivites += (resultat.impotSocietes + resultat.cotisationsSurDividendes) / associes.length
+    revenus.resultatConserve += resultat.resultatConserve / associes.length
+  }
 }
 
 /** Les dividendes sont partagés à parts égales entre les personnes reliées à la société. */
@@ -135,7 +154,8 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
   const resultat = societe.legalStatus === "SASU" ? calculerSASU(entrees, ctx.regles) : calculerEURL({ ...entrees, capitalSocial: societe.capitalSocial }, ctx.regles)
   const warnings = [...resultat.warnings]
 
-  verserRemuneration(ctx, societe, resultat.remunerationNette, warnings)
+  verserRemuneration(ctx, societe, resultat.remunerationNette, resultat.cotisationsSociales - resultat.cotisationsSurDividendes, warnings)
+  attribuerResultatSociete(ctx, societe, resultat)
   verserDividendes(ctx, societe, { verses: resultat.dividendesVerses, soumisPS: resultat.dividendesSoumisPS, cotisations: resultat.cotisationsSurDividendes }, warnings)
 
   return {
@@ -166,6 +186,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     const revenus = revenusDe(ctx, exploitant)
     revenus.beneficesImposables += Math.max(0, resultat.revenuNet)
     revenus.beneficesEncaisses += resultat.revenuNet
+    revenus.prelevementsActivites += resultat.cotisationsSociales
   } else {
     warnings.push("Aucune relation « Titulaire » vers une personne : le bénéfice de cette entreprise n'est rattaché à aucun foyer.")
     ctx.nonRattache += resultat.revenuNet
@@ -208,6 +229,7 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
     revenus.beneficesImposables += resultat.revenuImposable
     revenus.versementLiberatoire += resultat.versementLiberatoire
     revenus.beneficesEncaisses += revenuVerse
+    revenus.prelevementsActivites += resultat.cotisationsSociales
   } else {
     warnings.push("Aucune relation « Titulaire » vers une personne : les revenus de cette micro-entreprise ne sont rattachés à aucun foyer.")
     ctx.nonRattache += revenuVerse
@@ -272,7 +294,7 @@ function abattementSalaires(salaires: number, regles: ReglesFiscales["IR"]["abat
 
 /** Additionne les revenus de tous les membres d'un foyer, par traitement fiscal. */
 function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
-  const cumul = { baseBareme: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, encaisse: 0, depenses: 0 }
+  const cumul = { baseBareme: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, encaisse: 0, depenses: 0, prelevementsActivites: 0, resultatConserve: 0 }
   for (const personId of [...foyer.declarantIds, ...foyer.enfantIds]) {
     const revenus = revenusDe(ctx, personId)
     const salaires = total(ctx, personId, "salary", "are") + revenus.remunerations
@@ -284,6 +306,8 @@ function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
     cumul.versementLiberatoire += revenus.versementLiberatoire
     cumul.encaisse += total(ctx, personId, "salary", "are", "other_taxable_income") + encaisse(revenus)
     cumul.depenses += total(ctx, personId, "expense")
+    cumul.prelevementsActivites += revenus.prelevementsActivites
+    cumul.resultatConserve += revenus.resultatConserve
   }
   return cumul
 }
@@ -316,6 +340,10 @@ function calculerFoyer(ctx: Contexte, foyer: Foyer): FoyerFiscalResult {
     prelevementsSociaux: Math.round(prelevementsSociaux),
     optionDividendes: revenus.dividendes > 0 ? optionDividendes : null,
     netApresImpots: Math.round(revenus.encaisse - impotSurLeRevenu - prelevementsSociaux),
+    // Tout ce que le foyer produit se retrouve soit encaissé, soit prélevé en amont, soit conservé en société.
+    revenusAvantPrelevements: Math.round(revenus.encaisse + revenus.prelevementsActivites + revenus.resultatConserve),
+    totalPrelevements: Math.round(revenus.prelevementsActivites + impotSurLeRevenu + prelevementsSociaux),
+    resultatConserve: Math.round(revenus.resultatConserve),
     depenses: Math.round(revenus.depenses),
     warnings: foyer.warnings
   }

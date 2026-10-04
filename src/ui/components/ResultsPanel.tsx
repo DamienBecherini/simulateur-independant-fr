@@ -83,6 +83,11 @@ function BilanCard({ report }: { report: SimulationReport }) {
         </div>
       </dl>
       <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les salaires sont saisis nets : leurs cotisations ne sont pas comptées ici.</p>
+      {bilan.resultatConserve > 0 ? (
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          Le bénéfice conservé dans une société a payé l'impôt sur les sociétés, mais pas encore l'impôt personnel : il sera imposé le jour où il sera versé (dividendes, vente ou liquidation). Le taux de prélèvement affiché est donc provisoire pour cette part, et un scénario qui conserve davantage paraît moins taxé sans que cet argent soit disponible.
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -150,7 +155,23 @@ function PersonIncome({ person, showName }: { person: PersonResult; showName: bo
   )
 }
 
-function FoyerCard({ foyer, persons }: { foyer: FoyerFiscalResult; persons: PersonResult[] }) {
+/** Taux de prélèvement et part nette d'un foyer : affichés quand la simulation compte plusieurs foyers. */
+function FoyerRates({ foyer }: { foyer: FoyerFiscalResult }) {
+  const base = foyer.revenusAvantPrelevements
+  if (base <= 0) return null
+  const percent = (amount: number) => (amount / base).toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 })
+
+  return (
+    <dl className="mt-3 space-y-1 border-t border-slate-100 pt-2 text-sm dark:border-slate-800">
+      <Row label="Revenus avant prélèvements" value={formatMoney(base)} />
+      <Row label="Prélèvements du foyer" value={formatMoney(foyer.totalPrelevements)} hint={percent(foyer.totalPrelevements)} />
+      {foyer.resultatConserve !== 0 ? <Row label="Sa part conservée en société" value={formatMoney(foyer.resultatConserve)} hint={percent(foyer.resultatConserve)} /> : null}
+      <Row label="Net dans la poche" value={formatMoney(foyer.netApresImpots)} hint={percent(foyer.netApresImpots)} strong />
+    </dl>
+  )
+}
+
+function FoyerCard({ foyer, persons, showRates }: { foyer: FoyerFiscalResult; persons: PersonResult[]; showRates: boolean }) {
   const members = foyer.personIds.map(id => persons.find(p => p.entityId === id)).filter((p): p is PersonResult => p !== undefined)
   const parts = foyer.totalParts.toLocaleString("fr-FR")
 
@@ -168,6 +189,7 @@ function FoyerCard({ foyer, persons }: { foyer: FoyerFiscalResult; persons: Pers
         <Row label="Net après impôts" value={formatMoney(foyer.netApresImpots)} strong />
         {foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={formatMoney(foyer.netApresImpots - foyer.depenses)} hint={`${formatMoney(foyer.depenses)} de dépenses`} /> : null}
       </dl>
+      {showRates ? <FoyerRates foyer={foyer} /> : null}
       {foyer.optionDividendes ? <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{dividendOptionLabels[foyer.optionDividendes]}</p> : null}
     </Card>
   )
@@ -209,9 +231,10 @@ export function ResultsPanel({ report, error }: ResultsPanelProps) {
       {report && report.foyers.length > 0 ? (
         <div className="space-y-3">
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
+          {report.foyers.length > 1 ? <p className="text-xs text-slate-500 dark:text-slate-400">Dans une société à plusieurs associés, l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les foyers, comme les dividendes.</p> : null}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.foyers.map(foyer => (
-              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} />
+              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} />
             ))}
           </div>
         </div>
