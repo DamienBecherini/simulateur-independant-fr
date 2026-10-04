@@ -1,27 +1,16 @@
 // src/lib/graph-logic.ts
 import type { Entity, Relationship } from "@/types"
 
+type Activite = Exclude<Entity, { type: "person" }>
+
 /**
- * Détermine les types de relations théoriquement possibles entre deux types d'entités.
- * @param type1 - Le type de la première entité.
- * @param type2 - Le type de la deuxième entité.
- * @returns Un tableau de types de relations possibles.
+ * Relations possibles entre une personne et une activité, selon le statut de celle-ci :
+ * une SASU a un président, une EURL un gérant, et une entreprise individuelle
+ * (micro-entreprise ou EI au réel) un titulaire.
  */
-function getPotentialRelationTypes(type1: Entity["type"], type2: Entity["type"]): Relationship["type"][] {
-  const types = new Set([type1, type2])
-
-  if (types.has("person") && types.has("company")) {
-    // On déclare directement le tableau avec le bon type. TypeScript valide chaque chaîne.
-    return ["Président", "Gérant", "Associé"]
-  }
-  if (types.has("person") && types.has("micro-entreprise")) {
-    return ["Titulaire"]
-  }
-  if (types.has("person") && !types.has("company") && !types.has("micro-entreprise") && types.size === 1) {
-    return ["Marié(e)", "PACSé(e)", "Enfant"]
-  }
-
-  return []
+function getPersonToActivityRelationTypes(activite: Activite): Relationship["type"][] {
+  if (activite.type === "micro-entreprise" || activite.legalStatus === "EI") return ["Titulaire"]
+  return activite.legalStatus === "SASU" ? ["Président", "Associé"] : ["Gérant", "Associé"]
 }
 
 /**
@@ -33,15 +22,20 @@ function getPotentialRelationTypes(type1: Entity["type"], type2: Entity["type"])
  * @returns Un tableau de types de relations valides et non-existantes.
  */
 export function getAvailableRelationships(sourceEntity: Entity, targetEntity: Entity, allRelationships: Relationship[]): Relationship["type"][] {
-  // 1. `potentialTypes` est maintenant directement du bon type : Relationship['type'][]
-  const potentialTypes = getPotentialRelationTypes(sourceEntity.type, targetEntity.type)
-  if (potentialTypes.length === 0) {
-    return []
+  // Une entité ne peut pas être reliée à elle-même.
+  if (sourceEntity.id === targetEntity.id) return []
+
+  // Les relations qui existent déjà entre ces deux entités, quel que soit le sens.
+  const existingTypes = new Set(allRelationships.filter(r => (r.fromId === sourceEntity.id && r.toId === targetEntity.id) || (r.fromId === targetEntity.id && r.toId === sourceEntity.id)).map(r => r.type))
+
+  if (sourceEntity.type === "person" && targetEntity.type === "person") {
+    // Deux personnes n'ont qu'un seul lien familial : on ne cumule pas mariage, PACS et filiation.
+    return existingTypes.size > 0 ? [] : ["Marié(e)", "PACSé(e)", "Enfant"]
   }
 
-  // 2. Trouver toutes les relations qui existent déjà entre ces deux entités, quel que soit le sens
-  const existingRelationshipTypes = new Set(allRelationships.filter(r => (r.fromId === sourceEntity.id && r.toId === targetEntity.id) || (r.fromId === targetEntity.id && r.toId === sourceEntity.id)).map(r => r.type))
+  // Aucune relation entre deux activités.
+  if (sourceEntity.type !== "person" && targetEntity.type !== "person") return []
 
-  // 3. Le filtrage est maintenant sûr car les deux côtés de la comparaison sont du même type.
-  return potentialTypes.filter(type => !existingRelationshipTypes.has(type))
+  const activite = sourceEntity.type === "person" ? targetEntity : sourceEntity
+  return getPersonToActivityRelationTypes(activite as Activite).filter(type => !existingTypes.has(type))
 }
