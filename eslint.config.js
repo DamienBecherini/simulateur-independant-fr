@@ -7,7 +7,7 @@ import reactRefresh from "eslint-plugin-react-refresh"
 import tseslint from "typescript-eslint"
 
 export default tseslint.config(
-  { ignores: ["dist", "**/*.d.ts"] },
+  { ignores: ["dist", "dist-react", "dist-electron", "coverage", "reports", ".stryker-tmp", "**/*.d.ts"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -27,6 +27,13 @@ export default tseslint.config(
       "import/resolver": {
         typescript: {}
       }
+    }
+  },
+  {
+    // Garde-fou de complexité cyclomatique sur tout le code applicatif, tests compris.
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      complexity: ["error", { max: 15 }]
     }
   }
 )

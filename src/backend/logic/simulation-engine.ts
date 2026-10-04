@@ -105,6 +105,7 @@ class UnionFind {
   }
 }
 
+// eslint-disable-next-line complexity -- Exception ciblée (18 > 15) : regroupement des foyers à découper lors de la refonte du moteur.
 function buildFoyers(session: SessionState): { personIds: string[]; totalParts: number }[] {
   const persons = session.entities.filter((e): e is Person => e.type === "person")
   const personIds = persons.map(p => p.id)
@@ -153,6 +154,7 @@ function foyerForPerson(foyers: { personIds: string[]; totalParts: number }[], p
   return foyers.find(f => f.personIds.includes(personId))
 }
 
+// eslint-disable-next-line complexity -- Exception ciblée (46 > 15) : orchestrateur historique à découper lors de la refonte du moteur.
 export function runMetaSimulation(session: SessionState): SimulationReport {
   const aggregates = aggregateAnnualFlowsByEntity(session)
   const foyers = buildFoyers(session)
