@@ -22,7 +22,7 @@ const LIBELLES: Record<StatutCompare, string> = {
   "micro-vfl": "Micro + versement libératoire"
 }
 
-type Activite = Company | MicroEntreprise
+export type Activite = Company | MicroEntreprise
 type Nature = "vente" | "services" | "bic" | "bnc" | "charges" | "remuneration" | "dividendes" | "autre"
 
 const NATURE_DES_FLUX: Partial<Record<FinancialFlow["type"], Nature>> = {
@@ -37,7 +37,7 @@ const NATURE_DES_FLUX: Partial<Record<FinancialFlow["type"], Nature>> = {
   dividends_payment: "dividendes"
 }
 
-function estSocieteIS(statut: StatutCompare): statut is "SASU" | "EURL" {
+export function estSocieteIS(statut: StatutCompare): statut is "SASU" | "EURL" {
   return statut === "SASU" || statut === "EURL"
 }
 
@@ -157,7 +157,7 @@ function chiffreAffairesMicro(session: SessionState, activiteId: string) {
   return { caVente: total("ca_micro_vente"), caServicesBic: total("ca_micro_services_bic"), caServicesBnc: total("ca_micro_services_bnc") }
 }
 
-function scenario(statut: StatutCompare, actuel: boolean, simulation: { report: SimulationReport; session: SessionState }, activiteId: string, options: ComparaisonOptions, regles: ReglesFiscales): ScenarioStatut {
+function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation, activiteId: string, options: ComparaisonOptions, regles: ReglesFiscales): ScenarioStatut {
   const { report } = simulation
   const { bilan } = report
   const activite = report.activities.find(a => a.entityId === activiteId)
@@ -180,10 +180,17 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: { report: 
   }
 }
 
-function simulerStatut(session: SessionState, source: Activite, statut: StatutCompare, options: ComparaisonOptions, regles: ReglesFiscales): { report: SimulationReport; session: SessionState } {
+interface Simulation {
+  report: SimulationReport
+  session: SessionState
+  /** Dividendes calculés pour verser tout le bénéfice ; `null` quand ce sont ceux de la grille. */
+  dividendes: number | null
+}
+
+function simulerStatut(session: SessionState, source: Activite, statut: StatutCompare, options: ComparaisonOptions, regles: ReglesFiscales): Simulation {
   if (!estSocieteIS(statut) || !options.distribuerToutLeBenefice) {
     const convertie = sessionConvertie(session, source, statut, options, null)
-    return { report: runMetaSimulation(convertie, regles), session: convertie }
+    return { report: runMetaSimulation(convertie, regles), session: convertie, dividendes: null }
   }
   // Pour tout distribuer, on verse ce qui reste dans la société, et on recommence tant qu'il reste quelque chose :
   // les cotisations dépendent des dividendes (minimum du gérant d'EURL, part au-delà de 10 % du capital).
@@ -197,7 +204,24 @@ function simulerStatut(session: SessionState, source: Activite, statut: StatutCo
     convertie = sessionConvertie(session, source, statut, options, dividendes)
     report = runMetaSimulation(convertie, regles)
   }
-  return { report, session: convertie }
+  return { report, session: convertie, dividendes }
+}
+
+/** Simule l'activité dans un statut, avec les réglages donnés : la colonne du comparateur et les dividendes versés. */
+export function simulerScenario(session: SessionState, source: Activite, statut: StatutCompare, options: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur): { scenario: ScenarioStatut; dividendes: number | null } {
+  const simulation = simulerStatut(session, source, statut, options, regles)
+  return { scenario: scenario(statut, statut === statutActuel(source), simulation, source.id, options, regles), dividendes: simulation.dividendes }
+}
+
+/** Bénéfice après impôt sur les sociétés que la société garde avec cette rémunération, avant tout dividende. */
+export function beneficeAvantDividendes(session: SessionState, source: Activite, statut: "SASU" | "EURL", options: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur): number {
+  const report = runMetaSimulation(sessionConvertie(session, source, statut, options, 0), regles)
+  return report.activities.find(a => a.entityId === source.id)?.resultatConserve ?? 0
+}
+
+/** L'activité à comparer, ou `undefined` si l'identifiant ne désigne aucune activité. */
+export function activiteComparee(session: SessionState, activityId: string): Activite | undefined {
+  return session.entities.find((e): e is Activite => e.id === activityId && e.type !== "person")
 }
 
 /** Pour chaque couple en union libre : le net et l'impôt actuels, puis ceux d'une imposition commune (mariage ou PACS). */
@@ -223,7 +247,7 @@ export function comparerStatuts(session: SessionState, options: ComparaisonOptio
   const reportActuel = runMetaSimulation(session, regles)
   const couples = comparerCouples(session, regles, reportActuel)
 
-  const source = session.entities.find((e): e is Activite => e.id === options.activityId && e.type !== "person")
+  const source = activiteComparee(session, options.activityId)
   if (!source) {
     return { scenarios: [], meilleur: null, couples, warnings: ["Choisissez une activité à comparer."] }
   }

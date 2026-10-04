@@ -1,0 +1,29 @@
+// src/backend/logic/references/optimisation-remuneration.reference.test.ts
+
+import { expect, it } from "vitest"
+import { optimiserRemuneration } from "../optimisation-remuneration.js"
+import { casDeReference } from "../testing/cas-de-reference.js"
+import { personne, relation, session, societe } from "../testing/session-de-test.js"
+
+/*
+ * Cas de référence 2026 : arbitrage rémunération / dividendes avec les règles réelles.
+ * Seuil de 4 trimestres d'un président de SASU (voir protection-sociale.reference.test.ts) : 7 212 € bruts, soit
+ * 7 212 x 78 % = 5 625,4 € nets ; 5 600 € nets en valident 3, et la première centaine qui en valide 4 est 5 700 €.
+ */
+
+const options = { activityId: "s1", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+
+casDeReference("Arbitrage rémunération / dividendes", () => {
+  it("président de SASU : 4 trimestres de retraite à partir de 5 700 € nets de rémunération", () => {
+    const s = session([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 80000]])
+    const { points } = optimiserRemuneration(s, options, "SASU")
+
+    expect(points.find(p => p.remunerationNette === 5600)?.trimestres).toBe(3)
+    expect(points.find(p => p.trimestres >= 4)?.remunerationNette).toBe(5700)
+  })
+
+  it("président de SASU : sans rémunération, aucun trimestre de retraite", () => {
+    const s = session([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 80000]])
+    expect(optimiserRemuneration(s, options, "SASU").points[0]).toMatchObject({ remunerationNette: 0, trimestres: 0 })
+  })
+})

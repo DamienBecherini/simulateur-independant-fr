@@ -353,6 +353,35 @@ export interface ComparaisonResult {
   warnings: string[]
 }
 
+/** Sociétés à l'impôt sur les sociétés, où l'on arbitre entre rémunération et dividendes. */
+export type StatutSociete = "SASU" | "EURL"
+
+/** Résultat de toute la simulation pour une rémunération donnée, le reste du bénéfice étant versé en dividendes. */
+export interface PointRemuneration {
+  remunerationNette: number
+  dividendes: number
+  netApresImpots: number
+  cotisationsSociales: number
+  impotSocietes: number
+  impotSurLeRevenu: number
+  prelevementsSociaux: number
+  /** Trimestres de retraite validés par le dirigeant (4 au maximum). */
+  trimestres: number
+}
+
+export interface OptimisationRemuneration {
+  statut: StatutSociete
+  /** Rémunération nette la plus haute que la société peut verser sans devenir déficitaire. */
+  remunerationMaximale: number
+  /** Points de la courbe, par rémunération croissante. */
+  points: PointRemuneration[]
+  /** Rémunération au meilleur net du foyer. */
+  meilleur: PointRemuneration | null
+  /** Meilleur net parmi les rémunérations qui valident 4 trimestres de retraite ; `null` si aucune n'y parvient. */
+  meilleurAvecRetraite: PointRemuneration | null
+  warnings: string[]
+}
+
 export interface SanitizationReport {
   entitiesRemoved: number
   relationshipsRemoved: number
