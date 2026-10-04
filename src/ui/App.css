@@ -100,4 +100,13 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Curseur main sur tout ce qui se clique : la remise à zéro de Tailwind laisse le curseur par défaut sur les
+     boutons. Les classes utilitaires (cursor-grab des poignées, par exemple) restent prioritaires sur ce calque. */
+  :is(button, [role="button"], [role="switch"], [role="combobox"], [role="option"], [role="menuitem"], [role="tab"], select, summary, a[href], input:is([type="range"], [type="checkbox"], [type="radio"], [type="color"]), label:has(input:is([type="checkbox"], [type="radio"]), [role="switch"])) {
+    cursor: pointer;
+  }
+  :is(button, [role="button"], [role="switch"], [role="combobox"], [role="option"], [role="menuitem"], [role="tab"], select, summary, input):is([disabled], [aria-disabled="true"], [data-disabled]) {
+    cursor: not-allowed;
+  }
 }

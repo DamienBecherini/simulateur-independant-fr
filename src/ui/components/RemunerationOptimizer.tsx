@@ -176,7 +176,7 @@ function Courbe({ resultat, remunerationActuelle }: CourbeProps) {
           {meilleurAvecRetraite && meilleurAvecRetraite !== meilleur ? <Repere point={meilleurAvecRetraite} x={x} y={y} classe="fill-violet-600 dark:fill-violet-500" libelle="4 trimestres" largeur={largeur} /> : null}
           {meilleur ? <Repere point={meilleur} x={x} y={y} classe="fill-emerald-600" libelle="Meilleur net" largeur={largeur} /> : null}
 
-          <rect x={MARGES.gauche} y={MARGES.haut} width={Math.max(0, largeur - MARGES.gauche - MARGES.droite)} height={HAUTEUR - MARGES.haut - MARGES.bas} fill="transparent" onPointerMove={surPointeur} onPointerLeave={() => setSurvol(null)} />
+          <rect x={MARGES.gauche} y={MARGES.haut} width={Math.max(0, largeur - MARGES.gauche - MARGES.droite)} height={HAUTEUR - MARGES.haut - MARGES.bas} fill="transparent" className="cursor-crosshair" onPointerMove={surPointeur} onPointerLeave={() => setSurvol(null)} />
         </svg>
       </div>
       {pointSurvole ? <InfoBulle point={pointSurvole} gauche={x(pointSurvole.remunerationNette)} largeur={largeur} /> : null}
