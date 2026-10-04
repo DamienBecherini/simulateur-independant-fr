@@ -2,8 +2,9 @@
 
 import React, { useState, useMemo, Dispatch, SetStateAction } from "react"
 import type { Entity, MonthlyGridData, FinancialFlow, UserPreferences } from "@/types"
-import { EditFlowModal } from "./EditFlowModal"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
+import type { FlowChanges } from "./FlowItem"
+import type { NewFlowValues } from "./NewFlowItem"
 import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
 import { isExpenseFlowType } from "@/lib/flow-constants"
@@ -28,72 +29,51 @@ const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 
 function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap }: MonthlyGridProps) {
   // ===================================================================================
-  // == GESTION DE L'ÉTAT DES MODALES (INCHANGÉ)
+  // == ÉTAT DE LA FENÊTRE DES FLUX
   // ===================================================================================
-  const [isListModalOpen, setListModalOpen] = useState(false)
-  const [isEditModalOpen, setEditModalOpen] = useState(false)
-  const [context, setContext] = useState<{ entityId: string; monthIndex: number } | null>(null)
-  const [flowToEdit, setFlowToEdit] = useState<FinancialFlow | null>(null)
+  // Case (entité + mois) dont la fenêtre des flux est ouverte ; `null` quand elle est fermée.
+  const [openCell, setOpenCell] = useState<{ entityId: string; monthIndex: number } | null>(null)
+  const openCellEntity = openCell ? entities.find(e => e.id === openCell.entityId) : undefined
 
   // ===================================================================================
-  // == HANDLERS POUR LES ACTIONS UTILISATEUR (INCHANGÉ)
+  // == HANDLERS POUR LES ACTIONS UTILISATEUR
   // ===================================================================================
-  const openFlowsList = (entityId: string, monthIndex: number) => {
-    setContext({ entityId, monthIndex })
-    setListModalOpen(true)
+  /**
+   * Applique une transformation aux flux du mois ouvert.
+   * Si la transformation renvoie la liste inchangée, les données gardent la même référence :
+   * aucune entrée n'est alors ajoutée à l'historique undo/redo.
+   */
+  const updateOpenMonthFlows = (update: (flows: FinancialFlow[]) => FinancialFlow[]) => {
+    if (!openCell) return
+    const { monthIndex } = openCell
+    setMonthlyData(prevData => {
+      const flows = update(prevData[monthIndex].flows)
+      if (flows === prevData[monthIndex].flows) return prevData
+      return prevData.map((monthData, index) => (index === monthIndex ? { ...monthData, flows } : monthData))
+    })
   }
-  const handleAddFlow = () => {
-    setFlowToEdit(null)
-    setListModalOpen(false)
-    setEditModalOpen(true)
+  const handleCreateFlow = (values: NewFlowValues) => {
+    if (!openCell) return
+    // L'identifiant est généré hors de la fonction de mise à jour, qui doit rester pure.
+    const newFlow: FinancialFlow = { id: `flow-${Date.now()}`, entityId: openCell.entityId, ...values }
+    updateOpenMonthFlows(flows => [...flows, newFlow])
   }
-  const handleEditFlow = (flow: FinancialFlow) => {
-    setFlowToEdit(flow)
-    setListModalOpen(false)
-    setEditModalOpen(true)
+  const handleUpdateFlow = (flowId: string, changes: FlowChanges) => {
+    updateOpenMonthFlows(flows => {
+      const current = flows.find(f => f.id === flowId)
+      if (!current) return flows
+      const updated = { ...current, ...changes }
+      if (updated.type === current.type && updated.label === current.label && updated.amount === current.amount) return flows
+      return flows.map(f => (f.id === flowId ? updated : f))
+    })
   }
   const handleDeleteFlow = (flowId: string) => {
-    if (!context) return
-    const { monthIndex } = context
-    setMonthlyData(prevData =>
-      prevData.map((monthData, index) => {
-        if (index === monthIndex) {
-          return { ...monthData, flows: monthData.flows.filter(f => f.id !== flowId) }
-        }
-        return monthData
-      })
-    )
-  }
-  const handleSaveFlow = (savedFlow: FinancialFlow, isEditing: boolean) => {
-    if (!context) return
-    const { monthIndex } = context
-    setMonthlyData(prevData =>
-      prevData.map((monthData, index) => {
-        if (index === monthIndex) {
-          if (isEditing) {
-            return { ...monthData, flows: monthData.flows.map(f => (f.id === savedFlow.id ? savedFlow : f)) }
-          } else {
-            return { ...monthData, flows: [...monthData.flows, savedFlow] }
-          }
-        }
-        return monthData
-      })
-    )
-    setEditModalOpen(false)
-    setListModalOpen(true)
+    updateOpenMonthFlows(flows => (flows.some(f => f.id === flowId) ? flows.filter(f => f.id !== flowId) : flows))
   }
   const handleReorderFlows = (reorderedFlows: FinancialFlow[]) => {
-    if (!context) return
-    const { monthIndex, entityId } = context
-    setMonthlyData(prevData =>
-      prevData.map((monthData, index) => {
-        if (index === monthIndex) {
-          const otherEntityFlows = monthData.flows.filter(f => f.entityId !== entityId)
-          return { ...monthData, flows: [...otherEntityFlows, ...reorderedFlows] }
-        }
-        return monthData
-      })
-    )
+    if (!openCell) return
+    const { entityId } = openCell
+    updateOpenMonthFlows(flows => [...flows.filter(f => f.entityId !== entityId), ...reorderedFlows])
   }
 
   // ===================================================================================
@@ -234,7 +214,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
 
                   {/* Colonnes 3 à 14 : Les 12 mois */}
                   {monthlyCellData.map((cellData, monthIndex) => (
-                    <div key={monthIndex} className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start" onClick={() => openFlowsList(entity.id, monthIndex)}>
+                    <div key={monthIndex} className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start" onClick={() => setOpenCell({ entityId: entity.id, monthIndex })}>
                       <CellChartDisplay gains={cellData.gains} expenses={cellData.expenses} totalGains={cellData.totalGains} totalExpenses={cellData.totalExpenses} absoluteMaxValue={monthlyScale} flowCount={cellData.flowCount} />
                     </div>
                   ))}
@@ -245,8 +225,19 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         )}
       </div>
 
-      <MonthlyFlowsModal isOpen={isListModalOpen} onClose={() => setListModalOpen(false)} flows={context ? monthlyData[context.monthIndex].flows.filter(f => f.entityId === context.entityId) : []} entity={context ? entities.find(e => e.id === context.entityId) : undefined} monthName={context ? fullMonths[context.monthIndex] : ""} onAdd={handleAddFlow} onEdit={handleEditFlow} onDelete={handleDeleteFlow} onReorder={handleReorderFlows} />
-      <EditFlowModal isOpen={isEditModalOpen} onClose={() => setEditModalOpen(false)} onSave={handleSaveFlow} context={context} flowToEdit={flowToEdit} allEntities={entities} />
+      {openCell && openCellEntity && (
+        <MonthlyFlowsModal
+          key={`${openCell.entityId}-${openCell.monthIndex}`}
+          onClose={() => setOpenCell(null)}
+          flows={monthlyData[openCell.monthIndex].flows.filter(f => f.entityId === openCell.entityId)}
+          entity={openCellEntity}
+          monthName={fullMonths[openCell.monthIndex]}
+          onCreate={handleCreateFlow}
+          onUpdate={handleUpdateFlow}
+          onDelete={handleDeleteFlow}
+          onReorder={handleReorderFlows}
+        />
+      )}
     </>
   )
 }

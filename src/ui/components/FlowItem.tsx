@@ -1,26 +1,40 @@
 // src/ui/components/FlowItem.tsx
 
+import { useState, type KeyboardEvent } from "react"
 import type { FinancialFlow } from "@/types"
-import { flowTypeLabels, isExpenseFlowType } from "@/lib/flow-constants"
 import { Button } from "@/components/ui/button"
-// L'icône 'Edit' n'est plus nécessaire car le bouton est supprimé.
-import { Trash2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { formatAmount, parseAmount } from "@/lib/amount-utils"
+import { flowTypeLabels, isOutgoingFlowType, type FlowType } from "@/lib/flow-constants"
+import { cn } from "@/lib/utils"
+import { GripVertical, Trash2 } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { FlowTypeSelect } from "./FlowTypeSelect"
+
+/** Champs d'un flux modifiables depuis la liste. */
+export type FlowChanges = Partial<Pick<FinancialFlow, "type" | "label" | "amount">>
 
 /**
  * Interface pour les props du composant FlowItem.
- * Ce composant représente une seule ligne de flux dans la modale `MonthlyFlowsModal`.
+ * Ce composant représente une ligne de flux, éditable sur place, dans `MonthlyFlowsModal`.
  */
 interface FlowItemProps {
   flow: FinancialFlow
-  onEdit: (flow: FinancialFlow) => void
+  allowedTypes: ReadonlyArray<FlowType>
+  onUpdate: (flowId: string, changes: FlowChanges) => void
   onDelete: (flowId: string) => void
+  onTypeUsed: (type: FlowType) => void
 }
 
-export function FlowItem({ flow, onEdit, onDelete }: FlowItemProps) {
+export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onTypeUsed }: FlowItemProps) {
   // Hook de la bibliothèque dnd-kit pour rendre l'élément "triable" (sortable).
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: flow.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: flow.id })
+
+  // Saisies en cours : `null` tant que le champ n'est pas modifié, il affiche alors la valeur du flux.
+  // La session n'est écrite qu'à la validation : une seule entrée d'historique par modification, jamais une par frappe.
+  const [labelDraft, setLabelDraft] = useState<string | null>(null)
+  const [amountDraft, setAmountDraft] = useState<string | null>(null)
 
   // Style CSS dynamique pour animer le déplacement de l'élément pendant le glisser-déposer.
   const style = {
@@ -28,46 +42,80 @@ export function FlowItem({ flow, onEdit, onDelete }: FlowItemProps) {
     transition
   }
 
-  // MODIFICATION 1 : Le conteneur principal devient cliquable pour l'édition.
-  // - Ajout de `onClick={() => onEdit(flow)}`
-  // - Ajout de `cursor-pointer` pour indiquer visuellement l'interactivité.
+  // Un flux dont le type n'est plus proposé pour cette entité (ancienne sauvegarde) reste affichable.
+  const typeOptions = allowedTypes.includes(flow.type) ? allowedTypes : [flow.type, ...allowedTypes]
+
+  // Un libellé identique à celui du type est le libellé par défaut : le champ reste vide.
+  const hasDefaultLabel = flow.label === flowTypeLabels[flow.type]
+
+  const handleTypeChange = (type: FlowType) => {
+    if (type === flow.type) return
+    // Le libellé par défaut suit le type ; un libellé personnalisé est conservé.
+    onUpdate(flow.id, hasDefaultLabel ? { type, label: flowTypeLabels[type] } : { type })
+    onTypeUsed(type)
+  }
+
+  const commitLabel = () => {
+    if (labelDraft === null) return
+    setLabelDraft(null)
+    const label = labelDraft.trim() || flowTypeLabels[flow.type]
+    if (label !== flow.label) onUpdate(flow.id, { label })
+  }
+
+  const commitAmount = () => {
+    if (amountDraft === null) return
+    setAmountDraft(null)
+    // Saisie vide ou invalide : l'ancienne valeur est restaurée.
+    const amount = parseAmount(amountDraft)
+    if (amount !== null && amount !== flow.amount) onUpdate(flow.id, { amount })
+  }
+
+  // Entrée valide la saisie en cours, Échap l'annule.
+  const handleKeyDown = (commit: () => void, cancel: () => void) => (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault()
+      commit()
+    } else if (event.key === "Escape") {
+      cancel()
+    }
+  }
+
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center justify-between p-3 rounded-md border bg-slate-50 dark:bg-gray-800 touch-none cursor-pointer hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors" onClick={() => onEdit(flow)}>
-      <div className="flex items-center gap-2 flex-grow min-w-0">
-        {/* Poignée de Drag & Drop : les `listeners` et `attributes` de dnd-kit sont appliqués ici. */}
-        <div {...attributes} {...listeners} className="cursor-grab p-2 -ml-2 text-slate-400">
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-            <path d="M5.5 4.625C5.01421 4.625 4.625 5.01421 4.625 5.5C4.625 5.98579 5.01421 6.375 5.5 6.375C5.98579 6.375 6.375 5.98579 6.375 5.5C6.375 5.01421 5.98579 4.625 5.5 4.625ZM9.5 4.625C9.01421 4.625 8.625 5.01421 8.625 5.5C8.625 5.98579 9.01421 6.375 9.5 6.375C9.98579 6.375 10.375 5.98579 10.375 5.5C10.375 5.01421 9.98579 4.625 9.5 4.625ZM6.375 9.5C6.375 9.01421 5.98579 8.625 5.5 8.625C5.01421 8.625 4.625 9.01421 4.625 9.5C4.625 9.98579 5.01421 10.375 5.5 10.375C5.98579 10.375 6.375 9.98579 6.375 9.5ZM9.5 8.625C9.01421 8.625 8.625 9.01421 8.625 9.5C8.625 9.98579 9.01421 10.375 9.5 10.375C9.98579 10.375 10.375 9.98579 10.375 9.5C10.375 9.01421 9.98579 8.625 9.5 8.625Z" fill="currentColor"></path>
-          </svg>
-        </div>
-        {/* Affiche le libellé personnalisé ou le libellé par défaut du type de flux. */}
-        <div>
-          <p className="font-semibold">{flow.label || flowTypeLabels[flow.type]}</p>
-          <p className="text-sm text-slate-500">{flowTypeLabels[flow.type]}</p>
-        </div>
+    <div ref={setNodeRef} style={style} className={cn("flex items-center gap-2 rounded-md border bg-slate-50 p-2 dark:bg-gray-800", isDragging && "relative z-10 shadow-md")}>
+      {/* Poignée de glisser-déposer, hors de l'ordre de tabulation pour enchaîner type → libellé → montant. */}
+      <div {...attributes} {...listeners} tabIndex={-1} aria-label="Réordonner le flux" className="shrink-0 cursor-grab touch-none text-slate-400">
+        <GripVertical className="h-4 w-4" />
       </div>
 
-      <div className="flex items-center gap-2">
-        {/* Affiche le montant formaté avec un signe + ou - et une couleur appropriée. */}
-        <span className={`font-mono text-lg ${isExpenseFlowType(flow.type) ? "text-red-500" : "text-green-600"}`}>
-          {isExpenseFlowType(flow.type) ? "-" : "+"} {flow.amount.toLocaleString("fr-FR")} €
-        </span>
+      <FlowTypeSelect value={flow.type} options={typeOptions} onChange={handleTypeChange} />
 
-        {/* MODIFICATION 2 : Le bouton d'édition est supprimé. */}
+      <Input
+        className="min-w-0 flex-1 bg-background"
+        aria-label="Libellé"
+        placeholder="Libellé (optionnel)"
+        value={labelDraft ?? (hasDefaultLabel ? "" : flow.label)}
+        data-editing={labelDraft !== null}
+        onChange={e => setLabelDraft(e.target.value)}
+        onBlur={commitLabel}
+        onKeyDown={handleKeyDown(commitLabel, () => setLabelDraft(null))}
+      />
 
-        {/* MODIFICATION 3 : Le bouton de suppression est plus grand et stoppe la propagation du clic. */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 text-destructive hover:text-destructive" // Zone de clic plus grande
-          onClick={e => {
-            e.stopPropagation() // Empêche le clic de remonter au conteneur parent
-            onDelete(flow.id)
-          }}
-        >
-          <Trash2 className="h-5 w-5" />
-        </Button>
-      </div>
+      <Input
+        className={cn("w-28 shrink-0 bg-background text-right font-mono", isOutgoingFlowType(flow.type) ? "text-red-600 dark:text-red-400" : "text-green-700 dark:text-green-400")}
+        aria-label="Montant"
+        inputMode="decimal"
+        value={amountDraft ?? formatAmount(flow.amount)}
+        data-editing={amountDraft !== null}
+        onFocus={e => e.target.select()}
+        onChange={e => setAmountDraft(e.target.value)}
+        onBlur={commitAmount}
+        onKeyDown={handleKeyDown(commitAmount, () => setAmountDraft(null))}
+      />
+      <span className="text-sm text-slate-500">€</span>
+
+      <Button variant="ghost" size="icon" tabIndex={-1} className="shrink-0 text-destructive hover:text-destructive" aria-label="Supprimer le flux" onClick={() => onDelete(flow.id)}>
+        <Trash2 />
+      </Button>
     </div>
   )
 }

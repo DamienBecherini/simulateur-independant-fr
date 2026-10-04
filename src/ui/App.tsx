@@ -190,10 +190,11 @@ function App() {
           entities={currentSession.entities}
           monthlyData={currentSession.monthlyData}
           setMonthlyData={newMonthlyDataOrUpdater => {
-            setCurrentSession(prev => ({
-              ...prev,
-              monthlyData: typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(prev.monthlyData) : newMonthlyDataOrUpdater
-            }))
+            setCurrentSession(prev => {
+              const monthlyData = typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(prev.monthlyData) : newMonthlyDataOrUpdater
+              // Données inchangées : on renvoie la session telle quelle, sans créer d'entrée d'historique.
+              return monthlyData === prev.monthlyData ? prev : { ...prev, monthlyData }
+            })
           }}
           preferences={userPreferences}
           flowTypeToNumberMap={flowTypeToNumberMap}
