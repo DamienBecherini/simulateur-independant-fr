@@ -140,9 +140,11 @@ describe("EntityItem : relations", () => {
     await user.click(screen.getByRole("combobox", { name: "Avec qui" }))
     await user.click(await screen.findByRole("option", { name: "Ma SASU" }))
     expect(onAddRelationship).not.toHaveBeenCalled()
+    // La relation « Salarié » est proposée avec ses conditions.
+    expect(screen.getByText(/lien de subordination réel/)).toBeInTheDocument()
 
     await user.click(screen.getByRole("combobox", { name: "Type de relation" }))
-    expect(screen.getAllByRole("option").map(option => option.textContent)).toEqual(["Président", "Associé"])
+    expect(screen.getAllByRole("option").map(option => option.textContent)).toEqual(["Président", "Associé", "Salarié"])
     await user.click(screen.getByRole("option", { name: "Président" }))
 
     expect(onAddRelationship).toHaveBeenCalledWith(expect.objectContaining({ fromId: alice.id, toId: sasu.id, type: "Président" }))

@@ -97,7 +97,54 @@ casDeReference("Valeurs officielles utilisées par les cas de référence", () =
     expect(reglesEnVigueur.TNS.csgCrds).toMatchObject({ csgDeductible: 0.068, csgNonDeductible: 0.024, crds: 0.005 })
   })
 
-  it("approximation assumée du modèle : ratio du président de SASU", () => {
-    expect(reglesEnVigueur.SASU.ratioCoutTotalSurNet).toBe(1.8)
+  it("régime général : cotisations salariales et patronales 2026 (urssaf.fr, taux-cotisations-secteur-prive ; agirc-arrco.fr)", () => {
+    const { regimeGeneral } = reglesEnVigueur
+    const taux = (tranches: { jusquA: number | null; taux: number }[]) => tranches.map(t => [t.jusquA, t.taux])
+    const lignes = Object.fromEntries(Object.entries(regimeGeneral.cotisations).map(([nom, c]) => [nom, { salariale: taux(c.salariale), patronale: taux(c.patronale) }]))
+
+    expect(regimeGeneral.plafondSecuriteSociale).toBe(reglesEnVigueur.TNS.plafondSecuriteSociale)
+    expect(lignes).toEqual({
+      maladie: { salariale: [], patronale: [[null, 0.13]] },
+      vieillessePlafonnee: { salariale: [[1, 0.069]], patronale: [[1, 0.0855]] },
+      vieillesseDeplafonnee: { salariale: [[null, 0.004]], patronale: [[null, 0.0211]] },
+      allocationsFamiliales: { salariale: [], patronale: [[null, 0.0525]] },
+      accidentsDuTravail: { salariale: [], patronale: [[null, 0.0064]] },
+      contributionSolidariteAutonomie: { salariale: [], patronale: [[null, 0.003]] },
+      fnal: { salariale: [], patronale: [[1, 0.001]] },
+      retraiteComplementaire: {
+        salariale: [
+          [1, 0.0315],
+          [8, 0.0864]
+        ],
+        patronale: [
+          [1, 0.0472],
+          [8, 0.1295]
+        ]
+      },
+      contributionEquilibreGeneral: {
+        salariale: [
+          [1, 0.0086],
+          [8, 0.0108]
+        ],
+        patronale: [
+          [1, 0.0129],
+          [8, 0.0162]
+        ]
+      },
+      contributionEquilibreTechnique: { salariale: [[8, 0.0014]], patronale: [[8, 0.0021]] },
+      assuranceChomage: { salariale: [], patronale: [[4, 0.04]] },
+      ags: { salariale: [], patronale: [[4, 0.0025]] },
+      dialogueSocial: { salariale: [], patronale: [[null, 0.00016]] },
+      formationProfessionnelle: { salariale: [], patronale: [[null, 0.0055]] },
+      taxeApprentissage: { salariale: [], patronale: [[null, 0.0068]] }
+    })
+    // Ni assurance chômage, ni AGS, ni dialogue social pour le président ; CET seulement au-delà du plafond.
+    expect(Object.entries(regimeGeneral.cotisations).filter(([, c]) => c.salariesSeulement).map(([nom]) => nom)).toEqual(["assuranceChomage", "ags", "dialogueSocial"])
+    expect(regimeGeneral.cotisations.contributionEquilibreTechnique.auDelaDuPlafondSeulement).toBe(true)
+    expect(regimeGeneral.csgCrds).toMatchObject({ assiette: [{ jusquA: 4, taux: 0.9825 }, { jusquA: null, taux: 1 }], csgDeductible: 0.068, csgNonDeductible: 0.024, crds: 0.005 })
+  })
+
+  it("réduction générale dégressive unique 2026 (article D241-7 du CSS ; SMIC horaire de 12,02 € x 1 820 heures)", () => {
+    expect(reglesEnVigueur.regimeGeneral.reductionGenerale).toMatchObject({ smicAnnuel: 21876.4, tMin: 0.02, tDelta: 0.3781, puissance: 1.75, plafondEnSmic: 3 })
   })
 })

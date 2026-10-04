@@ -45,21 +45,21 @@ describe("getAvailableRelationships", () => {
       expect(getAvailableRelationships(personne("p1"), personne("p2"), [])).toEqual(["Marié(e)", "PACSé(e)", "En couple", "Enfant"])
     })
 
-    it("propose un président et des associés pour une SASU", () => {
-      expect(getAvailableRelationships(personne("p1"), societe("c1", "SASU"), [])).toEqual(["Président", "Associé"])
+    it("propose un président, des associés et des salariés pour une SASU", () => {
+      expect(getAvailableRelationships(personne("p1"), societe("c1", "SASU"), [])).toEqual(["Président", "Associé", "Salarié"])
     })
 
-    it("propose un gérant et des associés pour une EURL", () => {
-      expect(getAvailableRelationships(personne("p1"), societe("c1", "EURL"), [])).toEqual(["Gérant", "Associé"])
+    it("propose un gérant, des associés et des salariés pour une EURL", () => {
+      expect(getAvailableRelationships(personne("p1"), societe("c1", "EURL"), [])).toEqual(["Gérant", "Associé", "Salarié"])
     })
 
-    it("propose un titulaire pour une entreprise individuelle, au réel ou en micro", () => {
-      expect(getAvailableRelationships(personne("p1"), societe("c1", "EI"), [])).toEqual(["Titulaire"])
+    it("propose un titulaire pour une entreprise individuelle, et des salariés au réel seulement", () => {
+      expect(getAvailableRelationships(personne("p1"), societe("c1", "EI"), [])).toEqual(["Titulaire", "Salarié"])
       expect(getAvailableRelationships(personne("p1"), micro("m1"), [])).toEqual(["Titulaire"])
     })
 
     it("propose les mêmes relations quand l'activité est la source", () => {
-      expect(getAvailableRelationships(societe("c1", "EURL"), personne("p1"), [])).toEqual(["Gérant", "Associé"])
+      expect(getAvailableRelationships(societe("c1", "EURL"), personne("p1"), [])).toEqual(["Gérant", "Associé", "Salarié"])
       expect(getAvailableRelationships(micro("m1"), personne("p1"), [])).toEqual(["Titulaire"])
     })
 
@@ -85,13 +85,20 @@ describe("getAvailableRelationships", () => {
     it("retire une relation créée dans l'autre sens", () => {
       const existantes = [relation("c1", "p1", "Associé")]
 
-      expect(getAvailableRelationships(personne("p1"), societe("c1"), existantes)).toEqual(["Président"])
+      expect(getAvailableRelationships(personne("p1"), societe("c1"), existantes)).toEqual(["Président", "Salarié"])
     })
 
     it("ne propose plus rien quand toutes les relations existent", () => {
       const existantes = [relation("p1", "c1", "Président"), relation("p1", "c1", "Associé")]
 
       expect(getAvailableRelationships(personne("p1"), societe("c1"), existantes)).toEqual([])
+    })
+
+    it("ne propose pas d'être salarié de l'activité qu'on dirige, ni de diriger celle dont on est salarié", () => {
+      expect(getAvailableRelationships(personne("p1"), societe("c1", "EI"), [relation("p1", "c1", "Titulaire")])).toEqual([])
+      expect(getAvailableRelationships(personne("p1"), societe("c1", "EURL"), [relation("c1", "p1", "Gérant")])).toEqual(["Associé"])
+      expect(getAvailableRelationships(personne("p1"), societe("c1"), [relation("p1", "c1", "Salarié")])).toEqual(["Associé"])
+      expect(getAvailableRelationships(personne("p1"), societe("c1", "EI"), [relation("p1", "c1", "Salarié")])).toEqual([])
     })
 
     it("n'autorise qu'un seul lien familial entre deux personnes, quel que soit son sens", () => {
@@ -102,13 +109,13 @@ describe("getAvailableRelationships", () => {
     it("ignore les relations qui concernent d'autres entités", () => {
       const existantes = [relation("p1", "c2", "Président"), relation("p2", "c1", "Président"), relation("p2", "c2", "Associé")]
 
-      expect(getAvailableRelationships(personne("p1"), societe("c1"), existantes)).toEqual(["Président", "Associé"])
+      expect(getAvailableRelationships(personne("p1"), societe("c1"), existantes)).toEqual(["Président", "Associé", "Salarié"])
     })
 
     it("ignore une relation qui ne partage qu'une extrémité dans le sens inverse", () => {
       const existantes = [relation("c1", "p2", "Président"), relation("c2", "p1", "Associé")]
 
-      expect(getAvailableRelationships(personne("p1"), societe("c1"), existantes)).toEqual(["Président", "Associé"])
+      expect(getAvailableRelationships(personne("p1"), societe("c1"), existantes)).toEqual(["Président", "Associé", "Salarié"])
     })
   })
 })

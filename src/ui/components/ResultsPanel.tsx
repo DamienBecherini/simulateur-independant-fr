@@ -1,6 +1,6 @@
 // src/ui/components/ResultsPanel.tsx
 
-import type { ActivityResult, FoyerFiscalResult, PersonResult, SimulationReport, VersementLiberatoireInfo } from "@/types"
+import type { ActivityResult, FoyerFiscalResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
 
@@ -79,7 +79,7 @@ function BilanCard({ report }: { report: SimulationReport }) {
           )}
         </dl>
       </div>
-      <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les cotisations d'un salaire ne sont comptées que si son brut est saisi, et seulement pour leur part salariale.</p>
+      <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les cotisations d'un salaire ne sont comptées que si son brut est saisi, et seulement pour leur part salariale, sauf pour un salarié d'une activité de la simulation : ses cotisations patronales sont alors comptées avec celles de l'activité.</p>
       {bilan.resultatConserve > 0 ? (
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           Le bénéfice conservé dans une société a payé l'impôt sur les sociétés, mais pas encore l'impôt personnel : il sera imposé le jour où il sera versé (dividendes, vente ou liquidation). Le taux de prélèvement affiché est donc provisoire pour cette part, et un scénario qui conserve davantage paraît moins taxé sans que cet argent soit disponible.
@@ -211,6 +211,13 @@ function VersementLiberatoireNote({ info }: { info: VersementLiberatoireInfo }) 
   )
 }
 
+/** Coût employeur des salariés d'une activité : salaires bruts, plus cotisations patronales, moins la réduction générale. */
+function EmployerCost({ salaries }: { salaries: SalarieDeLActivite[] }) {
+  const sum = (value: (salarie: SalarieDeLActivite) => number) => salaries.reduce((total, salarie) => total + value(salarie), 0)
+  const hint = `${formatMoney(sum(s => s.brut))} bruts + ${formatMoney(sum(s => s.totalPatronal))} de cotisations patronales − ${formatMoney(sum(s => s.reductionGenerale))} de réduction générale`
+  return <Row label={salaries.length > 1 ? `Coût employeur des ${salaries.length} salariés` : "Coût employeur du salarié"} value={formatMoney(sum(s => s.coutEmployeur))} hint={hint} />
+}
+
 function ActivityCard({ activity }: { activity: ActivityResult }) {
   const isMicro = activity.type === "micro-entreprise"
 
@@ -220,6 +227,8 @@ function ActivityCard({ activity }: { activity: ActivityResult }) {
         <Row label="Chiffre d'affaires" value={formatMoney(activity.chiffreAffaires)} />
         {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${formatMoney(activity.charges)}`} /> : null}
         <Row label="Cotisations sociales" value={`− ${formatMoney(activity.cotisationsSociales)}`} />
+        {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={formatMoney(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${formatMoney(activity.cotisationsPresident.brut)} bruts`} /> : null}
+        {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} /> : null}
         {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(activity.impotSocietes)}`} /> : null}
         {activity.resultatConserve !== 0 ? <Row label={activity.resultatConserve > 0 ? "Conservé dans la société" : "Déficit de la société"} value={formatMoney(activity.resultatConserve)} /> : null}
         <Row label="Versé avant impôt sur le revenu" value={formatMoney(activity.revenuVerse)} hint={shareOfRevenue(activity)} strong />

@@ -50,7 +50,8 @@ export const RelationshipSchema = z.object({
   fromId: z.string(),
   toId: z.string(),
   // « En couple » (union libre) est informatif : chaque concubin reste un foyer fiscal distinct.
-  type: z.enum(["Marié(e)", "PACSé(e)", "En couple", "Enfant", "Président", "Gérant", "Associé", "Titulaire"])
+  // « Salarié » va de la personne vers l'activité qui l'emploie : celle-ci supporte le coût employeur de ses salaires.
+  type: z.enum(["Marié(e)", "PACSé(e)", "En couple", "Enfant", "Président", "Gérant", "Associé", "Titulaire", "Salarié"])
 })
 
 export const FinancialFlowSchema = z.object({
@@ -152,7 +153,56 @@ export interface ActivityResult {
   versementLiberatoire?: VersementLiberatoireInfo
   /** EURL et entreprise individuelle au réel : détail des cotisations du travailleur non salarié. */
   cotisationsTNS?: DetailCotisationsTNS
+  /** SASU : détail des cotisations du président, assimilé salarié, sur sa rémunération. */
+  cotisationsPresident?: DetailCotisationsSalarie
+  /** Salariés de l'activité (relation « Salarié ») : leurs salaires bruts sont dans les charges, les cotisations patronales dans les cotisations sociales. */
+  salaries?: SalarieDeLActivite[]
   warnings: string[]
+}
+
+/** Les cotisations du régime général, une par ligne du détail : celles du barème, puis la CSG et la CRDS. */
+export type CotisationSalarie =
+  | "maladie"
+  | "vieillessePlafonnee"
+  | "vieillesseDeplafonnee"
+  | "allocationsFamiliales"
+  | "accidentsDuTravail"
+  | "contributionSolidariteAutonomie"
+  | "fnal"
+  | "retraiteComplementaire"
+  | "contributionEquilibreGeneral"
+  | "contributionEquilibreTechnique"
+  | "assuranceChomage"
+  | "ags"
+  | "dialogueSocial"
+  | "formationProfessionnelle"
+  | "taxeApprentissage"
+  | "csgDeductible"
+  | "csgNonDeductibleEtCrds"
+
+/** Bulletin de paie annuel simplifié d'un président de SASU (assimilé salarié) ou d'un salarié. */
+export interface DetailCotisationsSalarie {
+  /** Le président, assimilé salarié, ne cotise pas à l'assurance chômage et n'a pas droit à la réduction générale. */
+  statut: "president" | "salarie"
+  brut: number
+  /** Brut moins les cotisations salariales, CSG et CRDS comprises. */
+  net: number
+  cotisations: Record<CotisationSalarie, { salariale: number; patronale: number }>
+  /** Cotisations salariales, CSG et CRDS comprises. */
+  totalSalarial: number
+  /** Cotisations patronales, avant la réduction générale. */
+  totalPatronal: number
+  /** Réduction générale dégressive unique des cotisations patronales (salariés seulement). */
+  reductionGenerale: number
+  /** Brut, plus les cotisations patronales, moins la réduction générale : ce que paie l'employeur. */
+  coutEmployeur: number
+  /** CSG non déductible et CRDS : elles s'ajoutent au net pour le revenu imposable. */
+  partNonDeductible: number
+}
+
+/** Un salarié d'une activité de la simulation, avec son bulletin de paie annuel. */
+export interface SalarieDeLActivite extends DetailCotisationsSalarie {
+  personId: string
 }
 
 /** Les cotisations et contributions sociales d'un travailleur non salarié, une par ligne du détail. */

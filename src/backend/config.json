@@ -58,9 +58,123 @@
     "abattementBareme": 0.4,
     "csgDeductible": 0.068
   },
-  "SASU": {
-    "description": "Approximation moyenne du coût total (salaire net + cotisations salariales et patronales) de la rémunération du président, rapporté au net versé. Un vrai bulletin de paie est plus fin.",
-    "ratioCoutTotalSurNet": 1.8
+  "regimeGeneral": {
+    "description": "Cotisations et contributions sociales 2026 du régime général, ligne à ligne, pour le président de SASU (assimilé salarié, sans contrat de travail, affilié comme cadre à la retraite complémentaire) et pour un salarié non cadre d'une activité de la simulation, en métropole, dans une entreprise de moins de 11 salariés. Chaque cotisation a une part salariale et une part patronale, par tranches exprimées en part du plafond annuel de la sécurité sociale (PASS) ; `jusquA` vaut `null` pour une tranche sans limite. Le président ne cotise ni à l'assurance chômage, ni à l'AGS, ni à la contribution au dialogue social, et n'ouvre pas droit à la réduction générale (cotisations marquées `salariesSeulement`). Ne sont pas modélisés : prévoyance et complémentaire santé (obligatoires pour les salariés, facultatives pour un mandataire), APEC (salariés cadres seulement, le salarié est non cadre ici), versement mobilité (dû à partir de 11 salariés), régime d'Alsace-Moselle.",
+    "source": "https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html ; règles du simulateur officiel de l'Urssaf (mon-entreprise.urssaf.fr, paquet modele-social 11.1, règle « dirigeant . assimilé salarié »)",
+    "plafondSecuriteSociale": 48060,
+    "cotisations": {
+      "maladie": {
+        "description": "Maladie-maternité-invalidité-décès : 13 % à la charge de l'employeur sur tout le brut. Depuis le 01/01/2026, le taux réduit de 7 % (« bandeau maladie ») est supprimé, sauf pour quelques exonérations ciblées (Lodeom) : il ne s'applique donc ni au président ni au salarié (LFSS 2025, article 18).",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/maladie-maternite-invalidite.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.13 }]
+      },
+      "vieillessePlafonnee": {
+        "description": "Assurance vieillesse plafonnée : 6,90 % salarié et 8,55 % employeur, dans la limite du PASS.",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/at-vieillesse-csa-dialoguesocial.html",
+        "salariale": [{ "jusquA": 1, "taux": 0.069 }],
+        "patronale": [{ "jusquA": 1, "taux": 0.0855 }]
+      },
+      "vieillesseDeplafonnee": {
+        "description": "Assurance vieillesse déplafonnée : 0,40 % salarié et 2,11 % employeur (2,02 % jusqu'en 2025) sur tout le brut.",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/at-vieillesse-csa-dialoguesocial.html",
+        "salariale": [{ "jusquA": null, "taux": 0.004 }],
+        "patronale": [{ "jusquA": null, "taux": 0.0211 }]
+      },
+      "allocationsFamiliales": {
+        "description": "Allocations familiales : 5,25 % employeur sur tout le brut. Le taux réduit de 3,45 % (« bandeau famille ») est supprimé depuis le 01/01/2026, sauf exonérations ciblées (LFSS 2025, article 18).",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/cotisation-allocation-familiale.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.0525 }]
+      },
+      "accidentsDuTravail": {
+        "description": "Accidents du travail et maladies professionnelles : le taux dépend de l'activité et de l'effectif. Taux retenu : 0,64 %, celui des fonctions support de nature administrative en 2026, proche des taux collectifs des activités de bureau et de conseil (le taux moyen national, toutes activités, est de 2,08 %). À adapter au taux notifié à l'entreprise.",
+        "source": "https://www.legifrance.gouv.fr/jorf/article_jo/JORFARTI000053229010",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.0064 }]
+      },
+      "contributionSolidariteAutonomie": {
+        "description": "Contribution solidarité autonomie : 0,30 % employeur sur tout le brut.",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/at-vieillesse-csa-dialoguesocial.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.003 }]
+      },
+      "fnal": {
+        "description": "Fonds national d'aide au logement : 0,10 % dans la limite du PASS pour une entreprise de moins de 50 salariés.",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/fonds-national-aide-logement.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": 1, "taux": 0.001 }]
+      },
+      "retraiteComplementaire": {
+        "description": "Retraite complémentaire Agirc-Arrco : tranche 1 (jusqu'au PASS) 3,15 % salarié et 4,72 % employeur ; tranche 2 (de 1 à 8 PASS) 8,64 % salarié et 12,95 % employeur.",
+        "source": "https://www.agirc-arrco.fr/mon-entreprise/calculer-et-declarer/calculer-les-cotisations-de-retraite-complementaire/",
+        "salariale": [{ "jusquA": 1, "taux": 0.0315 }, { "jusquA": 8, "taux": 0.0864 }],
+        "patronale": [{ "jusquA": 1, "taux": 0.0472 }, { "jusquA": 8, "taux": 0.1295 }]
+      },
+      "contributionEquilibreGeneral": {
+        "description": "Contribution d'équilibre général (CEG) : tranche 1 0,86 % salarié et 1,29 % employeur ; tranche 2 1,08 % salarié et 1,62 % employeur.",
+        "source": "https://www.agirc-arrco.fr/mon-entreprise/calculer-et-declarer/calculer-les-cotisations-de-retraite-complementaire/",
+        "salariale": [{ "jusquA": 1, "taux": 0.0086 }, { "jusquA": 8, "taux": 0.0108 }],
+        "patronale": [{ "jusquA": 1, "taux": 0.0129 }, { "jusquA": 8, "taux": 0.0162 }]
+      },
+      "contributionEquilibreTechnique": {
+        "description": "Contribution d'équilibre technique (CET) : due seulement si le brut dépasse le PASS, et alors sur tout le brut dans la limite de 8 PASS : 0,14 % salarié et 0,21 % employeur.",
+        "source": "https://www.agirc-arrco.fr/mon-entreprise/calculer-et-declarer/calculer-les-cotisations-de-retraite-complementaire/",
+        "auDelaDuPlafondSeulement": true,
+        "salariale": [{ "jusquA": 8, "taux": 0.0014 }],
+        "patronale": [{ "jusquA": 8, "taux": 0.0021 }]
+      },
+      "assuranceChomage": {
+        "description": "Assurance chômage : 4,00 % employeur dans la limite de 4 PASS. Pas due pour un mandataire social sans contrat de travail.",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/assurance-chomage-ags.html",
+        "salariesSeulement": true,
+        "salariale": [],
+        "patronale": [{ "jusquA": 4, "taux": 0.04 }]
+      },
+      "ags": {
+        "description": "Garantie des salaires (AGS) : 0,25 % employeur dans la limite de 4 PASS. Pas due pour un mandataire social sans contrat de travail.",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/assurance-chomage-ags.html",
+        "salariesSeulement": true,
+        "salariale": [],
+        "patronale": [{ "jusquA": 4, "taux": 0.0025 }]
+      },
+      "dialogueSocial": {
+        "description": "Contribution au dialogue social : 0,016 % employeur sur tout le brut, pour les salariés seulement (le simulateur de l'Urssaf ne l'applique pas au dirigeant assimilé salarié).",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/at-vieillesse-csa-dialoguesocial.html",
+        "salariesSeulement": true,
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.00016 }]
+      },
+      "formationProfessionnelle": {
+        "description": "Contribution à la formation professionnelle : 0,55 % du brut pour une entreprise de moins de 11 salariés, rémunération du président comprise.",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/formation-professionnelle.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.0055 }]
+      },
+      "taxeApprentissage": {
+        "description": "Taxe d'apprentissage : 0,59 % (part principale) et 0,09 % (solde), soit 0,68 % du brut, rémunération du président comprise.",
+        "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/taxe-apprentissage-csa.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.0068 }]
+      }
+    },
+    "csgCrds": {
+      "description": "CSG de 9,2 %, dont 6,8 points déductibles du revenu imposable, et CRDS de 0,5 %, non déductible, à la charge du salarié, sur 98,25 % du brut dans la limite de 4 PASS et sur tout le brut au-delà. La CSG non déductible et la CRDS s'ajoutent au net pour le revenu imposable.",
+      "source": "https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/csg-crds.html",
+      "assiette": [{ "jusquA": 4, "taux": 0.9825 }, { "jusquA": null, "taux": 1 }],
+      "csgDeductible": 0.068,
+      "csgNonDeductible": 0.024,
+      "crds": 0.005
+    },
+    "reductionGenerale": {
+      "description": "Réduction générale dégressive unique (RGDU) des cotisations patronales, depuis le 01/01/2026, pour les salariés seulement (pas pour un mandataire sans contrat de travail) : coefficient C = Tmin + Tdelta x (1/2 x (3 x SMIC annuel / brut annuel - 1))^P, arrondi à 4 décimales et plafonné à Tmin + Tdelta (0,3981), appliqué au brut annuel s'il est inférieur à 3 SMIC. Tmin = 0,02, Tdelta = 0,3781 (entreprise de moins de 50 salariés, FNAL à 0,10 %), P = 1,75. SMIC annuel : 1 820 heures au SMIC horaire du 01/01/2026 (12,02 €), gelé pour toute l'année 2026 par le décret 2026-509 du 12 juin 2026 malgré la revalorisation de juin. Salarié supposé à temps plein toute l'année.",
+      "source": "https://www.urssaf.fr/accueil/employeur/beneficier-exonerations/reduction-generale-cotisation.html ; article D241-7 du code de la sécurité sociale (décret 2025-887)",
+      "smicAnnuel": 21876.4,
+      "tMin": 0.02,
+      "tDelta": 0.3781,
+      "puissance": 1.75,
+      "plafondEnSmic": 3
+    }
   },
   "TNS": {
     "description": "Cotisations et contributions sociales 2026 d'un travailleur non salarié (gérant majoritaire d'EURL, entrepreneur individuel au réel) artisan, commerçant ou profession libérale non réglementée, en métropole, après la réforme de l'assiette (LFSS 2024, article 18 ; décret 2024-688). Toutes sont calculées sur une assiette unique : le revenu professionnel avant cotisations, diminué d'un abattement forfaitaire. Les seuils sont exprimés en part du plafond annuel de la sécurité sociale (PASS), les assiettes minimales en euros.",
@@ -139,7 +253,6 @@
   "protectionSociale": {
     "description": "Validation des trimestres de retraite en 2026 : 150 heures au SMIC horaire (12,02 €) par trimestre, 4 au maximum. En micro-entreprise, part des cotisations affectée à la retraite de base, ramenée au taux de 17,87 %. Sources : https://www.lassuranceretraite.fr/portail-info/home/actif/ma-carriere/cotisation-carriere.html et https://entreprendre.service-public.gouv.fr/vosdroits/F23369",
     "revenuParTrimestre": 1803,
-    "tauxNetSurBrutSalarie": 0.78,
     "tauxRetraiteDeBase": 0.1787,
     "partRetraiteDeBaseMicro": { "venteBic": 0.4345, "servicesBic": 0.4345, "servicesBnc": 0.464 }
   },

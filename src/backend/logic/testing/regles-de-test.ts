@@ -23,7 +23,53 @@ export const reglesDeTest: ReglesFiscales = {
   },
   IS: { tauxReduit: 0.15, plafondTauxReduit: 40000, tauxNormal: 0.25 },
   dividendes: { tauxIrForfaitaire: 0.12, prelevementsSociaux: 0.18, abattementBareme: 0.4, csgDeductible: 0.07 },
-  SASU: { ratioCoutTotalSurNet: 1.8 },
+  regimeGeneral: {
+    // Plafond de 40 000 €. Sous le plafond, cotisations salariales de 10 % (vieillesse 5 + 1, complémentaire 4) et
+    // CSG-CRDS de 10 % sur 90 % du brut, soit 9 % : net = 81 % du brut (8 100 € nets pour 10 000 € bruts).
+    // Cotisations patronales sous le plafond : 34 % pour le président (maladie 10, vieillesse 10 + 2, famille 5,
+    // accidents du travail 1, complémentaire 6), 39 % pour un salarié (chômage 4 et AGS 1 en plus).
+    plafondSecuriteSociale: 40000,
+    cotisations: {
+      maladie: { salariale: [], patronale: [{ jusquA: null, taux: 0.1 }] },
+      vieillessePlafonnee: { salariale: [{ jusquA: 1, taux: 0.05 }], patronale: [{ jusquA: 1, taux: 0.1 }] },
+      vieillesseDeplafonnee: { salariale: [{ jusquA: null, taux: 0.01 }], patronale: [{ jusquA: null, taux: 0.02 }] },
+      allocationsFamiliales: { salariale: [], patronale: [{ jusquA: null, taux: 0.05 }] },
+      accidentsDuTravail: { salariale: [], patronale: [{ jusquA: null, taux: 0.01 }] },
+      contributionSolidariteAutonomie: { salariale: [], patronale: [] },
+      fnal: { salariale: [], patronale: [] },
+      // Complémentaire : 4 % et 6 % jusqu'au plafond, 10 % et 15 % au-delà.
+      retraiteComplementaire: {
+        salariale: [
+          { jusquA: 1, taux: 0.04 },
+          { jusquA: 8, taux: 0.1 }
+        ],
+        patronale: [
+          { jusquA: 1, taux: 0.06 },
+          { jusquA: 8, taux: 0.15 }
+        ]
+      },
+      contributionEquilibreGeneral: { salariale: [], patronale: [] },
+      // 1 % salarié et 1 % employeur sur tout le brut, seulement s'il dépasse le plafond.
+      contributionEquilibreTechnique: { auDelaDuPlafondSeulement: true, salariale: [{ jusquA: 8, taux: 0.01 }], patronale: [{ jusquA: 8, taux: 0.01 }] },
+      assuranceChomage: { salariesSeulement: true, salariale: [], patronale: [{ jusquA: 4, taux: 0.04 }] },
+      ags: { salariesSeulement: true, salariale: [], patronale: [{ jusquA: 4, taux: 0.01 }] },
+      dialogueSocial: { salariesSeulement: true, salariale: [], patronale: [] },
+      formationProfessionnelle: { salariale: [], patronale: [] },
+      taxeApprentissage: { salariale: [], patronale: [] }
+    },
+    // CSG-CRDS de 10 % (7 % déductible, 2 % non déductible, 1 % de CRDS) sur 90 % du brut jusqu'à 4 plafonds, sur tout le brut au-delà.
+    csgCrds: {
+      assiette: [
+        { jusquA: 4, taux: 0.9 },
+        { jusquA: null, taux: 1 }
+      ],
+      csgDeductible: 0.07,
+      csgNonDeductible: 0.02,
+      crds: 0.01
+    },
+    // Réduction générale linéaire (puissance 1) : 40 % du brut au SMIC de 20 000 €, 2 % juste sous 3 SMIC (60 000 €).
+    reductionGenerale: { smicAnnuel: 20000, tMin: 0.02, tDelta: 0.38, puissance: 1, plafondEnSmic: 3 }
+  },
   TNS: {
     // Plafond de 40 000 € : abattement de 25 % borné entre 800 € et 40 000 €.
     plafondSecuriteSociale: 40000,
@@ -66,7 +112,7 @@ export const reglesDeTest: ReglesFiscales = {
     // Sans revenu : 160 € (IJ) + 1 200 € (retraite de base, 3 trimestres) + 40 € (invalidité-décès) + 100 € = 1 500 €.
     cotisationsMinimales: { indemnitesJournalieres: 16000, retraiteDeBase: 6000, invaliditeDeces: 4000 }
   },
-  protectionSociale: { revenuParTrimestre: 2000, tauxNetSurBrutSalarie: 0.8, tauxRetraiteDeBase: 0.2, partRetraiteDeBaseMicro: { venteBic: 0.4, servicesBic: 0.4, servicesBnc: 0.5 } },
+  protectionSociale: { revenuParTrimestre: 2000,tauxRetraiteDeBase: 0.2, partRetraiteDeBaseMicro: { venteBic: 0.4, servicesBic: 0.4, servicesBnc: 0.5 } },
   EURL: { seuilDividendesPartDuCapital: 0.1 },
   TVA: { services: { franchiseBase: 40000, seuilMajore: 45000 }, vente: { franchiseBase: 100000, seuilMajore: 110000 } },
   microEntreprise: {

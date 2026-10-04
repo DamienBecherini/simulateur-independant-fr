@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest"
 import { evaluerProtectionSociale, type DonneesProtection } from "./protection-sociale.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 
-// Règles de test : un trimestre pour 2 000 € de revenu cotisé ; net = 80 % du brut ; retraite de base des TNS au moins sur 6 000 € ;
+// Règles de test : un trimestre pour 2 000 € de revenu cotisé (le brut pour un président de SASU) ; retraite de base des TNS au moins sur 6 000 € ;
 // micro : cotisations 10 % / 20 % / 25 %, dont 40 % / 40 % / 50 % pour la retraite de base, au taux de 20 %.
-const donnees = (autres: Partial<DonneesProtection> = {}): DonneesProtection => ({ remunerationNette: 0, assietteTNS: 0, chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 }, ...autres })
+const donnees = (autres: Partial<DonneesProtection> = {}): DonneesProtection => ({ remunerationBrute: 0, assietteTNS: 0, chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 }, ...autres })
 
 describe("evaluerProtectionSociale", () => {
   describe("président de SASU", () => {
@@ -15,19 +15,19 @@ describe("evaluerProtectionSociale", () => {
     })
 
     it("valide des trimestres selon son salaire brut", () => {
-      // 4 000 € nets = 5 000 € bruts : 2 trimestres.
-      expect(evaluerProtectionSociale("SASU", donnees({ remunerationNette: 4000 }), reglesDeTest)).toMatchObject({ etoiles: 3, trimestres: 2 })
+      // 5 000 € bruts : 2 trimestres.
+      expect(evaluerProtectionSociale("SASU", donnees({ remunerationBrute: 5000 }), reglesDeTest)).toMatchObject({ etoiles: 3, trimestres: 2 })
     })
 
     it("accorde le texte au nombre de trimestres", () => {
-      // 1 600 € nets = 2 000 € bruts : 1 trimestre ; 4 000 € nets : 2 trimestres.
-      expect(evaluerProtectionSociale("SASU", donnees({ remunerationNette: 1600 }), reglesDeTest).resume).toContain(" 1 trimestre de retraite validé sur 4.")
-      expect(evaluerProtectionSociale("SASU", donnees({ remunerationNette: 4000 }), reglesDeTest).resume).toContain(" 2 trimestres de retraite validés sur 4.")
+      // 2 000 € bruts : 1 trimestre ; 5 000 € bruts : 2 trimestres.
+      expect(evaluerProtectionSociale("SASU", donnees({ remunerationBrute: 2000 }), reglesDeTest).resume).toContain(" 1 trimestre de retraite validé sur 4.")
+      expect(evaluerProtectionSociale("SASU", donnees({ remunerationBrute: 5000 }), reglesDeTest).resume).toContain(" 2 trimestres de retraite validés sur 4.")
     })
 
     it("obtient la meilleure note avec 4 trimestres, sans atteindre 5 faute d'assurance chômage", () => {
-      // 6 400 € nets = 8 000 € bruts : 4 trimestres.
-      const note = evaluerProtectionSociale("SASU", donnees({ remunerationNette: 6400 }), reglesDeTest)
+      // 8 000 € bruts : 4 trimestres.
+      const note = evaluerProtectionSociale("SASU", donnees({ remunerationBrute: 8000 }), reglesDeTest)
 
       expect(note).toMatchObject({ etoiles: 4, trimestres: 4 })
       expect(note.resume).toContain("pas d'assurance chômage")

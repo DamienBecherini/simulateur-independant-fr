@@ -100,7 +100,8 @@ function entiteCible(source: Activite, statut: StatutCompare): Activite {
 
 function relationsCibles(session: SessionState, source: Activite, statut: StatutCompare): Relationship[] {
   const { principale, associes } = personnesDeLActivite(session, source.id)
-  const autres = session.relationships.filter(rel => rel.fromId !== source.id && rel.toId !== source.id)
+  // Les salariés de l'activité le restent dans tous les statuts : leur coût employeur pèse sur chaque colonne.
+  const autres = session.relationships.filter(rel => rel.type === "Salarié" || (rel.fromId !== source.id && rel.toId !== source.id))
   if (!principale) return autres
 
   const lien = (personId: string, type: Relationship["type"]): Relationship => ({ id: `comparateur-${source.id}-${personId}-${type}`, fromId: personId, toId: source.id, type })
@@ -166,7 +167,7 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation
     libelle: LIBELLES[statut],
     actuel,
     fraisFonctionnement: fraisDuStatut(statut, options),
-    protectionSociale: evaluerProtectionSociale(statut, { remunerationNette: options.remunerationNette, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0, chiffreAffairesMicro: chiffreAffairesMicro(simulation.session, activiteId), beneficieACRE: simulation.session.entities.some(e => e.id === activiteId && e.type === "micro-entreprise" && e.beneficieACRE) }, regles),
+    protectionSociale: evaluerProtectionSociale(statut, { remunerationBrute: activite?.cotisationsPresident?.brut ?? 0, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0, chiffreAffairesMicro: chiffreAffairesMicro(simulation.session, activiteId), beneficieACRE: simulation.session.entities.some(e => e.id === activiteId && e.type === "micro-entreprise" && e.beneficieACRE) }, regles),
     netApresImpots: report.totalNetApresImpots,
     revenusAvantPrelevements: bilan.revenusAvantPrelevements,
     totalPrelevements: bilan.totalPrelevements,

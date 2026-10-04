@@ -35,9 +35,15 @@ import type { Company } from "../../../types.js"
  *   181 917 €, 45 % au-delà ; impôt cumulé à 29 579 € : 1 977,69 €, à 84 577 € : 1 977,69 + 54 998 x 30 % = 18 477,09 € ;
  * - décote d'un célibataire : 897 € - 45,25 % de l'impôt brut, si elle est positive.
  *
- * Approximations assumées du modèle, appliquées telles quelles : cotisations du président de SASU égales à
- * 80 % de sa rémunération nette (coût total = 1,8 x net), rémunération nette du président saisie traitée comme
- * le salaire imposable.
+ * - président de SASU, assimilé salarié (urssaf.fr, taux-cotisations-secteur-prive ; agirc-arrco.fr), PASS 48 060 € :
+ *   cotisations salariales jusqu'au PASS : vieillesse 6,90 % + 0,40 %, Agirc-Arrco T1 3,15 %, CEG T1 0,86 %, soit 11,31 %,
+ *   et CSG-CRDS 9,7 % sur 98,25 % du brut (9,53025 % du brut), dont 2,9 % x 98,25 % = 2,84925 % du brut non déductibles :
+ *   net = 79,15975 % du brut ; au-delà du PASS : vieillesse 0,40 %, T2 8,64 %, CEG T2 1,08 %, et CET 0,14 % sur tout le brut,
+ *   d'où net = 80,20975 % du brut - 1,19 % x 48 060 (571,91 €) ;
+ *   cotisations patronales jusqu'au PASS : maladie 13 %, vieillesse 8,55 % + 2,11 %, famille 5,25 %, accidents du travail
+ *   0,64 %, CSA 0,30 %, FNAL 0,10 %, Agirc-Arrco T1 4,72 %, CEG T1 1,29 %, formation 0,55 %, apprentissage 0,68 %, soit 37,19 % ;
+ *   au-delà : 37,31 % du brut + 0,09 % x 48 060 (43,25 €) ; ni assurance chômage, ni réduction générale ;
+ *   le brut est celui dont la rémunération nette saisie est le net ; la CSG non déductible et la CRDS s'ajoutent au net imposable.
  */
 
 const alice = personne("alice")
@@ -50,20 +56,25 @@ function simulerSociete(statut: Company["legalStatus"], flux: Flux[], capitalSoc
 casDeReference("Cas de référence 2026 : sociétés et entreprise individuelle", () => {
   describe("SASU", () => {
     it("rémunération seule", () => {
-      // Cotisations : 40 000 x 0,8 = 32 000 €. Bénéfice : 100 000 - 10 000 - 40 000 - 32 000 = 18 000 €.
-      // IS : 18 000 x 15 % = 2 700 € ; conservé 15 300 €.
-      // Revenu imposable : 40 000 - 10 % (4 000 €) = 36 000 € ; impôt 1 977,69 + 6 421 x 30 % = 3 903,99 €.
-      // Net : 40 000 - 3 903,99 = 36 096,01 €.
-      // Bilan : 90 000 € = 32 000 + 2 700 + 3 904 (prélèvements) + 15 300 (conservé) + 36 096 (net).
+      // 40 000 € nets dépassent le net du PASS (48 060 x 79,15975 % = 38 044 €) : brut B tel que 80,20975 % x B - 571,91 = 40 000,
+      // soit B = 40 571,91 / 0,8020975 = 50 582,27 €. Cotisations salariales 10 582,27 € ; patronales 37,31 % x 50 582,27 + 43,25
+      // = 18 915,50 € (maladie 6 575,70, vieillesse 5 176,42, famille 2 655,57, Agirc-Arrco 2 595,07, CEG 660,83, CET 106,22…).
+      // Cotisations : 10 582,27 + 18 915,50 = 29 497,77 €. Bénéfice : 100 000 - 10 000 - 40 000 - 29 497,77 = 20 502,23 €.
+      // IS : 15 % = 3 075,33 € ; conservé 17 426,89 €.
+      // Revenu imposable : 40 000 + 2,84925 % x 50 582,27 (1 441,22 €) = 41 441,22 €, moins 10 % : 37 297,10 € ;
+      // impôt 1 977,69 + 7 718,10 x 30 % = 4 293,12 €, soit 4 293 €. Net : 40 000 - 4 293 = 35 707 €.
+      // Bilan : 90 000 € = 29 498 + 3 075 + 4 293 (prélèvements, 36 866 €) + 17 427 (conservé) + 35 707 (net).
+      // (Avec l'ancien ratio de 1,8, les cotisations étaient de 32 000 € et le net de 36 096 €.)
       const report = simulerSociete("SASU", [
         ["s1", "ca_services", 100000],
         ["s1", "deductible_expense", 10000],
         ["s1", "director_remuneration", 40000]
       ])
 
-      expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 32000, impotSocietes: 2700, resultatConserve: 15300, revenuVerse: 40000 })
-      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 36000, impotSurLeRevenu: 3904, prelevementsSociaux: 0, optionDividendes: null, netApresImpots: 36096 })
-      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 90000, totalPrelevements: 38604, resultatConserve: 15300 })
+      expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 29498, impotSocietes: 3075, resultatConserve: 17427, revenuVerse: 40000 })
+      expect(activite(report, "s1").cotisationsPresident?.brut).toBeCloseTo(50582.27, 2)
+      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 37297, impotSurLeRevenu: 4293, prelevementsSociaux: 0, optionDividendes: null, netApresImpots: 35707 })
+      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 90000, totalPrelevements: 36866, resultatConserve: 17427 })
       verifierIdentiteDuBilan(report)
     })
 
@@ -105,14 +116,16 @@ casDeReference("Cas de référence 2026 : sociétés et entreprise individuelle"
     })
 
     it("rémunération et dividendes", () => {
-      // Cotisations : 30 000 x 0,8 = 24 000 €. Bénéfice : 100 000 - 15 000 - 30 000 - 24 000 = 31 000 €.
-      // IS : 4 650 € ; distribuable 26 350 € ; 20 000 € distribués ; conservé 6 350 €.
-      // Revenu au barème : 30 000 - 3 000 = 27 000 € ; impôt brut 15 400 x 11 % = 1 694 €,
-      // décote 897 - 766,535 = 130,465 €, impôt 1 563,535 €.
-      // Forfait : 1 563,535 + 2 560 = 4 123,535 €.
-      // Barème : 27 000 + 12 000 - 1 360 = 37 640 € ; impôt 1 977,69 + 8 061 x 30 % = 4 395,99 €. Forfait retenu.
-      // Net : 30 000 + 20 000 - 4 123,535 - 3 720 = 42 156,465 €.
-      // Bilan : 85 000 € = 24 000 + 4 650 + 4 124 + 3 720 (prélèvements) + 6 350 (conservé) + 42 156 (net).
+      // Brut : 30 000 / 0,7915975 = 37 898,05 € (sous le PASS). Cotisations salariales 7 898,05 € ; patronales 37,19 %, 14 094,28 €.
+      // Cotisations : 21 992,33 €. Bénéfice : 100 000 - 15 000 - 30 000 - 21 992,33 = 33 007,67 €.
+      // IS : 4 951,15 € ; distribuable 28 056,52 € ; 20 000 € distribués ; conservé 8 056,52 €.
+      // Revenu au barème : 30 000 + 2,84925 % x 37 898,05 (1 079,81 €) = 31 079,81 €, moins 10 % : 27 971,83 € ;
+      // impôt brut 16 371,83 x 11 % = 1 800,90 €, décote 897 - 814,91 = 82,09 €, impôt 1 718,81 €, arrondi à 1 719 €.
+      // Forfait : 1 719 + 2 560 = 4 279 €.
+      // Barème : 27 971,83 + 12 000 - 1 360 = 38 611,83 € ; impôt 1 977,69 + 9 032,83 x 30 % = 4 687,54 €. Forfait retenu.
+      // Net : 30 000 + 20 000 - 4 279 - 3 720 = 42 001 €.
+      // Bilan : 85 000 € = 21 992 + 4 951 + 4 279 + 3 720 (prélèvements, 34 942 €) + 8 057 (conservé) + 42 001 (net).
+      // (Avec l'ancien ratio de 1,8 : 24 000 € de cotisations, net 42 156 €.)
       const report = simulerSociete("SASU", [
         ["s1", "ca_services", 100000],
         ["s1", "deductible_expense", 15000],
@@ -120,9 +133,9 @@ casDeReference("Cas de référence 2026 : sociétés et entreprise individuelle"
         ["s1", "dividends_payment", 20000]
       ])
 
-      expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 24000, impotSocietes: 4650, resultatConserve: 6350, revenuVerse: 50000 })
-      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 27000, impotSurLeRevenu: 4124, prelevementsSociaux: 3720, optionDividendes: "pfu", netApresImpots: 42156 })
-      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 85000, totalPrelevements: 36494 })
+      expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 21992, impotSocietes: 4951, resultatConserve: 8057, revenuVerse: 50000 })
+      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 27972, impotSurLeRevenu: 4279, prelevementsSociaux: 3720, optionDividendes: "pfu", netApresImpots: 42001 })
+      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 85000, totalPrelevements: 34942 })
       verifierIdentiteDuBilan(report)
     })
 

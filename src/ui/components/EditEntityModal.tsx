@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect, useMemo } from "react"
 import type { Entity, Relationship, Person, Company, Avatar } from "@/types"
 import { Trash2, PlusCircle, ArrowRight } from "lucide-react"
-import { getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
+import { AIDE_RELATION_SALARIE, getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { updatePersonAvatar } from "@/lib/avatar-utils"
@@ -257,6 +257,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                       ))}
                     </SelectContent>
                   </Select>
+                  {availableTypes.includes("Salarié") ? <p className="text-sm text-slate-600 dark:text-slate-400">{AIDE_RELATION_SALARIE}</p> : null}
                   <div className="flex gap-2 justify-end">
                     <Button type="button" variant="ghost" onClick={() => setAddingRelation(false)}>
                       Annuler

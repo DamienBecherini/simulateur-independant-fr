@@ -1,11 +1,12 @@
 // src/backend/logic/simulation-engine.ts
 
-import type { VersementLiberatoireInfo, ActivityResult, Company, FinancialFlow, FoyerFiscalResult, MicroEntreprise, Person, PersonResult, Relationship, SessionState, SimulationBilan, SimulationReport } from "../../types.js"
+import type { VersementLiberatoireInfo, ActivityResult, Company, FinancialFlow, FoyerFiscalResult, MicroEntreprise, Person, PersonResult, Relationship, SalarieDeLActivite, SessionState, SimulationBilan, SimulationReport } from "../../types.js"
 import { calculerMicro, plafondRfrVersementLiberatoire } from "./calculsAE.js"
 import { calculerEI } from "./calculsEI.js"
 import { calculerEURL } from "./calculsEURL.js"
 import { calculerIR } from "./calculsIR.js"
 import { calculerSASU } from "./calculsSASU.js"
+import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.js"
 import { buildFoyers, type Foyer } from "./foyers.js"
 import { euros } from "./format.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
@@ -52,9 +53,11 @@ interface Contexte {
   /** Foyers fiscaux, calculés avant les activités : le versement libératoire dépend des parts du foyer. */
   foyers: Foyer[]
   flux: Map<string, FlowTotals>
-  /** Cotisations salariales par personne : écart entre brut et net des salaires dont le brut est renseigné. */
+  /** Cotisations salariales par personne : écart entre brut et net des salaires dont le brut est renseigné, ou calculé pour les salariés d'une activité de la simulation. */
   cotisationsSalariales: Map<string, number>
   revenus: Map<string, RevenusDActivite>
+  /** Bulletins de paie annuels des personnes salariées d'une activité de la simulation (relation « Salarié »). */
+  salaries: Map<string, { employeurId: string; bulletin: SalarieDeLActivite }>
   /** Revenus versés par des activités qu'aucune relation ne rattache à une personne. */
   nonRattache: number
 }
@@ -82,6 +85,51 @@ function aggregateSalaryContributions(session: SessionState): Map<string, number
     map.set(flow.entityId, (map.get(flow.entityId) ?? 0) + Math.max(0, flow.grossAmount - flow.amount))
   }
   return map
+}
+
+/**
+ * Salariés des activités de la simulation. Le salaire reste saisi, net, sur la personne ; une relation « Salarié »
+ * vers une activité fait supporter à celle-ci le coût employeur de tous ses salaires. Le brut est celui saisi s'il
+ * l'est pour chaque salaire, sinon il est retrouvé à partir du net par dichotomie. Sans relation, rien ne change :
+ * le salaire est un revenu venu de l'extérieur de la simulation.
+ */
+function bulletinsDesSalaries(session: SessionState, flux: Map<string, FlowTotals>, regles: ReglesFiscales): Contexte["salaries"] {
+  const typeDe = new Map(session.entities.map(e => [e.id, e.type]))
+  const bulletins: Contexte["salaries"] = new Map()
+  for (const rel of session.relationships.filter(r => r.type === "Salarié")) {
+    // La relation peut avoir été créée depuis la carte de la personne comme depuis celle de l'activité.
+    const [personId, employeurId] = typeDe.get(rel.fromId) === "person" ? [rel.fromId, rel.toId] : [rel.toId, rel.fromId]
+    const net = flux.get(personId)?.salary ?? 0
+    // Un seul employeur par personne : tous ses salaires viennent de la première activité qui l'emploie.
+    if (typeDe.get(personId) !== "person" || [undefined, "person"].includes(typeDe.get(employeurId)) || bulletins.has(personId) || net <= 0) continue
+    const salaires = session.monthlyData.flatMap(mois => mois.flows).filter(f => f.entityId === personId && f.type === "salary")
+    const brut = salaires.every(f => f.grossAmount !== undefined) ? salaires.reduce((cumul, f) => cumul + (f.grossAmount ?? 0), 0) : brutPourUnNet(net, "salarie", regles.regimeGeneral)
+    bulletins.set(personId, { employeurId, bulletin: { ...calculerCotisationsSalarie(brut, "salarie", regles.regimeGeneral), personId } })
+  }
+  return bulletins
+}
+
+/** Cotisations salariales : écart entre brut et net, pour les salaires dont le brut est connu (saisi ou calculé). */
+function cotisationsSalarialesParPersonne(session: SessionState, flux: Map<string, FlowTotals>, salaries: Contexte["salaries"]): Map<string, number> {
+  const cotisations = aggregateSalaryContributions(session)
+  for (const [personId, { bulletin }] of salaries) cotisations.set(personId, bulletin.brut - (flux.get(personId)?.salary ?? 0))
+  return cotisations
+}
+
+/**
+ * Masse salariale d'une activité : ses salariés, leurs salaires bruts (des charges) et les cotisations patronales
+ * nettes de la réduction générale (des cotisations sociales), le tout déductible du résultat.
+ */
+function masseSalariale(ctx: Contexte, activiteId: string) {
+  const salaries = [...ctx.salaries.values()].filter(s => s.employeurId === activiteId).map(s => s.bulletin)
+  const bruts = somme(salaries, s => s.brut)
+  const patronales = somme(salaries, s => s.coutEmployeur - s.brut)
+  return { salaries, bruts, patronales, cout: bruts + patronales }
+}
+
+/** Champs du résultat d'une activité qui décrivent ses salariés, s'il en a. */
+function detailSalaries(masse: ReturnType<typeof masseSalariale>): Pick<ActivityResult, "salaries"> {
+  return masse.salaries.length > 0 ? { salaries: masse.salaries } : {}
 }
 
 /** Somme annuelle de plusieurs types de flux d'une entité. */
@@ -162,9 +210,10 @@ function verserDividendes(ctx: Contexte, societe: Company, dividendes: { verses:
 }
 
 function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
+  const masse = masseSalariale(ctx, societe.id)
   const entrees = {
     chiffreAffaires: total(ctx, societe.id, "ca_services", "ca_vente"),
-    chargesDeductibles: total(ctx, societe.id, "deductible_expense"),
+    chargesDeductibles: total(ctx, societe.id, "deductible_expense") + masse.cout,
     remunerationNette: total(ctx, societe.id, "director_remuneration"),
     dividendesDemandes: total(ctx, societe.id, "dividends_payment")
   }
@@ -181,19 +230,23 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     type: "company",
     statut: societe.legalStatus,
     chiffreAffaires: resultat.chiffreAffaires,
-    charges: resultat.chargesDeductibles,
-    cotisationsSociales: resultat.cotisationsSociales,
+    // Les salaires bruts sont des charges, les cotisations patronales des cotisations sociales.
+    charges: resultat.chargesDeductibles - masse.patronales,
+    cotisationsSociales: resultat.cotisationsSociales + masse.patronales,
     impotSocietes: resultat.impotSocietes,
     revenuVerse: resultat.remunerationNette + resultat.dividendesVerses - resultat.cotisationsSurDividendes,
     resultatConserve: resultat.resultatConserve,
     beneficiaireIds: personnesLiees(ctx, societe.id, RELATIONS_D_ASSOCIE),
     ...(resultat.cotisationsTNS ? { cotisationsTNS: resultat.cotisationsTNS } : {}),
+    ...(resultat.cotisationsPresident && resultat.remunerationNette > 0 ? { cotisationsPresident: resultat.cotisationsPresident } : {}),
+    ...detailSalaries(masse),
     warnings
   }
 }
 
 function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): ActivityResult {
-  const resultat = calculerEI({ chiffreAffaires: total(ctx, entreprise.id, "ca_services", "ca_vente"), chargesDeductibles: total(ctx, entreprise.id, "deductible_expense") }, ctx.regles)
+  const masse = masseSalariale(ctx, entreprise.id)
+  const resultat = calculerEI({ chiffreAffaires: total(ctx, entreprise.id, "ca_services", "ca_vente"), chargesDeductibles: total(ctx, entreprise.id, "deductible_expense") + masse.cout }, ctx.regles)
   const warnings = [...resultat.warnings]
 
   if (total(ctx, entreprise.id, "director_remuneration", "dividends_payment") > 0) {
@@ -218,13 +271,14 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     type: "company",
     statut: "EI au réel",
     chiffreAffaires: resultat.chiffreAffaires,
-    charges: resultat.chargesDeductibles,
-    cotisationsSociales: resultat.cotisationsSociales,
+    charges: resultat.chargesDeductibles - masse.patronales,
+    cotisationsSociales: resultat.cotisationsSociales + masse.patronales,
     impotSocietes: 0,
     revenuVerse: resultat.revenuNet,
     resultatConserve: 0,
     beneficiaireIds: exploitant ? [exploitant] : [],
     cotisationsTNS: resultat.cotisationsTNS,
+    ...detailSalaries(masse),
     warnings
   }
 }
@@ -269,7 +323,9 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
   )
   const warnings = [...resultat.warnings, ...avertissementsVersementLiberatoire(micro, vfl)]
   // Au régime micro, les dépenses réelles ne réduisent ni les cotisations ni l'impôt : elles ne pèsent que sur la trésorerie.
-  const depenses = total(ctx, micro.id, "expense")
+  // Il en va de même du coût des salariés.
+  const masse = masseSalariale(ctx, micro.id)
+  const depenses = total(ctx, micro.id, "expense") + masse.cout
   const revenuVerse = resultat.chiffreAffaires - resultat.cotisationsSociales - depenses
 
   if (titulaire) {
@@ -289,13 +345,14 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
     type: "micro-entreprise",
     statut: "Micro-entreprise",
     chiffreAffaires: resultat.chiffreAffaires,
-    charges: depenses,
-    cotisationsSociales: resultat.cotisationsSociales,
+    charges: depenses - masse.patronales,
+    cotisationsSociales: resultat.cotisationsSociales + masse.patronales,
     impotSocietes: 0,
     revenuVerse,
     resultatConserve: 0,
     beneficiaireIds: titulaire ? [titulaire] : [],
     versementLiberatoire: { ...vfl, plafondRfr: Math.round(vfl.plafondRfr) },
+    ...detailSalaries(masse),
     warnings
   }
 }
@@ -348,7 +405,9 @@ function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
   const cumul = { baseBareme: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, encaisse: 0, depenses: 0, prelevementsActivites: 0, resultatConserve: 0 }
   for (const personId of [...foyer.declarantIds, ...foyer.enfantIds]) {
     const revenus = revenusDe(ctx, personId)
-    const salaires = total(ctx, personId, "salary", "are") + revenus.remunerationsImposables
+    const salarie = ctx.salaries.get(personId)?.bulletin
+    // Salarié d'une activité de la simulation : sa CSG non déductible et sa CRDS s'ajoutent au net imposable.
+    const salaires = total(ctx, personId, "salary", "are") + revenus.remunerationsImposables + (salarie?.partNonDeductible ?? 0)
     const autresRevenus = total(ctx, personId, "other_taxable_income")
 
     cumul.baseBareme += salaires - abattementSalaires(salaires, ctx.regles.IR.abattementSalaires) + autresRevenus + revenus.beneficesImposables
@@ -357,7 +416,8 @@ function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
     cumul.versementLiberatoire += revenus.versementLiberatoire
     cumul.encaisse += total(ctx, personId, "salary", "are", "other_taxable_income") + encaisse(revenus)
     cumul.depenses += total(ctx, personId, "expense")
-    cumul.prelevementsActivites += revenus.prelevementsActivites + (ctx.cotisationsSalariales.get(personId) ?? 0)
+    // Les cotisations patronales de son salaire comptent parmi les prélèvements de son foyer.
+    cumul.prelevementsActivites += revenus.prelevementsActivites + (ctx.cotisationsSalariales.get(personId) ?? 0) + (salarie ? salarie.coutEmployeur - salarie.brut : 0)
     cumul.resultatConserve += revenus.resultatConserve
   }
   return cumul
@@ -433,7 +493,9 @@ function calculerBilan(ctx: Contexte, activities: ActivityResult[], persons: Per
 
 export function runMetaSimulation(session: SessionState, regles: ReglesFiscales = reglesEnVigueur): SimulationReport {
   const foyersFiscaux = buildFoyers(session, regles.IR.partsParEnfant)
-  const ctx: Contexte = { session, regles, foyers: foyersFiscaux, flux: aggregateAnnualFlowsByEntity(session), cotisationsSalariales: aggregateSalaryContributions(session), revenus: new Map(), nonRattache: 0 }
+  const flux = aggregateAnnualFlowsByEntity(session)
+  const salaries = bulletinsDesSalaries(session, flux, regles)
+  const ctx: Contexte = { session, regles, foyers: foyersFiscaux, flux, cotisationsSalariales: cotisationsSalarialesParPersonne(session, flux, salaries), salaries, revenus: new Map(), nonRattache: 0 }
 
   // Les activités d'abord : elles alimentent les revenus des personnes, dont dépend l'impôt des foyers.
   const activities = session.entities.filter((e): e is Company | MicroEntreprise => e.type !== "person").map(activite => arrondirActivite(simulerActivite(ctx, activite)))

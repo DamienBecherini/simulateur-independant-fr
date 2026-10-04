@@ -104,11 +104,28 @@ describe("comparerStatuts", () => {
         ["s1", "dividends_payment", 20000]
       ]
 
-      const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { remunerationNette: 30000, distribuerToutLeBenefice: false }))
+      const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { remunerationNette: 24300, distribuerToutLeBenefice: false }))
 
-      // Rémunération de 30 000 € et 24 000 € de cotisations : 46 000 € de bénéfice, 7 500 € d'IS ; 20 000 € de dividendes saisis, 18 500 € conservés.
-      expect(colonne(resultat, "SASU")).toMatchObject({ cotisationsSociales: 24000, impotSocietes: 7500, resultatConserve: 18500 })
+      // Rémunération de 24 300 € (30 000 € bruts) et 15 900 € de cotisations : 59 800 € de bénéfice, 10 950 € d'IS ; 20 000 € de dividendes saisis, 28 850 € conservés.
+      expect(colonne(resultat, "SASU")).toMatchObject({ cotisationsSociales: 15900, impotSocietes: 10950, resultatConserve: 28850 })
     })
+  })
+
+  it("garde les salariés de l'activité dans chaque statut", () => {
+    // Bob : 24 300 € nets, 30 000 € bruts, 5 400 € de cotisations patronales après réduction générale (voir simulation-engine.test.ts).
+    // La colonne compte aussi les 5 700 € de cotisations salariales. En micro BNC : 25 % de 100 000 € = 25 000 €, en plus.
+    const resultat = comparer(
+      [personne("alice"), personne("bob"), societe("s1", "SASU")],
+      [relation("alice", "s1", "Président"), relation("bob", "s1", "Salarié")],
+      [
+        ["s1", "ca_services", 100000],
+        ["bob", "salary", 24300]
+      ],
+      options("s1")
+    )
+
+    expect(colonne(resultat, "micro").cotisationsSociales).toBe(25000 + 5400 + 5700)
+    expect(colonne(resultat, "SASU").cotisationsSociales).toBe(5400 + 5700)
   })
 
   describe("frais de fonctionnement", () => {
