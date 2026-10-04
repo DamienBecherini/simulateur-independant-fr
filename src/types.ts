@@ -151,6 +151,17 @@ export interface PersonResult {
   revenusDirects: number
   /** Rémunérations, bénéfices et dividendes reçus de ses activités, nets de cotisations. */
   revenusActivites: number
+  /** Les mêmes revenus, ventilés par nature. */
+  detail: {
+    salaires: number
+    allocationsChomage: number
+    autresRevenus: number
+    remunerationsDirigeant: number
+    /** Dividendes reçus, nets des cotisations sociales éventuelles (EURL). */
+    dividendes: number
+    /** Bénéfices de micro-entreprise ou d'entreprise individuelle, nets de cotisations. */
+    benefices: number
+  }
   depenses: number
 }
 

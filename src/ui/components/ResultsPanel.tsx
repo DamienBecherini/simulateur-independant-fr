@@ -1,10 +1,9 @@
 // src/ui/components/ResultsPanel.tsx
 
-import type { ActivityResult, Entity, FoyerFiscalResult, SimulationReport } from "@/types"
+import type { ActivityResult, FoyerFiscalResult, PersonResult, SimulationReport } from "@/types"
 import type { ReactNode } from "react"
 
 type ResultsPanelProps = {
-  entities: Entity[]
   report: SimulationReport | null
   error: string | null
 }
@@ -57,14 +56,45 @@ function Card({ title, subtitle, warnings, children }: { title: string; subtitle
   )
 }
 
-function FoyerCard({ foyer, entities }: { foyer: FoyerFiscalResult; entities: Entity[] }) {
-  const members = foyer.personIds.map(id => entities.find(e => e.id === id)?.name ?? id).join(", ")
+const incomeLabels: Record<keyof PersonResult["detail"], string> = {
+  salaires: "Salaires",
+  allocationsChomage: "Allocations chômage",
+  autresRevenus: "Autres revenus",
+  remunerationsDirigeant: "Rémunération de dirigeant",
+  dividendes: "Dividendes",
+  benefices: "Bénéfices d'activité"
+}
+
+/** Revenus d'un membre du foyer, ventilés par nature ; seules les lignes non nulles sont affichées. */
+function PersonIncome({ person, showName }: { person: PersonResult; showName: boolean }) {
+  const lines = (Object.keys(incomeLabels) as (keyof PersonResult["detail"])[]).filter(key => person.detail[key] !== 0)
+  if (lines.length === 0) return showName ? <p className="text-sm text-slate-500 dark:text-slate-400">{person.name} : aucun revenu</p> : null
+
+  return (
+    <div>
+      {showName ? <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{person.name}</p> : null}
+      <dl className="space-y-1 text-sm">
+        {lines.map(key => (
+          <Row key={key} label={incomeLabels[key]} value={formatMoney(person.detail[key])} />
+        ))}
+      </dl>
+    </div>
+  )
+}
+
+function FoyerCard({ foyer, persons }: { foyer: FoyerFiscalResult; persons: PersonResult[] }) {
+  const members = foyer.personIds.map(id => persons.find(p => p.entityId === id)).filter((p): p is PersonResult => p !== undefined)
   const parts = foyer.totalParts.toLocaleString("fr-FR")
 
   return (
-    <Card title={members} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
+    <Card title={members.map(p => p.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
+      <div className="mb-2 space-y-2 border-b border-slate-100 pb-2 empty:hidden dark:border-slate-800">
+        {members.map(person => (
+          <PersonIncome key={person.entityId} person={person} showName={members.length > 1} />
+        ))}
+      </div>
       <dl className="space-y-1 text-sm">
-        <Row label="Revenus encaissés" value={formatMoney(foyer.revenusEncaisses)} />
+        <Row label="Total encaissé" value={formatMoney(foyer.revenusEncaisses)} />
         <Row label="Impôt sur le revenu" value={`− ${formatMoney(foyer.impotSurLeRevenu)}`} hint={`sur ${formatMoney(foyer.revenuImposableGlobal)} imposables au barème`} />
         {foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(foyer.prelevementsSociaux)}`} /> : null}
         <Row label="Net après impôts" value={formatMoney(foyer.netApresImpots)} strong />
@@ -92,7 +122,7 @@ function ActivityCard({ activity }: { activity: ActivityResult }) {
   )
 }
 
-export function ResultsPanel({ entities, report, error }: ResultsPanelProps) {
+export function ResultsPanel({ report, error }: ResultsPanelProps) {
   return (
     <section className="mt-12 space-y-6">
       <div>
@@ -116,7 +146,7 @@ export function ResultsPanel({ entities, report, error }: ResultsPanelProps) {
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.foyers.map(foyer => (
-              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} entities={entities} />
+              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} />
             ))}
           </div>
         </div>

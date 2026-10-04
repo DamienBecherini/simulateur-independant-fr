@@ -80,6 +80,7 @@ describe("runMetaSimulation", () => {
       )
 
       // Base : 40 000 - 4 000 + 4 000 = 40 000 € ; impôt : 2 000 + 10 000 x 30 % = 5 000 €.
+      expect(report.persons[0].detail).toEqual({ salaires: 30000, allocationsChomage: 10000, autresRevenus: 4000, remunerationsDirigeant: 0, dividendes: 0, benefices: 0 })
       expect(foyerDe(report, "alice")).toMatchObject({ revenusEncaisses: 44000, revenuImposableGlobal: 40000, impotSurLeRevenu: 5000, prelevementsSociaux: 0, optionDividendes: null, netApresImpots: 39000 })
     })
 
@@ -136,7 +137,7 @@ describe("runMetaSimulation", () => {
     it("verse la rémunération et les dividendes au président, et impose le foyer une seule fois", () => {
       const report = simuler(entites, president, flux)
 
-      expect(report.persons[0]).toMatchObject({ revenusDirects: 0, revenusActivites: 50000 })
+      expect(report.persons[0]).toMatchObject({ revenusDirects: 0, revenusActivites: 50000, detail: { salaires: 0, allocationsChomage: 0, autresRevenus: 0, remunerationsDirigeant: 30000, dividendes: 20000, benefices: 0 } })
       // Rémunération : 30 000 - 3 000 = 27 000 € imposables, soit 1 700 € d'impôt.
       // Dividendes au forfait : 20 000 x 12 % = 2 400 € (le barème donnerait 4 280 € au total).
       expect(foyerDe(report, "alice")).toEqual({
@@ -244,6 +245,7 @@ describe("runMetaSimulation", () => {
       )
 
       // Dividendes : 1 000 € soumis aux prélèvements sociaux, 19 000 € soumis à 50 % de cotisations.
+      expect(report.persons[0].detail).toMatchObject({ remunerationsDirigeant: 30000, dividendes: 10500 })
       expect(activite(report, "eurl")).toMatchObject({ statut: "EURL", cotisationsSociales: 24500, impotSocietes: 7250, revenuVerse: 40500, resultatConserve: 17750 })
       expect(foyerDe(report, "dan")).toMatchObject({ revenusEncaisses: 40500, revenuImposableGlobal: 27000, impotSurLeRevenu: 4100, prelevementsSociaux: 180, optionDividendes: "pfu", netApresImpots: 36220 })
     })
@@ -317,6 +319,7 @@ describe("runMetaSimulation", () => {
         resultatConserve: 0,
         warnings: []
       })
+      expect(report.persons[0].detail.benefices).toBe(28000)
       expect(foyerDe(report, "bob")).toMatchObject({ revenusEncaisses: 28000, revenuImposableGlobal: 28000, impotSurLeRevenu: 1800, netApresImpots: 26200 })
     })
 

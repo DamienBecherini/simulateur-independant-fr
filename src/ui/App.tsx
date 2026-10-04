@@ -181,7 +181,7 @@ function App() {
 
         <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
 
-        <ResultsPanel entities={currentSession.entities} report={simulationReport} error={simulationError} />
+        <ResultsPanel report={simulationReport} error={simulationError} />
       </main>
 
       <Footer />
