@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Entity, Relationship } from "@/types"
 import { Plus, X } from "lucide-react"
-import { getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
+import { AIDE_RELATION_SALARIE, getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
 import { createId } from "@/lib/id"
 
 interface NewRelationshipFormProps {
@@ -57,36 +57,39 @@ export function NewRelationshipForm({ entity, allEntities, relationships, onAdd 
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <Select value={targetId} onValueChange={handleTargetChange}>
-        <SelectTrigger className="h-8 w-48" aria-label="Avec qui">
-          <SelectValue placeholder="Avec…" />
-        </SelectTrigger>
-        <SelectContent>
-          {candidates.map(candidate => (
-            <SelectItem key={candidate.id} value={candidate.id}>
-              {candidate.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {target && (
-        <Select onValueChange={(type: Relationship["type"]) => add(target.id, type)}>
-          <SelectTrigger className="h-8 w-44" aria-label="Type de relation">
-            <SelectValue placeholder="Lien…" />
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Select value={targetId} onValueChange={handleTargetChange}>
+          <SelectTrigger className="h-8 w-48" aria-label="Avec qui">
+            <SelectValue placeholder="Avec…" />
           </SelectTrigger>
           <SelectContent>
-            {availableTypes.map(type => (
-              <SelectItem key={type} value={type}>
-                {getRelationshipLabel(type)}
+            {candidates.map(candidate => (
+              <SelectItem key={candidate.id} value={candidate.id}>
+                {candidate.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      )}
-      <button type="button" aria-label="Annuler l'ajout de relation" className="inline-flex min-h-6 min-w-6 items-center justify-center rounded text-slate-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-gray-700" onClick={close}>
-        <X className="h-4 w-4" />
-      </button>
+        {target && (
+          <Select onValueChange={(type: Relationship["type"]) => add(target.id, type)}>
+            <SelectTrigger className="h-8 w-44" aria-label="Type de relation">
+              <SelectValue placeholder="Lien…" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableTypes.map(type => (
+                <SelectItem key={type} value={type}>
+                  {getRelationshipLabel(type)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <button type="button" aria-label="Annuler l'ajout de relation" className="inline-flex min-h-6 min-w-6 items-center justify-center rounded text-slate-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-gray-700" onClick={close}>
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      {target && availableTypes.includes("Salarié") ? <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">{AIDE_RELATION_SALARIE}</p> : null}
     </div>
   )
 }

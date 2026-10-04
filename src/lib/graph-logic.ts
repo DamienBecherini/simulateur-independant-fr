@@ -3,14 +3,19 @@ import type { Entity, Relationship } from "@/types"
 
 type Activite = Exclude<Entity, { type: "person" }>
 
+/** Relations qui font diriger une activité ou en être titulaire. */
+const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant", "Titulaire"]
+
 /**
  * Relations possibles entre une personne et une activité, selon le statut de celle-ci :
  * une SASU a un président, une EURL un gérant, et une entreprise individuelle
- * (micro-entreprise ou EI au réel) un titulaire.
+ * (micro-entreprise ou EI au réel) un titulaire. Une société ou une EI au réel peut aussi avoir des salariés
+ * (la relation n'est pas proposée pour une micro-entreprise, où le coût d'un salarié ne réduit ni cotisations ni impôt).
  */
 function getPersonToActivityRelationTypes(activite: Activite): Relationship["type"][] {
-  if (activite.type === "micro-entreprise" || activite.legalStatus === "EI") return ["Titulaire"]
-  return activite.legalStatus === "SASU" ? ["Président", "Associé"] : ["Gérant", "Associé"]
+  if (activite.type === "micro-entreprise") return ["Titulaire"]
+  if (activite.legalStatus === "EI") return ["Titulaire", "Salarié"]
+  return activite.legalStatus === "SASU" ? ["Président", "Associé", "Salarié"] : ["Gérant", "Associé", "Salarié"]
 }
 
 /**
@@ -49,5 +54,15 @@ export function getAvailableRelationships(sourceEntity: Entity, targetEntity: En
   if (sourceEntity.type !== "person" && targetEntity.type !== "person") return []
 
   const activite = sourceEntity.type === "person" ? targetEntity : sourceEntity
-  return getPersonToActivityRelationTypes(activite as Activite).filter(type => !existingTypes.has(type))
+  // On ne dirige pas, et on n'est pas titulaire, d'une activité dont on est salarié, et inversement.
+  const dirige = RELATIONS_DE_DIRECTION.some(type => existingTypes.has(type))
+  return getPersonToActivityRelationTypes(activite as Activite).filter(type => {
+    if (existingTypes.has(type)) return false
+    if (type === "Salarié") return !dirige
+    return !(RELATIONS_DE_DIRECTION.includes(type) && existingTypes.has("Salarié"))
+  })
 }
+
+/** Conditions d'une relation « Salarié », rappelées au moment de la créer. */
+export const AIDE_RELATION_SALARIE =
+  "Salarié : un vrai contrat de travail, avec un lien de subordination réel et sans gestion de fait de l'activité. Le salaire reste saisi, net, sur la personne ; l'activité en supporte le coût employeur (brut, cotisations patronales, moins la réduction générale)."

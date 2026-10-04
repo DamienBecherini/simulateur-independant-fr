@@ -2,7 +2,7 @@
 
 import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import type { FoyerFiscalResult, PersonResult, SimulationReport } from "@/types"
+import type { FoyerFiscalResult, PersonResult, SalarieDeLActivite, SimulationReport } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
 import { ResultsPanel } from "./ResultsPanel"
 
@@ -179,5 +179,25 @@ describe("ResultsPanel", () => {
     expect(rowValue(card, "Conservé dans la société")).toHaveTextContent(money(10000))
     expect(rowValue(card, "Versé avant impôt sur le revenu")).toHaveTextContent(`${money(38000)}48 % du CA`)
     expect(within(card).getByRole("listitem")).toHaveTextContent("Rémunération inférieure au seuil de validation de trimestres.")
+    expect(within(card).queryByText(/Coût employeur/)).not.toBeInTheDocument()
+  })
+
+  it("affiche le coût de la rémunération du président et celui des salariés", () => {
+    // Seuls les montants affichés sont renseignés.
+    const bulletin = (personId: string, brut: number, totalPatronal: number, reductionGenerale: number) =>
+      ({ personId, statut: "salarie", brut, totalPatronal, reductionGenerale, coutEmployeur: brut + totalPatronal - reductionGenerale }) as SalarieDeLActivite
+    const report = makeReport()
+    const sasu = report.activities[0]
+    const president = { ...bulletin("person-alice", 20000, 7000, 0), statut: "president" as const }
+    report.activities = [{ ...sasu, cotisationsPresident: president, salaries: [bulletin("person-bob", 30000, 12000, 6000)] }]
+    const { rerender } = render(<ResultsPanel report={report} error={null} />)
+
+    const card = screen.getAllByRole("article").find(article => within(article).queryByText("Ma SASU"))!
+    expect(rowValue(card, "Coût de la rémunération du président")).toHaveTextContent(`${money(27000)}dont ${money(20000)} bruts`)
+    expect(rowValue(card, "Coût employeur du salarié")).toHaveTextContent(`${money(36000)}${money(30000)} bruts + ${money(12000)} de cotisations patronales − ${money(6000)} de réduction générale`)
+
+    report.activities = [{ ...sasu, salaries: [bulletin("person-bob", 30000, 12000, 6000), bulletin("person-carl", 20000, 8000, 7000)] }]
+    rerender(<ResultsPanel report={{ ...report }} error={null} />)
+    expect(rowValue(card, "Coût employeur des 2 salariés")).toHaveTextContent(money(57000))
   })
 })
