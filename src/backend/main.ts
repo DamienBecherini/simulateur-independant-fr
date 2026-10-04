@@ -33,8 +33,8 @@ async function readSessionFromFile(): Promise<SessionState> {
     const { safeState, report } = sanitizeStateAndFillDefaults(parsedData)
 
     // Si le rapport indique des suppressions, on prévient l'utilisateur
-    if (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0) {
-      const message = `Votre session précédente a été chargée, mais des données corrompues ont dû être nettoyées :\n\n- Entités invalides supprimées : ${report.entitiesRemoved}\n- Relations invalides supprimées : ${report.relationshipsRemoved}\n\nVeuillez vérifier votre simulation.`
+    if (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0) {
+      const message = `Votre session précédente a été chargée, mais des données corrompues ont dû être nettoyées :\n\n- Entités invalides supprimées : ${report.entitiesRemoved}\n- Relations invalides ou orphelines supprimées : ${report.relationshipsRemoved}\n- Flux invalides ou orphelins supprimés : ${report.flowsRemoved}\n\nVeuillez vérifier votre simulation.`
       dialog
         .showMessageBox({
           type: "info",

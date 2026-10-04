@@ -125,13 +125,71 @@ describe("sanitizeStateAndFillDefaults", () => {
     })
   })
 
+  describe("éléments invalides", () => {
+    it("conserve les entités valides quand une seule est corrompue", () => {
+      const { safeState, report } = sanitizeStateAndFillDefaults({
+        name: "Scénario 2025",
+        entities: [alice, { id: "x1", type: "association", name: "Type inconnu" }, sasu, "pas une entité"],
+        relationships: [{ id: "r1", fromId: "p1", toId: "c1", type: "Président" }],
+        monthlyData: grille([flux("f1", "p1")])
+      })
+
+      expect(safeState.name).toBe("Scénario 2025")
+      expect(safeState.entities).toEqual([alice, sasu])
+      expect(safeState.relationships).toHaveLength(1)
+      expect(safeState.monthlyData[0].flows).toHaveLength(1)
+      expect(report).toEqual({ entitiesRemoved: 2, relationshipsRemoved: 0, flowsRemoved: 0 })
+    })
+
+    it("supprime aussi les relations et les flux de l'entité écartée", () => {
+      const { safeState, report } = sanitizeStateAndFillDefaults({
+        entities: [alice, { ...sasu, legalStatus: "SCI" }],
+        relationships: [{ id: "r1", fromId: "p1", toId: "c1", type: "Président" }],
+        monthlyData: grille([flux("f1", "p1"), flux("f2", "c1")])
+      })
+
+      expect(safeState.entities).toEqual([alice])
+      expect(safeState.relationships).toEqual([])
+      expect(safeState.monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
+      expect(report).toEqual({ entitiesRemoved: 1, relationshipsRemoved: 1, flowsRemoved: 1 })
+    })
+
+    it("écarte une relation invalide sans toucher aux autres", () => {
+      const { safeState, report } = sanitizeStateAndFillDefaults({
+        entities: [alice, sasu],
+        relationships: [
+          { id: "r1", fromId: "p1", toId: "c1", type: "Cousin" },
+          { id: "r2", fromId: "p1", toId: "c1", type: "Associé" },
+          { id: "r3", fromId: "p1", toId: "fantome", type: "Associé" }
+        ]
+      })
+
+      expect(safeState.entities).toEqual([alice, sasu])
+      expect(safeState.relationships).toEqual([{ id: "r2", fromId: "p1", toId: "c1", type: "Associé" }])
+      expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 2, flowsRemoved: 0 })
+    })
+
+    it("écarte un flux invalide sans toucher aux autres", () => {
+      const { safeState, report } = sanitizeStateAndFillDefaults({
+        entities: [alice],
+        monthlyData: grille([flux("f1", "p1"), { ...flux("f2", "p1"), type: "pot-de-vin" }, null, flux("f3", "fantome")])
+      })
+
+      expect(safeState.monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
+      expect(safeState.monthlyData).toHaveLength(12)
+      expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 3 })
+    })
+  })
+
   describe("données irrécupérables", () => {
     it.each([
       ["null", null],
       ["une chaîne", "pas une session"],
       ["un tableau", [1, 2, 3]],
       ["une grille de 11 mois", { monthlyData: grille().slice(0, 11) }],
-      ["un type de relation inconnu", { entities: [alice, sasu], relationships: [{ id: "r1", fromId: "p1", toId: "c1", type: "Cousin" }] }]
+      ["un mois qui n'est pas un objet", { monthlyData: [...grille().slice(0, 11), "décembre"] }],
+      ["un mois sans liste de flux", { monthlyData: [...grille().slice(0, 11), { month: 11 }] }],
+      ["un nom qui n'est pas une chaîne", { name: 42, entities: [alice] }]
     ])("repart d'une session vide pour %s", (_cas, donnees) => {
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
 
@@ -141,8 +199,6 @@ describe("sanitizeStateAndFillDefaults", () => {
       expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
       expect(consoleError).toHaveBeenCalledOnce()
     })
-
-    it.todo("conserve les entités valides quand une seule est corrompue (aujourd'hui toute la session est réinitialisée et entitiesRemoved vaut toujours 0)")
   })
 })
 
