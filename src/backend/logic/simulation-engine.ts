@@ -199,7 +199,8 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
   const exploitant = personnesLiees(ctx, entreprise.id, RELATIONS_D_EXPLOITANT)[0]
   if (exploitant) {
     const revenus = revenusDe(ctx, exploitant)
-    revenus.beneficesImposables += Math.max(0, resultat.revenuNet)
+    // Un déficit d'entreprise individuelle au réel s'impute sur les autres revenus du foyer (article 156 du CGI).
+    revenus.beneficesImposables += resultat.revenuNet
     revenus.beneficesEncaisses += resultat.revenuNet
     revenus.prelevementsActivites += resultat.cotisationsSociales
   } else {

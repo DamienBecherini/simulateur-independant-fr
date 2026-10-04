@@ -248,11 +248,9 @@ casDeReference("Cas de référence 2026 : sociétés et entreprise individuelle"
       verifierIdentiteDuBilan(report)
     })
 
-    // Écart relevé : un déficit professionnel (BIC ou BNC au réel) s'impute sur le revenu global de l'année
-    // (article 156 du CGI). Le moteur ramène le déficit à zéro avant l'impôt (Math.max(0, resultat.revenuNet)
-    // dans simulerEntrepriseIndividuelle, src/backend/logic/simulation-engine.ts) : l'avertissement de calculsEI.ts
-    // signale que le report du déficit n'est pas modélisé, mais l'imputation de l'année non plus.
-    it.fails("déficit et salaire : le déficit s'impute sur le revenu global", () => {
+    // Un déficit professionnel (BIC ou BNC au réel) s'impute sur le revenu global de l'année (article 156 du CGI).
+    // Ce cas a révélé une erreur du moteur, qui ramenait le déficit à zéro avant le calcul de l'impôt.
+    it("déficit et salaire : le déficit s'impute sur le revenu global", () => {
       // Salaire 50 000 € : 45 000 € après déduction de 10 %. Déficit de 10 000 € : revenu global 35 000 €.
       // Impôt : 1 977,69 + 5 421 x 30 % = 3 603,99 € (le moteur, sans imputation : 6 603,99 € sur 45 000 €).
       // Net : 50 000 - 10 000 - 3 603,99 = 36 396,01 €.

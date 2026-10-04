@@ -356,7 +356,7 @@ describe("runMetaSimulation", () => {
       expect(report.persons[0].revenusActivites).toBe(30000)
     })
 
-    it("fait supporter le déficit à l'entrepreneur sans le rendre imposable", () => {
+    it("impute le déficit sur les autres revenus du foyer", () => {
       const report = simuler(
         [personne("carl"), societe("ei", "EI")],
         [relation("carl", "ei", "Titulaire")],
@@ -367,7 +367,8 @@ describe("runMetaSimulation", () => {
         ]
       )
 
-      expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 17000, revenuImposableGlobal: 18000 })
+      // Salaire : 20 000 - 2 000 = 18 000 € imposables, moins le déficit de 3 000 €.
+      expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 17000, revenuImposableGlobal: 15000 })
     })
   })
 
