@@ -1,7 +1,7 @@
 // src/backend/logic/calculsIndividuels.test.ts
 
 import { describe, expect, it } from "vitest"
-import { calculerMicro, type EntreesMicro } from "./calculsAE.js"
+import { calculerMicro, plafondRfrVersementLiberatoire, type EntreesMicro } from "./calculsAE.js"
 import { calculerEI } from "./calculsEI.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 
@@ -34,8 +34,13 @@ describe("calculerMicro", () => {
 
     expect(resultat.revenuImposable).toBe(0)
     expect(resultat.versementLiberatoire).toBeCloseTo(500)
-    expect(resultat.warnings).toHaveLength(1)
-    expect(resultat.warnings[0]).toMatch(/revenu fiscal de référence.*28\s000 €/)
+    expect(resultat.warnings).toEqual([])
+  })
+
+  it("calcule le seuil de revenu fiscal de référence du versement libératoire selon le nombre de parts", () => {
+    expect(plafondRfrVersementLiberatoire(1, reglesDeTest)).toBe(28000)
+    expect(plafondRfrVersementLiberatoire(2.5, reglesDeTest)).toBe(70000)
+    expect(plafondRfrVersementLiberatoire(1)).toBeGreaterThan(0)
   })
 
   describe("abattement minimum", () => {

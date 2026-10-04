@@ -51,16 +51,20 @@ function calculerRevenuImposable(entrees: EntreesMicro, abattement: ReglesMicro[
 }
 
 /**
+ * Seuil de revenu fiscal de référence N-2 qui ouvre le versement libératoire : un montant par part,
+ * majoré de 50 % par demi-part (et de 25 % par quart de part), soit ce montant multiplié par le nombre de parts.
+ */
+export function plafondRfrVersementLiberatoire(partsFiscales: number, regles: ReglesFiscales = reglesEnVigueur): number {
+  return regles.microEntreprise.versementLiberatoire.plafondRfrParPart * partsFiscales
+}
+
+/**
  * Micro-entreprise : cotisations sociales en pourcentage du chiffre d'affaires (réduites avec l'ACRE),
  * puis soit un revenu imposable après abattement forfaitaire, soit le versement libératoire de l'impôt.
  */
 export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales = reglesEnVigueur): ResultatMicro {
   const micro = regles.microEntreprise
   const warnings = verifierPlafonds(entrees, micro.plafonds)
-
-  if (entrees.opteVFL) {
-    warnings.push(`Versement libératoire : l'option n'est ouverte que si le revenu fiscal de référence du foyer (année N-2) ne dépasse pas ${euros(micro.versementLiberatoire.plafondRfrParPart)} par part. Le simulateur ne vérifie pas cette condition.`)
-  }
 
   const cotisationsPleinTaux = appliquerTaux(entrees, micro.cotisations)
 

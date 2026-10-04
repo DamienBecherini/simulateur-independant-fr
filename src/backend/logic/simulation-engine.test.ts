@@ -395,6 +395,7 @@ describe("runMetaSimulation", () => {
         revenuVerse: 28000,
         resultatConserve: 0,
         beneficiaireIds: ["bob"],
+        versementLiberatoire: { plafondRfr: 28000, partsFiscales: 1, rfrN2: null, eligible: null, applique: false },
         warnings: []
       })
       expect(report.persons[0].detail.benefices).toBe(28000)
@@ -405,6 +406,45 @@ describe("runMetaSimulation", () => {
       const report = simuler([personne("bob"), micro("m1", { opteVFL: true })], [relation("bob", "m1", "Titulaire")], [["m1", "ca_micro_vente", 50000]])
 
       expect(foyerDe(report, "bob")).toMatchObject({ revenusEncaisses: 45000, revenuImposableGlobal: 0, impotSurLeRevenu: 500, netApresImpots: 44500 })
+    })
+
+    describe("versement libératoire", () => {
+      const avecVFL = (rfrN2?: number) => ({ ...micro("m1", { opteVFL: true }), ...(rfrN2 !== undefined ? { rfrN2 } : {}) })
+      const flux: Flux[] = [["m1", "ca_micro_vente", 50000]]
+
+      it("l'applique quand le revenu fiscal de référence est sous le seuil", () => {
+        const report = simuler([personne("bob"), avecVFL(20000)], [relation("bob", "m1", "Titulaire")], flux)
+
+        expect(activite(report, "m1").versementLiberatoire).toEqual({ plafondRfr: 28000, partsFiscales: 1, rfrN2: 20000, eligible: true, applique: true })
+        expect(activite(report, "m1").warnings).toEqual([])
+        expect(foyerDe(report, "bob")).toMatchObject({ impotSurLeRevenu: 500 })
+      })
+
+      it("calcule l'impôt au barème quand le revenu fiscal de référence dépasse le seuil, et le signale", () => {
+        const report = simuler([personne("bob"), avecVFL(30000)], [relation("bob", "m1", "Titulaire")], flux)
+
+        expect(activite(report, "m1").versementLiberatoire).toMatchObject({ eligible: false, applique: false })
+        expect(activite(report, "m1").warnings).toEqual([expect.stringContaining("Versement libératoire impossible")])
+        // 50 000 x 30 % = 15 000 € imposables au barème : 500 € d'impôt brut, effacé par la décote.
+        expect(foyerDe(report, "bob")).toMatchObject({ revenuImposableGlobal: 15000, impotSurLeRevenu: 0 })
+      })
+
+      it("proportionne le seuil au nombre de parts du foyer du titulaire", () => {
+        const report = simuler(
+          [personne("alice"), personne("bob"), personne("enfant"), avecVFL(65000)],
+          [relation("alice", "bob", "Marié(e)"), relation("alice", "enfant", "Enfant"), relation("bob", "m1", "Titulaire")],
+          flux
+        )
+
+        expect(activite(report, "m1").versementLiberatoire).toEqual({ plafondRfr: 70000, partsFiscales: 2.5, rfrN2: 65000, eligible: true, applique: true })
+      })
+
+      it("l'applique en le signalant quand le revenu fiscal de référence n'est pas renseigné", () => {
+        const report = simuler([personne("bob"), avecVFL()], [relation("bob", "m1", "Titulaire")], flux)
+
+        expect(activite(report, "m1").versementLiberatoire).toMatchObject({ eligible: null, applique: true })
+        expect(activite(report, "m1").warnings).toEqual([expect.stringMatching(/28\s000 € pour 1 part\(s\)/)])
+      })
     })
 
     it("signale une micro-entreprise sans titulaire", () => {

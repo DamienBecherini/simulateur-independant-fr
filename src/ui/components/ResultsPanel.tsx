@@ -1,6 +1,6 @@
 // src/ui/components/ResultsPanel.tsx
 
-import type { ActivityResult, FoyerFiscalResult, PersonResult, SimulationReport } from "@/types"
+import type { ActivityResult, FoyerFiscalResult, PersonResult, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
 
@@ -196,6 +196,21 @@ function FoyerCard({ foyer, persons, showRates }: { foyer: FoyerFiscalResult; pe
   )
 }
 
+/** Seuil d'accès au versement libératoire d'une micro-entreprise, et situation du foyer par rapport à ce seuil. */
+function VersementLiberatoireNote({ info }: { info: VersementLiberatoireInfo }) {
+  const parts = info.partsFiscales.toLocaleString("fr-FR")
+  const status = info.eligible === null ? "RFR N-2 non renseigné (fiche de la micro-entreprise)" : info.eligible ? `votre RFR N-2 de ${formatMoney(info.rfrN2 ?? 0)} y donne accès` : `votre RFR N-2 de ${formatMoney(info.rfrN2 ?? 0)} le dépasse`
+
+  return (
+    <div className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+      <p>
+        <span className="font-medium text-slate-700 dark:text-slate-200">Versement libératoire</span> {info.applique ? "(appliqué)" : "(non appliqué)"} : seuil de {formatMoney(info.plafondRfr)} de revenu fiscal de référence N-2 pour {parts} {info.partsFiscales > 1 ? "parts" : "part"} ;{" "}
+        <span className={info.eligible === false ? "text-rose-700 dark:text-rose-400" : info.eligible ? "text-emerald-700 dark:text-emerald-400" : undefined}>{status}</span>.
+      </p>
+    </div>
+  )
+}
+
 function ActivityCard({ activity }: { activity: ActivityResult }) {
   const isMicro = activity.type === "micro-entreprise"
 
@@ -209,6 +224,7 @@ function ActivityCard({ activity }: { activity: ActivityResult }) {
         {activity.resultatConserve !== 0 ? <Row label={activity.resultatConserve > 0 ? "Conservé dans la société" : "Déficit de la société"} value={formatMoney(activity.resultatConserve)} /> : null}
         <Row label="Versé avant impôt sur le revenu" value={formatMoney(activity.revenuVerse)} hint={shareOfRevenue(activity)} strong />
       </dl>
+      {activity.versementLiberatoire ? <VersementLiberatoireNote info={activity.versementLiberatoire} /> : null}
     </Card>
   )
 }

@@ -166,30 +166,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                 </Select>
               </div>
             )}
-            {localEntity.type === "company" && localEntity.legalStatus === "EURL" && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="capitalSocial" className="text-right">
-                  Capital social
-                </Label>
-                <div className="col-span-3">
-                  <Input
-                    id="capitalSocial"
-                    name="capitalSocial"
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={localEntity.capitalSocial}
-                    onChange={e =>
-                      setFormData(prev => {
-                        if (prev.entity?.type !== "company") return prev
-                        return { ...prev, entity: { ...prev.entity, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) } }
-                      })
-                    }
-                  />
-                  <p className="mt-1 text-xs text-slate-500">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
-                </div>
-              </div>
-            )}
+            <StatusSpecificFields entity={localEntity} onChange={entity => setFormData(prev => ({ ...prev, entity }))} />
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right">Couleur</Label>
               <div className="col-span-3 flex gap-2">
@@ -289,6 +266,56 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** Champs propres à certains statuts : revenu fiscal de référence d'une micro-entreprise, capital social d'une EURL. */
+function StatusSpecificFields({ entity, onChange }: { entity: Entity; onChange: (entity: Entity) => void }) {
+  return (
+    <>
+      {entity.type === "micro-entreprise" && (
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="rfrN2" className="text-right">
+            RFR N-2
+          </Label>
+          <div className="col-span-3">
+            <Input
+              id="rfrN2"
+              name="rfrN2"
+              type="number"
+              min="0"
+              step="100"
+              placeholder="Non renseigné"
+              value={entity.rfrN2 ?? ""}
+              onChange={e => {
+                const value = parseFloat(e.target.value)
+                onChange({ ...entity, rfrN2: Number.isFinite(value) && value >= 0 ? value : undefined })
+              }}
+            />
+            <p className="mt-1 text-xs text-slate-500">Revenu fiscal de référence du foyer d'il y a deux ans (avis d'imposition) : il décide de l'accès au versement libératoire.</p>
+          </div>
+        </div>
+      )}
+      {entity.type === "company" && entity.legalStatus === "EURL" && (
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="capitalSocial" className="text-right">
+            Capital social
+          </Label>
+          <div className="col-span-3">
+            <Input
+              id="capitalSocial"
+              name="capitalSocial"
+              type="number"
+              min="0"
+              step="100"
+              value={entity.capitalSocial}
+              onChange={e => onChange({ ...entity, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })}
+            />
+            <p className="mt-1 text-xs text-slate-500">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

@@ -37,6 +37,8 @@ export const MicroEntrepriseSchema = z.object({
   name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle Micro-Entreprise"),
   beneficieACRE: z.boolean().default(false),
   opteVFL: z.boolean().default(false),
+  // Revenu fiscal de référence du foyer de l'année N-2 : il conditionne l'accès au versement libératoire.
+  rfrN2: z.number().min(0).optional(),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
 })
@@ -146,7 +148,21 @@ export interface ActivityResult {
   resultatConserve: number
   /** Personnes qui reçoivent les revenus de l'activité : dirigeant et associés d'une société, titulaire d'une entreprise individuelle. */
   beneficiaireIds: string[]
+  /** Micro-entreprise seulement : accès au versement libératoire selon le revenu fiscal de référence du foyer. */
+  versementLiberatoire?: VersementLiberatoireInfo
   warnings: string[]
+}
+
+export interface VersementLiberatoireInfo {
+  /** Seuil de revenu fiscal de référence N-2 pour le foyer du titulaire : seuil par part x nombre de parts. */
+  plafondRfr: number
+  partsFiscales: number
+  /** Revenu fiscal de référence N-2 saisi, ou `null` s'il n'est pas renseigné. */
+  rfrN2: number | null
+  /** `null` tant que le revenu fiscal de référence n'est pas renseigné. */
+  eligible: boolean | null
+  /** L'option est demandée et applicable : l'impôt est payé en pourcentage du chiffre d'affaires. */
+  applique: boolean
 }
 
 /** Revenus annuels d'une personne, avant impôt sur le revenu. */

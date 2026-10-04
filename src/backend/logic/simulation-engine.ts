@@ -1,12 +1,13 @@
 // src/backend/logic/simulation-engine.ts
 
-import type { ActivityResult, Company, FinancialFlow, FoyerFiscalResult, MicroEntreprise, Person, PersonResult, Relationship, SessionState, SimulationBilan, SimulationReport } from "../../types.js"
-import { calculerMicro } from "./calculsAE.js"
+import type { VersementLiberatoireInfo, ActivityResult, Company, FinancialFlow, FoyerFiscalResult, MicroEntreprise, Person, PersonResult, Relationship, SessionState, SimulationBilan, SimulationReport } from "../../types.js"
+import { calculerMicro, plafondRfrVersementLiberatoire } from "./calculsAE.js"
 import { calculerEI } from "./calculsEI.js"
 import { calculerEURL } from "./calculsEURL.js"
 import { calculerIR } from "./calculsIR.js"
 import { calculerSASU } from "./calculsSASU.js"
 import { buildFoyers, type Foyer } from "./foyers.js"
+import { euros } from "./format.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 
 /*
@@ -46,6 +47,8 @@ function encaisse(revenus: RevenusDActivite): number {
 interface Contexte {
   session: SessionState
   regles: ReglesFiscales
+  /** Foyers fiscaux, calculés avant les activités : le versement libératoire dépend des parts du foyer. */
+  foyers: Foyer[]
   flux: Map<string, FlowTotals>
   /** Cotisations salariales par personne : écart entre brut et net des salaires dont le brut est renseigné. */
   cotisationsSalariales: Map<string, number>
@@ -220,23 +223,49 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
   }
 }
 
+/**
+ * Accès au versement libératoire : le revenu fiscal de référence N-2 du foyer du titulaire
+ * ne doit pas dépasser un seuil proportionnel à son nombre de parts.
+ */
+function analyserVersementLiberatoire(ctx: Contexte, micro: MicroEntreprise, titulaire: string | undefined): VersementLiberatoireInfo {
+  const foyer = titulaire ? ctx.foyers.find(f => f.declarantIds.includes(titulaire) || f.enfantIds.includes(titulaire)) : undefined
+  const partsFiscales = foyer?.totalParts ?? 1
+  const plafondRfr = plafondRfrVersementLiberatoire(partsFiscales, ctx.regles)
+  const rfrN2 = micro.rfrN2 ?? null
+  const eligible = rfrN2 === null ? null : rfrN2 <= plafondRfr
+  return { plafondRfr, partsFiscales, rfrN2, eligible, applique: micro.opteVFL && eligible !== false }
+}
+
+function avertissementsVersementLiberatoire(micro: MicroEntreprise, vfl: VersementLiberatoireInfo): string[] {
+  if (!micro.opteVFL) return []
+  const parts = vfl.partsFiscales.toLocaleString("fr-FR")
+  if (vfl.eligible === false) {
+    return [`Versement libératoire impossible : le revenu fiscal de référence N-2 (${euros(vfl.rfrN2 ?? 0)}) dépasse le seuil de ${euros(vfl.plafondRfr)} pour ${parts} part(s). L'impôt est calculé au barème.`]
+  }
+  if (vfl.eligible === null) {
+    return [`Versement libératoire : il n'est ouvert que si le revenu fiscal de référence N-2 du foyer ne dépasse pas ${euros(vfl.plafondRfr)} pour ${parts} part(s). Renseignez-le dans la fiche de la micro-entreprise pour le vérifier.`]
+  }
+  return []
+}
+
 function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): ActivityResult {
+  const titulaire = personnesLiees(ctx, micro.id, ["Titulaire"])[0]
+  const vfl = analyserVersementLiberatoire(ctx, micro, titulaire)
   const resultat = calculerMicro(
     {
       caVente: total(ctx, micro.id, "ca_micro_vente"),
       caServicesBic: total(ctx, micro.id, "ca_micro_services_bic"),
       caServicesBnc: total(ctx, micro.id, "ca_micro_services_bnc"),
       beneficieACRE: micro.beneficieACRE,
-      opteVFL: micro.opteVFL
+      opteVFL: vfl.applique
     },
     ctx.regles
   )
-  const warnings = [...resultat.warnings]
+  const warnings = [...resultat.warnings, ...avertissementsVersementLiberatoire(micro, vfl)]
   // Au régime micro, les dépenses réelles ne réduisent ni les cotisations ni l'impôt : elles ne pèsent que sur la trésorerie.
   const depenses = total(ctx, micro.id, "expense")
   const revenuVerse = resultat.chiffreAffaires - resultat.cotisationsSociales - depenses
 
-  const titulaire = personnesLiees(ctx, micro.id, ["Titulaire"])[0]
   if (titulaire) {
     const revenus = revenusDe(ctx, titulaire)
     revenus.beneficesImposables += resultat.revenuImposable
@@ -260,6 +289,7 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
     revenuVerse,
     resultatConserve: 0,
     beneficiaireIds: titulaire ? [titulaire] : [],
+    versementLiberatoire: { ...vfl, plafondRfr: Math.round(vfl.plafondRfr) },
     warnings
   }
 }
@@ -396,12 +426,13 @@ function calculerBilan(ctx: Contexte, activities: ActivityResult[], persons: Per
 }
 
 export function runMetaSimulation(session: SessionState, regles: ReglesFiscales = reglesEnVigueur): SimulationReport {
-  const ctx: Contexte = { session, regles, flux: aggregateAnnualFlowsByEntity(session), cotisationsSalariales: aggregateSalaryContributions(session), revenus: new Map(), nonRattache: 0 }
+  const foyersFiscaux = buildFoyers(session, regles.IR.partsParEnfant)
+  const ctx: Contexte = { session, regles, foyers: foyersFiscaux, flux: aggregateAnnualFlowsByEntity(session), cotisationsSalariales: aggregateSalaryContributions(session), revenus: new Map(), nonRattache: 0 }
 
   // Les activités d'abord : elles alimentent les revenus des personnes, dont dépend l'impôt des foyers.
   const activities = session.entities.filter((e): e is Company | MicroEntreprise => e.type !== "person").map(activite => arrondirActivite(simulerActivite(ctx, activite)))
   const persons = session.entities.filter((e): e is Person => e.type === "person").map(personne => resultatPersonne(ctx, personne))
-  const foyers = buildFoyers(session, regles.IR.partsParEnfant).map(foyer => calculerFoyer(ctx, foyer))
+  const foyers = foyersFiscaux.map(foyer => calculerFoyer(ctx, foyer))
 
   return {
     annee: regles.annee,
