@@ -108,7 +108,10 @@ test("la grille annuelle et sa légende sont imprimées sur une page en paysage,
   const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString("latin1")
   const orientations = Array.from(pdf.matchAll(/\/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]/g), ([, largeur, hauteur]) => (Number(largeur) > Number(hauteur) ? "paysage" : "portrait"))
 
-  expect(orientations.filter(orientation => orientation === "paysage")).toHaveLength(1)
+  // Une ou deux pages paysage selon les polices du système (la légende peut passer sur la suivante), toujours d'un seul tenant.
+  const paysage = orientations.flatMap((orientation, i) => (orientation === "paysage" ? [i] : []))
+  expect(paysage.length).toBeGreaterThanOrEqual(1)
+  expect(paysage.at(-1)! - paysage[0]).toBe(paysage.length - 1)
   expect(orientations[0]).toBe("portrait")
   expect(orientations.at(-1)).toBe("portrait")
 })
