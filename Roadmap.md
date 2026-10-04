@@ -130,7 +130,50 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
-### **Phase 11 : Scénarios Avancés & Finalisation [Planifié 🗓️]**
+### **Phase 11 : Exports [Planifié 🗓️]**
+
+- **Objectif :** présenter les chiffres, les transmettre à un expert-comptable ou les faire analyser par une IA.
+
+1.  **CSV :** grille mensuelle, résultats par activité et par foyer, tableau du comparateur et courbe rémunération / dividendes ; séparateur et décimales à la française, lisibles directement par Excel ou LibreOffice.
+2.  **PDF :** feuille de style d'impression (sans barre d'outils ni boutons, tableaux sur des pages entières), puis `printToPDF` dans Electron et « Imprimer en PDF » dans le navigateur.
+3.  **Rapport pour une IA :** Markdown structuré (hypothèses, règles de l'année, acteurs et relations, montants par activité et par foyer, comparaison des statuts, avertissements), plus lisible pour un modèle de langage qu'un export XML ; le JSON complet reste disponible.
+4.  **Toutes les sauvegardes :** export et import de l'ensemble des sauvegardes nommées en un seul fichier (aujourd'hui, seule la simulation en cours s'exporte).
+5.  **XLSX (optionnel) :** seulement avec une bibliothèque sans failles connues ; le CSV couvre l'essentiel.
+
+---
+
+### **Phase 12 : Cotisations du président de SASU et statut de salarié [Planifié 🗓️]**
+
+- **Objectif :** des rémunérations en société calculées comme sur un bulletin de paie, et le cas du conjoint salarié de la société.
+
+1.  **Président de SASU ligne à ligne :** remplacer le ratio moyen (coût total = 1,8 fois le net) par les cotisations salariales et patronales d'un assimilé salarié : taux et assiettes (plafonnée au PASS ou non), tranches 1 et 2 de la retraite complémentaire, taux réduits maladie et allocations familiales pour les rémunérations modestes (à confirmer pour un mandataire social), sans assurance chômage ni réduction générale des cotisations patronales. Brut retrouvé par dichotomie à partir du net, comme pour l'EURL ; cas de référence dérivés des barèmes Urssaf. Rend plus juste l'arbitrage rémunération / dividendes, surtout pour les petites rémunérations.
+2.  **Relation « Salarié de » :** une personne salariée d'une société de la simulation (par exemple le conjoint du président), avec le coût employeur complet : cotisations patronales, assurance chômage, et réduction générale dégressive des cotisations patronales (paramètres 2026 à vérifier sur l'Urssaf). Avertissement sur les conditions (lien de subordination réel, pas de gérance de fait). L'allocation chômage elle-même n'est pas modélisée.
+
+---
+
+### **Phase 13 : Plusieurs années [Planifié 🗓️]**
+
+- **Objectif :** simuler et comparer plusieurs années qui s'enchaînent.
+
+1.  **Modèle de données :** une session contient plusieurs années (grille, acteurs et relations par année) ; nouveau format de fichier, avec migration des sessions existantes.
+2.  **Règles par année :** `config.json` par année ; pour une année sans règles connues, reprise des dernières, avec un avertissement.
+3.  **Revenu fiscal de référence :** calculé chaque année et reporté ; le versement libératoire de l'année N vérifie celui de N-2 automatiquement (il faut donc trois années chaînées).
+4.  **Bénéfice mis en réserve :** le résultat conservé d'une société est reporté sur l'année suivante et peut être distribué plus tard ; arbitrage des dividendes entre les années.
+5.  **Dispositifs limités dans le temps :** ACRE la première année, exonération de CFE l'année de création, cotisations des premières années.
+
+---
+
+### **Phase 14 : Montages types [Planifié 🗓️]**
+
+- **Objectif :** partir d'une situation courante plutôt que d'une page vide. Peut s'intercaler entre deux autres phases.
+
+1.  **Bibliothèque de montages :** simulations préremplies à charger en un clic, comme la simulation d'exemple de la démo : micro-entreprise seule, SASU sans salaire, micro-entreprise et SASU du conjoint, conjoint salarié de la SASU, EURL à l'IR ou à l'IS, couple en union libre ou marié.
+2.  **Explication :** pour chaque montage, ce qu'il illustre, ses conditions et ses risques, avec un lien vers le comparateur et l'arbitrage rémunération / dividendes.
+3.  **Plus tard :** recherche automatique d'une meilleure structure, en s'appuyant sur le comparateur et l'optimiseur.
+
+---
+
+### **Phase 15 : Scénarios Avancés & Finalisation [Planifié 🗓️]**
 
 - **Objectif :** compléter le modèle pour les situations moins courantes, puis distribuer l'application.
 

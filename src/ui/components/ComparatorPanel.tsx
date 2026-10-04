@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
+import { numeroterNotes, type Note } from "@/lib/notes"
 import { cn } from "@/lib/utils"
 import { Depliable } from "./Depliable"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
@@ -163,7 +164,29 @@ function ComparatorControls({ activities, selected, options, onSelect, onChange 
   )
 }
 
-function ComparisonTable({ result, activityName }: { result: ComparaisonResult; activityName: string }) {
+const pastilleNote = "inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-100"
+
+/** En-tête d'une colonne : le statut, ses mentions (actuel, meilleur net) et ses renvois aux notes sous le tableau. */
+function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioStatut; meilleur: boolean; renvois: number[] }) {
+  const mentions = [scenario.actuel ? "actuel" : null, meilleur ? "meilleur net" : null].filter(Boolean).join(" · ")
+  return (
+    <th scope="col" className={cn("px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "bg-emerald-100 dark:bg-emerald-900/40")}>
+      {scenario.libelle}
+      <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{mentions || " "}</span>
+      {renvois.length > 0 ? (
+        <span className="mt-1 flex justify-end gap-1">
+          {renvois.map(numero => (
+            <a key={numero} href={`#note-comparateur-${numero}`} aria-label={`Voir la note ${numero}`} className={cn(pastilleNote, "hover:bg-amber-200 dark:hover:bg-amber-800")}>
+              {numero}
+            </a>
+          ))}
+        </span>
+      ) : null}
+    </th>
+  )
+}
+
+function ComparisonTable({ result, activityName, renvois }: { result: ComparaisonResult; activityName: string; renvois: Map<string, number[]> }) {
   if (result.scenarios.length === 0) return null
   const current = result.scenarios.find(s => s.actuel)
   const best = (s: ScenarioStatut) => s.statut === result.meilleur
@@ -177,10 +200,7 @@ function ComparisonTable({ result, activityName }: { result: ComparaisonResult; 
               <span className="sr-only">Indicateur</span>
             </th>
             {result.scenarios.map(s => (
-              <th key={s.statut} scope="col" className={cn("px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-200", best(s) && "bg-emerald-100 dark:bg-emerald-900/40")}>
-                {s.libelle}
-                <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{[s.actuel ? "actuel" : null, best(s) ? "meilleur net" : null].filter(Boolean).join(" · ") || " "}</span>
-              </th>
+              <EnTeteDeStatut key={s.statut} scenario={s} meilleur={best(s)} renvois={renvois.get(s.statut) ?? []} />
             ))}
           </tr>
         </thead>
@@ -260,19 +280,25 @@ function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
   )
 }
 
-function ScenarioWarnings({ scenarios, activityName }: { scenarios: ScenarioStatut[]; activityName: string }) {
-  const withWarnings = scenarios.filter(s => s.warnings.length > 0)
-  if (withWarnings.length === 0) return null
+/** Avertissements des statuts, numérotés : les pastilles des en-têtes de colonne y renvoient. */
+function NotesDuTableau({ notes, activityName }: { notes: Note[]; activityName: string }) {
+  if (notes.length === 0) return null
   return (
-    <div className="space-y-1 text-sm text-amber-800 dark:text-amber-200/90">
-      {withWarnings.map(s => (
-        <p key={s.statut}>
-          <span className="font-medium">
-            « {activityName} » en {s.libelle} :
-          </span>{" "}
-          {s.warnings.join(" ")}
-        </p>
-      ))}
+    <div className="space-y-2 text-sm text-amber-900 dark:text-amber-100">
+      <p className="font-medium">Notes sur « {activityName} »</p>
+      <ol className="space-y-2">
+        {notes.map(note => (
+          <li key={note.numero} id={`note-comparateur-${note.numero}`} className="flex scroll-mt-24 items-start gap-2">
+            <span aria-hidden="true" className={pastilleNote}>
+              {note.numero}
+            </span>
+            <p>
+              <span className="sr-only">Note {note.numero}. </span>
+              <span className="font-medium">{note.colonnes.join(", ")} :</span> {note.texte}
+            </p>
+          </li>
+        ))}
+      </ol>
     </div>
   )
 }
@@ -294,11 +320,12 @@ function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[
 }
 
 function ComparisonResults({ result, activityName }: { result: ComparaisonResult; activityName: string }) {
+  const { notes, renvois } = numeroterNotes(result.scenarios.map(s => ({ id: s.statut, libelle: s.libelle, avertissements: s.warnings })))
   return (
     <>
-      <ComparisonTable result={result} activityName={activityName} />
+      <ComparisonTable result={result} activityName={activityName} renvois={renvois} />
+      <NotesDuTableau notes={notes} activityName={activityName} />
       <ProtectionDetails scenarios={result.scenarios} />
-      <ScenarioWarnings scenarios={result.scenarios} activityName={activityName} />
     </>
   )
 }

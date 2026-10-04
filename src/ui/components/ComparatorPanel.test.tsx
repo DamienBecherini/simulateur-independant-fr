@@ -65,12 +65,23 @@ describe("ComparatorPanel", () => {
     expect(screen.getByText(/Couverture SASU./)).toBeInTheDocument()
   })
 
-  it("affiche les avertissements de chaque statut", async () => {
-    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
+  it("numérote les avertissements sous le tableau, avec un renvoi dans l'en-tête de chaque colonne concernée", async () => {
+    const seuil = "Seuil à vérifier."
+    const tva = "TVA due."
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "micro" ? { ...s, warnings: [tva] } : s.statut === "micro-vfl" ? { ...s, warnings: [tva, seuil] } : s)) }))
     render(<ComparatorPanel session={withActivity()} />)
 
-    expect(await screen.findByText("Seuil à vérifier.")).toBeInTheDocument()
-    expect(screen.getByText(/« Mon atelier » en Micro \+ versement libératoire :/)).toBeInTheDocument()
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    const enTeteMicro = within(table).getByRole("columnheader", { name: /^Micro-entreprise/ })
+    expect(within(enTeteMicro).getByRole("link", { name: "Voir la note 1" })).toHaveAttribute("href", "#note-comparateur-1")
+    const enTeteVfl = within(table).getByRole("columnheader", { name: /versement libératoire/ })
+    expect(within(enTeteVfl).getAllByRole("link").map(lien => lien.getAttribute("href"))).toEqual(["#note-comparateur-1", "#note-comparateur-2"])
+    expect(within(within(table).getByRole("columnheader", { name: /^SASU/ })).queryByRole("link")).not.toBeInTheDocument()
+
+    const note1 = document.getElementById("note-comparateur-1")!
+    expect(note1).toHaveTextContent(`Micro-entreprise, Micro + versement libératoire : ${tva}`)
+    expect(document.getElementById("note-comparateur-2")).toHaveTextContent(`Micro + versement libératoire : ${seuil}`)
+    expect(screen.getByText("Notes sur « Mon atelier »")).toBeInTheDocument()
     expect(screen.getByRole("row", { name: /^Conservé dans « Mon atelier »/ })).toBeInTheDocument()
   })
 
