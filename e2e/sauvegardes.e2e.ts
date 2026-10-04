@@ -31,7 +31,7 @@ test("enregistrer la session dans une sauvegarde, réinitialiser, puis recharger
   await page.getByRole("button", { name: "Paramètres" }).click()
   await parametres.getByRole("button", { name: "Charger une sauvegarde..." }).click()
   const chargement = page.getByRole("dialog", { name: "Charger une sauvegarde" })
-  await chargement.getByText("Scénario Alice", { exact: true }).click()
+  await chargement.getByRole("button", { name: "Charger la sauvegarde « Scénario Alice »" }).click()
   await expect(chargement).toBeHidden()
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Scénario Alice")
   await expect(page.getByRole("textbox", { name: "Nom" })).toHaveValue("Alice Martin")
@@ -45,7 +45,7 @@ test("une sauvegarde existante est proposée au chargement et restaure toute la 
 
   await page.getByRole("button", { name: "Paramètres" }).click()
   await page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: "Charger une sauvegarde..." }).click()
-  await page.getByRole("dialog", { name: "Charger une sauvegarde" }).getByText("Micro BNC 30 000 €", { exact: true }).click()
+  await page.getByRole("dialog", { name: "Charger une sauvegarde" }).getByRole("button", { name: "Charger la sauvegarde « Micro BNC 30 000 € »" }).click()
 
   await expect(page.getByRole("textbox", { name: "Nom" })).toHaveCount(2)
   await expect(page.getByRole("button", { name: "Flux de décembre : Atelier Martin" })).toBeVisible()

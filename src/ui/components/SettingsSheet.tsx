@@ -70,14 +70,14 @@ function SaveSlotItem({ slot, onDelete, onExport, onLoad }: { slot: SaveSlot; on
               <path d="M5.5 4.625C5.01421 4.625 4.625 5.01421 4.625 5.5C4.625 5.98579 5.01421 6.375 5.5 6.375C5.98579 6.375 6.375 5.98579 6.375 5.5C6.375 5.01421 5.98579 4.625 5.5 4.625ZM9.5 4.625C9.01421 4.625 8.625 5.01421 8.625 5.5C8.625 5.98579 9.01421 6.375 9.5 6.375C9.98579 6.375 10.375 5.98579 10.375 5.5C10.375 5.01421 9.98579 4.625 9.5 4.625ZM6.375 9.5C6.375 9.01421 5.98579 8.625 5.5 8.625C5.01421 8.625 4.625 9.01421 4.625 9.5C4.625 9.98579 5.01421 10.375 5.5 10.375C5.98579 10.375 6.375 9.98579 6.375 9.5ZM9.5 8.625C9.01421 8.625 8.625 9.01421 8.625 9.5C8.625 9.98579 9.01421 10.375 9.5 10.375C9.98579 10.375 10.375 9.98579 10.375 9.5C10.375 9.01421 9.98579 8.625 9.5 8.625Z" fill="currentColor"></path>
             </svg>
           </div>
-          <div className="flex-grow cursor-pointer min-w-0" onClick={onLoad}>
+          <button type="button" className="flex-grow min-w-0 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={onLoad} aria-label={`Charger la sauvegarde « ${slot.name} »`}>
             <p className="font-bold truncate" title={slot.name}>
               {slot.name}
             </p>
             <p className="text-sm text-slate-500">Modifié le: {new Date(slot.lastModified).toLocaleString("fr-FR")}</p>
-          </div>
+          </button>
         </div>
-        <Button variant="ghost" size="icon" onClick={onDelete} className="flex-shrink-0">
+        <Button variant="ghost" size="icon" onClick={onDelete} className="flex-shrink-0" aria-label={`Supprimer la sauvegarde « ${slot.name} »`}>
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       </div>
