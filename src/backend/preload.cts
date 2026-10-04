@@ -18,7 +18,7 @@ const api: import("../globals.js", { with: { "resolution-mode": "import" } }).Ev
 
   // Fonctions pour les slots
   getSaveSlots: () => ipcRenderer.invoke("getSaveSlots"),
-  saveSlots: (slots: import('../types.js', { with: { "resolution-mode": "import" } }).SaveSlot[]) => ipcRenderer.invoke("saveSlots", slots),
+  saveSlots: (slots: import('../types.js', { with: { "resolution-mode": "import" } }).SaveSlot[], options?: { silencieux?: boolean }) => ipcRenderer.invoke("saveSlots", slots, options),
 
   // Fonctions d'import/export
   exportState: (state: import('../types.js', { with: { "resolution-mode": "import" } }).ExportableState) => ipcRenderer.invoke("exportState", state),

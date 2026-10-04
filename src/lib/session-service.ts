@@ -63,8 +63,8 @@ export async function importState(): Promise<{ data: ExportableState; report: Sa
 }
 
 /**
- * Sauvegarde la liste complète des slots sur le disque.
+ * Sauvegarde la liste complète des slots sur le disque ; `silencieux` évite la notification de réussite.
  */
-export function saveAllSlots(slots: SaveSlot[]): void {
-  void window.api.saveSlots(slots)
+export function saveAllSlots(slots: SaveSlot[], options?: { silencieux?: boolean }): void {
+  void window.api.saveSlots(slots, options)
 }

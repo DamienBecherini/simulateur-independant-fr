@@ -77,9 +77,19 @@ describe("pont de la démo web", () => {
     expect(await api.getSaveSlots()).toEqual([slot])
     expect(notification).toHaveBeenCalledWith({ message: "Sauvegarde réussie !", type: "success" })
 
+    await api.saveSlots([slot], { silencieux: true })
+    expect(notification).toHaveBeenCalledTimes(1)
+
     seDesabonner()
     await api.saveSlots([])
     expect(notification).toHaveBeenCalledTimes(1)
+  })
+
+  it("écarte une sauvegarde invalide avant de l'écrire", async () => {
+    const api = creerApiNavigateur()
+    const valide: SaveSlot = { ...sessionExemple(), id: "slot-1", lastModified: 1 }
+    await api.saveSlots([valide, { id: 42 } as unknown as SaveSlot])
+    expect(await api.getSaveSlots()).toEqual([valide])
   })
 
   it("conserve les préférences, avec une valeur par défaut", async () => {

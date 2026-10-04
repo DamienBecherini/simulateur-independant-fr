@@ -76,9 +76,10 @@ export function creerApiNavigateur(): EventPayloadMapping {
     optimiserRemuneration: async (session, options, statut) => optimiserRemuneration(sessionValidee(session), options, statut),
 
     getSaveSlots: async () => sanitizeSlots(lire(CLES.sauvegardes) ?? []),
-    saveSlots: async (slots: SaveSlot[]) => {
-      ecrire(CLES.sauvegardes, slots.map(avecFormat))
-      notifier({ message: "Sauvegarde réussie !", type: "success" })
+    // Validées avant écriture, comme dans l'application de bureau.
+    saveSlots: async (slots: SaveSlot[], options) => {
+      ecrire(CLES.sauvegardes, sanitizeSlots(slots.map(avecFormat)).map(avecFormat))
+      if (!options?.silencieux) notifier({ message: "Sauvegarde réussie !", type: "success" })
     },
 
     exportState: async (state: ExportableState) => telecharger(`simulateur-export-${Date.now()}.json`, avecFormat(state)),

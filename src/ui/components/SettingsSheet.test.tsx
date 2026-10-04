@@ -132,7 +132,7 @@ describe("SettingsSheet, import de sauvegardes", () => {
     expect(bilan).toHaveTextContent("2 sauvegardes ajoutées à la fin de la liste.")
     expect(etat.slots.map(slot => slot.name)).toEqual(["Alpha", "Charlie", "Bravo"])
     expect(etat.ordre).toEqual(["a", "c", "b"])
-    expect(window.api.saveSlots).toHaveBeenCalledWith(etat.slots)
+    expect(window.api.saveSlots).toHaveBeenCalledWith(etat.slots, { silencieux: true })
 
     await userEvent.click(within(bilan).getByRole("button", { name: "OK" }))
     expect(screen.queryByRole("dialog", { name: "Import des sauvegardes" })).not.toBeInTheDocument()

@@ -84,7 +84,10 @@ describe("pont vers l'API Electron", () => {
 
     saveAllSlots(slots)
 
-    expect(api.saveSlots).toHaveBeenCalledExactlyOnceWith(slots)
+    expect(api.saveSlots).toHaveBeenCalledExactlyOnceWith(slots, undefined)
+
+    saveAllSlots(slots, { silencieux: true })
+    expect(api.saveSlots).toHaveBeenLastCalledWith(slots, { silencieux: true })
   })
 
   describe("importState", () => {

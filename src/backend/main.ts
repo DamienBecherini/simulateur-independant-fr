@@ -306,9 +306,13 @@ app.on("ready", () => {
 
   ipcMainHandle("getSaveSlots", async () => await readSlotsFromFile())
 
-  ipcMainHandle("saveSlots", async (slots: SaveSlot[]) => {
-    await writeSlotsToFile(slots)
-    if (mainWindow) {
+  ipcMainHandle("saveSlots", async (slots: SaveSlot[], options?: { silencieux?: boolean }) => {
+    // Validation avant écriture, comme à la lecture : un slot invalide est écarté au lieu d'abîmer le fichier.
+    // Les slots reçus sont au format actuel : on le leur indique, sinon ils seraient pris pour le format 1 et migrés.
+    const slotsValides = sanitizeSlots(slots.map(withFormatVersion))
+    if (slotsValides.length < slots.length) console.warn(`Sauvegardes invalides écartées avant écriture : ${slots.length - slotsValides.length}.`)
+    await writeSlotsToFile(slotsValides)
+    if (mainWindow && !options?.silencieux) {
       mainWindow.webContents.send("show-notification", {
         message: "Sauvegarde réussie !",
         type: "success"

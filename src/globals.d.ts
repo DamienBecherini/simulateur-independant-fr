@@ -11,7 +11,8 @@ export type EventPayloadMapping = {
   compareStatuts: (session: SessionState, options: ComparaisonOptions) => Promise<ComparaisonResult>
   optimiserRemuneration: (session: SessionState, options: ComparaisonOptions, statut: StatutSociete) => Promise<OptimisationRemuneration>
   getSaveSlots: () => Promise<SaveSlot[]>
-  saveSlots: (slots: SaveSlot[]) => Promise<void>
+  /** Enregistre toutes les sauvegardes ; `silencieux` évite la notification « Sauvegarde réussie ! » (après un import, qui a son propre bilan). */
+  saveSlots: (slots: SaveSlot[], options?: { silencieux?: boolean }) => Promise<void>
   exportState: (state: ExportableState) => Promise<void>
   importState: () => Promise<{ data?: ExportableState; report?: SanitizationReport; error?: string }>
   /** Fait enregistrer un fichier texte à l'utilisateur ; `true` s'il a été enregistré, `false` s'il a annulé. */

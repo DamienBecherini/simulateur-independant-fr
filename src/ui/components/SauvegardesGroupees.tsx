@@ -86,7 +86,8 @@ export function SauvegardesGroupees({ allSaveSlots, slotOrder, setAllSaveSlots, 
     const fusion = fusionnerSauvegardes(allSaveSlots, slotOrder, lecture.slots)
     if (fusion.rapport.ajoutees > 0) {
       setAllSaveSlots(fusion.slots)
-      SessionService.saveAllSlots(fusion.slots)
+      // Silencieux : le bilan de l'import tient lieu de confirmation.
+      SessionService.saveAllSlots(fusion.slots, { silencieux: true })
       setSlotOrder(fusion.slotOrder)
     }
     setBilan({ lecture: lecture.rapport, fusion: fusion.rapport })
