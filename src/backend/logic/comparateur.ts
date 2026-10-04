@@ -1,6 +1,6 @@
 // src/backend/logic/comparateur.ts
 
-import type { Company, ComparaisonCouple, ComparaisonOptions, ComparaisonResult, FinancialFlow, MicroEntreprise, Relationship, ScenarioStatut, SessionState, SimulationReport, StatutCompare } from "../../types.js"
+import type { StatutFrais, Company, ComparaisonCouple, ComparaisonOptions, ComparaisonResult, FinancialFlow, MicroEntreprise, Relationship, ScenarioStatut, SessionState, SimulationReport, StatutCompare } from "../../types.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 
@@ -128,6 +128,11 @@ function sessionConvertie(session: SessionState, source: Activite, statut: Statu
   if (estSocieteIS(statut) && dividendes !== null && dividendes > 0) {
     ajouts.push({ id: `comparateur-${source.id}-dividendes`, label: "Dividendes (comparateur)", amount: dividendes, entityId: source.id, type: "dividends_payment" })
   }
+  const frais = fraisDuStatut(statut, options)
+  if (frais > 0) {
+    // Déductibles en société et en EI ; en micro, une simple dépense qui ne réduit ni cotisations ni impôt.
+    ajouts.push({ id: `comparateur-${source.id}-frais`, label: "Frais de fonctionnement (comparateur)", amount: frais, entityId: source.id, type: statut === "micro" || statut === "micro-vfl" ? "expense" : "deductible_expense" })
+  }
   monthlyData[0] = { ...monthlyData[0], flows: [...monthlyData[0].flows, ...ajouts] }
 
   return {
@@ -138,12 +143,20 @@ function sessionConvertie(session: SessionState, source: Activite, statut: Statu
   }
 }
 
-function scenario(statut: StatutCompare, actuel: boolean, report: SimulationReport, activiteId: string): ScenarioStatut {
+/** Total annuel des frais de fonctionnement saisis pour un statut. */
+export function fraisDuStatut(statut: StatutCompare, options: ComparaisonOptions): number {
+  const cle: StatutFrais = statut === "micro-vfl" ? "micro" : statut
+  const postes = options.fraisFonctionnement?.[cle]
+  return postes ? Object.values(postes).reduce((somme, montant) => somme + Math.max(0, montant), 0) : 0
+}
+
+function scenario(statut: StatutCompare, actuel: boolean, report: SimulationReport, activiteId: string, options: ComparaisonOptions): ScenarioStatut {
   const { bilan } = report
   return {
     statut,
     libelle: LIBELLES[statut],
     actuel,
+    fraisFonctionnement: fraisDuStatut(statut, options),
     netApresImpots: report.totalNetApresImpots,
     revenusAvantPrelevements: bilan.revenusAvantPrelevements,
     totalPrelevements: bilan.totalPrelevements,
@@ -200,7 +213,7 @@ export function comparerStatuts(session: SessionState, options: ComparaisonOptio
   if (associes.length > 0) warnings.push("En entreprise individuelle et en micro-entreprise, seul le dirigeant reprend l'activité : les autres associés n'en reçoivent plus rien.")
 
   const actuel = statutActuel(source)
-  const scenarios = STATUTS_COMPARES.map(statut => scenario(statut, statut === actuel, simulerStatut(session, source, statut, options, regles), source.id))
+  const scenarios = STATUTS_COMPARES.map(statut => scenario(statut, statut === actuel, simulerStatut(session, source, statut, options, regles), source.id, options))
   const meilleur = scenarios.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a)).statut
 
   return { scenarios, meilleur, couples, warnings }

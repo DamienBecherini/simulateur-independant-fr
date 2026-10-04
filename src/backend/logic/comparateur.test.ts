@@ -103,7 +103,24 @@ describe("comparerStatuts", () => {
     })
   })
 
-  describe("personnes reliées", () => {
+  describe("frais de fonctionnement", () => {
+    const frais = (montant: number) => ({ expertComptable: montant, banque: 0, logiciel: 0, assurance: 0, cfe: 0 })
+    const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]], options("m1", { fraisFonctionnement: { SASU: frais(2000), EURL: frais(2000), EI: frais(1000), micro: frais(1000) } }))
+
+    it("retire de la poche les frais d'une micro, sans changer cotisations ni impôt", () => {
+      // Comme sans frais (28 200 €), moins 1 000 € de dépenses non déductibles.
+      expect(colonne(resultat, "micro")).toMatchObject({ fraisFonctionnement: 1000, netApresImpots: 27200, cotisationsSociales: 10000, impotSurLeRevenu: 1800 })
+      expect(colonne(resultat, "micro-vfl").fraisFonctionnement).toBe(1000)
+    })
+
+    it("déduit les frais du bénéfice d'une société", () => {
+      // 38 000 € de bénéfice, 5 700 € d'IS, 32 300 € de dividendes : barème 268 € (base 17 119 € après abattement
+      // et CSG déductible, décote comprise), 5 814 € de prélèvements sociaux.
+      expect(colonne(resultat, "SASU")).toMatchObject({ fraisFonctionnement: 2000, impotSocietes: 5700, impotSurLeRevenu: 268, prelevementsSociaux: 5814, netApresImpots: 26218 })
+    })
+  })
+
+    describe("personnes reliées", () => {
     it("signale une activité reliée à personne", () => {
       const resultat = comparer([personne("alice"), micro("m1")], [], [["m1", "ca_micro_vente", 10000]], options("m1"))
 

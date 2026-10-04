@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { comparableActivities, defaultComparisonOptions } from "@/lib/comparateur-options"
+import { comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
 import { cn } from "@/lib/utils"
-import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company, MicroEntreprise, ScenarioStatut, SessionState } from "@/types"
+import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ScenarioStatut, SessionState, StatutFrais } from "@/types"
 
 interface ComparatorPanelProps {
   session: SessionState
@@ -40,12 +40,74 @@ function rate(scenario: ScenarioStatut): string {
 const rows: { label: string; value: (s: ScenarioStatut) => string; strong?: boolean }[] = [
   { label: "Net dans la poche", value: s => formatMoney(s.netApresImpots), strong: true },
   { label: "Taux global de prélèvement", value: rate },
+  { label: "Frais de fonctionnement", value: s => formatMoney(s.fraisFonctionnement) },
   { label: "Cotisations sociales", value: s => formatMoney(s.cotisationsSociales) },
   { label: "Impôt sur les sociétés", value: s => formatMoney(s.impotSocietes) },
   { label: "Impôt sur le revenu", value: s => formatMoney(s.impotSurLeRevenu) },
   { label: "Prélèvements sociaux", value: s => formatMoney(s.prelevementsSociaux) },
   { label: "Conservé en société", value: s => formatMoney(s.resultatConserve) }
 ]
+
+const statutFraisLabels: Record<StatutFrais, string> = { SASU: "SASU", EURL: "EURL", EI: "EI au réel", micro: "Micro-entreprise" }
+
+/**
+ * Détail des frais de fonctionnement annuels par statut, modifiables : ils sont ajoutés aux charges de l'activité
+ * dans chaque colonne du comparateur, y compris celle du statut actuel.
+ */
+function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnement; onChange: (frais: FraisFonctionnement) => void }) {
+  const postes = Object.keys(posteFraisLabels) as PosteFrais[]
+  const total = (statut: StatutFrais) => postes.reduce((somme, poste) => somme + frais[statut][poste], 0)
+  const update = (statut: StatutFrais, poste: PosteFrais, value: string) => onChange({ ...frais, [statut]: { ...frais[statut], [poste]: Math.max(0, parseFloat(value) || 0) } })
+
+  return (
+    <details className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+      <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">Frais de fonctionnement annuels par statut</summary>
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+        Ordres de grandeur, à ajuster à votre situation. Ils s'ajoutent aux charges de l'activité dans chaque colonne, statut actuel compris : si vous les avez déjà saisis dans la grille, mettez-les à 0. Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune et n'est pas due l'année de création.
+      </p>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[40rem] text-sm" aria-label="Frais de fonctionnement annuels">
+          <thead>
+            <tr>
+              <th scope="col" className="py-1 text-left font-medium text-slate-600 dark:text-slate-300">
+                Poste
+              </th>
+              {statutsFrais.map(statut => (
+                <th key={statut} scope="col" className="px-2 py-1 text-right font-medium text-slate-600 dark:text-slate-300">
+                  {statutFraisLabels[statut]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {postes.map(poste => (
+              <tr key={poste} className="border-t border-slate-100 dark:border-slate-800">
+                <th scope="row" className="py-1 text-left font-normal text-slate-600 dark:text-slate-300">
+                  {posteFraisLabels[poste]}
+                </th>
+                {statutsFrais.map(statut => (
+                  <td key={statut} className="px-2 py-1">
+                    <Input className="h-8 w-28 ml-auto bg-background text-right" type="number" min="0" step="50" aria-label={`${posteFraisLabels[poste]}, ${statutFraisLabels[statut]}`} value={frais[statut][poste]} onChange={e => update(statut, poste, e.target.value)} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+            <tr className="border-t border-slate-200 font-medium dark:border-slate-700">
+              <th scope="row" className="py-1 text-left">
+                Total annuel
+              </th>
+              {statutsFrais.map(statut => (
+                <td key={statut} className="px-2 py-1 text-right tabular-nums">
+                  {formatMoney(total(statut))}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  )
+}
 
 interface ControlsProps {
   activities: (Company | MicroEntreprise)[]
@@ -95,12 +157,13 @@ function ComparatorControls({ activities, selected, options, onSelect, onChange 
 }
 
 function ComparisonTable({ result }: { result: ComparaisonResult }) {
+  if (result.scenarios.length === 0) return null
   const current = result.scenarios.find(s => s.actuel)
   const best = (s: ScenarioStatut) => s.statut === result.meilleur
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-      <table className="w-full min-w-[48rem] text-sm">
+      <table className="w-full min-w-[48rem] text-sm" aria-label="Comparaison des statuts">
         <thead className="bg-slate-100 dark:bg-slate-800/80">
           <tr>
             <th scope="col" className="px-3 py-2 text-left">
@@ -142,6 +205,17 @@ function ComparisonTable({ result }: { result: ComparaisonResult }) {
         </tbody>
       </table>
     </div>
+  )
+}
+
+function WarningList({ warnings }: { warnings: string[] }) {
+  if (warnings.length === 0) return null
+  return (
+    <ul className="list-inside list-disc text-xs text-amber-800 dark:text-amber-200/90">
+      {warnings.map((warning, i) => (
+        <li key={i}>{warning}</li>
+      ))}
+    </ul>
   )
 }
 
@@ -232,20 +306,22 @@ export function ComparatorPanel({ session }: ComparatorPanelProps) {
         <p className="text-sm text-slate-500 dark:text-slate-400">L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation.</p>
       </div>
 
-      {selected ? <ComparatorControls activities={activities} selected={selected} options={effectiveOptions} onSelect={activityId => setOptions(defaultComparisonOptions(session, activityId))} onChange={changes => setOptions({ ...effectiveOptions, ...changes })} /> : null}
+      {selected ? (
+        <>
+          <ComparatorControls activities={activities} selected={selected} options={effectiveOptions} onSelect={activityId => setOptions({ ...defaultComparisonOptions(session, activityId), fraisFonctionnement: effectiveOptions.fraisFonctionnement })} onChange={changes => setOptions({ ...effectiveOptions, ...changes })} />
+          <FraisFonctionnementTable frais={effectiveOptions.fraisFonctionnement ?? defaultFraisFonctionnement()} onChange={fraisFonctionnement => setOptions({ ...effectiveOptions, fraisFonctionnement })} />
+          <WarningList warnings={result?.warnings ?? []} />
+        </>
+      ) : null}
 
       {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 
-      {selected && result && result.warnings.length > 0 ? (
-        <ul className="list-inside list-disc text-xs text-amber-800 dark:text-amber-200/90">
-          {result.warnings.map((warning, i) => (
-            <li key={i}>{warning}</li>
-          ))}
-        </ul>
+      {result ? (
+        <>
+          <ComparisonTable result={result} />
+          <ScenarioWarnings scenarios={result.scenarios} />
+        </>
       ) : null}
-
-      {result && result.scenarios.length > 0 ? <ComparisonTable result={result} /> : null}
-      {result ? <ScenarioWarnings scenarios={result.scenarios} /> : null}
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
     </section>
   )

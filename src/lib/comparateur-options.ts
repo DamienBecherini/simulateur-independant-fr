@@ -1,6 +1,31 @@
 // src/lib/comparateur-options.ts
 
-import type { ComparaisonOptions, Company, MicroEntreprise, SessionState } from "@/types"
+import type { ComparaisonOptions, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, SessionState, StatutFrais } from "@/types"
+
+/** Libellés des postes de frais, dans l'ordre d'affichage. */
+export const posteFraisLabels: Record<PosteFrais, string> = {
+  expertComptable: "Expert-comptable",
+  banque: "Compte bancaire professionnel",
+  logiciel: "Logiciel de facturation et de comptabilité",
+  assurance: "Assurance responsabilité civile professionnelle",
+  cfe: "Cotisation foncière des entreprises (CFE)"
+}
+
+export const statutsFrais: StatutFrais[] = ["SASU", "EURL", "EI", "micro"]
+
+/**
+ * Frais de fonctionnement annuels proposés par défaut : des ordres de grandeur, à ajuster à sa situation.
+ * Le recours à un expert-comptable n'est pas obligatoire, mais quasi systématique en société (bilan, liasse fiscale).
+ * La CFE varie selon la commune, et n'est pas due l'année de création.
+ */
+export function defaultFraisFonctionnement(): FraisFonctionnement {
+  return {
+    SASU: { expertComptable: 2000, banque: 200, logiciel: 150, assurance: 250, cfe: 300 },
+    EURL: { expertComptable: 2000, banque: 200, logiciel: 150, assurance: 250, cfe: 300 },
+    EI: { expertComptable: 1200, banque: 150, logiciel: 150, assurance: 250, cfe: 300 },
+    micro: { expertComptable: 0, banque: 100, logiciel: 100, assurance: 250, cfe: 300 }
+  }
+}
 
 /** Activités qu'on peut faire changer de statut dans le comparateur. */
 export function comparableActivities(session: SessionState): (Company | MicroEntreprise)[] {
@@ -20,6 +45,7 @@ export function defaultComparisonOptions(session: SessionState, activityId: stri
     activityId,
     remunerationNette: annualTotal("director_remuneration"),
     distribuerToutLeBenefice: annualTotal("dividends_payment") === 0,
-    partBncPrestations: 1
+    partBncPrestations: 1,
+    fraisFonctionnement: defaultFraisFonctionnement()
   }
 }

@@ -268,13 +268,23 @@ export interface ComparaisonOptions {
   distribuerToutLeBenefice: boolean
   /** Part BNC des prestations de services quand l'activité devient une micro-entreprise (0 à 1). Ignorée si elle en est déjà une. */
   partBncPrestations: number
+  /** Frais de fonctionnement annuels par statut, ajoutés aux charges de l'activité dans chaque colonne. */
+  fraisFonctionnement?: FraisFonctionnement
 }
+
+/** Postes de frais de fonctionnement d'une activité, hors cotisations et impôts. */
+export type PosteFrais = "expertComptable" | "banque" | "logiciel" | "assurance" | "cfe"
+/** Statuts pour lesquels on saisit des frais : la micro-entreprise a les mêmes, avec ou sans versement libératoire. */
+export type StatutFrais = "SASU" | "EURL" | "EI" | "micro"
+export type FraisFonctionnement = Record<StatutFrais, Record<PosteFrais, number>>
 
 export interface ScenarioStatut {
   statut: StatutCompare
   libelle: string
   /** Statut actuel de l'activité. */
   actuel: boolean
+  /** Frais de fonctionnement annuels ajoutés pour ce statut. */
+  fraisFonctionnement: number
   /** Indicateurs de toute la simulation, l'activité ayant pris ce statut. */
   netApresImpots: number
   revenusAvantPrelevements: number
