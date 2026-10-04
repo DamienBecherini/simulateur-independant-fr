@@ -20,22 +20,7 @@ const FLOW_RELATIONSHIP_DEPENDENCIES: Partial<Record<FinancialFlow["type"], Rela
  * @returns Le `monthlyData` nettoyé de tous les flux orphelins logiques.
  */
 export function sanitizeFlowsAfterRelationshipChange(sessionState: SessionState): SessionState["monthlyData"] {
-  const { relationships, monthlyData /*, entities*/ } = sessionState
-
-  // Pour une recherche rapide, on crée une structure qui nous dit facilement si une relation existe.
-  // ex: "person-1_company-1": Set['Président', 'Associé']
-  const existingRelations = new Map<string, Set<Relationship["type"]>>()
-  relationships.forEach(rel => {
-    // On stocke la relation dans les deux sens pour simplifier la recherche
-    const key1 = `${rel.fromId}_${rel.toId}`
-    const key2 = `${rel.toId}_${rel.fromId}`
-
-    if (!existingRelations.has(key1)) existingRelations.set(key1, new Set())
-    if (!existingRelations.has(key2)) existingRelations.set(key2, new Set())
-
-    existingRelations.get(key1)!.add(rel.type)
-    existingRelations.get(key2)!.add(rel.type)
-  })
+  const { relationships, monthlyData } = sessionState
 
   // On parcourt chaque mois et on filtre ses flux
   const sanitizedMonthlyData = monthlyData.map(month => {
