@@ -1,10 +1,12 @@
-# Roadmap de Développement Détaillée v2.2
+# Roadmap de Développement Détaillée v3.0
 
-- **Dernière mise à jour :** 09/11/2025
+- **Dernière mise à jour :** 04/10/2026
 
 ## **État Actuel du Projet**
 
-## La base technique et l'UX de base sont fonctionnelles. Le projet a été rendu "pare-balles" grâce à l'intégration de schémas de validation (Zod) et d'un système de feedback utilisateur non-intrusif. Les fondations sont maintenant extrêmement solides pour construire les fonctionnalités de simulation.
+Le socle (graphe d'entités, grille visuelle, persistance validée par Zod) et une première version du moteur de méta-simulation sont en place. La priorité est maintenant la **fiabilité des chiffres** : tests automatisés, intégration continue, puis refonte du moteur autour d'un calcul unique par foyer fiscal. Les fonctionnalités d'analyse (comparateur, arbitrage) viennent ensuite, sur cette base.
+
+> **Changement d'ordre par rapport à la v2.2 :** le comparateur de statuts passe avant l'arbitrage rémunération / dividendes, et la gestion des foyers fiscaux est intégrée à la refonte du moteur.
 
 ### **Phase 1 & 2.5 : Socle Technique & UX de Base [Terminé ✅]**
 
@@ -41,70 +43,67 @@
 
 ---
 
-### **Phase 5.5 : Corrections & Améliorations de l'UX [À FAIRE 🎯 - NOUVELLE PRIORITÉ]**
+### **Phase 5.5 : Corrections & Améliorations de l'UX [Terminé ✅]**
 
-**Objectif :** Résoudre les problèmes fonctionnels et les bugs identifiés lors de l'utilisation de la grille et de la gestion des sauvegardes pour rendre l'expérience fluide et complète.
-
-1.  **Action 5.5.1 : Enrichir et Clarifier les Types de Dépenses Disponibles :**
-
-    - **Problème :** Les types de flux de dépenses disponibles sont trop restrictifs. Il est impossible pour une personne physique ou une micro-entreprise d'enregistrer une sortie d'argent, ce qui bloque la simulation de leur trésorerie réelle.
-
-    - **Clarification (suite à l'analyse) :** Une distinction sémantique cruciale doit être faite. Le régime de la micro-entreprise étant forfaitaire, ses dépenses réelles ne sont **pas déductibles** de son assiette fiscale (contrairement à une société à l'IS). Le type `deductible_expense` est donc sémantiquement incorrect pour ce statut. Il faut utiliser le type `expense` pour représenter une sortie de trésorerie sans avantage fiscal, à la fois pour les personnes et les micro-entreprises.
-
-    - **Plan d'action :**
-
-      - **Étape 1 (Clarification) :** Renommer le libellé du type de flux `expense` de `"Dépense (Test)"` à `"Dépense (non déductible)"` dans les dictionnaires de l'interface (`flowTypeLabels`) pour le rendre non ambigu pour l'utilisateur.
-      - **Étape 2 (Logique) :** Mettre à jour la logique du composant `src/ui/components/EditFlowModal.tsx`. Le `useMemo` qui calcule `availableFlowTypes` doit être modifié pour inclure :
-        - `expense` (Dépense non déductible) pour les entités de type `Person`.
-        - `expense` (Dépense non déductible) pour les entités de type `MicroEntreprise`.
-        - `deductible_expense` (Charge déductible) doit rester disponible **uniquement** pour les entités de type `Company` (SASU/EURL).
-
-    - **Résultat attendu :** L'utilisateur est guidé vers le bon type de saisie en fonction du statut juridique, rendant la simulation plus précise et pédagogique.
-
-2.  **Action 5.5.2 : Agréger les Barres par Type de Flux :**
-
-    - **Problème :** Si un utilisateur ajoute deux gains du même type (ex: deux salaires) dans le même mois, la grille affiche actuellement deux barres distinctes côte à côte. Le comportement attendu est que ces deux montants soient additionnés et représentés par une seule barre plus haute.
-    - **Plan d'action :** Refondre la logique d'agrégation dans le `useMemo` du composant `src/ui/components/MonthlyGrid.tsx`. Pour chaque cellule, au lieu d'itérer sur les flux et de créer un segment par flux, il faudra d'abord regrouper les flux par `type`, sommer leurs `amount`, puis créer un seul `FlowSegment` par type.
-
-3.  **Action 5.5.3 : Corriger la Logique de Sauvegarde "Écraser vs. Créer" :**
-    - **Problème :** Si on charge un slot, qu'on modifie le nom de la session dans le panneau latéral, puis qu'on clique sur "Sauvegarder", le système propose d'écraser un ancien slot qui porterait ce nouveau nom, au lieu de créer un nouveau slot. Renommer une session devrait "casser" le lien avec son slot d'origine et indiquer une intention de "Sauvegarder sous...".
-    - **Plan d'action :**
-      - **Étape 1 :** Dans le hook `useSessionManager`, ajouter un état pour mémoriser l'ID du slot qui a été chargé (ex: `loadedSlotId: string | null`). Cet ID est mis à jour lors d'un `handleLoadSlot` et réinitialisé à `null` lors d'un `handleResetSession` ou d'un import.
-      - **Étape 2 :** Dans `SettingsSheet.tsx`, la logique de la fonction `handleSave` doit être modifiée. Au lieu de juste chercher un slot par son nom, elle devra vérifier si `loadedSlotId` existe ET si le `currentSession.name` n'a pas changé. Si le nom a changé ou s'il n'y a pas de `loadedSlotId`, la sauvegarde doit être traitée comme une création de nouveau slot (en vérifiant les conflits de nom comme maintenant).
+- **Types de dépenses clarifiés :** `expense` (« Dépense (non déductible) ») pour les personnes et les micro-entreprises, `deductible_expense` réservé aux sociétés à l'IS.
+- **Barres agrégées par type de flux** dans la grille : deux flux du même type dans un mois donnent une seule barre.
+- **Sauvegarde « Écraser vs. Créer » :** renommer une session chargée crée une nouvelle sauvegarde au lieu d'écraser l'ancienne (`loadedSlotId`).
 
 ---
 
-### **Phase 6 : Le Moteur de Méta-Simulation v2 [Planifié 🗓️]**
+### **Phase 6 : Le Moteur de Méta-Simulation v1 [Terminé ✅]**
 
-**Objectif :** Orchestrer les calculs en interprétant le graphe d'entités et la grille de flux.
-
-1.  **Action 6.1 :** Refondre la fonction `runSimulation` dans `main.ts`. Cette fonction devra :
-    - Agréger les 12 mois de flux de `monthlyData` pour chaque entité afin d'obtenir les totaux annuels (CA total, charges totales, rémunération totale...).
-    - Utiliser le tableau `relationships` pour router les flux (ex: la "Rémunération" de la SASU devient un revenu pour la personne qui a la relation "Président").
-    - Préparer l'objet `SimulationInputs` pour chaque module de calcul (`simulerSASU`, `simulerEURL`...) avec les données agrégées.
-    - Calculer l'impôt sur le revenu au niveau du foyer fiscal.
-2.  **Action 6.2 :** Créer un composant `Results.tsx` qui affiche un premier tableau de résultats synthétiques (Net dans la poche par personne, impôts...).
+- `runMetaSimulation` (`src/backend/logic/simulation-engine.ts`) : agrégation annuelle des flux par entité, regroupement des foyers fiscaux (Union-Find sur les relations Marié(e) / PACSé(e), demi-parts des enfants), routage de la rémunération du dirigeant vers la personne liée, appel des modules SASU / EURL / micro-entreprise, impôt sur le revenu par foyer.
+- `ResultsPanel` : résultats par entité et synthèse par foyer, avec avertissements explicites.
+- **Limites connues de cette v1** (traitées en Phase 7) : l'impôt sur le revenu est estimé à la fois dans chaque module d'activité et au niveau du foyer ; les dividendes saisis dans la grille sont ignorés (100 % du bénéfice est supposé distribué) ; le capital social des EURL n'est pas saisi.
 
 ---
 
-### **Phase 7 : L'Optimisation Visuelle (Rémunération/Dividendes) [Planifié 🗓️]**
+### **Phase 6.5 : Qualité & Intégration Continue [En cours 🎯]**
 
-- **Objectif :** Implémenter la fonctionnalité interactive d'arbitrage pour les sociétés à l'IS (reprise de l'ancienne Phase 5).
+**Objectif :** pouvoir modifier le moteur sans régression.
 
----
-
-### **Phase 8 : La Simulation de Couple & Foyers Fiscaux [Planifié 🗓️]**
-
-- **Objectif :** Gérer la fiscalité du foyer en utilisant les relations de type "Marié(e)" / "PACSé(e)" pour regrouper les revenus avant le calcul de l'IR.
+1.  **Tests unitaires (Vitest)** sur les modules de calcul, le moteur, le sanitizer et la logique de graphe.
+2.  **Garde-fous :** seuil de couverture bloquant, plafond de complexité par fonction (ESLint), tests de mutation (Stryker) sur le moteur.
+3.  **GitHub Actions :** lint, vérification des types, tests et build à chaque push.
 
 ---
 
-### **Phase 9 : Le Comparateur Stratégique (Entité "???") [Planifié 🗓️]**
+### **Phase 6.6 : Saisie Rapide des Flux [En cours 🎯]**
 
-- **Objectif :** Réintégrer la fonctionnalité phare de la v1 en s'appuyant sur le nouveau moteur.
+**Objectif :** réduire le nombre de clics pour saisir et corriger des flux.
+
+1.  **Édition en ligne :** chaque flux se modifie directement dans la liste du mois (type, libellé, montant) ; une ligne vide en bas permet d'ajouter ; saisie enchaînée au clavier. La seconde fenêtre d'édition disparaît.
+2.  **Libellés de flux centralisés** dans `src/lib/flow-constants.ts`.
+3.  **Part du net dans le CA** affichée pour chaque activité dans les résultats.
+
+---
+
+### **Phase 7 : Refonte du Moteur — Un Calcul Unique par Foyer [Planifié 🗓️ - PROCHAINE ÉTAPE]**
+
+**Objectif :** des résultats cohérents entre eux, avec un vrai « net du foyer après impôts ». Intègre l'ancienne Phase 8 (couples et foyers fiscaux).
+
+1.  **Chaîne de calcul en un seul sens :** les activités produisent des revenus (rémunération nette, dividendes, bénéfice micro) → ces revenus sont routés vers les personnes → l'impôt sur le revenu est calculé **une seule fois** par foyer, sur l'ensemble de ses revenus. Les modules SASU / EURL / micro ne calculent plus d'IR.
+2.  **Dividendes :** prise en compte du flux « versement de dividendes » saisi dans la grille, réparti entre associés ; le bénéfice non distribué reste dans la société.
+3.  **Modèle de données :** capital social pour les sociétés ; plusieurs dirigeants et associés.
+4.  **Impôt sur le revenu :** barème entièrement lu depuis `config.json` (plus de coefficients dans le code), abattement de 10 % sur les salaires, parts des enfants selon leur rang, barème de l'année mis à jour.
+5.  **Résultats :** net après impôts par personne et par foyer ; recalcul automatique à chaque modification (plus de bouton à cliquer).
+6.  **À décider :** brancher l'EI au réel (`calculsEI.ts`) ou le retirer ; implémenter le versionnage des sauvegardes prévu au cahier des charges.
+
+---
+
+### **Phase 8 : Le Comparateur Stratégique (Entité « ??? ») [Planifié 🗓️]**
+
+- **Objectif :** réintégrer la fonctionnalité phare de la v1 : pour une même activité, comparer SASU, EURL et micro-entreprise (net du foyer, impôts, cotisations) en relançant le moteur une fois par statut.
+
+---
+
+### **Phase 9 : L'Optimisation Visuelle (Rémunération / Dividendes) [Planifié 🗓️]**
+
+- **Objectif :** arbitrage interactif entre rémunération et dividendes pour les sociétés à l'IS, intégré au comparateur.
 
 ---
 
 ### **Phase 10 : Scénarios Avancés & Finalisation [Planifié 🗓️]**
 
-- **Objectif :** Intégrer la gestion de l'ACRE, du VFL, du prorata temporis, et préparer la distribution de l'application.
+- **Objectif :** prorata temporis (activité démarrée en cours d'année), finalisation de l'ACRE et du versement libératoire (déjà pris en compte pour la micro-entreprise), distribution de l'application (exécutables Windows / macOS / Linux).
