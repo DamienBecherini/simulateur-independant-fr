@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch"
 import { comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
 import { cn } from "@/lib/utils"
+import { exporterComparaisonCsv } from "../exports-texte"
+import { BoutonExportCsv } from "./BoutonExportCsv"
 import { Depliable } from "./Depliable"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
 import { ZoneDefilante } from "./ZoneDefilante"
@@ -319,10 +321,15 @@ function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[
   )
 }
 
-function ComparisonResults({ result, activityName }: { result: ComparaisonResult; activityName: string }) {
+function ComparisonResults({ result, activityName, onExporter }: { result: ComparaisonResult; activityName: string; onExporter: () => void }) {
   const { notes, renvois } = numeroterNotes(result.scenarios.map(s => ({ id: s.statut, libelle: s.libelle, avertissements: s.warnings })))
   return (
     <>
+      {result.scenarios.length > 0 ? (
+        <div className="flex justify-end">
+          <BoutonExportCsv contenu="le tableau de comparaison" onClick={onExporter} />
+        </div>
+      ) : null}
       <ComparisonTable result={result} activityName={activityName} renvois={renvois} />
       <NotesDuTableau notes={notes} activityName={activityName} />
       <ProtectionDetails scenarios={result.scenarios} />
@@ -412,7 +419,7 @@ export function ComparatorPanel({ session }: ComparatorPanelProps) {
 
       {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 
-      {result ? <ComparisonResults result={result} activityName={selected?.name ?? ""} /> : null}
+      {result ? <ComparisonResults result={result} activityName={selected?.name ?? ""} onExporter={() => exporterComparaisonCsv(session, result, effectiveOptions, selected?.name ?? "")} /> : null}
       <OptimiseurDeLActivite session={session} selected={selected} options={effectiveOptions} onChange={setOptions} />
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
     </section>
