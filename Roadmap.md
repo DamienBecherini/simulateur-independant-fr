@@ -92,7 +92,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 - **Résultats :** net après impôts par foyer, détail par activité, recalcul automatique à chaque modification.
 - **Robustesse :** le chargement écarte les éléments invalides un par un au lieu de réinitialiser la session ; identifiants uniques (UUID).
 
-**Reste à décider :** implémenter le versionnage des sauvegardes prévu au cahier des charges, ou le retirer.
+**Reporté :** le versionnage des sauvegardes prévu au cahier des charges (voir « Travaux transverses »).
 
 ---
 
@@ -117,3 +117,14 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 3.  **Répartition du capital :** part de chaque associé dans une société à plusieurs associés. Aujourd'hui, les dividendes, l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales.
 4.  **Compte courant d'associé :** solde par société, flux d'apport et de remboursement (non imposés), intérêts versés (déductibles pour la société dans une limite, imposés chez l'associé), et prise en compte du solde dans le seuil des 10 % du capital des EURL.
 5.  **Distribution :** exécutables Windows / macOS / Linux.
+
+---
+
+### **Travaux transverses [À faire 🧰]**
+
+Tâches sans phase attitrée, à traiter entre deux fonctionnalités.
+
+1.  **Dépendances :** analyser les vulnérabilités signalées par `npm audit` (44 à l'installation), distinguer celles qui touchent l'application livrée de celles des outils de développement, et corriger ce qui peut l'être sans casser le build.
+2.  **Versionnage des sauvegardes :** numéro de version du format dans chaque fichier et migrations d'une version à la suivante, comme prévu au cahier des charges.
+3.  **Tests de l'interface :** tests de composants sur les parcours de saisie (flux, acteurs, relations, salaires).
+4.  **Import :** quand seuls des flux sont écartés à l'import, la notification renvoie vers une fenêtre de confirmation qui ne s'ouvre pas.
