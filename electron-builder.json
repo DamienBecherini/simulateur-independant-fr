@@ -1,8 +1,14 @@
 {
   "appId": "fr.independant.simulateur",
   "productName": "Simulateur Indépendant FR",
-  "files": ["dist-electron", "dist-react", "splash.html"],
-  "extraResources": ["dist-electron/backend/preload.cjs"],
+  "files": [
+    "dist-electron",
+    "dist-react",
+    "splash.html"
+  ],
+  "extraResources": [
+    "dist-electron/backend/preload.cjs"
+  ],
   "icon": "./templateIcon.png",
   "mac": {
     "target": "dmg"
@@ -12,6 +18,14 @@
     "category": "Utility"
   },
   "win": {
-    "target": ["portable", "msi"]
+    "target": [
+      "portable",
+      "msi"
+    ]
+  },
+  "msi": {
+    "additionalLightArgs": [
+      "-sval"
+    ]
   }
 }
