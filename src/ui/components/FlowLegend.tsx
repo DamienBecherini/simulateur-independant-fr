@@ -3,33 +3,10 @@
 import { useMemo, useState } from "react"
 import type { UserPreferences, FinancialFlow } from "@/types"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
+import { flowTypeShortLabels, isExpenseFlowType } from "@/lib/flow-constants"
 import { Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ColorSettingsModal } from "./ColorSettingsModal"
-
-/**
- * Dictionnaire de libellés pour la légende.
- * ROADMAP 5.5.1: Maintenu à jour pour la cohérence avec les autres composants.
- */
-const flowTypeLabels: Record<string, string> = {
-  are: "ARE",
-  salary: "Salaire",
-  other_taxable_income: "Autre Revenu",
-  ca_services: "CA Services",
-  ca_vente: "CA Vente",
-  deductible_expense: "Charge déductible",
-  director_remuneration: "Rémunération Dirigeant",
-  dividends_payment: "Dividendes",
-  ca_micro_services_bic: "CA Micro (BIC)",
-  ca_micro_services_bnc: "CA Micro (BNC)",
-  ca_micro_vente: "CA Micro Vente",
-  income: "Revenu (Test)",
-  expense: "Dépense (non déductible)"
-}
-
-// MODIFICATION 1 : Définition des types de flux considérés comme des dépenses.
-// Cette liste nous servira à séparer la légende en deux groupes distincts.
-const expenseTypes: ReadonlyArray<string> = ["deductible_expense", "expense"]
 
 /**
  * Interface pour les props du composant FlowLegend.
@@ -59,8 +36,8 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
   const usedFlowTypes = Array.from(flowTypeToNumberMap.keys()) as FinancialFlow["type"][]
 
   // MODIFICATION 2 : On filtre les types de flux en deux listes distinctes : gains et dépenses.
-  const gainTypes = useMemo(() => usedFlowTypes.filter(type => !expenseTypes.includes(type)), [usedFlowTypes])
-  const expenseTypesFiltered = useMemo(() => usedFlowTypes.filter(type => expenseTypes.includes(type)), [usedFlowTypes])
+  const gainTypes = useMemo(() => usedFlowTypes.filter(type => !isExpenseFlowType(type)), [usedFlowTypes])
+  const expenseTypesFiltered = useMemo(() => usedFlowTypes.filter(isExpenseFlowType), [usedFlowTypes])
 
   // Gère la mise à jour d'une couleur directement depuis la légende.
   const handleColorChange = (flowType: FinancialFlow["type"], newColor: string) => {
@@ -78,9 +55,9 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
       <div className="h-6 w-6 rounded relative border flex items-center justify-center" style={{ backgroundColor: finalColors[type] || "#ccc" }}>
         <span className="text-white text-xs font-bold [text-shadow:0_0_2px_rgba(0,0,0,0.7)]">{flowTypeToNumberMap.get(type)}</span>
         {/* Astuce UX : un input de type "color" est superposé et invisible, permettant un clic direct pour changer la couleur. */}
-        <input type="color" value={finalColors[type] || "#ffffff"} onChange={e => handleColorChange(type, e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title={`Changer la couleur pour ${flowTypeLabels[type]}`} />
+        <input type="color" value={finalColors[type] || "#ffffff"} onChange={e => handleColorChange(type, e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title={`Changer la couleur pour ${flowTypeShortLabels[type]}`} />
       </div>
-      <span className="text-sm text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors pr-2">{flowTypeLabels[type] || type}</span>
+      <span className="text-sm text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors pr-2">{flowTypeShortLabels[type] || type}</span>
     </div>
   )
 

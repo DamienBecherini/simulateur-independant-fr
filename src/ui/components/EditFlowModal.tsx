@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Entity, FinancialFlow } from "@/types"
+import { flowTypeLabels, flowTypesByEntityType, isOutgoingFlowType } from "@/lib/flow-constants"
 // 1. IMPORTATION DES ICÔNES
 // On importe les icônes de chevrons nécessaires depuis la bibliothèque lucide-react.
 import { ChevronUp, ChevronDown } from "lucide-react"
@@ -35,33 +36,6 @@ const getInitialState = () => ({
   amount: 0
 })
 
-/**
- * Dictionnaire central pour les libellés des types de flux.
- * ROADMAP 5.5.1: Les libellés ont été clarifiés pour être non-ambigus pour l'utilisateur.
- * - 'deductible_expense' est devenu "Charge déductible" (concerne les sociétés IS).
- * - 'expense' est devenu "Dépense (non déductible)" (concerne les personnes et les micro-entreprises).
- */
-const flowTypeLabels: Record<FinancialFlow["type"], string> = {
-  are: "Allocation chômage (ARE)",
-  salary: "Salaire (emploi tiers)",
-  other_taxable_income: "Autre revenu imposable",
-  ca_services: "CA - Prestation de services",
-  ca_vente: "CA - Vente de marchandises",
-  deductible_expense: "Charge déductible",
-  director_remuneration: "Rémunération de dirigeant",
-  dividends_payment: "Versement de dividendes",
-  ca_micro_services_bic: "CA Micro - Services (BIC)",
-  ca_micro_services_bnc: "CA Micro - Services (BNC)",
-  ca_micro_vente: "CA Micro - Vente",
-  income: "Revenu (Test)",
-  expense: "Dépense (non déductible)"
-}
-
-// 2. LISTE DES TYPES DE FLUX CONSIDÉRÉS COMME DES DÉPENSES
-// On crée un tableau constant qui liste tous les types de flux considérés comme des sorties d'argent.
-// Cela simplifie la logique pour déterminer quelle icône (chevron haut ou bas) et quelle couleur afficher.
-const expenseTypes: ReadonlyArray<FinancialFlow["type"]> = ["deductible_expense", "expense", "dividends_payment", "director_remuneration"]
-
 export function EditFlowModal({ isOpen, onClose, onSave, context, flowToEdit, allEntities }: EditFlowModalProps) {
   // État local pour gérer les données du formulaire (type, libellé, montant).
   const [formData, setFormData] = useState(getInitialState())
@@ -86,30 +60,8 @@ export function EditFlowModal({ isOpen, onClose, onSave, context, flowToEdit, al
     }
   }, [isOpen, flowToEdit])
 
-  /**
-   * Calcule la liste des types de flux disponibles en fonction du statut juridique de l'entité.
-   * C'est ici que la logique principale de la ROADMAP 5.5.1 est implémentée.
-   * @returns Un tableau de types de flux autorisés.
-   */
-  const availableFlowTypes = useMemo((): FinancialFlow["type"][] => {
-    if (!entity) return []
-    switch (entity.type) {
-      // Pour une personne, on autorise les revenus classiques ET les dépenses non déductibles.
-      case "person":
-        return ["are", "salary", "other_taxable_income", "expense"]
-
-      // Pour une société (SASU/EURL), les dépenses sont des "charges déductibles".
-      case "company":
-        return ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"]
-
-      // Pour une micro-entreprise (régime forfaitaire), les dépenses ne sont pas déductibles.
-      case "micro-entreprise":
-        return ["ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "expense"]
-
-      default:
-        return []
-    }
-  }, [entity])
+  // Types de flux proposés selon le type de l'entité.
+  const availableFlowTypes = entity ? flowTypesByEntityType[entity.type] : []
 
   // Gère la sauvegarde du flux.
   const handleSave = () => {
@@ -165,7 +117,7 @@ export function EditFlowModal({ isOpen, onClose, onSave, context, flowToEdit, al
                      * joliment l'icône et le libellé.
                      */}
                     <div className="flex items-center gap-2">
-                      {expenseTypes.includes(type) ? <ChevronDown className="h-4 w-4 text-red-500 stroke-[3px] flex-shrink-0" /> : <ChevronUp className="h-4 w-4 text-green-500 stroke-[3px] flex-shrink-0" />}
+                      {isOutgoingFlowType(type) ? <ChevronDown className="h-4 w-4 text-red-500 stroke-[3px] flex-shrink-0" /> : <ChevronUp className="h-4 w-4 text-green-500 stroke-[3px] flex-shrink-0" />}
                       <span>{flowTypeLabels[type] || type}</span>
                     </div>
                   </SelectItem>

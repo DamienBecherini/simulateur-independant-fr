@@ -6,6 +6,7 @@ import { EditFlowModal } from "./EditFlowModal"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
+import { isExpenseFlowType } from "@/lib/flow-constants"
 import { AvatarDisplay } from "./AvatarDisplay"
 
 /**
@@ -106,8 +107,8 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       let maxMonthlyTotal = 0
       monthlyData.forEach(month => {
         const relevantFlows = month.flows.filter(flow => flow.entityId === entity.id)
-        const monthlyGains = relevantFlows.filter(flow => !["deductible_expense", "expense"].includes(flow.type)).reduce((sum, flow) => sum + flow.amount, 0)
-        const monthlyExpenses = relevantFlows.filter(flow => ["deductible_expense", "expense"].includes(flow.type)).reduce((sum, flow) => sum + flow.amount, 0)
+        const monthlyGains = relevantFlows.filter(flow => !isExpenseFlowType(flow.type)).reduce((sum, flow) => sum + flow.amount, 0)
+        const monthlyExpenses = relevantFlows.filter(flow => isExpenseFlowType(flow.type)).reduce((sum, flow) => sum + flow.amount, 0)
         maxMonthlyTotal = Math.max(maxMonthlyTotal, monthlyGains, monthlyExpenses)
       })
       const monthlyScale = maxMonthlyTotal > 0 ? maxMonthlyTotal * 1.1 : 1
@@ -127,7 +128,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
 
         aggregatedFlows.forEach((amount, type) => {
           const segment: FlowSegment = { amount, color: finalColors[type] || "#cccccc", number: flowTypeToNumberMap.get(type) || 0 }
-          if (["deductible_expense", "expense"].includes(type)) {
+          if (isExpenseFlowType(type)) {
             expenses.push(segment)
             totalExpenses += amount
           } else {
@@ -155,7 +156,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
 
       totalAnnualFlows.forEach((amount, type) => {
         const segment: FlowSegment = { amount, color: finalColors[type] || "#cccccc", number: flowTypeToNumberMap.get(type) || 0 }
-        if (["deductible_expense", "expense"].includes(type)) {
+        if (isExpenseFlowType(type)) {
           annualExpenses.push(segment)
           totalAnnualExpenses += amount
         } else {

@@ -5,6 +5,7 @@ import type { UserPreferences, FinancialFlow } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
+import { flowTypeShortLabels } from "@/lib/flow-constants"
 import { RotateCcw } from "lucide-react"
 
 /**
@@ -21,26 +22,6 @@ interface ColorSettingsModalProps {
 
 // Récupère la liste de tous les types de flux possibles depuis les couleurs par défaut.
 const allFlowTypes = Object.keys(DEFAULT_FLOW_COLORS) as FinancialFlow["type"][]
-
-/**
- * Dictionnaire complet de tous les libellés de flux.
- * ROADMAP 5.5.1: Maintient la cohérence des libellés dans cette modale.
- */
-const flowTypeLabels: Record<string, string> = {
-  are: "ARE",
-  salary: "Salaire",
-  other_taxable_income: "Autre Revenu",
-  ca_services: "CA Services",
-  ca_vente: "CA Vente",
-  deductible_expense: "Charge déductible",
-  director_remuneration: "Rémunération Dirigeant",
-  dividends_payment: "Dividendes",
-  ca_micro_services_bic: "CA Micro (BIC)",
-  ca_micro_services_bnc: "CA Micro (BNC)",
-  ca_micro_vente: "CA Micro Vente",
-  income: "Revenu (Test)",
-  expense: "Dépense (non déductible)"
-}
 
 export function ColorSettingsModal({ isOpen, onClose, preferences, onSave }: ColorSettingsModalProps) {
   // État local pour les couleurs. Permet de modifier les couleurs sans affecter l'état global
@@ -83,7 +64,7 @@ export function ColorSettingsModal({ isOpen, onClose, preferences, onSave }: Col
           {allFlowTypes.map(type => (
             <div key={type} className="grid grid-cols-[1fr_auto] items-center gap-4">
               <label htmlFor={`color-${type}`} className="text-sm font-medium">
-                {flowTypeLabels[type] || type}
+                {flowTypeShortLabels[type] || type}
               </label>
               <div className="flex items-center gap-2">
                 {/* Aperçu de la couleur */}

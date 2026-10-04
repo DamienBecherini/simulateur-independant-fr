@@ -1,32 +1,12 @@
 // src/ui/components/FlowItem.tsx
 
 import type { FinancialFlow } from "@/types"
+import { flowTypeLabels, isExpenseFlowType } from "@/lib/flow-constants"
 import { Button } from "@/components/ui/button"
 // L'icône 'Edit' n'est plus nécessaire car le bouton est supprimé.
 import { Trash2 } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-
-/**
- * Dictionnaire de libellés pour l'affichage.
- * ROADMAP 5.5.1: Ce dictionnaire est aligné avec celui de la modale d'édition pour
- * garantir une cohérence parfaite dans l'interface utilisateur.
- */
-const flowTypeLabels: Record<FinancialFlow["type"], string> = {
-  are: "Allocation chômage (ARE)",
-  salary: "Salaire (emploi tiers)",
-  other_taxable_income: "Autre revenu imposable",
-  ca_services: "CA - Prestation de services",
-  ca_vente: "CA - Vente de marchandises",
-  deductible_expense: "Charge déductible",
-  director_remuneration: "Rémunération de dirigeant",
-  dividends_payment: "Versement de dividendes",
-  ca_micro_services_bic: "CA Micro - Services (BIC)",
-  ca_micro_services_bnc: "CA Micro - Services (BNC)",
-  ca_micro_vente: "CA Micro - Vente",
-  income: "Revenu (Test)",
-  expense: "Dépense (non déductible)"
-}
 
 /**
  * Interface pour les props du composant FlowItem.
@@ -69,8 +49,8 @@ export function FlowItem({ flow, onEdit, onDelete }: FlowItemProps) {
 
       <div className="flex items-center gap-2">
         {/* Affiche le montant formaté avec un signe + ou - et une couleur appropriée. */}
-        <span className={`font-mono text-lg ${flow.type.includes("expense") ? "text-red-500" : "text-green-600"}`}>
-          {flow.type.includes("expense") ? "-" : "+"} {flow.amount.toLocaleString("fr-FR")} €
+        <span className={`font-mono text-lg ${isExpenseFlowType(flow.type) ? "text-red-500" : "text-green-600"}`}>
+          {isExpenseFlowType(flow.type) ? "-" : "+"} {flow.amount.toLocaleString("fr-FR")} €
         </span>
 
         {/* MODIFICATION 2 : Le bouton d'édition est supprimé. */}
