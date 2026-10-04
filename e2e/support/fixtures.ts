@@ -88,12 +88,23 @@ export async function deposerSauvegardes(dossierDonnees: string, slots: SaveSlot
   await fs.writeFile(path.join(dossierDonnees, "simulationSlots.json"), JSON.stringify(slots.map(auFormatActuel), null, 2))
 }
 
+/** Fenêtres de fichier remplacées par neutraliser-dialogues.cjs : chemins choisis par le test et demandes reçues. */
+interface FichiersE2E {
+  enregistrer: string | null
+  ouvrir: string | null
+  demandes: { title: string; defaultPath: string }[]
+}
+
 /** Chemins que renverront les fenêtres d'enregistrement et d'ouverture de fichier ; `null` simule une annulation. */
 export async function choisirFichiers(electronApp: ElectronApplication, chemins: { enregistrer?: string | null; ouvrir?: string | null }) {
   await electronApp.evaluate((_electron, choix) => {
-    const fichiers = (globalThis as unknown as { __fichiersE2E: Record<string, string | null> }).__fichiersE2E
-    Object.assign(fichiers, choix)
+    Object.assign((globalThis as unknown as { __fichiersE2E: FichiersE2E }).__fichiersE2E, choix)
   }, chemins)
+}
+
+/** Titre et nom de fichier proposés par chaque fenêtre d'enregistrement ouverte depuis le lancement. */
+export async function demandesDEnregistrement(electronApp: ElectronApplication): Promise<FichiersE2E["demandes"]> {
+  return electronApp.evaluate(() => (globalThis as unknown as { __fichiersE2E: FichiersE2E }).__fichiersE2E.demandes)
 }
 
 /** Lit un fichier JSON du dossier de données ; `null` s'il n'existe pas encore. */

@@ -78,10 +78,10 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="p-4 border rounded-lg flex flex-col gap-4 transition-shadow hover:shadow-lg bg-white dark:bg-gray-900">
+    <div ref={setNodeRef} style={style} data-impression="bloc" className="p-4 border rounded-lg flex flex-col gap-4 transition-shadow hover:shadow-lg bg-white dark:bg-gray-900 print:gap-2 print:p-3">
       <div className="flex flex-wrap justify-between items-start gap-x-4 gap-y-2">
         <div className="flex-grow flex items-center gap-4 min-w-48">
-          <div {...attributes} {...listeners} aria-label={`Déplacer « ${entity.name} »`} className={cn(POIGNEE_DE_TRI, "-ml-2 self-start p-2")}>
+          <div {...attributes} {...listeners} aria-label={`Déplacer « ${entity.name} »`} className={cn(POIGNEE_DE_TRI, "-ml-2 self-start p-2 print:hidden")}>
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
               <path d="M5.5 4.625C5.01421 4.625 4.625 5.01421 4.625 5.5C4.625 5.98579 5.01421 6.375 5.5 6.375C5.98579 6.375 6.375 5.98579 6.375 5.5C6.375 5.01421 5.98579 4.625 5.5 4.625ZM9.5 4.625C9.01421 4.625 8.625 5.01421 8.625 5.5C8.625 5.98579 9.01421 6.375 9.5 6.375C9.98579 6.375 10.375 5.98579 10.375 5.5C10.375 5.01421 9.98579 4.625 9.5 4.625ZM6.375 9.5C6.375 9.01421 5.98579 8.625 5.5 8.625C5.01421 8.625 4.625 9.01421 4.625 9.5C4.625 9.98579 5.01421 10.375 5.5 10.375C5.98579 10.375 6.375 9.98579 6.375 9.5ZM9.5 8.625C9.01421 8.625 8.625 9.01421 8.625 9.5C8.625 9.98579 9.01421 10.375 9.5 10.375C9.98579 10.375 10.375 9.98579 10.375 9.5C10.375 9.01421 9.98579 8.625 9.5 8.625Z" fill="currentColor"></path>
             </svg>
@@ -129,7 +129,7 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
               </label>
             </>
           )}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 print:hidden">
             <Button variant="ghost" size="icon" aria-label="Modifier les autres réglages" title="Statut, couleur, icône…" onClick={() => onEdit(entity)}>
               <Pencil className="h-4 w-4 text-slate-600 dark:text-slate-400" />
             </Button>
@@ -156,7 +156,7 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
               {isSource && <ArrowRight className="h-3 w-3 text-slate-500 dark:text-slate-400" />}
               <AvatarDisplay avatar={otherEntity.avatar} />
               <span className="font-semibold">{otherEntity.name}</span>
-              <button type="button" aria-label={`Supprimer la relation avec ${otherEntity.name}`} className="inline-flex min-h-6 min-w-6 items-center justify-center rounded text-slate-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11 dark:text-slate-400 hover:bg-slate-200 hover:text-destructive dark:hover:bg-gray-700" onClick={() => onDeleteRelationship(rel.id)}>
+              <button type="button" aria-label={`Supprimer la relation avec ${otherEntity.name}`} className="print:hidden inline-flex min-h-6 min-w-6 items-center justify-center rounded text-slate-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11 dark:text-slate-400 hover:bg-slate-200 hover:text-destructive dark:hover:bg-gray-700" onClick={() => onDeleteRelationship(rel.id)}>
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>

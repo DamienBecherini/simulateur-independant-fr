@@ -6,6 +6,8 @@ import type { ReactNode } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import type { SessionState, SimulationReport } from "@/types"
 import { exporterGrilleCsv, exporterRapportMarkdown, exporterResultatsCsv } from "../exports-texte"
+import { nomDuPdf } from "@/lib/nom-du-pdf"
+import { exporterEnPdf } from "../impression"
 
 interface ExportDialogProps {
   isOpen: boolean
@@ -37,6 +39,11 @@ function Groupe({ titre, children }: { titre: string; children: ReactNode }) {
   )
 }
 
+/** Le PDF porte le nom de la simulation et l'année de ses règles fiscales (l'année en cours tant qu'elle n'est pas calculée). */
+function exporterLaSimulationEnPdf(session: SessionState, simulationReport: SimulationReport | null) {
+  exporterEnPdf(nomDuPdf(session.name, simulationReport?.annee ?? new Date().getFullYear())).catch(console.error)
+}
+
 export function ExportDialog({ isOpen, onClose, session, simulationReport, onExportJson }: ExportDialogProps) {
   const exporter = (action: () => void) => () => {
     action()
@@ -53,6 +60,9 @@ export function ExportDialog({ isOpen, onClose, session, simulationReport, onExp
         <div className="space-y-5">
           <Groupe titre="Sauvegarde">
             <OptionExport titre="Simulation complète (JSON)" description="Acteurs, relations, flux et résultats ; se réimporte dans le simulateur." onClick={exporter(onExportJson)} />
+          </Groupe>
+          <Groupe titre="Document">
+            <OptionExport titre="Document PDF" description="La simulation mise en page sur A4 : acteurs, grille annuelle, résultats et comparateur." onClick={exporter(() => exporterLaSimulationEnPdf(session, simulationReport))} />
           </Groupe>
           <Groupe titre="Tableur (CSV)">
             <OptionExport titre="Grille mensuelle (CSV)" description="Une ligne par acteur et par type de flux : les douze mois et le total de l'année." onClick={exporter(() => exporterGrilleCsv(session, simulationReport))} />

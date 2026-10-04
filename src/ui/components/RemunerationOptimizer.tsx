@@ -3,6 +3,7 @@
 // avec la meilleure rémunération et la meilleure parmi celles qui valident 4 trimestres de retraite.
 
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
+import { flushSync } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { echelle, graduations, indiceLePlusProche, montantCourt, positionInfoBulle } from "@/lib/graphique"
 import { cn } from "@/lib/utils"
@@ -44,10 +45,18 @@ function useOptimisation(session: SessionState, options: ComparaisonOptions, sta
   return { resultat, erreur }
 }
 
-/** Largeur réelle du conteneur, pour dessiner le graphique à l'échelle 1 : le texte garde sa taille sur téléphone. */
+/** Largeur du graphique imprimé : une feuille A4 (210 mm) moins ses marges et le cadre de la section, en pixels CSS. */
+const LARGEUR_IMPRIMEE = 660
+
+/**
+ * Largeur réelle du conteneur, pour dessiner le graphique à l'échelle 1 : le texte garde sa taille sur téléphone.
+ * À l'impression, la page est mise en forme sans que le code ne s'exécute : le graphique est redessiné à la largeur
+ * de la feuille dès l'annonce de l'impression (beforeprint), de façon synchrone, pour ne pas y être réduit.
+ */
 function useLargeur(defaut: number) {
   const ref = useRef<HTMLDivElement>(null)
   const [largeur, setLargeur] = useState(defaut)
+  const [impression, setImpression] = useState(false)
   useEffect(() => {
     const element = ref.current
     if (!element || typeof ResizeObserver === "undefined") return
@@ -55,14 +64,24 @@ function useLargeur(defaut: number) {
     observateur.observe(element)
     return () => observateur.disconnect()
   }, [])
-  return { ref, largeur }
+  useEffect(() => {
+    const avant = () => flushSync(() => setImpression(true))
+    const apres = () => setImpression(false)
+    window.addEventListener("beforeprint", avant)
+    window.addEventListener("afterprint", apres)
+    return () => {
+      window.removeEventListener("beforeprint", avant)
+      window.removeEventListener("afterprint", apres)
+    }
+  }, [])
+  return { ref, largeur: impression ? LARGEUR_IMPRIMEE : largeur }
 }
 
 function ChoixDuStatut({ statut, onChange }: { statut: StatutSociete; onChange: (statut: StatutSociete) => void }) {
   return (
     <div className="inline-flex rounded-md border border-slate-300 p-0.5 dark:border-slate-600" role="group" aria-label="Statut de la société">
       {STATUTS.map(s => (
-        <button key={s} type="button" aria-pressed={s === statut} onClick={() => onChange(s)} className={cn("min-h-9 min-w-16 rounded px-3 text-sm font-medium pointer-coarse:min-h-11", s === statut ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800")}>
+        <button key={s} type="button" aria-pressed={s === statut} onClick={() => onChange(s)} className={cn("min-h-9 min-w-16 rounded px-3 text-sm font-medium pointer-coarse:min-h-11", s === statut ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 print:hidden")}>
           {s}
         </button>
       ))}
@@ -89,7 +108,7 @@ function Resume({ resultat, remunerationActuelle, onAppliquer }: ResumeProps) {
         {euros(point.netApresImpots)} dans la poche du foyer, avec {euros(point.remunerationNette)} de rémunération nette et {euros(point.dividendes)} de dividendes ({trimestres(point.trimestres)}).
         {detail ? <span className="text-slate-600 dark:text-slate-300"> {detail}</span> : null}
       </p>
-      <Button variant="outline" size="sm" className="min-h-9" disabled={remunerationActuelle === point.remunerationNette} onClick={() => onAppliquer(point.remunerationNette)}>
+      <Button variant="outline" size="sm" className="min-h-9 print:hidden" disabled={remunerationActuelle === point.remunerationNette} onClick={() => onAppliquer(point.remunerationNette)}>
         {remunerationActuelle === point.remunerationNette ? "Appliquée" : "Appliquer au comparateur"}
       </Button>
     </li>
@@ -142,7 +161,8 @@ function Courbe({ resultat, remunerationActuelle }: CourbeProps) {
   return (
     <div ref={ref} className="relative">
       <div tabIndex={0} role="group" aria-label={`Net du foyer selon la rémunération nette en ${resultat.statut}. Flèches gauche et droite pour parcourir la courbe.`} onKeyDown={surClavier} onBlur={() => setSurvol(null)} className="rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-        <svg width={largeur} height={HAUTEUR} className="block overflow-visible text-xs" aria-hidden>
+        {/* La viewBox laisse le graphique se réduire à la largeur de la feuille à l'impression, sans le recadrer. */}
+        <svg width={largeur} height={HAUTEUR} viewBox={`0 0 ${largeur} ${HAUTEUR}`} className="block overflow-visible text-xs print:h-auto print:w-full" aria-hidden>
           {seuilRetraite !== undefined && seuilRetraite > 0 ? (
             <g>
               <rect x={MARGES.gauche} y={MARGES.haut} width={x(seuilRetraite) - MARGES.gauche} height={HAUTEUR - MARGES.haut - MARGES.bas} className="fill-slate-500/10" />
@@ -213,7 +233,7 @@ const LARGEUR_INFOBULLE = 208
 
 function InfoBulle({ point, gauche, largeur }: { point: PointRemuneration; gauche: number; largeur: number }) {
   return (
-    <div role="status" className="pointer-events-none absolute top-2 z-10 rounded-md border border-slate-200 bg-white p-3 text-sm shadow-md dark:border-slate-700 dark:bg-gray-900" style={{ left: positionInfoBulle(gauche, largeur, LARGEUR_INFOBULLE), width: LARGEUR_INFOBULLE }}>
+    <div role="status" className="pointer-events-none print:hidden absolute top-2 z-10 rounded-md border border-slate-200 bg-white p-3 text-sm shadow-md dark:border-slate-700 dark:bg-gray-900" style={{ left: positionInfoBulle(gauche, largeur, LARGEUR_INFOBULLE), width: LARGEUR_INFOBULLE }}>
       <p className="text-base font-semibold tabular-nums">{euros(point.netApresImpots)}</p>
       <p className="text-slate-600 dark:text-slate-300">dans la poche du foyer</p>
       <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-3 tabular-nums">

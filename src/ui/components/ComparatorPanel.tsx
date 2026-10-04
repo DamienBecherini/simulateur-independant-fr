@@ -75,7 +75,7 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
         Ordres de grandeur, à ajuster à votre situation. Ils s'ajoutent aux charges de l'activité dans chaque colonne, statut actuel compris : si vous les avez déjà saisis dans la grille, mettez-les à 0. Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune et n'est pas due l'année de création.
       </p>
-      <div className="relative mt-3 overflow-x-auto">
+      <div className="relative mt-3 overflow-x-auto print:overflow-visible">
         <table className="w-full min-w-[40rem] text-sm" aria-label="Frais de fonctionnement annuels">
           <thead>
             <tr>
@@ -129,7 +129,7 @@ interface ControlsProps {
 
 function ComparatorControls({ activities, selected, options, onSelect, onChange }: ControlsProps) {
   return (
-    <div className="flex flex-wrap items-end gap-x-6 gap-y-3 rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+    <div data-impression="bloc" className="flex flex-wrap items-end gap-x-6 gap-y-3 rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
       <div className="space-y-1">
         <Label htmlFor="comparateur-activite">Activité comparée</Label>
         <Select value={selected.id} onValueChange={onSelect}>
@@ -159,7 +159,7 @@ function ComparatorControls({ activities, selected, options, onSelect, onChange 
       {selected.type !== "micro-entreprise" && (
         <div className="space-y-1">
           <Label htmlFor="comparateur-bnc">En micro, prestations en BNC : {Math.round(options.partBncPrestations * 100)} % (le reste en BIC)</Label>
-          <input id="comparateur-bnc" className="block w-56 accent-slate-700" type="range" min="0" max="100" step="10" value={Math.round(options.partBncPrestations * 100)} onChange={e => onChange({ partBncPrestations: Number(e.target.value) / 100 })} />
+          <input id="comparateur-bnc" className="block w-56 accent-slate-700 print:hidden" type="range" min="0" max="100" step="10" value={Math.round(options.partBncPrestations * 100)} onChange={e => onChange({ partBncPrestations: Number(e.target.value) / 100 })} />
         </div>
       )}
     </div>
@@ -195,7 +195,7 @@ function ComparisonTable({ result, activityName, renvois }: { result: Comparaiso
 
   return (
     <ZoneDefilante libelle="Tableau de comparaison" className="rounded-lg border border-slate-200 dark:border-slate-700">
-      <table className="w-full min-w-[48rem] text-sm" aria-label="Comparaison des statuts">
+      <table className="w-full min-w-[48rem] text-sm print:min-w-0 print:text-[8pt]" aria-label="Comparaison des statuts">
         <thead className="bg-slate-100 dark:bg-slate-800/80">
           <tr>
             <th scope="col" className="px-3 py-2 text-left">
