@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import config from "../config.json" with { type: "json" }
+import { reductionGenerale } from "../logic/cotisationsSalarie.js"
 import type { BaremeProgressif, ReglesFiscales, TrancheCotisation } from "../logic/regles.js"
 import fichier2024 from "./2024.json" with { type: "json" }
 import fichier2025 from "./2025.json" with { type: "json" }
@@ -28,8 +29,8 @@ const annees = [
   { annee: 2026, regles: regles2026, brut: config as unknown }
 ]
 
-/** Les paires d'années consécutives : [année précédente, année suivante]. */
-const consecutives = annees.slice(1).map((suivante, i) => [annees[i], suivante] as const)
+/** Les paires d'années consécutives : l'année précédente et la suivante. */
+const consecutives = annees.slice(1).map((apres, i) => ({ avant: annees[i], apres }))
 
 /** Toutes les feuilles d'un objet JSON, avec leur chemin (`IR.bareme.0.taux`). */
 function feuilles(valeur: unknown, chemin = ""): [string, unknown][] {
@@ -37,8 +38,15 @@ function feuilles(valeur: unknown, chemin = ""): [string, unknown][] {
   return Object.entries(valeur).flatMap(([cle, enfant]) => feuilles(enfant, chemin ? `${chemin}.${cle}` : cle))
 }
 
-/** Tous les taux du fichier, c'est-à-dire des fractions entre 0 et 1, avec leur nom. */
+/**
+ * Tous les taux du fichier, c'est-à-dire des fractions entre 0 et 1, avec leur nom. Dans le bloc du régime général,
+ * ne sont pas des taux : le plafond de la sécurité sociale et le SMIC annuel (des montants), les limites de tranche
+ * `jusquA` (des multiples du plafond), l'exposant `puissance` et le seuil `plafondEnSmic` de la réduction générale
+ * (1,75 et 3 en 2026). Le reste en est : parts de chaque tranche, part du brut retenue pour la CSG, taux de CSG et de
+ * CRDS, bornes Tmin et Tdelta du coefficient de réduction.
+ */
 function taux(r: ReglesFiscales): [string, number][] {
+  const rg = r.regimeGeneral
   const tns = r.TNS
   const micro = r.microEntreprise
   const parTranches = (nom: string, tranches: TrancheCotisation[]) => tranches.map(({ taux }, i): [string, number] => [`${nom}.${i}`, taux])
@@ -58,6 +66,16 @@ function taux(r: ReglesFiscales): [string, number][] {
     ["dividendes.prelevementsSociaux", r.dividendes.prelevementsSociaux],
     ["dividendes.abattementBareme", r.dividendes.abattementBareme],
     ["dividendes.csgDeductible", r.dividendes.csgDeductible],
+    ...Object.entries(rg.cotisations).flatMap(([nom, { salariale, patronale }]) => [
+      ...parTranches(`regimeGeneral.cotisations.${nom}.salariale`, salariale),
+      ...parTranches(`regimeGeneral.cotisations.${nom}.patronale`, patronale)
+    ]),
+    ...parTranches("regimeGeneral.csgCrds.assiette", rg.csgCrds.assiette),
+    ["regimeGeneral.csgCrds.csgDeductible", rg.csgCrds.csgDeductible],
+    ["regimeGeneral.csgCrds.csgNonDeductible", rg.csgCrds.csgNonDeductible],
+    ["regimeGeneral.csgCrds.crds", rg.csgCrds.crds],
+    ["regimeGeneral.reductionGenerale.tMin", rg.reductionGenerale.tMin],
+    ["regimeGeneral.reductionGenerale.tDelta", rg.reductionGenerale.tDelta],
     ["TNS.abattement.taux", tns.abattement.taux],
     ...progressif("TNS.maladieMaternite", tns.maladieMaternite),
     ...progressif("TNS.allocationsFamiliales", tns.allocationsFamiliales),
@@ -69,7 +87,6 @@ function taux(r: ReglesFiscales): [string, number][] {
     ["TNS.csgCrds.csgNonDeductible", tns.csgCrds.csgNonDeductible],
     ["TNS.csgCrds.crds", tns.csgCrds.crds],
     ["TNS.formationProfessionnelle.tauxSurPlafond", tns.formationProfessionnelle.tauxSurPlafond],
-    ["protectionSociale.tauxNetSurBrutSalarie", r.protectionSociale.tauxNetSurBrutSalarie],
     ["protectionSociale.tauxRetraiteDeBase", r.protectionSociale.tauxRetraiteDeBase],
     ...parActivite("protectionSociale.partRetraiteDeBaseMicro", r.protectionSociale.partRetraiteDeBaseMicro),
     ["EURL.seuilDividendesPartDuCapital", r.EURL.seuilDividendesPartDuCapital],
@@ -171,6 +188,40 @@ describe("règles par année", () => {
       expect(cotisationsMinimales.retraiteDeBase).toBeLessThan(plafondSecuriteSociale)
     })
 
+    it("a des cotisations du régime général par tranches ordonnées du plafond de la sécurité sociale", () => {
+      const rg = regles.regimeGeneral
+      expect(rg.plafondSecuriteSociale).toBe(regles.TNS.plafondSecuriteSociale)
+      const listes = [...Object.values(rg.cotisations).flatMap(({ salariale, patronale }) => [salariale, patronale]), rg.csgCrds.assiette]
+      for (const tranches of listes) {
+        const bornes = tranches.map(({ jusquA }) => jusquA ?? Infinity)
+        expectCroissante(bornes)
+        if (bornes.length > 0) expect(bornes[0]).toBeGreaterThan(0)
+        // Aucune assiette ne dépasse 8 plafonds (tranche 2 de l'Agirc-Arrco) sans être illimitée.
+        bornes.forEach(borne => expect(borne === Infinity || borne <= 8).toBe(true))
+      }
+      // Chaque ligne est due par quelqu'un.
+      for (const [nom, { salariale, patronale }] of Object.entries(rg.cotisations)) expect(salariale.length + patronale.length, nom).toBeGreaterThan(0)
+      expect(rg.csgCrds.assiette).toEqual([{ jusquA: 4, taux: 0.9825 }, { jusquA: null, taux: 1 }])
+    })
+
+    it("réserve aux salariés l'assurance chômage, l'AGS et le dialogue social, et ne doit la CET qu'au-delà du plafond", () => {
+      const { cotisations } = regles.regimeGeneral
+      expect(Object.entries(cotisations).filter(([, c]) => c.salariesSeulement).map(([nom]) => nom)).toEqual(["assuranceChomage", "ags", "dialogueSocial"])
+      expect(Object.entries(cotisations).filter(([, c]) => c.auDelaDuPlafondSeulement).map(([nom]) => nom)).toEqual(["contributionEquilibreTechnique"])
+    })
+
+    it("a une réduction générale cohérente avec le SMIC de l'année", () => {
+      const rg = regles.regimeGeneral.reductionGenerale
+      // SMIC annuel = 1 820 heures au SMIC horaire du 1er janvier, et un trimestre de retraite = 150 heures (à l'euro près).
+      expect(Math.abs(rg.smicAnnuel - (regles.protectionSociale.revenuParTrimestre * 1820) / 150)).toBeLessThanOrEqual(1)
+      expect(rg.plafondEnSmic).toBeGreaterThan(1)
+      expect(rg.puissance).toBeGreaterThanOrEqual(1)
+      expect(rg.tMin + rg.tDelta).toBeLessThan(1)
+      // Maximale au SMIC (Tmin + Tdelta, arrondi à 4 décimales), nulle à partir du plafond.
+      expect(reductionGenerale(rg.smicAnnuel, rg)).toBeCloseTo(rg.smicAnnuel * Math.round((rg.tMin + rg.tDelta) * 10000) / 10000, 6)
+      expect(reductionGenerale(rg.plafondEnSmic * rg.smicAnnuel, rg)).toBe(0)
+    })
+
     it("a des seuils de micro-entreprise et de TVA positifs et ordonnés", () => {
       const { plafonds, abattement } = regles.microEntreprise
       expect(plafonds.vente).toBeGreaterThan(plafonds.services)
@@ -184,11 +235,13 @@ describe("règles par année", () => {
     })
   })
 
-  describe.each(consecutives)("de $0.annee à $1.annee", (avant, apres) => {
+  describe.each(consecutives)("de $avant.annee à $apres.annee", ({ avant, apres }) => {
     const [a, b] = [avant.regles, apres.regles]
 
-    it("fait croître le plafond de la sécurité sociale, le revenu d'un trimestre et les assiettes minimales", () => {
+    it("fait croître le plafond de la sécurité sociale, le SMIC, le revenu d'un trimestre et les assiettes minimales", () => {
       expect(b.TNS.plafondSecuriteSociale).toBeGreaterThan(a.TNS.plafondSecuriteSociale)
+      expect(b.regimeGeneral.plafondSecuriteSociale).toBeGreaterThan(a.regimeGeneral.plafondSecuriteSociale)
+      expect(b.regimeGeneral.reductionGenerale.smicAnnuel).toBeGreaterThan(a.regimeGeneral.reductionGenerale.smicAnnuel)
       expect(b.protectionSociale.revenuParTrimestre).toBeGreaterThan(a.protectionSociale.revenuParTrimestre)
       expect(b.TNS.cotisationsMinimales.indemnitesJournalieres).toBeGreaterThan(a.TNS.cotisationsMinimales.indemnitesJournalieres)
       expect(b.TNS.cotisationsMinimales.invaliditeDeces).toBeGreaterThan(a.TNS.cotisationsMinimales.invaliditeDeces)
@@ -223,6 +276,23 @@ describe("règles par année", () => {
         const precedent = tauxAvant.get(nom)
         if (precedent !== undefined && !nom.startsWith("TNS.")) expect(Math.abs(valeur - precedent), nom).toBeLessThanOrEqual(0.1)
       }
+    })
+  })
+
+  describe("réduction « Fillon » de 2024 et 2025, portée par les paramètres de la réduction dégressive unique", () => {
+    // C = (T / 0,6) x (1,6 x SMIC / brut - 1) : Tmin = 0, Tdelta = T, P = 1, plafond de 1,6 SMIC.
+    it.each([regles2024, regles2025])("$annee : Tmin = 0, P = 1, jusqu'à 1,6 SMIC", ({ regimeGeneral }) => {
+      expect(regimeGeneral.reductionGenerale).toMatchObject({ tMin: 0, tDelta: 0.3194, puissance: 1, plafondEnSmic: 1.6 })
+    })
+
+    it("retrouve l'exemple de l'Urssaf pour 2024 : 1 900 € brut par mois, SMIC de 1 766,92 €, coefficient de 0,2597", () => {
+      expect(reductionGenerale(12 * 1900, regles2024.regimeGeneral.reductionGenerale)).toBeCloseTo(12 * 1900 * 0.2597, 6)
+    })
+
+    it("retrouve l'exemple de l'Urssaf pour mai 2025 : 2 000 € brut par mois, T de 0,3193, coefficient de 0,2349", () => {
+      // Le fichier garde le T du 1er janvier (0,3194) ; l'exemple de l'Urssaf porte sur le T de mai à décembre.
+      const tDeMai = { ...regles2025.regimeGeneral.reductionGenerale, tDelta: 0.3193 }
+      expect(reductionGenerale(12 * 2000, tDeMai)).toBeCloseTo(12 * 2000 * 0.2349, 6)
     })
   })
 })

@@ -58,9 +58,123 @@
     "abattementBareme": 0.4,
     "csgDeductible": 0.068
   },
-  "SASU": {
-    "description": "Approximation moyenne du coût total (salaire net + cotisations salariales et patronales) de la rémunération du président, rapporté au net versé, reprise de 2026 faute de source officielle propre à l'année. Un vrai bulletin de paie est plus fin.",
-    "ratioCoutTotalSurNet": 1.8
+  "regimeGeneral": {
+    "description": "Cotisations et contributions sociales 2024 du régime général, ligne à ligne, pour le président de SASU (assimilé salarié, sans contrat de travail, affilié comme cadre à la retraite complémentaire) et pour un salarié non cadre d'une activité de la simulation, en métropole, dans une entreprise de moins de 11 salariés. Valeurs en vigueur au 01/01/2024, relevées sur le tableau des taux du secteur privé de l'Urssaf publié le 22 mars 2024 (archive du 19/05/2024) et vérifiées dans les règles du simulateur officiel de l'Urssaf (paquet modele-social 3.1.0 publié en novembre 2024, https://www.npmjs.com/package/modele-social/v/3.1.0). Trois règles de 2024 ne tiennent pas dans le schéma, conçu pour 2026 (une valeur par paramètre, des tranches en part du PASS, une seule formule de réduction) : (1) les taux réduits de maladie (7 % jusqu'à 2,5 SMIC) et d'allocations familiales (3,45 % jusqu'à 3,5 SMIC) s'appliquent à tout le brut sous un seuil en SMIC, ce qu'une tranche en PASS ne sait pas dire : le fichier garde les taux pleins, exacts pour le président (qui n'y a pas droit) et pour un salarié au-dessus des seuils, mais qui surestiment le coût employeur d'un salarié en dessous ; (2) la réduction générale de 2024 est l'ancienne réduction « Fillon » (jusqu'à 1,6 SMIC), représentée exactement par les paramètres de la formule dégressive (voir `reductionGenerale`) ; (3) l'AGS (0,20 % puis 0,25 % au 01/07/2024) et le SMIC (11,65 € puis 11,88 € au 01/11/2024) changent en cours d'année : le fichier garde la valeur du 1er janvier (ADR 007). Le président ne cotise ni à l'assurance chômage, ni à l'AGS, ni à la contribution au dialogue social, et n'ouvre pas droit à la réduction générale ni aux taux réduits (cotisations marquées `salariesSeulement`). Ne sont pas modélisés : prévoyance et complémentaire santé, APEC, versement mobilité, régime d'Alsace-Moselle.",
+    "source": "https://web.archive.org/web/20240519112507/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html",
+    "plafondSecuriteSociale": 46368,
+    "cotisations": {
+      "maladie": {
+        "description": "Maladie-maternité-invalidité-décès : 13 % à la charge de l'employeur sur tout le brut. En 2024, le taux est réduit à 7 % (« bandeau maladie ») pour un salarié dont la rémunération annuelle ne dépasse pas 2,5 fois le SMIC en vigueur au 31/12/2023 (11,52 €, valeur figée par la LFSS 2024), soit 52 416 € (2,5 x 1 820 h x 11,52 €) ; au-delà, 13 % sur tout le brut (article L241-2-1 du code de la sécurité sociale). Le seuil s'applique à tout le brut et non par tranche : le schéma ne sait pas le représenter, le fichier retient 13 %. C'est exact pour le président, qui n'a pas droit au taux réduit (il n'entre pas dans le champ de la réduction générale), et pour un salarié au-delà de 2,5 SMIC ; en dessous, le coût employeur d'un salarié est surestimé de 6 points de brut.",
+        "source": "https://web.archive.org/web/20240519112507/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.13 }]
+      },
+      "vieillessePlafonnee": {
+        "description": "Assurance vieillesse plafonnée : 6,90 % salarié et 8,55 % employeur, dans la limite du PASS.",
+        "source": "https://web.archive.org/web/20240519112507/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html",
+        "salariale": [{ "jusquA": 1, "taux": 0.069 }],
+        "patronale": [{ "jusquA": 1, "taux": 0.0855 }]
+      },
+      "vieillesseDeplafonnee": {
+        "description": "Assurance vieillesse déplafonnée : 0,40 % salarié et 2,02 % employeur sur tout le brut (1,90 % employeur jusqu'en 2023, 2,11 % à partir de 2026).",
+        "source": "https://web.archive.org/web/20240519112507/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html",
+        "salariale": [{ "jusquA": null, "taux": 0.004 }],
+        "patronale": [{ "jusquA": null, "taux": 0.0202 }]
+      },
+      "allocationsFamiliales": {
+        "description": "Allocations familiales : 5,25 % employeur sur tout le brut. En 2024, le taux est réduit à 3,45 % (« bandeau famille ») pour un salarié dont la rémunération annuelle ne dépasse pas 3,5 fois le SMIC en vigueur au 31/12/2023, soit 73 382,40 € (3,5 x 1 820 h x 11,52 €). Le seuil s'applique à tout le brut : le fichier retient 5,25 %, exact pour le président (pas de taux réduit) et pour un salarié au-delà de 3,5 SMIC ; en dessous, le coût employeur d'un salarié est surestimé de 1,8 point de brut.",
+        "source": "https://web.archive.org/web/20241103172319/https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/cotisation-allocation-familiale.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.0525 }]
+      },
+      "accidentsDuTravail": {
+        "description": "Accidents du travail et maladies professionnelles : taux des fonctions support de nature administrative hors BTP (code 00.00B), comme pour 2026 : 0,64 % en 2024 (arrêté du 27 décembre 2023 relatif à la tarification des risques pour l'année 2024, annexe 1). Taux net moyen national : 2,12 %. À adapter au taux notifié à l'entreprise.",
+        "source": "https://www.legifrance.gouv.fr/jorf/article_jo/JORFARTI000048708762",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.0064 }]
+      },
+      "contributionSolidariteAutonomie": {
+        "description": "Contribution solidarité autonomie : 0,30 % employeur sur tout le brut.",
+        "source": "https://web.archive.org/web/20240519112507/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.003 }]
+      },
+      "fnal": {
+        "description": "Fonds national d'aide au logement : 0,10 % dans la limite du PASS pour une entreprise de moins de 50 salariés.",
+        "source": "https://web.archive.org/web/20240519112507/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": 1, "taux": 0.001 }]
+      },
+      "retraiteComplementaire": {
+        "description": "Retraite complémentaire Agirc-Arrco : tranche 1 (jusqu'au PASS) 3,15 % salarié et 4,72 % employeur ; tranche 2 (de 1 à 8 PASS) 8,64 % salarié et 12,95 % employeur. Taux inchangés de 2019 à 2026.",
+        "source": "https://www.agirc-arrco.fr/mon-entreprise/calculer-et-declarer/calculer-les-cotisations-de-retraite-complementaire/",
+        "salariale": [{ "jusquA": 1, "taux": 0.0315 }, { "jusquA": 8, "taux": 0.0864 }],
+        "patronale": [{ "jusquA": 1, "taux": 0.0472 }, { "jusquA": 8, "taux": 0.1295 }]
+      },
+      "contributionEquilibreGeneral": {
+        "description": "Contribution d'équilibre général (CEG) : tranche 1 0,86 % salarié et 1,29 % employeur ; tranche 2 1,08 % salarié et 1,62 % employeur.",
+        "source": "https://www.agirc-arrco.fr/mon-entreprise/calculer-et-declarer/calculer-les-cotisations-de-retraite-complementaire/",
+        "salariale": [{ "jusquA": 1, "taux": 0.0086 }, { "jusquA": 8, "taux": 0.0108 }],
+        "patronale": [{ "jusquA": 1, "taux": 0.0129 }, { "jusquA": 8, "taux": 0.0162 }]
+      },
+      "contributionEquilibreTechnique": {
+        "description": "Contribution d'équilibre technique (CET) : due seulement si le brut dépasse le PASS, et alors sur tout le brut dans la limite de 8 PASS : 0,14 % salarié et 0,21 % employeur.",
+        "source": "https://www.agirc-arrco.fr/mon-entreprise/calculer-et-declarer/calculer-les-cotisations-de-retraite-complementaire/",
+        "auDelaDuPlafondSeulement": true,
+        "salariale": [{ "jusquA": 8, "taux": 0.0014 }],
+        "patronale": [{ "jusquA": 8, "taux": 0.0021 }]
+      },
+      "assuranceChomage": {
+        "description": "Assurance chômage : 4,05 % employeur dans la limite de 4 PASS (185 472 € en 2024). Pas due pour un mandataire social sans contrat de travail.",
+        "source": "https://web.archive.org/web/20240519112507/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html",
+        "salariesSeulement": true,
+        "salariale": [],
+        "patronale": [{ "jusquA": 4, "taux": 0.0405 }]
+      },
+      "ags": {
+        "description": "Garantie des salaires (AGS) : 0,20 % employeur dans la limite de 4 PASS au 01/01/2024 (0,15 % en 2023), puis 0,25 % à partir du 01/07/2024 (page de l'Urssaf archivée le 04/10/2024, https://web.archive.org/web/20241004051304/https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/assurance-chomage-ags.html) ; le fichier garde 0,20 % (valeur du 1er janvier). Pas due pour un mandataire social sans contrat de travail.",
+        "source": "https://web.archive.org/web/20240519111734/https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/assurance-chomage-ags.html",
+        "salariesSeulement": true,
+        "salariale": [],
+        "patronale": [{ "jusquA": 4, "taux": 0.002 }]
+      },
+      "dialogueSocial": {
+        "description": "Contribution au dialogue social : 0,016 % employeur sur tout le brut, pour les salariés seulement (le simulateur de l'Urssaf ne l'applique pas au dirigeant assimilé salarié).",
+        "source": "https://web.archive.org/web/20241103165305/https://www.urssaf.fr/accueil/employeur/cotisations/liste-cotisations/at-vieillesse-csa-dialoguesocial.html",
+        "salariesSeulement": true,
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.00016 }]
+      },
+      "formationProfessionnelle": {
+        "description": "Contribution à la formation professionnelle : 0,55 % du brut pour une entreprise de moins de 11 salariés, rémunération du président comprise.",
+        "source": "https://web.archive.org/web/20240519112507/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.0055 }]
+      },
+      "taxeApprentissage": {
+        "description": "Taxe d'apprentissage : 0,59 % (part principale) et 0,09 % (solde), soit 0,68 % du brut, rémunération du président comprise.",
+        "source": "https://web.archive.org/web/20240519112507/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html",
+        "salariale": [],
+        "patronale": [{ "jusquA": null, "taux": 0.0068 }]
+      }
+    },
+    "csgCrds": {
+      "description": "CSG de 9,2 %, dont 6,8 points déductibles du revenu imposable, et CRDS de 0,5 %, non déductible, à la charge du salarié, sur 98,25 % du brut dans la limite de 4 PASS et sur tout le brut au-delà. La CSG non déductible et la CRDS s'ajoutent au net pour le revenu imposable.",
+      "source": "https://web.archive.org/web/20240519112507/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-secteur-prive.html",
+      "assiette": [{ "jusquA": 4, "taux": 0.9825 }, { "jusquA": null, "taux": 1 }],
+      "csgDeductible": 0.068,
+      "csgNonDeductible": 0.024,
+      "crds": 0.005
+    },
+    "reductionGenerale": {
+      "description": "Réduction générale des cotisations patronales (« réduction Fillon ») de 2024, pour les salariés seulement (pas pour un mandataire sans contrat de travail) : coefficient C = (T / 0,6) x (1,6 x SMIC annuel / brut annuel - 1), arrondi à 4 décimales et plafonné à T, appliqué au brut annuel s'il est inférieur à 1,6 SMIC. Le moteur, écrit pour la réduction dégressive unique de 2026 (C = Tmin + Tdelta x ((plafond x SMIC / brut - 1) / (plafond - 1))^P), la reproduit exactement avec Tmin = 0, Tdelta = T, P = 1 et un plafond de 1,6 SMIC. T = 0,3194 pour une entreprise de moins de 50 salariés (FNAL à 0,10 %), toute l'année. T est calculé avec les taux réduits de maladie (7 %) et d'allocations familiales (3,45 %), dont bénéficie tout salarié sous 1,6 SMIC, alors que le fichier retient les taux pleins : sous 1,6 SMIC, le coût employeur d'un salarié reste donc surestimé de 7,8 points de brut. SMIC annuel : 1 820 heures au SMIC horaire du 01/01/2024 (11,65 €, 1 766,92 € par mois). Le SMIC est passé à 11,88 € (1 801,80 € par mois) le 01/11/2024 (décret 2024-951) : le SMIC annuel réel d'un salarié à temps plein toute l'année 2024, somme des SMIC mensuels, est de 21 272,80 € (10 x 1 766,92 € + 2 x 1 801,80 €) ; le fichier garde la valeur du 1er janvier (ADR 007), soit un seuil de 1,6 SMIC de 33 924,80 € au lieu de 34 036,48 €. Salarié supposé à temps plein toute l'année.",
+      "source": "https://web.archive.org/web/20240808132142/https://www.urssaf.fr/accueil/employeur/beneficier-exonerations/reduction-generale-cotisation.html",
+      "smicAnnuel": 21203,
+      "tMin": 0,
+      "tDelta": 0.3194,
+      "puissance": 1,
+      "plafondEnSmic": 1.6
+    }
   },
   "TNS": {
     "description": "Cotisations et contributions sociales dues sur les revenus de 2024 d'un travailleur non salarié (gérant majoritaire d'EURL, entrepreneur individuel au réel) artisan, commerçant ou profession libérale non réglementée, en métropole, AVANT la réforme de l'assiette. APPROXIMATION : en 2024, les cotisations portaient sur le revenu professionnel net de cotisations, et la CSG-CRDS sur ce revenu majoré des cotisations obligatoires ; le schéma n'ayant qu'une assiette unique, on reprend celle de la réforme (revenu avant cotisations diminué de l'abattement de 26 %, calibré pour être neutre en moyenne), avec les barèmes et le PASS de 2024, 46 368 €. Les montants peuvent donc s'écarter de quelques pour cent des cotisations réellement dues sur 2024. Les seuils sont exprimés en part du PASS, les assiettes minimales en euros.",
@@ -137,7 +251,6 @@
   "protectionSociale": {
     "description": "Validation des trimestres de retraite en 2024 : 150 heures au SMIC horaire du 1er janvier (11,65 €) par trimestre, soit 1 747,50 €, 4 au maximum ; la hausse du SMIC au 01/11/2024 ne change pas ce seuil. En micro-entreprise, part des cotisations affectée à la retraite de base au 01/01/2024 (article D613-6 du code de la sécurité sociale : 41,80 % en vente et services commerciaux, 55,50 % en libéral, puis 50,75 % en libéral à partir du 01/07/2024, non distingué), ramenée au taux de 17,75 %. Sources : https://legislation.lassuranceretraite.fr/Pdf/circulaire_cnav_2024_03_09012024.pdf et https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000043656780/2024-03-01",
     "revenuParTrimestre": 1747.5,
-    "tauxNetSurBrutSalarie": 0.78,
     "tauxRetraiteDeBase": 0.1775,
     "partRetraiteDeBaseMicro": { "venteBic": 0.418, "servicesBic": 0.418, "servicesBnc": 0.555 }
   },
