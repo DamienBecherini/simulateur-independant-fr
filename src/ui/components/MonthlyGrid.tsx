@@ -220,7 +220,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                   {monthlyCellData.map((cellData, monthIndex) => (
                     <div
                       key={monthIndex}
-                      className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start"
+                      className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start"
                       role="button"
                       tabIndex={0}
                       aria-label={`Flux de ${fullMonths[monthIndex].toLowerCase()} : ${entity.name}`}

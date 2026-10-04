@@ -31,6 +31,8 @@ async function mesurerLesCibles(page: Page): Promise<Cible[]> {
       if (element.closest('[aria-hidden="true"], [inert]') || !element.checkVisibility({ visibilityProperty: true })) return []
       const style = getComputedStyle(element)
       if (element.tagName === "A" && style.display === "inline") return []
+      // Masqué hors focus (lien d'évitement en sr-only) : il n'est pas affiché, donc pas cliquable.
+      if (style.clip === "rect(0px, 0px, 0px, 0px)" || style.clipPath === "inset(50%)") return []
       const zone = (element.closest("label") ?? element).getBoundingClientRect()
       if (zone.width === 0 && zone.height === 0) return []
       const nom = element.getAttribute("aria-label") ?? element.textContent?.trim().slice(0, 40) ?? ""

@@ -101,6 +101,13 @@
     @apply bg-background text-foreground;
   }
 
+  /* Indicateur de focus par défaut, pour les éléments qui n'en définissent pas (cases de la grille, sections
+     repliables, boutons sans style) : un contour net plutôt que celui, à demi transparent, du navigateur. */
+  :where(:focus-visible) {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
   /* Curseur main sur tout ce qui se clique : la remise à zéro de Tailwind laisse le curseur par défaut sur les
      boutons. Les classes utilitaires (cursor-grab des poignées, par exemple) restent prioritaires sur ce calque. */
   :is(button, [role="button"], [role="switch"], [role="combobox"], [role="option"], [role="menuitem"], [role="tab"], select, summary, a[href], input:is([type="range"], [type="checkbox"], [type="radio"], [type="color"]), label:has(input:is([type="checkbox"], [type="radio"]), [role="switch"])) {
@@ -108,5 +115,43 @@
   }
   :is(button, [role="button"], [role="switch"], [role="combobox"], [role="option"], [role="menuitem"], [role="tab"], select, summary, input):is([disabled], [aria-disabled="true"], [data-disabled]) {
     cursor: not-allowed;
+  }
+}
+
+/* Animations réduites à presque rien pour qui le demande au système (critère 2.3.3 des WCAG) : fondus des
+   fenêtres, glissement du panneau des paramètres, transitions de couleur et d'interrupteur. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Contraste élevé de Windows (couleurs forcées) : les ombres disparaissent, et avec elles les anneaux de focus
+   dessinés en box-shadow. Le focus reprend un contour aux couleurs du système, et les interrupteurs, dessinés
+   par leur seul fond, gardent un bord et une pastille visibles. */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid CanvasText !important;
+    outline-offset: 2px !important;
+  }
+  /* Un bouton dessiné par son seul fond n'aurait plus de contour : on lui en donne un. */
+  button:not([role="switch"]) {
+    border: 1px solid ButtonText;
+  }
+  [role="switch"] {
+    border-color: CanvasText !important;
+  }
+  [role="switch"] > span {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+  [role="switch"][data-state="checked"] {
+    forced-color-adjust: none;
+    background-color: Highlight;
   }
 }

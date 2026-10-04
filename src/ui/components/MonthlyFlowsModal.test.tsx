@@ -196,6 +196,23 @@ describe("MonthlyFlowsModal : lignes existantes", () => {
     expect(textbox("Libellé")).toHaveValue("Prime")
   })
 
+  it("se parcourt au clavier : poignée, type, libellé, montant, puis suppression, qu'Entrée déclenche", async () => {
+    const { user, onDelete } = renderModal({ flows: [flow] })
+
+    screen.getByRole("button", { name: "Réordonner le flux" }).focus()
+    await user.tab()
+    expect(screen.getAllByRole("combobox", { name: "Type de flux" })[0]).toHaveFocus()
+    await user.tab()
+    expect(textbox("Libellé")).toHaveFocus()
+    await user.tab()
+    expect(textbox("Montant")).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Supprimer le flux" })).toHaveFocus()
+    await user.keyboard("{Enter}")
+
+    expect(onDelete).toHaveBeenCalledWith("flow-1")
+  })
+
   it("change le type d'un flux en conservant un libellé personnalisé", async () => {
     const { user, onUpdate } = renderModal({ flows: [flow] })
 

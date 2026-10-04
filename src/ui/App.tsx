@@ -123,7 +123,11 @@ function App() {
   return (
     <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col">
       {/* Barre de menu sticky */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
+      {/* Lien d'évitement : invisible tant qu'il n'a pas le focus, il mène au contenu sans traverser la barre d'outils. */}
+      <a href="#contenu" className="sr-only z-[60] rounded-md bg-background px-4 py-2 font-medium shadow-md focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
+        Aller au contenu
+      </a>
+      <nav aria-label="Barre d'outils" className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
         <div className="container mx-auto flex items-center justify-between px-0 py-2 sm:px-8">
           {/* Groupe de boutons de gauche */}
           <div className="flex items-center gap-1">
@@ -161,7 +165,7 @@ function App() {
         {import.meta.env.VITE_CIBLE === "web" && <BandeauDemo />}
       </header>
 
-      <main className="flex-grow">
+      <main id="contenu" tabIndex={-1} className="flex-grow scroll-mt-20 focus:outline-none">
         <EntitiesManager session={currentSession} setSession={setCurrentSession} />
 
         <MonthlyGrid
