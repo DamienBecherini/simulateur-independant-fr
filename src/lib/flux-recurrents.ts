@@ -35,3 +35,44 @@ export function recopierFlux(grille: MonthlyGridData, flux: FinancialFlow, depui
     ajouts: cibles.size
   }
 }
+
+/** Même série : même acteur, même type et même libellé ; le montant peut varier d'un mois à l'autre (loyer augmenté). */
+export const memeSerie = (a: FinancialFlow, b: FinancialFlow) => a.entityId === b.entityId && a.type === b.type && a.label === b.label
+
+/** Changements que l'on peut reporter sur les autres flux d'une série. */
+export type ChangementsDeFlux = Partial<Pick<FinancialFlow, "type" | "label" | "amount" | "grossAmount">>
+
+/**
+ * Applique une modification au flux et, selon la portée, aux flux de la même série dans les autres mois visés
+ * (repérés d'après le flux avant modification). Seuls les champs modifiés sont reportés : un nouveau montant
+ * à partir de juillet ne touche pas aux mois précédents. Renvoie la nouvelle grille et le nombre d'autres mois
+ * modifiés ; pour le seul mois ouvert, la grille garde sa mise à jour habituelle (MonthlyGrid).
+ */
+export function modifierSerie(grille: MonthlyGridData, flux: FinancialFlow, depuis: number, portee: PorteeRecurrence, changements: ChangementsDeFlux): { grille: MonthlyGridData; touches: number } {
+  const cibles = new Set(moisCibles(depuis, portee))
+  const appliquer = (f: FinancialFlow) => ({ ...f, ...changements })
+  let touches = 0
+  const resultat = grille.map((mois, index) => {
+    if (index === depuis) return { ...mois, flows: mois.flows.map(f => (f.id === flux.id ? appliquer(f) : f)) }
+    if (!cibles.has(index) || !mois.flows.some(f => memeSerie(f, flux))) return mois
+    touches++
+    return { ...mois, flows: mois.flows.map(f => (memeSerie(f, flux) ? appliquer(f) : f)) }
+  })
+  return { grille: resultat, touches }
+}
+
+/**
+ * Supprime le flux et, selon la portée, les flux de la même série dans les autres mois visés.
+ * Renvoie le nombre d'autres mois où la série a été supprimée.
+ */
+export function supprimerSerie(grille: MonthlyGridData, flux: FinancialFlow, depuis: number, portee: PorteeRecurrence): { grille: MonthlyGridData; touches: number } {
+  const cibles = new Set(moisCibles(depuis, portee))
+  let touches = 0
+  const resultat = grille.map((mois, index) => {
+    if (index === depuis) return { ...mois, flows: mois.flows.filter(f => f.id !== flux.id) }
+    if (!cibles.has(index) || !mois.flows.some(f => memeSerie(f, flux))) return mois
+    touches++
+    return { ...mois, flows: mois.flows.filter(f => !memeSerie(f, flux)) }
+  })
+  return { grille: resultat, touches }
+}

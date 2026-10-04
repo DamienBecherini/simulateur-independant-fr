@@ -11,6 +11,7 @@ import { FlowItem, type FlowChanges } from "./FlowItem"
 import { NewFlowItem, type NewFlowValues } from "./NewFlowItem"
 import { useTriAccessible } from "../hooks/useTriAccessible"
 import { LIBELLES_PORTEE, type PorteeRecurrence } from "@/lib/flux-recurrents"
+import { cn } from "@/lib/utils"
 
 /**
  * Interface pour les props du composant MonthlyFlowsModal.
@@ -27,8 +28,10 @@ interface MonthlyFlowsModalProps {
   onCreate: (values: NewFlowValues, portee: PorteeRecurrence) => void
   /** Recopie un flux sur les mois suivants ; absent en décembre, où il n'y a pas de mois suivant. */
   onRecopier?: (flowId: string) => void
-  onUpdate: (flowId: string, changes: FlowChanges) => void
-  onDelete: (flowId: string) => void
+  /** Modifie le flux et, selon la portée choisie, sa série dans les autres mois. */
+  onUpdate: (flowId: string, changes: FlowChanges, portee: PorteeRecurrence) => void
+  /** Supprime le flux et, selon la portée choisie, sa série dans les autres mois. */
+  onDelete: (flowId: string, portee: PorteeRecurrence) => void
   onReorder: (reorderedFlows: FinancialFlow[]) => void
 }
 
@@ -39,7 +42,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate,
 
   // Type prérempli de la ligne d'ajout : le dernier type utilisé dans cette fenêtre, sinon le premier autorisé.
   const [newFlowType, setNewFlowType] = useState<FlowType>(allowedTypes[0])
-  // Portée des ajouts : gardée pour les saisies suivantes, tant que la fenêtre est ouverte.
+  // Portée des ajouts, modifications et suppressions : gardée tant que la fenêtre est ouverte.
   const [portee, setPortee] = useState<PorteeRecurrence>("mois")
 
   const listRef = useRef<HTMLDivElement>(null)
@@ -88,7 +91,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate,
             <span>Opérations de {monthName}</span>
             <span className="text-base font-normal text-slate-600 dark:text-slate-400">/ {entity.name}</span>
           </DialogTitle>
-          <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant. Pour une charge ou un revenu qui revient chaque mois, choisissez « Ajouter à » en dessous, ou recopiez un flux existant avec son bouton de recopie. Pour un salaire, le brut est calculé à 78 % du net si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.</DialogDescription>
+          <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant. Pour une charge ou un revenu qui revient chaque mois, choisissez « Appliquer à » en dessous : l'ajout, la modification ou la suppression vaut alors aussi pour les autres mois (même type et même libellé). Le bouton de recopie d'un flux le recopie jusqu'en décembre. Pour un salaire, le brut est calculé à 78 % du net si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2 py-2">
@@ -97,7 +100,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate,
               <div ref={listRef} className="max-h-[50vh] space-y-2 overflow-y-auto">
                 <SortableContext items={flowIds} strategy={verticalListSortingStrategy}>
                   {flows.map(flow => (
-                    <FlowItem key={flow.id} flow={flow} allowedTypes={allowedTypes} onUpdate={onUpdate} onDelete={onDelete} onRecopier={onRecopier} onTypeUsed={setNewFlowType} />
+                    <FlowItem key={flow.id} flow={flow} allowedTypes={allowedTypes} onUpdate={(flowId, changes) => onUpdate(flowId, changes, portee)} onDelete={flowId => onDelete(flowId, portee)} onRecopier={onRecopier} onTypeUsed={setNewFlowType} />
                   ))}
                 </SortableContext>
               </div>
@@ -106,14 +109,16 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate,
 
           <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee)} labelInputRef={newFlowLabelRef} />
           <label className="flex flex-wrap items-center gap-2 px-1 text-sm text-slate-700 dark:text-slate-300">
-            Ajouter à :
-            <select className="h-9 rounded-md border border-input bg-background px-2 text-sm pointer-coarse:h-11" value={portee} onChange={e => setPortee(e.target.value as PorteeRecurrence)}>
+            Appliquer à :
+            {/* Hors « ce mois seulement », la liste est mise en évidence : modifier ou supprimer touchera aussi d'autres mois. */}
+            <select className={cn("h-9 rounded-md border border-input bg-background px-2 text-sm pointer-coarse:h-11", portee !== "mois" && "border-amber-500 bg-amber-50 font-medium ring-2 ring-amber-300 dark:bg-amber-950 dark:ring-amber-700")} value={portee} onChange={e => setPortee(e.target.value as PorteeRecurrence)}>
               {(Object.keys(LIBELLES_PORTEE) as PorteeRecurrence[]).map(cle => (
                 <option key={cle} value={cle}>
                   {LIBELLES_PORTEE[cle]}
                 </option>
               ))}
             </select>
+            {portee !== "mois" ? <span className="text-amber-900 dark:text-amber-100">Les ajouts, modifications et suppressions s'appliquent aussi aux autres mois choisis.</span> : null}
           </label>
         </div>
 

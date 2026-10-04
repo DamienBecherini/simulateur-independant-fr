@@ -30,7 +30,7 @@ describe("MonthlyGrid, flux qui reviennent chaque mois", () => {
     await user.click(screen.getByRole("button", { name: "Flux de mars : Alice Martin" }))
     const fenetre = screen.getByRole("dialog")
 
-    await user.selectOptions(within(fenetre).getByLabelText("Ajouter à :"), "annee")
+    await user.selectOptions(within(fenetre).getByLabelText("Appliquer à :"), "annee")
     await user.type(within(fenetre).getByLabelText("Libellé du nouveau flux"), "Loyer")
     await user.type(within(fenetre).getByLabelText("Montant du nouveau flux"), "800{Enter}")
 
@@ -69,5 +69,33 @@ describe("MonthlyGrid, flux qui reviennent chaque mois", () => {
 
     await user.click(screen.getByRole("button", { name: "Flux de décembre : Alice Martin" }))
     expect(within(screen.getByRole("dialog")).queryByRole("button", { name: /Recopier/ })).not.toBeInTheDocument()
+  })
+
+  /** Loyer de 800 € à chaque mois d'Alice. */
+  const loyerToutelAnnee = (): MonthlyGridData => Array.from({ length: 12 }, (_, month) => ({ month, flows: [{ id: `loyer-${month}`, entityId: "person-alice", type: "expense" as const, label: "Loyer", amount: 800 }] }))
+
+  it("modifie le montant à partir de juillet, sur les mois suivants seulement", async () => {
+    const { user, etat } = afficherLaGrille(loyerToutelAnnee())
+    await user.click(screen.getByRole("button", { name: "Flux de juillet : Alice Martin" }))
+    const fenetre = screen.getByRole("dialog")
+
+    await user.selectOptions(within(fenetre).getByLabelText("Appliquer à :"), "suivants")
+    const montant = within(fenetre).getByLabelText("Montant")
+    await user.clear(montant)
+    await user.type(montant, "850{Enter}")
+
+    expect(montantsParMois(etat.grille)).toEqual([...Array.from({ length: 6 }, () => [800]), ...Array.from({ length: 6 }, () => [850])])
+  })
+
+  it("supprime une charge de toute l'année en une fois", async () => {
+    const { user, etat } = afficherLaGrille(loyerToutelAnnee())
+    await user.click(screen.getByRole("button", { name: "Flux de mars : Alice Martin" }))
+    const fenetre = screen.getByRole("dialog")
+
+    await user.selectOptions(within(fenetre).getByLabelText("Appliquer à :"), "annee")
+    expect(within(fenetre).getByText(/s'appliquent aussi aux autres mois choisis/)).toBeInTheDocument()
+    await user.click(within(fenetre).getByRole("button", { name: "Supprimer le flux" }))
+
+    expect(etat.grille.every(mois => mois.flows.length === 0)).toBe(true)
   })
 })

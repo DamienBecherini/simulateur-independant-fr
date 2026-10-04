@@ -9,7 +9,7 @@ import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
 import { isExpenseFlowType } from "@/lib/flow-constants"
 import { createId } from "@/lib/id"
-import { recopierFlux, type PorteeRecurrence } from "@/lib/flux-recurrents"
+import { modifierSerie, recopierFlux, supprimerSerie, type PorteeRecurrence } from "@/lib/flux-recurrents"
 import { toast } from "sonner"
 import { AvatarDisplay } from "./AvatarDisplay"
 
@@ -87,7 +87,20 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
     setMonthlyData(grille)
     toast.success(`Flux recopié sur ${ajouts} mois, jusqu'en décembre.`)
   }
-  const handleUpdateFlow = (flowId: string, changes: FlowChanges) => {
+  /** Flux du mois ouvert, pour reporter une modification ou une suppression sur sa série dans les autres mois. */
+  const fluxOuvert = (flowId: string) => (openCell ? monthlyData[openCell.monthIndex].flows.find(f => f.id === flowId) : undefined)
+  /** Notification du nombre d'autres mois touchés par une modification ou une suppression de série. */
+  const annoncerSerie = (action: string, touches: number) => {
+    if (touches > 0) toast.success(`${action} aussi sur ${touches} autre${touches > 1 ? "s" : ""} mois.`)
+  }
+  const handleUpdateFlow = (flowId: string, changes: FlowChanges, portee: PorteeRecurrence = "mois") => {
+    const flux = fluxOuvert(flowId)
+    if (portee !== "mois" && flux && openCell) {
+      const { grille, touches } = modifierSerie(monthlyData, flux, openCell.monthIndex, portee, changes)
+      setMonthlyData(grille)
+      annoncerSerie("Modifié", touches)
+      return
+    }
     updateOpenMonthFlows(flows => {
       const current = flows.find(f => f.id === flowId)
       if (!current) return flows
@@ -96,7 +109,14 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       return flows.map(f => (f.id === flowId ? updated : f))
     })
   }
-  const handleDeleteFlow = (flowId: string) => {
+  const handleDeleteFlow = (flowId: string, portee: PorteeRecurrence = "mois") => {
+    const flux = fluxOuvert(flowId)
+    if (portee !== "mois" && flux && openCell) {
+      const { grille, touches } = supprimerSerie(monthlyData, flux, openCell.monthIndex, portee)
+      setMonthlyData(grille)
+      annoncerSerie("Supprimé", touches)
+      return
+    }
     updateOpenMonthFlows(flows => (flows.some(f => f.id === flowId) ? flows.filter(f => f.id !== flowId) : flows))
   }
   const handleReorderFlows = (reorderedFlows: FinancialFlow[]) => {
