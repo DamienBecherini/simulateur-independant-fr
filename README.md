@@ -1,5 +1,7 @@
 # Simulateur Indépendant FR (Proof of Concept)
 
+[![CI](https://github.com/DamienBecherini/simulateur-independant-fr/actions/workflows/ci.yml/badge.svg)](https://github.com/DamienBecherini/simulateur-independant-fr/actions/workflows/ci.yml)
+
 Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un bac à sable financier, juridique et fiscal pour les indépendants : on modélise personnes, sociétés et micro-entreprises, leurs liens et leurs flux mensuels, puis on compare les statuts (SASU, EURL, micro-entreprise) et l'impôt du foyer.
 
 *Projet personnel, né d'un besoin d'entrepreneur, partagé dans le cadre de processus de recrutement pour montrer mes standards de code et ma vision produit. Ce n'est pas un logiciel de conseil fiscal : les résultats illustrent l'ingénierie, ils n'ont pas été validés par un expert-comptable.*
@@ -58,6 +60,22 @@ npm run dev
 
 `npm run dev` lance Vite et Electron avec rechargement à chaud. Pour un exécutable : `npm run dist:win`, `npm run dist:mac` ou `npm run dist:linux`.
 
+## ✅ Qualité
+
+```sh
+npm test               # tests unitaires (Vitest), exécution unique
+npm run test:watch     # tests en mode interactif
+npm run test:coverage  # tests + couverture (v8), rapport dans coverage/
+npm run lint           # ESLint, dont la complexité cyclomatique
+npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutation/
+```
+
+- **Tests** : fichiers `*.test.ts` placés à côté du code testé ; les montants attendus sont calculés à la main à partir de `src/backend/config.json`.
+- **Couverture** : seuil bloquant de 90 % (instructions, branches, fonctions, lignes) sur `src/backend/logic/` et `src/lib/`.
+- **Complexité** : règle ESLint `complexity` plafonnée à 15 sur `src/`, avec deux exceptions commentées dans le moteur de méta-simulation.
+- **Mutation** : Stryker sur `src/backend/logic/` (score d'environ 79 %), lancé chaque semaine et à la demande ; nécessite Node.js 22 ou supérieur.
+- **Intégration continue** : GitHub Actions exécute lint, vérification des types, tests avec couverture et build à chaque push et pull request.
+
 ## 🗂️ Structure du projet
 
 - `documentation/` : guide développeur et ADR.
@@ -71,4 +89,3 @@ npm run dev
 - POC : barèmes simplifiés, non validés par un expert-comptable.
 - Le calcul « EI au réel » (`calculsEI.ts`) existe mais n'est pas encore branché au moteur.
 - Les versements de dividendes saisis dans la grille ne sont pas encore pris en compte (un avertissement le signale).
-- Pas encore de tests automatisés.
