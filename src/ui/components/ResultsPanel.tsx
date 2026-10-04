@@ -1,6 +1,7 @@
 // src/ui/components/ResultsPanel.tsx
 
 import type { ActivityResult, FoyerFiscalResult, PersonResult, SimulationReport } from "@/types"
+import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
 
 type ResultsPanelProps = {
@@ -17,6 +18,73 @@ function shareOfRevenue(activity: ActivityResult): string | null {
   if (activity.chiffreAffaires <= 0) return null
   const share = activity.revenuVerse / activity.chiffreAffaires
   return `${share.toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 0 })} du CA`
+}
+
+/** Les destinations de l'argent, dans l'ordre de la barre de répartition. */
+const bilanShares = [
+  { key: "net", label: "Net dans la poche", color: "bg-emerald-500" },
+  { key: "conserve", label: "Conservé dans les sociétés", color: "bg-sky-500" },
+  { key: "prelevements", label: "Prélèvements", color: "bg-rose-500" },
+  { key: "nonRattache", label: "Non rattaché à une personne", color: "bg-slate-400" }
+] as const
+
+/**
+ * Bilan de la simulation : part des revenus qui part en cotisations et impôts, part conservée
+ * dans les sociétés, part qui reste dans la poche. C'est le repère à comparer d'un scénario à l'autre.
+ */
+function BilanCard({ report }: { report: SimulationReport }) {
+  const { bilan } = report
+  const base = bilan.revenusAvantPrelevements
+  const percent = (amount: number) => (base > 0 ? (amount / base).toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 }) : null)
+  const amounts = { net: report.totalNetApresImpots, conserve: bilan.resultatConserve, prelevements: bilan.totalPrelevements, nonRattache: bilan.nonRattache }
+  const origin = [`chiffre d'affaires ${formatMoney(bilan.chiffreAffaires)}`, bilan.charges > 0 ? `charges ${formatMoney(bilan.charges)}` : null, bilan.revenusDirects > 0 ? `salaires et autres revenus ${formatMoney(bilan.revenusDirects)}` : null].filter(Boolean).join(" · ")
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+        <div>
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Net dans la poche</p>
+          <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-50">
+            {formatMoney(amounts.net)}
+            {percent(amounts.net) ? <span className="ml-2 text-base font-semibold text-emerald-700 dark:text-emerald-400">{percent(amounts.net)} des revenus</span> : null}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Taux global de prélèvement</p>
+          <p className="text-2xl font-bold tabular-nums text-rose-700 dark:text-rose-400">{percent(amounts.prelevements) ?? "—"}</p>
+        </div>
+      </div>
+
+      {base > 0 ? (
+        <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700" role="img" aria-label="Répartition des revenus avant prélèvements">
+          {bilanShares.map(share => (amounts[share.key] > 0 ? <div key={share.key} className={share.color} style={{ width: `${(amounts[share.key] / base) * 100}%` }} title={`${share.label} : ${percent(amounts[share.key])}`} /> : null))}
+        </div>
+      ) : null}
+
+      <dl className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
+        <div className="space-y-1">
+          <Row label="Revenus avant prélèvements" value={formatMoney(base)} hint={origin} />
+          <Row label="Cotisations sociales" value={`− ${formatMoney(bilan.cotisationsSociales)}`} />
+          {bilan.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(bilan.impotSocietes)}`} /> : null}
+          <Row label="Impôt sur le revenu" value={`− ${formatMoney(bilan.impotSurLeRevenu)}`} />
+          {bilan.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(bilan.prelevementsSociaux)}`} /> : null}
+        </div>
+        <div className="space-y-1">
+          {bilanShares.map(share =>
+            amounts[share.key] !== 0 || share.key === "net" || share.key === "prelevements" ? (
+              <div key={share.key} className="flex items-start gap-2">
+                <span className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", share.color)} />
+                <div className="flex-grow">
+                  <Row label={share.key === "conserve" && amounts.conserve < 0 ? "Déficit des sociétés" : share.label} value={formatMoney(amounts[share.key])} hint={percent(amounts[share.key])} strong={share.key === "net"} />
+                </div>
+              </div>
+            ) : null
+          )}
+        </div>
+      </dl>
+      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les salaires sont saisis nets : leurs cotisations ne sont pas comptées ici.</p>
+    </div>
+  )
 }
 
 const dividendOptionLabels: Record<NonNullable<FoyerFiscalResult["optionDividendes"]>, string> = {
@@ -136,13 +204,10 @@ export function ResultsPanel({ report, error }: ResultsPanelProps) {
 
       {report && report.foyers.length + report.activities.length === 0 ? <p className="text-sm text-slate-500 dark:text-slate-400">Ajoutez une personne ou une activité pour voir les résultats.</p> : null}
 
+      {report && report.foyers.length + report.activities.length > 0 ? <BilanCard report={report} /> : null}
+
       {report && report.foyers.length > 0 ? (
         <div className="space-y-3">
-          <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Net après impôts, tous foyers confondus</p>
-            <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-50">{formatMoney(report.totalNetApresImpots)}</p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Ce qu'il reste aux personnes sur l'année, une fois payés les cotisations, l'impôt sur les sociétés, l'impôt sur le revenu et les prélèvements sociaux.</p>
-          </div>
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.foyers.map(foyer => (

@@ -185,9 +185,34 @@ export interface FoyerFiscalResult {
   warnings: string[]
 }
 
+/**
+ * Vue d'ensemble de la simulation : ce que produisent les activités et les revenus directs, et où cela va.
+ * Revenus avant prélèvements = prélèvements + résultat conservé + net après impôts + non rattaché.
+ */
+export interface SimulationBilan {
+  chiffreAffaires: number
+  /** Charges et dépenses des activités, hors cotisations et impôts. */
+  charges: number
+  /** Salaires, allocations et autres revenus saisis sur les personnes. */
+  revenusDirects: number
+  /** Chiffre d'affaires moins charges, plus revenus directs. */
+  revenusAvantPrelevements: number
+  cotisationsSociales: number
+  impotSocietes: number
+  impotSurLeRevenu: number
+  prelevementsSociaux: number
+  /** Cotisations sociales, impôt sur les sociétés, impôt sur le revenu et prélèvements sociaux. */
+  totalPrelevements: number
+  /** Bénéfices laissés dans les sociétés (négatif en cas de déficit). */
+  resultatConserve: number
+  /** Revenus d'activités qu'aucune relation ne rattache à une personne. */
+  nonRattache: number
+}
+
 export interface SimulationReport {
   /** Année des règles fiscales appliquées. */
   annee: number
+  bilan: SimulationBilan
   activities: ActivityResult[]
   persons: PersonResult[]
   foyers: FoyerFiscalResult[]

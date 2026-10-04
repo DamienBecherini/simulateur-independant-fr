@@ -30,7 +30,9 @@ function foyerDe(report: SimulationReport, personId: string) {
 describe("runMetaSimulation", () => {
   describe("structure du rapport", () => {
     it("renvoie un rapport vide pour une session vide", () => {
-      expect(simuler([])).toEqual({ annee: 2000, activities: [], persons: [], foyers: [], totalNetApresImpots: 0 })
+      const bilanVide = { chiffreAffaires: 0, charges: 0, revenusDirects: 0, revenusAvantPrelevements: 0, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, totalPrelevements: 0, resultatConserve: 0, nonRattache: 0 }
+
+      expect(simuler([])).toEqual({ annee: 2000, bilan: bilanVide, activities: [], persons: [], foyers: [], totalNetApresImpots: 0 })
     })
 
     it("sépare les activités des personnes, dans l'ordre de la session", () => {
@@ -43,6 +45,61 @@ describe("runMetaSimulation", () => {
 
     it("applique par défaut les règles en vigueur", () => {
       expect(runMetaSimulation(session([personne("alice")])).annee).toBe(reglesEnVigueur.annee)
+    })
+  })
+
+  describe("bilan", () => {
+    it("répartit les revenus avant prélèvements entre prélèvements, résultat conservé et net", () => {
+      const report = simuler(
+        [personne("alice"), societe("sasu")],
+        [relation("alice", "sasu", "Président")],
+        [
+          ["alice", "salary", 10000],
+          ["sasu", "ca_services", 100000],
+          ["sasu", "deductible_expense", 10000],
+          ["sasu", "director_remuneration", 30000],
+          ["sasu", "dividends_payment", 20000]
+        ]
+      )
+
+      // Salaires et rémunération : 40 000 - 4 000 = 36 000 € imposables, soit 3 800 € ; dividendes au forfait : 2 400 €.
+      expect(report.bilan).toEqual({
+        chiffreAffaires: 100000,
+        charges: 10000,
+        revenusDirects: 10000,
+        revenusAvantPrelevements: 100000,
+        cotisationsSociales: 24000,
+        impotSocietes: 5400,
+        impotSurLeRevenu: 6200,
+        prelevementsSociaux: 3600,
+        totalPrelevements: 39200,
+        resultatConserve: 10600,
+        nonRattache: 0
+      })
+      expect(report.bilan.totalPrelevements + report.bilan.resultatConserve + report.totalNetApresImpots).toBe(report.bilan.revenusAvantPrelevements)
+    })
+
+    it("isole les revenus d'une activité qui n'est rattachée à personne", () => {
+      const report = simuler([personne("bob"), micro("m1")], [], [["m1", "ca_micro_vente", 50000]])
+
+      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 50000, cotisationsSociales: 5000, totalPrelevements: 5000, nonRattache: 45000 })
+      expect(report.totalNetApresImpots).toBe(0)
+    })
+
+    it("compte comme non rattachés une rémunération, des dividendes ou un bénéfice sans bénéficiaire", () => {
+      const sansDirigeant = simuler(
+        [societe("sasu")],
+        [],
+        [
+          ["sasu", "ca_services", 100000],
+          ["sasu", "director_remuneration", 30000],
+          ["sasu", "dividends_payment", 20000]
+        ]
+      )
+      const sansTitulaire = simuler([societe("ei", "EI")], [], [["ei", "ca_services", 60000]])
+
+      expect(sansDirigeant.bilan.nonRattache).toBe(50000)
+      expect(sansTitulaire.bilan.nonRattache).toBe(40000)
     })
   })
 

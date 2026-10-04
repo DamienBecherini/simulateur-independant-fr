@@ -1,6 +1,6 @@
 // src/backend/logic/simulation-engine.ts
 
-import type { ActivityResult, Company, FinancialFlow, FoyerFiscalResult, MicroEntreprise, Person, PersonResult, Relationship, SessionState, SimulationReport } from "../../types.js"
+import type { ActivityResult, Company, FinancialFlow, FoyerFiscalResult, MicroEntreprise, Person, PersonResult, Relationship, SessionState, SimulationBilan, SimulationReport } from "../../types.js"
 import { calculerMicro } from "./calculsAE.js"
 import { calculerEI } from "./calculsEI.js"
 import { calculerEURL } from "./calculsEURL.js"
@@ -44,6 +44,8 @@ interface Contexte {
   regles: ReglesFiscales
   flux: Map<string, FlowTotals>
   revenus: Map<string, RevenusDActivite>
+  /** Revenus versés par des activités qu'aucune relation ne rattache à une personne. */
+  nonRattache: number
 }
 
 const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant"]
@@ -94,6 +96,7 @@ function verserRemuneration(ctx: Contexte, societe: Company, remuneration: numbe
   const dirigeants = personnesLiees(ctx, societe.id, RELATIONS_DE_DIRECTION)
   if (dirigeants.length === 0) {
     warnings.push("Rémunération dirigeant saisie sans relation Président/Gérant vers une personne : non routée vers un foyer.")
+    ctx.nonRattache += remuneration
     return
   }
   if (dirigeants.length > 1) {
@@ -108,6 +111,7 @@ function verserDividendes(ctx: Contexte, societe: Company, dividendes: { verses:
   const associes = personnesLiees(ctx, societe.id, RELATIONS_D_ASSOCIE)
   if (associes.length === 0) {
     warnings.push("Dividendes versés sans relation Président, Gérant ou Associé vers une personne : non routés vers un foyer.")
+    ctx.nonRattache += dividendes.verses - dividendes.cotisations
     return
   }
   if (associes.length > 1) {
@@ -164,6 +168,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     revenus.beneficesEncaisses += resultat.revenuNet
   } else {
     warnings.push("Aucune relation « Titulaire » vers une personne : le bénéfice de cette entreprise n'est rattaché à aucun foyer.")
+    ctx.nonRattache += resultat.revenuNet
   }
 
   return {
@@ -205,6 +210,7 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
     revenus.beneficesEncaisses += revenuVerse
   } else {
     warnings.push("Aucune relation « Titulaire » vers une personne : les revenus de cette micro-entreprise ne sont rattachés à aucun foyer.")
+    ctx.nonRattache += revenuVerse
   }
 
   return {
@@ -315,8 +321,37 @@ function calculerFoyer(ctx: Contexte, foyer: Foyer): FoyerFiscalResult {
   }
 }
 
+function somme<T>(elements: T[], valeur: (element: T) => number): number {
+  return elements.reduce((cumul, element) => cumul + valeur(element), 0)
+}
+
+/** Vue d'ensemble : ce que produisent les activités et les revenus directs, et ce qui part en prélèvements. */
+function calculerBilan(ctx: Contexte, activities: ActivityResult[], persons: PersonResult[], foyers: FoyerFiscalResult[]): SimulationBilan {
+  const chiffreAffaires = somme(activities, a => a.chiffreAffaires)
+  const charges = somme(activities, a => a.charges)
+  const revenusDirects = somme(persons, p => p.revenusDirects)
+  const cotisationsSociales = somme(activities, a => a.cotisationsSociales)
+  const impotSocietes = somme(activities, a => a.impotSocietes)
+  const impotSurLeRevenu = somme(foyers, f => f.impotSurLeRevenu)
+  const prelevementsSociaux = somme(foyers, f => f.prelevementsSociaux)
+
+  return {
+    chiffreAffaires,
+    charges,
+    revenusDirects,
+    revenusAvantPrelevements: chiffreAffaires - charges + revenusDirects,
+    cotisationsSociales,
+    impotSocietes,
+    impotSurLeRevenu,
+    prelevementsSociaux,
+    totalPrelevements: cotisationsSociales + impotSocietes + impotSurLeRevenu + prelevementsSociaux,
+    resultatConserve: somme(activities, a => a.resultatConserve),
+    nonRattache: Math.round(ctx.nonRattache)
+  }
+}
+
 export function runMetaSimulation(session: SessionState, regles: ReglesFiscales = reglesEnVigueur): SimulationReport {
-  const ctx: Contexte = { session, regles, flux: aggregateAnnualFlowsByEntity(session), revenus: new Map() }
+  const ctx: Contexte = { session, regles, flux: aggregateAnnualFlowsByEntity(session), revenus: new Map(), nonRattache: 0 }
 
   // Les activités d'abord : elles alimentent les revenus des personnes, dont dépend l'impôt des foyers.
   const activities = session.entities.filter((e): e is Company | MicroEntreprise => e.type !== "person").map(activite => arrondirActivite(simulerActivite(ctx, activite)))
@@ -325,9 +360,10 @@ export function runMetaSimulation(session: SessionState, regles: ReglesFiscales 
 
   return {
     annee: regles.annee,
+    bilan: calculerBilan(ctx, activities, persons, foyers),
     activities,
     persons,
     foyers,
-    totalNetApresImpots: foyers.reduce((somme, foyer) => somme + foyer.netApresImpots, 0)
+    totalNetApresImpots: somme(foyers, f => f.netApresImpots)
   }
 }
