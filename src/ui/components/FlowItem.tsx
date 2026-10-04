@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 import { GripVertical, Trash2 } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { FlowTypeSelect } from "./FlowTypeSelect"
+import { FlowTypeSelect, RetourALaLigneSurTelephone } from "./FlowTypeSelect"
 import { POIGNEE_DE_TRI } from "../hooks/useTriAccessible"
 
 /** Champs d'un flux modifiables depuis la liste. */
@@ -115,16 +115,17 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onTypeUsed }:
   }
 
   return (
-    <div ref={setNodeRef} style={style} className={cn("flex items-center gap-2 rounded-md border bg-slate-50 p-2 dark:bg-gray-800", isDragging && "relative z-10 shadow-md")}>
+    <div ref={setNodeRef} style={style} className={cn("flex flex-wrap items-center gap-2 rounded-md border bg-slate-50 p-2 sm:flex-nowrap dark:bg-gray-800", isDragging && "relative z-10 shadow-md")}>
       {/* Poignée de glisser-déposer : au clavier, Espace la saisit et les flèches déplacent le flux. */}
       <div {...attributes} {...listeners} aria-label="Réordonner le flux" className={POIGNEE_DE_TRI}>
         <GripVertical className="h-4 w-4" aria-hidden="true" />
       </div>
 
       <FlowTypeSelect value={flow.type} options={typeOptions} onChange={handleTypeChange} />
+      <RetourALaLigneSurTelephone />
 
       <Input
-        className="min-w-0 flex-1 bg-background"
+        className="min-w-32 flex-1 bg-background sm:min-w-0"
         aria-label="Libellé"
         placeholder="Libellé (optionnel)"
         value={labelDraft ?? (hasDefaultLabel ? "" : flow.label)}
@@ -179,7 +180,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onTypeUsed }:
       />
       <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
 
-      <Button variant="ghost" size="icon" className="shrink-0 text-destructive hover:text-destructive" aria-label="Supprimer le flux" onClick={() => onDelete(flow.id)}>
+      <Button variant="ghost" size="icon" className="shrink-0 text-destructive hover:text-destructive dark:text-red-400 dark:hover:text-red-400" aria-label="Supprimer le flux" onClick={() => onDelete(flow.id)}>
         <Trash2 />
       </Button>
     </div>

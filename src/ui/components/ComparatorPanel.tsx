@@ -148,7 +148,7 @@ function ComparatorControls({ activities, selected, options, onSelect, onChange 
         <Input id="comparateur-remuneration" className="w-40 bg-background text-right" type="number" min="0" step="1000" value={options.remunerationNette} onChange={e => onChange({ remunerationNette: Math.max(0, parseFloat(e.target.value) || 0) })} />
       </div>
 
-      <label className="flex items-center gap-2 pb-2 text-sm">
+      <label className="flex items-center gap-2 pb-2 text-sm pointer-coarse:min-h-11">
         <Switch checked={options.distribuerToutLeBenefice} onCheckedChange={distribuerToutLeBenefice => onChange({ distribuerToutLeBenefice })} />
         Verser tout le bénéfice disponible en dividendes
       </label>

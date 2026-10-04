@@ -139,7 +139,7 @@ function App() {
           </div>
           {/* Groupe de boutons de droite */}
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" aria-label="Exporter" className="h-8 gap-2 sm:mr-2" onClick={handleExportAll}>
+            <Button variant="outline" size="sm" aria-label="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 sm:mr-2" onClick={handleExportAll}>
               <Download className="size-4" />
               <span className="hidden sm:inline">Exporter</span>
             </Button>

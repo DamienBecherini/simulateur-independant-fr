@@ -52,7 +52,7 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
   const renderLegendItem = (type: FinancialFlow["type"]) => (
     <div key={type} className="flex items-center gap-2 group">
       {/* Le carré de couleur contient le numéro du flux. */}
-      <div className="h-6 w-6 rounded relative border flex items-center justify-center" style={{ backgroundColor: finalColors[type] || "#ccc" }}>
+      <div className="relative flex h-7 w-7 items-center justify-center rounded ring-1 ring-border pointer-coarse:h-11 pointer-coarse:w-11" style={{ backgroundColor: finalColors[type] || "#ccc" }}>
         <span className="text-white text-xs font-bold [text-shadow:0_0_2px_rgba(0,0,0,0.7)]">{flowTypeToNumberMap.get(type)}</span>
         {/* Astuce UX : un input de type "color" est superposé et invisible, permettant un clic direct pour changer la couleur. */}
         <input type="color" value={finalColors[type] || "#ffffff"} onChange={e => handleColorChange(type, e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title={`Changer la couleur pour ${flowTypeShortLabels[type]}`} />

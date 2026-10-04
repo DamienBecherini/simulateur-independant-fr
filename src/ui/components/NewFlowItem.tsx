@@ -7,7 +7,7 @@ import { formatAmount, parseAmount } from "@/lib/amount-utils"
 import { flowTypeLabels, type FlowType } from "@/lib/flow-constants"
 import { DEFAULT_NET_RATIO, formatPercent, grossFromNet, netFromGross, parsePercent } from "@/lib/salary-utils"
 import { Plus } from "lucide-react"
-import { FlowTypeSelect } from "./FlowTypeSelect"
+import { FlowTypeSelect, RetourALaLigneSurTelephone } from "./FlowTypeSelect"
 
 /** Valeurs saisies pour un nouveau flux. */
 export type NewFlowValues = Pick<FinancialFlow, "type" | "label" | "amount" | "grossAmount">
@@ -102,12 +102,13 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-dashed p-2">
+    <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2 sm:flex-nowrap">
       <Plus className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
 
       <FlowTypeSelect value={type} options={allowedTypes} onChange={onTypeChange} />
+      <RetourALaLigneSurTelephone />
 
-      <Input ref={labelInputRef} className="min-w-0 flex-1 bg-background" aria-label="Libellé du nouveau flux" placeholder="Libellé (optionnel)" value={label} data-editing={label !== ""} onChange={e => setLabel(e.target.value)} onKeyDown={handleOptionalFieldKeyDown(() => setLabel(""))} />
+      <Input ref={labelInputRef} className="min-w-32 flex-1 bg-background sm:min-w-0" aria-label="Libellé du nouveau flux" placeholder="Libellé (optionnel)" value={label} data-editing={label !== ""} onChange={e => setLabel(e.target.value)} onKeyDown={handleOptionalFieldKeyDown(() => setLabel(""))} />
 
       {isSalary && (
         <>
@@ -162,7 +163,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
       <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
 
       {/* Réserve la largeur du bouton de suppression pour aligner les colonnes sur les lignes existantes. */}
-      <div className="h-9 w-9 shrink-0" />
+      <div className="h-9 w-9 shrink-0 pointer-coarse:w-11" />
     </div>
   )
 }

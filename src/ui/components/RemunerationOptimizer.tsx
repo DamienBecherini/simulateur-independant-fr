@@ -60,7 +60,7 @@ function ChoixDuStatut({ statut, onChange }: { statut: StatutSociete; onChange: 
   return (
     <div className="inline-flex rounded-md border border-slate-300 p-0.5 dark:border-slate-600" role="group" aria-label="Statut de la société">
       {STATUTS.map(s => (
-        <button key={s} type="button" aria-pressed={s === statut} onClick={() => onChange(s)} className={cn("min-h-9 min-w-16 rounded px-3 text-sm font-medium", s === statut ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800")}>
+        <button key={s} type="button" aria-pressed={s === statut} onClick={() => onChange(s)} className={cn("min-h-9 min-w-16 rounded px-3 text-sm font-medium pointer-coarse:min-h-11", s === statut ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800")}>
           {s}
         </button>
       ))}

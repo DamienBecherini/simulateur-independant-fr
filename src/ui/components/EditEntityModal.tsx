@@ -221,7 +221,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                         {isSource && <ArrowRight className="h-4 w-4 text-slate-500 dark:text-slate-400" />}
                       </div>
                       <Button type="button" variant="ghost" size="icon" className="h-7 w-7 pointer-coarse:h-11 pointer-coarse:w-11" aria-label={`Supprimer la relation avec ${otherEntity.name}`} onClick={() => handleDeleteRelationship(rel.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4 text-destructive dark:text-red-400" />
                       </Button>
                     </div>
                   )

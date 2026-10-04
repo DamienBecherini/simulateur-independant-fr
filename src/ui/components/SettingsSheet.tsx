@@ -80,7 +80,7 @@ function SaveSlotItem({ slot, onDelete, onExport, onLoad }: { slot: SaveSlot; on
           </button>
         </div>
         <Button variant="ghost" size="icon" onClick={onDelete} className="flex-shrink-0" aria-label={`Supprimer la sauvegarde « ${slot.name} »`}>
-          <Trash2 className="h-4 w-4 text-destructive" />
+          <Trash2 className="h-4 w-4 text-destructive dark:text-red-400" />
         </Button>
       </div>
       <Button onClick={onExport} variant="outline" size="sm" className="self-start min-w-[200px] justify-start">

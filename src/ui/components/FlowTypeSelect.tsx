@@ -11,13 +11,21 @@ interface FlowTypeSelectProps {
 }
 
 /**
+ * Retour à la ligne d'une ligne de flux, sur téléphone seulement : le type occupe la première ligne, le libellé
+ * et les montants la suivante, pour que chaque champ garde une largeur utilisable.
+ */
+export function RetourALaLigneSurTelephone() {
+  return <div aria-hidden="true" className="basis-full sm:hidden" />
+}
+
+/**
  * Sélecteur de type de flux. Chaque option affiche une icône indiquant
  * s'il s'agit d'un gain (chevron vert) ou d'une sortie d'argent (chevron rouge).
  */
 export function FlowTypeSelect({ value, options, onChange }: FlowTypeSelectProps) {
   return (
     <Select value={value} onValueChange={type => onChange(type as FlowType)}>
-      <SelectTrigger className="w-60 shrink-0 bg-background" aria-label="Type de flux">
+      <SelectTrigger className="min-w-0 flex-1 bg-background sm:w-60 sm:flex-none" aria-label="Type de flux">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

@@ -118,12 +118,12 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
           )}
           {entity.type === "micro-entreprise" && (
             <>
-              <label className="flex items-center gap-2 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400" title="Aide à la création : cotisations réduites pendant les premiers trimestres, mais droits à la retraite et indemnités journalières réduits d'autant.">
+              <label className="flex items-center gap-2 whitespace-nowrap text-sm pointer-coarse:min-h-11 text-slate-600 dark:text-slate-400" title="Aide à la création : cotisations réduites pendant les premiers trimestres, mais droits à la retraite et indemnités journalières réduits d'autant.">
                 <Switch checked={entity.beneficieACRE} onCheckedChange={beneficieACRE => onUpdate({ ...entity, beneficieACRE })} />
                 ACRE
                 {entity.beneficieACRE && <span className="text-xs text-amber-700 dark:text-amber-400">(retraite réduite)</span>}
               </label>
-              <label className="flex items-center gap-2 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
+              <label className="flex items-center gap-2 whitespace-nowrap text-sm pointer-coarse:min-h-11 text-slate-600 dark:text-slate-400">
                 <Switch checked={entity.opteVFL} onCheckedChange={opteVFL => onUpdate({ ...entity, opteVFL })} />
                 Versement libératoire
               </label>
@@ -156,7 +156,7 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
               {isSource && <ArrowRight className="h-3 w-3 text-slate-500 dark:text-slate-400" />}
               <AvatarDisplay avatar={otherEntity.avatar} />
               <span className="font-semibold">{otherEntity.name}</span>
-              <button type="button" aria-label={`Supprimer la relation avec ${otherEntity.name}`} className="rounded p-0.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 hover:text-destructive dark:hover:bg-gray-700" onClick={() => onDeleteRelationship(rel.id)}>
+              <button type="button" aria-label={`Supprimer la relation avec ${otherEntity.name}`} className="inline-flex min-h-6 min-w-6 items-center justify-center rounded text-slate-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11 dark:text-slate-400 hover:bg-slate-200 hover:text-destructive dark:hover:bg-gray-700" onClick={() => onDeleteRelationship(rel.id)}>
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>

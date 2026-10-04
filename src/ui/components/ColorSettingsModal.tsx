@@ -70,7 +70,7 @@ export function ColorSettingsModal({ isOpen, onClose, preferences, onSave }: Col
                 {/* Aperçu de la couleur */}
                 <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: localColors[type] }} />
                 {/* Sélecteur de couleur natif du navigateur */}
-                <input id={`color-${type}`} type="color" value={localColors[type] || "#ffffff"} onChange={e => handleColorChange(type, e.target.value)} className="p-0 h-10 w-12 border-none bg-transparent cursor-pointer" title="Choisir une couleur" />
+                <input id={`color-${type}`} type="color" value={localColors[type] || "#ffffff"} onChange={e => handleColorChange(type, e.target.value)} className="p-0 h-10 w-12 border-none bg-transparent cursor-pointer pointer-coarse:h-11" title="Choisir une couleur" />
               </div>
             </div>
           ))}
