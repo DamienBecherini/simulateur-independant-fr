@@ -42,12 +42,23 @@ function verifierPlafonds(entrees: EntreesMicro, plafonds: ReglesMicro["plafonds
   return [`Plafond du régime micro dépassé (${depassements.join(" ; ")}) : le régime n'est conservé que si le dépassement ne se répète pas deux années de suite.`]
 }
 
-/** Revenu imposable après abattement forfaitaire, celui-ci ne pouvant être inférieur à un minimum par nature d'activité exercée. */
+/**
+ * Abattement d'une fraction du chiffre d'affaires : son taux, sans descendre sous le minimum,
+ * ni dépasser le chiffre d'affaires de la fraction.
+ */
+function abattementDeLaFraction(chiffreAffaires: number, taux: number, minimum: number): number {
+  if (chiffreAffaires <= 0) return 0
+  return Math.min(chiffreAffaires, Math.max(chiffreAffaires * taux, minimum))
+}
+
+/** Revenu imposable après abattement forfaitaire, calculé séparément pour chaque nature d'activité exercée. */
 function calculerRevenuImposable(entrees: EntreesMicro, abattement: ReglesMicro["abattement"]): number {
-  const chiffreAffaires = entrees.caVente + entrees.caServicesBic + entrees.caServicesBnc
-  const naturesExercees = [entrees.caVente, entrees.caServicesBic, entrees.caServicesBnc].filter(ca => ca > 0).length
-  const abattementApplique = Math.max(appliquerTaux(entrees, abattement), abattement.minimum * naturesExercees)
-  return Math.max(0, chiffreAffaires - abattementApplique)
+  const fractions: [number, number][] = [
+    [entrees.caVente, abattement.venteBic],
+    [entrees.caServicesBic, abattement.servicesBic],
+    [entrees.caServicesBnc, abattement.servicesBnc]
+  ]
+  return fractions.reduce((revenu, [chiffreAffaires, taux]) => revenu + chiffreAffaires - abattementDeLaFraction(chiffreAffaires, taux, abattement.minimum), 0)
 }
 
 /**

@@ -103,11 +103,10 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
     expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 0, impotSurLeRevenu: 0 })
   })
 
-  // Écart relevé : le moteur compare la somme des abattements au minimum global (305 € x 2 natures = 610 €),
-  // au lieu d'appliquer le minimum à chaque catégorie de revenus (BIC d'un côté, BNC de l'autre, déclarés dans
-  // des cases distinctes : 5KO pour la vente, 5HQ pour le BNC), chacun plafonné à son chiffre d'affaires.
-  // Cause probable : calculerRevenuImposable, src/backend/logic/calculsAE.ts.
-  it.fails("BNC 10 000 € et vente 300 € : le minimum de 305 € s'applique à chaque catégorie séparément", () => {
+  // Le minimum de 305 € s'applique à chaque catégorie de revenus (déclarées dans des cases distinctes : 5KO pour
+  // la vente, 5HQ pour le BNC), chacun plafonné à son chiffre d'affaires. Ce cas a révélé une erreur du moteur,
+  // qui comparait la somme des abattements à un minimum global (305 € x 2 natures).
+  it("BNC 10 000 € et vente 300 € : le minimum de 305 € s'applique à chaque catégorie séparément", () => {
     // BNC : 10 000 - max(3 400, 305) = 6 600 €.
     // Vente : max(300 x 71 % = 213 €, 305 €) = 305 €, plafonné au CA de 300 € : revenu 0 €.
     // Revenu imposable officiel : 6 600 € (le moteur obtient 10 300 - max(3 613, 610) = 6 687 €).
