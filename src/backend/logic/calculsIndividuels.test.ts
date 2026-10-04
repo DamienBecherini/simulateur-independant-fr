@@ -22,6 +22,12 @@ describe("calculerMicro", () => {
     expect(resultat.warnings).toEqual([])
   })
 
+  it("prévient qu'avec l'ACRE, les droits à la retraite sont réduits", () => {
+    const resultat = micro({ caServicesBnc: 50000, beneficieACRE: true })
+
+    expect(resultat.warnings).toEqual([expect.stringMatching(/^ACRE : cotisations réduites de 50 %.*moins de trimestres de retraite/)])
+  })
+
   it("réduit les cotisations avec l'ACRE, sans toucher au revenu imposable", () => {
     const resultat = micro({ caServicesBnc: 50000, beneficieACRE: true })
 

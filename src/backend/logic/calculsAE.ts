@@ -78,6 +78,9 @@ export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales = re
   const warnings = verifierPlafonds(entrees, micro.plafonds)
 
   const cotisationsPleinTaux = appliquerTaux(entrees, micro.cotisations)
+  if (entrees.beneficieACRE) {
+    warnings.push(`ACRE : cotisations réduites de ${Math.round(micro.reductionACRE * 100)} %. Elles financent aussi vos droits : pendant l'aide, vous validez moins de trimestres de retraite et vos indemnités journalières sont plus faibles.`)
+  }
 
   return {
     chiffreAffaires: entrees.caVente + entrees.caServicesBic + entrees.caServicesBnc,

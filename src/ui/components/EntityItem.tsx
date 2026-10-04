@@ -116,9 +116,10 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
           )}
           {entity.type === "micro-entreprise" && (
             <>
-              <label className="flex items-center gap-2 text-sm text-slate-500">
+              <label className="flex items-center gap-2 text-sm text-slate-500" title="Aide à la création : cotisations réduites pendant les premiers trimestres, mais droits à la retraite et indemnités journalières réduits d'autant.">
                 <Switch checked={entity.beneficieACRE} onCheckedChange={beneficieACRE => onUpdate({ ...entity, beneficieACRE })} />
                 ACRE
+                {entity.beneficieACRE && <span className="text-xs text-amber-700 dark:text-amber-400">(retraite réduite)</span>}
               </label>
               <label className="flex items-center gap-2 text-sm text-slate-500">
                 <Switch checked={entity.opteVFL} onCheckedChange={opteVFL => onUpdate({ ...entity, opteVFL })} />

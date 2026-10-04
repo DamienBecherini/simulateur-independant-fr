@@ -17,6 +17,8 @@ export interface DonneesProtection {
   cotisationsTNS: number
   /** Chiffre d'affaires annuel par nature, pour une micro-entreprise. */
   chiffreAffairesMicro: { caVente: number; caServicesBic: number; caServicesBnc: number }
+  /** Micro-entreprise bénéficiant de l'ACRE : les cotisations, donc les droits, sont réduits. */
+  beneficieACRE?: boolean
 }
 
 function trimestresValides(revenuCotise: number, regles: ReglesFiscales): number {
@@ -51,20 +53,21 @@ function protectionTNS(cotisations: number, regles: ReglesFiscales): ProtectionS
 }
 
 /** Micro-entrepreneur : mêmes droits que les indépendants, mais proportionnels au chiffre d'affaires, sans aucun minimum. */
-function protectionMicro(ca: DonneesProtection["chiffreAffairesMicro"], regles: ReglesFiscales): ProtectionSociale {
+function protectionMicro(ca: DonneesProtection["chiffreAffairesMicro"], beneficieACRE: boolean, regles: ReglesFiscales): ProtectionSociale {
   const taux: TauxMicro = regles.microEntreprise.cotisations
   const part = regles.protectionSociale.partRetraiteDeBaseMicro
-  const cotisationsRetraite = ca.caVente * taux.venteBic * part.venteBic + ca.caServicesBic * taux.servicesBic * part.servicesBic + ca.caServicesBnc * taux.servicesBnc * part.servicesBnc
+  const reduction = beneficieACRE ? 1 - regles.microEntreprise.reductionACRE : 1
+  const cotisationsRetraite = (ca.caVente * taux.venteBic * part.venteBic + ca.caServicesBic * taux.servicesBic * part.servicesBic + ca.caServicesBnc * taux.servicesBnc * part.servicesBnc) * reduction
   const trimestres = trimestresValides(cotisationsRetraite / regles.protectionSociale.tauxRetraiteDeBase, regles)
   return {
     etoiles: trimestres === 4 ? 2 : 1,
     trimestres,
-    resume: `Régime des indépendants, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. ${texteTrimestres(trimestres)}.`
+    resume: `Régime des indépendants, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. ${texteTrimestres(trimestres)}${beneficieACRE ? ", en tenant compte des cotisations réduites par l'ACRE" : ""}.`
   }
 }
 
 export function evaluerProtectionSociale(statut: StatutCompare, donnees: DonneesProtection, regles: ReglesFiscales): ProtectionSociale {
   if (statut === "SASU") return protectionSASU(donnees.remunerationNette, regles)
   if (statut === "EURL" || statut === "EI") return protectionTNS(donnees.cotisationsTNS, regles)
-  return protectionMicro(donnees.chiffreAffairesMicro, regles)
+  return protectionMicro(donnees.chiffreAffairesMicro, donnees.beneficieACRE ?? false, regles)
 }

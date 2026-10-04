@@ -50,6 +50,14 @@ describe("evaluerProtectionSociale", () => {
       expect(evaluerProtectionSociale("micro-vfl", donnees({ chiffreAffairesMicro: { caVente: 10000, caServicesBic: 0, caServicesBnc: 0 } }), reglesDeTest)).toMatchObject({ etoiles: 1, trimestres: 1 })
     })
 
+    it("valide moins de trimestres avec l'ACRE, les cotisations étant réduites de moitié", () => {
+      // 20 000 € de BNC : 2 500 € pour la retraite de base, réduits à 1 250 € : 6 250 € de revenu cotisé, 3 trimestres.
+      const note = evaluerProtectionSociale("micro", donnees({ chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 20000 }, beneficieACRE: true }), reglesDeTest)
+
+      expect(note).toMatchObject({ trimestres: 3, etoiles: 1 })
+      expect(note.resume).toContain("ACRE")
+    })
+
     it("n'a aucun trimestre sans chiffre d'affaires", () => {
       expect(evaluerProtectionSociale("micro", donnees(), reglesDeTest).trimestres).toBe(0)
     })

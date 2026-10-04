@@ -110,6 +110,13 @@ describe("EntityItem : réglages rapides", () => {
 
     expect(onUpdate).toHaveBeenNthCalledWith(1, { ...micro, beneficieACRE: true })
     expect(onUpdate).toHaveBeenNthCalledWith(2, { ...micro, opteVFL: true })
+    expect(screen.queryByText("(retraite réduite)")).not.toBeInTheDocument()
+  })
+
+  it("rappelle que l'ACRE réduit les droits à la retraite", () => {
+    renderItem({ ...micro, beneficieACRE: true })
+
+    expect(screen.getByText("(retraite réduite)")).toBeInTheDocument()
   })
 })
 

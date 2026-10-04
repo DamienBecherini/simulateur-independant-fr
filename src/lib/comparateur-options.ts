@@ -23,7 +23,7 @@ export function defaultFraisFonctionnement(): FraisFonctionnement {
     SASU: { expertComptable: 2000, banque: 200, logiciel: 150, assurance: 250, cfe: 300 },
     EURL: { expertComptable: 2000, banque: 200, logiciel: 150, assurance: 250, cfe: 300 },
     EI: { expertComptable: 1200, banque: 150, logiciel: 150, assurance: 250, cfe: 300 },
-    micro: { expertComptable: 0, banque: 100, logiciel: 100, assurance: 250, cfe: 300 }
+    micro: { expertComptable: 0, banque: 100, logiciel: 100, assurance: 350, cfe: 300 }
   }
 }
 
