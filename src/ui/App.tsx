@@ -126,16 +126,16 @@ function App() {
   }, [currentSession.monthlyData])
 
   return (
-    <div className="container mx-auto p-8 min-h-screen flex flex-col">
+    <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col">
       {/* Barre de menu sticky */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
-        <div className="container mx-auto flex items-center justify-between px-8 py-2">
+        <div className="container mx-auto flex items-center justify-between px-0 py-2 sm:px-8">
           {/* Groupe de boutons de gauche */}
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
               <Settings className="text-slate-500" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z)" onClick={undo} disabled={!canUndo} className="h-10 w-10 [&_svg]:size-6 ml-2">
+            <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z)" onClick={undo} disabled={!canUndo} className="h-10 w-10 [&_svg]:size-6 sm:ml-2">
               <Undo2 className="dark:text-slate-300" />
             </Button>
             <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y)" onClick={redo} disabled={!canRedo} className="h-10 w-10 [&_svg]:size-6">
@@ -144,14 +144,14 @@ function App() {
           </div>
           {/* Groupe de boutons de droite */}
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" className="h-8 gap-2 mr-2" onClick={handleExportAll}>
+            <Button variant="outline" size="sm" aria-label="Exporter" className="h-8 gap-2 sm:mr-2" onClick={handleExportAll}>
               <Download className="size-4" />
-              Exporter
+              <span className="hidden sm:inline">Exporter</span>
             </Button>
             <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} className="h-10 w-10 [&_svg]:size-6">
               <ZoomOut className="text-slate-500" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} className="h-10 w-10 [&_svg]:size-6 mr-4">
+            <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} className="h-10 w-10 [&_svg]:size-6 sm:mr-4">
               <ZoomIn className="text-slate-500" />
             </Button>
             <ThemeToggle />
