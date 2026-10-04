@@ -100,7 +100,8 @@ function entiteCible(source: Activite, statut: StatutCompare): Activite {
 
 function relationsCibles(session: SessionState, source: Activite, statut: StatutCompare): Relationship[] {
   const { principale, associes } = personnesDeLActivite(session, source.id)
-  const autres = session.relationships.filter(rel => rel.fromId !== source.id && rel.toId !== source.id)
+  // Les salariés de l'activité le restent dans tous les statuts : leur coût employeur pèse sur chaque colonne.
+  const autres = session.relationships.filter(rel => rel.type === "Salarié" || (rel.fromId !== source.id && rel.toId !== source.id))
   if (!principale) return autres
 
   const lien = (personId: string, type: Relationship["type"]): Relationship => ({ id: `comparateur-${source.id}-${personId}-${type}`, fromId: personId, toId: source.id, type })

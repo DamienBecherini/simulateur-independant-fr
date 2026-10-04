@@ -560,4 +560,91 @@ describe("runMetaSimulation", () => {
       expect(foyerDe(report, "alice").warnings).toHaveLength(1)
     })
   })
+
+  describe("salarié d'une activité de la simulation", () => {
+    // Bob touche 24 300 € nets : 30 000 € bruts (net = 81 % du brut), 5 700 € de cotisations salariales.
+    // Patronales d'un salarié : 39 % = 11 700 € ; réduction générale 2 % + 38 % x (60 000 / 30 000 - 1) / 2 = 21 %, 6 300 € ;
+    // coût employeur 30 000 + 11 700 - 6 300 = 35 400 €. CSG non déductible et CRDS : 3 % de 27 000 = 810 €.
+    const entites = [personne("alice"), personne("bob"), societe("sasu")]
+    const relations = [relation("alice", "sasu", "Président"), relation("bob", "sasu", "Salarié")]
+    const flux: Flux[] = [
+      ["sasu", "ca_services", 100000],
+      ["bob", "salary", 24300]
+    ]
+
+    it("fait supporter à la société le coût employeur, déductible avant l'IS", () => {
+      // Bénéfice 100 000 - 35 400 = 64 600 € ; IS 6 000 + 24 600 x 25 % = 12 150 € ; conservé 52 450 €.
+      const report = simuler(entites, relations, flux)
+
+      expect(activite(report, "sasu")).toMatchObject({ charges: 30000, cotisationsSociales: 5400, impotSocietes: 12150, resultatConserve: 52450, revenuVerse: 0 })
+      expect(activite(report, "sasu").salaries).toEqual([expect.objectContaining({ personId: "bob", statut: "salarie", brut: expect.closeTo(30000, 6), reductionGenerale: expect.closeTo(6300, 6), coutEmployeur: expect.closeTo(35400, 6) })])
+    })
+
+    it("impose le salarié sur son net augmenté de la CSG non déductible, et compte ses cotisations dans son foyer", () => {
+      // Imposable : 24 300 + 810 = 25 110 €, 22 599 € après 10 % ; impôt 1 259,90 € moins 170,05 € de décote = 1 089,85 €.
+      // Prélèvements du foyer : 5 700 (salariales) + 5 400 (patronales) + 1 089,85 = 12 189,85 € ; revenus avant prélèvements 35 400 €.
+      const report = simuler(entites, relations, flux)
+
+      expect(report.persons.find(p => p.entityId === "bob")).toMatchObject({ revenusDirects: 24300, cotisationsSalariales: 5700 })
+      expect(foyerDe(report, "bob")).toMatchObject({ revenuImposableGlobal: 22599, impotSurLeRevenu: 1090, revenusAvantPrelevements: 35400, totalPrelevements: 12190, netApresImpots: 23210 })
+      expect(foyerDe(report, "alice")).toMatchObject({ revenusAvantPrelevements: 64600, totalPrelevements: 12150, resultatConserve: 52450 })
+      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 100000, charges: 30000, cotisationsSalariales: 5700, cotisationsSociales: 5400 })
+      expect(report.bilan.totalPrelevements + report.bilan.resultatConserve + report.totalNetApresImpots).toBe(100000)
+    })
+
+    it("reconnaît la relation créée depuis la société", () => {
+      const report = simuler(entites, [relation("alice", "sasu", "Président"), relation("sasu", "bob", "Salarié")], flux)
+
+      expect(activite(report, "sasu").salaries?.[0].personId).toBe("bob")
+    })
+
+    it("retient le brut saisi sur chaque salaire", () => {
+      const donnees = session(entites, relations, [["sasu", "ca_services", 100000]])
+      donnees.monthlyData[0].flows.push({ id: "paie", label: "Salaire", amount: 24000, grossAmount: 30000, entityId: "bob", type: "salary" })
+      const report = runMetaSimulation(donnees, reglesDeTest)
+
+      expect(activite(report, "sasu")).toMatchObject({ charges: 30000, cotisationsSociales: 5400 })
+      expect(report.persons.find(p => p.entityId === "bob")?.cotisationsSalariales).toBe(6000)
+    })
+
+    it("déduit le coût employeur du bénéfice d'une entreprise individuelle au réel", () => {
+      // Bénéfice avant cotisations 60 000 - 35 400 = 24 600 € ; assiette 18 450 € : IJ 184,50, retraite de base 3 690,
+      // complémentaire 1 476, invalidité-décès 184,50, CSG-CRDS 1 845, formation 100 ; total 7 480 €.
+      const report = simuler([personne("carl"), personne("bob"), societe("ei", "EI")], [relation("carl", "ei", "Titulaire"), relation("bob", "ei", "Salarié")], [
+        ["ei", "ca_services", 60000],
+        ["bob", "salary", 24300]
+      ])
+
+      expect(activite(report, "ei")).toMatchObject({ charges: 30000, cotisationsSociales: 12880, revenuVerse: 17120 })
+    })
+
+    it("retire le coût employeur de ce que laisse une micro-entreprise, sans réduire ses cotisations", () => {
+      // 100 000 € de ventes : 10 000 € de cotisations ; reste 100 000 - 10 000 - 35 400 = 54 600 €.
+      const report = simuler([personne("carl"), personne("bob"), micro("m1")], [relation("carl", "m1", "Titulaire"), relation("bob", "m1", "Salarié")], [
+        ["m1", "ca_micro_vente", 100000],
+        ["bob", "salary", 24300]
+      ])
+
+      expect(activite(report, "m1")).toMatchObject({ charges: 30000, cotisationsSociales: 15400, revenuVerse: 54600 })
+    })
+
+    it("ne retient qu'un employeur, et ignore une relation sans salaire ou vers autre chose qu'une activité", () => {
+      const report = simuler(
+        [...entites, societe("autre"), personne("carl")],
+        [...relations, relation("bob", "autre", "Salarié"), relation("carl", "sasu", "Salarié"), relation("alice", "bob", "Salarié"), relation("bob", "fantome", "Salarié")],
+        flux
+      )
+
+      expect(activite(report, "sasu").salaries?.map(s => s.personId)).toEqual(["bob"])
+      expect(activite(report, "autre").salaries).toBeUndefined()
+    })
+
+    it("sans relation, le salaire reste un revenu venu de l'extérieur", () => {
+      const report = simuler(entites, [relation("alice", "sasu", "Président")], flux)
+
+      expect(activite(report, "sasu")).toMatchObject({ charges: 0, cotisationsSociales: 0 })
+      expect(activite(report, "sasu").salaries).toBeUndefined()
+      expect(report.persons.find(p => p.entityId === "bob")?.cotisationsSalariales).toBe(0)
+    })
+  })
 })

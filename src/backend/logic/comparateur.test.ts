@@ -111,6 +111,23 @@ describe("comparerStatuts", () => {
     })
   })
 
+  it("garde les salariés de l'activité dans chaque statut", () => {
+    // Bob : 24 300 € nets, 30 000 € bruts, 5 400 € de cotisations patronales après réduction générale (voir simulation-engine.test.ts).
+    // La colonne compte aussi les 5 700 € de cotisations salariales. En micro BNC : 25 % de 100 000 € = 25 000 €, en plus.
+    const resultat = comparer(
+      [personne("alice"), personne("bob"), societe("s1", "SASU")],
+      [relation("alice", "s1", "Président"), relation("bob", "s1", "Salarié")],
+      [
+        ["s1", "ca_services", 100000],
+        ["bob", "salary", 24300]
+      ],
+      options("s1")
+    )
+
+    expect(colonne(resultat, "micro").cotisationsSociales).toBe(25000 + 5400 + 5700)
+    expect(colonne(resultat, "SASU").cotisationsSociales).toBe(5400 + 5700)
+  })
+
   describe("frais de fonctionnement", () => {
     const frais = (montant: number) => ({ expertComptable: montant, banque: 0, logiciel: 0, assurance: 0, cfe: 0 })
     const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]], options("m1", { fraisFonctionnement: { SASU: frais(2000), EURL: frais(2000), EI: frais(1000), micro: frais(1000) } }))
