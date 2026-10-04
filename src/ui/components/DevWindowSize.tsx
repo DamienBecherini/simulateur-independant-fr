@@ -13,7 +13,7 @@ const breakpoints: [name: string, minWidth: number][] = [
 
 /**
  * Pastille de développement : dimensions de la fenêtre et point de rupture Tailwind actif.
- * N'est rendue qu'en mode développement (voir App.tsx).
+ * N'est rendue qu'en mode développement (voir App.tsx), et jamais imprimée (export PDF).
  */
 export function DevWindowSize() {
   const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight })
@@ -27,7 +27,7 @@ export function DevWindowSize() {
   const breakpoint = breakpoints.find(([, minWidth]) => size.width >= minWidth)?.[0] ?? "base"
 
   return (
-    <div className="pointer-events-none fixed bottom-2 right-2 z-50 rounded bg-black/70 px-2 py-1 font-mono text-xs text-white">
+    <div className="pointer-events-none fixed bottom-2 right-2 z-50 rounded bg-black/70 px-2 py-1 font-mono text-xs text-white print:hidden">
       {size.width} × {size.height} · {breakpoint}
     </div>
   )
