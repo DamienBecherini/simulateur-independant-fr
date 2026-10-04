@@ -10,7 +10,7 @@ Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un 
 
 - **Modélisation par graphe** : entités (personnes, sociétés, micro-entreprises) reliées par des relations (Marié(e), PACSé(e), Enfant, Président, Gérant…).
 - **Grille annuelle visuelle** : saisie des flux mois par mois, légende numérotée et couleurs personnalisables.
-- **Méta-simulation** : agrégation des flux par entité, regroupement des foyers fiscaux, routage de la rémunération du dirigeant vers la personne liée, calcul par statut et impôt sur le revenu du foyer.
+- **Simulation par foyer** : chaque activité (SASU, EURL, entreprise individuelle au réel, micro-entreprise) calcule ses cotisations et ce qu'elle verse ; l'impôt sur le revenu est ensuite calculé une seule fois par foyer fiscal (quotient familial plafonné, décote, dividendes au forfait ou au barème). Les résultats se recalculent à chaque modification.
 - **Scénarios** : sauvegardes nommées, chargement, import / export JSON.
 - **Pérennité des données** : validation Zod et réparation automatique des sessions à l'ouverture.
 - **Confort d'édition** : undo / redo (Ctrl+Z / Ctrl+Y, Cmd+Shift+Z), sauvegarde automatique, glisser-déposer, zoom.
@@ -33,7 +33,9 @@ Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un 
 
 ## ✨ Points d'intérêt dans le code
 
-- `src/backend/logic/simulation-engine.ts` : moteur de méta-simulation (agrégation des flux, foyers fiscaux par Union-Find, routage de la rémunération du dirigeant).
+- `src/backend/logic/simulation-engine.ts` : moteur de simulation à sens unique (activités → revenus des personnes → impôt du foyer).
+- `src/backend/logic/foyers.ts` : regroupement des foyers fiscaux par union-find (couples, enfants rattachés, parts).
+- `src/backend/logic/regles.ts` + `src/backend/config.json` : toutes les règles fiscales de l'année, typées et sourcées, hors du code.
 - `src/backend/logic/data-sanitizer.ts` : validation et réparation des sessions (relations et flux orphelins).
 - `src/backend/util.ts` + `src/backend/preload.cts` : contrat IPC typé de bout en bout, sans `any` sur la surface exposée.
 - `src/types.ts` : schémas Zod et types dérivés.
@@ -70,10 +72,10 @@ npm run lint           # ESLint, dont la complexité cyclomatique
 npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutation/
 ```
 
-- **Tests** : fichiers `*.test.ts` placés à côté du code testé ; les montants attendus sont calculés à la main à partir de `src/backend/config.json`.
+- **Tests** : fichiers `*.test.ts` placés à côté du code testé ; le moteur est testé avec des règles fictives aux chiffres ronds (`src/backend/logic/testing/`), pour que les montants attendus se vérifient de tête et ne dépendent pas du barème de l'année.
 - **Couverture** : seuil bloquant de 90 % (instructions, branches, fonctions, lignes) sur `src/backend/logic/` et `src/lib/`.
-- **Complexité** : règle ESLint `complexity` plafonnée à 15 sur `src/`, avec deux exceptions commentées dans le moteur de méta-simulation.
-- **Mutation** : Stryker sur `src/backend/logic/` (score d'environ 79 %), lancé chaque semaine et à la demande ; nécessite Node.js 22 ou supérieur.
+- **Complexité** : règle ESLint `complexity` plafonnée à 15 sur `src/`, sans exception.
+- **Mutation** : Stryker sur `src/backend/logic/` (score d'environ 93 %), lancé chaque semaine et à la demande ; nécessite Node.js 22 ou supérieur.
 - **Intégration continue** : GitHub Actions exécute lint, vérification des types, tests avec couverture et build à chaque push et pull request.
 
 ## 🗂️ Structure du projet
@@ -86,6 +88,6 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 
 ## ⚠️ Limites connues
 
-- POC : barèmes simplifiés, non validés par un expert-comptable.
-- Le calcul « EI au réel » (`calculsEI.ts`) existe mais n'est pas encore branché au moteur.
-- Les versements de dividendes saisis dans la grille ne sont pas encore pris en compte (un avertissement le signale).
+- POC : les résultats illustrent l'ingénierie, ils n'ont pas été validés par un expert-comptable.
+- Les cotisations du président de SASU et des travailleurs non salariés sont approchées par un taux moyen, pas calculées ligne à ligne.
+- Non modélisés : réductions et crédits d'impôt, résidence alternée, report des déficits, TVA, répartition du capital entre associés (dividendes partagés à parts égales).

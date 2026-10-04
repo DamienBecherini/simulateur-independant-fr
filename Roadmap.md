@@ -4,7 +4,7 @@
 
 ## **État Actuel du Projet**
 
-Le socle (graphe d'entités, grille visuelle, persistance validée par Zod) et une première version du moteur de méta-simulation sont en place. La priorité est maintenant la **fiabilité des chiffres** : tests automatisés, intégration continue, puis refonte du moteur autour d'un calcul unique par foyer fiscal. Les fonctionnalités d'analyse (comparateur, arbitrage) viennent ensuite, sur cette base.
+Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue et le moteur de simulation par foyer fiscal sont en place. La prochaine étape est le **comparateur de statuts**, qui s'appuie sur ce moteur.
 
 > **Changement d'ordre par rapport à la v2.2 :** le comparateur de statuts passe avant l'arbitrage rémunération / dividendes, et la gestion des foyers fiscaux est intégrée à la refonte du moteur.
 
@@ -55,11 +55,11 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod) et u
 
 - `runMetaSimulation` (`src/backend/logic/simulation-engine.ts`) : agrégation annuelle des flux par entité, regroupement des foyers fiscaux (Union-Find sur les relations Marié(e) / PACSé(e), demi-parts des enfants), routage de la rémunération du dirigeant vers la personne liée, appel des modules SASU / EURL / micro-entreprise, impôt sur le revenu par foyer.
 - `ResultsPanel` : résultats par entité et synthèse par foyer, avec avertissements explicites.
-- **Limites connues de cette v1** (traitées en Phase 7) : l'impôt sur le revenu est estimé à la fois dans chaque module d'activité et au niveau du foyer ; les dividendes saisis dans la grille sont ignorés (100 % du bénéfice est supposé distribué) ; le capital social des EURL n'est pas saisi.
+- **Limites de cette v1** (corrigées en Phase 7) : l'impôt sur le revenu est estimé à la fois dans chaque module d'activité et au niveau du foyer ; les dividendes saisis dans la grille sont ignorés (100 % du bénéfice est supposé distribué) ; le capital social des EURL n'est pas saisi.
 
 ---
 
-### **Phase 6.5 : Qualité & Intégration Continue [En cours 🎯]**
+### **Phase 6.5 : Qualité & Intégration Continue [Terminé ✅]**
 
 **Objectif :** pouvoir modifier le moteur sans régression.
 
@@ -69,7 +69,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod) et u
 
 ---
 
-### **Phase 6.6 : Saisie Rapide des Flux [En cours 🎯]**
+### **Phase 6.6 : Saisie Rapide des Flux [Terminé ✅]**
 
 **Objectif :** réduire le nombre de clics pour saisir et corriger des flux.
 
@@ -79,22 +79,26 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod) et u
 
 ---
 
-### **Phase 7 : Refonte du Moteur — Un Calcul Unique par Foyer [Planifié 🗓️ - PROCHAINE ÉTAPE]**
+### **Phase 7 : Refonte du Moteur — Un Calcul Unique par Foyer [Terminé ✅]**
 
 **Objectif :** des résultats cohérents entre eux, avec un vrai « net du foyer après impôts ». Intègre l'ancienne Phase 8 (couples et foyers fiscaux).
 
-1.  **Chaîne de calcul en un seul sens :** les activités produisent des revenus (rémunération nette, dividendes, bénéfice micro) → ces revenus sont routés vers les personnes → l'impôt sur le revenu est calculé **une seule fois** par foyer, sur l'ensemble de ses revenus. Les modules SASU / EURL / micro ne calculent plus d'IR.
-2.  **Dividendes :** prise en compte du flux « versement de dividendes » saisi dans la grille, réparti entre associés ; le bénéfice non distribué reste dans la société.
-3.  **Modèle de données :** capital social pour les sociétés ; plusieurs dirigeants et associés.
-4.  **Impôt sur le revenu :** barème entièrement lu depuis `config.json` (plus de coefficients dans le code), abattement de 10 % sur les salaires, parts des enfants selon leur rang, barème de l'année mis à jour.
-5.  **Résultats :** net après impôts par personne et par foyer ; recalcul automatique à chaque modification (plus de bouton à cliquer).
-6.  **À décider :** brancher l'EI au réel (`calculsEI.ts`) ou le retirer ; implémenter le versionnage des sauvegardes prévu au cahier des charges.
+- **Chaîne de calcul en un seul sens :** les activités produisent des revenus (rémunération, dividendes, bénéfices) → ces revenus sont versés aux personnes → l'impôt sur le revenu est calculé **une seule fois** par foyer. Les modules SASU / EURL / micro / EI ne calculent plus d'impôt sur le revenu.
+- **Dividendes :** seuls les dividendes saisis dans la grille sont distribués (plafonnés au bénéfice disponible), le reste est conservé dans la société ; imposition au forfait ou au barème, selon le plus favorable ; pour l'EURL, cotisations sociales au-delà de 10 % du capital social (nouveau champ).
+- **Impôt sur le revenu :** barème entièrement lu depuis `config.json`, abattement de 10 % sur les salaires, plafonnement du quotient familial, décote, parts des enfants selon leur rang.
+- **Foyers :** les enfants sont rattachés au foyer de leurs parents (la relation « Enfant » va du parent vers l'enfant).
+- **Entreprise individuelle au réel :** nouveau statut d'activité, branché sur le moteur.
+- **Règles 2026 :** barèmes et taux mis à jour et sourcés (service-public, impots.gouv).
+- **Résultats :** net après impôts par foyer, détail par activité, recalcul automatique à chaque modification.
+- **Robustesse :** le chargement écarte les éléments invalides un par un au lieu de réinitialiser la session ; identifiants uniques (UUID).
+
+**Reste à décider :** implémenter le versionnage des sauvegardes prévu au cahier des charges, ou le retirer.
 
 ---
 
-### **Phase 8 : Le Comparateur Stratégique (Entité « ??? ») [Planifié 🗓️]**
+### **Phase 8 : Le Comparateur Stratégique (Entité « ??? ») [Planifié 🗓️ - PROCHAINE ÉTAPE]**
 
-- **Objectif :** réintégrer la fonctionnalité phare de la v1 : pour une même activité, comparer SASU, EURL et micro-entreprise (net du foyer, impôts, cotisations) en relançant le moteur une fois par statut.
+- **Objectif :** réintégrer la fonctionnalité phare de la v1 : pour une même activité, comparer SASU, EURL, entreprise individuelle au réel et micro-entreprise (net du foyer, impôts, cotisations) en relançant le moteur une fois par statut.
 
 ---
 
