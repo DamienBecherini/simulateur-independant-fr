@@ -28,7 +28,17 @@ interface LocalState {
   relationships: Relationship[]
 }
 
-const availableColors = ["#3b82f6", "#ef4444", "#22c55e", "#eab308", "#8b5cf6", "#f97316"]
+// Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
+const availableColors = [
+  { color: "#3b82f6", name: "Bleu" },
+  { color: "#ef4444", name: "Rouge" },
+  { color: "#22c55e", name: "Vert" },
+  { color: "#eab308", name: "Jaune" },
+  { color: "#8b5cf6", name: "Violet" },
+  { color: "#f97316", name: "Orange" }
+]
+
+const iconNames: Record<string, string> = { Briefcase: "Mallette", Building: "Immeuble", Store: "Boutique", User: "Personne" }
 
 function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relationships }: EditEntityModalProps) {
   const [formData, setFormData] = useState<LocalState>({ entity: null, relationships: [] })
@@ -155,7 +165,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                     })
                   }
                 >
-                  <SelectTrigger className="col-span-3">
+                  <SelectTrigger id="legalStatus" className="col-span-3">
                     <SelectValue placeholder="Choisir un statut" />
                   </SelectTrigger>
                   <SelectContent>
@@ -168,19 +178,23 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
             )}
             <StatusSpecificFields entity={localEntity} onChange={entity => setFormData(prev => ({ ...prev, entity }))} />
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Couleur</Label>
-              <div className="col-span-3 flex gap-2">
-                {availableColors.map(color => (
-                  <button type="button" key={color} onClick={() => handleAvatarChange({ color })} className={`h-8 w-8 rounded-full border-2 transition-all ${localEntity.avatar.color === color ? "border-primary ring-2 ring-ring" : "border-transparent"}`} style={{ backgroundColor: color }} />
+              <span id="avatar-couleur" className="text-right text-sm font-medium">
+                Couleur
+              </span>
+              <div className="col-span-3 flex flex-wrap gap-2" role="group" aria-labelledby="avatar-couleur">
+                {availableColors.map(({ color, name }) => (
+                  <button type="button" key={color} aria-label={name} aria-pressed={localEntity.avatar.color === color} onClick={() => handleAvatarChange({ color })} className={`h-8 w-8 rounded-full border-2 transition-all pointer-coarse:h-11 pointer-coarse:w-11 ${localEntity.avatar.color === color ? "border-primary ring-2 ring-ring" : "border-transparent"}`} style={{ backgroundColor: color }} />
                 ))}
               </div>
             </div>
             {localEntity.type !== "person" && (
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Icône</Label>
-                <div className="col-span-3 flex gap-2">
+                <span id="avatar-icone" className="text-right text-sm font-medium">
+                  Icône
+                </span>
+                <div className="col-span-3 flex flex-wrap gap-2" role="group" aria-labelledby="avatar-icone">
                   {Object.entries(availableIconsSmall).map(([key, icon]) => (
-                    <button type="button" key={key} onClick={() => handleAvatarChange({ value: key, type: "icon" })} className={`flex h-10 w-10 items-center justify-center rounded-md border-2 transition-all ${localEntity.avatar.value === key ? "border-primary ring-2 ring-ring bg-secondary" : "border-transparent hover:bg-secondary/80"}`}>
+                    <button type="button" key={key} aria-label={iconNames[key] ?? key} aria-pressed={localEntity.avatar.value === key} onClick={() => handleAvatarChange({ value: key, type: "icon" })} className={`flex h-10 w-10 items-center justify-center rounded-md border-2 transition-all pointer-coarse:h-11 pointer-coarse:w-11 ${localEntity.avatar.value === key ? "border-primary ring-2 ring-ring bg-secondary" : "border-transparent hover:bg-secondary/80"}`}>
                       {icon}
                     </button>
                   ))}
@@ -188,7 +202,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
               </div>
             )}
             <div className="space-y-4 pt-6 border-t">
-              <Label className="font-semibold text-base">Relations</Label>
+              <h3 className="font-semibold text-base">Relations</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {relevantRelationships.length === 0 && !addingRelation && <p className="text-sm text-slate-600 dark:text-slate-400 italic col-span-full">Aucune relation.</p>}
                 {relevantRelationships.map(rel => {
@@ -206,7 +220,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                         </div>
                         {isSource && <ArrowRight className="h-4 w-4 text-slate-500 dark:text-slate-400" />}
                       </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteRelationship(rel.id)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 pointer-coarse:h-11 pointer-coarse:w-11" aria-label={`Supprimer la relation avec ${otherEntity.name}`} onClick={() => handleDeleteRelationship(rel.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -220,7 +234,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
               ) : (
                 <div className="p-3 border rounded-lg space-y-3 bg-slate-50 dark:bg-gray-800">
                   <Select value={targetId} onValueChange={setTargetId}>
-                    <SelectTrigger>
+                    <SelectTrigger aria-label="Lier avec">
                       <SelectValue placeholder="Lier avec..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -232,7 +246,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                     </SelectContent>
                   </Select>
                   <Select value={relationshipType} onValueChange={(value: Relationship["type"]) => setRelationshipType(value)} disabled={!targetId || availableTypes.length === 0}>
-                    <SelectTrigger>
+                    <SelectTrigger aria-label="Type de relation">
                       <SelectValue placeholder="Type de relation..." />
                     </SelectTrigger>
                     <SelectContent>

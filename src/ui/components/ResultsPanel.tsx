@@ -61,31 +61,27 @@ function BilanCard({ report }: { report: SimulationReport }) {
         </div>
       ) : null}
 
-      <dl className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
-        <div className="space-y-1">
+      {/* Deux listes de définitions côte à côte : un <dl> n'accepte qu'un niveau de <div> autour de ses paires. */}
+      <div className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
+        <dl className="space-y-1">
           <Row label="Revenus avant prélèvements" value={formatMoney(base)} hint={origin} />
           <Row label="Cotisations sociales des activités" value={`− ${formatMoney(bilan.cotisationsSociales)}`} />
           {bilan.cotisationsSalariales > 0 ? <Row label="Cotisations salariales" value={`− ${formatMoney(bilan.cotisationsSalariales)}`} /> : null}
           {bilan.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(bilan.impotSocietes)}`} /> : null}
           <Row label="Impôt sur le revenu" value={`− ${formatMoney(bilan.impotSurLeRevenu)}`} />
           {bilan.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(bilan.prelevementsSociaux)}`} /> : null}
-        </div>
-        <div className="space-y-1">
+        </dl>
+        <dl className="space-y-1">
           {bilanShares.map(share =>
             amounts[share.key] !== 0 || share.key === "net" || share.key === "prelevements" ? (
-              <div key={share.key} className="flex items-start gap-2">
-                <span className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", share.color)} />
-                <div className="flex-grow">
-                  <Row label={share.key === "conserve" && amounts.conserve < 0 ? "Déficit des sociétés" : share.label} value={formatMoney(amounts[share.key])} hint={percent(amounts[share.key])} strong={share.key === "net"} />
-                </div>
-              </div>
+              <Row key={share.key} label={share.key === "conserve" && amounts.conserve < 0 ? "Déficit des sociétés" : share.label} value={formatMoney(amounts[share.key])} hint={percent(amounts[share.key])} strong={share.key === "net"} pastille={share.color} />
             ) : null
           )}
-        </div>
-      </dl>
-      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les cotisations d'un salaire ne sont comptées que si son brut est saisi, et seulement pour leur part salariale.</p>
+        </dl>
+      </div>
+      <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les cotisations d'un salaire ne sont comptées que si son brut est saisi, et seulement pour leur part salariale.</p>
       {bilan.resultatConserve > 0 ? (
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
           Le bénéfice conservé dans une société a payé l'impôt sur les sociétés, mais pas encore l'impôt personnel : il sera imposé le jour où il sera versé (dividendes, vente ou liquidation). Le taux de prélèvement affiché est donc provisoire pour cette part, et un scénario qui conserve davantage paraît moins taxé sans que cet argent soit disponible.
         </p>
       ) : null}
@@ -99,13 +95,17 @@ const dividendOptionLabels: Record<NonNullable<FoyerFiscalResult["optionDividend
 }
 
 /** Une ligne « libellé — montant » d'une carte de résultats. */
-function Row({ label, value, hint, strong = false }: { label: string; value: string; hint?: string | null; strong?: boolean }) {
+function Row({ label, value, hint, strong = false, pastille }: { label: string; value: string; hint?: string | null; strong?: boolean; pastille?: string }) {
   return (
     <div className="flex justify-between gap-2">
-      <dt className={strong ? "font-medium text-slate-800 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}>{label}</dt>
+      <dt className={cn("flex items-start gap-2", strong ? "font-medium text-slate-800 dark:text-slate-100" : "text-slate-600 dark:text-slate-400")}>
+        {/* Pastille de la couleur de la part dans la barre de répartition. */}
+        {pastille ? <span aria-hidden="true" className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", pastille)} /> : null}
+        {label}
+      </dt>
       <dd className={`text-right tabular-nums ${strong ? "font-semibold text-emerald-700 dark:text-emerald-400" : "font-medium"}`}>
         {value}
-        {hint ? <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">{hint}</span> : null}
+        {hint ? <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{hint}</span> : null}
       </dd>
     </div>
   )
@@ -116,7 +116,7 @@ function Card({ title, subtitle, warnings, children }: { title: string; subtitle
     <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
       <header className="mb-2 border-b border-slate-100 pb-2 dark:border-slate-800">
         <p className="font-semibold text-slate-900 dark:text-slate-50">{title}</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
+        <p className="text-xs text-slate-600 dark:text-slate-400">{subtitle}</p>
       </header>
       {children}
       {warnings.length > 0 ? (
@@ -142,7 +142,7 @@ const incomeLabels: Record<keyof PersonResult["detail"], string> = {
 /** Revenus d'un membre du foyer, ventilés par nature ; seules les lignes non nulles sont affichées. */
 function PersonIncome({ person, showName }: { person: PersonResult; showName: boolean }) {
   const lines = (Object.keys(incomeLabels) as (keyof PersonResult["detail"])[]).filter(key => person.detail[key] !== 0)
-  if (lines.length === 0) return showName ? <p className="text-sm text-slate-500 dark:text-slate-400">{person.name} : aucun revenu</p> : null
+  if (lines.length === 0) return showName ? <p className="text-sm text-slate-600 dark:text-slate-400">{person.name} : aucun revenu</p> : null
 
   return (
     <div>
@@ -191,7 +191,7 @@ function FoyerCard({ foyer, persons, showRates }: { foyer: FoyerFiscalResult; pe
         {foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={formatMoney(foyer.netApresImpots - foyer.depenses)} hint={`${formatMoney(foyer.depenses)} de dépenses`} /> : null}
       </dl>
       {showRates ? <FoyerRates foyer={foyer} /> : null}
-      {foyer.optionDividendes ? <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{dividendOptionLabels[foyer.optionDividendes]}</p> : null}
+      {foyer.optionDividendes ? <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">{dividendOptionLabels[foyer.optionDividendes]}</p> : null}
     </Card>
   )
 }
@@ -202,7 +202,7 @@ function VersementLiberatoireNote({ info }: { info: VersementLiberatoireInfo }) 
   const status = info.eligible === null ? "RFR N-2 non renseigné (fiche de la micro-entreprise)" : info.eligible ? `votre RFR N-2 de ${formatMoney(info.rfrN2 ?? 0)} y donne accès` : `votre RFR N-2 de ${formatMoney(info.rfrN2 ?? 0)} le dépasse`
 
   return (
-    <div className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+    <div className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
       <p>
         <span className="font-medium text-slate-700 dark:text-slate-200">Versement libératoire</span> {info.applique ? "(appliqué)" : "(non appliqué)"} : seuil de {formatMoney(info.plafondRfr)} de revenu fiscal de référence N-2 pour {parts} {info.partsFiscales > 1 ? "parts" : "part"} ;{" "}
         <span className={info.eligible === false ? "text-rose-700 dark:text-rose-400" : info.eligible ? "text-emerald-700 dark:text-emerald-400" : undefined}>{status}</span>.
@@ -237,14 +237,14 @@ export function ResultsPanel({ report, error }: ResultsPanelProps) {
     <section className="mt-12 space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Résultats de simulation</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           Recalculés à chaque modification{report ? `, avec les règles fiscales ${report.annee}` : ""}. Estimations simplifiées, non validées par un expert-comptable.
         </p>
       </div>
 
       {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 
-      {report && report.foyers.length + report.activities.length === 0 ? <p className="text-sm text-slate-500 dark:text-slate-400">Ajoutez une personne ou une activité pour voir les résultats.</p> : null}
+      {report && report.foyers.length + report.activities.length === 0 ? <p className="text-sm text-slate-600 dark:text-slate-400">Ajoutez une personne ou une activité pour voir les résultats.</p> : null}
 
       {report && report.foyers.length + report.activities.length > 0 ? <BilanCard report={report} /> : null}
 
@@ -252,7 +252,7 @@ export function ResultsPanel({ report, error }: ResultsPanelProps) {
         <div className="space-y-3">
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
           {sharedCompanies.length > 0 ? (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               {sharedCompanies.map(a => `« ${a.name} »`).join(", ")} : l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les associés, comme les dividendes. La répartition réelle du capital n'est pas encore modélisée.
             </p>
           ) : null}

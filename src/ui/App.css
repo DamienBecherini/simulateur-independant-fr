@@ -4,6 +4,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Écran tactile (doigt plutôt que souris) : les zones cliquables y sont agrandies à 44 px. */
+@custom-variant pointer-coarse (@media (pointer: coarse));
+
 :root {
   --background: hsl(0 0% 96%);
   --foreground: hsl(0 0% 3.9%);

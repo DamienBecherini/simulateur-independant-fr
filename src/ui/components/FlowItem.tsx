@@ -12,6 +12,7 @@ import { GripVertical, Trash2 } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { FlowTypeSelect } from "./FlowTypeSelect"
+import { POIGNEE_DE_TRI } from "../hooks/useTriAccessible"
 
 /** Champs d'un flux modifiables depuis la liste. */
 export type FlowChanges = Partial<Pick<FinancialFlow, "type" | "label" | "amount" | "grossAmount">>
@@ -115,9 +116,9 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onTypeUsed }:
 
   return (
     <div ref={setNodeRef} style={style} className={cn("flex items-center gap-2 rounded-md border bg-slate-50 p-2 dark:bg-gray-800", isDragging && "relative z-10 shadow-md")}>
-      {/* Poignée de glisser-déposer, hors de l'ordre de tabulation pour enchaîner type → libellé → montant. */}
-      <div {...attributes} {...listeners} tabIndex={-1} aria-label="Réordonner le flux" className="shrink-0 cursor-grab touch-none text-slate-400">
-        <GripVertical className="h-4 w-4" />
+      {/* Poignée de glisser-déposer : au clavier, Espace la saisit et les flèches déplacent le flux. */}
+      <div {...attributes} {...listeners} aria-label="Réordonner le flux" className={POIGNEE_DE_TRI}>
+        <GripVertical className="h-4 w-4" aria-hidden="true" />
       </div>
 
       <FlowTypeSelect value={flow.type} options={typeOptions} onChange={handleTypeChange} />
@@ -178,7 +179,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onTypeUsed }:
       />
       <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
 
-      <Button variant="ghost" size="icon" tabIndex={-1} className="shrink-0 text-destructive hover:text-destructive" aria-label="Supprimer le flux" onClick={() => onDelete(flow.id)}>
+      <Button variant="ghost" size="icon" className="shrink-0 text-destructive hover:text-destructive" aria-label="Supprimer le flux" onClick={() => onDelete(flow.id)}>
         <Trash2 />
       </Button>
     </div>

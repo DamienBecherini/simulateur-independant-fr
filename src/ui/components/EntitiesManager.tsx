@@ -11,6 +11,7 @@ import { EntityItem } from "./EntityItem"
 import { SelectEntityTypeModal, BusinessEntityType } from "./SelectEntityTypeModal"
 import { sanitizeFlowsAfterRelationshipChange } from "@/lib/business-logic"
 import { toast } from "sonner"
+import { useTriAccessible } from "../hooks/useTriAccessible"
 
 interface EntitiesManagerProps {
   session: SessionState
@@ -24,6 +25,7 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
   const [isSelectModalOpen, setSelectModalOpen] = useState(false)
   const entityIds = useMemo(() => entities.map(e => e.id), [entities])
+  const tri = useTriAccessible(useMemo(() => entities.map(e => ({ id: e.id, nom: e.name })), [entities]))
 
   /**
    * Applique une modification des entités ou des relations en une seule étape d'historique.
@@ -103,11 +105,11 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
           + Ajouter une Activité
         </Button>
       </div>
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={entityIds} strategy={verticalListSortingStrategy}>
           <div className="space-y-4">
             {entities.length === 0 ? (
-              <p className="text-slate-500">Aucune entité. Commencez par en ajouter une !</p>
+              <p className="text-slate-600 dark:text-slate-400">Aucune entité. Commencez par en ajouter une !</p>
             ) : (
               entities.map(entity => <EntityItem key={entity.id} entity={entity} allEntities={entities} relationships={relationships} onUpdate={updateEntity} onDelete={deleteEntity} onToggleLock={toggleLock} onEdit={setEditingEntity} onAddRelationship={addRelationship} onDeleteRelationship={deleteRelationship} />)
             )}

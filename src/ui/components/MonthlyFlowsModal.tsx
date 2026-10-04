@@ -4,11 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import type { Entity, FinancialFlow } from "@/types"
-import { getFlowTypesForEntity, type FlowType } from "@/lib/flow-constants"
+import { flowTypeLabels, getFlowTypesForEntity, type FlowType } from "@/lib/flow-constants"
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { FlowItem, type FlowChanges } from "./FlowItem"
 import { NewFlowItem, type NewFlowValues } from "./NewFlowItem"
+import { useTriAccessible } from "../hooks/useTriAccessible"
 
 /**
  * Interface pour les props du composant MonthlyFlowsModal.
@@ -29,6 +30,7 @@ interface MonthlyFlowsModalProps {
 
 export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
   const flowIds = useMemo(() => flows.map(f => f.id), [flows])
+  const tri = useTriAccessible(useMemo(() => flows.map(f => ({ id: f.id, nom: f.label || flowTypeLabels[f.type] })), [flows]))
   const allowedTypes = getFlowTypesForEntity(entity)
 
   // Type prérempli de la ligne d'ajout : le dernier type utilisé dans cette fenêtre, sinon le premier autorisé.
@@ -78,14 +80,14 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate,
         <DialogHeader>
           <DialogTitle className="flex items-baseline gap-2">
             <span>Opérations de {monthName}</span>
-            <span className="text-base font-normal text-slate-500">/ {entity.name}</span>
+            <span className="text-base font-normal text-slate-600 dark:text-slate-400">/ {entity.name}</span>
           </DialogTitle>
           <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant. Pour un salaire, le brut est calculé à 78 % du net si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2 py-2">
           {flows.length > 0 && (
-            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <div ref={listRef} className="max-h-[50vh] space-y-2 overflow-y-auto">
                 <SortableContext items={flowIds} strategy={verticalListSortingStrategy}>
                   {flows.map(flow => (

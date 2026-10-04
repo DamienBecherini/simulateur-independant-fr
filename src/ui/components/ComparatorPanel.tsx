@@ -9,6 +9,7 @@ import { comparableActivities, defaultComparisonOptions, defaultFraisFonctionnem
 import { cn } from "@/lib/utils"
 import { Depliable } from "./Depliable"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
+import { ZoneDefilante } from "./ZoneDefilante"
 import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ScenarioStatut, SessionState, StatutFrais } from "@/types"
 
 interface ComparatorPanelProps {
@@ -168,7 +169,7 @@ function ComparisonTable({ result, activityName }: { result: ComparaisonResult; 
   const best = (s: ScenarioStatut) => s.statut === result.meilleur
 
   return (
-    <div className="relative overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+    <ZoneDefilante libelle="Tableau de comparaison" className="rounded-lg border border-slate-200 dark:border-slate-700">
       <table className="w-full min-w-[48rem] text-sm" aria-label="Comparaison des statuts">
         <thead className="bg-slate-100 dark:bg-slate-800/80">
           <tr>
@@ -224,7 +225,7 @@ function ComparisonTable({ result, activityName }: { result: ComparaisonResult; 
           ) : null}
         </tbody>
       </table>
-    </div>
+    </ZoneDefilante>
   )
 }
 

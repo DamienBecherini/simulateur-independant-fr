@@ -8,6 +8,7 @@ import { echelle, graduations, indiceLePlusProche, montantCourt, positionInfoBul
 import { cn } from "@/lib/utils"
 import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, SessionState, StatutSociete } from "@/types"
 import { Depliable } from "./Depliable"
+import { ZoneDefilante } from "./ZoneDefilante"
 
 const STATUTS: StatutSociete[] = ["SASU", "EURL"]
 
@@ -232,7 +233,7 @@ function TableDesValeurs({ resultat }: { resultat: OptimisationRemuneration }) {
   const lignes = points.filter((p, i) => i % pas === 0 || i === points.length - 1 || p === meilleur || p === meilleurAvecRetraite)
   return (
     <Depliable titre="Valeurs de la courbe" className="text-sm text-slate-700 dark:text-slate-200">
-      <div className="relative mt-3 overflow-x-auto">
+      <ZoneDefilante libelle="Tableau des valeurs de la courbe" className="mt-3">
         <table className="w-full min-w-[36rem] text-sm tabular-nums" aria-label={`Net du foyer selon la rémunération en ${resultat.statut}`}>
           <thead>
             <tr className="text-right text-slate-600 dark:text-slate-300">
@@ -257,7 +258,7 @@ function TableDesValeurs({ resultat }: { resultat: OptimisationRemuneration }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </ZoneDefilante>
     </Depliable>
   )
 }
