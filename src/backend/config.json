@@ -2,7 +2,7 @@
   "annee": 2026,
   "derniereMiseAJour": "2026-10-04",
   "IR": {
-    "description": "Barème 2026 de l'impôt sur le revenu (revenus 2025). La dernière tranche n'a pas de plafond (null).",
+    "description": "Barème de l'impôt sur le revenu de la loi de finances pour 2026 (revenus 2025), appliqué aux revenus 2026 en attendant la loi de finances pour 2027 (voir l'ADR 007). La dernière tranche n'a pas de plafond (null).",
     "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F1419",
     "bareme": [
       { "trancheJusqua": 11600, "taux": 0 },

@@ -1,7 +1,7 @@
 # ADR-007: Convention d'année des règles fiscales et sociales
 
 - **Date :** 2026-10-04
-- **Statut :** Proposé
+- **Statut :** Accepté
 
 ## Contexte
 
