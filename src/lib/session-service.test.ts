@@ -34,13 +34,17 @@ afterEach(() => {
 describe("createNewSlotFromSession", () => {
   it("copie la session dans un nouveau slot horodaté", () => {
     expect(createNewSlotFromSession(session)).toEqual({
-      id: `slot-${MAINTENANT}`,
+      id: expect.stringMatching(/^slot-[0-9a-f-]{36}$/),
       name: "Scénario 2025",
       entities: session.entities,
       relationships: session.relationships,
       monthlyData: session.monthlyData,
       lastModified: MAINTENANT
     })
+  })
+
+  it("donne un identifiant distinct à deux slots créés dans la même milliseconde", () => {
+    expect(createNewSlotFromSession(session).id).not.toBe(createNewSlotFromSession(session).id)
   })
 })
 

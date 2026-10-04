@@ -1,6 +1,7 @@
 // src/lib/entity-factory.ts
 
 import type { Person, Company, MicroEntreprise } from "@/types"
+import { createId } from "@/lib/id"
 
 // On peut même centraliser les couleurs par défaut ici
 const defaultColors = {
@@ -15,7 +16,7 @@ const defaultColors = {
  */
 export function createPerson(): Person {
   return {
-    id: `person-${Date.now()}`,
+    id: createId("person"),
     type: "person",
     name: "Nouvelle Personne",
     fiscalParts: 1,
@@ -31,7 +32,7 @@ export function createPerson(): Person {
 export function createCompany(legalStatus: "SASU" | "EURL"): Company {
   const isSASU = legalStatus === "SASU"
   return {
-    id: `company-${Date.now()}`,
+    id: createId("company"),
     type: "company",
     name: isSASU ? "Ma SASU" : "Mon EURL",
     legalStatus: legalStatus,
@@ -49,7 +50,7 @@ export function createCompany(legalStatus: "SASU" | "EURL"): Company {
  */
 export function createMicroEntreprise(): MicroEntreprise {
   return {
-    id: `micro-${Date.now()}`,
+    id: createId("micro"),
     type: "micro-entreprise",
     name: "Ma Micro-Entreprise",
     beneficieACRE: false,

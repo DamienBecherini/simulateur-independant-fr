@@ -6,6 +6,12 @@ import { CompanySchema, MicroEntrepriseSchema, PersonSchema } from "@/types"
 
 const MAINTENANT = 1_700_000_000_000
 
+/** Un identifiant attendu : le préfixe lisible suivi d'un UUID. */
+function idAvecPrefixe(prefixe: string) {
+  return expect.stringMatching(new RegExp(`^${prefixe}-[0-9a-f-]{36}$`))
+}
+
+// L'horloge est figée : toutes les entités d'un test sont créées dans la même milliseconde.
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(MAINTENANT)
@@ -18,7 +24,7 @@ afterEach(() => {
 describe("createPerson", () => {
   it("crée une personne avec une part fiscale et un avatar à initiales", () => {
     expect(createPerson()).toEqual({
-      id: `person-${MAINTENANT}`,
+      id: idAvecPrefixe("person"),
       type: "person",
       name: "Nouvelle Personne",
       fiscalParts: 1,
@@ -37,7 +43,7 @@ describe("createPerson", () => {
 describe("createCompany", () => {
   it("crée une SASU", () => {
     expect(createCompany("SASU")).toEqual({
-      id: `company-${MAINTENANT}`,
+      id: idAvecPrefixe("company"),
       type: "company",
       name: "Ma SASU",
       legalStatus: "SASU",
@@ -48,7 +54,7 @@ describe("createCompany", () => {
 
   it("crée une EURL", () => {
     expect(createCompany("EURL")).toEqual({
-      id: `company-${MAINTENANT}`,
+      id: idAvecPrefixe("company"),
       type: "company",
       name: "Mon EURL",
       legalStatus: "EURL",
@@ -67,7 +73,7 @@ describe("createCompany", () => {
 describe("createMicroEntreprise", () => {
   it("crée une micro-entreprise sans ACRE ni versement libératoire", () => {
     expect(createMicroEntreprise()).toEqual({
-      id: `micro-${MAINTENANT}`,
+      id: idAvecPrefixe("micro"),
       type: "micro-entreprise",
       name: "Ma Micro-Entreprise",
       beneficieACRE: false,
@@ -85,5 +91,13 @@ describe("createMicroEntreprise", () => {
 })
 
 describe("identifiants", () => {
-  it.todo("garantit des identifiants uniques : deux entités du même type créées dans la même milliseconde reçoivent le même id (Date.now())")
+  it.each([
+    ["personnes", createPerson],
+    ["sociétés", () => createCompany("SASU")],
+    ["micro-entreprises", createMicroEntreprise]
+  ])("garantit des identifiants uniques pour des %s créées dans la même milliseconde", (_type, creer) => {
+    const ids = Array.from({ length: 100 }, () => creer().id)
+
+    expect(new Set(ids).size).toBe(100)
+  })
 })

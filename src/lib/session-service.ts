@@ -1,6 +1,7 @@
 // src/lib/session-service.ts
 import type { SessionState, SaveSlot, Entity, Relationship, MonthlyGridData, ExportableState, SanitizationReport } from "@/types"
 import type { EventPayloadMapping } from "@/globals"
+import { createId } from "@/lib/id"
 
 // TypeScript augmentation for window.api
 declare global {
@@ -14,7 +15,7 @@ declare global {
  */
 export function createNewSlotFromSession(session: SessionState): SaveSlot {
   return {
-    id: `slot-${Date.now()}`,
+    id: createId("slot"),
     name: session.name,
     entities: session.entities,
     relationships: session.relationships,

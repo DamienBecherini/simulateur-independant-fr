@@ -12,6 +12,7 @@ import { getAvailableRelationships } from "@/lib/graph-logic"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { updatePersonAvatar } from "@/lib/avatar-utils"
+import { createId } from "@/lib/id"
 
 interface EditEntityModalProps {
   entity: Entity | null
@@ -71,7 +72,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
 
   const handleAddRelationship = () => {
     if (!localEntity || !targetId || !relationshipType) return
-    const newRelationship: Relationship = { id: `rel-${Date.now()}`, fromId: localEntity.id, toId: targetId, type: relationshipType }
+    const newRelationship: Relationship = { id: createId("rel"), fromId: localEntity.id, toId: targetId, type: relationshipType }
     setFormData(prev => ({ ...prev, relationships: [...prev.relationships, newRelationship] }))
     setAddingRelation(false)
     setTargetId(undefined)

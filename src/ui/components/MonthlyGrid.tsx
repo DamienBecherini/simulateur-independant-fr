@@ -8,6 +8,7 @@ import type { NewFlowValues } from "./NewFlowItem"
 import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
 import { isExpenseFlowType } from "@/lib/flow-constants"
+import { createId } from "@/lib/id"
 import { AvatarDisplay } from "./AvatarDisplay"
 
 /**
@@ -55,7 +56,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
   const handleCreateFlow = (values: NewFlowValues) => {
     if (!openCell) return
     // L'identifiant est généré hors de la fonction de mise à jour, qui doit rester pure.
-    const newFlow: FinancialFlow = { id: `flow-${Date.now()}`, entityId: openCell.entityId, ...values }
+    const newFlow: FinancialFlow = { id: createId("flow"), entityId: openCell.entityId, ...values }
     updateOpenMonthFlows(flows => [...flows, newFlow])
   }
   const handleUpdateFlow = (flowId: string, changes: FlowChanges) => {
