@@ -97,7 +97,7 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
   return (
     <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md">
       <h2 className="text-2xl font-semibold mb-4">Acteurs de la Simulation</h2>
-      <div className="flex gap-4 mb-6">
+      <div className="flex flex-wrap gap-4 mb-6">
         <Button onClick={() => addEntity(createPerson())}>+ Ajouter une Personne</Button>
         <Button onClick={() => setSelectModalOpen(true)} variant="secondary">
           + Ajouter une Activité

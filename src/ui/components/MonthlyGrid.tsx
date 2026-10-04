@@ -179,7 +179,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         {entities.length === 0 ? (
           <p className="text-slate-500">Veuillez d'abord ajouter une entité pour commencer la saisie.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             {/* `w-max` : la grille doit être aussi large que son contenu, sinon la première colonne (sticky) cesse de rester visible une fois la largeur de la fenêtre dépassée. */}
             <div className="grid w-max min-w-full gap-px" style={{ gridTemplateColumns: "minmax(8rem, 11rem) repeat(13, auto)" }}>
               {/* En-tête de la grille */}

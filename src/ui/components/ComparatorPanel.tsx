@@ -1,6 +1,7 @@
 // src/ui/components/ComparatorPanel.tsx
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { ChevronRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -8,6 +9,23 @@ import { Switch } from "@/components/ui/switch"
 import { comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
 import { cn } from "@/lib/utils"
 import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ScenarioStatut, SessionState, StatutFrais } from "@/types"
+
+/** Section repliable : un chevron et une indication « afficher / masquer » montrent qu'on peut cliquer. */
+function Depliable({ titre, className, children }: { titre: string; className?: string; children: ReactNode }) {
+  return (
+    <details className={cn("group", className)}>
+      <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-md font-medium hover:text-slate-950 dark:hover:text-white [&::-webkit-details-marker]:hidden">
+        <ChevronRight aria-hidden className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
+        {titre}
+        <span className="font-normal text-blue-600 underline-offset-2 group-hover:underline dark:text-blue-400">
+          <span className="group-open:hidden">(afficher)</span>
+          <span className="hidden group-open:inline">(masquer)</span>
+        </span>
+      </summary>
+      {children}
+    </details>
+  )
+}
 
 interface ComparatorPanelProps {
   session: SessionState
@@ -65,12 +83,11 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
   const update = (statut: StatutFrais, poste: PosteFrais, value: string) => onChange({ ...frais, [statut]: { ...frais[statut], [poste]: Math.max(0, parseFloat(value) || 0) } })
 
   return (
-    <details className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-      <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">Frais de fonctionnement annuels par statut</summary>
+    <Depliable titre="Frais de fonctionnement annuels par statut" className="rounded-lg border border-slate-200 p-4 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200">
       <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
         Ordres de grandeur, à ajuster à votre situation. Ils s'ajoutent aux charges de l'activité dans chaque colonne, statut actuel compris : si vous les avez déjà saisis dans la grille, mettez-les à 0. Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune et n'est pas due l'année de création.
       </p>
-      <div className="mt-3 overflow-x-auto">
+      <div className="relative mt-3 overflow-x-auto">
         <table className="w-full min-w-[40rem] text-sm" aria-label="Frais de fonctionnement annuels">
           <thead>
             <tr>
@@ -110,7 +127,7 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
           </tbody>
         </table>
       </div>
-    </details>
+    </Depliable>
   )
 }
 
@@ -167,7 +184,7 @@ function ComparisonTable({ result, activityName }: { result: ComparaisonResult; 
   const best = (s: ScenarioStatut) => s.statut === result.meilleur
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+    <div className="relative overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
       <table className="w-full min-w-[48rem] text-sm" aria-label="Comparaison des statuts">
         <thead className="bg-slate-100 dark:bg-slate-800/80">
           <tr>
@@ -242,8 +259,7 @@ function WarningList({ warnings }: { warnings: string[] }) {
 function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
   if (scenarios.length === 0) return null
   return (
-    <details className="text-xs text-slate-600 dark:text-slate-300">
-      <summary className="cursor-pointer font-medium">Ce que recouvre la note de protection sociale</summary>
+    <Depliable titre="Ce que recouvre la note de protection sociale" className="text-xs text-slate-600 dark:text-slate-300">
       <ul className="mt-2 space-y-1">
         {scenarios.map(s => (
           <li key={s.statut}>
@@ -255,7 +271,7 @@ function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
         ))}
       </ul>
       <p className="mt-2 text-slate-500 dark:text-slate-400">Note indicative : la cinquième étoile correspond au salarié classique, seul à cotiser à l'assurance chômage.</p>
-    </details>
+    </Depliable>
   )
 }
 
