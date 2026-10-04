@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { echelle, graduations, indiceLePlusProche, montantCourt, positionInfoBulle } from "@/lib/graphique"
 import { cn } from "@/lib/utils"
 import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, SessionState, StatutSociete } from "@/types"
+import { exporterCourbeCsv } from "../exports-texte"
+import { BoutonExportCsv } from "./BoutonExportCsv"
 import { Depliable } from "./Depliable"
 import { ZoneDefilante } from "./ZoneDefilante"
 
@@ -227,12 +229,16 @@ function InfoBulle({ point, gauche, largeur }: { point: PointRemuneration; gauch
 }
 
 /** Les valeurs de la courbe, pour qui ne peut pas la lire : une quinzaine de points, et les deux rémunérations retenues. */
-function TableDesValeurs({ resultat }: { resultat: OptimisationRemuneration }) {
+function TableDesValeurs({ resultat, onExporter }: { resultat: OptimisationRemuneration; onExporter: () => void }) {
   const { points, meilleur, meilleurAvecRetraite } = resultat
   const pas = Math.max(1, Math.ceil(points.length / 15))
   const lignes = points.filter((p, i) => i % pas === 0 || i === points.length - 1 || p === meilleur || p === meilleurAvecRetraite)
   return (
     <Depliable titre="Valeurs de la courbe" className="text-sm text-slate-700 dark:text-slate-200">
+      {/* L'export contient tous les points de la courbe, pas seulement ceux du tableau. */}
+      <div className="mt-3 flex justify-end">
+        <BoutonExportCsv contenu="toutes les valeurs de la courbe" onClick={onExporter} />
+      </div>
       <ZoneDefilante libelle="Tableau des valeurs de la courbe" className="mt-3">
         <table className="w-full min-w-[36rem] text-sm tabular-nums" aria-label={`Net du foyer selon la rémunération en ${resultat.statut}`}>
           <thead>
@@ -294,7 +300,7 @@ export function RemunerationOptimizer({ session, options, activityName, statutIn
         <>
           <Resume resultat={resultat} remunerationActuelle={options.remunerationNette} onAppliquer={onAppliquer} />
           <Courbe resultat={resultat} remunerationActuelle={options.remunerationNette} />
-          <TableDesValeurs resultat={resultat} />
+          <TableDesValeurs resultat={resultat} onExporter={() => exporterCourbeCsv(session, resultat, activityName)} />
         </>
       ) : null}
     </section>

@@ -5,6 +5,7 @@
 import type { ReactNode } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import type { SessionState, SimulationReport } from "@/types"
+import { exporterGrilleCsv, exporterRapportMarkdown, exporterResultatsCsv } from "../exports-texte"
 
 interface ExportDialogProps {
   isOpen: boolean
@@ -36,7 +37,7 @@ function Groupe({ titre, children }: { titre: string; children: ReactNode }) {
   )
 }
 
-export function ExportDialog({ isOpen, onClose, onExportJson }: ExportDialogProps) {
+export function ExportDialog({ isOpen, onClose, session, simulationReport, onExportJson }: ExportDialogProps) {
   const exporter = (action: () => void) => () => {
     action()
     onClose()
@@ -52,6 +53,13 @@ export function ExportDialog({ isOpen, onClose, onExportJson }: ExportDialogProp
         <div className="space-y-5">
           <Groupe titre="Sauvegarde">
             <OptionExport titre="Simulation complète (JSON)" description="Acteurs, relations, flux et résultats ; se réimporte dans le simulateur." onClick={exporter(onExportJson)} />
+          </Groupe>
+          <Groupe titre="Tableur (CSV)">
+            <OptionExport titre="Grille mensuelle (CSV)" description="Une ligne par acteur et par type de flux : les douze mois et le total de l'année." onClick={exporter(() => exporterGrilleCsv(session, simulationReport))} />
+            <OptionExport titre="Résultats (CSV)" description="Bilan, puis résultats par activité, par personne et par foyer fiscal." onClick={exporter(() => exporterResultatsCsv(session, simulationReport))} />
+          </Groupe>
+          <Groupe titre="Pour une IA (Markdown)">
+            <OptionExport titre="Rapport complet (Markdown)" description="Hypothèses, acteurs, flux, résultats et comparateur, en un texte à lire ou à confier à un assistant conversationnel." onClick={exporter(() => exporterRapportMarkdown(session, simulationReport))} />
           </Groupe>
         </div>
       </DialogContent>

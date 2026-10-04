@@ -103,6 +103,17 @@ describe("RemunerationOptimizer", () => {
     expect(within(tableau).getAllByRole("row")).toHaveLength(5)
   })
 
+  it("exporte tous les points de la courbe en CSV", async () => {
+    vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
+    afficher()
+
+    await userEvent.click(await screen.findByRole("button", { name: "Exporter en CSV toutes les valeurs de la courbe" }))
+
+    expect(window.api.saveTextFile).toHaveBeenCalledWith({ defaultName: "nouvelle-simulation-remuneration-mon-atelier-sasu.csv", content: expect.stringContaining("Statut;Rémunération nette;Dividendes;Net du foyer"), format: "csv" })
+    const { content } = vi.mocked(window.api.saveTextFile).mock.calls[0][0]
+    expect(content.split("\r\n").filter(Boolean)).toHaveLength(5)
+  })
+
   it("dans le comparateur, la rémunération appliquée est celle des colonnes SASU et EURL", async () => {
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
     render(<ComparatorPanel session={session} />)

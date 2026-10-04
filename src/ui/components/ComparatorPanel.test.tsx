@@ -1,6 +1,7 @@
 // src/ui/components/ComparatorPanel.test.tsx
 
 import { render, screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SessionState, StatutCompare } from "@/types"
 import { emptySession, makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
@@ -100,5 +101,22 @@ describe("ComparatorPanel", () => {
   it("propose la part BNC pour une société", async () => {
     render(<ComparatorPanel session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} />)
     expect(await screen.findByLabelText(/prestations en BNC : 100 %/)).toBeInTheDocument()
+  })
+
+  it("exporte le tableau de comparaison en CSV, avec les réglages utilisés", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
+    render(<ComparatorPanel session={withActivity()} />)
+
+    await userEvent.click(await screen.findByRole("button", { name: "Exporter en CSV le tableau de comparaison" }))
+
+    expect(window.api.saveTextFile).toHaveBeenCalledWith({ defaultName: "nouvelle-simulation-comparateur-mon-atelier.csv", content: expect.stringContaining("Indicateur;SASU;EURL;EI au réel;Micro-entreprise;Micro + versement libératoire\r\n"), format: "csv" })
+    expect(vi.mocked(window.api.saveTextFile).mock.calls[0][0].content).toContain("Activité comparée;Mon atelier\r\n")
+  })
+
+  it("ne propose pas d'export sans statut comparé", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: [] }))
+    render(<ComparatorPanel session={withActivity()} />)
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenCalled())
+    expect(screen.queryByRole("button", { name: /Exporter en CSV/ })).not.toBeInTheDocument()
   })
 })
