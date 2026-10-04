@@ -19,6 +19,12 @@ describe("evaluerProtectionSociale", () => {
       expect(evaluerProtectionSociale("SASU", donnees({ remunerationNette: 4000 }), reglesDeTest)).toMatchObject({ etoiles: 3, trimestres: 2 })
     })
 
+    it("accorde le texte au nombre de trimestres", () => {
+      // 1 600 € nets = 2 000 € bruts : 1 trimestre ; 4 000 € nets : 2 trimestres.
+      expect(evaluerProtectionSociale("SASU", donnees({ remunerationNette: 1600 }), reglesDeTest).resume).toContain(" 1 trimestre de retraite validé sur 4.")
+      expect(evaluerProtectionSociale("SASU", donnees({ remunerationNette: 4000 }), reglesDeTest).resume).toContain(" 2 trimestres de retraite validés sur 4.")
+    })
+
     it("obtient la meilleure note avec 4 trimestres, sans atteindre 5 faute d'assurance chômage", () => {
       // 6 400 € nets = 8 000 € bruts : 4 trimestres.
       const note = evaluerProtectionSociale("SASU", donnees({ remunerationNette: 6400 }), reglesDeTest)

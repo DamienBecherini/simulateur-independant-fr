@@ -143,7 +143,7 @@ describe("calculerEI", () => {
     expect(resultat.cotisationsSociales).toBeCloseTo(1716)
     expect(resultat.revenuNet).toBeCloseTo(284)
     expect(resultat.revenuImposable).toBeCloseTo(320)
-    expect(resultat.warnings).toEqual([expect.stringContaining("Cotisations minimales")])
+    expect(resultat.warnings).toEqual([expect.stringContaining("Cotisations minimales des indépendants appliquées")])
   })
 
   it("utilise par défaut les règles en vigueur", () => {
