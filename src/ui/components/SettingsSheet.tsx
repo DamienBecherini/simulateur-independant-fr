@@ -24,6 +24,7 @@ import { CSS } from "@dnd-kit/utilities"
 import * as SessionService from "@/lib/session-service"
 import { cn } from "@/lib/utils"
 import { POIGNEE_DE_TRI, useTriAccessible } from "../hooks/useTriAccessible"
+import { SauvegardesGroupees } from "./SauvegardesGroupees"
 
 /**
  * Props pour le composant SettingsSheet.
@@ -232,6 +233,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                 <Button onClick={onImport} variant="secondary" className="w-full">
                   <Upload className="mr-2 h-4 w-4" /> Importer une simulation...
                 </Button>
+                <SauvegardesGroupees allSaveSlots={allSaveSlots} slotOrder={slotOrder} setAllSaveSlots={setAllSaveSlots} setSlotOrder={setSlotOrder} />
               </SheetFooter>
             </>
           )}
