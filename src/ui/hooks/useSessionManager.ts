@@ -28,8 +28,6 @@ export function useSessionManager() {
     present: getInitialSessionState(),
     future: []
   })
-
-  const [sessionForSaving, setSessionForSaving] = useState<SessionState>(getInitialSessionState())
   const [allSaveSlots, setAllSaveSlots] = useState<SaveSlot[]>([])
   const [importConfirmation, setImportConfirmation] = useState<{ session: SessionState; report: SanitizationReport } | null>(null)
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({ slotOrder: [] })
@@ -70,14 +68,13 @@ export function useSessionManager() {
 
       // On initialise les états React avec les données chargées et fraîchement synchronisées.
       setHistory({ past: [], present: sessionData, future: [] })
-      setSessionForSaving(sessionData)
       setAllSaveSlots(slotsData)
       setUserPreferences(finalPreferences) // On utilise les préférences potentiellement corrigées.
     })
   }, []) // Le tableau de dépendances vide [] assure que cet effet ne s'exécute qu'une fois.
 
   // Hooks pour la sauvegarde automatique décalée (debounced).
-  useDebouncedSave(sessionForSaving, 1000, window.api.saveCurrentSession)
+  useDebouncedSave(history.present, 1000, window.api.saveCurrentSession)
   useDebouncedSave(userPreferences, 1000, window.api.saveUserPreferences)
 
   // Fonction pour mettre à jour l'état de la session tout en gérant l'historique.
@@ -93,7 +90,6 @@ export function useSessionManager() {
         future: []
       }
     })
-    setSessionForSaving(prev => (typeof newSession === "function" ? newSession(prev) : newSession))
   }, [])
 
   // Fonctions pour annuler (Undo) et rétablir (Redo).
@@ -135,10 +131,9 @@ export function useSessionManager() {
         monthlyData: slotToLoad.monthlyData
       }
       setHistory({ past: [], present: sessionFromSlot, future: [] })
-      setSessionForSaving(sessionFromSlot)
       setLoadedSlotId(slotToLoad.id)
     },
-    [setHistory, setSessionForSaving, setLoadedSlotId]
+    [setHistory, setLoadedSlotId]
   )
 
   // Fonctions pour gérer le flux d'importation de fichier.
@@ -150,7 +145,6 @@ export function useSessionManager() {
         setImportConfirmation({ session: sessionToLoad, report: result.report })
       } else {
         setHistory({ past: [], present: sessionToLoad, future: [] })
-        setSessionForSaving(sessionToLoad)
         setLoadedSlotId(null)
       }
     }
@@ -159,7 +153,6 @@ export function useSessionManager() {
   const proceedWithImport = () => {
     if (importConfirmation) {
       setHistory({ past: [], present: importConfirmation.session, future: [] })
-      setSessionForSaving(importConfirmation.session)
       setImportConfirmation(null)
       setLoadedSlotId(null)
     }
@@ -170,7 +163,6 @@ export function useSessionManager() {
   // Fonction pour réinitialiser la session de travail à un état vierge.
   const handleResetSession = () => {
     setHistory({ past: [], present: getInitialSessionState(), future: [] })
-    setSessionForSaving(getInitialSessionState())
     setLoadedSlotId(null)
   }
 
