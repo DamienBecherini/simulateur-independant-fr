@@ -1,0 +1,47 @@
+name: Tests de bout en bout
+
+# Plus lents que les tests unitaires : lancés sur main et à la demande, pas à chaque push de branche.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  playwright:
+    name: Playwright (application Electron)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      # Electron a besoin d'un affichage : xvfb-run fournit un serveur X virtuel.
+      - name: Compiler l'application et lancer les tests de bout en bout
+        run: xvfb-run --auto-servernum npm run test:e2e
+
+      - name: Publier le rapport
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-e2e
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14
