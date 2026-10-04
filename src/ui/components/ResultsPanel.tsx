@@ -1,7 +1,7 @@
 // src/ui/components/ResultsPanel.tsx
 
 import { Button } from "@/components/ui/button"
-import type { Entity, SimulationReport } from "@/types"
+import type { Entity, EntityResult, SimulationReport } from "@/types"
 import { Loader2, PlayCircle } from "lucide-react"
 
 type ResultsPanelProps = {
@@ -14,6 +14,16 @@ type ResultsPanelProps = {
 
 function formatMoney(n: number): string {
   return n.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €"
+}
+
+/**
+ * Part du net dans la poche par rapport au chiffre d'affaires (ex. « 62 % du CA »).
+ * Sans objet pour une personne physique ou quand le CA est nul.
+ */
+function netShareOfRevenue(er: EntityResult): string | null {
+  if (er.type === "person" || er.chiffreAffaires <= 0) return null
+  const share = er.netDansLaPoche / er.chiffreAffaires
+  return `${share.toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 0 })} du CA`
 }
 
 function entityLabel(entities: Entity[], id: string): string {
@@ -79,7 +89,10 @@ export function ResultsPanel({ entities, report, loading, error, onRunSimulation
                     </div>
                     <div className="flex justify-between gap-2">
                       <dt className="text-slate-500 dark:text-slate-400">Net dans la poche</dt>
-                      <dd className="tabular-nums font-medium text-emerald-700 dark:text-emerald-400">{formatMoney(er.netDansLaPoche)}</dd>
+                      <dd className="text-right tabular-nums font-medium text-emerald-700 dark:text-emerald-400">
+                        {formatMoney(er.netDansLaPoche)}
+                        {netShareOfRevenue(er) ? <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">{netShareOfRevenue(er)}</span> : null}
+                      </dd>
                     </div>
                     <div className="flex justify-between gap-2">
                       <dt className="text-slate-500 dark:text-slate-400">Impôts et cotisations (approx.)</dt>
