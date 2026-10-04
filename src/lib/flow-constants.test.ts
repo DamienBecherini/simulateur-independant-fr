@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
-import { flowTypeLabels } from "@/lib/flow-constants"
+import { flowTypeLabels, flowTypeShortLabels, flowTypesByEntityType, isExpenseFlowType, isOutgoingFlowType } from "@/lib/flow-constants"
 import { cn } from "@/lib/utils"
 import { FinancialFlowSchema } from "@/types"
 
@@ -41,5 +41,33 @@ describe("cn", () => {
 
   it("résout les conflits Tailwind au profit de la dernière classe", () => {
     expect(cn("p-2 text-sm", "p-4")).toBe("text-sm p-4")
+  })
+})
+
+describe("classement des types de flux", () => {
+  it("fournit un libellé court pour chaque type de flux du schéma", () => {
+    expect(Object.keys(flowTypeShortLabels).sort()).toEqual([...typesDeFlux].sort())
+  })
+
+  it("distingue les dépenses des autres sorties d'argent", () => {
+    expect(isExpenseFlowType("deductible_expense")).toBe(true)
+    expect(isExpenseFlowType("director_remuneration")).toBe(false)
+    expect(isOutgoingFlowType("director_remuneration")).toBe(true)
+    expect(isOutgoingFlowType("dividends_payment")).toBe(true)
+    expect(isOutgoingFlowType("salary")).toBe(false)
+  })
+
+  it("ne propose à chaque type d'entité que des types de flux du schéma, sans doublon", () => {
+    for (const types of Object.values(flowTypesByEntityType)) {
+      expect(types.length).toBeGreaterThan(0)
+      expect(new Set(types).size).toBe(types.length)
+      expect(types.every(type => typesDeFlux.includes(type))).toBe(true)
+    }
+  })
+
+  it("réserve les charges déductibles aux sociétés", () => {
+    expect(flowTypesByEntityType.company).toContain("deductible_expense")
+    expect(flowTypesByEntityType.person).not.toContain("deductible_expense")
+    expect(flowTypesByEntityType["micro-entreprise"]).not.toContain("deductible_expense")
   })
 })

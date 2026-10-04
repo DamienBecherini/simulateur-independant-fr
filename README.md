@@ -49,7 +49,7 @@ Le projet est développé avec des assistants IA, sous relecture humaine. Pour l
 
 ## 🚀 Démarrage rapide
 
-Prérequis : Node.js 20 ou supérieur, npm.
+Prérequis : Node.js 22 ou supérieur, npm.
 
 ```sh
 git clone https://github.com/DamienBecherini/simulateur-independant-fr.git
