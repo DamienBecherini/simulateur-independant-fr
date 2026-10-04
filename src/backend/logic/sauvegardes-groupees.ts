@@ -148,7 +148,7 @@ function formeCanonique(valeur: unknown): string {
   if (estObjet(valeur)) {
     const cles = Object.keys(valeur)
       .filter(cle => valeur[cle] !== undefined)
-      .sort()
+      .sort((a, b) => a.localeCompare(b))
     return `{${cles.map(cle => `${JSON.stringify(cle)}:${formeCanonique(valeur[cle])}`).join(",")}}`
   }
   return JSON.stringify(valeur)
