@@ -44,9 +44,13 @@ test("créer une personne et sa micro-entreprise, saisir un chiffre d'affaires, 
     await expect(comparateur.getByRole("columnheader", { name: statut })).toBeVisible()
   }
   await expect(comparateur.getByRole("columnheader", { name: "Micro-entreprise actuel" })).toBeVisible()
-  // La colonne du statut actuel reprend le net du bilan.
-  const ligneNet = comparateur.getByRole("row", { name: /^Net dans la poche/ })
-  await expect(ligneNet).toContainText(`${net.toLocaleString("fr-FR")} €`)
+  // La colonne du statut actuel (micro, 4e colonne) reprend le net du bilan, diminué des frais de fonctionnement
+  // que le comparateur ajoute dans chaque colonne.
+  const cellule = (ligne: RegExp) => comparateur.getByRole("row", { name: ligne }).getByRole("cell").nth(3)
+  await expect(cellule(/^Net dans la poche/)).not.toHaveText("")
+  const fraisMicro = montant(await cellule(/^Frais de fonctionnement/).innerText())
+  expect(fraisMicro).toBeGreaterThan(0)
+  expect(montant(await cellule(/^Net dans la poche/).innerText())).toBe(net - fraisMicro)
 })
 
 test("Ctrl+Z annule la dernière modification et Ctrl+Y la rétablit", async ({ dossierDonnees, lancer }) => {
