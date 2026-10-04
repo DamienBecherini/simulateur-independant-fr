@@ -47,6 +47,7 @@ describe("createCompany", () => {
       type: "company",
       name: "Ma SASU",
       legalStatus: "SASU",
+      capitalSocial: 1000,
       avatar: { type: "icon", value: "Briefcase", color: "#ef4444" },
       locked: false
     })
@@ -58,12 +59,25 @@ describe("createCompany", () => {
       type: "company",
       name: "Mon EURL",
       legalStatus: "EURL",
+      capitalSocial: 1000,
       avatar: { type: "icon", value: "Building", color: "#22c55e" },
       locked: false
     })
   })
 
-  it.each(["SASU", "EURL"] as const)("produit une %s conforme au schéma", statut => {
+  it("crée une entreprise individuelle, sans capital social", () => {
+    expect(createCompany("EI")).toEqual({
+      id: idAvecPrefixe("company"),
+      type: "company",
+      name: "Mon entreprise individuelle",
+      legalStatus: "EI",
+      capitalSocial: 0,
+      avatar: { type: "icon", value: "User", color: "#8b5cf6" },
+      locked: false
+    })
+  })
+
+  it.each(["SASU", "EURL", "EI"] as const)("produit une %s conforme au schéma", statut => {
     const societe = createCompany(statut)
 
     expect(CompanySchema.parse(societe)).toEqual(societe)

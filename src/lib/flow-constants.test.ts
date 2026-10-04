@@ -2,7 +2,8 @@
 
 import { describe, expect, it } from "vitest"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
-import { flowTypeLabels, flowTypeShortLabels, flowTypesByEntityType, isExpenseFlowType, isOutgoingFlowType } from "@/lib/flow-constants"
+import { flowTypeLabels, flowTypeShortLabels, flowTypesByEntityType, getFlowTypesForEntity, isExpenseFlowType, isOutgoingFlowType } from "@/lib/flow-constants"
+import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
 import { cn } from "@/lib/utils"
 import { FinancialFlowSchema } from "@/types"
 
@@ -63,6 +64,13 @@ describe("classement des types de flux", () => {
       expect(new Set(types).size).toBe(types.length)
       expect(types.every(type => typesDeFlux.includes(type))).toBe(true)
     }
+  })
+
+  it("ne propose ni rémunération de dirigeant ni dividendes à une entreprise individuelle", () => {
+    expect(getFlowTypesForEntity(createCompany("EI"))).toEqual(["ca_services", "ca_vente", "deductible_expense"])
+    expect(getFlowTypesForEntity(createCompany("SASU"))).toBe(flowTypesByEntityType.company)
+    expect(getFlowTypesForEntity(createMicroEntreprise())).toBe(flowTypesByEntityType["micro-entreprise"])
+    expect(getFlowTypesForEntity(createPerson())).toBe(flowTypesByEntityType.person)
   })
 
   it("réserve les charges déductibles aux sociétés", () => {

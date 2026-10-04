@@ -18,7 +18,7 @@ export default defineConfig({
       reportsDirectory: "coverage",
       // La couverture ne porte que sur la logique pure : moteur fiscal et utilitaires de l'interface.
       include: ["src/backend/logic/**/*.ts", "src/lib/**/*.ts"],
-      exclude: ["**/*.test.ts"],
+      exclude: ["**/*.test.ts", "src/backend/logic/testing/**"],
       // Seuils bloquants, fixés à la dizaine inférieure de la couverture réellement atteinte.
       thresholds: {
         statements: 90,

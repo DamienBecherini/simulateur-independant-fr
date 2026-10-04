@@ -8,6 +8,7 @@ const defaultColors = {
   person: "#3b82f6",
   sasu: "#ef4444",
   eurl: "#22c55e",
+  ei: "#8b5cf6",
   micro: "#f97316"
 }
 
@@ -25,22 +26,26 @@ export function createPerson(): Person {
   }
 }
 
+// Valeurs par défaut propres à chaque statut. Une entreprise individuelle n'a pas de capital social.
+const companyDefaults: Record<Company["legalStatus"], { name: string; icon: string; color: string; capitalSocial: number }> = {
+  SASU: { name: "Ma SASU", icon: "Briefcase", color: defaultColors.sasu, capitalSocial: 1000 },
+  EURL: { name: "Mon EURL", icon: "Building", color: defaultColors.eurl, capitalSocial: 1000 },
+  EI: { name: "Mon entreprise individuelle", icon: "User", color: defaultColors.ei, capitalSocial: 0 }
+}
+
 /**
- * Crée une nouvelle entité Company (SASU ou EURL) avec des valeurs par défaut.
- * @param legalStatus - Le statut juridique de la société.
+ * Crée une nouvelle entité Company (SASU, EURL ou entreprise individuelle au réel) avec des valeurs par défaut.
+ * @param legalStatus - Le statut juridique de l'activité.
  */
-export function createCompany(legalStatus: "SASU" | "EURL"): Company {
-  const isSASU = legalStatus === "SASU"
+export function createCompany(legalStatus: Company["legalStatus"]): Company {
+  const defaults = companyDefaults[legalStatus]
   return {
     id: createId("company"),
     type: "company",
-    name: isSASU ? "Ma SASU" : "Mon EURL",
+    name: defaults.name,
     legalStatus: legalStatus,
-    avatar: {
-      type: "icon",
-      value: isSASU ? "Briefcase" : "Building",
-      color: isSASU ? defaultColors.sasu : defaultColors.eurl
-    },
+    capitalSocial: defaults.capitalSocial,
+    avatar: { type: "icon", value: defaults.icon, color: defaults.color },
     locked: false
   }
 }

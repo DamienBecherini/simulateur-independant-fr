@@ -37,11 +37,10 @@ function EntitiesManager({ sessionName, entities, setEntities, relationships, se
       case "MicroEntreprise":
         newEntity = createMicroEntreprise()
         break
+      case "EI":
       case "SASU":
-        newEntity = createCompany("SASU")
-        break
       case "EURL":
-        newEntity = createCompany("EURL")
+        newEntity = createCompany(type)
         break
     }
     setEntities(prevEntities => [...prevEntities, newEntity])

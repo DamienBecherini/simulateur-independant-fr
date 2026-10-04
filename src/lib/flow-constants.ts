@@ -68,10 +68,19 @@ export const isOutgoingFlowType = (type: FlowType): boolean => outgoingFlowTypes
  * Types de flux proposés à la saisie selon le type d'entité.
  * - Personne : revenus classiques et dépenses non déductibles.
  * - Société (SASU/EURL) : les dépenses sont des charges déductibles.
+ * - Entreprise individuelle au réel : comme une société, sans rémunération de dirigeant ni dividendes.
  * - Micro-entreprise (régime forfaitaire) : les dépenses ne sont pas déductibles.
  */
 export const flowTypesByEntityType: Record<Entity["type"], ReadonlyArray<FlowType>> = {
   person: ["are", "salary", "other_taxable_income", "expense"],
   company: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
   "micro-entreprise": ["ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "expense"]
+}
+
+const individualBusinessFlowTypes: ReadonlyArray<FlowType> = ["ca_services", "ca_vente", "deductible_expense"]
+
+/** Types de flux proposés à la saisie pour une entité donnée, selon son type et son statut juridique. */
+export function getFlowTypesForEntity(entity: Entity): ReadonlyArray<FlowType> {
+  if (entity.type === "company" && entity.legalStatus === "EI") return individualBusinessFlowTypes
+  return flowTypesByEntityType[entity.type]
 }

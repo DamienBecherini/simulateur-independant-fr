@@ -2,10 +2,10 @@
 
 // import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Briefcase, Building, Store } from "lucide-react"
+import { Briefcase, Building, Store, User } from "lucide-react"
 
 // On définit un type pour les choix possibles, qui correspond à nos types d'entités "business"
-export type BusinessEntityType = "MicroEntreprise" | "SASU" | "EURL"
+export type BusinessEntityType = "MicroEntreprise" | "EI" | "SASU" | "EURL"
 
 interface SelectEntityTypeModalProps {
   isOpen: boolean
@@ -14,7 +14,8 @@ interface SelectEntityTypeModalProps {
 }
 
 const entityOptions = [
-  { type: "MicroEntreprise" as BusinessEntityType, label: "Micro-Entreprise", description: "Entreprise individuelle au régime simplifié.", icon: <Store className="h-8 w-8 text-blue-500" /> },
+  { type: "MicroEntreprise" as BusinessEntityType, label: "Micro-Entreprise", description: "Entreprise individuelle au régime simplifié, charges forfaitaires.", icon: <Store className="h-8 w-8 text-blue-500" /> },
+  { type: "EI" as BusinessEntityType, label: "Entreprise individuelle (au réel)", description: "Charges réelles déduites, bénéfice imposé à l'impôt sur le revenu.", icon: <User className="h-8 w-8 text-violet-500" /> },
   { type: "SASU" as BusinessEntityType, label: "SASU (à l'IS)", description: "Société par actions, dirigeant assimilé-salarié.", icon: <Briefcase className="h-8 w-8 text-red-500" /> },
   { type: "EURL" as BusinessEntityType, label: "EURL (à l'IS)", description: "Société à responsabilité limitée, gérant TNS.", icon: <Building className="h-8 w-8 text-green-500" /> }
 ]

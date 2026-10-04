@@ -1,148 +1,135 @@
 // src/ui/components/ResultsPanel.tsx
 
-import { Button } from "@/components/ui/button"
-import type { Entity, EntityResult, SimulationReport } from "@/types"
-import { Loader2, PlayCircle } from "lucide-react"
+import type { ActivityResult, Entity, FoyerFiscalResult, SimulationReport } from "@/types"
+import type { ReactNode } from "react"
 
 type ResultsPanelProps = {
   entities: Entity[]
   report: SimulationReport | null
-  loading: boolean
   error: string | null
-  onRunSimulation: () => void
 }
 
 function formatMoney(n: number): string {
   return n.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €"
 }
 
-/**
- * Part du net dans la poche par rapport au chiffre d'affaires (ex. « 62 % du CA »).
- * Sans objet pour une personne physique ou quand le CA est nul.
- */
-function netShareOfRevenue(er: EntityResult): string | null {
-  if (er.type === "person" || er.chiffreAffaires <= 0) return null
-  const share = er.netDansLaPoche / er.chiffreAffaires
+/** Part de ce que l'activité verse aux personnes par rapport à son chiffre d'affaires (ex. « 62 % du CA »). */
+function shareOfRevenue(activity: ActivityResult): string | null {
+  if (activity.chiffreAffaires <= 0) return null
+  const share = activity.revenuVerse / activity.chiffreAffaires
   return `${share.toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 0 })} du CA`
 }
 
-function entityLabel(entities: Entity[], id: string): string {
-  return entities.find(e => e.id === id)?.name ?? id
+const dividendOptionLabels: Record<NonNullable<FoyerFiscalResult["optionDividendes"]>, string> = {
+  pfu: "Dividendes imposés au prélèvement forfaitaire, plus favorable ici que le barème.",
+  bareme: "Dividendes imposés au barème après abattement, plus favorable ici que le prélèvement forfaitaire."
 }
 
-function entityTypeLabel(type: Entity["type"]): string {
-  switch (type) {
-    case "person":
-      return "Personne"
-    case "company":
-      return "Société"
-    case "micro-entreprise":
-      return "Micro-entreprise"
-    default:
-      return type
-  }
+/** Une ligne « libellé — montant » d'une carte de résultats. */
+function Row({ label, value, hint, strong = false }: { label: string; value: string; hint?: string | null; strong?: boolean }) {
+  return (
+    <div className="flex justify-between gap-2">
+      <dt className={strong ? "font-medium text-slate-800 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}>{label}</dt>
+      <dd className={`text-right tabular-nums ${strong ? "font-semibold text-emerald-700 dark:text-emerald-400" : "font-medium"}`}>
+        {value}
+        {hint ? <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">{hint}</span> : null}
+      </dd>
+    </div>
+  )
 }
 
-export function ResultsPanel({ entities, report, loading, error, onRunSimulation }: ResultsPanelProps) {
+function Card({ title, subtitle, warnings, children }: { title: string; subtitle: string; warnings: string[]; children: ReactNode }) {
+  return (
+    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+      <header className="mb-2 border-b border-slate-100 pb-2 dark:border-slate-800">
+        <p className="font-semibold text-slate-900 dark:text-slate-50">{title}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
+      </header>
+      {children}
+      {warnings.length > 0 ? (
+        <ul className="mt-3 list-inside list-disc text-xs text-amber-800 dark:text-amber-200/90">
+          {warnings.map((warning, i) => (
+            <li key={i}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
+    </article>
+  )
+}
+
+function FoyerCard({ foyer, entities }: { foyer: FoyerFiscalResult; entities: Entity[] }) {
+  const members = foyer.personIds.map(id => entities.find(e => e.id === id)?.name ?? id).join(", ")
+  const parts = foyer.totalParts.toLocaleString("fr-FR")
+
+  return (
+    <Card title={members} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
+      <dl className="space-y-1 text-sm">
+        <Row label="Revenus encaissés" value={formatMoney(foyer.revenusEncaisses)} />
+        <Row label="Impôt sur le revenu" value={`− ${formatMoney(foyer.impotSurLeRevenu)}`} hint={`sur ${formatMoney(foyer.revenuImposableGlobal)} imposables au barème`} />
+        {foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(foyer.prelevementsSociaux)}`} /> : null}
+        <Row label="Net après impôts" value={formatMoney(foyer.netApresImpots)} strong />
+        {foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={formatMoney(foyer.netApresImpots - foyer.depenses)} hint={`${formatMoney(foyer.depenses)} de dépenses`} /> : null}
+      </dl>
+      {foyer.optionDividendes ? <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{dividendOptionLabels[foyer.optionDividendes]}</p> : null}
+    </Card>
+  )
+}
+
+function ActivityCard({ activity }: { activity: ActivityResult }) {
+  const isMicro = activity.type === "micro-entreprise"
+
+  return (
+    <Card title={activity.name} subtitle={activity.statut} warnings={activity.warnings}>
+      <dl className="space-y-1 text-sm">
+        <Row label="Chiffre d'affaires" value={formatMoney(activity.chiffreAffaires)} />
+        {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${formatMoney(activity.charges)}`} /> : null}
+        <Row label="Cotisations sociales" value={`− ${formatMoney(activity.cotisationsSociales)}`} />
+        {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(activity.impotSocietes)}`} /> : null}
+        {activity.resultatConserve !== 0 ? <Row label={activity.resultatConserve > 0 ? "Conservé dans la société" : "Déficit de la société"} value={formatMoney(activity.resultatConserve)} /> : null}
+        <Row label="Versé avant impôt sur le revenu" value={formatMoney(activity.revenuVerse)} hint={shareOfRevenue(activity)} strong />
+      </dl>
+    </Card>
+  )
+}
+
+export function ResultsPanel({ entities, report, error }: ResultsPanelProps) {
   return (
     <section className="mt-12 space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div>
         <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Résultats de simulation</h2>
-        <Button type="button" onClick={onRunSimulation} disabled={loading} className="gap-2">
-          {loading ? <Loader2 className="size-4 animate-spin" /> : <PlayCircle className="size-4" />}
-          Lancer la simulation
-        </Button>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Recalculés à chaque modification{report ? `, avec les règles fiscales ${report.annee}` : ""}. Estimations simplifiées, non validées par un expert-comptable.
+        </p>
       </div>
 
-      {error ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p>
-      ) : null}
+      {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 
-      {!report && !loading && !error ? (
-        <p className="text-sm text-slate-500 dark:text-slate-400">Cliquez sur « Lancer la simulation » pour agréger la grille mensuelle et calculer les estimations (sociétés, micro, foyers).</p>
-      ) : null}
+      {report && report.foyers.length + report.activities.length === 0 ? <p className="text-sm text-slate-500 dark:text-slate-400">Ajoutez une personne ou une activité pour voir les résultats.</p> : null}
 
-      {report ? (
-        <div className="space-y-8">
+      {report && report.foyers.length > 0 ? (
+        <div className="space-y-3">
           <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Net global (sociétés + micro-entreprises)</p>
-            <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-50">{formatMoney(report.globalNet)}</p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Somme des « net dans la poche » des entités d'activité ; les personnes physiques ne sont pas incluses pour éviter le double comptage avec les rémunérations.</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Net après impôts, tous foyers confondus</p>
+            <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-50">{formatMoney(report.totalNetApresImpots)}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Ce qu'il reste aux personnes sur l'année, une fois payés les cotisations, l'impôt sur les sociétés, l'impôt sur le revenu et les prélèvements sociaux.</p>
           </div>
-
-          <div>
-            <h3 className="mb-3 text-lg font-medium text-slate-800 dark:text-slate-100">Par entité</h3>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {report.entities.map(er => (
-                <article
-                  key={er.entityId}
-                  className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
-                >
-                  <header className="mb-2 border-b border-slate-100 pb-2 dark:border-slate-800">
-                    <p className="font-semibold text-slate-900 dark:text-slate-50">{er.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{entityTypeLabel(er.type)}</p>
-                  </header>
-                  <dl className="space-y-1 text-sm">
-                    <div className="flex justify-between gap-2">
-                      <dt className="text-slate-500 dark:text-slate-400">Chiffre d'affaires</dt>
-                      <dd className="tabular-nums font-medium">{formatMoney(er.chiffreAffaires)}</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt className="text-slate-500 dark:text-slate-400">Net dans la poche</dt>
-                      <dd className="text-right tabular-nums font-medium text-emerald-700 dark:text-emerald-400">
-                        {formatMoney(er.netDansLaPoche)}
-                        {netShareOfRevenue(er) ? <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">{netShareOfRevenue(er)}</span> : null}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt className="text-slate-500 dark:text-slate-400">Impôts et cotisations (approx.)</dt>
-                      <dd className="tabular-nums">{formatMoney(er.impotsEtCotisations)}</dd>
-                    </div>
-                  </dl>
-                  {er.warnings.length > 0 ? (
-                    <ul className="mt-3 list-inside list-disc text-xs text-amber-800 dark:text-amber-200/90">
-                      {er.warnings.map((w, i) => (
-                        <li key={i}>{w}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </article>
-              ))}
-            </div>
+          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {report.foyers.map(foyer => (
+              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} entities={entities} />
+            ))}
           </div>
+        </div>
+      ) : null}
 
-          {report.foyers.length > 0 ? (
-            <div>
-              <h3 className="mb-3 text-lg font-medium text-slate-800 dark:text-slate-100">Foyers fiscaux (synthèse)</h3>
-              <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                <table className="w-full min-w-[32rem] text-left text-sm">
-                  <thead className="bg-slate-100 dark:bg-slate-800/80">
-                    <tr>
-                      <th className="px-3 py-2 font-medium text-slate-700 dark:text-slate-200">Membres</th>
-                      <th className="px-3 py-2 font-medium text-slate-700 dark:text-slate-200">Parts</th>
-                      <th className="px-3 py-2 font-medium text-slate-700 dark:text-slate-200">Revenu imposable (agrégé)</th>
-                      <th className="px-3 py-2 font-medium text-slate-700 dark:text-slate-200">IR (barème)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.foyers.map((f, idx) => (
-                      <tr key={idx} className="border-t border-slate-200 dark:border-slate-700">
-                        <td className="px-3 py-2 text-slate-800 dark:text-slate-200">
-                          {f.personIds.map(id => entityLabel(entities, id)).join(", ")}
-                        </td>
-                        <td className="px-3 py-2 tabular-nums">{f.totalParts}</td>
-                        <td className="px-3 py-2 tabular-nums">{formatMoney(f.revenuImposableGlobal)}</td>
-                        <td className="px-3 py-2 tabular-nums font-medium">{formatMoney(f.impotSurLeRevenu)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                L'IR au niveau foyer est indicatif (revenus directs personnes + rémunérations routées + base micro hors VFL). Les modules société/micro intègrent déjà une part d'IR dans leurs nets ; en cas de foyer multi-activités, écarts possibles jusqu'à refactor du moteur.
-              </p>
-            </div>
-          ) : null}
+      {report && report.activities.length > 0 ? (
+        <div className="space-y-3">
+          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par activité</h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {report.activities.map(activity => (
+              <ActivityCard key={activity.entityId} activity={activity} />
+            ))}
+          </div>
         </div>
       ) : null}
     </section>

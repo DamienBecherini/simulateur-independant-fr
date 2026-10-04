@@ -146,7 +146,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                 </Label>
                 <Select
                   value={(localEntity as Company).legalStatus}
-                  onValueChange={(value: "SASU" | "EURL") =>
+                  onValueChange={(value: Company["legalStatus"]) =>
                     setFormData(prev => {
                       if (prev.entity?.type !== "company") return prev
                       return { ...prev, entity: { ...prev.entity, legalStatus: value } }
@@ -159,8 +159,33 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                   <SelectContent>
                     <SelectItem value="SASU">SASU</SelectItem>
                     <SelectItem value="EURL">EURL</SelectItem>
+                    <SelectItem value="EI">Entreprise individuelle (au réel)</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+            {localEntity.type === "company" && localEntity.legalStatus === "EURL" && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="capitalSocial" className="text-right">
+                  Capital social
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="capitalSocial"
+                    name="capitalSocial"
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={localEntity.capitalSocial}
+                    onChange={e =>
+                      setFormData(prev => {
+                        if (prev.entity?.type !== "company") return prev
+                        return { ...prev, entity: { ...prev.entity, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) } }
+                      })
+                    }
+                  />
+                  <p className="mt-1 text-xs text-slate-500">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
+                </div>
               </div>
             )}
             <div className="grid grid-cols-4 items-center gap-4">

@@ -18,5 +18,5 @@
   // On inclut les fichiers du backend, notre nouveau fichier de types, et le fichier de déclarations globales.
   "include": ["./**/*", "../types.ts", "../globals.d.ts"],
   // Les tests ne sont pas embarqués dans l'application : ils sont vérifiés à part (tsconfig.test.json).
-  "exclude": ["./**/*.test.ts"]
+  "exclude": ["./**/*.test.ts", "./logic/testing/**"]
 }

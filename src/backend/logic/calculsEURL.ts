@@ -1,49 +1,29 @@
 // src/backend/logic/calculsEURL.ts
 
-// MODIFIÉ : Syntaxe d'import avec 'with'
-import config from "../config.json" with { type: "json" }
-import { calculerIR } from "./calculsIR.js"
-import type { SimulationInputs } from "@/types.js"
+import { calculerResultatSociete, type EntreesSociete, type ResultatSociete } from "./calculsSociete.js"
+import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 
-export function simulerEURL(inputs: SimulationInputs) {
-  const { chiffreAffaires = 0, chargesDeductibles = 0, remunerationNetteVisee = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1, capitalSocial = 0 } = inputs
+export interface EntreesEURL extends EntreesSociete {
+  capitalSocial: number
+}
 
-  const cotisationsSocialesRemu = remunerationNetteVisee * config.EURL.cotisations_tns.taux_approx_sur_remuneration
-  const coutTotalRemuneration = remunerationNetteVisee + cotisationsSocialesRemu
-  const beneficeAvantIS = chiffreAffaires - chargesDeductibles - coutTotalRemuneration
-  let impotSocietes = 0
-  if (beneficeAvantIS > 0) {
-    const beneficePartTauxReduit = Math.min(beneficeAvantIS, config.SASU.IS.plafond_reduit)
-    const beneficePartTauxNormal = beneficeAvantIS - beneficePartTauxReduit
-    impotSocietes = beneficePartTauxReduit * config.SASU.IS.taux_reduit + beneficePartTauxNormal * config.SASU.IS.taux_normal
-  }
-  const beneficeApresIS = beneficeAvantIS > 0 ? beneficeAvantIS - impotSocietes : 0
-  const dividendesBruts = beneficeApresIS
-  const seuilDividendesSoumisPS = capitalSocial * 0.1
-  const partDividendesPourPS = Math.min(dividendesBruts, seuilDividendesSoumisPS)
-  const partDividendesPourTNS = dividendesBruts - partDividendesPourPS
-  const cotisationsTNSsurDividendes = partDividendesPourTNS * config.EURL.cotisations_tns.taux_approx_sur_remuneration
-  const dividendesNetsPartTNS = partDividendesPourTNS - cotisationsTNSsurDividendes
-  const prelevementsSociaux = partDividendesPourPS * config.SASU.dividendes.pru_taux_ps
-  const impotDividendesPFU = partDividendesPourPS * config.SASU.dividendes.pru_taux_ir
-  const dividendesNetsPartPS_PFU = partDividendesPourPS - prelevementsSociaux - impotDividendesPFU
-  const dividendesImposablesBareme = partDividendesPourPS * 0.6
-  const revenuImposableBase = remunerationNetteVisee + autresRevenusImposablesFoyer + dividendesNetsPartTNS
-  const irTotalOptionBareme = calculerIR({ revenuNetGlobalImposable: revenuImposableBase + dividendesImposablesBareme, partsFiscales: partsFiscales })
-  const irSansDividendesPartPS = calculerIR({ revenuNetGlobalImposable: revenuImposableBase, partsFiscales: partsFiscales })
-  const surcoutIRDividendesBareme = irTotalOptionBareme - irSansDividendesPartPS
-  const dividendesNetsPartPS_Bareme = partDividendesPourPS - prelevementsSociaux - surcoutIRDividendesBareme
-  const meilleureOptionDividendesPartPS = Math.max(dividendesNetsPartPS_PFU, dividendesNetsPartPS_Bareme)
-  const dividendesNetsTotal = dividendesNetsPartTNS + meilleureOptionDividendesPartPS
-  const revenuImposableTotalActivite = remunerationNetteVisee + dividendesNetsPartTNS
-  const irTotalRemuEtDivTNS = calculerIR({ revenuNetGlobalImposable: revenuImposableTotalActivite + autresRevenusImposablesFoyer, partsFiscales: partsFiscales })
-  const irSansActivite = calculerIR({ revenuNetGlobalImposable: autresRevenusImposablesFoyer, partsFiscales: partsFiscales })
-  const surcoutIRRemu = irTotalRemuEtDivTNS - irSansActivite
-  const netDansLaPoche = remunerationNetteVisee + dividendesNetsTotal - surcoutIRRemu
+/**
+ * EURL à l'IS : le gérant associé unique est travailleur non salarié (TNS).
+ * Ses cotisations sont approchées par un taux sur la rémunération nette. La part des dividendes
+ * qui dépasse 10 % du capital social supporte ces mêmes cotisations au lieu des prélèvements sociaux.
+ */
+export function calculerEURL(entrees: EntreesEURL, regles: ReglesFiscales = reglesEnVigueur): ResultatSociete {
+  const tauxTNS = regles.TNS.tauxCotisationsSurRevenuNet
+  const resultat = calculerResultatSociete(entrees, entrees.remunerationNette * tauxTNS, regles.IS)
+
+  const seuil = entrees.capitalSocial * regles.EURL.seuilDividendesPartDuCapital
+  const dividendesSoumisPS = Math.min(resultat.dividendesVerses, seuil)
+  const cotisationsSurDividendes = (resultat.dividendesVerses - dividendesSoumisPS) * tauxTNS
 
   return {
-    statut: "EURL (IS)",
-    chiffreAffaires,
-    netDansLaPoche: Math.round(netDansLaPoche)
+    ...resultat,
+    dividendesSoumisPS,
+    cotisationsSurDividendes,
+    cotisationsSociales: resultat.cotisationsSociales + cotisationsSurDividendes
   }
 }

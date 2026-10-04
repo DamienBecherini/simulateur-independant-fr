@@ -6,7 +6,7 @@ import { sanitizeSlots, sanitizeStateAndFillDefaults } from "./data-sanitizer.js
 const avatar = { type: "initials", value: "AB", color: "#3b82f6" }
 
 const alice = { id: "p1", type: "person", name: "Alice", fiscalParts: 1, avatar, locked: false }
-const sasu = { id: "c1", type: "company", name: "Ma SASU", legalStatus: "SASU", avatar, locked: false }
+const sasu = { id: "c1", type: "company", name: "Ma SASU", legalStatus: "SASU", capitalSocial: 1000, avatar, locked: false }
 
 /** Grille de 12 mois dont seul janvier porte des flux. */
 function grille(fluxDeJanvier: unknown[] = []) {
@@ -44,7 +44,7 @@ describe("sanitizeStateAndFillDefaults", () => {
 
       expect(safeState.entities).toEqual([
         { id: "p1", type: "person", name: "Nouvelle Personne", fiscalParts: 1, avatar, locked: false },
-        { id: "c1", type: "company", name: "Nouvelle Société", legalStatus: "EURL", avatar, locked: false },
+        { id: "c1", type: "company", name: "Nouvelle Société", legalStatus: "EURL", capitalSocial: 1000, avatar, locked: false },
         { id: "m1", type: "micro-entreprise", name: "Nouvelle Micro-Entreprise", beneficieACRE: false, opteVFL: false, avatar, locked: false }
       ])
     })

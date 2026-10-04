@@ -24,7 +24,9 @@ export const CompanySchema = z.object({
   id: z.string(),
   type: z.literal("company"),
   name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle Société"),
-  legalStatus: z.enum(["SASU", "EURL"]),
+  legalStatus: z.enum(["SASU", "EURL", "EI"]),
+  // Sert au calcul des dividendes d'EURL soumis aux cotisations sociales (part dépassant 10 % du capital).
+  capitalSocial: z.number().min(0).default(1000),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
 })
@@ -122,49 +124,64 @@ export type UserPreferences = z.infer<typeof UserPreferencesSchema>
 // == 3. TYPES NON LIÉS À LA VALIDATION (API, ÉTATS VOLATILES, ETC.)
 // ===================================================================================
 
-export interface SimulationInputs {
-  ca_services_bic?: number
-  ca_services_bnc?: number
-  ca_vente?: number
-  chiffreAffaires?: number
-  chargesDeductibles?: number
-  remunerationNetteVisee?: number
-  capitalSocial?: number
-  autresRevenusImposablesFoyer?: number
-  partsFiscales?: number
-  beneficieACRE?: boolean
-  opteVFL?: boolean
-}
-
-export interface SimulationResult {
-  statut: string
-  chiffreAffaires: number
-  netDansLaPoche: number
-  warning?: string
-  error?: string
-}
-
-export interface EntityResult {
+/** Résultat annuel d'une activité (société, entreprise individuelle ou micro-entreprise), avant impôt sur le revenu. */
+export interface ActivityResult {
   entityId: string
   name: string
-  type: Entity["type"]
+  type: Exclude<Entity["type"], "person">
+  /** Statut affiché : « SASU », « EURL », « EI au réel » ou « Micro-entreprise ». */
+  statut: string
   chiffreAffaires: number
-  netDansLaPoche: number
-  impotsEtCotisations: number
+  /** Charges déductibles (société, EI) ou dépenses non déductibles (micro-entreprise). */
+  charges: number
+  cotisationsSociales: number
+  impotSocietes: number
+  /** Ce que l'activité verse aux personnes sur l'année, avant impôt sur le revenu. */
+  revenuVerse: number
+  /** Bénéfice après IS laissé dans la société (toujours nul hors société à l'IS). */
+  resultatConserve: number
   warnings: string[]
 }
 
+/** Revenus annuels d'une personne, avant impôt sur le revenu. */
+export interface PersonResult {
+  entityId: string
+  name: string
+  /** Salaires, allocations chômage et autres revenus saisis sur la personne. */
+  revenusDirects: number
+  /** Rémunérations, bénéfices et dividendes reçus de ses activités, nets de cotisations. */
+  revenusActivites: number
+  depenses: number
+}
+
 export interface FoyerFiscalResult {
+  /** Déclarants puis enfants rattachés. */
   personIds: string[]
   totalParts: number
+  /** Tout ce que le foyer encaisse sur l'année, avant impôt sur le revenu. */
+  revenusEncaisses: number
+  /** Base soumise au barème, après abattements. */
   revenuImposableGlobal: number
+  /** Impôt au barème, impôt forfaitaire sur les dividendes et versement libératoire. */
   impotSurLeRevenu: number
+  /** Prélèvements sociaux sur les dividendes. */
+  prelevementsSociaux: number
+  /** Imposition des dividendes la plus favorable au foyer ; `null` s'il n'en reçoit pas. */
+  optionDividendes: "pfu" | "bareme" | null
+  netApresImpots: number
+  /** Dépenses personnelles saisies : elles ne réduisent pas l'impôt. */
+  depenses: number
+  warnings: string[]
 }
 
 export interface SimulationReport {
-  entities: EntityResult[]
+  /** Année des règles fiscales appliquées. */
+  annee: number
+  activities: ActivityResult[]
+  persons: PersonResult[]
   foyers: FoyerFiscalResult[]
-  globalNet: number
+  /** Somme des nets après impôts de tous les foyers. */
+  totalNetApresImpots: number
 }
 
 export interface SanitizationReport {

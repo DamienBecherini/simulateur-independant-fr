@@ -34,7 +34,7 @@ export function EntityItem({ entity, allEntities, relationships, onDelete, onTog
           <AvatarDisplay avatar={entity.avatar} />
           <div>
             <p className="font-bold text-lg">{entity.name}</p>
-            <p className="text-sm text-slate-400">{entity.type === "person" ? `Personne physique - Parts: ${entity.fiscalParts}` : `Activité - ${"legalStatus" in entity ? entity.legalStatus : "Micro"}`}</p>
+            <p className="text-sm text-slate-400">{entity.type === "person" ? `Personne physique - Parts: ${entity.fiscalParts}` : `Activité - ${"legalStatus" in entity ? (entity.legalStatus === "EI" ? "EI au réel" : entity.legalStatus) : "Micro"}`}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

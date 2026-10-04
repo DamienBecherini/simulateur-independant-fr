@@ -17,7 +17,6 @@ function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
   const [simulationReport, setSimulationReport] = useState<SimulationReport | null>(null)
-  const [simulationLoading, setSimulationLoading] = useState(false)
   const [simulationError, setSimulationError] = useState<string | null>(null)
 
   // --- MODIFICATION : Récupération des nouveaux états et fonctions du hook ---
@@ -28,18 +27,24 @@ function App() {
     document.body.style.zoom = `${zoomLevel}`
   }, [zoomLevel])
 
-  const handleRunMetaSimulation = useCallback(async () => {
-    setSimulationLoading(true)
-    setSimulationError(null)
-    try {
-      const report = await window.api.runMetaSimulation(currentSession)
-      setSimulationReport(report)
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "La simulation a échoué."
-      setSimulationError(message)
-      setSimulationReport(null)
-    } finally {
-      setSimulationLoading(false)
+  // La simulation est recalculée automatiquement, peu après chaque modification de la session.
+  useEffect(() => {
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const report = await window.api.runMetaSimulation(currentSession)
+        if (cancelled) return
+        setSimulationReport(report)
+        setSimulationError(null)
+      } catch (e) {
+        if (cancelled) return
+        setSimulationError(e instanceof Error ? e.message : "La simulation a échoué.")
+        setSimulationReport(null)
+      }
+    }, 300)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
     }
   }, [currentSession])
 
@@ -55,10 +60,6 @@ function App() {
 
     await window.api.exportState(exportPayload)
   }, [currentSession, simulationReport, simulationError])
-
-  useEffect(() => {
-    setSimulationReport(null)
-  }, [currentSession.entities, currentSession.relationships, currentSession.monthlyData])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -202,13 +203,7 @@ function App() {
 
         <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
 
-        <ResultsPanel
-          entities={currentSession.entities}
-          report={simulationReport}
-          loading={simulationLoading}
-          error={simulationError}
-          onRunSimulation={handleRunMetaSimulation}
-        />
+        <ResultsPanel entities={currentSession.entities} report={simulationReport} error={simulationError} />
       </main>
 
       <Footer />

@@ -1,52 +1,24 @@
 // src/backend/logic/simulation-engine.test.ts
 
 import { describe, expect, it } from "vitest"
+import { reglesEnVigueur } from "./regles.js"
 import { runMetaSimulation } from "./simulation-engine.js"
-import type { Company, Entity, FinancialFlow, MicroEntreprise, Person, Relationship, SessionState, SimulationReport } from "../../types.js"
+import { reglesDeTest } from "./testing/regles-de-test.js"
+import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
+import type { Entity, Relationship, SimulationReport } from "../../types.js"
 
 /*
- * Ces tests ne couvrent que les comportements stables du moteur : agrégation annuelle des flux,
- * regroupement des foyers, routage de la rémunération du dirigeant et avertissements.
- * Les montants de « net dans la poche » et d'impôts des entités ne sont volontairement pas vérifiés ici.
+ * Tous les montants attendus sont calculés à la main avec les règles de test (chiffres ronds) :
+ * barème à 0 / 10 / 30 / 40 % (seuils 10 000, 30 000, 80 000 €), décote 800 € - 50 % de l'impôt,
+ * abattement de 10 % sur les salaires, dividendes à 12 % d'IR forfaitaire et 18 % de prélèvements sociaux.
  */
 
-const avatar = { type: "initials", value: "AB", color: "#3b82f6" } as const
+const simuler = (entities: Entity[], relationships: Relationship[] = [], flux: Flux[] = []) => runMetaSimulation(session(entities, relationships, flux), reglesDeTest)
 
-function personne(id: string, fiscalParts = 1): Person {
-  return { id, type: "person", name: id, fiscalParts, avatar, locked: false }
-}
-
-function societe(id: string, legalStatus: Company["legalStatus"] = "SASU"): Company {
-  return { id, type: "company", name: id, legalStatus, avatar, locked: false }
-}
-
-function micro(id: string, options: Partial<Pick<MicroEntreprise, "beneficieACRE" | "opteVFL">> = {}): MicroEntreprise {
-  return { id, type: "micro-entreprise", name: id, beneficieACRE: false, opteVFL: false, avatar, locked: false, ...options }
-}
-
-function relation(fromId: string, toId: string, type: Relationship["type"]): Relationship {
-  return { id: `${fromId}-${toId}-${type}`, fromId, toId, type }
-}
-
-type Flux = [mois: number, entityId: string, type: FinancialFlow["type"], amount: number]
-
-function session(entities: Entity[], relationships: Relationship[] = [], flux: Flux[] = []): SessionState {
-  const monthlyData: SessionState["monthlyData"] = Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
-  flux.forEach(([mois, entityId, type, amount], index) => {
-    monthlyData[mois].flows.push({ id: `flux-${index}`, label: type, amount, entityId, type })
-  })
-  return { name: "Test", entities, relationships, monthlyData }
-}
-
-/** Le même flux répété sur les 12 mois de l'année. */
-function chaqueMois(entityId: string, type: FinancialFlow["type"], amount: number): Flux[] {
-  return Array.from({ length: 12 }, (_, mois): Flux => [mois, entityId, type, amount])
-}
-
-function resultat(report: SimulationReport, entityId: string) {
-  const entite = report.entities.find(e => e.entityId === entityId)
-  if (!entite) throw new Error(`Entité ${entityId} absente du rapport`)
-  return entite
+function activite(report: SimulationReport, entityId: string) {
+  const resultat = report.activities.find(a => a.entityId === entityId)
+  if (!resultat) throw new Error(`Activité ${entityId} absente du rapport`)
+  return resultat
 }
 
 function foyerDe(report: SimulationReport, personId: string) {
@@ -55,421 +27,362 @@ function foyerDe(report: SimulationReport, personId: string) {
   return foyer
 }
 
-const AVERTISSEMENT_SANS_DIRIGEANT = "Rémunération dirigeant saisie sans relation Président/Gérant vers une personne : non routée vers un foyer."
-const AVERTISSEMENT_PLUSIEURS_DIRIGEANTS = "Plusieurs dirigeants liés : la rémunération est attribuée au premier pour le routage fiscal simplifié."
-const AVERTISSEMENT_DIVIDENDES = "Le flux « versement de dividendes » saisi sur la grille n'est pas encore pris en compte par le moteur (dividendes dérivés du bénéfice)."
-
 describe("runMetaSimulation", () => {
   describe("structure du rapport", () => {
     it("renvoie un rapport vide pour une session vide", () => {
-      expect(runMetaSimulation(session([]))).toEqual({ entities: [], foyers: [], globalNet: 0 })
+      expect(simuler([])).toEqual({ annee: 2000, activities: [], persons: [], foyers: [], totalNetApresImpots: 0 })
     })
 
-    it("produit une ligne par entité, dans l'ordre de la session", () => {
-      const report = runMetaSimulation(session([societe("c1"), personne("p1"), micro("m1"), societe("c2", "EURL")]))
+    it("sépare les activités des personnes, dans l'ordre de la session", () => {
+      const report = simuler([societe("s1"), personne("alice"), micro("m1"), personne("bob")])
 
-      expect(report.entities.map(e => [e.entityId, e.name, e.type])).toEqual([
-        ["c1", "c1", "company"],
-        ["p1", "p1", "person"],
-        ["m1", "m1", "micro-entreprise"],
-        ["c2", "c2", "company"]
-      ])
+      expect(report.activities.map(a => a.entityId)).toEqual(["s1", "m1"])
+      expect(report.persons.map(p => p.entityId)).toEqual(["alice", "bob"])
+      expect(report.foyers).toHaveLength(2)
     })
 
-    it("ne crée aucun foyer quand la session ne contient aucune personne", () => {
-      const report = runMetaSimulation(session([societe("c1"), micro("m1")], [], [[0, "c1", "ca_services", 1000]]))
-
-      expect(report.foyers).toEqual([])
+    it("applique par défaut les règles en vigueur", () => {
+      expect(runMetaSimulation(session([personne("alice")])).annee).toBe(reglesEnVigueur.annee)
     })
   })
 
   describe("agrégation annuelle des flux", () => {
-    it("additionne le chiffre d'affaires d'une société sur les 12 mois", () => {
-      const report = runMetaSimulation(session([societe("c1")], [], chaqueMois("c1", "ca_services", 5000)))
+    it("additionne les flux des douze mois, par entité et par type", () => {
+      const donnees = session([personne("alice"), personne("bob")])
+      donnees.monthlyData.forEach(mois => {
+        mois.flows.push({ id: `a-${mois.month}`, label: "Salaire", amount: 2000, entityId: "alice", type: "salary" })
+        mois.flows.push({ id: `b-${mois.month}`, label: "Chômage", amount: 1000, entityId: "bob", type: "are" })
+      })
+      donnees.monthlyData[5].flows.push({ id: "prime", label: "Prime", amount: 500, entityId: "alice", type: "salary" })
 
-      expect(resultat(report, "c1").chiffreAffaires).toBe(60_000)
+      const report = runMetaSimulation(donnees, reglesDeTest)
+
+      expect(report.persons.map(p => p.revenusDirects)).toEqual([24500, 12000])
     })
 
-    it("cumule services et ventes, y compris plusieurs flux dans le même mois", () => {
-      const report = runMetaSimulation(
-        session(
-          [societe("c1", "EURL")],
-          [],
-          [
-            [0, "c1", "ca_services", 10_000],
-            [0, "c1", "ca_services", 2500],
-            [0, "c1", "ca_vente", 4000],
-            [11, "c1", "ca_vente", 1500]
-          ]
-        )
-      )
+    it("ignore les flux d'une entité absente de la session", () => {
+      const report = simuler([personne("alice")], [], [["fantome", "salary", 50000]])
 
-      expect(resultat(report, "c1").chiffreAffaires).toBe(18_000)
-    })
-
-    it("n'attribue à chaque entité que ses propres flux", () => {
-      const report = runMetaSimulation(
-        session(
-          [societe("c1"), societe("c2"), micro("m1")],
-          [],
-          [
-            [0, "c1", "ca_services", 10_000],
-            [1, "c2", "ca_services", 20_000],
-            [2, "m1", "ca_micro_services_bic", 3000],
-            [3, "c1", "ca_vente", 5000]
-          ]
-        )
-      )
-
-      expect(resultat(report, "c1").chiffreAffaires).toBe(15_000)
-      expect(resultat(report, "c2").chiffreAffaires).toBe(20_000)
-      expect(resultat(report, "m1").chiffreAffaires).toBe(3000)
-    })
-
-    it("additionne les trois natures de chiffre d'affaires d'une micro-entreprise", () => {
-      const report = runMetaSimulation(
-        session(
-          [micro("m1")],
-          [],
-          [
-            [0, "m1", "ca_micro_services_bic", 1000],
-            [4, "m1", "ca_micro_services_bnc", 2000],
-            [8, "m1", "ca_micro_vente", 4000],
-            [8, "m1", "ca_micro_vente", 500]
-          ]
-        )
-      )
-
-      expect(resultat(report, "m1").chiffreAffaires).toBe(7500)
-    })
-
-    it("ne compte pas les charges ni la rémunération dans le chiffre d'affaires", () => {
-      const report = runMetaSimulation(
-        session(
-          [societe("c1")],
-          [],
-          [
-            [0, "c1", "ca_services", 10_000],
-            [0, "c1", "deductible_expense", 3000],
-            [0, "c1", "director_remuneration", 2000]
-          ]
-        )
-      )
-
-      expect(resultat(report, "c1").chiffreAffaires).toBe(10_000)
-    })
-
-    it("cumule salaires, ARE et autres revenus imposables d'une personne dans le revenu du foyer", () => {
-      const report = runMetaSimulation(
-        session(
-          [personne("p1")],
-          [],
-          [...chaqueMois("p1", "salary", 2000), [0, "p1", "are", 1200], [1, "p1", "are", 1200], [6, "p1", "other_taxable_income", 600]]
-        )
-      )
-
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(27_000)
-    })
-
-    it("donne un revenu nul à une personne sans flux et un chiffre d'affaires nul à une société sans flux", () => {
-      const report = runMetaSimulation(session([personne("p1"), societe("c1"), micro("m1")]))
-
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(0)
-      expect(resultat(report, "c1").chiffreAffaires).toBe(0)
-      expect(resultat(report, "m1").chiffreAffaires).toBe(0)
+      expect(report.persons[0].revenusDirects).toBe(0)
     })
   })
 
-  describe("regroupement des foyers fiscaux", () => {
-    it("crée un foyer par personne isolée, avec ses propres parts", () => {
-      const report = runMetaSimulation(session([personne("p1"), personne("p2", 1.5)]))
-
-      expect(report.foyers.map(f => [f.personIds, f.totalParts])).toEqual([
-        [["p1"], 1],
-        [["p2"], 1.5]
-      ])
-    })
-
-    it.each(["Marié(e)", "PACSé(e)"] as const)("réunit deux personnes liées par « %s » et additionne leurs parts", type => {
-      const report = runMetaSimulation(session([personne("p1"), personne("p2")], [relation("p1", "p2", type)]))
-
-      expect(report.foyers).toHaveLength(1)
-      expect(report.foyers[0].personIds).toEqual(["p1", "p2"])
-      expect(report.foyers[0].totalParts).toBe(2)
-    })
-
-    it("trie les membres du foyer par identifiant, quel que soit le sens de la relation", () => {
-      const report = runMetaSimulation(session([personne("zoe"), personne("adam")], [relation("zoe", "adam", "Marié(e)")]))
-
-      expect(report.foyers).toHaveLength(1)
-      expect(report.foyers[0].personIds).toEqual(["adam", "zoe"])
-    })
-
-    it("additionne les revenus des deux membres du couple", () => {
-      const report = runMetaSimulation(
-        session([personne("p1"), personne("p2")], [relation("p2", "p1", "PACSé(e)")], [...chaqueMois("p1", "salary", 2000), ...chaqueMois("p2", "salary", 3000)])
+  describe("personne salariée", () => {
+    it("impose les salaires et allocations après abattement de 10 %", () => {
+      const report = simuler(
+        [personne("alice")],
+        [],
+        [
+          ["alice", "salary", 30000],
+          ["alice", "are", 10000],
+          ["alice", "other_taxable_income", 4000]
+        ]
       )
 
-      expect(foyerDe(report, "p1")).toBe(foyerDe(report, "p2"))
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(60_000)
+      // Base : 40 000 - 4 000 + 4 000 = 40 000 € ; impôt : 2 000 + 10 000 x 30 % = 5 000 €.
+      expect(foyerDe(report, "alice")).toMatchObject({ revenusEncaisses: 44000, revenuImposableGlobal: 40000, impotSurLeRevenu: 5000, prelevementsSociaux: 0, optionDividendes: null, netApresImpots: 39000 })
     })
 
-    it("laisse dans des foyers distincts deux couples sans lien entre eux", () => {
-      const report = runMetaSimulation(
-        session([personne("p1"), personne("p2"), personne("p3"), personne("p4")], [relation("p1", "p2", "Marié(e)"), relation("p4", "p3", "PACSé(e)")])
+    it("applique le minimum et le maximum de l'abattement", () => {
+      expect(foyerDe(simuler([personne("alice")], [], [["alice", "salary", 3000]]), "alice").revenuImposableGlobal).toBe(2500)
+      expect(foyerDe(simuler([personne("alice")], [], [["alice", "salary", 200000]]), "alice").revenuImposableGlobal).toBe(186000)
+      expect(foyerDe(simuler([personne("alice")], [], [["alice", "salary", 200]]), "alice").revenuImposableGlobal).toBe(0)
+    })
+
+    it("rapporte les dépenses personnelles sans les déduire de l'impôt ni du net", () => {
+      const report = simuler(
+        [personne("alice")],
+        [],
+        [
+          ["alice", "salary", 40000],
+          ["alice", "expense", 12000]
+        ]
       )
 
-      expect(report.foyers.map(f => f.personIds)).toEqual([
-        ["p1", "p2"],
-        ["p3", "p4"]
-      ])
-    })
-
-    it("fusionne les regroupements de proche en proche", () => {
-      const report = runMetaSimulation(
-        session([personne("p1"), personne("p2"), personne("p3"), personne("p4")], [relation("p1", "p2", "Marié(e)"), relation("p3", "p4", "Marié(e)"), relation("p2", "p4", "PACSé(e)")])
-      )
-
-      expect(report.foyers).toHaveLength(1)
-      expect(report.foyers[0].personIds).toEqual(["p1", "p2", "p3", "p4"])
-      expect(report.foyers[0].totalParts).toBe(4)
-    })
-
-    it("ne regroupe pas une personne avec la société qu'elle dirige ou sa micro-entreprise", () => {
-      const report = runMetaSimulation(
-        session([personne("p1"), societe("c1"), micro("m1"), personne("p2")], [relation("p1", "c1", "Président"), relation("p1", "m1", "Titulaire"), relation("p1", "p2", "Associé")])
-      )
-
-      expect(report.foyers.map(f => [f.personIds, f.totalParts])).toEqual([
-        [["p1"], 1],
-        [["p2"], 1]
-      ])
-    })
-
-    it("ignore une relation de couple dont une extrémité n'est pas une personne", () => {
-      const report = runMetaSimulation(session([personne("p1"), societe("c1")], [relation("p1", "c1", "Marié(e)"), relation("p1", "fantome", "PACSé(e)")]))
-
-      expect(report.foyers.map(f => [f.personIds, f.totalParts])).toEqual([[["p1"], 1]])
-    })
-
-    describe("enfants", () => {
-      it("ajoute une demi-part au foyer du parent pour chaque enfant", () => {
-        const report = runMetaSimulation(
-          session([personne("parent"), personne("enfant1"), personne("enfant2")], [relation("parent", "enfant1", "Enfant"), relation("enfant2", "parent", "Enfant")])
-        )
-
-        expect(foyerDe(report, "parent").personIds).toEqual(["parent"])
-        expect(foyerDe(report, "parent").totalParts).toBe(2)
-      })
-
-      it("ne compte qu'une fois l'enfant relié aux deux membres d'un couple", () => {
-        const report = runMetaSimulation(
-          session(
-            [personne("p1"), personne("p2"), personne("enfant")],
-            [relation("p1", "p2", "Marié(e)"), relation("p1", "enfant", "Enfant"), relation("p2", "enfant", "Enfant")]
-          )
-        )
-
-        expect(foyerDe(report, "p1").personIds).toEqual(["p1", "p2"])
-        expect(foyerDe(report, "p1").totalParts).toBe(2.5)
-      })
-
-      it("ne compte pas deux fois un enfant relié deux fois au même parent", () => {
-        const report = runMetaSimulation(session([personne("parent"), personne("enfant")], [relation("parent", "enfant", "Enfant"), relation("enfant", "parent", "Enfant")]))
-
-        expect(foyerDe(report, "parent").totalParts).toBe(1.5)
-      })
-
-      it("n'ajoute aucune part pour une relation « Enfant » entre les deux membres d'un couple", () => {
-        const report = runMetaSimulation(session([personne("p1"), personne("p2")], [relation("p1", "p2", "PACSé(e)"), relation("p1", "p2", "Enfant")]))
-
-        expect(report.foyers).toHaveLength(1)
-        expect(report.foyers[0].totalParts).toBe(2)
-      })
-
-      it("n'ajoute aucune part pour une relation « Enfant » vers autre chose qu'une personne", () => {
-        const report = runMetaSimulation(session([personne("parent"), societe("c1")], [relation("parent", "c1", "Enfant"), relation("parent", "fantome", "Enfant")]))
-
-        expect(foyerDe(report, "parent").totalParts).toBe(1)
-      })
-
-      it("n'ajoute aucune part au foyer d'un tiers", () => {
-        const report = runMetaSimulation(session([personne("parent"), personne("enfant"), personne("voisin")], [relation("parent", "enfant", "Enfant")]))
-
-        expect(foyerDe(report, "voisin").totalParts).toBe(1)
-      })
-
-      it.todo("ne majore pas le foyer de l'enfant : la relation « Enfant » étant lue dans les deux sens, l'enfant reçoit lui aussi 0,5 part pour son parent, et reste un foyer distinct avec sa propre part")
-      it.todo("compte une part entière à partir du troisième enfant")
+      expect(report.persons[0].depenses).toBe(12000)
+      expect(foyerDe(report, "alice")).toMatchObject({ depenses: 12000, revenuImposableGlobal: 36000, netApresImpots: 40000 - 3800 })
     })
   })
 
-  describe("routage de la rémunération du dirigeant", () => {
-    it.each([
-      ["Président", "SASU"],
-      ["Gérant", "EURL"]
-    ] as const)("ajoute la rémunération annuelle au revenu du foyer du %s", (type, statut) => {
-      const report = runMetaSimulation(
-        session([personne("p1"), societe("c1", statut)], [relation("p1", "c1", type)], [...chaqueMois("c1", "ca_services", 8000), ...chaqueMois("c1", "director_remuneration", 2500)])
+  describe("SASU", () => {
+    const entites = [personne("alice"), societe("sasu")]
+    const president = [relation("alice", "sasu", "Président")]
+    const flux: Flux[] = [
+      ["sasu", "ca_services", 90000],
+      ["sasu", "ca_vente", 10000],
+      ["sasu", "deductible_expense", 10000],
+      ["sasu", "director_remuneration", 30000],
+      ["sasu", "dividends_payment", 20000]
+    ]
+
+    it("calcule le résultat de la société et ce qu'elle verse", () => {
+      const report = simuler(entites, president, flux)
+
+      expect(activite(report, "sasu")).toEqual({
+        entityId: "sasu",
+        name: "sasu",
+        type: "company",
+        statut: "SASU",
+        chiffreAffaires: 100000,
+        charges: 10000,
+        cotisationsSociales: 24000,
+        impotSocietes: 5400,
+        revenuVerse: 50000,
+        resultatConserve: 10600,
+        warnings: []
+      })
+    })
+
+    it("verse la rémunération et les dividendes au président, et impose le foyer une seule fois", () => {
+      const report = simuler(entites, president, flux)
+
+      expect(report.persons[0]).toMatchObject({ revenusDirects: 0, revenusActivites: 50000 })
+      // Rémunération : 30 000 - 3 000 = 27 000 € imposables, soit 1 700 € d'impôt.
+      // Dividendes au forfait : 20 000 x 12 % = 2 400 € (le barème donnerait 4 280 € au total).
+      expect(foyerDe(report, "alice")).toEqual({
+        personIds: ["alice"],
+        totalParts: 1,
+        revenusEncaisses: 50000,
+        revenuImposableGlobal: 27000,
+        impotSurLeRevenu: 4100,
+        prelevementsSociaux: 3600,
+        optionDividendes: "pfu",
+        netApresImpots: 42300,
+        depenses: 0,
+        warnings: []
+      })
+      expect(report.totalNetApresImpots).toBe(42300)
+    })
+
+    it("retient l'option pour le barème quand elle coûte moins que le forfait", () => {
+      const report = simuler(entites, president, [
+        ["sasu", "ca_services", 30000],
+        ["sasu", "dividends_payment", 20000]
+      ])
+
+      // Base au barème : 20 000 x 60 % - 20 000 x 7 % = 10 600 €, impôt effacé par la décote.
+      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 10600, impotSurLeRevenu: 0, prelevementsSociaux: 3600, optionDividendes: "bareme", netApresImpots: 16400 })
+    })
+
+    it("reconnaît le dirigeant quel que soit le sens de la relation", () => {
+      const report = simuler(entites, [relation("sasu", "alice", "Président")], flux)
+
+      expect(report.persons[0].revenusActivites).toBe(50000)
+    })
+
+    it("signale une rémunération sans dirigeant et ne la rattache à aucun foyer", () => {
+      const report = simuler(entites, [], [["sasu", "director_remuneration", 30000]])
+
+      expect(activite(report, "sasu").warnings).toContain("Rémunération dirigeant saisie sans relation Président/Gérant vers une personne : non routée vers un foyer.")
+      expect(report.persons[0].revenusActivites).toBe(0)
+    })
+
+    it("verse la rémunération au premier dirigeant quand il y en a plusieurs, et le signale", () => {
+      const report = simuler(
+        [personne("alice"), personne("bob"), societe("sasu")],
+        [relation("alice", "sasu", "Président"), relation("bob", "sasu", "Gérant")],
+        [
+          ["sasu", "ca_services", 100000],
+          ["sasu", "director_remuneration", 30000]
+        ]
       )
 
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(30_000)
-      expect(resultat(report, "c1").warnings).toEqual([])
+      expect(activite(report, "sasu").warnings).toEqual(["Plusieurs dirigeants liés : la rémunération est attribuée au premier pour le routage fiscal simplifié."])
+      expect(report.persons.map(p => p.revenusActivites)).toEqual([30000, 0])
     })
 
-    it("route la rémunération quel que soit le sens de la relation", () => {
-      const report = runMetaSimulation(session([societe("c1"), personne("p1")], [relation("c1", "p1", "Président")], [[0, "c1", "director_remuneration", 12_000]]))
-
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(12_000)
-    })
-
-    it("s'ajoute aux revenus propres du dirigeant", () => {
-      const report = runMetaSimulation(
-        session([personne("p1"), societe("c1")], [relation("p1", "c1", "Président")], [...chaqueMois("p1", "are", 1000), ...chaqueMois("c1", "director_remuneration", 2000)])
+    it("partage les dividendes à parts égales entre dirigeant et associés, et le signale", () => {
+      const report = simuler(
+        [personne("alice"), personne("bob"), societe("sasu")],
+        [relation("alice", "sasu", "Président"), relation("bob", "sasu", "Associé")],
+        [
+          ["sasu", "ca_services", 100000],
+          ["sasu", "dividends_payment", 20000]
+        ]
       )
 
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(36_000)
+      expect(activite(report, "sasu").warnings).toEqual(["Dividendes répartis à parts égales entre les 2 personnes liées : la répartition du capital n'est pas modélisée."])
+      expect(report.persons.map(p => p.revenusActivites)).toEqual([10000, 10000])
+      expect(report.foyers.map(f => f.prelevementsSociaux)).toEqual([1800, 1800])
     })
 
-    it("cumule les rémunérations de plusieurs sociétés dirigées par la même personne", () => {
-      const report = runMetaSimulation(
-        session(
-          [personne("p1"), societe("c1"), societe("c2", "EURL")],
-          [relation("p1", "c1", "Président"), relation("p1", "c2", "Gérant")],
-          [
-            [0, "c1", "director_remuneration", 10_000],
-            [5, "c2", "director_remuneration", 7000]
-          ]
-        )
+    it("signale des dividendes sans bénéficiaire", () => {
+      const report = simuler(
+        [societe("sasu")],
+        [],
+        [
+          ["sasu", "ca_services", 100000],
+          ["sasu", "dividends_payment", 20000]
+        ]
       )
 
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(17_000)
+      expect(activite(report, "sasu").warnings).toEqual(["Dividendes versés sans relation Président, Gérant ou Associé vers une personne : non routés vers un foyer."])
     })
 
-    it("profite au foyer du couple quand le dirigeant est marié", () => {
-      const report = runMetaSimulation(
-        session(
-          [personne("p1"), personne("p2"), societe("c1")],
-          [relation("p1", "p2", "Marié(e)"), relation("p2", "c1", "Président")],
-          [...chaqueMois("p1", "salary", 1500), ...chaqueMois("c1", "director_remuneration", 2000)]
-        )
-      )
+    it("remonte les avertissements du calcul de la société", () => {
+      const report = simuler(entites, president, [
+        ["sasu", "ca_services", 20000],
+        ["sasu", "director_remuneration", 30000]
+      ])
 
-      expect(report.foyers).toHaveLength(1)
-      expect(report.foyers[0].revenuImposableGlobal).toBe(42_000)
-    })
-
-    it("ne route rien vers un simple associé", () => {
-      const report = runMetaSimulation(session([personne("p1"), societe("c1")], [relation("p1", "c1", "Associé")], [[0, "c1", "director_remuneration", 12_000]]))
-
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(0)
-      expect(resultat(report, "c1").warnings).toEqual([AVERTISSEMENT_SANS_DIRIGEANT])
-    })
-
-    it("ne route rien vers le dirigeant d'une autre société", () => {
-      const report = runMetaSimulation(
-        session([personne("p1"), personne("p2"), societe("c1"), societe("c2")], [relation("p1", "c1", "Président"), relation("p2", "c2", "Président")], [[0, "c1", "director_remuneration", 12_000]])
-      )
-
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(12_000)
-      expect(foyerDe(report, "p2").revenuImposableGlobal).toBe(0)
+      expect(activite(report, "sasu").warnings[0]).toContain("déficitaire")
+      expect(activite(report, "sasu").resultatConserve).toBe(-34000)
     })
   })
 
-  describe("avertissements", () => {
-    it("ne signale rien pour une société correctement reliée", () => {
-      const report = runMetaSimulation(
-        session([personne("p1"), societe("c1")], [relation("p1", "c1", "Président")], [...chaqueMois("c1", "ca_services", 8000), ...chaqueMois("c1", "director_remuneration", 2000)])
+  describe("EURL", () => {
+    it("retire des revenus du gérant les cotisations dues sur ses dividendes", () => {
+      const report = simuler(
+        [personne("dan"), societe("eurl", "EURL", 10000)],
+        [relation("dan", "eurl", "Gérant")],
+        [
+          ["eurl", "ca_services", 100000],
+          ["eurl", "deductible_expense", 10000],
+          ["eurl", "director_remuneration", 30000],
+          ["eurl", "dividends_payment", 20000]
+        ]
       )
 
-      expect(resultat(report, "c1").warnings).toEqual([])
-      expect(resultat(report, "p1").warnings).toEqual([])
+      // Dividendes : 1 000 € soumis aux prélèvements sociaux, 19 000 € soumis à 50 % de cotisations.
+      expect(activite(report, "eurl")).toMatchObject({ statut: "EURL", cotisationsSociales: 24500, impotSocietes: 7250, revenuVerse: 40500, resultatConserve: 17750 })
+      expect(foyerDe(report, "dan")).toMatchObject({ revenusEncaisses: 40500, revenuImposableGlobal: 27000, impotSurLeRevenu: 4100, prelevementsSociaux: 180, optionDividendes: "pfu", netApresImpots: 36220 })
+    })
+  })
+
+  describe("entreprise individuelle au réel", () => {
+    const flux: Flux[] = [
+      ["ei", "ca_services", 60000],
+      ["ei", "deductible_expense", 15000]
+    ]
+
+    it("attribue tout le bénéfice, net de cotisations, à l'entrepreneur", () => {
+      const report = simuler([personne("carl"), societe("ei", "EI")], [relation("carl", "ei", "Titulaire")], flux)
+
+      expect(activite(report, "ei")).toMatchObject({ statut: "EI au réel", chiffreAffaires: 60000, charges: 15000, cotisationsSociales: 15000, impotSocietes: 0, revenuVerse: 30000, resultatConserve: 0, warnings: [] })
+      expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 30000, revenuImposableGlobal: 30000, impotSurLeRevenu: 2000, netApresImpots: 28000 })
     })
 
-    it("signale une rémunération saisie sans dirigeant", () => {
-      const report = runMetaSimulation(session([personne("p1"), societe("c1")], [], [[0, "c1", "director_remuneration", 12_000]]))
+    it("signale une entreprise sans titulaire", () => {
+      const report = simuler([personne("carl"), societe("ei", "EI")], [], flux)
 
-      expect(resultat(report, "c1").warnings).toEqual([AVERTISSEMENT_SANS_DIRIGEANT])
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(0)
+      expect(activite(report, "ei").warnings).toEqual(["Aucune relation « Titulaire » vers une personne : le bénéfice de cette entreprise n'est rattaché à aucun foyer."])
+      expect(report.persons[0].revenusActivites).toBe(0)
     })
 
-    it("signale une rémunération dont le « dirigeant » n'est pas une personne", () => {
-      const report = runMetaSimulation(session([societe("c1"), societe("c2")], [relation("c2", "c1", "Président")], [[0, "c1", "director_remuneration", 12_000]]))
+    it("ignore, en le signalant, la rémunération et les dividendes saisis", () => {
+      const report = simuler([personne("carl"), societe("ei", "EI")], [relation("carl", "ei", "Titulaire")], [...flux, ["ei", "director_remuneration", 10000]])
 
-      expect(resultat(report, "c1").warnings).toEqual([AVERTISSEMENT_SANS_DIRIGEANT])
-      expect(resultat(report, "c2").warnings).toEqual([])
+      expect(activite(report, "ei").warnings).toHaveLength(1)
+      expect(activite(report, "ei").warnings[0]).toContain("ni rémunération de dirigeant ni dividendes")
+      expect(report.persons[0].revenusActivites).toBe(30000)
     })
 
-    it("ne signale pas l'absence de dirigeant tant qu'aucune rémunération n'est saisie", () => {
-      const report = runMetaSimulation(session([societe("c1")], [], [[0, "c1", "ca_services", 12_000]]))
-
-      expect(resultat(report, "c1").warnings).toEqual([])
-    })
-
-    it("signale plusieurs dirigeants et route la rémunération vers le premier", () => {
-      const report = runMetaSimulation(
-        session([personne("p1"), personne("p2"), societe("c1")], [relation("p2", "c1", "Gérant"), relation("p1", "c1", "Président")], [[0, "c1", "director_remuneration", 12_000]])
+    it("fait supporter le déficit à l'entrepreneur sans le rendre imposable", () => {
+      const report = simuler(
+        [personne("carl"), societe("ei", "EI")],
+        [relation("carl", "ei", "Titulaire")],
+        [
+          ["carl", "salary", 20000],
+          ["ei", "ca_services", 5000],
+          ["ei", "deductible_expense", 8000]
+        ]
       )
 
-      expect(resultat(report, "c1").warnings).toEqual([AVERTISSEMENT_PLUSIEURS_DIRIGEANTS])
-      expect(foyerDe(report, "p2").revenuImposableGlobal).toBe(12_000)
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(0)
+      expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 17000, revenuImposableGlobal: 18000 })
     })
+  })
 
-    it("ne signale pas plusieurs dirigeants tant qu'aucune rémunération n'est saisie", () => {
-      const report = runMetaSimulation(session([personne("p1"), personne("p2"), societe("c1")], [relation("p1", "c1", "Président"), relation("p2", "c1", "Gérant")]))
-
-      expect(resultat(report, "c1").warnings).toEqual([])
-    })
-
-    it("signale les dividendes saisis sur la grille", () => {
-      const report = runMetaSimulation(
-        session(
-          [personne("p1"), societe("c1")],
-          [relation("p1", "c1", "Président"), relation("p1", "c1", "Associé")],
-          [
-            [0, "c1", "ca_services", 50_000],
-            [11, "c1", "dividends_payment", 5000]
-          ]
-        )
+  describe("micro-entreprise", () => {
+    it("impose le chiffre d'affaires après abattement et verse le reste au titulaire", () => {
+      const report = simuler(
+        [personne("bob"), micro("m1")],
+        [relation("bob", "m1", "Titulaire")],
+        [
+          ["m1", "ca_micro_services_bnc", 40000],
+          ["m1", "expense", 2000]
+        ]
       )
 
-      expect(resultat(report, "c1").warnings).toEqual([AVERTISSEMENT_DIVIDENDES])
+      // Les dépenses réduisent la trésorerie, pas le revenu imposable (40 000 x 70 % = 28 000 €).
+      expect(activite(report, "m1")).toEqual({
+        entityId: "m1",
+        name: "m1",
+        type: "micro-entreprise",
+        statut: "Micro-entreprise",
+        chiffreAffaires: 40000,
+        charges: 2000,
+        cotisationsSociales: 10000,
+        impotSocietes: 0,
+        revenuVerse: 28000,
+        resultatConserve: 0,
+        warnings: []
+      })
+      expect(foyerDe(report, "bob")).toMatchObject({ revenusEncaisses: 28000, revenuImposableGlobal: 28000, impotSurLeRevenu: 1800, netApresImpots: 26200 })
     })
 
-    it("cumule les avertissements d'une même société sans toucher aux autres entités", () => {
-      const report = runMetaSimulation(
-        session(
-          [personne("p1"), societe("c1"), societe("c2")],
-          [relation("p1", "c2", "Président")],
-          [
-            [0, "c1", "dividends_payment", 5000],
-            [0, "c1", "director_remuneration", 12_000],
-            [0, "c2", "director_remuneration", 6000]
-          ]
-        )
-      )
+    it("remplace l'impôt au barème par le versement libératoire quand l'option est prise", () => {
+      const report = simuler([personne("bob"), micro("m1", { opteVFL: true })], [relation("bob", "m1", "Titulaire")], [["m1", "ca_micro_vente", 50000]])
 
-      expect(resultat(report, "c1").warnings).toEqual([AVERTISSEMENT_DIVIDENDES, AVERTISSEMENT_SANS_DIRIGEANT])
-      expect(resultat(report, "c2").warnings).toEqual([])
-      expect(resultat(report, "p1").warnings).toEqual([])
+      expect(foyerDe(report, "bob")).toMatchObject({ revenusEncaisses: 45000, revenuImposableGlobal: 0, impotSurLeRevenu: 500, netApresImpots: 44500 })
     })
 
-    it("ignore les flux de rémunération ou de dividendes rattachés à autre chose qu'une société", () => {
-      const report = runMetaSimulation(
-        session(
-          [personne("p1"), micro("m1")],
-          [relation("p1", "m1", "Titulaire")],
-          [
-            [0, "p1", "director_remuneration", 12_000],
-            [0, "m1", "dividends_payment", 5000]
-          ]
-        )
+    it("signale une micro-entreprise sans titulaire", () => {
+      const report = simuler([personne("bob"), micro("m1")], [], [["m1", "ca_micro_vente", 50000]])
+
+      expect(activite(report, "m1").warnings).toEqual(["Aucune relation « Titulaire » vers une personne : les revenus de cette micro-entreprise ne sont rattachés à aucun foyer."])
+      expect(report.persons[0].revenusActivites).toBe(0)
+    })
+  })
+
+  describe("foyers", () => {
+    it("impose ensemble les revenus d'un couple, sur deux parts", () => {
+      const report = simuler(
+        [personne("alice"), personne("bob"), micro("m1")],
+        [relation("alice", "bob", "Marié(e)"), relation("bob", "m1", "Titulaire")],
+        [
+          ["alice", "salary", 36000],
+          ["m1", "ca_micro_services_bnc", 40000]
+        ]
       )
 
-      expect(resultat(report, "p1").warnings).toEqual([])
-      expect(resultat(report, "m1").warnings).toEqual([])
-      expect(foyerDe(report, "p1").revenuImposableGlobal).toBe(0)
+      // Base : 32 400 + 28 000 = 60 400 €, soit 30 200 € par part : 2 x 2 060 € d'impôt.
+      expect(report.foyers).toHaveLength(1)
+      expect(report.foyers[0]).toMatchObject({ personIds: ["alice", "bob"], totalParts: 2, revenusEncaisses: 66000, revenuImposableGlobal: 60400, impotSurLeRevenu: 4120, netApresImpots: 61880 })
+    })
+
+    it("ajoute les revenus d'un enfant rattaché à ceux de son parent, avec plafonnement du quotient familial", () => {
+      const report = simuler(
+        [personne("parent"), personne("enfant")],
+        [relation("parent", "enfant", "Enfant")],
+        [
+          ["parent", "salary", 40000],
+          ["enfant", "salary", 5000]
+        ]
+      )
+
+      // Base : 36 000 + 4 500 = 40 500 € pour 1,5 part ; l'avantage de la demi-part est plafonné à 1 500 €.
+      expect(report.foyers).toHaveLength(1)
+      expect(report.foyers[0]).toMatchObject({ personIds: ["parent", "enfant"], totalParts: 1.5, revenuImposableGlobal: 40500, impotSurLeRevenu: 3650 })
+    })
+
+    it("additionne les nets de tous les foyers", () => {
+      const report = simuler(
+        [personne("alice"), personne("bob")],
+        [],
+        [
+          ["alice", "salary", 10000],
+          ["bob", "salary", 20000]
+        ]
+      )
+
+      expect(report.totalNetApresImpots).toBe(report.foyers[0].netApresImpots + report.foyers[1].netApresImpots)
+      expect(report.totalNetApresImpots).toBe(10000 + 20000 - 400)
+    })
+
+    it("remonte les avertissements du regroupement des foyers", () => {
+      const report = simuler([personne("alice"), personne("bob"), personne("enfant")], [relation("alice", "enfant", "Enfant"), relation("bob", "enfant", "Enfant")])
+
+      expect(foyerDe(report, "alice").warnings).toHaveLength(1)
     })
   })
 })

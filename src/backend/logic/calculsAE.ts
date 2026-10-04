@@ -1,50 +1,74 @@
 // src/backend/logic/calculsAE.ts
 
-// MODIFIÉ : Syntaxe d'import avec 'with'
-import config from "../config.json" with { type: "json" }
-import { calculerIR } from "./calculsIR.js"
-import type { SimulationInputs } from "@/types.js"
+import { euros } from "./format.js"
+import { reglesEnVigueur, type ReglesFiscales, type TauxMicro } from "./regles.js"
 
-export function simulerMicroEntreprise(inputs: SimulationInputs) {
-  const { ca_services_bic = 0, ca_services_bnc = 0, ca_vente = 0, chargesDeductibles = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1, beneficieACRE = false, opteVFL = false } = inputs
-  const totalCA = ca_services_bic + ca_services_bnc + ca_vente
-  const plafond = ca_vente > ca_services_bic + ca_services_bnc ? config.microEntreprise.plafonds.vente : config.microEntreprise.plafonds.services
+export interface EntreesMicro {
+  caVente: number
+  caServicesBic: number
+  caServicesBnc: number
+  beneficieACRE: boolean
+  opteVFL: boolean
+}
 
-  if (totalCA > plafond) {
-    return {
-      statut: "Micro-Entreprise",
-      chiffreAffaires: totalCA,
-      netDansLaPoche: 0,
-      warning: `Plafond de ${plafond.toLocaleString("fr-FR")} € dépassé ! Le régime micro n'est plus applicable.`
-    }
+export interface ResultatMicro {
+  chiffreAffaires: number
+  cotisationsSociales: number
+  /** Revenu soumis au barème de l'IR (nul si le versement libératoire est choisi). */
+  revenuImposable: number
+  /** Impôt sur le revenu payé avec les cotisations, en pourcentage du chiffre d'affaires. */
+  versementLiberatoire: number
+  warnings: string[]
+}
+
+type ReglesMicro = ReglesFiscales["microEntreprise"]
+
+/** Applique un taux par nature d'activité au chiffre d'affaires correspondant. */
+function appliquerTaux({ caVente, caServicesBic, caServicesBnc }: EntreesMicro, taux: TauxMicro): number {
+  return caVente * taux.venteBic + caServicesBic * taux.servicesBic + caServicesBnc * taux.servicesBnc
+}
+
+/**
+ * Une activité mixte doit respecter deux plafonds : le chiffre d'affaires total sous le plafond
+ * de la vente, et sa part de prestations de services sous le plafond des services.
+ */
+function verifierPlafonds(entrees: EntreesMicro, plafonds: ReglesMicro["plafonds"]): string[] {
+  const caServices = entrees.caServicesBic + entrees.caServicesBnc
+  const caTotal = entrees.caVente + caServices
+  const depassements: string[] = []
+  if (caServices > plafonds.services) depassements.push(`prestations de services ${euros(caServices)} pour un plafond de ${euros(plafonds.services)}`)
+  if (caTotal > plafonds.vente) depassements.push(`chiffre d'affaires total ${euros(caTotal)} pour un plafond de ${euros(plafonds.vente)}`)
+  if (depassements.length === 0) return []
+  return [`Plafond du régime micro dépassé (${depassements.join(" ; ")}) : le régime n'est conservé que si le dépassement ne se répète pas deux années de suite.`]
+}
+
+/** Revenu imposable après abattement forfaitaire, celui-ci ne pouvant être inférieur à un minimum par nature d'activité exercée. */
+function calculerRevenuImposable(entrees: EntreesMicro, abattement: ReglesMicro["abattement"]): number {
+  const chiffreAffaires = entrees.caVente + entrees.caServicesBic + entrees.caServicesBnc
+  const naturesExercees = [entrees.caVente, entrees.caServicesBic, entrees.caServicesBnc].filter(ca => ca > 0).length
+  const abattementApplique = Math.max(appliquerTaux(entrees, abattement), abattement.minimum * naturesExercees)
+  return Math.max(0, chiffreAffaires - abattementApplique)
+}
+
+/**
+ * Micro-entreprise : cotisations sociales en pourcentage du chiffre d'affaires (réduites avec l'ACRE),
+ * puis soit un revenu imposable après abattement forfaitaire, soit le versement libératoire de l'impôt.
+ */
+export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales = reglesEnVigueur): ResultatMicro {
+  const micro = regles.microEntreprise
+  const warnings = verifierPlafonds(entrees, micro.plafonds)
+
+  if (entrees.opteVFL) {
+    warnings.push(`Versement libératoire : l'option n'est ouverte que si le revenu fiscal de référence du foyer (année N-2) ne dépasse pas ${euros(micro.versementLiberatoire.plafondRfrParPart)} par part. Le simulateur ne vérifie pas cette condition.`)
   }
 
-  const tauxCotisations = beneficieACRE ? config.microEntreprise.ACRE : config.microEntreprise.cotisations
-  const cotisationsSociales = ca_vente * tauxCotisations.vente_bic + ca_services_bic * tauxCotisations.services_bic + ca_services_bnc * tauxCotisations.services_bnc_regime_general
-  const revenuNetApresCotisations = totalCA - cotisationsSociales
-  let revenuImposable = 0
-  let surcoutIR = 0
-
-  if (opteVFL) {
-    const impotLiberatoire = ca_vente * config.microEntreprise.VFL.taux.vente_bic + ca_services_bic * config.microEntreprise.VFL.taux.services_bic + ca_services_bnc * config.microEntreprise.VFL.taux.services_bnc
-    surcoutIR = impotLiberatoire
-    revenuImposable = 0
-  } else {
-    const ca_imposable_vente = ca_vente * (1 - config.microEntreprise.abattement.vente_bic)
-    const ca_imposable_services_bic = ca_services_bic * (1 - config.microEntreprise.abattement.services_bic)
-    const ca_imposable_services_bnc = ca_services_bnc * (1 - config.microEntreprise.abattement.services_bnc)
-    revenuImposable = Math.max(ca_imposable_vente + ca_imposable_services_bic + ca_imposable_services_bnc, totalCA > 0 ? config.microEntreprise.abattement.minimum : 0)
-    const revenuNetGlobalImposableFoyer = revenuImposable + autresRevenusImposablesFoyer
-    const impotRevenuTotal = calculerIR({ revenuNetGlobalImposable: revenuNetGlobalImposableFoyer, partsFiscales: partsFiscales })
-    const irSansActivite = calculerIR({ revenuNetGlobalImposable: autresRevenusImposablesFoyer, partsFiscales: partsFiscales })
-    surcoutIR = impotRevenuTotal - irSansActivite
-  }
-
-  const netDansLaPoche = revenuNetApresCotisations - chargesDeductibles - surcoutIR
+  const cotisationsPleinTaux = appliquerTaux(entrees, micro.cotisations)
 
   return {
-    statut: "Micro-Entreprise",
-    chiffreAffaires: totalCA,
-    netDansLaPoche: Math.round(netDansLaPoche)
+    chiffreAffaires: entrees.caVente + entrees.caServicesBic + entrees.caServicesBnc,
+    cotisationsSociales: entrees.beneficieACRE ? cotisationsPleinTaux * (1 - micro.reductionACRE) : cotisationsPleinTaux,
+    revenuImposable: entrees.opteVFL ? 0 : calculerRevenuImposable(entrees, micro.abattement),
+    versementLiberatoire: entrees.opteVFL ? appliquerTaux(entrees, micro.versementLiberatoire.taux) : 0,
+    warnings
   }
 }

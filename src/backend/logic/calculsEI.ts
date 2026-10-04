@@ -1,25 +1,35 @@
 // src/backend/logic/calculsEI.ts
 
-// MODIFIÉ : Syntaxe d'import avec 'with'
-import config from "../config.json" with { type: "json" }
-import { calculerIR } from "./calculsIR.js"
-import type { SimulationInputs } from "@/types.js"
+import { euros } from "./format.js"
+import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 
-export function simulerEI(inputs: SimulationInputs) {
-  const { chiffreAffaires = 0, chargesDeductibles = 0, autresRevenusImposablesFoyer = 0, partsFiscales = 1 } = inputs
+export interface EntreesEI {
+  chiffreAffaires: number
+  chargesDeductibles: number
+}
 
-  const benefice = chiffreAffaires - chargesDeductibles
-  const revenuImposable = benefice > 0 ? benefice : 0
-  const cotisationsSociales = revenuImposable * config.EURL.cotisations_tns.taux_approx_sur_remuneration
-  const revenuNetGlobalImposableFoyer = revenuImposable + autresRevenusImposablesFoyer
-  const impotRevenuTotal = calculerIR({ revenuNetGlobalImposable: revenuNetGlobalImposableFoyer, partsFiscales: partsFiscales })
-  const irSansActivite = calculerIR({ revenuNetGlobalImposable: autresRevenusImposablesFoyer, partsFiscales: partsFiscales })
-  const surcoutIR = impotRevenuTotal - irSansActivite
-  const netDansLaPoche = benefice - cotisationsSociales - surcoutIR
+export interface ResultatEI {
+  chiffreAffaires: number
+  chargesDeductibles: number
+  cotisationsSociales: number
+  /** Bénéfice après cotisations : c'est à la fois ce que l'entrepreneur encaisse et ce qui est imposé à l'IR. */
+  revenuNet: number
+  warnings: string[]
+}
 
-  return {
-    statut: "EI (Régime Réel)",
-    chiffreAffaires,
-    netDansLaPoche: Math.round(netDansLaPoche)
+/**
+ * Entreprise individuelle au régime réel, imposée à l'impôt sur le revenu : tout le bénéfice
+ * revient à l'entrepreneur, qui paie des cotisations de travailleur non salarié (approchées par
+ * un taux sur le revenu net). Un déficit ne produit ni cotisations ni revenu imposable.
+ */
+export function calculerEI({ chiffreAffaires, chargesDeductibles }: EntreesEI, regles: ReglesFiscales = reglesEnVigueur): ResultatEI {
+  const beneficeAvantCotisations = chiffreAffaires - chargesDeductibles
+
+  if (beneficeAvantCotisations <= 0) {
+    const warnings = beneficeAvantCotisations < 0 ? [`L'entreprise est déficitaire de ${euros(-beneficeAvantCotisations)} : les cotisations minimales et le report du déficit ne sont pas modélisés.`] : []
+    return { chiffreAffaires, chargesDeductibles, cotisationsSociales: 0, revenuNet: beneficeAvantCotisations, warnings }
   }
+
+  const revenuNet = beneficeAvantCotisations / (1 + regles.TNS.tauxCotisationsSurRevenuNet)
+  return { chiffreAffaires, chargesDeductibles, cotisationsSociales: beneficeAvantCotisations - revenuNet, revenuNet, warnings: [] }
 }

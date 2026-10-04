@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import type { Entity, FinancialFlow } from "@/types"
-import { flowTypesByEntityType, type FlowType } from "@/lib/flow-constants"
+import { getFlowTypesForEntity, type FlowType } from "@/lib/flow-constants"
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { FlowItem, type FlowChanges } from "./FlowItem"
@@ -29,7 +29,7 @@ interface MonthlyFlowsModalProps {
 
 export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
   const flowIds = useMemo(() => flows.map(f => f.id), [flows])
-  const allowedTypes = flowTypesByEntityType[entity.type]
+  const allowedTypes = getFlowTypesForEntity(entity)
 
   // Type prérempli de la ligne d'ajout : le dernier type utilisé dans cette fenêtre, sinon le premier autorisé.
   const [newFlowType, setNewFlowType] = useState<FlowType>(allowedTypes[0])

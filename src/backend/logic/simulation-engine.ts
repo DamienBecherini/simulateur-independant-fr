@@ -1,308 +1,319 @@
 // src/backend/logic/simulation-engine.ts
 
-import config from "../config.json" with { type: "json" }
-import type { Entity, MicroEntreprise, Person, Relationship, SessionState, SimulationReport, EntityResult, FoyerFiscalResult, SimulationInputs, SimulationResult } from "../../types.js"
-import type { FinancialFlow } from "../../types.js"
+import type { ActivityResult, Company, FinancialFlow, FoyerFiscalResult, MicroEntreprise, Person, PersonResult, Relationship, SessionState, SimulationReport } from "../../types.js"
+import { calculerMicro } from "./calculsAE.js"
+import { calculerEI } from "./calculsEI.js"
+import { calculerEURL } from "./calculsEURL.js"
 import { calculerIR } from "./calculsIR.js"
-import { simulerSASU } from "./calculsSASU.js"
-import { simulerEURL } from "./calculsEURL.js"
-import { simulerMicroEntreprise } from "./calculsAE.js"
+import { calculerSASU } from "./calculsSASU.js"
+import { buildFoyers, type Foyer } from "./foyers.js"
+import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 
-const BOARD_RELATIONS: Relationship["type"][] = ["Président", "Gérant"]
-const COUPLE_RELATIONS: Relationship["type"][] = ["Marié(e)", "PACSé(e)"]
+/*
+ * Le calcul va dans un seul sens :
+ *   1. chaque activité calcule son résultat annuel et ce qu'elle verse aux personnes ;
+ *   2. ces versements sont inscrits sur le compte de chaque personne ;
+ *   3. l'impôt sur le revenu est calculé une seule fois par foyer, sur l'ensemble de ses revenus.
+ */
 
-type FlowTotals = Partial<Record<FinancialFlow["type"], number>>
+type FlowType = FinancialFlow["type"]
+type FlowTotals = Partial<Record<FlowType, number>>
+
+/** Ce qu'une personne reçoit de ses activités sur l'année, ventilé selon son traitement fiscal. */
+interface RevenusDActivite {
+  /** Rémunérations de dirigeant, imposées comme des salaires. */
+  remunerations: number
+  /** Bénéfices imposables au barème (micro-entreprise après abattement, entreprise individuelle). */
+  beneficesImposables: number
+  dividendes: number
+  dividendesSoumisPS: number
+  versementLiberatoire: number
+  /** Total réellement encaissé, net de cotisations. */
+  encaisse: number
+}
+
+interface Contexte {
+  session: SessionState
+  regles: ReglesFiscales
+  flux: Map<string, FlowTotals>
+  revenus: Map<string, RevenusDActivite>
+}
+
+const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant"]
+const RELATIONS_D_ASSOCIE: Relationship["type"][] = ["Président", "Gérant", "Associé"]
+const RELATIONS_D_EXPLOITANT: Relationship["type"][] = ["Titulaire", "Président", "Gérant"]
 
 function aggregateAnnualFlowsByEntity(session: SessionState): Map<string, FlowTotals> {
   const map = new Map<string, FlowTotals>()
   for (const month of session.monthlyData) {
     for (const flow of month.flows) {
-      const prev = map.get(flow.entityId) ?? {}
-      const t = flow.type
-      prev[t] = (prev[t] ?? 0) + flow.amount
-      map.set(flow.entityId, prev)
+      const totals = map.get(flow.entityId) ?? {}
+      totals[flow.type] = (totals[flow.type] ?? 0) + flow.amount
+      map.set(flow.entityId, totals)
     }
   }
   return map
 }
 
-function getEntity(session: SessionState, id: string): Entity | undefined {
-  return session.entities.find(e => e.id === id)
+/** Somme annuelle de plusieurs types de flux d'une entité. */
+function total(ctx: Contexte, entityId: string, ...types: FlowType[]): number {
+  const flux = ctx.flux.get(entityId)
+  return types.reduce((somme, type) => somme + (flux?.[type] ?? 0), 0)
 }
 
-function neighborId(rel: Relationship, entityId: string): string {
-  return rel.fromId === entityId ? rel.toId : rel.fromId
-}
-
-function isPersonEntity(e: Entity | undefined): e is Person {
-  return e?.type === "person"
-}
-
-/** Personnes liées à la société par Président / Gérant (relation symétrique). */
-function getBoardLinkedPersonIds(session: SessionState, companyId: string): string[] {
-  const ids: string[] = []
-  for (const rel of session.relationships) {
-    if (!BOARD_RELATIONS.includes(rel.type)) continue
-    if (rel.fromId !== companyId && rel.toId !== companyId) continue
-    const other = neighborId(rel, companyId)
-    const ent = getEntity(session, other)
-    if (isPersonEntity(ent)) ids.push(other)
+/** Personnes reliées à une activité par l'un des types de relation donnés, sans doublon, dans l'ordre des relations. */
+function personnesLiees(ctx: Contexte, entityId: string, types: Relationship["type"][]): string[] {
+  const ids = new Set<string>()
+  for (const rel of ctx.session.relationships) {
+    if (!types.includes(rel.type) || (rel.fromId !== entityId && rel.toId !== entityId)) continue
+    const autre = rel.fromId === entityId ? rel.toId : rel.fromId
+    if (ctx.session.entities.some(e => e.id === autre && e.type === "person")) ids.add(autre)
   }
-  return ids
+  return [...ids]
 }
 
-function getTitulairePersonId(session: SessionState, microId: string): string | undefined {
-  for (const rel of session.relationships) {
-    if (rel.type !== "Titulaire") continue
-    if (rel.fromId !== microId && rel.toId !== microId) continue
-    const other = neighborId(rel, microId)
-    const ent = getEntity(session, other)
-    if (isPersonEntity(ent)) return other
+function revenusDe(ctx: Contexte, personId: string): RevenusDActivite {
+  let revenus = ctx.revenus.get(personId)
+  if (!revenus) {
+    revenus = { remunerations: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, encaisse: 0 }
+    ctx.revenus.set(personId, revenus)
   }
-  return undefined
+  return revenus
 }
 
-function directTaxableAnnualPerson(flows: FlowTotals | undefined): number {
-  if (!flows) return 0
-  return (flows.salary ?? 0) + (flows.are ?? 0) + (flows.other_taxable_income ?? 0)
+/** La rémunération du dirigeant est versée à la première personne reliée par « Président » ou « Gérant ». */
+function verserRemuneration(ctx: Contexte, societe: Company, remuneration: number, warnings: string[]) {
+  if (remuneration <= 0) return
+  const dirigeants = personnesLiees(ctx, societe.id, RELATIONS_DE_DIRECTION)
+  if (dirigeants.length === 0) {
+    warnings.push("Rémunération dirigeant saisie sans relation Président/Gérant vers une personne : non routée vers un foyer.")
+    return
+  }
+  if (dirigeants.length > 1) {
+    warnings.push("Plusieurs dirigeants liés : la rémunération est attribuée au premier pour le routage fiscal simplifié.")
+  }
+  const revenus = revenusDe(ctx, dirigeants[0])
+  revenus.remunerations += remuneration
+  revenus.encaisse += remuneration
 }
 
-function microRevenuImposableAnnuel(micro: MicroEntreprise, totals: FlowTotals | undefined): number {
-  if (!totals || micro.opteVFL) return 0
-  const ca_vente = totals.ca_micro_vente ?? 0
-  const ca_services_bic = totals.ca_micro_services_bic ?? 0
-  const ca_services_bnc = totals.ca_micro_services_bnc ?? 0
-  const totalCA = ca_vente + ca_services_bic + ca_services_bnc
-  const plafond = ca_vente > ca_services_bic + ca_services_bnc ? config.microEntreprise.plafonds.vente : config.microEntreprise.plafonds.services
-  if (totalCA > plafond) return 0
+/** Les dividendes sont partagés à parts égales entre les personnes reliées à la société. */
+function verserDividendes(ctx: Contexte, societe: Company, dividendes: { verses: number; soumisPS: number; cotisations: number }, warnings: string[]) {
+  if (dividendes.verses <= 0) return
+  const associes = personnesLiees(ctx, societe.id, RELATIONS_D_ASSOCIE)
+  if (associes.length === 0) {
+    warnings.push("Dividendes versés sans relation Président, Gérant ou Associé vers une personne : non routés vers un foyer.")
+    return
+  }
+  if (associes.length > 1) {
+    warnings.push(`Dividendes répartis à parts égales entre les ${associes.length} personnes liées : la répartition du capital n'est pas modélisée.`)
+  }
+  for (const associe of associes) {
+    const revenus = revenusDe(ctx, associe)
+    revenus.dividendes += dividendes.verses / associes.length
+    revenus.dividendesSoumisPS += dividendes.soumisPS / associes.length
+    revenus.encaisse += (dividendes.verses - dividendes.cotisations) / associes.length
+  }
+}
 
-  const ca_imposable_vente = ca_vente * (1 - config.microEntreprise.abattement.vente_bic)
-  const ca_imposable_services_bic = ca_services_bic * (1 - config.microEntreprise.abattement.services_bic)
-  const ca_imposable_services_bnc = ca_services_bnc * (1 - config.microEntreprise.abattement.services_bnc)
-  return Math.max(
-    ca_imposable_vente + ca_imposable_services_bic + ca_imposable_services_bnc,
-    totalCA > 0 ? config.microEntreprise.abattement.minimum : 0
+function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
+  const entrees = {
+    chiffreAffaires: total(ctx, societe.id, "ca_services", "ca_vente"),
+    chargesDeductibles: total(ctx, societe.id, "deductible_expense"),
+    remunerationNette: total(ctx, societe.id, "director_remuneration"),
+    dividendesDemandes: total(ctx, societe.id, "dividends_payment")
+  }
+  const resultat = societe.legalStatus === "SASU" ? calculerSASU(entrees, ctx.regles) : calculerEURL({ ...entrees, capitalSocial: societe.capitalSocial }, ctx.regles)
+  const warnings = [...resultat.warnings]
+
+  verserRemuneration(ctx, societe, resultat.remunerationNette, warnings)
+  verserDividendes(ctx, societe, { verses: resultat.dividendesVerses, soumisPS: resultat.dividendesSoumisPS, cotisations: resultat.cotisationsSurDividendes }, warnings)
+
+  return {
+    entityId: societe.id,
+    name: societe.name,
+    type: "company",
+    statut: societe.legalStatus,
+    chiffreAffaires: resultat.chiffreAffaires,
+    charges: resultat.chargesDeductibles,
+    cotisationsSociales: resultat.cotisationsSociales,
+    impotSocietes: resultat.impotSocietes,
+    revenuVerse: resultat.remunerationNette + resultat.dividendesVerses - resultat.cotisationsSurDividendes,
+    resultatConserve: resultat.resultatConserve,
+    warnings
+  }
+}
+
+function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): ActivityResult {
+  const resultat = calculerEI({ chiffreAffaires: total(ctx, entreprise.id, "ca_services", "ca_vente"), chargesDeductibles: total(ctx, entreprise.id, "deductible_expense") }, ctx.regles)
+  const warnings = [...resultat.warnings]
+
+  if (total(ctx, entreprise.id, "director_remuneration", "dividends_payment") > 0) {
+    warnings.push("Une entreprise individuelle ne verse ni rémunération de dirigeant ni dividendes : ces flux sont ignorés, tout le bénéfice revient à l'entrepreneur.")
+  }
+
+  const exploitant = personnesLiees(ctx, entreprise.id, RELATIONS_D_EXPLOITANT)[0]
+  if (exploitant) {
+    const revenus = revenusDe(ctx, exploitant)
+    revenus.beneficesImposables += Math.max(0, resultat.revenuNet)
+    revenus.encaisse += resultat.revenuNet
+  } else {
+    warnings.push("Aucune relation « Titulaire » vers une personne : le bénéfice de cette entreprise n'est rattaché à aucun foyer.")
+  }
+
+  return {
+    entityId: entreprise.id,
+    name: entreprise.name,
+    type: "company",
+    statut: "EI au réel",
+    chiffreAffaires: resultat.chiffreAffaires,
+    charges: resultat.chargesDeductibles,
+    cotisationsSociales: resultat.cotisationsSociales,
+    impotSocietes: 0,
+    revenuVerse: resultat.revenuNet,
+    resultatConserve: 0,
+    warnings
+  }
+}
+
+function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): ActivityResult {
+  const resultat = calculerMicro(
+    {
+      caVente: total(ctx, micro.id, "ca_micro_vente"),
+      caServicesBic: total(ctx, micro.id, "ca_micro_services_bic"),
+      caServicesBnc: total(ctx, micro.id, "ca_micro_services_bnc"),
+      beneficieACRE: micro.beneficieACRE,
+      opteVFL: micro.opteVFL
+    },
+    ctx.regles
   )
+  const warnings = [...resultat.warnings]
+  // Au régime micro, les dépenses réelles ne réduisent ni les cotisations ni l'impôt : elles ne pèsent que sur la trésorerie.
+  const depenses = total(ctx, micro.id, "expense")
+  const revenuVerse = resultat.chiffreAffaires - resultat.cotisationsSociales - depenses
+
+  const titulaire = personnesLiees(ctx, micro.id, ["Titulaire"])[0]
+  if (titulaire) {
+    const revenus = revenusDe(ctx, titulaire)
+    revenus.beneficesImposables += resultat.revenuImposable
+    revenus.versementLiberatoire += resultat.versementLiberatoire
+    revenus.encaisse += revenuVerse
+  } else {
+    warnings.push("Aucune relation « Titulaire » vers une personne : les revenus de cette micro-entreprise ne sont rattachés à aucun foyer.")
+  }
+
+  return {
+    entityId: micro.id,
+    name: micro.name,
+    type: "micro-entreprise",
+    statut: "Micro-entreprise",
+    chiffreAffaires: resultat.chiffreAffaires,
+    charges: depenses,
+    cotisationsSociales: resultat.cotisationsSociales,
+    impotSocietes: 0,
+    revenuVerse,
+    resultatConserve: 0,
+    warnings
+  }
 }
 
-class UnionFind {
-  private parent = new Map<string, string>()
-  constructor(ids: string[]) {
-    for (const id of ids) this.parent.set(id, id)
-  }
-  find(a: string): string {
-    let p = this.parent.get(a) ?? a
-    if (p !== a) {
-      p = this.find(p)
-      this.parent.set(a, p)
-    }
-    return p
-  }
-  union(a: string, b: string) {
-    const ra = this.find(a)
-    const rb = this.find(b)
-    if (ra !== rb) this.parent.set(ra, rb)
+function simulerActivite(ctx: Contexte, activite: Company | MicroEntreprise): ActivityResult {
+  if (activite.type === "micro-entreprise") return simulerMicroEntreprise(ctx, activite)
+  return activite.legalStatus === "EI" ? simulerEntrepriseIndividuelle(ctx, activite) : simulerSocieteIS(ctx, activite)
+}
+
+function arrondirActivite(activite: ActivityResult): ActivityResult {
+  return {
+    ...activite,
+    chiffreAffaires: Math.round(activite.chiffreAffaires),
+    charges: Math.round(activite.charges),
+    cotisationsSociales: Math.round(activite.cotisationsSociales),
+    impotSocietes: Math.round(activite.impotSocietes),
+    revenuVerse: Math.round(activite.revenuVerse),
+    resultatConserve: Math.round(activite.resultatConserve)
   }
 }
 
-// eslint-disable-next-line complexity -- Exception ciblée (18 > 15) : regroupement des foyers à découper lors de la refonte du moteur.
-function buildFoyers(session: SessionState): { personIds: string[]; totalParts: number }[] {
-  const persons = session.entities.filter((e): e is Person => e.type === "person")
-  const personIds = persons.map(p => p.id)
-  if (personIds.length === 0) return []
-
-  const uf = new UnionFind(personIds)
-  for (const rel of session.relationships) {
-    if (!COUPLE_RELATIONS.includes(rel.type)) continue
-    const a = getEntity(session, rel.fromId)
-    const b = getEntity(session, rel.toId)
-    if (isPersonEntity(a) && isPersonEntity(b)) uf.union(rel.fromId, rel.toId)
+function resultatPersonne(ctx: Contexte, personne: Person): PersonResult {
+  return {
+    entityId: personne.id,
+    name: personne.name,
+    revenusDirects: Math.round(total(ctx, personne.id, "salary", "are", "other_taxable_income")),
+    revenusActivites: Math.round(revenusDe(ctx, personne.id).encaisse),
+    depenses: Math.round(total(ctx, personne.id, "expense"))
   }
-
-  const clusters = new Map<string, string[]>()
-  for (const id of personIds) {
-    const r = uf.find(id)
-    if (!clusters.has(r)) clusters.set(r, [])
-    clusters.get(r)!.push(id)
-  }
-
-  const foyers: { personIds: string[]; totalParts: number }[] = []
-  for (const memberIds of clusters.values()) {
-    const memberSet = new Set(memberIds)
-    let parts = 0
-    for (const id of memberIds) {
-      const p = getEntity(session, id) as Person | undefined
-      if (p) parts += p.fiscalParts
-    }
-
-    const childIds = new Set<string>()
-    for (const rel of session.relationships) {
-      if (rel.type !== "Enfant") continue
-      const otherFromMember = memberSet.has(rel.fromId) ? rel.toId : memberSet.has(rel.toId) ? rel.fromId : null
-      if (otherFromMember === null) continue
-      const otherEnt = getEntity(session, otherFromMember)
-      if (isPersonEntity(otherEnt) && !memberSet.has(otherFromMember)) childIds.add(otherFromMember)
-    }
-    parts += childIds.size * 0.5
-
-    foyers.push({ personIds: [...memberIds].sort(), totalParts: parts })
-  }
-  return foyers
 }
 
-function foyerForPerson(foyers: { personIds: string[]; totalParts: number }[], personId: string): { personIds: string[]; totalParts: number } | undefined {
-  return foyers.find(f => f.personIds.includes(personId))
+/** Déduction forfaitaire pour frais professionnels sur les revenus imposés comme des salaires, par personne. */
+function abattementSalaires(salaires: number, regles: ReglesFiscales["IR"]["abattementSalaires"]): number {
+  const abattement = Math.min(Math.max(salaires * regles.taux, regles.minimum), regles.maximum)
+  return Math.min(salaires, abattement)
 }
 
-// eslint-disable-next-line complexity -- Exception ciblée (46 > 15) : orchestrateur historique à découper lors de la refonte du moteur.
-export function runMetaSimulation(session: SessionState): SimulationReport {
-  const aggregates = aggregateAnnualFlowsByEntity(session)
-  const foyers = buildFoyers(session)
+/** Additionne les revenus de tous les membres d'un foyer, par traitement fiscal. */
+function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
+  const cumul = { baseBareme: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, encaisse: 0, depenses: 0 }
+  for (const personId of [...foyer.declarantIds, ...foyer.enfantIds]) {
+    const revenus = revenusDe(ctx, personId)
+    const salaires = total(ctx, personId, "salary", "are") + revenus.remunerations
+    const autresRevenus = total(ctx, personId, "other_taxable_income")
 
-  const routedRemuneration = new Map<string, number>()
-  const entityWarnings = new Map<string, string[]>()
-
-  function addWarning(entityId: string, msg: string) {
-    const arr = entityWarnings.get(entityId) ?? []
-    arr.push(msg)
-    entityWarnings.set(entityId, arr)
+    cumul.baseBareme += salaires - abattementSalaires(salaires, ctx.regles.IR.abattementSalaires) + autresRevenus + revenus.beneficesImposables
+    cumul.dividendes += revenus.dividendes
+    cumul.dividendesSoumisPS += revenus.dividendesSoumisPS
+    cumul.versementLiberatoire += revenus.versementLiberatoire
+    cumul.encaisse += total(ctx, personId, "salary", "are", "other_taxable_income") + revenus.encaisse
+    cumul.depenses += total(ctx, personId, "expense")
   }
+  return cumul
+}
 
-  for (const ent of session.entities) {
-    if (ent.type !== "company") continue
-    const totals = aggregates.get(ent.id)
-    const rem = totals?.director_remuneration ?? 0
-    const divPay = totals?.dividends_payment ?? 0
-    if (divPay > 0) {
-      addWarning(ent.id, "Le flux « versement de dividendes » saisi sur la grille n'est pas encore pris en compte par le moteur (dividendes dérivés du bénéfice).")
-    }
-    if (rem <= 0) continue
-    const board = getBoardLinkedPersonIds(session, ent.id)
-    if (board.length === 0) {
-      addWarning(ent.id, "Rémunération dirigeant saisie sans relation Président/Gérant vers une personne : non routée vers un foyer.")
-      continue
-    }
-    if (board.length > 1) {
-      addWarning(ent.id, "Plusieurs dirigeants liés : la rémunération est attribuée au premier pour le routage fiscal simplifié.")
-    }
-    const target = board[0]!
-    routedRemuneration.set(target, (routedRemuneration.get(target) ?? 0) + rem)
+/**
+ * Impôt du foyer. Les dividendes sont imposés de la façon la plus favorable entre le prélèvement
+ * forfaitaire et l'option pour le barème (abattement, CSG en partie déductible) ; les prélèvements
+ * sociaux sont dus dans les deux cas.
+ */
+function calculerFoyer(ctx: Contexte, foyer: Foyer): FoyerFiscalResult {
+  const { IR, dividendes: reglesDividendes } = ctx.regles
+  const revenus = revenusDuFoyer(ctx, foyer)
+  const quotient = { partsFiscales: foyer.totalParts, nombreDeclarants: foyer.nombreDeclarants }
+
+  const impotForfaitaire = calculerIR({ revenuNetGlobalImposable: revenus.baseBareme, ...quotient }, IR) + revenus.dividendes * reglesDividendes.tauxIrForfaitaire
+  const baseAvecDividendes = revenus.baseBareme + revenus.dividendes * (1 - reglesDividendes.abattementBareme) - revenus.dividendesSoumisPS * reglesDividendes.csgDeductible
+  const impotAuBareme = calculerIR({ revenuNetGlobalImposable: baseAvecDividendes, ...quotient }, IR)
+  const optionBareme = revenus.dividendes > 0 && impotAuBareme < impotForfaitaire
+
+  const impotSurLeRevenu = (optionBareme ? impotAuBareme : impotForfaitaire) + revenus.versementLiberatoire
+  const prelevementsSociaux = revenus.dividendesSoumisPS * reglesDividendes.prelevementsSociaux
+  const optionDividendes = optionBareme ? "bareme" : "pfu"
+
+  return {
+    personIds: [...foyer.declarantIds, ...foyer.enfantIds],
+    totalParts: foyer.totalParts,
+    revenusEncaisses: Math.round(revenus.encaisse),
+    revenuImposableGlobal: Math.round(Math.max(0, optionBareme ? baseAvecDividendes : revenus.baseBareme)),
+    impotSurLeRevenu: Math.round(impotSurLeRevenu),
+    prelevementsSociaux: Math.round(prelevementsSociaux),
+    optionDividendes: revenus.dividendes > 0 ? optionDividendes : null,
+    netApresImpots: Math.round(revenus.encaisse - impotSurLeRevenu - prelevementsSociaux),
+    depenses: Math.round(revenus.depenses),
+    warnings: foyer.warnings
   }
+}
 
-  const entities: EntityResult[] = []
+export function runMetaSimulation(session: SessionState, regles: ReglesFiscales = reglesEnVigueur): SimulationReport {
+  const ctx: Contexte = { session, regles, flux: aggregateAnnualFlowsByEntity(session), revenus: new Map() }
 
-  for (const ent of session.entities) {
-    const warnings = [...(entityWarnings.get(ent.id) ?? [])]
-    const totals = aggregates.get(ent.id)
+  // Les activités d'abord : elles alimentent les revenus des personnes, dont dépend l'impôt des foyers.
+  const activities = session.entities.filter((e): e is Company | MicroEntreprise => e.type !== "person").map(activite => arrondirActivite(simulerActivite(ctx, activite)))
+  const persons = session.entities.filter((e): e is Person => e.type === "person").map(personne => resultatPersonne(ctx, personne))
+  const foyers = buildFoyers(session, regles.IR.partsParEnfant).map(foyer => calculerFoyer(ctx, foyer))
 
-    if (ent.type === "person") {
-      const flows = totals
-      const netApprox = directTaxableAnnualPerson(flows)
-      const remunerationTransferee = routedRemuneration.get(ent.id) ?? 0
-      entities.push({
-        entityId: ent.id,
-        name: ent.name,
-        type: "person",
-        chiffreAffaires: 0,
-        netDansLaPoche: Math.round(netApprox + remunerationTransferee),
-        impotsEtCotisations: 0,
-        warnings
-      })
-      continue
-    }
-
-    if (ent.type === "company") {
-      const ca = (totals?.ca_services ?? 0) + (totals?.ca_vente ?? 0)
-      const charges = totals?.deductible_expense ?? 0
-      const rem = totals?.director_remuneration ?? 0
-      const board = getBoardLinkedPersonIds(session, ent.id)
-      const linkPerson = board[0]
-      const foyer = linkPerson ? foyerForPerson(foyers, linkPerson) : undefined
-      const partsFiscales = foyer?.totalParts ?? 1
-      const autres = linkPerson ? directTaxableAnnualPerson(aggregates.get(linkPerson)) : 0
-
-      const inputs: SimulationInputs = {
-        chiffreAffaires: ca,
-        chargesDeductibles: charges,
-        remunerationNetteVisee: rem,
-        capitalSocial: 0,
-        autresRevenusImposablesFoyer: autres,
-        partsFiscales
-      }
-
-      const raw = ent.legalStatus === "SASU" ? simulerSASU(inputs) : simulerEURL(inputs)
-      const impotsEtCotisations = Math.max(0, ca - raw.netDansLaPoche)
-      const sim = raw as SimulationResult
-      if (sim.warning) warnings.push(sim.warning)
-      entities.push({
-        entityId: ent.id,
-        name: ent.name,
-        type: "company",
-        chiffreAffaires: raw.chiffreAffaires,
-        netDansLaPoche: raw.netDansLaPoche,
-        impotsEtCotisations: Math.round(impotsEtCotisations),
-        warnings
-      })
-      continue
-    }
-
-    if (ent.type === "micro-entreprise") {
-      const titulaire = getTitulairePersonId(session, ent.id)
-      const foyer = titulaire ? foyerForPerson(foyers, titulaire) : undefined
-      const partsFiscales = foyer?.totalParts ?? 1
-      const autres = titulaire ? directTaxableAnnualPerson(aggregates.get(titulaire)) : 0
-
-      const inputs: SimulationInputs = {
-        ca_services_bic: totals?.ca_micro_services_bic ?? 0,
-        ca_services_bnc: totals?.ca_micro_services_bnc ?? 0,
-        ca_vente: totals?.ca_micro_vente ?? 0,
-        chargesDeductibles: totals?.deductible_expense ?? 0,
-        autresRevenusImposablesFoyer: autres,
-        partsFiscales,
-        beneficieACRE: ent.beneficieACRE,
-        opteVFL: ent.opteVFL
-      }
-
-      const raw = simulerMicroEntreprise(inputs) as SimulationResult
-      const impotsEtCotisations = Math.max(0, raw.chiffreAffaires - raw.netDansLaPoche)
-      if (raw.warning) warnings.push(raw.warning)
-      if (!titulaire) {
-        warnings.push("Aucune relation « Titulaire » vers une personne : parts fiscales par défaut (1).")
-      }
-      entities.push({
-        entityId: ent.id,
-        name: ent.name,
-        type: "micro-entreprise",
-        chiffreAffaires: raw.chiffreAffaires,
-        netDansLaPoche: raw.netDansLaPoche,
-        impotsEtCotisations: Math.round(impotsEtCotisations),
-        warnings
-      })
-    }
+  return {
+    annee: regles.annee,
+    activities,
+    persons,
+    foyers,
+    totalNetApresImpots: foyers.reduce((somme, foyer) => somme + foyer.netApresImpots, 0)
   }
-
-  const foyerResults: FoyerFiscalResult[] = foyers.map(f => {
-    let revenu = 0
-    for (const pid of f.personIds) {
-      revenu += directTaxableAnnualPerson(aggregates.get(pid))
-      revenu += routedRemuneration.get(pid) ?? 0
-    }
-    for (const ent of session.entities) {
-      if (ent.type !== "micro-entreprise") continue
-      const tid = getTitulairePersonId(session, ent.id)
-      if (!tid || !f.personIds.includes(tid)) continue
-      revenu += microRevenuImposableAnnuel(ent, aggregates.get(ent.id))
-    }
-    const impotSurLeRevenu = calculerIR({ revenuNetGlobalImposable: revenu, partsFiscales: f.totalParts })
-    return {
-      personIds: f.personIds,
-      totalParts: f.totalParts,
-      revenuImposableGlobal: Math.round(revenu),
-      impotSurLeRevenu
-    }
-  })
-
-  const globalNet = entities.filter(e => e.type === "company" || e.type === "micro-entreprise").reduce((s, e) => s + e.netDansLaPoche, 0)
-
-  return { entities, foyers: foyerResults, globalNet }
 }

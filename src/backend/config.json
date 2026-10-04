@@ -1,98 +1,105 @@
 {
-  "annee": 2025,
-  "derniereMiseAJour": "2025-09-13",
+  "annee": 2026,
+  "derniereMiseAJour": "2026-10-04",
   "IR": {
-    "description": "Barème progressif de l'Impôt sur le Revenu 2025 (sur les revenus de 2024)",
-    "source": "https://www.service-public.fr/particuliers/vosdroits/F1419",
+    "description": "Barème 2026 de l'impôt sur le revenu (revenus 2025). La dernière tranche n'a pas de plafond (null).",
+    "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F1419",
     "bareme": [
-      { "trancheJusqua": 11294, "taux": 0 },
-      { "trancheJusqua": 28797, "taux": 0.11 },
-      { "trancheJusqua": 82341, "taux": 0.3 },
-      { "trancheJusqua": 177106, "taux": 0.41 },
-      { "trancheJusqua": 1.7976931348623157e308, "taux": 0.45 }
-    ]
+      { "trancheJusqua": 11600, "taux": 0 },
+      { "trancheJusqua": 29579, "taux": 0.11 },
+      { "trancheJusqua": 84577, "taux": 0.3 },
+      { "trancheJusqua": 181917, "taux": 0.41 },
+      { "trancheJusqua": null, "taux": 0.45 }
+    ],
+    "plafonnementQuotientFamilial": {
+      "description": "Avantage maximal en impôt procuré par chaque demi-part au-delà des parts des déclarants (cas général).",
+      "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2705",
+      "avantageMaxParDemiPart": 1807
+    },
+    "decote": {
+      "description": "Décote = forfait - taux x impôt brut, appliquée tant qu'elle est positive.",
+      "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F34328",
+      "taux": 0.4525,
+      "forfaitSeul": 897,
+      "forfaitCouple": 1483
+    },
+    "abattementSalaires": {
+      "description": "Déduction forfaitaire de 10 % sur les salaires, allocations chômage et rémunérations de dirigeant, par personne.",
+      "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F1989",
+      "taux": 0.1,
+      "minimum": 509,
+      "maximum": 14555
+    },
+    "partsParEnfant": {
+      "description": "Parts de quotient familial par enfant à charge, selon son rang.",
+      "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2705",
+      "deuxPremiers": 0.5,
+      "suivants": 1
+    }
   },
   "TVA": {
-    "description": "Seuils de franchise en base de TVA pour les micro-entreprises.",
-    "source": "https://entreprendre.service-public.fr/vosdroits/F23566",
-    "services": {
-      "franchise_base": 36800,
-      "seuil_majore": 39100
-    },
-    "vente": {
-      "franchise_base": 91900,
-      "seuil_majore": 101000
-    }
+    "description": "Seuils de franchise en base de TVA (non utilisés par le moteur pour l'instant).",
+    "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F21746",
+    "services": { "franchiseBase": 37500, "seuilMajore": 41250 },
+    "vente": { "franchiseBase": 85000, "seuilMajore": 93500 }
+  },
+  "IS": {
+    "description": "Impôt sur les sociétés : taux réduit jusqu'au plafond de bénéfice, taux normal au-delà.",
+    "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F23575",
+    "tauxReduit": 0.15,
+    "plafondTauxReduit": 42500,
+    "tauxNormal": 0.25
+  },
+  "dividendes": {
+    "description": "Imposition des dividendes depuis le 01/01/2026 : prélèvement forfaitaire unique de 31,4 % (12,8 % d'IR + 18,6 % de prélèvements sociaux), ou option pour le barème avec abattement de 40 % et CSG déductible.",
+    "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F32963",
+    "tauxIrForfaitaire": 0.128,
+    "prelevementsSociaux": 0.186,
+    "abattementBareme": 0.4,
+    "csgDeductible": 0.068
+  },
+  "SASU": {
+    "description": "Approximation moyenne du coût total (salaire net + cotisations salariales et patronales) de la rémunération du président, rapporté au net versé. Un vrai bulletin de paie est plus fin.",
+    "ratioCoutTotalSurNet": 1.8
+  },
+  "TNS": {
+    "description": "Approximation des cotisations d'un travailleur non salarié (gérant d'EURL, entrepreneur individuel au réel), en proportion du revenu net. Le calcul réel est progressif.",
+    "tauxCotisationsSurRevenuNet": 0.45
+  },
+  "EURL": {
+    "description": "Part du capital social au-delà de laquelle les dividendes du gérant majoritaire supportent les cotisations sociales au lieu des prélèvements sociaux.",
+    "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F38152",
+    "seuilDividendesPartDuCapital": 0.1
   },
   "microEntreprise": {
     "plafonds": {
-      "description": "Plafonds de CA pour bénéficier du régime micro. Valables pour 2023, 2024 et 2025.",
-      "source": "https://entreprendre.service-public.fr/vosdroits/F23267",
-      "services": 77700,
-      "vente": 188700
+      "description": "Plafonds de chiffre d'affaires du régime micro pour 2026-2028.",
+      "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F32353",
+      "services": 83600,
+      "vente": 203100
     },
     "cotisations": {
-      "description": "Taux de cotisations sociales sur le CA.",
-      "source": "https://www.autoentrepreneur.urssaf.fr/",
-      "vente_bic": 0.123,
-      "services_bic": 0.212,
-      "services_bnc_regime_general": 0.211,
-      "professions_liberales_cipav": 0.212
+      "description": "Taux de cotisations sociales sur le chiffre d'affaires (hors contribution à la formation professionnelle). Les professions libérales relevant de la CIPAV (23,2 %) ne sont pas distinguées.",
+      "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F36232",
+      "venteBic": 0.123,
+      "servicesBic": 0.212,
+      "servicesBnc": 0.256
     },
+    "reductionACRE": 0.5,
+    "reductionACREDescription": "Réduction des cotisations avec l'ACRE : 50 % pour une micro-entreprise créée avant le 01/07/2026, 25 % après (non distingué par le simulateur). Source : https://entreprendre.service-public.gouv.fr/actualites/A18795",
     "abattement": {
-      "description": "Abattement forfaitaire pour frais professionnels avant calcul de l'IR.",
-      "vente_bic": 0.71,
-      "services_bic": 0.5,
-      "services_bnc": 0.34,
+      "description": "Abattement forfaitaire pour frais professionnels avant impôt sur le revenu, avec un minimum en euros par nature d'activité exercée.",
+      "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F23267",
+      "venteBic": 0.71,
+      "servicesBic": 0.5,
+      "servicesBnc": 0.34,
       "minimum": 305
     },
-    "ACRE": {
-      "description": "Taux de cotisations réduits de 50% pour la première année avec l'ACRE.",
-      "vente_bic": 0.062,
-      "services_bic": 0.106,
-      "services_bnc_regime_general": 0.106,
-      "professions_liberales_cipav": 0.121
-    },
-    "VFL": {
-      "description": "Versement Forfaitaire Libératoire de l'impôt sur le revenu.",
-      "plafond_RFR_par_part": {
-        "valeur": 27478,
-        "commentaire": "Plafond du Revenu Fiscal de Référence de l'année N-2 (2023 pour une option en 2025). Valeur 2024 connue, en attente de la valeur officielle 2025. Utilisation de la valeur de 2024 (revenus 2022)."
-      },
-      "taux": {
-        "vente_bic": 0.01,
-        "services_bic": 0.017,
-        "services_bnc": 0.022
-      }
-    }
-  },
-  "SASU": {
-    "IS": {
-      "description": "Impôt sur les Sociétés.",
-      "source": "https://www.economie.gouv.fr/entreprises/impot-sur-les-societes-is",
-      "taux_reduit": 0.15,
-      "plafond_reduit": 42500,
-      "taux_normal": 0.25
-    },
-    "cotisations_asssimile_salarie": {
-      "commentaire": "Les cotisations sur la rémunération du président de SASU sont complexes et varient (salaire, ACRE, etc.). Ce chiffre est une approximation MOYENNE du coût total pour l'entreprise par rapport au salaire net versé. Un vrai bulletin de paie est plus complexe.",
-      "ratio_cout_total_sur_net": 1.8
-    },
-    "dividendes": {
-      "description": "Prélèvement Forfaitaire Unique (Flat Tax) sur les dividendes.",
-      "pru_taux_global": 0.3,
-      "pru_taux_ir": 0.128,
-      "pru_taux_ps": 0.172
-    }
-  },
-  "EURL": {
-    "cotisations_tns": {
-      "commentaire": "Les cotisations TNS (gérant EURL) sont complexes et dépendent du revenu. Ce taux de 45% est une approximation commune pour un revenu moyen. Le calcul réel est progressif.",
-      "taux_approx_sur_remuneration": 0.45
-    },
-    "dividendes_ps_sur_part_sup_10_capital": {
-      "commentaire": "La part des dividendes supérieure à 10% du capital social est soumise aux cotisations sociales TNS (~45%) au lieu des prélèvements sociaux (~17.2%). C'est une différence majeure avec la SASU.",
-      "taux_approx": 0.45
+    "versementLiberatoire": {
+      "description": "Versement libératoire de l'impôt sur le revenu : taux sur le chiffre d'affaires, et plafond de revenu fiscal de référence 2024 par part pour y avoir droit en 2026.",
+      "source": "https://www.impots.gouv.fr/professionnel/questions/en-tant-que-micro-entrepreneur-sous-quelles-conditions-puis-je-opter-pour-l",
+      "plafondRfrParPart": 29315,
+      "taux": { "venteBic": 0.01, "servicesBic": 0.017, "servicesBnc": 0.022 }
     }
   }
 }
