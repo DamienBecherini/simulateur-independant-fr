@@ -1,9 +1,10 @@
 // src/lib/contraste.ts
-// Contraste entre deux couleurs, selon la formule des WCAG : sert à écrire lisiblement sur une couleur choisie
-// par l'utilisateur (pastille d'une entité).
+// Contraste entre deux couleurs, selon la formule des WCAG : sert à écrire lisiblement en blanc sur une couleur
+// choisie par l'utilisateur (pastille d'une entité).
 
-const TEXTE_CLAIR = "#ffffff"
-const TEXTE_SOMBRE = "#0f172a"
+const BLANC = "#ffffff"
+/** Contraste minimal d'un texte de taille normale (WCAG 1.4.3, niveau AA). */
+export const CONTRASTE_TEXTE = 4.5
 
 /** Composantes rouge, vert, bleu (0 à 255) d'une couleur « #rgb » ou « #rrggbb » ; `null` si elle n'est pas lisible. */
 function composantes(couleur: string): [number, number, number] | null {
@@ -32,10 +33,19 @@ export function rapportDeContraste(a: string, b: string): number | null {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
 }
 
-/** Couleur de texte, blanc ou presque noir, la plus contrastée sur ce fond. Blanc si le fond n'est pas lisible. */
-export function couleurDeTexteSur(fond: string): string {
-  const clair = rapportDeContraste(fond, TEXTE_CLAIR)
-  const sombre = rapportDeContraste(fond, TEXTE_SOMBRE)
-  if (clair === null || sombre === null) return TEXTE_CLAIR
-  return sombre > clair ? TEXTE_SOMBRE : TEXTE_CLAIR
+const hex = (rgb: number[]) => `#${rgb.map(c => Math.round(c).toString(16).padStart(2, "0")).join("")}`
+
+/**
+ * Fond sur lequel du texte blanc atteint le contraste demandé : la couleur elle-même si elle est assez sombre,
+ * sinon la même teinte, assombrie juste ce qu'il faut (mélange progressif avec du noir, par pas de 2 %).
+ * Une couleur illisible est renvoyée telle quelle.
+ */
+export function fondPourTexteBlanc(couleur: string, contrasteMinimal = CONTRASTE_TEXTE): string {
+  const rgb = composantes(couleur)
+  if (!rgb) return couleur
+  for (let part = 0; part <= 1; part += 0.02) {
+    const fond = hex(rgb.map(c => c * (1 - part)))
+    if (rapportDeContraste(fond, BLANC)! >= contrasteMinimal) return part === 0 ? couleur : fond
+  }
+  return "#000000"
 }
