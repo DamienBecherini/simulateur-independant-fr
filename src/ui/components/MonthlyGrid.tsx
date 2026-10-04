@@ -210,6 +210,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                       totalExpenses={annualCellData.totalExpenses}
                       absoluteMaxValue={annualScale} // <-- Utilisation de la nouvelle échelle
                       flowCount={annualCellData.flowCount}
+                      readOnly
                     />
                   </div>
 

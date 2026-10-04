@@ -12,6 +12,7 @@ import { useSessionManager } from "./hooks/useSessionManager"
 import type { SaveSlot, SimulationReport } from "@/types"
 import { ResultsPanel } from "./components/ResultsPanel"
 import { FlowLegend } from "./components/FlowLegend"
+import { DevWindowSize } from "./components/DevWindowSize"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
@@ -184,6 +185,8 @@ function App() {
       </main>
 
       <Footer />
+
+      {import.meta.env.DEV && <DevWindowSize />}
 
       {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
       {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que

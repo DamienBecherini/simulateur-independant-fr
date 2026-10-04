@@ -72,8 +72,8 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
 
   return (
     <div ref={setNodeRef} style={style} className="p-4 border rounded-lg flex flex-col gap-4 transition-shadow hover:shadow-lg bg-white dark:bg-gray-900">
-      <div className="flex justify-between items-start gap-4">
-        <div className="flex-grow flex items-center gap-4 min-w-0">
+      <div className="flex flex-wrap justify-between items-start gap-x-4 gap-y-2">
+        <div className="flex-grow flex items-center gap-4 min-w-64">
           <div {...attributes} {...listeners} className="cursor-grab touch-none p-2 -ml-2 self-start">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="text-slate-400">
               <path d="M5.5 4.625C5.01421 4.625 4.625 5.01421 4.625 5.5C4.625 5.98579 5.01421 6.375 5.5 6.375C5.98579 6.375 6.375 5.98579 6.375 5.5C6.375 5.01421 5.98579 4.625 5.5 4.625ZM9.5 4.625C9.01421 4.625 8.625 5.01421 8.625 5.5C8.625 5.98579 9.01421 6.375 9.5 6.375C9.98579 6.375 10.375 5.98579 10.375 5.5C10.375 5.01421 9.98579 4.625 9.5 4.625ZM6.375 9.5C6.375 9.01421 5.98579 8.625 5.5 8.625C5.01421 8.625 4.625 9.01421 4.625 9.5C4.625 9.98579 5.01421 10.375 5.5 10.375C5.98579 10.375 6.375 9.98579 6.375 9.5ZM9.5 8.625C9.01421 8.625 8.625 9.01421 8.625 9.5C8.625 9.98579 9.01421 10.375 9.5 10.375C9.98579 10.375 10.375 9.98579 10.375 9.5C10.375 9.01421 9.98579 8.625 9.5 8.625Z" fill="currentColor"></path>
@@ -94,7 +94,7 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-4">
+        <div className="ml-auto flex shrink-0 items-center gap-4">
           {entity.type === "person" && (
             <label className="flex items-center gap-2 text-sm text-slate-500" title="Hors enfants reliés : leurs parts s'ajoutent automatiquement.">
               Parts propres

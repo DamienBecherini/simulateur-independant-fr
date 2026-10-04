@@ -16,12 +16,15 @@ interface CellChartDisplayProps {
   totalExpenses: number
   absoluteMaxValue: number
   flowCount: number
+  /** Cellule calculée (total annuel) : vide, elle n'invite pas à la saisie. */
+  readOnly?: boolean
 }
 
 const MIN_HEIGHT_PX = 2
 
-export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, absoluteMaxValue, flowCount }: CellChartDisplayProps) {
+export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, absoluteMaxValue, flowCount, readOnly = false }: CellChartDisplayProps) {
   if (flowCount === 0) {
+    if (readOnly) return <div className="py-3 text-center text-slate-400">—</div>
     return <div className="text-slate-400 group-hover:text-slate-600 transition-colors py-3">+ Ajouter</div>
   }
 

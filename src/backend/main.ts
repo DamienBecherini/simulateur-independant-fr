@@ -141,6 +141,11 @@ function createSplashWindow() {
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
+    width: 1440,
+    height: 900,
+    // En dessous, les cartes des acteurs et la grille annuelle ne tiennent plus correctement.
+    minWidth: 1024,
+    minHeight: 640,
     show: false,
     backgroundColor: "#111827",
     webPreferences: {
