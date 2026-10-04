@@ -1,0 +1,171 @@
+// src/ui/components/ResultsPanel.test.tsx
+
+import { render, screen, within } from "@testing-library/react"
+import { describe, expect, it } from "vitest"
+import type { FoyerFiscalResult, PersonResult, SimulationReport } from "@/types"
+import { emptyReport } from "@/ui/testing/fixtures"
+import { ResultsPanel } from "./ResultsPanel"
+
+/**
+ * Formatage attendu d'un montant (« 12 345 € ») et d'un pourcentage (« 34 % »). Le français sépare par des espaces
+ * insécables, que les requêtes de Testing Library ramènent à des espaces simples : on fait de même.
+ */
+const normalize = (text: string) => text.replace(/\s+/g, " ")
+const money = (amount: number) => normalize(`${amount.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €`)
+const percent = (ratio: number) => normalize(ratio.toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 }))
+
+function makePersonResult(entityId: string, name: string, salaires: number): PersonResult {
+  return {
+    entityId,
+    name,
+    revenusDirects: salaires,
+    revenusActivites: 0,
+    detail: { salaires, allocationsChomage: 0, autresRevenus: 0, remunerationsDirigeant: 0, dividendes: 0, benefices: 0 },
+    cotisationsSalariales: 0,
+    depenses: 0
+  }
+}
+
+function makeFoyer(personId: string, overrides: Partial<FoyerFiscalResult> = {}): FoyerFiscalResult {
+  return {
+    personIds: [personId],
+    totalParts: 1,
+    revenusEncaisses: 30000,
+    revenuImposableGlobal: 27000,
+    impotSurLeRevenu: 2000,
+    prelevementsSociaux: 0,
+    optionDividendes: null,
+    netApresImpots: 28000,
+    revenusAvantPrelevements: 40000,
+    totalPrelevements: 12000,
+    resultatConserve: 0,
+    depenses: 0,
+    warnings: [],
+    ...overrides
+  }
+}
+
+/**
+ * Rapport fixe : Alice dirige une SASU qui conserve 10 000 € de bénéfice, Bob est salarié.
+ * Revenus avant prélèvements 100 000 € = prélèvements 34 000 € + conservé 10 000 € + net 56 000 €.
+ */
+function makeReport(): SimulationReport {
+  return {
+    ...emptyReport(),
+    annee: 2025,
+    bilan: {
+      chiffreAffaires: 80000,
+      charges: 10000,
+      revenusDirects: 28000,
+      cotisationsSalariales: 2000,
+      revenusAvantPrelevements: 100000,
+      cotisationsSociales: 20000,
+      impotSocietes: 2000,
+      impotSurLeRevenu: 10000,
+      prelevementsSociaux: 0,
+      totalPrelevements: 34000,
+      resultatConserve: 10000,
+      nonRattache: 0
+    },
+    activities: [
+      {
+        entityId: "company-sasu",
+        name: "Ma SASU",
+        type: "company",
+        statut: "SASU",
+        chiffreAffaires: 80000,
+        charges: 10000,
+        cotisationsSociales: 20000,
+        impotSocietes: 2000,
+        revenuVerse: 38000,
+        resultatConserve: 10000,
+        warnings: ["Rémunération inférieure au seuil de validation de trimestres."]
+      }
+    ],
+    persons: [makePersonResult("person-alice", "Alice Martin", 0), makePersonResult("person-bob", "Bob Durand", 28000)],
+    foyers: [makeFoyer("person-alice", { revenusAvantPrelevements: 70000, totalPrelevements: 24000, resultatConserve: 10000, netApresImpots: 36000 }), makeFoyer("person-bob", { netApresImpots: 20000 })],
+    totalNetApresImpots: 56000
+  }
+}
+
+/** Valeur affichée en face d'un libellé de ligne (`<dt>` / `<dd>`), dans un conteneur donné. */
+function rowValue(container: HTMLElement, label: string) {
+  const term = within(container).getByText(label, { selector: "dt" })
+  return term.nextElementSibling as HTMLElement
+}
+
+describe("ResultsPanel", () => {
+  it("invite à ajouter une entité quand le rapport est vide", () => {
+    render(<ResultsPanel report={emptyReport()} error={null} />)
+    expect(screen.getByText("Ajoutez une personne ou une activité pour voir les résultats.")).toBeInTheDocument()
+  })
+
+  it("affiche l'erreur de simulation", () => {
+    render(<ResultsPanel report={null} error="Entrée invalide" />)
+    expect(screen.getByText("Entrée invalide")).toBeInTheDocument()
+  })
+
+  it("présente le bilan : net dans la poche, taux global et répartition", () => {
+    render(<ResultsPanel report={makeReport()} error={null} />)
+
+    expect(screen.getByText(/règles fiscales 2025/)).toBeInTheDocument()
+    expect(screen.getByText(`${percent(0.56)} des revenus`)).toBeInTheDocument()
+    expect(screen.getByText("Taux global de prélèvement").nextElementSibling).toHaveTextContent(percent(0.34))
+    expect(screen.getByRole("img", { name: "Répartition des revenus avant prélèvements" })).toBeInTheDocument()
+
+    const bilan = screen.getByText("Taux global de prélèvement").closest("div.rounded-lg") as HTMLElement
+    expect(rowValue(bilan, "Revenus avant prélèvements")).toHaveTextContent(money(100000))
+    expect(rowValue(bilan, "Cotisations salariales")).toHaveTextContent(`− ${money(2000)}`)
+    expect(rowValue(bilan, "Impôt sur les sociétés")).toHaveTextContent(`− ${money(2000)}`)
+    expect(rowValue(bilan, "Conservé dans les sociétés")).toHaveTextContent(money(10000))
+    // Sans dividendes, la ligne des prélèvements sociaux n'apparaît pas.
+    expect(within(bilan).queryByText("Prélèvements sociaux sur dividendes")).not.toBeInTheDocument()
+  })
+
+  it("explique que le bénéfice conservé n'a pas encore payé l'impôt personnel", () => {
+    render(<ResultsPanel report={makeReport()} error={null} />)
+    expect(screen.getByText(/Le bénéfice conservé dans une société a payé l'impôt sur les sociétés/)).toBeInTheDocument()
+  })
+
+  it("n'affiche pas cette note sans bénéfice conservé", () => {
+    const report = makeReport()
+    report.bilan = { ...report.bilan, resultatConserve: 0 }
+    render(<ResultsPanel report={report} error={null} />)
+    expect(screen.queryByText(/Le bénéfice conservé dans une société/)).not.toBeInTheDocument()
+  })
+
+  it("affiche une carte par foyer, avec son taux de prélèvement quand il y a plusieurs foyers", () => {
+    render(<ResultsPanel report={makeReport()} error={null} />)
+
+    const cards = screen.getAllByRole("article")
+    const alice = cards.find(card => within(card).queryByText("Alice Martin"))!
+    const bob = cards.find(card => within(card).queryByText("Bob Durand"))!
+
+    expect(within(bob).getByText("Foyer fiscal · 1 part")).toBeInTheDocument()
+    expect(rowValue(bob, "Salaires")).toHaveTextContent(money(28000))
+    expect(rowValue(bob, "Net après impôts")).toHaveTextContent(money(20000))
+    expect(rowValue(alice, "Prélèvements du foyer")).toHaveTextContent(`${money(24000)}${percent(24000 / 70000)}`)
+    expect(rowValue(alice, "Sa part conservée en société")).toHaveTextContent(money(10000))
+    expect(screen.getByText(/partagés à parts égales entre les foyers/)).toBeInTheDocument()
+  })
+
+  it("n'affiche pas de taux par foyer quand il n'y a qu'un foyer", () => {
+    const report = makeReport()
+    report.foyers = [report.foyers[1]]
+    render(<ResultsPanel report={report} error={null} />)
+
+    expect(screen.getByText("Bob Durand")).toBeInTheDocument()
+    expect(screen.queryByText("Prélèvements du foyer")).not.toBeInTheDocument()
+    expect(screen.queryByText(/partagés à parts égales entre les foyers/)).not.toBeInTheDocument()
+  })
+
+  it("détaille chaque activité et ses avertissements", () => {
+    render(<ResultsPanel report={makeReport()} error={null} />)
+
+    const card = screen.getAllByRole("article").find(article => within(article).queryByText("Ma SASU"))!
+    expect(rowValue(card, "Charges déductibles")).toHaveTextContent(`− ${money(10000)}`)
+    expect(rowValue(card, "Conservé dans la société")).toHaveTextContent(money(10000))
+    expect(rowValue(card, "Versé avant impôt sur le revenu")).toHaveTextContent(`${money(38000)}48 % du CA`)
+    expect(within(card).getByRole("listitem")).toHaveTextContent("Rémunération inférieure au seuil de validation de trimestres.")
+  })
+})
