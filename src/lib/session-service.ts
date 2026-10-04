@@ -42,7 +42,7 @@ export function updateSlotWithSession(slotToUpdate: SaveSlot, session: SessionSt
  * Exporte l'état d'un slot ou d'une session vers un fichier JSON.
  */
 export function exportState(state: { entities: Entity[]; relationships: Relationship[]; monthlyData: MonthlyGridData }): void {
-  window.api.exportState(state)
+  void window.api.exportState(state)
 }
 
 /**
@@ -66,5 +66,5 @@ export async function importState(): Promise<{ data: ExportableState; report: Sa
  * Sauvegarde la liste complète des slots sur le disque.
  */
 export function saveAllSlots(slots: SaveSlot[]): void {
-  window.api.saveSlots(slots)
+  void window.api.saveSlots(slots)
 }

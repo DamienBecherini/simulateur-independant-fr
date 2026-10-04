@@ -29,6 +29,11 @@ function getDefaultSessionState(): SessionState {
   }
 }
 
+/** Affiche une boîte de dialogue d'information ; si elle ne peut pas s'afficher, l'échec est journalisé. */
+function showInfoDialog(options: Electron.MessageBoxOptions) {
+  dialog.showMessageBox(options).catch(error => console.error("Boîte de dialogue impossible à afficher :", error))
+}
+
 /** Ajoute à un fichier le numéro du format dans lequel il est écrit. */
 function withFormatVersion<T extends object>(data: T): T & { formatVersion: number } {
   return { ...data, formatVersion: FORMAT_VERSION_ACTUEL }
@@ -74,13 +79,11 @@ async function readSessionFromFile(): Promise<SessionState> {
       sections.push(`Elle a été convertie au nouveau format du simulateur. Points à vérifier :\n\n${formatMigrationNotes(report.migrationNotes)}`)
     }
     if (sections.length > 0) {
-      dialog
-        .showMessageBox({
-          type: "info",
-          title: "Chargement de la session",
-          message: `Votre session précédente a été chargée.\n\n${sections.join("\n\n")}`
-        })
-        .catch()
+      showInfoDialog({
+        type: "info",
+        title: "Chargement de la session",
+        message: `Votre session précédente a été chargée.\n\n${sections.join("\n\n")}`
+      })
     }
     return safeState
   } catch (error) {
@@ -91,13 +94,11 @@ async function readSessionFromFile(): Promise<SessionState> {
     console.warn(`Échec du chargement de la session : ${errorMessage}. Démarrage avec une session par défaut.`)
 
     // AVERTIR L'UTILISATEUR AU DÉMARRAGE (BONUS)
-    dialog
-      .showMessageBox({
-        type: "warning",
-        title: "Chargement échoué",
-        message: "Impossible de charger votre session précédente car le fichier est peut-être corrompu ou obsolète. L'application a démarré avec une nouvelle simulation vierge."
-      })
-      .catch() // On ignore l'erreur si la dialog ne peut pas s'afficher
+    showInfoDialog({
+      type: "warning",
+      title: "Chargement échoué",
+      message: "Impossible de charger votre session précédente car le fichier est peut-être corrompu ou obsolète. L'application a démarré avec une nouvelle simulation vierge."
+    })
 
     return getDefaultSessionState()
   }
@@ -140,13 +141,11 @@ async function readSlotsFromFile(): Promise<SaveSlot[]> {
       await backupBeforeMigration(slotsFilePath, data, Math.min(...oldSlots.map(versionDuFormat)))
       await writeSlotsToFile(slots)
       const notes = [...new Set(oldSlots.flatMap(slot => migrerVersFormatActuel(slot).notes))]
-      dialog
-        .showMessageBox({
-          type: "info",
-          title: "Sauvegardes converties",
-          message: `${oldSlots.length} sauvegarde${oldSlots.length > 1 ? "s ont été converties" : " a été convertie"} au nouveau format du simulateur.${notes.length > 0 ? `\n\nÀ l'ouverture de chacune, vérifiez :\n\n${formatMigrationNotes(notes)}` : ""}`
-        })
-        .catch()
+      showInfoDialog({
+        type: "info",
+        title: "Sauvegardes converties",
+        message: `${oldSlots.length} sauvegarde${oldSlots.length > 1 ? "s ont été converties" : " a été convertie"} au nouveau format du simulateur.${notes.length > 0 ? `\n\nÀ l'ouverture de chacune, vérifiez :\n\n${formatMigrationNotes(notes)}` : ""}`
+      })
     }
     return slots
   } catch {
@@ -209,7 +208,7 @@ function createSplashWindow() {
     resizable: false,
     center: true
   })
-  splashWindow.loadFile(path.join(app.getAppPath(), "splash.html"))
+  splashWindow.loadFile(path.join(app.getAppPath(), "splash.html")).catch(error => console.error("Écran de démarrage introuvable :", error))
 }
 
 function createMainWindow() {
@@ -229,9 +228,9 @@ function createMainWindow() {
   })
 
   if (isDev()) {
-    mainWindow.loadURL("http://localhost:3524")
+    mainWindow.loadURL("http://localhost:3524").catch(error => console.error("Serveur de développement injoignable :", error))
   } else {
-    mainWindow.loadFile(getUIPath())
+    mainWindow.loadFile(getUIPath()).catch(error => console.error("Interface introuvable :", error))
   }
 
   mainWindow.once("ready-to-show", () => {

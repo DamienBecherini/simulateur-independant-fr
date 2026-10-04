@@ -235,7 +235,7 @@ export function comparerStatuts(session: SessionState, options: ComparaisonOptio
 
   const actuel = statutActuel(source)
   const scenarios = STATUTS_COMPARES.map(statut => scenario(statut, statut === actuel, simulerStatut(session, source, statut, options, regles), source.id, options, regles))
-  const meilleur = scenarios.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a)).statut
+  const meilleur = scenarios.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), scenarios[0]).statut
 
   return { scenarios, meilleur, couples, warnings }
 }

@@ -64,7 +64,7 @@ export function useSessionManager() {
       // 4. Si on a dû corriger l'ordre, on le sauvegarde immédiatement sur le disque pour corriger la désynchronisation pour de bon.
       if (JSON.stringify(finalOrder) !== JSON.stringify(order)) {
         console.warn("Incohérence détectée entre les slots et l'ordre de tri. Synchronisation automatique effectuée.")
-        window.api.saveUserPreferences(finalPreferences)
+        void window.api.saveUserPreferences(finalPreferences)
       }
       // --- FIN DE LA LOGIQUE D'AUTO-RÉPARATION ---
 
@@ -73,7 +73,7 @@ export function useSessionManager() {
       setLoaded(true)
       setAllSaveSlots(slotsData)
       setUserPreferences(finalPreferences) // On utilise les préférences potentiellement corrigées.
-    })
+    }).catch(error => console.error("Chargement de la session, des sauvegardes ou des préférences impossible :", error))
   }, []) // Le tableau de dépendances vide [] assure que cet effet ne s'exécute qu'une fois.
 
   // Hooks pour la sauvegarde automatique décalée (debounced).

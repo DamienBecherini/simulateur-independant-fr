@@ -115,7 +115,7 @@ function App() {
     currentSession.monthlyData.forEach(month => {
       month.flows.forEach(flow => types.add(flow.type))
     })
-    const sortedTypes = Array.from(types).sort()
+    const sortedTypes = Array.from(types).sort((a, b) => a.localeCompare(b))
 
     const map = new Map<string, number>()
     sortedTypes.forEach((type, index) => {

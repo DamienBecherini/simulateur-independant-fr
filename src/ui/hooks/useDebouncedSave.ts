@@ -23,7 +23,6 @@ export function useDebouncedSave<T>(data: T, delay: number, saveCallback: (data:
     }
 
     timeoutRef.current = setTimeout(() => {
-      console.log(`[Debounce] Sauvegarde déclenchée après ${delay}ms d'inactivité.`)
       saveCallback(data)
     }, delay)
 
