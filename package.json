@@ -1,7 +1,14 @@
 {
-  "name": "electron-vite-template",
+  "name": "simulateur-independant-fr",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.9.0",
+  "description": "Simulateur desktop hors-ligne pour indépendants français : statuts juridiques, cotisations, impôt du foyer et comparateur de statuts.",
+  "author": "Damien Becherini",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DamienBecherini/simulateur-independant-fr.git"
+  },
   "type": "module",
   "main": "dist-electron/backend/main.js",
   "scripts": {
@@ -17,6 +24,7 @@
     "test:e2e": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && playwright test",
     "test:e2e:visible": "cross-env E2E_VISIBLE=1 npm run test:e2e",
     "test:all": "npm run test:coverage && npm run test:e2e",
+    "captures": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && playwright test --config playwright.captures.config.ts",
     "test:mutation": "stryker run",
     "typecheck:tests": "tsc --project src/backend/tsconfig.test.json",
     "preview": "vite preview",

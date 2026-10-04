@@ -10,10 +10,30 @@ import { isDev } from "./isDev.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
 import fs from "fs/promises"
-import { writeFileSync } from "fs"
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs"
 import { ipcMain } from "electron"
 import { sanitizeStateAndFillDefaults, sanitizeSlots } from "./logic/data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
+
+/** Fichiers de données conservés d'une version à l'autre. */
+const DATA_FILES = ["sessionState.json", "simulationSlots.json", "userPreferences.json"]
+
+/**
+ * Le dossier de données suit le nom du paquet. Jusqu'à la version 0.9, ce nom était « electron-vite-template » :
+ * au premier lancement, si le nouveau dossier ne contient encore aucune donnée, on y recopie l'ancien.
+ * L'ancien dossier n'est pas supprimé.
+ */
+function recopierAncienDossierDeDonnees() {
+  const dossier = app.getPath("userData")
+  const ancien = path.join(app.getPath("appData"), "electron-vite-template")
+  if (ancien === dossier || !existsSync(ancien) || DATA_FILES.some(f => existsSync(path.join(dossier, f)))) return
+  mkdirSync(dossier, { recursive: true })
+  for (const fichier of DATA_FILES) {
+    if (existsSync(path.join(ancien, fichier))) copyFileSync(path.join(ancien, fichier), path.join(dossier, fichier))
+  }
+  console.info(`Données reprises de l'ancien dossier : ${ancien}`)
+}
+recopierAncienDossierDeDonnees()
 
 const sessionStatePath = path.join(app.getPath("userData"), "sessionState.json")
 const slotsFilePath = path.join(app.getPath("userData"), "simulationSlots.json")
