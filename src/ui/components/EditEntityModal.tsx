@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect, useMemo } from "react"
 import type { Entity, Relationship, Person, Company, Avatar } from "@/types"
 import { Trash2, PlusCircle, ArrowRight } from "lucide-react"
-import { getAvailableRelationships } from "@/lib/graph-logic"
+import { getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { updatePersonAvatar } from "@/lib/avatar-utils"
@@ -121,22 +121,24 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
             {localEntity.type === "person" && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="fiscalParts" className="text-right">
-                  Parts
+                  Parts propres
                 </Label>
-                <Input
-                  id="fiscalParts"
-                  name="fiscalParts"
-                  type="number"
-                  step="0.5"
-                  value={(localEntity as Person).fiscalParts || 1}
-                  onChange={e =>
-                    setFormData(prev => {
-                      if (prev.entity?.type !== "person") return prev
-                      return { ...prev, entity: { ...prev.entity, fiscalParts: parseFloat(e.target.value) || 0 } }
-                    })
-                  }
-                  className="col-span-3"
-                />
+                <div className="col-span-3">
+                  <Input
+                    id="fiscalParts"
+                    name="fiscalParts"
+                    type="number"
+                    step="0.5"
+                    value={(localEntity as Person).fiscalParts || 1}
+                    onChange={e =>
+                      setFormData(prev => {
+                        if (prev.entity?.type !== "person") return prev
+                        return { ...prev, entity: { ...prev.entity, fiscalParts: parseFloat(e.target.value) || 0 } }
+                      })
+                    }
+                  />
+                  <p className="mt-1 text-xs text-slate-500">Hors enfants reliés : leurs parts s'ajoutent automatiquement. À modifier pour un cas particulier (parent isolé, invalidité…).</p>
+                </div>
               </div>
             )}
             {localEntity.type === "company" && (
@@ -223,7 +225,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                         <AvatarDisplay avatar={otherEntity.avatar} size="sm" />
                         <div>
                           <div className="font-semibold">{otherEntity.name}</div>
-                          <div className="text-blue-600 dark:text-blue-400 font-medium">{rel.type}</div>
+                          <div className="text-blue-600 dark:text-blue-400 font-medium">{getRelationshipLabel(rel.type, isSource)}</div>
                         </div>
                         {isSource && <ArrowRight className="h-4 w-4 text-slate-400" />}
                       </div>
@@ -259,7 +261,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                     <SelectContent>
                       {availableTypes.map(t => (
                         <SelectItem key={t} value={t}>
-                          {t}
+                          {getRelationshipLabel(t)}
                         </SelectItem>
                       ))}
                     </SelectContent>

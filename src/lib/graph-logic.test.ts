@@ -1,7 +1,7 @@
 // src/lib/graph-logic.test.ts
 
 import { describe, expect, it } from "vitest"
-import { getAvailableRelationships } from "@/lib/graph-logic"
+import { getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
 import type { Company, MicroEntreprise, Person, Relationship } from "@/types"
 
 const avatar = { type: "initials", value: "AB", color: "#3b82f6" } as const
@@ -21,6 +21,18 @@ function micro(id: string): MicroEntreprise {
 function relation(fromId: string, toId: string, type: Relationship["type"]): Relationship {
   return { id: `${fromId}-${toId}-${type}`, fromId, toId, type }
 }
+
+describe("getRelationshipLabel", () => {
+  it("présente la relation « Enfant » selon le côté d'où elle est vue", () => {
+    expect(getRelationshipLabel("Enfant")).toBe("Enfant à charge")
+    expect(getRelationshipLabel("Enfant", false)).toBe("Parent (à sa charge)")
+  })
+
+  it("affiche les autres relations telles quelles, des deux côtés", () => {
+    expect(getRelationshipLabel("Marié(e)")).toBe("Marié(e)")
+    expect(getRelationshipLabel("Président", false)).toBe("Président")
+  })
+})
 
 describe("getAvailableRelationships", () => {
   describe("relations possibles selon les entités", () => {

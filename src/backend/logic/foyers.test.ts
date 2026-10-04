@@ -33,6 +33,18 @@ describe("buildFoyers", () => {
       expect(foyers([personne("parent"), personne("enfant")], [relation("parent", "enfant", "Enfant")])).toEqual([{ declarantIds: ["parent"], enfantIds: ["enfant"], totalParts: 1.5, nombreDeclarants: 1, warnings: [] }])
     })
 
+    it("signale un parent qui a plus d'une part propre en plus d'enfants reliés", () => {
+      const [foyer] = foyers([personne("parent", 1.5), personne("enfant")], [relation("parent", "enfant", "Enfant")])
+
+      expect(foyer.totalParts).toBe(2)
+      expect(foyer.warnings).toHaveLength(1)
+      expect(foyer.warnings[0]).toContain("parent : plus d'une part propre et des enfants reliés")
+    })
+
+    it("ne signale rien pour une part majorée sans enfant relié", () => {
+      expect(foyers([personne("parent", 2.5)])[0].warnings).toEqual([])
+    })
+
     it("ignore les parts saisies sur l'enfant : seul son rang compte", () => {
       const [foyer] = foyers([personne("parent"), personne("enfant", 3)], [relation("parent", "enfant", "Enfant")])
 

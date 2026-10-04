@@ -99,6 +99,10 @@ export function buildFoyers(session: SessionState, regles: ReglesFiscales["IR"][
   }
 
   for (const foyer of foyers.values()) {
+    const avecPartsMajorees = personnes.filter(p => foyer.declarantIds.includes(p.id) && p.fiscalParts > 1).map(p => p.name)
+    if (foyer.enfantIds.length > 0 && avecPartsMajorees.length > 0) {
+      foyer.warnings.push(`${avecPartsMajorees.join(", ")} : plus d'une part propre et des enfants reliés. Les parts des enfants s'ajoutent automatiquement : vérifiez qu'ils ne sont pas comptés deux fois.`)
+    }
     foyer.totalParts += partsDesEnfants(foyer.enfantIds.length, regles)
     foyer.nombreDeclarants = foyer.declarantIds.length >= 2 ? 2 : 1
     if (foyer.declarantIds.length > 2) {
