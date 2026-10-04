@@ -9,6 +9,8 @@ import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
 import { isExpenseFlowType } from "@/lib/flow-constants"
 import { createId } from "@/lib/id"
+import { recopierFlux, type PorteeRecurrence } from "@/lib/flux-recurrents"
+import { toast } from "sonner"
 import { AvatarDisplay } from "./AvatarDisplay"
 
 /**
@@ -27,6 +29,9 @@ interface MonthlyGridProps {
 // Constantes pour les labels des mois
 const months = ["Janv", "Févr", "Mars", "Avril", "Mai", "Juin", "Juil", "Août", "Sept", "Oct", "Nov", "Déc"]
 const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+
+/** « de mars », mais « d’avril », « d’août », « d’octobre » : l’élision devant une voyelle. */
+const deMois = (mois: string) => (/^[aeiouâéèêîôû]/i.test(mois) ? `d’${mois.toLowerCase()}` : `de ${mois.toLowerCase()}`)
 
 function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap }: MonthlyGridProps) {
   // ===================================================================================
@@ -53,11 +58,34 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       return prevData.map((monthData, index) => (index === monthIndex ? { ...monthData, flows } : monthData))
     })
   }
-  const handleCreateFlow = (values: NewFlowValues) => {
+  const handleCreateFlow = (values: NewFlowValues, portee: PorteeRecurrence = "mois") => {
     if (!openCell) return
     // L'identifiant est généré hors de la fonction de mise à jour, qui doit rester pure.
     const newFlow: FinancialFlow = { id: createId("flow"), entityId: openCell.entityId, ...values }
-    updateOpenMonthFlows(flows => [...flows, newFlow])
+    if (portee === "mois") {
+      updateOpenMonthFlows(flows => [...flows, newFlow])
+      return
+    }
+    // Ajout et recopies en une seule modification : une seule étape d'annulation.
+    const { monthIndex } = openCell
+    const avecLeNouveau = monthlyData.map((mois, index) => (index === monthIndex ? { ...mois, flows: [...mois.flows, newFlow] } : mois))
+    const { grille, ajouts } = recopierFlux(avecLeNouveau, newFlow, monthIndex, portee, () => createId("flow"))
+    setMonthlyData(grille)
+    if (ajouts > 0) toast.success(`Flux ajouté à ce mois et recopié sur ${ajouts} autre${ajouts > 1 ? "s" : ""} mois.`)
+  }
+  /** Recopie un flux du mois ouvert sur les mois suivants, jusqu'en décembre, sans doublon. */
+  const handleRecopierFlux = (flowId: string) => {
+    if (!openCell) return
+    const { monthIndex } = openCell
+    const flux = monthlyData[monthIndex].flows.find(f => f.id === flowId)
+    if (!flux) return
+    const { grille, ajouts } = recopierFlux(monthlyData, flux, monthIndex, "suivants", () => createId("flow"))
+    if (ajouts === 0) {
+      toast.info("Ce flux est déjà présent sur tous les mois suivants.")
+      return
+    }
+    setMonthlyData(grille)
+    toast.success(`Flux recopié sur ${ajouts} mois, jusqu'en décembre.`)
   }
   const handleUpdateFlow = (flowId: string, changes: FlowChanges) => {
     updateOpenMonthFlows(flows => {
@@ -224,7 +252,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                       className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start print:min-h-0 print:p-1"
                       role="button"
                       tabIndex={0}
-                      aria-label={`Flux de ${fullMonths[monthIndex].toLowerCase()} : ${entity.name}`}
+                      aria-label={`Flux ${deMois(fullMonths[monthIndex])} : ${entity.name}`}
                       onClick={() => setOpenCell({ entityId: entity.id, monthIndex })}
                       onKeyDown={event => {
                         // Une case s'ouvre aussi au clavier, comme un bouton.
@@ -252,6 +280,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           entity={openCellEntity}
           monthName={fullMonths[openCell.monthIndex]}
           onCreate={handleCreateFlow}
+          onRecopier={openCell.monthIndex < 11 ? handleRecopierFlux : undefined}
           onUpdate={handleUpdateFlow}
           onDelete={handleDeleteFlow}
           onReorder={handleReorderFlows}

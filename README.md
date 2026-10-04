@@ -29,7 +29,7 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 ## ✨ Fonctionnalités
 
 - **Modélisation par graphe** : entités (personnes, sociétés, micro-entreprises) reliées par des relations (Marié(e), PACSé(e), Enfant, Président, Gérant…).
-- **Grille annuelle visuelle** : saisie des flux mois par mois, légende numérotée et couleurs personnalisables.
+- **Grille annuelle visuelle** : saisie des flux mois par mois, ajout d'un flux à tous les mois en une saisie ou recopie sur les mois suivants (loyer, abonnement, salaire), légende numérotée et couleurs personnalisables.
 - **Simulation par foyer** : chaque activité (SASU, EURL, entreprise individuelle au réel, micro-entreprise) calcule ses cotisations et ce qu'elle verse ; l'impôt sur le revenu est ensuite calculé une seule fois par foyer fiscal (quotient familial plafonné, décote, dividendes au forfait ou au barème). Les résultats se recalculent à chaque modification.
 - **Comparateur de statuts** : pour une activité, net dans la poche, taux de prélèvement, frais de fonctionnement détaillés et note de protection sociale (trimestres de retraite validés) en SASU, EURL, EI au réel et micro-entreprise (avec et sans versement libératoire) ; pour un couple en union libre, effet d'un mariage ou d'un PACS sur l'impôt.
 - **Rémunération ou dividendes** : pour une société à l'IS (SASU, EURL), courbe du net du foyer selon la rémunération du dirigeant, le reste du bénéfice étant versé en dividendes ; meilleure rémunération, et meilleure parmi celles qui valident 4 trimestres de retraite, à reporter dans le comparateur en un clic.

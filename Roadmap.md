@@ -166,7 +166,8 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 2.  **Règles par année [✅ en partie] :** règles 2024 et 2025 collectées et sourcées (`src/backend/regles/`), au format de `config.json`, avec des tests de forme et de cohérence d'une année sur l'autre ; convention d'année acceptée (ADR 007 : l'année des revenus et de l'activité). Le régime général (phase 12) y est aussi, pour les trois années. **Reste :** les brancher dans le moteur ; pour une année sans règles connues, reprendre les dernières avec un avertissement ; étendre le format pour représenter ce que les règles d'avant 2026 approchent aujourd'hui : cotisations des indépendants de 2024 (ancien mode de calcul), taux réduits maladie (7 %) et allocations familiales (3,45 %) des salariés sous un seuil en SMIC, coefficient de la réduction Fillon bâti sur ces taux, et changements en cours d'année (SMIC, chômage, AGS, accidents du travail, taux micro BNC de juillet 2024).
 3.  **Revenu fiscal de référence :** calculé chaque année et reporté ; le versement libératoire de l'année N vérifie celui de N-2 automatiquement (il faut donc trois années chaînées).
 4.  **Bénéfice mis en réserve :** le résultat conservé d'une société est reporté sur l'année suivante et peut être distribué plus tard ; arbitrage des dividendes entre les années.
-5.  **Dispositifs limités dans le temps :** ACRE la première année, exonération de CFE l'année de création, cotisations des premières années.
+5.  **Flux récurrents :** un flux défini une fois pour plusieurs mois ou années (« 800 € par mois de janvier à décembre »), modifiable en une fois, avec une règle claire quand on change un seul mois d'une série. Aujourd'hui, la grille recopie le flux sur les mois choisis : les copies sont indépendantes.
+6.  **Dispositifs limités dans le temps :** ACRE la première année, exonération de CFE l'année de création, cotisations des premières années.
 
 ---
 

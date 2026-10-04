@@ -8,7 +8,7 @@ import { formatAmount, parseAmount } from "@/lib/amount-utils"
 import { flowTypeLabels, isOutgoingFlowType, type FlowType } from "@/lib/flow-constants"
 import { DEFAULT_NET_RATIO, formatPercent, grossFromNet, netFromGross, netRatio, parsePercent } from "@/lib/salary-utils"
 import { cn } from "@/lib/utils"
-import { GripVertical, Trash2 } from "lucide-react"
+import { CopyPlus, GripVertical, Trash2 } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { FlowTypeSelect, RetourALaLigneSurTelephone } from "./FlowTypeSelect"
@@ -26,10 +26,12 @@ interface FlowItemProps {
   allowedTypes: ReadonlyArray<FlowType>
   onUpdate: (flowId: string, changes: FlowChanges) => void
   onDelete: (flowId: string) => void
+  /** Recopie le flux sur les mois suivants ; sans cette fonction, le bouton n'est pas affiché (décembre). */
+  onRecopier?: (flowId: string) => void
   onTypeUsed: (type: FlowType) => void
 }
 
-export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onTypeUsed }: FlowItemProps) {
+export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, onTypeUsed }: FlowItemProps) {
   // Hook de la bibliothèque dnd-kit pour rendre l'élément "triable" (sortable).
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: flow.id })
 
@@ -180,6 +182,11 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onTypeUsed }:
       />
       <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
 
+      {onRecopier ? (
+        <Button variant="ghost" size="icon" className="shrink-0" aria-label="Recopier ce flux jusqu'en décembre" title="Recopier ce flux sur les mois suivants, jusqu'en décembre" onClick={() => onRecopier(flow.id)}>
+          <CopyPlus />
+        </Button>
+      ) : null}
       <Button variant="ghost" size="icon" className="shrink-0 text-destructive hover:text-destructive dark:text-red-400 dark:hover:text-red-400" aria-label="Supprimer le flux" onClick={() => onDelete(flow.id)}>
         <Trash2 />
       </Button>
