@@ -241,6 +241,8 @@ export interface SanitizationReport {
   entitiesRemoved: number
   relationshipsRemoved: number
   flowsRemoved: number
+  /** Points à vérifier après la conversion d'un fichier d'un format précédent. */
+  migrationNotes: string[]
 }
 
 export type ExportableState = {

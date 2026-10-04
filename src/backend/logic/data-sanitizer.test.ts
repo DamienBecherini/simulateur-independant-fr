@@ -30,7 +30,7 @@ describe("sanitizeStateAndFillDefaults", () => {
       expect(safeState.entities).toEqual([])
       expect(safeState.relationships).toEqual([])
       expect(safeState.monthlyData).toEqual(grille())
-      expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
+      expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
     })
 
     it("complète les champs facultatifs des entités", () => {
@@ -69,7 +69,7 @@ describe("sanitizeStateAndFillDefaults", () => {
       const { safeState, report } = sanitizeStateAndFillDefaults(session)
 
       expect(safeState).toEqual(session)
-      expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
+      expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
     })
 
     it("écarte les propriétés inconnues", () => {
@@ -121,7 +121,7 @@ describe("sanitizeStateAndFillDefaults", () => {
 
       expect(safeState.relationships).toEqual([])
       expect(safeState.monthlyData).toEqual(grille())
-      expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 1, flowsRemoved: 1 })
+      expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 1, flowsRemoved: 1 })
     })
   })
 
@@ -138,7 +138,7 @@ describe("sanitizeStateAndFillDefaults", () => {
       expect(safeState.entities).toEqual([alice, sasu])
       expect(safeState.relationships).toHaveLength(1)
       expect(safeState.monthlyData[0].flows).toHaveLength(1)
-      expect(report).toEqual({ entitiesRemoved: 2, relationshipsRemoved: 0, flowsRemoved: 0 })
+      expect(report).toMatchObject({ entitiesRemoved: 2, relationshipsRemoved: 0, flowsRemoved: 0 })
     })
 
     it("supprime aussi les relations et les flux de l'entité écartée", () => {
@@ -151,7 +151,7 @@ describe("sanitizeStateAndFillDefaults", () => {
       expect(safeState.entities).toEqual([alice])
       expect(safeState.relationships).toEqual([])
       expect(safeState.monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
-      expect(report).toEqual({ entitiesRemoved: 1, relationshipsRemoved: 1, flowsRemoved: 1 })
+      expect(report).toMatchObject({ entitiesRemoved: 1, relationshipsRemoved: 1, flowsRemoved: 1 })
     })
 
     it("écarte une relation invalide sans toucher aux autres", () => {
@@ -166,7 +166,7 @@ describe("sanitizeStateAndFillDefaults", () => {
 
       expect(safeState.entities).toEqual([alice, sasu])
       expect(safeState.relationships).toEqual([{ id: "r2", fromId: "p1", toId: "c1", type: "Associé" }])
-      expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 2, flowsRemoved: 0 })
+      expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 2, flowsRemoved: 0 })
     })
 
     it("écarte un flux invalide sans toucher aux autres", () => {
@@ -177,7 +177,7 @@ describe("sanitizeStateAndFillDefaults", () => {
 
       expect(safeState.monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
       expect(safeState.monthlyData).toHaveLength(12)
-      expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 3 })
+      expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 3 })
     })
   })
 
@@ -196,7 +196,7 @@ describe("sanitizeStateAndFillDefaults", () => {
       const { safeState, report } = sanitizeStateAndFillDefaults(donnees)
 
       expect(safeState).toEqual({ name: "Nouvelle Simulation", entities: [], relationships: [], monthlyData: grille() })
-      expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
+      expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
       expect(consoleError).toHaveBeenCalledOnce()
     })
   })

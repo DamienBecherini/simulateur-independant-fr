@@ -3,9 +3,11 @@
  * @description Nettoyage des données lues sur le disque ou importées. Zod reste la source de vérité pour la structure :
  * chaque entité, relation et flux est validé individuellement, afin qu'un élément corrompu ne fasse pas perdre le reste.
  * Une passe sémantique supprime ensuite les relations et les flux orphelins.
+ * Les fichiers d'un format précédent sont d'abord convertis (voir migrations.ts).
  */
 import { EntitySchema, FinancialFlowSchema, RelationshipSchema, SessionStateSchema, SaveSlotSchema } from "../../types.js"
 import type { SessionState, SaveSlot, SanitizationReport } from "../../types.js"
+import { migrerVersFormatActuel } from "./migrations.js"
 
 interface SanitizationResult {
   safeState: SessionState
@@ -66,7 +68,9 @@ function countFlows(monthlyData: SessionState["monthlyData"]): number {
  * @returns La session nettoyée et son rapport, ou `null` si la structure est irrécupérable
  * (pas un objet, grille mensuelle inutilisable, champ de premier niveau invalide).
  */
-function sanitizeSession(rawData: unknown): SanitizationResult | null {
+function sanitizeSession(rawInput: unknown): SanitizationResult | null {
+  const migration = migrerVersFormatActuel(rawInput)
+  const rawData = migration.donnees
   if (!isRecord(rawData)) {
     console.error("Données de session invalides : un objet était attendu.")
     return null
@@ -110,13 +114,15 @@ function sanitizeSession(rawData: unknown): SanitizationResult | null {
     report: {
       entitiesRemoved: entities.removed,
       relationshipsRemoved: relationships.removed + orphanRelationships,
-      flowsRemoved: monthlyData.removed + orphanFlows
+      flowsRemoved: monthlyData.removed + orphanFlows,
+      migrationNotes: migration.notes
     }
   }
 }
 
 /**
  * Nettoie et valide les données brutes d'une session.
+ * 0. Convertit au format actuel un fichier d'un format précédent.
  * 1. Écarte individuellement les entités, relations et flux invalides.
  * 2. Valide la structure d'ensemble et applique les valeurs par défaut avec Zod.
  * 3. Supprime les relations et les flux orphelins.
@@ -131,7 +137,7 @@ export function sanitizeStateAndFillDefaults(rawData: unknown): SanitizationResu
   return {
     // .parse({}) utilise tous les .default() définis dans le schéma.
     safeState: SessionStateSchema.parse({}),
-    report: { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 }
+    report: { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, migrationNotes: [] }
   }
 }
 

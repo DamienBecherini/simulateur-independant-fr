@@ -92,7 +92,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 - **Résultats :** net après impôts par foyer, détail par activité, recalcul automatique à chaque modification.
 - **Robustesse :** le chargement écarte les éléments invalides un par un au lieu de réinitialiser la session ; identifiants uniques (UUID).
 
-**Reporté :** le versionnage des sauvegardes prévu au cahier des charges (voir « Travaux transverses »).
+**Ajouté ensuite :** le versionnage des sauvegardes prévu au cahier des charges (voir « Travaux transverses »).
 
 ---
 
@@ -125,6 +125,6 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 Tâches sans phase attitrée, à traiter entre deux fonctionnalités.
 
 1.  **Dépendances :** analyser les vulnérabilités signalées par `npm audit` (44 à l'installation), distinguer celles qui touchent l'application livrée de celles des outils de développement, et corriger ce qui peut l'être sans casser le build.
-2.  **Versionnage des sauvegardes :** numéro de version du format dans chaque fichier et migrations d'une version à la suivante, comme prévu au cahier des charges.
+2.  **Versionnage des sauvegardes [✅] :** chaque fichier (session, sauvegardes, exports) porte un numéro de format ; à la lecture, les migrations sont appliquées d'une version à la suivante, l'original est copié à côté, et l'utilisateur est prévenu des points à vérifier.
 3.  **Tests de l'interface :** tests de composants sur les parcours de saisie (flux, acteurs, relations, salaires).
-4.  **Import :** quand seuls des flux sont écartés à l'import, la notification renvoie vers une fenêtre de confirmation qui ne s'ouvre pas.
+4.  **Import [✅] :** la fenêtre de confirmation s'ouvre aussi quand seuls des flux sont écartés, ou quand le fichier a été converti.

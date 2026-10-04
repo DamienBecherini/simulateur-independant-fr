@@ -141,7 +141,9 @@ export function useSessionManager() {
     const result = await SessionService.importState()
     if (result && result.data) {
       const sessionToLoad: SessionState = { name: "Simulation importée", ...result.data }
-      if (result.report && (result.report.entitiesRemoved > 0 || result.report.relationshipsRemoved > 0)) {
+      const { entitiesRemoved, relationshipsRemoved, flowsRemoved, migrationNotes } = result.report
+      // Dès que le fichier a été corrigé ou converti, l'utilisateur confirme avant de remplacer sa session.
+      if (entitiesRemoved > 0 || relationshipsRemoved > 0 || flowsRemoved > 0 || migrationNotes.length > 0) {
         setImportConfirmation({ session: sessionToLoad, report: result.report })
       } else {
         setHistory({ past: [], present: sessionToLoad, future: [] })

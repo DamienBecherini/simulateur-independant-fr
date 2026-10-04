@@ -252,15 +252,31 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
       <Dialog open={!!importConfirmation} onOpenChange={onCancelImport}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Fichier de sauvegarde nettoyé</DialogTitle>
-            <DialogDescription>
-              Le fichier a été chargé, mais des données corrompues ou obsolètes ont été détectées et supprimées pour éviter de faire planter l'application.
-              <div className="mt-4 font-mono text-sm bg-slate-100 dark:bg-slate-800 p-3 rounded-md">
-                <p>Entités invalides supprimées : {importConfirmation?.report.entitiesRemoved}</p>
-                <p>Relations invalides supprimées : {importConfirmation?.report.relationshipsRemoved}</p>
-                <p>Flux financiers orphelins supprimés : {importConfirmation?.report.flowsRemoved}</p>
+            <DialogTitle>Fichier importé avec des ajustements</DialogTitle>
+            <DialogDescription asChild>
+              <div>
+                {importConfirmation && importConfirmation.report.entitiesRemoved + importConfirmation.report.relationshipsRemoved + importConfirmation.report.flowsRemoved > 0 && (
+                  <>
+                    <p>Des données corrompues ou obsolètes ont été retirées pour que la simulation reste utilisable.</p>
+                    <div className="mt-3 font-mono text-sm bg-slate-100 dark:bg-slate-800 p-3 rounded-md">
+                      <p>Entités invalides supprimées : {importConfirmation.report.entitiesRemoved}</p>
+                      <p>Relations invalides ou orphelines supprimées : {importConfirmation.report.relationshipsRemoved}</p>
+                      <p>Flux invalides ou orphelins supprimés : {importConfirmation.report.flowsRemoved}</p>
+                    </div>
+                  </>
+                )}
+                {importConfirmation && importConfirmation.report.migrationNotes.length > 0 && (
+                  <>
+                    <p className="mt-3">Le fichier a été converti au nouveau format du simulateur. Points à vérifier :</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                      {importConfirmation.report.migrationNotes.map((note, i) => (
+                        <li key={i}>{note}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                <p className="mt-4">Voulez-vous remplacer la simulation en cours par ce fichier ?</p>
               </div>
-              <p className="mt-4">Voulez-vous continuer avec cette version nettoyée de la simulation ?</p>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

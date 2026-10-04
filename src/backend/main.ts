@@ -10,6 +10,7 @@ import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
 import fs from "fs/promises"
 import { sanitizeStateAndFillDefaults, sanitizeSlots } from "./logic/data-sanitizer.js"
+import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
 
 const sessionStatePath = path.join(app.getPath("userData"), "sessionState.json")
 const slotsFilePath = path.join(app.getPath("userData"), "simulationSlots.json")
@@ -25,21 +26,56 @@ function getDefaultSessionState(): SessionState {
   }
 }
 
+/** Ajoute à un fichier le numéro du format dans lequel il est écrit. */
+function withFormatVersion<T extends object>(data: T): T & { formatVersion: number } {
+  return { ...data, formatVersion: FORMAT_VERSION_ACTUEL }
+}
+
+/**
+ * Avant de réécrire un fichier converti d'un format précédent, on en garde une copie à côté
+ * (par exemple `sessionState.format-1.json`), au cas où la conversion poserait problème.
+ */
+async function backupBeforeMigration(filePath: string, rawContent: string, version: number) {
+  const backupPath = filePath.replace(/\.json$/, `.format-${version}.json`)
+  try {
+    await fs.writeFile(backupPath, rawContent, { flag: "wx" })
+  } catch {
+    // Une copie existe déjà pour cette version : on la conserve.
+  }
+}
+
+/** Texte des points à vérifier après conversion, pour une boîte de dialogue. */
+function formatMigrationNotes(notes: string[]): string {
+  return notes.map(note => `- ${note}`).join("\n\n")
+}
+
 async function readSessionFromFile(): Promise<SessionState> {
   try {
     const data = await fs.readFile(sessionStatePath, "utf-8")
     const parsedData = JSON.parse(data)
+    const originalVersion = versionDuFormat(parsedData)
 
     const { safeState, report } = sanitizeStateAndFillDefaults(parsedData)
 
-    // Si le rapport indique des suppressions, on prévient l'utilisateur
+    // Un fichier d'un format précédent est converti une fois pour toutes, après copie de l'original.
+    if (originalVersion < FORMAT_VERSION_ACTUEL) {
+      await backupBeforeMigration(sessionStatePath, data, originalVersion)
+      await writeSessionToFile(safeState)
+    }
+
+    const sections: string[] = []
     if (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0) {
-      const message = `Votre session précédente a été chargée, mais des données corrompues ont dû être nettoyées :\n\n- Entités invalides supprimées : ${report.entitiesRemoved}\n- Relations invalides ou orphelines supprimées : ${report.relationshipsRemoved}\n- Flux invalides ou orphelins supprimés : ${report.flowsRemoved}\n\nVeuillez vérifier votre simulation.`
+      sections.push(`Des données corrompues ont dû être nettoyées :\n- Entités invalides supprimées : ${report.entitiesRemoved}\n- Relations invalides ou orphelines supprimées : ${report.relationshipsRemoved}\n- Flux invalides ou orphelins supprimés : ${report.flowsRemoved}`)
+    }
+    if (report.migrationNotes.length > 0) {
+      sections.push(`Elle a été convertie au nouveau format du simulateur. Points à vérifier :\n\n${formatMigrationNotes(report.migrationNotes)}`)
+    }
+    if (sections.length > 0) {
       dialog
         .showMessageBox({
           type: "info",
-          title: "Nettoyage de la session",
-          message: message
+          title: "Chargement de la session",
+          message: `Votre session précédente a été chargée.\n\n${sections.join("\n\n")}`
         })
         .catch()
     }
@@ -63,7 +99,7 @@ async function readSessionFromFile(): Promise<SessionState> {
 
 async function writeSessionToFile(session: SessionState) {
   try {
-    await fs.writeFile(sessionStatePath, JSON.stringify(session, null, 2))
+    await fs.writeFile(sessionStatePath, JSON.stringify(withFormatVersion(session), null, 2))
     // On envoie une notification de succès au frontend
     // if (mainWindow) {
     //   mainWindow.webContents.send("show-notification", {
@@ -86,10 +122,27 @@ async function writeSessionToFile(session: SessionState) {
 async function readSlotsFromFile(): Promise<SaveSlot[]> {
   try {
     const data = await fs.readFile(slotsFilePath, "utf-8")
-    const parsedData = JSON.parse(data)
+    const parsedData: unknown = JSON.parse(data)
 
     // Les slots corrompus sont écartés (et signalés dans la console) par le nettoyeur, les autres sont conservés.
-    return sanitizeSlots(parsedData)
+    const slots = sanitizeSlots(parsedData)
+
+    // Des sauvegardes d'un format précédent sont converties une fois pour toutes, après copie de l'original.
+    const rawSlots: unknown[] = Array.isArray(parsedData) ? parsedData : []
+    const oldSlots = rawSlots.filter(slot => versionDuFormat(slot) < FORMAT_VERSION_ACTUEL)
+    if (oldSlots.length > 0) {
+      await backupBeforeMigration(slotsFilePath, data, Math.min(...oldSlots.map(versionDuFormat)))
+      await writeSlotsToFile(slots)
+      const notes = [...new Set(oldSlots.flatMap(slot => migrerVersFormatActuel(slot).notes))]
+      dialog
+        .showMessageBox({
+          type: "info",
+          title: "Sauvegardes converties",
+          message: `${oldSlots.length} sauvegarde${oldSlots.length > 1 ? "s ont été converties" : " a été convertie"} au nouveau format du simulateur.${notes.length > 0 ? `\n\nÀ l'ouverture de chacune, vérifiez :\n\n${formatMigrationNotes(notes)}` : ""}`
+        })
+        .catch()
+    }
+    return slots
   } catch {
     console.log("Aucun fichier de slots trouvé ou fichier illisible, démarrage avec un état vide.")
     return []
@@ -98,7 +151,7 @@ async function readSlotsFromFile(): Promise<SaveSlot[]> {
 
 async function writeSlotsToFile(slots: SaveSlot[]) {
   try {
-    await fs.writeFile(slotsFilePath, JSON.stringify(slots, null, 2))
+    await fs.writeFile(slotsFilePath, JSON.stringify(slots.map(withFormatVersion), null, 2))
     console.log("Slots de sauvegarde enregistrés avec succès dans:", slotsFilePath)
   } catch (error) {
     console.error("Erreur lors de la sauvegarde des slots:", error)
@@ -207,7 +260,7 @@ app.on("ready", () => {
     })
     if (!canceled && filePath) {
       try {
-        await fs.writeFile(filePath, JSON.stringify(state, null, 2))
+        await fs.writeFile(filePath, JSON.stringify(withFormatVersion(state), null, 2))
       } catch (error) {
         console.error("Erreur lors de l'exportation :", error)
         dialog.showErrorBox("Erreur d'exportation", "Impossible d'enregistrer le fichier.")
@@ -230,9 +283,9 @@ app.on("ready", () => {
 
         const { safeState, report } = sanitizeStateAndFillDefaults(importedData)
 
-        if (mainWindow && (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0)) {
+        if (mainWindow && (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0 || report.migrationNotes.length > 0)) {
           mainWindow.webContents.send("show-notification", {
-            message: "Fichier importé avec des corrections. Voir la modale pour les détails.",
+            message: "Fichier importé avec des ajustements : vérifiez le détail avant de continuer.",
             type: "warning"
           })
         } else if (mainWindow) {
