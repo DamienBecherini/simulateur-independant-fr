@@ -1,7 +1,7 @@
 // src/lib/contraste.test.ts
 
 import { describe, expect, it } from "vitest"
-import { CONTRASTE_TEXTE, fondPourTexteBlanc, luminanceRelative, rapportDeContraste } from "./contraste"
+import { CONTRASTE_TEXTE, couleurDeTexteSur, fondPourTexteBlanc, luminanceRelative, rapportDeContraste } from "./contraste"
 
 describe("luminanceRelative", () => {
   it("va de 0 pour le noir à 1 pour le blanc, en notation courte ou longue", () => {
@@ -61,5 +61,17 @@ describe("fondPourTexteBlanc", () => {
   it("accepte un autre seuil, et laisse une couleur illisible telle quelle", () => {
     expect(fondPourTexteBlanc("#3b82f6", 3)).toBe("#3b82f6")
     expect(fondPourTexteBlanc("rouge")).toBe("rouge")
+  })
+})
+
+describe("couleurDeTexteSur", () => {
+  it("écrit en blanc sur un fond sombre, en foncé sur un fond clair", () => {
+    expect(couleurDeTexteSur("#1d4ed8")).toBe("#ffffff")
+    expect(couleurDeTexteSur("#facc15")).toBe("#0f172a")
+    expect(couleurDeTexteSur("#22d3ee")).toBe("#0f172a")
+  })
+
+  it("garde le blanc si le fond est illisible", () => {
+    expect(couleurDeTexteSur("rouge")).toBe("#ffffff")
   })
 })

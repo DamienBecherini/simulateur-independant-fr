@@ -7,6 +7,7 @@ import { flowTypeShortLabels, isExpenseFlowType } from "@/lib/flow-constants"
 import { Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ColorSettingsModal } from "./ColorSettingsModal"
+import { couleurDeTexteSur } from "@/lib/contraste"
 
 /**
  * Interface pour les props du composant FlowLegend.
@@ -53,7 +54,9 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
     <div key={type} className="flex items-center gap-2 group">
       {/* Le carré de couleur contient le numéro du flux. */}
       <div className="relative flex h-7 w-7 items-center justify-center rounded ring-1 ring-border pointer-coarse:h-11 pointer-coarse:w-11" style={{ backgroundColor: finalColors[type] || "#ccc" }}>
-        <span className="text-white text-xs font-bold [text-shadow:0_0_2px_rgba(0,0,0,0.7)]">{flowTypeToNumberMap.get(type)}</span>
+        <span className="text-xs font-bold" style={{ color: couleurDeTexteSur(finalColors[type] || "#cccccc") }}>
+          {flowTypeToNumberMap.get(type)}
+        </span>
         {/* Astuce UX : un input de type "color" est superposé et invisible, permettant un clic direct pour changer la couleur. */}
         <input type="color" value={finalColors[type] || "#ffffff"} onChange={e => handleColorChange(type, e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title={`Changer la couleur pour ${flowTypeShortLabels[type]}`} />
       </div>

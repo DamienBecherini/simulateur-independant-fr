@@ -49,3 +49,11 @@ export function fondPourTexteBlanc(couleur: string, contrasteMinimal = CONTRASTE
   }
   return "#000000"
 }
+
+/** Couleur de texte, blanc ou presque noir, la plus contrastée sur ce fond : pour un petit numéro posé sur une couleur. */
+export function couleurDeTexteSur(fond: string): string {
+  const blanc = rapportDeContraste(fond, BLANC)
+  const sombre = rapportDeContraste(fond, "#0f172a")
+  if (blanc === null || sombre === null) return BLANC
+  return sombre > blanc ? "#0f172a" : BLANC
+}

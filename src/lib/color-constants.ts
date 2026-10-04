@@ -3,36 +3,34 @@
 import type { FinancialFlow } from "@/types"
 
 /**
- * Nouvelle palette de couleurs par défaut.
- * Stratégie : Différenciation maximale entre chaque type de flux,
- * même au sein d'une même catégorie, pour une lisibilité instantanée.
+ * Couleurs par défaut des flux. Chaque type garde une famille de couleur qui a du sens (vert pour le salaire, rouge
+ * pour les dépenses, violets pour la rémunération et les dividendes…), et la nuance est choisie pour que deux types
+ * restent distincts : écart d'au moins 14 en OKLab (x 100) entre deux couleurs, contre 3,5 avec l'ancienne palette.
+ * Les numéros de la légende s'écrivent en blanc ou en foncé selon la couleur (voir couleurDeTexteSur).
  */
 export const DEFAULT_FLOW_COLORS: Record<FinancialFlow["type"], string> = {
-  // --- Revenus Personnels (Contraste Élevé) ---
-  // Un vert franc, un bleu ciel et un ambre chaud. Très distincts.
-  salary: "#22c55e", // Tailwind: green-500
-  are: "#38bdf8", // Tailwind: lightBlue-400 (ou sky-400)
-  other_taxable_income: "#f59e0b", // Tailwind: amber-500
+  // --- Revenus des personnes ---
+  salary: "#22c55e", // green-500
+  are: "#0284c7", // sky-600
+  other_taxable_income: "#facc15", // yellow-400
 
-  // --- Chiffre d'Affaires Société (Contraste Élevé) ---
-  // Un bleu-violet (indigo) et un vert d'eau (teal). Inconfondables.
-  ca_services: "#4f46e5", // Tailwind: indigo-600
-  ca_vente: "#14b8a6", // Tailwind: teal-500
+  // --- Chiffre d'affaires d'une société ---
+  ca_services: "#1d4ed8", // blue-700
+  ca_vente: "#047857", // emerald-700
 
-  // --- Chiffre d'Affaires Micro-Entreprise (Contraste Élevé) ---
-  // Un orange vif, un rose/magenta et un cyan. Aucune confusion possible.
-  ca_micro_services_bic: "#f97316", // Tailwind: orange-500
-  ca_micro_services_bnc: "#d946ef", // Tailwind: fuchsia-500
-  ca_micro_vente: "#06b6d4", // Tailwind: cyan-500
+  // --- Chiffre d'affaires d'une micro-entreprise ---
+  ca_micro_services_bic: "#fb923c", // orange-400
+  ca_micro_services_bnc: "#d946ef", // fuchsia-500
+  ca_micro_vente: "#22d3ee", // cyan-400
 
-  // --- Sorties d'Argent (Couleurs Cohérentes) ---
-  // Le rouge reste la convention pour les dépenses.
-  // Le violet, couleur "premium", est pour la rémunération et les dividendes.
-  deductible_expense: "#ef4444", // Tailwind: red-500
-  director_remuneration: "#8b5cf6", // Tailwind: violet-500
-  dividends_payment: "#a78bfa", // Tailwind: violet-400 (plus clair pour différencier)
+  // --- Dépenses : le rouge, foncé pour les charges déductibles, rose pour les autres ---
+  deductible_expense: "#b91c1c", // red-700
+  expense: "#f43f5e", // rose-500
 
-  // --- Types de test (Couleurs uniques pour le débogage) ---
-  income: "#eab308", // Tailwind: yellow-500
-  expense: "#f43f5e" // Tailwind: rose-500
+  // --- Rémunération du dirigeant et dividendes : deux violets bien séparés ---
+  director_remuneration: "#7e22ce", // purple-700
+  dividends_payment: "#a78bfa", // violet-400
+
+  // --- Type de test, sans usage dans l'interface ---
+  income: "#eab308" // yellow-500
 }
