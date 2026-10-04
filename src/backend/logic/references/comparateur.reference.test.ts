@@ -15,7 +15,7 @@ import type { ComparaisonOptions, ComparaisonResult, StatutCompare } from "../..
  * qui est suspect. L'impôt sur le revenu est arrondi à l'euro avant d'être retranché du net.
  *
  * Cotisations TNS (EURL, EI) : barème officiel 2026, détaillé dans l'en-tête de societes.reference.test.ts.
- * Approximation assumée du modèle : cotisations du président de SASU égales à 80 % de sa rémunération nette.
+ * Président de SASU : cotisations du régime général ligne à ligne, détaillées dans l'en-tête de societes.reference.test.ts.
  */
 
 const options = (activityId: string, autres: Partial<ComparaisonOptions> = {}): ComparaisonOptions => ({ activityId, remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1, ...autres })
@@ -105,11 +105,15 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
     )
 
     it("SASU : rémunération et solde distribué, dividendes au barème", () => {
-      // Cotisations 16 000 € ; bénéfice 60 000 - 5 000 - 20 000 - 16 000 = 19 000 € ; IS 2 850 € ; dividendes 16 150 €.
-      // Rémunération : 20 000 - 2 000 = 18 000 € ; impôt 125,56 €. Forfait : 125,56 + 2 067,20 = 2 192,76 €.
-      // Barème : 18 000 + 9 690 - 1 098,20 = 26 591,80 € ; impôt brut 1 649,10 €, décote 150,78 €, impôt 1 498,31 €. Barème retenu.
-      // Prélèvements sociaux : 16 150 x 18,6 % = 3 003,90 €. Net : 20 000 + 16 150 - 1 498 - 3 003,90 = 31 648,10 €.
-      expect(colonne(resultat, "SASU")).toMatchObject({ actuel: true, cotisationsSociales: 16000, impotSocietes: 2850, impotSurLeRevenu: 1498, prelevementsSociaux: 3004, resultatConserve: 0, netApresImpots: 31648 })
+      // Brut : 20 000 / 0,7915975 = 25 265,37 € ; cotisations salariales 5 265,37 €, patronales 37,19 % = 9 396,19 € ;
+      // cotisations 14 661,55 € ; bénéfice 60 000 - 5 000 - 20 000 - 14 661,55 = 20 338,45 € ; IS 3 050,77 € ; dividendes 17 287,68 €.
+      // Rémunération : 20 000 + 2,84925 % x 25 265,37 (719,87 €) = 20 719,87 €, moins 10 % : 18 647,89 € ; impôt brut 775,27 €,
+      // décote 546,19 €, impôt 229,08 €, soit 229 €. Forfait : 229 + 17 287,68 x 12,8 % = 2 441,82 €.
+      // Barème : 18 647,89 + 10 372,61 - 1 175,56 = 27 844,93 € ; impôt brut 1 786,94 €, décote 88,41 €, impôt 1 698,53 €,
+      // soit 1 699 €. Barème retenu.
+      // Prélèvements sociaux : 17 287,68 x 18,6 % = 3 215,51 €. Net : 20 000 + 17 287,68 - 1 699 - 3 215,51 = 32 373,17 €.
+      // (Avec l'ancien ratio de 1,8 : 16 000 € de cotisations et un net de 31 648 €.)
+      expect(colonne(resultat, "SASU")).toMatchObject({ actuel: true, cotisationsSociales: 14662, impotSocietes: 3051, impotSurLeRevenu: 1699, prelevementsSociaux: 3216, resultatConserve: 0, netApresImpots: 32373 })
     })
 
     it("EURL : rémunération et solde distribué, dividendes au barème", () => {

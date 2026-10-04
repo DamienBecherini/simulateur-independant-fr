@@ -188,6 +188,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     resultatConserve: resultat.resultatConserve,
     beneficiaireIds: personnesLiees(ctx, societe.id, RELATIONS_D_ASSOCIE),
     ...(resultat.cotisationsTNS ? { cotisationsTNS: resultat.cotisationsTNS } : {}),
+    ...(resultat.cotisationsPresident && resultat.remunerationNette > 0 ? { cotisationsPresident: resultat.cotisationsPresident } : {}),
     warnings
   }
 }

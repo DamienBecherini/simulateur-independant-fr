@@ -1,5 +1,6 @@
 // src/backend/logic/regles.ts
 
+import type { CotisationSalarie } from "../../types.js"
 import config from "../config.json" with { type: "json" }
 
 /** Une tranche du barème de l'impôt sur le revenu. `trancheJusqua` vaut `null` pour la dernière tranche. */
@@ -51,6 +52,30 @@ export interface ReglesTNS {
   cotisationsMinimales: { indemnitesJournalieres: number; retraiteDeBase: number; invaliditeDeces: number }
 }
 
+/** Les cotisations du régime général qui ont un barème propre : toutes sauf la CSG et la CRDS. */
+export type LigneRegimeGeneral = Exclude<CotisationSalarie, "csgDeductible" | "csgNonDeductibleEtCrds">
+
+/** Une cotisation du régime général : parts salariale et patronale, chacune par tranches en part du plafond. */
+export interface CotisationRegimeGeneral {
+  salariale: TrancheCotisation[]
+  patronale: TrancheCotisation[]
+  /** Due seulement si le brut dépasse le plafond, et alors sur tout le brut dans la limite de la dernière tranche (CET). */
+  auDelaDuPlafondSeulement?: boolean
+  /** Due pour un salarié, pas pour un président assimilé salarié sans contrat de travail (assurance chômage, AGS…). */
+  salariesSeulement?: boolean
+}
+
+/** Règles des cotisations du régime général : président de SASU (assimilé salarié) et salariés. */
+export interface ReglesRegimeGeneral {
+  /** Plafond annuel de la sécurité sociale (PASS), auquel se rapportent les tranches. */
+  plafondSecuriteSociale: number
+  cotisations: Record<LigneRegimeGeneral, CotisationRegimeGeneral>
+  /** CSG et CRDS du salarié : assiette par tranches (part du brut retenue), taux. */
+  csgCrds: { assiette: TrancheCotisation[]; csgDeductible: number; csgNonDeductible: number; crds: number }
+  /** Réduction générale dégressive unique des cotisations patronales, pour les salariés. */
+  reductionGenerale: { smicAnnuel: number; tMin: number; tDelta: number; puissance: number; plafondEnSmic: number }
+}
+
 /**
  * Les règles fiscales et sociales lues par le moteur.
  * Elles vivent dans `config.json` : changer d'année ne demande aucune modification du code.
@@ -66,13 +91,11 @@ export interface ReglesFiscales {
   }
   IS: { tauxReduit: number; plafondTauxReduit: number; tauxNormal: number }
   dividendes: { tauxIrForfaitaire: number; prelevementsSociaux: number; abattementBareme: number; csgDeductible: number }
-  SASU: { ratioCoutTotalSurNet: number }
+  regimeGeneral: ReglesRegimeGeneral
   TNS: ReglesTNS
   protectionSociale: {
     /** Revenu soumis à cotisations qui valide un trimestre de retraite. */
     revenuParTrimestre: number
-    /** Part du salaire brut qui reste en net, pour retrouver le brut d'une rémunération saisie nette. */
-    tauxNetSurBrutSalarie: number
     tauxRetraiteDeBase: number
     partRetraiteDeBaseMicro: TauxMicro
   }

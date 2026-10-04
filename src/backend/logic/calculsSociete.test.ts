@@ -6,7 +6,8 @@ import { calculerSASU } from "./calculsSASU.js"
 import { calculerIS } from "./calculsSociete.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 
-// Règles de test : IS à 15 % jusqu'à 40 000 € puis 25 % ; président de SASU à 80 % de cotisations sur le net ;
+// Règles de test : IS à 15 % jusqu'à 40 000 € puis 25 % ; président de SASU : net = 81 % du brut sous le plafond de
+// 40 000 €, cotisations patronales de 34 % (voir cotisationsSalarie.test.ts) ;
 // gérant d'EURL : cotisations de travailleur non salarié des règles de test (voir cotisationsTNS.test.ts).
 const activite = { chiffreAffaires: 100000, chargesDeductibles: 10000, remunerationNette: 30000, dividendesDemandes: 0 }
 
@@ -24,52 +25,71 @@ describe("calculerIS", () => {
 })
 
 describe("calculerSASU", () => {
-  it("déduit la rémunération et ses cotisations avant l'IS, et conserve le bénéfice non distribué", () => {
-    const resultat = calculerSASU(activite, reglesDeTest)
+  // Rémunération nette de 24 300 € : 30 000 € bruts (24 300 / 81 %), 10 200 € de cotisations patronales (34 %) ;
+  // cotisations sociales 30 000 - 24 300 + 10 200 = 15 900 €. Bénéfice : 100 000 - 10 000 - 24 300 - 15 900 = 49 800 € ;
+  // IS 6 000 + 9 800 x 25 % = 8 450 € ; conservé 41 350 €.
+  const sasu = { ...activite, remunerationNette: 24300 }
 
-    expect(resultat.cotisationsSociales).toBeCloseTo(24000)
-    expect(resultat.beneficeAvantIS).toBeCloseTo(36000)
-    expect(resultat.impotSocietes).toBeCloseTo(5400)
+  it("déduit la rémunération et ses cotisations avant l'IS, et conserve le bénéfice non distribué", () => {
+    const resultat = calculerSASU(sasu, reglesDeTest)
+
+    expect(resultat.cotisationsPresident?.brut).toBeCloseTo(30000)
+    expect(resultat.cotisationsSociales).toBeCloseTo(15900)
+    expect(resultat.beneficeAvantIS).toBeCloseTo(49800)
+    expect(resultat.impotSocietes).toBeCloseTo(8450)
     expect(resultat.dividendesVerses).toBe(0)
-    expect(resultat.resultatConserve).toBeCloseTo(30600)
+    expect(resultat.resultatConserve).toBeCloseTo(41350)
     expect(resultat.warnings).toEqual([])
   })
 
+  it("impose la rémunération nette augmentée de la CSG non déductible et de la CRDS", () => {
+    // 3 % de 90 % du brut : 810 €.
+    expect(calculerSASU(sasu, reglesDeTest).remunerationImposable).toBeCloseTo(25110)
+  })
+
+  it("sans rémunération, ni cotisations ni bulletin de paie à remplir", () => {
+    const resultat = calculerSASU({ ...sasu, remunerationNette: 0 }, reglesDeTest)
+
+    expect(resultat.cotisationsSociales).toBe(0)
+    expect(resultat.cotisationsPresident).toMatchObject({ brut: 0, coutEmployeur: 0 })
+    expect(resultat.beneficeAvantIS).toBe(90000)
+  })
+
   it("ne distribue que les dividendes saisis", () => {
-    const resultat = calculerSASU({ ...activite, dividendesDemandes: 20000 }, reglesDeTest)
+    const resultat = calculerSASU({ ...sasu, dividendesDemandes: 20000 }, reglesDeTest)
 
     expect(resultat.dividendesVerses).toBe(20000)
-    expect(resultat.resultatConserve).toBeCloseTo(10600)
+    expect(resultat.resultatConserve).toBeCloseTo(21350)
   })
 
   it("soumet tous les dividendes aux prélèvements sociaux, sans cotisations", () => {
-    const resultat = calculerSASU({ ...activite, dividendesDemandes: 20000 }, reglesDeTest)
+    const resultat = calculerSASU({ ...sasu, dividendesDemandes: 20000 }, reglesDeTest)
 
     expect(resultat.dividendesSoumisPS).toBe(20000)
     expect(resultat.cotisationsSurDividendes).toBe(0)
   })
 
   it("plafonne les dividendes au bénéfice distribuable et le signale", () => {
-    const resultat = calculerSASU({ ...activite, dividendesDemandes: 50000 }, reglesDeTest)
+    const resultat = calculerSASU({ ...sasu, dividendesDemandes: 50000 }, reglesDeTest)
 
-    expect(resultat.dividendesVerses).toBeCloseTo(30600)
+    expect(resultat.dividendesVerses).toBeCloseTo(41350)
     expect(resultat.resultatConserve).toBeCloseTo(0)
     expect(resultat.warnings).toHaveLength(1)
     expect(resultat.warnings[0]).toContain("supérieurs au bénéfice distribuable")
   })
 
   it("ne signale pas des dividendes égaux au bénéfice distribuable, aux arrondis près", () => {
-    // Bénéfice distribuable : 30 600 €.
-    expect(calculerSASU({ ...activite, dividendesDemandes: 30600.4 }, reglesDeTest).warnings).toEqual([])
+    expect(calculerSASU({ ...sasu, dividendesDemandes: 41350.4 }, reglesDeTest).warnings).toEqual([])
   })
 
   it("signale une société déficitaire, sans IS ni dividendes", () => {
-    const resultat = calculerSASU({ chiffreAffaires: 20000, chargesDeductibles: 0, remunerationNette: 30000, dividendesDemandes: 1000 }, reglesDeTest)
+    // 20 000 - 24 300 - 15 900 = - 20 200 €.
+    const resultat = calculerSASU({ chiffreAffaires: 20000, chargesDeductibles: 0, remunerationNette: 24300, dividendesDemandes: 1000 }, reglesDeTest)
 
-    expect(resultat.beneficeAvantIS).toBeCloseTo(-34000)
+    expect(resultat.beneficeAvantIS).toBeCloseTo(-20200)
     expect(resultat.impotSocietes).toBe(0)
     expect(resultat.dividendesVerses).toBe(0)
-    expect(resultat.resultatConserve).toBeCloseTo(-34000)
+    expect(resultat.resultatConserve).toBeCloseTo(-20200)
     expect(resultat.warnings[0]).toContain("déficitaire")
     expect(resultat.warnings).toHaveLength(2)
   })
@@ -78,6 +98,7 @@ describe("calculerSASU", () => {
     expect(calculerSASU(activite).chiffreAffaires).toBe(100000)
   })
 })
+
 
 describe("calculerEURL", () => {
   // Rémunération nette de 27 300 € : 40 000 € de revenu avant cotisations, assiette 30 000 €, 12 700 € de cotisations

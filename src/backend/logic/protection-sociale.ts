@@ -11,8 +11,8 @@ import type { ReglesFiscales, TauxMicro } from "./regles.js"
  */
 
 export interface DonneesProtection {
-  /** Rémunération nette du président de SASU sur l'année. */
-  remunerationNette: number
+  /** Rémunération brute du président de SASU sur l'année, celle sur laquelle il cotise à la retraite de base. */
+  remunerationBrute: number
   /** Assiette sociale de l'année du gérant d'EURL ou de l'entrepreneur individuel au réel, après l'abattement forfaitaire. */
   assietteTNS: number
   /** Chiffre d'affaires annuel par nature, pour une micro-entreprise. */
@@ -29,13 +29,12 @@ function texteTrimestres(trimestres: number): string {
   return `${trimestres} trimestre${trimestres > 1 ? "s" : ""} de retraite validé${trimestres > 1 ? "s" : ""} sur 4`
 }
 
-/** Président de SASU : tout dépend de sa rémunération, convertie en brut pour la validation des trimestres. */
-function protectionSASU(remunerationNette: number, regles: ReglesFiscales): ProtectionSociale {
-  if (remunerationNette <= 0) {
+/** Président de SASU : tout dépend de sa rémunération brute, sur laquelle il cotise à la retraite de base. */
+function protectionSASU(remunerationBrute: number, regles: ReglesFiscales): ProtectionSociale {
+  if (remunerationBrute <= 0) {
     return { etoiles: 1, trimestres: 0, resume: "Sans rémunération, aucune couverture liée au mandat : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni prévoyance." }
   }
-  const brut = remunerationNette / regles.protectionSociale.tauxNetSurBrutSalarie
-  const trimestres = trimestresValides(brut, regles)
+  const trimestres = trimestresValides(remunerationBrute, regles)
   const couverture = "Régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance ; pas d'assurance chômage"
   return { etoiles: trimestres === 4 ? 4 : 3, trimestres, resume: `${couverture}. ${texteTrimestres(trimestres)}.` }
 }
@@ -69,7 +68,7 @@ function protectionMicro(ca: DonneesProtection["chiffreAffairesMicro"], benefici
 }
 
 export function evaluerProtectionSociale(statut: StatutCompare, donnees: DonneesProtection, regles: ReglesFiscales): ProtectionSociale {
-  if (statut === "SASU") return protectionSASU(donnees.remunerationNette, regles)
+  if (statut === "SASU") return protectionSASU(donnees.remunerationBrute, regles)
   if (statut === "EURL" || statut === "EI") return protectionTNS(donnees.assietteTNS, regles)
   return protectionMicro(donnees.chiffreAffairesMicro, donnees.beneficieACRE ?? false, regles)
 }

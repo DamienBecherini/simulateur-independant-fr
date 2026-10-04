@@ -31,7 +31,7 @@ export function assietteSociale(revenuAvantCotisations: number, regles: ReglesTN
 }
 
 /** Cotisation à taux marginaux : chaque tranche ne s'applique qu'à la part de l'assiette comprise entre ses bornes. */
-function parTranches(assiette: number, tranches: TrancheCotisation[], pass: number): number {
+export function parTranches(assiette: number, tranches: TrancheCotisation[], pass: number): number {
   let cotisation = 0
   let bas = 0
   for (const { jusquA, taux } of tranches) {

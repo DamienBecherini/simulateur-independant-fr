@@ -57,24 +57,26 @@ describe("runMetaSimulation", () => {
           ["alice", "salary", 10000],
           ["sasu", "ca_services", 100000],
           ["sasu", "deductible_expense", 10000],
-          ["sasu", "director_remuneration", 30000],
+          ["sasu", "director_remuneration", 24300],
           ["sasu", "dividends_payment", 20000]
         ]
       )
 
-      // Salaires et rémunération : 40 000 - 4 000 = 36 000 € imposables, soit 3 800 € ; dividendes au forfait : 2 400 €.
+      // Rémunération de 24 300 € nets : 30 000 € bruts, 15 900 € de cotisations ; bénéfice 49 800 €, IS 8 450 €, 21 350 € conservés.
+      // Salaire et rémunération : 10 000 + 24 300 + 810 (CSG non déductible et CRDS) = 35 110 €, 31 599 € après 10 %,
+      // soit 2 000 + 1 599 x 30 % = 2 479,70 € ; dividendes au forfait : 2 400 €.
       expect(report.bilan).toEqual({
         chiffreAffaires: 100000,
         charges: 10000,
         revenusDirects: 10000,
         cotisationsSalariales: 0,
         revenusAvantPrelevements: 100000,
-        cotisationsSociales: 24000,
-        impotSocietes: 5400,
-        impotSurLeRevenu: 6200,
+        cotisationsSociales: 15900,
+        impotSocietes: 8450,
+        impotSurLeRevenu: 4880,
         prelevementsSociaux: 3600,
-        totalPrelevements: 39200,
-        resultatConserve: 10600,
+        totalPrelevements: 32830,
+        resultatConserve: 21350,
         nonRattache: 0
       })
       expect(report.bilan.totalPrelevements + report.bilan.resultatConserve + report.totalNetApresImpots).toBe(report.bilan.revenusAvantPrelevements)
@@ -185,11 +187,13 @@ describe("runMetaSimulation", () => {
       ["sasu", "ca_services", 90000],
       ["sasu", "ca_vente", 10000],
       ["sasu", "deductible_expense", 10000],
-      ["sasu", "director_remuneration", 30000],
+      ["sasu", "director_remuneration", 24300],
       ["sasu", "dividends_payment", 20000]
     ]
 
     it("calcule le résultat de la société et ce qu'elle verse", () => {
+      // 24 300 € nets = 30 000 € bruts : 5 700 € de cotisations salariales et 10 200 € de patronales, soit 15 900 €.
+      // Bénéfice 100 000 - 10 000 - 24 300 - 15 900 = 49 800 € ; IS 6 000 + 9 800 x 25 % = 8 450 € ; conservé 21 350 €.
       const report = simuler(entites, president, flux)
 
       expect(activite(report, "sasu")).toEqual({
@@ -199,11 +203,12 @@ describe("runMetaSimulation", () => {
         statut: "SASU",
         chiffreAffaires: 100000,
         charges: 10000,
-        cotisationsSociales: 24000,
-        impotSocietes: 5400,
-        revenuVerse: 50000,
-        resultatConserve: 10600,
+        cotisationsSociales: 15900,
+        impotSocietes: 8450,
+        revenuVerse: 44300,
+        resultatConserve: 21350,
         beneficiaireIds: ["alice"],
+        cotisationsPresident: expect.objectContaining({ statut: "president", brut: expect.closeTo(30000, 6), coutEmployeur: expect.closeTo(40200, 6) }),
         warnings: []
       })
     })
@@ -211,25 +216,26 @@ describe("runMetaSimulation", () => {
     it("verse la rémunération et les dividendes au président, et impose le foyer une seule fois", () => {
       const report = simuler(entites, president, flux)
 
-      expect(report.persons[0]).toMatchObject({ revenusDirects: 0, revenusActivites: 50000, detail: { salaires: 0, allocationsChomage: 0, autresRevenus: 0, remunerationsDirigeant: 30000, dividendes: 20000, benefices: 0 } })
-      // Rémunération : 30 000 - 3 000 = 27 000 € imposables, soit 1 700 € d'impôt.
-      // Dividendes au forfait : 20 000 x 12 % = 2 400 € (le barème donnerait 4 280 € au total).
+      expect(report.persons[0]).toMatchObject({ revenusDirects: 0, revenusActivites: 44300, detail: { salaires: 0, allocationsChomage: 0, autresRevenus: 0, remunerationsDirigeant: 24300, dividendes: 20000, benefices: 0 } })
+      // Rémunération : 24 300 + 810 (CSG non déductible et CRDS) = 25 110 €, 22 599 € imposables après 10 %.
+      // Forfait : 1 259,90 € d'impôt, moins 170,05 € de décote, plus 20 000 x 12 % = 3 489,85 €.
+      // Barème : 22 599 + 12 000 - 1 400 = 33 199 €, soit 2 959,70 €, retenu.
       expect(foyerDe(report, "alice")).toEqual({
         personIds: ["alice"],
         totalParts: 1,
-        revenusEncaisses: 50000,
-        revenuImposableGlobal: 27000,
-        impotSurLeRevenu: 4100,
+        revenusEncaisses: 44300,
+        revenuImposableGlobal: 33199,
+        impotSurLeRevenu: 2960,
         prelevementsSociaux: 3600,
-        optionDividendes: "pfu",
-        netApresImpots: 42300,
+        optionDividendes: "bareme",
+        netApresImpots: 37740,
         revenusAvantPrelevements: 90000,
-        totalPrelevements: 37100,
-        resultatConserve: 10600,
+        totalPrelevements: 30910,
+        resultatConserve: 21350,
         depenses: 0,
         warnings: []
       })
-      expect(report.totalNetApresImpots).toBe(42300)
+      expect(report.totalNetApresImpots).toBe(37740)
     })
 
     it("retient l'option pour le barème quand elle coûte moins que le forfait", () => {
@@ -245,7 +251,7 @@ describe("runMetaSimulation", () => {
     it("reconnaît le dirigeant quel que soit le sens de la relation", () => {
       const report = simuler(entites, [relation("sasu", "alice", "Président")], flux)
 
-      expect(report.persons[0].revenusActivites).toBe(50000)
+      expect(report.persons[0].revenusActivites).toBe(44300)
     })
 
     it("signale une rémunération sans dirigeant et ne la rattache à aucun foyer", () => {
@@ -301,11 +307,11 @@ describe("runMetaSimulation", () => {
     it("remonte les avertissements du calcul de la société", () => {
       const report = simuler(entites, president, [
         ["sasu", "ca_services", 20000],
-        ["sasu", "director_remuneration", 30000]
+        ["sasu", "director_remuneration", 24300]
       ])
 
       expect(activite(report, "sasu").warnings[0]).toContain("déficitaire")
-      expect(activite(report, "sasu").resultatConserve).toBe(-34000)
+      expect(activite(report, "sasu").resultatConserve).toBe(-20200)
     })
   })
 
@@ -503,15 +509,16 @@ describe("runMetaSimulation", () => {
         [relation("alice", "sasu", "Président"), relation("bob", "sasu", "Associé")],
         [
           ["sasu", "ca_services", 100000],
-          ["sasu", "director_remuneration", 30000],
+          ["sasu", "director_remuneration", 24300],
           ["sasu", "dividends_payment", 20000]
         ]
       )
 
-      // Société : 24 000 € de cotisations, 7 500 € d'IS, 20 000 € de dividendes, 18 500 € conservés.
+      // Société : 24 300 € nets (30 000 € bruts), 15 900 € de cotisations ; bénéfice 59 800 €, IS 10 950 €, 20 000 € de dividendes, 28 850 € conservés.
+      // Alice : 22 599 € imposables et 10 000 € de dividendes, barème (27 899 €, 1 789,90 €) plutôt que forfait (2 289,85 €).
       // Alice reçoit la rémunération et ses cotisations, puis la moitié du reste ; Bob l'autre moitié.
-      expect(foyerDe(report, "alice")).toMatchObject({ revenusAvantPrelevements: 77000, totalPrelevements: 32240, resultatConserve: 9250, netApresImpots: 35510, optionDividendes: "bareme" })
-      expect(foyerDe(report, "bob")).toMatchObject({ revenusAvantPrelevements: 23000, totalPrelevements: 5550, resultatConserve: 9250, netApresImpots: 8200 })
+      expect(foyerDe(report, "alice")).toMatchObject({ revenusAvantPrelevements: 70100, totalPrelevements: 24965, resultatConserve: 14425, netApresImpots: 30710, optionDividendes: "bareme" })
+      expect(foyerDe(report, "bob")).toMatchObject({ revenusAvantPrelevements: 29900, totalPrelevements: 7275, resultatConserve: 14425, netApresImpots: 8200 })
       for (const foyer of report.foyers) {
         expect(foyer.totalPrelevements + foyer.resultatConserve + foyer.netApresImpots).toBe(foyer.revenusAvantPrelevements)
       }

@@ -166,7 +166,7 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation
     libelle: LIBELLES[statut],
     actuel,
     fraisFonctionnement: fraisDuStatut(statut, options),
-    protectionSociale: evaluerProtectionSociale(statut, { remunerationNette: options.remunerationNette, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0, chiffreAffairesMicro: chiffreAffairesMicro(simulation.session, activiteId), beneficieACRE: simulation.session.entities.some(e => e.id === activiteId && e.type === "micro-entreprise" && e.beneficieACRE) }, regles),
+    protectionSociale: evaluerProtectionSociale(statut, { remunerationBrute: activite?.cotisationsPresident?.brut ?? 0, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0, chiffreAffairesMicro: chiffreAffairesMicro(simulation.session, activiteId), beneficieACRE: simulation.session.entities.some(e => e.id === activiteId && e.type === "micro-entreprise" && e.beneficieACRE) }, regles),
     netApresImpots: report.totalNetApresImpots,
     revenusAvantPrelevements: bilan.revenusAvantPrelevements,
     totalPrelevements: bilan.totalPrelevements,

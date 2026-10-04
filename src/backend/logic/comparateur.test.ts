@@ -104,10 +104,10 @@ describe("comparerStatuts", () => {
         ["s1", "dividends_payment", 20000]
       ]
 
-      const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { remunerationNette: 30000, distribuerToutLeBenefice: false }))
+      const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { remunerationNette: 24300, distribuerToutLeBenefice: false }))
 
-      // Rémunération de 30 000 € et 24 000 € de cotisations : 46 000 € de bénéfice, 7 500 € d'IS ; 20 000 € de dividendes saisis, 18 500 € conservés.
-      expect(colonne(resultat, "SASU")).toMatchObject({ cotisationsSociales: 24000, impotSocietes: 7500, resultatConserve: 18500 })
+      // Rémunération de 24 300 € (30 000 € bruts) et 15 900 € de cotisations : 59 800 € de bénéfice, 10 950 € d'IS ; 20 000 € de dividendes saisis, 28 850 € conservés.
+      expect(colonne(resultat, "SASU")).toMatchObject({ cotisationsSociales: 15900, impotSocietes: 10950, resultatConserve: 28850 })
     })
   })
 

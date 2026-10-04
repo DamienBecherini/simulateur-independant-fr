@@ -1,5 +1,6 @@
 // src/backend/logic/calculsSociete.ts
 
+import type { DetailCotisationsSalarie } from "../../types.js"
 import type { CotisationsTNS } from "./cotisationsTNS.js"
 import { euros } from "./format.js"
 import type { ReglesFiscales } from "./regles.js"
@@ -18,7 +19,7 @@ export interface ResultatSociete {
   chiffreAffaires: number
   chargesDeductibles: number
   remunerationNette: number
-  /** Rémunération imposée comme un salaire : la nette, augmentée pour un gérant d'EURL de la CSG non déductible et de la CRDS. */
+  /** Rémunération imposée comme un salaire : la nette, augmentée de la CSG non déductible et de la CRDS du dirigeant. */
   remunerationImposable: number
   /** Cotisations sociales sur la rémunération, et sur les dividendes pour une EURL. */
   cotisationsSociales: number
@@ -34,6 +35,8 @@ export interface ResultatSociete {
   resultatConserve: number
   /** EURL : détail des cotisations du gérant, travailleur non salarié, sur sa rémunération et ses dividendes. */
   cotisationsTNS?: CotisationsTNS
+  /** SASU : bulletin de paie du président, assimilé salarié. */
+  cotisationsPresident?: DetailCotisationsSalarie
   warnings: string[]
 }
 
