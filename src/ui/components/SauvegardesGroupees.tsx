@@ -22,6 +22,9 @@ interface SauvegardesGroupeesProps {
 /** Bilan affiché après une tentative d'import. */
 type Bilan = { erreur: string } | { lecture: RapportLecture; fusion: RapportFusion }
 
+/** Le panneau est étroit sur téléphone : l'étiquette passe à la ligne plutôt que de déborder du bouton. */
+const ETIQUETTE_SUR_DEUX_LIGNES = "h-auto min-h-9 whitespace-normal py-2"
+
 const pluriel = (n: number, singulier: string, plurielForme: string) => `${n} ${n > 1 ? plurielForme : singulier}`
 
 /** Les lignes du bilan d'un import réussi ; seules les rubriques non vides sont affichées. */
@@ -92,10 +95,10 @@ export function SauvegardesGroupees({ allSaveSlots, slotOrder, setAllSaveSlots, 
   return (
     <>
       <div className="flex flex-col gap-2">
-        <Button onClick={exporter} variant="outline" disabled={allSaveSlots.length === 0}>
+        <Button onClick={exporter} variant="outline" disabled={allSaveSlots.length === 0} className={ETIQUETTE_SUR_DEUX_LIGNES}>
           <FileDown className="mr-2 h-4 w-4" /> Exporter toutes les sauvegardes
         </Button>
-        <Button onClick={importer} variant="outline">
+        <Button onClick={importer} variant="outline" className={ETIQUETTE_SUR_DEUX_LIGNES}>
           <FileUp className="mr-2 h-4 w-4" /> Importer des sauvegardes...
         </Button>
       </div>
@@ -105,7 +108,7 @@ export function SauvegardesGroupees({ allSaveSlots, slotOrder, setAllSaveSlots, 
           <DialogHeader>
             <DialogTitle>{bilan && "erreur" in bilan ? "Import impossible" : "Import des sauvegardes"}</DialogTitle>
             <DialogDescription asChild>
-              <div className="text-sm">{bilan && ("erreur" in bilan ? <p>{bilan.erreur}</p> : <DetailImport lecture={bilan.lecture} fusion={bilan.fusion} />)}</div>
+              <div className="text-left text-sm">{bilan && ("erreur" in bilan ? <p>{bilan.erreur}</p> : <DetailImport lecture={bilan.lecture} fusion={bilan.fusion} />)}</div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
