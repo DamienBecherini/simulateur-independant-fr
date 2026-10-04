@@ -46,3 +46,26 @@ export function suivreImpression(): () => void {
     window.removeEventListener("afterprint", apres)
   }
 }
+
+/** Attend qu'aucune fenêtre ne soit plus affichée (fin de l'animation de fermeture), sans dépasser `delaiMaximal`. */
+export function attendreFermetureDesFenetres(delaiMaximal = 1000): Promise<void> {
+  return new Promise(resolve => {
+    const debut = performance.now()
+    const verifier = () => {
+      const fenetreOuverte = document.querySelector("[role='dialog'], [role='alertdialog']") !== null
+      if (!fenetreOuverte || performance.now() - debut > delaiMaximal) resolve()
+      else requestAnimationFrame(verifier)
+    }
+    requestAnimationFrame(verifier)
+  })
+}
+
+/**
+ * Enregistre la page en PDF sous le nom proposé, une fois la fenêtre « Exporter » refermée : elle ne doit pas
+ * figurer dans le document. L'export d'Electron émet, comme l'impression du navigateur, les événements beforeprint
+ * et afterprint : la page s'y prépare (sections dépliées, courbe à la largeur de la feuille), puis retrouve son état.
+ */
+export async function exporterEnPdf(nomDuFichier: string): Promise<boolean> {
+  await attendreFermetureDesFenetres()
+  return window.api.printToPdf(nomDuFichier)
+}
