@@ -143,6 +143,8 @@ export interface ActivityResult {
   revenuVerse: number
   /** Bénéfice après IS laissé dans la société (toujours nul hors société à l'IS). */
   resultatConserve: number
+  /** Personnes qui reçoivent les revenus de l'activité : dirigeant et associés d'une société, titulaire d'une entreprise individuelle. */
+  beneficiaireIds: string[]
   warnings: string[]
 }
 

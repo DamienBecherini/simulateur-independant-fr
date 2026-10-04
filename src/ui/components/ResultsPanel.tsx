@@ -214,6 +214,9 @@ function ActivityCard({ activity }: { activity: ActivityResult }) {
 }
 
 export function ResultsPanel({ report, error }: ResultsPanelProps) {
+  // Sociétés dont les revenus se partagent entre plusieurs personnes : seule situation où la répartition à parts égales s'applique.
+  const sharedCompanies = report?.activities.filter(a => a.type === "company" && a.beneficiaireIds.length > 1) ?? []
+
   return (
     <section className="mt-12 space-y-6">
       <div>
@@ -232,7 +235,11 @@ export function ResultsPanel({ report, error }: ResultsPanelProps) {
       {report && report.foyers.length > 0 ? (
         <div className="space-y-3">
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
-          {report.foyers.length > 1 ? <p className="text-xs text-slate-500 dark:text-slate-400">Dans une société à plusieurs associés, l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les foyers, comme les dividendes.</p> : null}
+          {sharedCompanies.length > 0 ? (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {sharedCompanies.map(a => `« ${a.name} »`).join(", ")} : l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les associés, comme les dividendes. La répartition réelle du capital n'est pas encore modélisée.
+            </p>
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.foyers.map(foyer => (
               <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} />

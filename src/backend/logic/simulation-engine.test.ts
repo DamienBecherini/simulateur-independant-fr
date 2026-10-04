@@ -202,6 +202,7 @@ describe("runMetaSimulation", () => {
         impotSocietes: 5400,
         revenuVerse: 50000,
         resultatConserve: 10600,
+        beneficiaireIds: ["alice"],
         warnings: []
       })
     })
@@ -279,6 +280,7 @@ describe("runMetaSimulation", () => {
 
       expect(activite(report, "sasu").warnings).toEqual(["Dividendes répartis à parts égales entre les 2 personnes liées : la répartition du capital n'est pas modélisée."])
       expect(report.persons.map(p => p.revenusActivites)).toEqual([10000, 10000])
+      expect(activite(report, "sasu").beneficiaireIds).toEqual(["alice", "bob"])
       expect(report.foyers.map(f => f.prelevementsSociaux)).toEqual([1800, 1800])
     })
 
@@ -392,6 +394,7 @@ describe("runMetaSimulation", () => {
         impotSocietes: 0,
         revenuVerse: 28000,
         resultatConserve: 0,
+        beneficiaireIds: ["bob"],
         warnings: []
       })
       expect(report.persons[0].detail.benefices).toBe(28000)

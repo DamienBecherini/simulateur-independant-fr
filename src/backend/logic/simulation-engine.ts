@@ -180,6 +180,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     impotSocietes: resultat.impotSocietes,
     revenuVerse: resultat.remunerationNette + resultat.dividendesVerses - resultat.cotisationsSurDividendes,
     resultatConserve: resultat.resultatConserve,
+    beneficiaireIds: personnesLiees(ctx, societe.id, RELATIONS_D_ASSOCIE),
     warnings
   }
 }
@@ -214,6 +215,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     impotSocietes: 0,
     revenuVerse: resultat.revenuNet,
     resultatConserve: 0,
+    beneficiaireIds: exploitant ? [exploitant] : [],
     warnings
   }
 }
@@ -257,6 +259,7 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
     impotSocietes: 0,
     revenuVerse,
     resultatConserve: 0,
+    beneficiaireIds: titulaire ? [titulaire] : [],
     warnings
   }
 }

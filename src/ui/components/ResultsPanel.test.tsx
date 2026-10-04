@@ -79,6 +79,7 @@ function makeReport(): SimulationReport {
         impotSocietes: 2000,
         revenuVerse: 38000,
         resultatConserve: 10000,
+        beneficiaireIds: ["person-alice"],
         warnings: ["Rémunération inférieure au seuil de validation de trimestres."]
       }
     ],
@@ -146,7 +147,19 @@ describe("ResultsPanel", () => {
     expect(rowValue(bob, "Net après impôts")).toHaveTextContent(money(20000))
     expect(rowValue(alice, "Prélèvements du foyer")).toHaveTextContent(`${money(24000)}${percent(24000 / 70000)}`)
     expect(rowValue(alice, "Sa part conservée en société")).toHaveTextContent(money(10000))
-    expect(screen.getByText(/partagés à parts égales entre les foyers/)).toBeInTheDocument()
+  })
+
+  it("n'explique le partage à parts égales que pour une société à plusieurs associés", () => {
+    const report = makeReport()
+    render(<ResultsPanel report={report} error={null} />)
+    expect(screen.queryByText(/partagés à parts égales entre les associés/)).not.toBeInTheDocument()
+  })
+
+  it("nomme la société dont les revenus sont partagés entre plusieurs associés", () => {
+    const report = makeReport()
+    report.activities = [{ ...report.activities[0], beneficiaireIds: ["person-alice", "person-bob"] }]
+    render(<ResultsPanel report={report} error={null} />)
+    expect(screen.getByText(/« Ma SASU » : l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les associés/)).toBeInTheDocument()
   })
 
   it("n'affiche pas de taux par foyer quand il n'y a qu'un foyer", () => {
@@ -156,7 +169,6 @@ describe("ResultsPanel", () => {
 
     expect(screen.getByText("Bob Durand")).toBeInTheDocument()
     expect(screen.queryByText("Prélèvements du foyer")).not.toBeInTheDocument()
-    expect(screen.queryByText(/partagés à parts égales entre les foyers/)).not.toBeInTheDocument()
   })
 
   it("détaille chaque activité et ses avertissements", () => {
