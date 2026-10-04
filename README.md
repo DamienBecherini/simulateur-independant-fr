@@ -69,7 +69,8 @@ npm run dev
 npm test               # rapide : tests de la logique et des composants (Vitest)
 npm run test:watch     # tests en mode interactif
 npm run test:coverage  # tests + couverture (v8), rapport dans coverage/
-npm run test:e2e       # compile l'application, puis tests de bout en bout (Playwright + Electron)
+npm run test:e2e       # compile l'application, puis tests de bout en bout (Playwright + Electron), fenêtres masquées
+npm run test:e2e:visible  # les mêmes, fenêtres affichées pour suivre les tests
 npm run test:all       # tout : tests avec couverture, puis tests de bout en bout
 npm run lint           # ESLint, dont la complexité cyclomatique
 npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutation/

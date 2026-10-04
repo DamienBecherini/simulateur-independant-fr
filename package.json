@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && playwright test",
+    "test:e2e:visible": "cross-env E2E_VISIBLE=1 npm run test:e2e",
     "test:all": "npm run test:coverage && npm run test:e2e",
     "test:mutation": "stryker run",
     "typecheck:tests": "tsc --project src/backend/tsconfig.test.json",

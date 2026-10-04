@@ -13,9 +13,8 @@ test("au démarrage, la fenêtre principale s'ouvre avec le preload chargé et s
   const fonctionsExposees = await page.evaluate(() => Object.keys(window.api ?? {}))
   expect(fonctionsExposees).toEqual(expect.arrayContaining(["getCurrentSession", "saveCurrentSession", "runMetaSimulation", "compareStatuts"]))
 
-  // La fenêtre d'accueil est refermée une fois la fenêtre principale affichée.
+  // La fenêtre d'accueil est refermée une fois la fenêtre principale prête.
   await expect.poll(() => electronApp.windows().length).toBe(1)
-  expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter(w => w.isVisible()).length)).toBe(1)
 
   expect(erreursConsole).toEqual([])
 })

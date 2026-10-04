@@ -193,8 +193,14 @@ function validatedSession(session: unknown, caller: string): SessionState {
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
 
+// Fenêtres discrètes : utilisé par les tests de bout en bout, pour ne pas gêner le travail en cours sur le poste.
+// La fenêtre principale reste affichée (une fenêtre cachée ne rafraîchit plus son rendu, ce qui ralentit les tests),
+// mais elle est transparente, absente de la barre des tâches, ne prend pas le focus et laisse passer les clics.
+const hiddenWindows = process.env.SIMULATEUR_FENETRES_MASQUEES === "1"
+
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
+    show: !hiddenWindows,
     width: 400,
     height: 300,
     transparent: true,
@@ -216,7 +222,9 @@ function createMainWindow() {
     show: false,
     backgroundColor: "#111827",
     webPreferences: {
-      preload: getPreloadPath()
+      preload: getPreloadPath(),
+      // Une fenêtre masquée ralentit ses minuteries ; la sauvegarde et le recalcul différés doivent rester ponctuels.
+      backgroundThrottling: !hiddenWindows
     }
   })
 
@@ -231,7 +239,12 @@ function createMainWindow() {
       splashWindow.close()
       splashWindow = null
     }
-    if (mainWindow) {
+    if (mainWindow && hiddenWindows) {
+      mainWindow.setOpacity(0)
+      mainWindow.setSkipTaskbar(true)
+      mainWindow.setIgnoreMouseEvents(true)
+      mainWindow.showInactive()
+    } else if (mainWindow) {
       mainWindow.show()
     }
   })

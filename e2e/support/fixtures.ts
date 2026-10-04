@@ -55,7 +55,8 @@ async function lancerApplication(dossierDonnees: string): Promise<Application> {
     cwd: RACINE,
     // Le bac à sable de Chromium n'est pas disponible sur les runners Linux de l'intégration continue.
     args: ["-r", NEUTRALISER_DIALOGUES, ".", `--user-data-dir=${dossierDonnees}`, ...(process.platform === "linux" ? ["--no-sandbox"] : [])],
-    env: { ...process.env, NODE_ENV: "production" }
+    // Fenêtres masquées par défaut ; E2E_VISIBLE=1 (npm run test:e2e:visible) les affiche pour suivre un test.
+    env: { ...process.env, NODE_ENV: "production", SIMULATEUR_FENETRES_MASQUEES: process.env.E2E_VISIBLE === "1" ? "0" : "1" }
   })
 
   const page = await attendreFenetrePrincipale(electronApp)
