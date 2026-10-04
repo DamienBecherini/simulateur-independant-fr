@@ -19,8 +19,16 @@ test("captures du README", async ({ dossierDonnees, lancer }) => {
   await page.getByRole("heading", { name: "Résultats de simulation" }).evaluate(titre => window.scrollTo(0, titre.getBoundingClientRect().top + window.scrollY - 110))
   await page.screenshot({ path: path.join(DOSSIER, "resultats.png") })
 
+  // Pour les captures d'une zone plus haute que la fenêtre, la barre du haut (fixe) est masquée : elle la recouvrirait.
+  const sansBarre = "nav { visibility: hidden !important; }"
   const comparateur = page.getByRole("region", { name: "Comparateur de statuts" })
+  const optimisation = page.getByRole("region", { name: "Rémunération ou dividendes ?" })
   await expect(comparateur.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
-  await comparateur.scrollIntoViewIfNeeded()
-  await comparateur.screenshot({ path: path.join(DOSSIER, "comparateur.png") })
+  await expect(optimisation.getByRole("group", { name: /Net du foyer selon la rémunération/ })).toBeVisible()
+  // Le tableau des statuts seul, sans la section d'optimisation qui le suit ; une référence à l'élément la retrouve une fois masquée.
+  const sectionOptimisation = await optimisation.elementHandle()
+  await sectionOptimisation!.evaluate(section => section.setAttribute("hidden", ""))
+  await comparateur.screenshot({ path: path.join(DOSSIER, "comparateur.png"), style: sansBarre })
+  await sectionOptimisation!.evaluate(section => section.removeAttribute("hidden"))
+  await optimisation.screenshot({ path: path.join(DOSSIER, "optimisation.png"), style: sansBarre })
 })

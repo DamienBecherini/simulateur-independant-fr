@@ -22,6 +22,8 @@ Simulation fictive : une indépendante en micro-entreprise mixte, pacsée avec l
 
 ![Comparateur de statuts : net, prélèvements, frais de fonctionnement et protection sociale pour chaque statut](docs/captures/comparateur.png)
 
+![Rémunération ou dividendes : courbe du net du foyer selon la rémunération, meilleur net et meilleur net avec 4 trimestres de retraite](docs/captures/optimisation.png)
+
 Les captures sont générées par `npm run captures` (Playwright, sur l'application compilée).
 
 ## ✨ Fonctionnalités
@@ -30,6 +32,7 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 - **Grille annuelle visuelle** : saisie des flux mois par mois, légende numérotée et couleurs personnalisables.
 - **Simulation par foyer** : chaque activité (SASU, EURL, entreprise individuelle au réel, micro-entreprise) calcule ses cotisations et ce qu'elle verse ; l'impôt sur le revenu est ensuite calculé une seule fois par foyer fiscal (quotient familial plafonné, décote, dividendes au forfait ou au barème). Les résultats se recalculent à chaque modification.
 - **Comparateur de statuts** : pour une activité, net dans la poche, taux de prélèvement, frais de fonctionnement détaillés et note de protection sociale (trimestres de retraite validés) en SASU, EURL, EI au réel et micro-entreprise (avec et sans versement libératoire) ; pour un couple en union libre, effet d'un mariage ou d'un PACS sur l'impôt.
+- **Rémunération ou dividendes** : pour une société à l'IS (SASU, EURL), courbe du net du foyer selon la rémunération du dirigeant, le reste du bénéfice étant versé en dividendes ; meilleure rémunération, et meilleure parmi celles qui valident 4 trimestres de retraite, à reporter dans le comparateur en un clic.
 - **Scénarios** : sauvegardes nommées, chargement, import / export JSON.
 - **Pérennité des données** : validation Zod et réparation automatique des sessions à l'ouverture.
 - **Confort d'édition** : undo / redo (Ctrl+Z / Ctrl+Y, Cmd+Shift+Z), sauvegarde automatique, glisser-déposer, zoom.
@@ -56,6 +59,7 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 - `src/backend/logic/foyers.ts` : regroupement des foyers fiscaux par union-find (couples, enfants rattachés, parts).
 - `src/backend/logic/regles.ts` + `src/backend/config.json` : toutes les règles fiscales de l'année, typées et sourcées, hors du code.
 - `src/backend/logic/data-sanitizer.ts` : validation et réparation des sessions (relations et flux orphelins).
+- `src/backend/logic/optimisation-remuneration.ts` : arbitrage rémunération / dividendes, par balayage puis affinage autour des optimums.
 - `src/backend/util.ts` + `src/backend/preload.cts` : contrat IPC typé de bout en bout, sans `any` sur la surface exposée.
 - `src/types.ts` : schémas Zod et types dérivés.
 - `src/ui/hooks/useSessionManager.ts` : état de session, historique, sauvegarde asynchrone.
@@ -120,6 +124,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - POC : les résultats illustrent l'ingénierie, ils n'ont pas été validés par un expert-comptable.
 - Les cotisations des travailleurs non salariés (gérant d'EURL, entrepreneur individuel au réel) sont calculées ligne à ligne selon le barème 2026 des artisans, commerçants et professions libérales non réglementées (assiette unique abattue de 26 %, assiettes minimales) ; ne sont pas modélisés les professions libérales réglementées, la contribution des artisans à la formation (0,29 %), le décalage entre cotisations provisionnelles et régularisation, ni la CSG déductible sur les dividendes soumis à cotisations. Celles du président de SASU restent approchées par un ratio moyen entre coût total et net.
 - La note de protection sociale du comparateur est indicative : elle combine le régime et les trimestres de retraite validés.
+- L'arbitrage rémunération / dividendes porte sur une année : il hérite des approximations ci-dessus (ratio moyen du président de SASU) et ne tient compte ni des droits à la retraite complémentaire ni du lissage sur plusieurs années.
 - Non modélisés : réductions et crédits d'impôt, résidence alternée, report des déficits, TVA (seul le dépassement des seuils de franchise est signalé en micro-entreprise ; les montants sont hors taxe), répartition du capital entre associés (dividendes partagés à parts égales).
 
 ## 📄 Licence

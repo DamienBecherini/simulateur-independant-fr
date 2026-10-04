@@ -4,7 +4,7 @@
 
 ## **État Actuel du Projet**
 
-Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue et le moteur de simulation par foyer fiscal sont en place. La prochaine étape est le **comparateur de statuts**, qui s'appuie sur ce moteur.
+Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue, le moteur de simulation par foyer fiscal, le comparateur de statuts et l'arbitrage rémunération / dividendes sont en place, avec une démo web publiée sur GitHub Pages. La prochaine étape est l'**accessibilité** (Phase 10).
 
 > **Changement d'ordre par rapport à la v2.2 :** le comparateur de statuts passe avant l'arbitrage rémunération / dividendes, et la gestion des foyers fiscaux est intégrée à la refonte du moteur.
 
@@ -109,13 +109,28 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
-### **Phase 9 : L'Optimisation Visuelle (Rémunération / Dividendes) [Planifié 🗓️]**
+### **Phase 9 : L'Optimisation Visuelle (Rémunération / Dividendes) [Terminé ✅]**
 
 - **Objectif :** arbitrage interactif entre rémunération et dividendes pour les sociétés à l'IS, intégré au comparateur.
+- **Moteur :** pour l'activité comparée, en SASU ou en EURL, chaque rémunération nette de zéro à ce que la société peut verser (trouvée par dichotomie), le reste du bénéfice étant versé en dividendes, puis toute la simulation relancée. Grille d'une soixantaine de points, affinée à 100 € près autour des optimums ; une quinzaine de millisecondes.
+- **Deux optimums :** le meilleur net du foyer, et le meilleur net parmi les rémunérations qui valident 4 trimestres de retraite, avec ce qu'il coûte par an. En SASU, le meilleur net est souvent sans salaire, donc sans retraite : le second optimum rend l'arbitrage visible.
+- **Interface :** courbe du net selon la rémunération (zone sans 4 trimestres, rémunération du comparateur, optimums annotés), survol au pointeur et au clavier, tableau des valeurs, report d'une rémunération dans le comparateur en un clic.
 
 ---
 
-### **Phase 10 : Scénarios Avancés & Finalisation [Planifié 🗓️]**
+### **Phase 10 : Accessibilité (RGAA / WCAG 2.2 AA) [Planifié 🗓️]**
+
+- **Objectif :** une application utilisable par tous, sur ordinateur comme sur téléphone, vérifiée automatiquement. Le RGAA reprend les WCAG 2.1 AA ; on vise les WCAG 2.2 AA, qui les incluent.
+
+1.  **Audit automatique en CI :** axe-core (`@axe-core/playwright`) sur la démo web et l'application, dans les tests de bout en bout ; la CI échoue en cas de violation. Couvre les contrastes (4,5:1 pour le texte, 3:1 pour les grands textes et les éléments d'interface), les libellés, les rôles ARIA et la structure des titres.
+2.  **Zones cliquables :** au moins 24 × 24 px (WCAG 2.2, critère 2.5.8), 44 × 44 px visés sur téléphone pour éviter les erreurs de clic ; espacement entre les boutons voisins (croix de suppression des relations, icônes de la barre du haut, cellules de la grille).
+3.  **Taille du texte :** pas de texte sous 12 px, 14 px pour le texte courant ; vérification par un test. Tout reste utilisable avec le texte agrandi à 200 % (critère 1.4.4).
+4.  **Clavier et focus :** tout le parcours au clavier (grille, fenêtres, glisser-déposer avec une alternative), focus toujours visible, ordre de tabulation logique.
+5.  **Préférences du système :** animations réduites (`prefers-reduced-motion`), contrastes renforcés (`forced-colors`).
+
+---
+
+### **Phase 11 : Scénarios Avancés & Finalisation [Planifié 🗓️]**
 
 - **Objectif :** compléter le modèle pour les situations moins courantes, puis distribuer l'application.
 
