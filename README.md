@@ -4,8 +4,11 @@
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=DamienBecherini_simulateur-independant-fr&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=DamienBecherini_simulateur-independant-fr)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=DamienBecherini_simulateur-independant-fr&metric=coverage)](https://sonarcloud.io/summary/new_code?id=DamienBecherini_simulateur-independant-fr)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](./LICENSE)
+[![Démo web](https://img.shields.io/badge/démo-en%20ligne-brightgreen.svg)](https://damienbecherini.github.io/simulateur-independant-fr/)
 
 Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un bac à sable financier, juridique et fiscal pour les indépendants : on modélise personnes, sociétés et micro-entreprises, leurs liens et leurs flux mensuels, puis on calcule cotisations, impôts et net du foyer, et on compare les statuts : SASU, EURL, entreprise individuelle au réel, micro-entreprise avec ou sans versement libératoire.
+
+**[▶ Essayer la démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/)**, sans installation : la même interface, le moteur de calcul tourne dans le navigateur et les simulations restent sur votre poste.
 
 *Projet personnel, né d'un besoin d'entrepreneur, partagé dans le cadre de processus de recrutement pour montrer mes standards de code et ma vision produit. Ce n'est pas un logiciel de conseil fiscal : les résultats illustrent l'ingénierie, ils n'ont pas été validés par un expert-comptable.*
 
@@ -78,6 +81,8 @@ npm run dev
 
 `npm run dev` lance Vite et Electron avec rechargement à chaud. Pour un exécutable : `npm run dist:win`, `npm run dist:mac` ou `npm run dist:linux`.
 
+`npm run dev:web` lance la version navigateur (http://localhost:3524/simulateur-independant-fr/) ; `npm run build:web` la compile dans `dist-web/`.
+
 ## ✅ Qualité
 
 ```sh
@@ -86,7 +91,8 @@ npm run test:watch     # tests en mode interactif
 npm run test:coverage  # tests + couverture (v8), rapport dans coverage/
 npm run test:e2e       # compile l'application, puis tests de bout en bout (Playwright + Electron), fenêtres masquées
 npm run test:e2e:visible  # les mêmes, fenêtres affichées pour suivre les tests
-npm run test:all       # tout : tests avec couverture, puis tests de bout en bout
+npm run test:web       # compile la démo web, puis la teste dans Chromium (Playwright)
+npm run test:all       # tout : tests avec couverture, puis tests de bout en bout (application et démo web)
 npm run lint           # ESLint, dont la complexité cyclomatique
 npm run duplication    # détection de code dupliqué (jscpd)
 npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutation/
@@ -96,6 +102,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - **Cas de référence 2026** : `src/backend/logic/references/` fait tourner le moteur avec les règles réelles de `config.json` sur une soixantaine de situations (micro-entreprise, SASU, EURL, EI, salaires, familles, comparateur), dont chaque montant attendu est dérivé à la main des règles officielles ; ils échouent explicitement si `config.json` change d'année.
 - **Tests de composants** : fichiers `*.test.tsx` (React Testing Library, user-event, jsdom) qui rejouent les parcours de saisie au clavier, la fenêtre des flux, les cartes d'entités, les résultats et l'historique d'annulation ; `window.api` y est simulé (`src/ui/testing/`).
 - **Tests de bout en bout** (optionnels) : fichiers `e2e/*.e2e.ts`, où Playwright pilote l'application Electron compilée (création d'entités, saisie dans la grille, résultats, historique, sauvegarde automatique, conversion d'un ancien format, sauvegardes nommées). Chaque test lance l'application sur un dossier de données temporaire (`--user-data-dir`), sans toucher aux vraies données ; aucun navigateur à télécharger. En intégration continue, ils tournent sur `main` et à la demande.
+- **Démo web** : `e2e-web/*.web.ts` ouvre la version navigateur compilée dans Chromium (simulation d'exemple, calculs, conservation des modifications, retour à l'exemple). Elle nécessite une fois `npx playwright install chromium`. À chaque push sur `main`, la CI la teste puis la publie sur GitHub Pages.
 - **Couverture** : seuil bloquant de 90 % (instructions, branches, fonctions, lignes) sur `src/backend/logic/` et `src/lib/`.
 - **Complexité** : règle ESLint `complexity` plafonnée à 15 sur `src/`, sans exception.
 - **Mutation** : Stryker sur `src/backend/logic/` (score d'environ 86 %), lancé chaque semaine et à la demande ; nécessite Node.js 22 ou supérieur.
@@ -108,6 +115,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - `src/backend/` : process principal Electron (logique métier, calculs fiscaux, accès fichiers, IPC).
 - `src/ui/` : application React (composants, hooks, interface).
 - `src/lib/` : fonctions utilitaires et logique pure partagée.
+- `src/web/` : démo web, qui remplace le process Electron : même `window.api`, moteur exécuté dans la page, stockage dans le navigateur.
 - `src/types.ts` : schémas Zod et types centraux.
 
 ## ⚠️ Limites connues

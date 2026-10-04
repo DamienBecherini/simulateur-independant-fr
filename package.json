@@ -14,6 +14,7 @@
   "scripts": {
     "dev": "npm-run-all --parallel --race dev:react dev:electron",
     "dev:react": "vite",
+    "dev:web": "vite --mode web",
     "dev:electron": "wait-on http://localhost:3524 && npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && cross-env NODE_ENV=development electron .",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -23,7 +24,9 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && playwright test",
     "test:e2e:visible": "cross-env E2E_VISIBLE=1 npm run test:e2e",
-    "test:all": "npm run test:coverage && npm run test:e2e",
+    "test:web": "vite build --mode web && playwright test --config playwright.web.config.ts",
+    "test:all": "npm run test:coverage && npm run test:e2e && npm run test:web",
+    "build:web": "vite build --mode web",
     "captures": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && playwright test --config playwright.captures.config.ts",
     "test:mutation": "stryker run",
     "typecheck:tests": "tsc --project src/backend/tsconfig.test.json",

@@ -20,5 +20,5 @@
     "noFallthroughCasesInSwitch": true
   },
   // `src/globals.d.ts` donne le type de `window.api`, utilisé dans les `page.evaluate`.
-  "include": ["e2e/**/*.ts", "captures/**/*.ts", "playwright.config.ts", "playwright.captures.config.ts", "src/globals.d.ts"]
+  "include": ["e2e/**/*.ts", "e2e-web/**/*.ts", "captures/**/*.ts", "playwright.config.ts", "playwright.captures.config.ts", "playwright.web.config.ts", "src/globals.d.ts"]
 }

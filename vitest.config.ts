@@ -34,10 +34,10 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html", "lcov"],
       reportsDirectory: "coverage",
-      // La couverture ne porte que sur la logique pure : moteur fiscal et utilitaires de l'interface.
+      // La couverture ne porte que sur la logique pure : moteur fiscal, utilitaires de l'interface et pont de la démo web.
       // Les composants sont vérifiés par leurs tests, sans seuil chiffré.
-      include: ["src/backend/logic/**/*.ts", "src/lib/**/*.ts"],
-      exclude: ["**/*.test.ts", "src/backend/logic/testing/**"],
+      include: ["src/backend/logic/**/*.ts", "src/lib/**/*.ts", "src/web/**/*.ts"],
+      exclude: ["**/*.test.ts", "src/backend/logic/testing/**", "src/web/*.tsx"],
       // Seuils bloquants, fixés à la dizaine inférieure de la couverture réellement atteinte.
       thresholds: {
         statements: 90,

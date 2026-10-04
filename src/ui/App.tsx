@@ -14,6 +14,7 @@ import { ResultsPanel } from "./components/ResultsPanel"
 import { ComparatorPanel } from "./components/ComparatorPanel"
 import { FlowLegend } from "./components/FlowLegend"
 import { DevWindowSize } from "./components/DevWindowSize"
+import { BandeauDemo } from "@/web/BandeauDemo"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
@@ -161,6 +162,7 @@ function App() {
       <header className="text-center mb-10 pt-16">
         <h1 className="text-4xl font-bold">{currentSession.name}</h1>
         <p className="text-lg text-slate-500">Votre bac à sable financier, juridique et fiscal</p>
+        {import.meta.env.VITE_CIBLE === "web" && <BandeauDemo />}
       </header>
 
       <main className="flex-grow">

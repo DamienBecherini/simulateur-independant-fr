@@ -1,0 +1,59 @@
+name: Démo web
+
+# Compile la démo pour le navigateur, la vérifie dans Chromium, puis la publie sur GitHub Pages.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+# Un seul déploiement à la fois ; celui en cours va jusqu'au bout.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  construire:
+    name: Compiler et tester la démo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Installer Chromium
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Compiler la démo et la tester dans le navigateur
+        run: npm run test:web
+
+      - name: Préparer la publication
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-web
+
+  publier:
+    name: Publier sur GitHub Pages
+    needs: construire
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - name: Déployer
+        id: deploiement
+        uses: actions/deploy-pages@v4
