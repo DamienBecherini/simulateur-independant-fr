@@ -11,7 +11,7 @@ Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un 
 - **Modélisation par graphe** : entités (personnes, sociétés, micro-entreprises) reliées par des relations (Marié(e), PACSé(e), Enfant, Président, Gérant…).
 - **Grille annuelle visuelle** : saisie des flux mois par mois, légende numérotée et couleurs personnalisables.
 - **Simulation par foyer** : chaque activité (SASU, EURL, entreprise individuelle au réel, micro-entreprise) calcule ses cotisations et ce qu'elle verse ; l'impôt sur le revenu est ensuite calculé une seule fois par foyer fiscal (quotient familial plafonné, décote, dividendes au forfait ou au barème). Les résultats se recalculent à chaque modification.
-- **Comparateur de statuts** : pour une activité, net dans la poche et taux de prélèvement en SASU, EURL, EI au réel et micro-entreprise (avec et sans versement libératoire) ; pour un couple en union libre, effet d'un mariage ou d'un PACS sur l'impôt.
+- **Comparateur de statuts** : pour une activité, net dans la poche, taux de prélèvement, frais de fonctionnement détaillés et note de protection sociale (trimestres de retraite validés) en SASU, EURL, EI au réel et micro-entreprise (avec et sans versement libératoire) ; pour un couple en union libre, effet d'un mariage ou d'un PACS sur l'impôt.
 - **Scénarios** : sauvegardes nommées, chargement, import / export JSON.
 - **Pérennité des données** : validation Zod et réparation automatique des sessions à l'ouverture.
 - **Confort d'édition** : undo / redo (Ctrl+Z / Ctrl+Y, Cmd+Shift+Z), sauvegarde automatique, glisser-déposer, zoom.
@@ -96,5 +96,6 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 ## ⚠️ Limites connues
 
 - POC : les résultats illustrent l'ingénierie, ils n'ont pas été validés par un expert-comptable.
-- Les cotisations du président de SASU et des travailleurs non salariés sont approchées par un taux moyen, pas calculées ligne à ligne.
+- Les cotisations du président de SASU et des travailleurs non salariés sont approchées par un taux moyen, pas calculées ligne à ligne ; les cotisations minimales des indépendants sont en revanche appliquées.
+- La note de protection sociale du comparateur est indicative : elle combine le régime et les trimestres de retraite validés.
 - Non modélisés : réductions et crédits d'impôt, résidence alternée, report des déficits, TVA, répartition du capital entre associés (dividendes partagés à parts égales).

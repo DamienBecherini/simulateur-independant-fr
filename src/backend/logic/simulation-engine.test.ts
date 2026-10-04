@@ -367,8 +367,9 @@ describe("runMetaSimulation", () => {
         ]
       )
 
-      // Salaire : 20 000 - 2 000 = 18 000 € imposables, moins le déficit de 3 000 €.
-      expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 17000, revenuImposableGlobal: 15000 })
+      // Déficit de 3 000 €, creusé à 4 000 € par les cotisations minimales (1 000 €).
+      // Salaire : 20 000 - 2 000 = 18 000 € imposables, moins le déficit de 4 000 €.
+      expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 16000, revenuImposableGlobal: 14000 })
     })
   })
 

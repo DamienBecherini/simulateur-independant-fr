@@ -101,6 +101,20 @@ describe("calculerEURL", () => {
     expect(resultat.cotisationsSurDividendes).toBe(0)
   })
 
+  it("fait payer à la société les cotisations minimales du gérant non rémunéré", () => {
+    // Règles de test : minimum de 1 000 €. Bénéfice 89 000 € ; IS 6 000 + 49 000 x 25 % = 18 250 €.
+    const resultat = calculerEURL({ chiffreAffaires: 100000, chargesDeductibles: 10000, remunerationNette: 0, dividendesDemandes: 0, capitalSocial: 10000 }, reglesDeTest)
+
+    expect(resultat.cotisationsSociales).toBe(1000)
+    expect(resultat.impotSocietes).toBeCloseTo(18250)
+    expect(resultat.resultatConserve).toBeCloseTo(70750)
+    expect(resultat.warnings).toEqual([expect.stringContaining("Cotisations minimales du gérant")])
+  })
+
+  it("n'ajoute rien quand les cotisations dépassent déjà le minimum", () => {
+    expect(calculerEURL({ ...activite, capitalSocial: 10000 }, reglesDeTest).warnings).toEqual([])
+  })
+
   it("soumet tous les dividendes aux cotisations quand le capital est nul", () => {
     const resultat = calculerEURL({ ...activite, dividendesDemandes: 20000, capitalSocial: 0 }, reglesDeTest)
 

@@ -31,7 +31,15 @@ export interface ReglesFiscales {
   IS: { tauxReduit: number; plafondTauxReduit: number; tauxNormal: number }
   dividendes: { tauxIrForfaitaire: number; prelevementsSociaux: number; abattementBareme: number; csgDeductible: number }
   SASU: { ratioCoutTotalSurNet: number }
-  TNS: { tauxCotisationsSurRevenuNet: number }
+  TNS: { tauxCotisationsSurRevenuNet: number; cotisationsMinimales: number }
+  protectionSociale: {
+    /** Revenu soumis à cotisations qui valide un trimestre de retraite. */
+    revenuParTrimestre: number
+    /** Part du salaire brut qui reste en net, pour retrouver le brut d'une rémunération saisie nette. */
+    tauxNetSurBrutSalarie: number
+    tauxRetraiteDeBase: number
+    partRetraiteDeBaseMicro: TauxMicro
+  }
   EURL: { seuilDividendesPartDuCapital: number }
   microEntreprise: {
     plafonds: { services: number; vente: number }

@@ -64,7 +64,16 @@
   },
   "TNS": {
     "description": "Approximation des cotisations d'un travailleur non salarié (gérant d'EURL, entrepreneur individuel au réel), en proportion du revenu net. Le calcul réel est progressif.",
-    "tauxCotisationsSurRevenuNet": 0.45
+    "tauxCotisationsSurRevenuNet": 0.45,
+    "cotisationsMinimalesDescription": "Cotisations minimales annuelles dues même sans revenu (2026) : indemnités journalières 96 €, retraite de base 967 € (3 trimestres validés), invalidité-décès 72 €, formation professionnelle 120 € (commerçant ou profession libérale non réglementée). Source : https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-ac-plnr.html",
+    "cotisationsMinimales": 1255
+  },
+  "protectionSociale": {
+    "description": "Validation des trimestres de retraite en 2026 : 150 heures au SMIC horaire (12,02 €) par trimestre, 4 au maximum. En micro-entreprise, part des cotisations affectée à la retraite de base, ramenée au taux de 17,87 %. Sources : https://www.lassuranceretraite.fr/portail-info/home/actif/ma-carriere/cotisation-carriere.html et https://entreprendre.service-public.gouv.fr/vosdroits/F23369",
+    "revenuParTrimestre": 1803,
+    "tauxNetSurBrutSalarie": 0.78,
+    "tauxRetraiteDeBase": 0.1787,
+    "partRetraiteDeBaseMicro": { "venteBic": 0.4345, "servicesBic": 0.4345, "servicesBnc": 0.464 }
   },
   "EURL": {
     "description": "Part du capital social au-delà de laquelle les dividendes du gérant majoritaire supportent les cotisations sociales au lieu des prélèvements sociaux.",

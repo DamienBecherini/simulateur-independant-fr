@@ -148,13 +148,15 @@ casDeReference("Cas de référence 2026 : sociétés et entreprise individuelle"
 
   describe("EURL", () => {
     it("capital élevé : dividendes sous 10 % du capital, aux prélèvements sociaux, et forfait retenu", () => {
-      // Capital 100 000 € : seuil 10 000 €. Bénéfice 40 000 € ; IS 6 000 € ; 10 000 € distribués ; conservé 24 000 €.
-      // Aucune cotisation : pas de rémunération, et les dividendes ne dépassent pas le seuil.
+      // Sans rémunération, et avec des dividendes sous le seuil, le gérant doit tout de même les cotisations minimales
+      // des indépendants : 1 255 €, à la charge de la société.
+      // Capital 100 000 € : seuil 10 000 €. Bénéfice 40 000 - 1 255 = 38 745 € ; IS 38 745 x 15 % = 5 811,75 € ;
+      // 10 000 € distribués ; conservé 38 745 - 5 811,75 - 10 000 = 22 933,25 €.
       // Salaire 60 000 € : revenu imposable 54 000 € ; impôt 1 977,69 + 24 421 x 30 % = 9 303,99 €.
       // Forfait : 9 303,99 + 1 280 = 10 583,99 €.
       // Barème : 54 000 + 6 000 - 680 = 59 320 € ; impôt 1 977,69 + 29 741 x 30 % = 10 899,99 €. Forfait retenu.
       // Prélèvements sociaux : 10 000 x 18,6 % = 1 860 €. Net : 60 000 + 10 000 - 10 583,99 - 1 860 = 57 556,01 €.
-      // Bilan : 100 000 € = 6 000 + 10 584 + 1 860 (prélèvements) + 24 000 (conservé) + 57 556 (net).
+      // Bilan : 100 000 € = 1 255 + 5 812 + 10 584 + 1 860 (prélèvements, 19 511 €) + 22 933 (conservé) + 57 556 (net).
       const report = simulerSociete(
         "EURL",
         [
@@ -166,9 +168,9 @@ casDeReference("Cas de référence 2026 : sociétés et entreprise individuelle"
         [["alice", "salary", 60000]]
       )
 
-      expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 0, impotSocietes: 6000, resultatConserve: 24000, revenuVerse: 10000 })
+      expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 1255, impotSocietes: 5812, resultatConserve: 22933, revenuVerse: 10000 })
       expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 54000, impotSurLeRevenu: 10584, prelevementsSociaux: 1860, optionDividendes: "pfu", netApresImpots: 57556 })
-      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 100000, totalPrelevements: 18444 })
+      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 100000, totalPrelevements: 19511 })
       verifierIdentiteDuBilan(report)
     })
 
@@ -234,26 +236,28 @@ casDeReference("Cas de référence 2026 : sociétés et entreprise individuelle"
       verifierIdentiteDuBilan(report)
     })
 
-    it("déficit seul : ni cotisations ni impôt, avec un avertissement", () => {
-      // Résultat : 20 000 - 30 000 = - 10 000 €. Le modèle n'applique pas de cotisations minimales.
+    it("déficit seul : cotisations minimales, pas d'impôt, et deux avertissements", () => {
+      // Résultat : 20 000 - 30 000 = - 10 000 €. Cotisations minimales des indépendants : 1 255 €, même sans revenu.
+      // Déficit après cotisations : - 11 255 €.
       const report = simulerSociete("EI", [
         ["s1", "ca_services", 20000],
         ["s1", "deductible_expense", 30000]
       ])
       const resultat = activite(report, "s1")
 
-      expect(resultat).toMatchObject({ cotisationsSociales: 0, revenuVerse: -10000 })
-      expect(resultat.warnings).toHaveLength(1)
-      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 0, impotSurLeRevenu: 0, netApresImpots: -10000 })
+      expect(resultat).toMatchObject({ cotisationsSociales: 1255, revenuVerse: -11255 })
+      expect(resultat.warnings).toHaveLength(2)
+      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 0, impotSurLeRevenu: 0, netApresImpots: -11255 })
       verifierIdentiteDuBilan(report)
     })
 
     // Un déficit professionnel (BIC ou BNC au réel) s'impute sur le revenu global de l'année (article 156 du CGI).
     // Ce cas a révélé une erreur du moteur, qui ramenait le déficit à zéro avant le calcul de l'impôt.
     it("déficit et salaire : le déficit s'impute sur le revenu global", () => {
-      // Salaire 50 000 € : 45 000 € après déduction de 10 %. Déficit de 10 000 € : revenu global 35 000 €.
-      // Impôt : 1 977,69 + 5 421 x 30 % = 3 603,99 € (le moteur, sans imputation : 6 603,99 € sur 45 000 €).
-      // Net : 50 000 - 10 000 - 3 603,99 = 36 396,01 €.
+      // Salaire 50 000 € : 45 000 € après déduction de 10 %. Déficit de 10 000 €, plus 1 255 € de cotisations minimales :
+      // - 11 255 €. Revenu global : 45 000 - 11 255 = 33 745 €.
+      // Impôt : 1 977,69 + (33 745 - 29 579) x 30 % = 1 977,69 + 1 249,80 = 3 227,49 €, arrondi à 3 227 €.
+      // Net : 50 000 - 11 255 - 3 227 = 35 518 €.
       const report = simulerSociete(
         "EI",
         [
@@ -264,7 +268,7 @@ casDeReference("Cas de référence 2026 : sociétés et entreprise individuelle"
         [["alice", "salary", 50000]]
       )
 
-      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 35000, impotSurLeRevenu: 3604, netApresImpots: 36396 })
+      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 33745, impotSurLeRevenu: 3227, netApresImpots: 35518 })
     })
   })
 })

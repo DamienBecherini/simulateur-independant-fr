@@ -285,6 +285,7 @@ export interface ScenarioStatut {
   actuel: boolean
   /** Frais de fonctionnement annuels ajoutés pour ce statut. */
   fraisFonctionnement: number
+  protectionSociale: ProtectionSociale
   /** Indicateurs de toute la simulation, l'activité ayant pris ce statut. */
   netApresImpots: number
   revenusAvantPrelevements: number
@@ -296,6 +297,14 @@ export interface ScenarioStatut {
   resultatConserve: number
   /** Avertissements de l'activité dans ce statut (plafond micro dépassé, société déficitaire…). */
   warnings: string[]
+}
+
+/** Note qualitative de protection sociale d'un statut, sur 5 étoiles. */
+export interface ProtectionSociale {
+  etoiles: number
+  /** Trimestres de retraite validés sur l'année (4 au maximum). */
+  trimestres: number
+  resume: string
 }
 
 export interface ComparaisonCouple {

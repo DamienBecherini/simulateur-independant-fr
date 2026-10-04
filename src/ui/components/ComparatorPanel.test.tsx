@@ -7,7 +7,7 @@ import { emptySession, makeCompany, makeMicro, makePerson } from "@/ui/testing/f
 import { ComparatorPanel } from "./ComparatorPanel"
 
 function scenario(statut: StatutCompare, libelle: string, net: number, overrides: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return { statut, libelle, actuel: false, fraisFonctionnement: 0, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
+  return { statut, libelle, actuel: false, fraisFonctionnement: 0, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
 }
 
 function comparison(overrides: Partial<ComparaisonResult> = {}): ComparaisonResult {
@@ -53,6 +53,16 @@ describe("ComparatorPanel", () => {
     render(<ComparatorPanel session={withActivity()} />)
     await screen.findByLabelText("Activité comparée")
     expect(screen.queryByLabelText(/prestations en BNC/)).not.toBeInTheDocument()
+  })
+
+  it("note la protection sociale de chaque statut en étoiles", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
+    render(<ComparatorPanel session={withActivity()} />)
+
+    const ligne = await screen.findByRole("row", { name: /^Protection sociale/ })
+    expect(ligne).toHaveTextContent("★★★☆☆")
+    expect(ligne).toHaveTextContent("3 sur 5")
+    expect(screen.getByText(/Couverture SASU./)).toBeInTheDocument()
   })
 
   it("affiche les avertissements de chaque statut", async () => {

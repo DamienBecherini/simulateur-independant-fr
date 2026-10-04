@@ -103,6 +103,9 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 - **Réglages des colonnes SASU et EURL :** rémunération nette, et versement de tout le bénéfice disponible en dividendes (par défaut si aucun dividende n'est saisi).
 - **Versement libératoire :** seuil de revenu fiscal de référence N-2 proportionnel aux parts du foyer ; au-delà, l'option est refusée et l'impôt calculé au barème.
 - **Couples :** relation « En couple (union libre) », et comparaison de l'impôt avec une imposition commune (mariage ou PACS).
+- **Frais de fonctionnement :** expert-comptable, banque, logiciel, assurance RC Pro et CFE par statut, détaillés et modifiables.
+- **Cotisations minimales des indépendants** (1 255 € en 2026, dues même sans revenu) appliquées au gérant d'EURL et à l'EI au réel, dans tout le moteur.
+- **Protection sociale :** note sur 5 étoiles par statut, avec les trimestres de retraite validés (seuils officiels 2026).
 
 ---
 

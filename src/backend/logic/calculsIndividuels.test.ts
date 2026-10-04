@@ -109,20 +109,31 @@ describe("calculerEI", () => {
     expect(resultat.warnings).toEqual([])
   })
 
-  it("signale un déficit, sans cotisations", () => {
+  it("applique les cotisations minimales en cas de déficit, qui s'en trouve creusé", () => {
+    // Règles de test : cotisations minimales de 1 000 €.
     const resultat = calculerEI({ chiffreAffaires: 5000, chargesDeductibles: 8000 }, reglesDeTest)
 
-    expect(resultat.revenuNet).toBe(-3000)
-    expect(resultat.cotisationsSociales).toBe(0)
-    expect(resultat.warnings).toHaveLength(1)
-    expect(resultat.warnings[0]).toMatch(/déficitaire de 3\s000 €/)
+    expect(resultat.cotisationsSociales).toBe(1000)
+    expect(resultat.revenuNet).toBe(-4000)
+    expect(resultat.warnings).toHaveLength(2)
+    expect(resultat.warnings[0]).toContain("Cotisations minimales")
+    expect(resultat.warnings[1]).toMatch(/déficitaire de 4\s000 €/)
   })
 
-  it("ne signale rien pour une entreprise sans activité", () => {
+  it("doit les cotisations minimales même sans activité", () => {
     const resultat = calculerEI({ chiffreAffaires: 0, chargesDeductibles: 0 }, reglesDeTest)
 
-    expect(resultat.revenuNet).toBe(0)
-    expect(resultat.warnings).toEqual([])
+    expect(resultat.cotisationsSociales).toBe(1000)
+    expect(resultat.revenuNet).toBe(-1000)
+  })
+
+  it("applique les cotisations minimales quand les cotisations proportionnelles sont plus faibles", () => {
+    // 1 500 € de bénéfice : 500 € de cotisations proportionnelles, portées à 1 000 €.
+    const resultat = calculerEI({ chiffreAffaires: 1500, chargesDeductibles: 0 }, reglesDeTest)
+
+    expect(resultat.cotisationsSociales).toBe(1000)
+    expect(resultat.revenuNet).toBe(500)
+    expect(resultat.warnings).toEqual([expect.stringContaining("Cotisations minimales")])
   })
 
   it("utilise par défaut les règles en vigueur", () => {

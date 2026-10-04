@@ -24,7 +24,8 @@ export const reglesDeTest: ReglesFiscales = {
   IS: { tauxReduit: 0.15, plafondTauxReduit: 40000, tauxNormal: 0.25 },
   dividendes: { tauxIrForfaitaire: 0.12, prelevementsSociaux: 0.18, abattementBareme: 0.4, csgDeductible: 0.07 },
   SASU: { ratioCoutTotalSurNet: 1.8 },
-  TNS: { tauxCotisationsSurRevenuNet: 0.5 },
+  TNS: { tauxCotisationsSurRevenuNet: 0.5, cotisationsMinimales: 1000 },
+  protectionSociale: { revenuParTrimestre: 2000, tauxNetSurBrutSalarie: 0.8, tauxRetraiteDeBase: 0.2, partRetraiteDeBaseMicro: { venteBic: 0.4, servicesBic: 0.4, servicesBnc: 0.5 } },
   EURL: { seuilDividendesPartDuCapital: 0.1 },
   microEntreprise: {
     plafonds: { services: 80000, vente: 200000 },

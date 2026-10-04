@@ -48,6 +48,11 @@ const rows: { label: string; value: (s: ScenarioStatut) => string; strong?: bool
   { label: "Conservé en société", value: s => formatMoney(s.resultatConserve) }
 ]
 
+/** Étoiles pleines et vides, sur 5. */
+function stars(count: number): string {
+  return "★".repeat(count) + "☆".repeat(5 - count)
+}
+
 const statutFraisLabels: Record<StatutFrais, string> = { SASU: "SASU", EURL: "EURL", EI: "EI au réel", micro: "Micro-entreprise" }
 
 /**
@@ -190,6 +195,20 @@ function ComparisonTable({ result }: { result: ComparaisonResult }) {
               ))}
             </tr>
           ))}
+          <tr className="border-t border-slate-200 dark:border-slate-700">
+            <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
+              Protection sociale
+            </th>
+            {result.scenarios.map(s => (
+              <td key={s.statut} className={cn("px-3 py-2 text-right", best(s) && "bg-emerald-50 dark:bg-emerald-950/30")} title={s.protectionSociale.resume}>
+                <span aria-hidden="true" className="tracking-wider text-amber-500">
+                  {stars(s.protectionSociale.etoiles)}
+                </span>
+                <span className="sr-only">{s.protectionSociale.etoiles} sur 5</span>
+                <span className="block text-xs text-slate-500 dark:text-slate-400">{s.protectionSociale.trimestres} trim. retraite</span>
+              </td>
+            ))}
+          </tr>
           {current ? (
             <tr className="border-t border-slate-200 dark:border-slate-700">
               <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
@@ -216,6 +235,27 @@ function WarningList({ warnings }: { warnings: string[] }) {
         <li key={i}>{warning}</li>
       ))}
     </ul>
+  )
+}
+
+/** Ce que recouvre chaque note de protection sociale. */
+function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
+  if (scenarios.length === 0) return null
+  return (
+    <details className="text-xs text-slate-600 dark:text-slate-300">
+      <summary className="cursor-pointer font-medium">Ce que recouvre la note de protection sociale</summary>
+      <ul className="mt-2 space-y-1">
+        {scenarios.map(s => (
+          <li key={s.statut}>
+            <span className="font-medium">
+              {s.libelle} ({s.protectionSociale.etoiles}/5) :
+            </span>{" "}
+            {s.protectionSociale.resume}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-slate-500 dark:text-slate-400">Note indicative : la cinquième étoile correspond au salarié classique, seul à cotiser à l'assurance chômage.</p>
+    </details>
   )
 }
 
@@ -319,6 +359,7 @@ export function ComparatorPanel({ session }: ComparatorPanelProps) {
       {result ? (
         <>
           <ComparisonTable result={result} />
+          <ProtectionDetails scenarios={result.scenarios} />
           <ScenarioWarnings scenarios={result.scenarios} />
         </>
       ) : null}
