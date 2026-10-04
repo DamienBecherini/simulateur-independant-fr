@@ -86,8 +86,13 @@ describe("sanitizeFlowsAfterRelationshipChange", () => {
       expect(identifiants(resultat, 0)).toEqual(["div"])
     })
 
-    it("est supprimé quand la société n'a qu'un président", () => {
-      const resultat = sanitizeFlowsAfterRelationshipChange(session([relation("p1", "c1", "Président")], { 0: [dividendes] }))
+    it("est conservé quand la société n'a qu'un dirigeant, premier bénéficiaire des dividendes", () => {
+      expect(identifiants(sanitizeFlowsAfterRelationshipChange(session([relation("p1", "c1", "Président")], { 0: [dividendes] })), 0)).toEqual(["div"])
+      expect(identifiants(sanitizeFlowsAfterRelationshipChange(session([relation("c1", "p1", "Gérant")], { 0: [dividendes] })), 0)).toEqual(["div"])
+    })
+
+    it("est supprimé quand la société n'a ni dirigeant ni associé", () => {
+      const resultat = sanitizeFlowsAfterRelationshipChange(session([relation("p1", "c2", "Associé")], { 0: [dividendes] }))
 
       expect(identifiants(resultat, 0)).toEqual([])
     })
@@ -103,7 +108,7 @@ describe("sanitizeFlowsAfterRelationshipChange", () => {
       })
     )
 
-    expect(identifiants(resultat, 0)).toEqual(["ca", "remu-c1"])
+    expect(identifiants(resultat, 0)).toEqual(["ca", "remu-c1", "div-c1"])
     expect(identifiants(resultat, 6)).toEqual(["div-c2", "salaire"])
     expect(identifiants(resultat, 11)).toEqual([])
   })

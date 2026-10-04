@@ -162,30 +162,7 @@ function App() {
       </header>
 
       <main className="flex-grow">
-        <EntitiesManager
-          sessionName={currentSession.name}
-          entities={currentSession.entities}
-          setEntities={newEntitiesOrUpdater => {
-            setCurrentSession(prevSession => ({
-              ...prevSession,
-              entities: typeof newEntitiesOrUpdater === "function" ? newEntitiesOrUpdater(prevSession.entities) : newEntitiesOrUpdater
-            }))
-          }}
-          relationships={currentSession.relationships}
-          setRelationships={newRelationshipsOrUpdater => {
-            setCurrentSession(prev => ({
-              ...prev,
-              relationships: typeof newRelationshipsOrUpdater === "function" ? newRelationshipsOrUpdater(prev.relationships) : newRelationshipsOrUpdater
-            }))
-          }}
-          monthlyData={currentSession.monthlyData}
-          setMonthlyData={newMonthlyDataOrUpdater => {
-            setCurrentSession(prev => ({
-              ...prev,
-              monthlyData: typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(prev.monthlyData) : newMonthlyDataOrUpdater
-            }))
-          }}
-        />
+        <EntitiesManager session={currentSession} setSession={setCurrentSession} />
 
         <MonthlyGrid
           entities={currentSession.entities}

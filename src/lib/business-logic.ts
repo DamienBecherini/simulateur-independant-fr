@@ -8,8 +8,8 @@ import type { SessionState, FinancialFlow, Relationship } from "@/types"
  */
 const FLOW_RELATIONSHIP_DEPENDENCIES: Partial<Record<FinancialFlow["type"], Relationship["type"][]>> = {
   director_remuneration: ["Président", "Gérant"],
-  dividends_payment: ["Associé"]
-  // On pourrait ajouter d'autres règles ici à l'avenir
+  // Le dirigeant est le premier bénéficiaire des dividendes : un associé distinct n'est pas requis.
+  dividends_payment: ["Président", "Gérant", "Associé"]
 }
 
 /**
