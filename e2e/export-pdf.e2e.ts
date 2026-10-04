@@ -4,7 +4,7 @@
 
 import fs from "node:fs/promises"
 import path from "node:path"
-import { test, expect, choisirFichiers, demandesDEnregistrement, deposerSession } from "./support/fixtures"
+import { test, expect, choisirFichiers, demandesDEnregistrement, deposerSession, orientationsDesPages } from "./support/fixtures"
 import { sessionMicroBnc } from "./support/sessions"
 
 test("le document PDF est enregistré sous le nom de la simulation, et la page retrouve son état", async ({ dossierDonnees, lancer }) => {
@@ -24,6 +24,10 @@ test("le document PDF est enregistré sous le nom de la simulation, et la page r
   expect(pdf.startsWith("%PDF-")).toBe(true)
   // Une page par objet « /Type /Page » : acteurs, grille, résultats et comparateur n'en tiennent pas sur une seule.
   expect(pdf.match(/\/Type\s*\/Page\b/g)?.length ?? 0).toBeGreaterThan(1)
+  // La grille annuelle a sa page en paysage ; le reste du document est en portrait.
+  const orientations = orientationsDesPages(pdf)
+  expect(orientations).toContain("paysage")
+  expect(orientations[0]).toBe("portrait")
 
   const demandes = await demandesDEnregistrement(electronApp)
   expect(demandes).toEqual([{ title: "Exporter en PDF", defaultPath: expect.stringMatching(/^micro-bnc-30-000-\d{4}\.pdf$/) }])

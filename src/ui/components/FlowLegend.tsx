@@ -66,8 +66,8 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
 
   return (
     <>
-      <div data-impression="bloc" className="p-4 mt-4 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md">
-        <div className="flex justify-between items-center mb-3">
+      <div data-impression="bloc" className="page-paysage p-4 mt-4 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md print:mt-2 print:p-3">
+        <div className="flex justify-between items-center mb-3 print:mb-1">
           <h3 className="text-lg font-semibold">Légende des Flux</h3>
           <Button variant="ghost" size="sm" className="print:hidden" onClick={() => setModalOpen(true)}>
             <Settings className="mr-2 h-4 w-4" />
@@ -75,16 +75,16 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
           </Button>
         </div>
         {/* MODIFICATION 3 : La structure d'affichage est maintenant une grille à deux colonnes. */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 print:gap-y-1">
           {/* Section pour les Gains */}
           <div>
             <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 border-b pb-1">Gains</h4>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">{gainTypes.length > 0 ? gainTypes.map(renderLegendItem) : <p className="text-sm text-slate-600 dark:text-slate-400 italic">Aucun gain ce mois-ci.</p>}</div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2 print:gap-y-1 print:pt-1">{gainTypes.length > 0 ? gainTypes.map(renderLegendItem) : <p className="text-sm text-slate-600 dark:text-slate-400 italic">Aucun gain ce mois-ci.</p>}</div>
           </div>
           {/* Section pour les Dépenses */}
           <div>
             <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 border-b pb-1">Dépenses</h4>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">{expenseTypesFiltered.length > 0 ? expenseTypesFiltered.map(renderLegendItem) : <p className="text-sm text-slate-600 dark:text-slate-400 italic">Aucune dépense ce mois-ci.</p>}</div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2 print:gap-y-1 print:pt-1">{expenseTypesFiltered.length > 0 ? expenseTypesFiltered.map(renderLegendItem) : <p className="text-sm text-slate-600 dark:text-slate-400 italic">Aucune dépense ce mois-ci.</p>}</div>
           </div>
         </div>
       </div>

@@ -26,7 +26,21 @@
   }
 }
 
+/* La grille annuelle et sa légende sont larges : elles ont leur propre page, en paysage ; le reste du document
+   reste en portrait. Les pages consécutives qui portent le même nom partagent la même feuille. */
+@page grille {
+  size: A4 landscape;
+}
+
 @media print {
+  /* Chromium met tout le document en page à la largeur d'une feuille portrait : sur la page paysage, ces blocs
+     reçoivent explicitement la largeur utile d'une feuille paysage (297 mm moins les marges de 12 mm). */
+  .page-paysage {
+    page: grille;
+    width: 273mm;
+    max-width: none;
+  }
+
   html {
     color-scheme: light;
     background: #fff;

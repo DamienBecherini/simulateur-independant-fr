@@ -371,7 +371,8 @@ app.on("ready", () => {
     if (canceled || !filePath) return false
     try {
       // La feuille de style d'impression (@media print) met la page en forme.
-      const pdf = await mainWindow.webContents.printToPDF({ printBackground: true, pageSize: "A4" })
+      // preferCSSPageSize : les tailles de page viennent de la feuille d'impression (A4 portrait, grille en paysage).
+      const pdf = await mainWindow.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true })
       await fs.writeFile(filePath, pdf)
       return true
     } catch (error) {

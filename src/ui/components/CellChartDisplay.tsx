@@ -55,15 +55,15 @@ export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, a
       {/* --- GROUPE GAINS (aligné à gauche) --- */}
       <div className="flex flex-col min-w-[68px] flex-1 items-start print:min-w-0 print:pt-3">
         {renderBarGroup(gains, "left")}
-        <div className={cn("flex items-center gap-1 p-1 rounded whitespace-nowrap mt-1 text-sm font-mono print:mt-0.5 print:gap-0.5 print:px-0.5 print:py-0 print:font-sans print:text-[7.5pt] print:tabular-nums print:[&>svg]:size-2", totalGains > 0 ? "text-green-800 dark:text-green-400 bg-green-500/10" : "text-slate-600 dark:text-slate-400")}>
+        <div className={cn("flex items-center gap-1 p-1 rounded whitespace-nowrap mt-1 text-sm font-mono print:mt-0.5 print:gap-0.5 print:px-0.5 print:py-0 print:font-sans print:text-[8.5pt] print:tabular-nums print:[&>svg]:size-2", totalGains > 0 ? "text-green-800 dark:text-green-400 bg-green-500/10" : "text-slate-600 dark:text-slate-400")}>
           <ArrowUp size={12} /> {totalGains.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
         </div>
       </div>
 
-      {/* --- GROUPE DÉPENSES (aligné à droite) --- */}
-      <div className="flex flex-col min-w-[68px] flex-1 items-start print:min-w-0 print:pt-3">
+      {/* --- GROUPE DÉPENSES (aligné à droite) --- ; sur papier, une case sans dépense ne l'affiche pas. */}
+      <div className={cn("flex flex-col min-w-[68px] flex-1 items-start print:min-w-0 print:pt-3", totalExpenses === 0 && "print:hidden")}>
         {renderBarGroup(expenses, "left")}
-        <div className={cn("flex items-center gap-1 p-1 rounded whitespace-nowrap mt-1 text-sm font-mono print:mt-0.5 print:gap-0.5 print:px-0.5 print:py-0 print:font-sans print:text-[7.5pt] print:tabular-nums print:[&>svg]:size-2", totalExpenses > 0 ? "text-red-800 dark:text-red-400 bg-red-500/10" : "text-slate-600 dark:text-slate-400")}>
+        <div className={cn("flex items-center gap-1 p-1 rounded whitespace-nowrap mt-1 text-sm font-mono print:mt-0.5 print:gap-0.5 print:px-0.5 print:py-0 print:font-sans print:text-[8.5pt] print:tabular-nums print:[&>svg]:size-2", totalExpenses > 0 ? "text-red-800 dark:text-red-400 bg-red-500/10" : "text-slate-600 dark:text-slate-400")}>
           <ArrowDown size={12} /> {totalExpenses.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
         </div>
       </div>

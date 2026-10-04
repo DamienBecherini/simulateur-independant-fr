@@ -71,15 +71,18 @@ test("à l'impression, rien ne déborde de la largeur d'une feuille A4", async (
 
   const debordements = await page.evaluate(() => {
     const largeur = document.documentElement.clientWidth
+    // La grille et sa légende sont imprimées sur une page paysage : elles ont droit à la largeur d'une feuille paysage.
+    const largeurPaysage = (largeur * 297) / 210
     const resultat: string[] = []
-    if (document.documentElement.scrollWidth > largeur) resultat.push(`page : ${document.documentElement.scrollWidth} px`)
+    if (document.documentElement.scrollWidth > largeurPaysage + 1) resultat.push(`page : ${document.documentElement.scrollWidth} px`)
     for (const element of Array.from(document.querySelectorAll<HTMLElement>("#contenu *"))) {
       const cadre = element.getBoundingClientRect()
       // Les textes réservés aux lecteurs d'écran (sr-only) mesurent 1 px et masquent leur contenu : ils ne comptent pas.
       if (!element.checkVisibility() || cadre.width <= 1) continue
       // Zones à défilement horizontal (grille, tableaux) : leur contenu doit tenir sans défiler.
       if (element.scrollWidth > element.clientWidth + 1 && getComputedStyle(element).overflowX !== "visible") resultat.push(`${element.tagName} défile : ${element.scrollWidth} > ${element.clientWidth} px`)
-      if (cadre.right > largeur + 1) resultat.push(`${element.tagName} « ${element.textContent?.slice(0, 30)} » dépasse : ${Math.round(cadre.right)} px`)
+      const limite = element.closest(".page-paysage") ? largeurPaysage : largeur
+      if (cadre.right > limite + 1) resultat.push(`${element.tagName} « ${element.textContent?.slice(0, 30)} » dépasse : ${Math.round(cadre.right)} px`)
     }
     return resultat
   })
@@ -95,4 +98,17 @@ test("Chromium produit un PDF de plusieurs pages A4", async ({ page }) => {
   expect(contenu.startsWith("%PDF-")).toBe(true)
   expect(pdf.length).toBeGreaterThan(50_000)
   expect(contenu.match(/\/Type\s*\/Page\b/g)?.length ?? 0).toBeGreaterThanOrEqual(4)
+})
+
+test("la grille annuelle et sa légende sont imprimées sur une page en paysage, le reste en portrait", async ({ page }) => {
+  await ouvrir(page)
+  await page.emulateMedia({ media: "print" })
+
+  // preferCSSPageSize : les tailles de page viennent de la feuille d'impression, comme dans l'application de bureau.
+  const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString("latin1")
+  const orientations = Array.from(pdf.matchAll(/\/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]/g), ([, largeur, hauteur]) => (Number(largeur) > Number(hauteur) ? "paysage" : "portrait"))
+
+  expect(orientations.filter(orientation => orientation === "paysage")).toHaveLength(1)
+  expect(orientations[0]).toBe("portrait")
+  expect(orientations.at(-1)).toBe("portrait")
 })

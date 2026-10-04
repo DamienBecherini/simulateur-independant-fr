@@ -107,6 +107,11 @@ export async function demandesDEnregistrement(electronApp: ElectronApplication):
   return electronApp.evaluate(() => (globalThis as unknown as { __fichiersE2E: FichiersE2E }).__fichiersE2E.demandes)
 }
 
+/** Orientation de chaque page d'un PDF, lue dans sa « MediaBox » (largeur et hauteur en points). */
+export function orientationsDesPages(pdf: string): ("portrait" | "paysage")[] {
+  return Array.from(pdf.matchAll(/\/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]/g), ([, largeur, hauteur]) => (Number(largeur) > Number(hauteur) ? "paysage" : "portrait"))
+}
+
 /** Lit un fichier JSON du dossier de données ; `null` s'il n'existe pas encore. */
 export async function lireFichier<T = unknown>(dossierDonnees: string, nom: string): Promise<T | null> {
   try {
