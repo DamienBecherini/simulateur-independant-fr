@@ -8,7 +8,7 @@ import type { ComparaisonOptions, ComparaisonResult, Entity, Relationship, Statu
 
 /*
  * Montants calculés à la main avec les règles de test : micro BNC à 25 % de cotisations et 30 % d'abattement,
- * versement libératoire BNC à 2 %, TNS à 50 % du revenu net, IS à 15 % jusqu'à 40 000 €,
+ * versement libératoire BNC à 2 %, cotisations TNS des règles de test (voir cotisationsTNS.test.ts), IS à 15 % jusqu'à 40 000 €,
  * dividendes à 12 % d'IR forfaitaire ou au barème (abattement 40 %, CSG déductible 7 %) et 18 % de prélèvements sociaux.
  */
 
@@ -44,12 +44,19 @@ describe("comparerStatuts", () => {
       expect(colonne(resultat, "micro")).toMatchObject({ netApresImpots: 28200, cotisationsSociales: 10000, impotSurLeRevenu: 1800 })
       // Versement libératoire : 2 % du chiffre d'affaires au lieu du barème.
       expect(colonne(resultat, "micro-vfl")).toMatchObject({ netApresImpots: 29200, impotSurLeRevenu: 800 })
-      // EI au réel : 26 667 € de revenu net après cotisations, 1 667 € d'impôt.
-      expect(colonne(resultat, "EI")).toMatchObject({ netApresImpots: 25000, impotSurLeRevenu: 1667 })
+      // EI au réel : 40 000 € de bénéfice, 12 700 € de cotisations, 27 300 € encaissés ; 28 200 € imposables
+      // (CSG non déductible et CRDS réintégrées), 1 820 € d'impôt.
+      expect(colonne(resultat, "EI")).toMatchObject({ netApresImpots: 25480, cotisationsSociales: 12700, impotSurLeRevenu: 1820 })
       // SASU sans rémunération : 6 000 € d'IS, 34 000 € de dividendes imposés au barème (403 €) et 6 120 € de prélèvements sociaux.
       expect(colonne(resultat, "SASU")).toMatchObject({ netApresImpots: 27477, impotSocietes: 6000, impotSurLeRevenu: 403, prelevementsSociaux: 6120, resultatConserve: 0 })
-      // EURL, capital de 1 000 € : au-delà de 100 €, les dividendes supportent 50 % de cotisations.
-      expect(colonne(resultat, "EURL")).toMatchObject({ netApresImpots: 16273, cotisationsSociales: 16950, prelevementsSociaux: 18 })
+      // EURL, capital de 1 000 €, sans rémunération : la société paie les cotisations minimales du gérant, 1 653,66 €
+      // (voir calculsSociete.test.ts) ; bénéfice 38 346,34 €, IS 5 751,95 €, dividendes 32 594,39 €.
+      // Au-delà de 100 €, les dividendes entrent dans le revenu soumis à cotisations : 1 653,66 + 32 494,39 = 34 148,05 €,
+      // assiette 25 611,04 € ; cotisations 287,41 (maladie) + 256,11 (IJ) + 5 122,21 (retraite de base) + 2 048,88
+      // (complémentaire) + 256,11 (invalidité-décès) + 2 561,10 (CSG-CRDS) + 100 = 10 631,82 €, dont 8 978,17 € sur les dividendes.
+      // Encaissé 32 594,39 - 8 978,17 = 23 616,23 €. Barème : 32 594,39 x 60 % - 100 x 7 % = 19 549,63 € ; impôt brut 954,96 €,
+      // décote 800 - 477,48 = 322,52 €, impôt 632,44 €, contre 3 911,33 € au forfait. Net : 23 616,23 - 632,44 - 18 = 22 965,79 €.
+      expect(colonne(resultat, "EURL")).toMatchObject({ netApresImpots: 22966, cotisationsSociales: 10632, impotSurLeRevenu: 632, prelevementsSociaux: 18 })
     })
 
     it("désigne le statut au meilleur net", () => {
@@ -77,15 +84,16 @@ describe("comparerStatuts", () => {
       const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], flux, options("m1", { partBncPrestations: 0 }))
 
       // 1 000 + 2 000 + 2 500 € : la part BNC choisie ne s'applique pas à une micro existante.
+      // En EI, 30 000 € de bénéfice, assiette 22 500 € : 112,50 (maladie à 0,5 %) + 225 + 4 500 + 1 800 + 225 + 2 250 + 100 = 9 212,50 €.
       expect(colonne(resultat, "micro").cotisationsSociales).toBe(5500)
-      expect(colonne(resultat, "EI").cotisationsSociales).toBe(10000)
+      expect(colonne(resultat, "EI").cotisationsSociales).toBe(9213)
     })
 
     it("rend déductibles en société les dépenses d'une micro, et l'inverse", () => {
       const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000], ["m1", "expense", 10000]], options("m1"))
 
-      // En EI, 30 000 € de bénéfice : 10 000 € de cotisations. En micro, les dépenses ne changent pas les cotisations.
-      expect(colonne(resultat, "EI").cotisationsSociales).toBe(10000)
+      // En EI, 30 000 € de bénéfice : 9 213 € de cotisations. En micro, les dépenses ne changent pas les cotisations.
+      expect(colonne(resultat, "EI").cotisationsSociales).toBe(9213)
       expect(colonne(resultat, "micro").cotisationsSociales).toBe(10000)
     })
 

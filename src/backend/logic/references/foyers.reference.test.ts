@@ -201,15 +201,20 @@ casDeReference("Cas de référence 2026 : salaires et foyers", () => {
   describe("cumul d'activités d'une personne", () => {
     it("salaire, micro-entreprise et EURL", () => {
       // Micro BIC 20 000 € : cotisations 4 240 €, revenu imposable 10 000 €, encaissé 15 760 €.
-      // EURL (capital 5 000 €, seuil 500 €) : cotisations sur la rémunération 20 000 x 45 % = 9 000 € ;
-      //   bénéfice 80 000 - 10 000 - 20 000 - 9 000 = 41 000 € ; IS 6 150 € ; 10 000 € distribués ; conservé 24 850 €.
-      //   Cotisations sur dividendes : 9 500 x 45 % = 4 275 € (total 13 275 €) ; dividendes encaissés 5 725 €.
-      // Salaire 30 000 € et rémunération 20 000 € : une seule déduction de 10 % sur 50 000 €, soit 45 000 €.
-      // Revenu au barème : 45 000 + 10 000 = 55 000 € ; impôt 1 977,69 + 25 421 x 30 % = 9 603,99 €.
-      // Forfait : 9 603,99 + 1 280 = 10 883,99 €. Barème : 55 000 + 6 000 - 34 = 60 966 €, impôt 11 393,79 €. Forfait retenu.
+      // EURL (capital 5 000 €, seuil 500 €), cotisations TNS selon le barème détaillé dans societes.reference.test.ts :
+      //   rémunération nette 20 000 € : revenu avant cotisations 28 412,04 €, 8 412,04 € de cotisations, dont 609,72 € de
+      //   CSG non déductible et de CRDS (voir comparateur.reference.test.ts) ;
+      //   bénéfice 80 000 - 10 000 - 20 000 - 8 412,04 = 41 587,96 € ; IS 6 238,19 € ; 10 000 € distribués ; conservé 25 349,77 €.
+      //   9 500 € de dividendes s'ajoutent au revenu soumis à cotisations : 37 912,04 € ; assiette 28 054,91 € ;
+      //   maladie 1,5 % + 2,5 % x (28 054,91 - 19 224) / 9 612 = 3,797 %, 1 065,20 € ; IJ 140,27 € ; retraite de base 5 013,41 € ;
+      //   complémentaire 2 272,45 € ; invalidité-décès 364,71 € ; CSG-CRDS 1 907,73 + 813,59 € ; formation 120,15 € ;
+      //   total 11 697,53 €, dont 3 285,49 € sur les dividendes ; dividendes encaissés 6 714,51 €.
+      // Salaire 30 000 € et rémunération imposable 20 609,72 € : une seule déduction de 10 % sur 50 609,72 €, soit 45 548,75 €.
+      // Revenu au barème : 45 548,75 + 10 000 = 55 548,75 € ; impôt 1 977,69 + 25 969,75 x 30 % = 9 768,62 €, soit 9 769 €.
+      // Forfait : 9 769 + 1 280 = 11 049 €. Barème : 55 548,75 + 6 000 - 34 = 61 514,75 €, impôt 11 558,42 €. Forfait retenu.
       // Prélèvements sociaux : 500 x 18,6 % = 93 €.
-      // Net : 30 000 + 20 000 + 5 725 + 15 760 - 10 884 - 93 = 60 508 €.
-      // Bilan : 120 000 € = 17 515 + 6 150 + 10 884 + 93 (prélèvements) + 24 850 (conservé) + 60 508 (net).
+      // Net : 30 000 + 20 000 + 6 714,51 + 15 760 - 11 049 - 93 = 61 332,51 €.
+      // Bilan : 120 000 € = 4 240 + 11 698 + 6 238 + 11 049 + 93 (prélèvements, 33 318 €) + 25 350 (conservé) + 61 333 (net), à 1 € près.
       const report = simuler(
         [alice, micro("m1"), societe("s1", "EURL", 5000)],
         [relation("alice", "m1", "Titulaire"), relation("alice", "s1", "Gérant")],
@@ -224,9 +229,9 @@ casDeReference("Cas de référence 2026 : salaires et foyers", () => {
       )
 
       expect(activite(report, "m1")).toMatchObject({ cotisationsSociales: 4240, revenuVerse: 15760 })
-      expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 13275, impotSocietes: 6150, resultatConserve: 24850, revenuVerse: 25725 })
-      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 55000, impotSurLeRevenu: 10884, prelevementsSociaux: 93, optionDividendes: "pfu", netApresImpots: 60508 })
-      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 120000, totalPrelevements: 34642, resultatConserve: 24850 })
+      expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 11698, impotSocietes: 6238, resultatConserve: 25350, revenuVerse: 26715 })
+      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 55549, impotSurLeRevenu: 11049, prelevementsSociaux: 93, optionDividendes: "pfu", netApresImpots: 61333 })
+      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 120000, totalPrelevements: 33318, resultatConserve: 25350 })
       verifierIdentiteDuBilan(report)
     })
   })

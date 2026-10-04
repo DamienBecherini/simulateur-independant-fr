@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest"
 import { evaluerProtectionSociale, type DonneesProtection } from "./protection-sociale.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 
-// Règles de test : un trimestre pour 2 000 € de revenu cotisé ; net = 80 % du brut ; TNS à 50 % du revenu net ;
+// Règles de test : un trimestre pour 2 000 € de revenu cotisé ; net = 80 % du brut ; retraite de base des TNS au moins sur 6 000 € ;
 // micro : cotisations 10 % / 20 % / 25 %, dont 40 % / 40 % / 50 % pour la retraite de base, au taux de 20 %.
-const donnees = (autres: Partial<DonneesProtection> = {}): DonneesProtection => ({ remunerationNette: 0, cotisationsTNS: 0, chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 }, ...autres })
+const donnees = (autres: Partial<DonneesProtection> = {}): DonneesProtection => ({ remunerationNette: 0, assietteTNS: 0, chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 }, ...autres })
 
 describe("evaluerProtectionSociale", () => {
   describe("président de SASU", () => {
@@ -29,13 +29,18 @@ describe("evaluerProtectionSociale", () => {
   })
 
   describe("travailleur non salarié", () => {
-    it.each(["EURL", "EI"] as const)("garantit 3 trimestres en %s grâce aux cotisations minimales", statut => {
-      expect(evaluerProtectionSociale(statut, donnees({ cotisationsTNS: 1000 }), reglesDeTest)).toMatchObject({ etoiles: 3, trimestres: 3 })
+    it.each(["EURL", "EI"] as const)("garantit 3 trimestres en %s grâce à l'assiette minimale de la retraite de base", statut => {
+      // Sans revenu, la retraite de base est cotisée sur 6 000 € : 3 trimestres.
+      const note = evaluerProtectionSociale(statut, donnees(), reglesDeTest)
+
+      expect(note).toMatchObject({ etoiles: 3, trimestres: 3 })
+      expect(note.resume).toContain("3 au minimum")
     })
 
-    it("valide 4 trimestres avec un revenu suffisant", () => {
-      // 5 000 € de cotisations à 50 % : 10 000 € de revenu cotisé.
-      expect(evaluerProtectionSociale("EI", donnees({ cotisationsTNS: 5000 }), reglesDeTest).trimestres).toBe(4)
+    it("compte les trimestres sur l'assiette sociale", () => {
+      // 7 999 € : encore 3 trimestres ; 8 000 € : 4.
+      expect(evaluerProtectionSociale("EI", donnees({ assietteTNS: 7999 }), reglesDeTest).trimestres).toBe(3)
+      expect(evaluerProtectionSociale("EI", donnees({ assietteTNS: 8000 }), reglesDeTest).trimestres).toBe(4)
     })
   })
 

@@ -14,8 +14,8 @@ import type { ComparaisonOptions, ComparaisonResult, StatutCompare } from "../..
  * societes.reference.test.ts pour le détail des taux), sans lancer le moteur. En cas d'écart, c'est le moteur
  * qui est suspect. L'impôt sur le revenu est arrondi à l'euro avant d'être retranché du net.
  *
- * Approximations assumées du modèle : cotisations du président de SASU égales à 80 % de sa rémunération nette,
- * cotisations TNS (EURL, EI) égales à 45 % du revenu net.
+ * Cotisations TNS (EURL, EI) : barème officiel 2026, détaillé dans l'en-tête de societes.reference.test.ts.
+ * Approximation assumée du modèle : cotisations du président de SASU égales à 80 % de sa rémunération nette.
  */
 
 const options = (activityId: string, autres: Partial<ComparaisonOptions> = {}): ComparaisonOptions => ({ activityId, remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1, ...autres })
@@ -42,10 +42,17 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
     })
 
     it("EI au réel : cotisations TNS sur le bénéfice", () => {
-      // Revenu net : 40 000 / 1,45 = 27 586,21 € ; cotisations 12 413,79 €.
-      // Impôt brut : (27 586,21 - 11 600) x 11 % = 1 758,48 € ; décote 897 - 795,71 = 101,29 € ; impôt 1 657,20 €, soit 1 657 €.
-      // Net : 27 586,21 - 1 657 = 25 929,21 €.
-      expect(colonne(resultat, "EI")).toMatchObject({ cotisationsSociales: 12414, impotSurLeRevenu: 1657, netApresImpots: 25929, totalPrelevements: 14071 })
+      // Bénéfice 40 000 € ; assiette 29 600 €. Maladie 4 % + 2,5 % x 764 / 24 030 = 4,079 %, 1 207,53 € ; IJ 148 € ;
+      // retraite de base 5 289,52 € ; complémentaire 2 397,60 € ; invalidité-décès 384,80 € ; CSG-CRDS 2 012,80 + 858,40 € ;
+      // formation 120,15 € ; total 12 418,80 €. Encaissé : 27 581,20 € ; imposable 27 581,20 + 858,40 = 28 439,60 €.
+      // Impôt brut : 16 839,60 x 11 % = 1 852,36 € ; décote 897 - 838,19 = 58,81 € ; impôt 1 793,55 €, soit 1 794 €.
+      // Net : 27 581,20 - 1 794 = 25 787,20 €.
+      expect(colonne(resultat, "EI")).toMatchObject({ cotisationsSociales: 12419, impotSurLeRevenu: 1794, netApresImpots: 25787, totalPrelevements: 14213 })
+    })
+
+    it("EI au réel : 4 trimestres de retraite validés sur l'assiette de 29 600 €", () => {
+      // 29 600 € de revenu cotisé pour la retraite de base, au-delà des 4 x 1 803 = 7 212 € qui valident 4 trimestres.
+      expect(colonne(resultat, "EI").protectionSociale).toMatchObject({ etoiles: 3, trimestres: 4 })
     })
 
     it("SASU sans rémunération, tout le bénéfice distribué", () => {
@@ -56,10 +63,16 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
     })
 
     it("EURL au capital de 1 000 € : dividendes au-delà de 100 € soumis aux cotisations TNS", () => {
-      // IS 6 000 € ; dividendes 34 000 €, dont 33 900 € aux cotisations TNS : 15 255 € ; encaissés 18 745 €.
-      // Barème : 20 400 - 100 x 6,8 % = 20 393,20 € ; impôt brut 967,25 €, décote 459,32 €, impôt 507,93 €, soit 508 €.
-      // Prélèvements sociaux : 100 x 18,6 % = 18,60 €. Net : 18 745 - 508 - 18,60 = 18 218,40 €.
-      expect(colonne(resultat, "EURL")).toMatchObject({ cotisationsSociales: 15255, impotSocietes: 6000, impotSurLeRevenu: 508, prelevementsSociaux: 19, netApresImpots: 18218 })
+      // Sans rémunération, la société paie les cotisations minimales du gérant : 1 343,24 € (voir societes.reference.test.ts).
+      // Bénéfice 38 656,76 € ; IS 5 798,51 € ; tout le reste est distribué : 32 858,24 €.
+      // 32 758,24 € de dividendes s'ajoutent au revenu soumis à cotisations : 34 101,49 € ; abattement 8 866,39 € ;
+      // assiette 25 235,10 €. Maladie 1,5 % + 2,5 % x (25 235,10 - 19 224) / 9 612 = 3,063 %, 773,06 € ; IJ sur 25 235,10 €, 126,18 € ;
+      // retraite de base 4 509,51 € ; complémentaire 2 044,04 € ; invalidité-décès 328,06 € ; CSG-CRDS 1 715,99 + 731,82 € ;
+      // formation 120,15 € ; total 10 348,80 €, dont 9 005,56 € sur les dividendes ; encaissés 23 852,68 €.
+      // Barème : 32 858,24 x 60 % - 100 x 6,8 % = 19 708,15 € ; impôt brut 891,90 €, décote 897 - 403,58 = 493,42 €,
+      // impôt 398,48 €, soit 398 €, contre 4 205,85 € au forfait.
+      // Prélèvements sociaux : 100 x 18,6 % = 18,60 €. Net : 23 852,68 - 398 - 18,60 = 23 436,08 €.
+      expect(colonne(resultat, "EURL")).toMatchObject({ cotisationsSociales: 10349, impotSocietes: 5799, impotSurLeRevenu: 398, prelevementsSociaux: 19, resultatConserve: 0, netApresImpots: 23436 })
     })
 
     it("toutes les colonnes partent des mêmes 40 000 €, et le versement libératoire l'emporte", () => {
@@ -100,18 +113,26 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
     })
 
     it("EURL : rémunération et solde distribué, dividendes au barème", () => {
-      // Cotisations sur la rémunération 9 000 € ; bénéfice 26 000 € ; IS 3 900 € ; dividendes 22 100 €.
-      // Capital 1 000 € : 22 000 € aux cotisations TNS, 9 900 € (total 18 900 €) ; dividendes encaissés 12 200 €.
-      // Forfait : 125,56 + 2 828,80 = 2 954,36 €. Barème : 18 000 + 13 260 - 6,80 = 31 253,20 € ;
-      // impôt 1 977,69 + 1 674,20 x 30 % = 2 479,95 €, soit 2 480 €. Barème retenu.
-      // Net : 20 000 + 12 200 - 2 480 - 18,60 = 29 701,40 €.
-      expect(colonne(resultat, "EURL")).toMatchObject({ cotisationsSociales: 18900, impotSocietes: 3900, impotSurLeRevenu: 2480, prelevementsSociaux: 19, netApresImpots: 29701 })
+      // Rémunération nette 20 000 € : R = 28 412,04 € tel que R - cotisations(R) = 20 000. Vérification : assiette 21 024,91 € ;
+      // maladie 1,5 % + 2,5 % x (21 024,91 - 19 224) / 9 612 = 1,968 %, 413,85 € ; IJ 105,12 € ; retraite de base 3 757,15 € ;
+      // complémentaire 1 703,02 € ; invalidité-décès 273,32 € ; CSG-CRDS 1 429,69 + 609,72 € ; formation 120,15 € ; total 8 412,04 €.
+      // Bénéfice 60 000 - 5 000 - 20 000 - 8 412,04 = 26 587,96 € ; IS 3 988,19 € ; dividendes 22 599,77 €.
+      // Capital 1 000 € : 22 499,77 € s'ajoutent au revenu : 50 911,81 € ; assiette 37 674,74 € ; maladie 4 % + 2,5 % x 8 838,74 / 24 030
+      // = 4,920 %, 1 853,43 € ; IJ 188,37 € ; retraite de base 6 732,48 € ; complémentaire 3 051,65 € ; invalidité-décès 489,77 € ;
+      // CSG-CRDS 2 561,88 + 1 092,57 € ; formation 120,15 € ; total 16 090,30 €, dont 7 678,26 € sur les dividendes, encaissés 14 921,50 €.
+      // Rémunération imposable 20 000 + 609,72 = 20 609,72 €, moins 10 % : 18 548,75 € ; impôt brut 764,36 €,
+      // décote 897 - 345,87 = 551,13 €, impôt 213,23 €, soit 213 €. Forfait : 213 + 22 599,77 x 12,8 % = 3 105,77 €.
+      // Barème : 18 548,75 + 13 559,86 - 6,80 = 32 101,81 € ; impôt 1 977,69 + 2 522,81 x 30 % = 2 734,53 €, soit 2 735 €. Barème retenu.
+      // Net : 20 000 + 14 921,50 - 2 735 - 18,60 = 32 167,90 €.
+      expect(colonne(resultat, "EURL")).toMatchObject({ cotisationsSociales: 16090, impotSocietes: 3988, impotSurLeRevenu: 2735, prelevementsSociaux: 19, resultatConserve: 0, netApresImpots: 32168 })
     })
 
     it("EI au réel : la rémunération saisie est ignorée, tout le bénéfice est imposé", () => {
-      // Revenu net : 55 000 / 1,45 = 37 931,03 € ; cotisations 17 068,97 €.
-      // Impôt : 1 977,69 + 8 352,03 x 30 % = 4 483,30 €, soit 4 483 €. Net : 37 931,03 - 4 483 = 33 448,03 €.
-      expect(colonne(resultat, "EI")).toMatchObject({ cotisationsSociales: 17069, impotSurLeRevenu: 4483, netApresImpots: 33448 })
+      // Bénéfice 55 000 € ; assiette 40 700 €. Maladie 4 % + 2,5 % x 11 864 / 24 030 = 5,234 %, 2 130,36 € ; IJ 203,50 € ;
+      // retraite de base 7 273,09 € ; complémentaire 3 296,70 € ; invalidité-décès 529,10 € ; CSG-CRDS 2 767,60 + 1 180,30 € ;
+      // formation 120,15 € ; total 17 500,80 €. Encaissé : 37 499,20 € ; imposable 38 679,50 €.
+      // Impôt : 1 977,69 + 9 100,50 x 30 % = 4 707,84 €, soit 4 708 €. Net : 37 499,20 - 4 708 = 32 791,20 €.
+      expect(colonne(resultat, "EI")).toMatchObject({ cotisationsSociales: 17501, impotSurLeRevenu: 4708, netApresImpots: 32791 })
     })
 
     it("micro : prestations converties en BNC, charges devenues des dépenses non déductibles", () => {

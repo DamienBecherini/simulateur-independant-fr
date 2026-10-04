@@ -63,10 +63,78 @@
     "ratioCoutTotalSurNet": 1.8
   },
   "TNS": {
-    "description": "Approximation des cotisations d'un travailleur non salarié (gérant d'EURL, entrepreneur individuel au réel), en proportion du revenu net. Le calcul réel est progressif.",
-    "tauxCotisationsSurRevenuNet": 0.45,
-    "cotisationsMinimalesDescription": "Cotisations minimales annuelles dues même sans revenu (2026) : indemnités journalières 96 €, retraite de base 967 € (3 trimestres validés), invalidité-décès 72 €, formation professionnelle 120 € (commerçant ou profession libérale non réglementée). Source : https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-ac-plnr.html",
-    "cotisationsMinimales": 1255
+    "description": "Cotisations et contributions sociales 2026 d'un travailleur non salarié (gérant majoritaire d'EURL, entrepreneur individuel au réel) artisan, commerçant ou profession libérale non réglementée, en métropole, après la réforme de l'assiette (LFSS 2024, article 18 ; décret 2024-688). Toutes sont calculées sur une assiette unique : le revenu professionnel avant cotisations, diminué d'un abattement forfaitaire. Les seuils sont exprimés en part du plafond annuel de la sécurité sociale (PASS), les assiettes minimales en euros.",
+    "source": "https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-ac-plnr.html",
+    "plafondSecuriteSociale": 48060,
+    "abattement": {
+      "description": "Abattement forfaitaire de 26 % sur le revenu avant cotisations, au moins 1,76 % et au plus 130 % du PASS (article D136-5 du code de la sécurité sociale). Pour un gérant d'EURL, il porte sur la rémunération augmentée des dividendes au-delà de 10 % du capital.",
+      "source": "https://legislation.lassuranceretraite.fr/Pdf/circulaire_cnav_2025_14_04042025.pdf",
+      "taux": 0.26,
+      "minimumPartDuPlafond": 0.0176,
+      "maximumPartDuPlafond": 1.3
+    },
+    "maladieMaternite": {
+      "description": "Taux progressif appliqué à toute l'assiette, interpolé linéairement entre les points du barème (article D621-2 du code de la sécurité sociale) ; au-delà de 3 PASS, 8,5 % jusqu'à 3 PASS et 6,5 % sur le surplus (article D621-1).",
+      "source": "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006073189/LEGISCTA000006141568/",
+      "points": [
+        { "partDuPlafond": 0.2, "taux": 0 },
+        { "partDuPlafond": 0.4, "taux": 0.015 },
+        { "partDuPlafond": 0.6, "taux": 0.04 },
+        { "partDuPlafond": 1.1, "taux": 0.065 },
+        { "partDuPlafond": 2, "taux": 0.077 },
+        { "partDuPlafond": 3, "taux": 0.085 }
+      ],
+      "tauxAuDela": 0.065
+    },
+    "allocationsFamiliales": {
+      "description": "Taux nul jusqu'à 110 % du PASS, progressif jusqu'à 3,1 % à 140 % du PASS, appliqué à toute l'assiette (article D613-1 du code de la sécurité sociale).",
+      "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000041966324",
+      "points": [
+        { "partDuPlafond": 1.1, "taux": 0 },
+        { "partDuPlafond": 1.4, "taux": 0.031 }
+      ],
+      "tauxAuDela": 0.031
+    },
+    "indemnitesJournalieres": {
+      "description": "Indemnités journalières maladie : 0,5 % dans la limite de 5 PASS.",
+      "tranches": [{ "jusquA": 5, "taux": 0.005 }]
+    },
+    "retraiteDeBase": {
+      "description": "17,87 % dans la limite de 1 PASS, 0,72 % sur la totalité du revenu au-delà.",
+      "tranches": [
+        { "jusquA": 1, "taux": 0.1787 },
+        { "jusquA": null, "taux": 0.0072 }
+      ]
+    },
+    "retraiteComplementaire": {
+      "description": "8,1 % dans la limite de 1 PASS, 9,1 % entre 1 et 4 PASS, rien au-delà.",
+      "tranches": [
+        { "jusquA": 1, "taux": 0.081 },
+        { "jusquA": 4, "taux": 0.091 }
+      ]
+    },
+    "invaliditeDeces": {
+      "description": "1,3 % dans la limite de 1 PASS.",
+      "tranches": [{ "jusquA": 1, "taux": 0.013 }]
+    },
+    "csgCrds": {
+      "description": "CSG-CRDS de 9,7 % sur la même assiette : CSG de 9,2 %, dont 6,8 points déductibles du revenu imposable (article 154 quinquies du CGI), et CRDS de 0,5 %, non déductible.",
+      "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047288608",
+      "csgDeductible": 0.068,
+      "csgNonDeductible": 0.024,
+      "crds": 0.005
+    },
+    "formationProfessionnelle": {
+      "description": "Contribution à la formation professionnelle d'un commerçant ou d'une profession libérale non réglementée : forfait de 0,25 % du PASS (120 €), due même sans revenu (0,29 % pour un artisan, non distingué).",
+      "tauxSurPlafond": 0.0025
+    },
+    "cotisationsMinimales": {
+      "description": "Assiettes minimales, par risque, sur lesquelles le travailleur non salarié cotise même sans revenu : 19 224 € (40 % du PASS) pour les indemnités journalières (96 €), 5 409 € (450 heures au SMIC horaire) pour la retraite de base (967 €, 3 trimestres validés), 5 527 € (11,5 % du PASS) pour l'invalidité-décès (72 €). Avec la formation professionnelle (120 €), 1 255 € par an au minimum.",
+      "source": "https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-ac-plnr.html",
+      "indemnitesJournalieres": 19224,
+      "retraiteDeBase": 5409,
+      "invaliditeDeces": 5527
+    }
   },
   "protectionSociale": {
     "description": "Validation des trimestres de retraite en 2026 : 150 heures au SMIC horaire (12,02 €) par trimestre, 4 au maximum. En micro-entreprise, part des cotisations affectée à la retraite de base, ramenée au taux de 17,87 %. Sources : https://www.lassuranceretraite.fr/portail-info/home/actif/ma-carriere/cotisation-carriere.html et https://entreprendre.service-public.gouv.fr/vosdroits/F23369",

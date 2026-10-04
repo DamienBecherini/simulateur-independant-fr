@@ -13,8 +13,8 @@ import type { ReglesFiscales, TauxMicro } from "./regles.js"
 export interface DonneesProtection {
   /** Rémunération nette du président de SASU sur l'année. */
   remunerationNette: number
-  /** Cotisations sociales de l'activité (gérant d'EURL, entrepreneur individuel au réel). */
-  cotisationsTNS: number
+  /** Assiette sociale de l'année du gérant d'EURL ou de l'entrepreneur individuel au réel, après l'abattement forfaitaire. */
+  assietteTNS: number
   /** Chiffre d'affaires annuel par nature, pour une micro-entreprise. */
   chiffreAffairesMicro: { caVente: number; caServicesBic: number; caServicesBnc: number }
   /** Micro-entreprise bénéficiant de l'ACRE : les cotisations, donc les droits, sont réduits. */
@@ -40,15 +40,17 @@ function protectionSASU(remunerationNette: number, regles: ReglesFiscales): Prot
   return { etoiles: trimestres === 4 ? 4 : 3, trimestres, resume: `${couverture}. ${texteTrimestres(trimestres)}.` }
 }
 
-/** Gérant d'EURL ou entrepreneur individuel au réel : régime des indépendants, avec un plancher grâce aux cotisations minimales. */
-function protectionTNS(cotisations: number, regles: ReglesFiscales): ProtectionSociale {
-  const revenuCotise = cotisations / regles.TNS.tauxCotisationsSurRevenuNet
-  // Les cotisations minimales valident à elles seules 3 trimestres.
-  const trimestres = Math.max(3, trimestresValides(revenuCotise, regles))
+/**
+ * Gérant d'EURL ou entrepreneur individuel au réel : régime des indépendants. La retraite de base est cotisée
+ * sur l'assiette sociale, au moins sur son assiette minimale, qui garantit un plancher de trimestres.
+ */
+function protectionTNS(assiette: number, regles: ReglesFiscales): ProtectionSociale {
+  const assietteMinimale = regles.TNS.cotisationsMinimales.retraiteDeBase
+  const trimestres = trimestresValides(Math.max(assiette, assietteMinimale), regles)
   return {
     etoiles: 3,
     trimestres,
-    resume: `Régime des indépendants : retraite de base et complémentaire, indemnités journalières après un an d'affiliation, invalidité-décès ; pas de couverture accidents du travail ni de chômage. ${texteTrimestres(trimestres)} (3 au minimum grâce aux cotisations minimales).`
+    resume: `Régime des indépendants : retraite de base et complémentaire, indemnités journalières après un an d'affiliation, invalidité-décès ; pas de couverture accidents du travail ni de chômage. ${texteTrimestres(trimestres)} (${trimestresValides(assietteMinimale, regles)} au minimum grâce aux cotisations minimales).`
   }
 }
 
@@ -68,6 +70,6 @@ function protectionMicro(ca: DonneesProtection["chiffreAffairesMicro"], benefici
 
 export function evaluerProtectionSociale(statut: StatutCompare, donnees: DonneesProtection, regles: ReglesFiscales): ProtectionSociale {
   if (statut === "SASU") return protectionSASU(donnees.remunerationNette, regles)
-  if (statut === "EURL" || statut === "EI") return protectionTNS(donnees.cotisationsTNS, regles)
+  if (statut === "EURL" || statut === "EI") return protectionTNS(donnees.assietteTNS, regles)
   return protectionMicro(donnees.chiffreAffairesMicro, donnees.beneficieACRE ?? false, regles)
 }

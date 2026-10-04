@@ -22,9 +22,11 @@ type FlowTotals = Partial<Record<FlowType, number>>
 
 /** Ce qu'une personne reçoit de ses activités sur l'année, ventilé selon son traitement fiscal. */
 interface RevenusDActivite {
-  /** Rémunérations de dirigeant, imposées comme des salaires. */
+  /** Rémunérations nettes de dirigeant, encaissées. */
   remunerations: number
-  /** Bénéfices imposables au barème (micro-entreprise après abattement, entreprise individuelle). */
+  /** Les mêmes, telles qu'imposées comme des salaires (CSG non déductible et CRDS du gérant d'EURL comprises). */
+  remunerationsImposables: number
+  /** Bénéfices imposables au barème (micro-entreprise après abattement, entreprise individuelle après cotisations déductibles). */
   beneficesImposables: number
   dividendes: number
   dividendesSoumisPS: number
@@ -102,27 +104,28 @@ function personnesLiees(ctx: Contexte, entityId: string, types: Relationship["ty
 function revenusDe(ctx: Contexte, personId: string): RevenusDActivite {
   let revenus = ctx.revenus.get(personId)
   if (!revenus) {
-    revenus = { remunerations: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, dividendesEncaisses: 0, beneficesEncaisses: 0, prelevementsActivites: 0, resultatConserve: 0 }
+    revenus = { remunerations: 0, remunerationsImposables: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, dividendesEncaisses: 0, beneficesEncaisses: 0, prelevementsActivites: 0, resultatConserve: 0 }
     ctx.revenus.set(personId, revenus)
   }
   return revenus
 }
 
 /** La rémunération du dirigeant est versée à la première personne reliée par « Président » ou « Gérant ». */
-function verserRemuneration(ctx: Contexte, societe: Company, remuneration: number, cotisations: number, warnings: string[]) {
-  if (remuneration <= 0) return
+function verserRemuneration(ctx: Contexte, societe: Company, remuneration: { nette: number; imposable: number; cotisations: number }, warnings: string[]) {
+  if (remuneration.nette <= 0) return
   const dirigeants = personnesLiees(ctx, societe.id, RELATIONS_DE_DIRECTION)
   if (dirigeants.length === 0) {
     warnings.push("Rémunération dirigeant saisie sans relation Président/Gérant vers une personne : non routée vers un foyer.")
-    ctx.nonRattache += remuneration
+    ctx.nonRattache += remuneration.nette
     return
   }
   if (dirigeants.length > 1) {
     warnings.push("Plusieurs dirigeants liés : la rémunération est attribuée au premier pour le routage fiscal simplifié.")
   }
   const revenus = revenusDe(ctx, dirigeants[0])
-  revenus.remunerations += remuneration
-  revenus.prelevementsActivites += cotisations
+  revenus.remunerations += remuneration.nette
+  revenus.remunerationsImposables += remuneration.imposable
+  revenus.prelevementsActivites += remuneration.cotisations
 }
 
 /**
@@ -168,7 +171,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
   const resultat = societe.legalStatus === "SASU" ? calculerSASU(entrees, ctx.regles) : calculerEURL({ ...entrees, capitalSocial: societe.capitalSocial }, ctx.regles)
   const warnings = [...resultat.warnings]
 
-  verserRemuneration(ctx, societe, resultat.remunerationNette, resultat.cotisationsSociales - resultat.cotisationsSurDividendes, warnings)
+  verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable, cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
   attribuerResultatSociete(ctx, societe, resultat)
   verserDividendes(ctx, societe, { verses: resultat.dividendesVerses, soumisPS: resultat.dividendesSoumisPS, cotisations: resultat.cotisationsSurDividendes }, warnings)
 
@@ -184,6 +187,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     revenuVerse: resultat.remunerationNette + resultat.dividendesVerses - resultat.cotisationsSurDividendes,
     resultatConserve: resultat.resultatConserve,
     beneficiaireIds: personnesLiees(ctx, societe.id, RELATIONS_D_ASSOCIE),
+    ...(resultat.cotisationsTNS ? { cotisationsTNS: resultat.cotisationsTNS } : {}),
     warnings
   }
 }
@@ -200,7 +204,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
   if (exploitant) {
     const revenus = revenusDe(ctx, exploitant)
     // Un déficit d'entreprise individuelle au réel s'impute sur les autres revenus du foyer (article 156 du CGI).
-    revenus.beneficesImposables += resultat.revenuNet
+    revenus.beneficesImposables += resultat.revenuImposable
     revenus.beneficesEncaisses += resultat.revenuNet
     revenus.prelevementsActivites += resultat.cotisationsSociales
   } else {
@@ -220,6 +224,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     revenuVerse: resultat.revenuNet,
     resultatConserve: 0,
     beneficiaireIds: exploitant ? [exploitant] : [],
+    cotisationsTNS: resultat.cotisationsTNS,
     warnings
   }
 }
@@ -343,7 +348,7 @@ function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
   const cumul = { baseBareme: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, encaisse: 0, depenses: 0, prelevementsActivites: 0, resultatConserve: 0 }
   for (const personId of [...foyer.declarantIds, ...foyer.enfantIds]) {
     const revenus = revenusDe(ctx, personId)
-    const salaires = total(ctx, personId, "salary", "are") + revenus.remunerations
+    const salaires = total(ctx, personId, "salary", "are") + revenus.remunerationsImposables
     const autresRevenus = total(ctx, personId, "other_taxable_income")
 
     cumul.baseBareme += salaires - abattementSalaires(salaires, ctx.regles.IR.abattementSalaires) + autresRevenus + revenus.beneficesImposables

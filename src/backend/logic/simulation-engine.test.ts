@@ -97,10 +97,11 @@ describe("runMetaSimulation", () => {
           ["sasu", "dividends_payment", 20000]
         ]
       )
-      const sansTitulaire = simuler([societe("ei", "EI")], [], [["ei", "ca_services", 60000]])
+      // Entreprise individuelle : 40 000 € de bénéfice, 12 700 € de cotisations (voir cotisationsTNS.test.ts).
+      const sansTitulaire = simuler([societe("ei", "EI")], [], [["ei", "ca_services", 40000]])
 
       expect(sansDirigeant.bilan.nonRattache).toBe(50000)
-      expect(sansTitulaire.bilan.nonRattache).toBe(40000)
+      expect(sansTitulaire.bilan.nonRattache).toBe(27300)
     })
   })
 
@@ -316,29 +317,37 @@ describe("runMetaSimulation", () => {
         [
           ["eurl", "ca_services", 100000],
           ["eurl", "deductible_expense", 10000],
-          ["eurl", "director_remuneration", 30000],
-          ["eurl", "dividends_payment", 20000]
+          ["eurl", "director_remuneration", 27300],
+          ["eurl", "dividends_payment", 41000]
         ]
       )
 
-      // Dividendes : 1 000 € soumis aux prélèvements sociaux, 19 000 € soumis à 50 % de cotisations.
-      expect(report.persons[0].detail).toMatchObject({ remunerationsDirigeant: 30000, dividendes: 10500 })
-      expect(activite(report, "eurl")).toMatchObject({ statut: "EURL", cotisationsSociales: 24500, impotSocietes: 7250, revenuVerse: 40500, resultatConserve: 17750 })
-      expect(foyerDe(report, "dan")).toMatchObject({ revenusEncaisses: 40500, revenuImposableGlobal: 27000, impotSurLeRevenu: 4100, prelevementsSociaux: 180, optionDividendes: "pfu", netApresImpots: 36220 })
+      // Rémunération nette 27 300 € : 12 700 € de cotisations pour la société ; bénéfice 50 000 €, IS 8 500 €, conservé 500 €
+      // (voir calculsSociete.test.ts). Dividendes : 1 000 € soumis aux prélèvements sociaux (180 €), 40 000 € ajoutés au revenu
+      // soumis à cotisations, qui coûtent 13 800 € de plus au gérant : dividendes encaissés 27 200 €.
+      // Rémunération imposable 27 300 + 900 = 28 200 €, moins 10 % : 25 380 € ; impôt 1 538 €, décote 800 - 769 = 31 €, 1 507 €.
+      // Forfait : 1 507 + 41 000 x 12 % = 6 427 €. Barème : 25 380 + 24 600 - 70 = 49 910 €, 7 973 €. Forfait retenu.
+      expect(report.persons[0].detail).toMatchObject({ remunerationsDirigeant: 27300, dividendes: 27200 })
+      expect(activite(report, "eurl")).toMatchObject({ statut: "EURL", cotisationsSociales: 26500, impotSocietes: 8500, revenuVerse: 54500, resultatConserve: 500 })
+      expect(activite(report, "eurl").cotisationsTNS?.assiette).toBeCloseTo(60000)
+      expect(foyerDe(report, "dan")).toMatchObject({ revenusEncaisses: 54500, revenuImposableGlobal: 25380, impotSurLeRevenu: 6427, prelevementsSociaux: 180, optionDividendes: "pfu", netApresImpots: 47893 })
     })
   })
 
   describe("entreprise individuelle au réel", () => {
+    // 40 000 € de bénéfice avant cotisations : 12 700 € de cotisations, dont 900 € non déductibles (voir cotisationsTNS.test.ts).
     const flux: Flux[] = [
       ["ei", "ca_services", 60000],
-      ["ei", "deductible_expense", 15000]
+      ["ei", "deductible_expense", 20000]
     ]
 
-    it("attribue tout le bénéfice, net de cotisations, à l'entrepreneur", () => {
+    it("attribue tout le bénéfice, net de cotisations, à l'entrepreneur, imposé sans la part déductible des cotisations", () => {
       const report = simuler([personne("carl"), societe("ei", "EI")], [relation("carl", "ei", "Titulaire")], flux)
 
-      expect(activite(report, "ei")).toMatchObject({ statut: "EI au réel", chiffreAffaires: 60000, charges: 15000, cotisationsSociales: 15000, impotSocietes: 0, revenuVerse: 30000, resultatConserve: 0, warnings: [] })
-      expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 30000, revenuImposableGlobal: 30000, impotSurLeRevenu: 2000, netApresImpots: 28000 })
+      // Encaissé 27 300 € ; imposable 27 300 + 900 = 28 200 € ; impôt 18 200 x 10 % = 1 820 €, sans décote.
+      expect(activite(report, "ei")).toMatchObject({ statut: "EI au réel", chiffreAffaires: 60000, charges: 20000, cotisationsSociales: 12700, impotSocietes: 0, revenuVerse: 27300, resultatConserve: 0, warnings: [] })
+      expect(activite(report, "ei").cotisationsTNS?.assiette).toBe(30000)
+      expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 27300, revenuImposableGlobal: 28200, impotSurLeRevenu: 1820, netApresImpots: 25480 })
     })
 
     it("signale une entreprise sans titulaire", () => {
@@ -353,7 +362,7 @@ describe("runMetaSimulation", () => {
 
       expect(activite(report, "ei").warnings).toHaveLength(1)
       expect(activite(report, "ei").warnings[0]).toContain("ni rémunération de dirigeant ni dividendes")
-      expect(report.persons[0].revenusActivites).toBe(30000)
+      expect(report.persons[0].revenusActivites).toBe(27300)
     })
 
     it("impute le déficit sur les autres revenus du foyer", () => {
@@ -367,9 +376,9 @@ describe("runMetaSimulation", () => {
         ]
       )
 
-      // Déficit de 3 000 €, creusé à 4 000 € par les cotisations minimales (1 000 €).
-      // Salaire : 20 000 - 2 000 = 18 000 € imposables, moins le déficit de 4 000 €.
-      expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 16000, revenuImposableGlobal: 14000 })
+      // Déficit de 3 000 €, creusé à 4 500 € par les cotisations minimales (1 500 €, sans CSG-CRDS).
+      // Salaire : 20 000 - 2 000 = 18 000 € imposables, moins le déficit de 4 500 €.
+      expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 15500, revenuImposableGlobal: 13500 })
     })
   })
 
@@ -516,12 +525,12 @@ describe("runMetaSimulation", () => {
         [
           ["m1", "ca_micro_vente", 20000],
           ["ei", "ca_services", 60000],
-          ["ei", "deductible_expense", 15000]
+          ["ei", "deductible_expense", 20000]
         ]
       )
 
-      // Cotisations : 2 000 € (micro) + 15 000 € (EI). Base imposable : 6 000 + 30 000 = 36 000 €, soit 3 800 € d'impôt.
-      expect(foyerDe(report, "bob")).toMatchObject({ revenusAvantPrelevements: 65000, totalPrelevements: 20800, resultatConserve: 0, netApresImpots: 44200 })
+      // Cotisations : 2 000 € (micro) + 12 700 € (EI). Base imposable : 6 000 + 28 200 = 34 200 €, soit 2 000 + 4 200 x 30 % = 3 260 € d'impôt.
+      expect(foyerDe(report, "bob")).toMatchObject({ revenusAvantPrelevements: 60000, totalPrelevements: 17960, resultatConserve: 0, netApresImpots: 42040 })
     })
 
     it("additionne les nets de tous les foyers", () => {

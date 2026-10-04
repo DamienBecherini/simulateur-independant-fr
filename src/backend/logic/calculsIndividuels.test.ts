@@ -106,39 +106,43 @@ describe("calculerMicro", () => {
 })
 
 describe("calculerEI", () => {
-  // Règles de test : cotisations égales à 50 % du revenu net.
-  it("partage le bénéfice entre cotisations et revenu net", () => {
-    const resultat = calculerEI({ chiffreAffaires: 60000, chargesDeductibles: 15000 }, reglesDeTest)
+  // Règles de test : voir cotisationsTNS.test.ts. Un bénéfice de 40 000 € avant cotisations donne une assiette de 30 000 €
+  // et 12 700 € de cotisations, dont 900 € de CSG non déductible et de CRDS ; sans revenu, 1 500 € de cotisations minimales.
+  it("déduit les cotisations du bénéfice, et réintègre leur part non déductible dans le revenu imposable", () => {
+    const resultat = calculerEI({ chiffreAffaires: 60000, chargesDeductibles: 20000 }, reglesDeTest)
 
-    expect(resultat.revenuNet).toBeCloseTo(30000)
-    expect(resultat.cotisationsSociales).toBeCloseTo(15000)
+    expect(resultat.cotisationsSociales).toBe(12700)
+    expect(resultat.cotisationsTNS.assiette).toBe(30000)
+    expect(resultat.revenuNet).toBe(27300)
+    expect(resultat.revenuImposable).toBe(28200)
     expect(resultat.warnings).toEqual([])
   })
 
   it("applique les cotisations minimales en cas de déficit, qui s'en trouve creusé", () => {
-    // Règles de test : cotisations minimales de 1 000 €.
     const resultat = calculerEI({ chiffreAffaires: 5000, chargesDeductibles: 8000 }, reglesDeTest)
 
-    expect(resultat.cotisationsSociales).toBe(1000)
-    expect(resultat.revenuNet).toBe(-4000)
+    expect(resultat.cotisationsSociales).toBe(1500)
+    expect(resultat.revenuNet).toBe(-4500)
+    expect(resultat.revenuImposable).toBe(-4500)
     expect(resultat.warnings).toHaveLength(2)
     expect(resultat.warnings[0]).toContain("Cotisations minimales")
-    expect(resultat.warnings[1]).toMatch(/déficitaire de 4\s000 €/)
+    expect(resultat.warnings[1]).toMatch(/déficitaire de 4\s500 €/)
   })
 
   it("doit les cotisations minimales même sans activité", () => {
     const resultat = calculerEI({ chiffreAffaires: 0, chargesDeductibles: 0 }, reglesDeTest)
 
-    expect(resultat.cotisationsSociales).toBe(1000)
-    expect(resultat.revenuNet).toBe(-1000)
+    expect(resultat.cotisationsSociales).toBe(1500)
+    expect(resultat.revenuNet).toBe(-1500)
   })
 
-  it("applique les cotisations minimales quand les cotisations proportionnelles sont plus faibles", () => {
-    // 1 500 € de bénéfice : 500 € de cotisations proportionnelles, portées à 1 000 €.
-    const resultat = calculerEI({ chiffreAffaires: 1500, chargesDeductibles: 0 }, reglesDeTest)
+  it("applique les assiettes minimales quand le bénéfice est faible", () => {
+    // 2 000 € de bénéfice : assiette 1 200 €, 1 716 € de cotisations dont 36 € non déductibles.
+    const resultat = calculerEI({ chiffreAffaires: 2000, chargesDeductibles: 0 }, reglesDeTest)
 
-    expect(resultat.cotisationsSociales).toBe(1000)
-    expect(resultat.revenuNet).toBe(500)
+    expect(resultat.cotisationsSociales).toBeCloseTo(1716)
+    expect(resultat.revenuNet).toBeCloseTo(284)
+    expect(resultat.revenuImposable).toBeCloseTo(320)
     expect(resultat.warnings).toEqual([expect.stringContaining("Cotisations minimales")])
   })
 

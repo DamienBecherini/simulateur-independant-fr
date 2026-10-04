@@ -50,8 +50,54 @@ casDeReference("Valeurs officielles utilisées par les cas de référence", () =
     })
   })
 
-  it("approximations assumées du modèle : ratio du président de SASU et taux des TNS", () => {
+  it("cotisations des travailleurs non salariés : assiette et abattement (urssaf.fr, reforme-cotisations-independants ; article D136-5 du CSS)", () => {
+    expect(reglesEnVigueur.TNS).toMatchObject({ plafondSecuriteSociale: 48060, abattement: { taux: 0.26, minimumPartDuPlafond: 0.0176, maximumPartDuPlafond: 1.3 } })
+  })
+
+  it("cotisations des travailleurs non salariés : barèmes 2026 (urssaf.fr, taux-cotisations-ac-plnr ; articles D621-1, D621-2 et D613-1 du CSS)", () => {
+    expect(reglesEnVigueur.TNS).toMatchObject({
+      maladieMaternite: {
+        points: [
+          { partDuPlafond: 0.2, taux: 0 },
+          { partDuPlafond: 0.4, taux: 0.015 },
+          { partDuPlafond: 0.6, taux: 0.04 },
+          { partDuPlafond: 1.1, taux: 0.065 },
+          { partDuPlafond: 2, taux: 0.077 },
+          { partDuPlafond: 3, taux: 0.085 }
+        ],
+        tauxAuDela: 0.065
+      },
+      allocationsFamiliales: {
+        points: [
+          { partDuPlafond: 1.1, taux: 0 },
+          { partDuPlafond: 1.4, taux: 0.031 }
+        ],
+        tauxAuDela: 0.031
+      },
+      indemnitesJournalieres: { tranches: [{ jusquA: 5, taux: 0.005 }] },
+      retraiteDeBase: {
+        tranches: [
+          { jusquA: 1, taux: 0.1787 },
+          { jusquA: null, taux: 0.0072 }
+        ]
+      },
+      retraiteComplementaire: {
+        tranches: [
+          { jusquA: 1, taux: 0.081 },
+          { jusquA: 4, taux: 0.091 }
+        ]
+      },
+      invaliditeDeces: { tranches: [{ jusquA: 1, taux: 0.013 }] },
+      formationProfessionnelle: { tauxSurPlafond: 0.0025 },
+      cotisationsMinimales: { indemnitesJournalieres: 19224, retraiteDeBase: 5409, invaliditeDeces: 5527 }
+    })
+  })
+
+  it("CSG-CRDS des travailleurs non salariés : 9,7 %, dont 6,8 points de CSG déductibles (article 154 quinquies du CGI)", () => {
+    expect(reglesEnVigueur.TNS.csgCrds).toMatchObject({ csgDeductible: 0.068, csgNonDeductible: 0.024, crds: 0.005 })
+  })
+
+  it("approximation assumée du modèle : ratio du président de SASU", () => {
     expect(reglesEnVigueur.SASU.ratioCoutTotalSurNet).toBe(1.8)
-    expect(reglesEnVigueur.TNS.tauxCotisationsSurRevenuNet).toBe(0.45)
   })
 })

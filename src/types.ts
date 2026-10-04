@@ -150,7 +150,33 @@ export interface ActivityResult {
   beneficiaireIds: string[]
   /** Micro-entreprise seulement : accès au versement libératoire selon le revenu fiscal de référence du foyer. */
   versementLiberatoire?: VersementLiberatoireInfo
+  /** EURL et entreprise individuelle au réel : détail des cotisations du travailleur non salarié. */
+  cotisationsTNS?: DetailCotisationsTNS
   warnings: string[]
+}
+
+/** Les cotisations et contributions sociales d'un travailleur non salarié, une par ligne du détail. */
+export type CotisationTNS =
+  | "maladieMaternite"
+  | "indemnitesJournalieres"
+  | "retraiteDeBase"
+  | "retraiteComplementaire"
+  | "invaliditeDeces"
+  | "allocationsFamiliales"
+  | "csgDeductible"
+  | "csgNonDeductibleEtCrds"
+  | "formationProfessionnelle"
+
+/** Cotisations annuelles d'un travailleur non salarié (gérant d'EURL, entrepreneur individuel au réel). */
+export interface DetailCotisationsTNS {
+  /** Revenu professionnel avant cotisations : bénéfice de l'entreprise individuelle, ou rémunération du gérant cotisations comprises et dividendes au-delà de 10 % du capital. */
+  revenuAvantCotisations: number
+  /** Assiette unique des cotisations et de la CSG-CRDS : le revenu avant cotisations après l'abattement forfaitaire. */
+  assiette: number
+  cotisations: Record<CotisationTNS, number>
+  total: number
+  /** CSG non déductible et CRDS : elles ne réduisent pas le revenu imposable. */
+  partNonDeductible: number
 }
 
 export interface VersementLiberatoireInfo {
