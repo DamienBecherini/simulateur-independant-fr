@@ -19,6 +19,11 @@ dist-electron
 *.local
 build
 
+# Tests : couverture et tests de mutation (Stryker)
+coverage
+reports
+.stryker-tmp
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

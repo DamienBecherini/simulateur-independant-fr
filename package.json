@@ -10,6 +10,11 @@
     "dev:electron": "wait-on http://localhost:3524 && npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && cross-env NODE_ENV=development electron .",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:mutation": "stryker run",
+    "typecheck:tests": "tsc --project src/backend/tsconfig.test.json",
     "preview": "vite preview",
     "transpile:electron": "tsc --project src/backend/tsconfig.json",
     "dist:mac": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && electron-builder --mac --arm64",
@@ -43,10 +48,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
     "@types/os-utils": "^0.0.4",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^4.1.11",
     "cross-env": "^7.0.3",
     "electron": "^34.1.1",
     "electron-builder": "^25.1.8",
@@ -60,6 +68,7 @@
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.22.0",
     "vite": "^6.1.0",
+    "vitest": "^4.1.11",
     "wait-on": "^9.0.1"
   }
 }

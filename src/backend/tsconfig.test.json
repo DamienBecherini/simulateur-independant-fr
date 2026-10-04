@@ -1,0 +1,11 @@
+// src/backend/tsconfig.test.json
+// Vérification des types du backend, tests compris, sans rien émettre.
+
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["./**/*", "../types.ts", "../globals.d.ts"],
+  "exclude": []
+}
