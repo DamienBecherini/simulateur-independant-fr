@@ -1,6 +1,6 @@
 // src/ui/components/EntityItem.tsx
 
-import { useState, type KeyboardEvent } from "react"
+import { useRef, useState, type KeyboardEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -32,17 +32,6 @@ function entitySubtitle(entity: Entity): string {
   return `Activité - ${entity.legalStatus === "EI" ? "EI au réel" : entity.legalStatus}`
 }
 
-/** Entrée valide la saisie en cours en quittant le champ, Échap l'annule. */
-function handleFieldKeyDown(cancel: () => void) {
-  return (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.currentTarget.blur()
-    } else if (event.key === "Escape") {
-      cancel()
-      event.currentTarget.blur()
-    }
-  }
-}
 
 export function EntityItem({ entity, allEntities, relationships, onUpdate, onDelete, onToggleLock, onEdit, onAddRelationship, onDeleteRelationship }: EntityItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: entity.id })
@@ -54,8 +43,24 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
   const [nameDraft, setNameDraft] = useState<string | null>(null)
   const [partsDraft, setPartsDraft] = useState<string | null>(null)
 
+  // Échap retire le focus pour annuler : la perte de focus qui suit ne doit pas valider le brouillon,
+  // encore visible dans la fermeture du gestionnaire.
+  const cancelling = useRef(false)
+
+  /** Entrée valide la saisie en cours en quittant le champ, Échap l'annule. */
+  const handleFieldKeyDown = (cancel: () => void) => (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.currentTarget.blur()
+    } else if (event.key === "Escape") {
+      cancel()
+      cancelling.current = true
+      event.currentTarget.blur()
+      cancelling.current = false
+    }
+  }
+
   const commitName = () => {
-    if (nameDraft === null) return
+    if (nameDraft === null || cancelling.current) return
     setNameDraft(null)
     const name = nameDraft.trim()
     if (!name || name === entity.name) return
@@ -64,7 +69,7 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
   }
 
   const commitParts = () => {
-    if (partsDraft === null || entity.type !== "person") return
+    if (partsDraft === null || cancelling.current || entity.type !== "person") return
     setPartsDraft(null)
     const fiscalParts = parseFloat(partsDraft.replace(",", "."))
     if (fiscalParts > 0 && fiscalParts !== entity.fiscalParts) onUpdate({ ...entity, fiscalParts })

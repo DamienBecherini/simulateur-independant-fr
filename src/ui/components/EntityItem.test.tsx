@@ -53,10 +53,17 @@ describe("EntityItem : nom modifiable sur place", () => {
     expect(onUpdate).toHaveBeenCalledWith({ ...sasu, name: "Conseil SAS" })
   })
 
-  // Bogue relevé : Échap annule le brouillon puis retire le focus dans le même gestionnaire ; la perte de focus
-  // valide alors le brouillon encore visible dans sa fermeture (EntityItem.tsx, handleFieldKeyDown). Le nom saisi
-  // est donc enregistré au lieu d'être annulé ; il en va de même pour les parts propres.
-  it.todo("annule la saisie avec Échap (aujourd'hui, Échap enregistre le nom saisi)")
+  it("annule la saisie avec Échap et restaure l'ancien nom", async () => {
+    const { user, onUpdate } = renderItem(alice)
+    const name = screen.getByRole("textbox", { name: "Nom" })
+
+    await user.clear(name)
+    await user.type(name, "Bob Durand{Escape}")
+
+    expect(onUpdate).not.toHaveBeenCalled()
+    expect(name).toHaveValue(alice.name)
+    expect(name).not.toHaveFocus()
+  })
 
   it("refuse un nom vide et restaure l'ancien", async () => {
     const { user, onUpdate } = renderItem(alice)
