@@ -1,0 +1,182 @@
+{
+  "annee": 2025,
+  "derniereMiseAJour": "2026-10-04",
+  "IR": {
+    "description": "Barème de l'impôt sur le revenu qui impose les revenus de 2025 : loi de finances pour 2026 (loi n° 2026-103 du 19 février 2026, article 4), limites des tranches indexées de 0,9 %. La dernière tranche n'a pas de plafond (null).",
+    "source": "https://bofip.impots.gouv.fr/bofip/14954-PGP.html/ACTU-2026-00022",
+    "bareme": [
+      { "trancheJusqua": 11600, "taux": 0 },
+      { "trancheJusqua": 29579, "taux": 0.11 },
+      { "trancheJusqua": 84577, "taux": 0.3 },
+      { "trancheJusqua": 181917, "taux": 0.41 },
+      { "trancheJusqua": null, "taux": 0.45 }
+    ],
+    "plafonnementQuotientFamilial": {
+      "description": "Avantage maximal en impôt procuré par chaque demi-part au-delà des parts des déclarants (cas général) : 1 807 € à compter de l'imposition des revenus de 2025.",
+      "source": "https://bofip.impots.gouv.fr/bofip/2494-PGP.html/identifiant=BOI-IR-LIQ-20-20-20-20260407",
+      "avantageMaxParDemiPart": 1807
+    },
+    "decote": {
+      "description": "Décote = forfait - taux x impôt brut, appliquée tant qu'elle est positive : 897 € (personne seule) ou 1 483 € (couple) moins 45,25 % de l'impôt brut, pour les revenus de 2025.",
+      "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F34328",
+      "taux": 0.4525,
+      "forfaitSeul": 897,
+      "forfaitCouple": 1483
+    },
+    "abattementSalaires": {
+      "description": "Déduction forfaitaire de 10 % sur les salaires, allocations chômage et rémunérations de dirigeant, par personne : au moins 509 €, au plus 14 555 € pour les revenus de 2025.",
+      "source": "https://www.impots.gouv.fr/particulier/questions/comment-puis-je-beneficier-de-la-deduction-forfaitaire-de-10",
+      "taux": 0.1,
+      "minimum": 509,
+      "maximum": 14555
+    },
+    "partsParEnfant": {
+      "description": "Parts de quotient familial par enfant à charge, selon son rang.",
+      "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2705",
+      "deuxPremiers": 0.5,
+      "suivants": 1
+    }
+  },
+  "TVA": {
+    "description": "Seuils de franchise en base de TVA en 2025, signalés pour les micro-entreprises ; la TVA elle-même n'est pas calculée, les montants saisis sont hors taxe. La loi de finances pour 2025 a ramené les seuils à 37 500 € et 85 000 € au 01/01/2025 ; le seuil unique de 25 000 € qu'elle prévoyait au 01/03/2025 a été suspendu, puis supprimé par la loi n° 2025-1044 du 3 novembre 2025.",
+    "source": "https://entreprendre.service-public.gouv.fr/actualites/A17995",
+    "services": { "franchiseBase": 37500, "seuilMajore": 41250 },
+    "vente": { "franchiseBase": 85000, "seuilMajore": 93500 }
+  },
+  "IS": {
+    "description": "Impôt sur les sociétés : taux réduit de 15 % jusqu'à 42 500 € de bénéfice (exercices clos à compter du 31/12/2022), taux normal de 25 % au-delà.",
+    "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000046868562",
+    "tauxReduit": 0.15,
+    "plafondTauxReduit": 42500,
+    "tauxNormal": 0.25
+  },
+  "dividendes": {
+    "description": "Imposition des dividendes versés en 2025 : prélèvement forfaitaire unique de 30 % (12,8 % d'IR + 17,2 % de prélèvements sociaux), ou option pour le barème avec abattement de 40 % et CSG déductible de 6,8 %. La hausse des prélèvements sociaux à 18,6 % ne vaut qu'à compter du 01/01/2026.",
+    "source": "https://entreprendre.service-public.gouv.fr/actualites/A18796",
+    "tauxIrForfaitaire": 0.128,
+    "prelevementsSociaux": 0.172,
+    "abattementBareme": 0.4,
+    "csgDeductible": 0.068
+  },
+  "SASU": {
+    "description": "Approximation moyenne du coût total (salaire net + cotisations salariales et patronales) de la rémunération du président, rapporté au net versé, reprise de 2026 faute de source officielle propre à l'année. Un vrai bulletin de paie est plus fin.",
+    "ratioCoutTotalSurNet": 1.8
+  },
+  "TNS": {
+    "description": "Cotisations et contributions sociales dues sur les revenus de 2025 d'un travailleur non salarié (gérant majoritaire d'EURL, entrepreneur individuel au réel) artisan, commerçant ou profession libérale non réglementée, en métropole. La réforme de l'assiette (LFSS 2024, article 18 ; décret 2024-688, applicable aux cotisations dues au titre de 2025) s'applique à la régularisation des revenus de 2025, faite en 2026 : les appels provisionnels de 2025 suivaient encore l'ancien barème, non repris ici. Toutes les cotisations sont calculées sur une assiette unique : le revenu professionnel avant cotisations, diminué d'un abattement forfaitaire. Les seuils sont exprimés en part du plafond annuel de la sécurité sociale (PASS) 2025, 47 100 €, les assiettes minimales en euros.",
+    "source": "https://www.urssaf.fr/accueil/independant/comprendre-payer-cotisations/reforme-cotisations-independants.html",
+    "plafondSecuriteSociale": 47100,
+    "abattement": {
+      "description": "Abattement forfaitaire de 26 % sur le revenu avant cotisations, au moins 1,76 % et au plus 130 % du PASS (article D136-5 du code de la sécurité sociale, issu du décret 2024-688). Pour un gérant d'EURL, il porte sur la rémunération augmentée des dividendes au-delà de 10 % du capital.",
+      "source": "https://legislation.lassuranceretraite.fr/Pdf/circulaire_cnav_2025_14_04042025.pdf",
+      "taux": 0.26,
+      "minimumPartDuPlafond": 0.0176,
+      "maximumPartDuPlafond": 1.3
+    },
+    "maladieMaternite": {
+      "description": "Barème issu du décret 2024-688, applicable aux revenus de 2025 avec le PASS 2025 : taux progressif appliqué à toute l'assiette, interpolé linéairement entre les points du barème (article D621-2 du code de la sécurité sociale) ; au-delà de 3 PASS, 8,5 % jusqu'à 3 PASS et 6,5 % sur le surplus (article D621-1).",
+      "source": "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006073189/LEGISCTA000006141568/",
+      "points": [
+        { "partDuPlafond": 0.2, "taux": 0 },
+        { "partDuPlafond": 0.4, "taux": 0.015 },
+        { "partDuPlafond": 0.6, "taux": 0.04 },
+        { "partDuPlafond": 1.1, "taux": 0.065 },
+        { "partDuPlafond": 2, "taux": 0.077 },
+        { "partDuPlafond": 3, "taux": 0.085 }
+      ],
+      "tauxAuDela": 0.065
+    },
+    "allocationsFamiliales": {
+      "description": "Taux nul jusqu'à 110 % du PASS (51 810 €), progressif jusqu'à 3,1 % à 140 % du PASS (65 940 €), appliqué à toute l'assiette (article D613-1 du code de la sécurité sociale).",
+      "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000041966324",
+      "points": [
+        { "partDuPlafond": 1.1, "taux": 0 },
+        { "partDuPlafond": 1.4, "taux": 0.031 }
+      ],
+      "tauxAuDela": 0.031
+    },
+    "indemnitesJournalieres": {
+      "description": "Indemnités journalières maladie : 0,5 % dans la limite de 5 PASS (235 500 €).",
+      "tranches": [{ "jusquA": 5, "taux": 0.005 }]
+    },
+    "retraiteDeBase": {
+      "description": "17,87 % dans la limite de 1 PASS, 0,72 % sur la totalité du revenu au-delà (décret 2024-688, article 3, au lieu de 17,75 % et 0,60 % avant la réforme).",
+      "tranches": [
+        { "jusquA": 1, "taux": 0.1787 },
+        { "jusquA": null, "taux": 0.0072 }
+      ]
+    },
+    "retraiteComplementaire": {
+      "description": "8,1 % dans la limite de 1 PASS, 9,1 % entre 1 et 4 PASS, rien au-delà (décret 2024-688, article 3, au lieu de 7 % jusqu'au plafond propre au régime, 43 891 €, et 8 % jusqu'à 4 PASS avant la réforme).",
+      "tranches": [
+        { "jusquA": 1, "taux": 0.081 },
+        { "jusquA": 4, "taux": 0.091 }
+      ]
+    },
+    "invaliditeDeces": {
+      "description": "1,3 % dans la limite de 1 PASS.",
+      "tranches": [{ "jusquA": 1, "taux": 0.013 }]
+    },
+    "csgCrds": {
+      "description": "CSG-CRDS de 9,7 % sur la même assiette : CSG de 9,2 %, dont 6,8 points déductibles du revenu imposable (article 154 quinquies du CGI), et CRDS de 0,5 %, non déductible.",
+      "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2971",
+      "csgDeductible": 0.068,
+      "csgNonDeductible": 0.024,
+      "crds": 0.005
+    },
+    "formationProfessionnelle": {
+      "description": "Contribution à la formation professionnelle d'un commerçant ou d'une profession libérale non réglementée : forfait de 0,25 % du PASS (118 €), due même sans revenu (0,29 % pour un artisan, non distingué).",
+      "tauxSurPlafond": 0.0025
+    },
+    "cotisationsMinimales": {
+      "description": "Assiettes minimales, par risque, sur lesquelles le travailleur non salarié cotise même sans revenu : 18 840 € (40 % du PASS) pour les indemnités journalières (94 €), 5 346 € (450 heures au SMIC horaire de 11,88 €) pour la retraite de base (955 € au taux de 17,87 %, calcul du simulateur : la page de l'Urssaf, antérieure à la régularisation, indique 949 € au taux de 17,75 %), 5 417 € (11,5 % du PASS) pour l'invalidité-décès (70 €). Avec la formation professionnelle (118 €), 1 237 € par an au minimum.",
+      "source": "https://web.archive.org/web/20250513033412/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-ac-plnr.html",
+      "indemnitesJournalieres": 18840,
+      "retraiteDeBase": 5346,
+      "invaliditeDeces": 5417
+    }
+  },
+  "protectionSociale": {
+    "description": "Validation des trimestres de retraite en 2025 : 150 heures au SMIC horaire du 1er janvier (11,88 €) par trimestre, 4 au maximum. En micro-entreprise, part des cotisations affectée à la retraite de base en 2025 (article D613-6 du code de la sécurité sociale : 41,80 % en vente et services commerciaux, 47,60 % en libéral), ramenée au taux de 17,87 % du barème des revenus de 2025. Sources : https://legislation.lassuranceretraite.fr/Pdf/circulaire_cnav_2024_40_23122024.pdf et https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000043656780/2025-06-01",
+    "revenuParTrimestre": 1782,
+    "tauxNetSurBrutSalarie": 0.78,
+    "tauxRetraiteDeBase": 0.1787,
+    "partRetraiteDeBaseMicro": { "venteBic": 0.418, "servicesBic": 0.418, "servicesBnc": 0.476 }
+  },
+  "EURL": {
+    "description": "Part du capital social au-delà de laquelle les dividendes du gérant majoritaire supportent les cotisations sociales au lieu des prélèvements sociaux.",
+    "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F38152",
+    "seuilDividendesPartDuCapital": 0.1
+  },
+  "microEntreprise": {
+    "plafonds": {
+      "description": "Plafonds de chiffre d'affaires du régime micro pour les revenus de 2025 (2023-2025).",
+      "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F32353",
+      "services": 77700,
+      "vente": 188700
+    },
+    "cotisations": {
+      "description": "Taux de cotisations sociales sur le chiffre d'affaires en 2025 (hors contribution à la formation professionnelle), article D613-4 du code de la sécurité sociale dans sa rédaction issue du décret 2024-484 : 24,6 % pour les professions libérales non réglementées. Les professions libérales relevant de la CIPAV (23,2 %) ne sont pas distinguées.",
+      "source": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000049620955",
+      "venteBic": 0.123,
+      "servicesBic": 0.212,
+      "servicesBnc": 0.246
+    },
+    "reductionACRE": 0.5,
+    "reductionACREDescription": "Réduction des cotisations avec l'ACRE en 2025 : 50 % (taux égal à 50 % des taux de l'article D613-4). Source : https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000041968018",
+    "abattement": {
+      "description": "Abattement forfaitaire pour frais professionnels avant impôt sur le revenu, avec un minimum de 305 € par nature d'activité exercée (revenus de 2025).",
+      "source": "https://www.impots.gouv.fr/sites/default/files/formulaires/2041-gx/2026/2041-gx_5466.pdf",
+      "venteBic": 0.71,
+      "servicesBic": 0.5,
+      "servicesBnc": 0.34,
+      "minimum": 305
+    },
+    "versementLiberatoire": {
+      "description": "Versement libératoire de l'impôt sur le revenu : taux sur le chiffre d'affaires, et plafond de revenu fiscal de référence 2023 par part pour y avoir droit en 2025, égal à la limite supérieure de la deuxième tranche du barème qui a imposé les revenus de 2023 (28 797 €, BOI-IR-LIQ-20-10-20240618). Source de la règle et des taux : https://www.impots.gouv.fr/professionnel/le-versement-liberatoire",
+      "source": "https://bofip.impots.gouv.fr/bofip/2491-PGP.html/identifiant=BOI-IR-LIQ-20-10-20240618",
+      "plafondRfrParPart": 28797,
+      "taux": { "venteBic": 0.01, "servicesBic": 0.017, "servicesBnc": 0.022 }
+    }
+  }
+}
