@@ -110,4 +110,10 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ### **Phase 10 : Scénarios Avancés & Finalisation [Planifié 🗓️]**
 
-- **Objectif :** prorata temporis (activité démarrée en cours d'année), finalisation de l'ACRE et du versement libératoire (déjà pris en compte pour la micro-entreprise), distribution de l'application (exécutables Windows / macOS / Linux).
+- **Objectif :** compléter le modèle pour les situations moins courantes, puis distribuer l'application.
+
+1.  **Prorata temporis :** activité démarrée en cours d'année.
+2.  **ACRE :** distinguer la réduction de 50 % et celle de 25 % (micro-entreprises créées à partir du 01/07/2026).
+3.  **Répartition du capital :** part de chaque associé dans une société à plusieurs associés. Aujourd'hui, les dividendes, l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales.
+4.  **Compte courant d'associé :** solde par société, flux d'apport et de remboursement (non imposés), intérêts versés (déductibles pour la société dans une limite, imposés chez l'associé), et prise en compte du solde dans le seuil des 10 % du capital des EURL.
+5.  **Distribution :** exécutables Windows / macOS / Linux.
