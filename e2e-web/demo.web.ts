@@ -48,3 +48,19 @@ test("les modifications sont conservées dans le navigateur, jusqu'à ce qu'on r
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(NOM_EXEMPLE)
   await expect(noms).toHaveCount(avant)
 })
+
+test("l'arbitrage rémunération / dividendes trouve la rémunération qui valide 4 trimestres, et la reporte dans le comparateur", async ({ page }) => {
+  await ouvrir(page)
+  const optimisation = page.getByRole("region", { name: "Rémunération ou dividendes ?" })
+
+  // L'atelier de la simulation d'exemple, converti en SASU : le minimum pour 4 trimestres est de 5 700 € nets.
+  const retraite = optimisation.getByRole("listitem").filter({ hasText: "Meilleur net avec 4 trimestres" })
+  await expect(retraite).toContainText(/5\s700\s€ de rémunération nette/)
+  await retraite.getByRole("button", { name: "Appliquer au comparateur" }).click()
+
+  await expect(page.getByLabel("Rémunération nette annuelle (SASU, EURL)")).toHaveValue("5700")
+  await expect(retraite.getByRole("button", { name: "Appliquée" })).toBeDisabled()
+
+  await optimisation.getByRole("button", { name: "EURL" }).click()
+  await expect(optimisation.getByRole("group", { name: /Net du foyer selon la rémunération nette en EURL/ })).toBeVisible()
+})

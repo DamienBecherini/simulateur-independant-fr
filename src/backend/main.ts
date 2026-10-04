@@ -1,10 +1,11 @@
 // src/backend/main.ts
 
 import { app, BrowserWindow, dialog } from "electron"
-import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions } from "@/types.js"
+import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions, StatutSociete } from "@/types.js"
 import { SessionStateSchema } from "@/types.js"
 import { runMetaSimulation } from "./logic/simulation-engine.js"
 import { comparerStatuts } from "./logic/comparateur.js"
+import { optimiserRemuneration } from "./logic/optimisation-remuneration.js"
 import { ipcMainHandle, validateEventFrame } from "./util.js"
 import { isDev } from "./isDev.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
@@ -294,6 +295,7 @@ app.on("ready", () => {
   ipcMainHandle("runMetaSimulation", async (session: SessionState) => runMetaSimulation(validatedSession(session, "runMetaSimulation")))
 
   ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions) => comparerStatuts(validatedSession(session, "compareStatuts"), options))
+  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete) => optimiserRemuneration(validatedSession(session, "optimiserRemuneration"), options, statut === "EURL" ? "EURL" : "SASU"))
 
   ipcMainHandle("getSaveSlots", async () => await readSlotsFromFile())
 

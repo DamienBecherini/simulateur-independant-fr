@@ -1,5 +1,5 @@
 // src/globals.d.ts
-import type { SessionState, SaveSlot, UserPreferences, ExportableState, SanitizationReport, NotificationPayload, SimulationReport, ComparaisonOptions, ComparaisonResult } from "./types.js"
+import type { SessionState, SaveSlot, UserPreferences, ExportableState, SanitizationReport, NotificationPayload, SimulationReport, ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, StatutSociete } from "./types.js"
 
 // On importe les types depuis notre nouveau module `types.ts` pour les utiliser ici.
 export type EventPayloadMapping = {
@@ -9,6 +9,7 @@ export type EventPayloadMapping = {
   saveCurrentSessionSync: (session: SessionState) => void
   runMetaSimulation: (session: SessionState) => Promise<SimulationReport>
   compareStatuts: (session: SessionState, options: ComparaisonOptions) => Promise<ComparaisonResult>
+  optimiserRemuneration: (session: SessionState, options: ComparaisonOptions, statut: StatutSociete) => Promise<OptimisationRemuneration>
   getSaveSlots: () => Promise<SaveSlot[]>
   saveSlots: (slots: SaveSlot[]) => Promise<void>
   exportState: (state: ExportableState) => Promise<void>

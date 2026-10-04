@@ -14,6 +14,7 @@ const api: import("../globals.js", { with: { "resolution-mode": "import" } }).Ev
   },
   runMetaSimulation: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState) => ipcRenderer.invoke("runMetaSimulation", session),
   compareStatuts: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState, options: import('../types.js', { with: { "resolution-mode": "import" } }).ComparaisonOptions) => ipcRenderer.invoke("compareStatuts", session, options),
+  optimiserRemuneration: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState, options: import('../types.js', { with: { "resolution-mode": "import" } }).ComparaisonOptions, statut: import('../types.js', { with: { "resolution-mode": "import" } }).StatutSociete) => ipcRenderer.invoke("optimiserRemuneration", session, options, statut),
 
   // Fonctions pour les slots
   getSaveSlots: () => ipcRenderer.invoke("getSaveSlots"),

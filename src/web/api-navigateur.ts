@@ -7,6 +7,7 @@ import type { EventPayloadMapping } from "@/globals"
 import type { ExportableState, NotificationPayload, SaveSlot, SessionState, UserPreferences } from "@/types"
 import { SessionStateSchema, UserPreferencesSchema } from "@/types"
 import { comparerStatuts } from "@/backend/logic/comparateur"
+import { optimiserRemuneration } from "@/backend/logic/optimisation-remuneration"
 import { sanitizeSlots, sanitizeStateAndFillDefaults } from "@/backend/logic/data-sanitizer"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { runMetaSimulation } from "@/backend/logic/simulation-engine"
@@ -64,6 +65,7 @@ export function creerApiNavigateur(): EventPayloadMapping {
 
     runMetaSimulation: async session => runMetaSimulation(sessionValidee(session)),
     compareStatuts: async (session, options) => comparerStatuts(sessionValidee(session), options),
+    optimiserRemuneration: async (session, options, statut) => optimiserRemuneration(sessionValidee(session), options, statut),
 
     getSaveSlots: async () => sanitizeSlots(lire(CLES.sauvegardes) ?? []),
     saveSlots: async (slots: SaveSlot[]) => {

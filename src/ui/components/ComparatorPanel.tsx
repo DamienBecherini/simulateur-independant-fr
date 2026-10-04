@@ -1,31 +1,15 @@
 // src/ui/components/ComparatorPanel.tsx
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { ChevronRight } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
 import { cn } from "@/lib/utils"
+import { Depliable } from "./Depliable"
+import { RemunerationOptimizer } from "./RemunerationOptimizer"
 import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ScenarioStatut, SessionState, StatutFrais } from "@/types"
-
-/** Section repliable : un chevron et une indication « afficher / masquer » montrent qu'on peut cliquer. */
-function Depliable({ titre, className, children }: { titre: string; className?: string; children: ReactNode }) {
-  return (
-    <details className={cn("group", className)}>
-      <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-md font-medium hover:text-slate-950 dark:hover:text-white [&::-webkit-details-marker]:hidden">
-        <ChevronRight aria-hidden className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
-        {titre}
-        <span className="font-normal text-blue-600 underline-offset-2 group-hover:underline dark:text-blue-400">
-          <span className="group-open:hidden">(afficher)</span>
-          <span className="hidden group-open:inline">(masquer)</span>
-        </span>
-      </summary>
-      {children}
-    </details>
-  )
-}
 
 interface ComparatorPanelProps {
   session: SessionState
@@ -344,6 +328,21 @@ function useComparison(session: SessionState, options: ComparaisonOptions) {
   return { result, error }
 }
 
+/** Arbitrage rémunération / dividendes de l'activité comparée, en SASU ou en EURL (son statut s'il en est un). */
+function OptimiseurDeLActivite({ session, selected, options, onChange }: { session: SessionState; selected: Company | MicroEntreprise | undefined; options: ComparaisonOptions; onChange: (options: ComparaisonOptions) => void }) {
+  if (!selected) return null
+  return (
+    <RemunerationOptimizer
+      key={selected.id}
+      session={session}
+      options={options}
+      activityName={selected.name}
+      statutInitial={selected.type === "company" && selected.legalStatus === "EURL" ? "EURL" : "SASU"}
+      onAppliquer={remunerationNette => onChange({ ...options, remunerationNette, distribuerToutLeBenefice: true })}
+    />
+  )
+}
+
 /**
  * Comparateur de statuts : l'activité choisie est simulée en SASU, EURL, EI au réel et micro-entreprise
  * (avec et sans versement libératoire), le reste de la simulation restant identique. Les couples en union
@@ -386,6 +385,7 @@ export function ComparatorPanel({ session }: ComparatorPanelProps) {
       {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 
       {result ? <ComparisonResults result={result} activityName={selected?.name ?? ""} /> : null}
+      <OptimiseurDeLActivite session={session} selected={selected} options={effectiveOptions} onChange={setOptions} />
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
     </section>
   )

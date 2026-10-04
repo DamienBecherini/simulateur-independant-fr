@@ -18,6 +18,7 @@ function createFakeApi(): EventPayloadMapping {
     saveCurrentSessionSync: vi.fn(),
     runMetaSimulation: vi.fn(async () => emptyReport()),
     compareStatuts: vi.fn(async () => ({ scenarios: [], meilleur: null, couples: [], warnings: [] })),
+    optimiserRemuneration: vi.fn(async (_session, _options, statut) => ({ statut, remunerationMaximale: 0, points: [], meilleur: null, meilleurAvecRetraite: null, warnings: [] })),
     getSaveSlots: vi.fn(async () => []),
     saveSlots: vi.fn(async () => {}),
     exportState: vi.fn(async () => {}),
