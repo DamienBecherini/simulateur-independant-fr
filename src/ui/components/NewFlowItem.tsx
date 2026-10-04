@@ -103,7 +103,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
 
   return (
     <div className="flex items-center gap-2 rounded-md border border-dashed p-2">
-      <Plus className="h-4 w-4 shrink-0 text-slate-400" />
+      <Plus className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
 
       <FlowTypeSelect value={type} options={allowedTypes} onChange={onTypeChange} />
 
@@ -159,7 +159,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
         onBlur={handleAmountBlur}
         onKeyDown={handleAmountKeyDown}
       />
-      <span className="text-sm text-slate-500">€</span>
+      <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
 
       {/* Réserve la largeur du bouton de suppression pour aligner les colonnes sur les lignes existantes. */}
       <div className="h-9 w-9 shrink-0" />

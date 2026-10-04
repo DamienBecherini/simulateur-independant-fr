@@ -165,7 +165,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onTypeUsed }:
       )}
 
       <Input
-        className={cn("w-28 shrink-0 bg-background text-right font-mono", isOutgoingFlowType(flow.type) ? "text-red-600 dark:text-red-400" : "text-green-700 dark:text-green-400")}
+        className={cn("w-28 shrink-0 bg-background text-right font-mono", isOutgoingFlowType(flow.type) ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400")}
         aria-label={isSalary ? "Salaire net" : "Montant"}
         title={isSalary ? "Salaire net" : undefined}
         inputMode="decimal"
@@ -176,7 +176,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onTypeUsed }:
         onBlur={commitAmount}
         onKeyDown={handleKeyDown(commitAmount, () => setAmountDraft(null))}
       />
-      <span className="text-sm text-slate-500">€</span>
+      <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
 
       <Button variant="ghost" size="icon" tabIndex={-1} className="shrink-0 text-destructive hover:text-destructive" aria-label="Supprimer le flux" onClick={() => onDelete(flow.id)}>
         <Trash2 />

@@ -137,7 +137,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                       })
                     }
                   />
-                  <p className="mt-1 text-xs text-slate-500">Hors enfants reliés : leurs parts s'ajoutent automatiquement. À modifier pour un cas particulier (parent isolé, invalidité…).</p>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Hors enfants reliés : leurs parts s'ajoutent automatiquement. À modifier pour un cas particulier (parent isolé, invalidité…).</p>
                 </div>
               </div>
             )}
@@ -190,7 +190,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
             <div className="space-y-4 pt-6 border-t">
               <Label className="font-semibold text-base">Relations</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {relevantRelationships.length === 0 && !addingRelation && <p className="text-sm text-slate-500 italic col-span-full">Aucune relation.</p>}
+                {relevantRelationships.length === 0 && !addingRelation && <p className="text-sm text-slate-600 dark:text-slate-400 italic col-span-full">Aucune relation.</p>}
                 {relevantRelationships.map(rel => {
                   const isSource = rel.fromId === localEntity.id
                   const otherEntity = allEntities.find(e => e.id === (isSource ? rel.toId : rel.fromId))
@@ -198,13 +198,13 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                   return (
                     <div key={rel.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-slate-50 dark:bg-gray-800 border">
                       <div className="flex items-center gap-2">
-                        {!isSource && <ArrowRight className="h-4 w-4 text-slate-400 transform rotate-180" />}
+                        {!isSource && <ArrowRight className="h-4 w-4 text-slate-500 dark:text-slate-400 transform rotate-180" />}
                         <AvatarDisplay avatar={otherEntity.avatar} size="sm" />
                         <div>
                           <div className="font-semibold">{otherEntity.name}</div>
                           <div className="text-blue-600 dark:text-blue-400 font-medium">{getRelationshipLabel(rel.type, isSource)}</div>
                         </div>
-                        {isSource && <ArrowRight className="h-4 w-4 text-slate-400" />}
+                        {isSource && <ArrowRight className="h-4 w-4 text-slate-500 dark:text-slate-400" />}
                       </div>
                       <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteRelationship(rel.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -292,7 +292,7 @@ function StatusSpecificFields({ entity, onChange }: { entity: Entity; onChange: 
                 onChange({ ...entity, rfrN2: Number.isFinite(value) && value >= 0 ? value : undefined })
               }}
             />
-            <p className="mt-1 text-xs text-slate-500">Revenu fiscal de référence du foyer d'il y a deux ans (avis d'imposition) : il décide de l'accès au versement libératoire.</p>
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Revenu fiscal de référence du foyer d'il y a deux ans (avis d'imposition) : il décide de l'accès au versement libératoire.</p>
           </div>
         </div>
       )}
@@ -311,7 +311,7 @@ function StatusSpecificFields({ entity, onChange }: { entity: Entity; onChange: 
               value={entity.capitalSocial}
               onChange={e => onChange({ ...entity, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })}
             />
-            <p className="mt-1 text-xs text-slate-500">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
           </div>
         </div>
       )}

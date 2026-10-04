@@ -177,7 +177,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md mt-8">
         <h2 className="text-2xl font-semibold mb-4">Grille de Saisie Annuelle</h2>
         {entities.length === 0 ? (
-          <p className="text-slate-500">Veuillez d'abord ajouter une entité pour commencer la saisie.</p>
+          <p className="text-slate-600 dark:text-slate-400">Veuillez d'abord ajouter une entité pour commencer la saisie.</p>
         ) : (
           <div className="relative overflow-x-auto">
             {/* `w-max` : la grille doit être aussi large que son contenu, sinon la première colonne (sticky) cesse de rester visible une fois la largeur de la fenêtre dépassée. */}

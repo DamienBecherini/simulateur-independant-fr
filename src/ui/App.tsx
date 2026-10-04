@@ -128,7 +128,7 @@ function App() {
           {/* Groupe de boutons de gauche */}
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
-              <Settings className="text-slate-500" />
+              <Settings className="text-slate-600 dark:text-slate-400" />
             </Button>
             <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z)" onClick={undo} disabled={!canUndo} className="h-10 w-10 [&_svg]:size-6 sm:ml-2">
               <Undo2 className="dark:text-slate-300" />
@@ -144,10 +144,10 @@ function App() {
               <span className="hidden sm:inline">Exporter</span>
             </Button>
             <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} disabled={!canZoomOut} className="h-10 w-10 [&_svg]:size-6">
-              <ZoomOut className="text-slate-500" />
+              <ZoomOut className="text-slate-600 dark:text-slate-400" />
             </Button>
             <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} disabled={!canZoomIn} className="h-10 w-10 [&_svg]:size-6 sm:mr-4">
-              <ZoomIn className="text-slate-500" />
+              <ZoomIn className="text-slate-600 dark:text-slate-400" />
             </Button>
             <ThemeToggle />
           </div>
@@ -156,7 +156,7 @@ function App() {
 
       <header className="text-center mb-10 pt-16">
         <h1 className="text-4xl font-bold">{currentSession.name}</h1>
-        <p className="text-lg text-slate-500">Votre bac à sable financier, juridique et fiscal</p>
+        <p className="text-lg text-slate-600 dark:text-slate-400">Votre bac à sable financier, juridique et fiscal</p>
         {import.meta.env.VITE_CIBLE === "web" && <BandeauDemo />}
       </header>
 

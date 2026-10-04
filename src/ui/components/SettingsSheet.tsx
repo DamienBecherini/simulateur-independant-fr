@@ -74,7 +74,7 @@ function SaveSlotItem({ slot, onDelete, onExport, onLoad }: { slot: SaveSlot; on
             <p className="font-bold truncate" title={slot.name}>
               {slot.name}
             </p>
-            <p className="text-sm text-slate-500">Modifié le: {new Date(slot.lastModified).toLocaleString("fr-FR")}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Modifié le: {new Date(slot.lastModified).toLocaleString("fr-FR")}</p>
           </button>
         </div>
         <Button variant="ghost" size="icon" onClick={onDelete} className="flex-shrink-0" aria-label={`Supprimer la sauvegarde « ${slot.name} »`}>
@@ -220,7 +220,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
               <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <div className="flex-grow overflow-y-auto p-6 space-y-3">
                   <SortableContext items={slotOrder} strategy={verticalListSortingStrategy}>
-                    {sortedSlots.length > 0 ? sortedSlots.map(slot => <SaveSlotItem key={slot.id} slot={slot} onLoad={() => onLoadSlot(slot)} onDelete={() => handleDeleteSlot(slot.id)} onExport={() => handleExportSlot(slot)} />) : <p className="text-center text-slate-500 pt-8">Aucune sauvegarde trouvée.</p>}
+                    {sortedSlots.length > 0 ? sortedSlots.map(slot => <SaveSlotItem key={slot.id} slot={slot} onLoad={() => onLoadSlot(slot)} onDelete={() => handleDeleteSlot(slot.id)} onExport={() => handleExportSlot(slot)} />) : <p className="text-center text-slate-600 dark:text-slate-400 pt-8">Aucune sauvegarde trouvée.</p>}
                   </SortableContext>
                 </div>
               </DndContext>

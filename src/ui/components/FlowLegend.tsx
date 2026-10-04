@@ -76,12 +76,12 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
           {/* Section pour les Gains */}
           <div>
             <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 border-b pb-1">Gains</h4>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">{gainTypes.length > 0 ? gainTypes.map(renderLegendItem) : <p className="text-sm text-slate-500 italic">Aucun gain ce mois-ci.</p>}</div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">{gainTypes.length > 0 ? gainTypes.map(renderLegendItem) : <p className="text-sm text-slate-600 dark:text-slate-400 italic">Aucun gain ce mois-ci.</p>}</div>
           </div>
           {/* Section pour les Dépenses */}
           <div>
             <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 border-b pb-1">Dépenses</h4>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">{expenseTypesFiltered.length > 0 ? expenseTypesFiltered.map(renderLegendItem) : <p className="text-sm text-slate-500 italic">Aucune dépense ce mois-ci.</p>}</div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">{expenseTypesFiltered.length > 0 ? expenseTypesFiltered.map(renderLegendItem) : <p className="text-sm text-slate-600 dark:text-slate-400 italic">Aucune dépense ce mois-ci.</p>}</div>
           </div>
         </div>
       </div>

@@ -39,7 +39,7 @@ export function SelectEntityTypeModal({ isOpen, onClose, onSelect }: SelectEntit
               {option.icon}
               <div>
                 <p className="font-semibold">{option.label}</p>
-                <p className="text-sm text-slate-500">{option.description}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">{option.description}</p>
               </div>
             </button>
           ))}

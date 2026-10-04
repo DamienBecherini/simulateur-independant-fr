@@ -68,7 +68,7 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
 
   return (
     <Depliable titre="Frais de fonctionnement annuels par statut" className="rounded-lg border border-slate-200 p-4 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200">
-      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+      <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
         Ordres de grandeur, à ajuster à votre situation. Ils s'ajoutent aux charges de l'activité dans chaque colonne, statut actuel compris : si vous les avez déjà saisis dans la grille, mettez-les à 0. Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune et n'est pas due l'année de création.
       </p>
       <div className="relative mt-3 overflow-x-auto">
@@ -178,7 +178,7 @@ function ComparisonTable({ result, activityName }: { result: ComparaisonResult; 
             {result.scenarios.map(s => (
               <th key={s.statut} scope="col" className={cn("px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-200", best(s) && "bg-emerald-100 dark:bg-emerald-900/40")}>
                 {s.libelle}
-                <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">{[s.actuel ? "actuel" : null, best(s) ? "meilleur net" : null].filter(Boolean).join(" · ") || " "}</span>
+                <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{[s.actuel ? "actuel" : null, best(s) ? "meilleur net" : null].filter(Boolean).join(" · ") || " "}</span>
               </th>
             ))}
           </tr>
@@ -206,7 +206,7 @@ function ComparisonTable({ result, activityName }: { result: ComparaisonResult; 
                   {stars(s.protectionSociale.etoiles)}
                 </span>
                 <span className="sr-only">{s.protectionSociale.etoiles} sur 5</span>
-                <span className="block text-xs text-slate-500 dark:text-slate-400">{s.protectionSociale.trimestres} trim. retraite</span>
+                <span className="block text-xs text-slate-600 dark:text-slate-400">{s.protectionSociale.trimestres} trim. retraite</span>
               </td>
             ))}
           </tr>
@@ -254,7 +254,7 @@ function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-slate-500 dark:text-slate-400">Note indicative : la cinquième étoile correspond au salarié classique, seul à cotiser à l'assurance chômage.</p>
+      <p className="mt-2 text-slate-600 dark:text-slate-400">Note indicative : la cinquième étoile correspond au salarié classique, seul à cotiser à l'assurance chômage.</p>
     </Depliable>
   )
 }
@@ -371,7 +371,7 @@ export function ComparatorPanel({ session }: ComparatorPanelProps) {
         <h2 id="comparateur-titre" className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
           Comparateur de statuts
         </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée.</p>
       </div>
 
       {selected ? (

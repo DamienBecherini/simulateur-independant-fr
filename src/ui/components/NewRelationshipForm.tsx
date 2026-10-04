@@ -49,7 +49,7 @@ export function NewRelationshipForm({ entity, allEntities, relationships, onAdd 
 
   if (!isOpen) {
     return (
-      <button type="button" className="flex items-center gap-1 rounded-md border border-dashed px-2 py-1 text-sm text-slate-500 hover:border-solid hover:text-slate-800 dark:hover:text-slate-200" onClick={() => setOpen(true)}>
+      <button type="button" className="flex items-center gap-1 rounded-md border border-dashed px-2 py-1 text-sm text-slate-600 dark:text-slate-400 hover:border-solid hover:text-slate-800 dark:hover:text-slate-200" onClick={() => setOpen(true)}>
         <Plus className="h-3.5 w-3.5" />
         Relation
       </button>
@@ -84,7 +84,7 @@ export function NewRelationshipForm({ entity, allEntities, relationships, onAdd 
           </SelectContent>
         </Select>
       )}
-      <button type="button" aria-label="Annuler l'ajout de relation" className="rounded p-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-gray-700" onClick={close}>
+      <button type="button" aria-label="Annuler l'ajout de relation" className="rounded p-1 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-gray-700" onClick={close}>
         <X className="h-4 w-4" />
       </button>
     </div>

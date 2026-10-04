@@ -95,13 +95,13 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
               onBlur={commitName}
               onKeyDown={handleFieldKeyDown(() => setNameDraft(null))}
             />
-            <p className="px-1 text-sm text-slate-400">{entitySubtitle(entity)}</p>
+            <p className="px-1 text-sm text-slate-600 dark:text-slate-400">{entitySubtitle(entity)}</p>
           </div>
         </div>
 
         <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-4 gap-y-2">
           {entity.type === "person" && (
-            <label className="flex items-center gap-2 text-sm text-slate-500" title="Hors enfants reliés : leurs parts s'ajoutent automatiquement.">
+            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400" title="Hors enfants reliés : leurs parts s'ajoutent automatiquement.">
               Parts propres
               <Input
                 className="h-8 w-16 text-right"
@@ -116,12 +116,12 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
           )}
           {entity.type === "micro-entreprise" && (
             <>
-              <label className="flex items-center gap-2 whitespace-nowrap text-sm text-slate-500" title="Aide à la création : cotisations réduites pendant les premiers trimestres, mais droits à la retraite et indemnités journalières réduits d'autant.">
+              <label className="flex items-center gap-2 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400" title="Aide à la création : cotisations réduites pendant les premiers trimestres, mais droits à la retraite et indemnités journalières réduits d'autant.">
                 <Switch checked={entity.beneficieACRE} onCheckedChange={beneficieACRE => onUpdate({ ...entity, beneficieACRE })} />
                 ACRE
                 {entity.beneficieACRE && <span className="text-xs text-amber-700 dark:text-amber-400">(retraite réduite)</span>}
               </label>
-              <label className="flex items-center gap-2 whitespace-nowrap text-sm text-slate-500">
+              <label className="flex items-center gap-2 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
                 <Switch checked={entity.opteVFL} onCheckedChange={opteVFL => onUpdate({ ...entity, opteVFL })} />
                 Versement libératoire
               </label>
@@ -129,10 +129,10 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
           )}
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" aria-label="Modifier les autres réglages" title="Statut, couleur, icône…" onClick={() => onEdit(entity)}>
-              <Pencil className="h-4 w-4 text-slate-500" />
+              <Pencil className="h-4 w-4 text-slate-600 dark:text-slate-400" />
             </Button>
             <Button variant="ghost" size="icon" aria-label={entity.locked ? "Déverrouiller" : "Verrouiller"} onClick={() => onToggleLock(entity.id)}>
-              {entity.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-slate-500" />}
+              {entity.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-slate-600 dark:text-slate-400" />}
             </Button>
             <Button variant="destructive" size="sm" disabled={entity.locked} onClick={() => onDelete(entity.id)}>
               Supprimer
@@ -149,12 +149,12 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
           if (!otherEntity) return null
           return (
             <div key={rel.id} className="flex items-center gap-2 text-sm p-1 pl-2 rounded-md bg-slate-100 dark:bg-gray-800">
-              {!isSource && <ArrowRight className="h-3 w-3 text-slate-400 transform rotate-180" />}
+              {!isSource && <ArrowRight className="h-3 w-3 text-slate-500 dark:text-slate-400 transform rotate-180" />}
               <span className="font-medium text-blue-600 dark:text-blue-400">{getRelationshipLabel(rel.type, isSource)}</span>
-              {isSource && <ArrowRight className="h-3 w-3 text-slate-400" />}
+              {isSource && <ArrowRight className="h-3 w-3 text-slate-500 dark:text-slate-400" />}
               <AvatarDisplay avatar={otherEntity.avatar} />
               <span className="font-semibold">{otherEntity.name}</span>
-              <button type="button" aria-label={`Supprimer la relation avec ${otherEntity.name}`} className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-destructive dark:hover:bg-gray-700" onClick={() => onDeleteRelationship(rel.id)}>
+              <button type="button" aria-label={`Supprimer la relation avec ${otherEntity.name}`} className="rounded p-0.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 hover:text-destructive dark:hover:bg-gray-700" onClick={() => onDeleteRelationship(rel.id)}>
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
