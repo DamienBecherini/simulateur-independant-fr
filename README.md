@@ -1,10 +1,25 @@
 # Simulateur Indépendant FR (Proof of Concept)
 
 [![CI](https://github.com/DamienBecherini/simulateur-independant-fr/actions/workflows/ci.yml/badge.svg)](https://github.com/DamienBecherini/simulateur-independant-fr/actions/workflows/ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=DamienBecherini_simulateur-independant-fr&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=DamienBecherini_simulateur-independant-fr)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=DamienBecherini_simulateur-independant-fr&metric=coverage)](https://sonarcloud.io/summary/new_code?id=DamienBecherini_simulateur-independant-fr)
+[![Licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](./LICENSE)
 
-Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un bac à sable financier, juridique et fiscal pour les indépendants : on modélise personnes, sociétés et micro-entreprises, leurs liens et leurs flux mensuels, puis on compare les statuts (SASU, EURL, micro-entreprise) et l'impôt du foyer.
+Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un bac à sable financier, juridique et fiscal pour les indépendants : on modélise personnes, sociétés et micro-entreprises, leurs liens et leurs flux mensuels, puis on calcule cotisations, impôts et net du foyer, et on compare les statuts : SASU, EURL, entreprise individuelle au réel, micro-entreprise avec ou sans versement libératoire.
 
 *Projet personnel, né d'un besoin d'entrepreneur, partagé dans le cadre de processus de recrutement pour montrer mes standards de code et ma vision produit. Ce n'est pas un logiciel de conseil fiscal : les résultats illustrent l'ingénierie, ils n'ont pas été validés par un expert-comptable.*
+
+## 🖼️ Aperçu
+
+Simulation fictive : une indépendante en micro-entreprise mixte, pacsée avec le président d'une SASU, avec un enfant.
+
+| Acteurs et relations | Résultats du foyer |
+|---|---|
+| ![Acteurs et relations, éditables sur leur carte](docs/captures/acteurs-et-grille.png) | ![Bilan : net dans la poche, taux de prélèvement, détail par foyer](docs/captures/resultats.png) |
+
+![Comparateur de statuts : net, prélèvements, frais de fonctionnement et protection sociale pour chaque statut](docs/captures/comparateur.png)
+
+Les captures sont générées par `npm run captures` (Playwright, sur l'application compilée).
 
 ## ✨ Fonctionnalités
 
@@ -101,3 +116,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - Les cotisations des travailleurs non salariés (gérant d'EURL, entrepreneur individuel au réel) sont calculées ligne à ligne selon le barème 2026 des artisans, commerçants et professions libérales non réglementées (assiette unique abattue de 26 %, assiettes minimales) ; ne sont pas modélisés les professions libérales réglementées, la contribution des artisans à la formation (0,29 %), le décalage entre cotisations provisionnelles et régularisation, ni la CSG déductible sur les dividendes soumis à cotisations. Celles du président de SASU restent approchées par un ratio moyen entre coût total et net.
 - La note de protection sociale du comparateur est indicative : elle combine le régime et les trimestres de retraite validés.
 - Non modélisés : réductions et crédits d'impôt, résidence alternée, report des déficits, TVA, répartition du capital entre associés (dividendes partagés à parts égales).
+
+## 📄 Licence
+
+[MIT](./LICENSE) © 2025-2026 Damien Becherini.
