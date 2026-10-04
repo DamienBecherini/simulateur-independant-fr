@@ -16,9 +16,11 @@ import { FlowLegend } from "./components/FlowLegend"
 import { DevWindowSize } from "./components/DevWindowSize"
 import { BandeauDemo } from "@/web/BandeauDemo"
 import { useZoom } from "./hooks/useZoom"
+import { ExportDialog } from "./components/ExportDialog"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
+  const [isExportOpen, setExportOpen] = useState(false)
   const { zoomIn, zoomOut, canZoomIn, canZoomOut } = useZoom()
   const [simulationReport, setSimulationReport] = useState<SimulationReport | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
@@ -143,7 +145,7 @@ function App() {
           </div>
           {/* Groupe de boutons de droite */}
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" aria-label="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 sm:mr-2" onClick={handleExportAll}>
+            <Button variant="outline" size="sm" aria-label="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 sm:mr-2" onClick={() => setExportOpen(true)}>
               <Download className="size-4" />
               <span className="hidden sm:inline">Exporter</span>
             </Button>
@@ -196,6 +198,7 @@ function App() {
       {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
       {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
           le panneau de configuration ait tout le contexte nécessaire. */}
+      <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} simulationReport={simulationReport} onExportJson={handleExportAll} />
       <SettingsSheet
         isOpen={isSettingsOpen}
         onOpenChange={setSettingsOpen}

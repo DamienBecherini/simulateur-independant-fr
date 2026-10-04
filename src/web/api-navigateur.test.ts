@@ -119,6 +119,30 @@ describe("pont de la démo web", () => {
     expect(await creerApiNavigateur().importState()).toEqual({ data: undefined })
   })
 
+  it("fait télécharger un fichier texte, au bon type", async () => {
+    const creerUrl = vi.fn(() => "blob:texte")
+    Object.assign(URL, { createObjectURL: creerUrl, revokeObjectURL: vi.fn() })
+    const telechargement = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {})
+
+    expect(await creerApiNavigateur().saveTextFile({ defaultName: "grille.csv", content: "a;b", format: "csv" })).toBe(true)
+
+    expect(telechargement).toHaveBeenCalledOnce()
+    const fichier = (creerUrl.mock.calls[0] as unknown as [Blob])[0]
+    expect(fichier.type).toBe("text/csv;charset=utf-8")
+    expect(await fichier.text()).toBe("a;b")
+  })
+
+  it("ouvre un fichier texte choisi par l'utilisateur", async () => {
+    choisirLeFichier("contenu du fichier")
+    expect(await creerApiNavigateur().openTextFile({ title: "Importer", format: "json" })).toBe("contenu du fichier")
+  })
+
+  it("ouvre l'impression du navigateur pour le PDF", async () => {
+    const imprimer = vi.spyOn(window, "print").mockImplementation(() => {})
+    expect(await creerApiNavigateur().printToPdf("simulation.pdf")).toBe(true)
+    expect(imprimer).toHaveBeenCalledOnce()
+  })
+
   it("signale un fichier importé illisible", async () => {
     choisirLeFichier("{pas du json")
     const api = creerApiNavigateur()

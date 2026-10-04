@@ -23,6 +23,9 @@ const api: import("../globals.js", { with: { "resolution-mode": "import" } }).Ev
   // Fonctions d'import/export
   exportState: (state: import('../types.js', { with: { "resolution-mode": "import" } }).ExportableState) => ipcRenderer.invoke("exportState", state),
   importState: () => ipcRenderer.invoke("importState"),
+  saveTextFile: (options: { defaultName: string; content: string; format: import('../types.js', { with: { "resolution-mode": "import" } }).FormatFichierTexte }) => ipcRenderer.invoke("saveTextFile", options),
+  openTextFile: (options: { title: string; format: import('../types.js', { with: { "resolution-mode": "import" } }).FormatFichierTexte }) => ipcRenderer.invoke("openTextFile", options),
+  printToPdf: (defaultName: string) => ipcRenderer.invoke("printToPdf", defaultName),
 
   // Fonctions pour les préférences
   getUserPreferences: () => ipcRenderer.invoke("getUserPreferences"),

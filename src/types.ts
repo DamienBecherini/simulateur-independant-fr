@@ -353,6 +353,9 @@ export interface ComparaisonResult {
   warnings: string[]
 }
 
+/** Formats de fichier texte que l'application sait enregistrer ou ouvrir (exports, sauvegardes groupées). */
+export type FormatFichierTexte = "csv" | "markdown" | "json"
+
 /** Sociétés à l'impôt sur les sociétés, où l'on arbitre entre rémunération et dividendes. */
 export type StatutSociete = "SASU" | "EURL"
 

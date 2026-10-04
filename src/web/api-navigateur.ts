@@ -4,7 +4,7 @@
 // L'interface ne voit aucune différence : elle appelle toujours window.api.
 
 import type { EventPayloadMapping } from "@/globals"
-import type { ExportableState, NotificationPayload, SaveSlot, SessionState, UserPreferences } from "@/types"
+import type { ExportableState, FormatFichierTexte, NotificationPayload, SaveSlot, SessionState, UserPreferences } from "@/types"
 import { SessionStateSchema, UserPreferencesSchema } from "@/types"
 import { comparerStatuts } from "@/backend/logic/comparateur"
 import { optimiserRemuneration } from "@/backend/logic/optimisation-remuneration"
@@ -22,9 +22,17 @@ function sessionValidee(session: unknown): SessionState {
   return resultat.success ? resultat.data : SessionStateSchema.parse({})
 }
 
+const TYPES_MIME: Record<FormatFichierTexte, string> = { csv: "text/csv;charset=utf-8", markdown: "text/markdown;charset=utf-8", json: "application/json" }
+const EXTENSIONS: Record<FormatFichierTexte, string> = { csv: ".csv", markdown: ".md", json: ".json" }
+
 /** Fait télécharger un fichier JSON au navigateur. */
 function telecharger(nom: string, contenu: unknown) {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(contenu, null, 2)], { type: "application/json" }))
+  telechargerTexte(nom, JSON.stringify(contenu, null, 2), "json")
+}
+
+/** Fait télécharger un fichier texte au navigateur. */
+function telechargerTexte(nom: string, contenu: string, format: FormatFichierTexte) {
+  const url = URL.createObjectURL(new Blob([contenu], { type: TYPES_MIME[format] }))
   const lien = document.createElement("a")
   lien.href = url
   lien.download = nom
@@ -33,11 +41,11 @@ function telecharger(nom: string, contenu: unknown) {
 }
 
 /** Ouvre le sélecteur de fichiers et renvoie le contenu du fichier choisi, ou `null` s'il est annulé. */
-function choisirFichier(): Promise<string | null> {
+function choisirFichier(format: FormatFichierTexte = "json"): Promise<string | null> {
   return new Promise(resolve => {
     const champ = document.createElement("input")
     champ.type = "file"
-    champ.accept = "application/json,.json"
+    champ.accept = `${TYPES_MIME[format].split(";")[0]},${EXTENSIONS[format]}`
     champ.addEventListener("change", () => {
       const fichier = champ.files?.[0]
       if (!fichier) return resolve(null)
@@ -85,6 +93,17 @@ export function creerApiNavigateur(): EventPayloadMapping {
         notifier({ message: `Le fichier sélectionné est invalide ou corrompu : ${message}`, type: "error" })
         return { error: message }
       }
+    },
+
+    saveTextFile: async ({ defaultName, content, format }) => {
+      telechargerTexte(defaultName, content, format)
+      return true
+    },
+    openTextFile: async ({ format }) => choisirFichier(format),
+    // Le navigateur ne sait pas écrire un PDF sans intervention : on ouvre sa fenêtre d'impression (« Enregistrer en PDF »).
+    printToPdf: async () => {
+      window.print()
+      return true
     },
 
     getUserPreferences: async () => {

@@ -1,7 +1,7 @@
 // src/backend/main.ts
 
 import { app, BrowserWindow, dialog } from "electron"
-import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions, StatutSociete } from "@/types.js"
+import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions, StatutSociete, FormatFichierTexte } from "@/types.js"
 import { SessionStateSchema } from "@/types.js"
 import { runMetaSimulation } from "./logic/simulation-engine.js"
 import { comparerStatuts } from "./logic/comparateur.js"
@@ -15,6 +15,13 @@ import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs"
 import { ipcMain } from "electron"
 import { sanitizeStateAndFillDefaults, sanitizeSlots } from "./logic/data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
+
+/** Filtres des fenêtres d'enregistrement et d'ouverture, par format de fichier texte. */
+const FILTRES_FICHIERS: Record<FormatFichierTexte, Electron.FileFilter> = {
+  csv: { name: "Fichiers CSV", extensions: ["csv"] },
+  markdown: { name: "Documents Markdown", extensions: ["md"] },
+  json: { name: "Fichiers JSON", extensions: ["json"] }
+}
 
 /** Fichiers de données conservés d'une version à l'autre. */
 const DATA_FILES = ["sessionState.json", "simulationSlots.json", "userPreferences.json"]
@@ -323,6 +330,50 @@ app.on("ready", () => {
         console.error("Erreur lors de l'exportation :", error)
         dialog.showErrorBox("Erreur d'exportation", "Impossible d'enregistrer le fichier.")
       }
+    }
+  })
+
+  // --- FICHIERS TEXTE (exports CSV et Markdown, sauvegardes groupées) ET PDF ---
+  ipcMainHandle("saveTextFile", async ({ defaultName, content, format }: { defaultName: string; content: string; format: FormatFichierTexte }) => {
+    if (!mainWindow) return false
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, { title: "Exporter", defaultPath: defaultName, filters: [FILTRES_FICHIERS[format]] })
+    if (canceled || !filePath) return false
+    try {
+      await fs.writeFile(filePath, content, "utf-8")
+      return true
+    } catch (error) {
+      console.error("Erreur lors de l'enregistrement :", error)
+      dialog.showErrorBox("Erreur d'exportation", "Impossible d'enregistrer le fichier.")
+      return false
+    }
+  })
+
+  ipcMainHandle("openTextFile", async ({ title, format }: { title: string; format: FormatFichierTexte }) => {
+    if (!mainWindow) return null
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { title, properties: ["openFile"], filters: [FILTRES_FICHIERS[format]] })
+    if (canceled || filePaths.length === 0) return null
+    try {
+      return await fs.readFile(filePaths[0], "utf-8")
+    } catch (error) {
+      console.error("Erreur lors de la lecture :", error)
+      dialog.showErrorBox("Erreur d'importation", "Impossible de lire le fichier.")
+      return null
+    }
+  })
+
+  ipcMainHandle("printToPdf", async (defaultName: string) => {
+    if (!mainWindow) return false
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, { title: "Exporter en PDF", defaultPath: defaultName, filters: [{ name: "Documents PDF", extensions: ["pdf"] }] })
+    if (canceled || !filePath) return false
+    try {
+      // La feuille de style d'impression (@media print) met la page en forme.
+      const pdf = await mainWindow.webContents.printToPDF({ printBackground: true, pageSize: "A4" })
+      await fs.writeFile(filePath, pdf)
+      return true
+    } catch (error) {
+      console.error("Erreur lors de l'export PDF :", error)
+      dialog.showErrorBox("Erreur d'exportation", "Impossible de créer le PDF.")
+      return false
     }
   })
 
