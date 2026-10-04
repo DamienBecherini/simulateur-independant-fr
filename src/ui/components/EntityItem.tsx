@@ -6,6 +6,7 @@ import { Lock, Unlock, ArrowRight } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { AvatarDisplay } from "./AvatarDisplay"
+import { getRelationshipLabel } from "@/lib/graph-logic"
 
 interface EntityItemProps {
   entity: Entity
@@ -56,7 +57,7 @@ export function EntityItem({ entity, allEntities, relationships, onDelete, onTog
             return (
               <div key={rel.id} className="flex items-center gap-2 text-sm p-1 px-2 rounded-md bg-slate-100 dark:bg-gray-800">
                 {!isSource && <ArrowRight className="h-3 w-3 text-slate-400 transform rotate-180" />}
-                <span className="font-medium text-blue-600 dark:text-blue-400">{rel.type}</span>
+                <span className="font-medium text-blue-600 dark:text-blue-400">{getRelationshipLabel(rel.type, isSource)}</span>
                 {isSource && <ArrowRight className="h-3 w-3 text-slate-400" />}
                 <AvatarDisplay avatar={otherEntity.avatar} />
                 <span className="font-semibold">{otherEntity.name}</span>

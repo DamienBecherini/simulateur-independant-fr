@@ -15,13 +15,13 @@ function getPersonToActivityRelationTypes(activite: Activite): Relationship["typ
 
 /**
  * Libellé d'une relation tel qu'il est affiché. La relation « Enfant » va du parent vers l'enfant :
- * elle se lit « Enfant à charge » depuis le parent et « Parent » depuis l'enfant.
+ * elle se lit « Enfant à charge » depuis le parent et « Enfant de » depuis l'enfant.
  * @param type - Le type de relation enregistré.
  * @param isSource - Vrai si l'entité affichée est à l'origine de la relation.
  */
 export function getRelationshipLabel(type: Relationship["type"], isSource = true): string {
   if (type !== "Enfant") return type
-  return isSource ? "Enfant à charge" : "Parent (à sa charge)"
+  return isSource ? "Enfant à charge" : "Enfant de"
 }
 
 /**

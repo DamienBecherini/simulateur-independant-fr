@@ -25,7 +25,7 @@ function relation(fromId: string, toId: string, type: Relationship["type"]): Rel
 describe("getRelationshipLabel", () => {
   it("présente la relation « Enfant » selon le côté d'où elle est vue", () => {
     expect(getRelationshipLabel("Enfant")).toBe("Enfant à charge")
-    expect(getRelationshipLabel("Enfant", false)).toBe("Parent (à sa charge)")
+    expect(getRelationshipLabel("Enfant", false)).toBe("Enfant de")
   })
 
   it("affiche les autres relations telles quelles, des deux côtés", () => {
