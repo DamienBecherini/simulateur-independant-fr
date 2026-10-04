@@ -124,7 +124,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 Tâches sans phase attitrée, à traiter entre deux fonctionnalités.
 
-1.  **Dépendances :** analyser les vulnérabilités signalées par `npm audit` (44 à l'installation), distinguer celles qui touchent l'application livrée de celles des outils de développement, et corriger ce qui peut l'être sans casser le build.
+1.  **Dépendances [✅ en grande partie] :** 46 vulnérabilités signalées, 8 restantes. Correctifs compatibles appliqués, `os-utils` (inutilisé) retiré, passage à Electron 44 et electron-builder 26. **Reste :** 8 vulnérabilités dans des outils de développement seulement, jamais embarqués dans l'application (`tsc-alias`, `globby` du script `concat`, `qs` via Stryker) ; aucun correctif disponible hors retour à des versions plus anciennes. À revoir à la prochaine mise à jour de ces outils.
 2.  **Versionnage des sauvegardes [✅] :** chaque fichier (session, sauvegardes, exports) porte un numéro de format ; à la lecture, les migrations sont appliquées d'une version à la suivante, l'original est copié à côté, et l'utilisateur est prévenu des points à vérifier.
-3.  **Tests de l'interface :** tests de composants sur les parcours de saisie (flux, acteurs, relations, salaires).
+3.  **Tests de l'interface [✅] :** tests de composants (Testing Library, jsdom) sur la saisie des flux et des salaires, les cartes des acteurs, le panneau de résultats et l'historique d'annulation de l'application entière. **Non couvert :** glisser-déposer, fenêtres d'édition et de sauvegarde, test de bout en bout de l'application packagée.
 4.  **Import [✅] :** la fenêtre de confirmation s'ouvre aussi quand seuls des flux sont écartés, ou quand le fichier a été converti.
