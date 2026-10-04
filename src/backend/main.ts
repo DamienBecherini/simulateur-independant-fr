@@ -1,9 +1,10 @@
 // src/backend/main.ts
 
 import { app, BrowserWindow, dialog } from "electron"
-import type { SessionState, SaveSlot, UserPreferences, ExportableState } from "@/types.js"
+import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions } from "@/types.js"
 import { SessionStateSchema } from "@/types.js"
 import { runMetaSimulation } from "./logic/simulation-engine.js"
+import { comparerStatuts } from "./logic/comparateur.js"
 import { ipcMainHandle } from "./util.js"
 import { isDev } from "./isDev.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
@@ -176,6 +177,14 @@ async function writePrefsToFile(prefs: UserPreferences) {
   }
 }
 
+/** Session reçue de l'interface, revalidée avant calcul ; une session invalide est remplacée par la session par défaut. */
+function validatedSession(session: unknown, caller: string): SessionState {
+  const parsed = SessionStateSchema.safeParse(session)
+  if (parsed.success) return parsed.data
+  console.warn(`${caller} : session invalide, utilisation des valeurs par défaut du schéma`, parsed.error.flatten())
+  return SessionStateSchema.parse({})
+}
+
 let mainWindow: BrowserWindow | null = null
 let splashWindow: BrowserWindow | null = null
 
@@ -230,14 +239,9 @@ app.on("ready", () => {
   ipcMainHandle("getCurrentSession", async () => await readSessionFromFile())
   ipcMainHandle("saveCurrentSession", async (session: SessionState) => await writeSessionToFile(session))
 
-  ipcMainHandle("runMetaSimulation", async (session: SessionState) => {
-    const parsed = SessionStateSchema.safeParse(session)
-    if (!parsed.success) {
-      console.warn("runMetaSimulation: session invalide, utilisation des valeurs par défaut du schéma", parsed.error.flatten())
-    }
-    const safeSession = parsed.success ? parsed.data : SessionStateSchema.parse({})
-    return runMetaSimulation(safeSession)
-  })
+  ipcMainHandle("runMetaSimulation", async (session: SessionState) => runMetaSimulation(validatedSession(session, "runMetaSimulation")))
+
+  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions) => comparerStatuts(validatedSession(session, "compareStatuts"), options))
 
   ipcMainHandle("getSaveSlots", async () => await readSlotsFromFile())
 

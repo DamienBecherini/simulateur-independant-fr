@@ -256,6 +256,56 @@ export interface SimulationReport {
   totalNetApresImpots: number
 }
 
+/** Statuts proposés par le comparateur ; la micro-entreprise est simulée avec et sans versement libératoire. */
+export type StatutCompare = "SASU" | "EURL" | "EI" | "micro" | "micro-vfl"
+
+export interface ComparaisonOptions {
+  /** Activité à faire changer de statut ; le reste de la simulation ne bouge pas. */
+  activityId: string
+  /** Rémunération nette annuelle du dirigeant dans les colonnes SASU et EURL. */
+  remunerationNette: number
+  /** Verser en dividendes tout le bénéfice disponible des colonnes SASU et EURL, plutôt que les dividendes saisis. */
+  distribuerToutLeBenefice: boolean
+  /** Part BNC des prestations de services quand l'activité devient une micro-entreprise (0 à 1). Ignorée si elle en est déjà une. */
+  partBncPrestations: number
+}
+
+export interface ScenarioStatut {
+  statut: StatutCompare
+  libelle: string
+  /** Statut actuel de l'activité. */
+  actuel: boolean
+  /** Indicateurs de toute la simulation, l'activité ayant pris ce statut. */
+  netApresImpots: number
+  revenusAvantPrelevements: number
+  totalPrelevements: number
+  cotisationsSociales: number
+  impotSocietes: number
+  impotSurLeRevenu: number
+  prelevementsSociaux: number
+  resultatConserve: number
+  /** Avertissements de l'activité dans ce statut (plafond micro dépassé, société déficitaire…). */
+  warnings: string[]
+}
+
+export interface ComparaisonCouple {
+  /** Personnes en union libre, comparées comme si elles étaient mariées ou pacsées. */
+  personIds: [string, string]
+  netApresImpotsActuel: number
+  impotSurLeRevenuActuel: number
+  netApresImpotsMaries: number
+  impotSurLeRevenuMaries: number
+}
+
+export interface ComparaisonResult {
+  scenarios: ScenarioStatut[]
+  /** Statut au meilleur net après impôts. */
+  meilleur: StatutCompare | null
+  /** Une entrée par couple en union libre. */
+  couples: ComparaisonCouple[]
+  warnings: string[]
+}
+
 export interface SanitizationReport {
   entitiesRemoved: number
   relationshipsRemoved: number

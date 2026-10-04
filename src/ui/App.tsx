@@ -11,6 +11,7 @@ import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
 import type { SaveSlot, SimulationReport } from "@/types"
 import { ResultsPanel } from "./components/ResultsPanel"
+import { ComparatorPanel } from "./components/ComparatorPanel"
 import { FlowLegend } from "./components/FlowLegend"
 import { DevWindowSize } from "./components/DevWindowSize"
 
@@ -182,6 +183,8 @@ function App() {
         <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
 
         <ResultsPanel report={simulationReport} error={simulationError} />
+
+        <ComparatorPanel session={currentSession} />
       </main>
 
       <Footer />
