@@ -96,9 +96,13 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
-### **Phase 8 : Le Comparateur Stratégique (Entité « ??? ») [Planifié 🗓️ - PROCHAINE ÉTAPE]**
+### **Phase 8 : Le Comparateur Stratégique [Terminé ✅]**
 
-- **Objectif :** réintégrer la fonctionnalité phare de la v1 : pour une même activité, comparer SASU, EURL, entreprise individuelle au réel et micro-entreprise (net du foyer, impôts, cotisations) en relançant le moteur une fois par statut.
+- **Comparateur de statuts :** l'activité choisie est simulée en SASU, EURL, EI au réel et micro-entreprise (avec et sans versement libératoire), le reste de la simulation restant identique. Tableau : net dans la poche, taux global de prélèvement, détail des prélèvements, bénéfice conservé, écart avec le statut actuel, meilleur net mis en évidence.
+- **Conversion des flux :** chiffre d'affaires par nature, charges déductibles en société et en EI mais pas en micro, part BNC des prestations réglable quand une société devient une micro ; une micro mêlant vente, BIC et BNC garde sa répartition.
+- **Réglages des colonnes SASU et EURL :** rémunération nette, et versement de tout le bénéfice disponible en dividendes (par défaut si aucun dividende n'est saisi).
+- **Versement libératoire :** seuil de revenu fiscal de référence N-2 proportionnel aux parts du foyer ; au-delà, l'option est refusée et l'impôt calculé au barème.
+- **Couples :** relation « En couple (union libre) », et comparaison de l'impôt avec une imposition commune (mariage ou PACS).
 
 ---
 

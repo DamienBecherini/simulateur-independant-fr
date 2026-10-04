@@ -11,6 +11,7 @@ Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un 
 - **Modélisation par graphe** : entités (personnes, sociétés, micro-entreprises) reliées par des relations (Marié(e), PACSé(e), Enfant, Président, Gérant…).
 - **Grille annuelle visuelle** : saisie des flux mois par mois, légende numérotée et couleurs personnalisables.
 - **Simulation par foyer** : chaque activité (SASU, EURL, entreprise individuelle au réel, micro-entreprise) calcule ses cotisations et ce qu'elle verse ; l'impôt sur le revenu est ensuite calculé une seule fois par foyer fiscal (quotient familial plafonné, décote, dividendes au forfait ou au barème). Les résultats se recalculent à chaque modification.
+- **Comparateur de statuts** : pour une activité, net dans la poche et taux de prélèvement en SASU, EURL, EI au réel et micro-entreprise (avec et sans versement libératoire) ; pour un couple en union libre, effet d'un mariage ou d'un PACS sur l'impôt.
 - **Scénarios** : sauvegardes nommées, chargement, import / export JSON.
 - **Pérennité des données** : validation Zod et réparation automatique des sessions à l'ouverture.
 - **Confort d'édition** : undo / redo (Ctrl+Z / Ctrl+Y, Cmd+Shift+Z), sauvegarde automatique, glisser-déposer, zoom.
