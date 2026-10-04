@@ -33,7 +33,8 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 - **Simulation par foyer** : chaque activité (SASU, EURL, entreprise individuelle au réel, micro-entreprise) calcule ses cotisations et ce qu'elle verse ; l'impôt sur le revenu est ensuite calculé une seule fois par foyer fiscal (quotient familial plafonné, décote, dividendes au forfait ou au barème). Les résultats se recalculent à chaque modification.
 - **Comparateur de statuts** : pour une activité, net dans la poche, taux de prélèvement, frais de fonctionnement détaillés et note de protection sociale (trimestres de retraite validés) en SASU, EURL, EI au réel et micro-entreprise (avec et sans versement libératoire) ; pour un couple en union libre, effet d'un mariage ou d'un PACS sur l'impôt.
 - **Rémunération ou dividendes** : pour une société à l'IS (SASU, EURL), courbe du net du foyer selon la rémunération du dirigeant, le reste du bénéfice étant versé en dividendes ; meilleure rémunération, et meilleure parmi celles qui valident 4 trimestres de retraite, à reporter dans le comparateur en un clic.
-- **Scénarios** : sauvegardes nommées, chargement, import / export JSON.
+- **Scénarios** : sauvegardes nommées, chargement, import / export JSON, export et import de toutes les sauvegardes en un fichier.
+- **Exports** : CSV pour Excel (grille, résultats, comparateur, courbe rémunération / dividendes), document PDF mis en page, rapport Markdown à lire ou à confier à une IA.
 - **Pérennité des données** : validation Zod et réparation automatique des sessions à l'ouverture.
 - **Confort d'édition** : undo / redo (Ctrl+Z / Ctrl+Y, Cmd+Shift+Z), sauvegarde automatique, glisser-déposer, zoom.
 - **100 % hors-ligne** : aucune donnée ne quitte la machine.

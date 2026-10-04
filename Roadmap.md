@@ -4,7 +4,7 @@
 
 ## **État Actuel du Projet**
 
-Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue, le moteur de simulation par foyer fiscal, le comparateur de statuts et l'arbitrage rémunération / dividendes sont en place, avec une démo web publiée sur GitHub Pages. L'accessibilité (WCAG 2.2 AA) est vérifiée automatiquement. La prochaine étape est l'**export des chiffres** (Phase 11).
+Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue, le moteur de simulation par foyer fiscal, le comparateur de statuts et l'arbitrage rémunération / dividendes sont en place, avec une démo web publiée sur GitHub Pages. L'accessibilité (WCAG 2.2 AA) est vérifiée automatiquement. Les chiffres s'exportent en CSV, en PDF et en rapport Markdown. La prochaine étape est le **calcul ligne à ligne du président de SASU et le statut de salarié** (Phase 12).
 
 > **Changement d'ordre par rapport à la v2.2 :** le comparateur de statuts passe avant l'arbitrage rémunération / dividendes, et la gestion des foyers fiscaux est intégrée à la refonte du moteur.
 
@@ -133,7 +133,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
-### **Phase 11 : Exports [Planifié 🗓️]**
+### **Phase 11 : Exports [Terminé ✅]**
 
 - **Objectif :** présenter les chiffres, les transmettre à un expert-comptable ou les faire analyser par une IA.
 
@@ -141,7 +141,9 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 2.  **PDF :** feuille de style d'impression (sans barre d'outils ni boutons, tableaux sur des pages entières), puis `printToPDF` dans Electron et « Imprimer en PDF » dans le navigateur.
 3.  **Rapport pour une IA :** Markdown structuré (hypothèses, règles de l'année, acteurs et relations, montants par activité et par foyer, comparaison des statuts, avertissements), plus lisible pour un modèle de langage qu'un export XML ; le JSON complet reste disponible.
 4.  **Toutes les sauvegardes :** export et import de l'ensemble des sauvegardes nommées en un seul fichier (aujourd'hui, seule la simulation en cours s'exporte).
-5.  **XLSX (optionnel) :** seulement avec une bibliothèque sans failles connues ; le CSV couvre l'essentiel.
+5.  **XLSX (optionnel) :** seulement avec une bibliothèque sans failles connues ; le CSV couvre l'essentiel. Non fait.
+
+- **Réalisé :** fenêtre « Exporter » regroupant les formats ; CSV de la grille, des résultats, du comparateur et de la courbe rémunération / dividendes (séparateur « ; », virgule décimale, BOM pour Excel, protection contre l'injection de formules) ; rapport Markdown complet ; PDF A4 en thème clair (barre d'outils et boutons masqués, sections dépliées, en-tête et numéros de page) ; export et import de toutes les sauvegardes dans un fichier versionné, sans jamais écraser (doublons ignorés, conflits importés en copie « (importée) »), avec bilan. Les sauvegardes sont validées avant écriture, dans l'application comme dans la démo.
 
 ---
 
@@ -159,7 +161,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 - **Objectif :** simuler et comparer plusieurs années qui s'enchaînent.
 
 1.  **Modèle de données :** une session contient plusieurs années (grille, acteurs et relations par année) ; nouveau format de fichier, avec migration des sessions existantes.
-2.  **Règles par année :** `config.json` par année ; pour une année sans règles connues, reprise des dernières, avec un avertissement.
+2.  **Règles par année [✅ en partie] :** règles 2024 et 2025 collectées et sourcées (`src/backend/regles/`), au format de `config.json`, avec des tests de forme et de cohérence d'une année sur l'autre ; convention d'année acceptée (ADR 007 : l'année des revenus et de l'activité). **Reste :** les brancher dans le moteur, y ajouter les paramètres de la phase 12, et, pour une année sans règles connues, reprendre les dernières avec un avertissement.
 3.  **Revenu fiscal de référence :** calculé chaque année et reporté ; le versement libératoire de l'année N vérifie celui de N-2 automatiquement (il faut donc trois années chaînées).
 4.  **Bénéfice mis en réserve :** le résultat conservé d'une société est reporté sur l'année suivante et peut être distribué plus tard ; arbitrage des dividendes entre les années.
 5.  **Dispositifs limités dans le temps :** ACRE la première année, exonération de CFE l'année de création, cotisations des premières années.
