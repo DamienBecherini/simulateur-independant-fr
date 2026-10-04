@@ -2,6 +2,7 @@
 // Petite simulation et ses résultats, aux chiffres ronds, pour les tests des exports CSV et Markdown.
 
 import type { ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, ScenarioStatut, SessionState, SimulationReport } from "@/types"
+import { defaultFraisFonctionnement } from "@/lib/comparateur-options"
 
 const avatar = { type: "initials" as const, value: "A", color: "#000000" }
 
@@ -119,12 +120,7 @@ export function optionsExemple(): ComparaisonOptions {
     remunerationNette: 20000,
     distribuerToutLeBenefice: true,
     partBncPrestations: 0.5,
-    fraisFonctionnement: {
-      SASU: { expertComptable: 2000, banque: 200, logiciel: 150, assurance: 250, cfe: 300 },
-      EURL: { expertComptable: 2000, banque: 200, logiciel: 150, assurance: 250, cfe: 300 },
-      EI: { expertComptable: 1200, banque: 150, logiciel: 150, assurance: 250, cfe: 300 },
-      micro: { expertComptable: 0, banque: 100, logiciel: 100, assurance: 350, cfe: 300 }
-    }
+    fraisFonctionnement: defaultFraisFonctionnement()
   }
 }
 

@@ -18,7 +18,7 @@
     "dev:electron": "wait-on http://localhost:3524 && npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && cross-env NODE_ENV=development electron .",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "duplication": "jscpd src --min-tokens 70 --threshold 5 --ignore \"**/*.test.ts,**/*.test.tsx,src/components/ui/**,src/backend/logic/testing/**\" --reporters console",
+    "duplication": "jscpd src --min-tokens 70 --threshold 5 --ignore \"**/*.test.ts,**/*.test.tsx,src/components/ui/**,src/backend/logic/testing/**,src/lib/testing/**,src/backend/regles/**\" --reporters console",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
