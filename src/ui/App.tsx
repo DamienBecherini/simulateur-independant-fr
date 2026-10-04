@@ -15,20 +15,17 @@ import { ComparatorPanel } from "./components/ComparatorPanel"
 import { FlowLegend } from "./components/FlowLegend"
 import { DevWindowSize } from "./components/DevWindowSize"
 import { BandeauDemo } from "@/web/BandeauDemo"
+import { useZoom } from "./hooks/useZoom"
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
-  const [zoomLevel, setZoomLevel] = useState(1)
+  const { zoomIn, zoomOut, canZoomIn, canZoomOut } = useZoom()
   const [simulationReport, setSimulationReport] = useState<SimulationReport | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
 
   // --- MODIFICATION : Récupération des nouveaux états et fonctions du hook ---
   // On récupère tout ce dont on a besoin depuis le "cerveau" de l'application.
   const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
-
-  useEffect(() => {
-    document.body.style.zoom = `${zoomLevel}`
-  }, [zoomLevel])
 
   // La simulation est recalculée automatiquement, peu après chaque modification de la session.
   useEffect(() => {
@@ -108,8 +105,6 @@ function App() {
     setSettingsOpen(false)
   }
 
-  const zoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2))
-  const zoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5))
 
   const flowTypeToNumberMap = useMemo(() => {
     const types = new Set<string>()
@@ -148,10 +143,10 @@ function App() {
               <Download className="size-4" />
               <span className="hidden sm:inline">Exporter</span>
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} className="h-10 w-10 [&_svg]:size-6">
+            <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} disabled={!canZoomOut} className="h-10 w-10 [&_svg]:size-6">
               <ZoomOut className="text-slate-500" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} className="h-10 w-10 [&_svg]:size-6 sm:mr-4">
+            <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} disabled={!canZoomIn} className="h-10 w-10 [&_svg]:size-6 sm:mr-4">
               <ZoomIn className="text-slate-500" />
             </Button>
             <ThemeToggle />
