@@ -1,6 +1,6 @@
 // src/ui/components/RemunerationOptimizer.test.tsx
 
-import { render, screen, within } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration } from "@/types"
@@ -93,6 +93,25 @@ describe("RemunerationOptimizer", () => {
     expect(infobulle).toHaveTextContent("3 trim.")
     await userEvent.keyboard("{End}")
     expect(screen.getByRole("status")).toHaveTextContent(money(48000))
+  })
+
+  it("redessine la courbe à la largeur de la feuille le temps d'une impression", async () => {
+    vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
+    afficher()
+    const courbe = await screen.findByRole("group", { name: /Net du foyer selon la rémunération nette en SASU/ })
+    const dessin = () => courbe.querySelector("svg")!
+    const largeurEcran = dessin().getAttribute("width")
+
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"))
+    })
+    expect(dessin()).toHaveAttribute("width", "660")
+    expect(dessin()).toHaveAttribute("viewBox", "0 0 660 260")
+
+    act(() => {
+      window.dispatchEvent(new Event("afterprint"))
+    })
+    expect(dessin()).toHaveAttribute("width", largeurEcran)
   })
 
   it("donne les valeurs de la courbe dans un tableau", async () => {
