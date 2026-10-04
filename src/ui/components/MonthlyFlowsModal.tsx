@@ -80,7 +80,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate,
             <span>Opérations de {monthName}</span>
             <span className="text-base font-normal text-slate-500">/ {entity.name}</span>
           </DialogTitle>
-          <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant. Pour un salaire, le brut est facultatif : il fait apparaître les cotisations salariales dans le bilan.</DialogDescription>
+          <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant. Pour un salaire, le brut est calculé à 78 % du net si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2 py-2">

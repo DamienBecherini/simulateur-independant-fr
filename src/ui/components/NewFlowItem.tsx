@@ -46,12 +46,14 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
     setAmountInvalid(false)
   }
 
-  /** Brut à enregistrer avec le net : celui saisi, sinon celui déduit du pourcentage ; rien s'il est incohérent. */
+  /**
+   * Brut à enregistrer avec le net : celui saisi, sinon celui déduit du pourcentage (78 % par défaut),
+   * pour que les cotisations d'un salaire soient toujours comptées. Un brut inférieur au net est ignoré.
+   */
   const resolveGross = (net: number): number | undefined => {
     if (!isSalary) return undefined
-    const typedRatio = parsePercent(ratio)
-    const grossAmount = parseAmount(gross) ?? (typedRatio !== null ? grossFromNet(net, typedRatio) : null)
-    return grossAmount !== null && grossAmount >= net ? grossAmount : undefined
+    const grossAmount = parseAmount(gross) ?? grossFromNet(net, parsePercent(ratio) ?? DEFAULT_NET_RATIO)
+    return grossAmount >= net ? grossAmount : undefined
   }
 
   // Seul point de création du flux : la perte de focus du champ montant.
@@ -112,7 +114,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
           <Input
             className="w-24 shrink-0 bg-background text-right font-mono"
             aria-label="Salaire brut du nouveau flux"
-            title="Salaire brut (optionnel) : le net est calculé si vous ne le saisissez pas."
+            title="Salaire brut : laissé vide, il est calculé à partir du net et du pourcentage."
             placeholder="Brut"
             inputMode="decimal"
             value={gross}
@@ -126,7 +128,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
           <Input
             className="w-16 shrink-0 bg-background text-right font-mono"
             aria-label="Part du net dans le brut du nouveau flux, en pourcentage"
-            title="Part du net dans le brut. Avec le net seul, elle sert à calculer le brut."
+            title="Part du net dans le brut : 78 % si vous ne la précisez pas."
             placeholder={`${formatPercent(DEFAULT_NET_RATIO)} %`}
             inputMode="decimal"
             value={ratio}
