@@ -56,7 +56,7 @@ jobs:
 
       - name: Analyse SonarQube Cloud
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
 
       - name: Détection de code dupliqué (sans SonarQube)
         if: env.SONAR_TOKEN == ''
