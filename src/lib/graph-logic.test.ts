@@ -32,12 +32,17 @@ describe("getRelationshipLabel", () => {
     expect(getRelationshipLabel("Marié(e)")).toBe("Marié(e)")
     expect(getRelationshipLabel("Président", false)).toBe("Président")
   })
+
+  it("précise que « En couple » désigne une union libre", () => {
+    expect(getRelationshipLabel("En couple")).toBe("En couple (union libre)")
+    expect(getRelationshipLabel("En couple", false)).toBe("En couple (union libre)")
+  })
 })
 
 describe("getAvailableRelationships", () => {
   describe("relations possibles selon les entités", () => {
     it("propose les liens familiaux entre deux personnes", () => {
-      expect(getAvailableRelationships(personne("p1"), personne("p2"), [])).toEqual(["Marié(e)", "PACSé(e)", "Enfant"])
+      expect(getAvailableRelationships(personne("p1"), personne("p2"), [])).toEqual(["Marié(e)", "PACSé(e)", "En couple", "Enfant"])
     })
 
     it("propose un président et des associés pour une SASU", () => {

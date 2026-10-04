@@ -20,6 +20,7 @@ function getPersonToActivityRelationTypes(activite: Activite): Relationship["typ
  * @param isSource - Vrai si l'entité affichée est à l'origine de la relation.
  */
 export function getRelationshipLabel(type: Relationship["type"], isSource = true): string {
+  if (type === "En couple") return "En couple (union libre)"
   if (type !== "Enfant") return type
   return isSource ? "Enfant à charge" : "Enfant de"
 }
@@ -41,7 +42,7 @@ export function getAvailableRelationships(sourceEntity: Entity, targetEntity: En
 
   if (sourceEntity.type === "person" && targetEntity.type === "person") {
     // Deux personnes n'ont qu'un seul lien familial : on ne cumule pas mariage, PACS et filiation.
-    return existingTypes.size > 0 ? [] : ["Marié(e)", "PACSé(e)", "Enfant"]
+    return existingTypes.size > 0 ? [] : ["Marié(e)", "PACSé(e)", "En couple", "Enfant"]
   }
 
   // Aucune relation entre deux activités.

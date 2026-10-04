@@ -47,7 +47,8 @@ export const RelationshipSchema = z.object({
   id: z.string(),
   fromId: z.string(),
   toId: z.string(),
-  type: z.enum(["Marié(e)", "PACSé(e)", "Enfant", "Président", "Gérant", "Associé", "Titulaire"])
+  // « En couple » (union libre) est informatif : chaque concubin reste un foyer fiscal distinct.
+  type: z.enum(["Marié(e)", "PACSé(e)", "En couple", "Enfant", "Président", "Gérant", "Associé", "Titulaire"])
 })
 
 export const FinancialFlowSchema = z.object({

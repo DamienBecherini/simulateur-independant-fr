@@ -24,6 +24,12 @@ describe("buildFoyers", () => {
     expect(foyers([personne("alice"), personne("bob")], [relation("bob", "alice", type)])).toEqual([{ declarantIds: ["alice", "bob"], enfantIds: [], totalParts: 2, nombreDeclarants: 2, warnings: [] }])
   })
 
+  it("laisse deux foyers distincts pour un couple en union libre", () => {
+    const resultat = foyers([personne("alice"), personne("bob")], [relation("alice", "bob", "En couple")])
+
+    expect(resultat.map(f => f.declarantIds)).toEqual([["alice"], ["bob"]])
+  })
+
   it("ignore les relations de couple vers une entité qui n'est pas une personne", () => {
     expect(foyers([personne("alice"), societe("s1")], [relation("alice", "s1", "Marié(e)")])).toHaveLength(1)
   })

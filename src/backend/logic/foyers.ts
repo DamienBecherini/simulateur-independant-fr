@@ -3,6 +3,7 @@
 import type { Person, Relationship, SessionState } from "../../types.js"
 import type { ReglesFiscales } from "./regles.js"
 
+// Seuls le mariage et le PACS créent une imposition commune ; l'union libre (« En couple ») laisse deux foyers.
 const RELATIONS_DE_COUPLE: Relationship["type"][] = ["Marié(e)", "PACSé(e)"]
 
 /** Un foyer fiscal : un ou deux déclarants, et les enfants qui leur sont rattachés. */
