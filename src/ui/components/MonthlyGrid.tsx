@@ -181,7 +181,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         ) : (
           <div className="overflow-x-auto">
             {/* `w-max` : la grille doit être aussi large que son contenu, sinon la première colonne (sticky) cesse de rester visible une fois la largeur de la fenêtre dépassée. */}
-            <div className="grid w-max min-w-full gap-px" style={{ gridTemplateColumns: "auto repeat(13, auto)" }}>
+            <div className="grid w-max min-w-full gap-px" style={{ gridTemplateColumns: "minmax(8rem, 11rem) repeat(13, auto)" }}>
               {/* En-tête de la grille */}
               <div className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2 whitespace-nowrap">Entités / Flux</div>
               <div className="font-bold text-center p-2">Total Annuel</div>
@@ -198,7 +198,8 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                   <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center">
                     <div className="flex flex-col items-center gap-2 pt-1 pb-1 ml-3 mr-3">
                       <AvatarDisplay avatar={entity.avatar} size="md" />
-                      <span className="text-center">{entity.name}</span>
+                      {/* Un nom long passe à la ligne ; un mot plus large que la colonne est coupé. */}
+                      <span className="text-center [overflow-wrap:anywhere]">{entity.name}</span>
                     </div>
                   </div>
 
