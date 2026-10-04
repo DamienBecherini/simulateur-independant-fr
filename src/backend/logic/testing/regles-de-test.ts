@@ -68,6 +68,7 @@ export const reglesDeTest: ReglesFiscales = {
   },
   protectionSociale: { revenuParTrimestre: 2000, tauxNetSurBrutSalarie: 0.8, tauxRetraiteDeBase: 0.2, partRetraiteDeBaseMicro: { venteBic: 0.4, servicesBic: 0.4, servicesBnc: 0.5 } },
   EURL: { seuilDividendesPartDuCapital: 0.1 },
+  TVA: { services: { franchiseBase: 40000, seuilMajore: 45000 }, vente: { franchiseBase: 100000, seuilMajore: 110000 } },
   microEntreprise: {
     plafonds: { services: 80000, vente: 200000 },
     cotisations: { venteBic: 0.1, servicesBic: 0.2, servicesBnc: 0.25 },

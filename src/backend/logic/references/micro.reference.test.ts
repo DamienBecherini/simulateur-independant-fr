@@ -17,6 +17,7 @@ import type { MicroEntreprise } from "../../../types.js"
  *   sans pouvoir dépasser le chiffre d'affaires ;
  * - versement libératoire : vente 1 %, BIC 1,7 %, BNC 2,2 % du CA, si le RFR 2024 ne dépasse pas 29 315 € par part ;
  * - plafonds 2026 : 83 600 € de prestations de services, 203 100 € de chiffre d'affaires total ;
+ * - franchise en base de TVA : 37 500 € de prestations (seuil majoré 41 250 €), 85 000 € au total (93 500 €) ;
  * - barème 2026 pour une part : 0 % jusqu'à 11 600 €, 11 % jusqu'à 29 579 €, 30 % jusqu'à 84 577 €, 41 % jusqu'à
  *   181 917 €, 45 % au-delà ; impôt cumulé à 29 579 € : 17 979 x 11 % = 1 977,69 € ;
  * - décote d'un célibataire : 897 € - 45,25 % de l'impôt brut, si elle est positive.
@@ -27,6 +28,11 @@ import type { MicroEntreprise } from "../../../types.js"
 
 const alice = personne("alice")
 const titulaire = [relation("alice", "m1", "Titulaire")]
+
+/** Avertissements sur les plafonds du régime, sans ceux de la franchise de TVA. */
+const plafonds = (warnings: string[]) => warnings.filter(w => w.startsWith("Plafond"))
+/** 40 000 € de prestations : au-dessus du seuil de franchise de TVA (37 500 €), sous le seuil majoré (41 250 €). */
+const tvaAnneeSuivante = expect.stringMatching(/^Seuil de franchise en base de TVA dépassé \(prestations de services 40\s000 € pour un seuil de 37\s500 €\)/)
 
 function simulerMicro(flux: Flux[], options: Partial<Pick<MicroEntreprise, "beneficieACRE" | "opteVFL" | "rfrN2">> = {}) {
   const entreprise: MicroEntreprise = { ...micro("m1"), ...options }
@@ -41,7 +47,7 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
     // Net : 40 000 - 10 240 - 1 467,67 = 28 292,33 €.
     const report = simulerMicro([["m1", "ca_micro_services_bnc", 40000]])
 
-    expect(activite(report, "m1")).toMatchObject({ chiffreAffaires: 40000, cotisationsSociales: 10240, revenuVerse: 29760, warnings: [] })
+    expect(activite(report, "m1")).toMatchObject({ chiffreAffaires: 40000, cotisationsSociales: 10240, revenuVerse: 29760, warnings: [tvaAnneeSuivante] })
     expect(foyerDe(report, "alice")).toMatchObject({ totalParts: 1, revenuImposableGlobal: 26400, impotSurLeRevenu: 1468, prelevementsSociaux: 0, netApresImpots: 28292 })
     verifierIdentiteDuBilan(report)
   })
@@ -137,7 +143,7 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
     expect(activite(report, "m1")).toMatchObject({
       cotisationsSociales: 10240,
       versementLiberatoire: { plafondRfr: 29315, partsFiscales: 1, rfrN2: 25000, eligible: true, applique: true },
-      warnings: []
+      warnings: [tvaAnneeSuivante]
     })
     expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 0, impotSurLeRevenu: 880, netApresImpots: 28880 })
     verifierIdentiteDuBilan(report)
@@ -179,15 +185,27 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
     const resultat = activite(report, "m1")
 
     expect(resultat.cotisationsSociales).toBe(23040)
-    expect(resultat.warnings).toHaveLength(1)
-    expect(resultat.warnings[0]).toContain("prestations de services")
+    expect(plafonds(resultat.warnings)).toEqual([expect.stringContaining("prestations de services")])
     expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 59400, impotSurLeRevenu: 10924, netApresImpots: 56036 })
   })
 
   it("prestations BNC de 83 600 € : plafond atteint mais pas dépassé", () => {
     const report = simulerMicro([["m1", "ca_micro_services_bnc", 83600]])
 
-    expect(activite(report, "m1").warnings).toEqual([])
+    expect(plafonds(activite(report, "m1").warnings)).toEqual([])
+  })
+
+  it("franchise en base de TVA : 37 500 € de prestations restent en franchise, 41 300 € la font perdre aussitôt", () => {
+    const tva = (ca: number) => activite(simulerMicro([["m1", "ca_micro_services_bnc", ca]]), "m1").warnings.filter(w => w.includes("TVA"))
+
+    expect(tva(37500)).toEqual([])
+    expect(tva(37600)).toEqual([expect.stringMatching(/^Seuil de franchise .*37\s500 €.*1er janvier suivant/)])
+    expect(tva(41300)).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue .*41\s250 €.*dès le jour du dépassement/)])
+  })
+
+  it("franchise en base de TVA : 93 600 € de vente dépassent le seuil majoré de 93 500 €", () => {
+    const report = simulerMicro([["m1", "ca_micro_vente", 93600]])
+    expect(activite(report, "m1").warnings).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue \(chiffre d'affaires total 93\s600 € pour un seuil de 93\s500 €\)/)])
   })
 
   it("activité mixte : vente 180 000 € et BIC 30 000 €, plafond total dépassé", () => {
@@ -203,9 +221,10 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
     const resultat = activite(report, "m1")
 
     expect(resultat.cotisationsSociales).toBe(28500)
-    expect(resultat.warnings).toHaveLength(1)
-    expect(resultat.warnings[0]).toContain("chiffre d'affaires total")
-    expect(resultat.warnings[0]).not.toContain("prestations de services")
+    const [plafond, ...autres] = plafonds(resultat.warnings)
+    expect(autres).toEqual([])
+    expect(plafond).toContain("chiffre d'affaires total")
+    expect(plafond).not.toContain("prestations de services")
     expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 67200, impotSurLeRevenu: 13264, netApresImpots: 168236 })
   })
 

@@ -38,7 +38,7 @@
     }
   },
   "TVA": {
-    "description": "Seuils de franchise en base de TVA (non utilisés par le moteur pour l'instant).",
+    "description": "Seuils de franchise en base de TVA, signalés pour les micro-entreprises ; la TVA elle-même n'est pas calculée, les montants saisis sont hors taxe.",
     "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F21746",
     "services": { "franchiseBase": 37500, "seuilMajore": 41250 },
     "vente": { "franchiseBase": 85000, "seuilMajore": 93500 }

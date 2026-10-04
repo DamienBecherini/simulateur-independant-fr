@@ -11,6 +11,9 @@ function micro(entrees: Partial<EntreesMicro>) {
   return calculerMicro({ caVente: 0, caServicesBic: 0, caServicesBnc: 0, beneficieACRE: false, opteVFL: false, ...entrees }, reglesDeTest)
 }
 
+/** Avertissements sur les plafonds du régime, sans ceux de la franchise de TVA. */
+const plafonds = (warnings: string[]) => warnings.filter(w => w.startsWith("Plafond"))
+
 describe("calculerMicro", () => {
   it("calcule les cotisations et le revenu imposable par nature d'activité", () => {
     const resultat = micro({ caVente: 10000, caServicesBic: 20000, caServicesBnc: 30000 })
@@ -19,13 +22,13 @@ describe("calculerMicro", () => {
     expect(resultat.cotisationsSociales).toBeCloseTo(1000 + 4000 + 7500)
     expect(resultat.revenuImposable).toBeCloseTo(3000 + 10000 + 21000)
     expect(resultat.versementLiberatoire).toBe(0)
-    expect(resultat.warnings).toEqual([])
+    expect(plafonds(resultat.warnings)).toEqual([])
   })
 
   it("prévient qu'avec l'ACRE, les droits à la retraite sont réduits", () => {
     const resultat = micro({ caServicesBnc: 50000, beneficieACRE: true })
 
-    expect(resultat.warnings).toEqual([expect.stringMatching(/^ACRE : cotisations réduites de 50 %.*moins de trimestres de retraite/)])
+    expect(resultat.warnings).toContainEqual(expect.stringMatching(/^ACRE : cotisations réduites de 50 %.*moins de trimestres de retraite/))
   })
 
   it("réduit les cotisations avec l'ACRE, sans toucher au revenu imposable", () => {
@@ -69,25 +72,50 @@ describe("calculerMicro", () => {
     })
   })
 
+  // Règles de test : franchise de TVA à 40 000 € (seuil majoré 45 000 €) pour les services, 100 000 € (110 000 €) au total.
+  describe("franchise en base de TVA", () => {
+    const tva = (entrees: Partial<EntreesMicro>) => micro(entrees).warnings.filter(w => w.includes("TVA"))
+
+    it("ne dit rien sous les seuils de franchise", () => {
+      expect(tva({ caVente: 60000, caServicesBnc: 39000 })).toEqual([])
+    })
+
+    it("au-delà du seuil de base, la TVA est due à partir de l'année suivante", () => {
+      const [avertissement, ...autres] = tva({ caServicesBnc: 42000 })
+      expect(autres).toEqual([])
+      expect(avertissement).toMatch(/^Seuil de franchise en base de TVA dépassé \(prestations de services .* pour un seuil de 40\s000 €\) : la TVA sera due à partir du 1er janvier suivant\. .*hors taxe/)
+    })
+
+    it("au-delà du seuil majoré, la TVA est due immédiatement", () => {
+      expect(tva({ caServicesBic: 46000 })).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue \(prestations de services .* pour un seuil de 45\s000 €\) : la TVA est due dès le jour du dépassement/)])
+    })
+
+    it("une activité mixte est aussi comparée au seuil du chiffre d'affaires total", () => {
+      const [avertissement] = tva({ caVente: 80000, caServicesBic: 25000 })
+      expect(avertissement).toMatch(/^Seuil de franchise .*chiffre d'affaires total .* pour un seuil de 100\s000 €/)
+      expect(avertissement).not.toContain("prestations de services")
+    })
+  })
+
   describe("plafonds de chiffre d'affaires", () => {
     it("accepte une activité mixte sous les deux plafonds", () => {
-      expect(micro({ caVente: 100000, caServicesBic: 70000 }).warnings).toEqual([])
-      expect(micro({ caVente: 40000, caServicesBnc: 40000 }).warnings).toEqual([])
+      expect(plafonds(micro({ caVente: 100000, caServicesBic: 70000 }).warnings)).toEqual([])
+      expect(plafonds(micro({ caVente: 40000, caServicesBnc: 40000 }).warnings)).toEqual([])
     })
 
     it("signale des prestations de services au-dessus de leur plafond", () => {
-      const resultat = micro({ caServicesBic: 50000, caServicesBnc: 40000 })
+      const resultat = plafonds(micro({ caServicesBic: 50000, caServicesBnc: 40000 }).warnings)
 
-      expect(resultat.warnings).toHaveLength(1)
-      expect(resultat.warnings[0]).toContain("prestations de services")
-      expect(resultat.warnings[0]).not.toContain("chiffre d'affaires total")
+      expect(resultat).toHaveLength(1)
+      expect(resultat[0]).toContain("prestations de services")
+      expect(resultat[0]).not.toContain("chiffre d'affaires total")
     })
 
     it("signale un chiffre d'affaires total au-dessus du plafond de la vente", () => {
-      const resultat = micro({ caVente: 150000, caServicesBic: 60000 })
+      const resultat = plafonds(micro({ caVente: 150000, caServicesBic: 60000 }).warnings)
 
-      expect(resultat.warnings).toHaveLength(1)
-      expect(resultat.warnings[0]).toContain("chiffre d'affaires total")
+      expect(resultat).toHaveLength(1)
+      expect(resultat[0]).toContain("chiffre d'affaires total")
     })
 
     it("continue de calculer cotisations et revenu imposable au-dessus du plafond", () => {

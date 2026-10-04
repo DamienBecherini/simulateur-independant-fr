@@ -77,6 +77,8 @@ export interface ReglesFiscales {
     partRetraiteDeBaseMicro: TauxMicro
   }
   EURL: { seuilDividendesPartDuCapital: number }
+  /** Seuils de la franchise en base de TVA : au-delà du seuil de base l'année suivante, au-delà du seuil majoré immédiatement. */
+  TVA: Record<"services" | "vente", { franchiseBase: number; seuilMajore: number }>
   microEntreprise: {
     plafonds: { services: number; vente: number }
     cotisations: TauxMicro

@@ -123,7 +123,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - POC : les résultats illustrent l'ingénierie, ils n'ont pas été validés par un expert-comptable.
 - Les cotisations des travailleurs non salariés (gérant d'EURL, entrepreneur individuel au réel) sont calculées ligne à ligne selon le barème 2026 des artisans, commerçants et professions libérales non réglementées (assiette unique abattue de 26 %, assiettes minimales) ; ne sont pas modélisés les professions libérales réglementées, la contribution des artisans à la formation (0,29 %), le décalage entre cotisations provisionnelles et régularisation, ni la CSG déductible sur les dividendes soumis à cotisations. Celles du président de SASU restent approchées par un ratio moyen entre coût total et net.
 - La note de protection sociale du comparateur est indicative : elle combine le régime et les trimestres de retraite validés.
-- Non modélisés : réductions et crédits d'impôt, résidence alternée, report des déficits, TVA, répartition du capital entre associés (dividendes partagés à parts égales).
+- Non modélisés : réductions et crédits d'impôt, résidence alternée, report des déficits, TVA (seul le dépassement des seuils de franchise est signalé en micro-entreprise ; les montants sont hors taxe), répartition du capital entre associés (dividendes partagés à parts égales).
 
 ## 📄 Licence
 

@@ -28,7 +28,7 @@ export function sessionExemple(): SessionState {
   const monthlyData = Array.from({ length: 12 }, (_, mois) => ({
     month: mois,
     flows: [
-      flux(atelier.id, "ca_micro_services_bnc", 3200 + (mois % 3) * 400, "Prestations", mois),
+      flux(atelier.id, "ca_micro_services_bnc", 2600 + (mois % 3) * 300, "Prestations", mois),
       flux(atelier.id, "ca_micro_vente", mois % 4 === 0 ? 900 : 300, "Ventes", mois),
       flux(conseil.id, "ca_services", 6500, "Facturation", mois),
       flux(conseil.id, "director_remuneration", 2500, "Rémunération", mois)

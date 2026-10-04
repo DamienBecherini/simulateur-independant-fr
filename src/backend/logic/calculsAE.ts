@@ -43,6 +43,28 @@ function verifierPlafonds(entrees: EntreesMicro, plafonds: ReglesMicro["plafonds
 }
 
 /**
+ * Franchise en base de TVA : comme pour les plafonds, les prestations de services sont comparées au seuil des services
+ * et le chiffre d'affaires total à celui de la vente. Le seuil majoré fait perdre la franchise immédiatement,
+ * le seuil de base seulement l'année suivante. La TVA n'est pas calculée : les montants saisis sont hors taxe.
+ */
+function verifierFranchiseTVA(entrees: EntreesMicro, seuils: ReglesFiscales["TVA"]): string[] {
+  const caServices = entrees.caServicesBic + entrees.caServicesBnc
+  const caTotal = entrees.caVente + caServices
+  const depasse = (seuil: "franchiseBase" | "seuilMajore") => {
+    const depassements: string[] = []
+    if (caServices > seuils.services[seuil]) depassements.push(`prestations de services ${euros(caServices)} pour un seuil de ${euros(seuils.services[seuil])}`)
+    if (caTotal > seuils.vente[seuil]) depassements.push(`chiffre d'affaires total ${euros(caTotal)} pour un seuil de ${euros(seuils.vente[seuil])}`)
+    return depassements.join(" ; ")
+  }
+  const nonCalculee = "Le simulateur ne calcule pas la TVA : il considère les montants saisis comme hors taxe."
+  const majore = depasse("seuilMajore")
+  if (majore) return [`Franchise en base de TVA perdue (${majore}) : la TVA est due dès le jour du dépassement. ${nonCalculee}`]
+  const base = depasse("franchiseBase")
+  if (base) return [`Seuil de franchise en base de TVA dépassé (${base}) : la TVA sera due à partir du 1er janvier suivant. ${nonCalculee}`]
+  return []
+}
+
+/**
  * Abattement d'une fraction du chiffre d'affaires : son taux, sans descendre sous le minimum,
  * ni dépasser le chiffre d'affaires de la fraction.
  */
@@ -75,7 +97,7 @@ export function plafondRfrVersementLiberatoire(partsFiscales: number, regles: Re
  */
 export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales = reglesEnVigueur): ResultatMicro {
   const micro = regles.microEntreprise
-  const warnings = verifierPlafonds(entrees, micro.plafonds)
+  const warnings = [...verifierPlafonds(entrees, micro.plafonds), ...verifierFranchiseTVA(entrees, regles.TVA)]
 
   const cotisationsPleinTaux = appliquerTaux(entrees, micro.cotisations)
   if (entrees.beneficieACRE) {
