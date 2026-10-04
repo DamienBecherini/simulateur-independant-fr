@@ -61,12 +61,9 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 - `src/ui/hooks/useSessionManager.ts` : état de session, historique, sauvegarde asynchrone.
 - `src/lib/business-logic.ts` : nettoyage du graphe lors de la rupture d'une relation.
 
-## 🤖 Workflow « AI-first » (context engineering)
+## 🤖 Développement assisté par IA
 
-Le projet est développé avec des assistants IA, sous relecture humaine. Pour leur donner une vue d'ensemble sans polluer leur fenêtre de contexte :
-
-- **`npm run concat`** exécute `concat_code.cjs`, qui applique les règles d'inclusion / exclusion de `.concatrc.json`.
-- Le résultat est un dump propre et optimisé en tokens de toute la base de code, prêt pour une revue d'architecture globale par un LLM à grande fenêtre de contexte.
+Le projet est développé avec des agents IA qui travaillent directement dans le dépôt, sous relecture humaine. Leurs modifications passent par les mêmes garde-fous que le reste du code : tests, cas de référence, lint, vérification des types et intégration continue.
 
 ## 🚀 Démarrage rapide
 
