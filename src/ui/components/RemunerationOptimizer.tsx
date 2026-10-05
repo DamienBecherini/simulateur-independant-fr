@@ -19,33 +19,6 @@ const STATUTS: StatutSociete[] = ["SASU", "EURL"]
 const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
 const trimestres = (n: number) => `${n} trimestre${n > 1 ? "s" : ""} de retraite`
 
-/** Recalcule la courbe peu après chaque changement ; la rémunération choisie dans le comparateur n'y change rien. */
-function useOptimisation(session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) {
-  const [resultat, setResultat] = useState<OptimisationRemuneration | null>(null)
-  const [erreur, setErreur] = useState<string | null>(null)
-  const { activityId, partBncPrestations, fraisFonctionnement } = options
-
-  useEffect(() => {
-    let annule = false
-    const minuteur = setTimeout(async () => {
-      try {
-        const optimisation = await window.api.optimiserRemuneration(session, { activityId, partBncPrestations, fraisFonctionnement, remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 } }, statut, annee)
-        if (annule) return
-        setResultat(optimisation)
-        setErreur(null)
-      } catch (e) {
-        if (!annule) setErreur(e instanceof Error ? e.message : "L'optimisation a échoué.")
-      }
-    }, 300)
-    return () => {
-      annule = true
-      clearTimeout(minuteur)
-    }
-  }, [session, activityId, partBncPrestations, fraisFonctionnement, statut, annee])
-
-  return { resultat, erreur }
-}
-
 /** Largeur du graphique imprimé : une feuille A4 (210 mm) moins ses marges et le cadre de la section, en pixels CSS. */
 const LARGEUR_IMPRIMEE = 660
 
@@ -78,7 +51,7 @@ function useLargeur(defaut: number) {
   return { ref, largeur: impression ? LARGEUR_IMPRIMEE : largeur }
 }
 
-function ChoixDuStatut({ statut, onChange }: { statut: StatutSociete; onChange: (statut: StatutSociete) => void }) {
+export function ChoixDuStatut({ statut, onChange }: { statut: StatutSociete; onChange: (statut: StatutSociete) => void }) {
   return (
     <div className="inline-flex rounded-md border border-slate-300 p-0.5 dark:border-slate-600" role="group" aria-label="Statut de la société">
       {STATUTS.map(s => (
@@ -296,13 +269,15 @@ interface RemunerationOptimizerProps {
   annee: number
   options: ComparaisonOptions
   activityName: string
-  statutInitial: StatutSociete
+  /** Statut étudié, partagé avec la barre de partage du bénéfice du comparateur, et son optimisation (useOptimisation). */
+  statut: StatutSociete
+  onStatut: (statut: StatutSociete) => void
+  resultat: OptimisationRemuneration | null
+  erreur: string | null
   onAppliquer: (remunerationNette: number) => void
 }
 
-export function RemunerationOptimizer({ session, annee, options, activityName, statutInitial, onAppliquer }: RemunerationOptimizerProps) {
-  const [statut, setStatut] = useState<StatutSociete>(statutInitial)
-  const { resultat, erreur } = useOptimisation(session, options, statut, annee)
+export function RemunerationOptimizer({ session, annee, options, activityName, statut, onStatut, resultat, erreur, onAppliquer }: RemunerationOptimizerProps) {
   const aJour = resultat?.statut === statut
 
   return (
@@ -314,7 +289,7 @@ export function RemunerationOptimizer({ session, annee, options, activityName, s
           </h3>
           <p className="text-sm text-slate-600 dark:text-slate-300">« {activityName} » en société, en {annee} : chaque rémunération nette, le reste du bénéfice étant versé en dividendes. Le trait vertical marque la rémunération du comparateur.</p>
         </div>
-        <ChoixDuStatut statut={statut} onChange={setStatut} />
+        <ChoixDuStatut statut={statut} onChange={onStatut} />
       </div>
 
       {erreur ? <p className="text-sm text-red-700 dark:text-red-300">{erreur}</p> : null}
