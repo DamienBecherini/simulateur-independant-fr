@@ -506,6 +506,8 @@ function detailFraisProfessionnels(ctx: Contexte, personne: Person): Pick<Person
       fraisReels: Math.round(frais.fraisReels),
       fraisDeTrajet: Math.round(frais.fraisDeTrajet),
       distanceRetenue: Math.round(frais.distanceRetenue),
+      voitures: frais.voitures.map(voiture => ({ ...voiture, distance: Math.round(voiture.distance), montant: Math.round(voiture.montant) })),
+      autresFrais: Math.round(frais.autresFrais),
       deduction: Math.round(frais.deduction)
     }
   }
@@ -536,7 +538,7 @@ function fraisProfessionnels(ctx: Contexte, personId: string): FraisProfessionne
   const salaires = revenusSalariaux(ctx, personId)
   const deductionForfaitaire = abattementSalaires(salaires, ctx.regles.IR.abattementSalaires)
   const personne = ctx.session.entities.find((e): e is Person => e.id === personId && e.type === "person")
-  const reels = personne?.fraisReels ? fraisReelsDeLaPersonne(personne.fraisReels, ctx.regles.baremeKilometrique) : { distanceRetenue: 0, fraisDeTrajet: 0, total: 0 }
+  const reels = personne?.fraisReels ? fraisReelsDeLaPersonne(personne.fraisReels, ctx.regles.baremeKilometrique) : { distanceRetenue: 0, fraisDeTrajet: 0, autresFrais: 0, voitures: [], total: 0 }
   const retenue = salaires > 0 && reels.total > deductionForfaitaire ? "reels" : "forfait"
   return {
     revenusSalariaux: salaires,
@@ -544,6 +546,9 @@ function fraisProfessionnels(ctx: Contexte, personId: string): FraisProfessionne
     fraisReels: reels.total,
     fraisDeTrajet: reels.fraisDeTrajet,
     distanceRetenue: reels.distanceRetenue,
+    nombreDeTrajets: personne?.fraisReels?.trajets.length ?? 0,
+    voitures: reels.voitures,
+    autresFrais: reels.autresFrais,
     retenue,
     deduction: retenue === "reels" ? Math.min(salaires, reels.total) : deductionForfaitaire
   }

@@ -60,13 +60,29 @@ export function distancesParVoiture(trajets: (TrajetDomicileTravail & Vehicule)[
   return [...parVoiture.values()]
 }
 
+/** Une voiture des trajets domicile-travail : la distance retenue avec elle dans l'année et son montant au barème. */
+export interface VoitureDesTrajets extends Vehicule {
+  distance: number
+  montant: number
+}
+
+/** Frais réels calculés d'une personne : trajets au barème, voiture par voiture, et autres frais. */
+export interface FraisReelsCalcules {
+  distanceRetenue: number
+  fraisDeTrajet: number
+  autresFrais: number
+  voitures: VoitureDesTrajets[]
+  total: number
+}
+
 /**
  * Frais réels d'une personne sur ses revenus imposés comme des salaires : ses trajets domicile-travail au barème
  * kilométrique de l'année, une fois par voiture, et ses autres frais réels saisis.
  */
-export function fraisReelsDeLaPersonne(frais: FraisReels, bareme: BaremeKilometrique): { distanceRetenue: number; fraisDeTrajet: number; total: number } {
-  const voitures = distancesParVoiture(frais.trajets, bareme.domicileTravail)
+export function fraisReelsDeLaPersonne(frais: FraisReels, bareme: BaremeKilometrique): FraisReelsCalcules {
+  const voitures = distancesParVoiture(frais.trajets, bareme.domicileTravail).map(({ vehicule, distance }) => ({ ...vehicule, distance, montant: montantBaremeKilometrique(distance, vehicule, bareme) }))
   const distanceRetenue = voitures.reduce((somme, voiture) => somme + voiture.distance, 0)
-  const fraisDeTrajet = voitures.reduce((somme, voiture) => somme + montantBaremeKilometrique(voiture.distance, voiture.vehicule, bareme), 0)
-  return { distanceRetenue, fraisDeTrajet, total: fraisDeTrajet + Math.max(0, frais.autresFrais) }
+  const fraisDeTrajet = voitures.reduce((somme, voiture) => somme + voiture.montant, 0)
+  const autresFrais = Math.max(0, frais.autresFrais)
+  return { distanceRetenue, fraisDeTrajet, autresFrais, voitures, total: fraisDeTrajet + autresFrais }
 }

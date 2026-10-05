@@ -244,7 +244,7 @@ describe("ResultsPanel", () => {
   it("indique la déduction retenue pour une personne qui a saisi des frais réels", () => {
     const report = makeReport()
     const bob = report.persons[1]
-    const frais = { revenusSalariaux: 28000, deductionForfaitaire: 2800, fraisReels: 4508, fraisDeTrajet: 4508, distanceRetenue: 8720, retenue: "reels" as const, deduction: 4508 }
+    const frais = { revenusSalariaux: 28000, deductionForfaitaire: 2800, fraisReels: 4508, fraisDeTrajet: 4508, distanceRetenue: 8720, nombreDeTrajets: 1, voitures: [], autresFrais: 0, retenue: "reels" as const, deduction: 4508 }
     report.persons = [report.persons[0], { ...bob, fraisProfessionnels: frais }]
     const { rerender } = render(<ResultsPanel report={report} error={null} />)
 

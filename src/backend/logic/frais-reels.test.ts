@@ -44,7 +44,7 @@ describe("frais réels sur les salaires", () => {
   it("retient les frais réels quand ils dépassent la déduction de 10 %", () => {
     const report = simuler([avecFrais("alice", trajets20km)], [], [["alice", "salary", 30000]])
 
-    expect(personDe(report, "alice").fraisProfessionnels).toEqual({ revenusSalariaux: 30000, deductionForfaitaire: 3000, fraisReels: 4200, fraisDeTrajet: 4200, distanceRetenue: 8000, retenue: "reels", deduction: 4200 })
+    expect(personDe(report, "alice").fraisProfessionnels).toEqual({ revenusSalariaux: 30000, deductionForfaitaire: 3000, fraisReels: 4200, fraisDeTrajet: 4200, distanceRetenue: 8000, nombreDeTrajets: 1, voitures: [{ puissanceFiscale: "5", electrique: false, distance: 8000, montant: 4200 }], autresFrais: 0, retenue: "reels", deduction: 4200 })
     // Imposable : 30 000 - 4 200 = 25 800 € ; impôt 1 580 €, décote 800 - 790 = 10 €, soit 1 570 €.
     expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 25800, impotSurLeRevenu: 1570 })
   })
@@ -165,13 +165,20 @@ describe("frais réels sur les salaires", () => {
       // 6 800 km en 5 CV : 6 800 x 0,4 + 1 000 = 3 720 €, et non 4 800 x 0,6 + 2 000 x 0,6 = 4 080 €.
       const report = simuler([avecTrajets("alice", [a, b])], [], salaires)
 
-      expect(personDe(report, "alice").fraisProfessionnels).toEqual({ revenusSalariaux: 30000, deductionForfaitaire: 3000, fraisReels: 3720, fraisDeTrajet: 3720, distanceRetenue: 6800, retenue: "reels", deduction: 3720 })
+      expect(personDe(report, "alice").fraisProfessionnels).toEqual({ revenusSalariaux: 30000, deductionForfaitaire: 3000, fraisReels: 3720, fraisDeTrajet: 3720, distanceRetenue: 6800, nombreDeTrajets: 2, voitures: [{ puissanceFiscale: "5", electrique: false, distance: 6800, montant: 3720 }], autresFrais: 0, retenue: "reels", deduction: 3720 })
     })
 
     it("applique le barème à chaque voiture, reconnue à sa puissance et à sa motorisation", () => {
       // 4 800 km en 5 CV : 2 880 € ; 2 000 km en 3 CV : 1 000 €. Total 3 880 €.
       const deuxPuissances = simuler([avecTrajets("alice", [a, { ...b, puissanceFiscale: "3" }])], [], salaires)
-      expect(personDe(deuxPuissances, "alice").fraisProfessionnels).toMatchObject({ fraisDeTrajet: 3880, distanceRetenue: 6800 })
+      expect(personDe(deuxPuissances, "alice").fraisProfessionnels).toMatchObject({
+        fraisDeTrajet: 3880,
+        distanceRetenue: 6800,
+        voitures: [
+          { puissanceFiscale: "5", electrique: false, distance: 4800, montant: 2880 },
+          { puissanceFiscale: "3", electrique: false, distance: 2000, montant: 1000 }
+        ]
+      })
 
       // 4 800 km en 5 CV : 2 880 € ; 2 000 km en 5 CV électrique : 1 200 x 1,2 = 1 440 €. Total 4 320 €.
       const electrique = simuler([avecTrajets("alice", [a, { ...b, electrique: true }])], [], salaires)
@@ -204,7 +211,7 @@ describe("frais réels sur les salaires", () => {
     it("accepte une personne sans trajet, avec seulement d'autres frais", () => {
       const report = simuler([avecTrajets("alice", [], 3500)], [], salaires)
 
-      expect(personDe(report, "alice").fraisProfessionnels).toMatchObject({ fraisDeTrajet: 0, distanceRetenue: 0, fraisReels: 3500, retenue: "reels" })
+      expect(personDe(report, "alice").fraisProfessionnels).toMatchObject({ fraisDeTrajet: 0, distanceRetenue: 0, nombreDeTrajets: 0, voitures: [], autresFrais: 3500, fraisReels: 3500, retenue: "reels" })
     })
   })
 
