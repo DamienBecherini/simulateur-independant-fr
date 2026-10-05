@@ -1,7 +1,7 @@
 // src/backend/logic/nettoyage-comparateur.ts
 
 /*
- * Nettoyage des réglages du comparateur enregistrés dans une session (voir l'ADR 010).
+ * Nettoyage des réglages du comparateur enregistrés dans une session (voir l'ADR 009).
  *
  * Avant la validation Zod, chaque réglage invalide (hors limites, mal formé) est écarté un par un et compté : un
  * réglage abîmé ne fait perdre ni les autres, ni la session. Après la validation, les réglages d'une activité ou

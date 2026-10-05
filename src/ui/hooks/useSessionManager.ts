@@ -18,7 +18,7 @@ function getInitialSessionState(): SessionState {
 
 /**
  * Une session de l'historique, avec les réglages du comparateur de la session affichée : ils restent hors de
- * l'historique d'annulation (voir l'ADR 010), annuler une modification de la simulation ne les change pas.
+ * l'historique d'annulation (voir l'ADR 009), annuler une modification de la simulation ne les change pas.
  */
 function avecLeComparateurDe(session: SessionState, source: SessionState): SessionState {
   const reste = { ...session }
@@ -120,7 +120,7 @@ export function useSessionManager() {
     })
   }, [])
 
-  // Réglages du comparateur : enregistrés avec la session, mais sans étape d'annulation (voir l'ADR 010). Un champ
+  // Réglages du comparateur : enregistrés avec la session, mais sans étape d'annulation (voir l'ADR 009). Un champ
   // de frais modifié chiffre par chiffre ferait sinon autant d'étapes, et ces choix ne changent pas la simulation.
   const setComparateur = useCallback((modifier: (comparateur: Comparateur | undefined) => Comparateur) => {
     setHistory(currentHistory => ({ ...currentHistory, present: { ...currentHistory.present, comparateur: modifier(currentHistory.present.comparateur) } }))

@@ -431,7 +431,7 @@ function OptimiseurDeLActivite({ session, annee, selected, options, arbitrage, r
 }
 
 /**
- * Activité comparée et réglages du comparateur pour l'année affichée, enregistrés dans la session (voir l'ADR 010).
+ * Activité comparée et réglages du comparateur pour l'année affichée, enregistrés dans la session (voir l'ADR 009).
  * Seuls les réglages que l'utilisateur change y sont retenus : les autres suivent la grille de l'année affichée.
  * La rémunération saisie vaut pour son année ; le mode de partage, la part BNC, les frais et le statut étudié dans
  * « Rémunération ou dividendes ? » valent pour toutes.

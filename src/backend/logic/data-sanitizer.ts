@@ -150,7 +150,7 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | SessionRefusee
     monthlyData: annee.monthlyData.map(month => ({ ...month, flows: month.flows.filter(flow => entityIds.has(flow.entityId)) }))
   }))
 
-  // Les réglages du comparateur d'une activité ou d'une année absentes sont retirés sans être signalés (voir l'ADR 010).
+  // Les réglages du comparateur d'une activité ou d'une année absentes sont retirés sans être signalés (voir l'ADR 009).
   const safeComparateur = sansReglagesOrphelins(structurallySafeState.comparateur, structurallySafeState.entities, safeAnnees.map(a => a.annee))
   const safeState: SessionState = { ...structurallySafeState, relationships: safeRelationships, annees: safeAnnees }
   if (safeComparateur) safeState.comparateur = safeComparateur

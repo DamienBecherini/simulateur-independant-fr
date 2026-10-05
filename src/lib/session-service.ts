@@ -25,7 +25,7 @@ export function updateSlotWithSession(slotToUpdate: SaveSlot, session: SessionSt
 }
 
 /**
- * Ce qu'une sauvegarde garde d'une session : tout son contenu, réglages du comparateur compris (voir l'ADR 010).
+ * Ce qu'une sauvegarde garde d'une session : tout son contenu, réglages du comparateur compris (voir l'ADR 009).
  * Une sauvegarde chargée redevient une session sans son identifiant ni sa date.
  */
 export function contenuDeLaSession({ appVersion, name, entities, relationships, annees, comparateur }: SessionState): SessionState {
