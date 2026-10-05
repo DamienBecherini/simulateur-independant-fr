@@ -1,7 +1,7 @@
 // src/lib/comparateur-options.test.ts
 
 import { describe, expect, it } from "vitest"
-import { activiteComparee, appliquerRemuneration, avecLaRetraiteParDefaut, avecLeMode, avecActiviteComparee, avecRemuneration, avecReglagesDeLActivite, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, optionsDuComparateur, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
+import { activiteComparee, appliquerRemuneration, avecLaRetraiteParDefaut, avecLeMode, avecActiviteComparee, avecRemuneration, avecRemunerationSaisie, avecReglagesDeLActivite, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, descriptionDuMode, libellesCourtsRepartition, libellesRepartition, optionsDuComparateur, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
 import type { ComparaisonOptions, FinancialFlow, DonneesDeLAnnee, OptimisationRemuneration, PointRemuneration } from "@/types"
 
@@ -165,5 +165,57 @@ describe("réglages enregistrés du comparateur", () => {
     expect(avecReglagesDeLActivite(comparateur, "micro", {})).toEqual({ activiteComparee: "micro", reglagesParActivite: { sasu: { partBncPrestations: 0.5 }, micro: {} } })
     expect(avecActiviteComparee(comparateur, "micro")).toEqual({ activiteComparee: "micro", reglagesParActivite: { sasu: { partBncPrestations: 0.5 } } })
     expect(avecActiviteComparee(undefined, "micro")).toEqual({ activiteComparee: "micro", reglagesParActivite: {} })
+  })
+})
+
+describe("modes de partage du bénéfice", () => {
+  it("donne aux boutons des libellés courts, dans l'ordre des libellés explicites des exports", () => {
+    expect(Object.keys(libellesCourtsRepartition)).toEqual(Object.keys(libellesRepartition))
+    expect(Object.values(libellesCourtsRepartition)).toEqual(["Meilleur net", "Ma rémunération", "Tout en rémunération", "Sur mesure", "Selon la grille"])
+    expect(libellesRepartition.dividendes).toBe("Rémunération saisie, le reste en dividendes")
+  })
+
+  it("décrit chaque mode en une phrase, les 4 trimestres au meilleur net quand ils sont exigés", () => {
+    expect(descriptionDuMode("meilleurNet")).toBe("Chaque société verse la rémunération qui donne le meilleur net, le reste en dividendes.")
+    expect(descriptionDuMode("meilleurNet", true)).toBe("Chaque société verse la rémunération qui donne le meilleur net parmi celles qui valident 4 trimestres de retraite, le reste en dividendes.")
+    expect(descriptionDuMode("dividendes")).toBe("La rémunération que vous saisissez, tout le reste du bénéfice en dividendes.")
+    expect(descriptionDuMode("remuneration")).toBe("La rémunération la plus haute que la société peut verser, sans dividendes.")
+    expect(descriptionDuMode("personnalisee", true)).toBe("Vous réglez la rémunération et la part du bénéfice distribuée ; le reste reste dans la société.")
+    expect(descriptionDuMode("grille")).toBe("Les rémunérations et dividendes saisis dans la grille.")
+  })
+
+  it("ne fait saisir la rémunération qu'avec « Ma rémunération » et « Sur mesure »", () => {
+    expect((Object.keys(libellesRepartition) as (keyof typeof libellesRepartition)[]).filter(avecRemunerationSaisie)).toEqual(["dividendes", "personnalisee"])
+  })
+})
+
+describe("plafondDeRemuneration", () => {
+  const optimisation = (statut: "SASU" | "EURL", remunerationMaximale: number): OptimisationRemuneration => ({ statut, remunerationMaximale, points: [], meilleur: null, meilleurAvecRetraite: null, warnings: [] })
+
+  it("reprend la rémunération maximale sans déficit du statut étudié", () => {
+    expect(plafondDeRemuneration(optimisation("SASU", 41300), "SASU")).toBe(41300)
+    expect(plafondDeRemuneration(optimisation("EURL", 52800), "EURL")).toBe(52800)
+  })
+
+  it("attend l'arbitrage du statut étudié, et vaut 0 sans bénéfice", () => {
+    expect(plafondDeRemuneration(optimisation("EURL", 52800), "SASU")).toBeNull()
+    expect(plafondDeRemuneration(null, "SASU")).toBeNull()
+    expect(plafondDeRemuneration(optimisation("SASU", 0), "SASU")).toBe(0)
+  })
+})
+
+describe("partBncUtile", () => {
+  const sasu = { ...createCompany("SASU"), id: "sasu" }
+
+  it("ne sert qu'à une société ou une EI qui facture des prestations", () => {
+    expect(partBncUtile(session([{ entityId: "sasu", type: "ca_services", amount: 5000 }]), sasu)).toBe(true)
+    expect(partBncUtile(session([{ entityId: "sasu", type: "ca_vente", amount: 5000 }]), sasu)).toBe(false)
+    expect(partBncUtile(session([{ entityId: "autre", type: "ca_services", amount: 5000 }]), sasu)).toBe(false)
+    expect(partBncUtile(session([{ entityId: "sasu", type: "ca_services", amount: 0 }]), sasu)).toBe(false)
+  })
+
+  it("ne sert pas à une micro-entreprise, dont les prestations sont déjà en BNC ou en BIC", () => {
+    const micro = { ...createMicroEntreprise(), id: "micro" }
+    expect(partBncUtile(session([{ entityId: "micro", type: "ca_micro_services_bnc", amount: 5000 }]), micro)).toBe(false)
   })
 })

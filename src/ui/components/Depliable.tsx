@@ -12,21 +12,23 @@ interface DepliableProps {
    * useSectionOuverte). Sans lui, la section s'ouvre fermée à chaque fois.
    */
   id?: string
+  /** État de la section tant que l'utilisateur ne l'a ni ouverte ni fermée (avec `id` seulement). */
+  ouverteParDefaut?: boolean
   className?: string
   children: ReactNode
 }
 
 /** Section repliable : un chevron et une indication « afficher / masquer » montrent qu'on peut cliquer. */
-export function Depliable({ id, ...props }: DepliableProps) {
-  return id ? <DepliableRetenu id={id} {...props} /> : <Section {...props} />
+export function Depliable({ id, ouverteParDefaut, ...props }: DepliableProps) {
+  return id ? <DepliableRetenu id={id} ouverteParDefaut={ouverteParDefaut} {...props} /> : <Section {...props} />
 }
 
-function DepliableRetenu({ id, ...props }: DepliableProps & { id: string }) {
-  const [ouverte, definir] = useSectionOuverte(id)
+function DepliableRetenu({ id, ouverteParDefaut, ...props }: DepliableProps & { id: string }) {
+  const [ouverte, definir] = useSectionOuverte(id, ouverteParDefaut)
   return <Section {...props} {...proprietesDeDetails(ouverte, definir)} />
 }
 
-interface SectionProps extends Omit<DepliableProps, "id"> {
+interface SectionProps extends Omit<DepliableProps, "id" | "ouverteParDefaut"> {
   open?: boolean
   onToggle?: (evenement: SyntheticEvent<HTMLDetailsElement>) => void
 }

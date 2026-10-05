@@ -173,7 +173,7 @@ describe("partage du bénéfice dans le comparateur", () => {
   it("passe d'un mode à l'autre, et ne demande pas de rémunération quand tout part en rémunération", async () => {
     render(<ComparateurDeTest annee={2026} session={session} />)
     const groupe = await screen.findByRole("group", { name: "Bénéfice de la société (SASU, EURL)" })
-    expect(within(groupe).getByRole("radio", { name: "Au meilleur net" })).toBeChecked()
+    expect(within(groupe).getByRole("radio", { name: "Meilleur net" })).toBeChecked()
     expect(screen.queryByLabelText("Rémunération nette annuelle (SASU, EURL)")).not.toBeInTheDocument()
     expect(screen.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).toBeChecked()
 
@@ -181,7 +181,7 @@ describe("partage du bénéfice dans le comparateur", () => {
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition: { mode: "remuneration", partDistribuee: 1 } }), 2026))
     expect(screen.queryByLabelText("Rémunération nette annuelle (SASU, EURL)")).not.toBeInTheDocument()
 
-    await userEvent.click(within(groupe).getByRole("radio", { name: "Répartition personnalisée" }))
+    await userEvent.click(within(groupe).getByRole("radio", { name: "Sur mesure" }))
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition: { mode: "personnalisee", partDistribuee: 1 } }), 2026))
     expect(screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")).toBeInTheDocument()
   })
@@ -190,7 +190,7 @@ describe("partage du bénéfice dans le comparateur", () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue({ scenarios: [scenario(partage())], meilleur: "SASU", couples: [], warnings: [] })
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation({ points: [point(4000, 0), point(5700, 4)] }))
     render(<ComparateurDeTest annee={2026} session={session} />)
-    await userEvent.click(await screen.findByRole("radio", { name: "Répartition personnalisée" }))
+    await userEvent.click(await screen.findByRole("radio", { name: "Sur mesure" }))
 
     const remuneration = await screen.findByRole("slider", { name: "Rémunération nette du dirigeant" })
     remuneration.focus()

@@ -4,7 +4,7 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { Affichage, ComparaisonResult, ScenarioStatut, SessionState, StatutCompare } from "@/types"
-import { emptySession, makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
+import { emptySession, makeCompany, makeFlow, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { ComparateurDeTest } from "@/ui/testing/comparateur"
 import { AffichageContext } from "../hooks/useAffichage"
 
@@ -24,6 +24,12 @@ function comparison(overrides: Partial<ComparaisonResult> = {}): ComparaisonResu
 
 // toHaveTextContent ramène les espaces insécables à des espaces simples : on fait de même.
 const money = (n: number) => `${n.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €`.replace(/\s/g, " ")
+
+/** La session, où l'activité facture des prestations : la part BNC sert alors à la convertir en micro. */
+function avecPrestations(session: SessionState, entityId = "company-sasu"): SessionState {
+  const prestations = makeFlow({ id: "prestations", entityId, type: "ca_services", amount: 5000 })
+  return { ...session, annees: session.annees.map(annee => ({ ...annee, monthlyData: annee.monthlyData.map(mois => (mois.month === 0 ? { ...mois, flows: [...mois.flows, prestations] } : mois)) })) }
+}
 
 function withActivity(): SessionState {
   return { ...emptySession(), entities: [makePerson(), makeMicro({ name: "Mon atelier" })] }
@@ -61,7 +67,7 @@ describe("ComparatorPanel sur plusieurs années", () => {
   it("reprend la rémunération de la nouvelle année quand on en change, mais garde les frais saisis", async () => {
     const session = deuxAnnees()
     const { rerender } = render(<ComparateurDeTest annee={2025} session={session} />)
-    await userEvent.click(screen.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }))
+    await userEvent.click(screen.getByRole("radio", { name: "Ma rémunération" }))
     const remuneration = screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")
     await userEvent.clear(remuneration)
     await userEvent.type(remuneration, "25000")
@@ -82,7 +88,7 @@ describe("ComparatorPanel sur plusieurs années", () => {
   it("n'enregistre que les réglages changés : la rémunération saisie pour son année, le reste pour toutes", async () => {
     const enregistre = vi.fn()
     render(<ComparateurDeTest annee={2025} session={deuxAnnees()} onComparateur={enregistre} />)
-    await userEvent.click(screen.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }))
+    await userEvent.click(screen.getByRole("radio", { name: "Ma rémunération" }))
     const remuneration = screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")
     await userEvent.clear(remuneration)
     await userEvent.type(remuneration, "25000")
@@ -93,7 +99,7 @@ describe("ComparatorPanel sur plusieurs années", () => {
 
 describe("ComparatorPanel et ses réglages enregistrés", () => {
   function deuxActivites(): SessionState {
-    return { ...emptySession(), entities: [makePerson(), makeCompany(), makeMicro({ name: "Mon atelier" })] }
+    return avecPrestations({ ...emptySession(), entities: [makePerson(), makeCompany(), makeMicro({ name: "Mon atelier" })] })
   }
 
   it("reprend les réglages enregistrés dans la session : activité comparée, partage, frais et statut étudié", async () => {
@@ -102,7 +108,7 @@ describe("ComparatorPanel et ses réglages enregistrés", () => {
     render(<ComparateurDeTest annee={2026} session={session} />)
 
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, { activityId: "company-sasu", remunerationNette: 18000, repartition: { mode: "personnalisee", partDistribuee: 0.4 }, partBncPrestations: 0.3, fraisFonctionnement: frais }, 2026))
-    expect(screen.getByRole("radio", { name: "Répartition personnalisée" })).toBeChecked()
+    expect(screen.getByRole("radio", { name: "Sur mesure" })).toBeChecked()
     expect(screen.getByLabelText(/prestations en BNC : 30 %/)).toBeInTheDocument()
     expect(screen.getAllByRole("button", { name: "EURL", pressed: true }).length).toBeGreaterThan(0)
   })
@@ -182,9 +188,9 @@ describe("ComparatorPanel", () => {
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: false } }), 2026))
     // Décochée, elle le reste en passant par un autre mode.
     await userEvent.click(screen.getByRole("radio", { name: "Tout en rémunération" }))
-    await userEvent.click(screen.getByRole("radio", { name: "Au meilleur net" }))
+    await userEvent.click(screen.getByRole("radio", { name: "Meilleur net" }))
     expect(screen.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).not.toBeChecked()
-    await userEvent.click(screen.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }))
+    await userEvent.click(screen.getByRole("radio", { name: "Ma rémunération" }))
     expect(screen.queryByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).not.toBeInTheDocument()
     expect(screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")).toBeInTheDocument()
   })
@@ -237,9 +243,17 @@ describe("ComparatorPanel", () => {
     expect(screen.queryByLabelText("Activité comparée")).not.toBeInTheDocument()
   })
 
-  it("propose la part BNC pour une société", async () => {
+  it("propose la part BNC pour une société qui facture des prestations, dans la section des frais", async () => {
+    render(<ComparateurDeTest annee={2026} session={avecPrestations({ ...emptySession(), entities: [makePerson(), makeCompany()] })} />)
+    const bnc = await screen.findByLabelText(/prestations en BNC : 100 %/)
+    expect(bnc.closest("details")).toHaveTextContent(/^Frais de fonctionnement et part BNC/)
+  })
+
+  it("sans prestations à répartir, la section ne parle que des frais de fonctionnement", async () => {
     render(<ComparateurDeTest annee={2026} session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} />)
-    expect(await screen.findByLabelText(/prestations en BNC : 100 %/)).toBeInTheDocument()
+    await screen.findByLabelText("Activité comparée")
+    expect(screen.queryByLabelText(/prestations en BNC/)).not.toBeInTheDocument()
+    expect(screen.getByRole("spinbutton", { name: "Compte bancaire professionnel, SASU" }).closest("details")).toHaveTextContent(/^Frais de fonctionnement\s*\(afficher\)/)
   })
 
   it("exporte le tableau de comparaison en CSV, avec les réglages utilisés", async () => {
@@ -289,7 +303,7 @@ describe("réglages essentiels du comparateur", () => {
   const avecCouts = () => comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, ...optimale(5800, true, 1234) } : s.statut === "EURL" ? { ...s, ...optimale(20000, true) } : s)) })
   const dans = (affichage: Affichage) => (
     <AffichageContext.Provider value={affichage}>
-      <ComparateurDeTest annee={2026} session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} />
+      <ComparateurDeTest annee={2026} session={avecPrestations({ ...emptySession(), entities: [makePerson(), makeCompany()] })} />
     </AffichageContext.Provider>
   )
 
@@ -300,10 +314,12 @@ describe("réglages essentiels du comparateur", () => {
     expect(caseRetraite.closest("details")).toBeNull()
     expect(screen.getByRole("combobox", { name: "Activité comparée" }).closest("details")).toBeNull()
     expect(screen.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).closest("details")).toBeNull()
-    // Les réglages d'expert ne sont repliés que dans les affichages qui replient le détail.
+    // Part BNC et frais de fonctionnement : une seule section repliée, un seul clic pour les voir, dans tous les affichages.
     const bnc = screen.getByRole("slider", { name: /En micro, prestations en BNC/ })
-    if (affichage === "classique") expect(bnc.closest("details")).toBeNull()
-    else expect(bnc.closest("details")).toHaveTextContent(/^Plus de réglages/)
+    const frais = screen.getByRole("table", { name: "Frais de fonctionnement annuels" })
+    expect(bnc.closest("details")).toHaveTextContent(/^Frais de fonctionnement et part BNC/)
+    expect(frais.closest("details")).toBe(bnc.closest("details"))
+    expect(frais.closest("details")!.parentElement!.closest("details")).toBeNull()
   })
 
   it("dit ce que coûtent les 4 trimestres en net, près de la case et dans l'en-tête des colonnes où ils coûtent", async () => {
