@@ -1,6 +1,7 @@
 // src/backend/logic/comparateur.ts
 
-import type { StatutFrais, Company, ComparaisonCouple, ComparaisonOptions, ComparaisonResult, FinancialFlow, MicroEntreprise, Relationship, ScenarioStatut, DonneesDeLAnnee, SimulationReport, StatutCompare } from "../../types.js"
+import type { StatutFrais, Company, ComparaisonCouple, ComparaisonOptions, ComparaisonResult, FinancialFlow, MicroEntreprise, OptimisationRemuneration, Relationship, RemunerationOptimale, ScenarioStatut, DonneesDeLAnnee, SimulationReport, StatutCompare, StatutSociete } from "../../types.js"
+import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import { depassePlafondMicro } from "./calculsAE.js"
@@ -214,7 +215,10 @@ export function remunerationMaximale(benefice: (remuneration: number) => number)
   return Math.floor(bas / PRECISION_REMUNERATION) * PRECISION_REMUNERATION
 }
 
-/** Rémunération et part du bénéfice distribuable versée en dividendes, selon la répartition choisie. */
+/**
+ * Rémunération et part du bénéfice distribuable versée en dividendes, selon la répartition choisie. Au meilleur net,
+ * le comparateur fixe d'abord la rémunération de chaque statut ; appelée seule, la simulation verse alors celle saisie.
+ */
 function remunerationEtPart(session: DonneesDeLAnnee, source: Activite, statut: "SASU" | "EURL", options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee): { remunerationNette: number; part: number } {
   const { mode, partDistribuee } = options.repartition
   if (mode === "remuneration") {
@@ -298,11 +302,40 @@ export function comparerStatuts(session: DonneesDeLAnnee, options: ComparaisonOp
   if (associes.length > 0) warnings.push("En entreprise individuelle et en micro-entreprise, seul le dirigeant reprend l'activité : les autres associés n'en reçoivent plus rien.")
 
   const actuel = statutActuel(source)
-  const scenarios = STATUTS_COMPARES.map(statut => scenario(statut, statut === actuel, simulerStatut(session, source, statut, options, regles, contexte), source.id, options, regles))
+  const auMeilleurNet = options.repartition.mode === "meilleurNet"
+  const optimisations: Partial<Record<StatutSociete, OptimisationRemuneration>> = {}
+  const scenarios = STATUTS_COMPARES.map(statut => {
+    if (!auMeilleurNet || !estSocieteIS(statut)) return scenario(statut, statut === actuel, simulerStatut(session, source, statut, options, regles, contexte), source.id, options, regles)
+    const colonne = colonneAuMeilleurNet(session, source, statut, options, regles, contexte)
+    optimisations[statut] = colonne.optimisation
+    return colonne.scenario
+  })
   // Une micro-entreprise hors plafond n'est tenable que deux ans : le meilleur net se choisit parmi les autres colonnes.
   const tenables = scenarios.filter(s => !s.horsPlafond)
   const candidats = tenables.length > 0 ? tenables : scenarios
   const meilleur = candidats.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), candidats[0]).statut
 
-  return { scenarios, meilleur, couples, warnings }
+  return { scenarios, meilleur, couples, warnings, ...(auMeilleurNet ? { optimisations } : {}) }
+}
+
+/**
+ * Au meilleur net, la rémunération retenue d'après l'arbitrage du statut : la meilleure, ou la meilleure parmi celles
+ * qui valident 4 trimestres de retraite si on le demande et qu'il en existe. Sans bénéfice, aucune rémunération.
+ */
+export function remunerationOptimale(optimisation: OptimisationRemuneration, avecRetraite: boolean): RemunerationOptimale {
+  const { meilleur, meilleurAvecRetraite } = optimisation
+  if (avecRetraite && meilleurAvecRetraite) return { remunerationNette: meilleurAvecRetraite.remunerationNette, avecRetraite: true, retraiteHorsDAtteinte: false }
+  return { remunerationNette: meilleur?.remunerationNette ?? 0, avecRetraite: false, retraiteHorsDAtteinte: avecRetraite }
+}
+
+/**
+ * Colonne SASU ou EURL au meilleur net : l'arbitrage rémunération / dividendes de ce statut, puis la simulation à la
+ * rémunération retenue, tout le bénéfice restant versé en dividendes. Chaque statut a donc sa propre rémunération.
+ */
+function colonneAuMeilleurNet(session: DonneesDeLAnnee, source: Activite, statut: StatutSociete, options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee): { scenario: ScenarioStatut; optimisation: OptimisationRemuneration } {
+  const optimisation = optimiserRemuneration(session, options, statut, regles, contexte)
+  const retenue = remunerationOptimale(optimisation, options.repartition.avecRetraite === true)
+  const { scenario } = simulerScenario(session, source, statut, { ...options, remunerationNette: retenue.remunerationNette, repartition: { mode: "dividendes", partDistribuee: 1 } }, regles, contexte)
+  const repli = retenue.retraiteHorsDAtteinte ? [`Aucune rémunération possible en ${statut} ne valide 4 trimestres de retraite : la colonne retient le meilleur net, sans cette condition.`] : []
+  return { scenario: { ...scenario, remunerationOptimale: retenue, warnings: [...scenario.warnings, ...repli] }, optimisation }
 }

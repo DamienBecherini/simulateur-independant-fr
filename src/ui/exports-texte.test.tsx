@@ -87,7 +87,7 @@ describe("exports CSV et Markdown de la fenêtre « Exporter »", () => {
     await userEvent.click(screen.getByRole("button", { name: /Rapport complet \(Markdown\)/ }))
 
     await vi.waitFor(() => expect(window.api.saveTextFile).toHaveBeenCalled())
-    expect(window.api.compareStatuts).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ activityId: "company-sasu", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }), 2026)
+    expect(window.api.compareStatuts).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ activityId: "company-sasu", remunerationNette: 0, repartition: { mode: "meilleurNet", partDistribuee: 1 }, partBncPrestations: 1 }), 2026)
     const { defaultName, content, format } = fichierEnregistre()
     expect(defaultName).toBe("nouvelle-simulation-rapport-2026.md")
     expect(format).toBe("markdown")

@@ -31,6 +31,15 @@ function afficher({ mode = "personnalisee" as ModeRepartition, part = 1, p = par
 afterEach(() => vi.restoreAllMocks())
 
 describe("RepartitionDuBenefice", () => {
+  it("au meilleur net, montre en lecture seule le partage à la rémunération optimale du statut choisi", () => {
+    afficher({ mode: "meilleurNet" })
+
+    expect(screen.getByText(/^Au meilleur net : la rémunération optimale en SASU, tout le reste en dividendes\./)).toBeInTheDocument()
+    expect(screen.getByText(/de rémunération nette,/)).toHaveTextContent(`${money(10000)} de rémunération nette, ${money(19550)} de dividendes`)
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument()
+    expect(screen.queryByRole("group", { name: "Répartitions toutes faites" })).not.toBeInTheDocument()
+  })
+
   it("détaille le bénéfice poste par poste dans un tableau, sans poignées hors répartition personnalisée", () => {
     afficher({ mode: "dividendes" })
     const tableau = screen.getByRole("table", { name: "Partage du bénéfice en SASU" })
@@ -164,7 +173,9 @@ describe("partage du bénéfice dans le comparateur", () => {
   it("passe d'un mode à l'autre, et ne demande pas de rémunération quand tout part en rémunération", async () => {
     render(<ComparatorPanel annee={2026} session={session} />)
     const groupe = await screen.findByRole("group", { name: "Bénéfice de la société (SASU, EURL)" })
-    expect(within(groupe).getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" })).toBeChecked()
+    expect(within(groupe).getByRole("radio", { name: "Au meilleur net" })).toBeChecked()
+    expect(screen.queryByLabelText("Rémunération nette annuelle (SASU, EURL)")).not.toBeInTheDocument()
+    expect(screen.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).not.toBeChecked()
 
     await userEvent.click(within(groupe).getByRole("radio", { name: "Tout en rémunération" }))
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition: { mode: "remuneration", partDistribuee: 1 } }), 2026))

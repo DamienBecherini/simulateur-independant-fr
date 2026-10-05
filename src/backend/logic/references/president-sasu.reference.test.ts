@@ -136,17 +136,24 @@ casDeReference("Cas de référence 2026 : président de SASU", () => {
       expect(netDe(48060.01)).toBeCloseTo(37976.91, 1)
     })
 
-    it.each([38000, 38010, 38044.17, 37976.9, 30000, 60000])("retrouve un brut qui donne %f € nets au centime près, même quand deux bruts conviennent", net => {
+    it.each([38000, 38010, 38044.17, 37976.9, 30000, 60000])("retrouve le plus petit brut qui donne %f € nets au centime près, même quand deux bruts conviennent", net => {
       // Entre 37 976,90 et 38 044,18 € nets, deux bruts conviennent : net / 0,7915975 sous le PASS, et (net + 571,91) / 0,8020975
-      // au-delà (pour 38 000 € : 48 004,19 € ou 48 088,80 €). La dichotomie peut rendre l'un ou l'autre.
+      // au-delà (pour 38 000 € : 48 004,19 € ou 48 088,80 €). Le plus petit, moins cher pour la société, est retenu.
       const sousLePass = net / 0.7915975
       const auDelaDuPass = (net + 0.0119 * 48060) / 0.8020975
       const candidats = [...(sousLePass <= 48060 ? [sousLePass] : []), ...(auDelaDuPass > 48060 ? [auDelaDuPass] : [])]
 
       const brut = brutPourUnNet(net, "president", regimeGeneral)
 
-      expect(Math.min(...candidats.map(b => Math.abs(b - brut)))).toBeLessThan(0.01)
+      expect(brut).toBeCloseTo(Math.min(...candidats), 2)
       expect(Math.abs(netDe(brut) - net)).toBeLessThan(0.01)
+    })
+
+    it("38 044,17 € nets : le brut juste sous le PASS (48 059,99 €), pas celui au-delà (48 143,88 €)", () => {
+      const brut = brutPourUnNet(38044.17, "president", regimeGeneral)
+
+      expect(brut).toBeLessThanOrEqual(48060)
+      expect(brut).toBeCloseTo(48059.99, 1)
     })
   })
 })

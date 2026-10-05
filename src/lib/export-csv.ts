@@ -99,14 +99,23 @@ function lignesDesIndicateurs(result: ComparaisonResult, nomActivite: string): L
 
 const libellesFrais: Record<(typeof statutsFrais)[number], string> = { SASU: "SASU", EURL: "EURL", EI: "EI au réel", micro: "Micro-entreprise" }
 
-/** Réglages du comparateur, pour qu'on sache à quoi correspondent les chiffres. */
-export function reglagesDuComparateur(options: ComparaisonOptions, nomActivite: string): [string, CelluleCsv][] {
+/** Rémunération nette annuelle des colonnes SASU et EURL, selon la répartition choisie. */
+function lignesDeRemuneration(options: ComparaisonOptions, scenarios: ScenarioStatut[]): [string, CelluleCsv][] {
+  const { mode, avecRetraite } = options.repartition
+  if (mode === "remuneration") return [["Rémunération nette annuelle (SASU, EURL)", "la plus haute possible"]]
+  if (mode !== "meilleurNet") return [["Rémunération nette annuelle (SASU, EURL)", montant(options.remunerationNette)]]
+  const retenues = scenarios.flatMap((s): [string, CelluleCsv][] => (s.remunerationOptimale ? [[`Rémunération nette annuelle retenue, ${s.libelle}`, montant(s.remunerationOptimale.remunerationNette)]] : []))
+  return [["Rémunération nette annuelle (SASU, EURL)", "au meilleur net de chaque statut"], ["4 trimestres de retraite exigés", ouiNon(avecRetraite === true)], ...retenues]
+}
+
+/** Réglages du comparateur, pour qu'on sache à quoi correspondent les chiffres ; au meilleur net, la rémunération retenue par statut. */
+export function reglagesDuComparateur(options: ComparaisonOptions, nomActivite: string, scenarios: ScenarioStatut[] = []): [string, CelluleCsv][] {
   const frais = options.fraisFonctionnement
   const totalFrais = frais ? statutsFrais.map((statut): [string, CelluleCsv] => [`Frais de fonctionnement annuels, ${libellesFrais[statut]}`, montant((Object.keys(posteFraisLabels) as (keyof typeof posteFraisLabels)[]).reduce((somme, poste) => somme + frais[statut][poste], 0))]) : []
   return [
     ["Activité comparée", nomActivite],
     ["Bénéfice de la société (SASU, EURL)", libellesRepartition[options.repartition.mode]],
-    ["Rémunération nette annuelle (SASU, EURL)", options.repartition.mode === "remuneration" ? "la plus haute possible" : montant(options.remunerationNette)],
+    ...lignesDeRemuneration(options, scenarios),
     ...(options.repartition.mode === "personnalisee" ? [["Part du bénéfice distribuable versée en dividendes (%)", Math.round(options.repartition.partDistribuee * 100)] as [string, CelluleCsv]] : []),
     ["Part des prestations en BNC en micro (%)", options.partBncPrestations * 100],
     ...totalFrais
@@ -121,7 +130,7 @@ function lignesDesAvertissements(result: ComparaisonResult): Ligne[] {
 
 /** Le tableau du comparateur (un statut par colonne), puis les réglages utilisés et les avertissements. */
 export function csvComparaison(result: ComparaisonResult, options: ComparaisonOptions, nomActivite: string): string {
-  return documentCsv([...lignesDesIndicateurs(result, nomActivite), [], ["Réglage", "Valeur"], ...reglagesDuComparateur(options, nomActivite), ...lignesDesAvertissements(result)])
+  return documentCsv([...lignesDesIndicateurs(result, nomActivite), [], ["Réglage", "Valeur"], ...reglagesDuComparateur(options, nomActivite, result.scenarios), ...lignesDesAvertissements(result)])
 }
 
 // --- Courbe rémunération / dividendes ---

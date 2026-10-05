@@ -58,6 +58,15 @@ test("l'arbitrage rémunération / dividendes trouve la rémunération qui valid
   await expect(retraite).toContainText(/5\s800\s€ de rémunération nette/)
   await retraite.getByRole("button", { name: "Appliquer au comparateur" }).click()
 
+  // Au meilleur net, mode par défaut, le comparateur retient alors le meilleur net avec 4 trimestres.
+  await expect(page.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).toBeChecked()
+  await expect(page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: /^SASU/ })).toContainText(/rémunération optimale : 5\s800\s€ nets/)
+  await expect(retraite.getByRole("button", { name: "Appliquée" })).toBeDisabled()
+
+  // Dans un autre mode, la rémunération est reportée telle quelle.
+  await page.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }).check({ force: true })
+  await expect(page.getByLabel("Rémunération nette annuelle (SASU, EURL)")).toHaveValue("0")
+  await retraite.getByRole("button", { name: "Appliquer au comparateur" }).click()
   await expect(page.getByLabel("Rémunération nette annuelle (SASU, EURL)")).toHaveValue("5800")
   await expect(retraite.getByRole("button", { name: "Appliquée" })).toBeDisabled()
 

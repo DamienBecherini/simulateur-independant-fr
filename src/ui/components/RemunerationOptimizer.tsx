@@ -268,6 +268,8 @@ interface RemunerationOptimizerProps {
   /** Année optimisée : celle qui est affichée. */
   annee: number
   options: ComparaisonOptions
+  /** Rémunération du comparateur dans ce statut, marquée sur la courbe ; par défaut, celle des réglages. */
+  remunerationAppliquee?: number
   activityName: string
   /** Statut étudié, partagé avec la barre de partage du bénéfice du comparateur, et son optimisation (useOptimisation). */
   statut: StatutSociete
@@ -277,7 +279,7 @@ interface RemunerationOptimizerProps {
   onAppliquer: (remunerationNette: number) => void
 }
 
-export function RemunerationOptimizer({ session, annee, options, activityName, statut, onStatut, resultat, erreur, onAppliquer }: RemunerationOptimizerProps) {
+export function RemunerationOptimizer({ session, annee, options, remunerationAppliquee = options.remunerationNette, activityName, statut, onStatut, resultat, erreur, onAppliquer }: RemunerationOptimizerProps) {
   const aJour = resultat?.statut === statut
 
   return (
@@ -296,8 +298,8 @@ export function RemunerationOptimizer({ session, annee, options, activityName, s
       {resultat && aJour && resultat.warnings.length > 0 ? <p className="text-sm text-slate-600 dark:text-slate-300">{resultat.warnings.join(" ")}</p> : null}
       {resultat && aJour && resultat.points.length > 0 ? (
         <>
-          <Resume resultat={resultat} remunerationActuelle={options.remunerationNette} onAppliquer={onAppliquer} />
-          <Courbe resultat={resultat} remunerationActuelle={options.remunerationNette} />
+          <Resume resultat={resultat} remunerationActuelle={remunerationAppliquee} onAppliquer={onAppliquer} />
+          <Courbe resultat={resultat} remunerationActuelle={remunerationAppliquee} />
           <TableDesValeurs resultat={resultat} onExporter={() => exporterCourbeCsv(vueDeLAnnee(session, annee), resultat, activityName)} />
         </>
       ) : null}

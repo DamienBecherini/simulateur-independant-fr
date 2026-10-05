@@ -192,6 +192,19 @@ Aucun avertissement.
     expect(rapport({ mode: "remuneration", partDistribuee: 1 })).toContain("- Bénéfice de la société en SASU et EURL : Tout en rémunération (la plus haute rémunération que la société peut verser, sans dividendes)")
   })
 
+  it("au meilleur net, décrit le mode et la rémunération retenue dans chaque colonne de société", () => {
+    const resultat = comparaisonExemple()
+    const optimale = (remunerationNette: number, retraiteHorsDAtteinte = false) => ({ remunerationOptimale: { remunerationNette, avecRetraite: !retraiteHorsDAtteinte, retraiteHorsDAtteinte } })
+    resultat.scenarios = [{ ...resultat.scenarios[0], ...optimale(12300) }, { ...resultat.scenarios[0], statut: "EURL", libelle: "EURL", actuel: false, ...optimale(25700, true) }, resultat.scenarios[1]]
+    const options = { ...optionsExemple(), repartition: { mode: "meilleurNet" as const, partDistribuee: 1, avecRetraite: true } }
+
+    const rapport = rapportComplet({ comparaison: { nomActivite: "Ma SASU", options, resultat } })
+
+    expect(rapport).toContain(`- Bénéfice de la société en SASU et EURL : Au meilleur net (dans chaque statut, la rémunération nette au meilleur net du foyer parmi celles qui valident 4 trimestres de retraite, tout le bénéfice restant versé en dividendes ; rémunération nette retenue : SASU ${euros(12300)}, EURL ${euros(25700)} (4 trimestres hors d'atteinte))`)
+    const sansRetraite = rapportComplet({ comparaison: { nomActivite: "Ma SASU", options: { ...options, repartition: { mode: "meilleurNet", partDistribuee: 1 } }, resultat } })
+    expect(sansRetraite).toContain("Au meilleur net (dans chaque statut, la rémunération nette au meilleur net du foyer, tout le bénéfice restant versé en dividendes ; rémunération nette retenue : SASU")
+  })
+
   it("adapte les réglages, l'écart négatif et les colonnes sans revenus ni statut actuel", () => {
     const resultat = comparaisonExemple()
     resultat.scenarios = [{ ...resultat.scenarios[1], netApresImpots: 15000, revenusAvantPrelevements: 0, warnings: [] }, { ...resultat.scenarios[0], warnings: [] }]
