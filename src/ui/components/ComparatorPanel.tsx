@@ -19,6 +19,10 @@ import { useAffichageResume } from "../hooks/useAffichage"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
 import { libelleDuCoutDesTrimestres, type ResumeDeLaComparaison } from "@/lib/resume"
 import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Comparateur, Company, MicroEntreprise, ReglagesComparateur, ScenarioStatut, SessionState, SimulationAnnuelle, StatutSociete } from "@/types"
+import { COLONNE_FIXE } from "../colonne-fixe"
+
+/** Fond de l'en-tête du tableau, rendu opaque pour sa première cellule, fixe : le gris translucide sur le fond de la page. */
+const FOND_DE_L_EN_TETE = "bg-slate-100 dark:bg-[color-mix(in_oklab,var(--color-slate-800)_80%,var(--background))]"
 
 interface ComparatorPanelProps {
   session: SessionState
@@ -128,7 +132,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
 
   const lignes = rows(activityName).map(row => (
     <tr key={row.label} className="border-t border-slate-200 dark:border-slate-700">
-      <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
+      <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
         {row.label}
       </th>
       {result.scenarios.map(s => (
@@ -140,7 +144,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
   ))
   const protection = (
     <tr className="border-t border-slate-200 dark:border-slate-700">
-      <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
+      <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
         Protection sociale
       </th>
       {result.scenarios.map(s => (
@@ -156,7 +160,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
   )
   const ecart = current ? (
     <tr className="border-t border-slate-200 dark:border-slate-700">
-      <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
+      <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
         Écart avec le statut actuel
       </th>
       {result.scenarios.map(s => (
@@ -172,7 +176,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
       <table className="w-full min-w-[48rem] text-sm print:min-w-0 print:text-[8pt]" aria-label="Comparaison des statuts">
         <thead className="bg-slate-100 dark:bg-slate-800/80">
           <tr>
-            <th scope="col" className="px-3 py-2 text-left">
+            <th scope="col" className={cn(COLONNE_FIXE, FOND_DE_L_EN_TETE, "px-3 py-2 text-left")}>
               <span className="sr-only">Indicateur</span>
             </th>
             {result.scenarios.map(s => (

@@ -84,3 +84,22 @@ test("l'arbitrage rémunération / dividendes trouve la rémunération qui valid
   await optimisation.getByRole("button", { name: "EURL" }).click()
   await expect(optimisation.getByRole("group", { name: /Net du foyer selon la rémunération nette en EURL/ })).toBeVisible()
 })
+
+test.describe("sur un téléphone", () => {
+  test.use({ viewport: { width: 375, height: 812 } })
+
+  test("le tableau du comparateur défile en largeur en gardant visible sa première colonne", async ({ page }) => {
+    await page.goto("./")
+    const table = page.getByRole("table", { name: "Comparaison des statuts" })
+    await table.scrollIntoViewIfNeeded()
+    const position = await table.evaluate(t => {
+      const zone = t.parentElement!
+      const premiere = t.querySelector("tbody th")!
+      const avant = premiere.getBoundingClientRect().left
+      zone.scrollLeft = 250
+      return { avant, apres: premiere.getBoundingClientRect().left, defile: zone.scrollLeft }
+    })
+    expect(position.defile).toBeGreaterThan(0)
+    expect(Math.abs(position.apres - position.avant)).toBeLessThan(1)
+  })
+})

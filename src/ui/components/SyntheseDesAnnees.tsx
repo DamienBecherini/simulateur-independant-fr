@@ -4,15 +4,12 @@
 import type { SimulationPluriannuelle } from "@/types"
 import { cn } from "@/lib/utils"
 import { ZoneDefilante } from "./ZoneDefilante"
+import { COLONNE_FIXE } from "../colonne-fixe"
 
 const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
 
-/**
- * Sur un écran étroit, le tableau défile en largeur et la colonne des années reste visible. Une cellule fixe
- * recouvre celles qui défilent dessous : elle a donc un fond opaque, celui de la page ou de l'année affichée,
- * et un trait à droite (une ombre : en `border-collapse`, une bordure ne suivrait pas la cellule).
- */
-const COLONNE_FIXE = "sticky left-0 z-10 whitespace-nowrap shadow-[inset_-1px_0_0_var(--border)] print:static print:shadow-none"
+/** Sur un écran étroit, le tableau défile en largeur et la colonne des années reste visible, sur une ligne. */
+const COLONNE_DES_ANNEES = cn(COLONNE_FIXE, "whitespace-nowrap")
 
 /** Fond de l'année affichée : le bleu translucide de la ligne, rendu opaque sur le fond de la page en thème sombre. */
 const FOND_ANNEE_AFFICHEE = "bg-blue-50 dark:bg-[color-mix(in_oklab,var(--color-blue-950)_40%,var(--background))]"
@@ -37,7 +34,7 @@ export function SyntheseDesAnnees({ simulation, annee }: SyntheseDesAnneesProps)
           <caption className="sr-only">Net après impôts et prélèvements de chaque année de la session</caption>
           <thead>
             <tr className="border-b border-slate-200 text-left dark:border-slate-700">
-              <th scope="col" className={cn(COLONNE_FIXE, "bg-background py-2 pr-4 font-medium")}>
+              <th scope="col" className={cn(COLONNE_DES_ANNEES, "bg-background py-2 pr-4 font-medium")}>
                 Année
               </th>
               <th scope="col" className="py-2 pr-4 text-right font-medium">
@@ -54,7 +51,7 @@ export function SyntheseDesAnnees({ simulation, annee }: SyntheseDesAnneesProps)
           <tbody>
             {simulation.annees.map(({ annee: a, report, erreur }) => (
               <tr key={a} className={cn("border-b border-slate-100 dark:border-slate-800", a === annee && "bg-blue-50 font-semibold dark:bg-blue-950/40")} aria-current={a === annee ? "true" : undefined}>
-                <th scope="row" className={cn(COLONNE_FIXE, "py-2 pr-4 text-left font-medium", a === annee ? FOND_ANNEE_AFFICHEE : "bg-background")}>
+                <th scope="row" className={cn(COLONNE_DES_ANNEES, "py-2 pr-4 text-left font-medium", a === annee ? FOND_ANNEE_AFFICHEE : "bg-background")}>
                   {a}
                   {report && report.anneeDesRegles !== a ? <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">règles {report.anneeDesRegles}</span> : null}
                 </th>
