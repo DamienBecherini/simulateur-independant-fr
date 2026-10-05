@@ -145,11 +145,26 @@ describe("RemunerationOptimizer", () => {
   it("dans le comparateur, la rémunération appliquée est celle des colonnes SASU et EURL", async () => {
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
     render(<ComparatorPanel annee={2026} session={session} />)
+    await userEvent.click(await screen.findByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }))
 
     const retraite = (await screen.findByText(/^Meilleur net avec 4 trimestres/)).closest("li")!
     await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer au comparateur" }))
 
     expect(screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")).toHaveValue(5700)
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 5700, repartition: { mode: "dividendes", partDistribuee: 1 } }), 2026))
+  })
+
+  it("au meilleur net, reprend l'arbitrage calculé par le comparateur sans le refaire, et ses boutons cochent ou décochent les 4 trimestres", async () => {
+    const optimisations = { SASU: optimisation(), EURL: optimisation({ statut: "EURL" }) }
+    vi.mocked(window.api.compareStatuts).mockResolvedValue({ scenarios: [], meilleur: null, couples: [], warnings: [], optimisations })
+    render(<ComparatorPanel annee={2026} session={session} />)
+
+    const retraite = (await screen.findByText(/^Meilleur net avec 4 trimestres/)).closest("li")!
+    expect(window.api.optimiserRemuneration).not.toHaveBeenCalled()
+    await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer au comparateur" }))
+
+    expect(screen.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).toBeChecked()
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true } }), 2026))
+    expect(window.api.optimiserRemuneration).not.toHaveBeenCalled()
   })
 })

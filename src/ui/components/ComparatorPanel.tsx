@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useOptimisation } from "../hooks/useOptimisation"
-import { avecRemuneration, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
+import { appliquerRemuneration, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { cn } from "@/lib/utils"
@@ -123,6 +123,29 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
   )
 }
 
+/** Au meilleur net : ne retenir, dans chaque statut de société, que les rémunérations qui valident 4 trimestres de retraite. */
+function AvecRetraite({ options, onChange }: { options: ComparaisonOptions; onChange: (changes: Partial<ComparaisonOptions>) => void }) {
+  return (
+    <label className="flex min-h-9 items-center gap-2 text-sm font-medium pointer-coarse:min-h-11">
+      <input type="checkbox" className="size-4 accent-slate-700 dark:accent-slate-300" checked={options.repartition.avecRetraite === true} onChange={e => onChange({ repartition: { ...options.repartition, avecRetraite: e.target.checked } })} />
+      Avec 4 trimestres de retraite
+    </label>
+  )
+}
+
+/** Au meilleur net, la rémunération retenue dans la colonne : « rémunération optimale : 12 300 € nets ». */
+function RemunerationRetenue({ scenario }: { scenario: ScenarioStatut }) {
+  const retenue = scenario.remunerationOptimale
+  if (!retenue) return null
+  return (
+    <span className="mt-1 block text-xs font-normal text-slate-700 dark:text-slate-200">
+      rémunération optimale : <span className="whitespace-nowrap font-medium">{formatMoney(retenue.remunerationNette)} nets</span>
+      {retenue.avecRetraite ? <span className="block text-slate-600 dark:text-slate-400">avec 4 trimestres de retraite</span> : null}
+      {retenue.retraiteHorsDAtteinte ? <span className="block text-amber-800 dark:text-amber-300">4 trimestres hors d'atteinte</span> : null}
+    </span>
+  )
+}
+
 interface ControlsProps {
   activities: (Company | MicroEntreprise)[]
   selected: Company | MicroEntreprise
@@ -152,7 +175,9 @@ function ComparatorControls({ activities, selected, options, onSelect, onChange 
 
       <ChoixDeLaRepartition mode={options.repartition.mode} onChange={mode => onChange({ repartition: { ...options.repartition, mode } })} />
 
-      {options.repartition.mode === "remuneration" ? null : (
+      {options.repartition.mode === "meilleurNet" ? <AvecRetraite options={options} onChange={onChange} /> : null}
+
+      {options.repartition.mode === "remuneration" || options.repartition.mode === "meilleurNet" ? null : (
         <div className="space-y-1">
           <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
           <Input id="comparateur-remuneration" className="w-40 bg-background text-right" type="number" min="0" step="1000" value={options.remunerationNette} onChange={e => onChange({ remunerationNette: Math.max(0, parseFloat(e.target.value) || 0) })} />
@@ -178,6 +203,7 @@ function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioSta
     <th scope="col" className={cn("px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "bg-emerald-100 dark:bg-emerald-900/40")}>
       {scenario.libelle}
       <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{mentions || " "}</span>
+      <RemunerationRetenue scenario={scenario} />
       {scenario.horsPlafond ? <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">hors plafond · 2 ans au plus</span> : null}
       {renvois.length > 0 ? (
         <span className="mt-1 flex justify-end gap-1">
@@ -371,12 +397,15 @@ function useComparison(session: SessionState, options: ComparaisonOptions, annee
  * Statut de société étudié pour l'activité comparée (son statut s'il en est un, la SASU sinon) et son arbitrage
  * rémunération / dividendes : partagés entre la barre de partage du bénéfice et la section « Rémunération ou dividendes ? ».
  */
-function useArbitrage(session: SessionState, options: ComparaisonOptions, annee: number, selected: Company | MicroEntreprise | undefined) {
+function useArbitrage(session: SessionState, options: ComparaisonOptions, annee: number, selected: Company | MicroEntreprise | undefined, result: ComparaisonResult | null) {
   const [choix, setChoix] = useState<{ activityId: string; statut: StatutSociete } | null>(null)
   const statutInitial: StatutSociete = selected?.type === "company" && selected.legalStatus === "EURL" ? "EURL" : "SASU"
   const statut = choix && choix.activityId === selected?.id ? choix.statut : statutInitial
-  const { resultat, erreur } = useOptimisation(session, options, statut, annee, !!selected)
-  return { statut, setStatut: (nouveau: StatutSociete) => setChoix({ activityId: selected?.id ?? "", statut: nouveau }), resultat, erreur }
+  // Au meilleur net, le comparateur a déjà calculé l'arbitrage de chaque statut : on le reprend au lieu de le refaire.
+  const auMeilleurNet = options.repartition.mode === "meilleurNet"
+  const calcule = useOptimisation(session, options, statut, annee, !!selected && !auMeilleurNet)
+  const resultat = auMeilleurNet ? (result?.optimisations?.[statut] ?? null) : calcule.resultat
+  return { statut, setStatut: (nouveau: StatutSociete) => setChoix({ activityId: selected?.id ?? "", statut: nouveau }), resultat, erreur: auMeilleurNet ? null : calcule.erreur }
 }
 
 const scenarioDuStatut = (result: ComparaisonResult | null, statut: StatutSociete) => result?.scenarios.find(s => s.statut === statut)
@@ -387,13 +416,16 @@ interface OptimiseurProps {
   selected: Company | MicroEntreprise | undefined
   options: ComparaisonOptions
   arbitrage: ReturnType<typeof useArbitrage>
+  result: ComparaisonResult | null
   onChange: (options: ComparaisonOptions) => void
 }
 
 /** Arbitrage rémunération / dividendes de l'activité comparée ; la rémunération appliquée rejoint le comparateur. */
-function OptimiseurDeLActivite({ session, annee, selected, options, arbitrage, onChange }: OptimiseurProps) {
+function OptimiseurDeLActivite({ session, annee, selected, options, arbitrage, result, onChange }: OptimiseurProps) {
   if (!selected) return null
-  return <RemunerationOptimizer session={session} annee={annee} options={options} activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} resultat={arbitrage.resultat} erreur={arbitrage.erreur} onAppliquer={remunerationNette => onChange(avecRemuneration(options, remunerationNette))} />
+  // Au meilleur net, la rémunération marquée est celle que le comparateur a retenue pour ce statut.
+  const remunerationAppliquee = scenarioDuStatut(result, arbitrage.statut)?.remunerationOptimale?.remunerationNette ?? options.remunerationNette
+  return <RemunerationOptimizer session={session} annee={annee} options={options} remunerationAppliquee={remunerationAppliquee} activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} resultat={arbitrage.resultat} erreur={arbitrage.erreur} onAppliquer={remunerationNette => onChange(appliquerRemuneration(options, remunerationNette, arbitrage.resultat))} />
 }
 
 /**
@@ -430,7 +462,7 @@ export function ComparatorPanel({ session, annee }: ComparatorPanelProps) {
   const { selected, effectiveOptions, setOptions } = useReglages(vue, activities)
 
   const { result, error } = useComparison(session, effectiveOptions, vue.annee)
-  const arbitrage = useArbitrage(session, effectiveOptions, vue.annee, selected)
+  const arbitrage = useArbitrage(session, effectiveOptions, vue.annee, selected, result)
   const couples = result?.couples ?? []
   if (!selected && couples.length === 0) return null
 
@@ -457,7 +489,7 @@ export function ComparatorPanel({ session, annee }: ComparatorPanelProps) {
       {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 
       {result ? <ComparisonResults result={result} activityName={selected?.name ?? ""} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, selected?.name ?? "")} /> : null}
-      <OptimiseurDeLActivite session={session} annee={vue.annee} selected={selected} options={effectiveOptions} arbitrage={arbitrage} onChange={setOptions} />
+      <OptimiseurDeLActivite session={session} annee={vue.annee} selected={selected} options={effectiveOptions} arbitrage={arbitrage} result={result} onChange={setOptions} />
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
     </section>
   )

@@ -297,3 +297,82 @@ describe("micro-entreprise au-delà des plafonds", () => {
     expect(colonne(resultat, "SASU").horsPlafond).toBe(false)
   })
 })
+
+describe("au meilleur net", () => {
+  /** Alice, présidente d'une SASU qui facture 100 000 € de prestations. */
+  const sessionDAlice = (chiffreAffaires = 100000) => session([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", chiffreAffaires]])
+  const auMeilleurNet = (avecRetraite?: boolean) => options("s1", { remunerationNette: 30000, repartition: { mode: "meilleurNet", partDistribuee: 1, ...(avecRetraite === undefined ? {} : { avecRetraite }) } })
+  const s = sessionDAlice()
+  const resultat = comparerStatuts(s, auMeilleurNet(), reglesDeTest)
+
+  it.each(["SASU", "EURL"] as const)("en %s, verse la rémunération au meilleur net de l'arbitrage de ce statut, et tout le reste en dividendes", statut => {
+    const { meilleur } = optimiserRemuneration(s, options("s1"), statut, reglesDeTest)
+    const c = colonne(resultat, statut)
+
+    expect(c.remunerationOptimale).toEqual({ remunerationNette: meilleur!.remunerationNette, avecRetraite: false, retraiteHorsDAtteinte: false })
+    expect(c.partage!.remunerationNette).toBeCloseTo(meilleur!.remunerationNette, 6)
+    expect(Math.round(c.netApresImpots)).toBe(meilleur!.netApresImpots)
+    expect(c.partage!.resultatConserve).toBeCloseTo(0, 0)
+  })
+
+  it("chaque statut de société a sa propre rémunération, qu'aucune rémunération saisie ne remplace", () => {
+    const sasu = colonne(resultat, "SASU").remunerationOptimale!.remunerationNette
+    const eurl = colonne(resultat, "EURL").remunerationOptimale!.remunerationNette
+
+    expect(sasu).not.toBe(eurl)
+    expect(comparerStatuts(s, { ...auMeilleurNet(), remunerationNette: 0 }, reglesDeTest).scenarios).toEqual(resultat.scenarios)
+  })
+
+  it("fait au moins aussi bien que toute rémunération saisie avec le reste en dividendes", () => {
+    for (const remunerationNette of [0, 10000, 30000, 50000]) {
+      const saisie = comparerStatuts(s, options("s1", { remunerationNette }), reglesDeTest)
+      for (const statut of ["SASU", "EURL"] as const) expect(colonne(resultat, statut).netApresImpots).toBeGreaterThanOrEqual(colonne(saisie, statut).netApresImpots - 0.5)
+    }
+  })
+
+  it("rend l'arbitrage de chaque statut de société, tel que l'optimisation le calcule", () => {
+    expect(resultat.optimisations).toEqual({ SASU: optimiserRemuneration(s, options("s1"), "SASU", reglesDeTest), EURL: optimiserRemuneration(s, options("s1"), "EURL", reglesDeTest) })
+    expect(comparerStatuts(s, options("s1"), reglesDeTest).optimisations).toBeUndefined()
+  })
+
+  it("ne change rien aux colonnes EI et micro-entreprise, ni au choix du meilleur statut parmi les colonnes tenables", () => {
+    const saisie = comparerStatuts(s, options("s1"), reglesDeTest)
+    for (const statut of ["EI", "micro", "micro-vfl"] as const) {
+      expect(colonne(resultat, statut)).toEqual(colonne(saisie, statut))
+      expect(colonne(resultat, statut).remunerationOptimale).toBeUndefined()
+    }
+    const tenables = resultat.scenarios.filter(c => !c.horsPlafond)
+    expect(resultat.meilleur).toBe(tenables.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a)).statut)
+  })
+
+  it.each(["SASU", "EURL"] as const)("avec 4 trimestres de retraite, en %s, retient le meilleur net parmi les rémunérations qui les valident", statut => {
+    const { meilleurAvecRetraite } = optimiserRemuneration(s, options("s1"), statut, reglesDeTest)
+    const c = colonne(comparerStatuts(s, auMeilleurNet(true), reglesDeTest), statut)
+
+    expect(c.remunerationOptimale).toEqual({ remunerationNette: meilleurAvecRetraite!.remunerationNette, avecRetraite: true, retraiteHorsDAtteinte: false })
+    expect(Math.round(c.netApresImpots)).toBe(meilleurAvecRetraite!.netApresImpots)
+    expect(c.protectionSociale.trimestres).toBe(4)
+  })
+
+  it("quand aucune rémunération ne valide 4 trimestres, retient le meilleur net et le signale dans la colonne", () => {
+    const petite = sessionDAlice(4000)
+    expect(optimiserRemuneration(petite, options("s1"), "SASU", reglesDeTest).meilleurAvecRetraite).toBeNull()
+    const { meilleur } = optimiserRemuneration(petite, options("s1"), "SASU", reglesDeTest)
+
+    const c = colonne(comparerStatuts(petite, auMeilleurNet(true), reglesDeTest), "SASU")
+
+    expect(c.remunerationOptimale).toEqual({ remunerationNette: meilleur!.remunerationNette, avecRetraite: false, retraiteHorsDAtteinte: true })
+    expect(c.warnings).toContain("Aucune rémunération possible en SASU ne valide 4 trimestres de retraite : la colonne retient le meilleur net, sans cette condition.")
+    expect(colonne(comparerStatuts(petite, auMeilleurNet(false), reglesDeTest), "SASU").warnings).not.toContainEqual(expect.stringContaining("4 trimestres"))
+  })
+
+  it("sans bénéfice, ne verse ni rémunération ni dividendes", () => {
+    const resultatSansBenefice = comparerStatuts(sessionDAlice(0), auMeilleurNet(), reglesDeTest)
+    for (const statut of ["SASU", "EURL"] as const) {
+      const c = colonne(resultatSansBenefice, statut)
+      expect(c.remunerationOptimale).toEqual({ remunerationNette: 0, avecRetraite: false, retraiteHorsDAtteinte: false })
+      expect(c.partage).toMatchObject({ remunerationNette: 0, dividendesNets: 0 })
+      expect(resultatSansBenefice.optimisations?.[statut]?.meilleur).toBeNull()
+    }
+  })
+})

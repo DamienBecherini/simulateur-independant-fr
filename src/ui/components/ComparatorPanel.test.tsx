@@ -45,12 +45,22 @@ describe("ComparatorPanel sur plusieurs années", () => {
     rerender(<ComparatorPanel annee={2026} session={session} />)
     expect(screen.getByText(/^Année 2026\./)).toBeInTheDocument()
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, expect.objectContaining({ remunerationNette: 30000 }), 2026))
+    // Au meilleur net, le comparateur calcule lui-même l'arbitrage rémunération / dividendes : il n'est pas refait à part.
+    expect(window.api.optimiserRemuneration).not.toHaveBeenCalled()
+  })
+
+  it("hors du meilleur net, l'arbitrage rémunération / dividendes porte sur l'année affichée", async () => {
+    const session = deuxAnnees()
+    render(<ComparatorPanel annee={2026} session={session} />)
+    await userEvent.click(screen.getByRole("radio", { name: "Tout en rémunération" }))
+
     await vi.waitFor(() => expect(window.api.optimiserRemuneration).toHaveBeenLastCalledWith(session, expect.anything(), "SASU", 2026))
   })
 
   it("reprend la rémunération de la nouvelle année quand on en change, mais garde les frais saisis", async () => {
     const session = deuxAnnees()
     const { rerender } = render(<ComparatorPanel annee={2025} session={session} />)
+    await userEvent.click(screen.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }))
     const remuneration = screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")
     await userEvent.clear(remuneration)
     await userEvent.type(remuneration, "25000")
@@ -78,13 +88,40 @@ describe("ComparatorPanel", () => {
     render(<ComparatorPanel annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
-    expect(window.api.compareStatuts).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ activityId: "micro-atelier", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }), 2026)
+    expect(window.api.compareStatuts).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ activityId: "micro-atelier", remunerationNette: 0, repartition: { mode: "meilleurNet", partDistribuee: 1 }, partBncPrestations: 1 }), 2026)
     expect(within(table).getByRole("columnheader", { name: /Micro-entreprise\s*actuel/ })).toBeInTheDocument()
     expect(within(table).getByRole("columnheader", { name: /versement libératoire\s*meilleur net/ })).toBeInTheDocument()
 
     const ecart = within(table).getByRole("row", { name: /Écart avec le statut actuel/ })
     expect(ecart).toHaveTextContent(`+${money(3000)}`)
     expect(ecart).toHaveTextContent(`−${money(2000)}`)
+  })
+
+  it("au meilleur net, chaque colonne de société affiche sa propre rémunération, et les 4 trimestres quand ils sont demandés", async () => {
+    const optimale = (remunerationNette: number, avecRetraite = false, retraiteHorsDAtteinte = false) => ({ remunerationOptimale: { remunerationNette, avecRetraite, retraiteHorsDAtteinte } })
+    const horsDAtteinte = "Aucune rémunération possible en EURL ne valide 4 trimestres de retraite."
+    const scenarios = comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, ...optimale(12300, true) } : s.statut === "EURL" ? { ...s, ...optimale(25700, false, true), warnings: [horsDAtteinte] } : s))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios }))
+    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent(`rémunération optimale : ${money(12300)} netsavec 4 trimestres de retraite`)
+    const eurl = within(table).getByRole("columnheader", { name: /^EURL/ })
+    expect(eurl).toHaveTextContent(`rémunération optimale : ${money(25700)} nets4 trimestres hors d'atteinte`)
+    expect(within(eurl).getByRole("link", { name: "Voir la note 1" })).toBeInTheDocument()
+    expect(document.getElementById("note-comparateur-1")).toHaveTextContent(`EURL : ${horsDAtteinte}`)
+    expect(within(table).getByRole("columnheader", { name: /^EI au réel/ })).not.toHaveTextContent("rémunération optimale")
+  })
+
+  it("au meilleur net, la case « avec 4 trimestres de retraite » rejoint les réglages du comparateur", async () => {
+    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Avec 4 trimestres de retraite" }))
+
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true } }), 2026))
+    await userEvent.click(screen.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }))
+    expect(screen.queryByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).not.toBeInTheDocument()
+    expect(screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")).toBeInTheDocument()
   })
 
   it("ne propose la part BNC des prestations que pour une activité qui n'est pas déjà une micro", async () => {

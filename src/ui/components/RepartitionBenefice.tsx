@@ -332,7 +332,7 @@ export function RepartitionDuBenefice({ activityName, statut, onStatut, scenario
             Partage du bénéfice en {statut}
           </h3>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            {libellesRepartition[options.repartition.mode]}. Le bénéfice de « {activityName} » avant rémunération (chiffre d'affaires moins charges et frais), partagé exactement entre ces postes ; l'impôt sur le revenu et les prélèvements sociaux du foyer viennent ensuite.
+            {libellesRepartition[options.repartition.mode]}{options.repartition.mode === "meilleurNet" ? ` : la rémunération optimale en ${statut}, tout le reste en dividendes` : ""}. Le bénéfice de « {activityName} » avant rémunération (chiffre d'affaires moins charges et frais), partagé exactement entre ces postes ; l'impôt sur le revenu et les prélèvements sociaux du foyer viennent ensuite.
           </p>
         </div>
         <ChoixDuStatut statut={statut} onChange={onStatut} />

@@ -466,17 +466,30 @@ export type StatutCompare = "SASU" | "EURL" | "EI" | "micro" | "micro-vfl"
 
 /**
  * Partage du bénéfice d'une société à l'IS dans le comparateur :
+ * - « meilleurNet » : dans chaque statut, la rémunération au meilleur net du foyer (ou au meilleur net parmi celles
+ *   qui valident 4 trimestres de retraite), tout le reste en dividendes : garder du bénéfice n'améliore jamais le net de l'année ;
  * - « dividendes » : la rémunération saisie, tout le reste en dividendes ;
  * - « remuneration » : la plus haute rémunération que la société peut verser, sans dividendes ;
  * - « personnalisee » : la rémunération saisie, et une part du bénéfice distribuable en dividendes, le reste conservé ;
  * - « grille » : la rémunération saisie et les dividendes saisis dans la grille.
  */
-export type ModeRepartition = "dividendes" | "remuneration" | "personnalisee" | "grille"
+export type ModeRepartition = "meilleurNet" | "dividendes" | "remuneration" | "personnalisee" | "grille"
 
 export interface RepartitionBenefice {
   mode: ModeRepartition
   /** Répartition personnalisée : part du bénéfice distribuable versée en dividendes (0 à 1), le reste étant conservé. */
   partDistribuee: number
+  /** Au meilleur net : ne retenir que les rémunérations qui valident 4 trimestres de retraite. Absent : non. */
+  avecRetraite?: boolean
+}
+
+/** Au meilleur net, la rémunération retenue dans une colonne SASU ou EURL. */
+export interface RemunerationOptimale {
+  remunerationNette: number
+  /** Cette rémunération valide 4 trimestres de retraite, comme demandé. */
+  avecRetraite: boolean
+  /** 4 trimestres demandés, mais aucune rémunération possible ne les valide : c'est le meilleur net sans condition. */
+  retraiteHorsDAtteinte: boolean
 }
 
 /**
@@ -540,6 +553,8 @@ export interface ScenarioStatut {
   warnings: string[]
   /** SASU et EURL : partage du bénéfice de l'activité entre rémunération, prélèvements, dividendes et réserves. */
   partage?: PartageDuBenefice
+  /** SASU et EURL, au meilleur net : la rémunération retenue pour ce statut. */
+  remunerationOptimale?: RemunerationOptimale
 }
 
 /** Note qualitative de protection sociale d'un statut, sur 5 étoiles. */
@@ -566,6 +581,8 @@ export interface ComparaisonResult {
   /** Une entrée par couple en union libre. */
   couples: ComparaisonCouple[]
   warnings: string[]
+  /** Au meilleur net : l'arbitrage rémunération / dividendes calculé pour chaque statut de société, à réutiliser tel quel. */
+  optimisations?: Partial<Record<StatutSociete, OptimisationRemuneration>>
 }
 
 /** Formats de fichier texte que l'application sait enregistrer ou ouvrir (exports, sauvegardes groupées). */

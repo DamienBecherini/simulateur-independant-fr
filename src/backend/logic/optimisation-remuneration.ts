@@ -14,14 +14,15 @@ import type { ContexteDeLAnnee } from "./simulation-engine.js"
  * La courbe n'est ni lisse ni monotone (tranches du barème, seuils des cotisations, décote) : on la parcourt sur
  * une grille d'une soixantaine de points, puis à 100 € près autour des meilleurs. Une simulation coûte moins d'une
  * milliseconde : le calcul complet reste sous la seconde.
+ *
+ * Le comparateur, au meilleur net, appelle cet arbitrage, qui s'appuie lui-même sur le comparateur : les deux modules
+ * s'importent l'un l'autre. Rien n'y est lu au chargement, seulement à l'appel, quel que soit l'ordre de chargement.
  */
 
-/** Précision des rémunérations proposées. */
-const PRECISION = PRECISION_REMUNERATION
 /** Nombre de points visés sur la grille. */
 const POINTS_DE_GRILLE = 60
 
-const arrondiInferieur = (montant: number) => Math.floor(montant / PRECISION) * PRECISION
+const arrondiInferieur = (montant: number) => Math.floor(montant / PRECISION_REMUNERATION) * PRECISION_REMUNERATION
 
 function calculerPoint(session: DonneesDeLAnnee, source: Activite, statut: StatutSociete, options: ComparaisonOptions, remunerationNette: number, regles: ReglesFiscales, contexte: ContexteDeLAnnee): PointRemuneration {
   const { scenario, dividendes } = simulerScenario(session, source, statut, { ...options, remunerationNette, repartition: { mode: "dividendes", partDistribuee: 1 } }, regles, contexte)
@@ -64,10 +65,10 @@ export function optimiserRemuneration(session: DonneesDeLAnnee, options: Compara
   }
   /** Parcourt à 100 € près les rémunérations entre deux bornes. */
   const affiner = (de: number, a: number) => {
-    for (let r = arrondiInferieur(Math.max(0, de)); r <= Math.min(maximum, a); r += PRECISION) point(r)
+    for (let r = arrondiInferieur(Math.max(0, de)); r <= Math.min(maximum, a); r += PRECISION_REMUNERATION) point(r)
   }
 
-  const pas = Math.max(PRECISION, Math.ceil(maximum / POINTS_DE_GRILLE / PRECISION) * PRECISION)
+  const pas = Math.max(PRECISION_REMUNERATION, Math.ceil(maximum / POINTS_DE_GRILLE / PRECISION_REMUNERATION) * PRECISION_REMUNERATION)
   for (let r = 0; r < maximum; r += pas) point(r)
   point(maximum)
 

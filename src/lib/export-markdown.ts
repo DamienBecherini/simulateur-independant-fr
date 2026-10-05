@@ -154,11 +154,18 @@ function totalDesFrais(options: ComparaisonOptions): string {
   return statutsFrais.map(statut => `${libelles[statut]} ${euros(postes.reduce((somme, poste) => somme + frais[statut][poste], 0))}`).join(", ")
 }
 
+/** Au meilleur net, la rémunération retenue dans chaque colonne de société : « SASU 12 300 €, EURL 9 800 € ». */
+function remunerationsRetenues(scenarios: ScenarioStatut[]): string {
+  const retenues = scenarios.flatMap(s => (s.remunerationOptimale ? [`${s.libelle} ${euros(s.remunerationOptimale.remunerationNette)}${s.remunerationOptimale.retraiteHorsDAtteinte ? " (4 trimestres hors d'atteinte)" : ""}`] : []))
+  return retenues.length > 0 ? ` ; rémunération nette retenue : ${retenues.join(", ")}` : ""
+}
+
 /** La répartition choisie du bénéfice des sociétés, en une phrase. */
-function descriptionRepartition(options: ComparaisonOptions): string {
-  const { mode, partDistribuee } = options.repartition
+function descriptionRepartition(options: ComparaisonOptions, scenarios: ScenarioStatut[]): string {
+  const { mode, partDistribuee, avecRetraite } = options.repartition
   const remuneration = euros(options.remunerationNette)
   const descriptions: Record<ModeRepartition, string> = {
+    meilleurNet: `dans chaque statut, la rémunération nette au meilleur net du foyer${avecRetraite ? " parmi celles qui valident 4 trimestres de retraite" : ""}, tout le bénéfice restant versé en dividendes${remunerationsRetenues(scenarios)}`,
     dividendes: `rémunération nette de ${remuneration}, tout le bénéfice restant versé en dividendes`,
     remuneration: "la plus haute rémunération que la société peut verser, sans dividendes",
     personnalisee: `rémunération nette de ${remuneration}, ${pourcentage(partDistribuee)} du bénéfice distribuable versé en dividendes, le reste conservé dans la société`,
@@ -167,9 +174,9 @@ function descriptionRepartition(options: ComparaisonOptions): string {
   return `${libellesRepartition[mode]} (${descriptions[mode]})`
 }
 
-function reglagesUtilises(options: ComparaisonOptions): string {
+function reglagesUtilises(options: ComparaisonOptions, scenarios: ScenarioStatut[]): string {
   return [
-    `- Bénéfice de la société en SASU et EURL : ${descriptionRepartition(options)}`,
+    `- Bénéfice de la société en SASU et EURL : ${descriptionRepartition(options, scenarios)}`,
     `- En micro-entreprise, part des prestations de services en BNC : ${pourcentage(options.partBncPrestations)} (le reste en BIC)`,
     `- Frais de fonctionnement annuels ajoutés aux charges : ${options.fraisFonctionnement ? totalDesFrais(options) : "aucun"}`
   ].join("\n")
@@ -217,7 +224,7 @@ function sectionComparateur(session: SimulationAnnuelle, comparaison: Comparaiso
   const { options, resultat } = comparaison
   const intro = "L'activité est simulée dans chaque statut, le reste de la simulation restant identique. Les montants portent sur toute la simulation, sauf la ligne « Conservé », propre à l'activité. Comparaison calculée à l'export avec les réglages proposés par défaut :"
   const tableauOuAbsence = resultat.scenarios.length > 0 ? tableauDeComparaison(resultat, comparaison.nomActivite) + notesDeComparaison(resultat) : "Aucun statut comparé."
-  return `${titre}\n\n${intro}\n\n${reglagesUtilises(options)}\n\n${tableauOuAbsence}${couplesEnUnionLibre(session, resultat)}`
+  return `${titre}\n\n${intro}\n\n${reglagesUtilises(options, resultat.scenarios)}\n\n${tableauOuAbsence}${couplesEnUnionLibre(session, resultat)}`
 }
 
 // --- Avertissements ---

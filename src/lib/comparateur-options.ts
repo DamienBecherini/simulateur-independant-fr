@@ -1,6 +1,6 @@
 // src/lib/comparateur-options.ts
 
-import type { ComparaisonOptions, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, PosteFrais, DonneesDeLAnnee, StatutFrais } from "@/types"
+import type { ComparaisonOptions, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, StatutFrais } from "@/types"
 
 /** Libellés des postes de frais, dans l'ordre d'affichage. */
 export const posteFraisLabels: Record<PosteFrais, string> = {
@@ -15,6 +15,7 @@ export const statutsFrais: StatutFrais[] = ["SASU", "EURL", "EI", "micro"]
 
 /** Modes de partage du bénéfice en SASU et EURL, dans l'ordre d'affichage, avec leur libellé. */
 export const libellesRepartition: Record<ModeRepartition, string> = {
+  meilleurNet: "Au meilleur net",
   dividendes: "Rémunération saisie, le reste en dividendes",
   remuneration: "Tout en rémunération",
   personnalisee: "Répartition personnalisée",
@@ -28,6 +29,18 @@ export const libellesRepartition: Record<ModeRepartition, string> = {
 export function avecRemuneration(options: ComparaisonOptions, remunerationNette: number): ComparaisonOptions {
   const mode = options.repartition.mode === "personnalisee" ? "personnalisee" : "dividendes"
   return { ...options, remunerationNette, repartition: { mode, partDistribuee: 1 } }
+}
+
+/**
+ * Reporte dans le comparateur une rémunération de l'arbitrage. Au meilleur net, ses deux meilleurs points y restent :
+ * on coche ou décoche seulement « avec 4 trimestres de retraite » ; toute autre rémunération est reportée telle quelle.
+ */
+export function appliquerRemuneration(options: ComparaisonOptions, remunerationNette: number, optimisation: OptimisationRemuneration | null): ComparaisonOptions {
+  const { meilleur, meilleurAvecRetraite } = optimisation ?? {}
+  const auMeilleurNet = options.repartition.mode === "meilleurNet"
+  if (auMeilleurNet && remunerationNette === meilleur?.remunerationNette) return { ...options, repartition: { ...options.repartition, avecRetraite: false } }
+  if (auMeilleurNet && remunerationNette === meilleurAvecRetraite?.remunerationNette) return { ...options, repartition: { ...options.repartition, avecRetraite: true } }
+  return avecRemuneration(options, remunerationNette)
 }
 
 /**
@@ -50,9 +63,10 @@ export function comparableActivities(session: DonneesDeLAnnee): (Company | Micro
 }
 
 /**
- * Réglages proposés à l'ouverture du comparateur pour une activité : on reprend la rémunération et les
- * dividendes saisis ; sans dividendes saisis, tout le bénéfice disponible est distribué, pour ne pas
- * pénaliser les statuts en société avec un bénéfice qui resterait bloqué.
+ * Réglages proposés à l'ouverture du comparateur pour une activité : avec des dividendes saisis, on reprend la
+ * rémunération et les dividendes de la grille ; sinon, chaque statut de société prend sa rémunération au meilleur net,
+ * tout le reste en dividendes, pour ne pas le pénaliser avec un bénéfice qui resterait bloqué. La rémunération saisie
+ * reste proposée pour les autres modes.
  */
 export function defaultComparisonOptions(session: DonneesDeLAnnee, activityId: string): ComparaisonOptions {
   const flows = session.monthlyData.flatMap(month => month.flows).filter(flow => flow.entityId === activityId)
@@ -61,7 +75,7 @@ export function defaultComparisonOptions(session: DonneesDeLAnnee, activityId: s
   return {
     activityId,
     remunerationNette: annualTotal("director_remuneration"),
-    repartition: { mode: annualTotal("dividends_payment") === 0 ? "dividendes" : "grille", partDistribuee: 1 },
+    repartition: { mode: annualTotal("dividends_payment") === 0 ? "meilleurNet" : "grille", partDistribuee: 1 },
     partBncPrestations: 1,
     fraisFonctionnement: defaultFraisFonctionnement()
   }

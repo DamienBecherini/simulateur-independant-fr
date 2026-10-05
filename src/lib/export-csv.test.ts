@@ -216,6 +216,21 @@ describe("reglagesDuComparateur", () => {
     expect(remuneration.map(([libelle]) => libelle)).not.toContain("Part du bénéfice distribuable versée en dividendes (%)")
   })
 
+  it("au meilleur net, donne la rémunération retenue dans chaque colonne de société, et si 4 trimestres sont exigés", () => {
+    const optimale = (remunerationNette: number) => ({ remunerationOptimale: { remunerationNette, avecRetraite: true, retraiteHorsDAtteinte: false } })
+    const [sasu, micro] = comparaisonExemple().scenarios
+    const scenarios = [{ ...sasu, ...optimale(12300) }, { ...sasu, statut: "EURL" as const, libelle: "EURL", ...optimale(25700) }, micro]
+    const reglages = reglagesDuComparateur({ ...optionsExemple(), repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true } }, "X", scenarios)
+
+    expect(reglages).toContainEqual(["Bénéfice de la société (SASU, EURL)", "Au meilleur net"])
+    expect(reglages).toContainEqual(["Rémunération nette annuelle (SASU, EURL)", "au meilleur net de chaque statut"])
+    expect(reglages).toContainEqual(["4 trimestres de retraite exigés", "oui"])
+    expect(reglages).toContainEqual(["Rémunération nette annuelle retenue, SASU", { montant: 12300 }])
+    expect(reglages).toContainEqual(["Rémunération nette annuelle retenue, EURL", { montant: 25700 }])
+    expect(reglages.map(([libelle]) => libelle)).not.toContain("Rémunération nette annuelle retenue, Micro-entreprise")
+    expect(reglagesDuComparateur({ ...optionsExemple(), repartition: { mode: "meilleurNet", partDistribuee: 1 } }, "X")).toContainEqual(["4 trimestres de retraite exigés", "non"])
+  })
+
   it("omet les frais quand le comparateur n'en ajoute pas", () => {
     expect(reglagesDuComparateur({ ...optionsExemple(), fraisFonctionnement: undefined }, "X")).toHaveLength(4)
   })
