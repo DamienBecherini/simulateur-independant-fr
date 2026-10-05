@@ -37,6 +37,22 @@ test("le document PDF est enregistré sous le nom de la simulation, et la page r
   expect(erreursConsole).toEqual([])
 })
 
+test("une simulation au nom très long propose un nom de PDF court, et le fichier est écrit", async ({ dossierDonnees, lancer }) => {
+  // Plus de 300 caractères, accents et ponctuation : le nom proposé doit rester un nom de fichier valide.
+  await deposerSession(dossierDonnees, { ...sessionMicroBnc(), name: `Scénario « très » long : ${"hypothèse prudente, ".repeat(16)}fin` })
+  const { electronApp, page, erreursConsole } = await lancer()
+  const chemin = path.join(dossierDonnees, "nom-long.pdf")
+  await choisirFichiers(electronApp, { enregistrer: chemin })
+
+  await page.getByRole("button", { name: "Exporter", exact: true }).click()
+  await page.getByRole("dialog", { name: "Exporter" }).getByRole("button", { name: /Document PDF/ }).click()
+
+  await expect.poll(async () => (await fs.readFile(chemin).catch(() => Buffer.alloc(0))).toString("latin1").trimEnd().endsWith("%%EOF"), { timeout: 20_000 }).toBe(true)
+  // Le nom est raccourci à 60 caractères, comme pour les autres exports, avant l'année.
+  expect(await demandesDEnregistrement(electronApp)).toEqual([{ title: "Exporter en PDF", defaultPath: "scenario-tres-long-hypothese-prudente-hypothese-prudente-hyp-2026.pdf" }])
+  expect(erreursConsole).toEqual([])
+})
+
 test("annuler la fenêtre d'enregistrement n'écrit aucun fichier", async ({ dossierDonnees, lancer }) => {
   await deposerSession(dossierDonnees, sessionMicroBnc())
   const { electronApp, page, erreursConsole } = await lancer()
