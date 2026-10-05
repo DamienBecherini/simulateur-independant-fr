@@ -153,7 +153,7 @@ describe("e-mail prérempli", () => {
 
 describe("cohérence avec le formulaire GitHub", () => {
   it("reprend mot pour mot les choix des listes de .github/ISSUE_TEMPLATE/retour.yml", () => {
-    const formulaire = readFileSync(".github/ISSUE_TEMPLATE/retour.yml", "utf-8")
+    const formulaire = readFileSync(".github/ISSUE_TEMPLATE/retour.yml", "utf-8").replace(/\r\n/g, "\n")
     for (const choix of [...Object.values(CHOIX_DU_FORMULAIRE.note), ...Object.values(CHOIX_DU_FORMULAIRE.affichage), ...Object.values(CHOIX_DU_FORMULAIRE.type)]) expect(formulaire).toContain(`- "${choix}"`)
     for (const id of ["note", "affichage", "type", "message", "version", "environnement", "diagnostic"]) expect(formulaire).toContain(`id: ${id}\n`)
   })

@@ -113,6 +113,11 @@ export async function demandesDEnregistrement(electronApp: ElectronApplication):
   return electronApp.evaluate(() => (globalThis as unknown as { __fichiersE2E: FichiersE2E }).__fichiersE2E.demandes)
 }
 
+/** Adresses que l'application a demandé d'ouvrir hors de sa fenêtre depuis le lancement (shell.openExternal). */
+export async function adressesOuvertes(electronApp: ElectronApplication): Promise<string[]> {
+  return electronApp.evaluate(() => (globalThis as unknown as { __adressesOuvertesE2E: string[] }).__adressesOuvertesE2E)
+}
+
 /** Orientation de chaque page d'un PDF, lue dans sa « MediaBox » (largeur et hauteur en points). */
 export function orientationsDesPages(pdf: string): ("portrait" | "paysage")[] {
   return Array.from(pdf.matchAll(/\/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]/g), ([, largeur, hauteur]) => (Number(largeur) > Number(hauteur) ? "paysage" : "portrait"))

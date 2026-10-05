@@ -6,7 +6,7 @@
 // `electronApp.evaluate`. Le remplacement a lieu avant le chargement de la session : aucune course
 // possible avec la boîte affichée au démarrage (conversion d'un fichier d'un format précédent).
 
-const { dialog } = require("electron")
+const { dialog, shell } = require("electron")
 
 globalThis.__dialoguesE2E = []
 
@@ -49,4 +49,12 @@ dialog.showSaveDialog = async (...args) => {
 dialog.showOpenDialog = async () => {
   const chemin = globalThis.__fichiersE2E.ouvrir
   return chemin ? { canceled: false, filePaths: [chemin] } : { canceled: true, filePaths: [] }
+}
+
+// Adresses ouvertes hors de l'application (navigateur, messagerie) : consignées dans `__adressesOuvertesE2E`, sans
+// rien ouvrir pendant les tests.
+globalThis.__adressesOuvertesE2E = []
+
+shell.openExternal = async adresse => {
+  globalThis.__adressesOuvertesE2E.push(adresse)
 }

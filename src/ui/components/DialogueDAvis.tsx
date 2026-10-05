@@ -3,7 +3,7 @@
 // message, tous facultatifs, et un diagnostic sans aucune donnée de la simulation. Le retour part sans serveur, par un
 // ticket GitHub ou un e-mail préremplis, ou se copie pour une messagerie en ligne. L'aperçu montre le texte envoyé.
 
-import { useId, useRef, useState, type ReactNode } from "react"
+import { useId, useRef, useState, type ReactNode, type RefObject } from "react"
 import { Copy, Github, Mail, Star } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,8 @@ interface DialogueDAvisProps {
   isOpen: boolean
   onClose: () => void
   diagnostic: Diagnostic
+  /** Bouton qui ouvre la fenêtre : le focus lui revient à la fermeture. */
+  declencheur?: RefObject<HTMLElement | null>
 }
 
 /** Taille des cibles : 24 px au moins, 44 px au doigt. */
@@ -222,12 +224,19 @@ function Formulaire({ retour, setRetour }: { retour: Retour; setRetour: (retour:
   )
 }
 
-export function DialogueDAvis({ isOpen, onClose, diagnostic }: DialogueDAvisProps) {
+export function DialogueDAvis({ isOpen, onClose, diagnostic, declencheur }: DialogueDAvisProps) {
   // Le brouillon reste le temps de la session de l'application, même fenêtre fermée.
   const [retour, setRetour] = useState<Retour>(RETOUR_VIDE)
   return (
     <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+        onCloseAutoFocus={event => {
+          if (!declencheur?.current) return
+          event.preventDefault()
+          declencheur.current.focus()
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Donner mon avis</DialogTitle>
           <DialogDescription>Tout est facultatif : une seule information suffit. Le simulateur est en bêta, et vos retours aident à choisir l'affichage à garder.</DialogDescription>

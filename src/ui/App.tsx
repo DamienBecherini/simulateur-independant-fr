@@ -1,6 +1,6 @@
 // src/ui/App.tsx
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
@@ -48,6 +48,7 @@ function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [isExportOpen, setExportOpen] = useState(false)
   const [isAvisOpen, setAvisOpen] = useState(false)
+  const boutonDAvis = useRef<HTMLButtonElement>(null)
   const [simulation, setSimulation] = useState<SimulationPluriannuelle | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
 
@@ -195,7 +196,7 @@ function App() {
               <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y)" onClick={redo} disabled={!canRedo} className="h-10 w-9 sm:w-10 [&_svg]:size-6">
                 <Redo2 className="dark:text-slate-300" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Donner mon avis" title="Donner mon avis" onClick={() => setAvisOpen(true)} className="h-10 w-9 sm:ml-2 sm:w-10 [&_svg]:size-6">
+              <Button variant="ghost" size="icon" ref={boutonDAvis} aria-label="Donner mon avis" title="Donner mon avis" onClick={() => setAvisOpen(true)} className="h-10 w-9 sm:ml-2 sm:w-10 [&_svg]:size-6">
                 <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
               </Button>
             </div>
@@ -294,7 +295,7 @@ function App() {
         {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
         {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
             le panneau de configuration ait tout le contexte nécessaire. */}
-        <DialogueDAvis isOpen={isAvisOpen} onClose={() => setAvisOpen(false)} diagnostic={diagnostic} />
+        <DialogueDAvis isOpen={isAvisOpen} onClose={() => setAvisOpen(false)} diagnostic={diagnostic} declencheur={boutonDAvis} />
         <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} onExportJson={handleExportAll} />
         <SettingsSheet
           isOpen={isSettingsOpen}
