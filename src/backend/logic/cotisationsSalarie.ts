@@ -77,18 +77,23 @@ export function calculerCotisationsSalarie(brut: number, statut: StatutSalarie, 
  * Brut B tel que B - cotisations salariales(B) = net, trouvé par dichotomie comme le revenu du gérant d'EURL :
  * le net croît avec le brut (aucun taux marginal n'atteint 100 %), sauf au plafond, où la contribution d'équilibre
  * technique, due alors sur tout le brut, le fait baisser d'un coup (0,14 % du plafond, 67 € en 2026). Un net de
- * cet intervalle a deux bruts possibles, de part et d'autre du plafond : la dichotomie retient l'un des deux. B est encadré entre `net`
- * et `net + écart`, l'écart doublant jusqu'à couvrir les cotisations, puis l'intervalle est divisé par deux à
- * chaque tour. Une rémunération nulle ou négative n'a ni brut ni cotisations.
+ * cet intervalle a deux bruts possibles, de part et d'autre du plafond : on retient le plus petit, moins cher pour
+ * la société. Si le brut du plafond suffit à atteindre le net, B est encadré entre `net` et le plafond, où le net
+ * croît avec le brut ; sinon entre `net` et `net + écart`, l'écart doublant jusqu'à couvrir les cotisations.
+ * L'intervalle est ensuite divisé par deux à chaque tour. Une rémunération nulle ou négative n'a ni brut ni cotisations.
  */
 export function brutPourUnNet(net: number, statut: StatutSalarie, regles: ReglesRegimeGeneral): number {
   if (net <= 0) return 0
   const netDe = (brut: number) => calculerCotisationsSalarie(brut, statut, regles).net
-  let ecart = net
-  while (netDe(net + ecart) < net) ecart *= 2
+  const plafond = regles.plafondSecuriteSociale
+  let haut = plafond
+  if (netDe(plafond) < net) {
+    let ecart = net
+    while (netDe(net + ecart) < net) ecart *= 2
+    haut = net + ecart
+  }
 
   let bas = net
-  let haut = net + ecart
   for (let tour = 0; tour < ITERATIONS_DICHOTOMIE; tour++) {
     const milieu = (bas + haut) / 2
     if (netDe(milieu) < net) bas = milieu
