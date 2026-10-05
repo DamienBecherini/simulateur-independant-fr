@@ -57,10 +57,11 @@ async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]>
       }
     ],
     [
-      "réglages d'une personne, frais réels dépliés",
+      "réglages d'une personne, frais réels dépliés avec deux trajets",
       async () => {
         await page.getByRole("button", { name: "Modifier les autres réglages" }).first().click()
         await page.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 10 %" }).click()
+        await page.getByRole("button", { name: "Ajouter un trajet" }).click()
       }
     ],
     [
