@@ -47,6 +47,10 @@ function tropPetites(cibles: Cible[], minimum: number): string[] {
 
 /** Ouvre chaque fenêtre, mesure ses contrôles et la referme ; renvoie les cibles trop petites, fenêtre par fenêtre. */
 async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]> {
+  const ouvrirLesMontages = async () => {
+    await page.getByRole("button", { name: "Paramètres" }).click()
+    await page.getByRole("button", { name: "Partir d'un montage type..." }).click()
+  }
   const fenetres: [string, () => Promise<void>][] = [
     ["paramètres", () => page.getByRole("button", { name: "Paramètres" }).click()],
     [
@@ -73,7 +77,15 @@ async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]>
     ],
     ["choix du type d'activité", () => page.getByRole("button", { name: "+ Ajouter une Activité" }).click()],
     ["flux d'un mois", () => page.getByRole("button", { name: /^Flux de janvier/ }).last().click()],
-    ["couleurs des flux", () => page.getByRole("button", { name: "Gérer les couleurs" }).click()]
+    ["couleurs des flux", () => page.getByRole("button", { name: "Gérer les couleurs" }).click()],
+    ["montages types", ouvrirLesMontages],
+    [
+      "détail d'un montage",
+      async () => {
+        await ouvrirLesMontages()
+        await page.getByRole("button", { name: "Détails du montage « Conjoint salarié de la SASU »" }).click()
+      }
+    ]
   ]
   const resultats: string[] = []
   for (const [nom, ouvrirFenetre] of fenetres) {
@@ -82,8 +94,8 @@ async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]>
     // Une fenêtre apparaît en grossissant : on la mesure une fois l'animation terminée.
     await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"))
     resultats.push(...tropPetites(await mesurerLesCibles(page), minimum).map(c => `[${nom}] ${c}`))
-    await page.keyboard.press("Escape")
-    await expect(page.getByRole("dialog")).toBeHidden()
+    // Une fenêtre ouverte depuis les paramètres se referme avec eux : une touche Échap par fenêtre.
+    while ((await page.getByRole("dialog").count()) > 0) await page.keyboard.press("Escape")
   }
   return resultats
 }

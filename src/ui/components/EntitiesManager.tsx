@@ -113,7 +113,7 @@ function EntitiesManager({ session, setSession, onChargerMontage }: EntitiesMana
 
   const listeVide = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-      <p className="text-slate-600 dark:text-slate-400">Aucune entité. Commencez par en ajouter une{onChargerMontage ? ", ou partez d'une situation courante" : ""} !</p>
+      <p className="text-slate-600 dark:text-slate-400">Aucune entité. Commencez par en ajouter une !</p>
       {onChargerMontage ? <BoutonDesMontages variant="outline" size="sm" className="print:hidden" onCharger={onChargerMontage} confirmationNecessaire={false} nomDeLaSession={session.name} /> : null}
     </div>
   )

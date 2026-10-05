@@ -68,6 +68,7 @@ describe("Fenêtre des montages types", () => {
     await user.click(within(confirmation).getByRole("button", { name: "Annuler" }))
     expect(onCharger).not.toHaveBeenCalled()
     expect(fenetre()).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Charger le montage « Micro-entreprise seule (BNC) »" })).toHaveFocus()
 
     await user.click(screen.getByRole("button", { name: "Charger le montage « Micro-entreprise seule (BNC) »" }))
     await user.click(screen.getByRole("button", { name: "Remplacer" }))

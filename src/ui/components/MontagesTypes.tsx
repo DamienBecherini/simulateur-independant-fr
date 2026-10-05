@@ -2,7 +2,7 @@
 // « Partir d'un montage type » : la bibliothèque des montages en cartes, le détail de chacun (ce qu'il illustre, ses
 // conditions, ses risques, ses sources), puis son chargement, confirmé quand la simulation en cours serait perdue.
 
-import { useState, type ReactNode } from "react"
+import { useRef, useState, type ReactNode } from "react"
 import { ChevronLeft, ExternalLink, LayoutTemplate } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -128,6 +128,8 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
   // Dernier montage dont on a vu le détail : de retour à la liste, le focus revient sur sa carte.
   const [montageVu, setMontageVu] = useState<string | null>(null)
   const [aConfirmer, setAConfirmer] = useState<MontageType | null>(null)
+  // Bouton qui a demandé la confirmation : « Annuler » y ramène le focus.
+  const declencheur = useRef<HTMLElement | null>(null)
 
   const changerOuverture = (ouverte: boolean) => {
     if (!ouverte) {
@@ -145,7 +147,11 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
     setDetail(montage)
     setMontageVu(montage.id)
   }
-  const demanderLeChargement = (montage: MontageType) => (confirmationNecessaire ? setAConfirmer(montage) : charger(montage))
+  const demanderLeChargement = (montage: MontageType) => {
+    if (!confirmationNecessaire) return charger(montage)
+    declencheur.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setAConfirmer(montage)
+  }
 
   return (
     <>
@@ -156,7 +162,12 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
       </Dialog>
 
       <Dialog open={aConfirmer !== null} onOpenChange={ouverte => !ouverte && setAConfirmer(null)}>
-        <DialogContent>
+        <DialogContent
+          onCloseAutoFocus={evenement => {
+            evenement.preventDefault()
+            if (declencheur.current?.isConnected) declencheur.current.focus()
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Remplacer la simulation en cours ?</DialogTitle>
             <DialogDescription>
