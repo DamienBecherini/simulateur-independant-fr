@@ -172,7 +172,8 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 8.  **Partage du bénéfice des sociétés [✅] :** dans le comparateur, quatre modes (rémunération saisie et dividendes, tout en rémunération, répartition personnalisée, dividendes de la grille) ; barre empilée exacte du bénéfice avant rémunération (rémunération nette, cotisations, IS, dividendes, cotisations sur dividendes, réserves) avec poignées glissables à la souris, au doigt et au clavier, répartitions toutes faites, exports.
 9.  **Comparateur au meilleur net [✅] :** mode par défaut, chaque statut de société (SASU, EURL) avec sa propre rémunération optimale et tout le reste en dividendes, option « avec 4 trimestres de retraite » ; un seul calcul partagé avec « Rémunération ou dividendes ? ».
 10. **Saisie sur plusieurs années depuis la grille [✅] :** cases « Aussi en » dans la fenêtre des flux ; ajout, modification et suppression d'une série appliqués aux mêmes mois des années cochées (même portée, mêmes mois du calendrier), sans doublon, en une seule étape d'annulation, avec une notification détaillée par année. La recopie jusqu'en décembre reste limitée à l'année affichée.
-11. **Plus tard :** acteurs et relations propres à chaque année, exports et optimisation sur plusieurs années, revenu fiscal de référence dans les exports CSV et Markdown.
+11. **Dix années au plus [✅] :** dix années consécutives au plus par session (au-delà, les chiffres ne sont plus qu'une projection) ; les fichiers aux années trop nombreuses ou non consécutives sont refusés en nommant les années manquantes, une année en double écartée est signalée (addendum à l'ADR 008) ; raccourcis « Toutes, Aucune, Années précédentes, Années suivantes » dans la fenêtre des flux, synthèse des années à colonne fixe.
+12. **Plus tard :** acteurs et relations propres à chaque année, exports et optimisation sur plusieurs années, revenu fiscal de référence dans les exports CSV et Markdown.
 
 ---
 
