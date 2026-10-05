@@ -40,6 +40,12 @@
     width: 273mm;
     max-width: none;
   }
+  /* Une section repliable qui contient une partie paysage (la légende des flux dans les affichages qui replient le
+     détail) est elle aussi sur la page paysage : sinon, son titre ouvrirait une page portrait entre la grille et la
+     légende. */
+  details:has(.page-paysage) {
+    page: grille;
+  }
 
   html {
     color-scheme: light;

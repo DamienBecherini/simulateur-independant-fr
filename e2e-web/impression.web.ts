@@ -9,15 +9,17 @@ import { choisirAvantLeChargement } from "./support/affichage"
 const LARGEUR_A4 = 794
 
 /**
- * Ouvre la démo dans l'affichage classique (l'impression de l'affichage « Résumé » a ses propres tests), à la largeur
- * d'une feuille A4, dans le thème demandé, et attend la simulation d'exemple.
+ * Ouvre la démo dans l'affichage demandé (classique par défaut : l'impression de l'affichage « Résumé » a ses propres
+ * tests), à la largeur d'une feuille A4, dans le thème demandé, et attend la simulation d'exemple.
  */
-async function ouvrir(page: Page, theme: "light" | "dark" = "light") {
-  await choisirAvantLeChargement(page, "classique")
+async function ouvrir(page: Page, theme: "light" | "dark" = "light", affichage: "classique" | "resume" | "vues" = "classique") {
+  await choisirAvantLeChargement(page, affichage)
   await page.setViewportSize({ width: LARGEUR_A4, height: 1123 })
   await page.addInitScript(choix => localStorage.setItem("theme", choix), theme)
-  await page.goto("./")
-  await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
+  // En « Trois vues », la courbe attendue ci-dessous est dans la vue « Comparer » ; l'impression montre toutes les vues.
+  await page.goto(affichage === "vues" ? "./#comparer" : "./")
+  // Les résultats sont calculés (en « Trois vues », dans une vue masquée à l'écran, mais imprimée).
+  await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeAttached()
   await expect(page.getByRole("group", { name: /Net du foyer selon la rémunération nette/ })).toBeVisible()
 }
 
@@ -105,8 +107,9 @@ test("Chromium produit un PDF de plusieurs pages A4", async ({ page }) => {
   expect(contenu.match(/\/Type\s*\/Page\b/g)?.length ?? 0).toBeGreaterThanOrEqual(4)
 })
 
-test("la grille annuelle et sa légende sont imprimées sur une page en paysage, le reste en portrait", async ({ page }) => {
-  await ouvrir(page)
+for (const affichage of ["classique", "resume", "vues"] as const) {
+test(`affichage ${affichage} : la grille annuelle et sa légende sont imprimées sur une page en paysage, le reste en portrait`, async ({ page }) => {
+  await ouvrir(page, "light", affichage)
   await page.emulateMedia({ media: "print" })
 
   // preferCSSPageSize : les tailles de page viennent de la feuille d'impression, comme dans l'application de bureau.
@@ -120,3 +123,4 @@ test("la grille annuelle et sa légende sont imprimées sur une page en paysage,
   expect(orientations[0]).toBe("portrait")
   expect(orientations.at(-1)).toBe("portrait")
 })
+}
