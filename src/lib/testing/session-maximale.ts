@@ -109,7 +109,7 @@ export function sauvegardeMaximale(id = "slot-maximal"): SaveSlot {
   return { ...sessionMaximale(), id, lastModified: 1_780_000_000_000 }
 }
 
-/** Préférences remplies : ordre des sauvegardes et couleurs des types de flux. */
+/** Préférences remplies : ordre des sauvegardes, couleurs des types de flux et affichage choisi. */
 export function preferencesMaximales(): UserPreferences {
-  return { slotOrder: ["slot-maximal", "slot-2"], flowTypeColors: { salary: "#123456", ca_services: "#abcdef" } }
+  return { slotOrder: ["slot-maximal", "slot-2"], flowTypeColors: { salary: "#123456", ca_services: "#abcdef" }, affichage: "resume" }
 }

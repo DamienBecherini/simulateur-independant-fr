@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useOptimisation } from "../hooks/useOptimisation"
-import { appliquerRemuneration, avecActiviteComparee, avecReglagesDeLActivite, comparableActivities, defaultFraisFonctionnement, posteFraisLabels, reglagesDeLActiviteComparee, retenirLesReglages, statutsFrais } from "@/lib/comparateur-options"
+import { appliquerRemuneration, avecActiviteComparee, avecReglagesDeLActivite, comparableActivities, defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, reglagesDeLActiviteComparee, retenirLesReglages, statutsFrais } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { cn } from "@/lib/utils"
@@ -15,6 +15,10 @@ import { Depliable } from "./Depliable"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
 import { ChoixDeLaRepartition, RepartitionDuBenefice } from "./RepartitionBenefice"
 import { ZoneDefilante } from "./ZoneDefilante"
+import { BoutonDuDetail, CartesDesStatuts, NoteDesFraisSupposes, VerdictDuComparateur } from "./SyntheseDuComparateur"
+import { ReplieEnResume } from "./ReplieEnResume"
+import { useAffichageResume } from "../hooks/useAffichage"
+import type { ResumeDeLaComparaison } from "@/lib/resume"
 import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Comparateur, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ReglagesComparateur, ScenarioStatut, SessionState, SimulationAnnuelle, StatutFrais, StatutSociete } from "@/types"
 
 interface ComparatorPanelProps {
@@ -23,6 +27,8 @@ interface ComparatorPanelProps {
   annee: number
   /** Enregistre dans la session les réglages du comparateur, à partir des réglages actuels. */
   onComparateurChange: (modifier: (comparateur: Comparateur | undefined) => Comparateur) => void
+  /** Reçoit l'activité comparée et le résultat à chaque nouvelle comparaison (barre de résumé de l'affichage « Résumé »). */
+  onComparaison?: (resume: ResumeDeLaComparaison | null) => void
 }
 
 /** Sans activité, on compare tout de même les couples en union libre. */
@@ -175,23 +181,26 @@ function ComparatorControls({ activities, selected, options, onSelect, onChange 
         </Select>
       </div>
 
-      <ChoixDeLaRepartition mode={options.repartition.mode} onChange={mode => onChange({ repartition: { ...options.repartition, mode } })} />
+      {/* Affichage « Résumé » : ces réglages tiennent en une ligne, qui rappelle le partage du bénéfice retenu. */}
+      <ReplieEnResume titre={`Réglages : ${libellesRepartition[options.repartition.mode].toLowerCase()}`} className="basis-full" classNameContenu="mt-3 flex flex-wrap items-end gap-x-6 gap-y-3">
+        <ChoixDeLaRepartition mode={options.repartition.mode} onChange={mode => onChange({ repartition: { ...options.repartition, mode } })} />
 
-      {options.repartition.mode === "meilleurNet" ? <AvecRetraite options={options} onChange={onChange} /> : null}
+        {options.repartition.mode === "meilleurNet" ? <AvecRetraite options={options} onChange={onChange} /> : null}
 
-      {options.repartition.mode === "remuneration" || options.repartition.mode === "meilleurNet" ? null : (
-        <div className="space-y-1">
-          <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
-          <Input id="comparateur-remuneration" className="w-40 bg-background text-right" type="number" min="0" step="1000" value={options.remunerationNette} onChange={e => onChange({ remunerationNette: Math.max(0, parseFloat(e.target.value) || 0) })} />
-        </div>
-      )}
+        {options.repartition.mode === "remuneration" || options.repartition.mode === "meilleurNet" ? null : (
+          <div className="space-y-1">
+            <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
+            <Input id="comparateur-remuneration" className="w-40 bg-background text-right" type="number" min="0" step="1000" value={options.remunerationNette} onChange={e => onChange({ remunerationNette: Math.max(0, parseFloat(e.target.value) || 0) })} />
+          </div>
+        )}
 
-      {selected.type !== "micro-entreprise" && (
-        <div className="space-y-1">
-          <Label htmlFor="comparateur-bnc">En micro, prestations en BNC : {Math.round(options.partBncPrestations * 100)} % (le reste en BIC)</Label>
-          <input id="comparateur-bnc" className="block w-56 accent-slate-700 print:hidden" type="range" min="0" max="100" step="10" value={Math.round(options.partBncPrestations * 100)} onChange={e => onChange({ partBncPrestations: Number(e.target.value) / 100 })} />
-        </div>
-      )}
+        {selected.type !== "micro-entreprise" && (
+          <div className="space-y-1">
+            <Label htmlFor="comparateur-bnc">En micro, prestations en BNC : {Math.round(options.partBncPrestations * 100)} % (le reste en BIC)</Label>
+            <input id="comparateur-bnc" className="block w-56 accent-slate-700 print:hidden" type="range" min="0" max="100" step="10" value={Math.round(options.partBncPrestations * 100)} onChange={e => onChange({ partBncPrestations: Number(e.target.value) / 100 })} />
+          </div>
+        )}
+      </ReplieEnResume>
     </div>
   )
 }
@@ -205,6 +214,8 @@ function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioSta
     <th scope="col" className={cn("px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "bg-emerald-100 dark:bg-emerald-900/40")}>
       {scenario.libelle}
       <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{mentions || " "}</span>
+      {/* Le net du statut actuel diffère de celui des résultats du foyer : il compte des frais de fonctionnement supposés. */}
+      {scenario.actuel && scenario.fraisFonctionnement > 0 ? <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">frais supposés compris</span> : null}
       <RemunerationRetenue scenario={scenario} />
       {scenario.horsPlafond ? <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">hors plafond · 2 ans au plus</span> : null}
       {renvois.length > 0 ? (
@@ -220,13 +231,64 @@ function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioSta
   )
 }
 
-function ComparisonTable({ result, activityName, renvois }: { result: ComparaisonResult; activityName: string; renvois: Map<string, number[]> }) {
+interface ComparisonTableProps {
+  result: ComparaisonResult
+  activityName: string
+  renvois: Map<string, number[]>
+  /** Affichage « Résumé » : net, écart et protection d'abord ; les autres lignes ne s'affichent qu'à la demande (et à l'impression). */
+  reduit?: boolean
+  detailOuvert?: boolean
+  className?: string
+}
+
+function ComparisonTable({ result, activityName, renvois, reduit = false, detailOuvert = false, className }: ComparisonTableProps) {
   if (result.scenarios.length === 0) return null
   const current = result.scenarios.find(s => s.actuel)
   const best = (s: ScenarioStatut) => s.statut === result.meilleur
 
+  const lignes = rows(activityName).map(row => (
+    <tr key={row.label} className="border-t border-slate-200 dark:border-slate-700">
+      <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
+        {row.label}
+      </th>
+      {result.scenarios.map(s => (
+        <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", row.strong && "font-semibold", best(s) && "bg-emerald-50 dark:bg-emerald-950/30")}>
+          {row.value(s)}
+        </td>
+      ))}
+    </tr>
+  ))
+  const protection = (
+    <tr className="border-t border-slate-200 dark:border-slate-700">
+      <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
+        Protection sociale
+      </th>
+      {result.scenarios.map(s => (
+        <td key={s.statut} className={cn("px-3 py-2 text-right", best(s) && "bg-emerald-50 dark:bg-emerald-950/30")} title={s.protectionSociale.resume}>
+          <span aria-hidden="true" className="tracking-wider text-amber-500">
+            {stars(s.protectionSociale.etoiles)}
+          </span>
+          <span className="sr-only">{s.protectionSociale.etoiles} sur 5</span>
+          <span className="block text-xs text-slate-600 dark:text-slate-400">{s.protectionSociale.trimestres} trim. retraite</span>
+        </td>
+      ))}
+    </tr>
+  )
+  const ecart = current ? (
+    <tr className="border-t border-slate-200 dark:border-slate-700">
+      <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
+        Écart avec le statut actuel
+      </th>
+      {result.scenarios.map(s => (
+        <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", deltaClass(s.netApresImpots - current.netApresImpots), best(s) && "bg-emerald-50 dark:bg-emerald-950/30")}>
+          {s.actuel ? "—" : formatSignedMoney(s.netApresImpots - current.netApresImpots)}
+        </td>
+      ))}
+    </tr>
+  ) : null
+
   return (
-    <ZoneDefilante libelle="Tableau de comparaison" className="rounded-lg border border-slate-200 dark:border-slate-700">
+    <ZoneDefilante libelle="Tableau de comparaison" className={cn("rounded-lg border border-slate-200 dark:border-slate-700", className)}>
       <table className="w-full min-w-[48rem] text-sm print:min-w-0 print:text-[8pt]" aria-label="Comparaison des statuts">
         <thead className="bg-slate-100 dark:bg-slate-800/80">
           <tr>
@@ -238,46 +300,24 @@ function ComparisonTable({ result, activityName, renvois }: { result: Comparaiso
             ))}
           </tr>
         </thead>
-        <tbody>
-          {rows(activityName).map(row => (
-            <tr key={row.label} className="border-t border-slate-200 dark:border-slate-700">
-              <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
-                {row.label}
-              </th>
-              {result.scenarios.map(s => (
-                <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", row.strong && "font-semibold", best(s) && "bg-emerald-50 dark:bg-emerald-950/30")}>
-                  {row.value(s)}
-                </td>
-              ))}
-            </tr>
-          ))}
-          <tr className="border-t border-slate-200 dark:border-slate-700">
-            <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
-              Protection sociale
-            </th>
-            {result.scenarios.map(s => (
-              <td key={s.statut} className={cn("px-3 py-2 text-right", best(s) && "bg-emerald-50 dark:bg-emerald-950/30")} title={s.protectionSociale.resume}>
-                <span aria-hidden="true" className="tracking-wider text-amber-500">
-                  {stars(s.protectionSociale.etoiles)}
-                </span>
-                <span className="sr-only">{s.protectionSociale.etoiles} sur 5</span>
-                <span className="block text-xs text-slate-600 dark:text-slate-400">{s.protectionSociale.trimestres} trim. retraite</span>
-              </td>
-            ))}
-          </tr>
-          {current ? (
-            <tr className="border-t border-slate-200 dark:border-slate-700">
-              <th scope="row" className="px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300">
-                Écart avec le statut actuel
-              </th>
-              {result.scenarios.map(s => (
-                <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", deltaClass(s.netApresImpots - current.netApresImpots), best(s) && "bg-emerald-50 dark:bg-emerald-950/30")}>
-                  {s.actuel ? "—" : formatSignedMoney(s.netApresImpots - current.netApresImpots)}
-                </td>
-              ))}
-            </tr>
-          ) : null}
-        </tbody>
+        {reduit ? (
+          <>
+            <tbody>
+              {lignes[0]}
+              {ecart}
+              {protection}
+            </tbody>
+            <tbody id="comparateur-lignes-detail" className={cn(!detailOuvert && "hidden print:table-row-group")}>
+              {lignes.slice(1)}
+            </tbody>
+          </>
+        ) : (
+          <tbody>
+            {lignes}
+            {protection}
+            {ecart}
+          </tbody>
+        )}
       </table>
     </ZoneDefilante>
   )
@@ -355,6 +395,10 @@ function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[
 
 function ComparisonResults({ result, activityName, onExporter }: { result: ComparaisonResult; activityName: string; onExporter: () => void }) {
   const { notes, renvois } = numeroterNotes(result.scenarios.map(s => ({ id: s.statut, libelle: s.libelle, avertissements: s.warnings })))
+  // Affichage « Résumé » : tableau réduit (cartes sur téléphone), le reste des lignes à la demande.
+  const resume = useAffichageResume()
+  const [detailOuvert, setDetailOuvert] = useState(false)
+  const reduit = resume && result.scenarios.length > 0
   return (
     <>
       {result.scenarios.length > 0 ? (
@@ -362,7 +406,10 @@ function ComparisonResults({ result, activityName, onExporter }: { result: Compa
           <BoutonExportCsv contenu="le tableau de comparaison" onClick={onExporter} />
         </div>
       ) : null}
-      <ComparisonTable result={result} activityName={activityName} renvois={renvois} />
+      {reduit ? <CartesDesStatuts result={result} className="sm:hidden print:hidden" /> : null}
+      <ComparisonTable result={result} activityName={activityName} renvois={renvois} reduit={reduit} detailOuvert={detailOuvert} className={reduit && !detailOuvert ? "max-sm:hidden print:block" : undefined} />
+      {reduit ? <BoutonDuDetail ouvert={detailOuvert} onClick={() => setDetailOuvert(!detailOuvert)} /> : null}
+      <NoteDesFraisSupposes result={result} />
       <NotesDuTableau notes={notes} activityName={activityName} />
       <ProtectionDetails scenarios={result.scenarios} />
     </>
@@ -453,12 +500,20 @@ function useReglages(vue: SimulationAnnuelle, comparateur: Comparateur | undefin
   return { selected, effectiveOptions, statutEtudie: reglages?.statutEtudie, setOptions, setStatutEtudie, selectActivity }
 }
 
+/** Transmet l'activité comparée et le résultat à qui le demande ; rien quand il n'y a pas d'activité à comparer. */
+function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onComparaison"], selected: Company | MicroEntreprise | undefined, result: ComparaisonResult | null) {
+  const activite = selected?.name ?? null
+  useEffect(() => {
+    onComparaison?.(activite === null ? null : { activite, result })
+  }, [onComparaison, activite, result])
+}
+
 /**
  * Comparateur de statuts : l'activité choisie est simulée en SASU, EURL, EI au réel et micro-entreprise
  * (avec et sans versement libératoire), le reste de la simulation restant identique. Les couples en union
  * libre sont aussi comparés avec une imposition commune.
  */
-export function ComparatorPanel({ session, annee, onComparateurChange }: ComparatorPanelProps) {
+export function ComparatorPanel({ session, annee, onComparateurChange, onComparaison }: ComparatorPanelProps) {
   // Le comparateur porte sur l'année affichée : réglages par défaut tirés de sa grille, exports à son nom.
   const vue = useMemo(() => vueDeLAnnee(session, annee), [session, annee])
   const activities = comparableActivities(vue)
@@ -467,6 +522,7 @@ export function ComparatorPanel({ session, annee, onComparateurChange }: Compara
   const { result, error } = useComparison(session, effectiveOptions, vue.annee)
   const arbitrage = useArbitrage(session, effectiveOptions, vue.annee, selected, result, { statutEtudie, setStatutEtudie })
   const couples = result?.couples ?? []
+  useSignalerLaComparaison(onComparaison, selected, result)
   if (!selected && couples.length === 0) return null
 
   const personName = (id: string) => session.entities.find(e => e.id === id)?.name ?? id
@@ -477,15 +533,21 @@ export function ComparatorPanel({ session, annee, onComparateurChange }: Compara
         <h2 id="comparateur-titre" className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
           Comparateur de statuts
         </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée. Les charges d'une micro-entreprise y deviennent déductibles dans les statuts au réel (société, EI).</p>
+        <ReplieEnResume titre={`Année ${vue.annee} : ce que compare le tableau`} className="text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée. Les charges d'une micro-entreprise y deviennent déductibles dans les statuts au réel (société, EI).</p>
+        </ReplieEnResume>
       </div>
+      <VerdictDuComparateur result={result} activite={selected?.name} />
 
       {selected ? (
         <>
           <ComparatorControls activities={activities} selected={selected} options={effectiveOptions} onSelect={selectActivity} onChange={changes => setOptions({ ...effectiveOptions, ...changes })} />
           <FraisFonctionnementTable frais={effectiveOptions.fraisFonctionnement ?? defaultFraisFonctionnement()} onChange={fraisFonctionnement => setOptions({ ...effectiveOptions, fraisFonctionnement })} />
           <WarningList warnings={result?.warnings ?? []} />
-          <RepartitionDuBenefice activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} scenario={scenarioDuStatut(result, arbitrage.statut)} optimisation={arbitrage.resultat} options={effectiveOptions} onChange={setOptions} />
+          {/* Affichage « Résumé » : le partage du bénéfice n'est déplié d'office qu'en répartition personnalisée, où il sert à régler. */}
+          <ReplieEnResume titre={`Partage du bénéfice en ${arbitrage.statut} (barre réglable)`} className="text-sm" replie={effectiveOptions.repartition.mode !== "personnalisee"}>
+            <RepartitionDuBenefice activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} scenario={scenarioDuStatut(result, arbitrage.statut)} optimisation={arbitrage.resultat} options={effectiveOptions} onChange={setOptions} />
+          </ReplieEnResume>
         </>
       ) : null}
 
