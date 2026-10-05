@@ -258,8 +258,20 @@ test.describe("sur un téléphone", () => {
   })
 })
 
-/** Hauteur de la page au chargement, sections repliées ; pour les trois vues, la hauteur de chacune. */
+/**
+ * Hauteur de la page au chargement, sections repliées ; pour les trois vues, la hauteur de chacune. La page est fermée
+ * après la mesure : les pages d'un même contexte partagent leur stockage, et une page restée ouverte pourrait réécrire
+ * ses préférences, donc son affichage, pendant que la suivante se charge.
+ */
 async function hauteurs(page: Page, affichage: Affichage): Promise<number[]> {
+  try {
+    return await mesurer(page, affichage)
+  } finally {
+    await page.close()
+  }
+}
+
+async function mesurer(page: Page, affichage: Affichage): Promise<number[]> {
   await choisirAvantLeChargement(page, affichage)
   if (affichage !== "vues") {
     await page.goto("./")
