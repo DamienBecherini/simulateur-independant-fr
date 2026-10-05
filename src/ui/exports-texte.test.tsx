@@ -5,7 +5,7 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { toast } from "sonner"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import type { SessionState, SimulationReport } from "@/types"
+import type { SessionState, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { emptyReport, emptySession, makeCompany, makeFlow, makePerson } from "@/ui/testing/fixtures"
 import { ExportDialog } from "./components/ExportDialog"
 
@@ -15,11 +15,19 @@ function sessionAvecSociete(): SessionState {
   return session
 }
 
-function ouvrir(session: SessionState = sessionAvecSociete(), report: SimulationReport | null = emptyReport()) {
+function ouvrir(session: SessionState = sessionAvecSociete(), report: SimulationReport | null = emptyReport(), simulation: SimulationPluriannuelle | null = null) {
   const onClose = vi.fn()
-  render(<ExportDialog isOpen onClose={onClose} session={session} annee={2026} simulationReport={report} onExportJson={vi.fn()} />)
+  render(<ExportDialog isOpen onClose={onClose} session={session} annee={2026} simulationReport={report} simulation={simulation} onExportJson={vi.fn()} />)
   return onClose
 }
+
+/** Deux années simulées, la seconde en erreur. */
+const deuxAnnees = (): SimulationPluriannuelle => ({
+  annees: [
+    { annee: 2026, report: { ...emptyReport(), annee: 2026, anneeDesRegles: 2026 }, erreur: null },
+    { annee: 2027, report: null, erreur: "Grille invalide." }
+  ]
+})
 
 const fichierEnregistre = () => vi.mocked(window.api.saveTextFile).mock.calls[0][0]
 
@@ -118,6 +126,30 @@ describe("exports CSV et Markdown de la fenêtre « Exporter »", () => {
     ouvrir()
     await userEvent.click(screen.getByRole("button", { name: /Rapport complet \(Markdown\)/ }))
     await vi.waitFor(() => expect(fichierEnregistre().content).toContain(attendu))
+  })
+
+  it("ne propose pas la synthèse des années tant que la session ne compte qu'une année", async () => {
+    ouvrir(sessionAvecSociete(), emptyReport(), { annees: deuxAnnees().annees.slice(0, 1) })
+    expect(screen.queryByRole("button", { name: /Synthèse des années \(CSV\)/ })).not.toBeInTheDocument()
+  })
+
+  it("exporte la synthèse des années en CSV, sans année dans le nom du fichier", async () => {
+    ouvrir(sessionAvecSociete(), emptyReport(), deuxAnnees())
+    await userEvent.click(screen.getByRole("button", { name: /Synthèse des années \(CSV\)/ }))
+
+    await vi.waitFor(() => expect(window.api.saveTextFile).toHaveBeenCalled())
+    const { defaultName, content, format } = fichierEnregistre()
+    expect(defaultName).toBe("nouvelle-simulation-annees.csv")
+    expect(format).toBe("csv")
+    expect(content).toMatch(/^\uFEFFAnnée;Année des règles fiscales;Net après impôts;/)
+    expect(content).toContain("\r\n2027;;;;;;;;;Grille invalide.\r\n")
+  })
+
+  it("ajoute au rapport Markdown la synthèse de toutes les années", async () => {
+    ouvrir(sessionAvecSociete(), emptyReport(), deuxAnnees())
+    await userEvent.click(screen.getByRole("button", { name: /Rapport complet \(Markdown\)/ }))
+    await vi.waitFor(() => expect(fichierEnregistre().content).toContain("## Toutes les années"))
+    expect(fichierEnregistre().content).toContain("| 2027 | — | non calculée : Grille invalide. | — | — |")
   })
 
   it("rédige le rapport sans comparateur quand aucune activité n'est à comparer", async () => {

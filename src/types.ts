@@ -513,6 +513,12 @@ export interface FraisProfessionnelsResult {
   fraisDeTrajet: number
   /** Distance annuelle des trajets retenue (aller-retour, chaque trajet limité à 40 km sauf justification). */
   distanceRetenue: number
+  /** Trajets domicile-travail saisis. */
+  nombreDeTrajets: number
+  /** Trajets regroupés par voiture : distance retenue et montant au barème kilométrique de chacune. */
+  voitures: { puissanceFiscale: PuissanceFiscale; electrique: boolean; distance: number; montant: number }[]
+  /** Autres frais réels saisis (repas, formation, double résidence…). */
+  autresFrais: number
   retenue: "forfait" | "reels"
   /** Montant déduit du revenu imposable. */
   deduction: number

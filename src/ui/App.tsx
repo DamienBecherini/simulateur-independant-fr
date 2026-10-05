@@ -305,7 +305,7 @@ function App() {
         {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
             le panneau de configuration ait tout le contexte nécessaire. */}
         <DialogueDAvis isOpen={isAvisOpen} onClose={() => setAvisOpen(false)} diagnostic={diagnostic} declencheur={boutonDAvis} />
-        <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} onExportJson={handleExportAll} />
+        <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} simulation={simulation} onExportJson={handleExportAll} />
         <SettingsSheet
           isOpen={isSettingsOpen}
           onOpenChange={setSettingsOpen}

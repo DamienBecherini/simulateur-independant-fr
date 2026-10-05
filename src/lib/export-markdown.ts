@@ -2,9 +2,9 @@
 // Rapport Markdown de la simulation, à lire tel quel ou à confier à une IA pour l'analyser : hypothèses et limites,
 // acteurs et relations, flux saisis, résultats, comparateur de statuts et avertissements.
 
-import type { ComparaisonOptions, ComparaisonResult, Entity, ModeRepartition, Relationship, ScenarioStatut, SimulationAnnuelle, SimulationReport } from "@/types"
+import type { ComparaisonOptions, ComparaisonResult, DeplacementsProfessionnels, Entity, FraisProfessionnelsResult, ModeRepartition, Person, Relationship, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
-import { dateDeCreationLisible, fluxParActeur, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, type LigneDeFlux } from "./export-commun"
+import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libellePuissance, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { numeroterNotes } from "./notes"
 
 /** Comparaison calculée à l'export pour l'activité choisie dans le comparateur, ou la raison de son absence. */
@@ -16,6 +16,8 @@ export interface DonneesDuRapport {
   /** `null` quand la simulation ne contient aucune activité à comparer. */
   comparaison: ComparaisonDuRapport | null
   date: Date
+  /** Toutes les années de la session : leur synthèse suit les résultats quand il y en a au moins deux. */
+  pluriannuelle?: SimulationPluriannuelle | null
 }
 
 /** Hypothèses et limites du simulateur, en bref. */
@@ -49,22 +51,46 @@ function tableau(entete: string[], lignes: string[][], alignesADroite: number[] 
 
 const colonnesNumeriques = (de: number, a: number) => Array.from({ length: a - de + 1 }, (_, i) => de + i)
 
+const kilometres = (km: number) => `${km.toLocaleString("fr-FR").replace(/\s/g, " ")} km`
+
+const ouiNon = (valeur: boolean) => (valeur ? "oui" : "non")
+
 // --- Acteurs et relations ---
 
+/** Frais réels saisis sur une personne, en bref : le détail des trajets suit le tableau des acteurs. */
+function detailDesFraisReels(person: Person): string {
+  if (!person.fraisReels) return ""
+  const { trajets, autresFrais } = person.fraisReels
+  return ` ; frais réels saisis : ${trajets.length} trajet${trajets.length > 1 ? "s" : ""} domicile-travail, autres frais ${euros(autresFrais)}`
+}
+
+/** Déplacements professionnels d'une activité, saisis en kilomètres par an. */
+function detailDesDeplacements(deplacements: DeplacementsProfessionnels | undefined): string {
+  return deplacements ? ` ; déplacements professionnels : ${kilometres(deplacements.kmParAn)} par an, ${libelleVoiture(deplacements)}` : ""
+}
+
 function detailDeLActeur(entity: Entity): string {
-  if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}`
+  if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}${detailDesFraisReels(entity)}`
   const creation = dateDeCreationLisible(entity)
-  const creee = creation ? ` ; créée en ${creation}` : ""
+  const creee = `${creation ? ` ; créée en ${creation}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}`
   if (entity.type === "company") return `${entity.legalStatus === "EI" ? "Entreprise individuelle au régime réel" : `Société à l'impôt sur les sociétés, capital social ${euros(entity.capitalSocial)}`}${creee}`
   const rfr = entity.rfrN2 === undefined ? "non renseigné" : euros(entity.rfrN2)
   const horsPlafond = entity.horsPlafondAnneePrecedente ? " ; au-delà des plafonds l'année d'avant la simulation" : ""
   return `ACRE : ${entity.beneficieACRE ? "oui" : "non"} ; versement libératoire demandé : ${entity.opteVFL ? "oui" : "non"} ; revenu fiscal de référence N-2 : ${rfr}${creee}${horsPlafond}`
 }
 
+/** Trajets domicile-travail saisis sur les personnes, un par ligne ; rien quand aucune n'en a. */
+function trajetsDesPersonnes(session: SimulationAnnuelle): string {
+  const lignes = session.entities.flatMap(e => (e.type === "person" ? (e.fraisReels?.trajets ?? []).map((t, i) => [echapper(e.name), echapper(t.libelle) || `Trajet ${i + 1}`, kilometres(t.kmParTrajet), String(t.joursTravailles), libellePuissance(t.puissanceFiscale), ouiNon(t.electrique), ouiNon(t.distanceJustifiee)]) : []))
+  if (lignes.length === 0) return ""
+  const entete = ["Personne", "Trajet", "Aller simple", "Jours travaillés", "Puissance fiscale", "Électrique", "Distance au-delà de 40 km justifiée"]
+  return `\n\n### Trajets domicile-travail\n\nUn aller-retour par jour travaillé, avec une voiture personnelle, pour les frais réels.\n\n${tableau(entete, lignes, [2, 3])}`
+}
+
 function sectionActeurs(session: SimulationAnnuelle): string {
   if (session.entities.length === 0) return "## Acteurs\n\nAucun acteur saisi."
   const lignes = session.entities.map(e => [echapper(e.name), natureActeur(e), detailDeLActeur(e)])
-  return `## Acteurs\n\n${tableau(["Nom", "Nature", "Détails"], lignes)}`
+  return `## Acteurs\n\n${tableau(["Nom", "Nature", "Détails"], lignes)}${trajetsDesPersonnes(session)}`
 }
 
 const relationsDeCouple: Partial<Record<Relationship["type"], string>> = { "Marié(e)": "mariés", "PACSé(e)": "pacsés", "En couple": "en couple (union libre, deux foyers fiscaux distincts)" }
@@ -139,13 +165,21 @@ const imposition = { pfu: "prélèvement forfaitaire unique", bareme: "barème p
 
 function sousSectionFoyers(session: SimulationAnnuelle, report: SimulationReport): string {
   if (report.foyers.length === 0) return "### Par foyer fiscal\n\nAucun foyer fiscal."
-  const lignes = report.foyers.map(f => [echapper(nomDuFoyer(session, f)), f.totalParts.toLocaleString("fr-FR"), euros(f.revenusEncaisses), euros(f.revenuImposableGlobal), euros(f.impotSurLeRevenu), euros(f.prelevementsSociaux), f.optionDividendes ? imposition[f.optionDividendes] : "—", `**${euros(f.netApresImpots)}**`])
-  return `### Par foyer fiscal\n\n${tableau(["Foyer (membres)", "Parts", "Revenus encaissés", "Revenu imposable", "Impôt sur le revenu", "Prélèvements sociaux", "Imposition des dividendes", "Net après impôts"], lignes, [1, 2, 3, 4, 5, 7])}`
+  const lignes = report.foyers.map(f => [echapper(nomDuFoyer(session, f)), f.totalParts.toLocaleString("fr-FR"), euros(f.revenusEncaisses), euros(f.revenuImposableGlobal), euros(f.revenuFiscalDeReference), euros(f.impotSurLeRevenu), euros(f.prelevementsSociaux), f.optionDividendes ? imposition[f.optionDividendes] : "—", `**${euros(f.netApresImpots)}**`])
+  return `### Par foyer fiscal\n\n${tableau(["Foyer (membres)", "Parts", "Revenus encaissés", "Revenu imposable", "Revenu fiscal de référence", "Impôt sur le revenu", "Prélèvements sociaux", "Imposition des dividendes", "Net après impôts"], lignes, [1, 2, 3, 4, 5, 6, 8])}`
 }
 
 function sectionResultats(session: SimulationAnnuelle, report: SimulationReport | null): string {
   if (!report) return "## Résultats\n\nRésultats indisponibles : la simulation n'a pas pu être calculée."
-  const sousSections = [sousSectionBilan(report), sousSectionActivites(session, report), sousSectionDispositifs(report), sousSectionFoyers(session, report)].filter(Boolean)
+  const sousSections = [
+    sousSectionBilan(report),
+    sousSectionActivites(session, report),
+    sousSectionDeplacements(report),
+    sousSectionVersementLiberatoire(report),
+    sousSectionDispositifs(report),
+    sousSectionFoyers(session, report),
+    sousSectionFraisProfessionnels(report)
+  ].filter(Boolean)
   return `## Résultats ${report.annee} (règles fiscales ${report.anneeDesRegles})\n\nMontants annuels, avant les éventuelles dépenses personnelles.\n\n${sousSections.join("\n\n")}`
 }
 
@@ -153,6 +187,48 @@ function sectionResultats(session: SimulationAnnuelle, report: SimulationReport 
 function sousSectionDispositifs(report: SimulationReport): string {
   const notes = report.activities.flatMap(a => (a.dispositifs ?? []).map(note => `- ${echapper(a.name)} : ${echapper(note)}`))
   return notes.length > 0 ? `### Dispositifs dans le temps\n\n${notes.join("\n")}` : ""
+}
+
+/** Déplacements professionnels des activités au barème kilométrique, compris dans leurs charges ; rien sans déplacements. */
+function sousSectionDeplacements(report: SimulationReport): string {
+  const lignes = report.activities.flatMap(({ name, fraisDeDeplacement: d }) => (d ? [[echapper(name), kilometres(d.kilometres), euros(d.montant), d.deductible ? "déductible" : "non déductible (micro-entreprise)"]] : []))
+  if (lignes.length === 0) return ""
+  return `### Déplacements professionnels\n\nAu barème kilométrique, compris dans les charges de l'activité.\n\n${tableau(["Activité", "Distance", "Montant", "Traitement"], lignes, [1, 2])}`
+}
+
+/** Micro-entreprises : le revenu fiscal de référence N-2 comparé au seuil du versement libératoire, et l'issue. */
+function sousSectionVersementLiberatoire(report: SimulationReport): string {
+  const lignes = report.activities.flatMap(({ name, versementLiberatoire: v }) => (v ? [[echapper(name), String(v.anneeRfr), v.rfrN2 === null ? "—" : euros(v.rfrN2), origineDuRfr(v), `${euros(v.plafondRfr)} (${v.partsFiscales.toLocaleString("fr-FR")} part${v.partsFiscales > 1 ? "s" : ""})`, issueDuVersementLiberatoire(v)]] : []))
+  if (lignes.length === 0) return ""
+  return `### Versement libératoire\n\n${tableau(["Micro-entreprise", "Année du revenu fiscal de référence", "Revenu fiscal de référence", "Origine", "Seuil", "Issue"], lignes, [2, 4])}`
+}
+
+/** Trajets au barème kilométrique d'une personne, voiture par voiture : « 5 CV : 6 800 km, 3 720 € ». */
+function trajetsAuBareme(frais: FraisProfessionnelsResult): string {
+  return frais.voitures.map(v => `${libelleVoiture(v)} : ${kilometres(v.distance)}, ${euros(v.montant)}`).join(" ; ") || "—"
+}
+
+/** Frais réels des personnes qui en ont saisi, face à la déduction de 10 % ; rien quand aucune n'en a. */
+function sousSectionFraisProfessionnels(report: SimulationReport): string {
+  const personnes = fraisProfessionnelsDesPersonnes(report)
+  if (personnes.length === 0) return ""
+  const lignes = personnes.map(({ name, frais: f }) => [echapper(name), euros(f.revenusSalariaux), euros(f.deductionForfaitaire), euros(f.fraisReels), `**${libelleRetenue(f)}** : ${euros(f.deduction)}`, String(f.nombreDeTrajets), kilometres(f.distanceRetenue), trajetsAuBareme(f), euros(f.autresFrais)])
+  const entete = ["Personne", "Revenus imposés comme des salaires", "Déduction de 10 %", "Frais réels", "Retenue", "Trajets", "Distance retenue", "Trajets au barème, par voiture", "Autres frais"]
+  return `### Frais professionnels\n\nSur les revenus imposés comme des salaires, la plus favorable de la déduction de 10 % et des frais réels.\n\n${tableau(entete, lignes, [1, 2, 3, 5, 6, 8])}`
+}
+
+// --- Toutes les années ---
+
+/** Synthèse des années de la session, une ligne par année, puis le revenu fiscal de référence de chaque foyer et les dispositifs. */
+function sectionToutesLesAnnees(session: SimulationAnnuelle, pluriannuelle: SimulationPluriannuelle | null | undefined): string {
+  if (!pluriannuelle || pluriannuelle.annees.length < 2) return ""
+  const lignes = pluriannuelle.annees.map(({ annee, report: r, erreur }) => (r ? [String(annee), String(r.anneeDesRegles), euros(r.totalNetApresImpots), euros(r.bilan.totalPrelevements), euros(r.bilan.revenusAvantPrelevements)] : [String(annee), "—", `non calculée : ${echapper(erreur ?? "erreur inconnue")}`, "—", "—"]))
+  const synthese = tableau(["Année", "Règles fiscales", "Net après impôts", "Total des prélèvements", "Revenus avant prélèvements"], lignes, [2, 3, 4])
+  const rfr = rfrDesAnnees(session, pluriannuelle).map(({ annee, foyer, rfr }) => [String(annee), echapper(foyer), euros(rfr)])
+  const blocRfr = rfr.length > 0 ? `\n\n### Revenu fiscal de référence, année par année\n\n${tableau(["Année", "Foyer (membres)", "Revenu fiscal de référence"], rfr, [2])}` : ""
+  const dispositifs = dispositifsDesAnnees(pluriannuelle).map(({ annee, activite, note }) => `- ${annee}, ${echapper(activite)} : ${echapper(note)}`)
+  const blocDispositifs = dispositifs.length > 0 ? `\n\n### Dispositifs dans le temps, année par année\n\n${dispositifs.join("\n")}` : ""
+  return `## Toutes les années\n\nUne ligne par année de la session, avec les mêmes acteurs et la grille de chaque année.\n\n${synthese}${blocRfr}${blocDispositifs}`
 }
 
 // --- Comparateur ---
@@ -260,7 +336,7 @@ function sectionAvertissements(session: SimulationAnnuelle, report: SimulationRe
 }
 
 /** Le rapport complet, en Markdown. */
-export function rapportMarkdown({ session, report, comparaison, date }: DonneesDuRapport): string {
+export function rapportMarkdown({ session, report, comparaison, date, pluriannuelle }: DonneesDuRapport): string {
   const dateTexte = date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
   const regles = report ? `, année ${report.annee}, règles fiscales ${report.anneeDesRegles}` : `, année ${session.annee}`
   const entete = [
@@ -269,6 +345,6 @@ export function rapportMarkdown({ session, report, comparaison, date }: DonneesD
     "> Ce document décrit une simulation de revenus d'indépendants en France. Il se lit tel quel ou se confie à une IA (un assistant conversationnel) pour l'analyser : les montants sont annuels et en euros, sauf mention contraire.",
     `## Hypothèses et limites\n\n${LIMITES.map(l => `- ${l}`).join("\n")}`
   ]
-  const sections = [sectionActeurs(session), sectionRelations(session), sectionFlux(session), sectionResultats(session, report), sectionComparateur(session, comparaison), sectionAvertissements(session, report, comparaison)]
+  const sections = [sectionActeurs(session), sectionRelations(session), sectionFlux(session), sectionResultats(session, report), sectionToutesLesAnnees(session, pluriannuelle), sectionComparateur(session, comparaison), sectionAvertissements(session, report, comparaison)].filter(Boolean)
   return `${[...entete, ...sections].join("\n\n")}\n`
 }

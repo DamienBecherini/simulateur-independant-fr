@@ -2,9 +2,9 @@
 // Exports CSV pour un tableur : la grille mensuelle, les résultats de la simulation, le tableau du comparateur
 // et les points de la courbe rémunération / dividendes. Les montants sont écrits au centime, sans symbole €.
 
-import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationReport } from "@/types"
+import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { documentCsv, montant, type CelluleCsv } from "./csv"
-import { fluxParActeur, MOIS, natureActeur, nomDeLActeur, nomDuFoyer } from "./export-commun"
+import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, rfrDesAnnees } from "./export-commun"
 import { libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
 
@@ -58,14 +58,58 @@ function lignesDesPersonnes(report: SimulationReport): Ligne[] {
 const optionsDividendes: Record<NonNullable<FoyerFiscalResult["optionDividendes"]>, string> = { pfu: "Prélèvement forfaitaire unique", bareme: "Barème progressif" }
 
 function lignesDesFoyers(session: SimulationAnnuelle, report: SimulationReport): Ligne[] {
-  const entete: Ligne = ["Foyer fiscal", "Parts", "Revenus encaissés", "Revenu imposable", "Impôt sur le revenu", "Prélèvements sociaux", "Imposition des dividendes", "Net après impôts", "Revenus avant prélèvements", "Total des prélèvements", "Résultat conservé", "Dépenses"]
-  const lignes = report.foyers.map((f): Ligne => [nomDuFoyer(session, f), f.totalParts, montant(f.revenusEncaisses), montant(f.revenuImposableGlobal), montant(f.impotSurLeRevenu), montant(f.prelevementsSociaux), f.optionDividendes ? optionsDividendes[f.optionDividendes] : "", montant(f.netApresImpots), montant(f.revenusAvantPrelevements), montant(f.totalPrelevements), montant(f.resultatConserve), montant(f.depenses)])
+  const entete: Ligne = ["Foyer fiscal", "Parts", "Revenus encaissés", "Revenu imposable", "Revenu fiscal de référence", "Impôt sur le revenu", "Prélèvements sociaux", "Imposition des dividendes", "Net après impôts", "Revenus avant prélèvements", "Total des prélèvements", "Résultat conservé", "Dépenses"]
+  const lignes = report.foyers.map((f): Ligne => [nomDuFoyer(session, f), f.totalParts, montant(f.revenusEncaisses), montant(f.revenuImposableGlobal), montant(f.revenuFiscalDeReference), montant(f.impotSurLeRevenu), montant(f.prelevementsSociaux), f.optionDividendes ? optionsDividendes[f.optionDividendes] : "", montant(f.netApresImpots), montant(f.revenusAvantPrelevements), montant(f.totalPrelevements), montant(f.resultatConserve), montant(f.depenses)])
   return [entete, ...lignes]
 }
 
-/** Quatre tableaux, séparés par une ligne vide : bilan, activités, personnes et foyers fiscaux. */
+/** Un tableau précédé d'une ligne vide, ou rien s'il n'a aucune ligne sous son en-tête. */
+const tableauFacultatif = (entete: Ligne, lignes: Ligne[]): Ligne[] => (lignes.length > 0 ? [[], entete, ...lignes] : [])
+
+/** Micro-entreprises : le revenu fiscal de référence N-2 comparé au seuil du versement libératoire, et l'issue. */
+function lignesDuVersementLiberatoire(report: SimulationReport): Ligne[] {
+  const entete: Ligne = ["Versement libératoire", "Année du revenu fiscal de référence", "Revenu fiscal de référence retenu", "Origine", "Parts", "Seuil", "Issue"]
+  const lignes = report.activities.flatMap(({ name, versementLiberatoire: v }): Ligne[] => (v ? [[name, v.anneeRfr, v.rfrN2 === null ? null : montant(v.rfrN2), origineDuRfr(v), v.partsFiscales, montant(v.plafondRfr), issueDuVersementLiberatoire(v)]] : []))
+  return tableauFacultatif(entete, lignes)
+}
+
+/** Déplacements professionnels des activités au barème kilométrique, compris dans leurs charges. */
+function lignesDesDeplacements(report: SimulationReport): Ligne[] {
+  const entete: Ligne = ["Déplacements professionnels", "Statut", "Kilomètres", "Montant au barème", "Déductible"]
+  const lignes = report.activities.flatMap(({ name, statut, fraisDeDeplacement: d }): Ligne[] => (d ? [[name, statut, d.kilometres, montant(d.montant), ouiNon(d.deductible)]] : []))
+  return tableauFacultatif(entete, lignes)
+}
+
+/** Frais professionnels des personnes qui ont saisi des frais réels, puis leurs trajets au barème, voiture par voiture. */
+function lignesDesFraisProfessionnels(report: SimulationReport): Ligne[] {
+  const personnes = fraisProfessionnelsDesPersonnes(report)
+  const entete: Ligne = ["Frais professionnels", "Revenus imposés comme des salaires", "Déduction de 10 %", "Frais réels", "Retenue", "Montant déduit", "Trajets domicile-travail", "Distance retenue (km)", "Frais de trajet", "Autres frais"]
+  const lignes = personnes.map(({ name, frais: f }): Ligne => [name, montant(f.revenusSalariaux), montant(f.deductionForfaitaire), montant(f.fraisReels), libelleRetenue(f), montant(f.deduction), f.nombreDeTrajets, f.distanceRetenue, montant(f.fraisDeTrajet), montant(f.autresFrais)])
+  const voitures = personnes.flatMap(({ name, frais }) => frais.voitures.map((v): Ligne => [name, libelleVoiture(v), v.distance, montant(v.montant)]))
+  return [...tableauFacultatif(entete, lignes), ...tableauFacultatif(["Voiture des trajets", "Puissance", "Distance retenue (km)", "Montant au barème"], voitures)]
+}
+
+/**
+ * Bilan, activités, personnes et foyers fiscaux, séparés par une ligne vide ; puis, quand la simulation en contient,
+ * le versement libératoire, les déplacements professionnels et les frais professionnels.
+ */
 export function csvResultats(session: SimulationAnnuelle, report: SimulationReport): string {
-  return documentCsv([...lignesDuBilan(report), [], ...lignesDesActivites(session, report), [], ...lignesDesPersonnes(report), [], ...lignesDesFoyers(session, report)])
+  const tableaux = [...lignesDuBilan(report), [], ...lignesDesActivites(session, report), [], ...lignesDesPersonnes(report), [], ...lignesDesFoyers(session, report)]
+  return documentCsv([...tableaux, ...lignesDuVersementLiberatoire(report), ...lignesDesDeplacements(report), ...lignesDesFraisProfessionnels(report)])
+}
+
+// --- Toutes les années ---
+
+/**
+ * Synthèse de toutes les années de la session : une ligne par année, puis le revenu fiscal de référence de chaque foyer
+ * année par année et les dispositifs limités dans le temps. Une année qui n'a pas pu être simulée garde sa ligne, avec l'erreur.
+ */
+export function csvSyntheseDesAnnees(session: SimulationAnnuelle, simulation: SimulationPluriannuelle): string {
+  const entete: Ligne = ["Année", "Année des règles fiscales", "Net après impôts", "Total des prélèvements", "Revenus avant prélèvements", "Cotisations sociales des activités", "Impôt sur les sociétés", "Impôt sur le revenu", "Résultat conservé dans les sociétés", "Erreur"]
+  const annees = simulation.annees.map(({ annee, report: r, erreur }): Ligne => (r ? [annee, r.anneeDesRegles, ...[r.totalNetApresImpots, r.bilan.totalPrelevements, r.bilan.revenusAvantPrelevements, r.bilan.cotisationsSociales, r.bilan.impotSocietes, r.bilan.impotSurLeRevenu, r.bilan.resultatConserve].map(montant), ""] : [annee, null, null, null, null, null, null, null, null, erreur ?? "Non calculée"]))
+  const rfr = rfrDesAnnees(session, simulation).map(({ annee, foyer, rfr }): Ligne => [annee, foyer, montant(rfr)])
+  const dispositifs = dispositifsDesAnnees(simulation).map(({ annee, activite, note }): Ligne => [annee, activite, note])
+  return documentCsv([entete, ...annees, ...tableauFacultatif(["Année", "Foyer fiscal", "Revenu fiscal de référence"], rfr), ...tableauFacultatif(["Année", "Activité", "Dispositif"], dispositifs)])
 }
 
 // --- Comparateur de statuts ---

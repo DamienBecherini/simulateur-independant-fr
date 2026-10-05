@@ -1,6 +1,8 @@
 // e2e-web/frais-reels.web.ts
-// Frais réels et déplacements professionnels dans la démo web : saisie dans la fenêtre de réglages, puis lecture des résultats.
+// Frais réels et déplacements professionnels dans la démo web : saisie dans la fenêtre de réglages, puis lecture des
+// résultats et du rapport Markdown exporté.
 
+import { readFile } from "node:fs/promises"
 import { test, expect, type Page } from "@playwright/test"
 
 async function ouvrir(page: Page) {
@@ -82,4 +84,33 @@ test("saisir deux trajets de Julien avec la même voiture : le barème s'appliqu
   await reouverte.getByRole("button", { name: "Enregistrer" }).click()
   // 7 200 x 0,357 + 1 395 = 3 965,40 €.
   await expect(ligne("dont trajets domicile-travail")).toContainText(/3\s965\s€7\s200 km au barème/)
+})
+
+test("le rapport Markdown reprend les trajets de Julien, ses frais réels et le versement libératoire de Camille", async ({ page }) => {
+  await ouvrir(page)
+  await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
+
+  // Julien : 30 km par trajet vers son bureau, 218 jours, 5 CV, soit 13 080 km et 6 065 € au barème.
+  const fenetre = await reglagesDe(page, "Julien Martin")
+  await fenetre.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 10 %" }).click()
+  await fenetre.getByLabel("Lieu de travail ou employeur (facultatif)", { exact: true }).fill("Bureau")
+  await fenetre.getByLabel("Trajet (km, aller simple)", { exact: true }).fill("30")
+  await fenetre.getByLabel("Jours travaillés par an", { exact: true }).fill("218")
+  await fenetre.getByRole("button", { name: "Enregistrer" }).click()
+  await expect(fenetre).toBeHidden()
+  // La déduction retenue est recalculée avant l'export.
+  await expect(page.getByText("Frais réels retenus", { exact: true })).toBeAttached()
+
+  await page.getByRole("button", { name: "Exporter", exact: true }).click()
+  const [telechargement] = await Promise.all([page.waitForEvent("download"), page.getByRole("dialog", { name: "Exporter" }).getByRole("button", { name: /Rapport complet \(Markdown\)/ }).click()])
+  const texte = await readFile(await telechargement.path(), "utf-8")
+
+  expect(texte).toContain("| Julien Martin | Personne | 1 part fiscale ; frais réels saisis : 1 trajet domicile-travail, autres frais 0 € |")
+  expect(texte).toContain("### Trajets domicile-travail")
+  expect(texte).toContain("| Julien Martin | Bureau | 30 km | 218 | 5 CV | non | non |")
+  expect(texte).toContain("### Frais professionnels")
+  expect(texte).toMatch(/\| Julien Martin \| [^\n]+ \| \*\*Frais réels\*\* : 6 065 € \| 1 \| 13 080 km \| 5 CV : 13 080 km, 6 065 € \| 0 € \|/)
+  expect(texte).toContain("### Versement libératoire")
+  expect(texte).toMatch(/\| Atelier de Camille \| \d{4} \| 38 000 € \| saisi dans la fiche \|/)
+  expect(texte).toContain("| Revenu fiscal de référence |")
 })

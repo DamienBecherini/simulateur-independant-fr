@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonOptions, SimulationAnnuelle } from "@/types"
 import { echapper, euros, LIMITES, rapportMarkdown, repartition, type DonneesDuRapport } from "./export-markdown"
-import { comparaisonExemple, optionsExemple, rapportExemple, sessionExemple } from "./testing/exports-fixtures"
+import { comparaisonExemple, optionsExemple, pluriannuelleExemple, rapportAvecFrais, rapportExemple, sessionAvecFrais, sessionExemple } from "./testing/exports-fixtures"
 
 const DATE = new Date(2026, 9, 4)
 
@@ -135,7 +135,112 @@ Aucun avertissement.
     expect(rapport).toContain("## Résultats 2026 (règles fiscales 2026)")
     expect(rapport).toContain("| Taux global de prélèvement | 29,2 % |\n| Conservé dans les sociétés | 400 € |\n| Non rattaché à une personne | 0 € |\n| **Net dans la poche (tous les foyers)** | **25 000 €** |")
     expect(rapport).toContain("| Ma SASU | SASU | 36 000 € | 101 € | 8 000 € | 1 000 € | 26 500 € | 400 € | Alice |")
-    expect(rapport).toContain("| Alice, Bob | 2,5 | 26 500 € | 18 000 € | 1 500 € | 0 € | prélèvement forfaitaire unique | **25 000 €** |")
+    expect(rapport).toContain("| Alice, Bob | 2,5 | 26 500 € | 18 000 € | 19 500 € | 1 500 € | 0 € | prélèvement forfaitaire unique | **25 000 €** |")
+  })
+
+  it("détaille les trajets domicile-travail des personnes et les déplacements des activités parmi les acteurs", () => {
+    const rapport = rapportComplet({ session: sessionAvecFrais(), report: rapportAvecFrais() })
+    expect(rapport).toContain("| Alice | Personne | 1 part fiscale ; frais réels saisis : 2 trajets domicile-travail, autres frais 500 € |")
+    expect(rapport).toContain("capital social 1 000 € ; déplacements professionnels : 5 000 km par an, 5 CV |")
+    expect(rapport).toContain("revenu fiscal de référence N-2 : 25 000 € ; déplacements professionnels : 1 000 km par an, 4 CV |")
+    expect(rapport).toContain(`### Trajets domicile-travail
+
+Un aller-retour par jour travaillé, avec une voiture personnelle, pour les frais réels.
+
+| Personne | Trajet | Aller simple | Jours travaillés | Puissance fiscale | Électrique | Distance au-delà de 40 km justifiée |
+| --- | --- | ---: | ---: | --- | --- | --- |
+| Alice | Bureau | 20 km | 120 | 5 CV | non | non |
+| Alice | Trajet 2 | 50 km | 25 | 3 CV et moins | oui | oui |
+
+## Relations`)
+  })
+
+  it("dit qu'une personne a saisi des frais réels sans trajet, et omet alors le tableau des trajets", () => {
+    const session = sessionExemple()
+    session.entities = session.entities.map(e => (e.id === "p2" && e.type === "person" ? { ...e, fraisReels: { trajets: [], autresFrais: 1200 } } : e))
+    const rapport = rapportComplet({ session })
+    expect(rapport).toContain("| Bob | Personne | 1,5 parts fiscales ; frais réels saisis : 0 trajet domicile-travail, autres frais 1 200 € |")
+    expect(rapport).not.toContain("### Trajets domicile-travail")
+  })
+
+  it("donne les déplacements professionnels, le versement libératoire et les frais réels dans les résultats", () => {
+    const rapport = rapportComplet({ session: sessionAvecFrais(), report: rapportAvecFrais() })
+    expect(rapport).toContain(`### Déplacements professionnels
+
+Au barème kilométrique, compris dans les charges de l'activité.
+
+| Activité | Distance | Montant | Traitement |
+| --- | ---: | ---: | --- |
+| Ma SASU | 5 000 km | 3 180 € | déductible |
+| Atelier | 1 000 km | 606 € | non déductible (micro-entreprise) |
+
+### Versement libératoire
+
+| Micro-entreprise | Année du revenu fiscal de référence | Revenu fiscal de référence | Origine | Seuil | Issue |
+| --- | --- | ---: | --- | ---: | --- |
+| Atelier | 2024 | 25 000 € | saisi dans la fiche | 28 797 € (1 part) | sous le seuil, versement libératoire appliqué |`)
+    expect(rapport).toContain(`### Frais professionnels
+
+Sur les revenus imposés comme des salaires, la plus favorable de la déduction de 10 % et des frais réels.
+
+| Personne | Revenus imposés comme des salaires | Déduction de 10 % | Frais réels | Retenue | Trajets | Distance retenue | Trajets au barème, par voiture | Autres frais |
+| --- | ---: | ---: | ---: | --- | ---: | ---: | --- | ---: |
+| Alice | 20 000 € | 2 000 € | 4 880 € | **Frais réels** : 4 880 € | 2 | 7 300 km | 5 CV : 4 800 km, 2 880 € ; 3 CV et moins, électrique : 2 500 km, 1 500 € | 500 € |`)
+  })
+
+  it("signale un revenu fiscal de référence calculé, dépassé ou inconnu, et une déduction de 10 % retenue sans trajet", () => {
+    const report = rapportAvecFrais()
+    const [sasu, atelier] = report.activities
+    const vfl = atelier.versementLiberatoire!
+    report.activities = [
+      sasu,
+      { ...atelier, versementLiberatoire: { ...vfl, partsFiscales: 2.5, rfrN2: 90000, origineRfr: "calcule", eligible: false, applique: false } },
+      { ...atelier, name: "Studio", versementLiberatoire: { ...vfl, rfrN2: null, origineRfr: null, eligible: null, applique: false } },
+      { ...atelier, name: "Boutique", versementLiberatoire: { ...vfl, applique: false } }
+    ]
+    report.persons = report.persons.map(p => (p.fraisProfessionnels ? { ...p, fraisProfessionnels: { ...p.fraisProfessionnels, voitures: [], nombreDeTrajets: 0, retenue: "forfait", deduction: 2000 } } : p))
+    const rapport = rapportComplet({ session: sessionAvecFrais(), report })
+    expect(rapport).toContain("| Atelier | 2024 | 90 000 € | calculé par la simulation | 28 797 € (2,5 parts) | seuil dépassé, versement libératoire inaccessible |")
+    expect(rapport).toContain("| Studio | 2024 | — | inconnu | 28 797 € (1 part) | revenu fiscal de référence inconnu |")
+    expect(rapport).toContain("| Boutique | 2024 | 25 000 € | saisi dans la fiche | 28 797 € (1 part) | sous le seuil, versement libératoire non appliqué |")
+    expect(rapport).toContain("| **Déduction de 10 %** : 2 000 € | 0 | 7 300 km | — | 500 € |")
+  })
+
+  it("omet les frais réels, les déplacements et le versement libératoire quand la simulation n'en a pas", () => {
+    const rapport = rapportComplet()
+    for (const titre of ["### Trajets domicile-travail", "### Déplacements professionnels", "### Versement libératoire", "### Frais professionnels", "## Toutes les années"]) expect(rapport).not.toContain(titre)
+  })
+
+  it("ajoute la synthèse de toutes les années : une ligne par année, le revenu fiscal de référence et les dispositifs", () => {
+    const rapport = rapportComplet({ pluriannuelle: pluriannuelleExemple() })
+    expect(rapport).toContain(`## Toutes les années
+
+Une ligne par année de la session, avec les mêmes acteurs et la grille de chaque année.
+
+| Année | Règles fiscales | Net après impôts | Total des prélèvements | Revenus avant prélèvements |
+| --- | --- | ---: | ---: | ---: |
+| 2026 | 2026 | 25 000 € | 10 500 € | 35 900 € |
+| 2027 | 2027 | 26 000 € | 10 500 € | 35 900 € |
+| 2028 | — | non calculée : Grille invalide. | — | — |
+
+### Revenu fiscal de référence, année par année
+
+| Année | Foyer (membres) | Revenu fiscal de référence |
+| --- | --- | ---: |
+| 2026 | Alice, Bob | 19 500 € |
+| 2027 | Alice, Bob | 21 000 € |
+
+### Dispositifs dans le temps, année par année
+
+- 2027, Ma SASU : Plafonds au prorata.
+
+## Comparateur de statuts`)
+  })
+
+  it("n'ajoute pas la synthèse pour une seule année, et la réduit à son tableau sans foyer ni dispositif", () => {
+    expect(rapportComplet({ pluriannuelle: { annees: [{ annee: 2026, report: rapportExemple(), erreur: null }] } })).not.toContain("## Toutes les années")
+    const rapport = rapportComplet({ pluriannuelle: { annees: [2026, 2027].map(annee => ({ annee, report: null, erreur: null })) } })
+    expect(rapport).toContain("| 2027 | — | non calculée : erreur inconnue | — | — |\n\n## Comparateur de statuts")
   })
 
   it("liste les dispositifs de l'année, et la date de création des activités", () => {
@@ -275,12 +380,13 @@ Aucun avertissement.
   })
 
   it("garde la structure de chaque tableau quand tous les noms contiennent des barres, des retours à la ligne ou du balisage", () => {
-    const session = sessionExemple()
+    const session = sessionAvecFrais()
     session.name = "Famille | Martin\n# pas un titre"
-    session.entities = session.entities.map(e => ({ ...e, name: `${e.name} | *gras*\n[lien](x)` }))
-    const rapport = rapportExemple()
-    rapport.activities = rapport.activities.map(a => ({ ...a, name: "Ma SASU | *gras*\n[lien](x)" }))
-    const texte = rapportComplet({ session, report: rapport, comparaison: { nomActivite: "Ma SASU | x", options: optionsExemple(), resultat: comparaisonExemple() } })
+    session.entities = session.entities.map(e => ({ ...e, name: `${e.name} | *gras*\n[lien](x)`, ...(e.type === "person" && e.fraisReels ? { fraisReels: { ...e.fraisReels, trajets: e.fraisReels.trajets.map(t => ({ ...t, libelle: "Bureau | A\n# B" })) } } : {}) }))
+    const rapport = rapportAvecFrais()
+    rapport.activities = rapport.activities.map(a => ({ ...a, name: `${a.name} | *gras*\n[lien](x)` }))
+    rapport.persons = rapport.persons.map(p => ({ ...p, name: `${p.name} | *gras*\n[lien](x)` }))
+    const texte = rapportComplet({ session, report: rapport, comparaison: { nomActivite: "Ma SASU | x", options: optionsExemple(), resultat: comparaisonExemple() }, pluriannuelle: pluriannuelleExemple() })
 
     // Le titre reste sur une ligne, et aucune ligne ne commence par un titre que l'utilisateur aurait glissé dans un nom.
     expect(texte.split("\n")[0]).toBe("# Simulation « Famille \\| Martin \\# pas un titre »")
@@ -289,7 +395,7 @@ Aucun avertissement.
     expect(texte).toContain("## Comparateur de statuts : « Ma SASU \\| x »")
     // Dans chaque tableau, toutes les lignes ont autant de cellules que l'en-tête : les barres échappées n'en créent pas.
     const tableaux = texte.split(/\n\n/).filter(bloc => bloc.startsWith("| "))
-    expect(tableaux.length).toBeGreaterThan(3)
+    expect(tableaux.length).toBeGreaterThan(8)
     for (const tableau of tableaux) {
       const colonnes = tableau.split("\n").map(ligne => ligne.split(/(?<!\\)\|/).length)
       expect(new Set(colonnes).size, tableau).toBe(1)

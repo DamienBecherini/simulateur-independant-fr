@@ -4,9 +4,9 @@
 
 import type { ReactNode } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import type { SessionState, SimulationAnnuelle, SimulationReport } from "@/types"
+import type { SessionState, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { vueDeLAnnee } from "@/backend/logic/annees"
-import { exporterGrilleCsv, exporterRapportMarkdown, exporterResultatsCsv } from "../exports-texte"
+import { exporterGrilleCsv, exporterRapportMarkdown, exporterResultatsCsv, exporterSyntheseCsv } from "../exports-texte"
 import { nomDuPdf } from "@/lib/nom-du-pdf"
 import { exporterEnPdf } from "../impression"
 
@@ -17,6 +17,8 @@ interface ExportDialogProps {
   /** Année affichée : les exports CSV, Markdown et PDF portent sur elle. */
   annee: number
   simulationReport: SimulationReport | null
+  /** Toutes les années de la session : leur synthèse s'exporte quand il y en a au moins deux. */
+  simulation?: SimulationPluriannuelle | null
   /** Export complet de la simulation, réimportable (JSON). */
   onExportJson: () => void
 }
@@ -47,8 +49,9 @@ function exporterLaSimulationEnPdf(vue: SimulationAnnuelle) {
   exporterEnPdf(nomDuPdf(vue.name, vue.annee)).catch(console.error)
 }
 
-export function ExportDialog({ isOpen, onClose, session, annee, simulationReport, onExportJson }: ExportDialogProps) {
+export function ExportDialog({ isOpen, onClose, session, annee, simulationReport, simulation = null, onExportJson }: ExportDialogProps) {
   const vue = vueDeLAnnee(session, annee)
+  const plusieursAnnees = simulation !== null && simulation.annees.length > 1
   const exporter = (action: () => void) => () => {
     action()
     onClose()
@@ -71,9 +74,10 @@ export function ExportDialog({ isOpen, onClose, session, annee, simulationReport
           <Groupe titre="Tableur (CSV)">
             <OptionExport titre="Grille mensuelle (CSV)" description="Une ligne par acteur et par type de flux : les douze mois et le total de l'année." onClick={exporter(() => exporterGrilleCsv(vue))} />
             <OptionExport titre="Résultats (CSV)" description="Bilan, puis résultats par activité, par personne et par foyer fiscal." onClick={exporter(() => exporterResultatsCsv(vue, simulationReport))} />
+            {plusieursAnnees ? <OptionExport titre="Synthèse des années (CSV)" description="Une ligne par année de la session, puis le revenu fiscal de référence de chaque foyer, année par année." onClick={exporter(() => exporterSyntheseCsv(vue, simulation))} /> : null}
           </Groupe>
           <Groupe titre="Pour une IA (Markdown)">
-            <OptionExport titre="Rapport complet (Markdown)" description="Hypothèses, acteurs, flux, résultats et comparateur, en un texte à lire ou à confier à un assistant conversationnel." onClick={exporter(() => exporterRapportMarkdown(session, annee, simulationReport))} />
+            <OptionExport titre="Rapport complet (Markdown)" description="Hypothèses, acteurs, flux, résultats et comparateur, en un texte à lire ou à confier à un assistant conversationnel." onClick={exporter(() => exporterRapportMarkdown(session, annee, simulationReport, simulation))} />
           </Groupe>
         </div>
       </DialogContent>
