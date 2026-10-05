@@ -18,6 +18,7 @@ import { ZoneDefilante } from "./ZoneDefilante"
 import { BoutonDuDetail, CartesDesStatuts, NoteDesFraisSupposes, VerdictDuComparateur } from "./SyntheseDuComparateur"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { useAffichageResume } from "../hooks/useAffichage"
+import { useSectionOuverte } from "../hooks/useSectionOuverte"
 import { coutsDesQuatreTrimestres, ecartSigne, libelleDuCoutDesTrimestres, type ResumeDeLaComparaison } from "@/lib/resume"
 import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Comparateur, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ReglagesComparateur, ScenarioStatut, SessionState, SimulationAnnuelle, StatutFrais, StatutSociete } from "@/types"
 
@@ -83,7 +84,7 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
   const update = (statut: StatutFrais, poste: PosteFrais, value: string) => onChange({ ...frais, [statut]: { ...frais[statut], [poste]: Math.max(0, parseFloat(value) || 0) } })
 
   return (
-    <Depliable titre="Frais de fonctionnement annuels par statut" className="text-sm text-slate-700 dark:text-slate-200">
+    <Depliable titre="Frais de fonctionnement annuels par statut" id="comparateur-frais" className="text-sm text-slate-700 dark:text-slate-200">
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
         Ordres de grandeur, à ajuster à votre situation. Ils s'ajoutent aux charges de l'activité dans chaque colonne, statut actuel compris : si vous les avez déjà saisis dans la grille, mettez-les à 0. Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune et n'est pas due l'année de création.
       </p>
@@ -216,7 +217,7 @@ function ComparatorControls({ activities, selected, options, result, onSelect, o
 
       <ChoixDeLaRepartition mode={mode} onChange={nouveau => onChange({ repartition: avecLeMode(options.repartition, nouveau) })} />
 
-      <ReplieEnResume titre="Plus de réglages" className="text-sm" classNameContenu="mt-3 space-y-3">
+      <ReplieEnResume titre="Plus de réglages" id="comparateur-plus-de-reglages" className="text-sm" classNameContenu="mt-3 space-y-3">
         {selected.type !== "micro-entreprise" && (
           <div className="space-y-1">
             <Label htmlFor="comparateur-bnc">En micro, prestations en BNC : {Math.round(options.partBncPrestations * 100)} % (le reste en BIC)</Label>
@@ -362,7 +363,7 @@ function WarningList({ warnings }: { warnings: string[] }) {
 function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
   if (scenarios.length === 0) return null
   return (
-    <Depliable titre="Ce que recouvre la note de protection sociale" className="text-sm text-slate-600 dark:text-slate-300">
+    <Depliable titre="Ce que recouvre la note de protection sociale" id="comparateur-note-protection" className="text-sm text-slate-600 dark:text-slate-300">
       <ul className="mt-2 space-y-1">
         {scenarios.map(s => (
           <li key={s.statut}>
@@ -421,7 +422,7 @@ function ComparisonResults({ result, activityName, onExporter }: { result: Compa
   const { notes, renvois } = numeroterNotes(result.scenarios.map(s => ({ id: s.statut, libelle: s.libelle, avertissements: s.warnings })))
   // Affichage « Résumé » : tableau réduit (cartes sur téléphone), le reste des lignes à la demande.
   const resume = useAffichageResume()
-  const [detailOuvert, setDetailOuvert] = useState(false)
+  const [detailOuvert, setDetailOuvert] = useSectionOuverte("comparateur-toutes-les-lignes")
   const reduit = resume && result.scenarios.length > 0
   return (
     <>
@@ -558,7 +559,7 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
         <h2 id="comparateur-titre" tabIndex={-1} className="text-2xl font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
           Comparateur de statuts
         </h2>
-        <ReplieEnResume titre={`Année ${vue.annee} : ce que compare le tableau`} className="text-sm text-slate-600 dark:text-slate-400">
+        <ReplieEnResume titre={`Année ${vue.annee} : ce que compare le tableau`} id="comparateur-explication" className="text-sm text-slate-600 dark:text-slate-400">
           <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée. Les charges d'une micro-entreprise y deviennent déductibles dans les statuts au réel (société, EI).</p>
         </ReplieEnResume>
       </div>
@@ -577,7 +578,7 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
           />
           <WarningList warnings={result?.warnings ?? []} />
           {/* Affichage « Résumé » : le partage du bénéfice n'est déplié d'office qu'en répartition personnalisée, où il sert à régler. */}
-          <ReplieEnResume titre={`Partage du bénéfice en ${arbitrage.statut} (barre réglable)`} className="text-sm" replie={effectiveOptions.repartition.mode !== "personnalisee"}>
+          <ReplieEnResume titre={`Partage du bénéfice en ${arbitrage.statut} (barre réglable)`} id="comparateur-partage" className="text-sm" replie={effectiveOptions.repartition.mode !== "personnalisee"}>
             <RepartitionDuBenefice activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} scenario={scenarioDuStatut(result, arbitrage.statut)} optimisation={arbitrage.resultat} options={effectiveOptions} onChange={setOptions} />
           </ReplieEnResume>
         </>

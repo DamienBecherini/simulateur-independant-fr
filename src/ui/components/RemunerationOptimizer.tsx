@@ -229,7 +229,7 @@ function TableDesValeurs({ resultat, onExporter }: { resultat: OptimisationRemun
   const pas = Math.max(1, Math.ceil(points.length / 15))
   const lignes = points.filter((p, i) => i % pas === 0 || i === points.length - 1 || p === meilleur || p === meilleurAvecRetraite)
   return (
-    <Depliable titre="Valeurs de la courbe" className="text-sm text-slate-700 dark:text-slate-200">
+    <Depliable titre="Valeurs de la courbe" id="valeurs-de-la-courbe" className="text-sm text-slate-700 dark:text-slate-200">
       {/* L'export contient tous les points de la courbe, pas seulement ceux du tableau. */}
       <div className="mt-3 flex justify-end">
         <BoutonExportCsv contenu="toutes les valeurs de la courbe" onClick={onExporter} />

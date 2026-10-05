@@ -1,13 +1,39 @@
 // src/ui/components/Depliable.tsx
 
-import type { ReactNode } from "react"
+import type { ReactNode, SyntheticEvent } from "react"
 import { ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { proprietesDeDetails, useSectionOuverte } from "../hooks/useSectionOuverte"
+
+interface DepliableProps {
+  titre: string
+  /**
+   * Identifiant stable de la section : son état ouvert ou fermé est alors retenu d'une ouverture à l'autre (voir
+   * useSectionOuverte). Sans lui, la section s'ouvre fermée à chaque fois.
+   */
+  id?: string
+  className?: string
+  children: ReactNode
+}
 
 /** Section repliable : un chevron et une indication « afficher / masquer » montrent qu'on peut cliquer. */
-export function Depliable({ titre, className, children }: { titre: string; className?: string; children: ReactNode }) {
+export function Depliable({ id, ...props }: DepliableProps) {
+  return id ? <DepliableRetenu id={id} {...props} /> : <Section {...props} />
+}
+
+function DepliableRetenu({ id, ...props }: DepliableProps & { id: string }) {
+  const [ouverte, definir] = useSectionOuverte(id)
+  return <Section {...props} {...proprietesDeDetails(ouverte, definir)} />
+}
+
+interface SectionProps extends Omit<DepliableProps, "id"> {
+  open?: boolean
+  onToggle?: (evenement: SyntheticEvent<HTMLDetailsElement>) => void
+}
+
+function Section({ titre, className, children, open, onToggle }: SectionProps) {
   return (
-    <details className={cn("group", className)}>
+    <details className={cn("group", className)} open={open} onToggle={onToggle}>
       <summary className="flex min-h-6 w-fit cursor-pointer list-none items-center gap-1.5 rounded-md pointer-coarse:min-h-11 font-medium hover:text-slate-950 dark:hover:text-white [&::-webkit-details-marker]:hidden">
         <ChevronRight aria-hidden className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90 print:hidden" />
         {titre}

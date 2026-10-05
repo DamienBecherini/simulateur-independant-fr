@@ -68,7 +68,7 @@ function BilanCard({ report }: { report: SimulationReport }) {
         </div>
       ) : null}
 
-      <ReplieEnResume titre="Détail du calcul" className="mt-3 text-sm">
+      <ReplieEnResume titre="Détail du calcul" id="detail-du-calcul" className="mt-3 text-sm">
         {/* Deux listes de définitions côte à côte : un <dl> n'accepte qu'un niveau de <div> autour de ses paires. */}
         <div className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
           <dl className="space-y-1">
@@ -412,7 +412,7 @@ function EnTeteDesResultats({ report }: { report: SimulationReport | null }) {
 function NoteDesAssocies({ sharedCompanies }: { sharedCompanies: ActivityResult[] }) {
   if (sharedCompanies.length === 0) return null
   return (
-    <ReplieEnResume titre="Sociétés à plusieurs associés" className="text-sm text-slate-600 dark:text-slate-400">
+    <ReplieEnResume titre="Sociétés à plusieurs associés" id="societes-a-plusieurs-associes" className="text-sm text-slate-600 dark:text-slate-400">
       <p className="text-sm text-slate-600 dark:text-slate-400">
         {sharedCompanies.map(a => `« ${a.name} »`).join(", ")} : l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les associés, comme les dividendes. La répartition réelle du capital n'est pas encore modélisée.
       </p>

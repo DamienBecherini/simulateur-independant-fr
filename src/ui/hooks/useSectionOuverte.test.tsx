@@ -5,7 +5,6 @@ import { useState, type ReactNode } from "react"
 import { describe, expect, it } from "vitest"
 import type { UserPreferences } from "@/types"
 import { MemoireDesSectionsContext, proprietesDeDetails, useMemoireDesSections, useSectionOuverte } from "./useSectionOuverte"
-import { SectionMemorisee } from "../components/SectionMemorisee"
 import { Depliable } from "../components/Depliable"
 import { deplierPourImpression } from "../impression"
 
@@ -77,18 +76,18 @@ describe("useSectionOuverte", () => {
   })
 })
 
-describe("SectionMemorisee", () => {
+describe("Depliable retenue", () => {
   function Legende({ initiales, suivre }: { initiales: UserPreferences; suivre?: (preferences: UserPreferences) => void }) {
     return (
       <AvecPreferences initiales={initiales} suivre={suivre}>
-        <SectionMemorisee id="legende">
-          <Depliable titre="Légende">contenu</Depliable>
-        </SectionMemorisee>
+        <Depliable titre="Légende" id="legende">
+          contenu
+        </Depliable>
       </AvecPreferences>
     )
   }
 
-  it("ouvre la section retenue ouverte, sans changer le composant qui l'affiche", () => {
+  it("ouvre la section retenue ouverte", () => {
     render(<Legende initiales={{ slotOrder: [], sectionsOuvertes: { legende: true } }} />)
     expect(section("Légende").open).toBe(true)
   })
@@ -109,32 +108,19 @@ describe("SectionMemorisee", () => {
     expect(preferences.sectionsOuvertes).toEqual({ legende: false })
   })
 
-  it("ignore les bascules des sections imbriquées", () => {
+  it("ne retient pas les bascules d'une section imbriquée sans identifiant", () => {
     let preferences: UserPreferences = { slotOrder: [] }
     render(
       <AvecPreferences initiales={{ slotOrder: [] }} suivre={p => (preferences = p)}>
-        <SectionMemorisee id="legende">
-          <Depliable titre="Légende">
-            <Depliable titre="Imbriquée">contenu</Depliable>
-          </Depliable>
-        </SectionMemorisee>
+        <Depliable titre="Légende" id="legende">
+          <Depliable titre="Imbriquée">contenu</Depliable>
+        </Depliable>
       </AvecPreferences>
     )
 
     basculer(section("Imbriquée"), true)
 
     expect(preferences.sectionsOuvertes).toBeUndefined()
-  })
-
-  it("ne fait rien sans section repliable (affichage classique)", () => {
-    render(
-      <AvecPreferences initiales={{ slotOrder: [], sectionsOuvertes: { legende: true } }}>
-        <SectionMemorisee id="legende">
-          <p>Légende affichée telle quelle</p>
-        </SectionMemorisee>
-      </AvecPreferences>
-    )
-    expect(screen.getByText("Légende affichée telle quelle")).toBeInTheDocument()
   })
 
   it("dépliée pour l'impression, la section retrouve ensuite son état, qui reste celui retenu", () => {

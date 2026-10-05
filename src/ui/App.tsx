@@ -29,7 +29,6 @@ import { BarreDeResume } from "./components/BarreDeResume"
 import { ReplieEnResume } from "./components/ReplieEnResume"
 import { AffichageContext } from "./hooks/useAffichage"
 import { MemoireDesSectionsContext, useMemoireDesSections } from "./hooks/useSectionOuverte"
-import { SectionMemorisee } from "./components/SectionMemorisee"
 import { affichageApplicable, avecPanneaux, avecResume, avecVues } from "@/lib/affichage"
 import { useVues, VuesContext } from "./hooks/useVues"
 import { VueDeLaPage } from "./components/VuesDeLaPage"
@@ -285,11 +284,9 @@ function App() {
               }
             />
 
-            <SectionMemorisee id="legende-des-flux">
-              <ReplieEnResume titre="Légende des flux" className="mt-3 print:mt-2">
-                <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
-              </ReplieEnResume>
-            </SectionMemorisee>
+            <ReplieEnResume titre="Légende des flux" id="legende-des-flux" className="mt-3 print:mt-2">
+              <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
+            </ReplieEnResume>
           </VueDeLaPage>
 
           <VueDeLaPage vue="resultats">
