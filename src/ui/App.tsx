@@ -28,7 +28,7 @@ import { SelecteurAffichage } from "./components/SelecteurAffichage"
 import { BarreDeResume } from "./components/BarreDeResume"
 import { ReplieEnResume } from "./components/ReplieEnResume"
 import { AffichageContext } from "./hooks/useAffichage"
-import { affichageApplicable } from "@/lib/affichage"
+import { affichageApplicable, avecResume } from "@/lib/affichage"
 import type { ResumeDeLaComparaison } from "@/lib/resume"
 import type { Affichage } from "@/types"
 import { cn } from "@/lib/utils"
@@ -59,7 +59,7 @@ function App() {
 
   // Affichage de la page choisi pendant la bêta : une préférence de l'utilisateur, pas une donnée de la simulation.
   const affichage = affichageApplicable(userPreferences.affichage)
-  const resume = affichage === "resume"
+  const resume = avecResume(affichage)
   const choisirAffichage = useCallback((choix: Affichage) => setUserPreferences(prefs => ({ ...prefs, affichage: choix })), [setUserPreferences])
   // Dans l'affichage « Résumé », le comparateur transmet son meilleur statut à la barre de résumé.
   const [comparaison, setComparaison] = useState<ResumeDeLaComparaison | null>(null)

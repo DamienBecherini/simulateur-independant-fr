@@ -30,6 +30,16 @@ export function affichageApplicable(valeur: unknown): Affichage {
   return AFFICHAGES.find(a => a.valeur === valeur && a.disponible)?.valeur ?? AFFICHAGE_PAR_DEFAUT
 }
 
+/** Vrai pour les affichages qui reprennent la proposition A (résumé collant, détail replié) : A, et C qui s'y ajoute. */
+export function avecResume(affichage: Affichage): boolean {
+  return affichage === "resume" || affichage === "panneaux"
+}
+
+/** Vrai pour l'affichage C : les acteurs en liste courte, les réglages et résultats de chacun dans un panneau latéral. */
+export function avecPanneaux(affichage: Affichage): boolean {
+  return affichage === "panneaux"
+}
+
 /** Libellé d'un affichage, pour le sélecteur et les lecteurs d'écran. */
 export function libelleDeLAffichage(affichage: Affichage): string {
   return AFFICHAGES.find(a => a.valeur === affichage)?.libelle ?? affichage
