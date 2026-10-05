@@ -75,7 +75,7 @@ test("l'arbitrage rémunération / dividendes trouve la rémunération qui valid
   await expect(retraite.getByRole("button", { name: "Appliquée" })).toBeDisabled()
 
   // Dans un autre mode, la rémunération est reportée telle quelle.
-  await page.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }).check({ force: true })
+  await page.getByRole("radio", { name: "Ma rémunération" }).check({ force: true })
   await expect(page.getByLabel("Rémunération nette annuelle (SASU, EURL)")).toHaveValue("0")
   await retraite.getByRole("button", { name: "Appliquer au comparateur" }).click()
   await expect(page.getByLabel("Rémunération nette annuelle (SASU, EURL)")).toHaveValue("5800")

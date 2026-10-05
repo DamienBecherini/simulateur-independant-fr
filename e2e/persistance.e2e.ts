@@ -113,9 +113,9 @@ test("les réglages du comparateur sont retrouvés au lancement suivant", async 
   const activite = premier.page.getByRole("combobox", { name: "Activité comparée" })
   await activite.click()
   await premier.page.getByRole("option", { name: "Conseil SASU" }).click()
-  await premier.page.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).getByText("Rémunération saisie, le reste en dividendes").click()
+  await premier.page.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).getByText("Ma rémunération").click()
   await premier.page.getByLabel("Rémunération nette annuelle (SASU, EURL)").fill("12000")
-  await premier.page.getByText("Frais de fonctionnement annuels par statut").click()
+  await premier.page.locator("summary", { hasText: /^Frais de fonctionnement/ }).click()
   await premier.page.getByRole("spinbutton", { name: "Cotisation foncière des entreprises (CFE), SASU" }).fill("450")
 
   await expect
@@ -125,7 +125,7 @@ test("les réglages du comparateur sont retrouvés au lancement suivant", async 
 
   const second = await lancer()
   await expect(second.page.getByRole("combobox", { name: "Activité comparée" })).toHaveText("Conseil SASU")
-  await expect(second.page.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" })).toBeChecked()
+  await expect(second.page.getByRole("radio", { name: "Ma rémunération" })).toBeChecked()
   await expect(second.page.getByLabel("Rémunération nette annuelle (SASU, EURL)")).toHaveValue("12000")
   await expect(second.page.getByRole("spinbutton", { name: "Cotisation foncière des entreprises (CFE), SASU", includeHidden: true })).toHaveValue("450")
   expect(await second.dialogues()).toEqual([])
