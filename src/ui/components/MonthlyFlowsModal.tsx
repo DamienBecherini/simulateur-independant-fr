@@ -187,7 +187,8 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee = 0
 
           <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee, aussiEn)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} />
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-sm text-slate-700 dark:text-slate-300">
-            <label className="flex flex-wrap items-center gap-2">
+            {/* `min-w-0 max-w-full` : avec une police large, la liste se resserre à la largeur de la fenêtre au lieu de la déborder. */}
+            <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
               Appliquer à :
               {/* Hors « ce mois seulement », la liste est mise en évidence : modifier ou supprimer touchera aussi d'autres mois. */}
               <select className={cn("h-9 max-w-full rounded-md border border-input bg-background px-2 text-sm pointer-coarse:h-11", portee !== "mois" && cn(EN_EVIDENCE, "font-medium"))} value={portee} onChange={e => setPortee(e.target.value as PorteeRecurrence)}>
