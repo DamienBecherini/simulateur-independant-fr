@@ -64,10 +64,29 @@ export function comparableActivities(session: DonneesDeLAnnee): (Company | Micro
 }
 
 /**
+ * Au meilleur net, la case « avec 4 trimestres de retraite » est cochée d'office : une rémunération qui ne valide aucun
+ * trimestre est rarement un bon choix sans le savoir. Seul un choix de l'utilisateur est enregistré (ADR 009) : une
+ * case décochée le reste, et les réglages enregistrés avant ce défaut, sans la case, le reçoivent.
+ */
+export function avecLaRetraiteParDefaut(repartition: RepartitionBenefice): RepartitionBenefice {
+  if (repartition.mode !== "meilleurNet" || repartition.avecRetraite !== undefined) return repartition
+  return { ...repartition, avecRetraite: true }
+}
+
+/**
+ * Le partage du bénéfice dans un autre mode. La case « 4 trimestres » ne suit que si elle a été décochée : cochée,
+ * c'est la valeur par défaut, qui n'a pas à être enregistrée avec un mode où elle n'a pas de sens.
+ */
+export function avecLeMode(repartition: RepartitionBenefice, mode: ModeRepartition): RepartitionBenefice {
+  const { avecRetraite, ...reste } = repartition
+  return { ...reste, mode, ...(avecRetraite === false ? { avecRetraite } : {}) }
+}
+
+/**
  * Réglages proposés à l'ouverture du comparateur pour une activité : avec des dividendes saisis, on reprend la
- * rémunération et les dividendes de la grille ; sinon, chaque statut de société prend sa rémunération au meilleur net,
- * tout le reste en dividendes, pour ne pas le pénaliser avec un bénéfice qui resterait bloqué. La rémunération saisie
- * reste proposée pour les autres modes.
+ * rémunération et les dividendes de la grille ; sinon, chaque statut de société prend sa rémunération au meilleur net
+ * parmi celles qui valident 4 trimestres de retraite, tout le reste en dividendes, pour ne pas le pénaliser avec un
+ * bénéfice qui resterait bloqué. La rémunération saisie reste proposée pour les autres modes.
  */
 export function defaultComparisonOptions(session: DonneesDeLAnnee, activityId: string): ComparaisonOptions {
   const flows = session.monthlyData.flatMap(month => month.flows).filter(flow => flow.entityId === activityId)
@@ -76,7 +95,7 @@ export function defaultComparisonOptions(session: DonneesDeLAnnee, activityId: s
   return {
     activityId,
     remunerationNette: annualTotal("director_remuneration"),
-    repartition: { mode: annualTotal("dividends_payment") === 0 ? "meilleurNet" : "grille", partDistribuee: 1 },
+    repartition: avecLaRetraiteParDefaut({ mode: annualTotal("dividends_payment") === 0 ? "meilleurNet" : "grille", partDistribuee: 1 }),
     partBncPrestations: 1,
     fraisFonctionnement: defaultFraisFonctionnement()
   }
@@ -102,7 +121,7 @@ export function optionsDuComparateur(vue: SimulationAnnuelle, activityId: string
   return {
     ...defaut,
     remunerationNette: reglages.remunerationParAnnee?.[String(vue.annee)] ?? defaut.remunerationNette,
-    repartition: reglages.repartition ?? defaut.repartition,
+    repartition: avecLaRetraiteParDefaut(reglages.repartition ?? defaut.repartition),
     partBncPrestations: reglages.partBncPrestations ?? defaut.partBncPrestations,
     fraisFonctionnement: reglages.fraisFonctionnement ?? defaut.fraisFonctionnement
   }
@@ -115,7 +134,8 @@ export function reglagesDeLActiviteComparee(vue: SimulationAnnuelle, comparateur
   return { activite, options: optionsDuComparateur(vue, activite.id, comparateur?.reglagesParActivite[activite.id]) }
 }
 
-const memeRepartition = (a: RepartitionBenefice, b: RepartitionBenefice) => a.mode === b.mode && a.partDistribuee === b.partDistribuee && (a.avecRetraite ?? false) === (b.avecRetraite ?? false)
+const avecRetraite = (repartition: RepartitionBenefice) => avecLaRetraiteParDefaut(repartition).avecRetraite ?? false
+const memeRepartition = (a: RepartitionBenefice, b: RepartitionBenefice) => a.mode === b.mode && a.partDistribuee === b.partDistribuee && avecRetraite(a) === avecRetraite(b)
 const memesFrais = (a: FraisFonctionnement | undefined, b: FraisFonctionnement | undefined) => JSON.stringify(a) === JSON.stringify(b)
 
 /**

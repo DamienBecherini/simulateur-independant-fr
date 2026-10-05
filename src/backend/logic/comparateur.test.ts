@@ -1,7 +1,7 @@
 // src/backend/logic/comparateur.test.ts
 
 import { describe, expect, it } from "vitest"
-import { comparerStatuts, statutActuel } from "./comparateur.js"
+import { comparerStatuts, coutDesQuatreTrimestres, remunerationOptimale, statutActuel } from "./comparateur.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
@@ -306,10 +306,12 @@ describe("au meilleur net", () => {
   const resultat = comparerStatuts(s, auMeilleurNet(), reglesDeTest)
 
   it.each(["SASU", "EURL"] as const)("en %s, verse la rémunération au meilleur net de l'arbitrage de ce statut, et tout le reste en dividendes", statut => {
-    const { meilleur } = optimiserRemuneration(s, options("s1"), statut, reglesDeTest)
+    const optimisation = optimiserRemuneration(s, options("s1"), statut, reglesDeTest)
+    const { meilleur } = optimisation
     const c = colonne(resultat, statut)
 
-    expect(c.remunerationOptimale).toEqual({ remunerationNette: meilleur!.remunerationNette, avecRetraite: false, retraiteHorsDAtteinte: false })
+    expect(c.remunerationOptimale).toMatchObject({ remunerationNette: meilleur!.remunerationNette, avecRetraite: false, retraiteHorsDAtteinte: false })
+    expect(c.remunerationOptimale!.coutDesQuatreTrimestres ?? 0).toBe(coutDesQuatreTrimestres(optimisation))
     expect(c.partage!.remunerationNette).toBeCloseTo(meilleur!.remunerationNette, 6)
     expect(Math.round(c.netApresImpots)).toBe(meilleur!.netApresImpots)
     expect(c.partage!.resultatConserve).toBeCloseTo(0, 0)
@@ -349,7 +351,7 @@ describe("au meilleur net", () => {
     const { meilleurAvecRetraite } = optimiserRemuneration(s, options("s1"), statut, reglesDeTest)
     const c = colonne(comparerStatuts(s, auMeilleurNet(true), reglesDeTest), statut)
 
-    expect(c.remunerationOptimale).toEqual({ remunerationNette: meilleurAvecRetraite!.remunerationNette, avecRetraite: true, retraiteHorsDAtteinte: false })
+    expect(c.remunerationOptimale).toMatchObject({ remunerationNette: meilleurAvecRetraite!.remunerationNette, avecRetraite: true, retraiteHorsDAtteinte: false })
     expect(Math.round(c.netApresImpots)).toBe(meilleurAvecRetraite!.netApresImpots)
     expect(c.protectionSociale.trimestres).toBe(4)
   })
@@ -364,6 +366,25 @@ describe("au meilleur net", () => {
     expect(c.remunerationOptimale).toEqual({ remunerationNette: meilleur!.remunerationNette, avecRetraite: false, retraiteHorsDAtteinte: true })
     expect(c.warnings).toContain("Aucune rémunération possible en SASU ne valide 4 trimestres de retraite : la colonne retient le meilleur net, sans cette condition.")
     expect(colonne(comparerStatuts(petite, auMeilleurNet(false), reglesDeTest), "SASU").warnings).not.toContainEqual(expect.stringContaining("4 trimestres"))
+  })
+
+  it("donne ce que coûtent les 4 trimestres en net, que la case soit cochée ou non", () => {
+    const optimisation = optimiserRemuneration(s, options("s1"), "SASU", reglesDeTest)
+    const cout = Math.round(optimisation.meilleur!.netApresImpots - optimisation.meilleurAvecRetraite!.netApresImpots)
+    expect(cout).toBeGreaterThan(0)
+    expect(colonne(comparerStatuts(s, auMeilleurNet(true), reglesDeTest), "SASU").remunerationOptimale!.coutDesQuatreTrimestres).toBe(cout)
+    expect(colonne(comparerStatuts(s, auMeilleurNet(false), reglesDeTest), "SASU").remunerationOptimale!.coutDesQuatreTrimestres).toBe(cout)
+  })
+
+  it("ne donne aucun coût quand le meilleur net valide déjà 4 trimestres, ou qu'aucune rémunération ne les valide", () => {
+    const point = (remunerationNette: number, netApresImpots: number, trimestres: number) => ({ remunerationNette, dividendes: 0, netApresImpots, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, trimestres })
+    const optimisation = (meilleur: ReturnType<typeof point> | null, meilleurAvecRetraite: ReturnType<typeof point> | null) => ({ statut: "SASU" as const, remunerationMaximale: 30000, points: [], meilleur, meilleurAvecRetraite, warnings: [] })
+    const valide = point(20000, 40000, 4)
+
+    expect(remunerationOptimale(optimisation(valide, valide), true)).toEqual({ remunerationNette: 20000, avecRetraite: true, retraiteHorsDAtteinte: false })
+    expect(remunerationOptimale(optimisation(point(0, 41000, 0), null), true)).toEqual({ remunerationNette: 0, avecRetraite: false, retraiteHorsDAtteinte: true })
+    expect(coutDesQuatreTrimestres(optimisation(point(0, 41234.4, 0), valide))).toBe(1234)
+    expect(remunerationOptimale(optimisation(point(0, 41234.4, 0), valide), false)).toEqual({ remunerationNette: 0, avecRetraite: false, retraiteHorsDAtteinte: false, coutDesQuatreTrimestres: 1234 })
   })
 
   it("sans bénéfice, ne verse ni rémunération ni dividendes", () => {

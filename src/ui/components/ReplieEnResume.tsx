@@ -6,6 +6,8 @@ import { Depliable } from "./Depliable"
 
 interface ReplieEnResumeProps {
   titre: string
+  /** Identifiant stable de la section repliée, pour retenir son état (voir Depliable). */
+  id?: string
   className?: string
   /** Classes du contenu une fois déplié (affichage « Résumé » seulement : sans lui, le contenu est rendu tel quel). */
   classNameContenu?: string
@@ -18,11 +20,11 @@ interface ReplieEnResumeProps {
  * Détail replié dans l'affichage « Résumé » (section dépliable, toujours dépliée à l'impression), affiché tel quel
  * dans l'affichage classique.
  */
-export function ReplieEnResume({ titre, className, classNameContenu, replie = true, children }: ReplieEnResumeProps) {
+export function ReplieEnResume({ titre, id, className, classNameContenu, replie = true, children }: ReplieEnResumeProps) {
   const resume = useAffichageResume()
   if (!resume || !replie) return <>{children}</>
   return (
-    <Depliable titre={titre} className={className}>
+    <Depliable titre={titre} id={id} className={className}>
       {classNameContenu ? <div className={classNameContenu}>{children}</div> : children}
     </Depliable>
   )

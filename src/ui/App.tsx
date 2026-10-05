@@ -29,12 +29,12 @@ import { BarreDeResume } from "./components/BarreDeResume"
 import { ReplieEnResume } from "./components/ReplieEnResume"
 import { AffichageContext } from "./hooks/useAffichage"
 import { MemoireDesSectionsContext, useMemoireDesSections } from "./hooks/useSectionOuverte"
-import { SectionMemorisee } from "./components/SectionMemorisee"
 import { affichageApplicable, avecPanneaux, avecResume, avecVues } from "@/lib/affichage"
 import { useVues, VuesContext } from "./hooks/useVues"
 import { VueDeLaPage } from "./components/VuesDeLaPage"
 import { InspecteurContext, useComparerLesStatuts, useEtatDeLInspecteur, type Inspecteur } from "./hooks/useInspecteur"
 import { PanneauDActeur } from "./components/PanneauDActeur"
+import { FournisseurDesDetails } from "./components/DetailsDesCartes"
 import type { ResumeDeLaComparaison } from "@/lib/resume"
 import type { Affichage } from "@/types"
 import { cn } from "@/lib/utils"
@@ -242,6 +242,8 @@ function App() {
 
         {resume ? <BarreDeResume report={simulationReport} annees={anneesDeLaSession(currentSession)} annee={annee} onAnnee={setAnneeChoisie} comparaison={comparaison} /> : null}
 
+        {/* Le détail des cartes de résultats s'ouvre par groupe, dans la page comme dans le panneau d'un acteur. */}
+        <FournisseurDesDetails>
         <AvecPanneau inspecteur={inspecteur} panneau={(acteurId, fermer) => <PanneauDActeur acteurId={acteurId} session={currentSession} setSession={setCurrentSession} report={simulationReport} onFermer={fermer} onComparer={comparerLesStatuts} />}>
         {/* `min-w-0` : à côté du panneau, la grille défile dans sa largeur au lieu d'élargir la page. */}
         <main id="contenu" tabIndex={-1} className="min-w-0 flex-grow scroll-mt-20 focus:outline-none">
@@ -282,11 +284,9 @@ function App() {
               }
             />
 
-            <SectionMemorisee id="legende-des-flux">
-              <ReplieEnResume titre="Légende des flux" className="mt-3 print:mt-2">
-                <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
-              </ReplieEnResume>
-            </SectionMemorisee>
+            <ReplieEnResume titre="Légende des flux" id="legende-des-flux" className="mt-3 print:mt-2">
+              <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
+            </ReplieEnResume>
           </VueDeLaPage>
 
           <VueDeLaPage vue="resultats">
@@ -301,6 +301,7 @@ function App() {
           </VueDeLaPage>
         </main>
         </AvecPanneau>
+        </FournisseurDesDetails>
 
         <Footer />
 

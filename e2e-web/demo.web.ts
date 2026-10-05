@@ -56,11 +56,22 @@ test("l'arbitrage rémunération / dividendes trouve la rémunération qui valid
   // L'atelier de la simulation d'exemple, converti en SASU : le minimum pour 4 trimestres est de 5 800 € nets (7 212 € bruts au moins).
   const retraite = optimisation.getByRole("listitem").filter({ hasText: "Meilleur net avec 4 trimestres" })
   await expect(retraite).toContainText(/5\s800\s€ de rémunération nette/)
-  await retraite.getByRole("button", { name: "Appliquer au comparateur" }).click()
 
-  // Au meilleur net, mode par défaut, le comparateur retient alors le meilleur net avec 4 trimestres.
-  await expect(page.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).toBeChecked()
-  await expect(page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: /^SASU/ })).toContainText(/rémunération optimale : 5\s800\s€ nets/)
+  // Au meilleur net, mode par défaut, 4 trimestres sont exigés d'office : le comparateur retient déjà cette rémunération.
+  const caseRetraite = page.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })
+  const enTeteSasu = page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: /^SASU/ })
+  await expect(caseRetraite).toBeChecked()
+  await expect(enTeteSasu).toContainText(/rémunération optimale : 5\s800\s€ nets/)
+  await expect(retraite.getByRole("button", { name: "Appliquée" })).toBeDisabled()
+
+  // Le meilleur net sans condition décoche la case ; le meilleur net avec 4 trimestres la recoche.
+  const meilleur = optimisation.getByRole("listitem").filter({ hasText: /^Meilleur net :/ })
+  await meilleur.getByRole("button", { name: "Appliquer au comparateur" }).click()
+  await expect(caseRetraite).not.toBeChecked()
+  await expect(enTeteSasu).not.toContainText(/rémunération optimale : 5\s800\s€ nets/)
+  await retraite.getByRole("button", { name: "Appliquer au comparateur" }).click()
+  await expect(caseRetraite).toBeChecked()
+  await expect(enTeteSasu).toContainText(/rémunération optimale : 5\s800\s€ nets/)
   await expect(retraite.getByRole("button", { name: "Appliquée" })).toBeDisabled()
 
   // Dans un autre mode, la rémunération est reportée telle quelle.

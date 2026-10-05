@@ -205,6 +205,16 @@ Aucun avertissement.
     expect(sansRetraite).toContain("Au meilleur net (dans chaque statut, la rémunération nette au meilleur net du foyer, tout le bénéfice restant versé en dividendes ; rémunération nette retenue : SASU")
   })
 
+  it("au meilleur net, dit ce que coûtent les 4 trimestres de retraite dans chaque colonne de société", () => {
+    const resultat = comparaisonExemple()
+    const sasu = { ...resultat.scenarios[0], remunerationOptimale: { remunerationNette: 5800, avecRetraite: true, retraiteHorsDAtteinte: false, coutDesQuatreTrimestres: 1234 } }
+    const eurl = { ...resultat.scenarios[0], statut: "EURL" as const, libelle: "EURL", actuel: false, remunerationOptimale: { remunerationNette: 9000, avecRetraite: true, retraiteHorsDAtteinte: false } }
+    resultat.scenarios = [sasu, eurl, resultat.scenarios[1]]
+    const options = { ...optionsExemple(), repartition: { mode: "meilleurNet" as const, partDistribuee: 1, avecRetraite: true } }
+
+    expect(rapportComplet({ comparaison: { nomActivite: "Ma SASU", options, resultat } })).toContain(`rémunération nette retenue : SASU ${euros(5800)} (4 trimestres : −${euros(1234)} de net), EURL ${euros(9000)})`)
+  })
+
   it("adapte les réglages, l'écart négatif et les colonnes sans revenus ni statut actuel", () => {
     const resultat = comparaisonExemple()
     resultat.scenarios = [{ ...resultat.scenarios[1], netApresImpots: 15000, revenusAvantPrelevements: 0, warnings: [] }, { ...resultat.scenarios[0], warnings: [] }]

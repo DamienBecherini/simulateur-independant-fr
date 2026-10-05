@@ -231,6 +231,15 @@ describe("reglagesDuComparateur", () => {
     expect(reglagesDuComparateur({ ...optionsExemple(), repartition: { mode: "meilleurNet", partDistribuee: 1 } }, "X")).toContainEqual(["4 trimestres de retraite exigés", "non"])
   })
 
+  it("au meilleur net, donne le net perdu avec 4 trimestres de retraite dans les colonnes où ils coûtent", () => {
+    const [sasu, micro] = comparaisonExemple().scenarios
+    const scenarios = [{ ...sasu, remunerationOptimale: { remunerationNette: 5800, avecRetraite: false, retraiteHorsDAtteinte: false, coutDesQuatreTrimestres: 1234 } }, { ...sasu, statut: "EURL" as const, libelle: "EURL", remunerationOptimale: { remunerationNette: 9000, avecRetraite: false, retraiteHorsDAtteinte: false } }, micro]
+    const reglages = reglagesDuComparateur({ ...optionsExemple(), repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: false } }, "X", scenarios)
+
+    expect(reglages).toContainEqual(["Net en moins avec 4 trimestres de retraite, SASU", { montant: 1234 }])
+    expect(reglages.map(([libelle]) => libelle)).not.toContain("Net en moins avec 4 trimestres de retraite, EURL")
+  })
+
   it("omet les frais quand le comparateur n'en ajoute pas", () => {
     expect(reglagesDuComparateur({ ...optionsExemple(), fraisFonctionnement: undefined }, "X")).toHaveLength(4)
   })

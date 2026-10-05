@@ -278,4 +278,16 @@ Chaque étape est livrable seule, avec ses tests unitaires, les tests axe et cla
 - **Essais** : trois à cinq personnes (dont au moins une au téléphone et une au clavier seul) sur les parcours 1, 2 et 5, avant et après ; noter le temps, les hésitations et ce qu'elles n'ont pas trouvé.
 - **Garde-fous** : tests axe sans nouvelle violation, en thème clair et sombre ; cibles de 24 px (44 px au toucher) ; texte de 12 px au moins (14 px pour le courant) ; pas de défilement horizontal de la page à 320 px ; impression et PDF identiques en contenu à aujourd'hui (tout déplié) ; tests de bout en bout adaptés aux nouveaux chemins.
 
+### Retours sur les affichages en place
+
+- **Détail des cartes de résultats.** Le bouton « Afficher le détail » d'une carte ouvre ou ferme celui de toutes les cartes de son groupe (tous les foyers, toutes les activités), dans les quatre affichages : ouvert d'office dans l'affichage classique, replié dans les autres. Le bouton cliqué reste à la même hauteur dans la fenêtre (la page défile d'autant que les cartes au-dessus ont grandi ou rétréci, sans animation) et garde le focus : avec beaucoup d'activités, le lecteur ne perd pas sa place.
+- **Réglages du comparateur.** L'activité comparée, le partage du bénéfice, la case « avec 4 trimestres de retraite » (cochée d'office) et la rémunération saisie, quand elle sert, restent visibles dans tous les affichages, serrés en deux lignes sur ordinateur ; la part BNC et les frais de fonctionnement passent sous « Plus de réglages » dans les affichages A, C et B. Ce que coûtent les 4 trimestres en net est dit près de la case et dans l'en-tête de chaque colonne de société.
+
+| Hauteur de la page (démo, au chargement) | 1 440 × 900 avant | après | 375 × 812 avant | après |
+| --- | --- | --- | --- | --- |
+| Classique | 5 888 px | 5 898 px | 9 349 px | 9 425 px |
+| Résumé (A) | 3 614 px | 3 644 px | 5 717 px | 5 857 px |
+| Panneaux (C) | 3 380 px | 3 410 px | 4 991 px | 5 131 px |
+| Trois vues (B) : situation / résultats / comparer | 1 617 / 1 023 / 1 967 px | 1 617 / 1 023 / 1 997 px | 2 505 / 1 857 / 2 944 px | 2 505 / 1 857 / 3 084 px |
+
 Les maquettes basse fidélité des trois propositions (un fichier HTML autonome, ordinateur et téléphone côte à côte, avec les chiffres de la simulation d'exemple) accompagnent cette étude.

@@ -1,7 +1,7 @@
 // src/lib/resume.ts
 // Chiffres clés de la barre de résumé (affichage « Résumé ») : tirés des résultats de l'année et du comparateur.
 
-import type { ComparaisonResult, SimulationReport } from "@/types"
+import type { ComparaisonResult, ScenarioStatut, SimulationReport } from "@/types"
 
 /** Ce que la barre retient du comparateur : l'activité comparée et le résultat de la comparaison. */
 export interface ResumeDeLaComparaison {
@@ -14,6 +14,14 @@ export const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} �
 
 /** Écart signé : « +1 234 € », « −850 € ». */
 export const ecartSigne = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${euros(Math.abs(n))}`
+
+/** Ce que coûte l'exigence de 4 trimestres de retraite dans une colonne : « 4 trimestres : −1 234 € de net ». */
+export const libelleDuCoutDesTrimestres = (cout: number) => `4 trimestres : ${ecartSigne(-cout)} de net`
+
+/** Au meilleur net, les colonnes de société où exiger 4 trimestres de retraite coûte du net, avec ce coût. */
+export function coutsDesQuatreTrimestres(scenarios: ScenarioStatut[]): { libelle: string; cout: number }[] {
+  return scenarios.flatMap(s => (s.remunerationOptimale?.coutDesQuatreTrimestres ? [{ libelle: s.libelle, cout: s.remunerationOptimale.coutDesQuatreTrimestres }] : []))
+}
 
 /** Nombre d'alertes de l'année : règles reprises d'une autre année, avertissements des foyers et des activités. */
 export function nombreDAlertes(report: SimulationReport | null): number {

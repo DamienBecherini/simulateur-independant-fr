@@ -175,7 +175,7 @@ describe("partage du bénéfice dans le comparateur", () => {
     const groupe = await screen.findByRole("group", { name: "Bénéfice de la société (SASU, EURL)" })
     expect(within(groupe).getByRole("radio", { name: "Au meilleur net" })).toBeChecked()
     expect(screen.queryByLabelText("Rémunération nette annuelle (SASU, EURL)")).not.toBeInTheDocument()
-    expect(screen.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).not.toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).toBeChecked()
 
     await userEvent.click(within(groupe).getByRole("radio", { name: "Tout en rémunération" }))
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition: { mode: "remuneration", partDistribuee: 1 } }), 2026))

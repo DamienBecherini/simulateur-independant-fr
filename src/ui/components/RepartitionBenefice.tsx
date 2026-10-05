@@ -21,9 +21,10 @@ export function ChoixDeLaRepartition({ mode, onChange }: { mode: ModeRepartition
   return (
     <fieldset className="basis-full space-y-1">
       <legend className="mb-1 text-sm font-medium leading-none">Bénéfice de la société (SASU, EURL)</legend>
-      <div className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-md border border-slate-300 bg-background p-0.5 dark:border-slate-600">
+      {/* Sur téléphone, deux colonnes de choix aux libellés sur deux lignes ; sur ordinateur, une seule rangée. */}
+      <div className="grid grid-cols-2 gap-0.5 rounded-md border border-slate-300 bg-background p-0.5 sm:flex sm:w-fit sm:max-w-full sm:flex-wrap dark:border-slate-600">
         {MODES.map(m => (
-          <label key={m} className={cn("flex min-h-9 items-center rounded px-3 text-sm font-medium pointer-coarse:min-h-11 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--ring)]", m === mode ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 print:hidden")}>
+          <label key={m} className={cn("flex min-h-9 items-center rounded px-2 py-1 text-xs leading-tight font-medium sm:px-3 sm:text-sm pointer-coarse:min-h-11 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--ring)]", m === mode ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 print:hidden")}>
             <input type="radio" name="comparateur-repartition" value={m} checked={m === mode} onChange={() => onChange(m)} className="sr-only" />
             {libellesRepartition[m]}
           </label>

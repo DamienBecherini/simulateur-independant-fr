@@ -149,7 +149,7 @@ function PanneauOuvert({ entity, session, setSession, report, onFermer, onCompar
           </div>
         </section>
 
-        <Depliable titre="Autres réglages (nom, parts, statut, couleur, frais…)" className="text-sm">
+        <Depliable titre="Autres réglages (nom, parts, statut, couleur, frais…)" id={`autres-reglages:${entity.id}`} className="text-sm">
           <div className="grid gap-5 pt-3" {...reglages.conteneur}>
             <ChampsDeLActeur entity={reglages.entity} onChange={reglages.onChange} />
           </div>
