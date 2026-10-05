@@ -35,21 +35,27 @@ interface PastilleDeRelationProps {
   compacte?: boolean
 }
 
-/** Une relation de l'acteur, vue de son côté (« Président → Conseil SASU »), avec le bouton qui la retire. */
+/**
+ * Une relation de l'acteur, vue de son côté (« Président → Conseil SASU »), avec le bouton qui la retire. Sur un
+ * téléphone étroit, ou avec une police large, la pastille passe à la ligne plutôt que de dépasser de sa carte.
+ */
 export function PastilleDeRelation({ relation, entity, allEntities, onDelete, compacte = false }: PastilleDeRelationProps) {
   const isSource = relation.fromId === entity.id
   const otherEntity = allEntities.find(e => e.id === (isSource ? relation.toId : relation.fromId))
   if (!otherEntity) return null
   return (
-    <div className={cn("flex items-center gap-2 text-sm rounded-md bg-slate-100 dark:bg-gray-800", compacte ? "py-0.5 pl-2" : "p-1 pl-2")}>
+    <div className={cn("flex min-w-0 max-w-full flex-wrap items-center gap-x-2 text-sm rounded-md bg-slate-100 dark:bg-gray-800", compacte ? "py-0.5 pl-2" : "p-1 pl-2")}>
       {!isSource && <ArrowRight className="h-3 w-3 text-slate-500 dark:text-slate-400 transform rotate-180" />}
       <span className="font-medium text-blue-600 dark:text-blue-400">{getRelationshipLabel(relation.type, isSource)}</span>
       {isSource && <ArrowRight className="h-3 w-3 text-slate-500 dark:text-slate-400" />}
-      {compacte ? null : <AvatarDisplay avatar={otherEntity.avatar} />}
-      <span className="font-semibold">{otherEntity.name}</span>
-      <button type="button" aria-label={`Supprimer la relation avec ${otherEntity.name}`} className="print:hidden inline-flex min-h-6 min-w-6 items-center justify-center rounded text-slate-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11 dark:text-slate-400 hover:bg-slate-200 hover:text-destructive dark:hover:bg-gray-700" onClick={() => onDelete(relation.id)}>
-        <X className="h-3.5 w-3.5" />
-      </button>
+      {/* L'autre acteur et le bouton de retrait restent ensemble quand la pastille passe à la ligne. */}
+      <span className="flex min-w-0 items-center gap-2">
+        {compacte ? null : <AvatarDisplay avatar={otherEntity.avatar} />}
+        <span className="min-w-0 break-words font-semibold">{otherEntity.name}</span>
+        <button type="button" aria-label={`Supprimer la relation avec ${otherEntity.name}`} className="print:hidden inline-flex min-h-6 min-w-6 items-center justify-center rounded text-slate-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11 dark:text-slate-400 hover:bg-slate-200 hover:text-destructive dark:hover:bg-gray-700" onClick={() => onDelete(relation.id)}>
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </span>
     </div>
   )
 }
