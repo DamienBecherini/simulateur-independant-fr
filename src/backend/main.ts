@@ -1,6 +1,6 @@
 // src/backend/main.ts
 
-import { app, BrowserWindow, dialog } from "electron"
+import { app, BrowserWindow, dialog, shell } from "electron"
 import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions, StatutSociete, FormatFichierTexte } from "@/types.js"
 import { SessionStateSchema } from "@/types.js"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./logic/simulation-pluriannuelle.js"
@@ -291,6 +291,13 @@ function createMainWindow() {
   } else {
     mainWindow.loadFile(getUIPath()).catch(error => console.error("Interface introuvable :", error))
   }
+
+  // Liens vers une page externe (sources officielles des montages types) : ouverts dans le navigateur du système,
+  // jamais dans une fenêtre de l'application.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("https://")) shell.openExternal(url).catch(error => console.error("Lien externe impossible à ouvrir :", error))
+    return { action: "deny" }
+  })
 
   // Boutons « précédent » et « suivant » de la souris (Windows, Linux) : retour à la vue précédente de l'affichage
   // « Trois vues », comme dans un navigateur. L'historique ne contient que des vues de la même page.

@@ -7,6 +7,7 @@ import Footer from "./components/Footer"
 import { Settings, Undo2, Redo2, ZoomIn, ZoomOut, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
+import { sessionDUnMontage, type MontageType } from "@/lib/montages/montages"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
 import * as SessionService from "@/lib/session-service"
@@ -68,7 +69,7 @@ function App() {
 
   // --- MODIFICATION : Récupération des nouveaux états et fonctions du hook ---
   // On récupère tout ce dont on a besoin depuis le "cerveau" de l'application.
-  const { currentSession, setCurrentSession, setComparateur, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
+  const { currentSession, setCurrentSession, setComparateur, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, handleLoadMontage, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
 
   // L'année affichée : celle de la grille, des résultats, du comparateur et des exports. Elle n'est pas enregistrée
   // dans la session (voir l'ADR 008) ; par défaut, ou si elle disparaît, c'est la plus récente.
@@ -172,6 +173,13 @@ function App() {
     setSettingsOpen(false)
   }
 
+  // Un montage type remplace la session, nommée d'après lui ; la page remonte en haut, sur ses acteurs.
+  const chargerUnMontage = (montage: MontageType) => {
+    handleLoadMontage(sessionDUnMontage(montage))
+    setSettingsOpen(false)
+    window.scrollTo(0, 0)
+  }
+
 
   const flowTypeToNumberMap = useMemo(() => {
     const types = new Set<string>()
@@ -249,7 +257,7 @@ function App() {
         <main id="contenu" tabIndex={-1} className="min-w-0 flex-grow scroll-mt-20 focus:outline-none">
           {/* Affichage « Trois vues » : les acteurs et la grille, puis les résultats, puis le comparateur, chacun dans sa vue. */}
           <VueDeLaPage vue="situation">
-            <EntitiesManager session={currentSession} setSession={setCurrentSession} />
+            <EntitiesManager session={currentSession} setSession={setCurrentSession} onChargerMontage={chargerUnMontage} />
 
             <MonthlyGrid
               entities={currentSession.entities}
@@ -323,6 +331,7 @@ function App() {
           slotOrder={slotOrder}
           setSlotOrder={setSlotOrder}
           onImport={handleImport}
+          onLoadMontage={chargerUnMontage}
           importConfirmation={importConfirmation}
           onConfirmImport={handleConfirmImportAndClose}
           onCancelImport={cancelImport}

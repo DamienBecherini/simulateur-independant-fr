@@ -17,10 +17,14 @@ import { lignesDesReglages } from "@/lib/reglages-des-acteurs"
 import { LigneActeur } from "./LigneActeur"
 import { PuceActeur } from "./PuceActeur"
 import { cn } from "@/lib/utils"
+import type { MontageType } from "@/lib/montages/montages"
+import { BoutonDesMontages } from "./MontagesTypes"
 
 interface EntitiesManagerProps {
   session: SessionState
   setSession: (session: SessionState) => void
+  /** Une simulation vide propose de partir d'un montage type : rien n'est perdu, aucune confirmation n'est demandée. */
+  onChargerMontage?: (montage: MontageType) => void
 }
 
 /**
@@ -62,7 +66,7 @@ function ListeCourte({ entities, relationships, listeVide }: { entities: Entity[
   )
 }
 
-function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
+function EntitiesManager({ session, setSession, onChargerMontage }: EntitiesManagerProps) {
   const { entities, relationships } = session
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
   const [isSelectModalOpen, setSelectModalOpen] = useState(false)
@@ -107,7 +111,12 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
     }
   }
 
-  const listeVide = <p className="text-slate-600 dark:text-slate-400">Aucune entité. Commencez par en ajouter une !</p>
+  const listeVide = (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <p className="text-slate-600 dark:text-slate-400">Aucune entité. Commencez par en ajouter une{onChargerMontage ? ", ou partez d'une situation courante" : ""} !</p>
+      {onChargerMontage ? <BoutonDesMontages variant="outline" size="sm" className="print:hidden" onCharger={onChargerMontage} confirmationNecessaire={false} nomDeLaSession={session.name} /> : null}
+    </div>
+  )
 
   const style = panneaux ? MISE_EN_PAGE.panneaux : resume ? MISE_EN_PAGE.resume : MISE_EN_PAGE.classique
 
