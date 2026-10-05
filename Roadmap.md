@@ -167,8 +167,8 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 3.  **Revenu fiscal de référence [✅] :** calculé pour chaque foyer et chaque année (article 1417 IV du CGI : revenu imposable au barème, dividendes au prélèvement forfaitaire ou abattement de 40 % réintégré, chiffre d'affaires micro après abattement sous versement libératoire) ; le versement libératoire de l'année N vérifie celui de N-2 quand cette année est dans la session, sinon celui saisi. Non calculables, faute de saisie : revenus exonérés, épargne salariale, plus-values, intérêts, déductions PER.
 4.  **Bénéfice mis en réserve [À faire] :** le résultat conservé d'une société est reporté sur l'année suivante et peut être distribué plus tard ; arbitrage des dividendes entre les années.
 5.  **Flux récurrents :** un flux défini une fois pour plusieurs mois ou années (« 800 € par mois de janvier à décembre »), modifiable en une fois, avec une règle claire quand on change un seul mois d'une série. Aujourd'hui, la grille recopie le flux sur les mois choisis : les copies sont indépendantes.
-6.  **Dispositifs limités dans le temps [À faire] :** ACRE la première année, exonération de CFE l'année de création, cotisations des premières années.
-7.  **Sortie du régime micro [À faire] :** repérer deux années consécutives au-delà des plafonds et annoncer le passage au réel au 1er janvier suivant (règle de service-public.fr, F32353). Aujourd'hui, une micro hors plafond est signalée « 2 ans au plus » et n'est jamais désignée meilleur net.
+6.  **Dispositifs limités dans le temps [✅] :** date de création (mois et année) d'une micro-entreprise ou d'une société ; ACRE d'une micro-entreprise du mois de création à la fin du 3e trimestre civil suivant, mois par mois d'après la grille, à 50 % ou à 25 % pour une création depuis le 1er juillet 2026 (décret n° 2026-69) ; CFE du comparateur exonérée l'année de création et réduite de moitié l'année suivante (article 1478 II du CGI). Sans date de création, rien ne change. **Reste :** ACRE des indépendants hors micro et des dirigeants de société, exonération de CFE sous 5 000 € de chiffre d'affaires, franchise de TVA au prorata l'année de création, cotisations provisionnelles des premières années.
+7.  **Sortie du régime micro [✅] :** deux années de suite au-delà des plafonds en vigueur l'année suivante (au prorata des jours d'activité l'année de création) font passer l'activité au réel au 1er janvier suivant (F32353) : elle y est simulée en EI au réel, annoncée sur sa carte, dans la synthèse des années, le comparateur (colonnes micro « plus accessibles ») et les exports ; retour au régime micro après une année sous les plafonds ; case « au-delà des plafonds l'année d'avant la simulation ».
 8.  **Partage du bénéfice des sociétés [✅] :** dans le comparateur, quatre modes (rémunération saisie et dividendes, tout en rémunération, répartition personnalisée, dividendes de la grille) ; barre empilée exacte du bénéfice avant rémunération (rémunération nette, cotisations, IS, dividendes, cotisations sur dividendes, réserves) avec poignées glissables à la souris, au doigt et au clavier, répartitions toutes faites, exports.
 9.  **Comparateur au meilleur net [✅] :** mode par défaut, chaque statut de société (SASU, EURL) avec sa propre rémunération optimale et tout le reste en dividendes, option « avec 4 trimestres de retraite » ; un seul calcul partagé avec « Rémunération ou dividendes ? ».
 10. **Saisie sur plusieurs années depuis la grille [✅] :** cases « Aussi en » dans la fenêtre des flux ; ajout, modification et suppression d'une série appliqués aux mêmes mois des années cochées (même portée, mêmes mois du calendrier), sans doublon, en une seule étape d'annulation, avec une notification détaillée par année. La recopie jusqu'en décembre reste limitée à l'année affichée.
@@ -226,12 +226,12 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
-### **Phase 14 : Montages types [Planifié 🗓️]**
+### **Phase 14 : Montages types [Terminé ✅, sauf la recherche automatique]**
 
 - **Objectif :** partir d'une situation courante plutôt que d'une page vide. Peut s'intercaler entre deux autres phases.
 
-1.  **Bibliothèque de montages :** simulations préremplies à charger en un clic, comme la simulation d'exemple de la démo : micro-entreprise seule, SASU sans salaire, micro-entreprise et SASU du conjoint, conjoint salarié de la SASU, EURL à l'IR ou à l'IS, couple en union libre ou marié.
-2.  **Explication :** pour chaque montage, ce qu'il illustre, ses conditions et ses risques, avec un lien vers le comparateur et l'arbitrage rémunération / dividendes.
+1.  **Bibliothèque de montages [✅] :** huit montages types (micro-entreprise seule, SASU sans salaire, SASU avec un salaire qui valide 4 trimestres, EURL à l'IS, salarié avec une micro-entreprise, micro-entreprise et SASU du conjoint, conjoint salarié de la SASU, couple en union libre), chargés depuis les paramètres ou une simulation vide, avec confirmation avant de remplacer une simulation non enregistrée ; leurs chiffres 2026 sont figés par un test de référence. L'EURL à l'IR est approchée par l'EI au réel du comparateur.
+2.  **Explication [✅] :** pour chaque montage, ce qu'il illustre, ses conditions, ses risques et ses sources officielles.
 3.  **Plus tard :** recherche automatique d'une meilleure structure, en s'appuyant sur le comparateur et l'optimiseur.
 
 ---
@@ -250,7 +250,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
     - **Parent isolé (case T) :** case « vit seul(e) avec ses enfants » sur la personne, demi-part supplémentaire avec son plafond propre. Elle ne se déduit pas des relations : sans relation de couple, rien ne dit que la personne vit seule.
     - **Enfant qui a des revenus :** majeur, rattaché (ses revenus s'ajoutent au foyer, avec sa part) ou déclarant seul (les parents peuvent déduire une pension alimentaire, plafonnée) ; mineur, imposé avec ses parents, sauf revenus de son propre travail (imposition distincte possible) ; exonération des salaires des étudiants de moins de 26 ans dans une limite.
     - **Comparateur :** pour chaque enfant concerné, rattachement le plus avantageux (à quel parent, ou déclaration séparée avec pension) et gain total des foyers.
-6.  **Distribution :** exécutables Windows / macOS / Linux.
+6.  **Distribution [✅ en grande partie] :** exécutables Windows (installateur et zip), macOS (Apple Silicon et Intel) et Linux (AppImage et deb), construits par le workflow « Publication des exécutables » à chaque étiquette `vX.Y.Z` et déposés dans un brouillon de version GitHub ; guide d'installation et CHANGELOG. **Reste :** première publication, signature du code (avertissements SmartScreen et Gatekeeper), test de bout en bout de l'application packagée.
 
 ---
 
