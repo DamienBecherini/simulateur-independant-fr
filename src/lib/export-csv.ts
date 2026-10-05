@@ -105,7 +105,9 @@ function lignesDeRemuneration(options: ComparaisonOptions, scenarios: ScenarioSt
   if (mode === "remuneration") return [["Rémunération nette annuelle (SASU, EURL)", "la plus haute possible"]]
   if (mode !== "meilleurNet") return [["Rémunération nette annuelle (SASU, EURL)", montant(options.remunerationNette)]]
   const retenues = scenarios.flatMap((s): [string, CelluleCsv][] => (s.remunerationOptimale ? [[`Rémunération nette annuelle retenue, ${s.libelle}`, montant(s.remunerationOptimale.remunerationNette)]] : []))
-  return [["Rémunération nette annuelle (SASU, EURL)", "au meilleur net de chaque statut"], ["4 trimestres de retraite exigés", ouiNon(avecRetraite === true)], ...retenues]
+  // Ce que coûtent les 4 trimestres en net du foyer, colonne par colonne, que la case soit cochée ou non.
+  const couts = scenarios.flatMap((s): [string, CelluleCsv][] => (s.remunerationOptimale?.coutDesQuatreTrimestres ? [[`Net en moins avec 4 trimestres de retraite, ${s.libelle}`, montant(s.remunerationOptimale.coutDesQuatreTrimestres)]] : []))
+  return [["Rémunération nette annuelle (SASU, EURL)", "au meilleur net de chaque statut"], ["4 trimestres de retraite exigés", ouiNon(avecRetraite === true)], ...retenues, ...couts]
 }
 
 /** Réglages du comparateur, pour qu'on sache à quoi correspondent les chiffres ; au meilleur net, la rémunération retenue par statut. */

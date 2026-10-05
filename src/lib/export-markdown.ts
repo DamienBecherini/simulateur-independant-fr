@@ -154,9 +154,18 @@ function totalDesFrais(options: ComparaisonOptions): string {
   return statutsFrais.map(statut => `${libelles[statut]} ${euros(postes.reduce((somme, poste) => somme + frais[statut][poste], 0))}`).join(", ")
 }
 
-/** Au meilleur net, la rémunération retenue dans chaque colonne de société : « SASU 12 300 €, EURL 9 800 € ». */
+/** Ce qu'on précise après la rémunération retenue d'une colonne : 4 trimestres hors d'atteinte, ou ce qu'ils coûtent en net. */
+function precisionDeLaRemuneration({ retraiteHorsDAtteinte, coutDesQuatreTrimestres }: NonNullable<ScenarioStatut["remunerationOptimale"]>): string {
+  if (retraiteHorsDAtteinte) return " (4 trimestres hors d'atteinte)"
+  return coutDesQuatreTrimestres ? ` (4 trimestres : −${euros(coutDesQuatreTrimestres)} de net)` : ""
+}
+
+/**
+ * Au meilleur net, la rémunération retenue dans chaque colonne de société, avec ce que coûtent les 4 trimestres de
+ * retraite : « SASU 12 300 € (4 trimestres : −1 234 € de net), EURL 9 800 € ».
+ */
 function remunerationsRetenues(scenarios: ScenarioStatut[]): string {
-  const retenues = scenarios.flatMap(s => (s.remunerationOptimale ? [`${s.libelle} ${euros(s.remunerationOptimale.remunerationNette)}${s.remunerationOptimale.retraiteHorsDAtteinte ? " (4 trimestres hors d'atteinte)" : ""}`] : []))
+  const retenues = scenarios.flatMap(s => (s.remunerationOptimale ? [`${s.libelle} ${euros(s.remunerationOptimale.remunerationNette)}${precisionDeLaRemuneration(s.remunerationOptimale)}`] : []))
   return retenues.length > 0 ? ` ; rémunération nette retenue : ${retenues.join(", ")}` : ""
 }
 
