@@ -1,7 +1,7 @@
 // src/ui/components/MonthlyGrid.tsx
 
 import React, { useState, useMemo, Dispatch, SetStateAction } from "react"
-import type { Entity, MonthlyGridData, FinancialFlow, UserPreferences } from "@/types"
+import type { AnneeSimulee, Entity, MonthlyGridData, FinancialFlow, UserPreferences } from "@/types"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import type { FlowChanges } from "./FlowItem"
 import type { NewFlowValues } from "./NewFlowItem"
@@ -9,7 +9,7 @@ import { CellChartDisplay, FlowSegment } from "./CellChartDisplay"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
 import { isExpenseFlowType } from "@/lib/flow-constants"
 import { createId } from "@/lib/id"
-import { modifierSerie, recopierFlux, supprimerSerie, type PorteeRecurrence } from "@/lib/flux-recurrents"
+import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlux, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type MoisTouches, type PorteeRecurrence } from "@/lib/flux-recurrents"
 import { toast } from "sonner"
 import { AvatarDisplay } from "./AvatarDisplay"
 
@@ -28,6 +28,10 @@ interface MonthlyGridProps {
   annee?: number
   /** Sélecteur d'année, affiché à côté du titre. */
   selecteurAnnee?: React.ReactNode
+  /** Toutes les années de la session, pour appliquer aussi une opération aux autres années cochées. */
+  annees?: AnneeSimulee[]
+  /** Remplace les années de la session en une seule modification (une seule étape d'annulation). */
+  setAnnees?: (annees: AnneeSimulee[]) => void
 }
 
 // Constantes pour les labels des mois
@@ -37,13 +41,15 @@ const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 /** « de mars », mais « d’avril », « d’août », « d’octobre » : l’élision devant une voyelle. */
 const deMois = (mois: string) => (/^[aeiouâéèêîôû]/i.test(mois) ? `d’${mois.toLowerCase()}` : `de ${mois.toLowerCase()}`)
 
-function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee }: MonthlyGridProps) {
+function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees }: MonthlyGridProps) {
   // ===================================================================================
   // == ÉTAT DE LA FENÊTRE DES FLUX
   // ===================================================================================
   // Case (entité + mois) dont la fenêtre des flux est ouverte ; `null` quand elle est fermée.
   const [openCell, setOpenCell] = useState<{ entityId: string; monthIndex: number } | null>(null)
   const openCellEntity = openCell ? entities.find(e => e.id === openCell.entityId) : undefined
+  // Autres années de la session, proposées dans la fenêtre des flux ; aucune si la grille ne les connaît pas.
+  const autresAnnees = annees && setAnnees && annee !== undefined ? annees.map(a => a.annee).filter(a => a !== annee) : []
 
   // ===================================================================================
   // == HANDLERS POUR LES ACTIONS UTILISATEUR
@@ -62,10 +68,23 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       return prevData.map((monthData, index) => (index === monthIndex ? { ...monthData, flows } : monthData))
     })
   }
-  const handleCreateFlow = (values: NewFlowValues, portee: PorteeRecurrence = "mois") => {
+  /**
+   * Applique une opération à l'année affichée et aux autres années cochées, en une seule modification de la
+   * session : une seule étape d'annulation. Renvoie `false` si aucune autre année n'est cochée : l'opération
+   * suit alors le chemin habituel, limité à l'année affichée.
+   */
+  const dansLesAnnees = (aussiEn: number[], portee: PorteeRecurrence, operation: (annees: AnneeSimulee[], cible: CibleDansLesAnnees) => { annees: AnneeSimulee[]; touches: MoisTouches[] }, annonce: string) => {
+    if (aussiEn.length === 0 || !openCell || !annees || !setAnnees || annee === undefined) return false
+    const { annees: nouvelles, touches } = operation(annees, { annee, depuis: openCell.monthIndex, portee, autresAnnees: aussiEn })
+    setAnnees(nouvelles)
+    if (touches.length > 0) toast.success(`${annonce} ${resumerMoisTouches(touches)}.`)
+    return true
+  }
+  const handleCreateFlow = (values: NewFlowValues, portee: PorteeRecurrence = "mois", aussiEn: number[] = []) => {
     if (!openCell) return
     // L'identifiant est généré hors de la fonction de mise à jour, qui doit rester pure.
     const newFlow: FinancialFlow = { id: createId("flow"), entityId: openCell.entityId, ...values }
+    if (dansLesAnnees(aussiEn, portee, (a, cible) => ajouterDansLesAnnees(a, newFlow, cible, () => createId("flow")), "Flux ajouté à ce mois et recopié sur")) return
     if (portee === "mois") {
       updateOpenMonthFlows(flows => [...flows, newFlow])
       return
@@ -97,8 +116,9 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
   const annoncerSerie = (action: string, touches: number) => {
     if (touches > 0) toast.success(`${action} aussi sur ${touches} autre${touches > 1 ? "s" : ""} mois.`)
   }
-  const handleUpdateFlow = (flowId: string, changes: FlowChanges, portee: PorteeRecurrence = "mois") => {
+  const handleUpdateFlow = (flowId: string, changes: FlowChanges, portee: PorteeRecurrence = "mois", aussiEn: number[] = []) => {
     const flux = fluxOuvert(flowId)
+    if (flux && dansLesAnnees(aussiEn, portee, (a, cible) => modifierDansLesAnnees(a, flux, cible, changes), "Modifié aussi sur")) return
     if (portee !== "mois" && flux && openCell) {
       const { grille, touches } = modifierSerie(monthlyData, flux, openCell.monthIndex, portee, changes)
       setMonthlyData(grille)
@@ -113,8 +133,9 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       return flows.map(f => (f.id === flowId ? updated : f))
     })
   }
-  const handleDeleteFlow = (flowId: string, portee: PorteeRecurrence = "mois") => {
+  const handleDeleteFlow = (flowId: string, portee: PorteeRecurrence = "mois", aussiEn: number[] = []) => {
     const flux = fluxOuvert(flowId)
+    if (flux && dansLesAnnees(aussiEn, portee, (a, cible) => supprimerDansLesAnnees(a, flux, cible), "Supprimé aussi sur")) return
     if (portee !== "mois" && flux && openCell) {
       const { grille, touches } = supprimerSerie(monthlyData, flux, openCell.monthIndex, portee)
       setMonthlyData(grille)
@@ -264,7 +285,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                   </div>
 
                   {/* Colonne 2 : Total Annuel */}
-                  <div className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start print:p-1">
+                  <div role="group" aria-label={`Total annuel : ${entity.name}`} className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start print:p-1">
                     <CellChartDisplay
                       gains={annualCellData.gains}
                       expenses={annualCellData.expenses}
@@ -310,6 +331,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           flows={monthlyData[openCell.monthIndex].flows.filter(f => f.entityId === openCell.entityId)}
           entity={openCellEntity}
           monthName={fullMonths[openCell.monthIndex]}
+          autresAnnees={autresAnnees}
           onCreate={handleCreateFlow}
           onRecopier={openCell.monthIndex < 11 ? handleRecopierFlux : undefined}
           onUpdate={handleUpdateFlow}

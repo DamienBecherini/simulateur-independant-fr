@@ -136,6 +136,13 @@ test("plusieurs années (sélecteur, synthèse, fenêtres d'ajout et de suppress
   await expect(page.getByText(/année 2027 avec les règles fiscales 2026/)).toBeVisible()
   await expect(page.getByRole("table", { name: /chaque année de la session/ })).toBeVisible()
   await auditer(page, "deux années, avertissement et synthèse")
+  // La fenêtre des flux propose alors l'autre année ; cochée, elle est mise en évidence et annoncée.
+  await page.getByRole("button", { name: /^Flux de janvier/ }).last().click()
+  await page.getByRole("dialog").getByRole("checkbox", { name: "2026" }).check()
+  await expect(page.getByRole("dialog").getByText(/au même mois en 2026/)).toBeVisible()
+  await auditer(page, "fenêtre des flux, autre année cochée", "[role=dialog]")
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("dialog")).toBeHidden()
   await page.getByRole("button", { name: "Supprimer 2027" }).click()
   await expect(page.getByRole("dialog", { name: "Supprimer l'année 2027 ?" })).toBeVisible()
   await auditer(page, "suppression d'une année")
