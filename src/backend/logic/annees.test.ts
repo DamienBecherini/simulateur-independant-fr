@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import { ANNEE_PAR_DEFAUT, grilleVide, type AnneeSimulee, type FinancialFlow } from "../../types.js"
-import { ajouterAnnee, anneeAAjouter, anneeExistante, anneesDeLaSession, donneesDeLAnnee, nombreDeFlux, ordonnerLesAnnees, peutSupprimerAnnee, remplacerGrille, supprimerAnnee, transformerLesGrilles, vueDeLAnnee, type SessionAnnuelle } from "./annees.js"
+import { ajouterAnnee, anneeAAjouter, anneeExistante, anneesDeLaSession, anneesManquantes, donneesDeLAnnee, erreurDesAnnees, NOMBRE_MAX_ANNEES, nombreDeFlux, ordonnerLesAnnees, peutAjouterAnnee, peutSupprimerAnnee, remplacerGrille, supprimerAnnee, transformerLesGrilles, vueDeLAnnee, type SessionAnnuelle } from "./annees.js"
 import { reglesEnVigueur } from "./regles.js"
 import { personne } from "./testing/session-de-test.js"
 
@@ -155,5 +155,63 @@ describe("ordonnerLesAnnees", () => {
     expect(annees.map(a => a.annee)).toEqual([2024, 2025, 2026])
     expect(annees[1]).toBe(premiere2025)
     expect(ecartees).toEqual([doublon2025])
+  })
+})
+
+describe("nombre maximal d'années", () => {
+  const dixAnnees = session(...Array.from({ length: NOMBRE_MAX_ANNEES }, (_, i) => annee(2024 + i)))
+
+  it("fixe la limite à dix années", () => {
+    expect(NOMBRE_MAX_ANNEES).toBe(10)
+  })
+
+  it("permet d'ajouter une année tant que la limite n'est pas atteinte", () => {
+    expect(peutAjouterAnnee(session(...dixAnnees.annees.slice(1)))).toBe(true)
+    expect(peutAjouterAnnee(dixAnnees)).toBe(false)
+  })
+
+  it("n'ajoute pas d'année au-delà de la limite, ni avant ni après", () => {
+    expect(ajouterAnnee(dixAnnees, "apres", true, compteur())).toBe(dixAnnees)
+    expect(ajouterAnnee(dixAnnees, "avant", false, compteur())).toBe(dixAnnees)
+  })
+
+  it("ajoute la dixième année", () => {
+    const neuf = session(...dixAnnees.annees.slice(0, 9))
+
+    expect(anneesDeLaSession(ajouterAnnee(neuf, "apres", false, compteur()))).toHaveLength(10)
+  })
+})
+
+describe("années manquantes et années refusées", () => {
+  it("ne trouve aucune année manquante dans une suite consécutive, ou avec moins de deux années", () => {
+    expect(anneesManquantes([2024, 2025, 2026])).toEqual([])
+    expect(anneesManquantes([2026])).toEqual([])
+    expect(anneesManquantes([])).toEqual([])
+  })
+
+  it("trouve les années absentes entre la plus ancienne et la plus récente", () => {
+    expect(anneesManquantes([2024, 2027, 2029])).toEqual([2025, 2026, 2028])
+  })
+
+  it("accepte des années consécutives, jusqu'à dix", () => {
+    expect(erreurDesAnnees([])).toBeNull()
+    expect(erreurDesAnnees([2026])).toBeNull()
+    expect(erreurDesAnnees(Array.from({ length: 10 }, (_, i) => 2024 + i))).toBeNull()
+  })
+
+  it("refuse plus de dix années, en disant combien il y en a et pourquoi", () => {
+    expect(erreurDesAnnees(Array.from({ length: 11 }, (_, i) => 2024 + i))).toBe(
+      "Cette simulation contient 11 années, de 2024 à 2034 ; le simulateur en accepte au plus 10. Au-delà de deux ou trois ans après les dernières règles connues, les chiffres ne sont plus qu'une projection."
+    )
+  })
+
+  it("refuse des années qui ne se suivent pas, en nommant les années manquantes", () => {
+    expect(erreurDesAnnees([2024, 2026])).toBe("Les années de cette simulation ne se suivent pas : il manque 2025 entre 2024 et 2026. Ajoutez les années manquantes au fichier, ou retirez les années isolées.")
+    expect(erreurDesAnnees([2024, 2027, 2029])).toContain("il manque 2025, 2026 et 2028 entre 2024 et 2029")
+  })
+
+  it("compte les années manquantes plutôt que de toutes les nommer quand il y en a beaucoup", () => {
+    expect(erreurDesAnnees([2024, 2031])).toContain("il manque 6 années entre 2024 et 2031")
+    expect(erreurDesAnnees([2024, 2030])).toContain("il manque 2025, 2026, 2027, 2028 et 2029 entre 2024 et 2030")
   })
 })
