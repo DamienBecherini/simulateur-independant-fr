@@ -3,13 +3,12 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Entity, Relationship } from "@/types"
-import { Lock, Unlock, Pencil } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { NewRelationshipForm } from "./NewRelationshipForm"
 import { useChampSurPlace, useNomSurPlace } from "../hooks/useChampSurPlace"
-import { OptionsDeLaMicro, PastilleDeRelation, PoigneeDeTri } from "./ElementsDActeur"
+import { BoutonsModifierVerrouiller, OptionsDeLaMicro, PastilleDeRelation, PoigneeDeTri } from "./ElementsDActeur"
 
 export interface EntityItemProps {
   entity: Entity
@@ -75,12 +74,7 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
           )}
           {entity.type === "micro-entreprise" && <OptionsDeLaMicro entity={entity} onUpdate={onUpdate} />}
           <div className="flex items-center gap-1 print:hidden">
-            <Button variant="ghost" size="icon" aria-label="Modifier les autres réglages" title="Statut, couleur, icône…" onClick={() => onEdit(entity)}>
-              <Pencil className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-            </Button>
-            <Button variant="ghost" size="icon" aria-label={entity.locked ? "Déverrouiller" : "Verrouiller"} onClick={() => onToggleLock(entity.id)}>
-              {entity.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-slate-600 dark:text-slate-400" />}
-            </Button>
+            <BoutonsModifierVerrouiller entity={entity} onEdit={onEdit} onToggleLock={onToggleLock} titre="Statut, couleur, icône…" />
             <Button variant="destructive" size="sm" disabled={entity.locked} onClick={() => onDelete(entity.id)}>
               Supprimer
             </Button>

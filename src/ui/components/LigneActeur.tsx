@@ -2,13 +2,13 @@
 
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Lock, Pencil, Trash2, Unlock } from "lucide-react"
+import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Entity } from "@/types"
 import { useNomSurPlace } from "../hooks/useChampSurPlace"
 import { AvatarDisplay } from "./AvatarDisplay"
-import { OptionsDeLaMicro, PastilleDeRelation, PoigneeDeTri } from "./ElementsDActeur"
+import { BoutonsModifierVerrouiller, OptionsDeLaMicro, PastilleDeRelation, PoigneeDeTri } from "./ElementsDActeur"
 import type { EntityItemProps } from "./EntityItem"
 import { NewRelationshipForm } from "./NewRelationshipForm"
 import { cn } from "@/lib/utils"
@@ -47,12 +47,7 @@ export function LigneActeur({ entity, allEntities, relationships, onUpdate, onDe
         <NewRelationshipForm entity={entity} allEntities={allEntities} relationships={relationships} onAdd={onAddRelationship} />
       </div>
       <div className="ml-auto flex items-center print:hidden">
-        <Button variant="ghost" size="icon" aria-label="Modifier les autres réglages" title="Parts, statut, couleur, icône…" onClick={() => onEdit(entity)}>
-          <Pencil className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-        </Button>
-        <Button variant="ghost" size="icon" aria-label={entity.locked ? "Déverrouiller" : "Verrouiller"} onClick={() => onToggleLock(entity.id)}>
-          {entity.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-slate-600 dark:text-slate-400" />}
-        </Button>
+        <BoutonsModifierVerrouiller entity={entity} onEdit={onEdit} onToggleLock={onToggleLock} titre="Parts, statut, couleur, icône…" />
         <Button variant="ghost" size="icon" aria-label={`Supprimer « ${entity.name} »`} title="Supprimer" disabled={entity.locked} className="text-rose-700 hover:text-rose-800 dark:text-rose-400" onClick={() => onDelete(entity.id)}>
           <Trash2 className="h-4 w-4" />
         </Button>

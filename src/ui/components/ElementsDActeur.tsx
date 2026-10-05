@@ -1,9 +1,10 @@
 // src/ui/components/ElementsDActeur.tsx
 // Éléments communs à la carte d'un acteur (affichage classique) et à sa ligne (affichage « Résumé ») : poignée de tri,
-// options de la micro-entreprise et pastille de relation.
+// options de la micro-entreprise, pastille de relation, boutons « Modifier » et « Verrouiller ».
 
 import type { HTMLAttributes } from "react"
-import { ArrowRight, X } from "lucide-react"
+import { ArrowRight, Lock, Pencil, Unlock, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import type { Entity, MicroEntreprise, Relationship } from "@/types"
 import { getRelationshipLabel } from "@/lib/graph-logic"
@@ -64,6 +65,28 @@ export function OptionsDeLaMicro({ entity, onUpdate, compactes = false }: { enti
         <Switch checked={entity.opteVFL} onCheckedChange={opteVFL => onUpdate({ ...entity, opteVFL })} />
         Versement libératoire
       </label>
+    </>
+  )
+}
+
+interface BoutonsProps {
+  entity: Entity
+  onEdit: (entity: Entity) => void
+  onToggleLock: (id: string) => void
+  /** Info-bulle du bouton « Modifier les autres réglages » : ce qu'on y trouve. */
+  titre: string
+}
+
+/** Ouvre la fenêtre des autres réglages de l'acteur ; verrouille ou déverrouille l'acteur (un acteur verrouillé ne se supprime pas). */
+export function BoutonsModifierVerrouiller({ entity, onEdit, onToggleLock, titre }: BoutonsProps) {
+  return (
+    <>
+      <Button variant="ghost" size="icon" aria-label="Modifier les autres réglages" title={titre} onClick={() => onEdit(entity)}>
+        <Pencil className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+      </Button>
+      <Button variant="ghost" size="icon" aria-label={entity.locked ? "Déverrouiller" : "Verrouiller"} onClick={() => onToggleLock(entity.id)}>
+        {entity.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-slate-600 dark:text-slate-400" />}
+      </Button>
     </>
   )
 }
