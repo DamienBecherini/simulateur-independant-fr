@@ -1,6 +1,6 @@
 // src/backend/logic/frais-kilometriques.ts
 
-import type { PuissanceFiscale } from "../../types.js"
+import type { FraisReels, PuissanceFiscale } from "../../types.js"
 import type { BaremeKilometrique } from "./regles.js"
 
 /** La voiture utilisée : sa puissance fiscale, et si elle est 100 % électrique. */
@@ -39,4 +39,14 @@ export function distanceDomicileTravail(trajets: TrajetsDomicileTravail, regles:
   const kmParTrajet = Math.max(0, trajets.kmParTrajet)
   const retenus = trajets.distanceJustifiee ? kmParTrajet : Math.min(kmParTrajet, regles.distanceMaxParTrajet)
   return 2 * retenus * Math.max(0, trajets.joursTravailles)
+}
+
+/**
+ * Frais réels d'une personne sur ses revenus imposés comme des salaires : ses trajets domicile-travail au barème
+ * kilométrique de l'année, et ses autres frais réels saisis.
+ */
+export function fraisReelsDeLaPersonne(frais: FraisReels, bareme: BaremeKilometrique): { distanceRetenue: number; fraisDeTrajet: number; total: number } {
+  const distanceRetenue = distanceDomicileTravail(frais, bareme.domicileTravail)
+  const fraisDeTrajet = montantBaremeKilometrique(distanceRetenue, frais, bareme)
+  return { distanceRetenue, fraisDeTrajet, total: fraisDeTrajet + Math.max(0, frais.autresFrais) }
 }

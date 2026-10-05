@@ -15,11 +15,43 @@ export const AvatarSchema = z.object({
   color: z.string().startsWith("#").length(7)
 })
 
+/** La voiture d'un déplacement : sa puissance fiscale, qui choisit la ligne du barème kilométrique, et si elle est 100 % électrique (+ 20 %). */
+const champsVehicule = {
+  puissanceFiscale: z.enum(PUISSANCES_FISCALES).default("5"),
+  electrique: z.boolean().default(false)
+}
+
+/**
+ * Frais réels d'une personne sur ses revenus imposés comme des salaires (salaires, allocations chômage, rémunérations de
+ * dirigeant) : trajets domicile-travail convertis au barème kilométrique, et autres frais réels. Facultatifs : sans eux,
+ * seule la déduction forfaitaire de 10 % s'applique. Communs à toutes les années de la session, comme les acteurs.
+ */
+export const FraisReelsSchema = z.object({
+  /** Distance d'un aller simple entre le domicile et le lieu de travail, en kilomètres. */
+  kmParTrajet: z.number().min(0).default(0),
+  joursTravailles: z.number().min(0).max(366).default(0),
+  ...champsVehicule,
+  /** Distance au-delà de 40 km par trajet justifiée (précarité de l'emploi, emploi du conjoint, santé…) : retenue entière. */
+  distanceJustifiee: z.boolean().default(false),
+  /** Autres frais réels de l'année, en euros (repas, formation, double résidence…). */
+  autresFrais: z.number().min(0).default(0)
+})
+
+/**
+ * Déplacements professionnels d'une activité avec une voiture personnelle, convertis au barème kilométrique : une charge
+ * réelle de l'activité, déductible au réel, jamais en micro-entreprise. Facultatifs, communs à toutes les années.
+ */
+export const DeplacementsProfessionnelsSchema = z.object({
+  kmParAn: z.number().min(0).default(0),
+  ...champsVehicule
+})
+
 export const PersonSchema = z.object({
   id: z.string(),
   type: z.literal("person"),
   name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle Personne"),
   fiscalParts: z.number().positive().default(1),
+  fraisReels: FraisReelsSchema.optional(),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
 })
@@ -31,6 +63,7 @@ export const CompanySchema = z.object({
   legalStatus: z.enum(["SASU", "EURL", "EI"]),
   // Sert au calcul des dividendes d'EURL soumis aux cotisations sociales (part dépassant 10 % du capital).
   capitalSocial: z.number().min(0).default(1000),
+  deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
 })
@@ -43,6 +76,7 @@ export const MicroEntrepriseSchema = z.object({
   opteVFL: z.boolean().default(false),
   // Revenu fiscal de référence du foyer de l'année N-2 : il conditionne l'accès au versement libératoire.
   rfrN2: z.number().min(0).optional(),
+  deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
 })
@@ -139,6 +173,8 @@ export const UserPreferencesSchema = z.object({
 // ===================================================================================
 
 export type Avatar = z.infer<typeof AvatarSchema>
+export type FraisReels = z.infer<typeof FraisReelsSchema>
+export type DeplacementsProfessionnels = z.infer<typeof DeplacementsProfessionnelsSchema>
 export type Person = z.infer<typeof PersonSchema>
 export type Company = z.infer<typeof CompanySchema>
 export type MicroEntreprise = z.infer<typeof MicroEntrepriseSchema>
@@ -307,6 +343,26 @@ export interface PersonResult {
   /** Écart entre le brut et le net des salaires dont le brut est renseigné. */
   cotisationsSalariales: number
   depenses: number
+  /** Personne qui a saisi des frais réels et perçoit des revenus imposés comme des salaires : la déduction retenue. */
+  fraisProfessionnels?: FraisProfessionnelsResult
+}
+
+/**
+ * Déduction pour frais professionnels sur les revenus imposés comme des salaires d'une personne : la plus favorable entre
+ * la déduction forfaitaire de 10 % (bornée) et les frais réels, sans dépasser ces revenus.
+ */
+export interface FraisProfessionnelsResult {
+  /** Salaires, allocations chômage et rémunérations de dirigeant imposables. */
+  revenusSalariaux: number
+  deductionForfaitaire: number
+  fraisReels: number
+  /** Part des frais réels qui vient des trajets domicile-travail, au barème kilométrique. */
+  fraisDeTrajet: number
+  /** Distance annuelle des trajets retenue (aller-retour, chaque trajet limité à 40 km sauf justification). */
+  distanceRetenue: number
+  retenue: "forfait" | "reels"
+  /** Montant déduit du revenu imposable. */
+  deduction: number
 }
 
 export interface FoyerFiscalResult {

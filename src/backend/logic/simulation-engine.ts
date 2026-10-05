@@ -1,6 +1,6 @@
 // src/backend/logic/simulation-engine.ts
 
-import type { VersementLiberatoireInfo, ActivityResult, Company, FinancialFlow, FoyerFiscalResult, MicroEntreprise, Person, PersonResult, Relationship, SalarieDeLActivite, DonneesDeLAnnee, SimulationBilan, SimulationReport } from "../../types.js"
+import type { VersementLiberatoireInfo, ActivityResult, Company, FinancialFlow, FoyerFiscalResult, FraisProfessionnelsResult, MicroEntreprise, Person, PersonResult, Relationship, SalarieDeLActivite, DonneesDeLAnnee, SimulationBilan, SimulationReport } from "../../types.js"
 import { calculerMicro, plafondRfrVersementLiberatoire } from "./calculsAE.js"
 import { calculerEI } from "./calculsEI.js"
 import { calculerEURL } from "./calculsEURL.js"
@@ -9,6 +9,7 @@ import { calculerSASU } from "./calculsSASU.js"
 import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.js"
 import { buildFoyers, type Foyer } from "./foyers.js"
 import { euros } from "./format.js"
+import { fraisReelsDeLaPersonne } from "./frais-kilometriques.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 
 /*
@@ -407,7 +408,26 @@ function resultatPersonne(ctx: Contexte, personne: Person): PersonResult {
       benefices: Math.round(revenus.beneficesEncaisses)
     },
     cotisationsSalariales: Math.round(ctx.cotisationsSalariales.get(personne.id) ?? 0),
-    depenses: Math.round(total(ctx, personne.id, "expense"))
+    depenses: Math.round(total(ctx, personne.id, "expense")),
+    ...detailFraisProfessionnels(ctx, personne)
+  }
+}
+
+/** La déduction retenue, pour une personne qui a saisi des frais réels et perçoit des revenus imposés comme des salaires. */
+function detailFraisProfessionnels(ctx: Contexte, personne: Person): Pick<PersonResult, "fraisProfessionnels"> {
+  if (!personne.fraisReels) return {}
+  const frais = fraisProfessionnels(ctx, personne.id)
+  if (frais.revenusSalariaux <= 0) return {}
+  return {
+    fraisProfessionnels: {
+      ...frais,
+      revenusSalariaux: Math.round(frais.revenusSalariaux),
+      deductionForfaitaire: Math.round(frais.deductionForfaitaire),
+      fraisReels: Math.round(frais.fraisReels),
+      fraisDeTrajet: Math.round(frais.fraisDeTrajet),
+      distanceRetenue: Math.round(frais.distanceRetenue),
+      deduction: Math.round(frais.deduction)
+    }
   }
 }
 
@@ -417,17 +437,48 @@ function abattementSalaires(salaires: number, regles: ReglesFiscales["IR"]["abat
   return Math.min(salaires, abattement)
 }
 
+/**
+ * Revenus imposés comme des salaires d'une personne : salaires et allocations chômage saisis, rémunérations de dirigeant
+ * (président de SASU, gérant d'EURL) imposables. Salarié d'une activité de la simulation : sa CSG non déductible et sa
+ * CRDS s'ajoutent au net imposable. Ni les bénéfices (micro, EI) ni les dividendes n'en font partie.
+ */
+function revenusSalariaux(ctx: Contexte, personId: string): number {
+  const salarie = ctx.salaries.get(personId)?.bulletin
+  return total(ctx, personId, "salary", "are") + revenusDe(ctx, personId).remunerationsImposables + (salarie?.partNonDeductible ?? 0)
+}
+
+/**
+ * Déduction pour frais professionnels d'une personne (article 83, 3° du CGI) : la déduction forfaitaire de 10 % (avec son
+ * minimum et son maximum), ou ses frais réels s'ils sont plus élevés. Le choix vaut pour l'ensemble de ses revenus
+ * imposés comme des salaires. Simplification : la déduction ne dépasse jamais ces revenus (pas de déficit).
+ */
+function fraisProfessionnels(ctx: Contexte, personId: string): FraisProfessionnelsResult {
+  const salaires = revenusSalariaux(ctx, personId)
+  const deductionForfaitaire = abattementSalaires(salaires, ctx.regles.IR.abattementSalaires)
+  const personne = ctx.session.entities.find((e): e is Person => e.id === personId && e.type === "person")
+  const reels = personne?.fraisReels ? fraisReelsDeLaPersonne(personne.fraisReels, ctx.regles.baremeKilometrique) : { distanceRetenue: 0, fraisDeTrajet: 0, total: 0 }
+  const retenue = salaires > 0 && reels.total > deductionForfaitaire ? "reels" : "forfait"
+  return {
+    revenusSalariaux: salaires,
+    deductionForfaitaire,
+    fraisReels: reels.total,
+    fraisDeTrajet: reels.fraisDeTrajet,
+    distanceRetenue: reels.distanceRetenue,
+    retenue,
+    deduction: retenue === "reels" ? Math.min(salaires, reels.total) : deductionForfaitaire
+  }
+}
+
 /** Additionne les revenus de tous les membres d'un foyer, par traitement fiscal. */
 function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
   const cumul = { baseBareme: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, revenusAuVersementLiberatoire: 0, encaisse: 0, depenses: 0, prelevementsActivites: 0, resultatConserve: 0 }
   for (const personId of [...foyer.declarantIds, ...foyer.enfantIds]) {
     const revenus = revenusDe(ctx, personId)
     const salarie = ctx.salaries.get(personId)?.bulletin
-    // Salarié d'une activité de la simulation : sa CSG non déductible et sa CRDS s'ajoutent au net imposable.
-    const salaires = total(ctx, personId, "salary", "are") + revenus.remunerationsImposables + (salarie?.partNonDeductible ?? 0)
+    const frais = fraisProfessionnels(ctx, personId)
     const autresRevenus = total(ctx, personId, "other_taxable_income")
 
-    cumul.baseBareme += salaires - abattementSalaires(salaires, ctx.regles.IR.abattementSalaires) + autresRevenus + revenus.beneficesImposables
+    cumul.baseBareme += frais.revenusSalariaux - frais.deduction + autresRevenus + revenus.beneficesImposables
     cumul.dividendes += revenus.dividendes
     cumul.dividendesSoumisPS += revenus.dividendesSoumisPS
     cumul.versementLiberatoire += revenus.versementLiberatoire

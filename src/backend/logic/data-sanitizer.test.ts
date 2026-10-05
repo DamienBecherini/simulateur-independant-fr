@@ -50,6 +50,20 @@ describe("sanitizeStateAndFillDefaults", () => {
       ])
     })
 
+    it("complète les frais réels d'une personne et les déplacements d'une activité, sans changer de format", () => {
+      const { safeState } = sanitizeStateAndFillDefaults({
+        entities: [
+          { ...alice, fraisReels: { kmParTrajet: 20 } },
+          { ...sasu, deplacementsProfessionnels: { kmParAn: 3000, electrique: true } },
+          { id: "m1", type: "micro-entreprise", avatar, deplacementsProfessionnels: {} }
+        ]
+      })
+
+      expect(safeState.entities[0]).toMatchObject({ fraisReels: { kmParTrajet: 20, joursTravailles: 0, puissanceFiscale: "5", electrique: false, distanceJustifiee: false, autresFrais: 0 } })
+      expect(safeState.entities[1]).toMatchObject({ deplacementsProfessionnels: { kmParAn: 3000, puissanceFiscale: "5", electrique: true } })
+      expect(safeState.entities[2]).toMatchObject({ deplacementsProfessionnels: { kmParAn: 0, puissanceFiscale: "5", electrique: false } })
+    })
+
     it("met à 0 le montant d'un flux qui n'en a pas", () => {
       const { safeState } = sanitizeStateAndFillDefaults({
         entities: [alice],
