@@ -72,7 +72,7 @@ describe("sanitizeStateAndFillDefaults", () => {
         const { safeState, report } = sanitizeStateAndFillDefaults({ formatVersion: FORMAT_VERSION_ACTUEL, entities: [{ ...alice, fraisReels: ancienFrais }] })
 
         expect(safeState.entities[0]).toEqual({ ...alice, fraisReels: { trajets: [trajetConverti], autresFrais: 300 } })
-        expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, migrationNotes: [], anneesEcartees: [] })
+        expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, migrationNotes: [], anneesEcartees: [] })
       })
 
       it("deviennent un trajet aux valeurs par défaut quand seuls les autres frais étaient saisis", () => {
@@ -472,5 +472,60 @@ describe("texteAnneesEcartees", () => {
   it("accorde le texte au nombre d'années", () => {
     expect(texteAnneesEcartees([2025])).toBe("Année en double écartée : 2025")
     expect(texteAnneesEcartees([2025, 2026])).toBe("Années en double écartées : 2025, 2026")
+  })
+})
+
+describe("réglages du comparateur", () => {
+  const micro = { id: "m1", type: "micro-entreprise", name: "Atelier", beneficieACRE: false, opteVFL: false, avatar, locked: false }
+  const frais = { expertComptable: 1, banque: 2, logiciel: 3, assurance: 4, cfe: 5 }
+  const fraisFonctionnement = { SASU: frais, EURL: frais, EI: frais, micro: frais }
+  const reglagesSasu = { repartition: { mode: "personnalisee", partDistribuee: 0.4 }, remunerationParAnnee: { "2026": 18000 }, partBncPrestations: 0.3, fraisFonctionnement, statutEtudie: "EURL" }
+  const session = (comparateur: unknown) => ({ formatVersion: FORMAT_VERSION_ACTUEL, entities: [alice, sasu, micro], annees: [{ annee: 2026, monthlyData: grille() }], comparateur })
+
+  it("lit une session sans réglages telle quelle, sans en ajouter", () => {
+    const { safeState, report } = sanitizeStateAndFillDefaults({ entities: [alice], formatVersion: FORMAT_VERSION_ACTUEL })
+    expect(safeState).not.toHaveProperty("comparateur")
+    expect(report.reglagesRemoved).toBe(0)
+  })
+
+  it("garde des réglages valides à l'identique", () => {
+    const comparateur = { activiteComparee: "c1", reglagesParActivite: { c1: reglagesSasu, m1: { partBncPrestations: 0 } } }
+    const { safeState, report } = sanitizeStateAndFillDefaults(session(comparateur))
+    expect(safeState.comparateur).toEqual(comparateur)
+    expect(rapportAvecCorrections(report)).toBe(false)
+  })
+
+  it("écarte un à un les réglages invalides, en gardant les autres et la session", () => {
+    const comparateur = {
+      activiteComparee: 42,
+      reglagesParActivite: {
+        c1: { ...reglagesSasu, partBncPrestations: 1.5, repartition: { mode: "inconnu", partDistribuee: 1 }, remunerationParAnnee: { "2026": 18000, "deux mille": 1, "2025": -5 }, inconnu: true },
+        m1: { fraisFonctionnement: { ...fraisFonctionnement, EI: { ...frais, cfe: -1 } }, statutEtudie: "SA" },
+        perdue: "pas un objet"
+      }
+    }
+    const { safeState, report } = sanitizeStateAndFillDefaults(session(comparateur))
+
+    expect(safeState.entities).toHaveLength(3)
+    expect(safeState.comparateur).toEqual({ reglagesParActivite: { c1: { remunerationParAnnee: { "2026": 18000 }, fraisFonctionnement, statutEtudie: "EURL" }, m1: {} } })
+    // Activité comparée, part BNC, répartition, deux années, frais, statut étudié et une activité illisible.
+    expect(report.reglagesRemoved).toBe(8)
+    expect(rapportAvecCorrections(report)).toBe(true)
+  })
+
+  it("écarte un comparateur ou une liste de réglages illisibles", () => {
+    expect(sanitizeStateAndFillDefaults(session("abîmé"))).toMatchObject({ safeState: { entities: [{}, {}, {}] }, report: { reglagesRemoved: 1 } })
+    expect(sanitizeStateAndFillDefaults(session("abîmé")).safeState).not.toHaveProperty("comparateur")
+    expect(sanitizeStateAndFillDefaults(session({ reglagesParActivite: [] }))).toMatchObject({ safeState: { comparateur: { reglagesParActivite: {} } }, report: { reglagesRemoved: 1 } })
+    expect(sanitizeStateAndFillDefaults(session({ activiteComparee: "c1" }))).toMatchObject({ safeState: { comparateur: { activiteComparee: "c1", reglagesParActivite: {} } }, report: { reglagesRemoved: 0 } })
+    expect(sanitizeStateAndFillDefaults(session({ reglagesParActivite: { c1: { remunerationParAnnee: "beaucoup" } } }))).toMatchObject({ safeState: { comparateur: { reglagesParActivite: { c1: {} } } }, report: { reglagesRemoved: 1 } })
+  })
+
+  it("retire sans le signaler les réglages d'une activité ou d'une année absentes", () => {
+    const comparateur = { activiteComparee: "supprimee", reglagesParActivite: { c1: { remunerationParAnnee: { "2026": 1, "2024": 2 } }, supprimee: { partBncPrestations: 1 }, p1: { partBncPrestations: 1 } } }
+    const { safeState, report } = sanitizeStateAndFillDefaults(session(comparateur))
+
+    expect(safeState.comparateur).toEqual({ reglagesParActivite: { c1: { remunerationParAnnee: { "2026": 1 } } } })
+    expect(rapportAvecCorrections(report)).toBe(false)
   })
 })

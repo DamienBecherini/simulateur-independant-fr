@@ -82,7 +82,7 @@ describe("exports CSV et Markdown de la fenêtre « Exporter »", () => {
     expect(window.api.saveTextFile).not.toHaveBeenCalled()
   })
 
-  it("exporte le rapport Markdown, avec le comparateur calculé pour la première activité aux réglages par défaut", async () => {
+  it("exporte le rapport Markdown, avec le comparateur calculé pour la première activité aux réglages par défaut tant que rien n'est choisi", async () => {
     ouvrir()
     await userEvent.click(screen.getByRole("button", { name: /Rapport complet \(Markdown\)/ }))
 
@@ -94,6 +94,20 @@ describe("exports CSV et Markdown de la fenêtre « Exporter »", () => {
     expect(content).toMatch(/^# Simulation « Nouvelle Simulation »\n/)
     expect(content).toContain("## Comparateur de statuts : « Ma SASU »")
     expect(toast.success).toHaveBeenCalledWith("Export enregistré : nouvelle-simulation-rapport-2026.md")
+  })
+
+  it("calcule le comparateur du rapport Markdown avec l'activité et les réglages enregistrés", async () => {
+    const atelier = { ...makeCompany({ id: "company-eurl", name: "Mon EURL", legalStatus: "EURL" }) }
+    const frais = { expertComptable: 0, banque: 0, logiciel: 0, assurance: 0, cfe: 0 }
+    const fraisFonctionnement = { SASU: frais, EURL: { ...frais, cfe: 700 }, EI: frais, micro: frais }
+    const session: SessionState = { ...sessionAvecSociete(), entities: [makePerson(), makeCompany(), atelier], comparateur: { activiteComparee: "company-eurl", reglagesParActivite: { "company-eurl": { repartition: { mode: "personnalisee", partDistribuee: 0.25 }, remunerationParAnnee: { "2026": 15000 }, partBncPrestations: 0.5, fraisFonctionnement } } } }
+    ouvrir(session)
+    await userEvent.click(screen.getByRole("button", { name: /Rapport complet \(Markdown\)/ }))
+
+    await vi.waitFor(() => expect(window.api.saveTextFile).toHaveBeenCalled())
+    expect(window.api.compareStatuts).toHaveBeenCalledWith(session, { activityId: "company-eurl", remunerationNette: 15000, repartition: { mode: "personnalisee", partDistribuee: 0.25 }, partBncPrestations: 0.5, fraisFonctionnement }, 2026)
+    expect(fichierEnregistre().content).toContain("## Comparateur de statuts : « Mon EURL »")
+    expect(fichierEnregistre().content).toContain("avec les réglages du comparateur")
   })
 
   it.each([

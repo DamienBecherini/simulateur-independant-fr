@@ -7,7 +7,7 @@ import { useState } from "react"
 import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, StatutSociete } from "@/types"
 import { useOptimisation } from "../hooks/useOptimisation"
 import { emptySession, makeMicro, makePerson } from "@/ui/testing/fixtures"
-import { ComparatorPanel } from "./ComparatorPanel"
+import { ComparateurDeTest } from "@/ui/testing/comparateur"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
 
 // toHaveTextContent ramène les espaces insécables à des espaces simples : on fait de même.
@@ -144,7 +144,7 @@ describe("RemunerationOptimizer", () => {
 
   it("dans le comparateur, la rémunération appliquée est celle des colonnes SASU et EURL", async () => {
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
-    render(<ComparatorPanel annee={2026} session={session} />)
+    render(<ComparateurDeTest annee={2026} session={session} />)
     await userEvent.click(await screen.findByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }))
 
     const retraite = (await screen.findByText(/^Meilleur net avec 4 trimestres/)).closest("li")!
@@ -157,7 +157,7 @@ describe("RemunerationOptimizer", () => {
   it("au meilleur net, reprend l'arbitrage calculé par le comparateur sans le refaire, et ses boutons cochent ou décochent les 4 trimestres", async () => {
     const optimisations = { SASU: optimisation(), EURL: optimisation({ statut: "EURL" }) }
     vi.mocked(window.api.compareStatuts).mockResolvedValue({ scenarios: [], meilleur: null, couples: [], warnings: [], optimisations })
-    render(<ComparatorPanel annee={2026} session={session} />)
+    render(<ComparateurDeTest annee={2026} session={session} />)
 
     const retraite = (await screen.findByText(/^Meilleur net avec 4 trimestres/)).closest("li")!
     expect(window.api.optimiserRemuneration).not.toHaveBeenCalled()

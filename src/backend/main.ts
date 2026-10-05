@@ -11,7 +11,8 @@ import path from "path"
 import fs from "fs/promises"
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs"
 import { ipcMain } from "electron"
-import { AnneesRefuseesError, nettoyerLesSlots, rapportAvecCorrections, sanitizeStateAndFillDefaults, sanitizeSlots, texteAnneesEcartees } from "./logic/data-sanitizer.js"
+import { AnneesRefuseesError, rapportAvecCorrections, texteAnneesEcartees } from "./logic/data-sanitizer.js"
+import { contenuDesSauvegardes, contenuDuFichier, lireLaSession, lireLesSauvegardes, lireUneSimulationImportee, sauvegardesAEcrire } from "./logic/fichiers-de-donnees.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
 
 /** Filtres des fenêtres d'enregistrement et d'ouverture, par format de fichier texte. */
@@ -57,11 +58,6 @@ function showInfoDialog(options: Electron.MessageBoxOptions) {
   dialog.showMessageBox(options).catch(error => console.error("Boîte de dialogue impossible à afficher :", error))
 }
 
-/** Ajoute à un fichier le numéro du format dans lequel il est écrit. */
-function withFormatVersion<T extends object>(data: T): T & { formatVersion: number } {
-  return { ...data, formatVersion: FORMAT_VERSION_ACTUEL }
-}
-
 /**
  * Avant de réécrire un fichier converti d'un format précédent, on en garde une copie à côté
  * (par exemple `sessionState.format-1.json`), au cas où la conversion poserait problème.
@@ -103,10 +99,7 @@ async function readSessionFromFile(): Promise<SessionState> {
   let data = ""
   try {
     data = await fs.readFile(sessionStatePath, "utf-8")
-    const parsedData = JSON.parse(data)
-    const originalVersion = versionDuFormat(parsedData)
-
-    const { safeState, report } = sanitizeStateAndFillDefaults(parsedData)
+    const { safeState, report, versionOrigine: originalVersion } = lireLaSession(data)
 
     // Un fichier d'un format précédent est converti une fois pour toutes, après copie de l'original.
     if (originalVersion < FORMAT_VERSION_ACTUEL) {
@@ -115,8 +108,8 @@ async function readSessionFromFile(): Promise<SessionState> {
     }
 
     const sections: string[] = []
-    if (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0) {
-      sections.push(`Des données corrompues ont dû être nettoyées :\n- Entités invalides supprimées : ${report.entitiesRemoved}\n- Relations invalides ou orphelines supprimées : ${report.relationshipsRemoved}\n- Flux invalides ou orphelins supprimés : ${report.flowsRemoved}`)
+    if (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0 || report.reglagesRemoved > 0) {
+      sections.push(`Des données corrompues ont dû être nettoyées :\n- Entités invalides supprimées : ${report.entitiesRemoved}\n- Relations invalides ou orphelines supprimées : ${report.relationshipsRemoved}\n- Flux invalides ou orphelins supprimés : ${report.flowsRemoved}\n- Réglages du comparateur invalides écartés : ${report.reglagesRemoved}`)
     }
     if (report.anneesEcartees.length > 0) {
       sections.push(`${texteAnneesEcartees(report.anneesEcartees)}. Seule la première occurrence de chaque année a été gardée.`)
@@ -153,7 +146,7 @@ async function readSessionFromFile(): Promise<SessionState> {
 
 async function writeSessionToFile(session: SessionState) {
   try {
-    await fs.writeFile(sessionStatePath, JSON.stringify(withFormatVersion(session), null, 2))
+    await fs.writeFile(sessionStatePath, contenuDuFichier(session))
     // On envoie une notification de succès au frontend
     // if (mainWindow) {
     //   mainWindow.webContents.send("show-notification", {
@@ -176,10 +169,8 @@ async function writeSessionToFile(session: SessionState) {
 async function readSlotsFromFile(): Promise<SaveSlot[]> {
   try {
     const data = await fs.readFile(slotsFilePath, "utf-8")
-    const parsedData: unknown = JSON.parse(data)
-
     // Les slots corrompus sont écartés (et signalés dans la console) par le nettoyeur, les autres sont conservés.
-    const { slots, refusees } = nettoyerLesSlots(parsedData)
+    const { slots, refusees, brutes: rawSlots } = lireLesSauvegardes(data)
 
     // Des sauvegardes refusées à cause de leurs années disparaîtront à la prochaine écriture : on garde une copie du fichier.
     if (refusees.length > 0) {
@@ -192,7 +183,6 @@ async function readSlotsFromFile(): Promise<SaveSlot[]> {
     }
 
     // Des sauvegardes d'un format précédent sont converties une fois pour toutes, après copie de l'original.
-    const rawSlots: unknown[] = Array.isArray(parsedData) ? parsedData : []
     const oldSlots = rawSlots.filter(slot => versionDuFormat(slot) < FORMAT_VERSION_ACTUEL)
     if (oldSlots.length > 0) {
       await backupBeforeMigration(slotsFilePath, data, Math.min(...oldSlots.map(versionDuFormat)))
@@ -213,7 +203,7 @@ async function readSlotsFromFile(): Promise<SaveSlot[]> {
 
 async function writeSlotsToFile(slots: SaveSlot[]) {
   try {
-    await fs.writeFile(slotsFilePath, JSON.stringify(slots.map(withFormatVersion), null, 2))
+    await fs.writeFile(slotsFilePath, contenuDesSauvegardes(slots))
     console.log("Slots de sauvegarde enregistrés avec succès dans:", slotsFilePath)
   } catch (error) {
     console.error("Erreur lors de la sauvegarde des slots:", error)
@@ -318,7 +308,7 @@ app.on("ready", () => {
   ipcMain.on("saveCurrentSessionSync", (event, session: SessionState) => {
     if (event.senderFrame) validateEventFrame(event.senderFrame)
     try {
-      writeFileSync(sessionStatePath, JSON.stringify(withFormatVersion(session), null, 2))
+      writeFileSync(sessionStatePath, contenuDuFichier(session))
       event.returnValue = true
     } catch (error) {
       console.error("Erreur lors de la sauvegarde de la session à la fermeture :", error)
@@ -335,8 +325,7 @@ app.on("ready", () => {
 
   ipcMainHandle("saveSlots", async (slots: SaveSlot[], options?: { silencieux?: boolean }) => {
     // Validation avant écriture, comme à la lecture : un slot invalide est écarté au lieu d'abîmer le fichier.
-    // Les slots reçus sont au format actuel : on le leur indique, sinon ils seraient pris pour le format 1 et migrés.
-    const slotsValides = sanitizeSlots(slots.map(withFormatVersion))
+    const slotsValides = sauvegardesAEcrire(slots)
     if (slotsValides.length < slots.length) console.warn(`Sauvegardes invalides écartées avant écriture : ${slots.length - slotsValides.length}.`)
     await writeSlotsToFile(slotsValides)
     if (mainWindow && !options?.silencieux) {
@@ -356,7 +345,7 @@ app.on("ready", () => {
     })
     if (!canceled && filePath) {
       try {
-        await fs.writeFile(filePath, JSON.stringify(withFormatVersion(state), null, 2))
+        await fs.writeFile(filePath, contenuDuFichier(state))
       } catch (error) {
         console.error("Erreur lors de l'exportation :", error)
         dialog.showErrorBox("Erreur d'exportation", "Impossible d'enregistrer le fichier.")
@@ -420,9 +409,7 @@ app.on("ready", () => {
     if (!canceled && filePaths.length > 0) {
       try {
         const fileContent = await fs.readFile(filePaths[0], "utf-8")
-        const importedData = JSON.parse(fileContent)
-
-        const { safeState, report } = sanitizeStateAndFillDefaults(importedData)
+        const { data, report } = lireUneSimulationImportee(fileContent)
 
         if (mainWindow && rapportAvecCorrections(report)) {
           mainWindow.webContents.send("show-notification", {
@@ -437,14 +424,8 @@ app.on("ready", () => {
         }
 
         // On renvoie l'état ET le rapport au frontend
-        return {
-          data: {
-            entities: safeState.entities,
-            relationships: safeState.relationships,
-            annees: safeState.annees
-          },
-          report: report // Le frontend saura quoi faire de cette information
-        }
+        // On renvoie l'état ET le rapport au frontend, qui saura quoi faire de cette information.
+        return { data, report }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Erreur inconnue."
         console.error("Erreur lors de l'importation :", errorMessage)

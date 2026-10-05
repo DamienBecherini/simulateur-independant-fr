@@ -174,6 +174,48 @@ export const AnneeSimuleeSchema = z.object({
   monthlyData: MonthlyGridDataSchema
 })
 
+/** Modes de partage du bénéfice d'une société à l'IS dans le comparateur (voir `ModeRepartition`). */
+export const MODES_REPARTITION = ["meilleurNet", "dividendes", "remuneration", "personnalisee", "grille"] as const
+
+export const RepartitionBeneficeSchema = z.object({
+  mode: z.enum(MODES_REPARTITION),
+  /** Répartition personnalisée : part du bénéfice distribuable versée en dividendes (0 à 1), le reste étant conservé. */
+  partDistribuee: z.number().min(0).max(1),
+  /** Au meilleur net : ne retenir que les rémunérations qui valident 4 trimestres de retraite. Absent : non. */
+  avecRetraite: z.boolean().optional()
+})
+
+/** Postes de frais de fonctionnement d'une activité, hors cotisations et impôts. */
+export const POSTES_FRAIS = ["expertComptable", "banque", "logiciel", "assurance", "cfe"] as const
+/** Statuts pour lesquels on saisit des frais : la micro-entreprise a les mêmes, avec ou sans versement libératoire. */
+export const STATUTS_FRAIS = ["SASU", "EURL", "EI", "micro"] as const
+
+const FraisDUnStatutSchema = z.object(Object.fromEntries(POSTES_FRAIS.map(poste => [poste, z.number().min(0)])) as Record<(typeof POSTES_FRAIS)[number], z.ZodNumber>)
+
+/** Frais de fonctionnement annuels par statut, en euros. */
+export const FraisFonctionnementSchema = z.object(Object.fromEntries(STATUTS_FRAIS.map(statut => [statut, FraisDUnStatutSchema])) as Record<(typeof STATUTS_FRAIS)[number], typeof FraisDUnStatutSchema>)
+
+/**
+ * Réglages du comparateur choisis par l'utilisateur pour une activité (voir l'ADR 009). Chaque champ est facultatif :
+ * absent, le comparateur propose sa valeur par défaut, tirée de la grille de l'année affichée.
+ */
+export const ReglagesComparateurSchema = z.object({
+  repartition: RepartitionBeneficeSchema.optional(),
+  /** Rémunération nette annuelle saisie, par année (« 2026 ») : une autre année repart de sa grille. */
+  remunerationParAnnee: z.record(z.string().regex(/^\d{4}$/), z.number().min(0)).optional(),
+  /** Part BNC des prestations quand l'activité devient une micro-entreprise (0 à 1). */
+  partBncPrestations: z.number().min(0).max(1).optional(),
+  fraisFonctionnement: FraisFonctionnementSchema.optional(),
+  /** Statut de société étudié dans « Rémunération ou dividendes ? » et la barre de partage du bénéfice. */
+  statutEtudie: z.enum(["SASU", "EURL"]).optional()
+})
+
+/** Comparateur de statuts : l'activité comparée et les réglages choisis pour chaque activité, par identifiant. */
+export const ComparateurSchema = z.object({
+  activiteComparee: z.string().optional(),
+  reglagesParActivite: z.record(z.string(), ReglagesComparateurSchema).default({})
+})
+
 export const SessionStateSchema = z.object({
   appVersion: z.string().optional(),
   name: z.string().default("Nouvelle Simulation"),
@@ -181,7 +223,9 @@ export const SessionStateSchema = z.object({
   entities: z.array(EntitySchema).default([]),
   relationships: z.array(RelationshipSchema).default([]),
   // Les années, de la plus ancienne à la plus récente, sans doublon (le nettoyage les trie) ; au moins une.
-  annees: z.array(AnneeSimuleeSchema).min(1, "Une session contient au moins une année").default(() => [{ annee: ANNEE_PAR_DEFAUT, monthlyData: grilleVide() }])
+  annees: z.array(AnneeSimuleeSchema).min(1, "Une session contient au moins une année").default(() => [{ annee: ANNEE_PAR_DEFAUT, monthlyData: grilleVide() }]),
+  // Facultatif : une session d'avant cet ajout se lit telle quelle, sans changer de format (voir l'ADR 009).
+  comparateur: ComparateurSchema.optional()
 })
 
 export const SaveSlotSchema = SessionStateSchema.extend({
@@ -211,6 +255,12 @@ export type Relationship = z.infer<typeof RelationshipSchema>
 export type FinancialFlow = z.infer<typeof FinancialFlowSchema>
 export type MonthlyGridData = z.infer<typeof MonthlyGridDataSchema>
 export type AnneeSimulee = z.infer<typeof AnneeSimuleeSchema>
+export type RepartitionBenefice = z.infer<typeof RepartitionBeneficeSchema>
+export type PosteFrais = (typeof POSTES_FRAIS)[number]
+export type StatutFrais = (typeof STATUTS_FRAIS)[number]
+export type FraisFonctionnement = z.infer<typeof FraisFonctionnementSchema>
+export type ReglagesComparateur = z.infer<typeof ReglagesComparateurSchema>
+export type Comparateur = z.infer<typeof ComparateurSchema>
 export type SessionState = z.infer<typeof SessionStateSchema>
 export type SaveSlot = z.infer<typeof SaveSlotSchema>
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>
@@ -501,15 +551,7 @@ export type StatutCompare = "SASU" | "EURL" | "EI" | "micro" | "micro-vfl"
  * - « personnalisee » : la rémunération saisie, et une part du bénéfice distribuable en dividendes, le reste conservé ;
  * - « grille » : la rémunération saisie et les dividendes saisis dans la grille.
  */
-export type ModeRepartition = "meilleurNet" | "dividendes" | "remuneration" | "personnalisee" | "grille"
-
-export interface RepartitionBenefice {
-  mode: ModeRepartition
-  /** Répartition personnalisée : part du bénéfice distribuable versée en dividendes (0 à 1), le reste étant conservé. */
-  partDistribuee: number
-  /** Au meilleur net : ne retenir que les rémunérations qui valident 4 trimestres de retraite. Absent : non. */
-  avecRetraite?: boolean
-}
+export type ModeRepartition = (typeof MODES_REPARTITION)[number]
 
 /** Au meilleur net, la rémunération retenue dans une colonne SASU ou EURL. */
 export interface RemunerationOptimale {
@@ -549,12 +591,6 @@ export interface ComparaisonOptions {
   /** Frais de fonctionnement annuels par statut, ajoutés aux charges de l'activité dans chaque colonne. */
   fraisFonctionnement?: FraisFonctionnement
 }
-
-/** Postes de frais de fonctionnement d'une activité, hors cotisations et impôts. */
-export type PosteFrais = "expertComptable" | "banque" | "logiciel" | "assurance" | "cfe"
-/** Statuts pour lesquels on saisit des frais : la micro-entreprise a les mêmes, avec ou sans versement libératoire. */
-export type StatutFrais = "SASU" | "EURL" | "EI" | "micro"
-export type FraisFonctionnement = Record<StatutFrais, Record<PosteFrais, number>>
 
 export interface ScenarioStatut {
   statut: StatutCompare
@@ -649,6 +685,8 @@ export interface SanitizationReport {
   entitiesRemoved: number
   relationshipsRemoved: number
   flowsRemoved: number
+  /** Réglages du comparateur invalides (hors limites, mal formés), écartés un par un. */
+  reglagesRemoved: number
   /** Années en double écartées (la première occurrence est gardée), qu'elles aient eu des flux ou non. */
   anneesEcartees: number[]
   /** Points à vérifier après la conversion d'un fichier d'un format précédent. */
@@ -656,9 +694,13 @@ export interface SanitizationReport {
 }
 
 export type ExportableState = {
+  /** Nom de la simulation ; absent des exports d'avant son ajout. */
+  name?: string
   entities: Entity[]
   relationships: Relationship[]
   annees: AnneeSimulee[]
+  /** Réglages du comparateur, facultatifs. */
+  comparateur?: Comparateur
   /** Résultats de chaque année, à titre d'information : ils sont recalculés à l'import. */
   simulation?: SimulationPluriannuelle | null
   simulationError?: string | null

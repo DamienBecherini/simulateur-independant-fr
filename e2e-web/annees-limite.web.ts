@@ -43,7 +43,8 @@ async function importer(page: Page, fichier: string) {
 async function ouvrirDixAnnees(page: Page, testInfo: TestInfo) {
   await importer(page, await fichierDesAnnees(testInfo, "dix-annees", DIX_ANNEES))
   // Le panneau des paramètres reste ouvert derrière (et rend la page inerte) : on le ferme.
-  await expect(page.locator("h1")).toHaveText("Simulation importée")
+  // Le nom du fichier est gardé à l'import.
+  await expect(page.locator("h1")).toHaveText("Écrit à la main")
   await page.keyboard.press("Escape")
   await expect(page.getByRole("dialog")).toBeHidden()
   await expect(page.getByRole("group", { name: "Année affichée" }).getByRole("button")).toHaveText(DIX_ANNEES.map(String))
