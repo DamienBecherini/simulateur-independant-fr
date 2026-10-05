@@ -23,6 +23,18 @@ import { BandeauDemo } from "@/web/BandeauDemo"
 import { useZoom } from "./hooks/useZoom"
 import { ExportDialog } from "./components/ExportDialog"
 import { dateDuDocument, styleDesPages } from "./impression"
+import { SelecteurAffichage } from "./components/SelecteurAffichage"
+import { BarreDeResume } from "./components/BarreDeResume"
+import { ReplieEnResume } from "./components/ReplieEnResume"
+import { AffichageContext } from "./hooks/useAffichage"
+import { affichageApplicable } from "@/lib/affichage"
+import type { ResumeDeLaComparaison } from "@/lib/resume"
+import type { Affichage } from "@/types"
+import { cn } from "@/lib/utils"
+
+/** En-tête de la page : dans l'affichage « Résumé », un titre plus petit et sans sous-titre à l'écran. */
+const EN_TETE_CLASSIQUE = { header: "mb-10", titre: "text-4xl", sousTitre: "" }
+const EN_TETE_RESUME = { header: "mb-4", titre: "text-2xl sm:text-3xl print:text-4xl", sousTitre: "hidden print:block" }
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
@@ -43,6 +55,14 @@ function App() {
   const resultatDeLAnnee = simulation?.annees.find(a => a.annee === annee)
   const simulationReport = resultatDeLAnnee?.report ?? null
   const erreurDeLAnnee = simulationError ?? resultatDeLAnnee?.erreur ?? null
+
+  // Affichage de la page choisi pendant la bêta : une préférence de l'utilisateur, pas une donnée de la simulation.
+  const affichage = affichageApplicable(userPreferences.affichage)
+  const resume = affichage === "resume"
+  const choisirAffichage = useCallback((choix: Affichage) => setUserPreferences(prefs => ({ ...prefs, affichage: choix })), [setUserPreferences])
+  // Dans l'affichage « Résumé », le comparateur transmet son meilleur statut à la barre de résumé.
+  const [comparaison, setComparaison] = useState<ResumeDeLaComparaison | null>(null)
+  const enTete = resume ? EN_TETE_RESUME : EN_TETE_CLASSIQUE
 
   // La simulation de toutes les années est recalculée automatiquement, peu après chaque modification de la session.
   useEffect(() => {
@@ -139,126 +159,134 @@ function App() {
   }, [vue.monthlyData])
 
   return (
-    <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col print:min-h-0 print:max-w-none print:p-0">
-      {/* Barre de menu sticky */}
-      {/* Lien d'évitement : invisible tant qu'il n'a pas le focus, il mène au contenu sans traverser la barre d'outils. */}
-      <a href="#contenu" className="print:hidden sr-only z-[60] rounded-md bg-background px-4 py-2 font-medium shadow-md focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
-        Aller au contenu
-      </a>
-      <nav aria-label="Barre d'outils" className="print:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
-        <div className="container mx-auto flex items-center justify-between px-0 py-2 sm:px-8">
-          {/* Groupe de boutons de gauche */}
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-9 sm:w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
-              <Settings className="text-slate-600 dark:text-slate-400" />
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z)" onClick={undo} disabled={!canUndo} className="h-10 w-9 sm:w-10 [&_svg]:size-6 sm:ml-2">
-              <Undo2 className="dark:text-slate-300" />
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y)" onClick={redo} disabled={!canRedo} className="h-10 w-9 sm:w-10 [&_svg]:size-6">
-              <Redo2 className="dark:text-slate-300" />
-            </Button>
+    <AffichageContext.Provider value={affichage}>
+      <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col print:min-h-0 print:max-w-none print:p-0">
+        {/* Barre de menu sticky */}
+        {/* Lien d'évitement : invisible tant qu'il n'a pas le focus, il mène au contenu sans traverser la barre d'outils. */}
+        <a href="#contenu" className="print:hidden sr-only z-[60] rounded-md bg-background px-4 py-2 font-medium shadow-md focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
+          Aller au contenu
+        </a>
+        <nav aria-label="Barre d'outils" className="print:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
+          <div className="container mx-auto flex items-center justify-between px-0 py-2 sm:px-8">
+            {/* Groupe de boutons de gauche */}
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-9 sm:w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
+                <Settings className="text-slate-600 dark:text-slate-400" />
+              </Button>
+              <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z)" onClick={undo} disabled={!canUndo} className="h-10 w-9 sm:w-10 [&_svg]:size-6 sm:ml-2">
+                <Undo2 className="dark:text-slate-300" />
+              </Button>
+              <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y)" onClick={redo} disabled={!canRedo} className="h-10 w-9 sm:w-10 [&_svg]:size-6">
+                <Redo2 className="dark:text-slate-300" />
+              </Button>
+            </div>
+            {/* Groupe de boutons de droite */}
+            <div className="flex items-center gap-1">
+              <SelecteurAffichage affichage={affichage} onChange={choisirAffichage} />
+              <Button variant="outline" size="sm" aria-label="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 sm:mr-2" onClick={() => setExportOpen(true)}>
+                <Download className="size-4" />
+                <span className="hidden sm:inline">Exporter</span>
+              </Button>
+              {/* Sur un téléphone tactile, on zoome avec les doigts : les boutons de zoom y laissent la place aux autres. */}
+              <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} disabled={!canZoomOut} className="h-10 w-9 pointer-coarse:max-sm:hidden sm:w-10 [&_svg]:size-6">
+                <ZoomOut className="text-slate-600 dark:text-slate-400" />
+              </Button>
+              <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} disabled={!canZoomIn} className="h-10 w-9 pointer-coarse:max-sm:hidden sm:w-10 [&_svg]:size-6 sm:mr-4">
+                <ZoomIn className="text-slate-600 dark:text-slate-400" />
+              </Button>
+              <ThemeToggle />
+            </div>
           </div>
-          {/* Groupe de boutons de droite */}
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" aria-label="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 sm:mr-2" onClick={() => setExportOpen(true)}>
-              <Download className="size-4" />
-              <span className="hidden sm:inline">Exporter</span>
-            </Button>
-            {/* Sur un téléphone tactile, on zoome avec les doigts : les boutons de zoom y laissent la place aux autres. */}
-            <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} disabled={!canZoomOut} className="h-10 w-9 pointer-coarse:max-sm:hidden sm:w-10 [&_svg]:size-6">
-              <ZoomOut className="text-slate-600 dark:text-slate-400" />
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} disabled={!canZoomIn} className="h-10 w-9 pointer-coarse:max-sm:hidden sm:w-10 [&_svg]:size-6 sm:mr-4">
-              <ZoomIn className="text-slate-600 dark:text-slate-400" />
-            </Button>
-            <ThemeToggle />
-          </div>
-        </div>
-      </nav>
+        </nav>
 
-      <header className="text-center mb-10 pt-16 print:mb-6 print:pt-0">
-        <h1 className="text-4xl font-bold">{currentSession.name}</h1>
-        <p className="text-lg text-slate-600 dark:text-slate-400">Votre bac à sable financier, juridique et fiscal</p>
-        {/* Sur papier, la date du document (les chiffres valent pour les données de ce jour-là), et l'en-tête des pages suivantes. */}
-        <p className="hidden text-sm text-slate-600 print:block">Document du {dateDuDocument()}</p>
-        <style>{styleDesPages(currentSession.name, dateDuDocument())}</style>
-        {import.meta.env.VITE_CIBLE === "web" && <BandeauDemo />}
-      </header>
+        <header className={cn("text-center pt-16 print:mb-6 print:pt-0", enTete.header)}>
+          <h1 className={cn("font-bold", enTete.titre)}>{currentSession.name}</h1>
+          <p className={cn("text-lg text-slate-600 dark:text-slate-400", enTete.sousTitre)}>Votre bac à sable financier, juridique et fiscal</p>
+          {/* Sur papier, la date du document (les chiffres valent pour les données de ce jour-là), et l'en-tête des pages suivantes. */}
+          <p className="hidden text-sm text-slate-600 print:block">Document du {dateDuDocument()}</p>
+          <style>{styleDesPages(currentSession.name, dateDuDocument())}</style>
+          {import.meta.env.VITE_CIBLE === "web" && <BandeauDemo />}
+        </header>
 
-      <main id="contenu" tabIndex={-1} className="flex-grow scroll-mt-20 focus:outline-none">
-        <EntitiesManager session={currentSession} setSession={setCurrentSession} />
+        {resume ? <BarreDeResume report={simulationReport} annees={anneesDeLaSession(currentSession)} annee={annee} onAnnee={setAnneeChoisie} comparaison={comparaison} /> : null}
 
-        <MonthlyGrid
-          entities={currentSession.entities}
-          monthlyData={vue.monthlyData}
-          setMonthlyData={newMonthlyDataOrUpdater => {
-            setCurrentSession(prev => {
-              const actuelle = donneesDeLAnnee(prev, annee).monthlyData
-              const monthlyData = typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(actuelle) : newMonthlyDataOrUpdater
-              // Données inchangées : la session est renvoyée telle quelle, sans créer d'entrée d'historique.
-              return remplacerGrille(prev, annee, monthlyData)
-            })
-          }}
-          preferences={userPreferences}
-          flowTypeToNumberMap={flowTypeToNumberMap}
-          annee={annee}
-          // Une opération appliquée aussi à d'autres années remplace toutes les années d'un coup : une seule étape d'annulation.
-          annees={currentSession.annees}
-          setAnnees={annees => setCurrentSession(prev => ({ ...prev, annees }))}
-          selecteurAnnee={
-            <SelecteurAnnee
-              annees={anneesDeLaSession(currentSession)}
-              annee={annee}
-              premiereAnneeConnue={PREMIERE_ANNEE_DES_REGLES}
-              onChange={setAnneeChoisie}
-              onAjouter={(position, copier) => {
-                // La nouvelle année est affichée tout de suite ; son numéro se déduit de la session actuelle.
-                setAnneeChoisie(anneeAAjouter(currentSession, position))
-                setCurrentSession(prev => ajouterAnnee(prev, position, copier, () => createId("flow")))
-              }}
-              onSupprimer={anneeASupprimer => setCurrentSession(prev => supprimerAnnee(prev, anneeASupprimer))}
-            />
-          }
+        <main id="contenu" tabIndex={-1} className="flex-grow scroll-mt-20 focus:outline-none">
+          <EntitiesManager session={currentSession} setSession={setCurrentSession} />
+
+          <MonthlyGrid
+            entities={currentSession.entities}
+            monthlyData={vue.monthlyData}
+            setMonthlyData={newMonthlyDataOrUpdater => {
+              setCurrentSession(prev => {
+                const actuelle = donneesDeLAnnee(prev, annee).monthlyData
+                const monthlyData = typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(actuelle) : newMonthlyDataOrUpdater
+                // Données inchangées : la session est renvoyée telle quelle, sans créer d'entrée d'historique.
+                return remplacerGrille(prev, annee, monthlyData)
+              })
+            }}
+            preferences={userPreferences}
+            flowTypeToNumberMap={flowTypeToNumberMap}
+            annee={annee}
+            // Une opération appliquée aussi à d'autres années remplace toutes les années d'un coup : une seule étape d'annulation.
+            annees={currentSession.annees}
+            setAnnees={annees => setCurrentSession(prev => ({ ...prev, annees }))}
+            selecteurAnnee={
+              <SelecteurAnnee
+                annees={anneesDeLaSession(currentSession)}
+                annee={annee}
+                premiereAnneeConnue={PREMIERE_ANNEE_DES_REGLES}
+                onChange={setAnneeChoisie}
+                onAjouter={(position, copier) => {
+                  // La nouvelle année est affichée tout de suite ; son numéro se déduit de la session actuelle.
+                  setAnneeChoisie(anneeAAjouter(currentSession, position))
+                  setCurrentSession(prev => ajouterAnnee(prev, position, copier, () => createId("flow")))
+                }}
+                onSupprimer={anneeASupprimer => setCurrentSession(prev => supprimerAnnee(prev, anneeASupprimer))}
+              />
+            }
+          />
+
+          <ReplieEnResume titre="Légende des flux" className="mt-3 print:mt-2">
+            <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
+          </ReplieEnResume>
+
+          {/* Dans l'affichage « Résumé », la synthèse des années remonte sous le bilan, avant les cartes détaillées. */}
+          <ResultsPanel report={simulationReport} error={erreurDeLAnnee} apresLeBilan={resume ? <SyntheseDesAnnees simulation={simulation} annee={annee} /> : null} />
+
+          {resume ? null : <SyntheseDesAnnees simulation={simulation} annee={annee} />}
+
+          <ComparatorPanel session={currentSession} annee={annee} onComparaison={resume ? setComparaison : undefined} />
+        </main>
+
+        <Footer />
+
+        {import.meta.env.DEV && <DevWindowSize />}
+
+        {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
+        {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
+            le panneau de configuration ait tout le contexte nécessaire. */}
+        <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} onExportJson={handleExportAll} />
+        <SettingsSheet
+          isOpen={isSettingsOpen}
+          onOpenChange={setSettingsOpen}
+          allSaveSlots={allSaveSlots}
+          setAllSaveSlots={setAllSaveSlots}
+          currentSession={currentSession}
+          setCurrentSession={setCurrentSession}
+          onReset={handleResetAndClose}
+          onLoadSlot={handleLoadAndClose} // On passe la nouvelle fonction wrapper
+          slotOrder={slotOrder}
+          setSlotOrder={setSlotOrder}
+          onImport={handleImport}
+          importConfirmation={importConfirmation}
+          onConfirmImport={handleConfirmImportAndClose}
+          onCancelImport={cancelImport}
+          // Ajout des props cruciales pour la nouvelle logique
+          loadedSlotId={loadedSlotId}
+          setLoadedSlotId={setLoadedSlotId}
         />
-
-        <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
-
-        <ResultsPanel report={simulationReport} error={erreurDeLAnnee} />
-
-        <SyntheseDesAnnees simulation={simulation} annee={annee} />
-
-        <ComparatorPanel session={currentSession} annee={annee} />
-      </main>
-
-      <Footer />
-
-      {import.meta.env.DEV && <DevWindowSize />}
-
-      {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
-      {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
-          le panneau de configuration ait tout le contexte nécessaire. */}
-      <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} onExportJson={handleExportAll} />
-      <SettingsSheet
-        isOpen={isSettingsOpen}
-        onOpenChange={setSettingsOpen}
-        allSaveSlots={allSaveSlots}
-        setAllSaveSlots={setAllSaveSlots}
-        currentSession={currentSession}
-        setCurrentSession={setCurrentSession}
-        onReset={handleResetAndClose}
-        onLoadSlot={handleLoadAndClose} // On passe la nouvelle fonction wrapper
-        slotOrder={slotOrder}
-        setSlotOrder={setSlotOrder}
-        onImport={handleImport}
-        importConfirmation={importConfirmation}
-        onConfirmImport={handleConfirmImportAndClose}
-        onCancelImport={cancelImport}
-        // Ajout des props cruciales pour la nouvelle logique
-        loadedSlotId={loadedSlotId}
-        setLoadedSlotId={setLoadedSlotId}
-      />
-    </div>
+      </div>
+    </AffichageContext.Provider>
   )
 }
 

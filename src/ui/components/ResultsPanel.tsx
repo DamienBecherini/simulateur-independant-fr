@@ -3,10 +3,15 @@
 import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
+import { useAffichageResume } from "../hooks/useAffichage"
+import { Depliable } from "./Depliable"
+import { ReplieEnResume } from "./ReplieEnResume"
 
 type ResultsPanelProps = {
   report: SimulationReport | null
   error: string | null
+  /** Affiché juste sous le bilan (affichage « Résumé » : la synthèse des années). */
+  apresLeBilan?: ReactNode
 }
 
 function formatMoney(n: number): string {
@@ -40,7 +45,7 @@ function BilanCard({ report }: { report: SimulationReport }) {
   const origin = [`chiffre d'affaires ${formatMoney(bilan.chiffreAffaires)}`, bilan.charges > 0 ? `charges ${formatMoney(bilan.charges)}` : null, bilan.revenusDirects > 0 ? `salaires et autres revenus ${formatMoney(bilan.revenusDirects + bilan.cotisationsSalariales)}` : null].filter(Boolean).join(" · ")
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+    <div id="bilan" className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
         <div>
           <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Net dans la poche</p>
@@ -61,30 +66,32 @@ function BilanCard({ report }: { report: SimulationReport }) {
         </div>
       ) : null}
 
-      {/* Deux listes de définitions côte à côte : un <dl> n'accepte qu'un niveau de <div> autour de ses paires. */}
-      <div className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
-        <dl className="space-y-1">
-          <Row label="Revenus avant prélèvements" value={formatMoney(base)} hint={origin} />
-          <Row label="Cotisations sociales des activités" value={`− ${formatMoney(bilan.cotisationsSociales)}`} />
-          {bilan.cotisationsSalariales > 0 ? <Row label="Cotisations salariales" value={`− ${formatMoney(bilan.cotisationsSalariales)}`} /> : null}
-          {bilan.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(bilan.impotSocietes)}`} /> : null}
-          <Row label="Impôt sur le revenu" value={`− ${formatMoney(bilan.impotSurLeRevenu)}`} />
-          {bilan.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(bilan.prelevementsSociaux)}`} /> : null}
-        </dl>
-        <dl className="space-y-1">
-          {bilanShares.map(share =>
-            amounts[share.key] !== 0 || share.key === "net" || share.key === "prelevements" ? (
-              <Row key={share.key} label={share.key === "conserve" && amounts.conserve < 0 ? "Déficit des sociétés" : share.label} value={formatMoney(amounts[share.key])} hint={percent(amounts[share.key])} strong={share.key === "net"} pastille={share.color} />
-            ) : null
-          )}
-        </dl>
-      </div>
-      <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les cotisations d'un salaire ne sont comptées que si son brut est saisi, et seulement pour leur part salariale, sauf pour un salarié d'une activité de la simulation : ses cotisations patronales sont alors comptées avec celles de l'activité.</p>
-      {bilan.resultatConserve > 0 ? (
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Le bénéfice conservé dans une société a payé l'impôt sur les sociétés, mais pas encore l'impôt personnel : il sera imposé le jour où il sera versé (dividendes, vente ou liquidation). Le taux de prélèvement affiché est donc provisoire pour cette part, et un scénario qui conserve davantage paraît moins taxé sans que cet argent soit disponible.
-        </p>
-      ) : null}
+      <ReplieEnResume titre="Détail du calcul" className="mt-3 text-sm">
+        {/* Deux listes de définitions côte à côte : un <dl> n'accepte qu'un niveau de <div> autour de ses paires. */}
+        <div className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
+          <dl className="space-y-1">
+            <Row label="Revenus avant prélèvements" value={formatMoney(base)} hint={origin} />
+            <Row label="Cotisations sociales des activités" value={`− ${formatMoney(bilan.cotisationsSociales)}`} />
+            {bilan.cotisationsSalariales > 0 ? <Row label="Cotisations salariales" value={`− ${formatMoney(bilan.cotisationsSalariales)}`} /> : null}
+            {bilan.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(bilan.impotSocietes)}`} /> : null}
+            <Row label="Impôt sur le revenu" value={`− ${formatMoney(bilan.impotSurLeRevenu)}`} />
+            {bilan.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(bilan.prelevementsSociaux)}`} /> : null}
+          </dl>
+          <dl className="space-y-1">
+            {bilanShares.map(share =>
+              amounts[share.key] !== 0 || share.key === "net" || share.key === "prelevements" ? (
+                <Row key={share.key} label={share.key === "conserve" && amounts.conserve < 0 ? "Déficit des sociétés" : share.label} value={formatMoney(amounts[share.key])} hint={percent(amounts[share.key])} strong={share.key === "net"} pastille={share.color} />
+              ) : null
+            )}
+          </dl>
+        </div>
+        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">Les revenus avant prélèvements sont le chiffre d'affaires moins les charges, plus les salaires et autres revenus saisis sur les personnes. Les cotisations d'un salaire ne sont comptées que si son brut est saisi, et seulement pour leur part salariale, sauf pour un salarié d'une activité de la simulation : ses cotisations patronales sont alors comptées avec celles de l'activité.</p>
+        {bilan.resultatConserve > 0 ? (
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            Le bénéfice conservé dans une société a payé l'impôt sur les sociétés, mais pas encore l'impôt personnel : il sera imposé le jour où il sera versé (dividendes, vente ou liquidation). Le taux de prélèvement affiché est donc provisoire pour cette part, et un scénario qui conserve davantage paraît moins taxé sans que cet argent soit disponible.
+          </p>
+        ) : null}
+      </ReplieEnResume>
     </div>
   )
 }
@@ -189,26 +196,63 @@ function FoyerRates({ foyer }: { foyer: FoyerFiscalResult }) {
 }
 
 function FoyerCard({ foyer, persons, showRates }: { foyer: FoyerFiscalResult; persons: PersonResult[]; showRates: boolean }) {
+  const resume = useAffichageResume()
   const members = foyer.personIds.map(id => persons.find(p => p.entityId === id)).filter((p): p is PersonResult => p !== undefined)
   const parts = foyer.totalParts.toLocaleString("fr-FR")
 
-  return (
-    <Card title={members.map(p => p.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
-      <div className="mb-2 space-y-2 border-b border-slate-100 pb-2 empty:hidden dark:border-slate-800">
-        {members.map(person => (
-          <PersonIncome key={person.entityId} person={person} showName={members.length > 1} />
-        ))}
-      </div>
-      <dl className="space-y-1 text-sm">
-        <Row label="Total encaissé" value={formatMoney(foyer.revenusEncaisses)} />
-        <Row label="Impôt sur le revenu" value={`− ${formatMoney(foyer.impotSurLeRevenu)}`} hint={`sur ${formatMoney(foyer.revenuImposableGlobal)} imposables au barème`} />
-        {foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(foyer.prelevementsSociaux)}`} /> : null}
-        <Row label="Net après impôts" value={formatMoney(foyer.netApresImpots)} strong />
-        <Row label="Revenu fiscal de référence" value={formatMoney(foyer.revenuFiscalDeReference)} hint="pour le versement libératoire dans deux ans" />
-        {foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={formatMoney(foyer.netApresImpots - foyer.depenses)} hint={`${formatMoney(foyer.depenses)} de dépenses`} /> : null}
-      </dl>
+  const revenus = (
+    <div className="mb-2 space-y-2 border-b border-slate-100 pb-2 empty:hidden dark:border-slate-800">
+      {members.map(person => (
+        <PersonIncome key={person.entityId} person={person} showName={members.length > 1} />
+      ))}
+    </div>
+  )
+  const encaisse = <Row label="Total encaissé" value={formatMoney(foyer.revenusEncaisses)} />
+  const impot = <Row label="Impôt sur le revenu" value={`− ${formatMoney(foyer.impotSurLeRevenu)}`} hint={`sur ${formatMoney(foyer.revenuImposableGlobal)} imposables au barème`} />
+  const prelevementsSociaux = foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(foyer.prelevementsSociaux)}`} /> : null
+  const rfr = <Row label="Revenu fiscal de référence" value={formatMoney(foyer.revenuFiscalDeReference)} hint="pour le versement libératoire dans deux ans" />
+  const reste = foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={formatMoney(foyer.netApresImpots - foyer.depenses)} hint={`${formatMoney(foyer.depenses)} de dépenses`} /> : null
+  const complements = (
+    <>
       {showRates ? <FoyerRates foyer={foyer} /> : null}
       {foyer.optionDividendes ? <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{dividendOptionLabels[foyer.optionDividendes]}</p> : null}
+    </>
+  )
+
+  return (
+    <Card title={members.map(p => p.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
+      {resume ? (
+        // Affichage « Résumé » : l'impôt et le revenu fiscal de référence d'abord. Le net du foyer n'est pas répété :
+        // il est dans le bilan, et dans le taux du foyer quand il y en a plusieurs.
+        <>
+          <dl className="space-y-1 text-sm">
+            {impot}
+            {rfr}
+          </dl>
+          <Depliable titre="Détail" className="mt-2 text-sm">
+            <div className="mt-2">{revenus}</div>
+            <dl className="space-y-1 text-sm">
+              {encaisse}
+              {prelevementsSociaux}
+              {reste}
+            </dl>
+            {complements}
+          </Depliable>
+        </>
+      ) : (
+        <>
+          {revenus}
+          <dl className="space-y-1 text-sm">
+            {encaisse}
+            {impot}
+            {prelevementsSociaux}
+            <Row label="Net après impôts" value={formatMoney(foyer.netApresImpots)} strong />
+            {rfr}
+            {reste}
+          </dl>
+          {complements}
+        </>
+      )}
     </Card>
   )
 }
@@ -244,23 +288,50 @@ function DeplacementsRow({ deplacements }: { deplacements: NonNullable<ActivityR
 }
 
 function ActivityCard({ activity }: { activity: ActivityResult }) {
-  const isMicro = activity.type === "micro-entreprise"
+  const resume = useAffichageResume()
+  const verse = <Row label="Versé avant impôt sur le revenu" value={formatMoney(activity.revenuVerse)} hint={shareOfRevenue(activity)} strong />
+  const versementLiberatoire = activity.versementLiberatoire ? <VersementLiberatoireNote info={activity.versementLiberatoire} /> : null
 
   return (
     <Card title={activity.name} subtitle={activity.statut} warnings={activity.warnings}>
-      <dl className="space-y-1 text-sm">
-        <Row label="Chiffre d'affaires" value={formatMoney(activity.chiffreAffaires)} />
-        {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${formatMoney(activity.charges)}`} /> : null}
-        {activity.fraisDeDeplacement ? <DeplacementsRow deplacements={activity.fraisDeDeplacement} /> : null}
-        <Row label="Cotisations sociales" value={`− ${formatMoney(activity.cotisationsSociales)}`} />
-        {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={formatMoney(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${formatMoney(activity.cotisationsPresident.brut)} bruts`} /> : null}
-        {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} /> : null}
-        {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(activity.impotSocietes)}`} /> : null}
-        {activity.resultatConserve !== 0 ? <Row label={activity.resultatConserve > 0 ? "Conservé dans la société" : "Déficit de la société"} value={formatMoney(activity.resultatConserve)} /> : null}
-        <Row label="Versé avant impôt sur le revenu" value={formatMoney(activity.revenuVerse)} hint={shareOfRevenue(activity)} strong />
-      </dl>
-      {activity.versementLiberatoire ? <VersementLiberatoireNote info={activity.versementLiberatoire} /> : null}
+      {resume ? (
+        // Affichage « Résumé » : ce que l'activité verse d'abord, le calcul replié.
+        <>
+          <dl className="text-sm">{verse}</dl>
+          <Depliable titre="Détail" className="mt-2 text-sm">
+            <dl className="mt-2 space-y-1 text-sm">
+              <LignesDeLActivite activity={activity} />
+            </dl>
+            {versementLiberatoire}
+          </Depliable>
+        </>
+      ) : (
+        <>
+          <dl className="space-y-1 text-sm">
+            <LignesDeLActivite activity={activity} />
+            {verse}
+          </dl>
+          {versementLiberatoire}
+        </>
+      )}
     </Card>
+  )
+}
+
+/** Du chiffre d'affaires au résultat conservé : le calcul de ce que l'activité verse. */
+function LignesDeLActivite({ activity }: { activity: ActivityResult }) {
+  const isMicro = activity.type === "micro-entreprise"
+  return (
+    <>
+      <Row label="Chiffre d'affaires" value={formatMoney(activity.chiffreAffaires)} />
+      {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${formatMoney(activity.charges)}`} /> : null}
+      {activity.fraisDeDeplacement ? <DeplacementsRow deplacements={activity.fraisDeDeplacement} /> : null}
+      <Row label="Cotisations sociales" value={`− ${formatMoney(activity.cotisationsSociales)}`} />
+      {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={formatMoney(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${formatMoney(activity.cotisationsPresident.brut)} bruts`} /> : null}
+      {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} /> : null}
+      {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(activity.impotSocietes)}`} /> : null}
+      {activity.resultatConserve !== 0 ? <Row label={activity.resultatConserve > 0 ? "Conservé dans la société" : "Déficit de la société"} value={formatMoney(activity.resultatConserve)} /> : null}
+    </>
   )
 }
 
@@ -269,7 +340,9 @@ function EnTeteDesResultats({ report }: { report: SimulationReport | null }) {
   return (
     <>
       <div>
-        <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Résultats de simulation</h2>
+        <h2 id="resultats-titre" className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
+          Résultats de simulation
+        </h2>
         <p className="text-sm text-slate-600 dark:text-slate-400">
           Recalculés à chaque modification{report ? `, année ${report.annee} avec les règles fiscales ${report.anneeDesRegles}` : ""}. Estimations simplifiées, non validées par un expert-comptable.
         </p>
@@ -286,7 +359,7 @@ function EnTeteDesResultats({ report }: { report: SimulationReport | null }) {
   )
 }
 
-export function ResultsPanel({ report, error }: ResultsPanelProps) {
+export function ResultsPanel({ report, error, apresLeBilan }: ResultsPanelProps) {
   // Sociétés dont les revenus se partagent entre plusieurs personnes : seule situation où la répartition à parts égales s'applique.
   const sharedCompanies = report?.activities.filter(a => a.type === "company" && a.beneficiaireIds.length > 1) ?? []
 
@@ -300,13 +373,17 @@ export function ResultsPanel({ report, error }: ResultsPanelProps) {
 
       {report && report.foyers.length + report.activities.length > 0 ? <BilanCard report={report} /> : null}
 
+      {apresLeBilan}
+
       {report && report.foyers.length > 0 ? (
         <div className="space-y-3">
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
           {sharedCompanies.length > 0 ? (
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              {sharedCompanies.map(a => `« ${a.name} »`).join(", ")} : l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les associés, comme les dividendes. La répartition réelle du capital n'est pas encore modélisée.
-            </p>
+            <ReplieEnResume titre="Sociétés à plusieurs associés" className="text-sm text-slate-600 dark:text-slate-400">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                {sharedCompanies.map(a => `« ${a.name} »`).join(", ")} : l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les associés, comme les dividendes. La répartition réelle du capital n'est pas encore modélisée.
+              </p>
+            </ReplieEnResume>
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.foyers.map(foyer => (

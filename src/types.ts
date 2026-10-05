@@ -189,10 +189,15 @@ export const SaveSlotSchema = SessionStateSchema.extend({
   lastModified: z.number()
 })
 
+/** Affichage de la page choisi par l'utilisateur pendant la bêta : l'affichage d'origine ou l'une des trois propositions. */
+export const AffichageSchema = z.enum(["classique", "resume", "panneaux", "vues"])
+
 export const UserPreferencesSchema = z.object({
   slotOrder: z.array(z.string()).default([]),
   // La clé (type de flux) est une string, la valeur (couleur) est une string
-  flowTypeColors: z.record(z.string(), z.string()).optional()
+  flowTypeColors: z.record(z.string(), z.string()).optional(),
+  // Une valeur inconnue (affichage retiré d'une version ultérieure) est ignorée sans invalider les autres préférences.
+  affichage: AffichageSchema.optional().catch(undefined)
 })
 
 // ===================================================================================
@@ -214,6 +219,7 @@ export type AnneeSimulee = z.infer<typeof AnneeSimuleeSchema>
 export type SessionState = z.infer<typeof SessionStateSchema>
 export type SaveSlot = z.infer<typeof SaveSlotSchema>
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>
+export type Affichage = z.infer<typeof AffichageSchema>
 
 // ===================================================================================
 // == 3. TYPES NON LIÉS À LA VALIDATION (API, ÉTATS VOLATILES, ETC.)
