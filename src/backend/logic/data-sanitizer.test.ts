@@ -53,15 +53,68 @@ describe("sanitizeStateAndFillDefaults", () => {
     it("complète les frais réels d'une personne et les déplacements d'une activité, sans changer de format", () => {
       const { safeState } = sanitizeStateAndFillDefaults({
         entities: [
-          { ...alice, fraisReels: { kmParTrajet: 20 } },
+          { ...alice, fraisReels: { trajets: [{ kmParTrajet: 20 }] } },
           { ...sasu, deplacementsProfessionnels: { kmParAn: 3000, electrique: true } },
           { id: "m1", type: "micro-entreprise", avatar, deplacementsProfessionnels: {} }
         ]
       })
 
-      expect(safeState.entities[0]).toMatchObject({ fraisReels: { kmParTrajet: 20, joursTravailles: 0, puissanceFiscale: "5", electrique: false, distanceJustifiee: false, autresFrais: 0 } })
+      expect(safeState.entities[0]).toMatchObject({ fraisReels: { trajets: [{ libelle: "", kmParTrajet: 20, joursTravailles: 0, puissanceFiscale: "5", electrique: false, distanceJustifiee: false }], autresFrais: 0 } })
       expect(safeState.entities[1]).toMatchObject({ deplacementsProfessionnels: { kmParAn: 3000, puissanceFiscale: "5", electrique: true } })
       expect(safeState.entities[2]).toMatchObject({ deplacementsProfessionnels: { kmParAn: 0, puissanceFiscale: "5", electrique: false } })
+    })
+
+    describe("frais réels enregistrés avec un seul trajet, avant les trajets multiples", () => {
+      const ancienFrais = { kmParTrajet: 45, joursTravailles: 210, puissanceFiscale: "7", electrique: true, distanceJustifiee: true, autresFrais: 300 }
+      const trajetConverti = { libelle: "", kmParTrajet: 45, joursTravailles: 210, puissanceFiscale: "7", electrique: true, distanceJustifiee: true }
+
+      it("deviennent une liste d'un trajet, au même format de fichier et sans point à vérifier", () => {
+        const { safeState, report } = sanitizeStateAndFillDefaults({ formatVersion: FORMAT_VERSION_ACTUEL, entities: [{ ...alice, fraisReels: ancienFrais }] })
+
+        expect(safeState.entities[0]).toEqual({ ...alice, fraisReels: { trajets: [trajetConverti], autresFrais: 300 } })
+        expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, migrationNotes: [] })
+      })
+
+      it("deviennent un trajet aux valeurs par défaut quand seuls les autres frais étaient saisis", () => {
+        const { safeState } = sanitizeStateAndFillDefaults({ entities: [{ ...alice, fraisReels: { autresFrais: 400 } }] })
+
+        expect(safeState.entities[0]).toMatchObject({ fraisReels: { trajets: [{ kmParTrajet: 0, joursTravailles: 0, puissanceFiscale: "5", electrique: false, distanceJustifiee: false }], autresFrais: 400 } })
+      })
+
+      it("se relisent à l'identique une fois convertis", () => {
+        const { safeState } = sanitizeStateAndFillDefaults({ entities: [{ ...alice, fraisReels: ancienFrais }] })
+
+        expect(sanitizeStateAndFillDefaults(safeState).safeState).toEqual(safeState)
+      })
+
+      it("écartent la personne si le trajet est invalide, comme tout autre champ", () => {
+        const { safeState, report } = sanitizeStateAndFillDefaults({ entities: [{ ...alice, fraisReels: { ...ancienFrais, joursTravailles: 400 } }, sasu] })
+
+        expect(safeState.entities.map(e => e.id)).toEqual(["c1"])
+        expect(report.entitiesRemoved).toBe(1)
+      })
+
+      it("sont convertis aussi dans les sauvegardes et dans une session de plusieurs années", () => {
+        const annees = [2026, 2027].map(annee => ({ annee, monthlyData: grille([flux(`f${annee}`, "p1")]) }))
+        const [slot] = sanitizeSlots([{ id: "slot-1", lastModified: 42, formatVersion: FORMAT_VERSION_ACTUEL, entities: [{ ...alice, fraisReels: ancienFrais }], annees }])
+
+        expect(slot.entities[0]).toMatchObject({ fraisReels: { trajets: [trajetConverti], autresFrais: 300 } })
+        expect(slot.annees.map(a => a.annee)).toEqual([2026, 2027])
+      })
+    })
+
+    it("garde plusieurs trajets et complète chacun", () => {
+      const { safeState } = sanitizeStateAndFillDefaults({ entities: [{ ...alice, fraisReels: { trajets: [{ libelle: "Agence", kmParTrajet: 12 }, { kmParTrajet: 30, puissanceFiscale: "3" }] } }] })
+
+      expect(safeState.entities[0]).toMatchObject({
+        fraisReels: {
+          trajets: [
+            { libelle: "Agence", kmParTrajet: 12, joursTravailles: 0, puissanceFiscale: "5" },
+            { libelle: "", kmParTrajet: 30, joursTravailles: 0, puissanceFiscale: "3" }
+          ],
+          autresFrais: 0
+        }
+      })
     })
 
     it("met à 0 le montant d'un flux qui n'en a pas", () => {

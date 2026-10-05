@@ -1,7 +1,7 @@
 // src/backend/logic/frais-kilometriques.test.ts
 
 import { describe, expect, it } from "vitest"
-import { distanceDomicileTravail, montantBaremeKilometrique } from "./frais-kilometriques.js"
+import { distanceDomicileTravail, distancesParVoiture, montantBaremeKilometrique } from "./frais-kilometriques.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 
 const bareme = reglesDeTest.baremeKilometrique
@@ -56,5 +56,27 @@ describe("distanceDomicileTravail", () => {
   it("ignore les valeurs négatives", () => {
     expect(distanceDomicileTravail({ kmParTrajet: -5, joursTravailles: 100, distanceJustifiee: false }, regles)).toBe(0)
     expect(distanceDomicileTravail({ kmParTrajet: 5, joursTravailles: -1, distanceJustifiee: false }, regles)).toBe(0)
+  })
+})
+
+describe("distancesParVoiture", () => {
+  const regles = bareme.domicileTravail
+  const trajet = (kmParTrajet: number, vehicule: { puissanceFiscale: "3" | "5"; electrique: boolean }) => ({ kmParTrajet, joursTravailles: 100, distanceJustifiee: false, ...vehicule })
+
+  it("additionne les trajets faits avec la même voiture", () => {
+    expect(distancesParVoiture([trajet(10, thermique5), trajet(60, thermique5)], regles)).toEqual([{ vehicule: thermique5, distance: 2000 + 8000 }])
+  })
+
+  it("sépare les voitures de puissance ou de motorisation différente, dans l'ordre des trajets", () => {
+    const electrique5 = { ...thermique5, electrique: true }
+    expect(distancesParVoiture([trajet(10, thermique5), trajet(20, thermique3), trajet(5, electrique5), trajet(10, thermique3)], regles)).toEqual([
+      { vehicule: thermique5, distance: 2000 },
+      { vehicule: thermique3, distance: 4000 + 2000 },
+      { vehicule: electrique5, distance: 1000 }
+    ])
+  })
+
+  it("ne renvoie rien sans trajet", () => {
+    expect(distancesParVoiture([], regles)).toEqual([])
   })
 })

@@ -1,7 +1,7 @@
 // src/backend/logic/frais-reels.test.ts
 
 import { describe, expect, it } from "vitest"
-import type { Entity, FraisReels, Person, Relationship, SimulationReport } from "../../types.js"
+import type { Entity, FraisReels, Person, Relationship, SimulationReport, Trajet } from "../../types.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
@@ -15,14 +15,22 @@ import { micro, personne, relation, session, societe, type Flux } from "./testin
 
 const simuler = (entities: Entity[], relationships: Relationship[] = [], flux: Flux[] = []) => runMetaSimulation(session(entities, relationships, flux), reglesDeTest)
 
-const sansFrais: FraisReels = { kmParTrajet: 0, joursTravailles: 0, puissanceFiscale: "5", electrique: false, distanceJustifiee: false, autresFrais: 0 }
+const sansTrajet: Trajet = { libelle: "", kmParTrajet: 0, joursTravailles: 0, puissanceFiscale: "5", electrique: false, distanceJustifiee: false }
 
-function avecFrais(id: string, frais: Partial<FraisReels>): Person {
-  return { ...personne(id), fraisReels: { ...sansFrais, ...frais } }
+const trajet = (champs: Partial<Trajet>): Trajet => ({ ...sansTrajet, ...champs })
+
+/** Une personne avec un seul trajet (les champs du trajet) et ses autres frais. */
+function avecFrais(id: string, { autresFrais = 0, ...champs }: Partial<Trajet> & { autresFrais?: number }): Person {
+  return { ...personne(id), fraisReels: { trajets: [trajet(champs)], autresFrais } }
+}
+
+function avecTrajets(id: string, trajets: Partial<Trajet>[], autresFrais = 0): Person {
+  const fraisReels: FraisReels = { trajets: trajets.map(trajet), autresFrais }
+  return { ...personne(id), fraisReels }
 }
 
 /** 20 km par trajet, 200 jours, 5 CV : 8 000 km, soit 8 000 x 0,4 + 1 000 = 4 200 €. */
-const trajets20km: Partial<FraisReels> = { kmParTrajet: 20, joursTravailles: 200 }
+const trajets20km: Partial<Trajet> = { kmParTrajet: 20, joursTravailles: 200 }
 
 function personDe(report: SimulationReport, id: string) {
   const resultat = report.persons.find(p => p.entityId === id)
@@ -142,6 +150,62 @@ describe("frais réels sur les salaires", () => {
     expect(personDe(report, "bob").fraisProfessionnels?.retenue).toBe("forfait")
     // 30 000 - 4 200 + 30 000 - 3 000.
     expect(foyerDe(report, "alice").revenuImposableGlobal).toBe(52800)
+  })
+
+  describe("plusieurs trajets, vers plusieurs lieux de travail", () => {
+    // Trajet A : 20 km, 120 jours, soit 4 800 km. Trajet B : 10 km, 100 jours, soit 2 000 km.
+    const a: Partial<Trajet> = { libelle: "Employeur A", kmParTrajet: 20, joursTravailles: 120 }
+    const b: Partial<Trajet> = { libelle: "Employeur B", kmParTrajet: 10, joursTravailles: 100 }
+    const salaires: Flux[] = [
+      ["alice", "salary", 20000],
+      ["alice", "salary", 10000]
+    ]
+
+    it("additionne les distances d'une même voiture avant d'appliquer le barème, une seule fois", () => {
+      // 6 800 km en 5 CV : 6 800 x 0,4 + 1 000 = 3 720 €, et non 4 800 x 0,6 + 2 000 x 0,6 = 4 080 €.
+      const report = simuler([avecTrajets("alice", [a, b])], [], salaires)
+
+      expect(personDe(report, "alice").fraisProfessionnels).toEqual({ revenusSalariaux: 30000, deductionForfaitaire: 3000, fraisReels: 3720, fraisDeTrajet: 3720, distanceRetenue: 6800, retenue: "reels", deduction: 3720 })
+    })
+
+    it("applique le barème à chaque voiture, reconnue à sa puissance et à sa motorisation", () => {
+      // 4 800 km en 5 CV : 2 880 € ; 2 000 km en 3 CV : 1 000 €. Total 3 880 €.
+      const deuxPuissances = simuler([avecTrajets("alice", [a, { ...b, puissanceFiscale: "3" }])], [], salaires)
+      expect(personDe(deuxPuissances, "alice").fraisProfessionnels).toMatchObject({ fraisDeTrajet: 3880, distanceRetenue: 6800 })
+
+      // 4 800 km en 5 CV : 2 880 € ; 2 000 km en 5 CV électrique : 1 200 x 1,2 = 1 440 €. Total 4 320 €.
+      const electrique = simuler([avecTrajets("alice", [a, { ...b, electrique: true }])], [], salaires)
+      expect(personDe(electrique, "alice").fraisProfessionnels).toMatchObject({ fraisDeTrajet: 4320, distanceRetenue: 6800 })
+    })
+
+    it("limite chaque trajet à 40 km séparément, selon sa propre justification", () => {
+      // 60 km non justifiés, 100 jours : 40 x 2 x 100 = 8 000 km ; 50 km justifiés, 50 jours : 5 000 km.
+      // 13 000 km en 5 CV : 13 000 x 0,4 + 1 000 = 6 200 €.
+      const report = simuler([avecTrajets("alice", [{ kmParTrajet: 60, joursTravailles: 100 }, { kmParTrajet: 50, joursTravailles: 50, distanceJustifiee: true }])], [], salaires)
+
+      expect(personDe(report, "alice").fraisProfessionnels).toMatchObject({ distanceRetenue: 13000, fraisDeTrajet: 6200 })
+    })
+
+    it("fait un seul choix entre la déduction de 10 % et les frais réels, pour le salaire et la rémunération de dirigeant ensemble", () => {
+      const report = simuler(
+        [avecTrajets("alice", [a, b], 500), societe("sasu")],
+        [relation("alice", "sasu", "Président")],
+        [
+          ["alice", "salary", 20000],
+          ["sasu", "ca_services", 100000],
+          ["sasu", "director_remuneration", 24300]
+        ]
+      )
+
+      // Revenus 20 000 + 25 110 = 45 110 € ; 10 % : 4 511 € ; frais réels 3 720 + 500 = 4 220 € : la déduction de 10 % l'emporte.
+      expect(personDe(report, "alice").fraisProfessionnels).toMatchObject({ revenusSalariaux: 45110, deductionForfaitaire: 4511, fraisReels: 4220, retenue: "forfait", deduction: 4511 })
+    })
+
+    it("accepte une personne sans trajet, avec seulement d'autres frais", () => {
+      const report = simuler([avecTrajets("alice", [], 3500)], [], salaires)
+
+      expect(personDe(report, "alice").fraisProfessionnels).toMatchObject({ fraisDeTrajet: 0, distanceRetenue: 0, fraisReels: 3500, retenue: "reels" })
+    })
   })
 
   it("n'affiche rien pour une personne sans frais réels saisis", () => {
