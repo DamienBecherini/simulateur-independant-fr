@@ -35,7 +35,7 @@ export function LigneActeur({ entity, allEntities, relationships, onUpdate, onDe
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} data-impression="bloc" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-white px-2 py-1.5 dark:bg-gray-900">
       <PoigneeDeTri nom={entity.name} {...attributes} {...listeners} className="print:hidden" />
       <AvatarDisplay avatar={entity.avatar} size="sm" />
-      <Input aria-label="Nom" className="h-8 w-40 border-transparent bg-transparent px-1 font-semibold shadow-none hover:border-input focus-visible:border-input sm:w-48" {...nom} />
+      <Input aria-label="Nom" className="h-8 w-40 border-transparent bg-transparent px-1 font-semibold shadow-none dark:bg-transparent hover:border-input focus-visible:border-input" {...nom} />
       <span className={PASTILLE}>{typeCourt(entity)}</span>
       {entity.type === "micro-entreprise" ? <OptionsDeLaMicro entity={entity} onUpdate={onUpdate} compactes /> : null}
       {/* Sur téléphone, le nombre de relations seulement : elles se modifient dans la fenêtre « Modifier ». */}

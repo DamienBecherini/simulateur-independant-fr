@@ -85,8 +85,8 @@ export function BarreDeResume({ report, annees, annee, onAnnee, comparaison }: B
         <ChoixDeLAnnee annees={annees} annee={annee} onAnnee={onAnnee} />
         {report ? (
           <>
-            <Chiffre vers="bilan" libelle="Net du foyer" valeur={euros(report.totalNetApresImpots)} />
-            <Chiffre vers="bilan" libelle="Prélèvements" valeur={tauxDePrelevement(report) ?? "—"} />
+            <Chiffre vers="bilan" libelle="Net du foyer" libelleCourt="Net" valeur={euros(report.totalNetApresImpots)} />
+            <Chiffre vers="bilan" libelle="Prélèvements" libelleCourt="Taux" valeur={tauxDePrelevement(report) ?? "—"} />
           </>
         ) : null}
         {meilleur && comparaison ? <Chiffre vers="comparateur-verdict" libelle={`Meilleur statut pour « ${comparaison.activite} »`} libelleCourt="Meilleur" valeur={meilleur} /> : null}

@@ -542,7 +542,7 @@ export function ComparatorPanel({ session, annee, onComparaison }: ComparatorPan
           <FraisFonctionnementTable frais={effectiveOptions.fraisFonctionnement ?? defaultFraisFonctionnement()} onChange={fraisFonctionnement => setOptions({ ...effectiveOptions, fraisFonctionnement })} />
           <WarningList warnings={result?.warnings ?? []} />
           {/* Affichage « Résumé » : le partage du bénéfice n'est déplié d'office qu'en répartition personnalisée, où il sert à régler. */}
-          <ReplieEnResume titre={`Partage du bénéfice en ${arbitrage.statut} (barre réglable)`} replie={effectiveOptions.repartition.mode !== "personnalisee"}>
+          <ReplieEnResume titre={`Partage du bénéfice en ${arbitrage.statut} (barre réglable)`} className="text-sm" replie={effectiveOptions.repartition.mode !== "personnalisee"}>
             <RepartitionDuBenefice activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} scenario={scenarioDuStatut(result, arbitrage.statut)} optimisation={arbitrage.resultat} options={effectiveOptions} onChange={setOptions} />
           </ReplieEnResume>
         </>
