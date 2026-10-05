@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { createNewSlotFromSession, exportState, importState, saveAllSlots, updateSlotWithSession } from "@/lib/session-service"
+import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import type { ExportableState, SanitizationReport, SaveSlot, SessionState } from "@/types"
 
 const MAINTENANT = 1_700_000_000_000
@@ -39,6 +40,7 @@ describe("createNewSlotFromSession", () => {
       entities: session.entities,
       relationships: session.relationships,
       annees: session.annees,
+      appVersion: VERSION_DE_L_APPLICATION,
       lastModified: MAINTENANT
     })
   })
@@ -58,6 +60,7 @@ describe("updateSlotWithSession", () => {
       entities: session.entities,
       relationships: session.relationships,
       annees: session.annees,
+      appVersion: VERSION_DE_L_APPLICATION,
       lastModified: MAINTENANT
     })
   })

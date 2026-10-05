@@ -1,9 +1,16 @@
 // vitest.config.ts
 
+import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { defineConfig } from "vitest/config"
 
+// Version de l'application, comme dans vite.config.ts (voir src/lib/version.ts).
+const { version } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8")) as { version: string }
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(version)
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url))

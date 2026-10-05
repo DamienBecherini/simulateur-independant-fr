@@ -12,7 +12,7 @@ import fs from "fs/promises"
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs"
 import { ipcMain } from "electron"
 import { AnneesRefuseesError, rapportAvecCorrections, texteAnneesEcartees } from "./logic/data-sanitizer.js"
-import { contenuDesSauvegardes, contenuDuFichier, lireLaSession, lireLesSauvegardes, lireUneSimulationImportee, sauvegardesAEcrire } from "./logic/fichiers-de-donnees.js"
+import { contenuDesSauvegardes, contenuDuFichier, lireLaSession, lireLesPreferences, lireLesSauvegardes, lireUneSimulationImportee, preferencesParDefaut, preferencesValides, sauvegardesAEcrire } from "./logic/fichiers-de-donnees.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
 
 /** Filtres des fenêtres d'enregistrement et d'ouverture, par format de fichier texte. */
@@ -146,7 +146,7 @@ async function readSessionFromFile(): Promise<SessionState> {
 
 async function writeSessionToFile(session: SessionState) {
   try {
-    await fs.writeFile(sessionStatePath, contenuDuFichier(session))
+    await fs.writeFile(sessionStatePath, contenuDuFichier(session, app.getVersion()))
     // On envoie une notification de succès au frontend
     // if (mainWindow) {
     //   mainWindow.webContents.send("show-notification", {
@@ -210,19 +210,31 @@ async function writeSlotsToFile(slots: SaveSlot[]) {
   }
 }
 
+/**
+ * Lit les préférences, validées comme dans la démo web : un champ invalide est écarté seul. Un fichier illisible
+ * (JSON abîmé) donne les préférences par défaut ; on en garde une copie (userPreferences.refuse.json), comme des
+ * autres fichiers refusés, sans boîte de dialogue : rien de la simulation n'est perdu.
+ */
 async function readPrefsFromFile(): Promise<UserPreferences> {
+  let data = ""
   try {
-    const data = await fs.readFile(userPreferencesPath, "utf-8")
-    return JSON.parse(data)
+    data = await fs.readFile(userPreferencesPath, "utf-8")
+    return lireLesPreferences(data)
   } catch (error) {
-    console.log("Aucun fichier de préférences trouvé, retour aux valeurs par défaut.", error)
-    return { slotOrder: [] }
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return preferencesParDefaut()
+    console.warn("Fichier de préférences illisible, retour aux valeurs par défaut :", error instanceof Error ? error.message : error)
+    if (data !== "") await keepCopy(userPreferencesPath, data, SUFFIXE_REFUS)
+    return preferencesParDefaut()
   }
 }
 
 async function writePrefsToFile(prefs: UserPreferences) {
   try {
-    await fs.writeFile(userPreferencesPath, JSON.stringify(prefs, null, 2))
+    // Validées avant écriture, comme à la lecture. Écrites à côté puis renommées : enregistrées aussi à la fermeture de
+    // la fenêtre, elles ne doivent pas rester à moitié écrites si l'application se termine pendant l'écriture.
+    const provisoire = `${userPreferencesPath}.tmp`
+    await fs.writeFile(provisoire, JSON.stringify(preferencesValides(prefs), null, 2))
+    await fs.rename(provisoire, userPreferencesPath)
   } catch (error) {
     console.error("Erreur lors de la sauvegarde des préférences:", error)
   }
@@ -316,7 +328,7 @@ app.on("ready", () => {
   ipcMain.on("saveCurrentSessionSync", (event, session: SessionState) => {
     if (event.senderFrame) validateEventFrame(event.senderFrame)
     try {
-      writeFileSync(sessionStatePath, contenuDuFichier(session))
+      writeFileSync(sessionStatePath, contenuDuFichier(session, app.getVersion()))
       event.returnValue = true
     } catch (error) {
       console.error("Erreur lors de la sauvegarde de la session à la fermeture :", error)
@@ -353,7 +365,7 @@ app.on("ready", () => {
     })
     if (!canceled && filePath) {
       try {
-        await fs.writeFile(filePath, contenuDuFichier(state))
+        await fs.writeFile(filePath, contenuDuFichier(state, app.getVersion()))
       } catch (error) {
         console.error("Erreur lors de l'exportation :", error)
         dialog.showErrorBox("Erreur d'exportation", "Impossible d'enregistrer le fichier.")

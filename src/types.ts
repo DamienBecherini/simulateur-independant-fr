@@ -217,6 +217,10 @@ export const ComparateurSchema = z.object({
 })
 
 export const SessionStateSchema = z.object({
+  /**
+   * Version de l'application qui a écrit le fichier (session en cours, export) ou enregistré la sauvegarde nommée.
+   * Une information, jamais une condition de lecture : c'est `formatVersion` qui décide des conversions.
+   */
   appVersion: z.string().optional(),
   name: z.string().default("Nouvelle Simulation"),
   // Acteurs et relations communs à toutes les années de la session (voir l'ADR 008).
@@ -236,12 +240,28 @@ export const SaveSlotSchema = SessionStateSchema.extend({
 /** Affichage de la page choisi par l'utilisateur pendant la bêta : l'affichage d'origine ou l'une des trois propositions. */
 export const AffichageSchema = z.enum(["classique", "resume", "panneaux", "vues"])
 
+/** Longueur maximale de l'identifiant d'une section repliable mémorisée. */
+export const LONGUEUR_MAXIMALE_ID_SECTION = 200
+
+/**
+ * Préférences de l'utilisateur, propres à son poste (ou à son navigateur pour la démo web) : elles ne voyagent pas avec
+ * les fichiers de simulation. Chaque champ invalide est écarté seul (`catch`), sans faire perdre les autres préférences.
+ */
 export const UserPreferencesSchema = z.object({
-  slotOrder: z.array(z.string()).default([]),
+  slotOrder: z.array(z.string()).default([]).catch([]),
   // La clé (type de flux) est une string, la valeur (couleur) est une string
-  flowTypeColors: z.record(z.string(), z.string()).optional(),
+  flowTypeColors: z.record(z.string(), z.string()).optional().catch(undefined),
   // Une valeur inconnue (affichage retiré d'une version ultérieure) est ignorée sans invalider les autres préférences.
-  affichage: AffichageSchema.optional().catch(undefined)
+  affichage: AffichageSchema.optional().catch(undefined),
+  /**
+   * Sauvegarde nommée chargée : « Sauvegarder » la met à jour, même après un redémarrage. C'est un état du poste, pas
+   * une donnée de la simulation : un fichier exporté ou partagé ne doit pas désigner une sauvegarde d'un autre poste.
+   */
+  loadedSlotId: z.string().optional().catch(undefined),
+  /** Zoom de l'interface demandé (1 = 100 %), entre le zoom minimal et le zoom maximal de src/lib/zoom.ts. */
+  zoom: z.number().min(0.5).max(2).optional().catch(undefined),
+  /** Sections repliables ouvertes (vrai) ou fermées (faux) par l'utilisateur, par identifiant de section. */
+  sectionsOuvertes: z.record(z.string().max(LONGUEUR_MAXIMALE_ID_SECTION), z.boolean()).optional().catch(undefined)
 })
 
 // ===================================================================================
@@ -711,6 +731,8 @@ export type ExportableState = {
   simulation?: SimulationPluriannuelle | null
   simulationError?: string | null
   exportedAt?: string
+  /** Version de l'application qui a écrit le fichier, si elle l'indique. */
+  appVersion?: string
 }
 
 export type NotificationPayload = {

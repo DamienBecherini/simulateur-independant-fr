@@ -24,6 +24,8 @@ export interface FichierSauvegardes {
   type: typeof TYPE_FICHIER_SAUVEGARDES
   /** Date de l'export, au format ISO 8601. */
   exportedAt: string
+  /** Version de l'application qui a écrit le fichier ; chaque sauvegarde garde la sienne (celle qui l'a enregistrée). */
+  appVersion?: string
   /** Les sauvegardes, dans l'ordre d'affichage ; chacune porte aussi son numéro de format. */
   slots: (SaveSlot & { formatVersion: number })[]
   slotOrder: string[]
@@ -77,13 +79,14 @@ function trierSelonOrdre(slots: SaveSlot[], ordre: unknown): SaveSlot[] {
   return [...ordonnes, ...slots.filter(slot => !places.has(slot.id))]
 }
 
-/** Construit le fichier d'export de toutes les sauvegardes, dans leur ordre d'affichage. */
-export function construireFichierSauvegardes(slots: SaveSlot[], slotOrder: string[], date: Date = new Date()): FichierSauvegardes {
+/** Construit le fichier d'export de toutes les sauvegardes, dans leur ordre d'affichage, avec la version de l'application qui l'écrit. */
+export function construireFichierSauvegardes(slots: SaveSlot[], slotOrder: string[], date: Date = new Date(), appVersion?: string): FichierSauvegardes {
   const ordonnes = trierSelonOrdre(slots, slotOrder)
   return {
     formatVersion: FORMAT_VERSION_ACTUEL,
     type: TYPE_FICHIER_SAUVEGARDES,
     exportedAt: date.toISOString(),
+    ...(appVersion === undefined ? {} : { appVersion }),
     slots: ordonnes.map(slot => ({ ...slot, formatVersion: FORMAT_VERSION_ACTUEL })),
     slotOrder: ordonnes.map(slot => slot.id)
   }

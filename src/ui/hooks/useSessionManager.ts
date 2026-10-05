@@ -1,8 +1,9 @@
 // src/ui/hooks/useSessionManager.ts
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, type Dispatch, type SetStateAction } from "react"
 import { ANNEE_PAR_DEFAUT, grilleVide, type Comparateur, type SessionState, type SaveSlot, type SanitizationReport, type UserPreferences } from "@/types"
 import * as SessionService from "@/lib/session-service"
+import { avecSauvegardeChargee, preferencesSynchronisees } from "@/lib/preferences"
 import { rapportAvecCorrections } from "@/backend/logic/data-sanitizer"
 import { useDebouncedSave } from "./useDebouncedSave"
 
@@ -42,7 +43,11 @@ export function useSessionManager() {
   const [allSaveSlots, setAllSaveSlots] = useState<SaveSlot[]>([])
   const [importConfirmation, setImportConfirmation] = useState<{ session: SessionState; report: SanitizationReport } | null>(null)
   const [userPreferences, setUserPreferences] = useState<UserPreferences>({ slotOrder: [] })
-  const [loadedSlotId, setLoadedSlotId] = useState<string | null>(null)
+  // La sauvegarde chargée est retenue dans les préférences : « Sauvegarder » la met à jour même après un redémarrage.
+  const loadedSlotId = userPreferences.loadedSlotId ?? null
+  const setLoadedSlotId: Dispatch<SetStateAction<string | null>> = useCallback(valeur => {
+    setUserPreferences(prefs => avecSauvegardeChargee(prefs, typeof valeur === "function" ? valeur(prefs.loadedSlotId ?? null) : valeur))
+  }, [])
 
   const [isLoaded, setLoaded] = useState(false)
 
@@ -50,34 +55,13 @@ export function useSessionManager() {
   useEffect(() => {
     // On charge toutes les données nécessaires en parallèle depuis le backend.
     Promise.all([window.api.getCurrentSession(), window.api.getSaveSlots(), window.api.getUserPreferences()]).then(([sessionData, slotsData, prefsData]) => {
-      // --- NOUVELLE LOGIQUE D'AUTO-RÉPARATION ---
-      // Ce bloc garantit que la liste d'affichage (`slotOrder`) est toujours synchronisée avec les données réelles des sauvegardes (`slotsData`).
-      const validPrefs = prefsData || { slotOrder: [], flowTypeColors: {} }
-      const slotIdsFromFile = new Set(slotsData.map(s => s.id))
-      const order = validPrefs.slotOrder || []
-
-      // 1. On retire de `slotOrder` les IDs qui n'existent plus dans les sauvegardes (slots "fantômes" dans la liste d'ordre).
-      const cleanOrder = order.filter(id => slotIdsFromFile.has(id))
-
-      // 2. On trouve les slots qui existent dans le fichier de sauvegarde mais qui manquent dans la liste d'ordre (slots "orphelins").
-      const orderedIds = new Set(cleanOrder)
-      const orphanSlots = slotsData.filter(slot => !orderedIds.has(slot.id))
-
-      // 3. On crée le nouvel ordre final en ajoutant les slots orphelins au début de la liste nettoyée.
-      // Cela garantit que toutes les sauvegardes sont visibles, même en cas de corruption du fichier de préférences.
-      const finalOrder = [...orphanSlots.map(s => s.id), ...cleanOrder]
-
-      const finalPreferences: UserPreferences = {
-        ...validPrefs,
-        slotOrder: finalOrder
-      }
-
-      // 4. Si on a dû corriger l'ordre, on le sauvegarde immédiatement sur le disque pour corriger la désynchronisation pour de bon.
-      if (JSON.stringify(finalOrder) !== JSON.stringify(order)) {
-        console.warn("Incohérence détectée entre les slots et l'ordre de tri. Synchronisation automatique effectuée.")
+      // Les préférences sont remises en accord avec les sauvegardes réellement présentes (ordre d'affichage, sauvegarde
+      // chargée), et enregistrées tout de suite si elles ont dû être corrigées.
+      const finalPreferences = preferencesSynchronisees({ ...prefsData, slotOrder: prefsData.slotOrder ?? [] }, slotsData)
+      if (JSON.stringify(finalPreferences) !== JSON.stringify(prefsData)) {
+        console.warn("Incohérence détectée entre les sauvegardes et les préférences. Synchronisation automatique effectuée.")
         void window.api.saveUserPreferences(finalPreferences)
       }
-      // --- FIN DE LA LOGIQUE D'AUTO-RÉPARATION ---
 
       // On initialise les états React avec les données chargées et fraîchement synchronisées.
       setHistory({ past: [], present: sessionData, future: [] })
@@ -104,6 +88,25 @@ export function useSessionManager() {
     return () => window.removeEventListener("beforeunload", saveNow)
   }, [])
   useDebouncedSave(userPreferences, 1000, window.api.saveUserPreferences)
+
+  // Les préférences aussi sont enregistrées à la fermeture, sans attendre : une sauvegarde chargée ou un zoom choisi
+  // juste avant de fermer seraient sinon oubliés. Comme pour la session, pas avant le premier chargement.
+  const latestPreferences = useRef<UserPreferences | null>(null)
+  useEffect(() => {
+    latestPreferences.current = isLoaded ? userPreferences : null
+  }, [userPreferences, isLoaded])
+  useEffect(() => {
+    const saveNow = () => {
+      if (latestPreferences.current) void window.api.saveUserPreferences(latestPreferences.current)
+    }
+    window.addEventListener("beforeunload", saveNow)
+    return () => window.removeEventListener("beforeunload", saveNow)
+  }, [])
+
+  // Une sauvegarde chargée qui disparaît (supprimée de la liste) est oubliée : « Sauvegarder » en créera une nouvelle.
+  useEffect(() => {
+    if (isLoaded && loadedSlotId !== null && !allSaveSlots.some(slot => slot.id === loadedSlotId)) setLoadedSlotId(null)
+  }, [isLoaded, loadedSlotId, allSaveSlots, setLoadedSlotId])
 
   // Fonction pour mettre à jour l'état de la session tout en gérant l'historique.
   const setSession = useCallback((newSession: SessionState | ((prevState: SessionState) => SessionState)) => {
@@ -170,8 +173,9 @@ export function useSessionManager() {
     const result = await SessionService.importState()
     if (result && result.data) {
       // Le nom du fichier est gardé (sauvegarde exportée) ; un export qui n'en porte pas reçoit « Simulation importée ».
-      const { name, entities, relationships, annees, comparateur } = result.data
-      const sessionToLoad = SessionService.contenuDeLaSession({ name: name ?? "Simulation importée", entities, relationships, annees, comparateur })
+      // La version de l'application qui a écrit le fichier est gardée telle quelle, jusqu'au prochain enregistrement.
+      const { appVersion, name, entities, relationships, annees, comparateur } = result.data
+      const sessionToLoad = SessionService.contenuDeLaSession({ appVersion, name: name ?? "Simulation importée", entities, relationships, annees, comparateur })
       // Dès que le fichier a été corrigé ou converti, l'utilisateur confirme avant de remplacer sa session.
       if (rapportAvecCorrections(result.report)) {
         setImportConfirmation({ session: sessionToLoad, report: result.report })

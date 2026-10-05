@@ -62,6 +62,15 @@ describe("construireFichierSauvegardes", () => {
     expect(resultat.slots.map(slot => slot.id)).toEqual(["b", "a"])
   })
 
+  it("porte la version de l'application qui l'écrit ; chaque sauvegarde garde celle qui l'a enregistrée", () => {
+    const ancienne = sauvegarde("a", "Alpha", { appVersion: "0.8.0" })
+    const resultat = construireFichierSauvegardes([ancienne], ["a"], new Date("2026-10-04T08:00:00.000Z"), "0.9.0")
+
+    expect(resultat.appVersion).toBe("0.9.0")
+    expect(resultat.slots[0].appVersion).toBe("0.8.0")
+    expect(lireAvecSucces(JSON.stringify(resultat)).slots[0].appVersion).toBe("0.8.0")
+  })
+
   it("se relit à l'identique", () => {
     const slots = [sauvegarde("a", "Alpha"), sauvegarde("b", "Bravo")]
     const relu = lireAvecSucces(JSON.stringify(construireFichierSauvegardes(slots, ["b", "a"])))
