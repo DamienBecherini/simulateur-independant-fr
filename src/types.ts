@@ -566,6 +566,11 @@ export interface RemunerationOptimale {
   avecRetraite: boolean
   /** 4 trimestres demandés, mais aucune rémunération possible ne les valide : c'est le meilleur net sans condition. */
   retraiteHorsDAtteinte: boolean
+  /**
+   * Net du foyer perdu en exigeant 4 trimestres de retraite (meilleur net moins meilleur net avec 4 trimestres), en
+   * euros arrondis ; absent quand le meilleur net les valide déjà, ou qu'aucune rémunération ne les valide.
+   */
+  coutDesQuatreTrimestres?: number
 }
 
 /**

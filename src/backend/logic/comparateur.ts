@@ -318,14 +318,23 @@ export function comparerStatuts(session: DonneesDeLAnnee, options: ComparaisonOp
   return { scenarios, meilleur, couples, warnings, ...(auMeilleurNet ? { optimisations } : {}) }
 }
 
+/** Ce que coûtent les 4 trimestres de retraite en net du foyer, arrondi à l'euro ; 0 si le meilleur net les valide déjà. */
+export function coutDesQuatreTrimestres({ meilleur, meilleurAvecRetraite }: OptimisationRemuneration): number {
+  if (!meilleur || !meilleurAvecRetraite) return 0
+  return Math.max(0, Math.round(meilleur.netApresImpots - meilleurAvecRetraite.netApresImpots))
+}
+
 /**
  * Au meilleur net, la rémunération retenue d'après l'arbitrage du statut : la meilleure, ou la meilleure parmi celles
  * qui valident 4 trimestres de retraite si on le demande et qu'il en existe. Sans bénéfice, aucune rémunération.
+ * Cochée ou non, la case s'accompagne de ce que coûtent les 4 trimestres, pour choisir en connaissance de cause.
  */
 export function remunerationOptimale(optimisation: OptimisationRemuneration, avecRetraite: boolean): RemunerationOptimale {
   const { meilleur, meilleurAvecRetraite } = optimisation
-  if (avecRetraite && meilleurAvecRetraite) return { remunerationNette: meilleurAvecRetraite.remunerationNette, avecRetraite: true, retraiteHorsDAtteinte: false }
-  return { remunerationNette: meilleur?.remunerationNette ?? 0, avecRetraite: false, retraiteHorsDAtteinte: avecRetraite }
+  const cout = coutDesQuatreTrimestres(optimisation)
+  const avecCout = cout > 0 ? { coutDesQuatreTrimestres: cout } : {}
+  if (avecRetraite && meilleurAvecRetraite) return { remunerationNette: meilleurAvecRetraite.remunerationNette, avecRetraite: true, retraiteHorsDAtteinte: false, ...avecCout }
+  return { remunerationNette: meilleur?.remunerationNette ?? 0, avecRetraite: false, retraiteHorsDAtteinte: avecRetraite, ...avecCout }
 }
 
 /**

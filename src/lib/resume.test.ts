@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
-import { ecartSigne, meilleurStatut, nombreDAlertes, phraseDuVerdict, tauxDePrelevement } from "./resume"
+import { coutsDesQuatreTrimestres, ecartSigne, libelleDuCoutDesTrimestres, meilleurStatut, nombreDAlertes, phraseDuVerdict, tauxDePrelevement } from "./resume"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
 
@@ -62,5 +62,13 @@ describe("verdict du comparateur", () => {
 
   it("seul en tête, le statut actuel n'a personne derrière lui", () => {
     expect(espaces(phraseDuVerdict({ ...comparaison("micro"), scenarios: [scenario("micro", "Micro-entreprise", 32000, true)] }, "Atelier"))).toBe("Pour « Atelier », le statut actuel, Micro-entreprise, donne le meilleur net : 32 000 €.")
+  })
+})
+
+describe("coût des 4 trimestres de retraite", () => {
+  it("donne les colonnes où les exiger coûte du net, avec ce coût", () => {
+    const colonne = (libelle: string, coutDesQuatreTrimestres?: number) => ({ libelle, remunerationOptimale: { remunerationNette: 0, avecRetraite: true, retraiteHorsDAtteinte: false, ...(coutDesQuatreTrimestres ? { coutDesQuatreTrimestres } : {}) } }) as ScenarioStatut
+    expect(coutsDesQuatreTrimestres([colonne("SASU", 1234), colonne("EURL"), { libelle: "EI au réel" } as ScenarioStatut])).toEqual([{ libelle: "SASU", cout: 1234 }])
+    expect(libelleDuCoutDesTrimestres(1234).replace(/\s/g, " ")).toBe("4 trimestres : −1 234 € de net")
   })
 })
