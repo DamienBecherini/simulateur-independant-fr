@@ -312,7 +312,7 @@ export function RemunerationOptimizer({ session, annee, options, activityName, s
           <h3 id="optimisation-titre" className="text-lg font-semibold text-slate-800 dark:text-slate-100">
             Rémunération ou dividendes ?
           </h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300">« {activityName} » en société : chaque rémunération nette, le reste du bénéfice étant versé en dividendes. Le trait vertical marque la rémunération du comparateur.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">« {activityName} » en société, en {annee} : chaque rémunération nette, le reste du bénéfice étant versé en dividendes. Le trait vertical marque la rémunération du comparateur.</p>
         </div>
         <ChoixDuStatut statut={statut} onChange={setStatut} />
       </div>

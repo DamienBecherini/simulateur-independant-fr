@@ -14,7 +14,7 @@ import { BoutonExportCsv } from "./BoutonExportCsv"
 import { Depliable } from "./Depliable"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
 import { ZoneDefilante } from "./ZoneDefilante"
-import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ScenarioStatut, SessionState, StatutFrais } from "@/types"
+import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ScenarioStatut, SessionState, SimulationAnnuelle, StatutFrais } from "@/types"
 
 interface ComparatorPanelProps {
   session: SessionState
@@ -383,6 +383,28 @@ function OptimiseurDeLActivite({ session, annee, selected, options, onChange }: 
 }
 
 /**
+ * Activité comparée et réglages du comparateur pour l'année affichée. Les réglages retiennent l'année pour laquelle
+ * ils ont été choisis : dans une autre année, la rémunération et les dividendes repartent de sa grille, les frais et
+ * la part BNC sont gardés.
+ */
+function useReglages(vue: SimulationAnnuelle, activities: (Company | MicroEntreprise)[]) {
+  const [reglages, setReglages] = useState<{ annee: number; options: ComparaisonOptions } | null>(null)
+  const options = reglages?.options ?? null
+  const setOptions = (nouvelles: ComparaisonOptions) => setReglages({ annee: vue.annee, options: nouvelles })
+
+  // L'activité comparée par défaut est la première ; si elle disparaît, on repart sur la première restante.
+  const selected = activities.find(a => a.id === options?.activityId) ?? activities[0]
+  const effectiveOptions = useMemo(() => {
+    if (!selected) return NO_ACTIVITY
+    if (options?.activityId !== selected.id) return defaultComparisonOptions(vue, selected.id)
+    if (reglages?.annee === vue.annee) return options
+    return { ...defaultComparisonOptions(vue, selected.id), partBncPrestations: options.partBncPrestations, fraisFonctionnement: options.fraisFonctionnement }
+  }, [options, reglages, selected, vue])
+
+  return { selected, effectiveOptions, setOptions }
+}
+
+/**
  * Comparateur de statuts : l'activité choisie est simulée en SASU, EURL, EI au réel et micro-entreprise
  * (avec et sans versement libératoire), le reste de la simulation restant identique. Les couples en union
  * libre sont aussi comparés avec une imposition commune.
@@ -391,14 +413,7 @@ export function ComparatorPanel({ session, annee }: ComparatorPanelProps) {
   // Le comparateur porte sur l'année affichée : réglages par défaut tirés de sa grille, exports à son nom.
   const vue = useMemo(() => vueDeLAnnee(session, annee), [session, annee])
   const activities = comparableActivities(vue)
-  const [options, setOptions] = useState<ComparaisonOptions | null>(null)
-
-  // L'activité comparée par défaut est la première ; si elle disparaît, on repart sur la première restante.
-  const selected = activities.find(a => a.id === options?.activityId) ?? activities[0]
-  const effectiveOptions = useMemo(() => {
-    if (!selected) return NO_ACTIVITY
-    return options?.activityId === selected.id ? options : defaultComparisonOptions(vue, selected.id)
-  }, [options, selected, vue])
+  const { selected, effectiveOptions, setOptions } = useReglages(vue, activities)
 
   const { result, error } = useComparison(session, effectiveOptions, vue.annee)
   const couples = result?.couples ?? []
@@ -412,7 +427,7 @@ export function ComparatorPanel({ session, annee }: ComparatorPanelProps) {
         <h2 id="comparateur-titre" className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
           Comparateur de statuts
         </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée.</p>
       </div>
 
       {selected ? (

@@ -28,6 +28,43 @@ function withActivity(): SessionState {
   return { ...emptySession(), entities: [makePerson(), makeMicro({ name: "Mon atelier" })] }
 }
 
+describe("ComparatorPanel sur plusieurs années", () => {
+  /** Une SASU qui verse 20 000 € de rémunération en 2025 et 30 000 € en 2026. */
+  function deuxAnnees(): SessionState {
+    const remuneration = (annee: number, montant: number) => ({ annee, monthlyData: emptySession().annees[0].monthlyData.map(mois => (mois.month === 0 ? { ...mois, flows: [{ id: `r-${annee}`, label: "Rémunération", amount: montant, entityId: "company-sasu", type: "director_remuneration" as const }] } : mois)) })
+    return { ...emptySession(), entities: [makePerson(), makeCompany()], relationships: [{ id: "r", fromId: "person-alice", toId: "company-sasu", type: "Président" }], annees: [remuneration(2025, 20000), remuneration(2026, 30000)] }
+  }
+
+  it("compare l'année affichée, avec la rémunération saisie cette année-là", async () => {
+    const session = deuxAnnees()
+    const { rerender } = render(<ComparatorPanel annee={2025} session={session} />)
+
+    expect(screen.getByText(/^Année 2025\./)).toBeInTheDocument()
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, expect.objectContaining({ remunerationNette: 20000 }), 2025))
+
+    rerender(<ComparatorPanel annee={2026} session={session} />)
+    expect(screen.getByText(/^Année 2026\./)).toBeInTheDocument()
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, expect.objectContaining({ remunerationNette: 30000 }), 2026))
+    await vi.waitFor(() => expect(window.api.optimiserRemuneration).toHaveBeenLastCalledWith(session, expect.anything(), "SASU", 2026))
+  })
+
+  it("reprend la rémunération de la nouvelle année quand on en change, mais garde les frais saisis", async () => {
+    const session = deuxAnnees()
+    const { rerender } = render(<ComparatorPanel annee={2025} session={session} />)
+    const remuneration = screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")
+    await userEvent.clear(remuneration)
+    await userEvent.type(remuneration, "25000")
+    const banque = screen.getByRole("spinbutton", { name: "Compte bancaire professionnel, SASU" })
+    await userEvent.clear(banque)
+    await userEvent.type(banque, "500")
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, expect.objectContaining({ remunerationNette: 25000 }), 2025))
+
+    rerender(<ComparatorPanel annee={2026} session={session} />)
+
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, expect.objectContaining({ remunerationNette: 30000, fraisFonctionnement: expect.objectContaining({ SASU: expect.objectContaining({ banque: 500 }) }) }), 2026))
+  })
+})
+
 describe("ComparatorPanel", () => {
   it("n'affiche rien sans activité ni couple en union libre", async () => {
     const { container } = render(<ComparatorPanel annee={2026} session={emptySession()} />)
