@@ -35,5 +35,18 @@ export default tseslint.config(
     rules: {
       complexity: ["error", { max: 15 }]
     }
+  },
+  {
+    // Scripts Node des workflows GitHub (JavaScript sans compilation), tests compris.
+    extends: [js.configs.recommended],
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2024,
+      sourceType: "module",
+      globals: globals.node
+    },
+    rules: {
+      complexity: ["error", { max: 15 }]
+    }
   }
 )
