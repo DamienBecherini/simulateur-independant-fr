@@ -31,8 +31,8 @@ test("saisir les trajets de Julien : ses frais réels l'emportent sur la déduct
   // et 13 080 x 0,357 + 1 395 = 6 064,56 €, plus que 10 % de sa rémunération imposable.
   const fenetre = await reglagesDe(page, "Julien Martin")
   await fenetre.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 10 %" }).click()
-  await fenetre.getByLabel("Trajet (km, aller simple)").fill("30")
-  await fenetre.getByLabel("Jours travaillés par an").fill("218")
+  await fenetre.getByLabel("Trajet (km, aller simple)", { exact: true }).fill("30")
+  await fenetre.getByLabel("Jours travaillés par an", { exact: true }).fill("218")
   await fenetre.getByRole("button", { name: "Enregistrer" }).click()
   await expect(fenetre).toBeHidden()
 
@@ -43,7 +43,7 @@ test("saisir les trajets de Julien : ses frais réels l'emportent sur la déduct
   // Les déplacements professionnels de la SASU : 5 000 km en 5 CV, soit 3 180 € d'indemnités kilométriques.
   const societe = await reglagesDe(page, "Conseil SASU")
   await societe.getByRole("switch", { name: "Déplacements avec une voiture personnelle" }).click()
-  await societe.getByLabel("Kilomètres professionnels par an").fill("5000")
+  await societe.getByLabel("Kilomètres professionnels par an", { exact: true }).fill("5000")
   await societe.getByRole("button", { name: "Enregistrer" }).click()
   await expect(societe).toBeHidden()
   await expect(ligne("dont déplacements professionnels")).toContainText(/3\s180\s€5\s000 km au barème kilométrique, déductibles/)
@@ -58,15 +58,15 @@ test("saisir deux trajets de Julien avec la même voiture : le barème s'appliqu
   const fenetre = await reglagesDe(page, "Julien Martin")
   await fenetre.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 10 %" }).click()
   const premier = fenetre.getByRole("group", { name: "Trajet 1" })
-  await premier.getByLabel("Trajet (km, aller simple)").fill("30")
-  await premier.getByLabel("Jours travaillés par an").fill("120")
+  await premier.getByLabel("Trajet (km, aller simple)", { exact: true }).fill("30")
+  await premier.getByLabel("Jours travaillés par an", { exact: true }).fill("120")
 
   await fenetre.getByRole("button", { name: "Ajouter un trajet" }).click()
   // Le focus est sur le nom du nouveau trajet : la saisie continue au clavier.
   await page.keyboard.type("Client à Lyon")
   const second = fenetre.getByRole("group", { name: "Trajet 2 : Client à Lyon" })
-  await second.getByLabel("Trajet (km, aller simple)").fill("50")
-  await second.getByLabel("Jours travaillés par an").fill("98")
+  await second.getByLabel("Trajet (km, aller simple)", { exact: true }).fill("50")
+  await second.getByLabel("Jours travaillés par an", { exact: true }).fill("98")
   await fenetre.getByRole("button", { name: "Enregistrer" }).click()
   await expect(fenetre).toBeHidden()
 
@@ -76,7 +76,7 @@ test("saisir deux trajets de Julien avec la même voiture : le barème s'appliqu
 
   // Les trajets sont gardés à la réouverture, et le second se retire.
   const reouverte = await reglagesDe(page, "Julien Martin")
-  await expect(reouverte.getByRole("group", { name: "Trajet 2 : Client à Lyon" }).getByLabel("Trajet (km, aller simple)")).toHaveValue("50")
+  await expect(reouverte.getByRole("group", { name: "Trajet 2 : Client à Lyon" }).getByLabel("Trajet (km, aller simple)", { exact: true })).toHaveValue("50")
   await reouverte.getByRole("button", { name: "Retirer le trajet 2" }).click()
   await expect(reouverte.getByRole("button", { name: "Ajouter un trajet" })).toBeFocused()
   await reouverte.getByRole("button", { name: "Enregistrer" }).click()

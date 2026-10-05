@@ -83,13 +83,13 @@ async function auditerLesFenetres(page: Page, theme: string) {
   // Les champs des frais réels, dépliés, avec deux trajets.
   await fenetre.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 10 %" }).click()
   await fenetre.getByRole("button", { name: "Ajouter un trajet" }).click()
-  await expect(fenetre.getByRole("group", { name: "Trajet 2" }).getByLabel("Jours travaillés par an")).toBeVisible()
+  await expect(fenetre.getByRole("group", { name: "Trajet 2" }).getByLabel("Jours travaillés par an", { exact: true })).toBeVisible()
   await auditer(page, `réglages d'une entité, ${theme}`, "[role=dialog]")
   await fermer()
 
   await page.getByRole("button", { name: "Modifier les autres réglages" }).last().click()
   await fenetre.getByRole("switch", { name: "Déplacements avec une voiture personnelle" }).click()
-  await expect(fenetre.getByLabel("Kilomètres professionnels par an")).toBeVisible()
+  await expect(fenetre.getByLabel("Kilomètres professionnels par an", { exact: true })).toBeVisible()
   await auditer(page, `réglages d'une activité, ${theme}`, "[role=dialog]")
   await fermer()
 

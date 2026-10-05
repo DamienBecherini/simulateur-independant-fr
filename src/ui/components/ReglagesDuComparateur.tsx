@@ -5,7 +5,6 @@
 // sert, sont repliés sous une seule section.
 
 import { useState } from "react"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { avecLeMode, avecRemunerationSaisie, defaultFraisFonctionnement, descriptionDuMode, libellesCourtsRepartition, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
@@ -15,6 +14,7 @@ import type { ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnemen
 import { CurseurDeRemuneration } from "./Curseur"
 import { Depliable } from "./Depliable"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
+import { ChampNumerique } from "./ChampNumerique"
 
 function formatMoney(n: number): string {
   return n.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €"
@@ -94,7 +94,7 @@ function RemunerationSaisie({ remunerationNette, statut, plafond, onChange }: Re
       <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
       {/* Le champ, et le curseur avec son plafond dessous ; sur téléphone, le curseur passe sous le champ. */}
       <div className="flex flex-wrap items-start gap-x-4 gap-y-1">
-        <Input id="comparateur-remuneration" className="mt-1 w-40 bg-background text-right" type="number" min="0" step="1000" aria-describedby={note} value={apercu ?? remunerationNette} onChange={e => onChange(Math.max(0, parseFloat(e.target.value) || 0))} />
+        <ChampNumerique id="comparateur-remuneration" className="mt-1 w-40" classNameChamp="bg-background text-right" min="0" step="1000" quoi="la rémunération" aria-describedby={note} value={apercu ?? remunerationNette} onChange={e => onChange(Math.max(0, parseFloat(e.target.value) || 0))} />
         {plafond !== null && plafond > 0 ? (
           <div className="w-full max-w-xs sm:w-72">
             <CurseurDeRemuneration valeur={remunerationNette} max={plafond} libelle="Régler la rémunération nette annuelle" decritPar={note} onApercu={setApercu} onValider={onChange} />
@@ -152,7 +152,7 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
                     {/* Calé à droite comme l'en-tête et le total de sa colonne : une marge automatique ne suffit pas sur un
                         champ de saisie, que certains navigateurs (Firefox) affichent en ligne. */}
                     <div className="flex justify-end">
-                      <Input className="h-8 w-28 bg-background text-right" type="number" min="0" step="50" aria-label={`${posteFraisLabels[poste]}, ${statutFraisLabels[statut]}`} value={frais[statut][poste]} onChange={e => update(statut, poste, e.target.value)} />
+                      <ChampNumerique className="w-32" classNameChamp="h-8 bg-background text-right" min="0" step="50" aria-label={`${posteFraisLabels[poste]}, ${statutFraisLabels[statut]}`} value={frais[statut][poste]} onChange={e => update(statut, poste, e.target.value)} />
                     </div>
                   </td>
                 ))}

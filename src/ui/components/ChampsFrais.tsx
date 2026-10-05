@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { PUISSANCES_FISCALES, type Company, type DeplacementsProfessionnels, type FraisReels, type MicroEntreprise, type Person, type PuissanceFiscale, type Trajet } from "@/types"
+import { ChampNumerique } from "./ChampNumerique"
 
 /*
  * Champs de la fenêtre de réglages d'un acteur pour les frais au barème kilométrique : frais réels d'une personne sur
@@ -30,7 +31,7 @@ function ChampNombre({ id, label, value, onChange, max }: { id: string; label: s
   return (
     <div className="space-y-1">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} name={id} type="number" min="0" max={max} step="any" value={value} onChange={e => onChange(positif(e.target.value, max))} />
+      <ChampNumerique id={id} name={id} min="0" max={max} step="any" quoi={`« ${label} »`} value={value} onChange={e => onChange(positif(e.target.value, max))} />
     </div>
   )
 }

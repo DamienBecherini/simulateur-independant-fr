@@ -128,12 +128,6 @@
   :is(button, [role="button"], [role="switch"], [role="combobox"], [role="option"], [role="menuitem"], [role="tab"], select, summary, input):is([disabled], [aria-disabled="true"], [data-disabled]) {
     cursor: not-allowed;
   }
-
-  /* Un peu d'air entre la fin d'un nombre aligné à droite et les flèches + / − du champ (Chromium, donc l'application
-     de bureau ; Firefox n'expose pas ses flèches au style). */
-  input[type="number"]::-webkit-inner-spin-button {
-    margin-inline-start: 0.5rem;
-  }
 }
 
 /* Animations réduites à presque rien pour qui le demande au système (critère 2.3.3 des WCAG) : fondus des

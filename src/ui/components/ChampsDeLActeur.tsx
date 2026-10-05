@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { Avatar, Company, Entity } from "@/types"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
+import { ChampNumerique } from "./ChampNumerique"
 
 // Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
 const COULEURS_DES_ACTEURS = [
@@ -44,7 +45,7 @@ export function ChampsDeLActeur({ entity, onChange }: ChampsDeLActeurProps) {
             Parts propres
           </Label>
           <div className="col-span-3">
-            <Input id="fiscalParts" name="fiscalParts" type="number" step="0.5" value={entity.fiscalParts || 1} onChange={e => onChange({ ...entity, fiscalParts: parseFloat(e.target.value) || 0 })} />
+            <ChampNumerique id="fiscalParts" name="fiscalParts" step="0.5" quoi="les parts propres" value={entity.fiscalParts || 1} onChange={e => onChange({ ...entity, fiscalParts: parseFloat(e.target.value) || 0 })} />
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Hors enfants reliés : leurs parts s'ajoutent automatiquement. À modifier pour un cas particulier (parent isolé, invalidité…).</p>
           </div>
         </div>
@@ -106,12 +107,12 @@ function StatusSpecificFields({ entity, onChange }: ChampsDeLActeurProps) {
             RFR N-2
           </Label>
           <div className="col-span-3">
-            <Input
+            <ChampNumerique
               id="rfrN2"
               name="rfrN2"
-              type="number"
               min="0"
               step="100"
+              quoi="le revenu fiscal de référence"
               placeholder="Non renseigné"
               value={entity.rfrN2 ?? ""}
               onChange={e => {
@@ -129,7 +130,7 @@ function StatusSpecificFields({ entity, onChange }: ChampsDeLActeurProps) {
             Capital social
           </Label>
           <div className="col-span-3">
-            <Input id="capitalSocial" name="capitalSocial" type="number" min="0" step="100" value={entity.capitalSocial} onChange={e => onChange({ ...entity, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })} />
+            <ChampNumerique id="capitalSocial" name="capitalSocial" min="0" step="100" quoi="le capital social" value={entity.capitalSocial} onChange={e => onChange({ ...entity, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })} />
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
           </div>
         </div>
