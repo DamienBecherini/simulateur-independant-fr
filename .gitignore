@@ -20,6 +20,9 @@ dist-electron
 *.local
 build
 
+# Agrégat des retours des utilisateurs, produit à chaque publication de la démo web (scripts/retours/agreger.mjs)
+public/retours.json
+
 # Tests : couverture et tests de mutation (Stryker)
 coverage
 reports

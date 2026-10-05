@@ -1,0 +1,38 @@
+name: Retours des utilisateurs
+
+# Pose les étiquettes d'un ticket de retour (note, affichage préféré, type) d'après ses réponses,
+# à sa création et à chaque modification. Les étiquettes manquantes sont créées au passage.
+on:
+  issues:
+    types: [opened, edited]
+
+# Les modifications d'un même ticket passent l'une après l'autre ; la dernière l'emporte.
+concurrency:
+  group: retours-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  etiqueter:
+    name: Étiqueter le retour
+    # Seulement les tickets du formulaire de retour (étiquette posée par le modèle ou section propre au formulaire).
+    if: contains(github.event.issue.labels.*.name, 'retour') || contains(github.event.issue.body, '### Type de retour')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      # Le corps du ticket est une saisie non fiable : il passe par une variable d'environnement,
+      # jamais par une expression dans le script, et le script appelle gh sans shell.
+      - name: Poser les étiquettes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+        run: node scripts/retours/etiqueter.mjs

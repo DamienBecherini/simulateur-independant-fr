@@ -1,0 +1,84 @@
+name: Retour sur le simulateur
+description: Noter le simulateur, dire quel affichage vous préférez, signaler un bug ou proposer une idée.
+title: "[Retour] "
+labels: [retour]
+# Les identifiants (id) et les libellés des choix sont stables : l'application préremplit ce formulaire
+# par son adresse, et scripts/retours/ lit les réponses pour poser les étiquettes et calculer la note moyenne.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de prendre le temps de répondre. **Tout est facultatif** : une seule information suffit.
+        N'indiquez aucune donnée personnelle ni chiffre de votre situation sans le vouloir : ce ticket est public.
+
+  - type: dropdown
+    id: note
+    attributes:
+      label: Note
+      description: Votre note globale du simulateur.
+      options:
+        - "★★★★★ 5/5"
+        - "★★★★☆ 4/5"
+        - "★★★☆☆ 3/5"
+        - "★★☆☆☆ 2/5"
+        - "★☆☆☆☆ 1/5"
+        - "Sans note"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: affichage
+    attributes:
+      label: Affichage préféré
+      description: L'affichage que vous aimeriez garder après la bêta.
+      options:
+        - "Résumé"
+        - "Classique"
+        - "Trois vues"
+        - "Sans préférence"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type de retour
+      options:
+        - "Avis"
+        - "Bug"
+        - "Idée"
+    validations:
+      required: false
+
+  - type: textarea
+    id: message
+    attributes:
+      label: Message
+      description: Votre avis, le bug rencontré (ce que vous avez fait, ce qui s'est passé, ce que vous attendiez) ou votre idée.
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Numéro de version de l'application, par exemple 0.9.0.
+    validations:
+      required: false
+
+  - type: input
+    id: environnement
+    attributes:
+      label: Environnement
+      description: Application de bureau ou démo web, système (Windows, macOS, Linux…) et navigateur.
+    validations:
+      required: false
+
+  - type: textarea
+    id: diagnostic
+    attributes:
+      label: Diagnostic (facultatif)
+      description: Informations techniques jointes par l'application si vous l'avez accepté (version, système, affichage choisi, dernières erreurs).
+      render: text
+    validations:
+      required: false

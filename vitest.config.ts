@@ -35,16 +35,25 @@ export default defineConfig({
           include: ["src/**/*.test.tsx"],
           setupFiles: ["src/ui/testing/setup.ts"]
         }
+      },
+      {
+        extends: true,
+        test: {
+          name: "scripts",
+          environment: "node",
+          include: ["scripts/**/*.test.mjs"]
+        }
       }
     ],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
       reportsDirectory: "coverage",
-      // La couverture ne porte que sur la logique pure : moteur fiscal, utilitaires de l'interface et pont de la démo web.
+      // La couverture ne porte que sur la logique pure : moteur fiscal, utilitaires de l'interface, pont de la démo web
+      // et scripts des retours des utilisateurs.
       // Les composants sont vérifiés par leurs tests, sans seuil chiffré.
-      include: ["src/backend/logic/**/*.ts", "src/lib/**/*.ts", "src/web/**/*.ts"],
-      exclude: ["**/*.test.ts", "src/backend/logic/testing/**", "src/web/*.tsx"],
+      include: ["src/backend/logic/**/*.ts", "src/lib/**/*.ts", "src/web/**/*.ts", "scripts/**/*.mjs"],
+      exclude: ["**/*.test.ts", "**/*.test.mjs", "src/backend/logic/testing/**", "src/web/*.tsx"],
       // Seuils bloquants, fixés à la dizaine inférieure de la couverture réellement atteinte.
       thresholds: {
         statements: 90,
