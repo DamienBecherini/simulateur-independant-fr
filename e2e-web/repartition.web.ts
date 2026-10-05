@@ -23,14 +23,16 @@ test("faire glisser la poignée de rémunération règle la colonne SASU du comp
   await expect(poignee).toHaveAttribute("aria-valuenow", "0")
   const avant = await netSasu(page).textContent()
 
+  // La barre doit être à l'écran : sinon la souris presse hors de la fenêtre (polices plus hautes sous Linux).
+  await poignee.scrollIntoViewIfNeeded()
   const boite = (await poignee.boundingBox())!
   const barre = (await page.locator("section[aria-labelledby=repartition-titre] .touch-none").first().boundingBox())!
   await page.mouse.move(boite.x + boite.width / 2, boite.y + boite.height / 2)
   await page.mouse.down()
   await page.mouse.move(barre.x + barre.width * 0.3, boite.y + boite.height / 2, { steps: 10 })
   // Pendant le glissement, la poignée suit le pointeur, par pas de 100 €.
+  await expect.poll(async () => Number(await poignee.getAttribute("aria-valuenow"))).toBeGreaterThan(0)
   const pendant = Number(await poignee.getAttribute("aria-valuenow"))
-  expect(pendant).toBeGreaterThan(0)
   expect(pendant % 100).toBe(0)
   await page.mouse.up()
 
