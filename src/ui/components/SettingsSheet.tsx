@@ -262,13 +262,14 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
             <DialogTitle>Fichier importé avec des ajustements</DialogTitle>
             <DialogDescription asChild>
               <div>
-                {importConfirmation && importConfirmation.report.entitiesRemoved + importConfirmation.report.relationshipsRemoved + importConfirmation.report.flowsRemoved > 0 && (
+                {importConfirmation && importConfirmation.report.entitiesRemoved + importConfirmation.report.relationshipsRemoved + importConfirmation.report.flowsRemoved + importConfirmation.report.reglagesRemoved > 0 && (
                   <>
                     <p>Des données corrompues ou obsolètes ont été retirées pour que la simulation reste utilisable.</p>
                     <div className="mt-3 font-mono text-sm bg-slate-100 dark:bg-slate-800 p-3 rounded-md">
                       <p>Entités invalides supprimées : {importConfirmation.report.entitiesRemoved}</p>
                       <p>Relations invalides ou orphelines supprimées : {importConfirmation.report.relationshipsRemoved}</p>
                       <p>Flux invalides ou orphelins supprimés : {importConfirmation.report.flowsRemoved}</p>
+                      {importConfirmation.report.reglagesRemoved > 0 ? <p>Réglages du comparateur invalides écartés : {importConfirmation.report.reglagesRemoved}</p> : null}
                     </div>
                   </>
                 )}

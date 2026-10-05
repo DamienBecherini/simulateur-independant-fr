@@ -205,7 +205,9 @@ export const ReglagesComparateurSchema = z.object({
   remunerationParAnnee: z.record(z.string().regex(/^\d{4}$/), z.number().min(0)).optional(),
   /** Part BNC des prestations quand l'activité devient une micro-entreprise (0 à 1). */
   partBncPrestations: z.number().min(0).max(1).optional(),
-  fraisFonctionnement: FraisFonctionnementSchema.optional()
+  fraisFonctionnement: FraisFonctionnementSchema.optional(),
+  /** Statut de société étudié dans « Rémunération ou dividendes ? » et la barre de partage du bénéfice. */
+  statutEtudie: z.enum(["SASU", "EURL"]).optional()
 })
 
 /** Comparateur de statuts : l'activité comparée et les réglages choisis pour chaque activité, par identifiant. */
@@ -692,6 +694,8 @@ export interface SanitizationReport {
 }
 
 export type ExportableState = {
+  /** Nom de la simulation ; absent des exports d'avant son ajout. */
+  name?: string
   entities: Entity[]
   relationships: Relationship[]
   annees: AnneeSimulee[]
