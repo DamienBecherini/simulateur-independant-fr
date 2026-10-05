@@ -7,7 +7,7 @@ import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, stat
 import { fluxParActeur, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, type LigneDeFlux } from "./export-commun"
 import { numeroterNotes } from "./notes"
 
-/** Comparaison calculée à l'export pour la première activité, ou la raison de son absence. */
+/** Comparaison calculée à l'export pour l'activité choisie dans le comparateur, ou la raison de son absence. */
 export type ComparaisonDuRapport = { nomActivite: string; options: ComparaisonOptions; resultat: ComparaisonResult } | { nomActivite: string; erreur: string }
 
 export interface DonneesDuRapport {
@@ -222,7 +222,7 @@ function sectionComparateur(session: SimulationAnnuelle, comparaison: Comparaiso
   const titre = `## Comparateur de statuts : « ${echapper(comparaison.nomActivite)} »`
   if ("erreur" in comparaison) return `${titre}\n\nComparaison indisponible : ${echapper(comparaison.erreur)}`
   const { options, resultat } = comparaison
-  const intro = "L'activité est simulée dans chaque statut, le reste de la simulation restant identique. Les montants portent sur toute la simulation, sauf la ligne « Conservé », propre à l'activité. Comparaison calculée à l'export avec les réglages proposés par défaut :"
+  const intro = "L'activité est simulée dans chaque statut, le reste de la simulation restant identique. Les montants portent sur toute la simulation, sauf la ligne « Conservé », propre à l'activité. Comparaison calculée à l'export avec les réglages du comparateur :"
   const tableauOuAbsence = resultat.scenarios.length > 0 ? tableauDeComparaison(resultat, comparaison.nomActivite) + notesDeComparaison(resultat) : "Aucun statut comparé."
   return `${titre}\n\n${intro}\n\n${reglagesUtilises(options, resultat.scenarios)}\n\n${tableauOuAbsence}${couplesEnUnionLibre(session, resultat)}`
 }

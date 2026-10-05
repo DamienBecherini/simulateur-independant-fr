@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ComparaisonOptions, ModeRepartition, OptimisationRemuneration, PartageDuBenefice, PointRemuneration, ScenarioStatut } from "@/types"
 import { emptySession, makePerson, makeMicro } from "@/ui/testing/fixtures"
-import { ComparatorPanel } from "./ComparatorPanel"
+import { ComparateurDeTest } from "@/ui/testing/comparateur"
 import { RepartitionDuBenefice } from "./RepartitionBenefice"
 
 // toHaveTextContent ramène les espaces insécables à des espaces simples : on fait de même.
@@ -171,7 +171,7 @@ describe("partage du bénéfice dans le comparateur", () => {
   const session = { ...emptySession(), entities: [makePerson(), makeMicro()] }
 
   it("passe d'un mode à l'autre, et ne demande pas de rémunération quand tout part en rémunération", async () => {
-    render(<ComparatorPanel annee={2026} session={session} />)
+    render(<ComparateurDeTest annee={2026} session={session} />)
     const groupe = await screen.findByRole("group", { name: "Bénéfice de la société (SASU, EURL)" })
     expect(within(groupe).getByRole("radio", { name: "Au meilleur net" })).toBeChecked()
     expect(screen.queryByLabelText("Rémunération nette annuelle (SASU, EURL)")).not.toBeInTheDocument()
@@ -189,7 +189,7 @@ describe("partage du bénéfice dans le comparateur", () => {
   it("règle la colonne SASU depuis la barre, et l'arbitrage applique sa rémunération en restant en répartition personnalisée", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue({ scenarios: [scenario(partage())], meilleur: "SASU", couples: [], warnings: [] })
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation({ points: [point(4000, 0), point(5700, 4)] }))
-    render(<ComparatorPanel annee={2026} session={session} />)
+    render(<ComparateurDeTest annee={2026} session={session} />)
     await userEvent.click(await screen.findByRole("radio", { name: "Répartition personnalisée" }))
 
     const remuneration = await screen.findByRole("slider", { name: "Rémunération nette du dirigeant" })

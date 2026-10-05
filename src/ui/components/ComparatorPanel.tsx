@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useOptimisation } from "../hooks/useOptimisation"
-import { appliquerRemuneration, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
+import { appliquerRemuneration, avecActiviteComparee, avecReglagesDeLActivite, comparableActivities, defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, reglagesDeLActiviteComparee, retenirLesReglages, statutsFrais } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { cn } from "@/lib/utils"
@@ -19,12 +19,14 @@ import { BoutonDuDetail, CartesDesStatuts, NoteDesFraisSupposes, VerdictDuCompar
 import { ReplieEnResume } from "./ReplieEnResume"
 import { useAffichageResume } from "../hooks/useAffichage"
 import type { ResumeDeLaComparaison } from "@/lib/resume"
-import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ScenarioStatut, SessionState, SimulationAnnuelle, StatutFrais, StatutSociete } from "@/types"
+import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Comparateur, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ReglagesComparateur, ScenarioStatut, SessionState, SimulationAnnuelle, StatutFrais, StatutSociete } from "@/types"
 
 interface ComparatorPanelProps {
   session: SessionState
   /** Année comparée : celle qui est affichée. */
   annee: number
+  /** Enregistre dans la session les réglages du comparateur, à partir des réglages actuels. */
+  onComparateurChange: (modifier: (comparateur: Comparateur | undefined) => Comparateur) => void
   /** Reçoit l'activité comparée et le résultat à chaque nouvelle comparaison (barre de résumé de l'affichage « Résumé »). */
   onComparaison?: (resume: ResumeDeLaComparaison | null) => void
 }
@@ -444,15 +446,15 @@ function useComparison(session: SessionState, options: ComparaisonOptions, annee
  * Statut de société étudié pour l'activité comparée (son statut s'il en est un, la SASU sinon) et son arbitrage
  * rémunération / dividendes : partagés entre la barre de partage du bénéfice et la section « Rémunération ou dividendes ? ».
  */
-function useArbitrage(session: SessionState, options: ComparaisonOptions, annee: number, selected: Company | MicroEntreprise | undefined, result: ComparaisonResult | null) {
-  const [choix, setChoix] = useState<{ activityId: string; statut: StatutSociete } | null>(null)
+function useArbitrage(session: SessionState, options: ComparaisonOptions, annee: number, selected: Company | MicroEntreprise | undefined, result: ComparaisonResult | null, choix: { statutEtudie: StatutSociete | undefined; setStatutEtudie: (statut: StatutSociete) => void }) {
   const statutInitial: StatutSociete = selected?.type === "company" && selected.legalStatus === "EURL" ? "EURL" : "SASU"
-  const statut = choix && choix.activityId === selected?.id ? choix.statut : statutInitial
+  // Le statut choisi est enregistré avec les réglages de l'activité ; sans choix, c'est celui de l'activité.
+  const statut = choix.statutEtudie ?? statutInitial
   // Au meilleur net, le comparateur a déjà calculé l'arbitrage de chaque statut : on le reprend au lieu de le refaire.
   const auMeilleurNet = options.repartition.mode === "meilleurNet"
   const calcule = useOptimisation(session, options, statut, annee, !!selected && !auMeilleurNet)
   const resultat = auMeilleurNet ? (result?.optimisations?.[statut] ?? null) : calcule.resultat
-  return { statut, setStatut: (nouveau: StatutSociete) => setChoix({ activityId: selected?.id ?? "", statut: nouveau }), resultat, erreur: auMeilleurNet ? null : calcule.erreur }
+  return { statut, setStatut: choix.setStatutEtudie, resultat, erreur: auMeilleurNet ? null : calcule.erreur }
 }
 
 const scenarioDuStatut = (result: ComparaisonResult | null, statut: StatutSociete) => result?.scenarios.find(s => s.statut === statut)
@@ -476,25 +478,26 @@ function OptimiseurDeLActivite({ session, annee, selected, options, arbitrage, r
 }
 
 /**
- * Activité comparée et réglages du comparateur pour l'année affichée. Les réglages retiennent l'année pour laquelle
- * ils ont été choisis : dans une autre année, la rémunération et les dividendes repartent de sa grille, les frais et
- * la part BNC sont gardés.
+ * Activité comparée et réglages du comparateur pour l'année affichée, enregistrés dans la session (voir l'ADR 009).
+ * Seuls les réglages que l'utilisateur change y sont retenus : les autres suivent la grille de l'année affichée.
+ * La rémunération saisie vaut pour son année ; le mode de partage, la part BNC, les frais et le statut étudié dans
+ * « Rémunération ou dividendes ? » valent pour toutes.
  */
-function useReglages(vue: SimulationAnnuelle, activities: (Company | MicroEntreprise)[]) {
-  const [reglages, setReglages] = useState<{ annee: number; options: ComparaisonOptions } | null>(null)
-  const options = reglages?.options ?? null
-  const setOptions = (nouvelles: ComparaisonOptions) => setReglages({ annee: vue.annee, options: nouvelles })
+function useReglages(vue: SimulationAnnuelle, comparateur: Comparateur | undefined, onComparateurChange: ComparatorPanelProps["onComparateurChange"]) {
+  const choix = useMemo(() => reglagesDeLActiviteComparee(vue, comparateur), [vue, comparateur])
+  const selected = choix?.activite
+  const effectiveOptions = choix?.options ?? NO_ACTIVITY
+  const reglages = selected ? comparateur?.reglagesParActivite[selected.id] : undefined
 
-  // L'activité comparée par défaut est la première ; si elle disparaît, on repart sur la première restante.
-  const selected = activities.find(a => a.id === options?.activityId) ?? activities[0]
-  const effectiveOptions = useMemo(() => {
-    if (!selected) return NO_ACTIVITY
-    if (options?.activityId !== selected.id) return defaultComparisonOptions(vue, selected.id)
-    if (reglages?.annee === vue.annee) return options
-    return { ...defaultComparisonOptions(vue, selected.id), partBncPrestations: options.partBncPrestations, fraisFonctionnement: options.fraisFonctionnement }
-  }, [options, reglages, selected, vue])
+  const modifierReglages = (modifier: (reglages: ReglagesComparateur | undefined) => ReglagesComparateur) => {
+    if (!selected) return
+    onComparateurChange(actuel => avecReglagesDeLActivite(actuel, selected.id, modifier(actuel?.reglagesParActivite[selected.id])))
+  }
+  const setOptions = (nouvelles: ComparaisonOptions) => modifierReglages(actuels => retenirLesReglages(actuels, effectiveOptions, nouvelles, vue.annee))
+  const setStatutEtudie = (statutEtudie: StatutSociete) => modifierReglages(actuels => ({ ...actuels, statutEtudie }))
+  const selectActivity = (activityId: string) => onComparateurChange(actuel => avecActiviteComparee(actuel, activityId))
 
-  return { selected, effectiveOptions, setOptions }
+  return { selected, effectiveOptions, statutEtudie: reglages?.statutEtudie, setOptions, setStatutEtudie, selectActivity }
 }
 
 /** Transmet l'activité comparée et le résultat à qui le demande ; rien quand il n'y a pas d'activité à comparer. */
@@ -510,14 +513,14 @@ function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onCompara
  * (avec et sans versement libératoire), le reste de la simulation restant identique. Les couples en union
  * libre sont aussi comparés avec une imposition commune.
  */
-export function ComparatorPanel({ session, annee, onComparaison }: ComparatorPanelProps) {
+export function ComparatorPanel({ session, annee, onComparateurChange, onComparaison }: ComparatorPanelProps) {
   // Le comparateur porte sur l'année affichée : réglages par défaut tirés de sa grille, exports à son nom.
   const vue = useMemo(() => vueDeLAnnee(session, annee), [session, annee])
   const activities = comparableActivities(vue)
-  const { selected, effectiveOptions, setOptions } = useReglages(vue, activities)
+  const { selected, effectiveOptions, statutEtudie, setOptions, setStatutEtudie, selectActivity } = useReglages(vue, session.comparateur, onComparateurChange)
 
   const { result, error } = useComparison(session, effectiveOptions, vue.annee)
-  const arbitrage = useArbitrage(session, effectiveOptions, vue.annee, selected, result)
+  const arbitrage = useArbitrage(session, effectiveOptions, vue.annee, selected, result, { statutEtudie, setStatutEtudie })
   const couples = result?.couples ?? []
   useSignalerLaComparaison(onComparaison, selected, result)
   if (!selected && couples.length === 0) return null
@@ -538,7 +541,7 @@ export function ComparatorPanel({ session, annee, onComparaison }: ComparatorPan
 
       {selected ? (
         <>
-          <ComparatorControls activities={activities} selected={selected} options={effectiveOptions} onSelect={activityId => setOptions({ ...defaultComparisonOptions(vue, activityId), fraisFonctionnement: effectiveOptions.fraisFonctionnement })} onChange={changes => setOptions({ ...effectiveOptions, ...changes })} />
+          <ComparatorControls activities={activities} selected={selected} options={effectiveOptions} onSelect={selectActivity} onChange={changes => setOptions({ ...effectiveOptions, ...changes })} />
           <FraisFonctionnementTable frais={effectiveOptions.fraisFonctionnement ?? defaultFraisFonctionnement()} onChange={fraisFonctionnement => setOptions({ ...effectiveOptions, fraisFonctionnement })} />
           <WarningList warnings={result?.warnings ?? []} />
           {/* Affichage « Résumé » : le partage du bénéfice n'est déplié d'office qu'en répartition personnalisée, où il sert à régler. */}

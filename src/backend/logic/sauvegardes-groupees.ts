@@ -157,9 +157,12 @@ function formeCanonique(valeur: unknown): string {
   return JSON.stringify(valeur)
 }
 
-/** Deux sauvegardes au contenu identique : même nom et même simulation (la date de modification n'entre pas en compte). */
+/**
+ * Deux sauvegardes au contenu identique : même nom, même simulation et mêmes réglages du comparateur (la date de
+ * modification n'entre pas en compte).
+ */
 function memeContenu(a: SaveSlot, b: SaveSlot): boolean {
-  const contenu = ({ name, entities, relationships, annees }: SaveSlot) => formeCanonique({ name, entities, relationships, annees })
+  const contenu = ({ name, entities, relationships, annees, comparateur }: SaveSlot) => formeCanonique({ name, entities, relationships, annees, comparateur })
   return contenu(a) === contenu(b)
 }
 

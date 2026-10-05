@@ -5,8 +5,8 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { FORMAT_VERSION_ACTUEL } from "../src/backend/logic/migrations"
 import type { SessionState } from "../src/types"
-import { test, expect, lireFichier } from "./support/fixtures"
-import { ALICE, ATELIER, grilleMensuelle } from "./support/sessions"
+import { test, expect, deposerSession, lireFichier } from "./support/fixtures"
+import { ALICE, ATELIER, grilleMensuelle, sessionMicroBnc } from "./support/sessions"
 
 type FichierSession = SessionState & { formatVersion?: number }
 
@@ -101,4 +101,32 @@ test("une session au format 2 devient une session d'une année, 2026, après cop
   const messages = await dialogues()
   expect(messages).toHaveLength(1)
   expect(messages[0].message).toContain("votre grille a été placée en 2026")
+})
+
+test("les réglages du comparateur sont retrouvés au lancement suivant", async ({ dossierDonnees, lancer }) => {
+  // L'atelier d'Alice et une SASU : le comparateur propose les deux activités.
+  const session = sessionMicroBnc()
+  const sasu = { id: "company-sasu", type: "company" as const, name: "Conseil SASU", legalStatus: "SASU" as const, capitalSocial: 1000, avatar: { type: "icon" as const, value: "Briefcase", color: "#b91c1c" }, locked: false }
+  await deposerSession(dossierDonnees, { ...session, entities: [...session.entities, sasu] })
+
+  const premier = await lancer()
+  const activite = premier.page.getByRole("combobox", { name: "Activité comparée" })
+  await activite.click()
+  await premier.page.getByRole("option", { name: "Conseil SASU" }).click()
+  await premier.page.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).getByText("Rémunération saisie, le reste en dividendes").click()
+  await premier.page.getByLabel("Rémunération nette annuelle (SASU, EURL)").fill("12000")
+  await premier.page.getByText("Frais de fonctionnement annuels par statut").click()
+  await premier.page.getByRole("spinbutton", { name: "Cotisation foncière des entreprises (CFE), SASU" }).fill("450")
+
+  await expect
+    .poll(async () => (await lireFichier<FichierSession>(dossierDonnees, "sessionState.json"))?.comparateur)
+    .toMatchObject({ activiteComparee: "company-sasu", reglagesParActivite: { "company-sasu": { repartition: { mode: "dividendes" }, remunerationParAnnee: { "2026": 12000 }, fraisFonctionnement: { SASU: { cfe: 450 } } } } })
+  await premier.electronApp.close()
+
+  const second = await lancer()
+  await expect(second.page.getByRole("combobox", { name: "Activité comparée" })).toHaveText("Conseil SASU")
+  await expect(second.page.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" })).toBeChecked()
+  await expect(second.page.getByLabel("Rémunération nette annuelle (SASU, EURL)")).toHaveValue("12000")
+  await expect(second.page.getByRole("spinbutton", { name: "Cotisation foncière des entreprises (CFE), SASU", includeHidden: true })).toHaveValue("450")
+  expect(await second.dialogues()).toEqual([])
 })

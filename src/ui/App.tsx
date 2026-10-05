@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
+import * as SessionService from "@/lib/session-service"
 import type { SaveSlot, SimulationPluriannuelle } from "@/types"
 import { ajouterAnnee, anneeAAjouter, anneeExistante, anneesDeLaSession, donneesDeLAnnee, remplacerGrille, supprimerAnnee, vueDeLAnnee } from "@/backend/logic/annees"
 import { PREMIERE_ANNEE_DES_REGLES } from "@/backend/logic/regles"
@@ -45,7 +46,7 @@ function App() {
 
   // --- MODIFICATION : Récupération des nouveaux états et fonctions du hook ---
   // On récupère tout ce dont on a besoin depuis le "cerveau" de l'application.
-  const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
+  const { currentSession, setCurrentSession, setComparateur, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
 
   // L'année affichée : celle de la grille, des résultats, du comparateur et des exports. Elle n'est pas enregistrée
   // dans la session (voir l'ADR 008) ; par défaut, ou si elle disparaît, c'est la plus récente.
@@ -87,9 +88,7 @@ function App() {
 
   const handleExportAll = useCallback(async () => {
     const exportPayload = {
-      entities: currentSession.entities,
-      relationships: currentSession.relationships,
-      annees: currentSession.annees,
+      ...SessionService.contenuDeLaSession(currentSession),
       simulation,
       simulationError,
       exportedAt: new Date().toISOString()
@@ -255,7 +254,7 @@ function App() {
 
           {resume ? null : <SyntheseDesAnnees simulation={simulation} annee={annee} />}
 
-          <ComparatorPanel session={currentSession} annee={annee} onComparaison={resume ? setComparaison : undefined} />
+          <ComparatorPanel session={currentSession} annee={annee} onComparateurChange={setComparateur} onComparaison={resume ? setComparaison : undefined} />
         </main>
 
         <Footer />

@@ -9,6 +9,7 @@ import { EntitySchema, FinancialFlowSchema, RelationshipSchema, SessionStateSche
 import type { SessionState, SaveSlot, SanitizationReport } from "../../types.js"
 import { erreurDesAnnees, nombreDeFlux, ordonnerLesAnnees } from "./annees.js"
 import { migrerVersFormatActuel } from "./migrations.js"
+import { nettoyerComparateurBrut, sansReglagesOrphelins } from "./nettoyage-comparateur.js"
 
 interface SanitizationResult {
   safeState: SessionState
@@ -116,13 +117,15 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | SessionRefusee
   const entities = keepValidItems(EntitySchema, rawData.entities)
   const relationships = keepValidItems(RelationshipSchema, rawData.relationships)
   const annees = keepValidFlowsOfYears(rawData.annees)
+  const comparateur = nettoyerComparateurBrut(rawData.comparateur)
 
   // Étape 2 : Zod valide l'ensemble et applique les valeurs par défaut
   const parseResult = SessionStateSchema.safeParse({
     ...rawData,
     entities: entities.kept,
     relationships: relationships.kept,
-    annees: annees.kept
+    annees: annees.kept,
+    comparateur: comparateur.kept
   })
 
   if (!parseResult.success) {
@@ -147,17 +150,24 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | SessionRefusee
     monthlyData: annee.monthlyData.map(month => ({ ...month, flows: month.flows.filter(flow => entityIds.has(flow.entityId)) }))
   }))
 
+  // Les réglages du comparateur d'une activité ou d'une année absentes sont retirés sans être signalés (voir l'ADR 009).
+  const safeComparateur = sansReglagesOrphelins(structurallySafeState.comparateur, structurallySafeState.entities, safeAnnees.map(a => a.annee))
+  const safeState: SessionState = { ...structurallySafeState, relationships: safeRelationships, annees: safeAnnees }
+  if (safeComparateur) safeState.comparateur = safeComparateur
+  else delete safeState.comparateur
+
   const orphanRelationships = structurallySafeState.relationships.length - safeRelationships.length
   const orphanFlows = nombreDeFlux(ordonnees.annees) - nombreDeFlux(safeAnnees)
 
   return {
-    safeState: { ...structurallySafeState, relationships: safeRelationships, annees: safeAnnees },
+    safeState,
     // Chaque compteur cumule les éléments invalides et, pour les relations et les flux, les orphelins
     // (et, pour les flux, ceux des années en double).
     report: {
       entitiesRemoved: entities.removed,
       relationshipsRemoved: relationships.removed + orphanRelationships,
       flowsRemoved: annees.removed + orphanFlows + nombreDeFlux(ordonnees.ecartees),
+      reglagesRemoved: comparateur.removed,
       // Une année en double est signalée même vide : l'utilisateur doit savoir qu'une partie du fichier est ignorée.
       anneesEcartees: [...new Set(ordonnees.ecartees.map(a => a.annee))].sort((a, b) => a - b),
       migrationNotes: migration.notes
@@ -187,13 +197,13 @@ export function sanitizeStateAndFillDefaults(rawData: unknown): SanitizationResu
   return {
     // .parse({}) utilise tous les .default() définis dans le schéma.
     safeState: SessionStateSchema.parse({}),
-    report: { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, anneesEcartees: [], migrationNotes: [] }
+    report: { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, anneesEcartees: [], migrationNotes: [] }
   }
 }
 
 /** Vrai si le nettoyage a corrigé, écarté ou converti quelque chose : l'utilisateur doit en être informé. */
 export function rapportAvecCorrections(report: SanitizationReport): boolean {
-  return report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0 || report.anneesEcartees.length > 0 || report.migrationNotes.length > 0
+  return report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0 || report.reglagesRemoved > 0 || report.anneesEcartees.length > 0 || report.migrationNotes.length > 0
 }
 
 /** « Année en double écartée : 2024 », « Années en double écartées : 2024, 2025 ». */

@@ -14,28 +14,22 @@ declare global {
  * Crée un nouvel objet SaveSlot à partir de la session actuelle.
  */
 export function createNewSlotFromSession(session: SessionState): SaveSlot {
-  return {
-    id: createId("slot"),
-    name: session.name,
-    entities: session.entities,
-    relationships: session.relationships,
-    annees: session.annees,
-    lastModified: Date.now()
-  }
+  return { ...contenuDeLaSession(session), id: createId("slot"), lastModified: Date.now() }
 }
 
 /**
  * Met à jour un slot existant avec les données de la session actuelle.
  */
 export function updateSlotWithSession(slotToUpdate: SaveSlot, session: SessionState): SaveSlot {
-  return {
-    ...slotToUpdate,
-    name: session.name,
-    entities: session.entities,
-    relationships: session.relationships,
-    annees: session.annees,
-    lastModified: Date.now()
-  }
+  return { ...contenuDeLaSession(session), id: slotToUpdate.id, lastModified: Date.now() }
+}
+
+/**
+ * Ce qu'une sauvegarde garde d'une session : tout son contenu, réglages du comparateur compris (voir l'ADR 009).
+ * Une sauvegarde chargée redevient une session sans son identifiant ni sa date.
+ */
+export function contenuDeLaSession({ appVersion, name, entities, relationships, annees, comparateur }: SessionState): SessionState {
+  return { ...(appVersion === undefined ? {} : { appVersion }), name, entities, relationships, annees, ...(comparateur ? { comparateur } : {}) }
 }
 
 /**
