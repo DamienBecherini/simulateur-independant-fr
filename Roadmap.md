@@ -186,6 +186,24 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
+### **Phase 13 ter : Moins d'informations à l'écran [À étudier 🔍]**
+
+- **Objectif :** n'afficher par défaut que ce qui répond à la question de l'utilisateur, et atteindre le reste en un ou deux clics. L'écran est aujourd'hui une longue page : acteurs, grille, légende, résultats du foyer, synthèse des années, puis le comparateur (réglages, partage du bénéfice, tableau, notes, rémunération ou dividendes). Chaque phase y a ajouté un panneau.
+- **À faire avant la phase 14 :** les montages types ajouteront encore du contenu.
+
+1.  **Inventaire :** lister chaque information affichée et la classer : essentielle, fréquente, occasionnelle, experte. Repérer les doublons (une même donnée à plusieurs endroits) et ce qui pourrait n'apparaître qu'au survol ou à la sélection.
+2.  **Parcours types et nombre de clics :** trois ou quatre questions réelles (« je suis en micro, ai-je intérêt à passer en société ? », « quelle rémunération me verser en SASU ? », « que donnent les trois prochaines années ? », « je prépare mon rendez-vous avec l'expert-comptable »), avec le nombre de clics et de défilements avant et après la refonte.
+3.  **Pistes à évaluer :**
+    - **Résumé toujours visible :** une barre de quelques chiffres clés (net du foyer, taux de prélèvement, meilleur statut, alertes), recalculée en direct ; chaque chiffre mène à son détail.
+    - **Divulgation progressive :** dans chaque panneau, le chiffre qui compte d'abord, le détail replié ; dans le comparateur, la ligne « Net dans la poche » et le meilleur statut, les autres lignes et notes sur demande ; la barre de partage réduite à une ligne hors répartition personnalisée.
+    - **Vues ou étapes :** « Ma situation » (acteurs, grille), « Mes résultats » (foyer, années), « Comparer et optimiser », sans perdre le lien direct entre une saisie et son effet (le résumé reste visible).
+    - **Détails contextuels :** les réglages et résultats d'un acteur dans un panneau latéral à sa sélection plutôt qu'en permanence ; la légende de la grille au survol ou repliée.
+    - **Mémoire de l'affichage :** sections ouvertes ou fermées retenues, liens d'ancrage, raccourcis clavier.
+4.  **Maquettes et essais :** deux ou trois maquettes basse fidélité, essayées par quelques personnes sur les parcours types avant de coder.
+5.  **Garde-fous :** accessibilité inchangée (tests axe, clavier, tailles des cibles), impression et PDF qui déplient tout, tests de bout en bout adaptés aux nouveaux chemins.
+
+---
+
 ### **Phase 14 : Montages types [Planifié 🗓️]**
 
 - **Objectif :** partir d'une situation courante plutôt que d'une page vide. Peut s'intercaler entre deux autres phases.
