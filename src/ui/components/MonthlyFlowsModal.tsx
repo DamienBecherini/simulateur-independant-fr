@@ -100,14 +100,14 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, onCreate,
               <div ref={listRef} className="max-h-[50vh] space-y-2 overflow-y-auto">
                 <SortableContext items={flowIds} strategy={verticalListSortingStrategy}>
                   {flows.map(flow => (
-                    <FlowItem key={flow.id} flow={flow} allowedTypes={allowedTypes} onUpdate={(flowId, changes) => onUpdate(flowId, changes, portee)} onDelete={flowId => onDelete(flowId, portee)} onRecopier={onRecopier} onTypeUsed={setNewFlowType} />
+                    <FlowItem key={flow.id} flow={flow} allowedTypes={allowedTypes} onUpdate={(flowId, changes) => onUpdate(flowId, changes, portee)} onDelete={flowId => onDelete(flowId, portee)} onRecopier={onRecopier} onTypeUsed={setNewFlowType} typeActeur={entity.type} />
                   ))}
                 </SortableContext>
               </div>
             </DndContext>
           )}
 
-          <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee)} labelInputRef={newFlowLabelRef} />
+          <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} />
           <label className="flex flex-wrap items-center gap-2 px-1 text-sm text-slate-700 dark:text-slate-300">
             Appliquer à :
             {/* Hors « ce mois seulement », la liste est mise en évidence : modifier ou supprimer touchera aussi d'autres mois. */}

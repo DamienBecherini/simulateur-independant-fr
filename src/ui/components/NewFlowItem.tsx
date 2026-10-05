@@ -1,10 +1,10 @@
 // src/ui/components/NewFlowItem.tsx
 
 import { useRef, useState, type KeyboardEvent, type RefObject } from "react"
-import type { FinancialFlow } from "@/types"
+import type { Entity, FinancialFlow } from "@/types"
 import { Input } from "@/components/ui/input"
 import { formatAmount, parseAmount } from "@/lib/amount-utils"
-import { flowTypeLabels, type FlowType } from "@/lib/flow-constants"
+import { libelleDuType, type FlowType } from "@/lib/flow-constants"
 import { DEFAULT_NET_RATIO, formatPercent, grossFromNet, netFromGross, parsePercent } from "@/lib/salary-utils"
 import { Plus } from "lucide-react"
 import { FlowTypeSelect, RetourALaLigneSurTelephone } from "./FlowTypeSelect"
@@ -23,9 +23,11 @@ interface NewFlowItemProps {
   onTypeChange: (type: FlowType) => void
   onCreate: (values: NewFlowValues) => void
   labelInputRef: RefObject<HTMLInputElement | null>
+  /** Acteur qui porte le flux, pour les libellés qui en dépendent. */
+  typeActeur?: Entity["type"]
 }
 
-export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelInputRef }: NewFlowItemProps) {
+export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelInputRef, typeActeur }: NewFlowItemProps) {
   const [label, setLabel] = useState("")
   const [amount, setAmount] = useState("")
   const [isAmountInvalid, setAmountInvalid] = useState(false)
@@ -65,7 +67,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
       return
     }
     const grossAmount = resolveGross(parsedAmount)
-    onCreate({ type, label: label.trim() || flowTypeLabels[type], amount: parsedAmount, ...(grossAmount !== undefined ? { grossAmount } : {}) })
+    onCreate({ type, label: label.trim() || libelleDuType(type, typeActeur), amount: parsedAmount, ...(grossAmount !== undefined ? { grossAmount } : {}) })
     // La ligne redevient vide ; le type est conservé pour la saisie suivante.
     setLabel("")
     setAmount("")
@@ -105,7 +107,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
     <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2 sm:flex-nowrap">
       <Plus className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
 
-      <FlowTypeSelect value={type} options={allowedTypes} onChange={onTypeChange} />
+      <FlowTypeSelect value={type} options={allowedTypes} onChange={onTypeChange} typeActeur={typeActeur} />
       <RetourALaLigneSurTelephone />
 
       <Input ref={labelInputRef} className="min-w-32 flex-1 bg-background sm:min-w-0" aria-label="Libellé du nouveau flux" placeholder="Libellé (optionnel)" value={label} data-editing={label !== ""} onChange={e => setLabel(e.target.value)} onKeyDown={handleOptionalFieldKeyDown(() => setLabel(""))} />

@@ -1,11 +1,11 @@
 // src/ui/components/FlowItem.tsx
 
 import { useState, type KeyboardEvent } from "react"
-import type { FinancialFlow } from "@/types"
+import type { Entity, FinancialFlow } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { formatAmount, parseAmount } from "@/lib/amount-utils"
-import { flowTypeLabels, isOutgoingFlowType, type FlowType } from "@/lib/flow-constants"
+import { estLibelleParDefaut, libelleDuType, isOutgoingFlowType, type FlowType } from "@/lib/flow-constants"
 import { DEFAULT_NET_RATIO, formatPercent, grossFromNet, netFromGross, netRatio, parsePercent } from "@/lib/salary-utils"
 import { cn } from "@/lib/utils"
 import { CopyPlus, GripVertical, Trash2 } from "lucide-react"
@@ -29,9 +29,11 @@ interface FlowItemProps {
   /** Recopie le flux sur les mois suivants ; sans cette fonction, le bouton n'est pas affiché (décembre). */
   onRecopier?: (flowId: string) => void
   onTypeUsed: (type: FlowType) => void
+  /** Acteur qui porte le flux, pour les libellés qui en dépendent. */
+  typeActeur?: Entity["type"]
 }
 
-export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, onTypeUsed }: FlowItemProps) {
+export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, onTypeUsed, typeActeur }: FlowItemProps) {
   // Hook de la bibliothèque dnd-kit pour rendre l'élément "triable" (sortable).
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: flow.id })
 
@@ -52,7 +54,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
   const typeOptions = allowedTypes.includes(flow.type) ? allowedTypes : [flow.type, ...allowedTypes]
 
   // Un libellé identique à celui du type est le libellé par défaut : le champ reste vide.
-  const hasDefaultLabel = flow.label === flowTypeLabels[flow.type]
+  const hasDefaultLabel = estLibelleParDefaut(flow, typeActeur)
 
   // Un salaire peut préciser son brut : l'écart avec le net compte alors comme cotisations salariales.
   const isSalary = flow.type === "salary"
@@ -61,14 +63,14 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
   const handleTypeChange = (type: FlowType) => {
     if (type === flow.type) return
     // Le libellé par défaut suit le type ; un libellé personnalisé est conservé. Le brut n'a de sens que pour un salaire.
-    onUpdate(flow.id, { type, ...(hasDefaultLabel ? { label: flowTypeLabels[type] } : {}), ...(flow.grossAmount !== undefined ? { grossAmount: undefined } : {}) })
+    onUpdate(flow.id, { type, ...(hasDefaultLabel ? { label: libelleDuType(type, typeActeur) } : {}), ...(flow.grossAmount !== undefined ? { grossAmount: undefined } : {}) })
     onTypeUsed(type)
   }
 
   const commitLabel = () => {
     if (labelDraft === null) return
     setLabelDraft(null)
-    const label = labelDraft.trim() || flowTypeLabels[flow.type]
+    const label = labelDraft.trim() || libelleDuType(flow.type, typeActeur)
     if (label !== flow.label) onUpdate(flow.id, { label })
   }
 
@@ -123,7 +125,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
         <GripVertical className="h-4 w-4" aria-hidden="true" />
       </div>
 
-      <FlowTypeSelect value={flow.type} options={typeOptions} onChange={handleTypeChange} />
+      <FlowTypeSelect value={flow.type} options={typeOptions} onChange={handleTypeChange} typeActeur={typeActeur} />
       <RetourALaLigneSurTelephone />
 
       <Input

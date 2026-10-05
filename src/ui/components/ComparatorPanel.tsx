@@ -428,7 +428,7 @@ export function ComparatorPanel({ session, annee }: ComparatorPanelProps) {
         <h2 id="comparateur-titre" className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
           Comparateur de statuts
         </h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée. Les charges d'une micro-entreprise y deviennent déductibles dans les statuts au réel (société, EI).</p>
       </div>
 
       {selected ? (

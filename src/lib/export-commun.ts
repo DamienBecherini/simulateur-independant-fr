@@ -2,7 +2,7 @@
 // Briques partagées par les exports CSV et Markdown : noms de fichiers, nature des acteurs, flux regroupés par acteur.
 
 import type { Entity, FinancialFlow, FoyerFiscalResult, SimulationAnnuelle } from "@/types"
-import { flowTypeLabels, isOutgoingFlowType, type FlowType } from "./flow-constants"
+import { flowTypeLabels, libelleDuType, isOutgoingFlowType, type FlowType } from "./flow-constants"
 
 export const MOIS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 
@@ -52,19 +52,19 @@ export interface FluxDUnActeur {
 
 const ORDRE_DES_TYPES = Object.keys(flowTypeLabels) as FlowType[]
 
-function lignesDeLActeur(entityId: string, fluxParMois: FinancialFlow[][]): LigneDeFlux[] {
+function lignesDeLActeur(entityId: string, typeActeur: Entity["type"], fluxParMois: FinancialFlow[][]): LigneDeFlux[] {
   return ORDRE_DES_TYPES.flatMap(type => {
     const mois = fluxParMois.map(flows => flows.filter(f => f.entityId === entityId && f.type === type).reduce((somme, f) => somme + f.amount, 0))
     const present = fluxParMois.some(flows => flows.some(f => f.entityId === entityId && f.type === type))
     if (!present) return []
-    return [{ type, libelle: flowTypeLabels[type], sortie: isOutgoingFlowType(type), mois, total: mois.reduce((a, b) => a + b, 0) }]
+    return [{ type, libelle: libelleDuType(type, typeActeur), sortie: isOutgoingFlowType(type), mois, total: mois.reduce((a, b) => a + b, 0) }]
   })
 }
 
 /** Flux de la grille, regroupés par acteur (dans l'ordre des acteurs) puis par type ; les acteurs sans flux sont omis. */
 export function fluxParActeur(session: SimulationAnnuelle): FluxDUnActeur[] {
   const fluxParMois = Array.from({ length: 12 }, (_, i) => session.monthlyData.find(m => m.month === i)?.flows ?? [])
-  return session.entities.map(entity => ({ entity, lignes: lignesDeLActeur(entity.id, fluxParMois) })).filter(acteur => acteur.lignes.length > 0)
+  return session.entities.map(entity => ({ entity, lignes: lignesDeLActeur(entity.id, entity.type, fluxParMois) })).filter(acteur => acteur.lignes.length > 0)
 }
 
 /** Nom d'un acteur d'après son identifiant, ou l'identifiant lui-même s'il n'existe plus. */

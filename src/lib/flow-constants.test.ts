@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
-import { flowTypeLabels, flowTypeShortLabels, flowTypesByEntityType, getFlowTypesForEntity, isExpenseFlowType, isOutgoingFlowType } from "@/lib/flow-constants"
+import { estLibelleParDefaut, flowTypeLabels, flowTypeShortLabels, flowTypesByEntityType, getFlowTypesForEntity, isExpenseFlowType, isOutgoingFlowType, libelleDuType } from "@/lib/flow-constants"
 import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
 import { cn } from "@/lib/utils"
 import { FinancialFlowSchema } from "@/types"
@@ -77,5 +77,20 @@ describe("classement des types de flux", () => {
     expect(flowTypesByEntityType.company).toContain("deductible_expense")
     expect(flowTypesByEntityType.person).not.toContain("deductible_expense")
     expect(flowTypesByEntityType["micro-entreprise"]).not.toContain("deductible_expense")
+  })
+})
+
+describe("libellés qui dépendent de l'acteur", () => {
+  it("distingue la dépense personnelle de la charge d'une micro-entreprise", () => {
+    expect(libelleDuType("expense", "person")).toBe("Dépense personnelle")
+    expect(libelleDuType("expense", "micro-entreprise")).toBe("Charge de l'activité (non déductible en micro)")
+    expect(libelleDuType("expense")).toBe("Dépense (non déductible)")
+    expect(libelleDuType("salary", "person")).toBe("Salaire (emploi tiers)")
+  })
+
+  it("reconnaît comme libellé par défaut le libellé de l'acteur et l'ancien libellé générique", () => {
+    expect(estLibelleParDefaut({ type: "expense", label: "Charge de l'activité (non déductible en micro)" }, "micro-entreprise")).toBe(true)
+    expect(estLibelleParDefaut({ type: "expense", label: "Dépense (non déductible)" }, "micro-entreprise")).toBe(true)
+    expect(estLibelleParDefaut({ type: "expense", label: "Loyer" }, "person")).toBe(false)
   })
 })

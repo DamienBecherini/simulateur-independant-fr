@@ -31,6 +31,22 @@ export const flowTypeLabels: Record<FlowType, string> = {
   expense: "Dépense (non déductible)"
 }
 
+/**
+ * Libellé d'un type de flux selon l'acteur qui le porte. Une dépense n'a pas le même sens sur une personne
+ * (dépense personnelle, jamais déductible) et sur une micro-entreprise (charge de l'activité : non déductible
+ * tant que l'activité est en micro, déductible en société ou en EI au réel, ce que fait le comparateur).
+ */
+export function libelleDuType(type: FlowType, typeActeur?: Entity["type"]): string {
+  if (type === "expense" && typeActeur === "micro-entreprise") return "Charge de l'activité (non déductible en micro)"
+  if (type === "expense" && typeActeur === "person") return "Dépense personnelle"
+  return flowTypeLabels[type]
+}
+
+/** Libellé laissé par défaut : celui du type pour cet acteur, ou l'ancien libellé générique (sauvegardes antérieures). */
+export function estLibelleParDefaut(flow: Pick<FinancialFlow, "type" | "label">, typeActeur?: Entity["type"]): boolean {
+  return flow.label === libelleDuType(flow.type, typeActeur) || flow.label === flowTypeLabels[flow.type]
+}
+
 /** Libellés courts, utilisés là où la place est comptée (légende, réglage des couleurs). */
 export const flowTypeShortLabels: Record<FlowType, string> = {
   are: "ARE",
@@ -45,7 +61,7 @@ export const flowTypeShortLabels: Record<FlowType, string> = {
   ca_micro_services_bnc: "CA Micro (BNC)",
   ca_micro_vente: "CA Micro Vente",
   income: "Revenu (Test)",
-  expense: "Dépense (non déductible)"
+  expense: "Dépense ou charge micro"
 }
 
 /**
