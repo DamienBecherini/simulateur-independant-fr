@@ -175,7 +175,8 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 11. **Dix années au plus [✅] :** dix années consécutives au plus par session (au-delà, les chiffres ne sont plus qu'une projection) ; les fichiers aux années trop nombreuses ou non consécutives sont refusés en nommant les années manquantes, une année en double écartée est signalée (addendum à l'ADR 008) ; raccourcis « Toutes, Aucune, Années précédentes, Années suivantes » dans la fenêtre des flux, synthèse des années à colonne fixe.
 12. **Réglages du comparateur enregistrés [✅] :** activité comparée, partage du bénéfice, rémunération saisie par année, part BNC, frais de fonctionnement et statut étudié, enregistrés avec la session : rechargement, sauvegardes, exports, imports et rapport Markdown ; hors de l'historique d'annulation (ADR 009). Le nom de la simulation suit désormais l'export et l'import. Un test vérifie que rien ne se perd d'une session qui remplit chaque champ du schéma, par tous les chemins d'enregistrement.
 13. **Préférences retenues [✅] :** d'une ouverture à l'autre, la sauvegarde chargée (« Sauvegarder » la met à jour), le zoom et les sections repliées ; préférences validées champ par champ dans l'application de bureau ; version de l'application écrite dans chaque fichier et indiquée à l'import.
-14. **Plus tard :** acteurs et relations propres à chaque année, exports et optimisation sur plusieurs années, revenu fiscal de référence dans les exports CSV et Markdown.
+14. **Exports complets [✅] :** frais réels par personne (déduction retenue, trajets, montant au barème par voiture, autres frais), déplacements professionnels, revenu fiscal de référence par foyer et contrôle du versement libératoire dans les résultats CSV et le rapport Markdown ; synthèse des années dans le rapport et en CSV.
+15. **Plus tard :** acteurs et relations propres à chaque année, optimisation sur plusieurs années.
 
 ---
 
