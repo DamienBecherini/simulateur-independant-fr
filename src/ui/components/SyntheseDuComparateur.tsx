@@ -32,7 +32,7 @@ export function NoteDesFraisSupposes({ result }: { result: ComparaisonResult }) 
   if (!actuel || actuel.fraisFonctionnement <= 0) return null
   return (
     <p className="text-sm text-slate-600 dark:text-slate-400">
-      Les nets du comparateur comptent les frais de fonctionnement supposés de chaque statut. Pour le statut actuel, {actuel.libelle}, ces {euros(actuel.fraisFonctionnement)} de frais ne figurent pas dans les résultats du foyer : son net de {euros(actuel.netApresImpots)} peut donc différer du « Net dans la poche » affiché plus haut. Ajustez-les dans « Frais de fonctionnement annuels par statut ».
+      Les nets du comparateur comptent les frais de fonctionnement supposés de chaque statut. Pour le statut actuel, {actuel.libelle}, ces {euros(actuel.fraisFonctionnement)} de frais ne figurent pas dans les résultats du foyer : son net de {euros(actuel.netApresImpots)} peut donc différer du « Net dans la poche » affiché plus haut. Ces frais se règlent dans le tableau des frais de fonctionnement, plus haut.
     </p>
   )
 }
