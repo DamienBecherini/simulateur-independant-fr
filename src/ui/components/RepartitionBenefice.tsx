@@ -1,38 +1,19 @@
 // src/ui/components/RepartitionBenefice.tsx
-// Partage du bénéfice d'une société dans le comparateur : choix du mode (rémunération saisie et dividendes, tout en
-// rémunération, répartition personnalisée, dividendes de la grille) et barre empilée du bénéfice avant rémunération,
-// avec deux poignées à faire glisser (rémunération, part distribuée) et des répartitions toutes faites.
+// Partage du bénéfice d'une société dans le comparateur : barre empilée du bénéfice avant rémunération, avec deux
+// poignées à faire glisser (rémunération, part distribuée) et des répartitions toutes faites.
 
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
+import { useEffect, useRef, useState, type PointerEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { avecRemuneration, libellesRepartition } from "@/lib/comparateur-options"
-import { apercuDuPartage, auPas, coutRemuneration, dividendesVerses, libellesPostes, PAS_PART, PAS_REMUNERATION, partDistribueeDe, POSTES, postesArrondis, remunerationPourUnCout, valeurAuClavier, type PosteDuPartage } from "@/lib/repartition-benefice"
+import { apercuDuPartage, auPas, coutRemuneration, dividendesVerses, libellesPostes, PAS_PART, PAS_REMUNERATION, partDistribueeDe, POSTES, postesArrondis, remunerationPourUnCout, type PosteDuPartage } from "@/lib/repartition-benefice"
 import { cn } from "@/lib/utils"
-import type { ComparaisonOptions, ModeRepartition, OptimisationRemuneration, PartageDuBenefice, ScenarioStatut, StatutSociete } from "@/types"
+import type { ComparaisonOptions, OptimisationRemuneration, PartageDuBenefice, ScenarioStatut, StatutSociete } from "@/types"
+import { clavierDuCurseur, gestesDuCurseur, montantAuPointeur, type Glissement as GlissementDuCurseur } from "../curseur"
+import { PoigneeDeCurseur } from "./Curseur"
 import { ChoixDuStatut } from "./RemunerationOptimizer"
 
 const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
 const pourcentage = (part: number) => `${Math.round(part * 100)} %`
-
-const MODES = Object.keys(libellesRepartition) as ModeRepartition[]
-
-/** Choix du partage du bénéfice des colonnes SASU et EURL : des boutons radio présentés comme un sélecteur segmenté. */
-export function ChoixDeLaRepartition({ mode, onChange }: { mode: ModeRepartition; onChange: (mode: ModeRepartition) => void }) {
-  return (
-    <fieldset className="basis-full space-y-1">
-      <legend className="mb-1 text-sm font-medium leading-none">Bénéfice de la société (SASU, EURL)</legend>
-      {/* Sur téléphone, deux colonnes de choix aux libellés sur deux lignes ; sur ordinateur, une seule rangée. */}
-      <div className="grid grid-cols-2 gap-0.5 rounded-md border border-slate-300 bg-background p-0.5 sm:flex sm:w-fit sm:max-w-full sm:flex-wrap dark:border-slate-600">
-        {MODES.map(m => (
-          <label key={m} className={cn("flex min-h-9 items-center rounded px-2 py-1 text-xs leading-tight font-medium sm:px-3 sm:text-sm pointer-coarse:min-h-11 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--ring)]", m === mode ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 print:hidden")}>
-            <input type="radio" name="comparateur-repartition" value={m} checked={m === mode} onChange={() => onChange(m)} className="sr-only" />
-            {libellesRepartition[m]}
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  )
-}
 
 /**
  * Couleurs des postes : la palette catégorielle validée (daltonisme, contraste, clair et sombre), dans un ordre dont
@@ -52,10 +33,7 @@ const largeurDuTexte = (texte: string) => texte.length * 7 + 8
 
 type Poignee = "remuneration" | "part"
 
-interface Glissement {
-  poignee: Poignee
-  valeur: number
-}
+type Glissement = GlissementDuCurseur<Poignee>
 
 /** Largeur de la barre, mesurée pour placer les montants sous les segments assez larges. */
 function useLargeurDeLaBarre() {
@@ -70,38 +48,6 @@ function useLargeurDeLaBarre() {
     return () => observateur.disconnect()
   }, [])
   return { ref, largeur }
-}
-
-interface PoigneeProps {
-  nom: Poignee
-  position: number
-  libelle: string
-  valeur: number
-  max: number
-  texte: string
-  onClavier: (e: KeyboardEvent<HTMLDivElement>) => void
-}
-
-/** Poignée de la barre : un curseur (role="slider") qu'on fait glisser ou qu'on règle au clavier. */
-function PoigneeDeLaBarre({ nom, position, libelle, valeur, max, texte, onClavier }: PoigneeProps) {
-  return (
-    <div
-      role="slider"
-      tabIndex={0}
-      data-poignee={nom}
-      aria-label={libelle}
-      aria-orientation="horizontal"
-      aria-valuemin={0}
-      aria-valuemax={max}
-      aria-valuenow={valeur}
-      aria-valuetext={texte}
-      onKeyDown={onClavier}
-      style={{ left: `${position * 100}%` }}
-      className="absolute top-1/2 z-10 flex h-11 w-6 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-md active:cursor-grabbing pointer-coarse:w-11 print:hidden"
-    >
-      <span aria-hidden="true" className="h-10 w-2 rounded-full bg-slate-900 ring-2 ring-white dark:bg-slate-50 dark:ring-gray-950" />
-    </div>
-  )
 }
 
 interface BarreProps {
@@ -147,8 +93,7 @@ function Barre({ partage, remunerationMaximale, remuneration, part, glissement, 
   const modifiable = remunerationMaximale !== null
 
   const valeurAuPointeur = (poignee: Poignee, clientX: number): number => {
-    const cadre = ref.current!.getBoundingClientRect()
-    const montant = ((clientX - cadre.left) / Math.max(1, cadre.width)) * echelle
+    const montant = montantAuPointeur(ref.current!, clientX, echelle)
     if (poignee === "remuneration") return auPas(remunerationPourUnCout(partage, remunerationMaximale ?? 0, montant), PAS_REMUNERATION, 0, remunerationMaximale ?? 0)
     return distribuable > 0 ? auPas((montant - avantDividendes) / distribuable, PAS_PART, 0, 1) : part
   }
@@ -156,38 +101,18 @@ function Barre({ partage, remunerationMaximale, remuneration, part, glissement, 
   const poigneeVisee = (e: PointerEvent<HTMLDivElement>): Poignee => {
     const saisie = (e.target as HTMLElement).closest<HTMLElement>("[data-poignee]")?.dataset.poignee
     if (saisie === "remuneration" || saisie === "part") return saisie
-    const cadre = ref.current!.getBoundingClientRect()
-    const montant = ((e.clientX - cadre.left) / Math.max(1, cadre.width)) * echelle
+    const montant = montantAuPointeur(ref.current!, e.clientX, echelle)
     return distribuable > 0 && Math.abs(montant - (avantDividendes + dividendesVerses(partage))) < Math.abs(montant - cout) ? "part" : "remuneration"
   }
 
-  const surAppui = (e: PointerEvent<HTMLDivElement>) => {
-    if (!modifiable || e.button !== 0) return
-    e.preventDefault()
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-    const poignee = poigneeVisee(e)
-    ;(e.currentTarget.querySelector<HTMLElement>(`[data-poignee="${poignee}"]`) ?? e.currentTarget).focus()
-    onGlisser({ poignee, valeur: valeurAuPointeur(poignee, e.clientX) })
-  }
-  const surDeplacement = (e: PointerEvent<HTMLDivElement>) => {
-    if (glissement) onGlisser({ poignee: glissement.poignee, valeur: valeurAuPointeur(glissement.poignee, e.clientX) })
-  }
-  const surRelache = () => {
-    if (glissement) onValider(glissement)
-    onGlisser(null)
-  }
-  const auClavier = (poignee: Poignee) => (e: KeyboardEvent<HTMLDivElement>) => {
-    const bornes = poignee === "remuneration" ? { min: 0, max: remunerationMaximale ?? 0, pas: PAS_REMUNERATION, grandPas: 1000 } : { min: 0, max: 1, pas: PAS_PART, grandPas: 0.25 }
-    const valeur = valeurAuClavier(e.key, poignee === "remuneration" ? remuneration : part, bornes)
-    if (valeur === null) return
-    e.preventDefault()
-    onValider({ poignee, valeur })
-  }
+  const gestes = gestesDuCurseur<Poignee>({ actif: modifiable, glissement, onGlisser, onValider, poigneeVisee, valeurAuPointeur })
+  const auClavier = (poignee: Poignee) =>
+    poignee === "remuneration" ? clavierDuCurseur(remuneration, { min: 0, max: remunerationMaximale ?? 0, pas: PAS_REMUNERATION, grandPas: 1000 }, valeur => onValider({ poignee, valeur })) : clavierDuCurseur(part, { min: 0, max: 1, pas: PAS_PART, grandPas: 0.25 }, valeur => onValider({ poignee, valeur }))
 
   let debut = 0
   return (
     <div>
-      <div ref={ref} className={cn("relative py-2.5", modifiable && "cursor-pointer touch-none")} onPointerDown={surAppui} onPointerMove={surDeplacement} onPointerUp={surRelache} onPointerCancel={() => onGlisser(null)}>
+      <div ref={ref} className={cn("relative py-2.5", modifiable && "cursor-pointer touch-none")} {...gestes}>
         <div className="relative h-6">
           {POSTES.map(poste => {
             const montant = Math.max(0, partage[poste])
@@ -200,8 +125,8 @@ function Barre({ partage, remunerationMaximale, remuneration, part, glissement, 
         </div>
         {modifiable ? (
           <>
-            <PoigneeDeLaBarre nom="remuneration" position={cout / echelle} libelle="Rémunération nette du dirigeant" valeur={remuneration} max={remunerationMaximale ?? 0}texte={`${euros(remuneration)} de rémunération nette`} onClavier={auClavier("remuneration")} />
-            {distribuable > 0 ? <PoigneeDeLaBarre nom="part" position={(avantDividendes + part * distribuable) / echelle} libelle="Part du bénéfice distribuable versée en dividendes" valeur={Math.round(part * 100)} max={100} texte={`${pourcentage(part)} du bénéfice distribuable en dividendes, ${pourcentage(1 - part)} conservés`} onClavier={auClavier("part")} /> : null}
+            <PoigneeDeCurseur nom="remuneration" position={cout / echelle} libelle="Rémunération nette du dirigeant" valeur={remuneration} max={remunerationMaximale ?? 0} texte={`${euros(remuneration)} de rémunération nette`} onClavier={auClavier("remuneration")} />
+            {distribuable > 0 ? <PoigneeDeCurseur nom="part" position={(avantDividendes + part * distribuable) / echelle} libelle="Part du bénéfice distribuable versée en dividendes" valeur={Math.round(part * 100)} max={100} texte={`${pourcentage(part)} du bénéfice distribuable en dividendes, ${pourcentage(1 - part)} conservés`} onClavier={auClavier("part")} /> : null}
           </>
         ) : null}
       </div>

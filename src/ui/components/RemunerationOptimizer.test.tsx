@@ -145,7 +145,7 @@ describe("RemunerationOptimizer", () => {
   it("dans le comparateur, la rémunération appliquée est celle des colonnes SASU et EURL", async () => {
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
     render(<ComparateurDeTest annee={2026} session={session} />)
-    await userEvent.click(await screen.findByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }))
+    await userEvent.click(await screen.findByRole("radio", { name: "Ma rémunération" }))
 
     const retraite = (await screen.findByText(/^Meilleur net avec 4 trimestres/)).closest("li")!
     await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer au comparateur" }))

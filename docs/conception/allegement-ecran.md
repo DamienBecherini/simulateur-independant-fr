@@ -281,7 +281,7 @@ Chaque étape est livrable seule, avec ses tests unitaires, les tests axe et cla
 ### Retours sur les affichages en place
 
 - **Détail des cartes de résultats.** Le bouton « Afficher le détail » d'une carte ouvre ou ferme celui de toutes les cartes de son groupe (tous les foyers, toutes les activités), dans les quatre affichages : ouvert d'office dans l'affichage classique, replié dans les autres. Le bouton cliqué reste à la même hauteur dans la fenêtre (la page défile d'autant que les cartes au-dessus ont grandi ou rétréci, sans animation) et garde le focus : avec beaucoup d'activités, le lecteur ne perd pas sa place.
-- **Réglages du comparateur.** L'activité comparée, le partage du bénéfice, la case « avec 4 trimestres de retraite » (cochée d'office) et la rémunération saisie, quand elle sert, restent visibles dans tous les affichages, serrés en deux lignes sur ordinateur ; la part BNC et les frais de fonctionnement passent sous « Plus de réglages » dans les affichages A, C et B. Ce que coûtent les 4 trimestres en net est dit près de la case et dans l'en-tête de chaque colonne de société.
+- **Réglages du comparateur.** L'activité comparée, le partage du bénéfice, la case « avec 4 trimestres de retraite » (cochée d'office) et la rémunération saisie, quand elle sert, restent visibles dans tous les affichages. Les cinq modes de partage, aux libellés courts (« Meilleur net », « Ma rémunération », « Tout en rémunération », « Sur mesure », « Selon la grille »), sont sur la ligne de l'activité (deux lignes de boutons à 375 px) ; une phrase dessous décrit le mode choisi, et chaque bouton porte la sienne (description accessible, infobulle). Les exports gardent les libellés explicites. Avec « Ma rémunération » et « Sur mesure », un curseur suit le champ de la rémunération, de 0 à la plus haute rémunération possible sans déficit dans le statut étudié (dite dessous) ; il reprend la poignée, le clavier et les gestes de la barre du partage du bénéfice, et une rémunération saisie au-delà reste acceptée (le comparateur signale le déficit). Les frais de fonctionnement, et la part BNC quand l'activité a des prestations à convertir en micro, sont sous une seule section repliée, « Frais de fonctionnement et part BNC », dans tous les affichages : un clic au lieu de deux. Ce que coûtent les 4 trimestres en net est dit près de la case et dans l'en-tête de chaque colonne de société.
 
 | Hauteur de la page (démo, au chargement) | 1 440 × 900 avant | après | 375 × 812 avant | après |
 | --- | --- | --- | --- | --- |
@@ -289,5 +289,14 @@ Chaque étape est livrable seule, avec ses tests unitaires, les tests axe et cla
 | Résumé (A) | 3 614 px | 3 644 px | 5 717 px | 5 857 px |
 | Panneaux (C) | 3 380 px | 3 410 px | 4 991 px | 5 131 px |
 | Trois vues (B) : situation / résultats / comparer | 1 617 / 1 023 / 1 967 px | 1 617 / 1 023 / 1 997 px | 2 505 / 1 857 / 2 944 px | 2 505 / 1 857 / 3 084 px |
+
+Modes sur la ligne de l'activité, curseur et section des frais à un clic (démo, au meilleur net, au chargement) : la phrase du mode choisi coûte quelques pixels.
+
+| Hauteur de la page | 1 440 × 900 avant | après | 375 × 812 avant | après |
+| --- | --- | --- | --- | --- |
+| Classique | 5 898 px | 5 906 px | 8 861 px | 8 867 px |
+| Résumé (A) | 3 644 px | 3 652 px | 5 359 px | 5 381 px |
+| Panneaux (C) | 3 410 px | 3 418 px | 4 721 px | 4 743 px |
+| Trois vues (B) : comparer | 1 997 px | 2 005 px | 2 838 px | 2 860 px |
 
 Les maquettes basse fidélité des trois propositions (un fichier HTML autonome, ordinateur et téléphone côte à côte, avec les chiffres de la simulation d'exemple) accompagnent cette étude.

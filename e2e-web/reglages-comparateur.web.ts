@@ -18,19 +18,19 @@ async function regler(page: Page) {
   await activiteComparee(page).click()
   await page.getByRole("option", { name: "Conseil SASU" }).click()
   await expect(activiteComparee(page)).toHaveText("Conseil SASU")
-  await page.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).getByText("Répartition personnalisée").click()
+  await page.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).getByText("Sur mesure").click()
   await partDistribuee(page).focus()
   await page.keyboard.press("PageDown")
   await page.keyboard.press("PageDown")
   await expect(partDistribuee(page)).toHaveAttribute("aria-valuenow", "50")
-  await page.getByText("Frais de fonctionnement annuels par statut").click()
+  await page.locator("summary", { hasText: /^Frais de fonctionnement/ }).click()
   await cfeSasu(page).fill("450")
 }
 
 /** Les réglages faits par `regler` sont affichés. */
 async function verifierLesReglages(page: Page) {
   await expect(activiteComparee(page)).toHaveText("Conseil SASU")
-  await expect(page.getByRole("radio", { name: "Répartition personnalisée" })).toBeChecked()
+  await expect(page.getByRole("radio", { name: "Sur mesure" })).toBeChecked()
   await expect(partDistribuee(page)).toHaveAttribute("aria-valuenow", "50")
   // Repliés ou non, les frais saisis sont dans la page.
   await expect(cfeSasu(page)).toHaveValue("450")

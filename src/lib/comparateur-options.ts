@@ -1,7 +1,7 @@
 // src/lib/comparateur-options.ts
 
 import { STATUTS_FRAIS } from "@/types"
-import type { ComparaisonOptions, Comparateur, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle, StatutFrais } from "@/types"
+import type { ComparaisonOptions, Comparateur, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle, StatutFrais, StatutSociete } from "@/types"
 
 /** Libellés des postes de frais, dans l'ordre d'affichage. */
 export const posteFraisLabels: Record<PosteFrais, string> = {
@@ -14,13 +14,60 @@ export const posteFraisLabels: Record<PosteFrais, string> = {
 
 export const statutsFrais: StatutFrais[] = [...STATUTS_FRAIS]
 
-/** Modes de partage du bénéfice en SASU et EURL, dans l'ordre d'affichage, avec leur libellé. */
+/**
+ * Modes de partage du bénéfice en SASU et EURL, dans l'ordre d'affichage, avec leur libellé explicite : celui des
+ * exports et du partage du bénéfice, lus sans les boutons du comparateur.
+ */
 export const libellesRepartition: Record<ModeRepartition, string> = {
   meilleurNet: "Au meilleur net",
   dividendes: "Rémunération saisie, le reste en dividendes",
   remuneration: "Tout en rémunération",
   personnalisee: "Répartition personnalisée",
   grille: "Dividendes saisis dans la grille"
+}
+
+/** Libellés courts des boutons du comparateur, dans le même ordre ; la phrase de chaque mode les explique. */
+export const libellesCourtsRepartition: Record<ModeRepartition, string> = {
+  meilleurNet: "Meilleur net",
+  dividendes: "Ma rémunération",
+  remuneration: "Tout en rémunération",
+  personnalisee: "Sur mesure",
+  grille: "Selon la grille"
+}
+
+/**
+ * Ce que fait un mode de partage, en une phrase, sous les boutons du comparateur. Au meilleur net, la phrase dit
+ * si la rémunération retenue doit valider 4 trimestres de retraite.
+ */
+export function descriptionDuMode(mode: ModeRepartition, avecRetraite = false): string {
+  const descriptions: Record<ModeRepartition, string> = {
+    meilleurNet: avecRetraite ? "Chaque société verse la rémunération qui donne le meilleur net parmi celles qui valident 4 trimestres de retraite, le reste en dividendes." : "Chaque société verse la rémunération qui donne le meilleur net, le reste en dividendes.",
+    dividendes: "La rémunération que vous saisissez, tout le reste du bénéfice en dividendes.",
+    remuneration: "La rémunération la plus haute que la société peut verser, sans dividendes.",
+    personnalisee: "Vous réglez la rémunération et la part du bénéfice distribuée ; le reste reste dans la société.",
+    grille: "Les rémunérations et dividendes saisis dans la grille."
+  }
+  return descriptions[mode]
+}
+
+/** Modes où l'on saisit soi-même la rémunération : un champ et un curseur la règlent. */
+export const avecRemunerationSaisie = (mode: ModeRepartition) => mode === "dividendes" || mode === "personnalisee"
+
+/**
+ * Plafond du curseur de rémunération : la plus haute rémunération que la société peut verser sans déficit dans le
+ * statut étudié, d'après son arbitrage ; `null` tant que l'arbitrage de ce statut n'est pas arrivé.
+ */
+export function plafondDeRemuneration(optimisation: OptimisationRemuneration | null, statut: StatutSociete): number | null {
+  return optimisation?.statut === statut ? Math.max(0, optimisation.remunerationMaximale) : null
+}
+
+/**
+ * La part BNC ne sert qu'à convertir en micro-entreprise le chiffre d'affaires de prestations d'une société ou d'une
+ * EI : une micro a déjà ses prestations en BNC ou en BIC, une activité sans prestations n'a rien à répartir.
+ */
+export function partBncUtile(vue: DonneesDeLAnnee, activite: Company | MicroEntreprise): boolean {
+  if (activite.type === "micro-entreprise") return false
+  return vue.monthlyData.some(mois => mois.flows.some(flux => flux.entityId === activite.id && flux.type === "ca_services" && flux.amount > 0))
 }
 
 /**

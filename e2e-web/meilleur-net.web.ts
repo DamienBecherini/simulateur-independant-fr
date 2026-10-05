@@ -25,7 +25,7 @@ async function remunerationDe(page: Page, statut: string): Promise<number> {
 test("par défaut, chaque colonne de société affiche sa propre rémunération optimale", async ({ page }) => {
   await ouvrir(page)
 
-  await expect(page.getByRole("radio", { name: "Au meilleur net" })).toBeChecked()
+  await expect(page.getByRole("radio", { name: "Meilleur net" })).toBeChecked()
   await expect(page.getByLabel("Rémunération nette annuelle (SASU, EURL)")).toHaveCount(0)
   await expect(enTete(page, "SASU")).toContainText("rémunération optimale")
   await expect(enTete(page, "EURL")).toContainText("rémunération optimale")

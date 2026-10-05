@@ -1,11 +1,8 @@
 // src/ui/components/ComparatorPanel.tsx
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useEffect, useMemo, useState } from "react"
 import { useOptimisation } from "../hooks/useOptimisation"
-import { appliquerRemuneration, avecActiviteComparee, avecLeMode, avecReglagesDeLActivite, comparableActivities, defaultFraisFonctionnement, posteFraisLabels, reglagesDeLActiviteComparee, retenirLesReglages, statutsFrais } from "@/lib/comparateur-options"
+import { appliquerRemuneration, avecActiviteComparee, avecReglagesDeLActivite, comparableActivities, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { cn } from "@/lib/utils"
@@ -13,14 +10,15 @@ import { exporterComparaisonCsv } from "../exports-texte"
 import { BoutonExportCsv } from "./BoutonExportCsv"
 import { Depliable } from "./Depliable"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
-import { ChoixDeLaRepartition, RepartitionDuBenefice } from "./RepartitionBenefice"
+import { RepartitionDuBenefice } from "./RepartitionBenefice"
+import { ReglagesDuComparateur } from "./ReglagesDuComparateur"
 import { ZoneDefilante } from "./ZoneDefilante"
 import { BoutonDuDetail, CartesDesStatuts, NoteDesFraisSupposes, VerdictDuComparateur } from "./SyntheseDuComparateur"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
-import { coutsDesQuatreTrimestres, ecartSigne, libelleDuCoutDesTrimestres, type ResumeDeLaComparaison } from "@/lib/resume"
-import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Comparateur, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ReglagesComparateur, ScenarioStatut, SessionState, SimulationAnnuelle, StatutFrais, StatutSociete } from "@/types"
+import { libelleDuCoutDesTrimestres, type ResumeDeLaComparaison } from "@/lib/resume"
+import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Comparateur, Company, MicroEntreprise, ReglagesComparateur, ScenarioStatut, SessionState, SimulationAnnuelle, StatutSociete } from "@/types"
 
 interface ComparatorPanelProps {
   session: SessionState
@@ -72,86 +70,6 @@ function stars(count: number): string {
   return "★".repeat(count) + "☆".repeat(5 - count)
 }
 
-const statutFraisLabels: Record<StatutFrais, string> = { SASU: "SASU", EURL: "EURL", EI: "EI au réel", micro: "Micro-entreprise" }
-
-/**
- * Détail des frais de fonctionnement annuels par statut, modifiables : ils sont ajoutés aux charges de l'activité
- * dans chaque colonne du comparateur, y compris celle du statut actuel.
- */
-function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnement; onChange: (frais: FraisFonctionnement) => void }) {
-  const postes = Object.keys(posteFraisLabels) as PosteFrais[]
-  const total = (statut: StatutFrais) => postes.reduce((somme, poste) => somme + frais[statut][poste], 0)
-  const update = (statut: StatutFrais, poste: PosteFrais, value: string) => onChange({ ...frais, [statut]: { ...frais[statut], [poste]: Math.max(0, parseFloat(value) || 0) } })
-
-  return (
-    <Depliable titre="Frais de fonctionnement annuels par statut" id="comparateur-frais" className="text-sm text-slate-700 dark:text-slate-200">
-      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-        Ordres de grandeur, à ajuster à votre situation. Ils s'ajoutent aux charges de l'activité dans chaque colonne, statut actuel compris : si vous les avez déjà saisis dans la grille, mettez-les à 0. Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune et n'est pas due l'année de création.
-      </p>
-      <div className="relative mt-3 overflow-x-auto print:overflow-visible">
-        <table className="w-full min-w-[40rem] text-sm" aria-label="Frais de fonctionnement annuels">
-          <thead>
-            <tr>
-              <th scope="col" className="py-1 text-left font-medium text-slate-600 dark:text-slate-300">
-                Poste
-              </th>
-              {statutsFrais.map(statut => (
-                <th key={statut} scope="col" className="px-2 py-1 text-right font-medium text-slate-600 dark:text-slate-300">
-                  {statutFraisLabels[statut]}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {postes.map(poste => (
-              <tr key={poste} className="border-t border-slate-100 dark:border-slate-800">
-                <th scope="row" className="py-1 text-left font-normal text-slate-600 dark:text-slate-300">
-                  {posteFraisLabels[poste]}
-                </th>
-                {statutsFrais.map(statut => (
-                  <td key={statut} className="px-2 py-1">
-                    <Input className="h-8 w-28 ml-auto bg-background text-right" type="number" min="0" step="50" aria-label={`${posteFraisLabels[poste]}, ${statutFraisLabels[statut]}`} value={frais[statut][poste]} onChange={e => update(statut, poste, e.target.value)} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-            <tr className="border-t border-slate-200 font-medium dark:border-slate-700">
-              <th scope="row" className="py-1 text-left">
-                Total annuel
-              </th>
-              {statutsFrais.map(statut => (
-                <td key={statut} className="px-2 py-1 text-right tabular-nums">
-                  {formatMoney(total(statut))}
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </Depliable>
-  )
-}
-
-/**
- * Au meilleur net : ne retenir, dans chaque statut de société, que les rémunérations qui valident 4 trimestres de
- * retraite. Cochée d'office ; ce que coûtent les 4 trimestres en net, colonne par colonne, est dit à côté.
- */
-function AvecRetraite({ options, couts, onChange }: { options: ComparaisonOptions; couts: { libelle: string; cout: number }[]; onChange: (changes: Partial<ComparaisonOptions>) => void }) {
-  return (
-    <div className="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-0.5 pointer-coarse:min-h-11">
-      <label className="flex min-h-9 items-center gap-2 text-sm font-medium pointer-coarse:min-h-11">
-        <input type="checkbox" className="size-4 accent-slate-700 dark:accent-slate-300" aria-describedby={couts.length > 0 ? "comparateur-cout-retraite" : undefined} checked={options.repartition.avecRetraite === true} onChange={e => onChange({ repartition: { ...options.repartition, avecRetraite: e.target.checked } })} />
-        Avec 4 trimestres de retraite
-      </label>
-      {couts.length > 0 ? (
-        <span id="comparateur-cout-retraite" className="text-xs text-slate-600 dark:text-slate-400">
-          coût en net : {couts.map(c => `${c.libelle} ${ecartSigne(-c.cout)}`).join(", ")}
-        </span>
-      ) : null}
-    </div>
-  )
-}
-
 /** Au meilleur net, la rémunération retenue dans la colonne : « rémunération optimale : 12 300 € nets ». */
 function RemunerationRetenue({ scenario }: { scenario: ScenarioStatut }) {
   const retenue = scenario.remunerationOptimale
@@ -164,69 +82,6 @@ function RemunerationRetenue({ scenario }: { scenario: ScenarioStatut }) {
       {/* Cochée ou non, ce que coûtent les 4 trimestres dans cette colonne : le choix se fait en connaissance de cause. */}
       {retenue.coutDesQuatreTrimestres ? <span className="block text-slate-600 dark:text-slate-400">{libelleDuCoutDesTrimestres(retenue.coutDesQuatreTrimestres)}</span> : null}
     </span>
-  )
-}
-
-interface ControlsProps {
-  activities: (Company | MicroEntreprise)[]
-  selected: Company | MicroEntreprise
-  options: ComparaisonOptions
-  /** Comparaison en cours : au meilleur net, elle dit ce que coûtent les 4 trimestres de retraite dans chaque colonne. */
-  result: ComparaisonResult | null
-  onSelect: (activityId: string) => void
-  onChange: (changes: Partial<ComparaisonOptions>) => void
-}
-
-/**
- * Réglages essentiels de la comparaison, visibles dans tous les affichages et serrés en deux lignes : l'activité, la
- * case des 4 trimestres (au meilleur net) ou la rémunération saisie, puis le partage du bénéfice. Les réglages
- * d'expert (part BNC en micro, frais de fonctionnement) sont repliés sous « Plus de réglages » dans les affichages
- * qui replient le détail.
- */
-function ComparatorControls({ activities, selected, options, result, onSelect, onChange, frais }: ControlsProps & { frais: ReactNode }) {
-  const { mode } = options.repartition
-  const couts = coutsDesQuatreTrimestres(result?.scenarios ?? [])
-  return (
-    <div data-impression="bloc" className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3 sm:p-4 dark:border-slate-700 dark:bg-slate-900/50">
-      <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
-        <div className="min-w-0 max-w-full space-y-1">
-          <Label htmlFor="comparateur-activite">Activité comparée</Label>
-          <Select value={selected.id} onValueChange={onSelect}>
-            <SelectTrigger id="comparateur-activite" className="w-64 max-w-full bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {activities.map(activity => (
-                <SelectItem key={activity.id} value={activity.id}>
-                  {activity.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {mode === "meilleurNet" ? <AvecRetraite options={options} couts={couts} onChange={onChange} /> : null}
-
-        {mode === "remuneration" || mode === "meilleurNet" ? null : (
-          <div className="space-y-1">
-            <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
-            <Input id="comparateur-remuneration" className="w-40 bg-background text-right" type="number" min="0" step="1000" value={options.remunerationNette} onChange={e => onChange({ remunerationNette: Math.max(0, parseFloat(e.target.value) || 0) })} />
-          </div>
-        )}
-      </div>
-
-      <ChoixDeLaRepartition mode={mode} onChange={nouveau => onChange({ repartition: avecLeMode(options.repartition, nouveau) })} />
-
-      <ReplieEnResume titre="Plus de réglages" id="comparateur-plus-de-reglages" className="text-sm" classNameContenu="mt-3 space-y-3">
-        {selected.type !== "micro-entreprise" && (
-          <div className="space-y-1">
-            <Label htmlFor="comparateur-bnc">En micro, prestations en BNC : {Math.round(options.partBncPrestations * 100)} % (le reste en BIC)</Label>
-            <input id="comparateur-bnc" className="block w-56 max-w-full accent-slate-700 print:hidden" type="range" min="0" max="100" step="10" value={Math.round(options.partBncPrestations * 100)} onChange={e => onChange({ partBncPrestations: Number(e.target.value) / 100 })} />
-          </div>
-        )}
-        {frais}
-      </ReplieEnResume>
-    </div>
   )
 }
 
@@ -567,14 +422,16 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
 
       {selected ? (
         <>
-          <ComparatorControls
+          <ReglagesDuComparateur
             activities={activities}
             selected={selected}
             options={effectiveOptions}
             result={result}
+            statut={arbitrage.statut}
+            plafond={plafondDeRemuneration(arbitrage.resultat, arbitrage.statut)}
+            bncUtile={partBncUtile(vue, selected)}
             onSelect={selectActivity}
             onChange={changes => setOptions({ ...effectiveOptions, ...changes })}
-            frais={<FraisFonctionnementTable frais={effectiveOptions.fraisFonctionnement ?? defaultFraisFonctionnement()} onChange={fraisFonctionnement => setOptions({ ...effectiveOptions, fraisFonctionnement })} />}
           />
           <WarningList warnings={result?.warnings ?? []} />
           {/* Affichage « Résumé » : le partage du bénéfice n'est déplié d'office qu'en répartition personnalisée, où il sert à régler. */}

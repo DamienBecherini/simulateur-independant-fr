@@ -9,8 +9,8 @@ import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 async function ouvrirEnRepartitionPersonnalisee(page: Page) {
   await page.goto("./")
   await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
-  await page.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).getByText("Répartition personnalisée").click()
-  await expect(page.getByRole("radio", { name: "Répartition personnalisée" })).toBeChecked()
+  await page.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).getByText("Sur mesure").click()
+  await expect(page.getByRole("radio", { name: "Sur mesure" })).toBeChecked()
   await expect(page.getByRole("slider", { name: "Rémunération nette du dirigeant" })).toBeVisible()
 }
 
