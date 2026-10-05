@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import { meilleurStatut, nombreDAlertes, tauxDePrelevement, euros, type ResumeDeLaComparaison } from "@/lib/resume"
 import type { SimulationReport } from "@/types"
+import { useVuesDeLaPage } from "../hooks/useVues"
+import { OngletsDesVues } from "./VuesDeLaPage"
 
 interface BarreDeResumeProps {
   report: SimulationReport | null
@@ -78,24 +80,29 @@ function ChoixDeLAnnee({ annees, annee, onAnnee }: Pick<BarreDeResumeProps, "ann
 }
 
 export function BarreDeResume({ report, annees, annee, onAnnee, comparaison }: BarreDeResumeProps) {
-  const barre = useRef<HTMLElement>(null)
+  const barre = useRef<HTMLDivElement>(null)
   const haut = useSousLaBarreDOutils(barre)
   const meilleur = meilleurStatut(comparaison?.result ?? null)
   const alertes = nombreDAlertes(report)
+  // Affichage « Trois vues » : les onglets des vues, collés sous la barre avec elle.
+  const vues = useVuesDeLaPage()
 
   return (
-    <section ref={barre} aria-label="Résumé de l'année" style={{ top: haut }} className="sticky z-40 -mx-4 mb-6 border-y border-blue-200 bg-blue-50/95 px-4 py-1.5 text-sm backdrop-blur-sm sm:mx-0 sm:rounded-md sm:border dark:border-blue-900 dark:bg-slate-900/95 print:hidden">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-0.5">
-        <ChoixDeLAnnee annees={annees} annee={annee} onAnnee={onAnnee} />
-        {report ? (
-          <>
-            <Chiffre vers="bilan" libelle="Net du foyer" libelleCourt="Net" valeur={euros(report.totalNetApresImpots)} />
-            <Chiffre vers="bilan" libelle="Prélèvements" libelleCourt="Taux" valeur={tauxDePrelevement(report) ?? "—"} />
-          </>
-        ) : null}
-        {meilleur && comparaison ? <Chiffre vers="comparateur-verdict" libelle={`Meilleur statut pour « ${comparaison.activite} »`} libelleCourt="Meilleur" valeur={meilleur} /> : null}
-        <Chiffre vers="resultats-titre" libelle="Alertes" valeur={alertes} className={alertes > 0 ? "text-amber-900 dark:text-amber-200" : undefined} />
-      </div>
-    </section>
+    <div ref={barre} style={{ top: haut }} className="sticky z-40 -mx-4 mb-6 sm:mx-0 print:hidden">
+      <section aria-label="Résumé de l'année" className={cn("border-y border-blue-200 bg-blue-50/95 px-4 py-1.5 text-sm backdrop-blur-sm sm:rounded-md sm:border dark:border-blue-900 dark:bg-slate-900/95", vues && "sm:rounded-b-none")}>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-0.5">
+          <ChoixDeLAnnee annees={annees} annee={annee} onAnnee={onAnnee} />
+          {report ? (
+            <>
+              <Chiffre vers="bilan" libelle="Net du foyer" libelleCourt="Net" valeur={euros(report.totalNetApresImpots)} />
+              <Chiffre vers="bilan" libelle="Prélèvements" libelleCourt="Taux" valeur={tauxDePrelevement(report) ?? "—"} />
+            </>
+          ) : null}
+          {meilleur && comparaison ? <Chiffre vers="comparateur-verdict" libelle={`Meilleur statut pour « ${comparaison.activite} »`} libelleCourt="Meilleur" valeur={meilleur} /> : null}
+          <Chiffre vers="resultats-titre" libelle="Alertes" valeur={alertes} className={alertes > 0 ? "text-amber-900 dark:text-amber-200" : undefined} />
+        </div>
+      </section>
+      {vues ? <OngletsDesVues {...vues} /> : null}
+    </div>
   )
 }

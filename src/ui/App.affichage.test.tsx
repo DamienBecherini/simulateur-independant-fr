@@ -28,8 +28,8 @@ describe("App : affichage de la page", () => {
     expect(screen.getByRole("combobox", { name: "Affichage : Résumé" })).toBeInTheDocument()
   })
 
-  it("ignore un affichage pas encore disponible", async () => {
-    await renderApp({ slotOrder: [], affichage: "vues" })
+  it("ignore un affichage inconnu, par exemple retiré après la bêta", async () => {
+    await renderApp({ slotOrder: [], affichage: "retire" as never })
     expect(screen.getByRole("combobox", { name: "Affichage : Classique" })).toBeInTheDocument()
   })
 

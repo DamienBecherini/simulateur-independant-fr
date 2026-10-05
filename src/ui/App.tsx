@@ -28,7 +28,9 @@ import { SelecteurAffichage } from "./components/SelecteurAffichage"
 import { BarreDeResume } from "./components/BarreDeResume"
 import { ReplieEnResume } from "./components/ReplieEnResume"
 import { AffichageContext } from "./hooks/useAffichage"
-import { affichageApplicable, avecPanneaux, avecResume } from "@/lib/affichage"
+import { affichageApplicable, avecPanneaux, avecResume, avecVues } from "@/lib/affichage"
+import { useVues, VuesContext } from "./hooks/useVues"
+import { VueDeLaPage } from "./components/VuesDeLaPage"
 import { InspecteurContext, useComparerLesStatuts, useEtatDeLInspecteur, type Inspecteur } from "./hooks/useInspecteur"
 import { PanneauDActeur } from "./components/PanneauDActeur"
 import type { ResumeDeLaComparaison } from "@/lib/resume"
@@ -82,6 +84,8 @@ function App() {
   // Affichage « Panneaux » : l'acteur dont le panneau est ouvert, quelle que soit l'année affichée.
   const inspecteur = useEtatDeLInspecteur(useMemo(() => currentSession.entities.map(e => e.id), [currentSession.entities]), avecPanneaux(affichage))
   const comparerLesStatuts = useComparerLesStatuts(setComparateur)
+  // Affichage « Trois vues » : la vue affichée, suivie dans l'adresse de la page.
+  const vues = useVues(avecVues(affichage), currentSession.name)
   const choisirAffichage = useCallback((choix: Affichage) => setUserPreferences(prefs => ({ ...prefs, affichage: choix })), [setUserPreferences])
   // Dans l'affichage « Résumé », le comparateur transmet son meilleur statut à la barre de résumé.
   const [comparaison, setComparaison] = useState<ResumeDeLaComparaison | null>(null)
@@ -181,6 +185,7 @@ function App() {
 
   return (
     <AffichageContext.Provider value={affichage}>
+    <VuesContext.Provider value={vues}>
       <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col print:min-h-0 print:max-w-none print:p-0">
         {/* Barre de menu sticky */}
         {/* Lien d'évitement : invisible tant qu'il n'a pas le focus, il mène au contenu sans traverser la barre d'outils. */}
@@ -234,51 +239,58 @@ function App() {
         <AvecPanneau inspecteur={inspecteur} panneau={(acteurId, fermer) => <PanneauDActeur acteurId={acteurId} session={currentSession} setSession={setCurrentSession} report={simulationReport} onFermer={fermer} onComparer={comparerLesStatuts} />}>
         {/* `min-w-0` : à côté du panneau, la grille défile dans sa largeur au lieu d'élargir la page. */}
         <main id="contenu" tabIndex={-1} className="min-w-0 flex-grow scroll-mt-20 focus:outline-none">
-          <EntitiesManager session={currentSession} setSession={setCurrentSession} />
+          {/* Affichage « Trois vues » : les acteurs et la grille, puis les résultats, puis le comparateur, chacun dans sa vue. */}
+          <VueDeLaPage vue="situation">
+            <EntitiesManager session={currentSession} setSession={setCurrentSession} />
 
-          <MonthlyGrid
-            entities={currentSession.entities}
-            monthlyData={vue.monthlyData}
-            setMonthlyData={newMonthlyDataOrUpdater => {
-              setCurrentSession(prev => {
-                const actuelle = donneesDeLAnnee(prev, annee).monthlyData
-                const monthlyData = typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(actuelle) : newMonthlyDataOrUpdater
-                // Données inchangées : la session est renvoyée telle quelle, sans créer d'entrée d'historique.
-                return remplacerGrille(prev, annee, monthlyData)
-              })
-            }}
-            preferences={userPreferences}
-            flowTypeToNumberMap={flowTypeToNumberMap}
-            annee={annee}
-            // Une opération appliquée aussi à d'autres années remplace toutes les années d'un coup : une seule étape d'annulation.
-            annees={currentSession.annees}
-            setAnnees={annees => setCurrentSession(prev => ({ ...prev, annees }))}
-            selecteurAnnee={
-              <SelecteurAnnee
-                annees={anneesDeLaSession(currentSession)}
-                annee={annee}
-                premiereAnneeConnue={PREMIERE_ANNEE_DES_REGLES}
-                onChange={setAnneeChoisie}
-                onAjouter={(position, copier) => {
-                  // La nouvelle année est affichée tout de suite ; son numéro se déduit de la session actuelle.
-                  setAnneeChoisie(anneeAAjouter(currentSession, position))
-                  setCurrentSession(prev => ajouterAnnee(prev, position, copier, () => createId("flow")))
-                }}
-                onSupprimer={anneeASupprimer => setCurrentSession(prev => supprimerAnnee(prev, anneeASupprimer))}
-              />
-            }
-          />
+            <MonthlyGrid
+              entities={currentSession.entities}
+              monthlyData={vue.monthlyData}
+              setMonthlyData={newMonthlyDataOrUpdater => {
+                setCurrentSession(prev => {
+                  const actuelle = donneesDeLAnnee(prev, annee).monthlyData
+                  const monthlyData = typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(actuelle) : newMonthlyDataOrUpdater
+                  // Données inchangées : la session est renvoyée telle quelle, sans créer d'entrée d'historique.
+                  return remplacerGrille(prev, annee, monthlyData)
+                })
+              }}
+              preferences={userPreferences}
+              flowTypeToNumberMap={flowTypeToNumberMap}
+              annee={annee}
+              // Une opération appliquée aussi à d'autres années remplace toutes les années d'un coup : une seule étape d'annulation.
+              annees={currentSession.annees}
+              setAnnees={annees => setCurrentSession(prev => ({ ...prev, annees }))}
+              selecteurAnnee={
+                <SelecteurAnnee
+                  annees={anneesDeLaSession(currentSession)}
+                  annee={annee}
+                  premiereAnneeConnue={PREMIERE_ANNEE_DES_REGLES}
+                  onChange={setAnneeChoisie}
+                  onAjouter={(position, copier) => {
+                    // La nouvelle année est affichée tout de suite ; son numéro se déduit de la session actuelle.
+                    setAnneeChoisie(anneeAAjouter(currentSession, position))
+                    setCurrentSession(prev => ajouterAnnee(prev, position, copier, () => createId("flow")))
+                  }}
+                  onSupprimer={anneeASupprimer => setCurrentSession(prev => supprimerAnnee(prev, anneeASupprimer))}
+                />
+              }
+            />
 
-          <ReplieEnResume titre="Légende des flux" className="mt-3 print:mt-2">
-            <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
-          </ReplieEnResume>
+            <ReplieEnResume titre="Légende des flux" className="mt-3 print:mt-2">
+              <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
+            </ReplieEnResume>
+          </VueDeLaPage>
 
-          {/* Dans l'affichage « Résumé », la synthèse des années remonte sous le bilan, avant les cartes détaillées. */}
-          <ResultsPanel report={simulationReport} error={erreurDeLAnnee} apresLeBilan={resume ? <SyntheseDesAnnees simulation={simulation} annee={annee} /> : null} />
+          <VueDeLaPage vue="resultats">
+            {/* Dans l'affichage « Résumé », la synthèse des années remonte sous le bilan, avant les cartes détaillées. */}
+            <ResultsPanel report={simulationReport} error={erreurDeLAnnee} apresLeBilan={resume ? <SyntheseDesAnnees simulation={simulation} annee={annee} /> : null} />
 
-          {resume ? null : <SyntheseDesAnnees simulation={simulation} annee={annee} />}
+            {resume ? null : <SyntheseDesAnnees simulation={simulation} annee={annee} />}
+          </VueDeLaPage>
 
-          <ComparatorPanel session={currentSession} annee={annee} onComparateurChange={setComparateur} onComparaison={resume ? setComparaison : undefined} />
+          <VueDeLaPage vue="comparer">
+            <ComparatorPanel session={currentSession} annee={annee} onComparateurChange={setComparateur} onComparaison={resume ? setComparaison : undefined} />
+          </VueDeLaPage>
         </main>
         </AvecPanneau>
 
@@ -310,6 +322,7 @@ function App() {
           setLoadedSlotId={setLoadedSlotId}
         />
       </div>
+    </VuesContext.Provider>
     </AffichageContext.Provider>
   )
 }

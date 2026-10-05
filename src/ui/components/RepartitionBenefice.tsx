@@ -63,7 +63,8 @@ function useLargeurDeLaBarre() {
   useEffect(() => {
     const element = ref.current
     if (!element || typeof ResizeObserver === "undefined") return
-    const observateur = new ResizeObserver(([entree]) => setLargeur(entree.contentRect.width))
+    // Une largeur nulle est celle d'une vue masquée (affichage « Trois vues ») : la barre garde sa dernière largeur.
+    const observateur = new ResizeObserver(([entree]) => entree.contentRect.width > 0 && setLargeur(entree.contentRect.width))
     observateur.observe(element)
     return () => observateur.disconnect()
   }, [])

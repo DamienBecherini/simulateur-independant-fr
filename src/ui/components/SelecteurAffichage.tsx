@@ -11,9 +11,8 @@ interface SelecteurAffichageProps {
 }
 
 /**
- * Choix de l'affichage de la page pendant la bêta, dans la barre d'outils. Les affichages pas encore réalisés sont
- * proposés grisés, avec la mention « bientôt » : on sait ainsi qu'il y en aura quatre à essayer. Sur un téléphone,
- * le bouton se réduit à son icône ; son nom accessible garde l'affichage en cours.
+ * Choix de l'affichage de la page pendant la bêta, dans la barre d'outils, parmi les quatre à essayer. Sur un
+ * téléphone, le bouton se réduit à son icône ; son nom accessible garde l'affichage en cours.
  */
 export function SelecteurAffichage({ affichage, onChange }: SelecteurAffichageProps) {
   return (
@@ -29,8 +28,8 @@ export function SelecteurAffichage({ affichage, onChange }: SelecteurAffichagePr
         <SelectGroup>
           <SelectLabel className="max-w-64">Bêta : dites-nous quel affichage vous préférez.</SelectLabel>
           {AFFICHAGES.map(a => (
-            <SelectItem key={a.valeur} value={a.valeur} disabled={!a.disponible} title={a.description} className="pointer-coarse:min-h-11">
-              {a.disponible ? a.libelle : `${a.libelle} (bientôt)`}
+            <SelectItem key={a.valeur} value={a.valeur} title={a.description} className="pointer-coarse:min-h-11">
+              {a.libelle}
             </SelectItem>
           ))}
         </SelectGroup>
