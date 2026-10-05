@@ -4,7 +4,7 @@
 
 ## **État Actuel du Projet**
 
-Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue, le moteur de simulation par foyer fiscal, le comparateur de statuts et l'arbitrage rémunération / dividendes sont en place, avec une démo web publiée sur GitHub Pages. L'accessibilité (WCAG 2.2 AA) est vérifiée automatiquement. Les chiffres s'exportent en CSV, en PDF et en rapport Markdown. Les cotisations du président de SASU et des salariés sont calculées ligne à ligne. La prochaine étape est **plusieurs années** (Phase 13), dont les règles 2024 et 2025 sont déjà collectées.
+Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue, le moteur de simulation par foyer fiscal, le comparateur de statuts et l'arbitrage rémunération / dividendes sont en place, avec une démo web publiée sur GitHub Pages. L'accessibilité (WCAG 2.2 AA) est vérifiée automatiquement. Les chiffres s'exportent en CSV, en PDF et en rapport Markdown. Les cotisations du président de SASU et des salariés sont calculées ligne à ligne. Une session couvre désormais plusieurs années, chacune avec ses règles, et le revenu fiscal de référence est reporté sur le versement libératoire. La suite de la phase 13 : bénéfice mis en réserve, flux récurrents, sortie du régime micro.
 
 > **Changement d'ordre par rapport à la v2.2 :** le comparateur de statuts passe avant l'arbitrage rémunération / dividendes, et la gestion des foyers fiscaux est intégrée à la refonte du moteur.
 
@@ -158,16 +158,18 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
-### **Phase 13 : Plusieurs années [Planifié 🗓️]**
+### **Phase 13 : Plusieurs années [En cours 🚧]**
 
 - **Objectif :** simuler et comparer plusieurs années qui s'enchaînent.
 
-1.  **Modèle de données :** une session contient plusieurs années (grille, acteurs et relations par année) ; nouveau format de fichier, avec migration des sessions existantes.
-2.  **Règles par année [✅ en partie] :** règles 2024 et 2025 collectées et sourcées (`src/backend/regles/`), au format de `config.json`, avec des tests de forme et de cohérence d'une année sur l'autre ; convention d'année acceptée (ADR 007 : l'année des revenus et de l'activité). Le régime général (phase 12) y est aussi, pour les trois années. **Reste :** les brancher dans le moteur ; pour une année sans règles connues, reprendre les dernières avec un avertissement ; étendre le format pour représenter ce que les règles d'avant 2026 approchent aujourd'hui : cotisations des indépendants de 2024 (ancien mode de calcul), taux réduits maladie (7 %) et allocations familiales (3,45 %) des salariés sous un seuil en SMIC, coefficient de la réduction Fillon bâti sur ces taux, et changements en cours d'année (SMIC, chômage, AGS, accidents du travail, taux micro BNC de juillet 2024).
-3.  **Revenu fiscal de référence :** calculé chaque année et reporté ; le versement libératoire de l'année N vérifie celui de N-2 automatiquement (il faut donc trois années chaînées).
-4.  **Bénéfice mis en réserve :** le résultat conservé d'une société est reporté sur l'année suivante et peut être distribué plus tard ; arbitrage des dividendes entre les années.
+1.  **Modèle de données [✅] :** une session contient plusieurs années consécutives (`annees`, ADR 008) ; acteurs et relations communs à toutes les années pour l'instant ; format de fichier 3, avec migration des formats 1 et 2 (la grille existante est placée en 2026, l'original est copié à côté) ; sélecteur d'année, ajout d'une année (copie de la voisine ou vide) et suppression d'une année d'extrémité.
+2.  **Règles par année [✅] :** règles 2024 et 2025 collectées et sourcées (`src/backend/regles/`), 2026 dans `config.json`, convention d'année acceptée (ADR 007) ; chaque année est simulée avec ses propres règles. Après 2026, les dernières règles connues sont reprises avec un avertissement (revalorisations manquantes) ; avant 2024, l'année est refusée, faute de règles fiables. **Reste :** étendre le format pour ce que les règles d'avant 2026 approchent (cotisations des indépendants de 2024, taux réduits maladie 7 % et allocations familiales 3,45 % des salariés, réduction Fillon bâtie sur ces taux, changements en cours d'année), et déplacer `config.json` dans `regles/2026.json`.
+3.  **Revenu fiscal de référence [✅] :** calculé pour chaque foyer et chaque année (article 1417 IV du CGI : revenu imposable au barème, dividendes au prélèvement forfaitaire ou abattement de 40 % réintégré, chiffre d'affaires micro après abattement sous versement libératoire) ; le versement libératoire de l'année N vérifie celui de N-2 quand cette année est dans la session, sinon celui saisi. Non calculables, faute de saisie : revenus exonérés, épargne salariale, plus-values, intérêts, déductions PER.
+4.  **Bénéfice mis en réserve [À faire] :** le résultat conservé d'une société est reporté sur l'année suivante et peut être distribué plus tard ; arbitrage des dividendes entre les années.
 5.  **Flux récurrents :** un flux défini une fois pour plusieurs mois ou années (« 800 € par mois de janvier à décembre »), modifiable en une fois, avec une règle claire quand on change un seul mois d'une série. Aujourd'hui, la grille recopie le flux sur les mois choisis : les copies sont indépendantes.
-6.  **Dispositifs limités dans le temps :** ACRE la première année, exonération de CFE l'année de création, cotisations des premières années.
+6.  **Dispositifs limités dans le temps [À faire] :** ACRE la première année, exonération de CFE l'année de création, cotisations des premières années.
+7.  **Sortie du régime micro [À faire] :** repérer deux années consécutives au-delà des plafonds et annoncer le passage au réel au 1er janvier suivant (règle de service-public.fr, F32353). Aujourd'hui, une micro hors plafond est signalée « 2 ans au plus » et n'est jamais désignée meilleur net.
+8.  **Plus tard :** acteurs et relations propres à chaque année, exports et optimisation sur plusieurs années, revenu fiscal de référence dans les exports CSV et Markdown.
 
 ---
 
