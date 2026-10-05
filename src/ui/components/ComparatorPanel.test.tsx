@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SessionState, StatutCompare } from "@/types"
 import { emptySession, makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
-import { ComparatorPanel } from "./ComparatorPanel"
+import { ComparateurDeTest } from "@/ui/testing/comparateur"
 
 function scenario(statut: StatutCompare, libelle: string, net: number, overrides: Partial<ScenarioStatut> = {}): ScenarioStatut {
   return { statut, libelle, actuel: false, fraisFonctionnement: 0, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
@@ -37,29 +37,29 @@ describe("ComparatorPanel sur plusieurs années", () => {
 
   it("compare l'année affichée, avec la rémunération saisie cette année-là", async () => {
     const session = deuxAnnees()
-    const { rerender } = render(<ComparatorPanel annee={2025} session={session} />)
+    const { rerender } = render(<ComparateurDeTest annee={2025} session={session} />)
 
     expect(screen.getByText(/^Année 2025\./)).toBeInTheDocument()
-    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, expect.objectContaining({ remunerationNette: 20000 }), 2025))
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.objectContaining({ annees: session.annees }), expect.objectContaining({ remunerationNette: 20000 }), 2025))
 
-    rerender(<ComparatorPanel annee={2026} session={session} />)
+    rerender(<ComparateurDeTest annee={2026} session={session} />)
     expect(screen.getByText(/^Année 2026\./)).toBeInTheDocument()
-    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, expect.objectContaining({ remunerationNette: 30000 }), 2026))
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.objectContaining({ annees: session.annees }), expect.objectContaining({ remunerationNette: 30000 }), 2026))
     // Au meilleur net, le comparateur calcule lui-même l'arbitrage rémunération / dividendes : il n'est pas refait à part.
     expect(window.api.optimiserRemuneration).not.toHaveBeenCalled()
   })
 
   it("hors du meilleur net, l'arbitrage rémunération / dividendes porte sur l'année affichée", async () => {
     const session = deuxAnnees()
-    render(<ComparatorPanel annee={2026} session={session} />)
+    render(<ComparateurDeTest annee={2026} session={session} />)
     await userEvent.click(screen.getByRole("radio", { name: "Tout en rémunération" }))
 
-    await vi.waitFor(() => expect(window.api.optimiserRemuneration).toHaveBeenLastCalledWith(session, expect.anything(), "SASU", 2026))
+    await vi.waitFor(() => expect(window.api.optimiserRemuneration).toHaveBeenLastCalledWith(expect.objectContaining({ annees: session.annees }), expect.anything(), "SASU", 2026))
   })
 
   it("reprend la rémunération de la nouvelle année quand on en change, mais garde les frais saisis", async () => {
     const session = deuxAnnees()
-    const { rerender } = render(<ComparatorPanel annee={2025} session={session} />)
+    const { rerender } = render(<ComparateurDeTest annee={2025} session={session} />)
     await userEvent.click(screen.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }))
     const remuneration = screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")
     await userEvent.clear(remuneration)
@@ -67,17 +67,72 @@ describe("ComparatorPanel sur plusieurs années", () => {
     const banque = screen.getByRole("spinbutton", { name: "Compte bancaire professionnel, SASU" })
     await userEvent.clear(banque)
     await userEvent.type(banque, "500")
-    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, expect.objectContaining({ remunerationNette: 25000 }), 2025))
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.objectContaining({ annees: session.annees }), expect.objectContaining({ remunerationNette: 25000 }), 2025))
 
-    rerender(<ComparatorPanel annee={2026} session={session} />)
+    rerender(<ComparateurDeTest annee={2026} session={session} />)
 
-    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, expect.objectContaining({ remunerationNette: 30000, fraisFonctionnement: expect.objectContaining({ SASU: expect.objectContaining({ banque: 500 }) }) }), 2026))
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.objectContaining({ annees: session.annees }), expect.objectContaining({ remunerationNette: 30000, repartition: { mode: "dividendes", partDistribuee: 1 }, fraisFonctionnement: expect.objectContaining({ SASU: expect.objectContaining({ banque: 500 }) }) }), 2026))
+
+    // De retour sur 2025, la rémunération saisie pour cette année-là revient.
+    rerender(<ComparateurDeTest annee={2025} session={session} />)
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 25000 }), 2025))
+  })
+
+  it("n'enregistre que les réglages changés : la rémunération saisie pour son année, le reste pour toutes", async () => {
+    const enregistre = vi.fn()
+    render(<ComparateurDeTest annee={2025} session={deuxAnnees()} onComparateur={enregistre} />)
+    await userEvent.click(screen.getByRole("radio", { name: "Rémunération saisie, le reste en dividendes" }))
+    const remuneration = screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")
+    await userEvent.clear(remuneration)
+    await userEvent.type(remuneration, "25000")
+
+    expect(enregistre).toHaveBeenLastCalledWith({ activiteComparee: "company-sasu", reglagesParActivite: { "company-sasu": { repartition: { mode: "dividendes", partDistribuee: 1 }, remunerationParAnnee: { "2025": 25000 } } } })
+  })
+})
+
+describe("ComparatorPanel et ses réglages enregistrés", () => {
+  function deuxActivites(): SessionState {
+    return { ...emptySession(), entities: [makePerson(), makeCompany(), makeMicro({ name: "Mon atelier" })] }
+  }
+
+  it("reprend les réglages enregistrés dans la session : activité comparée, partage, frais et statut étudié", async () => {
+    const frais = { SASU: { expertComptable: 0, banque: 0, logiciel: 0, assurance: 0, cfe: 0 }, EURL: { expertComptable: 1, banque: 0, logiciel: 0, assurance: 0, cfe: 0 }, EI: { expertComptable: 2, banque: 0, logiciel: 0, assurance: 0, cfe: 0 }, micro: { expertComptable: 3, banque: 0, logiciel: 0, assurance: 0, cfe: 0 } }
+    const session: SessionState = { ...deuxActivites(), comparateur: { activiteComparee: "company-sasu", reglagesParActivite: { "company-sasu": { repartition: { mode: "personnalisee", partDistribuee: 0.4 }, remunerationParAnnee: { "2026": 18000 }, partBncPrestations: 0.3, fraisFonctionnement: frais, statutEtudie: "EURL" } } } }
+    render(<ComparateurDeTest annee={2026} session={session} />)
+
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(session, { activityId: "company-sasu", remunerationNette: 18000, repartition: { mode: "personnalisee", partDistribuee: 0.4 }, partBncPrestations: 0.3, fraisFonctionnement: frais }, 2026))
+    expect(screen.getByRole("radio", { name: "Répartition personnalisée" })).toBeChecked()
+    expect(screen.getByLabelText(/prestations en BNC : 30 %/)).toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: "EURL", pressed: true }).length).toBeGreaterThan(0)
+  })
+
+  it("garde les réglages de chaque activité, et retient l'activité comparée", async () => {
+    const enregistre = vi.fn()
+    render(<ComparateurDeTest annee={2026} session={deuxActivites()} onComparateur={enregistre} />)
+    const banque = screen.getByRole("spinbutton", { name: "Compte bancaire professionnel, SASU" })
+    await userEvent.clear(banque)
+    await userEvent.type(banque, "9")
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Activité comparée" }))
+    await userEvent.click(await screen.findByRole("option", { name: "Mon atelier" }))
+
+    expect(enregistre).toHaveBeenLastCalledWith(expect.objectContaining({ activiteComparee: "micro-atelier", reglagesParActivite: { "company-sasu": { fraisFonctionnement: expect.objectContaining({ SASU: expect.objectContaining({ banque: 9 }) }) } } }))
+    // Chaque activité a ses frais : la micro repart des frais proposés par défaut.
+    expect(screen.getByRole("spinbutton", { name: "Compte bancaire professionnel, SASU" })).toHaveValue(200)
+  })
+
+  it("retient le statut étudié dans « Rémunération ou dividendes ? »", async () => {
+    const enregistre = vi.fn()
+    render(<ComparateurDeTest annee={2026} session={deuxActivites()} onComparateur={enregistre} />)
+    await userEvent.click(screen.getAllByRole("button", { name: "EURL", pressed: false })[0])
+
+    expect(enregistre).toHaveBeenLastCalledWith({ activiteComparee: "company-sasu", reglagesParActivite: { "company-sasu": { statutEtudie: "EURL" } } })
   })
 })
 
 describe("ComparatorPanel", () => {
   it("n'affiche rien sans activité ni couple en union libre", async () => {
-    const { container } = render(<ComparatorPanel annee={2026} session={emptySession()} />)
+    const { container } = render(<ComparateurDeTest annee={2026} session={emptySession()} />)
 
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenCalled())
     expect(container).toBeEmptyDOMElement()
@@ -85,7 +140,7 @@ describe("ComparatorPanel", () => {
 
   it("compare la première activité et met en évidence le statut actuel et le meilleur net", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
-    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     expect(window.api.compareStatuts).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ activityId: "micro-atelier", remunerationNette: 0, repartition: { mode: "meilleurNet", partDistribuee: 1 }, partBncPrestations: 1 }), 2026)
@@ -102,7 +157,7 @@ describe("ComparatorPanel", () => {
     const horsDAtteinte = "Aucune rémunération possible en EURL ne valide 4 trimestres de retraite."
     const scenarios = comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, ...optimale(12300, true) } : s.statut === "EURL" ? { ...s, ...optimale(25700, false, true), warnings: [horsDAtteinte] } : s))
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios }))
-    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent(`rémunération optimale : ${money(12300)} netsavec 4 trimestres de retraite`)
@@ -114,7 +169,7 @@ describe("ComparatorPanel", () => {
   })
 
   it("au meilleur net, la case « avec 4 trimestres de retraite » rejoint les réglages du comparateur", async () => {
-    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     await userEvent.click(await screen.findByRole("checkbox", { name: "Avec 4 trimestres de retraite" }))
 
@@ -125,14 +180,14 @@ describe("ComparatorPanel", () => {
   })
 
   it("ne propose la part BNC des prestations que pour une activité qui n'est pas déjà une micro", async () => {
-    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
     await screen.findByLabelText("Activité comparée")
     expect(screen.queryByLabelText(/prestations en BNC/)).not.toBeInTheDocument()
   })
 
   it("note la protection sociale de chaque statut en étoiles", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
-    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const ligne = await screen.findByRole("row", { name: /^Protection sociale/ })
     expect(ligne).toHaveTextContent("★★★☆☆")
@@ -144,7 +199,7 @@ describe("ComparatorPanel", () => {
     const seuil = "Seuil à vérifier."
     const tva = "TVA due."
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "micro" ? { ...s, warnings: [tva] } : s.statut === "micro-vfl" ? { ...s, warnings: [tva, seuil] } : s)) }))
-    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     const enTeteMicro = within(table).getByRole("columnheader", { name: /^Micro-entreprise/ })
@@ -163,7 +218,7 @@ describe("ComparatorPanel", () => {
   it("compare un couple en union libre avec une imposition commune, même sans activité", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue({ scenarios: [], meilleur: null, couples: [{ personIds: ["person-alice", "person-bob"], netApresImpotsActuel: 48500, impotSurLeRevenuActuel: 6500, netApresImpotsMaries: 52050, impotSurLeRevenuMaries: 2950 }], warnings: ["Choisissez une activité à comparer."] })
     const session = { ...emptySession(), entities: [makePerson(), makePerson({ id: "person-bob", name: "Bob Durand" })] }
-    render(<ComparatorPanel annee={2026} session={session} />)
+    render(<ComparateurDeTest annee={2026} session={session} />)
 
     const phrase = await screen.findByText(/Alice Martin et Bob Durand/)
     expect(phrase).toHaveTextContent(`${money(6500)} en union libre, ${money(2950)} avec une imposition commune`)
@@ -173,13 +228,13 @@ describe("ComparatorPanel", () => {
   })
 
   it("propose la part BNC pour une société", async () => {
-    render(<ComparatorPanel annee={2026} session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} />)
+    render(<ComparateurDeTest annee={2026} session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} />)
     expect(await screen.findByLabelText(/prestations en BNC : 100 %/)).toBeInTheDocument()
   })
 
   it("exporte le tableau de comparaison en CSV, avec les réglages utilisés", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
-    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     await userEvent.click(await screen.findByRole("button", { name: "Exporter en CSV le tableau de comparaison" }))
 
@@ -189,14 +244,14 @@ describe("ComparatorPanel", () => {
 
   it("ne propose pas d'export sans statut comparé", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: [] }))
-    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenCalled())
     expect(screen.queryByRole("button", { name: /Exporter en CSV/ })).not.toBeInTheDocument()
   })
 
   it("signale dans l'en-tête une colonne micro hors plafond", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "micro-vfl" ? { ...s, horsPlafond: true } : s)), meilleur: "micro" }))
-    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     expect(within(table).getByRole("columnheader", { name: /versement libératoire/ })).toHaveTextContent("hors plafond · 2 ans au plus")
@@ -206,7 +261,7 @@ describe("ComparatorPanel", () => {
   it("signale les deux colonnes micro hors plafond, et met en évidence le meilleur statut tenable", async () => {
     const horsPlafond = comparison().scenarios.map(s => (s.statut === "micro" || s.statut === "micro-vfl" ? { ...s, horsPlafond: true } : s))
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: horsPlafond, meilleur: "SASU" }))
-    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     for (const colonne of [/^Micro-entreprise/, /versement libératoire/]) {

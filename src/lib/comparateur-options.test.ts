@@ -1,7 +1,7 @@
 // src/lib/comparateur-options.test.ts
 
 import { describe, expect, it } from "vitest"
-import { appliquerRemuneration, avecRemuneration, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement } from "@/lib/comparateur-options"
+import { activiteComparee, appliquerRemuneration, avecActiviteComparee, avecRemuneration, avecReglagesDeLActivite, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, optionsDuComparateur, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
 import type { ComparaisonOptions, FinancialFlow, DonneesDeLAnnee, OptimisationRemuneration, PointRemuneration } from "@/types"
 
@@ -87,5 +87,53 @@ describe("appliquerRemuneration", () => {
     expect(appliquerRemuneration(options("meilleurNet"), 12000, optimisation)).toMatchObject({ remunerationNette: 12000, repartition: { mode: "dividendes" } })
     expect(appliquerRemuneration(options("grille"), 5800, optimisation)).toMatchObject({ remunerationNette: 5800, repartition: { mode: "dividendes" } })
     expect(appliquerRemuneration(options("meilleurNet"), 5800, null)).toMatchObject({ remunerationNette: 5800, repartition: { mode: "dividendes" } })
+  })
+})
+
+describe("réglages enregistrés du comparateur", () => {
+  const sasu = { ...createCompany("SASU"), id: "sasu" }
+  const micro = { ...createMicroEntreprise(), id: "micro" }
+  /** L'année 2026 : la SASU verse 20 000 € de rémunération et des dividendes. */
+  const vue = { ...session([{ entityId: "sasu", type: "director_remuneration", amount: 20000 }, { entityId: "sasu", type: "dividends_payment", amount: 5000 }]), entities: [createPerson(), sasu, micro], name: "Test", annee: 2026 }
+
+  it("compare l'activité choisie, ou la première si elle a disparu ou si rien n'est choisi", () => {
+    expect(activiteComparee(vue, { activiteComparee: "micro", reglagesParActivite: {} })).toBe(micro)
+    expect(activiteComparee(vue, { activiteComparee: "supprimee", reglagesParActivite: {} })).toBe(sasu)
+    expect(activiteComparee(vue, undefined)).toBe(sasu)
+    expect(reglagesDeLActiviteComparee({ ...vue, entities: [] }, undefined)).toBeNull()
+  })
+
+  it("sans réglage enregistré, propose les réglages tirés de la grille de l'année", () => {
+    expect(optionsDuComparateur(vue, "sasu", undefined)).toEqual(defaultComparisonOptions(vue, "sasu"))
+    expect(optionsDuComparateur(vue, "sasu", {})).toEqual(defaultComparisonOptions(vue, "sasu"))
+  })
+
+  it("applique les réglages choisis ; la rémunération saisie ne vaut que pour son année", () => {
+    const frais = { ...defaultFraisFonctionnement(), micro: { expertComptable: 0, banque: 0, logiciel: 0, assurance: 0, cfe: 0 } }
+    const reglages = { repartition: { mode: "personnalisee" as const, partDistribuee: 0.5 }, remunerationParAnnee: { "2025": 9000 }, partBncPrestations: 0.2, fraisFonctionnement: frais }
+
+    expect(optionsDuComparateur(vue, "sasu", reglages)).toEqual({ activityId: "sasu", remunerationNette: 20000, repartition: { mode: "personnalisee", partDistribuee: 0.5 }, partBncPrestations: 0.2, fraisFonctionnement: frais })
+    expect(optionsDuComparateur({ ...vue, annee: 2025 }, "sasu", reglages).remunerationNette).toBe(9000)
+    expect(reglagesDeLActiviteComparee(vue, { reglagesParActivite: { sasu: reglages } })?.options.partBncPrestations).toBe(0.2)
+  })
+
+  it("ne retient que les réglages changés, en gardant ceux déjà choisis", () => {
+    const avant = defaultComparisonOptions(vue, "sasu")
+    const dejaChoisis = { partBncPrestations: 0.4, remunerationParAnnee: { "2025": 9000 } }
+
+    expect(retenirLesReglages(undefined, avant, avant, 2026)).toEqual({})
+    expect(retenirLesReglages(dejaChoisis, avant, { ...avant, remunerationNette: 12000 }, 2026)).toEqual({ partBncPrestations: 0.4, remunerationParAnnee: { "2025": 9000, "2026": 12000 } })
+    expect(retenirLesReglages(undefined, avant, { ...avant, repartition: { ...avant.repartition, avecRetraite: true } }, 2026)).toEqual({ repartition: { mode: "grille", partDistribuee: 1, avecRetraite: true } })
+    expect(retenirLesReglages(undefined, avant, { ...avant, repartition: { ...avant.repartition, avecRetraite: false } }, 2026)).toEqual({})
+    const frais = { ...defaultFraisFonctionnement(), EI: { ...defaultFraisFonctionnement().EI, cfe: 0 } }
+    expect(retenirLesReglages(undefined, avant, { ...avant, partBncPrestations: 0.7, fraisFonctionnement: frais }, 2026)).toEqual({ partBncPrestations: 0.7, fraisFonctionnement: frais })
+  })
+
+  it("range les réglages par activité, et retient l'activité comparée", () => {
+    const comparateur = avecReglagesDeLActivite(undefined, "sasu", { partBncPrestations: 0.5 })
+    expect(comparateur).toEqual({ activiteComparee: "sasu", reglagesParActivite: { sasu: { partBncPrestations: 0.5 } } })
+    expect(avecReglagesDeLActivite(comparateur, "micro", {})).toEqual({ activiteComparee: "micro", reglagesParActivite: { sasu: { partBncPrestations: 0.5 }, micro: {} } })
+    expect(avecActiviteComparee(comparateur, "micro")).toEqual({ activiteComparee: "micro", reglagesParActivite: { sasu: { partBncPrestations: 0.5 } } })
+    expect(avecActiviteComparee(undefined, "micro")).toEqual({ activiteComparee: "micro", reglagesParActivite: {} })
   })
 })

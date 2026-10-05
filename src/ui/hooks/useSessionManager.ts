@@ -1,7 +1,7 @@
 // src/ui/hooks/useSessionManager.ts
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { ANNEE_PAR_DEFAUT, grilleVide, type SessionState, type SaveSlot, type SanitizationReport, type UserPreferences } from "@/types"
+import { ANNEE_PAR_DEFAUT, grilleVide, type Comparateur, type SessionState, type SaveSlot, type SanitizationReport, type UserPreferences } from "@/types"
 import * as SessionService from "@/lib/session-service"
 import { rapportAvecCorrections } from "@/backend/logic/data-sanitizer"
 import { useDebouncedSave } from "./useDebouncedSave"
@@ -14,6 +14,16 @@ function getInitialSessionState(): SessionState {
     relationships: [],
     annees: [{ annee: ANNEE_PAR_DEFAUT, monthlyData: grilleVide() }]
   }
+}
+
+/**
+ * Une session de l'historique, avec les réglages du comparateur de la session affichée : ils restent hors de
+ * l'historique d'annulation (voir l'ADR 010), annuler une modification de la simulation ne les change pas.
+ */
+function avecLeComparateurDe(session: SessionState, source: SessionState): SessionState {
+  const reste = { ...session }
+  delete reste.comparateur
+  return source.comparateur ? { ...reste, comparateur: source.comparateur } : reste
 }
 
 // Interface pour la structure de l'historique (Undo/Redo).
@@ -110,6 +120,12 @@ export function useSessionManager() {
     })
   }, [])
 
+  // Réglages du comparateur : enregistrés avec la session, mais sans étape d'annulation (voir l'ADR 010). Un champ
+  // de frais modifié chiffre par chiffre ferait sinon autant d'étapes, et ces choix ne changent pas la simulation.
+  const setComparateur = useCallback((modifier: (comparateur: Comparateur | undefined) => Comparateur) => {
+    setHistory(currentHistory => ({ ...currentHistory, present: { ...currentHistory.present, comparateur: modifier(currentHistory.present.comparateur) } }))
+  }, [])
+
   // Fonctions pour annuler (Undo) et rétablir (Redo).
   const undo = useCallback(() => {
     setHistory(currentHistory => {
@@ -119,7 +135,7 @@ export function useSessionManager() {
       const newPast = past.slice(0, past.length - 1)
       return {
         past: newPast,
-        present: previous,
+        present: avecLeComparateurDe(previous, present),
         future: [present, ...future]
       }
     })
@@ -133,7 +149,7 @@ export function useSessionManager() {
       const newFuture = future.slice(1)
       return {
         past: [...past, present],
-        present: next,
+        present: avecLeComparateurDe(next, present),
         future: newFuture
       }
     })
@@ -142,12 +158,7 @@ export function useSessionManager() {
   // Fonction centralisée pour charger une sauvegarde manuelle.
   const handleLoadSlot = useCallback(
     (slotToLoad: SaveSlot) => {
-      const sessionFromSlot: SessionState = {
-        name: slotToLoad.name,
-        entities: slotToLoad.entities,
-        relationships: slotToLoad.relationships,
-        annees: slotToLoad.annees
-      }
+      const sessionFromSlot = SessionService.contenuDeLaSession(slotToLoad)
       setHistory({ past: [], present: sessionFromSlot, future: [] })
       setLoadedSlotId(slotToLoad.id)
     },
@@ -158,8 +169,9 @@ export function useSessionManager() {
   const handleImport = async () => {
     const result = await SessionService.importState()
     if (result && result.data) {
-      const { entities, relationships, annees } = result.data
-      const sessionToLoad: SessionState = { name: "Simulation importée", entities, relationships, annees }
+      // Le nom du fichier est gardé (sauvegarde exportée) ; un export qui n'en porte pas reçoit « Simulation importée ».
+      const { name, entities, relationships, annees, comparateur } = result.data
+      const sessionToLoad = SessionService.contenuDeLaSession({ name: name ?? "Simulation importée", entities, relationships, annees, comparateur })
       // Dès que le fichier a été corrigé ou converti, l'utilisateur confirme avant de remplacer sa session.
       if (rapportAvecCorrections(result.report)) {
         setImportConfirmation({ session: sessionToLoad, report: result.report })
@@ -198,6 +210,7 @@ export function useSessionManager() {
   return {
     currentSession: history.present,
     setCurrentSession: setSession,
+    setComparateur,
     allSaveSlots,
     setAllSaveSlots,
     userPreferences,

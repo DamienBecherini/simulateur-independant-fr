@@ -5,7 +5,7 @@
 
 import { toast } from "sonner"
 import { vueDeLAnnee } from "@/backend/logic/annees"
-import { comparableActivities, defaultComparisonOptions } from "@/lib/comparateur-options"
+import { reglagesDeLActiviteComparee } from "@/lib/comparateur-options"
 import { csvComparaison, csvCourbeRemuneration, csvGrilleMensuelle, csvResultats } from "@/lib/export-csv"
 import { nomDeFichier, slugifier } from "@/lib/export-commun"
 import { rapportMarkdown, type ComparaisonDuRapport } from "@/lib/export-markdown"
@@ -42,11 +42,14 @@ export function exporterCourbeCsv(vue: SimulationAnnuelle, optimisation: Optimis
   return enregistrerExport(nomDeFichier(vue.name, contenu, "csv", vue.annee), csvCourbeRemuneration(optimisation), "csv")
 }
 
-/** Compare la première activité avec les réglages proposés par défaut, comme le comparateur à son ouverture. */
-async function comparaisonParDefaut(session: SessionState, vue: SimulationAnnuelle): Promise<ComparaisonDuRapport | null> {
-  const activite = comparableActivities(vue)[0]
-  if (!activite) return null
-  const options = defaultComparisonOptions(vue, activite.id)
+/**
+ * Compare l'activité choisie dans le comparateur avec ses réglages enregistrés, comme le comparateur l'affiche pour
+ * cette année : la première activité et les réglages proposés par défaut si l'utilisateur n'a rien choisi.
+ */
+async function comparaisonDuComparateur(session: SessionState, vue: SimulationAnnuelle): Promise<ComparaisonDuRapport | null> {
+  const reglages = reglagesDeLActiviteComparee(vue, session.comparateur)
+  if (!reglages) return null
+  const { activite, options } = reglages
   try {
     return { nomActivite: activite.name, options, resultat: await window.api.compareStatuts(session, options, vue.annee) }
   } catch (e) {
@@ -57,6 +60,6 @@ async function comparaisonParDefaut(session: SessionState, vue: SimulationAnnuel
 /** Le rapport porte sur l'année affichée ; le comparateur reçoit toute la session, pour les années qui précèdent. */
 export async function exporterRapportMarkdown(session: SessionState, annee: number, report: SimulationReport | null): Promise<void> {
   const vue = vueDeLAnnee(session, annee)
-  const comparaison = await comparaisonParDefaut(session, vue)
+  const comparaison = await comparaisonDuComparateur(session, vue)
   await enregistrerExport(nomDeFichier(vue.name, "rapport", "md", vue.annee), rapportMarkdown({ session: vue, report, comparaison, date: new Date() }), "markdown")
 }
