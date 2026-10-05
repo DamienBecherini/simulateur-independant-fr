@@ -20,5 +20,8 @@ export default defineConfig(({ mode }) => ({
 	server: {
 		port: 3524,
 		strictPort: true,
+		// Les copies de travail parallèles (.claude/worktrees) et les sorties de compilation ne concernent pas la page
+		// servie : les surveiller la rechargerait à chaque compilation faite ailleurs.
+		watch: { ignored: ['**/.claude/**', '**/dist/**', '**/dist-web/**', '**/dist-react/**', '**/dist-electron/**'] },
 	},
 }));
