@@ -37,6 +37,43 @@
       "suivants": 1
     }
   },
+  "baremeKilometrique": {
+    "description": "Barème kilométrique des voitures pour les revenus de 2026 : pas encore publié (il le sera au printemps 2027, avec la déclaration des revenus de 2026). Celui des revenus de 2025, le dernier connu, est repris (voir l'ADR 007) ; il n'a pas été revalorisé depuis l'arrêté du 27 mars 2023. d est la distance parcourue à titre professionnel dans l'année, avec le véhicule : jusqu'à 5 000 km, d x taux ; de 5 001 à 20 000 km, d x taux + forfait ; au-delà de 20 000 km, d x taux. Clés : puissance fiscale, de « 3 » (3 CV et moins) à « 7 » (7 CV et plus). Le barème couvre la dépréciation du véhicule, les réparations, l'entretien, les pneumatiques, le carburant et l'assurance ; les péages, le stationnement et les intérêts d'emprunt, déductibles en plus, ne sont pas modélisés. Majoration de 20 % pour un véhicule 100 % électrique (depuis l'imposition des revenus de 2020). Les barèmes des deux-roues motorisés ne sont pas modélisés.",
+    "source": "https://www.service-public.gouv.fr/particuliers/actualites/A14686",
+    "majorationElectrique": 0.2,
+    "voitures": {
+      "3": [
+        { "jusquA": 5000, "taux": 0.529, "forfait": 0 },
+        { "jusquA": 20000, "taux": 0.316, "forfait": 1065 },
+        { "jusquA": null, "taux": 0.37, "forfait": 0 }
+      ],
+      "4": [
+        { "jusquA": 5000, "taux": 0.606, "forfait": 0 },
+        { "jusquA": 20000, "taux": 0.34, "forfait": 1330 },
+        { "jusquA": null, "taux": 0.407, "forfait": 0 }
+      ],
+      "5": [
+        { "jusquA": 5000, "taux": 0.636, "forfait": 0 },
+        { "jusquA": 20000, "taux": 0.357, "forfait": 1395 },
+        { "jusquA": null, "taux": 0.427, "forfait": 0 }
+      ],
+      "6": [
+        { "jusquA": 5000, "taux": 0.665, "forfait": 0 },
+        { "jusquA": 20000, "taux": 0.374, "forfait": 1457 },
+        { "jusquA": null, "taux": 0.447, "forfait": 0 }
+      ],
+      "7": [
+        { "jusquA": 5000, "taux": 0.697, "forfait": 0 },
+        { "jusquA": 20000, "taux": 0.394, "forfait": 1515 },
+        { "jusquA": null, "taux": 0.47, "forfait": 0 }
+      ]
+    },
+    "domicileTravail": {
+      "description": "Trajets entre le domicile et le lieu de travail, au titre des frais réels sur les salaires : la distance retenue est limitée à 40 km par trajet (80 km aller-retour), sauf circonstances particulières justifiées (précarité de l'emploi, emploi du conjoint, santé…) ; un seul aller-retour par jour est déductible, sauf contraintes particulières (retour pour le repas de midi, horaires atypiques, santé). Article 83, 3° du code général des impôts.",
+      "source": "https://www.impots.gouv.fr/particulier/frais-de-transport",
+      "distanceMaxParTrajet": 40
+    }
+  },
   "TVA": {
     "description": "Seuils de franchise en base de TVA, signalés pour les micro-entreprises ; la TVA elle-même n'est pas calculée, les montants saisis sont hors taxe.",
     "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F21746",

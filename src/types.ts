@@ -5,6 +5,10 @@ import { z } from "zod"
 // == 1. DÉFINITION DES SCHÉMAS DE VALIDATION (LA SOURCE DE VÉRITÉ)
 // ===================================================================================
 
+/** Puissances fiscales d'une voiture que distingue le barème kilométrique : « 3 » pour 3 CV et moins, « 7 » pour 7 CV et plus. */
+export const PUISSANCES_FISCALES = ["3", "4", "5", "6", "7"] as const
+export type PuissanceFiscale = (typeof PUISSANCES_FISCALES)[number]
+
 export const AvatarSchema = z.object({
   type: z.enum(["initials", "icon"]),
   value: z.string(),

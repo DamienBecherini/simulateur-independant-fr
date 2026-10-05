@@ -2,7 +2,9 @@
 
 import { describe, expect, it } from "vitest"
 import config from "../config.json" with { type: "json" }
+import { PUISSANCES_FISCALES } from "../../types.js"
 import { reductionGenerale } from "../logic/cotisationsSalarie.js"
+import { montantBaremeKilometrique } from "../logic/frais-kilometriques.js"
 import type { BaremeProgressif, ReglesFiscales, TrancheCotisation } from "../logic/regles.js"
 import fichier2024 from "./2024.json" with { type: "json" }
 import fichier2025 from "./2025.json" with { type: "json" }
@@ -60,6 +62,8 @@ function taux(r: ReglesFiscales): [string, number][] {
     ...r.IR.bareme.map(({ taux }, i): [string, number] => [`IR.bareme.${i}`, taux]),
     ["IR.decote.taux", r.IR.decote.taux],
     ["IR.abattementSalaires.taux", r.IR.abattementSalaires.taux],
+    ["baremeKilometrique.majorationElectrique", r.baremeKilometrique.majorationElectrique],
+    ...Object.entries(r.baremeKilometrique.voitures).flatMap(([cv, tranches]) => tranches.map(({ taux }, i): [string, number] => [`baremeKilometrique.voitures.${cv}.${i}`, taux])),
     ["IS.tauxReduit", r.IS.tauxReduit],
     ["IS.tauxNormal", r.IS.tauxNormal],
     ["dividendes.tauxIrForfaitaire", r.dividendes.tauxIrForfaitaire],
@@ -156,6 +160,40 @@ describe("règles par année", () => {
       expect(decote.forfaitCouple).toBeGreaterThan(decote.forfaitSeul)
       expect(abattementSalaires.maximum).toBeGreaterThan(abattementSalaires.minimum)
       expect(plafonnementQuotientFamilial.avantageMaxParDemiPart).toBeGreaterThan(0)
+    })
+
+    it("a un barème kilométrique des voitures de 3 à 7 CV, en trois tranches (5 000 km, 20 000 km, au-delà)", () => {
+      const { voitures, majorationElectrique, domicileTravail } = regles.baremeKilometrique
+      expect(Object.keys(voitures).sort()).toEqual([...PUISSANCES_FISCALES])
+      for (const [cv, tranches] of Object.entries(voitures)) {
+        expect(tranches.map(({ jusquA }) => jusquA), cv).toEqual([5000, 20000, null])
+        tranches.forEach(({ taux }) => expect(taux, cv).toBeGreaterThan(0))
+        // Seule la tranche du milieu a un forfait.
+        expect(tranches.map(({ forfait }) => forfait > 0), cv).toEqual([false, true, false])
+      }
+      expect(majorationElectrique).toBe(0.2)
+      expect(domicileTravail.distanceMaxParTrajet).toBe(40)
+    })
+
+    it("a un barème kilométrique continu aux limites des tranches, aux arrondis près", () => {
+      // Les taux sont publiés au millième : à la limite L, chacun des deux taux peut s'écarter de 0,0005 €/km, et le
+      // forfait d'un demi-euro ; on tolère donc 2 x 0,0005 x L + 1 € (6 € à 5 000 km, 21 € à 20 000 km).
+      for (const [cv, tranches] of Object.entries(regles.baremeKilometrique.voitures)) {
+        tranches.slice(0, -1).forEach((tranche, i) => {
+          const limite = tranche.jusquA ?? 0
+          const suivante = tranches[i + 1]
+          const ecart = Math.abs(limite * tranche.taux + tranche.forfait - (limite * suivante.taux + suivante.forfait))
+          expect(ecart, `${cv} CV à ${limite} km`).toBeLessThanOrEqual(2 * 0.0005 * limite + 1)
+        })
+      }
+    })
+
+    it("a un barème kilométrique qui croît avec la puissance fiscale", () => {
+      const { voitures } = regles.baremeKilometrique
+      for (const distance of [3000, 12000, 30000]) {
+        expectCroissante(PUISSANCES_FISCALES.map(cv => montantBaremeKilometrique(distance, { puissanceFiscale: cv, electrique: false }, regles.baremeKilometrique)))
+      }
+      expect(voitures["3"][0].taux).toBeLessThan(1)
     })
 
     it("a un impôt sur les sociétés au taux réduit inférieur au taux normal", () => {
@@ -276,6 +314,23 @@ describe("règles par année", () => {
         const precedent = tauxAvant.get(nom)
         if (precedent !== undefined && !nom.startsWith("TNS.")) expect(Math.abs(valeur - precedent), nom).toBeLessThanOrEqual(0.1)
       }
+    })
+  })
+
+  describe("barème kilométrique", () => {
+    it("est le même de 2024 à 2026 : non revalorisé depuis l'arrêté du 27 mars 2023, et repris pour 2026 en attendant sa publication", () => {
+      // Les valeurs seulement : descriptions et sources diffèrent d'une année à l'autre.
+      const valeurs = ({ baremeKilometrique: b }: ReglesFiscales) => ({ voitures: b.voitures, majorationElectrique: b.majorationElectrique, distanceMaxParTrajet: b.domicileTravail.distanceMaxParTrajet })
+      expect(valeurs(regles2025)).toEqual(valeurs(regles2024))
+      expect(valeurs(regles2026)).toEqual(valeurs(regles2025))
+    })
+
+    it("retrouve la ligne des 5 CV publiée par l'administration : d x 0,636 ; d x 0,357 + 1 395 ; d x 0,427", () => {
+      expect(regles2026.baremeKilometrique.voitures["5"]).toEqual([
+        { jusquA: 5000, taux: 0.636, forfait: 0 },
+        { jusquA: 20000, taux: 0.357, forfait: 1395 },
+        { jusquA: null, taux: 0.427, forfait: 0 }
+      ])
     })
   })
 

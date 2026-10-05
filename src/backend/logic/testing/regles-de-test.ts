@@ -21,6 +21,40 @@ export const reglesDeTest: ReglesFiscales = {
     abattementSalaires: { taux: 0.1, minimum: 500, maximum: 14000 },
     partsParEnfant: { deuxPremiers: 0.5, suivants: 1 }
   },
+  // Barème kilométrique continu : de 3 à 4 CV, 0,5 €/km jusqu'à 5 000 km (2 500 €), 0,3 €/km + 1 000 € jusqu'à
+  // 20 000 km (7 000 €), 0,35 €/km au-delà ; de 5 à 7 CV, 0,6 €/km (3 000 €), 0,4 €/km + 1 000 € (9 000 €), 0,45 €/km.
+  // Électrique : + 20 %. Trajets domicile-travail retenus jusqu'à 40 km.
+  baremeKilometrique: {
+    majorationElectrique: 0.2,
+    voitures: {
+      "3": [
+        { jusquA: 5000, taux: 0.5, forfait: 0 },
+        { jusquA: 20000, taux: 0.3, forfait: 1000 },
+        { jusquA: null, taux: 0.35, forfait: 0 }
+      ],
+      "4": [
+        { jusquA: 5000, taux: 0.5, forfait: 0 },
+        { jusquA: 20000, taux: 0.3, forfait: 1000 },
+        { jusquA: null, taux: 0.35, forfait: 0 }
+      ],
+      "5": [
+        { jusquA: 5000, taux: 0.6, forfait: 0 },
+        { jusquA: 20000, taux: 0.4, forfait: 1000 },
+        { jusquA: null, taux: 0.45, forfait: 0 }
+      ],
+      "6": [
+        { jusquA: 5000, taux: 0.6, forfait: 0 },
+        { jusquA: 20000, taux: 0.4, forfait: 1000 },
+        { jusquA: null, taux: 0.45, forfait: 0 }
+      ],
+      "7": [
+        { jusquA: 5000, taux: 0.6, forfait: 0 },
+        { jusquA: 20000, taux: 0.4, forfait: 1000 },
+        { jusquA: null, taux: 0.45, forfait: 0 }
+      ]
+    },
+    domicileTravail: { distanceMaxParTrajet: 40 }
+  },
   IS: { tauxReduit: 0.15, plafondTauxReduit: 40000, tauxNormal: 0.25 },
   dividendes: { tauxIrForfaitaire: 0.12, prelevementsSociaux: 0.18, abattementBareme: 0.4, csgDeductible: 0.07 },
   regimeGeneral: {

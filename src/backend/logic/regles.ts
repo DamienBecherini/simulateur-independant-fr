@@ -1,6 +1,6 @@
 // src/backend/logic/regles.ts
 
-import type { CotisationSalarie } from "../../types.js"
+import type { CotisationSalarie, PuissanceFiscale } from "../../types.js"
 import config from "../config.json" with { type: "json" }
 import regles2024 from "../regles/2024.json" with { type: "json" }
 import regles2025 from "../regles/2025.json" with { type: "json" }
@@ -79,6 +79,25 @@ export interface ReglesRegimeGeneral {
 }
 
 /**
+ * Une tranche du barème kilométrique : pour une distance annuelle `d` jusqu'à `jusquA` kilomètres (`null` : sans limite),
+ * le montant est `d x taux + forfait`.
+ */
+export interface TrancheKilometrique {
+  jusquA: number | null
+  taux: number
+  forfait: number
+}
+
+/** Barème kilométrique des voitures, par puissance fiscale, et règles des trajets domicile-travail. */
+export interface BaremeKilometrique {
+  /** Majoration du montant pour un véhicule 100 % électrique (0,2 pour 20 %). */
+  majorationElectrique: number
+  voitures: Record<PuissanceFiscale, TrancheKilometrique[]>
+  /** Distance retenue par trajet domicile-travail, sauf distance plus longue justifiée. */
+  domicileTravail: { distanceMaxParTrajet: number }
+}
+
+/**
  * Les règles fiscales et sociales lues par le moteur.
  * Elles vivent dans `config.json` : changer d'année ne demande aucune modification du code.
  */
@@ -91,6 +110,7 @@ export interface ReglesFiscales {
     abattementSalaires: { taux: number; minimum: number; maximum: number }
     partsParEnfant: { deuxPremiers: number; suivants: number }
   }
+  baremeKilometrique: BaremeKilometrique
   IS: { tauxReduit: number; plafondTauxReduit: number; tauxNormal: number }
   dividendes: { tauxIrForfaitaire: number; prelevementsSociaux: number; abattementBareme: number; csgDeductible: number }
   regimeGeneral: ReglesRegimeGeneral
