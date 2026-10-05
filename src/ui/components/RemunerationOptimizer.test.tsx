@@ -20,7 +20,7 @@ function optimisation(overrides: Partial<OptimisationRemuneration> = {}): Optimi
   return { statut: "SASU", remunerationMaximale: 10000, points, meilleur: points[0], meilleurAvecRetraite: points[2], warnings: [], ...overrides }
 }
 
-const options: ComparaisonOptions = { activityId: "micro-atelier", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+const options: ComparaisonOptions = { activityId: "micro-atelier", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }
 const session = { ...emptySession(), entities: [makePerson(), makeMicro()] }
 
 function afficher(onAppliquer = vi.fn()) {
@@ -141,6 +141,6 @@ describe("RemunerationOptimizer", () => {
     await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer au comparateur" }))
 
     expect(screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")).toHaveValue(5700)
-    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 5700, distribuerToutLeBenefice: true }), 2026))
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 5700, repartition: { mode: "dividendes", partDistribuee: 1 } }), 2026))
   })
 })

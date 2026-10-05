@@ -23,7 +23,7 @@ interface ComparatorPanelProps {
 }
 
 /** Sans activité, on compare tout de même les couples en union libre. */
-const NO_ACTIVITY: ComparaisonOptions = { activityId: "", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+const NO_ACTIVITY: ComparaisonOptions = { activityId: "", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }
 
 function formatMoney(n: number): string {
   return n.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €"
@@ -155,7 +155,7 @@ function ComparatorControls({ activities, selected, options, onSelect, onChange 
       </div>
 
       <label className="flex items-center gap-2 pb-2 text-sm pointer-coarse:min-h-11">
-        <Switch checked={options.distribuerToutLeBenefice} onCheckedChange={distribuerToutLeBenefice => onChange({ distribuerToutLeBenefice })} />
+        <Switch checked={options.repartition.mode !== "grille"} onCheckedChange={tout => onChange({ repartition: { mode: tout ? "dividendes" : "grille", partDistribuee: 1 } })} />
         Verser tout le bénéfice disponible en dividendes
       </label>
 
@@ -378,7 +378,7 @@ function OptimiseurDeLActivite({ session, annee, selected, options, onChange }: 
       options={options}
       activityName={selected.name}
       statutInitial={selected.type === "company" && selected.legalStatus === "EURL" ? "EURL" : "SASU"}
-      onAppliquer={remunerationNette => onChange({ ...options, remunerationNette, distribuerToutLeBenefice: true })}
+      onAppliquer={remunerationNette => onChange({ ...options, remunerationNette, repartition: { mode: "dividendes", partDistribuee: 1 } })}
     />
   )
 }

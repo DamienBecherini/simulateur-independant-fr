@@ -29,7 +29,7 @@ function useOptimisation(session: SessionState, options: ComparaisonOptions, sta
     let annule = false
     const minuteur = setTimeout(async () => {
       try {
-        const optimisation = await window.api.optimiserRemuneration(session, { activityId, partBncPrestations, fraisFonctionnement, remunerationNette: 0, distribuerToutLeBenefice: true }, statut, annee)
+        const optimisation = await window.api.optimiserRemuneration(session, { activityId, partBncPrestations, fraisFonctionnement, remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 } }, statut, annee)
         if (annule) return
         setResultat(optimisation)
         setErreur(null)

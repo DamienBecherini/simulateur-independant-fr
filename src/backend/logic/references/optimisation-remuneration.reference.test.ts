@@ -12,7 +12,7 @@ import { personne, relation, session, societe } from "../testing/session-de-test
  * et la première centaine qui en valide 4 est 5 800 € (7 326,96 € bruts). Avec l'ancien ratio net / brut de 78 %, c'était 5 700 €.
  */
 
-const options = { activityId: "s1", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+const options = { activityId: "s1", remunerationNette: 0, repartition: { mode: "dividendes" as const, partDistribuee: 1 }, partBncPrestations: 1 }
 
 casDeReference("Arbitrage rémunération / dividendes", () => {
   it("président de SASU : 4 trimestres de retraite à partir de 5 800 € nets de rémunération", () => {

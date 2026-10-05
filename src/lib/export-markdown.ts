@@ -2,8 +2,8 @@
 // Rapport Markdown de la simulation, à lire tel quel ou à confier à une IA pour l'analyser : hypothèses et limites,
 // acteurs et relations, flux saisis, résultats, comparateur de statuts et avertissements.
 
-import type { ComparaisonOptions, ComparaisonResult, Entity, Relationship, ScenarioStatut, SimulationAnnuelle, SimulationReport } from "@/types"
-import { defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "./comparateur-options"
+import type { ComparaisonOptions, ComparaisonResult, Entity, ModeRepartition, Relationship, ScenarioStatut, SimulationAnnuelle, SimulationReport } from "@/types"
+import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { fluxParActeur, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, type LigneDeFlux } from "./export-commun"
 import { numeroterNotes } from "./notes"
 
@@ -154,10 +154,22 @@ function totalDesFrais(options: ComparaisonOptions): string {
   return statutsFrais.map(statut => `${libelles[statut]} ${euros(postes.reduce((somme, poste) => somme + frais[statut][poste], 0))}`).join(", ")
 }
 
+/** La répartition choisie du bénéfice des sociétés, en une phrase. */
+function descriptionRepartition(options: ComparaisonOptions): string {
+  const { mode, partDistribuee } = options.repartition
+  const remuneration = euros(options.remunerationNette)
+  const descriptions: Record<ModeRepartition, string> = {
+    dividendes: `rémunération nette de ${remuneration}, tout le bénéfice restant versé en dividendes`,
+    remuneration: "la plus haute rémunération que la société peut verser, sans dividendes",
+    personnalisee: `rémunération nette de ${remuneration}, ${pourcentage(partDistribuee)} du bénéfice distribuable versé en dividendes, le reste conservé dans la société`,
+    grille: `rémunération nette de ${remuneration}, dividendes saisis dans la grille`
+  }
+  return `${libellesRepartition[mode]} (${descriptions[mode]})`
+}
+
 function reglagesUtilises(options: ComparaisonOptions): string {
   return [
-    `- Rémunération nette annuelle du dirigeant en SASU et EURL : ${euros(options.remunerationNette)}`,
-    `- Dividendes en SASU et EURL : ${options.distribuerToutLeBenefice ? "tout le bénéfice disponible est distribué" : "ceux saisis dans la grille"}`,
+    `- Bénéfice de la société en SASU et EURL : ${descriptionRepartition(options)}`,
     `- En micro-entreprise, part des prestations de services en BNC : ${pourcentage(options.partBncPrestations)} (le reste en BIC)`,
     `- Frais de fonctionnement annuels ajoutés aux charges : ${options.fraisFonctionnement ? totalDesFrais(options) : "aucun"}`
   ].join("\n")

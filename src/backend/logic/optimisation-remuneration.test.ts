@@ -7,7 +7,7 @@ import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
 import type { ComparaisonOptions, SimulationAnnuelle, StatutSociete } from "../../types.js"
 
-const options = (activityId: string): ComparaisonOptions => ({ activityId, remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 })
+const options = (activityId: string): ComparaisonOptions => ({ activityId, remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 })
 
 /** Alice, présidente d'une SASU (ou gérante d'une EURL) qui facture 100 000 € de prestations. */
 function societeDAlice(statut: StatutSociete, flux: Flux[] = [["s1", "ca_services", 100000]]): SimulationAnnuelle {

@@ -1,7 +1,7 @@
 // src/lib/export-markdown.test.ts
 
 import { describe, expect, it } from "vitest"
-import type { SimulationAnnuelle } from "@/types"
+import type { ComparaisonOptions, SimulationAnnuelle } from "@/types"
 import { echapper, euros, LIMITES, rapportMarkdown, repartition, type DonneesDuRapport } from "./export-markdown"
 import { comparaisonExemple, optionsExemple, rapportExemple, sessionExemple } from "./testing/exports-fixtures"
 
@@ -159,8 +159,7 @@ Aucun avertissement.
 
   it("donne le tableau du comparateur avec les réglages utilisés, les notes et les avertissements", () => {
     const rapport = rapportComplet()
-    expect(rapport).toContain(`- Rémunération nette annuelle du dirigeant en SASU et EURL : 20 000 €
-- Dividendes en SASU et EURL : tout le bénéfice disponible est distribué
+    expect(rapport).toContain(`- Bénéfice de la société en SASU et EURL : Rémunération saisie, le reste en dividendes (rémunération nette de 20 000 €, tout le bénéfice restant versé en dividendes)
 - En micro-entreprise, part des prestations de services en BNC : 50 % (le reste en BIC)
 - Frais de fonctionnement annuels ajoutés aux charges : SASU 2 900 €, EURL 2 900 €, EI au réel 2 050 €, micro-entreprise 850 €
 
@@ -186,12 +185,19 @@ Aucun avertissement.
     expect(rapport).toContain("## Avertissements\n\n- Règles de 2026 reprises pour 2027.\n- Ma SASU : Société peu rentable.")
   })
 
+  it("décrit la répartition personnalisée et le mode « tout en rémunération »", () => {
+    const resultat = comparaisonExemple()
+    const rapport = (choix: ComparaisonOptions["repartition"]) => rapportComplet({ comparaison: { nomActivite: "Ma SASU", options: { ...optionsExemple(), repartition: choix }, resultat } })
+    expect(rapport({ mode: "personnalisee", partDistribuee: 0.35 })).toContain("- Bénéfice de la société en SASU et EURL : Répartition personnalisée (rémunération nette de 20 000 €, 35 % du bénéfice distribuable versé en dividendes, le reste conservé dans la société)")
+    expect(rapport({ mode: "remuneration", partDistribuee: 1 })).toContain("- Bénéfice de la société en SASU et EURL : Tout en rémunération (la plus haute rémunération que la société peut verser, sans dividendes)")
+  })
+
   it("adapte les réglages, l'écart négatif et les colonnes sans revenus ni statut actuel", () => {
     const resultat = comparaisonExemple()
     resultat.scenarios = [{ ...resultat.scenarios[1], netApresImpots: 15000, revenusAvantPrelevements: 0, warnings: [] }, { ...resultat.scenarios[0], warnings: [] }]
-    const options = { ...optionsExemple(), distribuerToutLeBenefice: false, fraisFonctionnement: undefined }
+    const options = { ...optionsExemple(), repartition: { mode: "grille" as const, partDistribuee: 1 }, fraisFonctionnement: undefined }
     const rapport = rapportComplet({ comparaison: { nomActivite: "Ma SASU", options, resultat } })
-    expect(rapport).toContain("- Dividendes en SASU et EURL : ceux saisis dans la grille")
+    expect(rapport).toContain("- Bénéfice de la société en SASU et EURL : Dividendes saisis dans la grille (rémunération nette de 20 000 €, dividendes saisis dans la grille)")
     expect(rapport).toContain("- Frais de fonctionnement annuels ajoutés aux charges : aucun")
     expect(rapport).toContain("| Taux global de prélèvement | — | 25 % |")
     expect(rapport).toContain("| Écart avec le statut actuel | -5 000 € | — |")

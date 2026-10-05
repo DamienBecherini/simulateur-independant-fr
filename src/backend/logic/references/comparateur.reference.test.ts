@@ -18,7 +18,7 @@ import type { ComparaisonOptions, ComparaisonResult, StatutCompare } from "../..
  * Président de SASU : cotisations du régime général ligne à ligne, détaillées dans l'en-tête de societes.reference.test.ts.
  */
 
-const options = (activityId: string, autres: Partial<ComparaisonOptions> = {}): ComparaisonOptions => ({ activityId, remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1, ...autres })
+const options = (activityId: string, autres: Partial<ComparaisonOptions> = {}): ComparaisonOptions => ({ activityId, remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1, ...autres })
 
 function colonne(resultat: ComparaisonResult, statut: StatutCompare) {
   const trouvee = resultat.scenarios.find(s => s.statut === statut)

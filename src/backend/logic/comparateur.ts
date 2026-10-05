@@ -180,32 +180,65 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation
     resultatConserve: bilan.resultatConserve,
     resultatConserveActivite: Math.round(activite?.resultatConserve ?? 0),
     horsPlafond: (statut === "micro" || statut === "micro-vfl") && depassePlafondMicro(caMicro, regles),
-    warnings: activite?.warnings ?? []
+    warnings: activite?.warnings ?? [],
+    ...(activite?.partage ? { partage: activite.partage } : {})
   }
 }
 
 interface Simulation {
   report: SimulationReport
   session: DonneesDeLAnnee
-  /** Dividendes calculés pour verser tout le bénéfice ; `null` quand ce sont ceux de la grille. */
+  /** Dividendes calculés selon la répartition choisie ; `null` quand ce sont ceux de la grille. */
   dividendes: number | null
 }
 
+/** Précision des rémunérations calculées. */
+export const PRECISION_REMUNERATION = 100
+
+/**
+ * Rémunération nette la plus haute qui laisse un bénéfice positif ou nul, à 100 € près. Le bénéfice baisse quand
+ * la rémunération monte : on double la borne haute jusqu'à le rendre négatif, puis on procède par dichotomie.
+ */
+export function remunerationMaximale(benefice: (remuneration: number) => number): number {
+  let haut = Math.max(PRECISION_REMUNERATION, benefice(0))
+  for (let i = 0; i < 20 && benefice(haut) >= 0; i++) haut *= 2
+  let bas = 0
+  while (haut - bas > PRECISION_REMUNERATION / 10) {
+    const milieu = (bas + haut) / 2
+    if (benefice(milieu) >= 0) bas = milieu
+    else haut = milieu
+  }
+  return Math.floor(bas / PRECISION_REMUNERATION) * PRECISION_REMUNERATION
+}
+
+/** Rémunération et part du bénéfice distribuable versée en dividendes, selon la répartition choisie. */
+function remunerationEtPart(session: DonneesDeLAnnee, source: Activite, statut: "SASU" | "EURL", options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee): { remunerationNette: number; part: number } {
+  const { mode, partDistribuee } = options.repartition
+  if (mode === "remuneration") {
+    const benefice = (remunerationNette: number) => beneficeAvantDividendes(session, source, statut, { ...options, remunerationNette }, regles, contexte)
+    return { remunerationNette: benefice(0) > 0 ? remunerationMaximale(benefice) : 0, part: 0 }
+  }
+  return { remunerationNette: options.remunerationNette, part: mode === "personnalisee" ? Math.min(1, Math.max(0, partDistribuee)) : 1 }
+}
+
 function simulerStatut(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee): Simulation {
-  if (!estSocieteIS(statut) || !options.distribuerToutLeBenefice) {
+  if (!estSocieteIS(statut) || options.repartition.mode === "grille") {
     const convertie = sessionConvertie(session, source, statut, options, null)
     return { report: runMetaSimulation(convertie, regles, contexte), session: convertie, dividendes: null }
   }
-  // Pour tout distribuer, on verse ce qui reste dans la société, et on recommence tant qu'il reste quelque chose :
-  // les cotisations dépendent des dividendes (minimum du gérant d'EURL, part au-delà de 10 % du capital).
+  const { remunerationNette, part } = remunerationEtPart(session, source, statut, options, regles, contexte)
+  const reglages = { ...options, remunerationNette }
+  // On verse la part choisie du bénéfice distribuable (dividendes déjà versés et reste), et on recommence tant que
+  // les dividendes changent : les cotisations peuvent en dépendre (part au-delà de 10 % du capital en EURL).
   let dividendes = 0
-  let convertie = sessionConvertie(session, source, statut, options, dividendes)
+  let convertie = sessionConvertie(session, source, statut, reglages, dividendes)
   let report = runMetaSimulation(convertie, regles, contexte)
   for (let tour = 0; tour < 5; tour++) {
     const reste = report.activities.find(a => a.entityId === source.id)?.resultatConserve ?? 0
-    if (reste < 1) break
-    dividendes += reste
-    convertie = sessionConvertie(session, source, statut, options, dividendes)
+    const suivants = Math.max(0, part * (dividendes + reste))
+    if (Math.abs(suivants - dividendes) < 1) break
+    dividendes = suivants
+    convertie = sessionConvertie(session, source, statut, reglages, dividendes)
     report = runMetaSimulation(convertie, regles, contexte)
   }
   return { report, session: convertie, dividendes }

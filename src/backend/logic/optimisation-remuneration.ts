@@ -1,7 +1,7 @@
 // src/backend/logic/optimisation-remuneration.ts
 
 import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, DonneesDeLAnnee, StatutSociete } from "../../types.js"
-import { activiteComparee, beneficeAvantDividendes, simulerScenario, type Activite } from "./comparateur.js"
+import { activiteComparee, beneficeAvantDividendes, PRECISION_REMUNERATION, remunerationMaximale, simulerScenario, type Activite } from "./comparateur.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 import type { ContexteDeLAnnee } from "./simulation-engine.js"
 
@@ -17,14 +17,14 @@ import type { ContexteDeLAnnee } from "./simulation-engine.js"
  */
 
 /** Précision des rémunérations proposées. */
-const PRECISION = 100
+const PRECISION = PRECISION_REMUNERATION
 /** Nombre de points visés sur la grille. */
 const POINTS_DE_GRILLE = 60
 
 const arrondiInferieur = (montant: number) => Math.floor(montant / PRECISION) * PRECISION
 
 function calculerPoint(session: DonneesDeLAnnee, source: Activite, statut: StatutSociete, options: ComparaisonOptions, remunerationNette: number, regles: ReglesFiscales, contexte: ContexteDeLAnnee): PointRemuneration {
-  const { scenario, dividendes } = simulerScenario(session, source, statut, { ...options, remunerationNette, distribuerToutLeBenefice: true }, regles, contexte)
+  const { scenario, dividendes } = simulerScenario(session, source, statut, { ...options, remunerationNette, repartition: { mode: "dividendes", partDistribuee: 1 } }, regles, contexte)
   return {
     remunerationNette,
     dividendes: Math.round(dividendes ?? 0),
@@ -35,22 +35,6 @@ function calculerPoint(session: DonneesDeLAnnee, source: Activite, statut: Statu
     prelevementsSociaux: Math.round(scenario.prelevementsSociaux),
     trimestres: scenario.protectionSociale.trimestres
   }
-}
-
-/**
- * Rémunération nette la plus haute qui laisse un bénéfice positif ou nul, à 100 € près. Le bénéfice baisse quand
- * la rémunération monte : on double la borne haute jusqu'à le rendre négatif, puis on procède par dichotomie.
- */
-function remunerationMaximale(benefice: (remuneration: number) => number): number {
-  let haut = Math.max(PRECISION, benefice(0))
-  for (let i = 0; i < 20 && benefice(haut) >= 0; i++) haut *= 2
-  let bas = 0
-  while (haut - bas > PRECISION / 10) {
-    const milieu = (bas + haut) / 2
-    if (benefice(milieu) >= 0) bas = milieu
-    else haut = milieu
-  }
-  return arrondiInferieur(bas)
 }
 
 /** Le point au meilleur net ; à net égal, celui qui valide le plus de trimestres, puis la plus petite rémunération. */
