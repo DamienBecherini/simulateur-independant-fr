@@ -12,6 +12,10 @@ Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un 
 
 *Projet personnel, né d'un besoin d'entrepreneur. Je le partage pour montrer mes standards de code et ma vision produit, et parce qu'il peut aider d'autres entrepreneurs à y voir plus clair. Ce n'est pas un logiciel de conseil fiscal : les résultats sont indicatifs et n'ont pas été validés par un expert-comptable.*
 
+## 📥 Télécharger
+
+L'application de bureau pour Windows, macOS (Apple Silicon et Intel) et Linux se télécharge depuis la **[dernière version publiée](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)**. Les exécutables ne sont pas signés par un certificat d'éditeur : Windows et macOS affichent un avertissement au premier lancement. Le [guide d'installation](./documentation/installation.md) explique comment le passer, système par système. Les changements de chaque version sont dans le [journal des modifications](./CHANGELOG.md).
+
 ## 🖼️ Aperçu
 
 Simulation fictive : une indépendante en micro-entreprise mixte, pacsée avec le président d'une SASU, avec un enfant.
