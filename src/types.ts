@@ -425,6 +425,8 @@ export interface ScenarioStatut {
   fraisFonctionnement: number
   /** Bénéfice laissé dans l'activité comparée (négatif si elle est déficitaire) ; les autres montants portent sur toute la simulation. */
   resultatConserveActivite: number
+  /** Micro-entreprise au-delà des plafonds de chiffre d'affaires : régime tenable deux ans au plus, jamais désigné meilleur net. */
+  horsPlafond: boolean
   protectionSociale: ProtectionSociale
   /** Indicateurs de toute la simulation, l'activité ayant pris ce statut. */
   netApresImpots: number

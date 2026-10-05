@@ -184,3 +184,28 @@ describe("comparerStatuts", () => {
     })
   })
 })
+
+describe("micro-entreprise au-delà des plafonds", () => {
+  // Règles de test : plafond de 80 000 € pour les prestations de services.
+  const titulaire = [relation("alice", "m1", "Titulaire")]
+
+  it("signale les colonnes micro hors plafond, et ne les désigne jamais meilleur net", () => {
+    const resultat = comparer([personne("alice"), micro("m1")], titulaire, [["m1", "ca_micro_services_bnc", 150000]], options("m1"))
+
+    expect(resultat.scenarios.filter(s => s.horsPlafond).map(s => s.statut)).toEqual(["micro", "micro-vfl"])
+    expect(["micro", "micro-vfl"]).not.toContain(resultat.meilleur)
+    const meilleurTenable = Math.max(...resultat.scenarios.filter(s => !s.horsPlafond).map(s => s.netApresImpots))
+    expect(colonne(resultat, resultat.meilleur!).netApresImpots).toBe(meilleurTenable)
+  })
+
+  it("sous le plafond, aucune colonne n'est hors plafond", () => {
+    const resultat = comparer([personne("alice"), micro("m1")], titulaire, [["m1", "ca_micro_services_bnc", 80000]], options("m1"))
+    expect(resultat.scenarios.some(s => s.horsPlafond)).toBe(false)
+  })
+
+  it("une société convertie en micro est aussi comparée au plafond", () => {
+    const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 90000]], options("s1"))
+    expect(colonne(resultat, "micro").horsPlafond).toBe(true)
+    expect(colonne(resultat, "SASU").horsPlafond).toBe(false)
+  })
+})

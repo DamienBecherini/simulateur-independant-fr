@@ -178,6 +178,7 @@ function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioSta
     <th scope="col" className={cn("px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "bg-emerald-100 dark:bg-emerald-900/40")}>
       {scenario.libelle}
       <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{mentions || " "}</span>
+      {scenario.horsPlafond ? <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">hors plafond · 2 ans au plus</span> : null}
       {renvois.length > 0 ? (
         <span className="mt-1 flex justify-end gap-1">
           {renvois.map(numero => (

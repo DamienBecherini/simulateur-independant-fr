@@ -1,7 +1,7 @@
 // src/backend/logic/calculsIndividuels.test.ts
 
 import { describe, expect, it } from "vitest"
-import { calculerMicro, plafondRfrVersementLiberatoire, type EntreesMicro } from "./calculsAE.js"
+import { calculerMicro, depassePlafondMicro, plafondRfrVersementLiberatoire, type EntreesMicro } from "./calculsAE.js"
 import { calculerEI } from "./calculsEI.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 
@@ -176,5 +176,20 @@ describe("calculerEI", () => {
 
   it("utilise par défaut les règles en vigueur", () => {
     expect(calculerEI({ chiffreAffaires: 10000, chargesDeductibles: 0 }).revenuNet).toBeLessThan(10000)
+  })
+})
+
+describe("depassePlafondMicro", () => {
+  // Règles de test : 80 000 € de prestations de services, 200 000 € de chiffre d'affaires total.
+  const ca = (caVente: number, caServicesBic: number, caServicesBnc: number) => ({ caVente, caServicesBic, caServicesBnc })
+
+  it("compare les prestations BIC et BNC ensemble au plafond des services", () => {
+    expect(depassePlafondMicro(ca(0, 40000, 40000), reglesDeTest)).toBe(false)
+    expect(depassePlafondMicro(ca(0, 40000, 40001), reglesDeTest)).toBe(true)
+  })
+
+  it("compare le chiffre d'affaires total au plafond de la vente, même si les prestations restent sous le leur", () => {
+    expect(depassePlafondMicro(ca(200000, 0, 0), reglesDeTest)).toBe(false)
+    expect(depassePlafondMicro(ca(130000, 75000, 0), reglesDeTest)).toBe(true)
   })
 })
