@@ -130,3 +130,72 @@ describe("App : historique d'annulation", () => {
     expect(nameInput()).toHaveValue("Bob")
   })
 })
+
+describe("App : plusieurs années", () => {
+  /** La case de janvier d'Alice, qui affiche le total de ses flux du mois. */
+  const caseDeJanvier = () => screen.getByRole("button", { name: "Flux de janvier : Alice Martin" })
+
+  async function ajouterLAnneeSuivante(user: UserEvent) {
+    await user.click(screen.getByRole("button", { name: "Ajouter une année" }))
+    await user.click(screen.getByRole("button", { name: "Ajouter 2027" }))
+  }
+
+  it("ajoute l'année suivante en recopiant les flux, l'affiche, puis revient à la précédente", async () => {
+    const user = await renderApp()
+    await ajouterLAnneeSuivante(user)
+
+    expect(screen.getByRole("button", { name: "2027" })).toHaveAttribute("aria-pressed", "true")
+    expect(caseDeJanvier()).toHaveTextContent(/1\s000/)
+    await vi.waitFor(() => expect(window.api.simulerLesAnnees).toHaveBeenLastCalledWith(expect.objectContaining({ annees: [expect.objectContaining({ annee: 2026 }), expect.objectContaining({ annee: 2027 })] })))
+    // Les résultats portent sur l'année affichée, la synthèse sur toutes.
+    expect(await screen.findByText(/année 2027 avec les règles fiscales/)).toBeInTheDocument()
+    expect(screen.getByRole("table", { name: /chaque année de la session/ })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "2026" }))
+    expect(screen.getByRole("button", { name: "2026" })).toHaveAttribute("aria-pressed", "true")
+    expect(await screen.findByText(/année 2026 avec les règles fiscales/)).toBeInTheDocument()
+  })
+
+  it("ajoute une année vide, qui ne touche pas à la grille de l'autre année", async () => {
+    const user = await renderApp()
+
+    await user.click(screen.getByRole("button", { name: "Ajouter une année" }))
+    await user.click(screen.getByRole("radio", { name: "2025, avant 2026" }))
+    await user.click(screen.getByRole("radio", { name: "Commencer avec une grille vide" }))
+    await user.click(screen.getByRole("button", { name: "Ajouter 2025" }))
+
+    expect(screen.getByRole("button", { name: "2025" })).toHaveAttribute("aria-pressed", "true")
+    expect(caseDeJanvier()).not.toHaveTextContent(/1\s000/)
+    await user.click(screen.getByRole("button", { name: "2026" }))
+    expect(caseDeJanvier()).toHaveTextContent(/1\s000/)
+  })
+
+  it("modifie la grille de l'année affichée seulement", async () => {
+    const user = await renderApp()
+    await ajouterLAnneeSuivante(user)
+
+    const dialog = await openMonth(user, "janvier")
+    const amount = within(dialog).getByRole("textbox", { name: "Montant" })
+    await user.clear(amount)
+    await user.type(amount, "2500{Enter}")
+    await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
+
+    expect(caseDeJanvier()).toHaveTextContent(/2\s500/)
+    await user.click(screen.getByRole("button", { name: "2026" }))
+    expect(caseDeJanvier()).toHaveTextContent(/1\s000/)
+  })
+
+  it("supprime une année en une étape d'annulation, et revient à la plus récente", async () => {
+    const user = await renderApp()
+    await ajouterLAnneeSuivante(user)
+
+    await user.click(screen.getByRole("button", { name: "Supprimer 2027" }))
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Supprimer 2027" }))
+
+    expect(screen.queryByRole("button", { name: "2027" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "2026" })).toHaveAttribute("aria-pressed", "true")
+    expect(await countUndoSteps(user)).toBe(2)
+    await user.keyboard("{Control>}z{/Control}")
+    expect(screen.getByRole("button", { name: "2027" })).toBeInTheDocument()
+  })
+})

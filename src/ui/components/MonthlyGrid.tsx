@@ -24,6 +24,10 @@ interface MonthlyGridProps {
   setMonthlyData: Dispatch<SetStateAction<MonthlyGridData>>
   preferences: UserPreferences
   flowTypeToNumberMap: Map<string, number>
+  /** Année de la grille, rappelée dans le titre à l'impression. */
+  annee?: number
+  /** Sélecteur d'année, affiché à côté du titre. */
+  selecteurAnnee?: React.ReactNode
 }
 
 // Constantes pour les labels des mois
@@ -33,7 +37,7 @@ const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 /** « de mars », mais « d’avril », « d’août », « d’octobre » : l’élision devant une voyelle. */
 const deMois = (mois: string) => (/^[aeiouâéèêîôû]/i.test(mois) ? `d’${mois.toLowerCase()}` : `de ${mois.toLowerCase()}`)
 
-function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap }: MonthlyGridProps) {
+function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee }: MonthlyGridProps) {
   // ===================================================================================
   // == ÉTAT DE LA FENÊTRE DES FLUX
   // ===================================================================================
@@ -223,7 +227,14 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
   return (
     <>
       <div className="page-paysage p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md mt-8 print:mt-0 print:p-3">
-        <h2 className="text-2xl font-semibold mb-4">Grille de Saisie Annuelle</h2>
+        <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <h2 className="text-2xl font-semibold">
+            Grille de Saisie Annuelle
+            {/* Sur papier, le sélecteur disparaît : le titre dit de quelle année il s'agit. */}
+            {annee !== undefined ? <span className="hidden print:inline"> {annee}</span> : null}
+          </h2>
+          {selecteurAnnee}
+        </div>
         {entities.length === 0 ? (
           <p className="text-slate-600 dark:text-slate-400">Veuillez d'abord ajouter une entité pour commencer la saisie.</p>
         ) : (

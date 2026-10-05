@@ -117,3 +117,17 @@ test("l'ajout d'une relation sur la carte d'une entité ne présente aucune viol
   await expect(page.getByRole("combobox", { name: "Avec qui" })).toBeVisible()
   await auditer(page, "ajout d'une relation")
 })
+
+test("plusieurs années (sélecteur, synthèse, fenêtres d'ajout et de suppression) ne présentent aucune violation WCAG", async ({ page }) => {
+  await ouvrir(page)
+  await page.getByRole("button", { name: "Ajouter une année" }).click()
+  await expect(page.getByRole("dialog", { name: "Ajouter une année" })).toBeVisible()
+  await auditer(page, "ajout d'une année")
+  await page.getByRole("button", { name: "Ajouter 2027" }).click()
+  await expect(page.getByText(/année 2027 avec les règles fiscales 2026/)).toBeVisible()
+  await expect(page.getByRole("table", { name: /chaque année de la session/ })).toBeVisible()
+  await auditer(page, "deux années, avertissement et synthèse")
+  await page.getByRole("button", { name: "Supprimer 2027" }).click()
+  await expect(page.getByRole("dialog", { name: "Supprimer l'année 2027 ?" })).toBeVisible()
+  await auditer(page, "suppression d'une année")
+})

@@ -10,7 +10,11 @@ import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
 import type { SaveSlot, SimulationPluriannuelle } from "@/types"
-import { anneeExistante, donneesDeLAnnee, remplacerGrille, vueDeLAnnee } from "@/backend/logic/annees"
+import { ajouterAnnee, anneeAAjouter, anneeExistante, anneesDeLaSession, donneesDeLAnnee, remplacerGrille, supprimerAnnee, vueDeLAnnee } from "@/backend/logic/annees"
+import { PREMIERE_ANNEE_DES_REGLES } from "@/backend/logic/regles"
+import { createId } from "@/lib/id"
+import { SelecteurAnnee } from "./components/SelecteurAnnee"
+import { SyntheseDesAnnees } from "./components/SyntheseDesAnnees"
 import { ResultsPanel } from "./components/ResultsPanel"
 import { ComparatorPanel } from "./components/ComparatorPanel"
 import { FlowLegend } from "./components/FlowLegend"
@@ -33,7 +37,8 @@ function App() {
 
   // L'année affichée : celle de la grille, des résultats, du comparateur et des exports. Elle n'est pas enregistrée
   // dans la session (voir l'ADR 008) ; par défaut, ou si elle disparaît, c'est la plus récente.
-  const annee = anneeExistante(currentSession, null)
+  const [anneeChoisie, setAnneeChoisie] = useState<number | null>(null)
+  const annee = anneeExistante(currentSession, anneeChoisie)
   const vue = useMemo(() => vueDeLAnnee(currentSession, annee), [currentSession, annee])
   const resultatDeLAnnee = simulation?.annees.find(a => a.annee === annee)
   const simulationReport = resultatDeLAnnee?.report ?? null
@@ -197,11 +202,28 @@ function App() {
           }}
           preferences={userPreferences}
           flowTypeToNumberMap={flowTypeToNumberMap}
+          annee={annee}
+          selecteurAnnee={
+            <SelecteurAnnee
+              annees={anneesDeLaSession(currentSession)}
+              annee={annee}
+              premiereAnneeConnue={PREMIERE_ANNEE_DES_REGLES}
+              onChange={setAnneeChoisie}
+              onAjouter={(position, copier) => {
+                // La nouvelle année est affichée tout de suite ; son numéro se déduit de la session actuelle.
+                setAnneeChoisie(anneeAAjouter(currentSession, position))
+                setCurrentSession(prev => ajouterAnnee(prev, position, copier, () => createId("flow")))
+              }}
+              onSupprimer={anneeASupprimer => setCurrentSession(prev => supprimerAnnee(prev, anneeASupprimer))}
+            />
+          }
         />
 
         <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
 
         <ResultsPanel report={simulationReport} error={erreurDeLAnnee} />
+
+        <SyntheseDesAnnees simulation={simulation} annee={annee} />
 
         <ComparatorPanel session={currentSession} annee={annee} />
       </main>
