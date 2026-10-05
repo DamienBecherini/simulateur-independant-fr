@@ -1,6 +1,7 @@
 // src/lib/comparateur-options.ts
 
-import type { ComparaisonOptions, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, StatutFrais } from "@/types"
+import { STATUTS_FRAIS } from "@/types"
+import type { ComparaisonOptions, Comparateur, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle, StatutFrais } from "@/types"
 
 /** Libellés des postes de frais, dans l'ordre d'affichage. */
 export const posteFraisLabels: Record<PosteFrais, string> = {
@@ -11,7 +12,7 @@ export const posteFraisLabels: Record<PosteFrais, string> = {
   cfe: "Cotisation foncière des entreprises (CFE)"
 }
 
-export const statutsFrais: StatutFrais[] = ["SASU", "EURL", "EI", "micro"]
+export const statutsFrais: StatutFrais[] = [...STATUTS_FRAIS]
 
 /** Modes de partage du bénéfice en SASU et EURL, dans l'ordre d'affichage, avec leur libellé. */
 export const libellesRepartition: Record<ModeRepartition, string> = {
@@ -79,4 +80,64 @@ export function defaultComparisonOptions(session: DonneesDeLAnnee, activityId: s
     partBncPrestations: 1,
     fraisFonctionnement: defaultFraisFonctionnement()
   }
+}
+
+/**
+ * Activité comparée : celle que l'utilisateur a choisie, ou la première si elle n'est pas (ou plus) dans la session.
+ * `undefined` sans activité.
+ */
+export function activiteComparee(session: DonneesDeLAnnee, comparateur: Comparateur | undefined): Company | MicroEntreprise | undefined {
+  const activites = comparableActivities(session)
+  return activites.find(activite => activite.id === comparateur?.activiteComparee) ?? activites[0]
+}
+
+/**
+ * Réglages du comparateur pour une activité et l'année affichée : ceux que l'utilisateur a choisis, et pour les autres
+ * les valeurs par défaut tirées de la grille de l'année. La rémunération saisie vaut pour son année seulement ;
+ * le mode de partage, la part BNC et les frais de fonctionnement valent pour toutes les années.
+ */
+export function optionsDuComparateur(vue: SimulationAnnuelle, activityId: string, reglages: ReglagesComparateur | undefined): ComparaisonOptions {
+  const defaut = defaultComparisonOptions(vue, activityId)
+  if (!reglages) return defaut
+  return {
+    ...defaut,
+    remunerationNette: reglages.remunerationParAnnee?.[String(vue.annee)] ?? defaut.remunerationNette,
+    repartition: reglages.repartition ?? defaut.repartition,
+    partBncPrestations: reglages.partBncPrestations ?? defaut.partBncPrestations,
+    fraisFonctionnement: reglages.fraisFonctionnement ?? defaut.fraisFonctionnement
+  }
+}
+
+/** Réglages du comparateur de l'activité comparée dans une session, pour l'année affichée ; `null` sans activité. */
+export function reglagesDeLActiviteComparee(vue: SimulationAnnuelle, comparateur: Comparateur | undefined): { activite: Company | MicroEntreprise; options: ComparaisonOptions } | null {
+  const activite = activiteComparee(vue, comparateur)
+  if (!activite) return null
+  return { activite, options: optionsDuComparateur(vue, activite.id, comparateur?.reglagesParActivite[activite.id]) }
+}
+
+const memeRepartition = (a: RepartitionBenefice, b: RepartitionBenefice) => a.mode === b.mode && a.partDistribuee === b.partDistribuee && (a.avecRetraite ?? false) === (b.avecRetraite ?? false)
+const memesFrais = (a: FraisFonctionnement | undefined, b: FraisFonctionnement | undefined) => JSON.stringify(a) === JSON.stringify(b)
+
+/**
+ * Retient ce que l'utilisateur vient de changer dans le comparateur, en passant des réglages affichés (`avant`) aux
+ * nouveaux (`apres`) : seuls les champs modifiés rejoignent ses réglages, les autres gardent leur valeur choisie,
+ * ou restent absents pour suivre la grille. Une rémunération modifiée est retenue pour l'année affichée.
+ */
+export function retenirLesReglages(reglages: ReglagesComparateur | undefined, avant: ComparaisonOptions, apres: ComparaisonOptions, annee: number): ReglagesComparateur {
+  const retenus: ReglagesComparateur = { ...reglages }
+  if (!memeRepartition(avant.repartition, apres.repartition)) retenus.repartition = apres.repartition
+  if (avant.remunerationNette !== apres.remunerationNette) retenus.remunerationParAnnee = { ...reglages?.remunerationParAnnee, [String(annee)]: apres.remunerationNette }
+  if (avant.partBncPrestations !== apres.partBncPrestations) retenus.partBncPrestations = apres.partBncPrestations
+  if (!memesFrais(avant.fraisFonctionnement, apres.fraisFonctionnement)) retenus.fraisFonctionnement = apres.fraisFonctionnement
+  return retenus
+}
+
+/** Le comparateur avec de nouveaux réglages pour une activité, qui devient l'activité comparée. */
+export function avecReglagesDeLActivite(comparateur: Comparateur | undefined, activityId: string, reglages: ReglagesComparateur): Comparateur {
+  return { ...comparateur, activiteComparee: activityId, reglagesParActivite: { ...comparateur?.reglagesParActivite, [activityId]: reglages } }
+}
+
+/** Le comparateur avec une autre activité comparée ; les réglages de chaque activité sont conservés. */
+export function avecActiviteComparee(comparateur: Comparateur | undefined, activityId: string): Comparateur {
+  return { reglagesParActivite: {}, ...comparateur, activiteComparee: activityId }
 }
