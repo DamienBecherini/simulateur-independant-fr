@@ -1,6 +1,6 @@
 // src/backend/logic/references/micro.reference.test.ts
 
-import { expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 import { activite, casDeReference, foyerDe, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
 import { micro, personne, relation, type Flux } from "../testing/session-de-test.js"
 import type { MicroEntreprise } from "../../../types.js"
@@ -226,6 +226,67 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
     expect(plafond).toContain("chiffre d'affaires total")
     expect(plafond).not.toContain("prestations de services")
     expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 67200, impotSurLeRevenu: 13264, netApresImpots: 168236 })
+  })
+
+  describe("plafonds du régime, à l'euro près : le plafond peut être atteint, pas dépassé", () => {
+    const plafondsDe = (flux: Flux[]) => plafonds(activite(simulerMicro(flux), "m1").warnings)
+
+    it.each<[string, Flux[], string[]]>([
+      ["prestations BNC 83 600 €", [["m1", "ca_micro_services_bnc", 83600]], []],
+      ["prestations BNC 83 601 €", [["m1", "ca_micro_services_bnc", 83601]], ["prestations de services 83 601 € pour un plafond de 83 600 €"]],
+      ["prestations BIC 83 601 €", [["m1", "ca_micro_services_bic", 83601]], ["prestations de services 83 601 € pour un plafond de 83 600 €"]],
+      // BIC et BNC s'additionnent : 40 000 + 43 601 = 83 601 €.
+      ["BIC 40 000 € et BNC 43 601 €", [["m1", "ca_micro_services_bic", 40000], ["m1", "ca_micro_services_bnc", 43601]], ["prestations de services 83 601 € pour un plafond de 83 600 €"]],
+      ["vente 203 100 €", [["m1", "ca_micro_vente", 203100]], []],
+      ["vente 203 101 €", [["m1", "ca_micro_vente", 203101]], ["chiffre d'affaires total 203 101 € pour un plafond de 203 100 €"]],
+      // Activité mixte : prestations 83 600 € (au plafond) et total 119 500 + 83 600 = 203 100 € (au plafond) : rien.
+      ["vente 119 500 € et BIC 83 600 €", [["m1", "ca_micro_vente", 119500], ["m1", "ca_micro_services_bic", 83600]], []],
+      // Prestations 53 101 € sous leur plafond, mais total 150 000 + 53 101 = 203 101 € : seul le total dépasse.
+      ["vente 150 000 € et BIC 53 101 €", [["m1", "ca_micro_vente", 150000], ["m1", "ca_micro_services_bic", 53101]], ["chiffre d'affaires total 203 101 € pour un plafond de 203 100 €"]],
+      // Les deux plafonds dépassés : 83 601 € de prestations, 120 000 + 83 601 = 203 601 € au total.
+      ["vente 120 000 € et BNC 83 601 €", [["m1", "ca_micro_vente", 120000], ["m1", "ca_micro_services_bnc", 83601]], ["prestations de services 83 601 € pour un plafond de 83 600 €", "chiffre d'affaires total 203 601 € pour un plafond de 203 100 €"]]
+    ])("%s", (_cas, flux, depassements) => {
+      const avertissements = plafondsDe(flux).map(w => w.replace(/\s/g, " "))
+
+      if (depassements.length === 0) expect(avertissements).toEqual([])
+      else expect(avertissements).toEqual([`Plafond du régime micro dépassé (${depassements.join(" ; ")}) : le régime n'est conservé que si le dépassement ne se répète pas deux années de suite.`])
+    })
+  })
+
+  describe("franchise en base de TVA, à l'euro près : seuil de base pour l'année suivante, seuil majoré aussitôt", () => {
+    /** Avertissement de TVA : aucun, seuil de base (« suivant ») ou seuil majoré (« perdue »), avec ce qui dépasse. */
+    function tva(flux: Flux[]): string {
+      const avertissement = activite(simulerMicro(flux), "m1").warnings.find(w => w.includes("TVA"))?.replace(/\s/g, " ")
+      if (!avertissement) return "aucun"
+      const detail = /\((.*)\)/.exec(avertissement)?.[1]
+      return `${avertissement.startsWith("Franchise en base de TVA perdue") ? "perdue" : "suivant"} : ${detail}`
+    }
+
+    it.each<[string, Flux[], string]>([
+      ["prestations 37 500 €", [["m1", "ca_micro_services_bnc", 37500]], "aucun"],
+      ["prestations 37 501 €", [["m1", "ca_micro_services_bnc", 37501]], "suivant : prestations de services 37 501 € pour un seuil de 37 500 €"],
+      // 41 250 € : au-delà du seuil de base, mais le seuil majoré n'est pas dépassé.
+      ["prestations 41 250 €", [["m1", "ca_micro_services_bic", 41250]], "suivant : prestations de services 41 250 € pour un seuil de 37 500 €"],
+      ["prestations 41 251 €", [["m1", "ca_micro_services_bic", 41251]], "perdue : prestations de services 41 251 € pour un seuil de 41 250 €"],
+      ["vente 85 000 €", [["m1", "ca_micro_vente", 85000]], "aucun"],
+      ["vente 85 001 €", [["m1", "ca_micro_vente", 85001]], "suivant : chiffre d'affaires total 85 001 € pour un seuil de 85 000 €"],
+      ["vente 93 500 €", [["m1", "ca_micro_vente", 93500]], "suivant : chiffre d'affaires total 93 500 € pour un seuil de 85 000 €"],
+      ["vente 93 501 €", [["m1", "ca_micro_vente", 93501]], "perdue : chiffre d'affaires total 93 501 € pour un seuil de 93 500 €"],
+      // Activité mixte : prestations 37 500 € (au seuil), mais total 50 000 + 37 500 = 87 500 € au-delà de 85 000 €.
+      ["vente 50 000 € et BNC 37 500 €", [["m1", "ca_micro_vente", 50000], ["m1", "ca_micro_services_bnc", 37500]], "suivant : chiffre d'affaires total 87 500 € pour un seuil de 85 000 €"],
+      // Prestations 41 251 € au-delà du seuil majoré : la franchise est perdue même si le total (91 251 €) reste sous 93 500 €.
+      ["vente 50 000 € et BNC 41 251 €", [["m1", "ca_micro_vente", 50000], ["m1", "ca_micro_services_bnc", 41251]], "perdue : prestations de services 41 251 € pour un seuil de 41 250 €"]
+    ])("%s", (_cas, flux, attendu) => {
+      expect(tva(flux)).toBe(attendu)
+    })
+  })
+
+  it("versement libératoire, RFR un euro au-dessus du seuil : refusé", () => {
+    // 29 316 € > 29 315 € : l'option est refusée, l'impôt est celui du barème (1 467,67 €, voir le cas BNC de 40 000 €).
+    const report = simulerMicro([["m1", "ca_micro_services_bnc", 40000]], { opteVFL: true, rfrN2: 29316 })
+
+    expect(activite(report, "m1").versementLiberatoire).toMatchObject({ plafondRfr: 29315, eligible: false, applique: false })
+    expect(foyerDe(report, "alice").impotSurLeRevenu).toBe(1468)
   })
 
   it("dépenses saisies : elles ne changent ni les cotisations ni l'impôt, seulement le net", () => {

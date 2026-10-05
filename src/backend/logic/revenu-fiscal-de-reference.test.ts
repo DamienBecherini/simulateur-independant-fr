@@ -50,6 +50,21 @@ describe("revenu fiscal de référence d'un foyer", () => {
     expect(rfrDe(report, "alice")).toBe(28000)
   })
 
+  it("ajoute l'abattement de 40 % aux dividendes imposés au barème, tel que le moteur le calcule", () => {
+    // Alice n'a que 10 000 € de dividendes. Au forfait : 1 200 €. Au barème : 10 000 x 60 % - 10 000 x 7 % de CSG déductible
+    // = 5 300 €, sous la première tranche (10 000 €) : 0 €, l'option pour le barème l'emporte.
+    // Revenu fiscal de référence : 5 300 € imposables plus l'abattement de 4 000 €, soit 9 300 € (la CSG déductible
+    // reste déduite).
+    const flux: Flux[] = [
+      ["s1", "ca_services", 50000],
+      ["s1", "dividends_payment", 10000]
+    ]
+    const report = runMetaSimulation(session([personne("alice"), societe("s1")], [relation("alice", "s1", "Président")], flux), reglesDeTest)
+
+    expect(report.foyers[0]).toMatchObject({ optionDividendes: "bareme", revenuImposableGlobal: 5300, impotSurLeRevenu: 0 })
+    expect(rfrDe(report, "alice")).toBe(9300)
+  })
+
   it("est commun aux membres d'un foyer, et ne descend pas sous zéro", () => {
     const report = runMetaSimulation(session([personne("alice"), personne("bob")], [relation("alice", "bob", "Marié(e)")], [["bob", "salary", 20000]]), reglesDeTest)
 
@@ -69,6 +84,41 @@ describe("versement libératoire de l'année N, d'après le revenu fiscal de ré
 
     expect(vfl.versementLiberatoire).toEqual({ plafondRfr: 28000, partsFiscales: 1, rfrN2: 30000, anneeRfr: 2024, origineRfr: "calcule", eligible: false, applique: false })
     expect(espacesSimples(vfl.warnings)).toContain("Versement libératoire impossible : le revenu fiscal de référence 2024 (30 000 €, calculé par la simulation) dépasse le seuil de 28 000 € pour 1 part(s). L'impôt est calculé au barème.")
+  })
+
+  it.each([
+    [28000, "ouvert", true],
+    [28001, "refusé", false]
+  ])("à %i € calculés pour 1 part, au seuil de 28 000 € : versement libératoire %s", (rfr, _issue, eligible) => {
+    // Le revenu ne doit pas dépasser le seuil : l'égalité ouvre encore droit à l'option.
+    const vfl = activite(runMetaSimulation(microDAlice(), reglesDeTest, en2026({ alice: rfr })), "m1").versementLiberatoire
+
+    expect(vfl).toMatchObject({ plafondRfr: 28000, partsFiscales: 1, rfrN2: rfr, origineRfr: "calcule", eligible, applique: eligible })
+  })
+
+  describe("foyer de plusieurs parts : le seuil est multiplié par le nombre de parts", () => {
+    /** Alice mariée à Bob, avec un enfant, Enzo : 1 + 1 + 0,5 = 2,5 parts, seuil 2,5 x 28 000 = 70 000 €. */
+    function familleDAlice() {
+      const entites = [personne("alice"), personne("bob"), personne("enzo"), { ...micro("m1", { opteVFL: true }), rfrN2: 10000 }]
+      const relations = [relation("alice", "bob", "Marié(e)"), relation("alice", "enzo", "Enfant"), relation("alice", "m1", "Titulaire")]
+      return session(entites, relations, [["m1", "ca_micro_services_bnc", 40000]])
+    }
+
+    it.each([
+      [70000, "ouvert", true],
+      [70001, "refusé", false]
+    ])("à %i € calculés pour le foyer : versement libératoire %s", (rfr, _issue, eligible) => {
+      // Le revenu calculé pour N-2 est celui du foyer : chacun de ses membres porte le même montant.
+      const vfl = activite(runMetaSimulation(familleDAlice(), reglesDeTest, en2026({ alice: rfr, bob: rfr, enzo: rfr })), "m1").versementLiberatoire
+
+      expect(vfl).toMatchObject({ plafondRfr: 70000, partsFiscales: 2.5, rfrN2: rfr, eligible, applique: eligible })
+    })
+
+    it("le dit en nombre de parts décimal quand il est refusé", () => {
+      const report = runMetaSimulation(familleDAlice(), reglesDeTest, en2026({ alice: 70001 }))
+
+      expect(espacesSimples(activite(report, "m1").warnings)).toContain("Versement libératoire impossible : le revenu fiscal de référence 2024 (70 001 €, calculé par la simulation) dépasse le seuil de 70 000 € pour 2,5 part(s). L'impôt est calculé au barème.")
+    })
   })
 
   it("garde le revenu saisi quand N-2 ne donne rien pour le titulaire", () => {
