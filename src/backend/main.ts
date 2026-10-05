@@ -11,7 +11,7 @@ import path from "path"
 import fs from "fs/promises"
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs"
 import { ipcMain } from "electron"
-import { sanitizeStateAndFillDefaults, sanitizeSlots } from "./logic/data-sanitizer.js"
+import { AnneesRefuseesError, nettoyerLesSlots, rapportAvecCorrections, sanitizeStateAndFillDefaults, sanitizeSlots, texteAnneesEcartees } from "./logic/data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
 
 /** Filtres des fenêtres d'enregistrement et d'ouverture, par format de fichier texte. */
@@ -67,22 +67,42 @@ function withFormatVersion<T extends object>(data: T): T & { formatVersion: numb
  * (par exemple `sessionState.format-1.json`), au cas où la conversion poserait problème.
  */
 async function backupBeforeMigration(filePath: string, rawContent: string, version: number) {
-  const backupPath = filePath.replace(/\.json$/, `.format-${version}.json`)
+  await keepCopy(filePath, rawContent, `format-${version}`)
+}
+
+/** Garde une copie d'un fichier à côté de lui (`sessionState.<suffixe>.json`), sans écraser une copie existante. */
+async function keepCopy(filePath: string, rawContent: string, suffix: string) {
+  const backupPath = filePath.replace(/\.json$/, `.${suffix}.json`)
   try {
     await fs.writeFile(backupPath, rawContent, { flag: "wx" })
   } catch {
-    // Une copie existe déjà pour cette version : on la conserve.
+    // Une copie existe déjà : on la conserve.
   }
 }
+
+/** Suffixe de la copie gardée d'un fichier refusé à cause de ses années (trop nombreuses ou non consécutives). */
+const SUFFIXE_REFUS = "refuse"
 
 /** Texte des points à vérifier après conversion, pour une boîte de dialogue. */
 function formatMigrationNotes(notes: string[]): string {
   return notes.map(note => `- ${note}`).join("\n\n")
 }
 
+/** Session refusée au démarrage à cause de ses années : on en garde une copie, on prévient, on repart d'une session vierge. */
+async function refuseSession(rawContent: string, reason: string): Promise<SessionState> {
+  await keepCopy(sessionStatePath, rawContent, SUFFIXE_REFUS)
+  showInfoDialog({
+    type: "warning",
+    title: "Chargement refusé",
+    message: `Votre session précédente n'a pas été chargée.\n\n${reason}\n\nUne copie du fichier a été gardée à côté de lui (sessionState.${SUFFIXE_REFUS}.json). L'application a démarré avec une nouvelle simulation vierge.`
+  })
+  return getDefaultSessionState()
+}
+
 async function readSessionFromFile(): Promise<SessionState> {
+  let data = ""
   try {
-    const data = await fs.readFile(sessionStatePath, "utf-8")
+    data = await fs.readFile(sessionStatePath, "utf-8")
     const parsedData = JSON.parse(data)
     const originalVersion = versionDuFormat(parsedData)
 
@@ -98,6 +118,9 @@ async function readSessionFromFile(): Promise<SessionState> {
     if (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0) {
       sections.push(`Des données corrompues ont dû être nettoyées :\n- Entités invalides supprimées : ${report.entitiesRemoved}\n- Relations invalides ou orphelines supprimées : ${report.relationshipsRemoved}\n- Flux invalides ou orphelins supprimés : ${report.flowsRemoved}`)
     }
+    if (report.anneesEcartees.length > 0) {
+      sections.push(`${texteAnneesEcartees(report.anneesEcartees)}. Seule la première occurrence de chaque année a été gardée.`)
+    }
     if (report.migrationNotes.length > 0) {
       sections.push(`Elle a été convertie au nouveau format du simulateur. Points à vérifier :\n\n${formatMigrationNotes(report.migrationNotes)}`)
     }
@@ -112,6 +135,7 @@ async function readSessionFromFile(): Promise<SessionState> {
   } catch (error) {
     // Premier lancement : il n'y a simplement pas encore de session, ce n'est pas une erreur.
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return getDefaultSessionState()
+    if (error instanceof AnneesRefuseesError) return refuseSession(data, error.message)
 
     const errorMessage = error instanceof Error ? error.message : "Erreur inconnue."
     console.warn(`Échec du chargement de la session : ${errorMessage}. Démarrage avec une session par défaut.`)
@@ -155,7 +179,17 @@ async function readSlotsFromFile(): Promise<SaveSlot[]> {
     const parsedData: unknown = JSON.parse(data)
 
     // Les slots corrompus sont écartés (et signalés dans la console) par le nettoyeur, les autres sont conservés.
-    const slots = sanitizeSlots(parsedData)
+    const { slots, refusees } = nettoyerLesSlots(parsedData)
+
+    // Des sauvegardes refusées à cause de leurs années disparaîtront à la prochaine écriture : on garde une copie du fichier.
+    if (refusees.length > 0) {
+      await keepCopy(slotsFilePath, data, SUFFIXE_REFUS)
+      showInfoDialog({
+        type: "warning",
+        title: "Sauvegardes refusées",
+        message: `${refusees.length > 1 ? "Ces sauvegardes n'ont pas été chargées" : "Cette sauvegarde n'a pas été chargée"} :\n\n${refusees.map(({ nom, raison }) => `- « ${nom} » : ${raison}`).join("\n\n")}\n\nUne copie du fichier a été gardée à côté de lui (simulationSlots.${SUFFIXE_REFUS}.json).`
+      })
+    }
 
     // Des sauvegardes d'un format précédent sont converties une fois pour toutes, après copie de l'original.
     const rawSlots: unknown[] = Array.isArray(parsedData) ? parsedData : []
@@ -390,7 +424,7 @@ app.on("ready", () => {
 
         const { safeState, report } = sanitizeStateAndFillDefaults(importedData)
 
-        if (mainWindow && (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0 || report.migrationNotes.length > 0)) {
+        if (mainWindow && rapportAvecCorrections(report)) {
           mainWindow.webContents.send("show-notification", {
             message: "Fichier importé avec des ajustements : vérifiez le détail avant de continuer.",
             type: "warning"
@@ -414,6 +448,11 @@ app.on("ready", () => {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Erreur inconnue."
         console.error("Erreur lors de l'importation :", errorMessage)
+        // Un fichier refusé à cause de ses années n'est pas corrompu : le motif suffit, il dit quoi corriger.
+        if (error instanceof AnneesRefuseesError) {
+          dialog.showErrorBox("Import impossible", errorMessage)
+          return { error: errorMessage }
+        }
         dialog.showErrorBox("Erreur d'importation", `Le fichier sélectionné est invalide, corrompu ou d'une version non compatible.\n\nDétails : ${errorMessage}`)
         return { error: errorMessage }
       }

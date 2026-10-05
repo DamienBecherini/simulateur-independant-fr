@@ -148,12 +148,37 @@ describe("pont de la démo web", () => {
   it("importe un fichier de plusieurs années écrit à la main : années triées, doublon écarté avec ses flux", async () => {
     const { entities, relationships, annees } = sessionExemple()
     const grille = annees[0].monthlyData
-    choisirLeFichier(JSON.stringify({ entities, relationships, annees: [{ annee: 2026, monthlyData: grille }, { annee: 2024, monthlyData: grille }, { annee: 2026, monthlyData: grille }], formatVersion: FORMAT_VERSION_ACTUEL }))
+    choisirLeFichier(JSON.stringify({ entities, relationships, annees: [{ annee: 2026, monthlyData: grille }, { annee: 2025, monthlyData: grille }, { annee: 2026, monthlyData: grille }], formatVersion: FORMAT_VERSION_ACTUEL }))
 
     const resultat = await creerApiNavigateur().importState()
 
-    expect(resultat.data?.annees.map(a => a.annee)).toEqual([2024, 2026])
+    expect(resultat.data?.annees.map(a => a.annee)).toEqual([2025, 2026])
     expect(resultat.report?.flowsRemoved).toBe(grille.reduce((n, mois) => n + mois.flows.length, 0))
+    expect(resultat.report?.anneesEcartees).toEqual([2026])
+  })
+
+  it("refuse un fichier dont les années ne se suivent pas, et dit lesquelles manquent", async () => {
+    const { entities, relationships, annees } = sessionExemple()
+    choisirLeFichier(JSON.stringify({ entities, relationships, annees: [2024, 2026].map(annee => ({ annee, monthlyData: annees[0].monthlyData })), formatVersion: FORMAT_VERSION_ACTUEL }))
+    const api = creerApiNavigateur()
+    const notification = vi.fn()
+    api.onShowNotification(notification)
+
+    const resultat = await api.importState()
+
+    expect(resultat).toEqual({ error: expect.stringContaining("il manque 2025 entre 2024 et 2026") })
+    expect(notification).toHaveBeenCalledWith({ message: expect.stringMatching(/^Import impossible\. Les années de cette simulation ne se suivent pas/), type: "error" })
+  })
+
+  it("repart d'une session vierge si la session du navigateur a été modifiée avec des années refusées", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    const { entities, relationships, annees } = sessionExemple()
+    window.localStorage.setItem(CLES.session, JSON.stringify({ entities, relationships, annees: [2024, 2026].map(annee => ({ annee, monthlyData: annees[0].monthlyData })), formatVersion: FORMAT_VERSION_ACTUEL }))
+
+    const session = await creerApiNavigateur().getCurrentSession()
+
+    expect(session.entities).toEqual([])
+    expect(session.annees.map(a => a.annee)).toEqual([2026])
   })
 
   it("n'importe rien si l'utilisateur ferme le sélecteur de fichiers", async () => {

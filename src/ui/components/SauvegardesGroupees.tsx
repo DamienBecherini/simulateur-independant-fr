@@ -29,7 +29,7 @@ const pluriel = (n: number, singulier: string, plurielForme: string) => `${n} ${
 
 /** Les lignes du bilan d'un import réussi ; seules les rubriques non vides sont affichées. */
 function DetailImport({ lecture, fusion }: { lecture: RapportLecture; fusion: RapportFusion }) {
-  if (lecture.lues === 0 && lecture.ecartees === 0) return <p>Ce fichier ne contient aucune sauvegarde.</p>
+  if (lecture.lues === 0 && lecture.ecartees === 0 && lecture.refusees.length === 0) return <p>Ce fichier ne contient aucune sauvegarde.</p>
 
   return (
     <>
@@ -38,6 +38,18 @@ function DetailImport({ lecture, fusion }: { lecture: RapportLecture; fusion: Ra
         {fusion.doublons > 0 && <li>{pluriel(fusion.doublons, "sauvegarde déjà présente, ignorée.", "sauvegardes déjà présentes, ignorées.")}</li>}
         {lecture.ecartees > 0 && <li>{pluriel(lecture.ecartees, "sauvegarde illisible ou endommagée, écartée.", "sauvegardes illisibles ou endommagées, écartées.")}</li>}
       </ul>
+      {lecture.refusees.length > 0 && (
+        <>
+          <p className="mt-3">{lecture.refusees.length > 1 ? "Ces sauvegardes n'ont pas été importées" : "Cette sauvegarde n'a pas été importée"} :</p>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            {lecture.refusees.map(({ nom, raison }, i) => (
+              <li key={i}>
+                « {nom} » : {raison}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {fusion.renommees.length > 0 && (
         <>
           <p className="mt-3">Pour ne rien écraser, {fusion.renommees.length > 1 ? "ces sauvegardes ont été renommées" : "cette sauvegarde a été renommée"} :</p>
