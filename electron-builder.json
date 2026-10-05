@@ -1,31 +1,61 @@
 {
   "appId": "fr.independant.simulateur",
   "productName": "Simulateur Indépendant FR",
+  "copyright": "© Damien Becherini — licence MIT",
+  "directories": {
+    "output": "dist"
+  },
+  "artifactName": "Simulateur-Independant-FR-${version}-${os}-${arch}.${ext}",
   "files": [
     "dist-electron",
     "dist-react",
-    "splash.html"
+    "splash.html",
+    "!node_modules/**/*",
+    "node_modules/zod/**/*",
+    "!node_modules/zod/src/**/*",
+    "!**/*.{map,ts,cts,mts}"
   ],
   "extraResources": [
     "dist-electron/backend/preload.cjs"
   ],
   "icon": "./templateIcon.png",
   "mac": {
-    "target": "dmg"
+    "target": [
+      {
+        "target": "dmg",
+        "arch": [
+          "arm64",
+          "x64"
+        ]
+      }
+    ],
+    "category": "public.app-category.finance",
+    "identity": "-",
+    "hardenedRuntime": false
   },
   "linux": {
-    "target": "AppImage",
-    "category": "Utility"
+    "target": [
+      "AppImage",
+      "deb"
+    ],
+    "category": "Office",
+    "maintainer": "Damien Becherini <damien@becherini.fr>",
+    "synopsis": "Simulateur hors-ligne pour indépendants français"
   },
   "win": {
     "target": [
-      "portable",
-      "msi"
+      "nsis",
+      "zip"
     ]
   },
-  "msi": {
-    "additionalLightArgs": [
-      "-sval"
-    ]
-  }
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": false
+  },
+  "electronLanguages": [
+    "fr",
+    "en-US"
+  ]
 }

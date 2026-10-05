@@ -1,0 +1,151 @@
+name: Publication des exécutables
+
+# Construit l'application pour Windows, macOS et Linux, puis prépare un brouillon de version GitHub
+# avec tous les exécutables. Le brouillon est relu et publié à la main (documentation/publication.md).
+# Lancé à la main (workflow_dispatch), il construit seulement les exécutables, téléchargeables
+# depuis la page de l'exécution, sans brouillon de version sauf s'il est lancé sur une étiquette.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Deux publications de la même étiquette ne se chevauchent pas ; celle en cours va jusqu'au bout.
+concurrency:
+  group: publication-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verifier:
+    name: Version et tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Vérifier que l'étiquette correspond à la version de package.json
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::L'étiquette ${GITHUB_REF_NAME} ne correspond pas à la version ${version} de package.json (attendu : v${version})."
+            exit 1
+          fi
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Tests unitaires
+        run: npm test
+
+  construire:
+    name: Exécutables ${{ matrix.systeme }}
+    needs: verifier
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      # Un système en échec n'interrompt pas les autres : leurs exécutables restent téléchargeables.
+      fail-fast: false
+      matrix:
+        include:
+          - systeme: Windows
+            runner: windows-latest
+            script: dist:win
+          - systeme: macOS
+            # Runner Apple Silicon : l'image disque Intel (x64) y est construite aussi.
+            runner: macos-latest
+            script: dist:mac
+          - systeme: Linux
+            # Version fixée : ubuntu-latest passe à Ubuntu 26.04 le 19 octobre 2026. Les exécutables ne
+            # dépendent pas de la version du runner (Electron est livré précompilé, sans module natif),
+            # mais le paquet deb est construit par fpm, téléchargé par electron-builder avec son propre
+            # Ruby : on garde un système connu, à monter de version après un essai.
+            runner: ubuntu-24.04
+            script: dist:linux
+    env:
+      # Aucun certificat de signature : on ne cherche pas d'identité dans le trousseau macOS
+      # (l'application macOS reçoit une signature ad hoc, voir electron-builder.json).
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      # Bash aussi sous Windows : PowerShell ne transmet pas toujours le « -- » à npm.
+      - name: Construire les exécutables
+        shell: bash
+        run: npm run ${{ matrix.script }} -- --publish never
+
+      - name: Conserver les exécutables
+        uses: actions/upload-artifact@v4
+        with:
+          name: executables-${{ matrix.systeme }}
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+          if-no-files-found: error
+          retention-days: 14
+
+  brouillon:
+    name: Brouillon de version GitHub
+    needs: construire
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Récupérer les exécutables
+        uses: actions/download-artifact@v4
+        with:
+          pattern: executables-*
+          path: executables
+          merge-multiple: true
+
+      - name: Calculer les empreintes SHA-256
+        working-directory: executables
+        run: |
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Créer ou compléter le brouillon de version
+        shell: bash
+        run: |
+          brouillon="$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft 2> /dev/null || echo absent)"
+          if [ "${brouillon}" = "true" ]; then
+            # Nouvelle exécution pour la même étiquette : on remplace les fichiers du brouillon existant.
+            gh release upload "${GITHUB_REF_NAME}" executables/* --clobber
+          elif [ "${brouillon}" = "false" ]; then
+            echo "::error::La version ${GITHUB_REF_NAME} est déjà publiée : ses fichiers ne sont pas remplacés."
+            exit 1
+          else
+            gh release create "${GITHUB_REF_NAME}" executables/* \
+              --draft \
+              --verify-tag \
+              --generate-notes \
+              --title "Simulateur Indépendant FR ${GITHUB_REF_NAME}"
+          fi
