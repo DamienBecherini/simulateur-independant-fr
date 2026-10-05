@@ -26,6 +26,7 @@ const api: import("../globals.js", { with: { "resolution-mode": "import" } }).Ev
   saveTextFile: (options: { defaultName: string; content: string; format: import('../types.js', { with: { "resolution-mode": "import" } }).FormatFichierTexte }) => ipcRenderer.invoke("saveTextFile", options),
   openTextFile: (options: { title: string; format: import('../types.js', { with: { "resolution-mode": "import" } }).FormatFichierTexte }) => ipcRenderer.invoke("openTextFile", options),
   printToPdf: (defaultName: string) => ipcRenderer.invoke("printToPdf", defaultName),
+  ouvrirAdresseExterne: (adresse: string) => ipcRenderer.invoke("ouvrirAdresseExterne", adresse),
 
   // Fonctions pour les préférences
   getUserPreferences: () => ipcRenderer.invoke("getUserPreferences"),

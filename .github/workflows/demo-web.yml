@@ -1,10 +1,13 @@
 name: Démo web
 
 # Compile la démo pour le navigateur, la vérifie dans Chromium, puis la publie sur GitHub Pages.
+# Elle est republiée quand un retour d'utilisateur change, pour mettre à jour retours.json (badge du README).
 on:
   workflow_dispatch:
   push:
     branches: [main]
+  issues:
+    types: [opened, edited, closed, labeled]
 
 # Un seul déploiement à la fois ; celui en cours va jusqu'au bout.
 concurrency:
@@ -13,10 +16,17 @@ concurrency:
 
 permissions:
   contents: read
+  issues: read
 
 jobs:
   construire:
     name: Compiler et tester la démo
+    # Seule la branche main est publiée (les événements de tickets s'exécutent sur la branche par défaut),
+    # et parmi les tickets, seuls les retours des utilisateurs relancent la publication.
+    if: >-
+      github.ref == 'refs/heads/main' && (github.event_name != 'issues'
+      || contains(github.event.issue.labels.*.name, 'retour')
+      || contains(github.event.issue.body, '### Type de retour'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -31,6 +41,18 @@ jobs:
 
       - name: Installer les dépendances
         run: npm ci
+
+      # Note moyenne et préférences d'affichage, servies avec la démo et lues par le badge du README.
+      # Sans accès aux tickets, le script écrit un agrégat vide : la publication continue.
+      - name: Agréger les retours des utilisateurs
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh issue list --label retour --state all --json author,createdAt,body,labels --limit 1000 > "$RUNNER_TEMP/retours-bruts.json" || echo "[]" > "$RUNNER_TEMP/retours-bruts.json"
+          node scripts/retours/agreger.mjs "$RUNNER_TEMP/retours-bruts.json" public/retours.json
+          cat public/retours.json
 
       - name: Installer Chromium
         run: npx playwright install --with-deps --only-shell chromium

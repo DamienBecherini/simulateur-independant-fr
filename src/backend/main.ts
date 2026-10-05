@@ -1,6 +1,6 @@
 // src/backend/main.ts
 
-import { app, BrowserWindow, dialog } from "electron"
+import { app, BrowserWindow, dialog, shell } from "electron"
 import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions, StatutSociete, FormatFichierTexte } from "@/types.js"
 import { SessionStateSchema } from "@/types.js"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./logic/simulation-pluriannuelle.js"
@@ -14,6 +14,7 @@ import { ipcMain } from "electron"
 import { AnneesRefuseesError, rapportAvecCorrections, texteAnneesEcartees } from "./logic/data-sanitizer.js"
 import { contenuDesSauvegardes, contenuDuFichier, lireLaSession, lireLesPreferences, lireLesSauvegardes, lireUneSimulationImportee, preferencesParDefaut, preferencesValides, sauvegardesAEcrire } from "./logic/fichiers-de-donnees.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
+import { adresseExterneAutorisee } from "@/lib/adresses-des-retours.js"
 
 /** Filtres des fenêtres d'enregistrement et d'ouverture, par format de fichier texte. */
 const FILTRES_FICHIERS: Record<FormatFichierTexte, Electron.FileFilter> = {
@@ -414,6 +415,22 @@ app.on("ready", () => {
     } catch (error) {
       console.error("Erreur lors de l'export PDF :", error)
       dialog.showErrorBox("Erreur d'exportation", "Impossible de créer le PDF.")
+      return false
+    }
+  })
+
+  // Retours des utilisateurs : seuls le formulaire de ticket du dépôt et l'e-mail des retours s'ouvrent hors de
+  // l'application, dans le navigateur ou la messagerie du système. L'adresse est revérifiée ici, quoi qu'envoie la page.
+  ipcMainHandle("ouvrirAdresseExterne", async (adresse: string) => {
+    if (!adresseExterneAutorisee(adresse)) {
+      console.warn("Adresse externe refusée.")
+      return false
+    }
+    try {
+      await shell.openExternal(adresse)
+      return true
+    } catch (error) {
+      console.error("Ouverture de l'adresse externe impossible :", error)
       return false
     }
   })

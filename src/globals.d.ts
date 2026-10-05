@@ -23,6 +23,11 @@ export type EventPayloadMapping = {
   openTextFile: (options: { title: string; format: FormatFichierTexte }) => Promise<string | null>
   /** Enregistre la page en PDF (Electron) ou ouvre l'impression du navigateur (démo web) ; `true` si c'est fait. */
   printToPdf: (defaultName: string) => Promise<boolean>
+  /**
+   * Ouvre hors de l'application (navigateur, messagerie) le formulaire de ticket du dépôt GitHub ou un e-mail à
+   * l'adresse des retours, et rien d'autre (voir src/lib/adresses-des-retours.ts) ; `false` si l'adresse est refusée.
+   */
+  ouvrirAdresseExterne: (adresse: string) => Promise<boolean>
   getUserPreferences: () => Promise<UserPreferences>
   saveUserPreferences: (prefs: UserPreferences) => Promise<void>
   onShowNotification: (callback: (payload: NotificationPayload) => void) => () => void

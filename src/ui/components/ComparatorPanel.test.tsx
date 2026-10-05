@@ -307,7 +307,7 @@ describe("réglages essentiels du comparateur", () => {
     </AffichageContext.Provider>
   )
 
-  it.each(["classique", "resume", "panneaux", "vues"] as const)("affichage %s : l'activité, le partage du bénéfice et la case des 4 trimestres sont visibles sans rien déplier", async affichage => {
+  it.each(["classique", "resume", "vues"] as const)("affichage %s : l'activité, le partage du bénéfice et la case des 4 trimestres sont visibles sans rien déplier", async affichage => {
     render(dans(affichage))
     const caseRetraite = await screen.findByRole("checkbox", { name: "Avec 4 trimestres de retraite" })
     expect(caseRetraite).toBeChecked()

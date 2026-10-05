@@ -5,11 +5,7 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
-
-/** Dépose la préférence d'affichage avant le chargement, comme si elle avait été choisie lors d'une visite précédente. */
-async function choisirAvantLeChargement(page: Page, affichage: "classique" | "resume") {
-  await page.addInitScript(choix => window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], affichage: choix })), affichage)
-}
+import { choisirAvantLeChargement } from "./support/affichage"
 
 /** Ouvre la démo et attend la simulation d'exemple, le comparateur et la courbe de l'arbitrage. */
 async function ouvrir(page: Page) {
@@ -27,25 +23,33 @@ async function ouvrirEnResume(page: Page) {
 const barre = (page: Page) => page.getByRole("region", { name: "Résumé de l'année" })
 const espaces = (texte: string | null) => (texte ?? "").replace(/\s+/g, " ").trim()
 
-test("l'affichage se choisit dans la barre d'outils et reste choisi au rechargement", async ({ page }) => {
+test("l'affichage « Résumé » s'ouvre par défaut ; un autre se choisit dans la barre d'outils et reste choisi au rechargement", async ({ page }) => {
   await ouvrir(page)
-  await expect(barre(page)).toHaveCount(0)
-
-  await page.getByRole("combobox", { name: "Affichage : Classique" }).click()
-  await expect(page.getByText("Bêta : dites-nous quel affichage vous préférez.")).toBeVisible()
-  await expect(page.getByRole("option")).toHaveText(["Classique", "Résumé", "Panneaux", "Trois vues"])
-  await expect(page.locator("[role=option][aria-disabled=true]")).toHaveCount(0)
-  await page.getByRole("option", { name: "Résumé" }).click()
   await expect(barre(page)).toBeVisible()
   await expect(page.getByRole("button", { name: /Voir le détail/ })).toBeVisible()
 
+  await page.getByRole("combobox", { name: "Affichage : Résumé" }).click()
+  await expect(page.getByText("Bêta : dites-nous quel affichage vous préférez.")).toBeVisible()
+  await expect(page.getByRole("option")).toHaveText(["Résumé", "Classique", "Trois vues"])
+  await expect(page.locator("[role=option][aria-disabled=true]")).toHaveCount(0)
+  await page.getByRole("option", { name: "Classique" }).click()
+  await expect(barre(page)).toHaveCount(0)
+
   // La préférence est enregistrée peu après le choix, dans le stockage du navigateur, à part de la simulation.
-  await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("simulateur.preferences") ?? "{}").affichage)).toBe("resume")
+  await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("simulateur.preferences") ?? "{}").affichage)).toBe("classique")
   expect(await page.evaluate(() => window.localStorage.getItem("simulateur.session"))).not.toContain("affichage")
 
   await page.reload()
-  await expect(barre(page)).toBeVisible()
+  await expect(page.getByRole("combobox", { name: "Affichage : Classique" })).toBeVisible()
+  await expect(barre(page)).toHaveCount(0)
+})
+
+test("un affichage retiré après la bêta (« Panneaux ») laisse place au « Résumé », sans perdre les autres préférences", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], zoom: 1.2, affichage: "panneaux" })))
+  await ouvrir(page)
   await expect(page.getByRole("combobox", { name: "Affichage : Résumé" })).toBeVisible()
+  await expect(barre(page)).toBeVisible()
+  await expect.poll(() => page.evaluate(() => document.body.style.zoom)).toBe("1.2")
 })
 
 test("la barre de résumé reprend les chiffres du bilan et du comparateur", async ({ page }) => {
@@ -121,19 +125,20 @@ test("l'affichage « Résumé » ne présente aucune violation WCAG en thème so
 
 test("le choix de l'affichage ouvert ne présente aucune violation WCAG", async ({ page }) => {
   await ouvrir(page)
-  await page.getByRole("combobox", { name: "Affichage : Classique" }).click()
+  await page.getByRole("combobox", { name: "Affichage : Résumé" }).click()
   await expect(page.getByRole("listbox")).toBeVisible()
   // Radix masque le reste de la page aux lecteurs d'écran tant que la liste est ouverte : seule la liste est auditée.
   await auditer(page, "choix de l'affichage", "[role=listbox]")
 })
 
 test("au clavier : choisir l'affichage, puis parcourir le résumé avec un focus visible", async ({ page }) => {
+  await choisirAvantLeChargement(page, "classique")
   await ouvrir(page)
   const choix = page.getByRole("combobox", { name: "Affichage : Classique" })
   await choix.focus()
   await page.keyboard.press("Enter")
   await expect(page.getByRole("option", { name: "Classique" })).toBeFocused()
-  await page.keyboard.press("ArrowDown")
+  await page.keyboard.press("ArrowUp")
   await expect(page.getByRole("option", { name: "Résumé" })).toBeFocused()
   await page.keyboard.press("Enter")
   await expect(barre(page)).toBeVisible()

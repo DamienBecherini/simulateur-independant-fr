@@ -3,12 +3,17 @@
 // sans les commandes de l'écran, sections repliables dépliées, sans débordement horizontal.
 
 import { test, expect, type Page } from "@playwright/test"
+import { choisirAvantLeChargement } from "./support/affichage"
 
 /** Largeur d'une feuille A4 en pixels CSS (210 mm à 96 ppp). */
 const LARGEUR_A4 = 794
 
-/** Ouvre la démo à la largeur d'une feuille A4, dans le thème demandé, et attend la simulation d'exemple. */
+/**
+ * Ouvre la démo dans l'affichage classique (l'impression de l'affichage « Résumé » a ses propres tests), à la largeur
+ * d'une feuille A4, dans le thème demandé, et attend la simulation d'exemple.
+ */
 async function ouvrir(page: Page, theme: "light" | "dark" = "light") {
+  await choisirAvantLeChargement(page, "classique")
   await page.setViewportSize({ width: LARGEUR_A4, height: 1123 })
   await page.addInitScript(choix => localStorage.setItem("theme", choix), theme)
   await page.goto("./")

@@ -73,8 +73,8 @@ test("le zoom choisi est retrouvé au rechargement", async ({ page }) => {
 
 test("la légende des flux dépliée dans l'affichage « Résumé » l'est encore au rechargement, et se déplie toujours à l'impression", async ({ page }) => {
   await ouvrir(page)
-  await page.getByRole("combobox", { name: "Affichage : Classique" }).click()
-  await page.getByRole("option", { name: "Résumé" }).click()
+  // « Résumé » est l'affichage par défaut.
+  await expect(page.getByRole("combobox", { name: "Affichage : Résumé" })).toBeVisible()
   const legende = page.locator("details").filter({ has: page.locator("summary", { hasText: "Légende des flux" }) })
   await expect(legende).not.toHaveAttribute("open")
 

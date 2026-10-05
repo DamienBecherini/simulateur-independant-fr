@@ -1,10 +1,10 @@
 // src/ui/App.tsx
 
-import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
-import { Settings, Undo2, Redo2, ZoomIn, ZoomOut, Download } from "lucide-react"
+import { Settings, Undo2, Redo2, ZoomIn, ZoomOut, Download, MessageSquareHeart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
@@ -29,12 +29,13 @@ import { BarreDeResume } from "./components/BarreDeResume"
 import { ReplieEnResume } from "./components/ReplieEnResume"
 import { AffichageContext } from "./hooks/useAffichage"
 import { MemoireDesSectionsContext, useMemoireDesSections } from "./hooks/useSectionOuverte"
-import { affichageApplicable, avecPanneaux, avecResume, avecVues } from "@/lib/affichage"
+import { affichageApplicable, avecResume, avecVues } from "@/lib/affichage"
 import { useVues, VuesContext } from "./hooks/useVues"
 import { VueDeLaPage } from "./components/VuesDeLaPage"
-import { InspecteurContext, useComparerLesStatuts, useEtatDeLInspecteur, type Inspecteur } from "./hooks/useInspecteur"
-import { PanneauDActeur } from "./components/PanneauDActeur"
 import { FournisseurDesDetails } from "./components/DetailsDesCartes"
+import { DialogueDAvis } from "./components/DialogueDAvis"
+import { systemeEtNavigateur, type Diagnostic } from "@/lib/retours"
+import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import type { ResumeDeLaComparaison } from "@/lib/resume"
 import type { Affichage } from "@/types"
 import { cn } from "@/lib/utils"
@@ -43,26 +44,11 @@ import { cn } from "@/lib/utils"
 const EN_TETE_CLASSIQUE = { header: "mb-10", titre: "text-4xl", sousTitre: "" }
 const EN_TETE_RESUME = { header: "mb-4", titre: "text-2xl sm:text-3xl print:text-4xl", sousTitre: "hidden print:block" }
 
-/**
- * Affichage « Panneaux » : le contenu et, sur ordinateur, le panneau de l'acteur ouvert à sa droite, collé sous le
- * résumé ; sur téléphone, le panneau se pose en bas de l'écran. Dans les autres affichages, le contenu seul, tel quel.
- */
-function AvecPanneau({ inspecteur, panneau, children }: { inspecteur: Inspecteur | null; panneau: (acteurId: string, fermer: () => void) => ReactNode; children: ReactNode }) {
-  // Le contenu garde sa place dans l'arbre à l'ouverture du panneau : il n'est pas recréé, ses sections dépliées le restent.
-  if (!inspecteur) return <>{children}</>
-  return (
-    <InspecteurContext.Provider value={inspecteur}>
-      <div className="flex-grow lg:flex lg:items-start lg:gap-6">
-        {children}
-        {inspecteur.acteurOuvert ? panneau(inspecteur.acteurOuvert, inspecteur.fermer) : null}
-      </div>
-    </InspecteurContext.Provider>
-  )
-}
-
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [isExportOpen, setExportOpen] = useState(false)
+  const [isAvisOpen, setAvisOpen] = useState(false)
+  const boutonDAvis = useRef<HTMLButtonElement>(null)
   const [simulation, setSimulation] = useState<SimulationPluriannuelle | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
 
@@ -82,9 +68,6 @@ function App() {
   // Affichage de la page choisi pendant la bêta : une préférence de l'utilisateur, pas une donnée de la simulation.
   const affichage = affichageApplicable(userPreferences.affichage)
   const resume = avecResume(affichage)
-  // Affichage « Panneaux » : l'acteur dont le panneau est ouvert, quelle que soit l'année affichée.
-  const inspecteur = useEtatDeLInspecteur(useMemo(() => currentSession.entities.map(e => e.id), [currentSession.entities]), avecPanneaux(affichage))
-  const comparerLesStatuts = useComparerLesStatuts(setComparateur)
   // Affichage « Trois vues » : la vue affichée, suivie dans l'adresse de la page.
   const vues = useVues(avecVues(affichage), currentSession.name)
   const choisirAffichage = useCallback((choix: Affichage) => setUserPreferences(prefs => ({ ...prefs, affichage: choix })), [setUserPreferences])
@@ -95,6 +78,8 @@ function App() {
   // Dans l'affichage « Résumé », le comparateur transmet son meilleur statut à la barre de résumé.
   const [comparaison, setComparaison] = useState<ResumeDeLaComparaison | null>(null)
   const enTete = resume ? EN_TETE_RESUME : EN_TETE_CLASSIQUE
+  // Diagnostic proposé avec un avis : aucune donnée de la simulation, seulement des nombres d'années et d'acteurs.
+  const diagnostic: Diagnostic = { version: VERSION_DE_L_APPLICATION, web: import.meta.env.VITE_CIBLE === "web", ...systemeEtNavigateur(navigator.userAgent), affichageEnCours: affichage, nombreDAnnees: currentSession.annees.length, nombreDActeurs: currentSession.entities.length }
 
   // La simulation de toutes les années est recalculée automatiquement, peu après chaque modification de la session.
   useEffect(() => {
@@ -211,6 +196,9 @@ function App() {
               <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y)" onClick={redo} disabled={!canRedo} className="h-10 w-9 sm:w-10 [&_svg]:size-6">
                 <Redo2 className="dark:text-slate-300" />
               </Button>
+              <Button variant="ghost" size="icon" ref={boutonDAvis} aria-label="Donner mon avis" title="Donner mon avis" onClick={() => setAvisOpen(true)} className="h-10 w-9 sm:ml-2 sm:w-10 [&_svg]:size-6">
+                <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
+              </Button>
             </div>
             {/* Groupe de boutons de droite */}
             <div className="flex items-center gap-1">
@@ -219,11 +207,12 @@ function App() {
                 <Download className="size-4" />
                 <span className="hidden sm:inline">Exporter</span>
               </Button>
-              {/* Sur un téléphone tactile, on zoome avec les doigts : les boutons de zoom y laissent la place aux autres. */}
-              <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} disabled={!canZoomOut} className="h-10 w-9 pointer-coarse:max-sm:hidden sm:w-10 [&_svg]:size-6">
+              {/* Sur un téléphone tactile, on zoome avec les doigts : les boutons de zoom y laissent la place aux autres. Dans
+                  une fenêtre très étroite (moins de 416 px), ils s'effacent aussi : le zoom du navigateur reste. */}
+              <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} disabled={!canZoomOut} className="h-10 w-9 pointer-coarse:max-sm:hidden max-[26rem]:hidden sm:w-10 [&_svg]:size-6">
                 <ZoomOut className="text-slate-600 dark:text-slate-400" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} disabled={!canZoomIn} className="h-10 w-9 pointer-coarse:max-sm:hidden sm:w-10 [&_svg]:size-6 sm:mr-4">
+              <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} disabled={!canZoomIn} className="h-10 w-9 pointer-coarse:max-sm:hidden max-[26rem]:hidden sm:w-10 [&_svg]:size-6 sm:mr-4">
                 <ZoomIn className="text-slate-600 dark:text-slate-400" />
               </Button>
               <ThemeToggle />
@@ -242,10 +231,8 @@ function App() {
 
         {resume ? <BarreDeResume report={simulationReport} annees={anneesDeLaSession(currentSession)} annee={annee} onAnnee={setAnneeChoisie} comparaison={comparaison} /> : null}
 
-        {/* Le détail des cartes de résultats s'ouvre par groupe, dans la page comme dans le panneau d'un acteur. */}
+        {/* Le détail des cartes de résultats s'ouvre par groupe. */}
         <FournisseurDesDetails>
-        <AvecPanneau inspecteur={inspecteur} panneau={(acteurId, fermer) => <PanneauDActeur acteurId={acteurId} session={currentSession} setSession={setCurrentSession} report={simulationReport} onFermer={fermer} onComparer={comparerLesStatuts} />}>
-        {/* `min-w-0` : à côté du panneau, la grille défile dans sa largeur au lieu d'élargir la page. */}
         <main id="contenu" tabIndex={-1} className="min-w-0 flex-grow scroll-mt-20 focus:outline-none">
           {/* Affichage « Trois vues » : les acteurs et la grille, puis les résultats, puis le comparateur, chacun dans sa vue. */}
           <VueDeLaPage vue="situation">
@@ -300,7 +287,6 @@ function App() {
             <ComparatorPanel session={currentSession} annee={annee} onComparateurChange={setComparateur} onComparaison={resume ? setComparaison : undefined} />
           </VueDeLaPage>
         </main>
-        </AvecPanneau>
         </FournisseurDesDetails>
 
         <Footer />
@@ -310,6 +296,7 @@ function App() {
         {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
         {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
             le panneau de configuration ait tout le contexte nécessaire. */}
+        <DialogueDAvis isOpen={isAvisOpen} onClose={() => setAvisOpen(false)} diagnostic={diagnostic} declencheur={boutonDAvis} />
         <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} onExportJson={handleExportAll} />
         <SettingsSheet
           isOpen={isSettingsOpen}

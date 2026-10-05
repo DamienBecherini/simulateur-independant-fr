@@ -5,11 +5,15 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { deplierLeTableauDuComparateur } from "./support/affichage"
 
-/** Ouvre la démo : l'atelier de la simulation d'exemple, sans dividendes saisis, est comparé au meilleur net. */
+/**
+ * Ouvre la démo : l'atelier de la simulation d'exemple, sans dividendes saisis, est comparé au meilleur net ; le
+ * tableau est déplié en entier (affichage « Résumé », par défaut).
+ */
 async function ouvrir(page: Page) {
   await page.goto("./")
-  await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
+  await deplierLeTableauDuComparateur(page)
 }
 
 const tableau = (page: Page) => page.getByRole("table", { name: "Comparaison des statuts" })

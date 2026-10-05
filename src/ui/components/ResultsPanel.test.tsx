@@ -9,8 +9,7 @@ import { emptyReport } from "@/ui/testing/fixtures"
 import { AffichageContext } from "../hooks/useAffichage"
 import { retrouverLaPosition } from "../hooks/useDetailsDesCartes"
 import { MemoireDesSectionsContext, useMemoireDesSections } from "../hooks/useSectionOuverte"
-import { CarteDeLActeur, ResultsPanel } from "./ResultsPanel"
-import { FournisseurDesDetails } from "./DetailsDesCartes"
+import { ResultsPanel } from "./ResultsPanel"
 
 /**
  * Formatage attendu d'un montant (« 12 345 € ») et d'un pourcentage (« 34 % »). Le français sépare par des espaces
@@ -343,23 +342,6 @@ describe("détail des cartes de résultats", () => {
     afficher("resume", report)
     const bouton = within(carte("Bob Durand")).getByRole("button", { name: "Afficher le détail" })
     expect(document.getElementById(bouton.getAttribute("aria-controls")!)).toHaveTextContent("Total encaissé")
-  })
-
-  it("les cartes du panneau d'un acteur suivent le même état que celles de la page", async () => {
-    const report = rapportAvecDeuxActivites()
-    render(
-      <AffichageContext.Provider value="panneaux">
-        <FournisseurDesDetails>
-          <ResultsPanel report={report} error={null} />
-          <section aria-label="Panneau">
-            <CarteDeLActeur report={report} entityId="person-bob" />
-          </section>
-        </FournisseurDesDetails>
-      </AffichageContext.Provider>
-    )
-    const panneau = screen.getByRole("region", { name: "Panneau" })
-    await userEvent.click(within(panneau).getByRole("button", { name: TOUTES }))
-    for (const bouton of boutons()) expect(bouton).toHaveAttribute("aria-expanded", "true")
   })
 })
 

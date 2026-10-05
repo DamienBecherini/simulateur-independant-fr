@@ -4,17 +4,19 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { choisirAvantLeChargement, deplierLeTableauDuComparateur } from "./support/affichage"
 
-/** Ouvre la démo et attend la simulation d'exemple, le comparateur et la courbe de l'arbitrage. */
+/** Ouvre la démo (affichage « Résumé », par défaut) et attend la simulation d'exemple, le comparateur et la courbe. */
 async function ouvrir(page: Page) {
   await page.goto("./")
   await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
-  await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
+  await expect(page.getByRole("button", { name: /^Voir le détail : taux/ })).toBeVisible()
   await expect(page.getByRole("group", { name: /Net du foyer selon la rémunération nette/ })).toBeVisible()
 }
 
-/** Ouvre toutes les sections repliables du comparateur, y compris les valeurs de la courbe. */
+/** Ouvre tout le tableau du comparateur et toutes les sections repliables, y compris les valeurs de la courbe. */
 async function deplierLeComparateur(page: Page) {
+  await deplierLeTableauDuComparateur(page)
   const sections = page.locator("details")
   const nombre = await sections.count()
   for (let i = 0; i < nombre; i++) {
@@ -52,8 +54,16 @@ test.describe("sur un téléphone", () => {
 
   test("la démo ne présente aucune violation WCAG à 375 px de large", async ({ page }) => {
     await ouvrir(page)
+    await auditer(page, "375 px, premier affichage")
     await deplierLeComparateur(page)
     await auditer(page, "375 px")
+  })
+
+  test("l'affichage classique ne présente aucune violation WCAG à 375 px de large", async ({ page }) => {
+    await choisirAvantLeChargement(page, "classique")
+    await page.goto("./")
+    await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
+    await auditer(page, "375 px, affichage classique")
   })
 })
 
@@ -103,6 +113,8 @@ async function auditerLesFenetres(page: Page, theme: string) {
   await auditer(page, `flux d'un mois, ${theme}`, "[role=dialog]")
   await fermer()
 
+  // Affichage « Résumé » : la légende des flux, repliée, est d'abord dépliée.
+  await page.locator("summary", { hasText: "Légende des flux" }).click()
   await page.getByRole("button", { name: "Gérer les couleurs" }).click()
   await expect(fenetre).toBeVisible()
   await auditer(page, `couleurs des flux, ${theme}`, "[role=dialog]")

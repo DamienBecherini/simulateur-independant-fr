@@ -11,7 +11,7 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { FORMAT_VERSION_ACTUEL } from "../../src/backend/logic/migrations"
-import type { SaveSlot, SessionState } from "../../src/types"
+import type { Affichage, SaveSlot, SessionState } from "../../src/types"
 
 const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const NEUTRALISER_DIALOGUES = path.join(RACINE, "e2e/support/neutraliser-dialogues.cjs")
@@ -84,6 +84,11 @@ export async function deposerSession(dossierDonnees: string, session: SessionSta
   await fs.writeFile(path.join(dossierDonnees, "sessionState.json"), JSON.stringify(auFormatActuel(session), null, 2))
 }
 
+/** Choisit l'affichage de la page avant le lancement (« Résumé » sinon, l'affichage par défaut). */
+export async function deposerAffichage(dossierDonnees: string, affichage: Affichage) {
+  await fs.writeFile(path.join(dossierDonnees, "userPreferences.json"), JSON.stringify({ slotOrder: [], affichage }))
+}
+
 /** Dépose des sauvegardes, au format actuel, avant le lancement de l'application. */
 export async function deposerSauvegardes(dossierDonnees: string, slots: SaveSlot[]) {
   await fs.writeFile(path.join(dossierDonnees, "simulationSlots.json"), JSON.stringify(slots.map(auFormatActuel), null, 2))
@@ -106,6 +111,11 @@ export async function choisirFichiers(electronApp: ElectronApplication, chemins:
 /** Titre et nom de fichier proposés par chaque fenêtre d'enregistrement ouverte depuis le lancement. */
 export async function demandesDEnregistrement(electronApp: ElectronApplication): Promise<FichiersE2E["demandes"]> {
   return electronApp.evaluate(() => (globalThis as unknown as { __fichiersE2E: FichiersE2E }).__fichiersE2E.demandes)
+}
+
+/** Adresses que l'application a demandé d'ouvrir hors de sa fenêtre depuis le lancement (shell.openExternal). */
+export async function adressesOuvertes(electronApp: ElectronApplication): Promise<string[]> {
+  return electronApp.evaluate(() => (globalThis as unknown as { __adressesOuvertesE2E: string[] }).__adressesOuvertesE2E)
 }
 
 /** Orientation de chaque page d'un PDF, lue dans sa « MediaBox » (largeur et hauteur en points). */

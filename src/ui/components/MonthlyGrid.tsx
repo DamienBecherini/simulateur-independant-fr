@@ -12,7 +12,6 @@ import { createId } from "@/lib/id"
 import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlux, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type MoisTouches, type PorteeRecurrence } from "@/lib/flux-recurrents"
 import { toast } from "sonner"
 import { AvatarDisplay } from "./AvatarDisplay"
-import { BoutonDActeur } from "./BoutonDActeur"
 import { cn } from "@/lib/utils"
 import { useAffichageResume } from "../hooks/useAffichage"
 
@@ -282,12 +281,11 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                 <React.Fragment key={entity.id}>
                   {/* Colonne 1 : Nom de l'entité + Avatar */}
                   <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center print:static print:p-1">
-                    {/* Affichage « Panneaux » : le nom ouvre le panneau de l'acteur. */}
-                    <BoutonDActeur id={entity.id} balise="div" className={cn("flex items-center gap-2 py-1 mx-0 text-sm sm:mx-3 sm:text-base print:mx-0 print:gap-1 print:text-[9pt]", resume ? "max-sm:flex-col" : "flex-col")}>
+                    <div className={cn("flex items-center gap-2 py-1 mx-0 text-sm sm:mx-3 sm:text-base print:mx-0 print:gap-1 print:text-[9pt]", resume ? "max-sm:flex-col" : "flex-col")}>
                       <AvatarDisplay avatar={entity.avatar} size={resume ? "sm" : "md"} />
                       {/* Un nom long passe à la ligne ; un mot plus large que la colonne est coupé. */}
                       <span className="text-center [overflow-wrap:anywhere]">{entity.name}</span>
-                    </BoutonDActeur>
+                    </div>
                   </div>
 
                   {/* Colonne 2 : Total Annuel */}

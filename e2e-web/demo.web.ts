@@ -2,6 +2,7 @@
 // La démo web dans un vrai navigateur : simulation d'exemple, calculs dans la page, stockage local.
 
 import { test, expect, type Page } from "@playwright/test"
+import { deplierLeTableauDuComparateur } from "./support/affichage"
 
 const NOM_EXEMPLE = "Famille Martin, simulation 2026"
 
@@ -90,6 +91,8 @@ test.describe("sur un téléphone", () => {
 
   test("le tableau du comparateur défile en largeur en gardant visible sa première colonne", async ({ page }) => {
     await page.goto("./")
+    // Affichage « Résumé » : sur téléphone, des cartes remplacent le tableau jusqu'à ce qu'on en demande le détail.
+    await deplierLeTableauDuComparateur(page)
     const table = page.getByRole("table", { name: "Comparaison des statuts" })
     await table.scrollIntoViewIfNeeded()
     const position = await table.evaluate(t => {

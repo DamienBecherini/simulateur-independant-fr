@@ -4,11 +4,12 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { deplierLeTableauDuComparateur } from "./support/affichage"
 
-/** Ouvre la démo et passe le comparateur en répartition personnalisée, poignées comprises. */
+/** Ouvre la démo, déplie le tableau du comparateur et le passe en répartition personnalisée, poignées comprises. */
 async function ouvrirEnRepartitionPersonnalisee(page: Page) {
   await page.goto("./")
-  await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
+  await deplierLeTableauDuComparateur(page)
   await page.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).getByText("Sur mesure").click()
   await expect(page.getByRole("radio", { name: "Sur mesure" })).toBeChecked()
   await expect(page.getByRole("slider", { name: "Rémunération nette du dirigeant" })).toBeVisible()

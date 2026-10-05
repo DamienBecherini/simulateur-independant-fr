@@ -1,6 +1,6 @@
 // src/ui/hooks/useActionsSurLesActeurs.ts
-// Modifications des acteurs et de leurs relations, communes à la liste des acteurs et au panneau d'un acteur
-// (affichage « Panneaux ») : chacune est une seule étape d'historique.
+// Modifications des acteurs et de leurs relations, depuis la liste des acteurs : chacune est une seule étape
+// d'historique.
 
 import { toast } from "sonner"
 import { sanitizeFlowsAfterRelationshipChange } from "@/lib/business-logic"

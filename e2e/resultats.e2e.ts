@@ -2,13 +2,15 @@
 // Résultats d'un scénario préparé : les montants affichés sont ceux du moteur de calcul, et cohérents entre eux.
 // Les barèmes eux-mêmes sont vérifiés par les tests unitaires du moteur : ici, on ne les recopie pas.
 
-import { test, expect, deposerSession } from "./support/fixtures"
+import { test, expect, deposerAffichage, deposerSession } from "./support/fixtures"
 import { euros, montant, netDansLaPoche, valeurDeLigne } from "./support/interface"
 import { ATELIER, sessionMicroBnc } from "./support/sessions"
 
 test("une micro-entreprise BNC à 30 000 € de chiffre d'affaires affiche les montants calculés par le moteur", async ({ dossierDonnees, lancer }) => {
   const session = sessionMicroBnc()
   await deposerSession(dossierDonnees, session)
+  // Affichage classique : chaque carte y montre toutes ses lignes, net après impôts compris.
+  await deposerAffichage(dossierDonnees, "classique")
   const { page, erreursConsole } = await lancer()
 
   // Référence : la même session simulée par le process principal, via l'API exposée par le preload.
