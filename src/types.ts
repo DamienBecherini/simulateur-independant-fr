@@ -92,12 +92,29 @@ export const MonthlyGridDataSchema = z
   )
   .length(12, "La grille mensuelle doit contenir exactement 12 mois")
 
+/**
+ * Année d'une nouvelle session : la dernière dont le simulateur connaît les règles (un test le vérifie).
+ * C'est aussi l'année où les migrations placent la grille d'une session d'avant les années multiples (format 2).
+ */
+export const ANNEE_PAR_DEFAUT = 2026
+
+/** Douze mois sans flux. */
+export function grilleVide(): z.infer<typeof MonthlyGridDataSchema> {
+  return Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
+}
+
+/** Une année simulée : son numéro et sa grille mensuelle. Les acteurs et les relations sont ceux de la session. */
+export const AnneeSimuleeSchema = z.object({
+  annee: z.number().int().min(1900).max(2200),
+  monthlyData: MonthlyGridDataSchema
+})
+
 export const SessionStateSchema = z.object({
   appVersion: z.string().optional(),
   name: z.string().default("Nouvelle Simulation"),
   entities: z.array(EntitySchema).default([]),
   relationships: z.array(RelationshipSchema).default([]),
-  monthlyData: MonthlyGridDataSchema.default(() => Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] })))
+  monthlyData: MonthlyGridDataSchema.default(grilleVide)
 })
 
 export const SaveSlotSchema = SessionStateSchema.extend({
@@ -123,6 +140,7 @@ export type Entity = z.infer<typeof EntitySchema>
 export type Relationship = z.infer<typeof RelationshipSchema>
 export type FinancialFlow = z.infer<typeof FinancialFlowSchema>
 export type MonthlyGridData = z.infer<typeof MonthlyGridDataSchema>
+export type AnneeSimulee = z.infer<typeof AnneeSimuleeSchema>
 export type SessionState = z.infer<typeof SessionStateSchema>
 export type SaveSlot = z.infer<typeof SaveSlotSchema>
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>
@@ -130,6 +148,19 @@ export type UserPreferences = z.infer<typeof UserPreferencesSchema>
 // ===================================================================================
 // == 3. TYPES NON LIÉS À LA VALIDATION (API, ÉTATS VOLATILES, ETC.)
 // ===================================================================================
+
+/** Ce que le moteur calcule pour une année : les acteurs et les relations de la session, la grille de l'année. */
+export interface DonneesDeLAnnee {
+  entities: Entity[]
+  relationships: Relationship[]
+  monthlyData: MonthlyGridData
+}
+
+/** Une année de la session vue comme une simulation d'un an, avec le nom de la session (exports, comparateur). */
+export interface SimulationAnnuelle extends DonneesDeLAnnee {
+  name: string
+  annee: number
+}
 
 /** Résultat annuel d'une activité (société, entreprise individuelle ou micro-entreprise), avant impôt sur le revenu. */
 export interface ActivityResult {
@@ -330,6 +361,18 @@ export interface SimulationReport {
   foyers: FoyerFiscalResult[]
   /** Somme des nets après impôts de tous les foyers. */
   totalNetApresImpots: number
+}
+
+/** Résultat d'une année de la session : son rapport, ou l'erreur qui l'a empêchée d'être simulée. */
+export interface ResultatAnnee {
+  annee: number
+  report: SimulationReport | null
+  erreur: string | null
+}
+
+/** Résultats de toutes les années de la session, de la plus ancienne à la plus récente. */
+export interface SimulationPluriannuelle {
+  annees: ResultatAnnee[]
 }
 
 /** Statuts proposés par le comparateur ; la micro-entreprise est simulée avec et sans versement libératoire. */
