@@ -1,12 +1,14 @@
 // src/ui/components/ResultsPanel.test.tsx
 
 import { render, screen, within } from "@testing-library/react"
+import { useState, type ReactNode } from "react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { Affichage, FoyerFiscalResult, PersonResult, SalarieDeLActivite, SimulationReport } from "@/types"
+import type { Affichage, FoyerFiscalResult, PersonResult, SalarieDeLActivite, SimulationReport, UserPreferences } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
 import { AffichageContext } from "../hooks/useAffichage"
 import { retrouverLaPosition } from "../hooks/useDetailsDesCartes"
+import { MemoireDesSectionsContext, useMemoireDesSections } from "../hooks/useSectionOuverte"
 import { CarteDeLActeur, ResultsPanel } from "./ResultsPanel"
 import { FournisseurDesDetails } from "./DetailsDesCartes"
 
@@ -361,6 +363,36 @@ describe("détail des cartes de résultats", () => {
     const panneau = screen.getByRole("region", { name: "Panneau" })
     await userEvent.click(within(panneau).getByRole("button", { name: FOYERS }))
     for (const bouton of boutons(FOYERS)) expect(bouton).toHaveAttribute("aria-expanded", "true")
+  })
+})
+
+describe("détail des cartes retenu dans les préférences", () => {
+  function AvecPreferences({ initiales, suivre, children }: { initiales: UserPreferences; suivre: (preferences: UserPreferences) => void; children: ReactNode }) {
+    const [preferences, setPreferences] = useState(initiales)
+    const memoire = useMemoireDesSections(preferences.sectionsOuvertes, setPreferences)
+    suivre(preferences)
+    return <MemoireDesSectionsContext.Provider value={memoire}>{children}</MemoireDesSectionsContext.Provider>
+  }
+  const afficher = (initiales: UserPreferences, suivre: (preferences: UserPreferences) => void = () => {}) =>
+    render(
+      <AvecPreferences initiales={initiales} suivre={suivre}>
+        <AffichageContext.Provider value="resume">
+          <ResultsPanel report={makeReport()} error={null} />
+        </AffichageContext.Provider>
+      </AvecPreferences>
+    )
+
+  it("reprend l'état retenu de chaque groupe, et retient la bascule d'un groupe sous son identifiant", async () => {
+    let preferences: UserPreferences = { slotOrder: [] }
+    afficher({ slotOrder: [], sectionsOuvertes: { "details-activites": true } }, p => (preferences = p))
+    const activite = within(screen.getAllByRole("article").find(a => within(a).queryByText("Ma SASU"))!).getByRole("button", { name: /le détail$/ })
+    expect(activite).toHaveAttribute("aria-expanded", "true")
+    for (const bouton of screen.getAllByRole("button", { name: /\(tous les foyers\)$/ })) expect(bouton).toHaveAttribute("aria-expanded", "false")
+
+    await userEvent.click(screen.getAllByRole("button", { name: /\(tous les foyers\)$/ })[0])
+
+    expect(preferences.sectionsOuvertes).toEqual({ "details-activites": true, "details-foyers": true })
+    for (const bouton of screen.getAllByRole("button", { name: /\(tous les foyers\)$/ })) expect(bouton).toHaveAttribute("aria-expanded", "true")
   })
 })
 

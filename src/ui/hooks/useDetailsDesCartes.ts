@@ -1,23 +1,31 @@
 // src/ui/hooks/useDetailsDesCartes.ts
 // Détail des cartes de résultats : un seul état par groupe de cartes (les foyers fiscaux, les activités), pour qu'un
 // clic sur « Afficher le détail » d'une carte déplie tout le groupe d'un coup. Le bouton cliqué garde sa place à
-// l'écran et le focus, quelle que soit la hauteur gagnée ou perdue au-dessus de lui.
+// l'écran et le focus, quelle que soit la hauteur gagnée ou perdue au-dessus de lui. L'état de chaque groupe est
+// retenu dans les préférences de l'utilisateur (voir useSectionOuverte).
 
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef } from "react"
 import { useAffichageResume } from "./useAffichage"
+import { useSectionOuverte } from "./useSectionOuverte"
 
 export type GroupeDeCartes = "foyers" | "activites"
 
-/** Détail ouvert ou fermé de chaque groupe ; `null` tant que l'utilisateur n'a rien choisi : l'affichage décide. */
-export type EtatDesGroupes = Record<GroupeDeCartes, boolean | null>
+/** Détail ouvert ou fermé de chaque groupe. */
+export type EtatDesGroupes = Record<GroupeDeCartes, boolean>
+
+/** Identifiants sous lesquels l'état de chaque groupe est retenu. */
+export const ID_DES_GROUPES: Record<GroupeDeCartes, string> = { foyers: "details-foyers", activites: "details-activites" }
 
 /**
- * État des groupes, seul et à part : il pourra être retenu dans les préférences de l'utilisateur sans rien changer
- * aux cartes ni aux boutons.
+ * État des groupes, retenu dans les préférences : ouvert d'office dans l'affichage classique (la page d'origine, tout
+ * affiché), fermé dans les affichages qui replient le détail, tant que l'utilisateur n'a pas choisi.
  */
 export function useEtatDesGroupes(): [EtatDesGroupes, (groupe: GroupeDeCartes, ouvert: boolean) => void] {
-  const [etat, setEtat] = useState<EtatDesGroupes>({ foyers: null, activites: null })
-  const changer = useCallback((groupe: GroupeDeCartes, ouvert: boolean) => setEtat(actuel => ({ ...actuel, [groupe]: ouvert })), [])
+  const ouvertParDefaut = !useAffichageResume()
+  const [foyers, definirFoyers] = useSectionOuverte(ID_DES_GROUPES.foyers, ouvertParDefaut)
+  const [activites, definirActivites] = useSectionOuverte(ID_DES_GROUPES.activites, ouvertParDefaut)
+  const etat = useMemo(() => ({ foyers, activites }), [foyers, activites])
+  const changer = useCallback((groupe: GroupeDeCartes, ouvert: boolean) => (groupe === "foyers" ? definirFoyers : definirActivites)(ouvert), [definirFoyers, definirActivites])
   return [etat, changer]
 }
 
@@ -82,10 +90,7 @@ export function useDetailsDesCartesExistants(): DetailsDesCartes | null {
   return useContext(DetailsDesCartesContext)
 }
 
-/**
- * Détail d'un groupe de cartes : ouvert d'office dans l'affichage classique (la page d'origine, tout affiché), fermé
- * dans les affichages qui replient le détail, tant que l'utilisateur n'a pas choisi.
- */
+/** Détail d'un groupe de cartes, partagé par toutes ses cartes (voir useEtatDesGroupes pour l'état par défaut). */
 export function useDetailDuGroupe(groupe: GroupeDeCartes): { ouvert: boolean; basculer: (bouton: HTMLElement) => void } {
   const details = useContext(DetailsDesCartesContext)
   const resume = useAffichageResume()

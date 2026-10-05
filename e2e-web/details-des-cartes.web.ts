@@ -22,8 +22,11 @@ function sessionNombreuse(): SessionState {
 
 /** Ouvre la démo sur cette session, dans l'affichage voulu. */
 async function ouvrir(page: Page, affichage: "classique" | "resume") {
+  // Au premier chargement seulement : un rechargement retrouve la session et les préférences enregistrées.
   await page.addInitScript(
     ({ session, affichage }) => {
+      if (window.sessionStorage.getItem("session-preparee")) return
+      window.sessionStorage.setItem("session-preparee", "oui")
       window.localStorage.setItem("simulateur.session", JSON.stringify({ ...session, formatVersion: 3 }))
       window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], affichage }))
     },
@@ -101,6 +104,19 @@ for (const affichage of ["classique", "resume"] as const) {
     })
   })
 }
+
+test("le détail ouvert ou fermé de chaque groupe est retrouvé au rechargement", async ({ page }) => {
+  await ouvrir(page, "resume")
+  await boutons(page, ACTIVITES).first().click()
+  await expect(boutons(page, ACTIVITES).last()).toHaveAttribute("aria-expanded", "true")
+  // Les préférences sont enregistrées dans le navigateur peu après la bascule.
+  await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("simulateur.preferences") ?? "{}").sectionsOuvertes)).toEqual({ "details-activites": true })
+
+  await page.reload()
+  await expect(boutons(page, ACTIVITES)).toHaveCount(NOMBRE_D_ACTIVITES)
+  for (const bouton of await boutons(page, ACTIVITES).all()) await expect(bouton).toHaveAttribute("aria-expanded", "true")
+  for (const bouton of await boutons(page, FOYERS).all()) await expect(bouton).toHaveAttribute("aria-expanded", "false")
+})
 
 test("sans animation demandée, la page ne défile pas en douceur pour compenser", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" })
