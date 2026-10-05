@@ -1,12 +1,13 @@
 // src/ui/components/SelecteurAnnee.tsx
 // Choix de l'année affichée (grille, résultats, comparateur, exports), ajout d'une année avant la plus ancienne ou
 // après la plus récente, et suppression de l'une des deux extrémités : les années de la session restent consécutives.
+// Une session compte au plus NOMBRE_MAX_ANNEES années : l'ajout est alors désactivé, et l'interface dit pourquoi.
 
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import type { PositionNouvelleAnnee } from "@/backend/logic/annees"
+import { NOMBRE_MAX_ANNEES, type PositionNouvelleAnnee } from "@/backend/logic/annees"
 import { cn } from "@/lib/utils"
 
 interface SelecteurAnneeProps {
@@ -105,13 +106,19 @@ function FenetreSuppression({ annee, onClose, onSupprimer }: { annee: number; on
   )
 }
 
+/** Pourquoi on ne peut plus ajouter d'année, affiché sous le sélecteur une fois la limite atteinte. */
+const EXPLICATION_LIMITE = `${NOMBRE_MAX_ANNEES} années au plus : au-delà de deux ou trois ans après les dernières règles connues, les chiffres ne sont plus qu'une projection. Supprimez la première ou la dernière année pour en ajouter une autre.`
+
 export function SelecteurAnnee({ annees, annee, premiereAnneeConnue, onChange, onAjouter, onSupprimer }: SelecteurAnneeProps) {
   const [fenetre, setFenetre] = useState<"ajout" | "suppression" | null>(null)
+  const idExplication = useId()
   // Seules la plus ancienne et la plus récente se suppriment, et jamais la dernière qui reste.
   const supprimable = annees.length > 1 && (annee === annees[0] || annee === annees[annees.length - 1])
+  // Au-delà de NOMBRE_MAX_ANNEES, le bouton d'ajout est désactivé et l'explication, visible, lui est associée.
+  const limiteAtteinte = annees.length >= NOMBRE_MAX_ANNEES
 
   return (
-    <div className="flex flex-wrap items-center gap-2 print:hidden">
+    <div className="flex min-w-0 flex-wrap items-center gap-2 print:hidden">
       <div role="group" aria-label="Année affichée" className="flex flex-wrap gap-1">
         {annees.map(a => (
           <Button key={a} size="sm" variant={a === annee ? "default" : "outline"} aria-pressed={a === annee} className="min-w-14 text-sm" onClick={() => onChange(a)}>
@@ -119,7 +126,7 @@ export function SelecteurAnnee({ annees, annee, premiereAnneeConnue, onChange, o
           </Button>
         ))}
       </div>
-      <Button size="sm" variant="ghost" className="text-sm" onClick={() => setFenetre("ajout")}>
+      <Button size="sm" variant="ghost" className="text-sm" disabled={limiteAtteinte} aria-describedby={limiteAtteinte ? idExplication : undefined} title={limiteAtteinte ? EXPLICATION_LIMITE : undefined} onClick={() => setFenetre("ajout")}>
         <Plus aria-hidden="true" />
         Ajouter une année
       </Button>
@@ -129,7 +136,12 @@ export function SelecteurAnnee({ annees, annee, premiereAnneeConnue, onChange, o
           Supprimer {annee}
         </Button>
       ) : null}
-      {fenetre === "ajout" ? <FenetreAjout annees={annees} premiereAnneeConnue={premiereAnneeConnue} onClose={() => setFenetre(null)} onAjouter={onAjouter} /> : null}
+      {limiteAtteinte ? (
+        <p id={idExplication} className="basis-full text-sm text-slate-600 dark:text-slate-400">
+          {EXPLICATION_LIMITE}
+        </p>
+      ) : null}
+      {fenetre === "ajout" ?<FenetreAjout annees={annees} premiereAnneeConnue={premiereAnneeConnue} onClose={() => setFenetre(null)} onAjouter={onAjouter} /> : null}
       {fenetre === "suppression" ? <FenetreSuppression annee={annee} onClose={() => setFenetre(null)} onSupprimer={onSupprimer} /> : null}
     </div>
   )

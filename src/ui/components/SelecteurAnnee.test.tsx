@@ -104,4 +104,23 @@ describe("SelecteurAnnee", () => {
 
     expect(screen.queryByRole("button", { name: /^Supprimer/ })).not.toBeInTheDocument()
   })
+
+  it("désactive l'ajout à dix années, en expliquant pourquoi, et laisse supprimer une extrémité", () => {
+    const dix = Array.from({ length: 10 }, (_, i) => 2024 + i)
+    afficher(dix, 2033)
+
+    const ajouter = screen.getByRole("button", { name: "Ajouter une année" })
+    expect(ajouter).toBeDisabled()
+    expect(ajouter).toHaveAccessibleDescription(/^10 années au plus : au-delà de deux ou trois ans après les dernières règles connues, les chiffres ne sont plus qu'une projection\./)
+    expect(screen.getByText(/^10 années au plus/)).toBeVisible()
+    expect(screen.getByRole("button", { name: "Supprimer 2033" })).toBeEnabled()
+    expect(boutonsDesAnnees()).toHaveLength(10)
+  })
+
+  it("laisse ajouter une année tant qu'il y en a moins de dix, sans explication", () => {
+    afficher(Array.from({ length: 9 }, (_, i) => 2024 + i), 2032)
+
+    expect(screen.getByRole("button", { name: "Ajouter une année" })).toBeEnabled()
+    expect(screen.queryByText(/années au plus/)).not.toBeInTheDocument()
+  })
 })
