@@ -190,7 +190,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
-### **Phase 13 ter : Moins d'informations à l'écran [À étudier 🔍]**
+### **Phase 13 ter : Moins d'informations à l'écran [En cours 🚧]**
 
 - **Objectif :** n'afficher par défaut que ce qui répond à la question de l'utilisateur, et atteindre le reste en un ou deux clics. L'écran est aujourd'hui une longue page : acteurs, grille, légende, résultats du foyer, synthèse des années, puis le comparateur (réglages, partage du bénéfice, tableau, notes, rémunération ou dividendes). Chaque phase y a ajouté un panneau.
 - **À faire avant la phase 14 :** les montages types ajouteront encore du contenu.
@@ -204,7 +204,21 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
     - **Détails contextuels :** les réglages et résultats d'un acteur dans un panneau latéral à sa sélection plutôt qu'en permanence ; la légende de la grille au survol ou repliée.
     - **Mémoire de l'affichage :** sections ouvertes ou fermées retenues, liens d'ancrage, raccourcis clavier.
 4.  **Maquettes et essais :** deux ou trois maquettes basse fidélité, essayées par quelques personnes sur les parcours types avant de coder.
-5.  **Garde-fous :** accessibilité inchangée (tests axe, clavier, tailles des cibles), impression et PDF qui déplient tout, tests de bout en bout adaptés aux nouveaux chemins.
+5.  **Étude [✅] :** inventaire, parcours mesurés et trois propositions dans `docs/conception/allegement-ecran.md` (page actuelle : 6,5 écrans sur ordinateur, 11 sur téléphone).
+6.  **Quatre affichages au choix pendant la bêta :** l'affichage d'origine et les trois propositions (A : résumé collant et divulgation progressive ; C : A plus un panneau latéral par acteur ; B : trois vues), à choisir dans la barre du haut et retenus pour chaque utilisateur, pour les faire essayer et recueillir des avis avant d'en garder un. Ordre de réalisation : A, puis C, puis B.
+7.  **Garde-fous :** accessibilité inchangée (tests axe, clavier, tailles des cibles), impression et PDF qui déplient tout, tests de bout en bout adaptés aux nouveaux chemins.
+
+---
+
+### **Phase 13 quater : Retours des utilisateurs [Planifié 🗓️]**
+
+- **Objectif :** pendant la bêta, recueillir notes, avis et rapports de bug depuis l'application, et les retrouver sur GitHub sans ressaisie.
+
+1.  **Formulaire dans l'application :** noter l'application (1 à 5), dire quel affichage on préfère (classique, A, B ou C), écrire un commentaire, signaler un bug ou proposer une idée. **Tout est facultatif**, mais il faut au moins une information pour pouvoir envoyer ; joindre si on le souhaite un diagnostic (version, système, affichage choisi, dernières erreurs), jamais les données de la simulation sans accord explicite. Rien n'est envoyé sans clic sur « Envoyer », avec un aperçu du contenu.
+2.  **Sans serveur, d'abord :** le bouton ouvre un ticket GitHub prérempli (formulaires de tickets du dépôt : bug, idée, avis avec note), sur le compte GitHub de la personne. Aucun secret dans l'application ni dans la démo.
+3.  **Sans compte GitHub, ensuite :** un petit relais (fonction serverless) qui garde seul le jeton d'une application GitHub et crée le ticket ou la discussion avec ses étiquettes ; protection contre le spam (défi anti-robot, limite de débit), aucune donnée personnelle conservée, mention RGPD.
+4.  **Note moyenne dans le README :** une GitHub Action agrège les notes des tickets qui en ont une (les retours sans note sont ignorés dans la moyenne, et le nombre de notes est affiché avec elle), ainsi que les préférences d'affichage exprimées, et publie un badge (fichier JSON servi par GitHub Pages, lu par shields.io) : le README affiche la note sans commit automatique sur main.
+5.  **Tri :** étiquettes automatiques (bug, idée, avis, affichage A, B, C ou d'origine), modèle de réponse, lien entre un ticket et sa correction.
 
 ---
 
