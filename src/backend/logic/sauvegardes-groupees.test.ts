@@ -305,18 +305,34 @@ describe("fusionnerSauvegardes", () => {
   })
 
   it("renomme sans écraser une sauvegarde déjà suffixée « (importée) » quand ce nom est pris", () => {
-    // Le suffixe s'ajoute au nom tel qu'il est : aucun nom existant n'est réutilisé.
+    // Le suffixe n'est pas empilé : la copie prend le numéro suivant, et aucun nom existant n'est réutilisé.
     const existantes = [sauvegarde("a", "Alpha (importée)")]
     const homonyme = sauvegarde("b", "Alpha (importée)")
 
     const resultat = fusionnerSauvegardes(existantes, ["a"], [homonyme, { ...homonyme, id: "c" }], creerId)
 
-    expect(resultat.slots.map(slot => slot.name)).toEqual(["Alpha (importée)", "Alpha (importée) (importée)", "Alpha (importée) (importée 2)"])
+    expect(resultat.slots.map(slot => slot.name)).toEqual(["Alpha (importée)", "Alpha (importée 2)", "Alpha (importée 3)"])
     expect(new Set(resultat.slots.map(slot => slot.id)).size).toBe(3)
     expect(resultat.rapport.renommees).toEqual([
-      { ancienNom: "Alpha (importée)", nouveauNom: "Alpha (importée) (importée)" },
-      { ancienNom: "Alpha (importée)", nouveauNom: "Alpha (importée) (importée 2)" }
+      { ancienNom: "Alpha (importée)", nouveauNom: "Alpha (importée 2)" },
+      { ancienNom: "Alpha (importée)", nouveauNom: "Alpha (importée 3)" }
     ])
+  })
+
+  it("poursuit la numérotation d'une copie déjà numérotée, sans revenir à un numéro inférieur", () => {
+    const existantes = [sauvegarde("a", "Alpha (importée 2)")]
+
+    const resultat = fusionnerSauvegardes(existantes, ["a"], [sauvegarde("b", "Alpha (importée 2)")], creerId)
+
+    expect(resultat.slots.map(slot => slot.name)).toEqual(["Alpha (importée 2)", "Alpha (importée 3)"])
+  })
+
+  it("garde tel quel un nom qui contient « importée » sans en être le suffixe", () => {
+    const existantes = [sauvegarde("a", "Alpha (importée) bis")]
+
+    const resultat = fusionnerSauvegardes(existantes, ["a"], [sauvegarde("b", "Alpha (importée) bis")], creerId)
+
+    expect(resultat.slots.map(slot => slot.name)).toEqual(["Alpha (importée) bis", "Alpha (importée) bis (importée)"])
   })
 
   it("n'ajoute rien et ne touche à rien pour un fichier vide", () => {

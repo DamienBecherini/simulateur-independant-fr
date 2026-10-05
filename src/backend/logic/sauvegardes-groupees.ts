@@ -161,13 +161,19 @@ function memeContenu(a: SaveSlot, b: SaveSlot): boolean {
   return contenu(a) === contenu(b)
 }
 
-/** Premier nom libre parmi « Nom (importée) », « Nom (importée 2) », « Nom (importée 3) »… */
+const SUFFIXE_IMPORTEE = /^(.*) \(importée(?: (\d+))?\)$/
+
+/**
+ * Premier nom libre parmi « Nom (importée) », « Nom (importée 2) », « Nom (importée 3) »… Un nom déjà suffixé n'en
+ * reçoit pas un second : « Nom (importée) » devient « Nom (importée 2) », « Nom (importée 2) » devient « Nom (importée 3) ».
+ */
 function nomLibre(nom: string, nomsPris: Set<string>): string {
-  let candidat = `${nom} (importée)`
-  for (let numero = 2; nomsPris.has(candidat); numero++) {
-    candidat = `${nom} (importée ${numero})`
-  }
-  return candidat
+  const suffixe = SUFFIXE_IMPORTEE.exec(nom)
+  const base = suffixe ? suffixe[1] : nom
+  const libelle = (numero: number) => (numero === 1 ? `${base} (importée)` : `${base} (importée ${numero})`)
+  let numero = suffixe ? Number(suffixe[2] ?? 1) + 1 : 1
+  while (nomsPris.has(libelle(numero))) numero++
+  return libelle(numero)
 }
 
 const nouvelIdentifiant = () => `slot-${crypto.randomUUID()}`
