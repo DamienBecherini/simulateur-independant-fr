@@ -407,20 +407,29 @@ function NoteDesAssocies({ sharedCompanies }: { sharedCompanies: ActivityResult[
   )
 }
 
+/** Les cartes des foyers fiscaux ; le bouton du détail de chacune compte toutes les cartes de la page. */
+function cartesDesFoyers(report: SimulationReport) {
+  return report.foyers.map(foyer => <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length + report.activities.length} />)
+}
+
+/** Les cartes des activités. */
+function cartesDesActivites(report: SimulationReport) {
+  return report.activities.map(activity => <ActivityCard key={activity.entityId} activity={activity} nombre={report.foyers.length + report.activities.length} />)
+}
+
+const GRILLE_DES_CARTES = "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+const TITRE_DES_CARTES = "text-lg font-medium text-slate-800 dark:text-slate-100"
+
 /** Affichage « Résumé » : les cartes des foyers et des activités, réduites à leur chiffre clé, dans une seule grille. */
 function CartesDuResume({ report, sharedCompanies }: { report: SimulationReport; sharedCompanies: ActivityResult[] }) {
   if (report.foyers.length + report.activities.length === 0) return null
   return (
     <div className="space-y-3">
-      <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal et par activité</h3>
+      <h3 className={TITRE_DES_CARTES}>Par foyer fiscal et par activité</h3>
       <NoteDesAssocies sharedCompanies={sharedCompanies} />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {report.foyers.map(foyer => (
-          <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length + report.activities.length} />
-        ))}
-        {report.activities.map(activity => (
-          <ActivityCard key={activity.entityId} activity={activity} nombre={report.foyers.length + report.activities.length} />
-        ))}
+      <div className={GRILLE_DES_CARTES}>
+        {cartesDesFoyers(report)}
+        {cartesDesActivites(report)}
       </div>
     </div>
   )
@@ -432,24 +441,16 @@ function CartesClassiques({ report, sharedCompanies }: { report: SimulationRepor
     <>
       {report.foyers.length > 0 ? (
         <div className="space-y-3">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
+          <h3 className={TITRE_DES_CARTES}>Par foyer fiscal</h3>
           <NoteDesAssocies sharedCompanies={sharedCompanies} />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {report.foyers.map(foyer => (
-              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length + report.activities.length} />
-            ))}
-          </div>
+          <div className={GRILLE_DES_CARTES}>{cartesDesFoyers(report)}</div>
         </div>
       ) : null}
 
       {report.activities.length > 0 ? (
         <div className="space-y-3">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par activité</h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {report.activities.map(activity => (
-              <ActivityCard key={activity.entityId} activity={activity} nombre={report.foyers.length + report.activities.length} />
-            ))}
-          </div>
+          <h3 className={TITRE_DES_CARTES}>Par activité</h3>
+          <div className={GRILLE_DES_CARTES}>{cartesDesActivites(report)}</div>
         </div>
       ) : null}
     </>
