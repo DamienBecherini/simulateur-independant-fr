@@ -136,6 +136,14 @@ for (const theme of ["clair", "sombre"] as const) {
 }
 
 for (const largeur of [320, 375]) {
+  test(`à ${largeur} px, avec une souris, tous les boutons de la barre d'outils tiennent dans la largeur`, async ({ page }) => {
+    await page.setViewportSize({ width: largeur, height: 740 })
+    await ouvrir(page)
+    for (const nom of ["Paramètres", "Donner mon avis"]) expect((await page.getByRole("button", { name: nom }).boundingBox())!.x).toBeGreaterThanOrEqual(0)
+    const theme = (await page.getByRole("switch", { name: "Changer de thème" }).boundingBox())!
+    expect(theme.x + theme.width).toBeLessThanOrEqual(largeur)
+  })
+
   test.describe(`sur un téléphone de ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: 740 }, hasTouch: true, isMobile: true })
 
