@@ -33,7 +33,8 @@ test("l'affichage se choisit dans la barre d'outils et reste choisi au rechargem
 
   await page.getByRole("combobox", { name: "Affichage : Classique" }).click()
   await expect(page.getByText("Bêta : dites-nous quel affichage vous préférez.")).toBeVisible()
-  await expect(page.getByRole("option", { name: "Trois vues (bientôt)" })).toHaveAttribute("aria-disabled", "true")
+  await expect(page.getByRole("option")).toHaveText(["Classique", "Résumé", "Panneaux", "Trois vues"])
+  await expect(page.locator("[role=option][aria-disabled=true]")).toHaveCount(0)
   await page.getByRole("option", { name: "Résumé" }).click()
   await expect(barre(page)).toBeVisible()
   await expect(page.getByRole("button", { name: /Voir le détail/ })).toBeVisible()
