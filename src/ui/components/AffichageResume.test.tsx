@@ -39,14 +39,14 @@ function report(): SimulationReport {
 const session = () => ({ ...emptySession(), entities: [makePerson(), makeMicro({ name: "Mon atelier" })] })
 
 describe("choix de l'affichage", () => {
-  it("propose les quatre affichages, dont un à venir, et transmet le choix", async () => {
+  it("propose les quatre affichages, tous disponibles, et transmet le choix", async () => {
     const onChange = vi.fn()
     render(<SelecteurAffichage affichage="classique" onChange={onChange} />)
     await userEvent.click(screen.getByRole("combobox", { name: "Affichage : Classique" }))
 
     expect(await screen.findByText("Bêta : dites-nous quel affichage vous préférez.")).toBeInTheDocument()
-    expect(screen.getByRole("option", { name: "Panneaux" })).not.toHaveAttribute("aria-disabled")
-    expect(screen.getByRole("option", { name: "Trois vues (bientôt)" })).toHaveAttribute("aria-disabled", "true")
+    expect(screen.getAllByRole("option").map(option => option.textContent)).toEqual(["Classique", "Résumé", "Panneaux", "Trois vues"])
+    for (const option of screen.getAllByRole("option")) expect(option).not.toHaveAttribute("aria-disabled")
     await userEvent.click(screen.getByRole("option", { name: "Résumé" }))
     expect(onChange).toHaveBeenCalledWith("resume")
   })

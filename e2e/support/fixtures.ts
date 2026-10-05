@@ -66,8 +66,9 @@ async function lancerApplication(dossierDonnees: string): Promise<Application> {
   })
   page.on("pageerror", erreur => erreursConsole.push(erreur.message))
 
-  // L'interface est prête quand la session est chargée et que la première simulation est affichée.
-  await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
+  // L'interface est prête quand la session est chargée et que la première simulation est affichée (dans la page :
+  // l'affichage « Trois vues » peut la garder dans une vue masquée).
+  await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeAttached()
 
   const dialogues = () => electronApp.evaluate(() => (globalThis as unknown as { __dialoguesE2E: DialogueIntercepte[] }).__dialoguesE2E)
   return { electronApp, page, erreursConsole, dialogues }

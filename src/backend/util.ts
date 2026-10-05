@@ -25,5 +25,8 @@ export function ipcMainHandle<Key extends keyof EventPayloadMapping>(key: Key, h
 
 export function validateEventFrame(frame: WebFrameMain) {
   if (isDev() && new URL(frame.url).host === "localhost:3524") return // Assurez-vous que le port est correct
-  if (frame.url !== pathToFileURL(getUIPath()).toString()) throw new Error("Malicious event")
+  // Le fragment de l'adresse (#resultats, affichage « Trois vues ») désigne une vue de la même page : il est ignoré.
+  const url = new URL(frame.url)
+  url.hash = ""
+  if (url.toString() !== pathToFileURL(getUIPath()).toString()) throw new Error("Malicious event")
 }

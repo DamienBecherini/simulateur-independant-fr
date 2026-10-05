@@ -47,6 +47,8 @@ Element.prototype.setPointerCapture ??= () => {}
 Element.prototype.releasePointerCapture ??= () => {}
 Element.prototype.scrollIntoView ??= () => {}
 Element.prototype.scrollTo ??= () => {}
+// jsdom déclare window.scrollTo sans l'implémenter (il signale une erreur à chaque appel).
+window.scrollTo = () => {}
 
 window.matchMedia ??= (query: string): MediaQueryList => ({
   matches: false,

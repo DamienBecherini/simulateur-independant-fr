@@ -280,6 +280,14 @@ function createMainWindow() {
     mainWindow.loadFile(getUIPath()).catch(error => console.error("Interface introuvable :", error))
   }
 
+  // Boutons « précédent » et « suivant » de la souris (Windows, Linux) : retour à la vue précédente de l'affichage
+  // « Trois vues », comme dans un navigateur. L'historique ne contient que des vues de la même page.
+  mainWindow.on("app-command", (_event, commande) => {
+    const historique = mainWindow?.webContents.navigationHistory
+    if (commande === "browser-backward" && historique?.canGoBack()) historique.goBack()
+    if (commande === "browser-forward" && historique?.canGoForward()) historique.goForward()
+  })
+
   mainWindow.once("ready-to-show", () => {
     if (splashWindow) {
       splashWindow.close()
