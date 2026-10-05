@@ -359,7 +359,70 @@ function EnTeteDesResultats({ report }: { report: SimulationReport | null }) {
   )
 }
 
+/** Sociétés dont les revenus se partagent entre plusieurs personnes : seule situation où la répartition à parts égales s'applique. */
+function NoteDesAssocies({ sharedCompanies }: { sharedCompanies: ActivityResult[] }) {
+  if (sharedCompanies.length === 0) return null
+  return (
+    <ReplieEnResume titre="Sociétés à plusieurs associés" className="text-sm text-slate-600 dark:text-slate-400">
+      <p className="text-sm text-slate-600 dark:text-slate-400">
+        {sharedCompanies.map(a => `« ${a.name} »`).join(", ")} : l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les associés, comme les dividendes. La répartition réelle du capital n'est pas encore modélisée.
+      </p>
+    </ReplieEnResume>
+  )
+}
+
+/** Affichage « Résumé » : les cartes des foyers et des activités, réduites à leur chiffre clé, dans une seule grille. */
+function CartesDuResume({ report, sharedCompanies }: { report: SimulationReport; sharedCompanies: ActivityResult[] }) {
+  if (report.foyers.length + report.activities.length === 0) return null
+  return (
+    <div className="space-y-3">
+      <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal et par activité</h3>
+      <NoteDesAssocies sharedCompanies={sharedCompanies} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {report.foyers.map(foyer => (
+          <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} />
+        ))}
+        {report.activities.map(activity => (
+          <ActivityCard key={activity.entityId} activity={activity} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Affichage classique : les cartes des foyers, puis celles des activités. */
+function CartesClassiques({ report, sharedCompanies }: { report: SimulationReport; sharedCompanies: ActivityResult[] }) {
+  return (
+    <>
+      {report.foyers.length > 0 ? (
+        <div className="space-y-3">
+          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
+          <NoteDesAssocies sharedCompanies={sharedCompanies} />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {report.foyers.map(foyer => (
+              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {report.activities.length > 0 ? (
+        <div className="space-y-3">
+          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par activité</h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {report.activities.map(activity => (
+              <ActivityCard key={activity.entityId} activity={activity} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </>
+  )
+}
+
 export function ResultsPanel({ report, error, apresLeBilan }: ResultsPanelProps) {
+  // L'affichage classique a deux grilles de cartes, l'affichage « Résumé » une seule.
+  const Cartes = useAffichageResume() ? CartesDuResume : CartesClassiques
   // Sociétés dont les revenus se partagent entre plusieurs personnes : seule situation où la répartition à parts égales s'applique.
   const sharedCompanies = report?.activities.filter(a => a.type === "company" && a.beneficiaireIds.length > 1) ?? []
 
@@ -375,34 +438,7 @@ export function ResultsPanel({ report, error, apresLeBilan }: ResultsPanelProps)
 
       {apresLeBilan}
 
-      {report && report.foyers.length > 0 ? (
-        <div className="space-y-3">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par foyer fiscal</h3>
-          {sharedCompanies.length > 0 ? (
-            <ReplieEnResume titre="Sociétés à plusieurs associés" className="text-sm text-slate-600 dark:text-slate-400">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {sharedCompanies.map(a => `« ${a.name} »`).join(", ")} : l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales entre les associés, comme les dividendes. La répartition réelle du capital n'est pas encore modélisée.
-              </p>
-            </ReplieEnResume>
-          ) : null}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {report.foyers.map(foyer => (
-              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} />
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {report && report.activities.length > 0 ? (
-        <div className="space-y-3">
-          <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par activité</h3>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {report.activities.map(activity => (
-              <ActivityCard key={activity.entityId} activity={activity} />
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {report ? <Cartes report={report} sharedCompanies={sharedCompanies} /> : null}
     </section>
   )
 }

@@ -13,6 +13,8 @@
 
 /* Écran tactile (doigt plutôt que souris) : les zones cliquables y sont agrandies à 44 px. */
 @custom-variant pointer-coarse (@media (pointer: coarse));
+/* Souris ou pavé tactile : une invitation peut n'apparaître qu'au survol. */
+@custom-variant pointer-fine (@media (pointer: fine));
 
 :root {
   --background: hsl(0 0% 96%);

@@ -12,6 +12,8 @@ import { createId } from "@/lib/id"
 import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlux, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type MoisTouches, type PorteeRecurrence } from "@/lib/flux-recurrents"
 import { toast } from "sonner"
 import { AvatarDisplay } from "./AvatarDisplay"
+import { cn } from "@/lib/utils"
+import { useAffichageResume } from "../hooks/useAffichage"
 
 /**
  * Interface pour les props du composant MonthlyGrid.
@@ -42,6 +44,8 @@ const fullMonths = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 const deMois = (mois: string) => (/^[aeiouâéèêîôû]/i.test(mois) ? `d’${mois.toLowerCase()}` : `de ${mois.toLowerCase()}`)
 
 function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees }: MonthlyGridProps) {
+  // Affichage « Résumé » : lignes plus basses, avatar en petit à côté du nom.
+  const resume = useAffichageResume()
   // ===================================================================================
   // == ÉTAT DE LA FENÊTRE DES FLUX
   // ===================================================================================
@@ -277,8 +281,8 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                 <React.Fragment key={entity.id}>
                   {/* Colonne 1 : Nom de l'entité + Avatar */}
                   <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center print:static print:p-1">
-                    <div className="flex flex-col items-center gap-2 py-1 mx-0 text-sm sm:mx-3 sm:text-base print:mx-0 print:gap-1 print:text-[9pt]">
-                      <AvatarDisplay avatar={entity.avatar} size="md" />
+                    <div className={cn("flex items-center gap-2 py-1 mx-0 text-sm sm:mx-3 sm:text-base print:mx-0 print:gap-1 print:text-[9pt]", resume ? "max-sm:flex-col" : "flex-col")}>
+                      <AvatarDisplay avatar={entity.avatar} size={resume ? "sm" : "md"} />
                       {/* Un nom long passe à la ligne ; un mot plus large que la colonne est coupé. */}
                       <span className="text-center [overflow-wrap:anywhere]">{entity.name}</span>
                     </div>
@@ -301,7 +305,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                   {monthlyCellData.map((cellData, monthIndex) => (
                     <div
                       key={monthIndex}
-                      className="bg-slate-100 dark:bg-gray-800 p-2 group transition-colors min-h-[80px] cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start print:min-h-0 print:p-1"
+                      className={cn("bg-slate-100 dark:bg-gray-800 p-2 group transition-colors cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start print:min-h-0 print:p-1", resume ? "min-h-12" : "min-h-[80px]")}
                       role="button"
                       tabIndex={0}
                       aria-label={`Flux ${deMois(fullMonths[monthIndex])} : ${entity.name}`}

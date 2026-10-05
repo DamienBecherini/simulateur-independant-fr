@@ -7,6 +7,8 @@ import { Depliable } from "./Depliable"
 interface ReplieEnResumeProps {
   titre: string
   className?: string
+  /** Classes du contenu une fois déplié (affichage « Résumé » seulement : sans lui, le contenu est rendu tel quel). */
+  classNameContenu?: string
   /** Faux : le contenu reste affiché, même dans l'affichage « Résumé ». */
   replie?: boolean
   children: ReactNode
@@ -16,12 +18,12 @@ interface ReplieEnResumeProps {
  * Détail replié dans l'affichage « Résumé » (section dépliable, toujours dépliée à l'impression), affiché tel quel
  * dans l'affichage classique.
  */
-export function ReplieEnResume({ titre, className, replie = true, children }: ReplieEnResumeProps) {
+export function ReplieEnResume({ titre, className, classNameContenu, replie = true, children }: ReplieEnResumeProps) {
   const resume = useAffichageResume()
   if (!resume || !replie) return <>{children}</>
   return (
     <Depliable titre={titre} className={className}>
-      {children}
+      {classNameContenu ? <div className={classNameContenu}>{children}</div> : children}
     </Depliable>
   )
 }

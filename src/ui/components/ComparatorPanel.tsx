@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useOptimisation } from "../hooks/useOptimisation"
-import { appliquerRemuneration, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
+import { appliquerRemuneration, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { cn } from "@/lib/utils"
@@ -179,23 +179,26 @@ function ComparatorControls({ activities, selected, options, onSelect, onChange 
         </Select>
       </div>
 
-      <ChoixDeLaRepartition mode={options.repartition.mode} onChange={mode => onChange({ repartition: { ...options.repartition, mode } })} />
+      {/* Affichage « Résumé » : ces réglages tiennent en une ligne, qui rappelle le partage du bénéfice retenu. */}
+      <ReplieEnResume titre={`Réglages : ${libellesRepartition[options.repartition.mode].toLowerCase()}`} className="basis-full" classNameContenu="mt-3 flex flex-wrap items-end gap-x-6 gap-y-3">
+        <ChoixDeLaRepartition mode={options.repartition.mode} onChange={mode => onChange({ repartition: { ...options.repartition, mode } })} />
 
-      {options.repartition.mode === "meilleurNet" ? <AvecRetraite options={options} onChange={onChange} /> : null}
+        {options.repartition.mode === "meilleurNet" ? <AvecRetraite options={options} onChange={onChange} /> : null}
 
-      {options.repartition.mode === "remuneration" || options.repartition.mode === "meilleurNet" ? null : (
-        <div className="space-y-1">
-          <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
-          <Input id="comparateur-remuneration" className="w-40 bg-background text-right" type="number" min="0" step="1000" value={options.remunerationNette} onChange={e => onChange({ remunerationNette: Math.max(0, parseFloat(e.target.value) || 0) })} />
-        </div>
-      )}
+        {options.repartition.mode === "remuneration" || options.repartition.mode === "meilleurNet" ? null : (
+          <div className="space-y-1">
+            <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
+            <Input id="comparateur-remuneration" className="w-40 bg-background text-right" type="number" min="0" step="1000" value={options.remunerationNette} onChange={e => onChange({ remunerationNette: Math.max(0, parseFloat(e.target.value) || 0) })} />
+          </div>
+        )}
 
-      {selected.type !== "micro-entreprise" && (
-        <div className="space-y-1">
-          <Label htmlFor="comparateur-bnc">En micro, prestations en BNC : {Math.round(options.partBncPrestations * 100)} % (le reste en BIC)</Label>
-          <input id="comparateur-bnc" className="block w-56 accent-slate-700 print:hidden" type="range" min="0" max="100" step="10" value={Math.round(options.partBncPrestations * 100)} onChange={e => onChange({ partBncPrestations: Number(e.target.value) / 100 })} />
-        </div>
-      )}
+        {selected.type !== "micro-entreprise" && (
+          <div className="space-y-1">
+            <Label htmlFor="comparateur-bnc">En micro, prestations en BNC : {Math.round(options.partBncPrestations * 100)} % (le reste en BIC)</Label>
+            <input id="comparateur-bnc" className="block w-56 accent-slate-700 print:hidden" type="range" min="0" max="100" step="10" value={Math.round(options.partBncPrestations * 100)} onChange={e => onChange({ partBncPrestations: Number(e.target.value) / 100 })} />
+          </div>
+        )}
+      </ReplieEnResume>
     </div>
   )
 }

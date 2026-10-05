@@ -1,6 +1,7 @@
 // src/ui/components/CellChartDisplay.tsx
 
 import { cn } from "@/lib/utils"
+import { useAffichageResume } from "../hooks/useAffichage"
 import { ArrowUp, ArrowDown } from "lucide-react"
 
 export interface FlowSegment {
@@ -23,12 +24,14 @@ interface CellChartDisplayProps {
 const MIN_HEIGHT_PX = 2
 
 export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, absoluteMaxValue, flowCount, readOnly = false }: CellChartDisplayProps) {
+  const resume = useAffichageResume()
   if (flowCount === 0) {
     if (readOnly) return <div className="py-3 text-center text-slate-600 dark:text-slate-400">—</div>
     // Sur papier, une case vide n'invite plus à la saisie : elle se lit comme un total annuel vide.
     return (
       <div className="py-3 text-slate-600 transition-colors group-hover:text-slate-900 dark:text-slate-400 dark:group-hover:text-slate-200 print:text-center">
-        <span className="print:hidden">+ Ajouter</span>
+        {/* Affichage « Résumé » : l'invitation n'apparaît qu'au survol ou au focus de la case, toujours au toucher. */}
+        <span className={cn("print:hidden", resume && "pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-visible:opacity-100")}>+ Ajouter</span>
         <span className="hidden print:inline">—</span>
       </div>
     )

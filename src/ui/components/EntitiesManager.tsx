@@ -13,6 +13,9 @@ import { sanitizeFlowsAfterRelationshipChange } from "@/lib/business-logic"
 import { nombreDeFlux, transformerLesGrilles } from "@/backend/logic/annees"
 import { toast } from "sonner"
 import { useTriAccessible } from "../hooks/useTriAccessible"
+import { useAffichageResume } from "../hooks/useAffichage"
+import { LigneActeur } from "./LigneActeur"
+import { cn } from "@/lib/utils"
 
 interface EntitiesManagerProps {
   session: SessionState
@@ -25,6 +28,9 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
   const [isSelectModalOpen, setSelectModalOpen] = useState(false)
   const entityIds = useMemo(() => entities.map(e => e.id), [entities])
+  // Affichage « Résumé » : un acteur par ligne, des commandes d'ajout plus discrètes.
+  const resume = useAffichageResume()
+  const Acteur = resume ? LigneActeur : EntityItem
   const tri = useTriAccessible(useMemo(() => entities.map(e => ({ id: e.id, nom: e.name })), [entities]))
 
   /**
@@ -98,21 +104,23 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
   }
 
   return (
-    <div className="p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md">
-      <h2 className="text-2xl font-semibold mb-4">Acteurs de la Simulation</h2>
-      <div className="flex flex-wrap gap-4 mb-6 print:hidden">
-        <Button onClick={() => addEntity(createPerson())}>+ Ajouter une Personne</Button>
-        <Button onClick={() => setSelectModalOpen(true)} variant="secondary">
+    <div className={cn("bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md", resume ? "p-4" : "p-6")}>
+      <h2 className={cn("text-2xl font-semibold", resume ? "mb-3" : "mb-4")}>Acteurs de la Simulation</h2>
+      <div className={cn("flex flex-wrap print:hidden", resume ? "mb-3 gap-2" : "mb-6 gap-4")}>
+        <Button size={resume ? "sm" : "default"} onClick={() => addEntity(createPerson())}>
+          + Ajouter une Personne
+        </Button>
+        <Button size={resume ? "sm" : "default"} onClick={() => setSelectModalOpen(true)} variant="secondary">
           + Ajouter une Activité
         </Button>
       </div>
       <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={entityIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-4">
+          <div className={resume ? "space-y-2" : "space-y-4"}>
             {entities.length === 0 ? (
               <p className="text-slate-600 dark:text-slate-400">Aucune entité. Commencez par en ajouter une !</p>
             ) : (
-              entities.map(entity => <EntityItem key={entity.id} entity={entity} allEntities={entities} relationships={relationships} onUpdate={updateEntity} onDelete={deleteEntity} onToggleLock={toggleLock} onEdit={setEditingEntity} onAddRelationship={addRelationship} onDeleteRelationship={deleteRelationship} />)
+              entities.map(entity => <Acteur key={entity.id} entity={entity} allEntities={entities} relationships={relationships} onUpdate={updateEntity} onDelete={deleteEntity} onToggleLock={toggleLock} onEdit={setEditingEntity} onAddRelationship={addRelationship} onDeleteRelationship={deleteRelationship} />)
             )}
           </div>
         </SortableContext>
