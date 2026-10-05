@@ -2,10 +2,11 @@
 
 import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { cn } from "@/lib/utils"
-import { Fragment, type ReactNode } from "react"
+import { Fragment, useId, type ReactNode } from "react"
 import { useAffichagePanneaux, useAffichageResume } from "../hooks/useAffichage"
+import { classeDuDetail, useDetailDuGroupe } from "../hooks/useDetailsDesCartes"
 import { BoutonDActeur } from "./BoutonDActeur"
-import { Depliable } from "./Depliable"
+import { BoutonDuDetailDesCartes, FournisseurDesDetails } from "./DetailsDesCartes"
 import { ReplieEnResume } from "./ReplieEnResume"
 
 type ResultsPanelProps = {
@@ -103,9 +104,9 @@ const dividendOptionLabels: Record<NonNullable<FoyerFiscalResult["optionDividend
 }
 
 /** Une ligne « libellé — montant » d'une carte de résultats. */
-function Row({ label, value, hint, strong = false, pastille }: { label: string; value: string; hint?: string | null; strong?: boolean; pastille?: string }) {
+function Row({ label, value, hint, strong = false, pastille, className }: { label: string; value: string; hint?: string | null; strong?: boolean; pastille?: string; className?: string }) {
   return (
-    <div className="flex justify-between gap-2">
+    <div className={cn("flex justify-between gap-2", className)}>
       <dt className={cn("flex items-start gap-2", strong ? "font-medium text-slate-800 dark:text-slate-100" : "text-slate-600 dark:text-slate-400")}>
         {/* Pastille de la couleur de la part dans la barre de répartition. */}
         {pastille ? <span aria-hidden="true" className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", pastille)} /> : null}
@@ -212,62 +213,85 @@ function NomsQuiOuvrent({ members }: { members: PersonResult[] }) {
   ))
 }
 
-function FoyerCard({ foyer, persons, showRates, nomsQuiOuvrent = false }: { foyer: FoyerFiscalResult; persons: PersonResult[]; showRates: boolean; nomsQuiOuvrent?: boolean }) {
+/** Lignes et compléments d'une carte de foyer ; `cache`, les classes des lignes de détail dans l'affichage classique. */
+function piecesDuFoyer(foyer: FoyerFiscalResult, members: PersonResult[], showRates: boolean, cache: string | undefined) {
+  return {
+    revenus: (
+      <div className="mb-2 space-y-2 border-b border-slate-100 pb-2 empty:hidden dark:border-slate-800">
+        {members.map(person => (
+          <PersonIncome key={person.entityId} person={person} showName={members.length > 1} />
+        ))}
+      </div>
+    ),
+    encaisse: <Row label="Total encaissé" value={formatMoney(foyer.revenusEncaisses)} className={cache} />,
+    impot: <Row label="Impôt sur le revenu" value={`− ${formatMoney(foyer.impotSurLeRevenu)}`} hint={`sur ${formatMoney(foyer.revenuImposableGlobal)} imposables au barème`} />,
+    prelevementsSociaux: foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(foyer.prelevementsSociaux)}`} className={cache} /> : null,
+    rfr: <Row label="Revenu fiscal de référence" value={formatMoney(foyer.revenuFiscalDeReference)} hint="pour le versement libératoire dans deux ans" />,
+    reste: foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={formatMoney(foyer.netApresImpots - foyer.depenses)} hint={`${formatMoney(foyer.depenses)} de dépenses`} className={cache} /> : null,
+    complements: (
+      <>
+        {showRates ? <FoyerRates foyer={foyer} /> : null}
+        {foyer.optionDividendes ? <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{dividendOptionLabels[foyer.optionDividendes]}</p> : null}
+      </>
+    )
+  }
+}
+
+interface FoyerCardProps {
+  foyer: FoyerFiscalResult
+  persons: PersonResult[]
+  showRates: boolean
+  /** Nombre de foyers : le bouton du détail les ouvre ou les ferme tous. */
+  nombre: number
+  nomsQuiOuvrent?: boolean
+}
+
+function FoyerCard({ foyer, persons, showRates, nombre, nomsQuiOuvrent = false }: FoyerCardProps) {
   const resume = useAffichageResume()
+  const { ouvert } = useDetailDuGroupe("foyers")
+  const idDuDetail = useId()
   const members = membresDuFoyer(foyer, persons)
   const parts = foyer.totalParts.toLocaleString("fr-FR")
-
-  const revenus = (
-    <div className="mb-2 space-y-2 border-b border-slate-100 pb-2 empty:hidden dark:border-slate-800">
-      {members.map(person => (
-        <PersonIncome key={person.entityId} person={person} showName={members.length > 1} />
-      ))}
-    </div>
-  )
-  const encaisse = <Row label="Total encaissé" value={formatMoney(foyer.revenusEncaisses)} />
-  const impot = <Row label="Impôt sur le revenu" value={`− ${formatMoney(foyer.impotSurLeRevenu)}`} hint={`sur ${formatMoney(foyer.revenuImposableGlobal)} imposables au barème`} />
-  const prelevementsSociaux = foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(foyer.prelevementsSociaux)}`} /> : null
-  const rfr = <Row label="Revenu fiscal de référence" value={formatMoney(foyer.revenuFiscalDeReference)} hint="pour le versement libératoire dans deux ans" />
-  const reste = foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={formatMoney(foyer.netApresImpots - foyer.depenses)} hint={`${formatMoney(foyer.depenses)} de dépenses`} /> : null
-  const complements = (
-    <>
-      {showRates ? <FoyerRates foyer={foyer} /> : null}
-      {foyer.optionDividendes ? <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{dividendOptionLabels[foyer.optionDividendes]}</p> : null}
-    </>
-  )
+  // Affichage classique : chaque ligne de détail se masque à sa place ; ailleurs, tout le détail, sous le bouton.
+  const p = piecesDuFoyer(foyer, members, showRates, resume ? undefined : classeDuDetail(ouvert, "flex"))
+  const bouton = <BoutonDuDetailDesCartes groupe="foyers" nombre={nombre} controle={idDuDetail} className="mt-2" />
 
   return (
-    <Card title={nomsQuiOuvrent ? <NomsQuiOuvrent members={members} /> : members.map(p => p.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
+    <Card title={nomsQuiOuvrent ? <NomsQuiOuvrent members={members} /> : members.map(m => m.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
       {resume ? (
         // Affichage « Résumé » : l'impôt et le revenu fiscal de référence d'abord. Le net du foyer n'est pas répété :
         // il est dans le bilan, et dans le taux du foyer quand il y en a plusieurs.
         <>
           <dl className="space-y-1 text-sm">
-            {impot}
-            {rfr}
+            {p.impot}
+            {p.rfr}
           </dl>
-          <Depliable titre="Détail" className="mt-2 text-sm">
-            <div className="mt-2">{revenus}</div>
+          {bouton}
+          <div id={idDuDetail} className={cn("text-sm", classeDuDetail(ouvert))}>
+            <div className="mt-2">{p.revenus}</div>
             <dl className="space-y-1 text-sm">
-              {encaisse}
-              {prelevementsSociaux}
-              {reste}
+              {p.encaisse}
+              {p.prelevementsSociaux}
+              {p.reste}
             </dl>
-            {complements}
-          </Depliable>
+            {p.complements}
+          </div>
         </>
       ) : (
         <>
-          {revenus}
-          <dl className="space-y-1 text-sm">
-            {encaisse}
-            {impot}
-            {prelevementsSociaux}
-            <Row label="Net après impôts" value={formatMoney(foyer.netApresImpots)} strong />
-            {rfr}
-            {reste}
-          </dl>
-          {complements}
+          <div id={idDuDetail}>
+            <div className={classeDuDetail(ouvert)}>{p.revenus}</div>
+            <dl className="space-y-1 text-sm">
+              {p.encaisse}
+              {p.impot}
+              {p.prelevementsSociaux}
+              <Row label="Net après impôts" value={formatMoney(foyer.netApresImpots)} strong className={classeDuDetail(ouvert, "flex")} />
+              {p.rfr}
+              {p.reste}
+            </dl>
+            <div className={classeDuDetail(ouvert)}>{p.complements}</div>
+          </div>
+          {bouton}
         </>
       )}
     </Card>
@@ -292,22 +316,25 @@ function VersementLiberatoireNote({ info }: { info: VersementLiberatoireInfo }) 
 }
 
 /** Coût employeur des salariés d'une activité : salaires bruts, plus cotisations patronales, moins la réduction générale. */
-function EmployerCost({ salaries }: { salaries: SalarieDeLActivite[] }) {
+function EmployerCost({ salaries, className }: { salaries: SalarieDeLActivite[]; className?: string }) {
   const sum = (value: (salarie: SalarieDeLActivite) => number) => salaries.reduce((total, salarie) => total + value(salarie), 0)
   const hint = `${formatMoney(sum(s => s.brut))} bruts + ${formatMoney(sum(s => s.totalPatronal))} de cotisations patronales − ${formatMoney(sum(s => s.reductionGenerale))} de réduction générale`
-  return <Row label={salaries.length > 1 ? `Coût employeur des ${salaries.length} salariés` : "Coût employeur du salarié"} value={formatMoney(sum(s => s.coutEmployeur))} hint={hint} />
+  return <Row label={salaries.length > 1 ? `Coût employeur des ${salaries.length} salariés` : "Coût employeur du salarié"} value={formatMoney(sum(s => s.coutEmployeur))} hint={hint} className={className} />
 }
 
 /** Déplacements professionnels convertis au barème kilométrique, déjà compris dans les charges ou les dépenses. */
-function DeplacementsRow({ deplacements }: { deplacements: NonNullable<ActivityResult["fraisDeDeplacement"]> }) {
+function DeplacementsRow({ deplacements, className }: { deplacements: NonNullable<ActivityResult["fraisDeDeplacement"]>; className?: string }) {
   const kilometres = `${deplacements.kilometres.toLocaleString("fr-FR")} km au barème kilométrique`
-  return <Row label="dont déplacements professionnels" value={formatMoney(deplacements.montant)} hint={deplacements.deductible ? `${kilometres}, déductibles` : `${kilometres}, non déductibles`} />
+  return <Row label="dont déplacements professionnels" value={formatMoney(deplacements.montant)} hint={deplacements.deductible ? `${kilometres}, déductibles` : `${kilometres}, non déductibles`} className={className} />
 }
 
-function ActivityCard({ activity, className, enTeteMasque }: { activity: ActivityResult; className?: string; enTeteMasque?: boolean }) {
+function ActivityCard({ activity, nombre, className, enTeteMasque }: { activity: ActivityResult; nombre: number; className?: string; enTeteMasque?: boolean }) {
   const resume = useAffichageResume()
+  const { ouvert } = useDetailDuGroupe("activites")
+  const idDuDetail = useId()
   const verse = <Row label="Versé avant impôt sur le revenu" value={formatMoney(activity.revenuVerse)} hint={shareOfRevenue(activity)} strong />
   const versementLiberatoire = activity.versementLiberatoire ? <VersementLiberatoireNote info={activity.versementLiberatoire} /> : null
+  const bouton = <BoutonDuDetailDesCartes groupe="activites" nombre={nombre} controle={idDuDetail} className="mt-2" />
 
   return (
     <Card title={activity.name} subtitle={activity.statut} warnings={activity.warnings} className={className} enTeteMasque={enTeteMasque}>
@@ -315,20 +342,25 @@ function ActivityCard({ activity, className, enTeteMasque }: { activity: Activit
         // Affichage « Résumé » : ce que l'activité verse d'abord, le calcul replié.
         <>
           <dl className="text-sm">{verse}</dl>
-          <Depliable titre="Détail" className="mt-2 text-sm">
+          {bouton}
+          <div id={idDuDetail} className={classeDuDetail(ouvert)}>
             <dl className="mt-2 space-y-1 text-sm">
               <LignesDeLActivite activity={activity} />
             </dl>
             {versementLiberatoire}
-          </Depliable>
+          </div>
         </>
       ) : (
+        // Affichage classique : le calcul ligne à ligne, chaque ligne masquée à sa place quand le détail est fermé.
         <>
-          <dl className="space-y-1 text-sm">
-            <LignesDeLActivite activity={activity} />
-            {verse}
-          </dl>
-          {versementLiberatoire}
+          <div id={idDuDetail}>
+            <dl className="space-y-1 text-sm">
+              <LignesDeLActivite activity={activity} className={classeDuDetail(ouvert, "flex")} />
+              {verse}
+            </dl>
+            <div className={classeDuDetail(ouvert)}>{versementLiberatoire}</div>
+          </div>
+          {bouton}
         </>
       )}
     </Card>
@@ -336,18 +368,18 @@ function ActivityCard({ activity, className, enTeteMasque }: { activity: Activit
 }
 
 /** Du chiffre d'affaires au résultat conservé : le calcul de ce que l'activité verse. */
-function LignesDeLActivite({ activity }: { activity: ActivityResult }) {
+function LignesDeLActivite({ activity, className }: { activity: ActivityResult; className?: string }) {
   const isMicro = activity.type === "micro-entreprise"
   return (
     <>
-      <Row label="Chiffre d'affaires" value={formatMoney(activity.chiffreAffaires)} />
-      {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${formatMoney(activity.charges)}`} /> : null}
-      {activity.fraisDeDeplacement ? <DeplacementsRow deplacements={activity.fraisDeDeplacement} /> : null}
-      <Row label="Cotisations sociales" value={`− ${formatMoney(activity.cotisationsSociales)}`} />
-      {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={formatMoney(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${formatMoney(activity.cotisationsPresident.brut)} bruts`} /> : null}
-      {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} /> : null}
-      {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(activity.impotSocietes)}`} /> : null}
-      {activity.resultatConserve !== 0 ? <Row label={activity.resultatConserve > 0 ? "Conservé dans la société" : "Déficit de la société"} value={formatMoney(activity.resultatConserve)} /> : null}
+      <Row label="Chiffre d'affaires" value={formatMoney(activity.chiffreAffaires)} className={className} />
+      {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${formatMoney(activity.charges)}`} className={className} /> : null}
+      {activity.fraisDeDeplacement ? <DeplacementsRow deplacements={activity.fraisDeDeplacement} className={className} /> : null}
+      <Row label="Cotisations sociales" value={`− ${formatMoney(activity.cotisationsSociales)}`} className={className} />
+      {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={formatMoney(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${formatMoney(activity.cotisationsPresident.brut)} bruts`} className={className} /> : null}
+      {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} className={className} /> : null}
+      {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(activity.impotSocietes)}`} className={className} /> : null}
+      {activity.resultatConserve !== 0 ? <Row label={activity.resultatConserve > 0 ? "Conservé dans la société" : "Déficit de la société"} value={formatMoney(activity.resultatConserve)} className={className} /> : null}
     </>
   )
 }
@@ -424,10 +456,10 @@ function CartesDuResume({ report, sharedCompanies }: { report: SimulationReport;
       <NoteDesAssocies sharedCompanies={sharedCompanies} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {report.foyers.map(foyer => (
-          <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nomsQuiOuvrent={panneaux} />
+          <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length} nomsQuiOuvrent={panneaux} />
         ))}
         {report.activities.map(activity => (
-          <ActivityCard key={activity.entityId} activity={activity} className={panneaux ? "hidden print:block" : undefined} />
+          <ActivityCard key={activity.entityId} activity={activity} nombre={report.activities.length} className={panneaux ? "hidden print:block" : undefined} />
         ))}
       </div>
       {panneaux ? <ListeDesActivites activities={report.activities} /> : null}
@@ -438,9 +470,9 @@ function CartesDuResume({ report, sharedCompanies }: { report: SimulationReport;
 /** Carte de résultats d'un acteur, pour son panneau : celle de l'activité, ou celle du foyer de la personne. */
 export function CarteDeLActeur({ report, entityId }: { report: SimulationReport | null; entityId: string }) {
   const activity = report?.activities.find(a => a.entityId === entityId)
-  if (activity) return <ActivityCard activity={activity} enTeteMasque />
+  if (report && activity) return <ActivityCard activity={activity} nombre={report.activities.length} enTeteMasque />
   const foyer = report?.foyers.find(f => f.personIds.includes(entityId))
-  if (report && foyer) return <FoyerCard foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} />
+  if (report && foyer) return <FoyerCard foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length} />
   return <p className="text-sm text-slate-600 dark:text-slate-400">Pas encore de résultats pour cet acteur.</p>
 }
 
@@ -454,7 +486,7 @@ function CartesClassiques({ report, sharedCompanies }: { report: SimulationRepor
           <NoteDesAssocies sharedCompanies={sharedCompanies} />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.foyers.map(foyer => (
-              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} />
+              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length} />
             ))}
           </div>
         </div>
@@ -465,7 +497,7 @@ function CartesClassiques({ report, sharedCompanies }: { report: SimulationRepor
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par activité</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.activities.map(activity => (
-              <ActivityCard key={activity.entityId} activity={activity} />
+              <ActivityCard key={activity.entityId} activity={activity} nombre={report.activities.length} />
             ))}
           </div>
         </div>
@@ -492,7 +524,12 @@ export function ResultsPanel({ report, error, apresLeBilan }: ResultsPanelProps)
 
       {apresLeBilan}
 
-      {report ? <Cartes report={report} sharedCompanies={sharedCompanies} /> : null}
+      {/* Le détail des cartes s'ouvre et se ferme par groupe : tous les foyers ensemble, toutes les activités ensemble. */}
+      {report ? (
+        <FournisseurDesDetails>
+          <Cartes report={report} sharedCompanies={sharedCompanies} />
+        </FournisseurDesDetails>
+      ) : null}
     </section>
   )
 }
