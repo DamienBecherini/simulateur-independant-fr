@@ -3,6 +3,7 @@
 import type { StatutFrais, Company, ComparaisonCouple, ComparaisonOptions, ComparaisonResult, FinancialFlow, MicroEntreprise, Relationship, ScenarioStatut, SessionState, SimulationReport, StatutCompare } from "../../types.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
+import { depassePlafondMicro } from "./calculsAE.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 
 /*
@@ -162,12 +163,13 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation
   const { report } = simulation
   const { bilan } = report
   const activite = report.activities.find(a => a.entityId === activiteId)
+  const caMicro = chiffreAffairesMicro(simulation.session, activiteId)
   return {
     statut,
     libelle: LIBELLES[statut],
     actuel,
     fraisFonctionnement: fraisDuStatut(statut, options),
-    protectionSociale: evaluerProtectionSociale(statut, { remunerationBrute: activite?.cotisationsPresident?.brut ?? 0, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0, chiffreAffairesMicro: chiffreAffairesMicro(simulation.session, activiteId), beneficieACRE: simulation.session.entities.some(e => e.id === activiteId && e.type === "micro-entreprise" && e.beneficieACRE) }, regles),
+    protectionSociale: evaluerProtectionSociale(statut, { remunerationBrute: activite?.cotisationsPresident?.brut ?? 0, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0, chiffreAffairesMicro: caMicro, beneficieACRE: simulation.session.entities.some(e => e.id === activiteId && e.type === "micro-entreprise" && e.beneficieACRE) }, regles),
     netApresImpots: report.totalNetApresImpots,
     revenusAvantPrelevements: bilan.revenusAvantPrelevements,
     totalPrelevements: bilan.totalPrelevements,
@@ -177,6 +179,7 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation
     prelevementsSociaux: bilan.prelevementsSociaux,
     resultatConserve: bilan.resultatConserve,
     resultatConserveActivite: Math.round(activite?.resultatConserve ?? 0),
+    horsPlafond: (statut === "micro" || statut === "micro-vfl") && depassePlafondMicro(caMicro, regles),
     warnings: activite?.warnings ?? []
   }
 }
@@ -260,7 +263,10 @@ export function comparerStatuts(session: SessionState, options: ComparaisonOptio
 
   const actuel = statutActuel(source)
   const scenarios = STATUTS_COMPARES.map(statut => scenario(statut, statut === actuel, simulerStatut(session, source, statut, options, regles), source.id, options, regles))
-  const meilleur = scenarios.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), scenarios[0]).statut
+  // Une micro-entreprise hors plafond n'est tenable que deux ans : le meilleur net se choisit parmi les autres colonnes.
+  const tenables = scenarios.filter(s => !s.horsPlafond)
+  const candidats = tenables.length > 0 ? tenables : scenarios
+  const meilleur = candidats.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), candidats[0]).statut
 
   return { scenarios, meilleur, couples, warnings }
 }

@@ -8,7 +8,7 @@ import { emptySession, makeCompany, makeMicro, makePerson } from "@/ui/testing/f
 import { ComparatorPanel } from "./ComparatorPanel"
 
 function scenario(statut: StatutCompare, libelle: string, net: number, overrides: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return { statut, libelle, actuel: false, fraisFonctionnement: 0, resultatConserveActivite: 0, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
+  return { statut, libelle, actuel: false, fraisFonctionnement: 0, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
 }
 
 function comparison(overrides: Partial<ComparaisonResult> = {}): ComparaisonResult {
@@ -118,5 +118,14 @@ describe("ComparatorPanel", () => {
     render(<ComparatorPanel session={withActivity()} />)
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenCalled())
     expect(screen.queryByRole("button", { name: /Exporter en CSV/ })).not.toBeInTheDocument()
+  })
+
+  it("signale dans l'en-tête une colonne micro hors plafond", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "micro-vfl" ? { ...s, horsPlafond: true } : s)), meilleur: "micro" }))
+    render(<ComparatorPanel session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    expect(within(table).getByRole("columnheader", { name: /versement libératoire/ })).toHaveTextContent("hors plafond · 2 ans au plus")
+    expect(within(table).getByRole("columnheader", { name: /^Micro-entreprise/ })).toHaveTextContent("meilleur net")
   })
 })

@@ -91,6 +91,7 @@ function scenario(statut: ScenarioStatut["statut"], libelle: string, net: number
     actuel: false,
     fraisFonctionnement: 1000,
     resultatConserveActivite: 0,
+    horsPlafond: false,
     protectionSociale: { etoiles: 3, trimestres: 4, resume: "Régime général." },
     netApresImpots: net,
     revenusAvantPrelevements: 30000,

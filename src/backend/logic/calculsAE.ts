@@ -29,6 +29,17 @@ function appliquerTaux({ caVente, caServicesBic, caServicesBnc }: EntreesMicro, 
 }
 
 /**
+ * Chiffre d'affaires au-delà des plafonds du régime : prestations de services au-delà du plafond des services,
+ * ou chiffre d'affaires total au-delà de celui de la vente. Le régime est conservé si cela n'arrive qu'une année ;
+ * deux années de suite, il prend fin au 1er janvier suivant (pas de seuil qui fasse sortir immédiatement).
+ */
+export function depassePlafondMicro(ca: Pick<EntreesMicro, "caVente" | "caServicesBic" | "caServicesBnc">, regles: ReglesFiscales = reglesEnVigueur): boolean {
+  const { plafonds } = regles.microEntreprise
+  const services = ca.caServicesBic + ca.caServicesBnc
+  return services > plafonds.services || ca.caVente + services > plafonds.vente
+}
+
+/**
  * Une activité mixte doit respecter deux plafonds : le chiffre d'affaires total sous le plafond
  * de la vente, et sa part de prestations de services sous le plafond des services.
  */
