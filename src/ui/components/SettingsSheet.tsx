@@ -273,7 +273,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                   </>
                 )}
                 {importConfirmation && importConfirmation.report.anneesEcartees.length > 0 && (
-                  <p className="mt-3">{texteAnneesEcartees(importConfirmation.report.anneesEcartees)} : seule la première occurrence de chaque année est gardée.</p>
+                  <p className="mt-3">{texteAnneesEcartees(importConfirmation.report.anneesEcartees)}. Seule la première occurrence de chaque année est gardée.</p>
                 )}
                 {importConfirmation && importConfirmation.report.migrationNotes.length > 0 && (
                   <>

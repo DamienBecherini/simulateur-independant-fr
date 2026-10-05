@@ -77,6 +77,7 @@ test("un fichier de plusieurs années modifié à la main : année en double éc
   await (await selecteur).setFiles(fichier)
   const confirmation = page.getByRole("dialog", { name: "Fichier importé avec des ajustements" })
   await expect(confirmation).toContainText("Flux invalides ou orphelins supprimés : 1")
+  await expect(confirmation).toContainText("Année en double écartée : 2024. Seule la première occurrence de chaque année est gardée.")
   await confirmation.getByRole("button", { name: "Oui, continuer" }).click()
 
   // Les années sont remises dans l'ordre ; la plus récente est affichée, avec le revenu de la première 2024 du fichier.
