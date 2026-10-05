@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { construireFichierSauvegardes, fusionnerSauvegardes, lireFichierSauvegardes, nomFichierSauvegardes, type RapportFusion, type RapportLecture } from "@/backend/logic/sauvegardes-groupees"
 import * as SessionService from "@/lib/session-service"
+import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import type { SaveSlot } from "@/types"
 
 interface SauvegardesGroupeesProps {
@@ -80,7 +81,7 @@ export function SauvegardesGroupees({ allSaveSlots, slotOrder, setAllSaveSlots, 
   const [bilan, setBilan] = useState<Bilan | null>(null)
 
   const exporter = async () => {
-    const fichier = construireFichierSauvegardes(allSaveSlots, slotOrder)
+    const fichier = construireFichierSauvegardes(allSaveSlots, slotOrder, new Date(), VERSION_DE_L_APPLICATION)
     const enregistre = await window.api.saveTextFile({ defaultName: nomFichierSauvegardes(), content: JSON.stringify(fichier, null, 2), format: "json" })
     if (enregistre) toast.success(`${pluriel(fichier.slots.length, "sauvegarde exportée", "sauvegardes exportées")}.`)
   }

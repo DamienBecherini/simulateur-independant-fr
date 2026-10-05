@@ -92,6 +92,12 @@ function SaveSlotItem({ slot, onDelete, onExport, onLoad }: { slot: SaveSlot; on
   )
 }
 
+/** Version de l'application qui a écrit le fichier importé, s'il l'indique. */
+function VersionDuFichier({ appVersion }: { appVersion: string | undefined }) {
+  if (appVersion === undefined) return null
+  return <p className="mt-3 text-sm">Fichier écrit par la version {appVersion} du simulateur.</p>
+}
+
 // --- MODIFICATION : Réception des nouvelles props ---
 export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId }: SettingsSheetProps) {
   const [view, setView] = useState<"main" | "load">("main")
@@ -286,6 +292,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                     </ul>
                   </>
                 )}
+                <VersionDuFichier appVersion={importConfirmation?.session.appVersion} />
                 <p className="mt-4">Voulez-vous remplacer la simulation en cours par ce fichier ?</p>
               </div>
             </DialogDescription>
