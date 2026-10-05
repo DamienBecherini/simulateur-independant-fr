@@ -12,7 +12,7 @@ const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
  * recouvre celles qui défilent dessous : elle a donc un fond opaque, celui de la page ou de l'année affichée,
  * et un trait à droite (une ombre : en `border-collapse`, une bordure ne suivrait pas la cellule).
  */
-const COLONNE_FIXE = "sticky left-0 z-10 shadow-[inset_-1px_0_0_var(--border)] print:static print:shadow-none"
+const COLONNE_FIXE = "sticky left-0 z-10 whitespace-nowrap shadow-[inset_-1px_0_0_var(--border)] print:static print:shadow-none"
 
 /** Fond de l'année affichée : le bleu translucide de la ligne, rendu opaque sur le fond de la page en thème sombre. */
 const FOND_ANNEE_AFFICHEE = "bg-blue-50 dark:bg-[color-mix(in_oklab,var(--color-blue-950)_40%,var(--background))]"

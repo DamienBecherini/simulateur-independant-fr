@@ -71,9 +71,10 @@ function CasesDesAnnees({ annee, autresAnnees, aussiEn, setAussiEn }: CasesDesAn
 
   return (
     <fieldset className={cn("rounded-md border border-transparent px-2", avecRaccourcis && "w-full", aussiEn.length > 0 && EN_EVIDENCE)}>
-      <legend className="float-left mr-2 flex min-h-9 items-center pointer-coarse:min-h-11">Aussi en :</legend>
+      {/* Sur un écran étroit, avec les raccourcis, la légende prend toute la ligne : les raccourcis vont dessous. */}
+      <legend className={cn("float-left mr-2 flex min-h-9 items-center pointer-coarse:min-h-11", avecRaccourcis && "max-sm:w-full")}>Aussi en :</legend>
       {avecRaccourcis ? (
-        <div className="flex flex-wrap items-center gap-1 py-0.5">
+        <div className="flex flex-wrap items-center gap-1 py-0.5 max-sm:clear-left">
           {RACCOURCIS.map(raccourci => {
             const annees = anneesDuRaccourci(raccourci, annee, autresAnnees)
             // Pas d'année avant (ou après) l'année affichée : le raccourci est désactivé. Il ne l'est jamais à la suite
