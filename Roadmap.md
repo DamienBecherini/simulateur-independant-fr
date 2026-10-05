@@ -254,6 +254,24 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
+### **Phase 16 : Travailler avec une IA [Planifié 🗓️]**
+
+- **Objectif :** qu'une IA puisse remplir la simulation à partir d'un cahier de comptes ou de factures, l'interroger et en analyser les résultats, en se servant du simulateur comme d'un outil plutôt qu'en calculant elle-même.
+
+1.  **Couche d'outils commune :** une quinzaine de fonctions documentées et validées par Zod (décrire la simulation, proposer des flux, appliquer une proposition, simuler, comparer les statuts, optimiser la rémunération, expliquer un résultat), dont les schémas JSON sont générés depuis Zod. Seule source de vérité pour le serveur MCP et l'assistant intégré.
+2.  **Serveur MCP local :** livré avec l'application de bureau, utilisable depuis un client d'IA (Claude Desktop, Claude Code…) qui lit lui-même les factures et les relevés ; il travaille sur les fichiers de la simulation, que l'application recharge. Page « Utiliser le simulateur avec une IA ».
+3.  **Serveur MCP distant (pour la démo web et sans installation) :** le même jeu d'outils sur un service web hébergé, la simulation étant passée en paramètre (aucun stockage côté serveur), avec authentification, limite de débit et journalisation sans données.
+4.  **Assistant intégré avec la clé de l'utilisateur :** fenêtre de discussion dans l'application et la démo, dépôt de fichiers (PDF, images, CSV), mêmes outils ; clé chiffrée par le système dans l'application de bureau, gardée en mémoire seulement dans la démo. D'abord Anthropic, puis d'autres fournisseurs.
+5.  **Règles :**
+    - **Les chiffres viennent du moteur, jamais de l'IA.**
+    - **L'IA propose, l'utilisateur valide :** chaque modification est présentée à relire (« Appliquer ces 24 flux ? ») et s'annule en une étape.
+    - **Méfiance envers les documents :** une facture peut contenir des instructions piégées ; les outils sont limités (pas de suppression en masse, rien hors de la simulation) et toujours soumis à validation.
+    - **Confidentialité :** l'utilisateur est prévenu que ses données partent chez le fournisseur d'IA choisi, avec une option d'anonymisation des noms ; mention RGPD.
+    - **Avertissement :** ce n'est pas l'avis d'un expert-comptable.
+6.  **Sans IA, en complément :** import CSV de relevés bancaires ou du livre de recettes, avec des règles de classement ; l'IA ne sert qu'aux lignes ambiguës.
+
+---
+
 ### **Travaux transverses [À faire 🧰]**
 
 Tâches sans phase attitrée, à traiter entre deux fonctionnalités.
