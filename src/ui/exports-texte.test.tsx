@@ -71,7 +71,7 @@ describe("exports CSV et Markdown de la fenêtre « Exporter »", () => {
 
     await vi.waitFor(() => expect(window.api.saveTextFile).toHaveBeenCalled())
     expect(fichierEnregistre().defaultName).toBe("nouvelle-simulation-resultats-2026.csv")
-    expect(fichierEnregistre().content).toContain("Bilan;Montant\r\nAnnée des règles fiscales;2025\r\n")
+    expect(fichierEnregistre().content).toContain("Bilan;Montant\r\nAnnée simulée;2025\r\nAnnée des règles fiscales;2025\r\n")
   })
 
   it("explique que les résultats ne sont pas encore calculés, sans rien enregistrer", async () => {

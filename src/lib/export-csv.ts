@@ -40,7 +40,7 @@ function lignesDuBilan(report: SimulationReport): Ligne[] {
     ["Revenus non rattachés à une personne", bilan.nonRattache],
     ["Net après impôts (tous les foyers)", report.totalNetApresImpots]
   ]
-  return [["Bilan", "Montant"], ["Année des règles fiscales", report.annee], ...indicateurs.map(([libelle, valeur]): Ligne => [libelle, montant(valeur)])]
+  return [["Bilan", "Montant"], ["Année simulée", report.annee], ["Année des règles fiscales", report.anneeDesRegles], ...indicateurs.map(([libelle, valeur]): Ligne => [libelle, montant(valeur)])]
 }
 
 function lignesDesActivites(session: SimulationAnnuelle, report: SimulationReport): Ligne[] {

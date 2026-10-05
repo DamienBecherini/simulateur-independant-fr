@@ -30,6 +30,8 @@ export function sessionExemple(): SimulationAnnuelle {
 export function rapportExemple(): SimulationReport {
   return {
     annee: 2026,
+    anneeDesRegles: 2026,
+    avertissements: [],
     bilan: {
       chiffreAffaires: 36000,
       charges: 100.5,

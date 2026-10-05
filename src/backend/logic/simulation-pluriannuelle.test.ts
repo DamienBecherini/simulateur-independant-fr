@@ -33,6 +33,39 @@ describe("simulerLesAnnees", () => {
     expect(annees.map(a => a.report?.activities[0].chiffreAffaires)).toEqual([20000, 30000])
     expect(annees.every(a => a.erreur === null)).toBe(true)
   })
+
+  it("simule chaque année avec ses propres règles : même chiffre d'affaires, cotisations micro BNC de 2025 puis de 2026", () => {
+    const meme = sessionMicro()
+    meme.annees[0].monthlyData = meme.annees[1].monthlyData
+
+    const [en2025, en2026] = simulerLesAnnees(meme).annees.map(a => a.report!)
+
+    expect([en2025.anneeDesRegles, en2026.anneeDesRegles]).toEqual([2025, 2026])
+    // 30 000 € de prestations BNC : 24,6 % en 2025, 25,6 % en 2026 (fichiers de règles).
+    expect(en2025.activities[0].cotisationsSociales).toBe(7380)
+    expect(en2026.activities[0].cotisationsSociales).toBe(7680)
+    expect(en2026.avertissements).toEqual([])
+  })
+
+  it("simule une année plus récente avec les dernières règles connues, et le dit", () => {
+    const session = sessionMicro()
+    session.annees.push({ annee: 2027, monthlyData: session.annees[1].monthlyData })
+
+    const en2027 = simulerLesAnnees(session).annees[2]
+
+    expect(en2027.report).toMatchObject({ annee: 2027, anneeDesRegles: 2026, avertissements: [expect.stringContaining("Les règles de 2027 ne sont pas encore connues")] })
+    expect(en2027.report!.totalNetApresImpots).toBe(simulerLesAnnees(session).annees[1].report!.totalNetApresImpots)
+  })
+
+  it("ne simule pas une année antérieure aux premières règles connues, et dit pourquoi", () => {
+    const session = sessionMicro()
+    session.annees.unshift({ annee: 2023, monthlyData: grilleVide() })
+
+    const [en2023, en2025] = simulerLesAnnees(session).annees
+
+    expect(en2023).toEqual({ annee: 2023, report: null, erreur: "Le simulateur ne connaît pas les règles d'avant 2024 : l'année 2023 n'est pas simulée." })
+    expect(en2025.report).not.toBeNull()
+  })
 })
 
 describe("comparateur et optimiseur sur une année", () => {
@@ -57,6 +90,13 @@ describe("comparateur et optimiseur sur une année", () => {
 
   it("prend la plus récente pour une année absente de la session", () => {
     expect(comparerStatutsDeLAnnee(sasu, options, 2030)).toEqual(comparerStatutsDeLAnnee(sasu, options, 2026))
+  })
+
+  it("refuse de comparer ou d'optimiser une année sans règles connues", () => {
+    const ancienne: SessionState = { ...sasu, annees: [{ annee: 2023, monthlyData: grilleAvecCA("s1", "ca_services", 50000) }] }
+
+    expect(() => comparerStatutsDeLAnnee(ancienne, options, 2023)).toThrow("l'année 2023 n'est pas simulée")
+    expect(() => optimiserRemunerationDeLAnnee(ancienne, options, "SASU", 2023)).toThrow("l'année 2023 n'est pas simulée")
   })
 
   it("arbitre rémunération et dividendes sur l'année demandée", () => {

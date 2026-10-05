@@ -3,6 +3,7 @@
 import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, DonneesDeLAnnee, StatutSociete } from "../../types.js"
 import { activiteComparee, beneficeAvantDividendes, simulerScenario, type Activite } from "./comparateur.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
+import type { ContexteDeLAnnee } from "./simulation-engine.js"
 
 /*
  * Arbitrage entre rémunération et dividendes, en SASU ou en EURL : pour chaque rémunération nette, de zéro à
@@ -22,8 +23,8 @@ const POINTS_DE_GRILLE = 60
 
 const arrondiInferieur = (montant: number) => Math.floor(montant / PRECISION) * PRECISION
 
-function calculerPoint(session: DonneesDeLAnnee, source: Activite, statut: StatutSociete, options: ComparaisonOptions, remunerationNette: number, regles: ReglesFiscales): PointRemuneration {
-  const { scenario, dividendes } = simulerScenario(session, source, statut, { ...options, remunerationNette, distribuerToutLeBenefice: true }, regles)
+function calculerPoint(session: DonneesDeLAnnee, source: Activite, statut: StatutSociete, options: ComparaisonOptions, remunerationNette: number, regles: ReglesFiscales, contexte: ContexteDeLAnnee): PointRemuneration {
+  const { scenario, dividendes } = simulerScenario(session, source, statut, { ...options, remunerationNette, distribuerToutLeBenefice: true }, regles, contexte)
   return {
     remunerationNette,
     dividendes: Math.round(dividendes ?? 0),
@@ -61,20 +62,20 @@ function meilleurPoint(points: PointRemuneration[]): PointRemuneration | null {
   }, null)
 }
 
-export function optimiserRemuneration(session: DonneesDeLAnnee, options: ComparaisonOptions, statut: StatutSociete, regles: ReglesFiscales = reglesEnVigueur): OptimisationRemuneration {
+export function optimiserRemuneration(session: DonneesDeLAnnee, options: ComparaisonOptions, statut: StatutSociete, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): OptimisationRemuneration {
   const vide = (warnings: string[]): OptimisationRemuneration => ({ statut, remunerationMaximale: 0, points: [], meilleur: null, meilleurAvecRetraite: null, warnings })
 
   const source = activiteComparee(session, options.activityId)
   if (!source) return vide(["Choisissez une activité à comparer."])
 
-  const benefice = (remuneration: number) => beneficeAvantDividendes(session, source, statut, { ...options, remunerationNette: remuneration }, regles)
+  const benefice = (remuneration: number) => beneficeAvantDividendes(session, source, statut, { ...options, remunerationNette: remuneration }, regles, contexte)
   if (benefice(0) <= 0) return vide([`Sans rémunération, l'activité ne dégage aucun bénéfice en ${statut} : il n'y a rien à partager entre rémunération et dividendes.`])
 
   const maximum = remunerationMaximale(benefice)
   const calcules = new Map<number, PointRemuneration>()
   const point = (remuneration: number) => {
     const montant = Math.min(maximum, Math.max(0, remuneration))
-    if (!calcules.has(montant)) calcules.set(montant, calculerPoint(session, source, statut, options, montant, regles))
+    if (!calcules.has(montant)) calcules.set(montant, calculerPoint(session, source, statut, options, montant, regles, contexte))
     return calcules.get(montant)!
   }
   /** Parcourt à 100 € près les rémunérations entre deux bornes. */

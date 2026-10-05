@@ -9,7 +9,7 @@ import fichier2025 from "./2025.json" with { type: "json" }
 
 /*
  * Garde-fous des règles par année (convention : documentation/adr/007-convention-annee-des-regles.md).
- * Ces fichiers ne sont pas encore lus par le moteur (phase 13) : ces tests attrapent les fautes de frappe
+ * Le moteur les lit par reglesDeLAnnee (src/backend/logic/regles.ts) : ces tests attrapent les fautes de frappe
  * et les oublis, ils ne vérifient pas les calculs.
  */
 

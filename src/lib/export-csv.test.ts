@@ -38,6 +38,7 @@ describe("csvResultats", () => {
   it("écrit le bilan, les activités, les personnes et les foyers, séparés par une ligne vide", () => {
     expect(lignes(csvResultats(sessionExemple(), rapportExemple()))).toEqual([
       "Bilan;Montant",
+      "Année simulée;2026",
       "Année des règles fiscales;2026",
       "Chiffre d'affaires;36000,00",
       "Charges;100,50",

@@ -2,6 +2,8 @@
 
 import type { CotisationSalarie } from "../../types.js"
 import config from "../config.json" with { type: "json" }
+import regles2024 from "../regles/2024.json" with { type: "json" }
+import regles2025 from "../regles/2025.json" with { type: "json" }
 
 /** Une tranche du barème de l'impôt sur le revenu. `trancheJusqua` vaut `null` pour la dernière tranche. */
 export interface TrancheIR {
@@ -113,3 +115,35 @@ export interface ReglesFiscales {
 
 /** Les règles de l'année en cours, telles que définies dans `config.json`. */
 export const reglesEnVigueur: ReglesFiscales = config
+
+/*
+ * Règles par année (convention : ADR 007, l'année N d'un fichier est celle de l'activité et des revenus).
+ * Une année après la dernière connue reprend les dernières règles, avec un avertissement : l'écart vient surtout de
+ * la revalorisation annuelle des seuils, que l'on ne peut pas deviner. Une année avant la première connue n'est pas
+ * simulée : les règles ont changé de structure (assiette des indépendants avant 2025, taux micro de 2024, etc.) et
+ * reprendre celles de 2024 donnerait des résultats faux sans qu'on puisse le chiffrer.
+ */
+const REGLES_PAR_ANNEE: ReadonlyMap<number, ReglesFiscales> = new Map<number, ReglesFiscales>([
+  [2024, regles2024],
+  [2025, regles2025],
+  [config.annee, config]
+])
+
+/** Première et dernière années dont le simulateur connaît les règles. */
+export const PREMIERE_ANNEE_DES_REGLES = Math.min(...REGLES_PAR_ANNEE.keys())
+export const DERNIERE_ANNEE_DES_REGLES = Math.max(...REGLES_PAR_ANNEE.keys())
+
+/** Les règles qui s'appliquent à une année, ou la raison pour laquelle l'année ne peut pas être simulée. */
+export type ReglesDeLAnnee = { regles: ReglesFiscales; avertissement: string | null } | { regles: null; erreur: string }
+
+export function reglesDeLAnnee(annee: number): ReglesDeLAnnee {
+  const connues = REGLES_PAR_ANNEE.get(annee)
+  if (connues) return { regles: connues, avertissement: null }
+  if (annee > DERNIERE_ANNEE_DES_REGLES) {
+    return {
+      regles: REGLES_PAR_ANNEE.get(DERNIERE_ANNEE_DES_REGLES)!,
+      avertissement: `Les règles de ${annee} ne sont pas encore connues : ${annee} est simulée avec celles de ${DERNIERE_ANNEE_DES_REGLES}, les dernières connues. Les seuils et barèmes revalorisés chaque année (plafond de la sécurité sociale, SMIC, barème de l'impôt) n'en tiennent pas compte.`
+    }
+  }
+  return { regles: null, erreur: `Le simulateur ne connaît pas les règles d'avant ${PREMIERE_ANNEE_DES_REGLES} : l'année ${annee} n'est pas simulée.` }
+}

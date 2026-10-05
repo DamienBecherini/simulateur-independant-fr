@@ -101,6 +101,14 @@ describe("ResultsPanel", () => {
     expect(screen.getByText("Ajoutez une personne ou une activité pour voir les résultats.")).toBeInTheDocument()
   })
 
+  it("donne l'année simulée, celle des règles appliquées, et les avertissements de l'année", () => {
+    const avertissement = "Les règles de 2027 ne sont pas encore connues : 2027 est simulée avec celles de 2026."
+    render(<ResultsPanel report={{ ...emptyReport(), annee: 2027, anneeDesRegles: 2026, avertissements: [avertissement] }} error={null} />)
+
+    expect(screen.getByText(/année 2027 avec les règles fiscales 2026/)).toBeInTheDocument()
+    expect(screen.getByRole("listitem")).toHaveTextContent(avertissement)
+  })
+
   it("affiche l'erreur de simulation", () => {
     render(<ResultsPanel report={null} error="Entrée invalide" />)
     expect(screen.getByText("Entrée invalide")).toBeInTheDocument()

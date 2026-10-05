@@ -43,7 +43,7 @@ describe("rapportMarkdown", () => {
     expect(rapportMarkdown({ session: sessionVide(), report: null, comparaison: null, date: DATE })).toBe(
       `# Simulation « Vide »
 
-Rapport exporté le 4 octobre 2026 depuis le Simulateur de revenus pour indépendants.
+Rapport exporté le 4 octobre 2026 depuis le Simulateur de revenus pour indépendants, année 2026.
 
 > Ce document décrit une simulation de revenus d'indépendants en France. Il se lit tel quel ou se confie à une IA (un assistant conversationnel) pour l'analyser : les montants sont annuels et en euros, sauf mention contraire.
 
@@ -79,7 +79,7 @@ Aucun avertissement.
   })
 
   it("donne le titre, la date et l'année des règles fiscales", () => {
-    expect(rapportComplet()).toMatch(/^# Simulation « Famille Martin »\n\nRapport exporté le 4 octobre 2026 depuis le Simulateur de revenus pour indépendants, règles fiscales 2026\.\n/)
+    expect(rapportComplet()).toMatch(/^# Simulation « Famille Martin »\n\nRapport exporté le 4 octobre 2026 depuis le Simulateur de revenus pour indépendants, année 2026, règles fiscales 2026\.\n/)
   })
 
   it("présente les acteurs et leurs relations", () => {
@@ -132,7 +132,7 @@ Aucun avertissement.
 
   it("donne le bilan, les résultats par activité et par foyer fiscal", () => {
     const rapport = rapportComplet()
-    expect(rapport).toContain("## Résultats (règles fiscales 2026)")
+    expect(rapport).toContain("## Résultats 2026 (règles fiscales 2026)")
     expect(rapport).toContain("| Taux global de prélèvement | 29,2 % |\n| Conservé dans les sociétés | 400 € |\n| Non rattaché à une personne | 0 € |\n| **Net dans la poche (tous les foyers)** | **25 000 €** |")
     expect(rapport).toContain("| Ma SASU | SASU | 36 000 € | 101 € | 8 000 € | 1 000 € | 26 500 € | 400 € | Alice |")
     expect(rapport).toContain("| Alice, Bob | 2,5 | 26 500 € | 18 000 € | 1 500 € | 0 € | prélèvement forfaitaire unique | **25 000 €** |")
@@ -175,6 +175,15 @@ Aucun avertissement.
 - Foyer Alice, Bob : Vérifier les parts.
 - Comparateur : Comparaison indicative.
 `)
+  })
+
+  it("reprend les avertissements de l'année en tête de la liste", () => {
+    const report = { ...rapportExemple(), annee: 2027, anneeDesRegles: 2026, avertissements: ["Règles de 2026 reprises pour 2027."] }
+    const rapport = rapportMarkdown({ session: { ...sessionExemple(), annee: 2027 }, report, comparaison: null, date: new Date(2026, 9, 4) })
+
+    expect(rapport).toContain("pour indépendants, année 2027, règles fiscales 2026.")
+    expect(rapport).toContain("## Résultats 2027 (règles fiscales 2026)")
+    expect(rapport).toContain("## Avertissements\n\n- Règles de 2026 reprises pour 2027.\n- Ma SASU : Société peu rentable.")
   })
 
   it("adapte les réglages, l'écart négatif et les colonnes sans revenus ni statut actuel", () => {

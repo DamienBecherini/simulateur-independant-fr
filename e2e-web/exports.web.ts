@@ -44,7 +44,7 @@ test("les résultats se téléchargent en CSV", async ({ page }) => {
   await ouvrir(page)
   const texte = await contenu(await exporterDepuisLaFenetre(page, /Résultats \(CSV\)/))
 
-  expect(texte).toMatch(/^\uFEFFBilan;Montant\r\nAnnée des règles fiscales;\d{4}\r\n/)
+  expect(texte).toMatch(/^\uFEFFBilan;Montant\r\nAnnée simulée;2026\r\nAnnée des règles fiscales;2026\r\n/)
   expect(texte).toContain("\r\nFoyer fiscal;Parts;Revenus encaissés;")
 })
 
@@ -55,7 +55,7 @@ test("le rapport Markdown se télécharge, avec le comparateur de la première a
   expect(fichier.suggestedFilename()).toBe("famille-martin-simulation-2026-rapport.md")
   const texte = await contenu(fichier)
   expect(texte).toMatch(/^# Simulation « Famille Martin, simulation 2026 »\n/)
-  for (const titre of ["## Hypothèses et limites", "## Acteurs", "## Relations", "## Flux saisis", "## Résultats (règles fiscales", "## Comparateur de statuts : «", "## Avertissements"]) expect(texte).toContain(titre)
+  for (const titre of ["## Hypothèses et limites", "## Acteurs", "## Relations", "## Flux saisis", "## Résultats 2026 (règles fiscales 2026)", "## Comparateur de statuts : «", "## Avertissements"]) expect(texte).toContain(titre)
 })
 
 test("le tableau du comparateur et les valeurs de la courbe s'exportent en CSV depuis le comparateur", async ({ page }) => {

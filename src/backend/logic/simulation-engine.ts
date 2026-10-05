@@ -491,7 +491,15 @@ function calculerBilan(ctx: Contexte, activities: ActivityResult[], persons: Per
   }
 }
 
-export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales = reglesEnVigueur): SimulationReport {
+/** Ce que la simulation d'une année reçoit de la session au-delà de sa grille. */
+export interface ContexteDeLAnnee {
+  /** Année simulée, quand elle diffère de celle des règles (année sans règles connues). */
+  annee?: number
+  /** Avertissements sur l'année elle-même, repris dans le rapport. */
+  avertissements?: string[]
+}
+
+export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): SimulationReport {
   const foyersFiscaux = buildFoyers(session, regles.IR.partsParEnfant)
   const flux = aggregateAnnualFlowsByEntity(session)
   const salaries = bulletinsDesSalaries(session, flux, regles)
@@ -503,7 +511,9 @@ export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscal
   const foyers = foyersFiscaux.map(foyer => calculerFoyer(ctx, foyer))
 
   return {
-    annee: regles.annee,
+    annee: contexte.annee ?? regles.annee,
+    anneeDesRegles: regles.annee,
+    avertissements: contexte.avertissements ?? [],
     bilan: calculerBilan(ctx, activities, persons, foyers),
     activities,
     persons,

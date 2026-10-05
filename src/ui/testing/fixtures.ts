@@ -66,6 +66,8 @@ export function emptySession(): SessionState {
 export function emptyReport(): SimulationReport {
   return {
     annee: 2025,
+    anneeDesRegles: 2025,
+    avertissements: [],
     bilan: {
       chiffreAffaires: 0,
       charges: 0,

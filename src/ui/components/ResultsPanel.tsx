@@ -238,18 +238,35 @@ function ActivityCard({ activity }: { activity: ActivityResult }) {
   )
 }
 
+/** Titre des résultats, année et règles appliquées, et avertissements propres à l'année (règles reprises d'une autre année). */
+function EnTeteDesResultats({ report }: { report: SimulationReport | null }) {
+  return (
+    <>
+      <div>
+        <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Résultats de simulation</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Recalculés à chaque modification{report ? `, année ${report.annee} avec les règles fiscales ${report.anneeDesRegles}` : ""}. Estimations simplifiées, non validées par un expert-comptable.
+        </p>
+      </div>
+
+      {report?.avertissements.length ? (
+        <ul className="list-inside list-disc rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          {report.avertissements.map(avertissement => (
+            <li key={avertissement}>{avertissement}</li>
+          ))}
+        </ul>
+      ) : null}
+    </>
+  )
+}
+
 export function ResultsPanel({ report, error }: ResultsPanelProps) {
   // Sociétés dont les revenus se partagent entre plusieurs personnes : seule situation où la répartition à parts égales s'applique.
   const sharedCompanies = report?.activities.filter(a => a.type === "company" && a.beneficiaireIds.length > 1) ?? []
 
   return (
     <section className="mt-12 space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Résultats de simulation</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          Recalculés à chaque modification{report ? `, avec les règles fiscales ${report.annee}` : ""}. Estimations simplifiées, non validées par un expert-comptable.
-        </p>
-      </div>
+      <EnTeteDesResultats report={report} />
 
       {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 

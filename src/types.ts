@@ -355,8 +355,12 @@ export interface SimulationBilan {
 }
 
 export interface SimulationReport {
-  /** Année des règles fiscales appliquées. */
+  /** Année simulée. */
   annee: number
+  /** Année des règles fiscales appliquées : la même, ou la dernière connue pour une année plus récente. */
+  anneeDesRegles: number
+  /** Avertissements sur l'année elle-même (règles reprises d'une autre année). */
+  avertissements: string[]
   bilan: SimulationBilan
   activities: ActivityResult[]
   persons: PersonResult[]

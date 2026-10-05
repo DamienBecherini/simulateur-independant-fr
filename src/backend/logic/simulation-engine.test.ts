@@ -32,7 +32,7 @@ describe("runMetaSimulation", () => {
     it("renvoie un rapport vide pour une session vide", () => {
       const bilanVide = { chiffreAffaires: 0, charges: 0, revenusDirects: 0, cotisationsSalariales: 0, revenusAvantPrelevements: 0, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, totalPrelevements: 0, resultatConserve: 0, nonRattache: 0 }
 
-      expect(simuler([])).toEqual({ annee: 2000, bilan: bilanVide, activities: [], persons: [], foyers: [], totalNetApresImpots: 0 })
+      expect(simuler([])).toEqual({ annee: 2000, anneeDesRegles: 2000, avertissements: [], bilan: bilanVide, activities: [], persons: [], foyers: [], totalNetApresImpots: 0 })
     })
 
     it("sépare les activités des personnes, dans l'ordre de la session", () => {

@@ -142,7 +142,7 @@ function sousSectionFoyers(session: SimulationAnnuelle, report: SimulationReport
 
 function sectionResultats(session: SimulationAnnuelle, report: SimulationReport | null): string {
   if (!report) return "## Résultats\n\nRésultats indisponibles : la simulation n'a pas pu être calculée."
-  return `## Résultats (règles fiscales ${report.annee})\n\nMontants annuels, avant les éventuelles dépenses personnelles.\n\n${[sousSectionBilan(report), sousSectionActivites(session, report), sousSectionFoyers(session, report)].join("\n\n")}`
+  return `## Résultats ${report.annee} (règles fiscales ${report.anneeDesRegles})\n\nMontants annuels, avant les éventuelles dépenses personnelles.\n\n${[sousSectionBilan(report), sousSectionActivites(session, report), sousSectionFoyers(session, report)].join("\n\n")}`
 }
 
 // --- Comparateur ---
@@ -212,6 +212,7 @@ function sectionComparateur(session: SimulationAnnuelle, comparaison: Comparaiso
 
 function sectionAvertissements(session: SimulationAnnuelle, report: SimulationReport | null, comparaison: ComparaisonDuRapport | null): string {
   const avertissements = [
+    ...(report?.avertissements.map(echapper) ?? []),
     ...(report?.activities.flatMap(a => a.warnings.map(w => `${echapper(a.name)} : ${echapper(w)}`)) ?? []),
     ...(report?.foyers.flatMap(f => f.warnings.map(w => `Foyer ${echapper(nomDuFoyer(session, f))} : ${echapper(w)}`)) ?? []),
     ...(comparaison && "resultat" in comparaison ? comparaison.resultat.warnings.map(w => `Comparateur : ${echapper(w)}`) : [])
@@ -222,7 +223,7 @@ function sectionAvertissements(session: SimulationAnnuelle, report: SimulationRe
 /** Le rapport complet, en Markdown. */
 export function rapportMarkdown({ session, report, comparaison, date }: DonneesDuRapport): string {
   const dateTexte = date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
-  const regles = report ? `, règles fiscales ${report.annee}` : ""
+  const regles = report ? `, année ${report.annee}, règles fiscales ${report.anneeDesRegles}` : `, année ${session.annee}`
   const entete = [
     `# Simulation « ${echapper(session.name)} »`,
     `Rapport exporté le ${dateTexte} depuis le Simulateur de revenus pour indépendants${regles}.`,
