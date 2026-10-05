@@ -35,4 +35,15 @@ describe("SyntheseDesAnnees", () => {
     expect(lignes[1]).toHaveAttribute("aria-current", "true")
     expect(lignes[2]).not.toHaveAttribute("aria-current")
   })
+
+  it("défile dans une région nommée, atteignable au clavier, et garde la colonne des années fixe, sur un fond opaque", () => {
+    const simulation = { annees: [2025, 2026, 2027].map(annee => ({ annee, report: rapport(annee, 1000, 500), erreur: null })) }
+    render(<SyntheseDesAnnees simulation={simulation} annee={2026} />)
+
+    expect(screen.getByRole("region", { name: "Synthèse des années" })).toHaveAttribute("tabindex", "0")
+    const enTetes = [screen.getByRole("columnheader", { name: "Année" }), ...screen.getAllByRole("rowheader")]
+    for (const cellule of enTetes) expect(cellule).toHaveClass("sticky", "left-0")
+    expect(screen.getByRole("rowheader", { name: "2026" })).toHaveClass("bg-blue-50")
+    expect(screen.getByRole("rowheader", { name: "2025" })).toHaveClass("bg-background")
+  })
 })
