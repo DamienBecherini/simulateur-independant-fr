@@ -1,7 +1,7 @@
 // src/lib/comparateur-options.test.ts
 
 import { describe, expect, it } from "vitest"
-import { activiteComparee, appliquerRemuneration, avecActiviteComparee, avecRemuneration, avecReglagesDeLActivite, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, optionsDuComparateur, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
+import { activiteComparee, appliquerRemuneration, avecLaRetraiteParDefaut, avecLeMode, avecActiviteComparee, avecRemuneration, avecReglagesDeLActivite, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, optionsDuComparateur, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
 import type { ComparaisonOptions, FinancialFlow, DonneesDeLAnnee, OptimisationRemuneration, PointRemuneration } from "@/types"
 
@@ -50,8 +50,8 @@ describe("defaultComparisonOptions", () => {
     expect(defaultComparisonOptions(donnees, "s1")).toEqual({ activityId: "s1", remunerationNette: 4000, repartition: { mode: "grille", partDistribuee: 1 }, partBncPrestations: 1, fraisFonctionnement: defaultFraisFonctionnement() })
   })
 
-  it("sans dividende saisi, se place au meilleur net, sans exiger 4 trimestres de retraite", () => {
-    expect(defaultComparisonOptions(session([{ entityId: "m1", type: "ca_micro_vente", amount: 1000 }]), "m1")).toEqual({ activityId: "m1", remunerationNette: 0, repartition: { mode: "meilleurNet", partDistribuee: 1 }, partBncPrestations: 1, fraisFonctionnement: defaultFraisFonctionnement() })
+  it("sans dividende saisi, se place au meilleur net, en exigeant 4 trimestres de retraite", () => {
+    expect(defaultComparisonOptions(session([{ entityId: "m1", type: "ca_micro_vente", amount: 1000 }]), "m1")).toEqual({ activityId: "m1", remunerationNette: 0, repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true }, partBncPrestations: 1, fraisFonctionnement: defaultFraisFonctionnement() })
   })
 
   it("au meilleur net, garde la rémunération saisie pour les autres modes", () => {
@@ -117,6 +117,32 @@ describe("réglages enregistrés du comparateur", () => {
     expect(reglagesDeLActiviteComparee(vue, { reglagesParActivite: { sasu: reglages } })?.options.partBncPrestations).toBe(0.2)
   })
 
+  it("au meilleur net, exige 4 trimestres de retraite tant que la case n'a pas été décochée, y compris dans les réglages enregistrés sans elle", () => {
+    const sansDividendes = { ...vue, monthlyData: session([]).monthlyData }
+    expect(optionsDuComparateur(sansDividendes, "sasu", undefined).repartition).toEqual({ mode: "meilleurNet", partDistribuee: 1, avecRetraite: true })
+    // Réglages d'une sauvegarde antérieure à ce défaut : le meilleur net choisi, sans la case.
+    expect(optionsDuComparateur(vue, "sasu", { repartition: { mode: "meilleurNet", partDistribuee: 1 } }).repartition.avecRetraite).toBe(true)
+    // Une case décochée reste décochée.
+    expect(optionsDuComparateur(vue, "sasu", { repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: false } }).repartition.avecRetraite).toBe(false)
+    // Hors du meilleur net, la case n'a pas de sens : rien n'est ajouté.
+    expect(avecLaRetraiteParDefaut({ mode: "grille", partDistribuee: 1 })).toEqual({ mode: "grille", partDistribuee: 1 })
+  })
+
+  it("en changeant de mode, ne garde la case des 4 trimestres que décochée", () => {
+    expect(avecLeMode({ mode: "meilleurNet", partDistribuee: 1, avecRetraite: true }, "dividendes")).toEqual({ mode: "dividendes", partDistribuee: 1 })
+    expect(avecLeMode({ mode: "meilleurNet", partDistribuee: 1, avecRetraite: false }, "dividendes")).toEqual({ mode: "dividendes", partDistribuee: 1, avecRetraite: false })
+    expect(avecLaRetraiteParDefaut(avecLeMode({ mode: "dividendes", partDistribuee: 1 }, "meilleurNet"))).toEqual({ mode: "meilleurNet", partDistribuee: 1, avecRetraite: true })
+  })
+
+  it("une case décochée est enregistrée, et le reste après rechargement des réglages", () => {
+    const sansDividendes = { ...vue, monthlyData: session([]).monthlyData }
+    const avant = optionsDuComparateur(sansDividendes, "sasu", undefined)
+    const reglages = retenirLesReglages(undefined, avant, { ...avant, repartition: { ...avant.repartition, avecRetraite: false } }, 2026)
+    // Réglages enregistrés puis relus, comme après un rechargement de la page.
+    const relus = JSON.parse(JSON.stringify(reglages))
+    expect(optionsDuComparateur(sansDividendes, "sasu", relus).repartition).toEqual({ mode: "meilleurNet", partDistribuee: 1, avecRetraite: false })
+  })
+
   it("ne retient que les réglages changés, en gardant ceux déjà choisis", () => {
     const avant = defaultComparisonOptions(vue, "sasu")
     const dejaChoisis = { partBncPrestations: 0.4, remunerationParAnnee: { "2025": 9000 } }
@@ -125,6 +151,10 @@ describe("réglages enregistrés du comparateur", () => {
     expect(retenirLesReglages(dejaChoisis, avant, { ...avant, remunerationNette: 12000 }, 2026)).toEqual({ partBncPrestations: 0.4, remunerationParAnnee: { "2025": 9000, "2026": 12000 } })
     expect(retenirLesReglages(undefined, avant, { ...avant, repartition: { ...avant.repartition, avecRetraite: true } }, 2026)).toEqual({ repartition: { mode: "grille", partDistribuee: 1, avecRetraite: true } })
     expect(retenirLesReglages(undefined, avant, { ...avant, repartition: { ...avant.repartition, avecRetraite: false } }, 2026)).toEqual({})
+    // Au meilleur net, les 4 trimestres sont exigés d'office : seule la case décochée est un choix à retenir.
+    const auMeilleurNet = { ...avant, repartition: avecLaRetraiteParDefaut({ mode: "meilleurNet", partDistribuee: 1 }) }
+    expect(retenirLesReglages(undefined, auMeilleurNet, { ...auMeilleurNet, repartition: { mode: "meilleurNet", partDistribuee: 1 } }, 2026)).toEqual({})
+    expect(retenirLesReglages(undefined, auMeilleurNet, { ...auMeilleurNet, repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: false } }, 2026)).toEqual({ repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: false } })
     const frais = { ...defaultFraisFonctionnement(), EI: { ...defaultFraisFonctionnement().EI, cfe: 0 } }
     expect(retenirLesReglages(undefined, avant, { ...avant, partBncPrestations: 0.7, fraisFonctionnement: frais }, 2026)).toEqual({ partBncPrestations: 0.7, fraisFonctionnement: frais })
   })
