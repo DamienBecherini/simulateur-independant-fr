@@ -101,12 +101,17 @@ test("l'e-mail s'ouvre prérempli dans la messagerie, et la copie remplit le pre
   expect(eMail.adresse).toContain("Ligne%201%0D%0ALigne%202")
   expect(eMail.adresse.length).toBeLessThanOrEqual(1800)
 
-  await fenetre(page).getByRole("button", { name: "Copier le message" }).click()
-  await expect(fenetre(page).getByRole("status")).toContainText("Adresse et message copiés")
   // Le presse-papiers de Windows rend les retours à la ligne en « \r\n ».
-  const copie = (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, "\n")
-  expect(copie).toMatch(new RegExp(`^À : ${ADRESSE_E_MAIL.replace(/\./g, "\\.")}\\nSujet : Retour sur le simulateur — v`))
+  const pressePapiers = async () => (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, "\n")
+  await fenetre(page).getByRole("button", { name: "Copier le message" }).click()
+  await expect(fenetre(page).getByRole("status")).toContainText("Message copié")
+  const copie = await pressePapiers()
+  expect(copie).toMatch(/^Sujet : Retour sur le simulateur — v/)
   expect(copie).toContain("Type de retour : Bug\n\nMessage :\nLigne 1\nLigne 2")
+  // L'adresse du destinataire se copie à part, pour la coller dans le champ « À » d'une messagerie en ligne.
+  await fenetre(page).getByRole("button", { name: "Copier l'adresse" }).click()
+  await expect(fenetre(page).getByRole("status")).toContainText("Adresse copiée")
+  expect(await pressePapiers()).toBe(ADRESSE_E_MAIL)
 })
 
 test("la fenêtre se remplit au clavier", async ({ page }) => {

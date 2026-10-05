@@ -166,9 +166,9 @@ export function adresseDeLEMail(retour: Retour, diagnostic: Diagnostic): { adres
   return tenirDansLaLongueur(message, construire, LONGUEUR_MAXIMALE_E_MAIL)
 }
 
-/** Texte copié pour un webmail : l'adresse, le sujet, puis le retour en entier. */
+/** Message à coller dans une messagerie, objet en tête ; l'adresse du destinataire se copie à part. */
 export function texteACopier(retour: Retour, diagnostic: Diagnostic): string {
-  return `À : ${ADRESSE_E_MAIL_DES_RETOURS}\nSujet : ${sujetDeLEMail(diagnostic)}\n\n${texteDuRetour(retour, diagnostic)}`
+  return `Sujet : ${sujetDeLEMail(diagnostic)}\n\n${texteDuRetour(retour, diagnostic)}`
 }
 
 /** Système et navigateur, lus dans l'identification du navigateur (`navigator.userAgent`), sans version de système. */

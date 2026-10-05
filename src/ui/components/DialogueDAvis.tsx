@@ -94,12 +94,12 @@ function useEnvoi(retour: Retour, diagnostic: Diagnostic) {
     const ouverte = await window.api.ouvrirAdresseExterne(adresse).catch(() => false)
     setEtat(ouverte ? { message: succes, erreur: false } : { message: "L'adresse n'a pas pu être ouverte. Copiez le message pour l'envoyer vous-même.", erreur: true })
   }
-  const copier = async () => {
+  const copier = async (texte: string, succes: string, echec: string) => {
     try {
-      await navigator.clipboard.writeText(texteACopier(retour, diagnostic))
-      setEtat({ message: "Adresse et message copiés : collez-les dans votre messagerie.", erreur: false })
+      await navigator.clipboard.writeText(texte)
+      setEtat({ message: succes, erreur: false })
     } catch {
-      setEtat({ message: "La copie a échoué : sélectionnez le texte de l'aperçu pour le copier.", erreur: true })
+      setEtat({ message: echec, erreur: true })
     }
   }
   return {
@@ -107,14 +107,15 @@ function useEnvoi(retour: Retour, diagnostic: Diagnostic) {
     effacerEtat: () => setEtat(null),
     envoyerSurGitHub: () => ouvrir(adresseDuTicket(retour, diagnostic).adresse, "Le formulaire GitHub s'ouvre dans votre navigateur : il reste à le valider."),
     envoyerParEMail: () => ouvrir(adresseDeLEMail(retour, diagnostic).adresse, "Votre messagerie s'ouvre avec le message prérempli : il reste à l'envoyer."),
-    copier
+    copierLAdresse: () => copier(ADRESSE_E_MAIL_DES_RETOURS, "Adresse copiée : collez-la comme destinataire dans votre messagerie.", "La copie a échoué : sélectionnez l'adresse affichée pour la copier."),
+    copierLeMessage: () => copier(texteACopier(retour, diagnostic), "Message copié : collez-le dans votre messagerie.", "La copie a échoué : sélectionnez le texte de l'aperçu pour le copier.")
   }
 }
 
 function ZoneDEnvoi({ retour, diagnostic }: { retour: Retour; diagnostic: Diagnostic }) {
   const idCondition = useId()
   const envoyable = retourEnvoyable(retour)
-  const { etat, envoyerSurGitHub, envoyerParEMail, copier } = useEnvoi(retour, diagnostic)
+  const { etat, envoyerSurGitHub, envoyerParEMail, copierLAdresse, copierLeMessage } = useEnvoi(retour, diagnostic)
   const decrit = envoyable ? undefined : idCondition
   const ticketTronque = adresseDuTicket(retour, diagnostic).tronque
   const eMailTronque = adresseDeLEMail(retour, diagnostic).tronque
@@ -151,10 +152,17 @@ function ZoneDEnvoi({ retour, diagnostic }: { retour: Retour; diagnostic: Diagno
             À : <span className="break-all">{ADRESSE_E_MAIL_DES_RETOURS}</span>. Les avis reçus par e-mail ne comptent pas dans la note moyenne publiée.
           </p>
           {eMailTronque ? <p>Message long : il sera coupé dans l'e-mail ; copiez-le pour l'envoyer en entier.</p> : null}
-          <Button type="button" variant="outline" size="sm" className={cn("mt-1 w-full", CIBLE)} disabled={!envoyable} aria-describedby={decrit} onClick={copier}>
-            <Copy aria-hidden />
-            Copier le message
-          </Button>
+          {/* Pour une messagerie en ligne : l'adresse (toujours disponible) et le message se copient chacun à part. */}
+          <div className="mt-1 grid grid-cols-2 gap-2">
+            <Button type="button" variant="outline" size="sm" className={cn("w-full", CIBLE)} onClick={copierLAdresse}>
+              <Copy aria-hidden />
+              Copier l'adresse
+            </Button>
+            <Button type="button" variant="outline" size="sm" className={cn("w-full", CIBLE)} disabled={!envoyable} aria-describedby={decrit} onClick={copierLeMessage}>
+              <Copy aria-hidden />
+              Copier le message
+            </Button>
+          </div>
         </MoyenDEnvoi>
       </div>
       <p role="status" className={cn("min-h-5 text-sm", etat?.erreur ? "text-red-700 dark:text-red-400" : "text-emerald-800 dark:text-emerald-300")}>

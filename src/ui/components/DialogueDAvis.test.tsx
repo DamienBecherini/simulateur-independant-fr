@@ -110,13 +110,21 @@ describe("fenêtre « Donner mon avis »", () => {
     expect(await within(fenetre).findByRole("status")).toHaveTextContent("L'adresse n'a pas pu être ouverte")
   })
 
-  it("copie l'adresse et le message, et le confirme", async () => {
+  it("copie le message, et le confirme", async () => {
     const { user, fenetre } = await ouvrir()
     const ecrire = vi.spyOn(navigator.clipboard, "writeText")
     await user.click(within(fenetre).getByRole("radio", { name: "Avis" }))
     await user.click(boutons(fenetre).copier)
-    expect(ecrire).toHaveBeenCalledWith(`À : ${ADRESSE_E_MAIL_DES_RETOURS}\nSujet : Retour sur le simulateur — v0.9.0\n\nType de retour : Avis\n\nVersion : 0.9.0\nEnvironnement : démo web`)
-    expect(await within(fenetre).findByRole("status")).toHaveTextContent("Adresse et message copiés")
+    expect(ecrire).toHaveBeenCalledWith("Sujet : Retour sur le simulateur — v0.9.0\n\nType de retour : Avis\n\nVersion : 0.9.0\nEnvironnement : démo web")
+    expect(await within(fenetre).findByRole("status")).toHaveTextContent("Message copié")
+  })
+
+  it("copie l'adresse du destinataire à part, même sans rien avoir rempli", async () => {
+    const { user, fenetre } = await ouvrir()
+    const ecrire = vi.spyOn(navigator.clipboard, "writeText")
+    await user.click(within(fenetre).getByRole("button", { name: "Copier l'adresse" }))
+    expect(ecrire).toHaveBeenCalledWith(ADRESSE_E_MAIL_DES_RETOURS)
+    expect(await within(fenetre).findByRole("status")).toHaveTextContent("Adresse copiée")
   })
 
   it("dit quand la copie échoue", async () => {

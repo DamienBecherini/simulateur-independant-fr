@@ -73,7 +73,7 @@ describe("contenu du retour", () => {
       "Note : ★★★☆☆ 3/5\nType de retour : Bug\n\nMessage :\nLa grille\nne défile pas\n\nVersion : 0.9.0\nEnvironnement : démo web · Windows · Chrome 140\n\nDiagnostic :\nAffichage en cours : Résumé\nAnnées simulées : 3\nActeurs : 4"
     )
     expect(texteDuRetour(retour({ affichage: "classique" }), DIAGNOSTIC)).toBe("Affichage préféré : Classique\n\nVersion : 0.9.0\nEnvironnement : démo web")
-    expect(texteACopier(retour({ note: 5 }), DIAGNOSTIC)).toBe(`À : ${ADRESSE_E_MAIL_DES_RETOURS}\nSujet : Retour sur le simulateur — v0.9.0\n\nNote : ★★★★★ 5/5\n\nVersion : 0.9.0\nEnvironnement : démo web`)
+    expect(texteACopier(retour({ note: 5 }), DIAGNOSTIC)).toBe(`Sujet : Retour sur le simulateur — v0.9.0\n\nNote : ★★★★★ 5/5\n\nVersion : 0.9.0\nEnvironnement : démo web`)
   })
 
   it("titre le ticket et l'e-mail avec le type, la note et la version", () => {
