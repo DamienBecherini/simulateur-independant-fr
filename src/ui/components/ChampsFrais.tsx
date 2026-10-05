@@ -72,7 +72,7 @@ function ChampsTrajet({ numero, trajet, onChange, onRetirer }: { numero: number;
 
   return (
     <fieldset className="grid min-w-0 gap-3 rounded-md border p-3 sm:grid-cols-2">
-      <legend className="max-w-full truncate px-1 text-sm font-medium">
+      <legend className="px-1 text-sm font-medium wrap-anywhere">
         Trajet {numero}
         {trajet.libelle.trim() ? ` : ${trajet.libelle.trim()}` : ""}
       </legend>
