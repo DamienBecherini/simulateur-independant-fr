@@ -55,8 +55,8 @@ describe("csvResultats", () => {
       "Revenus non rattachés à une personne;0,00",
       "Net après impôts (tous les foyers);24999,50",
       "",
-      "Activité;Statut;Chiffre d'affaires;Charges;Cotisations sociales;Impôt sur les sociétés;Revenu versé aux personnes;Résultat conservé;Bénéficiaires",
-      "Ma SASU;SASU;36000,00;100,50;8000,00;1000,00;26499,50;400,00;Alice",
+      "Activité;Statut;Chiffre d'affaires;Charges;Cotisations sociales;Impôt sur les sociétés;Revenu versé aux personnes;Résultat conservé;Bénéficiaires;Dispositifs de l'année",
+      "Ma SASU;SASU;36000,00;100,50;8000,00;1000,00;26499,50;400,00;Alice;",
       "",
       "Personne;Revenus directs;Revenus des activités;Salaires;Allocations chômage;Autres revenus;Rémunérations de dirigeant;Dividendes;Bénéfices;Cotisations salariales;Dépenses",
       "Alice;0,00;26499,50;0,00;0,00;0,00;20000,00;6499,50;0,00;0,00;0,00",
@@ -65,6 +65,12 @@ describe("csvResultats", () => {
       "Foyer fiscal;Parts;Revenus encaissés;Revenu imposable;Impôt sur le revenu;Prélèvements sociaux;Imposition des dividendes;Net après impôts;Revenus avant prélèvements;Total des prélèvements;Résultat conservé;Dépenses",
       "Alice, Bob;2,5;26499,50;18000,00;1500,00;0,00;Prélèvement forfaitaire unique;24999,50;35899,50;10500,00;400,00;0,00"
     ])
+  })
+
+  it("écrit les dispositifs de l'année d'une activité dans leur colonne", () => {
+    const rapport = rapportExemple()
+    rapport.activities = rapport.activities.map(a => ({ ...a, dispositifs: ["ACRE : cotisations réduites de 25 %.", "Plafonds au prorata."] }))
+    expect(lignes(csvResultats(sessionExemple(), rapport))).toContain("Ma SASU;SASU;36000,00;100,50;8000,00;1000,00;26499,50;400,00;Alice;ACRE : cotisations réduites de 25 %. Plafonds au prorata.")
   })
 
   it("nomme l'imposition au barème, et laisse la case vide sans dividendes", () => {
@@ -144,7 +150,7 @@ describe("noms saisis hostiles : séparateurs, guillemets, retours à la ligne e
     const ligneQuiCommencePar = (debut: string) => cellules.find(ligne => ligne[0] === debut)
 
     // Toutes les lignes d'un même tableau ont autant de cellules que son en-tête.
-    expect(ligneQuiCommencePar(`'${NOMS.c1}`)).toHaveLength(9)
+    expect(ligneQuiCommencePar(`'${NOMS.c1}`)).toHaveLength(10)
     expect(ligneQuiCommencePar(`'${NOMS.c1}`)?.[8]).toBe(NOMS.p1)
     expect(ligneQuiCommencePar(NOMS.p1)).toHaveLength(11)
     expect(ligneQuiCommencePar(`'${NOMS.p2}`)).toHaveLength(11)
@@ -192,6 +198,15 @@ describe("csvComparaison", () => {
       "Comparaison indicative.;Tous",
       "Plafond dépassé.;Micro-entreprise"
     ])
+  })
+
+  it("signale les colonnes micro plus accessibles après la sortie du régime, et la CFE de l'année de création", () => {
+    const result = comparaisonExemple()
+    result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? { ...s, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] } } : s))
+    result.noteCFE = "CFE exonérée l'année de création (2026)."
+    const csv = lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))
+    expect(csv.slice(1, 4)).toEqual(["Statut actuel;oui;non", "Meilleur net;non;oui", "Régime plus accessible;non;oui"])
+    expect(csv).toContain("CFE exonérée l'année de création (2026).;Tous")
   })
 
   it("laisse vides le taux sans revenus et l'écart sans statut actuel, et omet les avertissements absents", () => {

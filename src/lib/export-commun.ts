@@ -3,6 +3,13 @@
 
 import type { Entity, FinancialFlow, FoyerFiscalResult, SimulationAnnuelle } from "@/types"
 import { flowTypeLabels, libelleDuType, isOutgoingFlowType, type FlowType } from "./flow-constants"
+import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
+
+/** Mois de création d'une activité en toutes lettres (« septembre 2026 ») ; `null` pour une personne ou sans date. */
+export function dateDeCreationLisible(entity: Entity): string | null {
+  const mois = entity.type === "person" ? null : lireMois(entity.dateDeCreation)
+  return mois ? libelleDuMois(mois) : null
+}
 
 export const MOIS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 

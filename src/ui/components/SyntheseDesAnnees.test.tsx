@@ -46,4 +46,32 @@ describe("SyntheseDesAnnees", () => {
     expect(screen.getByRole("rowheader", { name: "2026" })).toHaveClass("bg-blue-50")
     expect(screen.getByRole("rowheader", { name: "2025" })).toHaveClass("bg-background")
   })
+
+  it("liste les dispositifs de chaque année sous le tableau : ACRE, annonce et sortie du régime micro", () => {
+    const avecNotes = (annee: number, notes: string[]): SimulationReport => {
+      const r = rapport(annee, 1000, 500)
+      return { ...r, activities: [{ entityId: "m1", name: "Mon atelier", type: "micro-entreprise", statut: "Micro-entreprise", chiffreAffaires: 0, charges: 0, cotisationsSociales: 0, impotSocietes: 0, revenuVerse: 0, resultatConserve: 0, beneficiaireIds: [], warnings: [], ...(notes.length > 0 ? { dispositifs: notes } : {}) }] }
+    }
+    const simulation = {
+      annees: [
+        { annee: 2026, report: avecNotes(2026, ["ACRE : cotisations réduites de 25 %."]), erreur: null },
+        { annee: 2027, report: avecNotes(2027, ["Deuxième année de suite au-delà des plafonds (2026 et 2027)."]), erreur: null },
+        { annee: 2028, report: avecNotes(2028, ["Sortie du régime micro au 1er janvier 2028 : chiffre d'affaires au-delà des plafonds en 2026 et 2027."]), erreur: null }
+      ]
+    }
+    render(<SyntheseDesAnnees simulation={simulation} annee={2026} />)
+
+    const liste = screen.getByRole("list", { name: "Dispositifs dans le temps" })
+    expect(within(liste).getAllByRole("listitem").map(texte)).toEqual([
+      "2026 · Mon atelier : ACRE : cotisations réduites de 25 %.",
+      "2027 · Mon atelier : Deuxième année de suite au-delà des plafonds (2026 et 2027).",
+      "2028 · Mon atelier : Sortie du régime micro au 1er janvier 2028 : chiffre d'affaires au-delà des plafonds en 2026 et 2027."
+    ])
+  })
+
+  it("n'ajoute rien sous le tableau quand aucun dispositif ne joue", () => {
+    const simulation = { annees: [2025, 2026].map(annee => ({ annee, report: rapport(annee, 1000, 500), erreur: null })) }
+    render(<SyntheseDesAnnees simulation={simulation} annee={2026} />)
+    expect(screen.queryByRole("list", { name: "Dispositifs dans le temps" })).not.toBeInTheDocument()
+  })
 })

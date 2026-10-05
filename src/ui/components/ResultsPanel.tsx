@@ -315,6 +315,26 @@ function DeplacementsRow({ deplacements, className }: { deplacements: NonNullabl
   return <Row label="dont déplacements professionnels" value={formatMoney(deplacements.montant)} hint={deplacements.deductible ? `${kilometres}, déductibles` : `${kilometres}, non déductibles`} className={className} />
 }
 
+/**
+ * Dispositifs limités dans le temps qui jouent cette année (sortie du régime micro, ACRE, plafonds au prorata) : une
+ * information sur le calcul, toujours visible, distincte des avertissements.
+ */
+export function NotesDesDispositifs({ notes, className }: { notes: string[] | undefined; className?: string }) {
+  if (!notes?.length) return null
+  return (
+    <ul aria-label="Dispositifs de l'année" className={cn("mb-2 space-y-1 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100", className)}>
+      {notes.map(note => (
+        <li key={note}>{note}</li>
+      ))}
+    </ul>
+  )
+}
+
+/** Statut affiché sous le nom : celui de l'année, et la sortie du régime micro quand elle a eu lieu. */
+function statutAffiche(activity: ActivityResult): string {
+  return activity.sortieDuRegimeMicro ? `${activity.statut} · sortie du régime micro au 1er janvier ${activity.sortieDuRegimeMicro.depuis}` : activity.statut
+}
+
 function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: number }) {
   const resume = useAffichageResume()
   const { ouvert } = useDetailDesCartes()
@@ -324,7 +344,8 @@ function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: 
   const bouton = <BoutonDuDetailDesCartes nombre={nombre} controle={idDuDetail} className="mt-2" />
 
   return (
-    <Card title={activity.name} subtitle={activity.statut} warnings={activity.warnings}>
+    <Card title={activity.name} subtitle={statutAffiche(activity)} warnings={activity.warnings}>
+      <NotesDesDispositifs notes={activity.dispositifs} />
       {resume ? (
         // Affichage « Résumé » : ce que l'activité verse d'abord, le calcul replié.
         <>

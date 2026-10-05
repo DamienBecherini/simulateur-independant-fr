@@ -51,7 +51,7 @@ export function phraseDuVerdict(result: ComparaisonResult, activite: string): st
   const actuel = result.scenarios.find(s => s.actuel)
   if (!meilleur || !actuel) return null
   if (meilleur.actuel) {
-    const suivant = [...result.scenarios].filter(s => !s.actuel && !s.horsPlafond).sort((a, b) => b.netApresImpots - a.netApresImpots)[0]
+    const suivant = [...result.scenarios].filter(s => !s.actuel && !s.horsPlafond && !s.regimeMicroFerme).sort((a, b) => b.netApresImpots - a.netApresImpots)[0]
     const derriere = suivant ? ` Juste derrière : ${suivant.libelle}, ${ecartSigne(suivant.netApresImpots - actuel.netApresImpots)}.` : ""
     return `Pour « ${activite} », le statut actuel, ${actuel.libelle}, donne le meilleur net : ${euros(actuel.netApresImpots)}.${derriere}`
   }

@@ -89,7 +89,17 @@ function RemunerationRetenue({ scenario }: { scenario: ScenarioStatut }) {
   )
 }
 
-const pastilleNote = "inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-100"
+/**
+ * Colonne micro au-delà des plafonds : tenable deux ans au plus ; ou régime déjà fermé à l'activité, sortie du régime
+ * micro après deux années de suite au-delà des plafonds. Jamais désignée meilleur net.
+ */
+function MentionDuPlafond({ scenario }: { scenario: ScenarioStatut }) {
+  const classe = "block text-xs font-medium text-amber-800 dark:text-amber-300"
+  if (scenario.regimeMicroFerme) return <span className={classe}>plus accessible · sortie au 1er janvier {scenario.regimeMicroFerme.depuis}</span>
+  return scenario.horsPlafond ? <span className={classe}>hors plafond · 2 ans au plus</span> : null
+}
+
+const pastilleNote ="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-100"
 
 /** En-tête d'une colonne : le statut, ses mentions (actuel, meilleur net) et ses renvois aux notes sous le tableau. */
 function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioStatut; meilleur: boolean; renvois: number[] }) {
@@ -101,7 +111,7 @@ function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioSta
       {/* Le net du statut actuel diffère de celui des résultats du foyer : il compte des frais de fonctionnement supposés. */}
       {scenario.actuel && scenario.fraisFonctionnement > 0 ? <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">frais supposés compris</span> : null}
       <RemunerationRetenue scenario={scenario} />
-      {scenario.horsPlafond ? <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">hors plafond · 2 ans au plus</span> : null}
+      <MentionDuPlafond scenario={scenario} />
       {renvois.length > 0 ? (
         <span className="mt-1 flex justify-end gap-1">
           {renvois.map(numero => (

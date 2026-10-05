@@ -117,7 +117,7 @@ function RemunerationSaisie({ remunerationNette, statut, plafond, onChange }: Re
  * Détail des frais de fonctionnement annuels par statut, modifiables : ils sont ajoutés aux charges de l'activité
  * dans chaque colonne du comparateur, y compris celle du statut actuel.
  */
-function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnement; onChange: (frais: FraisFonctionnement) => void }) {
+function FraisFonctionnementTable({ frais, cfe, onChange }: { frais: FraisFonctionnement; cfe?: CFEDeLAnnee; onChange: (frais: FraisFonctionnement) => void }) {
   const postes = Object.keys(posteFraisLabels) as PosteFrais[]
   const total = (statut: StatutFrais) => postes.reduce((somme, poste) => somme + frais[statut][poste], 0)
   const update = (statut: StatutFrais, poste: PosteFrais, value: string) => onChange({ ...frais, [statut]: { ...frais[statut], [poste]: Math.max(0, parseFloat(value) || 0) } })
@@ -125,7 +125,7 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
   return (
     <div className="text-slate-700 dark:text-slate-200">
       <p className="text-sm text-slate-600 dark:text-slate-400">
-        Frais annuels par statut : des ordres de grandeur, à ajuster à votre situation. Ils s'ajoutent aux charges de l'activité dans chaque colonne, statut actuel compris : si vous les avez déjà saisis dans la grille, mettez-les à 0. Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune et n'est pas due l'année de création.
+        Frais annuels par statut : des ordres de grandeur, à ajuster à votre situation. Ils s'ajoutent aux charges de l'activité dans chaque colonne, statut actuel compris : si vous les avez déjà saisis dans la grille, mettez-les à 0. Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune ; avec la date de création de l'activité, elle est exonérée l'année de création et réduite de moitié l'année suivante.
       </p>
       <div className="relative mt-3 overflow-x-auto print:overflow-visible">
         <table className="w-full min-w-[40rem] text-sm" aria-label="Frais de fonctionnement annuels">
@@ -146,6 +146,7 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
               <tr key={poste} className="border-t border-slate-100 dark:border-slate-800">
                 <th scope="row" className="py-1 text-left font-normal text-slate-600 dark:text-slate-300">
                   {posteFraisLabels[poste]}
+                  {poste === "cfe" && cfe ? <span className="block text-xs text-blue-800 dark:text-blue-300">{cfe.part === 0 ? "non comptée cette année" : `comptée pour ${Math.round(cfe.part * 100)} % cette année`}</span> : null}
                 </th>
                 {statutsFrais.map(statut => (
                   <td key={statut} className="px-2 py-1">
@@ -171,8 +172,20 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
           </tbody>
         </table>
       </div>
+      {cfe ? <p className="mt-2 text-sm text-blue-900 dark:text-blue-200">{cfe.note}</p> : null}
     </div>
   )
+}
+
+/** CFE de l'année exonérée ou réduite d'après la date de création de l'activité comparée (voir dispositifs.ts). */
+interface CFEDeLAnnee {
+  part: number
+  note: string
+}
+
+/** La CFE de l'année d'après la comparaison, quand elle n'est pas due en entier. */
+function cfeDeLaComparaison(result: ComparaisonResult | null): CFEDeLAnnee | undefined {
+  return result?.noteCFE !== undefined && result.partCFE !== undefined ? { part: result.partCFE, note: result.noteCFE } : undefined
 }
 
 /**
@@ -180,7 +193,7 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
  * état est retenu sous l'identifiant de l'ancienne section « Plus de réglages » ; tant qu'il ne l'est pas, elle
  * reprend celui de l'ancien tableau des frais, qui était replié à l'intérieur.
  */
-function FraisEtPartBnc({ options, bncUtile, onChange }: { options: ComparaisonOptions; bncUtile: boolean; onChange: (changes: Partial<ComparaisonOptions>) => void }) {
+function FraisEtPartBnc({ options, bncUtile, cfe, onChange }: { options: ComparaisonOptions; bncUtile: boolean; cfe?: CFEDeLAnnee; onChange: (changes: Partial<ComparaisonOptions>) => void }) {
   const [ancienTableauOuvert] = useSectionOuverte("comparateur-frais")
   return (
     <Depliable titre={bncUtile ? "Frais de fonctionnement et part BNC" : "Frais de fonctionnement"} id="comparateur-plus-de-reglages" ouverteParDefaut={ancienTableauOuvert} className="text-sm">
@@ -191,7 +204,7 @@ function FraisEtPartBnc({ options, bncUtile, onChange }: { options: ComparaisonO
             <input id="comparateur-bnc" className="block w-56 max-w-full accent-slate-700 print:hidden" type="range" min="0" max="100" step="10" value={Math.round(options.partBncPrestations * 100)} onChange={e => onChange({ partBncPrestations: Number(e.target.value) / 100 })} />
           </div>
         ) : null}
-        <FraisFonctionnementTable frais={options.fraisFonctionnement ?? defaultFraisFonctionnement()} onChange={fraisFonctionnement => onChange({ fraisFonctionnement })} />
+        <FraisFonctionnementTable frais={options.fraisFonctionnement ?? defaultFraisFonctionnement()} cfe={cfe} onChange={fraisFonctionnement => onChange({ fraisFonctionnement })} />
       </div>
     </Depliable>
   )
@@ -249,7 +262,7 @@ export function ReglagesDuComparateur({ activities, selected, options, result, s
       {mode === "meilleurNet" ? <AvecRetraite options={options} couts={coutsDesQuatreTrimestres(result?.scenarios ?? [])} onChange={onChange} /> : null}
       {avecRemunerationSaisie(mode) ? <RemunerationSaisie remunerationNette={options.remunerationNette} statut={statut} plafond={plafond} onChange={remunerationNette => onChange({ remunerationNette })} /> : null}
 
-      <FraisEtPartBnc options={options} bncUtile={bncUtile} onChange={onChange} />
+      <FraisEtPartBnc options={options} bncUtile={bncUtile} cfe={cfeDeLaComparaison(result)} onChange={onChange} />
     </div>
   )
 }

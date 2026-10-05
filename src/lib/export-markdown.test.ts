@@ -138,6 +138,26 @@ Aucun avertissement.
     expect(rapport).toContain("| Alice, Bob | 2,5 | 26 500 € | 18 000 € | 1 500 € | 0 € | prélèvement forfaitaire unique | **25 000 €** |")
   })
 
+  it("liste les dispositifs de l'année, et la date de création des activités", () => {
+    const report = rapportExemple()
+    report.activities = report.activities.map(a => ({ ...a, dispositifs: ["Sortie du régime micro au 1er janvier 2028."] }))
+    const session = sessionExemple()
+    session.entities = session.entities.map(e => (e.type === "company" ? { ...e, dateDeCreation: "2026-09" } : e))
+    const rapport = rapportComplet({ report, session })
+    expect(rapport).toContain("### Dispositifs dans le temps\n\n- Ma SASU : Sortie du régime micro au 1er janvier 2028.\n\n### Par foyer fiscal")
+    expect(rapport).toContain("capital social 1 000 € ; créée en septembre 2026 |")
+    expect(rapportComplet()).not.toContain("### Dispositifs dans le temps")
+  })
+
+  it("dans le comparateur, signale les colonnes plus accessibles et la CFE de l'année", () => {
+    const resultat = comparaisonExemple()
+    resultat.scenarios = resultat.scenarios.map(s => (s.statut === "micro" ? { ...s, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] } } : s))
+    resultat.noteCFE = "CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié."
+    const rapport = rapportComplet({ comparaison: { nomActivite: "Ma SASU", options: optionsExemple(), resultat } })
+    expect(rapport).toContain("| Indicateur | SASU (actuel) | Micro-entreprise (meilleur net, plus accessible) |")
+    expect(rapport).toContain("- CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié.\n\n| Indicateur |")
+  })
+
   it("gère un rapport sans revenus, sans activité ni foyer", () => {
     const report = { ...rapportExemple(), activities: [], foyers: [] }
     report.bilan = { ...report.bilan, revenusAvantPrelevements: 0 }

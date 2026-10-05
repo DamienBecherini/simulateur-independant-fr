@@ -8,8 +8,19 @@ export interface EntreesMicro {
   caServicesBic: number
   caServicesBnc: number
   beneficieACRE: boolean
+  /**
+   * Avec l'ACRE et une date de création connue : le chiffre d'affaires des seuls mois couverts par l'aide, et sa réduction.
+   * Absents, la réduction de l'année (reductionACRE) porte sur tout le chiffre d'affaires.
+   */
+  caSousACRE?: ChiffreAffairesMicro
+  reductionACRE?: number
+  /** Part des plafonds du régime qui s'applique : moins de 1 l'année de création (prorata des jours d'activité). */
+  prorataPlafonds?: number
   opteVFL: boolean
 }
+
+/** Chiffre d'affaires d'une micro-entreprise, par nature d'activité. */
+export type ChiffreAffairesMicro = Pick<EntreesMicro, "caVente" | "caServicesBic" | "caServicesBnc">
 
 export interface ResultatMicro {
   chiffreAffaires: number
@@ -26,19 +37,24 @@ export interface ResultatMicro {
 type ReglesMicro = ReglesFiscales["microEntreprise"]
 
 /** Applique un taux par nature d'activité au chiffre d'affaires correspondant. */
-function appliquerTaux({ caVente, caServicesBic, caServicesBnc }: EntreesMicro, taux: TauxMicro): number {
+function appliquerTaux({ caVente, caServicesBic, caServicesBnc }: ChiffreAffairesMicro, taux: TauxMicro): number {
   return caVente * taux.venteBic + caServicesBic * taux.servicesBic + caServicesBnc * taux.servicesBnc
 }
 
 /**
  * Chiffre d'affaires au-delà des plafonds du régime : prestations de services au-delà du plafond des services,
  * ou chiffre d'affaires total au-delà de celui de la vente. Le régime est conservé si cela n'arrive qu'une année ;
- * deux années de suite, il prend fin au 1er janvier suivant (pas de seuil qui fasse sortir immédiatement).
+ * deux années de suite, il prend fin au 1er janvier suivant (pas de seuil qui fasse sortir immédiatement). L'année de
+ * création, les plafonds sont réduits au prorata des jours d'activité (`prorata`, voir dispositifs.ts).
  */
-export function depassePlafondMicro(ca: Pick<EntreesMicro, "caVente" | "caServicesBic" | "caServicesBnc">, regles: ReglesFiscales = reglesEnVigueur): boolean {
-  const { plafonds } = regles.microEntreprise
+export function depassePlafondMicro(ca: ChiffreAffairesMicro, regles: ReglesFiscales = reglesEnVigueur, prorata = 1): boolean {
+  const plafonds = plafondsAuProrata(regles.microEntreprise.plafonds, prorata)
   const services = ca.caServicesBic + ca.caServicesBnc
   return services > plafonds.services || ca.caVente + services > plafonds.vente
+}
+
+function plafondsAuProrata(plafonds: ReglesMicro["plafonds"], prorata: number): ReglesMicro["plafonds"] {
+  return { services: plafonds.services * prorata, vente: plafonds.vente * prorata }
 }
 
 /**
@@ -110,17 +126,20 @@ export function plafondRfrVersementLiberatoire(partsFiscales: number, regles: Re
  */
 export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales = reglesEnVigueur): ResultatMicro {
   const micro = regles.microEntreprise
-  const warnings = [...verifierPlafonds(entrees, micro.plafonds), ...verifierFranchiseTVA(entrees, regles.TVA)]
+  const warnings = [...verifierPlafonds(entrees, plafondsAuProrata(micro.plafonds, entrees.prorataPlafonds ?? 1)), ...verifierFranchiseTVA(entrees, regles.TVA)]
 
   const cotisationsPleinTaux = appliquerTaux(entrees, micro.cotisations)
   const revenuApresAbattement = calculerRevenuImposable(entrees, micro.abattement)
-  if (entrees.beneficieACRE) {
+  // Sans date de création, la réduction de l'année porte sur tout le chiffre d'affaires ; avec elle, le moteur donne le
+  // chiffre d'affaires des seuls mois couverts (voir dispositifs.ts) et le dit dans une note de l'activité.
+  const reductionACRE = entrees.beneficieACRE ? appliquerTaux(entrees.caSousACRE ?? entrees, micro.cotisations) * (entrees.reductionACRE ?? micro.reductionACRE) : 0
+  if (entrees.beneficieACRE && !entrees.caSousACRE) {
     warnings.push(`ACRE : cotisations réduites de ${Math.round(micro.reductionACRE * 100)} %. Elles financent aussi vos droits : pendant l'aide, vous validez moins de trimestres de retraite et vos indemnités journalières sont plus faibles.`)
   }
 
   return {
     chiffreAffaires: entrees.caVente + entrees.caServicesBic + entrees.caServicesBnc,
-    cotisationsSociales: entrees.beneficieACRE ? cotisationsPleinTaux * (1 - micro.reductionACRE) : cotisationsPleinTaux,
+    cotisationsSociales: cotisationsPleinTaux - reductionACRE,
     revenuImposable: entrees.opteVFL ? 0 : revenuApresAbattement,
     revenuApresAbattement,
     versementLiberatoire: entrees.opteVFL ? appliquerTaux(entrees, micro.versementLiberatoire.taux) : 0,

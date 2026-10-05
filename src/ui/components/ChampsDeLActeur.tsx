@@ -1,6 +1,6 @@
 // src/ui/components/ChampsDeLActeur.tsx
-// Réglages d'un acteur hors relations : nom, parts, statut, revenu fiscal de référence, capital, couleur, icône, frais.
-// Affichés dans la fenêtre « Modifier », qui les enregistre à la validation.
+// Réglages d'un acteur hors relations : nom, parts, statut, revenu fiscal de référence, date de création, capital, couleur,
+// icône, frais. Affichés dans la fenêtre « Modifier », qui les enregistre à la validation.
 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,6 +9,7 @@ import type { Avatar, Company, Entity } from "@/types"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 import { ChampNumerique } from "./ChampNumerique"
+import { ChampDateDeCreation, ChampHorsPlafondAnneePrecedente } from "./ChampDateDeCreation"
 
 // Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
 const COULEURS_DES_ACTEURS = [
@@ -123,6 +124,8 @@ function StatusSpecificFields({ entity, onChange }: ChampsDeLActeurProps) {
           </div>
         </div>
       )}
+      {entity.type !== "person" && <ChampDateDeCreation activite={entity} onChange={onChange} />}
+      {entity.type === "micro-entreprise" && <ChampHorsPlafondAnneePrecedente activite={entity} onChange={onChange} />}
       {entity.type === "company" && entity.legalStatus === "EURL" && (
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="capitalSocial" className="text-right">

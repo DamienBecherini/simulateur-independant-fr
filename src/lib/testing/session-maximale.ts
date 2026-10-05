@@ -75,9 +75,9 @@ export function sessionMaximale(): SessionState {
       { id: "p-dan", type: "person", name: "Dan", fiscalParts: 1, avatar: icone("User", "#64748b"), locked: false },
       { id: "c-sasu", type: "company", name: "Martin Conseil", legalStatus: "SASU", capitalSocial: 5000, deplacementsProfessionnels: { kmParAn: 8000, puissanceFiscale: "6", electrique: true }, avatar: icone("Briefcase", "#ef4444"), locked: true },
       { id: "c-eurl", type: "company", name: "Martin Bois", legalStatus: "EURL", capitalSocial: 1500, deplacementsProfessionnels: { kmParAn: 450, puissanceFiscale: "7", electrique: false }, avatar: icone("Hammer", "#8b5cf6"), locked: false },
-      { id: "c-ei", type: "company", name: "Bob Réparations", legalStatus: "EI", capitalSocial: 0, deplacementsProfessionnels: { kmParAn: 1200, puissanceFiscale: "5", electrique: false }, avatar: icone("Wrench", "#0ea5e9"), locked: false },
-      { id: "m-bic", type: "micro-entreprise", name: "Alice Formations", beneficieACRE: true, opteVFL: true, rfrN2: 24000, deplacementsProfessionnels: { kmParAn: 300, puissanceFiscale: "3", electrique: false }, avatar: icone("Store", "#f97316"), locked: false },
-      { id: "m-bnc", type: "micro-entreprise", name: "Bob Photos", beneficieACRE: false, opteVFL: false, rfrN2: 0, deplacementsProfessionnels: { kmParAn: 0, puissanceFiscale: "4", electrique: true }, avatar: initiales("BP", "#14b8a6"), locked: true }
+      { id: "c-ei", type: "company", name: "Bob Réparations", legalStatus: "EI", capitalSocial: 0, dateDeCreation: "2025-04", deplacementsProfessionnels: { kmParAn: 1200, puissanceFiscale: "5", electrique: false }, avatar: icone("Wrench", "#0ea5e9"), locked: false },
+      { id: "m-bic", type: "micro-entreprise", name: "Alice Formations", beneficieACRE: true, opteVFL: true, rfrN2: 24000, dateDeCreation: "2026-09", horsPlafondAnneePrecedente: false, deplacementsProfessionnels: { kmParAn: 300, puissanceFiscale: "3", electrique: false }, avatar: icone("Store", "#f97316"), locked: false },
+      { id: "m-bnc", type: "micro-entreprise", name: "Bob Photos", beneficieACRE: false, opteVFL: false, rfrN2: 0, horsPlafondAnneePrecedente: true, deplacementsProfessionnels: { kmParAn: 0, puissanceFiscale: "4", electrique: true }, avatar: initiales("BP", "#14b8a6"), locked: true }
     ],
     relationships: [
       { id: "r-mariage", fromId: "p-alice", toId: "p-bob", type: "Marié(e)" },
