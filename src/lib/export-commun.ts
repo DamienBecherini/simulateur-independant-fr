@@ -1,7 +1,7 @@
 // src/lib/export-commun.ts
 // Briques partagées par les exports CSV et Markdown : noms de fichiers, nature des acteurs, flux regroupés par acteur.
 
-import type { Entity, FinancialFlow, FoyerFiscalResult, SessionState } from "@/types"
+import type { Entity, FinancialFlow, FoyerFiscalResult, SimulationAnnuelle } from "@/types"
 import { flowTypeLabels, isOutgoingFlowType, type FlowType } from "./flow-constants"
 
 export const MOIS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
@@ -62,17 +62,17 @@ function lignesDeLActeur(entityId: string, fluxParMois: FinancialFlow[][]): Lign
 }
 
 /** Flux de la grille, regroupés par acteur (dans l'ordre des acteurs) puis par type ; les acteurs sans flux sont omis. */
-export function fluxParActeur(session: SessionState): FluxDUnActeur[] {
+export function fluxParActeur(session: SimulationAnnuelle): FluxDUnActeur[] {
   const fluxParMois = Array.from({ length: 12 }, (_, i) => session.monthlyData.find(m => m.month === i)?.flows ?? [])
   return session.entities.map(entity => ({ entity, lignes: lignesDeLActeur(entity.id, fluxParMois) })).filter(acteur => acteur.lignes.length > 0)
 }
 
 /** Nom d'un acteur d'après son identifiant, ou l'identifiant lui-même s'il n'existe plus. */
-export function nomDeLActeur(session: SessionState, id: string): string {
+export function nomDeLActeur(session: SimulationAnnuelle, id: string): string {
   return session.entities.find(e => e.id === id)?.name ?? id
 }
 
 /** Nom d'un foyer fiscal : ses membres, déclarants puis enfants. */
-export function nomDuFoyer(session: SessionState, foyer: FoyerFiscalResult): string {
+export function nomDuFoyer(session: SimulationAnnuelle, foyer: FoyerFiscalResult): string {
   return foyer.personIds.map(id => nomDeLActeur(session, id)).join(", ")
 }

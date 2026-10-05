@@ -4,7 +4,8 @@
 
 import type { ReactNode } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import type { SessionState, SimulationReport } from "@/types"
+import type { SessionState, SimulationAnnuelle, SimulationReport } from "@/types"
+import { vueDeLAnnee } from "@/backend/logic/annees"
 import { exporterGrilleCsv, exporterRapportMarkdown, exporterResultatsCsv } from "../exports-texte"
 import { nomDuPdf } from "@/lib/nom-du-pdf"
 import { exporterEnPdf } from "../impression"
@@ -13,6 +14,8 @@ interface ExportDialogProps {
   isOpen: boolean
   onClose: () => void
   session: SessionState
+  /** Année affichée : les exports CSV, Markdown et PDF portent sur elle. */
+  annee: number
   simulationReport: SimulationReport | null
   /** Export complet de la simulation, réimportable (JSON). */
   onExportJson: () => void
@@ -39,12 +42,13 @@ function Groupe({ titre, children }: { titre: string; children: ReactNode }) {
   )
 }
 
-/** Le PDF porte le nom de la simulation et l'année de ses règles fiscales (l'année en cours tant qu'elle n'est pas calculée). */
-function exporterLaSimulationEnPdf(session: SessionState, simulationReport: SimulationReport | null) {
-  exporterEnPdf(nomDuPdf(session.name, simulationReport?.annee ?? new Date().getFullYear())).catch(console.error)
+/** Le PDF porte le nom de la simulation et l'année affichée. */
+function exporterLaSimulationEnPdf(vue: SimulationAnnuelle) {
+  exporterEnPdf(nomDuPdf(vue.name, vue.annee)).catch(console.error)
 }
 
-export function ExportDialog({ isOpen, onClose, session, simulationReport, onExportJson }: ExportDialogProps) {
+export function ExportDialog({ isOpen, onClose, session, annee, simulationReport, onExportJson }: ExportDialogProps) {
+  const vue = vueDeLAnnee(session, annee)
   const exporter = (action: () => void) => () => {
     action()
     onClose()
@@ -62,14 +66,14 @@ export function ExportDialog({ isOpen, onClose, session, simulationReport, onExp
             <OptionExport titre="Simulation complète (JSON)" description="Acteurs, relations, flux et résultats ; se réimporte dans le simulateur." onClick={exporter(onExportJson)} />
           </Groupe>
           <Groupe titre="Document">
-            <OptionExport titre="Document PDF" description="La simulation mise en page sur A4 : acteurs, grille annuelle, résultats et comparateur." onClick={exporter(() => exporterLaSimulationEnPdf(session, simulationReport))} />
+            <OptionExport titre="Document PDF" description="La simulation mise en page sur A4 : acteurs, grille annuelle, résultats et comparateur." onClick={exporter(() => exporterLaSimulationEnPdf(vue))} />
           </Groupe>
           <Groupe titre="Tableur (CSV)">
-            <OptionExport titre="Grille mensuelle (CSV)" description="Une ligne par acteur et par type de flux : les douze mois et le total de l'année." onClick={exporter(() => exporterGrilleCsv(session, simulationReport))} />
-            <OptionExport titre="Résultats (CSV)" description="Bilan, puis résultats par activité, par personne et par foyer fiscal." onClick={exporter(() => exporterResultatsCsv(session, simulationReport))} />
+            <OptionExport titre="Grille mensuelle (CSV)" description="Une ligne par acteur et par type de flux : les douze mois et le total de l'année." onClick={exporter(() => exporterGrilleCsv(vue))} />
+            <OptionExport titre="Résultats (CSV)" description="Bilan, puis résultats par activité, par personne et par foyer fiscal." onClick={exporter(() => exporterResultatsCsv(vue, simulationReport))} />
           </Groupe>
           <Groupe titre="Pour une IA (Markdown)">
-            <OptionExport titre="Rapport complet (Markdown)" description="Hypothèses, acteurs, flux, résultats et comparateur, en un texte à lire ou à confier à un assistant conversationnel." onClick={exporter(() => exporterRapportMarkdown(session, simulationReport))} />
+            <OptionExport titre="Rapport complet (Markdown)" description="Hypothèses, acteurs, flux, résultats et comparateur, en un texte à lire ou à confier à un assistant conversationnel." onClick={exporter(() => exporterRapportMarkdown(session, annee, simulationReport))} />
           </Groupe>
         </div>
       </DialogContent>

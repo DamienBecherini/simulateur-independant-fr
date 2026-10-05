@@ -2,7 +2,7 @@
 // Rapport Markdown de la simulation, à lire tel quel ou à confier à une IA pour l'analyser : hypothèses et limites,
 // acteurs et relations, flux saisis, résultats, comparateur de statuts et avertissements.
 
-import type { ComparaisonOptions, ComparaisonResult, Entity, Relationship, ScenarioStatut, SessionState, SimulationReport } from "@/types"
+import type { ComparaisonOptions, ComparaisonResult, Entity, Relationship, ScenarioStatut, SimulationAnnuelle, SimulationReport } from "@/types"
 import { defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { fluxParActeur, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, type LigneDeFlux } from "./export-commun"
 import { numeroterNotes } from "./notes"
@@ -11,7 +11,7 @@ import { numeroterNotes } from "./notes"
 export type ComparaisonDuRapport = { nomActivite: string; options: ComparaisonOptions; resultat: ComparaisonResult } | { nomActivite: string; erreur: string }
 
 export interface DonneesDuRapport {
-  session: SessionState
+  session: SimulationAnnuelle
   report: SimulationReport | null
   /** `null` quand la simulation ne contient aucune activité à comparer. */
   comparaison: ComparaisonDuRapport | null
@@ -58,7 +58,7 @@ function detailDeLActeur(entity: Entity): string {
   return `ACRE : ${entity.beneficieACRE ? "oui" : "non"} ; versement libératoire demandé : ${entity.opteVFL ? "oui" : "non"} ; revenu fiscal de référence N-2 : ${rfr}`
 }
 
-function sectionActeurs(session: SessionState): string {
+function sectionActeurs(session: SimulationAnnuelle): string {
   if (session.entities.length === 0) return "## Acteurs\n\nAucun acteur saisi."
   const lignes = session.entities.map(e => [echapper(e.name), natureActeur(e), detailDeLActeur(e)])
   return `## Acteurs\n\n${tableau(["Nom", "Nature", "Détails"], lignes)}`
@@ -66,7 +66,7 @@ function sectionActeurs(session: SessionState): string {
 
 const relationsDeCouple: Partial<Record<Relationship["type"], string>> = { "Marié(e)": "mariés", "PACSé(e)": "pacsés", "En couple": "en couple (union libre, deux foyers fiscaux distincts)" }
 
-function phraseDeRelation(session: SessionState, relation: Relationship): string {
+function phraseDeRelation(session: SimulationAnnuelle, relation: Relationship): string {
   const de = echapper(nomDeLActeur(session, relation.fromId))
   const vers = echapper(nomDeLActeur(session, relation.toId))
   const couple = relationsDeCouple[relation.type]
@@ -78,7 +78,7 @@ function phraseDeRelation(session: SessionState, relation: Relationship): string
   return `${personne} : ${relation.type.toLowerCase()} de « ${activite} »`
 }
 
-function sectionRelations(session: SessionState): string {
+function sectionRelations(session: SimulationAnnuelle): string {
   if (session.relationships.length === 0) return "## Relations\n\nAucune relation saisie."
   return `## Relations\n\n${session.relationships.map(r => `- ${phraseDeRelation(session, r)}`).join("\n")}`
 }
@@ -94,7 +94,7 @@ export function repartition(mois: number[]): string {
 
 const ligneDeFlux = (l: LigneDeFlux) => [l.libelle, l.sortie ? "Sortie" : "Entrée", euros(l.total), repartition(l.mois)]
 
-function sectionFlux(session: SessionState): string {
+function sectionFlux(session: SimulationAnnuelle): string {
   const acteurs = fluxParActeur(session)
   if (acteurs.length === 0) return "## Flux saisis\n\nAucun flux saisi dans la grille."
   const blocs = acteurs.map(({ entity, lignes }) => `### ${echapper(entity.name)} (${natureActeur(entity)})\n\n${tableau(["Flux", "Sens", "Total annuel", "Répartition"], lignes.map(ligneDeFlux), [2])}`)
@@ -126,7 +126,7 @@ function sousSectionBilan(report: SimulationReport): string {
   return `### Bilan\n\n${tableau(["Indicateur", "Montant"], lignes, [1])}`
 }
 
-function sousSectionActivites(session: SessionState, report: SimulationReport): string {
+function sousSectionActivites(session: SimulationAnnuelle, report: SimulationReport): string {
   if (report.activities.length === 0) return "### Par activité\n\nAucune activité."
   const lignes = report.activities.map(a => [echapper(a.name), a.statut, euros(a.chiffreAffaires), euros(a.charges), euros(a.cotisationsSociales), euros(a.impotSocietes), euros(a.revenuVerse), euros(a.resultatConserve), a.beneficiaireIds.map(id => echapper(nomDeLActeur(session, id))).join(", ") || "—"])
   return `### Par activité\n\n${tableau(["Activité", "Statut", "Chiffre d'affaires", "Charges", "Cotisations sociales", "Impôt sur les sociétés", "Versé aux personnes", "Conservé", "Bénéficiaires"], lignes, colonnesNumeriques(2, 7))}`
@@ -134,13 +134,13 @@ function sousSectionActivites(session: SessionState, report: SimulationReport): 
 
 const imposition = { pfu: "prélèvement forfaitaire unique", bareme: "barème progressif" }
 
-function sousSectionFoyers(session: SessionState, report: SimulationReport): string {
+function sousSectionFoyers(session: SimulationAnnuelle, report: SimulationReport): string {
   if (report.foyers.length === 0) return "### Par foyer fiscal\n\nAucun foyer fiscal."
   const lignes = report.foyers.map(f => [echapper(nomDuFoyer(session, f)), f.totalParts.toLocaleString("fr-FR"), euros(f.revenusEncaisses), euros(f.revenuImposableGlobal), euros(f.impotSurLeRevenu), euros(f.prelevementsSociaux), f.optionDividendes ? imposition[f.optionDividendes] : "—", `**${euros(f.netApresImpots)}**`])
   return `### Par foyer fiscal\n\n${tableau(["Foyer (membres)", "Parts", "Revenus encaissés", "Revenu imposable", "Impôt sur le revenu", "Prélèvements sociaux", "Imposition des dividendes", "Net après impôts"], lignes, [1, 2, 3, 4, 5, 7])}`
 }
 
-function sectionResultats(session: SessionState, report: SimulationReport | null): string {
+function sectionResultats(session: SimulationAnnuelle, report: SimulationReport | null): string {
   if (!report) return "## Résultats\n\nRésultats indisponibles : la simulation n'a pas pu être calculée."
   return `## Résultats (règles fiscales ${report.annee})\n\nMontants annuels, avant les éventuelles dépenses personnelles.\n\n${[sousSectionBilan(report), sousSectionActivites(session, report), sousSectionFoyers(session, report)].join("\n\n")}`
 }
@@ -192,13 +192,13 @@ function notesDeComparaison(resultat: ComparaisonResult): string {
   return `\n\nNotes :\n\n${notes.map(n => `${n.numero}. ${n.colonnes.join(", ")} : ${echapper(n.texte)}`).join("\n")}`
 }
 
-function couplesEnUnionLibre(session: SessionState, resultat: ComparaisonResult): string {
+function couplesEnUnionLibre(session: SimulationAnnuelle, resultat: ComparaisonResult): string {
   if (resultat.couples.length === 0) return ""
   const phrases = resultat.couples.map(c => `- ${c.personIds.map(id => echapper(nomDeLActeur(session, id))).join(" et ")} : impôt sur le revenu de ${euros(c.impotSurLeRevenuActuel)} en union libre, ${euros(c.impotSurLeRevenuMaries)} avec une imposition commune ; net après impôts de ${euros(c.netApresImpotsActuel)}, contre ${euros(c.netApresImpotsMaries)} mariés ou pacsés.`)
   return `\n\n### Et si le couple était marié ou pacsé ?\n\n${phrases.join("\n")}`
 }
 
-function sectionComparateur(session: SessionState, comparaison: ComparaisonDuRapport | null): string {
+function sectionComparateur(session: SimulationAnnuelle, comparaison: ComparaisonDuRapport | null): string {
   if (!comparaison) return "## Comparateur de statuts\n\nAucune activité à comparer."
   const titre = `## Comparateur de statuts : « ${echapper(comparaison.nomActivite)} »`
   if ("erreur" in comparaison) return `${titre}\n\nComparaison indisponible : ${echapper(comparaison.erreur)}`
@@ -210,7 +210,7 @@ function sectionComparateur(session: SessionState, comparaison: ComparaisonDuRap
 
 // --- Avertissements ---
 
-function sectionAvertissements(session: SessionState, report: SimulationReport | null, comparaison: ComparaisonDuRapport | null): string {
+function sectionAvertissements(session: SimulationAnnuelle, report: SimulationReport | null, comparaison: ComparaisonDuRapport | null): string {
   const avertissements = [
     ...(report?.activities.flatMap(a => a.warnings.map(w => `${echapper(a.name)} : ${echapper(w)}`)) ?? []),
     ...(report?.foyers.flatMap(f => f.warnings.map(w => `Foyer ${echapper(nomDuFoyer(session, f))} : ${echapper(w)}`)) ?? []),

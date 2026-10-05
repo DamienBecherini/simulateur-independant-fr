@@ -12,7 +12,7 @@ test("une micro-entreprise BNC à 30 000 € de chiffre d'affaires affiche les m
   const { page, erreursConsole } = await lancer()
 
   // Référence : la même session simulée par le process principal, via l'API exposée par le preload.
-  const rapport = await page.evaluate(s => window.api.runMetaSimulation(s), session)
+  const rapport = (await page.evaluate(s => window.api.simulerLesAnnees(s), session)).annees[0].report!
   const activite = rapport.activities.find(a => a.entityId === ATELIER.id)!
   const foyer = rapport.foyers[0]
 

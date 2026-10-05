@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { sanitizeSlots, sanitizeStateAndFillDefaults } from "./data-sanitizer.js"
+import { FORMAT_VERSION_ACTUEL } from "./migrations.js"
 
 const avatar = { type: "initials", value: "AB", color: "#3b82f6" }
 
@@ -29,7 +30,7 @@ describe("sanitizeStateAndFillDefaults", () => {
       expect(safeState.name).toBe("Nouvelle Simulation")
       expect(safeState.entities).toEqual([])
       expect(safeState.relationships).toEqual([])
-      expect(safeState.monthlyData).toEqual(grille())
+      expect(safeState.annees).toEqual([{ annee: 2026, monthlyData: grille() }])
       expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
     })
 
@@ -55,7 +56,7 @@ describe("sanitizeStateAndFillDefaults", () => {
         monthlyData: grille([{ id: "f1", label: "Salaire", entityId: "p1", type: "salary" }])
       })
 
-      expect(safeState.monthlyData[0].flows).toEqual([{ id: "f1", label: "Salaire", amount: 0, entityId: "p1", type: "salary" }])
+      expect(safeState.annees[0].monthlyData[0].flows).toEqual([{ id: "f1", label: "Salaire", amount: 0, entityId: "p1", type: "salary" }])
     })
 
     it("conserve une session déjà valide à l'identique", () => {
@@ -63,10 +64,13 @@ describe("sanitizeStateAndFillDefaults", () => {
         name: "Scénario 2025",
         entities: [alice, sasu],
         relationships: [{ id: "r1", fromId: "p1", toId: "c1", type: "Président" }],
-        monthlyData: grille([flux("f1", "p1")])
+        annees: [
+          { annee: 2025, monthlyData: grille([flux("f1", "p1")]) },
+          { annee: 2026, monthlyData: grille() }
+        ]
       }
 
-      const { safeState, report } = sanitizeStateAndFillDefaults(session)
+      const { safeState, report } = sanitizeStateAndFillDefaults({ ...session, formatVersion: FORMAT_VERSION_ACTUEL })
 
       expect(safeState).toEqual(session)
       expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
@@ -104,11 +108,11 @@ describe("sanitizeStateAndFillDefaults", () => {
 
       const { safeState, report } = sanitizeStateAndFillDefaults({ entities: [alice, sasu], monthlyData })
 
-      expect(safeState.monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
-      expect(safeState.monthlyData[5].flows.map(f => f.id)).toEqual(["f4"])
-      expect(safeState.monthlyData[11].flows).toEqual([])
-      expect(safeState.monthlyData).toHaveLength(12)
-      expect(safeState.monthlyData.map(m => m.month)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+      expect(safeState.annees[0].monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
+      expect(safeState.annees[0].monthlyData[5].flows.map(f => f.id)).toEqual(["f4"])
+      expect(safeState.annees[0].monthlyData[11].flows).toEqual([])
+      expect(safeState.annees[0].monthlyData).toHaveLength(12)
+      expect(safeState.annees[0].monthlyData.map(m => m.month)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
       expect(report.flowsRemoved).toBe(3)
       expect(report.relationshipsRemoved).toBe(0)
     })
@@ -120,7 +124,7 @@ describe("sanitizeStateAndFillDefaults", () => {
       })
 
       expect(safeState.relationships).toEqual([])
-      expect(safeState.monthlyData).toEqual(grille())
+      expect(safeState.annees).toEqual([{ annee: 2026, monthlyData: grille() }])
       expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 1, flowsRemoved: 1 })
     })
   })
@@ -137,7 +141,7 @@ describe("sanitizeStateAndFillDefaults", () => {
       expect(safeState.name).toBe("Scénario 2025")
       expect(safeState.entities).toEqual([alice, sasu])
       expect(safeState.relationships).toHaveLength(1)
-      expect(safeState.monthlyData[0].flows).toHaveLength(1)
+      expect(safeState.annees[0].monthlyData[0].flows).toHaveLength(1)
       expect(report).toMatchObject({ entitiesRemoved: 2, relationshipsRemoved: 0, flowsRemoved: 0 })
     })
 
@@ -150,7 +154,7 @@ describe("sanitizeStateAndFillDefaults", () => {
 
       expect(safeState.entities).toEqual([alice])
       expect(safeState.relationships).toEqual([])
-      expect(safeState.monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
+      expect(safeState.annees[0].monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
       expect(report).toMatchObject({ entitiesRemoved: 1, relationshipsRemoved: 1, flowsRemoved: 1 })
     })
 
@@ -175,9 +179,62 @@ describe("sanitizeStateAndFillDefaults", () => {
         monthlyData: grille([flux("f1", "p1"), { ...flux("f2", "p1"), type: "pot-de-vin" }, null, flux("f3", "fantome")])
       })
 
-      expect(safeState.monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
-      expect(safeState.monthlyData).toHaveLength(12)
+      expect(safeState.annees[0].monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
+      expect(safeState.annees[0].monthlyData).toHaveLength(12)
       expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 3 })
+    })
+  })
+
+  describe("années", () => {
+    /** Une session au format actuel, avec les années données. */
+    const sessionDesAnnees = (annees: unknown) => ({ formatVersion: FORMAT_VERSION_ACTUEL, entities: [alice], annees })
+
+    it("trie les années dans l'ordre chronologique", () => {
+      const { safeState } = sanitizeStateAndFillDefaults(sessionDesAnnees([2026, 2024, 2025].map(annee => ({ annee, monthlyData: grille() }))))
+
+      expect(safeState.annees.map(a => a.annee)).toEqual([2024, 2025, 2026])
+    })
+
+    it("écarte une année en double, et compte ses flux parmi les flux supprimés", () => {
+      const { safeState, report } = sanitizeStateAndFillDefaults(
+        sessionDesAnnees([
+          { annee: 2026, monthlyData: grille([flux("f1", "p1")]) },
+          { annee: 2026, monthlyData: grille([flux("f2", "p1"), flux("f3", "p1")]) }
+        ])
+      )
+
+      expect(safeState.annees).toEqual([{ annee: 2026, monthlyData: grille([flux("f1", "p1")]) }])
+      expect(report.flowsRemoved).toBe(2)
+    })
+
+    it("nettoie les flux de chaque année", () => {
+      const { safeState, report } = sanitizeStateAndFillDefaults(
+        sessionDesAnnees([
+          { annee: 2025, monthlyData: grille([flux("f1", "fantome")]) },
+          { annee: 2026, monthlyData: grille([flux("f2", "p1"), { id: "f3" }]) }
+        ])
+      )
+
+      expect(safeState.annees.map(a => a.monthlyData[0].flows.map(f => f.id))).toEqual([[], ["f2"]])
+      expect(report.flowsRemoved).toBe(2)
+    })
+
+    it("donne l'année par défaut à une session dont la liste des années est vide", () => {
+      const { safeState } = sanitizeStateAndFillDefaults(sessionDesAnnees([]))
+
+      expect(safeState.entities).toEqual([alice])
+      expect(safeState.annees).toEqual([{ annee: 2026, monthlyData: grille() }])
+    })
+
+    it.each([
+      ["une année sans numéro", [{ monthlyData: grille() }]],
+      ["une année qui n'est pas un objet", ["2026"]],
+      ["une année au numéro décimal", [{ annee: 2025.5, monthlyData: grille() }]],
+      ["une liste d'années qui n'en est pas une", "2026"]
+    ])("repart d'une session vide pour %s", (_cas, annees) => {
+      vi.spyOn(console, "error").mockImplementation(() => {})
+
+      expect(sanitizeStateAndFillDefaults(sessionDesAnnees(annees)).safeState.entities).toEqual([])
     })
   })
 
@@ -195,7 +252,7 @@ describe("sanitizeStateAndFillDefaults", () => {
 
       const { safeState, report } = sanitizeStateAndFillDefaults(donnees)
 
-      expect(safeState).toEqual({ name: "Nouvelle Simulation", entities: [], relationships: [], monthlyData: grille() })
+      expect(safeState).toEqual({ name: "Nouvelle Simulation", entities: [], relationships: [], annees: [{ annee: 2026, monthlyData: grille() }] })
       expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
       expect(consoleError).toHaveBeenCalledOnce()
     })
@@ -209,7 +266,7 @@ describe("sanitizeSlots", () => {
     name: "Scénario A",
     entities: [alice],
     relationships: [],
-    monthlyData: grille([flux("f1", "p1")])
+    annees: [{ annee: 2026, monthlyData: grille([flux("f1", "p1")]) }]
   }
 
   it.each([
@@ -234,7 +291,7 @@ describe("sanitizeSlots", () => {
   it("applique les valeurs par défaut à chaque slot", () => {
     const [resultat] = sanitizeSlots([{ id: "slot-1", lastModified: 42 }])
 
-    expect(resultat).toEqual({ id: "slot-1", lastModified: 42, name: "Nouvelle Simulation", entities: [], relationships: [], monthlyData: grille() })
+    expect(resultat).toEqual({ id: "slot-1", lastModified: 42, name: "Nouvelle Simulation", entities: [], relationships: [], annees: [{ annee: 2026, monthlyData: grille() }] })
   })
 
   it("nettoie les relations et flux orphelins de chaque slot", () => {
@@ -242,12 +299,12 @@ describe("sanitizeSlots", () => {
       {
         ...slot,
         relationships: [{ id: "r1", fromId: "p1", toId: "fantome", type: "Président" }],
-        monthlyData: grille([flux("f1", "p1"), flux("f2", "fantome")])
+        annees: [{ annee: 2026, monthlyData: grille([flux("f1", "p1"), flux("f2", "fantome")]) }]
       }
     ])
 
     expect(resultat.relationships).toEqual([])
-    expect(resultat.monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
+    expect(resultat.annees[0].monthlyData[0].flows.map(f => f.id)).toEqual(["f1"])
     expect(resultat.id).toBe("slot-1")
     expect(resultat.lastModified).toBe(1_700_000_000_000)
   })
@@ -261,7 +318,7 @@ describe("sanitizeSlots", () => {
       slot,
       { name: "Slot sans identifiant" },
       { ...slot, id: "slot-sans-date", lastModified: "hier" },
-      { ...slot, id: "slot-grille-tronquee", monthlyData: grille().slice(0, 11) },
+      { ...slot, id: "slot-grille-tronquee", annees: [{ annee: 2026, monthlyData: grille().slice(0, 11) }] },
       null,
       autre
     ])

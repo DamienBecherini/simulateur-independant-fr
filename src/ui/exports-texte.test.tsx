@@ -11,13 +11,13 @@ import { ExportDialog } from "./components/ExportDialog"
 
 function sessionAvecSociete(): SessionState {
   const session = { ...emptySession(), entities: [makePerson(), makeCompany()] }
-  session.monthlyData[0] = { month: 0, flows: [makeFlow({ entityId: "company-sasu", type: "ca_services", amount: 5000 })] }
+  session.annees[0].monthlyData[0] = { month: 0, flows: [makeFlow({ entityId: "company-sasu", type: "ca_services", amount: 5000 })] }
   return session
 }
 
 function ouvrir(session: SessionState = sessionAvecSociete(), report: SimulationReport | null = emptyReport()) {
   const onClose = vi.fn()
-  render(<ExportDialog isOpen onClose={onClose} session={session} simulationReport={report} onExportJson={vi.fn()} />)
+  render(<ExportDialog isOpen onClose={onClose} session={session} annee={2026} simulationReport={report} onExportJson={vi.fn()} />)
   return onClose
 }
 
@@ -33,19 +33,19 @@ describe("exports CSV et Markdown de la fenêtre « Exporter »", () => {
     const onClose = ouvrir()
     await userEvent.click(screen.getByRole("button", { name: /Grille mensuelle \(CSV\)/ }))
 
-    await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith("Export enregistré : nouvelle-simulation-grille-2025.csv"))
+    await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith("Export enregistré : nouvelle-simulation-grille-2026.csv"))
     expect(onClose).toHaveBeenCalled()
     const { defaultName, content, format } = fichierEnregistre()
-    expect(defaultName).toBe("nouvelle-simulation-grille-2025.csv")
+    expect(defaultName).toBe("nouvelle-simulation-grille-2026.csv")
     expect(format).toBe("csv")
     expect(content.startsWith("\uFEFFActeur;Nature;Flux;Sens;Janvier;")).toBe(true)
     expect(content).toContain("\r\nMa SASU;SASU;CA - Prestation de services;Entrée;5000,00;0,00;")
   })
 
-  it("prend l'année en cours dans le nom de la grille tant que les résultats manquent", async () => {
+  it("nomme la grille d'après l'année affichée, même sans résultats", async () => {
     ouvrir(sessionAvecSociete(), null)
     await userEvent.click(screen.getByRole("button", { name: /Grille mensuelle \(CSV\)/ }))
-    await vi.waitFor(() => expect(fichierEnregistre().defaultName).toBe(`nouvelle-simulation-grille-${new Date().getFullYear()}.csv`))
+    await vi.waitFor(() => expect(fichierEnregistre().defaultName).toBe("nouvelle-simulation-grille-2026.csv"))
   })
 
   it("ne dit rien quand l'utilisateur annule l'enregistrement", async () => {
@@ -70,7 +70,7 @@ describe("exports CSV et Markdown de la fenêtre « Exporter »", () => {
     await userEvent.click(screen.getByRole("button", { name: /Résultats \(CSV\)/ }))
 
     await vi.waitFor(() => expect(window.api.saveTextFile).toHaveBeenCalled())
-    expect(fichierEnregistre().defaultName).toBe("nouvelle-simulation-resultats-2025.csv")
+    expect(fichierEnregistre().defaultName).toBe("nouvelle-simulation-resultats-2026.csv")
     expect(fichierEnregistre().content).toContain("Bilan;Montant\r\nAnnée des règles fiscales;2025\r\n")
   })
 
@@ -87,13 +87,13 @@ describe("exports CSV et Markdown de la fenêtre « Exporter »", () => {
     await userEvent.click(screen.getByRole("button", { name: /Rapport complet \(Markdown\)/ }))
 
     await vi.waitFor(() => expect(window.api.saveTextFile).toHaveBeenCalled())
-    expect(window.api.compareStatuts).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ activityId: "company-sasu", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }))
+    expect(window.api.compareStatuts).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ activityId: "company-sasu", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }), 2026)
     const { defaultName, content, format } = fichierEnregistre()
-    expect(defaultName).toBe("nouvelle-simulation-rapport.md")
+    expect(defaultName).toBe("nouvelle-simulation-rapport-2026.md")
     expect(format).toBe("markdown")
     expect(content).toMatch(/^# Simulation « Nouvelle Simulation »\n/)
     expect(content).toContain("## Comparateur de statuts : « Ma SASU »")
-    expect(toast.success).toHaveBeenCalledWith("Export enregistré : nouvelle-simulation-rapport.md")
+    expect(toast.success).toHaveBeenCalledWith("Export enregistré : nouvelle-simulation-rapport-2026.md")
   })
 
   it.each([

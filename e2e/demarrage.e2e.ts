@@ -11,7 +11,7 @@ test("au démarrage, la fenêtre principale s'ouvre avec le preload chargé et s
 
   // Le preload expose l'API du process principal à l'interface.
   const fonctionsExposees = await page.evaluate(() => Object.keys(window.api ?? {}))
-  expect(fonctionsExposees).toEqual(expect.arrayContaining(["getCurrentSession", "saveCurrentSession", "runMetaSimulation", "compareStatuts", "optimiserRemuneration", "saveTextFile", "openTextFile", "printToPdf"]))
+  expect(fonctionsExposees).toEqual(expect.arrayContaining(["getCurrentSession", "saveCurrentSession", "simulerLesAnnees", "compareStatuts", "optimiserRemuneration", "saveTextFile", "openTextFile", "printToPdf"]))
 
   // La fenêtre d'accueil est refermée une fois la fenêtre principale prête.
   await expect.poll(() => electronApp.windows().length).toBe(1)

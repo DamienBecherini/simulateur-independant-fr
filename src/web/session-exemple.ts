@@ -40,6 +40,6 @@ export function sessionExemple(): SessionState {
     name: "Famille Martin, simulation 2026",
     entities: [camille, julien, lea, atelier, conseil],
     relationships: relations,
-    monthlyData
+    annees: [{ annee: 2026, monthlyData }]
   }
 }

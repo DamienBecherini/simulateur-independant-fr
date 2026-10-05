@@ -5,12 +5,12 @@ import { activiteComparee, beneficeAvantDividendes, comparerStatuts } from "./co
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
-import type { ComparaisonOptions, SessionState, StatutSociete } from "../../types.js"
+import type { ComparaisonOptions, SimulationAnnuelle, StatutSociete } from "../../types.js"
 
 const options = (activityId: string): ComparaisonOptions => ({ activityId, remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 })
 
 /** Alice, présidente d'une SASU (ou gérante d'une EURL) qui facture 100 000 € de prestations. */
-function societeDAlice(statut: StatutSociete, flux: Flux[] = [["s1", "ca_services", 100000]]): SessionState {
+function societeDAlice(statut: StatutSociete, flux: Flux[] = [["s1", "ca_services", 100000]]): SimulationAnnuelle {
   return session([personne("alice"), societe("s1", statut)], [relation("alice", "s1", statut === "SASU" ? "Président" : "Gérant")], flux)
 }
 

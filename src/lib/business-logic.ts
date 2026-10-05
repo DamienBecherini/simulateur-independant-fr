@@ -1,6 +1,6 @@
 // src/lib/business-logic.ts
 
-import type { SessionState, FinancialFlow, Relationship } from "@/types"
+import type { DonneesDeLAnnee, FinancialFlow, MonthlyGridData, Relationship } from "@/types"
 
 /**
  * Ce dictionnaire définit les dépendances entre les types de flux et les types de relations.
@@ -16,10 +16,10 @@ const FLOW_RELATIONSHIP_DEPENDENCIES: Partial<Record<FinancialFlow["type"], Rela
  * Analyse l'état d'une session et supprime les flux financiers qui sont devenus invalides
  * suite à un changement dans les relations entre entités.
  *
- * @param sessionState L'état actuel de la session (entités, relations, données mensuelles).
+ * @param sessionState Les relations de la session et la grille d'une année.
  * @returns Le `monthlyData` nettoyé de tous les flux orphelins logiques.
  */
-export function sanitizeFlowsAfterRelationshipChange(sessionState: SessionState): SessionState["monthlyData"] {
+export function sanitizeFlowsAfterRelationshipChange(sessionState: Pick<DonneesDeLAnnee, "relationships" | "monthlyData">): MonthlyGridData {
   const { relationships, monthlyData } = sessionState
 
   // On parcourt chaque mois et on filtre ses flux

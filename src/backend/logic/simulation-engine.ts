@@ -1,6 +1,6 @@
 // src/backend/logic/simulation-engine.ts
 
-import type { VersementLiberatoireInfo, ActivityResult, Company, FinancialFlow, FoyerFiscalResult, MicroEntreprise, Person, PersonResult, Relationship, SalarieDeLActivite, SessionState, SimulationBilan, SimulationReport } from "../../types.js"
+import type { VersementLiberatoireInfo, ActivityResult, Company, FinancialFlow, FoyerFiscalResult, MicroEntreprise, Person, PersonResult, Relationship, SalarieDeLActivite, DonneesDeLAnnee, SimulationBilan, SimulationReport } from "../../types.js"
 import { calculerMicro, plafondRfrVersementLiberatoire } from "./calculsAE.js"
 import { calculerEI } from "./calculsEI.js"
 import { calculerEURL } from "./calculsEURL.js"
@@ -48,7 +48,7 @@ function encaisse(revenus: RevenusDActivite): number {
 }
 
 interface Contexte {
-  session: SessionState
+  session: DonneesDeLAnnee
   regles: ReglesFiscales
   /** Foyers fiscaux, calculés avant les activités : le versement libératoire dépend des parts du foyer. */
   foyers: Foyer[]
@@ -66,7 +66,7 @@ const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant"]
 const RELATIONS_D_ASSOCIE: Relationship["type"][] = ["Président", "Gérant", "Associé"]
 const RELATIONS_D_EXPLOITANT: Relationship["type"][] = ["Titulaire", "Président", "Gérant"]
 
-function aggregateAnnualFlowsByEntity(session: SessionState): Map<string, FlowTotals> {
+function aggregateAnnualFlowsByEntity(session: DonneesDeLAnnee): Map<string, FlowTotals> {
   const map = new Map<string, FlowTotals>()
   for (const month of session.monthlyData) {
     for (const flow of month.flows) {
@@ -78,7 +78,7 @@ function aggregateAnnualFlowsByEntity(session: SessionState): Map<string, FlowTo
   return map
 }
 
-function aggregateSalaryContributions(session: SessionState): Map<string, number> {
+function aggregateSalaryContributions(session: DonneesDeLAnnee): Map<string, number> {
   const map = new Map<string, number>()
   for (const flow of session.monthlyData.flatMap(month => month.flows)) {
     if (flow.type !== "salary" || flow.grossAmount === undefined) continue
@@ -93,7 +93,7 @@ function aggregateSalaryContributions(session: SessionState): Map<string, number
  * l'est pour chaque salaire, sinon il est retrouvé à partir du net par dichotomie. Sans relation, rien ne change :
  * le salaire est un revenu venu de l'extérieur de la simulation.
  */
-function bulletinsDesSalaries(session: SessionState, flux: Map<string, FlowTotals>, regles: ReglesFiscales): Contexte["salaries"] {
+function bulletinsDesSalaries(session: DonneesDeLAnnee, flux: Map<string, FlowTotals>, regles: ReglesFiscales): Contexte["salaries"] {
   const typeDe = new Map(session.entities.map(e => [e.id, e.type]))
   const bulletins: Contexte["salaries"] = new Map()
   for (const rel of session.relationships.filter(r => r.type === "Salarié")) {
@@ -110,7 +110,7 @@ function bulletinsDesSalaries(session: SessionState, flux: Map<string, FlowTotal
 }
 
 /** Cotisations salariales : écart entre brut et net, pour les salaires dont le brut est connu (saisi ou calculé). */
-function cotisationsSalarialesParPersonne(session: SessionState, flux: Map<string, FlowTotals>, salaries: Contexte["salaries"]): Map<string, number> {
+function cotisationsSalarialesParPersonne(session: DonneesDeLAnnee, flux: Map<string, FlowTotals>, salaries: Contexte["salaries"]): Map<string, number> {
   const cotisations = aggregateSalaryContributions(session)
   for (const [personId, { bulletin }] of salaries) cotisations.set(personId, bulletin.brut - (flux.get(personId)?.salary ?? 0))
   return cotisations
@@ -491,7 +491,7 @@ function calculerBilan(ctx: Contexte, activities: ActivityResult[], persons: Per
   }
 }
 
-export function runMetaSimulation(session: SessionState, regles: ReglesFiscales = reglesEnVigueur): SimulationReport {
+export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales = reglesEnVigueur): SimulationReport {
   const foyersFiscaux = buildFoyers(session, regles.IR.partsParEnfant)
   const flux = aggregateAnnualFlowsByEntity(session)
   const salaries = bulletinsDesSalaries(session, flux, regles)

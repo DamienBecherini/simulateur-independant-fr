@@ -1,13 +1,13 @@
 // src/lib/export-markdown.test.ts
 
 import { describe, expect, it } from "vitest"
-import type { SessionState } from "@/types"
+import type { SimulationAnnuelle } from "@/types"
 import { echapper, euros, LIMITES, rapportMarkdown, repartition, type DonneesDuRapport } from "./export-markdown"
 import { comparaisonExemple, optionsExemple, rapportExemple, sessionExemple } from "./testing/exports-fixtures"
 
 const DATE = new Date(2026, 9, 4)
 
-const sessionVide = (): SessionState => ({ name: "Vide", entities: [], relationships: [], monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: [] })) })
+const sessionVide = (): SimulationAnnuelle => ({ name: "Vide", annee: 2026, entities: [], relationships: [], monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: [] })) })
 
 function rapportComplet(changements: Partial<DonneesDuRapport> = {}): string {
   return rapportMarkdown({ session: sessionExemple(), report: rapportExemple(), comparaison: { nomActivite: "Ma SASU", options: optionsExemple(), resultat: comparaisonExemple() }, date: DATE, ...changements })

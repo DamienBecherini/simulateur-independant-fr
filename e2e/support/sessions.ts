@@ -1,7 +1,7 @@
 // e2e/support/sessions.ts
 // Sessions préparées pour les tests de bout en bout, avec des identifiants stables.
 
-import type { FinancialFlow, MicroEntreprise, Person, SessionState } from "../../src/types"
+import type { FinancialFlow, MicroEntreprise, MonthlyGridData, Person, SessionState } from "../../src/types"
 
 export const ALICE: Person = {
   id: "person-alice",
@@ -23,18 +23,18 @@ export const ATELIER: MicroEntreprise = {
 }
 
 /** Douze mois ; `flux` place des flux dans les mois indiqués (0 = janvier). */
-export function grilleMensuelle(flux: { mois: number; flux: FinancialFlow }[] = []): SessionState["monthlyData"] {
+export function grilleMensuelle(flux: { mois: number; flux: FinancialFlow }[] = []): MonthlyGridData {
   return Array.from({ length: 12 }, (_, month) => ({ month, flows: flux.filter(f => f.mois === month).map(f => f.flux) }))
 }
 
 /** Session vierge, telle que l'application la crée. */
 export function sessionVide(): SessionState {
-  return { name: "Nouvelle Simulation", entities: [], relationships: [], monthlyData: grilleMensuelle() }
+  return { name: "Nouvelle Simulation", entities: [], relationships: [], annees: [{ annee: 2026, monthlyData: grilleMensuelle() }] }
 }
 
 /** Alice seule, sans activité ni flux. */
 export function sessionAliceSeule(): SessionState {
-  return { name: "Alice seule", entities: [ALICE], relationships: [], monthlyData: grilleMensuelle() }
+  return { name: "Alice seule", entities: [ALICE], relationships: [], annees: [{ annee: 2026, monthlyData: grilleMensuelle() }] }
 }
 
 /**
@@ -50,6 +50,6 @@ export function sessionMicroBnc(): SessionState {
     name: "Micro BNC 30 000 €",
     entities: [ALICE, ATELIER],
     relationships: [{ id: "rel-titulaire", fromId: ALICE.id, toId: ATELIER.id, type: "Titulaire" }],
-    monthlyData: grilleMensuelle(flux)
+    annees: [{ annee: 2026, monthlyData: grilleMensuelle(flux) }]
   }
 }

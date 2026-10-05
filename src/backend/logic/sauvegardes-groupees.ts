@@ -96,7 +96,8 @@ export function nomFichierSauvegardes(date: Date = new Date()): string {
 
 /** Un export de simulation seule (bouton « Exporter » ou « Exporter cette sauvegarde... ») contient directement la simulation. */
 function ressembleAUneSimulation(donnees: DonneesBrutes): boolean {
-  return "entities" in donnees || "monthlyData" in donnees || "relationships" in donnees
+  // `monthlyData` : une simulation exportée avant les années multiples (format 2 ou plus ancien).
+  return "entities" in donnees || "annees" in donnees || "monthlyData" in donnees || "relationships" in donnees
 }
 
 /** Message d'erreur si le contenu n'est pas un fichier de sauvegardes ; `null` s'il en est un. */
@@ -156,7 +157,7 @@ function formeCanonique(valeur: unknown): string {
 
 /** Deux sauvegardes au contenu identique : même nom et même simulation (la date de modification n'entre pas en compte). */
 function memeContenu(a: SaveSlot, b: SaveSlot): boolean {
-  const contenu = ({ name, entities, relationships, monthlyData }: SaveSlot) => formeCanonique({ name, entities, relationships, monthlyData })
+  const contenu = ({ name, entities, relationships, annees }: SaveSlot) => formeCanonique({ name, entities, relationships, annees })
   return contenu(a) === contenu(b)
 }
 

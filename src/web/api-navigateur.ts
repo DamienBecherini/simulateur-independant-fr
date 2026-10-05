@@ -6,11 +6,9 @@
 import type { EventPayloadMapping } from "@/globals"
 import type { ExportableState, FormatFichierTexte, NotificationPayload, SaveSlot, SessionState, UserPreferences } from "@/types"
 import { SessionStateSchema, UserPreferencesSchema } from "@/types"
-import { comparerStatuts } from "@/backend/logic/comparateur"
-import { optimiserRemuneration } from "@/backend/logic/optimisation-remuneration"
 import { sanitizeSlots, sanitizeStateAndFillDefaults } from "@/backend/logic/data-sanitizer"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
-import { runMetaSimulation } from "@/backend/logic/simulation-engine"
+import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
 import { sessionExemple } from "./session-exemple"
 import { CLES, ecrire, lire } from "./stockage-navigateur"
 
@@ -71,9 +69,9 @@ export function creerApiNavigateur(): EventPayloadMapping {
     saveCurrentSession: async session => enregistrerSession(session),
     saveCurrentSessionSync: session => enregistrerSession(session),
 
-    runMetaSimulation: async session => runMetaSimulation(sessionValidee(session)),
-    compareStatuts: async (session, options) => comparerStatuts(sessionValidee(session), options),
-    optimiserRemuneration: async (session, options, statut) => optimiserRemuneration(sessionValidee(session), options, statut),
+    simulerLesAnnees: async session => simulerLesAnnees(sessionValidee(session)),
+    compareStatuts: async (session, options, annee) => comparerStatutsDeLAnnee(sessionValidee(session), options, annee),
+    optimiserRemuneration: async (session, options, statut, annee) => optimiserRemunerationDeLAnnee(sessionValidee(session), options, statut, annee),
 
     getSaveSlots: async () => sanitizeSlots(lire(CLES.sauvegardes) ?? []),
     // Validées avant écriture, comme dans l'application de bureau.
@@ -88,7 +86,7 @@ export function creerApiNavigateur(): EventPayloadMapping {
       if (contenu === null) return { data: undefined }
       try {
         const { safeState, report } = sanitizeStateAndFillDefaults(JSON.parse(contenu))
-        return { data: { entities: safeState.entities, relationships: safeState.relationships, monthlyData: safeState.monthlyData }, report }
+        return { data: { entities: safeState.entities, relationships: safeState.relationships, annees: safeState.annees }, report }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Erreur inconnue."
         notifier({ message: `Le fichier sélectionné est invalide ou corrompu : ${message}`, type: "error" })

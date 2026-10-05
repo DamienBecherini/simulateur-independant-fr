@@ -1,6 +1,6 @@
 // src/lib/comparateur-options.ts
 
-import type { ComparaisonOptions, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, SessionState, StatutFrais } from "@/types"
+import type { ComparaisonOptions, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, DonneesDeLAnnee, StatutFrais } from "@/types"
 
 /** Libellés des postes de frais, dans l'ordre d'affichage. */
 export const posteFraisLabels: Record<PosteFrais, string> = {
@@ -28,7 +28,7 @@ export function defaultFraisFonctionnement(): FraisFonctionnement {
 }
 
 /** Activités qu'on peut faire changer de statut dans le comparateur. */
-export function comparableActivities(session: SessionState): (Company | MicroEntreprise)[] {
+export function comparableActivities(session: DonneesDeLAnnee): (Company | MicroEntreprise)[] {
   return session.entities.filter((e): e is Company | MicroEntreprise => e.type !== "person")
 }
 
@@ -37,7 +37,7 @@ export function comparableActivities(session: SessionState): (Company | MicroEnt
  * dividendes saisis ; sans dividendes saisis, tout le bénéfice disponible est distribué, pour ne pas
  * pénaliser les statuts en société avec un bénéfice qui resterait bloqué.
  */
-export function defaultComparisonOptions(session: SessionState, activityId: string): ComparaisonOptions {
+export function defaultComparisonOptions(session: DonneesDeLAnnee, activityId: string): ComparaisonOptions {
   const flows = session.monthlyData.flatMap(month => month.flows).filter(flow => flow.entityId === activityId)
   const annualTotal = (type: string) => flows.filter(flow => flow.type === type).reduce((sum, flow) => sum + flow.amount, 0)
 

@@ -1,7 +1,7 @@
 // src/lib/export-commun.test.ts
 
 import { describe, expect, it } from "vitest"
-import type { Company, FinancialFlow, MicroEntreprise, Person, SessionState } from "@/types"
+import type { Company, FinancialFlow, MicroEntreprise, Person, SimulationAnnuelle } from "@/types"
 import { fluxParActeur, natureActeur, nomDeFichier, nomDeLActeur, slugifier } from "./export-commun"
 
 const avatar = { type: "initials" as const, value: "A", color: "#000000" }
@@ -12,8 +12,8 @@ const micro: MicroEntreprise = { id: "m1", type: "micro-entreprise", name: "Atel
 
 const flux = (entityId: string, type: FinancialFlow["type"], amount: number, id = `${entityId}-${type}-${amount}`): FinancialFlow => ({ id, entityId, type, label: "", amount })
 
-function session(fluxParMois: Record<number, FinancialFlow[]>, entities = [alice, sasu]): SessionState {
-  return { name: "Test", entities, relationships: [], monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: fluxParMois[month] ?? [] })) }
+function session(fluxParMois: Record<number, FinancialFlow[]>, entities = [alice, sasu]): SimulationAnnuelle {
+  return { name: "Test", annee: 2026, entities, relationships: [], monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: fluxParMois[month] ?? [] })) }
 }
 
 describe("slugifier", () => {
@@ -76,7 +76,7 @@ describe("fluxParActeur", () => {
   })
 
   it("tolère une grille dont un mois manque", () => {
-    const s: SessionState = { ...session({}), monthlyData: [{ month: 3, flows: [flux("p1", "salary", 10)] }] as SessionState["monthlyData"] }
+    const s: SimulationAnnuelle = { ...session({}), monthlyData: [{ month: 3, flows: [flux("p1", "salary", 10)] }] as SimulationAnnuelle["monthlyData"] }
     expect(fluxParActeur(s)[0].lignes[0].mois).toEqual([0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0])
   })
 })

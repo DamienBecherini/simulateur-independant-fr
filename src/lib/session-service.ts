@@ -1,5 +1,5 @@
 // src/lib/session-service.ts
-import type { SessionState, SaveSlot, Entity, Relationship, MonthlyGridData, ExportableState, SanitizationReport } from "@/types"
+import type { SessionState, SaveSlot, ExportableState, SanitizationReport } from "@/types"
 import type { EventPayloadMapping } from "@/globals"
 import { createId } from "@/lib/id"
 
@@ -19,7 +19,7 @@ export function createNewSlotFromSession(session: SessionState): SaveSlot {
     name: session.name,
     entities: session.entities,
     relationships: session.relationships,
-    monthlyData: session.monthlyData,
+    annees: session.annees,
     lastModified: Date.now()
   }
 }
@@ -33,7 +33,7 @@ export function updateSlotWithSession(slotToUpdate: SaveSlot, session: SessionSt
     name: session.name,
     entities: session.entities,
     relationships: session.relationships,
-    monthlyData: session.monthlyData,
+    annees: session.annees,
     lastModified: Date.now()
   }
 }
@@ -41,7 +41,7 @@ export function updateSlotWithSession(slotToUpdate: SaveSlot, session: SessionSt
 /**
  * Exporte l'état d'un slot ou d'une session vers un fichier JSON.
  */
-export function exportState(state: { entities: Entity[]; relationships: Relationship[]; monthlyData: MonthlyGridData }): void {
+export function exportState(state: Pick<ExportableState, "entities" | "relationships" | "annees">): void {
   void window.api.exportState(state)
 }
 

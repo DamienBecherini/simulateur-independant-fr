@@ -54,16 +54,16 @@ describe("pont de la démo web", () => {
   })
 
   it("calcule une session vide si l'interface envoie une session invalide", async () => {
-    const rapport = await creerApiNavigateur().runMetaSimulation({ name: 42 } as never)
-    expect(rapport.foyers).toEqual([])
+    const { annees: [{ report: rapport }] } = await creerApiNavigateur().simulerLesAnnees({ name: 42 } as never)
+    expect(rapport?.foyers).toEqual([])
   })
 
   it("calcule la simulation et la comparaison dans la page", async () => {
     const api = creerApiNavigateur()
-    const rapport = await api.runMetaSimulation(sessionExemple())
-    expect(rapport.foyers.length).toBeGreaterThan(0)
+    const { annees: [{ report: rapport }] } = await api.simulerLesAnnees(sessionExemple())
+    expect(rapport?.foyers.length).toBeGreaterThan(0)
 
-    const comparaison = await api.compareStatuts(sessionExemple(), { activityId: "micro-atelier", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 })
+    const comparaison = await api.compareStatuts(sessionExemple(), { activityId: "micro-atelier", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }, 2026)
     expect(comparaison.scenarios.map(s => s.statut)).toContain("SASU")
   })
 
@@ -103,9 +103,9 @@ describe("pont de la démo web", () => {
     const creerUrl = vi.fn(() => "blob:export")
     Object.assign(URL, { createObjectURL: creerUrl, revokeObjectURL: vi.fn() })
     const telechargement = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {})
-    const { entities, relationships, monthlyData } = sessionExemple()
+    const { entities, relationships, annees } = sessionExemple()
 
-    await creerApiNavigateur().exportState({ entities, relationships, monthlyData })
+    await creerApiNavigateur().exportState({ entities, relationships, annees })
 
     expect(telechargement).toHaveBeenCalledOnce()
     const fichier = (creerUrl.mock.calls[0] as unknown as [Blob])[0]
@@ -113,13 +113,23 @@ describe("pont de la démo web", () => {
   })
 
   it("importe un fichier choisi par l'utilisateur, nettoyé comme dans l'application de bureau", async () => {
-    const { entities, relationships, monthlyData } = sessionExemple()
-    choisirLeFichier(JSON.stringify({ entities, relationships: [...relationships, { id: "orpheline", fromId: "inconnu", toId: "person-lea", type: "Enfant" }], monthlyData }))
+    const { entities, relationships, annees } = sessionExemple()
+    choisirLeFichier(JSON.stringify({ entities, relationships: [...relationships, { id: "orpheline", fromId: "inconnu", toId: "person-lea", type: "Enfant" }], annees, formatVersion: FORMAT_VERSION_ACTUEL }))
 
     const resultat = await creerApiNavigateur().importState()
 
     expect(resultat.data?.entities).toEqual(entities)
     expect(resultat.report?.relationshipsRemoved).toBe(1)
+  })
+
+  it("importe une simulation exportée au format 2 dans l'année 2026", async () => {
+    const { entities, relationships, annees } = sessionExemple()
+    choisirLeFichier(JSON.stringify({ entities, relationships, monthlyData: annees[0].monthlyData, formatVersion: 2 }))
+
+    const resultat = await creerApiNavigateur().importState()
+
+    expect(resultat.data?.annees).toEqual([{ annee: 2026, monthlyData: annees[0].monthlyData }])
+    expect(resultat.report?.migrationNotes).toEqual([expect.stringContaining("placée en 2026")])
   })
 
   it("n'importe rien si l'utilisateur ferme le sélecteur de fichiers", async () => {

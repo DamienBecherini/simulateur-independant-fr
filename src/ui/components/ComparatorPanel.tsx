@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
+import { vueDeLAnnee } from "@/backend/logic/annees"
 import { cn } from "@/lib/utils"
 import { exporterComparaisonCsv } from "../exports-texte"
 import { BoutonExportCsv } from "./BoutonExportCsv"
@@ -17,6 +18,8 @@ import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company,
 
 interface ComparatorPanelProps {
   session: SessionState
+  /** Année comparée : celle qui est affichée. */
+  annee: number
 }
 
 /** Sans activité, on compare tout de même les couples en union libre. */
@@ -338,7 +341,7 @@ function ComparisonResults({ result, activityName, onExporter }: { result: Compa
 }
 
 /** Recalcule la comparaison peu après chaque modification de la session ou des réglages. */
-function useComparison(session: SessionState, options: ComparaisonOptions) {
+function useComparison(session: SessionState, options: ComparaisonOptions, annee: number) {
   const [result, setResult] = useState<ComparaisonResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -346,7 +349,7 @@ function useComparison(session: SessionState, options: ComparaisonOptions) {
     let cancelled = false
     const timer = setTimeout(async () => {
       try {
-        const comparison = await window.api.compareStatuts(session, options)
+        const comparison = await window.api.compareStatuts(session, options, annee)
         if (cancelled) return
         setResult(comparison)
         setError(null)
@@ -358,18 +361,19 @@ function useComparison(session: SessionState, options: ComparaisonOptions) {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [session, options])
+  }, [session, options, annee])
 
   return { result, error }
 }
 
 /** Arbitrage rémunération / dividendes de l'activité comparée, en SASU ou en EURL (son statut s'il en est un). */
-function OptimiseurDeLActivite({ session, selected, options, onChange }: { session: SessionState; selected: Company | MicroEntreprise | undefined; options: ComparaisonOptions; onChange: (options: ComparaisonOptions) => void }) {
+function OptimiseurDeLActivite({ session, annee, selected, options, onChange }: { session: SessionState; annee: number; selected: Company | MicroEntreprise | undefined; options: ComparaisonOptions; onChange: (options: ComparaisonOptions) => void }) {
   if (!selected) return null
   return (
     <RemunerationOptimizer
       key={selected.id}
       session={session}
+      annee={annee}
       options={options}
       activityName={selected.name}
       statutInitial={selected.type === "company" && selected.legalStatus === "EURL" ? "EURL" : "SASU"}
@@ -383,18 +387,20 @@ function OptimiseurDeLActivite({ session, selected, options, onChange }: { sessi
  * (avec et sans versement libératoire), le reste de la simulation restant identique. Les couples en union
  * libre sont aussi comparés avec une imposition commune.
  */
-export function ComparatorPanel({ session }: ComparatorPanelProps) {
-  const activities = comparableActivities(session)
+export function ComparatorPanel({ session, annee }: ComparatorPanelProps) {
+  // Le comparateur porte sur l'année affichée : réglages par défaut tirés de sa grille, exports à son nom.
+  const vue = useMemo(() => vueDeLAnnee(session, annee), [session, annee])
+  const activities = comparableActivities(vue)
   const [options, setOptions] = useState<ComparaisonOptions | null>(null)
 
   // L'activité comparée par défaut est la première ; si elle disparaît, on repart sur la première restante.
   const selected = activities.find(a => a.id === options?.activityId) ?? activities[0]
   const effectiveOptions = useMemo(() => {
     if (!selected) return NO_ACTIVITY
-    return options?.activityId === selected.id ? options : defaultComparisonOptions(session, selected.id)
-  }, [options, selected, session])
+    return options?.activityId === selected.id ? options : defaultComparisonOptions(vue, selected.id)
+  }, [options, selected, vue])
 
-  const { result, error } = useComparison(session, effectiveOptions)
+  const { result, error } = useComparison(session, effectiveOptions, vue.annee)
   const couples = result?.couples ?? []
   if (!selected && couples.length === 0) return null
 
@@ -411,7 +417,7 @@ export function ComparatorPanel({ session }: ComparatorPanelProps) {
 
       {selected ? (
         <>
-          <ComparatorControls activities={activities} selected={selected} options={effectiveOptions} onSelect={activityId => setOptions({ ...defaultComparisonOptions(session, activityId), fraisFonctionnement: effectiveOptions.fraisFonctionnement })} onChange={changes => setOptions({ ...effectiveOptions, ...changes })} />
+          <ComparatorControls activities={activities} selected={selected} options={effectiveOptions} onSelect={activityId => setOptions({ ...defaultComparisonOptions(vue, activityId), fraisFonctionnement: effectiveOptions.fraisFonctionnement })} onChange={changes => setOptions({ ...effectiveOptions, ...changes })} />
           <FraisFonctionnementTable frais={effectiveOptions.fraisFonctionnement ?? defaultFraisFonctionnement()} onChange={fraisFonctionnement => setOptions({ ...effectiveOptions, fraisFonctionnement })} />
           <WarningList warnings={result?.warnings ?? []} />
         </>
@@ -419,8 +425,8 @@ export function ComparatorPanel({ session }: ComparatorPanelProps) {
 
       {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 
-      {result ? <ComparisonResults result={result} activityName={selected?.name ?? ""} onExporter={() => exporterComparaisonCsv(session, result, effectiveOptions, selected?.name ?? "")} /> : null}
-      <OptimiseurDeLActivite session={session} selected={selected} options={effectiveOptions} onChange={setOptions} />
+      {result ? <ComparisonResults result={result} activityName={selected?.name ?? ""} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, selected?.name ?? "")} /> : null}
+      <OptimiseurDeLActivite session={session} annee={vue.annee} selected={selected} options={effectiveOptions} onChange={setOptions} />
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
     </section>
   )

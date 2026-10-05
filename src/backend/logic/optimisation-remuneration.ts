@@ -1,6 +1,6 @@
 // src/backend/logic/optimisation-remuneration.ts
 
-import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, SessionState, StatutSociete } from "../../types.js"
+import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, DonneesDeLAnnee, StatutSociete } from "../../types.js"
 import { activiteComparee, beneficeAvantDividendes, simulerScenario, type Activite } from "./comparateur.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 
@@ -22,7 +22,7 @@ const POINTS_DE_GRILLE = 60
 
 const arrondiInferieur = (montant: number) => Math.floor(montant / PRECISION) * PRECISION
 
-function calculerPoint(session: SessionState, source: Activite, statut: StatutSociete, options: ComparaisonOptions, remunerationNette: number, regles: ReglesFiscales): PointRemuneration {
+function calculerPoint(session: DonneesDeLAnnee, source: Activite, statut: StatutSociete, options: ComparaisonOptions, remunerationNette: number, regles: ReglesFiscales): PointRemuneration {
   const { scenario, dividendes } = simulerScenario(session, source, statut, { ...options, remunerationNette, distribuerToutLeBenefice: true }, regles)
   return {
     remunerationNette,
@@ -61,7 +61,7 @@ function meilleurPoint(points: PointRemuneration[]): PointRemuneration | null {
   }, null)
 }
 
-export function optimiserRemuneration(session: SessionState, options: ComparaisonOptions, statut: StatutSociete, regles: ReglesFiscales = reglesEnVigueur): OptimisationRemuneration {
+export function optimiserRemuneration(session: DonneesDeLAnnee, options: ComparaisonOptions, statut: StatutSociete, regles: ReglesFiscales = reglesEnVigueur): OptimisationRemuneration {
   const vide = (warnings: string[]): OptimisationRemuneration => ({ statut, remunerationMaximale: 0, points: [], meilleur: null, meilleurAvecRetraite: null, warnings })
 
   const source = activiteComparee(session, options.activityId)

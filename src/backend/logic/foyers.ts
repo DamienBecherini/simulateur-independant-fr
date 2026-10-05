@@ -1,6 +1,6 @@
 // src/backend/logic/foyers.ts
 
-import type { Person, Relationship, SessionState } from "../../types.js"
+import type { Person, Relationship, DonneesDeLAnnee } from "../../types.js"
 import type { ReglesFiscales } from "./regles.js"
 
 // Seuls le mariage et le PACS créent une imposition commune ; l'union libre (« En couple ») laisse deux foyers.
@@ -37,7 +37,7 @@ class UnionFind {
 }
 
 /** Relations dont les deux extrémités sont des personnes de la session, parmi les types demandés. */
-function relationsEntrePersonnes(session: SessionState, personIds: Set<string>, types: Relationship["type"][]): Relationship[] {
+function relationsEntrePersonnes(session: DonneesDeLAnnee, personIds: Set<string>, types: Relationship["type"][]): Relationship[] {
   return session.relationships.filter(rel => types.includes(rel.type) && personIds.has(rel.fromId) && personIds.has(rel.toId))
 }
 
@@ -66,7 +66,7 @@ function partsDesEnfants(nombreEnfants: number, regles: ReglesFiscales["IR"]["pa
  * ensemble, et leurs enfants leur sont rattachés. Les parts saisies sur un enfant rattaché sont
  * ignorées : c'est son rang qui détermine ce qu'il apporte au foyer.
  */
-export function buildFoyers(session: SessionState, regles: ReglesFiscales["IR"]["partsParEnfant"]): Foyer[] {
+export function buildFoyers(session: DonneesDeLAnnee, regles: ReglesFiscales["IR"]["partsParEnfant"]): Foyer[] {
   const personnes = session.entities.filter((e): e is Person => e.type === "person")
   const personIds = new Set(personnes.map(p => p.id))
 

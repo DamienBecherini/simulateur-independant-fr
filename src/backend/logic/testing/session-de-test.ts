@@ -1,6 +1,6 @@
 // src/backend/logic/testing/session-de-test.ts
 
-import type { Company, Entity, FinancialFlow, MicroEntreprise, Person, Relationship, SessionState } from "../../../types.js"
+import type { Company, Entity, FinancialFlow, MicroEntreprise, Person, Relationship, SimulationAnnuelle } from "../../../types.js"
 
 /* Petites fabriques pour décrire une session en quelques lignes dans les tests du moteur. */
 
@@ -25,10 +25,10 @@ export function relation(fromId: string, toId: string, type: Relationship["type"
 /** Un flux annuel : il est saisi sur le mois de janvier. */
 export type Flux = [entityId: string, type: FinancialFlow["type"], amount: number]
 
-export function session(entities: Entity[], relationships: Relationship[] = [], flux: Flux[] = []): SessionState {
-  const monthlyData: SessionState["monthlyData"] = Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
+export function session(entities: Entity[], relationships: Relationship[] = [], flux: Flux[] = []): SimulationAnnuelle {
+  const monthlyData: SimulationAnnuelle["monthlyData"] = Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
   flux.forEach(([entityId, type, amount], index) => {
     monthlyData[0].flows.push({ id: `flux-${index}`, label: type, amount, entityId, type })
   })
-  return { name: "Test", entities, relationships, monthlyData }
+  return { name: "Test", annee: 2026, entities, relationships, monthlyData }
 }

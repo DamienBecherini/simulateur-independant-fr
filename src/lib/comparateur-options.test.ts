@@ -3,12 +3,12 @@
 import { describe, expect, it } from "vitest"
 import { comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement } from "@/lib/comparateur-options"
 import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
-import type { FinancialFlow, SessionState } from "@/types"
+import type { FinancialFlow, DonneesDeLAnnee } from "@/types"
 
-function session(flows: Omit<FinancialFlow, "id" | "label">[] = []): SessionState {
+function session(flows: Omit<FinancialFlow, "id" | "label">[] = []): DonneesDeLAnnee {
   const monthlyData = Array.from({ length: 12 }, (_, month) => ({ month, flows: [] as FinancialFlow[] }))
   flows.forEach((flow, i) => monthlyData[i % 12].flows.push({ id: `f${i}`, label: flow.type, ...flow }))
-  return { name: "Test", entities: [], relationships: [], monthlyData }
+  return { entities: [], relationships: [], monthlyData }
 }
 
 describe("comparableActivities", () => {

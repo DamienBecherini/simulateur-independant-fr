@@ -14,7 +14,7 @@ function initialSession(): SessionState {
   const session = emptySession()
   session.name = "Simulation de test"
   session.entities = [makePerson()]
-  session.monthlyData[0].flows = [makeFlow({ id: "flow-janvier", label: "Loyer perçu", amount: 1000 })]
+  session.annees[0].monthlyData[0].flows = [makeFlow({ id: "flow-janvier", label: "Loyer perçu", amount: 1000 })]
   return session
 }
 

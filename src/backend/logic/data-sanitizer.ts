@@ -7,6 +7,7 @@
  */
 import { EntitySchema, FinancialFlowSchema, RelationshipSchema, SessionStateSchema, SaveSlotSchema } from "../../types.js"
 import type { SessionState, SaveSlot, SanitizationReport } from "../../types.js"
+import { nombreDeFlux, ordonnerLesAnnees } from "./annees.js"
 import { migrerVersFormatActuel } from "./migrations.js"
 
 interface SanitizationResult {
@@ -59,14 +60,31 @@ function keepValidFlows(monthlyData: unknown): FilteredItems {
   return { kept, removed }
 }
 
-function countFlows(monthlyData: SessionState["monthlyData"]): number {
-  return monthlyData.reduce((total, month) => total + month.flows.length, 0)
+/**
+ * Écarte les flux invalides de la grille de chaque année, sans toucher à la forme des années :
+ * une année inutilisable (numéro ou grille malformés) reste à la charge du schéma de session.
+ * Une liste vide est traitée comme absente : la session reçoit l'année par défaut plutôt que d'être perdue.
+ */
+function keepValidFlowsOfYears(annees: unknown): FilteredItems {
+  if (Array.isArray(annees) && annees.length === 0) return { kept: undefined, removed: 0 }
+  if (!Array.isArray(annees)) return { kept: annees, removed: 0 }
+
+  let removed = 0
+  const kept = annees.map((annee: unknown) => {
+    if (!isRecord(annee)) return annee
+
+    const monthlyData = keepValidFlows(annee.monthlyData)
+    removed += monthlyData.removed
+    return { ...annee, monthlyData: monthlyData.kept }
+  })
+
+  return { kept, removed }
 }
 
 /**
  * Nettoie une session élément par élément.
  * @returns La session nettoyée et son rapport, ou `null` si la structure est irrécupérable
- * (pas un objet, grille mensuelle inutilisable, champ de premier niveau invalide).
+ * (pas un objet, aucune année, année ou grille mensuelle inutilisable, champ de premier niveau invalide).
  */
 function sanitizeSession(rawInput: unknown): SanitizationResult | null {
   const migration = migrerVersFormatActuel(rawInput)
@@ -79,14 +97,14 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | null {
   // Étape 1 : on écarte les éléments structurellement invalides, un par un
   const entities = keepValidItems(EntitySchema, rawData.entities)
   const relationships = keepValidItems(RelationshipSchema, rawData.relationships)
-  const monthlyData = keepValidFlows(rawData.monthlyData)
+  const annees = keepValidFlowsOfYears(rawData.annees)
 
   // Étape 2 : Zod valide l'ensemble et applique les valeurs par défaut
   const parseResult = SessionStateSchema.safeParse({
     ...rawData,
     entities: entities.kept,
     relationships: relationships.kept,
-    monthlyData: monthlyData.kept
+    annees: annees.kept
   })
 
   if (!parseResult.success) {
@@ -96,25 +114,29 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | null {
 
   const structurallySafeState = parseResult.data
 
-  // Étape 3 : cohérence sémantique, on supprime ce qui pointe vers une entité absente
+  // Étape 3 : les années dans l'ordre chronologique ; une année en double est écartée avec ses flux.
+  const ordonnees = ordonnerLesAnnees(structurallySafeState.annees)
+
+  // Étape 4 : cohérence sémantique, on supprime ce qui pointe vers une entité absente
   const entityIds = new Set(structurallySafeState.entities.map(e => e.id))
 
   const safeRelationships = structurallySafeState.relationships.filter(rel => entityIds.has(rel.fromId) && entityIds.has(rel.toId))
-  const safeMonthlyData = structurallySafeState.monthlyData.map(month => ({
-    ...month,
-    flows: month.flows.filter(flow => entityIds.has(flow.entityId))
+  const safeAnnees = ordonnees.annees.map(annee => ({
+    ...annee,
+    monthlyData: annee.monthlyData.map(month => ({ ...month, flows: month.flows.filter(flow => entityIds.has(flow.entityId)) }))
   }))
 
   const orphanRelationships = structurallySafeState.relationships.length - safeRelationships.length
-  const orphanFlows = countFlows(structurallySafeState.monthlyData) - countFlows(safeMonthlyData)
+  const orphanFlows = nombreDeFlux(ordonnees.annees) - nombreDeFlux(safeAnnees)
 
   return {
-    safeState: { ...structurallySafeState, relationships: safeRelationships, monthlyData: safeMonthlyData },
-    // Chaque compteur cumule les éléments invalides et, pour les relations et les flux, les orphelins.
+    safeState: { ...structurallySafeState, relationships: safeRelationships, annees: safeAnnees },
+    // Chaque compteur cumule les éléments invalides et, pour les relations et les flux, les orphelins
+    // (et, pour les flux, ceux des années en double).
     report: {
       entitiesRemoved: entities.removed,
       relationshipsRemoved: relationships.removed + orphanRelationships,
-      flowsRemoved: monthlyData.removed + orphanFlows,
+      flowsRemoved: annees.removed + orphanFlows + nombreDeFlux(ordonnees.ecartees),
       migrationNotes: migration.notes
     }
   }
@@ -125,7 +147,8 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | null {
  * 0. Convertit au format actuel un fichier d'un format précédent.
  * 1. Écarte individuellement les entités, relations et flux invalides.
  * 2. Valide la structure d'ensemble et applique les valeurs par défaut avec Zod.
- * 3. Supprime les relations et les flux orphelins.
+ * 3. Trie les années et écarte celles en double.
+ * 4. Supprime les relations et les flux orphelins.
  * @param rawData Les données brutes à nettoyer.
  * @returns Un état de session propre et un rapport des corrections. Si la structure est irrécupérable,
  * la session par défaut est renvoyée avec un rapport vide : rien n'a été nettoyé, tout a été remplacé.

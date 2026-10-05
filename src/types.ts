@@ -112,9 +112,11 @@ export const AnneeSimuleeSchema = z.object({
 export const SessionStateSchema = z.object({
   appVersion: z.string().optional(),
   name: z.string().default("Nouvelle Simulation"),
+  // Acteurs et relations communs à toutes les années de la session (voir l'ADR 008).
   entities: z.array(EntitySchema).default([]),
   relationships: z.array(RelationshipSchema).default([]),
-  monthlyData: MonthlyGridDataSchema.default(grilleVide)
+  // Les années, de la plus ancienne à la plus récente, sans doublon (le nettoyage les trie) ; au moins une.
+  annees: z.array(AnneeSimuleeSchema).min(1, "Une session contient au moins une année").default(() => [{ annee: ANNEE_PAR_DEFAUT, monthlyData: grilleVide() }])
 })
 
 export const SaveSlotSchema = SessionStateSchema.extend({
@@ -489,8 +491,9 @@ export interface SanitizationReport {
 export type ExportableState = {
   entities: Entity[]
   relationships: Relationship[]
-  monthlyData: MonthlyGridData
-  simulationReport?: SimulationReport | null
+  annees: AnneeSimulee[]
+  /** Résultats de chaque année, à titre d'information : ils sont recalculés à l'import. */
+  simulation?: SimulationPluriannuelle | null
   simulationError?: string | null
   exportedAt?: string
 }

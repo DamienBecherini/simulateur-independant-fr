@@ -1,13 +1,13 @@
 // src/lib/testing/exports-fixtures.ts
 // Petite simulation et ses résultats, aux chiffres ronds, pour les tests des exports CSV et Markdown.
 
-import type { ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, ScenarioStatut, SessionState, SimulationReport } from "@/types"
+import type { ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationReport } from "@/types"
 import { defaultFraisFonctionnement } from "@/lib/comparateur-options"
 
 const avatar = { type: "initials" as const, value: "A", color: "#000000" }
 
 /** Alice, présidente de « Ma SASU », mariée à Bob ; la SASU facture 3 000 € par mois et paie 100 € de charges en mars. */
-export function sessionExemple(): SessionState {
+export function sessionExemple(): SimulationAnnuelle {
   return {
     name: "Famille Martin",
     entities: [
@@ -19,6 +19,7 @@ export function sessionExemple(): SessionState {
       { id: "r1", fromId: "p1", toId: "p2", type: "Marié(e)" },
       { id: "r2", fromId: "p1", toId: "c1", type: "Président" }
     ],
+    annee: 2026,
     monthlyData: Array.from({ length: 12 }, (_, month) => ({
       month,
       flows: [{ id: `ca-${month}`, entityId: "c1", type: "ca_services" as const, label: "Mission", amount: 3000 }, ...(month === 2 ? [{ id: "charge", entityId: "c1", type: "deductible_expense" as const, label: "Logiciel", amount: 100.5 }] : [])]

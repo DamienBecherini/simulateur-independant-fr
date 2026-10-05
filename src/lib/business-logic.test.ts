@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import { sanitizeFlowsAfterRelationshipChange } from "@/lib/business-logic"
-import type { FinancialFlow, Relationship, SessionState } from "@/types"
+import type { DonneesDeLAnnee, FinancialFlow, Relationship } from "@/types"
 
 function flux(id: string, entityId: string, type: FinancialFlow["type"]): FinancialFlow {
   return { id, label: id, amount: 1000, entityId, type }
@@ -13,16 +13,15 @@ function relation(fromId: string, toId: string, type: Relationship["type"]): Rel
 }
 
 /** Session minimale : seuls les relations et les flux comptent pour ce nettoyage. */
-function session(relationships: Relationship[], fluxParMois: Record<number, FinancialFlow[]>): SessionState {
+function session(relationships: Relationship[], fluxParMois: Record<number, FinancialFlow[]>): DonneesDeLAnnee {
   return {
-    name: "Test",
     entities: [],
     relationships,
     monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: fluxParMois[month] ?? [] }))
   }
 }
 
-function identifiants(monthlyData: SessionState["monthlyData"], mois: number): string[] {
+function identifiants(monthlyData: DonneesDeLAnnee["monthlyData"], mois: number): string[] {
   return monthlyData[mois].flows.map(f => f.id)
 }
 

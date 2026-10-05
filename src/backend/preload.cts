@@ -12,9 +12,9 @@ const api: import("../globals.js", { with: { "resolution-mode": "import" } }).Ev
   saveCurrentSessionSync: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState) => {
     ipcRenderer.sendSync("saveCurrentSessionSync", session)
   },
-  runMetaSimulation: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState) => ipcRenderer.invoke("runMetaSimulation", session),
-  compareStatuts: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState, options: import('../types.js', { with: { "resolution-mode": "import" } }).ComparaisonOptions) => ipcRenderer.invoke("compareStatuts", session, options),
-  optimiserRemuneration: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState, options: import('../types.js', { with: { "resolution-mode": "import" } }).ComparaisonOptions, statut: import('../types.js', { with: { "resolution-mode": "import" } }).StatutSociete) => ipcRenderer.invoke("optimiserRemuneration", session, options, statut),
+  simulerLesAnnees: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState) => ipcRenderer.invoke("simulerLesAnnees", session),
+  compareStatuts: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState, options: import('../types.js', { with: { "resolution-mode": "import" } }).ComparaisonOptions, annee: number) => ipcRenderer.invoke("compareStatuts", session, options, annee),
+  optimiserRemuneration: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState, options: import('../types.js', { with: { "resolution-mode": "import" } }).ComparaisonOptions, statut: import('../types.js', { with: { "resolution-mode": "import" } }).StatutSociete, annee: number) => ipcRenderer.invoke("optimiserRemuneration", session, options, statut, annee),
 
   // Fonctions pour les slots
   getSaveSlots: () => ipcRenderer.invoke("getSaveSlots"),

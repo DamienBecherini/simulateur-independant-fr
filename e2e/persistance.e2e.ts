@@ -6,7 +6,7 @@ import path from "node:path"
 import { FORMAT_VERSION_ACTUEL } from "../src/backend/logic/migrations"
 import type { SessionState } from "../src/types"
 import { test, expect, lireFichier } from "./support/fixtures"
-import { ALICE, grilleMensuelle } from "./support/sessions"
+import { ALICE, ATELIER, grilleMensuelle } from "./support/sessions"
 
 type FichierSession = SessionState & { formatVersion?: number }
 
@@ -69,4 +69,36 @@ test("une session au format 1 est convertie au format actuel, après copie de l'
   expect(messages).toHaveLength(1)
   expect(messages[0]).toMatchObject({ title: "Chargement de la session", message: expect.stringContaining("convertie au nouveau format") })
   expect(messages[0].message).toContain("capital social des EURL")
+})
+
+test("une session au format 2 devient une session d'une année, 2026, après copie de l'original", async ({ dossierDonnees, lancer }) => {
+  // Format 2 : une seule grille, sans année. Alice et sa micro-entreprise, avec 2 500 € de chiffre d'affaires en janvier.
+  const ancienneSession = {
+    formatVersion: 2,
+    name: "Session d'une année",
+    entities: [ALICE, ATELIER],
+    relationships: [{ id: "rel-titulaire", fromId: ALICE.id, toId: ATELIER.id, type: "Titulaire" }],
+    monthlyData: grilleMensuelle([{ mois: 0, flux: { id: "flow-ca", entityId: ATELIER.id, type: "ca_micro_services_bnc", label: "Prestations", amount: 2500 } }])
+  }
+  const contenuOriginal = JSON.stringify(ancienneSession, null, 2)
+  await fs.writeFile(path.join(dossierDonnees, "sessionState.json"), contenuOriginal)
+
+  const { page, dialogues } = await lancer()
+  await expect(page.getByRole("textbox", { name: "Nom" })).toHaveCount(2)
+
+  // L'original est gardé à côté ; le fichier réécrit place la grille dans l'année 2026.
+  expect(await fs.readFile(path.join(dossierDonnees, "sessionState.format-2.json"), "utf-8")).toBe(contenuOriginal)
+  const converti = await lireFichier<FichierSession & { monthlyData?: unknown }>(dossierDonnees, "sessionState.json")
+  expect(converti?.formatVersion).toBe(3)
+  expect(converti?.monthlyData).toBeUndefined()
+  expect(converti?.annees.map(a => a.annee)).toEqual([2026])
+  expect(converti?.annees[0].monthlyData[0].flows).toEqual([expect.objectContaining({ id: "flow-ca", amount: 2500 })])
+
+  // Les résultats de 2026 sont calculés sur cette grille.
+  const carteActivite = page.getByRole("article").filter({ hasText: ATELIER.name })
+  await expect(carteActivite).toContainText(/2\s500\s€/)
+
+  const messages = await dialogues()
+  expect(messages).toHaveLength(1)
+  expect(messages[0].message).toContain("votre grille a été placée en 2026")
 })

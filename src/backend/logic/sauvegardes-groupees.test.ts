@@ -7,7 +7,7 @@ import { TYPE_FICHIER_SAUVEGARDES, construireFichierSauvegardes, fusionnerSauveg
 
 const avatar = { type: "initials" as const, value: "AB", color: "#3b82f6" }
 
-function grille(): SaveSlot["monthlyData"] {
+function grille(): SaveSlot["annees"][number]["monthlyData"] {
   return Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
 }
 
@@ -19,7 +19,7 @@ function sauvegarde(id: string, name: string, contenu: Partial<SaveSlot> = {}): 
     lastModified: Date.UTC(2026, 8, 1),
     entities: [{ id: `${id}-p`, type: "person", name: `Personne de ${name}`, fiscalParts: 1, avatar, locked: false }],
     relationships: [],
-    monthlyData: grille(),
+    annees: [{ annee: 2026, monthlyData: grille() }],
     ...contenu
   }
 }
@@ -113,7 +113,7 @@ describe("lireFichierSauvegardes", () => {
     const a = sauvegarde("a", "Alpha")
     const b = sauvegarde("b", "Bravo")
     const sansIdentifiant = { ...sauvegarde("x", "Sans identifiant"), id: undefined }
-    const grilleCassee = { ...sauvegarde("y", "Grille cassée"), monthlyData: "illisible" }
+    const grilleCassee = { ...sauvegarde("y", "Grille cassée"), annees: [{ annee: 2026, monthlyData: "illisible" }] }
 
     const resultat = lireAvecSucces(fichier([a, sansIdentifiant, "texte", grilleCassee, b]))
 
@@ -126,7 +126,7 @@ describe("lireFichierSauvegardes", () => {
     const fluxOrphelin = { id: "f1", label: "Orphelin", amount: 100, entityId: "inconnu", type: "salary" }
     const grilleAvecOrphelin = grille().map(mois => (mois.month === 0 ? { ...mois, flows: [fluxOrphelin] } : mois))
 
-    const resultat = lireAvecSucces(fichier([{ ...a, monthlyData: grilleAvecOrphelin }]))
+    const resultat = lireAvecSucces(fichier([{ ...a, annees: [{ annee: 2026, monthlyData: grilleAvecOrphelin }] }]))
 
     expect(resultat.slots).toEqual([a])
   })
@@ -162,6 +162,25 @@ describe("lireFichierSauvegardes", () => {
     expect(lireAvecSucces(fichier([ancienneCorrompue])).rapport).toEqual({ lues: 0, ecartees: 1, notesMigration: [] })
   })
 
+  it("importe un fichier de sauvegardes au format 2 : chaque grille devient l'année 2026", () => {
+    const fluxDeJanvier = { id: "f1", label: "Salaire", amount: 2000, entityId: "a-p", type: "salary" }
+    const ancienneGrille = grille().map(mois => (mois.month === 0 ? { ...mois, flows: [fluxDeJanvier] } : mois))
+    const a: Partial<SaveSlot> = sauvegarde("a", "Alpha")
+    delete a.annees
+    const b: Partial<SaveSlot> = sauvegarde("b", "Bravo")
+    delete b.annees
+    const contenu = JSON.stringify({ formatVersion: 2, type: TYPE_FICHIER_SAUVEGARDES, exportedAt: "2026-09-01T08:00:00.000Z", slots: [{ ...a, monthlyData: ancienneGrille }, { ...b, monthlyData: grille() }], slotOrder: ["b", "a"] })
+
+    const resultat = lireAvecSucces(contenu)
+
+    expect(resultat.slots.map(slot => slot.id)).toEqual(["b", "a"])
+    expect(resultat.slots.map(slot => slot.annees.map(x => x.annee))).toEqual([[2026], [2026]])
+    expect(resultat.slots[1].annees[0].monthlyData[0].flows).toEqual([fluxDeJanvier])
+    expect(resultat.slots[1]).not.toHaveProperty("monthlyData")
+    // La même note pour les deux sauvegardes : elle n'est rapportée qu'une fois.
+    expect(resultat.rapport.notesMigration).toEqual([expect.stringContaining("placée en 2026")])
+  })
+
   it("signale une sauvegarde d'un format plus récent", () => {
     const resultat = lireAvecSucces(fichier([{ ...sauvegarde("a", "Alpha"), formatVersion: FORMAT_VERSION_ACTUEL + 1 }]))
 
@@ -194,7 +213,7 @@ describe("fusionnerSauvegardes", () => {
 
   it("ignore une sauvegarde déjà présente à l'identique, même si sa date ou l'ordre de ses clés diffère", () => {
     const a = sauvegarde("a", "Alpha")
-    const memeContenu = { lastModified: Date.UTC(2026, 9, 1), monthlyData: a.monthlyData, relationships: [], entities: a.entities, name: "Alpha", id: "a" }
+    const memeContenu = { lastModified: Date.UTC(2026, 9, 1), annees: a.annees, relationships: [], entities: a.entities, name: "Alpha", id: "a" }
 
     const resultat = fusionnerSauvegardes([a], ["a"], [memeContenu], creerId)
 

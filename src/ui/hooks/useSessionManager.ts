@@ -1,17 +1,17 @@
 // src/ui/hooks/useSessionManager.ts
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import type { SessionState, SaveSlot, SanitizationReport, UserPreferences } from "@/types"
+import { ANNEE_PAR_DEFAUT, grilleVide, type SessionState, type SaveSlot, type SanitizationReport, type UserPreferences } from "@/types"
 import * as SessionService from "@/lib/session-service"
 import { useDebouncedSave } from "./useDebouncedSave"
 
-// Fonction utilitaire pour créer une session vierge.
+// Session vierge : une seule année, la dernière dont les règles sont connues.
 function getInitialSessionState(): SessionState {
   return {
     name: "Nouvelle Simulation",
     entities: [],
     relationships: [],
-    monthlyData: Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
+    annees: [{ annee: ANNEE_PAR_DEFAUT, monthlyData: grilleVide() }]
   }
 }
 
@@ -145,7 +145,7 @@ export function useSessionManager() {
         name: slotToLoad.name,
         entities: slotToLoad.entities,
         relationships: slotToLoad.relationships,
-        monthlyData: slotToLoad.monthlyData
+        annees: slotToLoad.annees
       }
       setHistory({ past: [], present: sessionFromSlot, future: [] })
       setLoadedSlotId(slotToLoad.id)
@@ -157,7 +157,8 @@ export function useSessionManager() {
   const handleImport = async () => {
     const result = await SessionService.importState()
     if (result && result.data) {
-      const sessionToLoad: SessionState = { name: "Simulation importée", ...result.data }
+      const { entities, relationships, annees } = result.data
+      const sessionToLoad: SessionState = { name: "Simulation importée", entities, relationships, annees }
       const { entitiesRemoved, relationshipsRemoved, flowsRemoved, migrationNotes } = result.report
       // Dès que le fichier a été corrigé ou converti, l'utilisateur confirme avant de remplacer sa session.
       if (entitiesRemoved > 0 || relationshipsRemoved > 0 || flowsRemoved > 0 || migrationNotes.length > 0) {

@@ -12,7 +12,10 @@
  * ajouter la migration correspondante dans `migrations`.
  */
 
-export const FORMAT_VERSION_ACTUEL = 2
+export const FORMAT_VERSION_ACTUEL = 3
+
+/** Année des sessions écrites avant les années multiples (formats 1 et 2) : celle des seules règles alors connues. */
+export const ANNEE_DES_SESSIONS_D_UNE_ANNEE = 2026
 
 /** Un fichier sans numéro de format date d'avant le versionnage : c'est la version 1. */
 const VERSION_SANS_NUMERO = 1
@@ -71,9 +74,24 @@ function migrerV1VersV2(donnees: DonneesBrutes): { donnees: DonneesBrutes; notes
   return { donnees, notes }
 }
 
+/**
+ * Version 2 → 3 (octobre 2026, plusieurs années). La grille unique devient la grille d'une année : 2026, la seule
+ * dont le simulateur connaissait les règles. Les acteurs et les relations, communs à toutes les années, ne changent pas.
+ * Un fichier sans grille n'en reçoit pas : l'année par défaut s'applique à la validation.
+ */
+function migrerV2VersV3(donnees: DonneesBrutes): { donnees: DonneesBrutes; notes: string[] } {
+  if (!("monthlyData" in donnees)) return { donnees, notes: [] }
+  const { monthlyData, ...reste } = donnees
+  return {
+    donnees: { ...reste, annees: [{ annee: ANNEE_DES_SESSIONS_D_UNE_ANNEE, monthlyData }] },
+    notes: [`La simulation porte désormais sur une ou plusieurs années : votre grille a été placée en ${ANNEE_DES_SESSIONS_D_UNE_ANNEE}, l'année des règles qu'elle utilisait. Vous pouvez ajouter des années à côté de la grille.`]
+  }
+}
+
 /** `migrations[n]` convertit un fichier de la version n à la version n + 1. */
 const migrations: Record<number, (donnees: DonneesBrutes) => { donnees: DonneesBrutes; notes: string[] }> = {
-  1: migrerV1VersV2
+  1: migrerV1VersV2,
+  2: migrerV2VersV3
 }
 
 /**

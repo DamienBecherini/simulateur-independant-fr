@@ -9,6 +9,7 @@ import { echelle, graduations, indiceLePlusProche, montantCourt, positionInfoBul
 import { cn } from "@/lib/utils"
 import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, SessionState, StatutSociete } from "@/types"
 import { exporterCourbeCsv } from "../exports-texte"
+import { vueDeLAnnee } from "@/backend/logic/annees"
 import { BoutonExportCsv } from "./BoutonExportCsv"
 import { Depliable } from "./Depliable"
 import { ZoneDefilante } from "./ZoneDefilante"
@@ -19,7 +20,7 @@ const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
 const trimestres = (n: number) => `${n} trimestre${n > 1 ? "s" : ""} de retraite`
 
 /** Recalcule la courbe peu après chaque changement ; la rémunération choisie dans le comparateur n'y change rien. */
-function useOptimisation(session: SessionState, options: ComparaisonOptions, statut: StatutSociete) {
+function useOptimisation(session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) {
   const [resultat, setResultat] = useState<OptimisationRemuneration | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const { activityId, partBncPrestations, fraisFonctionnement } = options
@@ -28,7 +29,7 @@ function useOptimisation(session: SessionState, options: ComparaisonOptions, sta
     let annule = false
     const minuteur = setTimeout(async () => {
       try {
-        const optimisation = await window.api.optimiserRemuneration(session, { activityId, partBncPrestations, fraisFonctionnement, remunerationNette: 0, distribuerToutLeBenefice: true }, statut)
+        const optimisation = await window.api.optimiserRemuneration(session, { activityId, partBncPrestations, fraisFonctionnement, remunerationNette: 0, distribuerToutLeBenefice: true }, statut, annee)
         if (annule) return
         setResultat(optimisation)
         setErreur(null)
@@ -40,7 +41,7 @@ function useOptimisation(session: SessionState, options: ComparaisonOptions, sta
       annule = true
       clearTimeout(minuteur)
     }
-  }, [session, activityId, partBncPrestations, fraisFonctionnement, statut])
+  }, [session, activityId, partBncPrestations, fraisFonctionnement, statut, annee])
 
   return { resultat, erreur }
 }
@@ -291,15 +292,17 @@ function TableDesValeurs({ resultat, onExporter }: { resultat: OptimisationRemun
 
 interface RemunerationOptimizerProps {
   session: SessionState
+  /** Année optimisée : celle qui est affichée. */
+  annee: number
   options: ComparaisonOptions
   activityName: string
   statutInitial: StatutSociete
   onAppliquer: (remunerationNette: number) => void
 }
 
-export function RemunerationOptimizer({ session, options, activityName, statutInitial, onAppliquer }: RemunerationOptimizerProps) {
+export function RemunerationOptimizer({ session, annee, options, activityName, statutInitial, onAppliquer }: RemunerationOptimizerProps) {
   const [statut, setStatut] = useState<StatutSociete>(statutInitial)
-  const { resultat, erreur } = useOptimisation(session, options, statut)
+  const { resultat, erreur } = useOptimisation(session, options, statut, annee)
   const aJour = resultat?.statut === statut
 
   return (
@@ -320,7 +323,7 @@ export function RemunerationOptimizer({ session, options, activityName, statutIn
         <>
           <Resume resultat={resultat} remunerationActuelle={options.remunerationNette} onAppliquer={onAppliquer} />
           <Courbe resultat={resultat} remunerationActuelle={options.remunerationNette} />
-          <TableDesValeurs resultat={resultat} onExporter={() => exporterCourbeCsv(session, resultat, activityName)} />
+          <TableDesValeurs resultat={resultat} onExporter={() => exporterCourbeCsv(vueDeLAnnee(session, annee), resultat, activityName)} />
         </>
       ) : null}
     </section>

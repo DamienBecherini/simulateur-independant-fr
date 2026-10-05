@@ -10,7 +10,7 @@ const session: SessionState = {
   name: "Scénario 2025",
   entities: [{ id: "p1", type: "person", name: "Alice", fiscalParts: 1, avatar: { type: "initials", value: "A", color: "#3b82f6" }, locked: false }],
   relationships: [],
-  monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
+  annees: [{ annee: 2026, monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: [] })) }]
 }
 
 const api = {
@@ -38,7 +38,7 @@ describe("createNewSlotFromSession", () => {
       name: "Scénario 2025",
       entities: session.entities,
       relationships: session.relationships,
-      monthlyData: session.monthlyData,
+      annees: session.annees,
       lastModified: MAINTENANT
     })
   })
@@ -49,7 +49,7 @@ describe("createNewSlotFromSession", () => {
 })
 
 describe("updateSlotWithSession", () => {
-  const slot: SaveSlot = { id: "slot-1", name: "Ancien nom", entities: [], relationships: [], monthlyData: [], lastModified: 1 }
+  const slot: SaveSlot = { id: "slot-1", name: "Ancien nom", entities: [], relationships: [], annees: [], lastModified: 1 }
 
   it("remplace le contenu du slot en conservant son identifiant", () => {
     expect(updateSlotWithSession(slot, session)).toEqual({
@@ -57,7 +57,7 @@ describe("updateSlotWithSession", () => {
       name: "Scénario 2025",
       entities: session.entities,
       relationships: session.relationships,
-      monthlyData: session.monthlyData,
+      annees: session.annees,
       lastModified: MAINTENANT
     })
   })
@@ -72,7 +72,7 @@ describe("updateSlotWithSession", () => {
 
 describe("pont vers l'API Electron", () => {
   it("transmet l'état à exporter", () => {
-    const etat = { entities: session.entities, relationships: session.relationships, monthlyData: session.monthlyData }
+    const etat = { entities: session.entities, relationships: session.relationships, annees: session.annees }
 
     exportState(etat)
 
@@ -91,7 +91,7 @@ describe("pont vers l'API Electron", () => {
   })
 
   describe("importState", () => {
-    const data: ExportableState = { entities: session.entities, relationships: [], monthlyData: session.monthlyData }
+    const data: ExportableState = { entities: session.entities, relationships: [], annees: session.annees }
     const report: SanitizationReport = { entitiesRemoved: 0, relationshipsRemoved: 1, flowsRemoved: 2, migrationNotes: [] }
 
     it("renvoie les données et le rapport de nettoyage", async () => {

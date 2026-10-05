@@ -11,14 +11,14 @@ import { ExportDialog } from "./ExportDialog"
 /** La fenêtre telle que l'application l'affiche : ouverte, elle se referme d'elle-même après un export. */
 function FenetreExporter({ session, simulationReport }: { session: SessionState; simulationReport: SimulationReport | null }) {
   const [ouverte, setOuverte] = useState(true)
-  return <ExportDialog isOpen={ouverte} onClose={() => setOuverte(false)} session={session} simulationReport={simulationReport} onExportJson={vi.fn()} />
+  return <ExportDialog isOpen={ouverte} onClose={() => setOuverte(false)} session={session} annee={2026} simulationReport={simulationReport} onExportJson={vi.fn()} />
 }
 
 describe("ExportDialog", () => {
   it("propose l'export complet en JSON, puis se referme", async () => {
     const onExportJson = vi.fn()
     const onClose = vi.fn()
-    render(<ExportDialog isOpen onClose={onClose} session={emptySession()} simulationReport={null} onExportJson={onExportJson} />)
+    render(<ExportDialog isOpen onClose={onClose} session={emptySession()} annee={2026} simulationReport={null} onExportJson={onExportJson} />)
 
     expect(screen.getByRole("dialog", { name: "Exporter" })).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: /Simulation complète \(JSON\)/ }))
@@ -51,7 +51,7 @@ describe("ExportDialog", () => {
   })
 
   it("ne s'affiche pas fermée", () => {
-    render(<ExportDialog isOpen={false} onClose={vi.fn()} session={emptySession()} simulationReport={null} onExportJson={vi.fn()} />)
+    render(<ExportDialog isOpen={false} onClose={vi.fn()} session={emptySession()} annee={2026} simulationReport={null} onExportJson={vi.fn()} />)
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 })

@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
-import type { SaveSlot, SimulationReport } from "@/types"
+import type { SaveSlot, SimulationPluriannuelle } from "@/types"
+import { anneeExistante, donneesDeLAnnee, remplacerGrille, vueDeLAnnee } from "@/backend/logic/annees"
 import { ResultsPanel } from "./components/ResultsPanel"
 import { ComparatorPanel } from "./components/ComparatorPanel"
 import { FlowLegend } from "./components/FlowLegend"
@@ -23,26 +24,34 @@ function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [isExportOpen, setExportOpen] = useState(false)
   const { zoomIn, zoomOut, canZoomIn, canZoomOut } = useZoom()
-  const [simulationReport, setSimulationReport] = useState<SimulationReport | null>(null)
+  const [simulation, setSimulation] = useState<SimulationPluriannuelle | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
 
   // --- MODIFICATION : Récupération des nouveaux états et fonctions du hook ---
   // On récupère tout ce dont on a besoin depuis le "cerveau" de l'application.
   const { currentSession, setCurrentSession, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
 
-  // La simulation est recalculée automatiquement, peu après chaque modification de la session.
+  // L'année affichée : celle de la grille, des résultats, du comparateur et des exports. Elle n'est pas enregistrée
+  // dans la session (voir l'ADR 008) ; par défaut, ou si elle disparaît, c'est la plus récente.
+  const annee = anneeExistante(currentSession, null)
+  const vue = useMemo(() => vueDeLAnnee(currentSession, annee), [currentSession, annee])
+  const resultatDeLAnnee = simulation?.annees.find(a => a.annee === annee)
+  const simulationReport = resultatDeLAnnee?.report ?? null
+  const erreurDeLAnnee = simulationError ?? resultatDeLAnnee?.erreur ?? null
+
+  // La simulation de toutes les années est recalculée automatiquement, peu après chaque modification de la session.
   useEffect(() => {
     let cancelled = false
     const timer = setTimeout(async () => {
       try {
-        const report = await window.api.runMetaSimulation(currentSession)
+        const resultat = await window.api.simulerLesAnnees(currentSession)
         if (cancelled) return
-        setSimulationReport(report)
+        setSimulation(resultat)
         setSimulationError(null)
       } catch (e) {
         if (cancelled) return
         setSimulationError(e instanceof Error ? e.message : "La simulation a échoué.")
-        setSimulationReport(null)
+        setSimulation(null)
       }
     }, 300)
     return () => {
@@ -55,14 +64,14 @@ function App() {
     const exportPayload = {
       entities: currentSession.entities,
       relationships: currentSession.relationships,
-      monthlyData: currentSession.monthlyData,
-      simulationReport,
+      annees: currentSession.annees,
+      simulation,
       simulationError,
       exportedAt: new Date().toISOString()
     }
 
     await window.api.exportState(exportPayload)
-  }, [currentSession, simulationReport, simulationError])
+  }, [currentSession, simulation, simulationError])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -111,7 +120,8 @@ function App() {
 
   const flowTypeToNumberMap = useMemo(() => {
     const types = new Set<string>()
-    currentSession.monthlyData.forEach(month => {
+    // La légende numérote les types de flux de la grille affichée, celle de l'année choisie.
+    vue.monthlyData.forEach(month => {
       month.flows.forEach(flow => types.add(flow.type))
     })
     const sortedTypes = Array.from(types).sort((a, b) => a.localeCompare(b))
@@ -121,7 +131,7 @@ function App() {
       map.set(type, index + 1)
     })
     return map
-  }, [currentSession.monthlyData])
+  }, [vue.monthlyData])
 
   return (
     <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col print:min-h-0 print:max-w-none print:p-0">
@@ -176,12 +186,13 @@ function App() {
 
         <MonthlyGrid
           entities={currentSession.entities}
-          monthlyData={currentSession.monthlyData}
+          monthlyData={vue.monthlyData}
           setMonthlyData={newMonthlyDataOrUpdater => {
             setCurrentSession(prev => {
-              const monthlyData = typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(prev.monthlyData) : newMonthlyDataOrUpdater
-              // Données inchangées : on renvoie la session telle quelle, sans créer d'entrée d'historique.
-              return monthlyData === prev.monthlyData ? prev : { ...prev, monthlyData }
+              const actuelle = donneesDeLAnnee(prev, annee).monthlyData
+              const monthlyData = typeof newMonthlyDataOrUpdater === "function" ? newMonthlyDataOrUpdater(actuelle) : newMonthlyDataOrUpdater
+              // Données inchangées : la session est renvoyée telle quelle, sans créer d'entrée d'historique.
+              return remplacerGrille(prev, annee, monthlyData)
             })
           }}
           preferences={userPreferences}
@@ -190,9 +201,9 @@ function App() {
 
         <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
 
-        <ResultsPanel report={simulationReport} error={simulationError} />
+        <ResultsPanel report={simulationReport} error={erreurDeLAnnee} />
 
-        <ComparatorPanel session={currentSession} />
+        <ComparatorPanel session={currentSession} annee={annee} />
       </main>
 
       <Footer />
@@ -202,7 +213,7 @@ function App() {
       {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
       {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
           le panneau de configuration ait tout le contexte nécessaire. */}
-      <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} simulationReport={simulationReport} onExportJson={handleExportAll} />
+      <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} onExportJson={handleExportAll} />
       <SettingsSheet
         isOpen={isSettingsOpen}
         onOpenChange={setSettingsOpen}

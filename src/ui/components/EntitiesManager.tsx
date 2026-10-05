@@ -10,6 +10,7 @@ import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-ki
 import { EntityItem } from "./EntityItem"
 import { SelectEntityTypeModal, BusinessEntityType } from "./SelectEntityTypeModal"
 import { sanitizeFlowsAfterRelationshipChange } from "@/lib/business-logic"
+import { nombreDeFlux, transformerLesGrilles } from "@/backend/logic/annees"
 import { toast } from "sonner"
 import { useTriAccessible } from "../hooks/useTriAccessible"
 
@@ -18,7 +19,6 @@ interface EntitiesManagerProps {
   setSession: (session: SessionState) => void
 }
 
-const countFlows = (monthlyData: SessionState["monthlyData"]) => monthlyData.reduce((count, month) => count + month.flows.length, 0)
 
 function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
   const { entities, relationships } = session
@@ -30,16 +30,16 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
   /**
    * Applique une modification des entités ou des relations en une seule étape d'historique.
    * Quand les relations changent, les flux qui n'ont plus de bénéficiaire (rémunération sans dirigeant,
-   * dividendes sans associé) sont retirés, et l'utilisateur en est averti.
+   * dividendes sans associé) sont retirés de toutes les années, et l'utilisateur en est averti.
    */
-  const applyChange = (changes: Partial<Pick<SessionState, "entities" | "relationships" | "monthlyData">>) => {
+  const applyChange = (changes: Partial<Pick<SessionState, "entities" | "relationships" | "annees">>) => {
     const next = { ...session, ...changes }
-    const monthlyData = changes.relationships ? sanitizeFlowsAfterRelationshipChange(next) : next.monthlyData
-    const removedFlows = countFlows(next.monthlyData) - countFlows(monthlyData)
+    const nettoyee = changes.relationships ? transformerLesGrilles(next, monthlyData => sanitizeFlowsAfterRelationshipChange({ relationships: next.relationships, monthlyData })) : next
+    const removedFlows = nombreDeFlux(next.annees) - nombreDeFlux(nettoyee.annees)
     if (removedFlows > 0) {
       toast.info(`${removedFlows} flux ${removedFlows > 1 ? "supprimés" : "supprimé"} : ${removedFlows > 1 ? "ils n'avaient" : "il n'avait"} plus de bénéficiaire. Ctrl+Z pour annuler.`)
     }
-    setSession({ ...next, monthlyData })
+    setSession(nettoyee)
   }
 
   const addEntity = (entity: Entity) => applyChange({ entities: [...entities, entity] })
@@ -63,7 +63,8 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
     applyChange({
       entities: entities.filter(e => e.id !== idToDelete),
       relationships: relationships.filter(rel => rel.fromId !== idToDelete && rel.toId !== idToDelete),
-      monthlyData: session.monthlyData.map(month => ({ ...month, flows: month.flows.filter(flow => flow.entityId !== idToDelete) }))
+      // Ses flux disparaissent de toutes les années.
+      annees: transformerLesGrilles(session, grille => grille.map(month => ({ ...month, flows: month.flows.filter(flow => flow.entityId !== idToDelete) }))).annees
     })
   }
 

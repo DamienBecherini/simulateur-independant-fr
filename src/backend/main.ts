@@ -3,9 +3,7 @@
 import { app, BrowserWindow, dialog } from "electron"
 import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions, StatutSociete, FormatFichierTexte } from "@/types.js"
 import { SessionStateSchema } from "@/types.js"
-import { runMetaSimulation } from "./logic/simulation-engine.js"
-import { comparerStatuts } from "./logic/comparateur.js"
-import { optimiserRemuneration } from "./logic/optimisation-remuneration.js"
+import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./logic/simulation-pluriannuelle.js"
 import { ipcMainHandle, validateEventFrame } from "./util.js"
 import { isDev } from "./isDev.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
@@ -49,14 +47,9 @@ const sessionStatePath = path.join(app.getPath("userData"), "sessionState.json")
 const slotsFilePath = path.join(app.getPath("userData"), "simulationSlots.json")
 const userPreferencesPath = path.join(app.getPath("userData"), "userPreferences.json")
 
-// --- MISE À JOUR DE LA VALEUR PAR DÉFAUT ---
+/** Session vierge : une année, la dernière dont les règles sont connues, sans acteur ni flux. */
 function getDefaultSessionState(): SessionState {
-  return {
-    name: "Nouvelle Simulation",
-    entities: [],
-    relationships: [], // <-- MODIFIÉ
-    monthlyData: Array.from({ length: 12 }, (_, i) => ({ month: i, flows: [] }))
-  }
+  return SessionStateSchema.parse({})
 }
 
 /** Affiche une boîte de dialogue d'information ; si elle ne peut pas s'afficher, l'échec est journalisé. */
@@ -299,10 +292,10 @@ app.on("ready", () => {
     }
   })
 
-  ipcMainHandle("runMetaSimulation", async (session: SessionState) => runMetaSimulation(validatedSession(session, "runMetaSimulation")))
+  ipcMainHandle("simulerLesAnnees", async (session: SessionState) => simulerLesAnnees(validatedSession(session, "simulerLesAnnees")))
 
-  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions) => comparerStatuts(validatedSession(session, "compareStatuts"), options))
-  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete) => optimiserRemuneration(validatedSession(session, "optimiserRemuneration"), options, statut === "EURL" ? "EURL" : "SASU"))
+  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions, annee: number) => comparerStatutsDeLAnnee(validatedSession(session, "compareStatuts"), options, annee))
+  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) => optimiserRemunerationDeLAnnee(validatedSession(session, "optimiserRemuneration"), options, statut === "EURL" ? "EURL" : "SASU", annee))
 
   ipcMainHandle("getSaveSlots", async () => await readSlotsFromFile())
 
@@ -414,7 +407,7 @@ app.on("ready", () => {
           data: {
             entities: safeState.entities,
             relationships: safeState.relationships,
-            monthlyData: safeState.monthlyData
+            annees: safeState.annees
           },
           report: report // Le frontend saura quoi faire de cette information
         }

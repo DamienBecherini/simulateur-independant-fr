@@ -1,7 +1,7 @@
 // src/lib/export-csv.test.ts
 
 import { describe, expect, it } from "vitest"
-import type { SessionState } from "@/types"
+import type { SimulationAnnuelle } from "@/types"
 import { nomDuFoyer } from "./export-commun"
 import { csvComparaison, csvCourbeRemuneration, csvGrilleMensuelle, csvResultats, reglagesDuComparateur } from "./export-csv"
 import { comparaisonExemple, optimisationExemple, optionsExemple, rapportExemple, sessionExemple } from "./testing/exports-fixtures"
@@ -29,7 +29,7 @@ describe("csvGrilleMensuelle", () => {
   })
 
   it("se limite à l'en-tête pour une grille vide", () => {
-    const session: SessionState = { ...sessionExemple(), monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: [] })) }
+    const session: SimulationAnnuelle = { ...sessionExemple(), monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: [] })) }
     expect(lignes(csvGrilleMensuelle(session))).toHaveLength(1)
   })
 })

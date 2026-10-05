@@ -5,6 +5,7 @@ import "@testing-library/jest-dom/vitest"
 import { cleanup } from "@testing-library/react"
 import { afterEach, beforeEach, vi } from "vitest"
 import type { EventPayloadMapping } from "@/globals"
+import type { SessionState } from "@/types"
 import { emptyReport, emptySession } from "./fixtures"
 
 /**
@@ -16,7 +17,7 @@ function createFakeApi(): EventPayloadMapping {
     getCurrentSession: vi.fn(async () => emptySession()),
     saveCurrentSession: vi.fn(async () => {}),
     saveCurrentSessionSync: vi.fn(),
-    runMetaSimulation: vi.fn(async () => emptyReport()),
+    simulerLesAnnees: vi.fn(async (session: SessionState) => ({ annees: session.annees.map(({ annee }) => ({ annee, report: { ...emptyReport(), annee }, erreur: null })) })),
     compareStatuts: vi.fn(async () => ({ scenarios: [], meilleur: null, couples: [], warnings: [] })),
     optimiserRemuneration: vi.fn(async (_session, _options, statut) => ({ statut, remunerationMaximale: 0, points: [], meilleur: null, meilleurAvecRetraite: null, warnings: [] })),
     getSaveSlots: vi.fn(async () => []),

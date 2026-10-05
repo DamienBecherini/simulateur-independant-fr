@@ -24,7 +24,7 @@ const options: ComparaisonOptions = { activityId: "micro-atelier", remunerationN
 const session = { ...emptySession(), entities: [makePerson(), makeMicro()] }
 
 function afficher(onAppliquer = vi.fn()) {
-  render(<RemunerationOptimizer session={session} options={options} activityName="Mon atelier" statutInitial="SASU" onAppliquer={onAppliquer} />)
+  render(<RemunerationOptimizer annee={2026} session={session} options={options} activityName="Mon atelier" statutInitial="SASU" onAppliquer={onAppliquer} />)
   return onAppliquer
 }
 
@@ -70,7 +70,7 @@ describe("RemunerationOptimizer", () => {
     await userEvent.click(screen.getByRole("button", { name: "EURL" }))
 
     expect(screen.getByRole("button", { name: "EURL" })).toHaveAttribute("aria-pressed", "true")
-    await vi.waitFor(() => expect(window.api.optimiserRemuneration).toHaveBeenLastCalledWith(session, expect.objectContaining({ activityId: "micro-atelier" }), "EURL"))
+    await vi.waitFor(() => expect(window.api.optimiserRemuneration).toHaveBeenLastCalledWith(session, expect.objectContaining({ activityId: "micro-atelier" }), "EURL", 2026))
   })
 
   it("affiche l'avertissement quand il n'y a rien à optimiser", async () => {
@@ -128,19 +128,19 @@ describe("RemunerationOptimizer", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "Exporter en CSV toutes les valeurs de la courbe" }))
 
-    expect(window.api.saveTextFile).toHaveBeenCalledWith({ defaultName: "nouvelle-simulation-remuneration-mon-atelier-sasu.csv", content: expect.stringContaining("Statut;Rémunération nette;Dividendes;Net du foyer"), format: "csv" })
+    expect(window.api.saveTextFile).toHaveBeenCalledWith({ defaultName: "nouvelle-simulation-remuneration-mon-atelier-sasu-2026.csv", content: expect.stringContaining("Statut;Rémunération nette;Dividendes;Net du foyer"), format: "csv" })
     const { content } = vi.mocked(window.api.saveTextFile).mock.calls[0][0]
     expect(content.split("\r\n").filter(Boolean)).toHaveLength(5)
   })
 
   it("dans le comparateur, la rémunération appliquée est celle des colonnes SASU et EURL", async () => {
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
-    render(<ComparatorPanel session={session} />)
+    render(<ComparatorPanel annee={2026} session={session} />)
 
     const retraite = (await screen.findByText(/^Meilleur net avec 4 trimestres/)).closest("li")!
     await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer au comparateur" }))
 
     expect(screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")).toHaveValue(5700)
-    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 5700, distribuerToutLeBenefice: true })))
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 5700, distribuerToutLeBenefice: true }), 2026))
   })
 })

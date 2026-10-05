@@ -2,7 +2,7 @@
 // Exports CSV pour un tableur : la grille mensuelle, les résultats de la simulation, le tableau du comparateur
 // et les points de la courbe rémunération / dividendes. Les montants sont écrits au centime, sans symbole €.
 
-import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SessionState, SimulationReport } from "@/types"
+import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationReport } from "@/types"
 import { documentCsv, montant, type CelluleCsv } from "./csv"
 import { fluxParActeur, MOIS, natureActeur, nomDeLActeur, nomDuFoyer } from "./export-commun"
 import { posteFraisLabels, statutsFrais } from "./comparateur-options"
@@ -15,7 +15,7 @@ const ouiNon = (valeur: boolean) => (valeur ? "oui" : "non")
 // --- Grille mensuelle ---
 
 /** Une ligne par acteur et par type de flux : les douze mois, puis le total de l'année. */
-export function csvGrilleMensuelle(session: SessionState): string {
+export function csvGrilleMensuelle(session: SimulationAnnuelle): string {
   const entete: Ligne = ["Acteur", "Nature", "Flux", "Sens", ...MOIS, "Total"]
   const lignes = fluxParActeur(session).flatMap(({ entity, lignes }) => lignes.map((l): Ligne => [entity.name, natureActeur(entity), l.libelle, l.sortie ? "Sortie" : "Entrée", ...l.mois.map(montant), montant(l.total)]))
   return documentCsv([entete, ...lignes])
@@ -43,7 +43,7 @@ function lignesDuBilan(report: SimulationReport): Ligne[] {
   return [["Bilan", "Montant"], ["Année des règles fiscales", report.annee], ...indicateurs.map(([libelle, valeur]): Ligne => [libelle, montant(valeur)])]
 }
 
-function lignesDesActivites(session: SessionState, report: SimulationReport): Ligne[] {
+function lignesDesActivites(session: SimulationAnnuelle, report: SimulationReport): Ligne[] {
   const entete: Ligne = ["Activité", "Statut", "Chiffre d'affaires", "Charges", "Cotisations sociales", "Impôt sur les sociétés", "Revenu versé aux personnes", "Résultat conservé", "Bénéficiaires"]
   const lignes = report.activities.map((a): Ligne => [a.name, a.statut, montant(a.chiffreAffaires), montant(a.charges), montant(a.cotisationsSociales), montant(a.impotSocietes), montant(a.revenuVerse), montant(a.resultatConserve), a.beneficiaireIds.map(id => nomDeLActeur(session, id)).join(", ")])
   return [entete, ...lignes]
@@ -57,14 +57,14 @@ function lignesDesPersonnes(report: SimulationReport): Ligne[] {
 
 const optionsDividendes: Record<NonNullable<FoyerFiscalResult["optionDividendes"]>, string> = { pfu: "Prélèvement forfaitaire unique", bareme: "Barème progressif" }
 
-function lignesDesFoyers(session: SessionState, report: SimulationReport): Ligne[] {
+function lignesDesFoyers(session: SimulationAnnuelle, report: SimulationReport): Ligne[] {
   const entete: Ligne = ["Foyer fiscal", "Parts", "Revenus encaissés", "Revenu imposable", "Impôt sur le revenu", "Prélèvements sociaux", "Imposition des dividendes", "Net après impôts", "Revenus avant prélèvements", "Total des prélèvements", "Résultat conservé", "Dépenses"]
   const lignes = report.foyers.map((f): Ligne => [nomDuFoyer(session, f), f.totalParts, montant(f.revenusEncaisses), montant(f.revenuImposableGlobal), montant(f.impotSurLeRevenu), montant(f.prelevementsSociaux), f.optionDividendes ? optionsDividendes[f.optionDividendes] : "", montant(f.netApresImpots), montant(f.revenusAvantPrelevements), montant(f.totalPrelevements), montant(f.resultatConserve), montant(f.depenses)])
   return [entete, ...lignes]
 }
 
 /** Quatre tableaux, séparés par une ligne vide : bilan, activités, personnes et foyers fiscaux. */
-export function csvResultats(session: SessionState, report: SimulationReport): string {
+export function csvResultats(session: SimulationAnnuelle, report: SimulationReport): string {
   return documentCsv([...lignesDuBilan(report), [], ...lignesDesActivites(session, report), [], ...lignesDesPersonnes(report), [], ...lignesDesFoyers(session, report)])
 }
 

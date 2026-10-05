@@ -1,7 +1,7 @@
 // src/ui/testing/fixtures.ts
 // Données de départ des tests de composants : entités, flux et session, avec des identifiants stables.
 
-import type { Company, FinancialFlow, MicroEntreprise, Person, SessionState, SimulationReport } from "@/types"
+import { grilleVide, type Company, type FinancialFlow, type MicroEntreprise, type Person, type SessionState, type SimulationReport } from "@/types"
 
 export function makePerson(overrides: Partial<Person> = {}): Person {
   return {
@@ -52,13 +52,13 @@ export function makeFlow(overrides: Partial<FinancialFlow> = {}): FinancialFlow 
   }
 }
 
-/** Session vide : douze mois sans flux. */
+/** Session vide : une année, 2026, de douze mois sans flux. */
 export function emptySession(): SessionState {
   return {
     name: "Nouvelle Simulation",
     entities: [],
     relationships: [],
-    monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
+    annees: [{ annee: 2026, monthlyData: grilleVide() }]
   }
 }
 
