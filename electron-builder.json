@@ -29,7 +29,9 @@
         ]
       }
     ],
-    "category": "public.app-category.finance"
+    "category": "public.app-category.finance",
+    "identity": "-",
+    "hardenedRuntime": false
   },
   "linux": {
     "target": [
