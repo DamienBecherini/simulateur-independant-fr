@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
   issues:
-    types: [opened, edited, closed, labeled]
+    types: [opened, edited, closed, reopened, labeled, unlabeled]
 
 # Un seul déploiement à la fois ; celui en cours va jusqu'au bout.
 concurrency:
@@ -54,11 +54,18 @@ jobs:
           node scripts/retours/agreger.mjs "$RUNNER_TEMP/retours-bruts.json" public/retours.json
           cat public/retours.json
 
+      # Un retour d'utilisateur ne change pas le code, déjà vérifié au dernier envoi sur main : on recompile seulement.
       - name: Installer Chromium
+        if: github.event_name != 'issues'
         run: npx playwright install --with-deps --only-shell chromium
 
       - name: Compiler la démo et la tester dans le navigateur
+        if: github.event_name != 'issues'
         run: npm run test:web
+
+      - name: Compiler la démo (retour d'utilisateur)
+        if: github.event_name == 'issues'
+        run: npm run build:web
 
       - name: Préparer la publication
         uses: actions/upload-pages-artifact@v3
