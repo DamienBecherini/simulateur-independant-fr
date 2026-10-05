@@ -2,8 +2,9 @@
 
 import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { cn } from "@/lib/utils"
-import type { ReactNode } from "react"
-import { useAffichageResume } from "../hooks/useAffichage"
+import { Fragment, type ReactNode } from "react"
+import { useAffichagePanneaux, useAffichageResume } from "../hooks/useAffichage"
+import { BoutonDActeur } from "./BoutonDActeur"
 import { Depliable } from "./Depliable"
 import { ReplieEnResume } from "./ReplieEnResume"
 
@@ -118,10 +119,11 @@ function Row({ label, value, hint, strong = false, pastille }: { label: string; 
   )
 }
 
-function Card({ title, subtitle, warnings, children }: { title: string; subtitle: string; warnings: string[]; children: ReactNode }) {
+function Card({ title, subtitle, warnings, className, enTeteMasque = false, children }: { title: ReactNode; subtitle: string; warnings: string[]; className?: string; enTeteMasque?: boolean; children: ReactNode }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-      <header className="mb-2 border-b border-slate-100 pb-2 dark:border-slate-800">
+    <article className={cn("rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80", className)}>
+      {/* Masqué à l'écran quand le panneau de l'acteur porte déjà son nom et son statut ; lu par les lecteurs d'écran. */}
+      <header className={enTeteMasque ? "sr-only" : "mb-2 border-b border-slate-100 pb-2 dark:border-slate-800"}>
         <p className="font-semibold text-slate-900 dark:text-slate-50">{title}</p>
         <p className="text-xs text-slate-600 dark:text-slate-400">{subtitle}</p>
       </header>
@@ -195,9 +197,24 @@ function FoyerRates({ foyer }: { foyer: FoyerFiscalResult }) {
   )
 }
 
-function FoyerCard({ foyer, persons, showRates }: { foyer: FoyerFiscalResult; persons: PersonResult[]; showRates: boolean }) {
+/** Membres d'un foyer, dans l'ordre du foyer. */
+function membresDuFoyer(foyer: FoyerFiscalResult, persons: PersonResult[]): PersonResult[] {
+  return foyer.personIds.map(id => persons.find(p => p.entityId === id)).filter((p): p is PersonResult => p !== undefined)
+}
+
+/** Affichage « Panneaux » : le nom de chaque membre du foyer ouvre son panneau. */
+function NomsQuiOuvrent({ members }: { members: PersonResult[] }) {
+  return members.map((person, index) => (
+    <Fragment key={person.entityId}>
+      {index > 0 ? ", " : null}
+      <BoutonDActeur id={person.entityId}>{person.name}</BoutonDActeur>
+    </Fragment>
+  ))
+}
+
+function FoyerCard({ foyer, persons, showRates, nomsQuiOuvrent = false }: { foyer: FoyerFiscalResult; persons: PersonResult[]; showRates: boolean; nomsQuiOuvrent?: boolean }) {
   const resume = useAffichageResume()
-  const members = foyer.personIds.map(id => persons.find(p => p.entityId === id)).filter((p): p is PersonResult => p !== undefined)
+  const members = membresDuFoyer(foyer, persons)
   const parts = foyer.totalParts.toLocaleString("fr-FR")
 
   const revenus = (
@@ -220,7 +237,7 @@ function FoyerCard({ foyer, persons, showRates }: { foyer: FoyerFiscalResult; pe
   )
 
   return (
-    <Card title={members.map(p => p.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
+    <Card title={nomsQuiOuvrent ? <NomsQuiOuvrent members={members} /> : members.map(p => p.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
       {resume ? (
         // Affichage « Résumé » : l'impôt et le revenu fiscal de référence d'abord. Le net du foyer n'est pas répété :
         // il est dans le bilan, et dans le taux du foyer quand il y en a plusieurs.
@@ -287,13 +304,13 @@ function DeplacementsRow({ deplacements }: { deplacements: NonNullable<ActivityR
   return <Row label="dont déplacements professionnels" value={formatMoney(deplacements.montant)} hint={deplacements.deductible ? `${kilometres}, déductibles` : `${kilometres}, non déductibles`} />
 }
 
-function ActivityCard({ activity }: { activity: ActivityResult }) {
+function ActivityCard({ activity, className, enTeteMasque }: { activity: ActivityResult; className?: string; enTeteMasque?: boolean }) {
   const resume = useAffichageResume()
   const verse = <Row label="Versé avant impôt sur le revenu" value={formatMoney(activity.revenuVerse)} hint={shareOfRevenue(activity)} strong />
   const versementLiberatoire = activity.versementLiberatoire ? <VersementLiberatoireNote info={activity.versementLiberatoire} /> : null
 
   return (
-    <Card title={activity.name} subtitle={activity.statut} warnings={activity.warnings}>
+    <Card title={activity.name} subtitle={activity.statut} warnings={activity.warnings} className={className} enTeteMasque={enTeteMasque}>
       {resume ? (
         // Affichage « Résumé » : ce que l'activité verse d'abord, le calcul replié.
         <>
@@ -371,8 +388,35 @@ function NoteDesAssocies({ sharedCompanies }: { sharedCompanies: ActivityResult[
   )
 }
 
-/** Affichage « Résumé » : les cartes des foyers et des activités, réduites à leur chiffre clé, dans une seule grille. */
+/**
+ * Affichage « Panneaux » : chaque activité en une ligne, son nom ouvre son panneau, qui porte sa carte de résultats.
+ * Sur papier, les cartes reviennent à la place de cette liste.
+ */
+function ListeDesActivites({ activities }: { activities: ActivityResult[] }) {
+  if (activities.length === 0) return null
+  return (
+    <ul aria-label="Par activité" className="flex flex-wrap gap-x-6 gap-y-1 text-sm print:hidden">
+      {activities.map(activity => (
+        <li key={activity.entityId} className="flex flex-wrap items-baseline gap-x-2">
+          <BoutonDActeur id={activity.entityId} className="font-semibold text-slate-900 dark:text-slate-50">
+            {activity.name}
+          </BoutonDActeur>
+          <span className="text-slate-600 dark:text-slate-400">
+            verse <span className="font-medium tabular-nums text-slate-800 dark:text-slate-100">{formatMoney(activity.revenuVerse)}</span>
+            {shareOfRevenue(activity) ? ` (${shareOfRevenue(activity)})` : ""}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
+ * Affichage « Résumé » : les cartes des foyers et des activités, réduites à leur chiffre clé, dans une seule grille.
+ * Affichage « Panneaux » : les cartes des activités passent dans leur panneau, une liste courte les remplace à l'écran.
+ */
 function CartesDuResume({ report, sharedCompanies }: { report: SimulationReport; sharedCompanies: ActivityResult[] }) {
+  const panneaux = useAffichagePanneaux()
   if (report.foyers.length + report.activities.length === 0) return null
   return (
     <div className="space-y-3">
@@ -380,14 +424,24 @@ function CartesDuResume({ report, sharedCompanies }: { report: SimulationReport;
       <NoteDesAssocies sharedCompanies={sharedCompanies} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {report.foyers.map(foyer => (
-          <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} />
+          <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nomsQuiOuvrent={panneaux} />
         ))}
         {report.activities.map(activity => (
-          <ActivityCard key={activity.entityId} activity={activity} />
+          <ActivityCard key={activity.entityId} activity={activity} className={panneaux ? "hidden print:block" : undefined} />
         ))}
       </div>
+      {panneaux ? <ListeDesActivites activities={report.activities} /> : null}
     </div>
   )
+}
+
+/** Carte de résultats d'un acteur, pour son panneau : celle de l'activité, ou celle du foyer de la personne. */
+export function CarteDeLActeur({ report, entityId }: { report: SimulationReport | null; entityId: string }) {
+  const activity = report?.activities.find(a => a.entityId === entityId)
+  if (activity) return <ActivityCard activity={activity} enTeteMasque />
+  const foyer = report?.foyers.find(f => f.personIds.includes(entityId))
+  if (report && foyer) return <FoyerCard foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} />
+  return <p className="text-sm text-slate-600 dark:text-slate-400">Pas encore de résultats pour cet acteur.</p>
 }
 
 /** Affichage classique : les cartes des foyers, puis celles des activités. */

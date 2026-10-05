@@ -11,7 +11,7 @@ import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 
 // Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
-export const COULEURS_DES_ACTEURS = [
+const COULEURS_DES_ACTEURS = [
   { color: "#3b82f6", name: "Bleu" },
   { color: "#b91c1c", name: "Rouge" },
   { color: "#16a34a", name: "Vert" },

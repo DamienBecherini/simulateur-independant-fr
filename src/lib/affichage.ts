@@ -21,7 +21,7 @@ interface DescriptionDAffichage {
 export const AFFICHAGES: readonly DescriptionDAffichage[] = [
   { valeur: "classique", libelle: "Classique", description: "La page d'origine, tout affiché.", disponible: true },
   { valeur: "resume", libelle: "Résumé", description: "Un résumé toujours visible en haut, le détail replié.", disponible: true },
-  { valeur: "panneaux", libelle: "Panneaux", description: "Le résumé, et les réglages de chaque acteur dans un panneau latéral.", disponible: false },
+  { valeur: "panneaux", libelle: "Panneaux", description: "Le résumé, et les réglages de chaque acteur dans un panneau latéral.", disponible: true },
   { valeur: "vues", libelle: "Trois vues", description: "Le résumé, et trois vues : ma situation, mes résultats, comparer.", disponible: false }
 ]
 
