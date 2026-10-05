@@ -64,7 +64,7 @@ describe("déplacements professionnels d'une activité", () => {
   })
 
   it("au comparateur : chaque colonne convertit les kilomètres comme une charge, déductible sauf en micro-entreprise", () => {
-    const options: ComparaisonOptions = { activityId: "a", remunerationNette: 10000, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+    const options: ComparaisonOptions = { activityId: "a", remunerationNette: 10000, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }
     const comparer = (activite: MicroEntreprise, flux: Flux[]) => comparerStatuts(session([personne("alice"), activite], [relation("alice", "a", "Titulaire")], [["a", "ca_micro_services_bnc", 50000], ...flux]), options, reglesDeTest)
 
     const avec = comparer(avecDeplacements(micro("a")), [])

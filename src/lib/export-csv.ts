@@ -5,7 +5,7 @@
 import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationReport } from "@/types"
 import { documentCsv, montant, type CelluleCsv } from "./csv"
 import { fluxParActeur, MOIS, natureActeur, nomDeLActeur, nomDuFoyer } from "./export-commun"
-import { posteFraisLabels, statutsFrais } from "./comparateur-options"
+import { libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
 
 type Ligne = CelluleCsv[]
@@ -105,8 +105,9 @@ export function reglagesDuComparateur(options: ComparaisonOptions, nomActivite: 
   const totalFrais = frais ? statutsFrais.map((statut): [string, CelluleCsv] => [`Frais de fonctionnement annuels, ${libellesFrais[statut]}`, montant((Object.keys(posteFraisLabels) as (keyof typeof posteFraisLabels)[]).reduce((somme, poste) => somme + frais[statut][poste], 0))]) : []
   return [
     ["Activité comparée", nomActivite],
-    ["Rémunération nette annuelle (SASU, EURL)", montant(options.remunerationNette)],
-    ["Verser tout le bénéfice disponible en dividendes", ouiNon(options.distribuerToutLeBenefice)],
+    ["Bénéfice de la société (SASU, EURL)", libellesRepartition[options.repartition.mode]],
+    ["Rémunération nette annuelle (SASU, EURL)", options.repartition.mode === "remuneration" ? "la plus haute possible" : montant(options.remunerationNette)],
+    ...(options.repartition.mode === "personnalisee" ? [["Part du bénéfice distribuable versée en dividendes (%)", Math.round(options.repartition.partDistribuee * 100)] as [string, CelluleCsv]] : []),
     ["Part des prestations en BNC en micro (%)", options.partBncPrestations * 100],
     ...totalFrais
   ]

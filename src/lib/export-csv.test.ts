@@ -103,8 +103,8 @@ describe("csvComparaison", () => {
       "",
       "Réglage;Valeur",
       "Activité comparée;Ma SASU",
+      "Bénéfice de la société (SASU, EURL);Rémunération saisie, le reste en dividendes",
       "Rémunération nette annuelle (SASU, EURL);20000,00",
-      "Verser tout le bénéfice disponible en dividendes;oui",
       "Part des prestations en BNC en micro (%);50",
       "Frais de fonctionnement annuels, SASU;2900,00",
       "Frais de fonctionnement annuels, EURL;2900,00",
@@ -121,15 +121,24 @@ describe("csvComparaison", () => {
     const result = comparaisonExemple()
     result.scenarios = result.scenarios.map(s => ({ ...s, actuel: false, warnings: [], revenusAvantPrelevements: 0 }))
     result.warnings = []
-    const csv = lignes(csvComparaison(result, { ...optionsExemple(), fraisFonctionnement: undefined, distribuerToutLeBenefice: false }, "Ma SASU"))
+    const csv = lignes(csvComparaison(result, { ...optionsExemple(), fraisFonctionnement: undefined, repartition: { mode: "grille", partDistribuee: 1 } }, "Ma SASU"))
     expect(csv).toContain("Taux global de prélèvement (%);;")
     expect(csv).toContain("Écart avec le statut actuel;;")
-    expect(csv).toContain("Verser tout le bénéfice disponible en dividendes;non")
+    expect(csv).toContain("Bénéfice de la société (SASU, EURL);Dividendes saisis dans la grille")
     expect(csv[csv.length - 1]).toBe("Part des prestations en BNC en micro (%);50")
   })
 })
 
 describe("reglagesDuComparateur", () => {
+  it("donne la part distribuée d'une répartition personnalisée, et aucune rémunération chiffrée quand tout part en rémunération", () => {
+    const personnalisee = reglagesDuComparateur({ ...optionsExemple(), repartition: { mode: "personnalisee", partDistribuee: 0.35 } }, "X")
+    expect(personnalisee).toContainEqual(["Bénéfice de la société (SASU, EURL)", "Répartition personnalisée"])
+    expect(personnalisee).toContainEqual(["Part du bénéfice distribuable versée en dividendes (%)", 35])
+    const remuneration = reglagesDuComparateur({ ...optionsExemple(), repartition: { mode: "remuneration", partDistribuee: 1 } }, "X")
+    expect(remuneration).toContainEqual(["Rémunération nette annuelle (SASU, EURL)", "la plus haute possible"])
+    expect(remuneration.map(([libelle]) => libelle)).not.toContain("Part du bénéfice distribuable versée en dividendes (%)")
+  })
+
   it("omet les frais quand le comparateur n'en ajoute pas", () => {
     expect(reglagesDuComparateur({ ...optionsExemple(), fraisFonctionnement: undefined }, "X")).toHaveLength(4)
   })

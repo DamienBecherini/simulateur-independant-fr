@@ -1,6 +1,6 @@
 // src/lib/comparateur-options.ts
 
-import type { ComparaisonOptions, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, DonneesDeLAnnee, StatutFrais } from "@/types"
+import type { ComparaisonOptions, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, PosteFrais, DonneesDeLAnnee, StatutFrais } from "@/types"
 
 /** Libellés des postes de frais, dans l'ordre d'affichage. */
 export const posteFraisLabels: Record<PosteFrais, string> = {
@@ -12,6 +12,23 @@ export const posteFraisLabels: Record<PosteFrais, string> = {
 }
 
 export const statutsFrais: StatutFrais[] = ["SASU", "EURL", "EI", "micro"]
+
+/** Modes de partage du bénéfice en SASU et EURL, dans l'ordre d'affichage, avec leur libellé. */
+export const libellesRepartition: Record<ModeRepartition, string> = {
+  dividendes: "Rémunération saisie, le reste en dividendes",
+  remuneration: "Tout en rémunération",
+  personnalisee: "Répartition personnalisée",
+  grille: "Dividendes saisis dans la grille"
+}
+
+/**
+ * Reporte une rémunération dans le comparateur, tout le bénéfice restant étant distribué : en répartition
+ * personnalisée, on y reste, avec 100 % distribué ; sinon, on passe à « le reste en dividendes ».
+ */
+export function avecRemuneration(options: ComparaisonOptions, remunerationNette: number): ComparaisonOptions {
+  const mode = options.repartition.mode === "personnalisee" ? "personnalisee" : "dividendes"
+  return { ...options, remunerationNette, repartition: { mode, partDistribuee: 1 } }
+}
 
 /**
  * Frais de fonctionnement annuels proposés par défaut : des ordres de grandeur, à ajuster à sa situation.
@@ -44,7 +61,7 @@ export function defaultComparisonOptions(session: DonneesDeLAnnee, activityId: s
   return {
     activityId,
     remunerationNette: annualTotal("director_remuneration"),
-    distribuerToutLeBenefice: annualTotal("dividends_payment") === 0,
+    repartition: { mode: annualTotal("dividends_payment") === 0 ? "dividendes" : "grille", partDistribuee: 1 },
     partBncPrestations: 1,
     fraisFonctionnement: defaultFraisFonctionnement()
   }

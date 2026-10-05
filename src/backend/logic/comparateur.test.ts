@@ -2,9 +2,10 @@
 
 import { describe, expect, it } from "vitest"
 import { comparerStatuts, statutActuel } from "./comparateur.js"
+import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
-import type { ComparaisonOptions, ComparaisonResult, Entity, Relationship, StatutCompare } from "../../types.js"
+import type { ComparaisonOptions, ComparaisonResult, Entity, PartageDuBenefice, Relationship, RepartitionBenefice, StatutCompare } from "../../types.js"
 
 /*
  * Montants calculés à la main avec les règles de test : micro BNC à 25 % de cotisations et 30 % d'abattement,
@@ -12,7 +13,7 @@ import type { ComparaisonOptions, ComparaisonResult, Entity, Relationship, Statu
  * dividendes à 12 % d'IR forfaitaire ou au barème (abattement 40 %, CSG déductible 7 %) et 18 % de prélèvements sociaux.
  */
 
-const options = (activityId: string, autres: Partial<ComparaisonOptions> = {}): ComparaisonOptions => ({ activityId, remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1, ...autres })
+const options = (activityId: string, autres: Partial<ComparaisonOptions> = {}): ComparaisonOptions => ({ activityId, remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1, ...autres })
 
 const comparer = (entities: Entity[], relationships: Relationship[], flux: Flux[], opts: ComparaisonOptions) => comparerStatuts(session(entities, relationships, flux), opts, reglesDeTest)
 
@@ -104,7 +105,7 @@ describe("comparerStatuts", () => {
         ["s1", "dividends_payment", 20000]
       ]
 
-      const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { remunerationNette: 24300, distribuerToutLeBenefice: false }))
+      const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { remunerationNette: 24300, repartition: { mode: "grille", partDistribuee: 1 } }))
 
       // Rémunération de 24 300 € (30 000 € bruts) et 15 900 € de cotisations : 59 800 € de bénéfice, 10 950 € d'IS ; 20 000 € de dividendes saisis, 28 850 € conservés.
       expect(colonne(resultat, "SASU")).toMatchObject({ cotisationsSociales: 15900, impotSocietes: 10950, resultatConserve: 28850 })
@@ -182,6 +183,80 @@ describe("comparerStatuts", () => {
       // Mariés : 49 500 € pour 2 parts, soit 2 x 1 475 € = 2 950 € d'impôt brut, sans décote.
       expect(resultat.couples).toEqual([{ personIds: ["alice", "bob"], netApresImpotsActuel: 48500, impotSurLeRevenuActuel: 6500, netApresImpotsMaries: 52050, impotSurLeRevenuMaries: 2950 }])
     })
+  })
+})
+
+describe("répartition du bénéfice des sociétés", () => {
+  const avec = (repartition: RepartitionBenefice, remunerationNette = 0) => comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]], options("m1", { remunerationNette, repartition }))
+  const sommeDesPostes = (p: PartageDuBenefice) => p.remunerationNette + p.cotisationsRemuneration + p.impotSocietes + p.dividendesNets + p.cotisationsSurDividendes + p.resultatConserve
+
+  it("détaille le partage du bénéfice en société seulement, et la somme des postes redonne le bénéfice", () => {
+    const resultat = avec({ mode: "dividendes", partDistribuee: 1 })
+    // SASU sans rémunération : 40 000 € de bénéfice, 6 000 € d'IS, 34 000 € de dividendes.
+    expect(colonne(resultat, "SASU").partage).toEqual({ beneficeAvantRemuneration: 40000, remunerationNette: 0, cotisationsRemuneration: 0, impotSocietes: 6000, dividendesNets: 34000, cotisationsSurDividendes: 0, resultatConserve: expect.closeTo(0, 0) })
+    expect(colonne(resultat, "EI").partage).toBeUndefined()
+    expect(colonne(resultat, "micro").partage).toBeUndefined()
+  })
+
+  it("verse la part choisie du bénéfice distribuable, le reste étant conservé", () => {
+    const resultat = avec({ mode: "personnalisee", partDistribuee: 0.25 })
+    expect(colonne(resultat, "SASU").partage).toMatchObject({ impotSocietes: 6000, dividendesNets: 8500, resultatConserve: 25500 })
+    expect(colonne(resultat, "SASU").resultatConserveActivite).toBe(25500)
+  })
+
+  it("en EURL, verse la part choisie du bénéfice distribuable final, cotisations sur dividendes comprises", () => {
+    // Bénéfice distribuable de 32 594,39 € (voir plus haut) : 16 297,20 € de dividendes, au-delà de 10 % du capital
+    // (100 €) soumis aux cotisations du gérant, et autant de conservé.
+    const { partage } = colonne(avec({ mode: "personnalisee", partDistribuee: 0.5 }), "EURL")
+    expect(partage!.dividendesNets + partage!.cotisationsSurDividendes).toBeCloseTo(16297, 0)
+    expect(partage!.cotisationsSurDividendes).toBeGreaterThan(0)
+    expect(partage!.resultatConserve).toBeCloseTo(16297, 0)
+    expect(sommeDesPostes(partage!)).toBeCloseTo(partage!.beneficeAvantRemuneration, 6)
+  })
+
+  it("à 0 %, ne verse aucun dividende ; à 100 %, distribue tout comme le mode « le reste en dividendes »", () => {
+    const aucun = avec({ mode: "personnalisee", partDistribuee: 0 })
+    expect(colonne(aucun, "SASU").partage).toMatchObject({ dividendesNets: 0, resultatConserve: 34000 })
+    expect(colonne(aucun, "EURL").partage).toMatchObject({ dividendesNets: 0, cotisationsSurDividendes: 0 })
+
+    const tout = avec({ mode: "personnalisee", partDistribuee: 1 })
+    const reference = avec({ mode: "dividendes", partDistribuee: 1 })
+    for (const statut of ["SASU", "EURL"] as const) expect(colonne(tout, statut).netApresImpots).toBe(colonne(reference, statut).netApresImpots)
+    // Une part hors bornes est ramenée entre 0 et 100 %.
+    expect(colonne(avec({ mode: "personnalisee", partDistribuee: 2 }), "SASU").netApresImpots).toBe(colonne(reference, "SASU").netApresImpots)
+  })
+
+  it("« tout en rémunération » verse la plus haute rémunération possible, sans dividendes", () => {
+    const resultat = avec({ mode: "remuneration", partDistribuee: 1 }, 5000)
+    const s = session([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]])
+    for (const statut of ["SASU", "EURL"] as const) {
+      const { partage } = colonne(resultat, statut)
+      expect(partage!.remunerationNette).toBe(optimiserRemuneration(s, options("m1"), statut, reglesDeTest).remunerationMaximale)
+      expect(partage!.remunerationNette).toBeGreaterThan(15000)
+      expect(partage!.dividendesNets).toBe(0)
+      // Il ne reste qu'un reliquat, faute de rémunération à 100 € près.
+      expect(partage!.resultatConserve).toBeGreaterThanOrEqual(0)
+      expect(partage!.resultatConserve).toBeLessThan(200)
+    }
+  })
+
+  it("sans bénéfice, « tout en rémunération » ne verse rien", () => {
+    const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 0]], options("m1", { repartition: { mode: "remuneration", partDistribuee: 1 } }))
+    expect(colonne(resultat, "SASU").partage).toMatchObject({ remunerationNette: 0, dividendesNets: 0 })
+  })
+
+  it.each([
+    ["dividendes", 0.5, 12000],
+    ["remuneration", 1, 0],
+    ["personnalisee", 0.35, 8000],
+    ["grille", 1, 3000]
+  ] as const)("en mode « %s », la somme des postes redonne exactement le bénéfice avant rémunération", (mode, partDistribuee, remuneration) => {
+    const resultat = avec({ mode, partDistribuee }, remuneration)
+    for (const statut of ["SASU", "EURL"] as const) {
+      const { partage } = colonne(resultat, statut)
+      expect(partage!.beneficeAvantRemuneration).toBe(40000)
+      expect(sommeDesPostes(partage!)).toBeCloseTo(40000, 6)
+    }
   })
 })
 

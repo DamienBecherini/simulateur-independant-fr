@@ -76,7 +76,7 @@ describe("versement libératoire 2026 d'après le RFR 2024 calculé (règles ré
   })
 
   it("le comparateur de 2026 retient lui aussi le RFR 2024 calculé : la colonne au versement libératoire est refusée", () => {
-    const options = { activityId: "m1", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+    const options = { activityId: "m1", remunerationNette: 0, repartition: { mode: "dividendes" as const, partDistribuee: 1 }, partBncPrestations: 1 }
     const colonne = comparerStatutsDeLAnnee(troisAnnees(45000), options, 2026).scenarios.find(s => s.statut === "micro-vfl")!
 
     expect(colonne.warnings).toContainEqual(expect.stringMatching(/^Versement libératoire impossible : le revenu fiscal de référence 2024 \(29\s700 €, calculé par la simulation\)/))

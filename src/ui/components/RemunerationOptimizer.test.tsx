@@ -3,7 +3,9 @@
 import { act, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration } from "@/types"
+import { useState } from "react"
+import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, StatutSociete } from "@/types"
+import { useOptimisation } from "../hooks/useOptimisation"
 import { emptySession, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { ComparatorPanel } from "./ComparatorPanel"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
@@ -20,11 +22,18 @@ function optimisation(overrides: Partial<OptimisationRemuneration> = {}): Optimi
   return { statut: "SASU", remunerationMaximale: 10000, points, meilleur: points[0], meilleurAvecRetraite: points[2], warnings: [], ...overrides }
 }
 
-const options: ComparaisonOptions = { activityId: "micro-atelier", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+const options: ComparaisonOptions = { activityId: "micro-atelier", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }
 const session = { ...emptySession(), entities: [makePerson(), makeMicro()] }
 
+/** La section telle que le comparateur la monte : statut et optimisation tenus au-dessus d'elle. */
+function Section({ onAppliquer }: { onAppliquer: (remunerationNette: number) => void }) {
+  const [statut, setStatut] = useState<StatutSociete>("SASU")
+  const { resultat, erreur } = useOptimisation(session, options, statut, 2026)
+  return <RemunerationOptimizer annee={2026} session={session} options={options} activityName="Mon atelier" statut={statut} onStatut={setStatut} resultat={resultat} erreur={erreur} onAppliquer={onAppliquer} />
+}
+
 function afficher(onAppliquer = vi.fn()) {
-  render(<RemunerationOptimizer annee={2026} session={session} options={options} activityName="Mon atelier" statutInitial="SASU" onAppliquer={onAppliquer} />)
+  render(<Section onAppliquer={onAppliquer} />)
   return onAppliquer
 }
 
@@ -141,6 +150,6 @@ describe("RemunerationOptimizer", () => {
     await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer au comparateur" }))
 
     expect(screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")).toHaveValue(5700)
-    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 5700, distribuerToutLeBenefice: true }), 2026))
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 5700, repartition: { mode: "dividendes", partDistribuee: 1 } }), 2026))
   })
 })

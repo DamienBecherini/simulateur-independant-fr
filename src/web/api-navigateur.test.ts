@@ -63,7 +63,7 @@ describe("pont de la démo web", () => {
     const { annees: [{ report: rapport }] } = await api.simulerLesAnnees(sessionExemple())
     expect(rapport?.foyers.length).toBeGreaterThan(0)
 
-    const comparaison = await api.compareStatuts(sessionExemple(), { activityId: "micro-atelier", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }, 2026)
+    const comparaison = await api.compareStatuts(sessionExemple(), { activityId: "micro-atelier", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }, 2026)
     expect(comparaison.scenarios.map(s => s.statut)).toContain("SASU")
   })
 

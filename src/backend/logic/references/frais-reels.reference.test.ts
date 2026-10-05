@@ -50,7 +50,7 @@ casDeReference("Cas de référence 2026 : frais réels d'un salarié", () => {
   describe("micro-entreprise BNC de 40 000 €, avec les mêmes 8 720 km en déplacements professionnels, comparée en EI", () => {
     // Sans déplacements, voir comparateur.reference.test.ts : micro 10 240 € de cotisations, 1 468 € d'impôt ; EI 25 787 € nets.
     const activite = { ...micro("m1"), deplacementsProfessionnels: { kmParAn: 8720, puissanceFiscale: "5" as const, electrique: false } }
-    const options: ComparaisonOptions = { activityId: "m1", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+    const options: ComparaisonOptions = { activityId: "m1", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }
     const resultat = comparerStatuts(session([personne("alice"), activite], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options)
     const colonne = (statut: StatutCompare) => resultat.scenarios.find(s => s.statut === statut)!
 

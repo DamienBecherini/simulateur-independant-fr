@@ -6,6 +6,8 @@ import { calculerEI } from "./calculsEI.js"
 import { calculerEURL } from "./calculsEURL.js"
 import { calculerIR } from "./calculsIR.js"
 import { calculerSASU } from "./calculsSASU.js"
+import type { ResultatSociete } from "./calculsSociete.js"
+import type { PartageDuBenefice } from "../../types.js"
 import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.js"
 import { buildFoyers, type Foyer } from "./foyers.js"
 import { euros } from "./format.js"
@@ -264,7 +266,22 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     ...(resultat.cotisationsPresident && resultat.remunerationNette > 0 ? { cotisationsPresident: resultat.cotisationsPresident } : {}),
     ...detailSalaries(masse),
     ...detailDeplacements(societe, deplacements, true),
+    partage: partageDuBenefice(resultat),
     warnings
+  }
+}
+
+/** Le bénéfice avant rémunération du dirigeant, poste par poste : la somme des postes le redonne exactement. */
+function partageDuBenefice(resultat: ResultatSociete): PartageDuBenefice {
+  const cotisationsRemuneration = resultat.cotisationsSociales - resultat.cotisationsSurDividendes
+  return {
+    beneficeAvantRemuneration: resultat.chiffreAffaires - resultat.chargesDeductibles,
+    remunerationNette: resultat.remunerationNette,
+    cotisationsRemuneration,
+    impotSocietes: resultat.impotSocietes,
+    dividendesNets: resultat.dividendesVerses - resultat.cotisationsSurDividendes,
+    cotisationsSurDividendes: resultat.cotisationsSurDividendes,
+    resultatConserve: resultat.resultatConserve
   }
 }
 

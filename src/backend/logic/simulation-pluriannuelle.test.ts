@@ -78,7 +78,7 @@ describe("comparateur et optimiseur sur une année", () => {
       { annee: 2026, monthlyData: grilleAvecCA("s1", "ca_services", 90000) }
     ]
   }
-  const options = { activityId: "s1", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+  const options = { activityId: "s1", remunerationNette: 0, repartition: { mode: "dividendes" as const, partDistribuee: 1 }, partBncPrestations: 1 }
 
   it("compare les statuts sur la grille de l'année demandée", () => {
     const en2025 = comparerStatutsDeLAnnee(sasu, options, 2025)

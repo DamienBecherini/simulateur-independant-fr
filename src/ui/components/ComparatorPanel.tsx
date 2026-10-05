@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
+import { useOptimisation } from "../hooks/useOptimisation"
+import { avecRemuneration, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { cn } from "@/lib/utils"
@@ -13,8 +13,9 @@ import { exporterComparaisonCsv } from "../exports-texte"
 import { BoutonExportCsv } from "./BoutonExportCsv"
 import { Depliable } from "./Depliable"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
+import { ChoixDeLaRepartition, RepartitionDuBenefice } from "./RepartitionBenefice"
 import { ZoneDefilante } from "./ZoneDefilante"
-import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ScenarioStatut, SessionState, SimulationAnnuelle, StatutFrais } from "@/types"
+import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, PosteFrais, ScenarioStatut, SessionState, SimulationAnnuelle, StatutFrais, StatutSociete } from "@/types"
 
 interface ComparatorPanelProps {
   session: SessionState
@@ -23,7 +24,7 @@ interface ComparatorPanelProps {
 }
 
 /** Sans activité, on compare tout de même les couples en union libre. */
-const NO_ACTIVITY: ComparaisonOptions = { activityId: "", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+const NO_ACTIVITY: ComparaisonOptions = { activityId: "", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }
 
 function formatMoney(n: number): string {
   return n.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €"
@@ -149,15 +150,14 @@ function ComparatorControls({ activities, selected, options, onSelect, onChange 
         </Select>
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
-        <Input id="comparateur-remuneration" className="w-40 bg-background text-right" type="number" min="0" step="1000" value={options.remunerationNette} onChange={e => onChange({ remunerationNette: Math.max(0, parseFloat(e.target.value) || 0) })} />
-      </div>
+      <ChoixDeLaRepartition mode={options.repartition.mode} onChange={mode => onChange({ repartition: { ...options.repartition, mode } })} />
 
-      <label className="flex items-center gap-2 pb-2 text-sm pointer-coarse:min-h-11">
-        <Switch checked={options.distribuerToutLeBenefice} onCheckedChange={distribuerToutLeBenefice => onChange({ distribuerToutLeBenefice })} />
-        Verser tout le bénéfice disponible en dividendes
-      </label>
+      {options.repartition.mode === "remuneration" ? null : (
+        <div className="space-y-1">
+          <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
+          <Input id="comparateur-remuneration" className="w-40 bg-background text-right" type="number" min="0" step="1000" value={options.remunerationNette} onChange={e => onChange({ remunerationNette: Math.max(0, parseFloat(e.target.value) || 0) })} />
+        </div>
+      )}
 
       {selected.type !== "micro-entreprise" && (
         <div className="space-y-1">
@@ -367,20 +367,33 @@ function useComparison(session: SessionState, options: ComparaisonOptions, annee
   return { result, error }
 }
 
-/** Arbitrage rémunération / dividendes de l'activité comparée, en SASU ou en EURL (son statut s'il en est un). */
-function OptimiseurDeLActivite({ session, annee, selected, options, onChange }: { session: SessionState; annee: number; selected: Company | MicroEntreprise | undefined; options: ComparaisonOptions; onChange: (options: ComparaisonOptions) => void }) {
+/**
+ * Statut de société étudié pour l'activité comparée (son statut s'il en est un, la SASU sinon) et son arbitrage
+ * rémunération / dividendes : partagés entre la barre de partage du bénéfice et la section « Rémunération ou dividendes ? ».
+ */
+function useArbitrage(session: SessionState, options: ComparaisonOptions, annee: number, selected: Company | MicroEntreprise | undefined) {
+  const [choix, setChoix] = useState<{ activityId: string; statut: StatutSociete } | null>(null)
+  const statutInitial: StatutSociete = selected?.type === "company" && selected.legalStatus === "EURL" ? "EURL" : "SASU"
+  const statut = choix && choix.activityId === selected?.id ? choix.statut : statutInitial
+  const { resultat, erreur } = useOptimisation(session, options, statut, annee, !!selected)
+  return { statut, setStatut: (nouveau: StatutSociete) => setChoix({ activityId: selected?.id ?? "", statut: nouveau }), resultat, erreur }
+}
+
+const scenarioDuStatut = (result: ComparaisonResult | null, statut: StatutSociete) => result?.scenarios.find(s => s.statut === statut)
+
+interface OptimiseurProps {
+  session: SessionState
+  annee: number
+  selected: Company | MicroEntreprise | undefined
+  options: ComparaisonOptions
+  arbitrage: ReturnType<typeof useArbitrage>
+  onChange: (options: ComparaisonOptions) => void
+}
+
+/** Arbitrage rémunération / dividendes de l'activité comparée ; la rémunération appliquée rejoint le comparateur. */
+function OptimiseurDeLActivite({ session, annee, selected, options, arbitrage, onChange }: OptimiseurProps) {
   if (!selected) return null
-  return (
-    <RemunerationOptimizer
-      key={selected.id}
-      session={session}
-      annee={annee}
-      options={options}
-      activityName={selected.name}
-      statutInitial={selected.type === "company" && selected.legalStatus === "EURL" ? "EURL" : "SASU"}
-      onAppliquer={remunerationNette => onChange({ ...options, remunerationNette, distribuerToutLeBenefice: true })}
-    />
-  )
+  return <RemunerationOptimizer session={session} annee={annee} options={options} activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} resultat={arbitrage.resultat} erreur={arbitrage.erreur} onAppliquer={remunerationNette => onChange(avecRemuneration(options, remunerationNette))} />
 }
 
 /**
@@ -417,6 +430,7 @@ export function ComparatorPanel({ session, annee }: ComparatorPanelProps) {
   const { selected, effectiveOptions, setOptions } = useReglages(vue, activities)
 
   const { result, error } = useComparison(session, effectiveOptions, vue.annee)
+  const arbitrage = useArbitrage(session, effectiveOptions, vue.annee, selected)
   const couples = result?.couples ?? []
   if (!selected && couples.length === 0) return null
 
@@ -436,13 +450,14 @@ export function ComparatorPanel({ session, annee }: ComparatorPanelProps) {
           <ComparatorControls activities={activities} selected={selected} options={effectiveOptions} onSelect={activityId => setOptions({ ...defaultComparisonOptions(vue, activityId), fraisFonctionnement: effectiveOptions.fraisFonctionnement })} onChange={changes => setOptions({ ...effectiveOptions, ...changes })} />
           <FraisFonctionnementTable frais={effectiveOptions.fraisFonctionnement ?? defaultFraisFonctionnement()} onChange={fraisFonctionnement => setOptions({ ...effectiveOptions, fraisFonctionnement })} />
           <WarningList warnings={result?.warnings ?? []} />
+          <RepartitionDuBenefice activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} scenario={scenarioDuStatut(result, arbitrage.statut)} optimisation={arbitrage.resultat} options={effectiveOptions} onChange={setOptions} />
         </>
       ) : null}
 
       {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 
       {result ? <ComparisonResults result={result} activityName={selected?.name ?? ""} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, selected?.name ?? "")} /> : null}
-      <OptimiseurDeLActivite session={session} annee={vue.annee} selected={selected} options={effectiveOptions} onChange={setOptions} />
+      <OptimiseurDeLActivite session={session} annee={vue.annee} selected={selected} options={effectiveOptions} arbitrage={arbitrage} onChange={setOptions} />
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
     </section>
   )

@@ -209,6 +209,8 @@ describe("runMetaSimulation", () => {
         resultatConserve: 21350,
         beneficiaireIds: ["alice"],
         cotisationsPresident: expect.objectContaining({ statut: "president", brut: expect.closeTo(30000, 6), coutEmployeur: expect.closeTo(40200, 6) }),
+        // Le bénéfice avant rémunération, 90 000 €, est exactement la somme des postes.
+        partage: { beneficeAvantRemuneration: 90000, remunerationNette: 24300, cotisationsRemuneration: expect.closeTo(15900, 6), impotSocietes: expect.closeTo(8450, 6), dividendesNets: 20000, cotisationsSurDividendes: 0, resultatConserve: expect.closeTo(21350, 6) },
         warnings: []
       })
     })

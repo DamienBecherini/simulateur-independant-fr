@@ -123,7 +123,7 @@ export function optionsExemple(): ComparaisonOptions {
   return {
     activityId: "c1",
     remunerationNette: 20000,
-    distribuerToutLeBenefice: true,
+    repartition: { mode: "dividendes", partDistribuee: 1 },
     partBncPrestations: 0.5,
     fraisFonctionnement: defaultFraisFonctionnement()
   }

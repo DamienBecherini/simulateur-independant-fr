@@ -235,6 +235,8 @@ export interface ActivityResult {
    * entreprise individuelle, simple dépense en micro-entreprise.
    */
   fraisDeDeplacement?: { kilometres: number; montant: number; deductible: boolean }
+  /** Société à l'IS : partage de son bénéfice, montants non arrondis. */
+  partage?: PartageDuBenefice
   warnings: string[]
 }
 
@@ -462,13 +464,45 @@ export interface SimulationPluriannuelle {
 /** Statuts proposés par le comparateur ; la micro-entreprise est simulée avec et sans versement libératoire. */
 export type StatutCompare = "SASU" | "EURL" | "EI" | "micro" | "micro-vfl"
 
+/**
+ * Partage du bénéfice d'une société à l'IS dans le comparateur :
+ * - « dividendes » : la rémunération saisie, tout le reste en dividendes ;
+ * - « remuneration » : la plus haute rémunération que la société peut verser, sans dividendes ;
+ * - « personnalisee » : la rémunération saisie, et une part du bénéfice distribuable en dividendes, le reste conservé ;
+ * - « grille » : la rémunération saisie et les dividendes saisis dans la grille.
+ */
+export type ModeRepartition = "dividendes" | "remuneration" | "personnalisee" | "grille"
+
+export interface RepartitionBenefice {
+  mode: ModeRepartition
+  /** Répartition personnalisée : part du bénéfice distribuable versée en dividendes (0 à 1), le reste étant conservé. */
+  partDistribuee: number
+}
+
+/**
+ * Partage du bénéfice d'une société à l'IS, tiré de la simulation : le bénéfice avant rémunération du dirigeant
+ * (chiffre d'affaires moins les charges) est exactement la somme des six postes.
+ */
+export interface PartageDuBenefice {
+  beneficeAvantRemuneration: number
+  remunerationNette: number
+  /** Cotisations sociales sur la rémunération du dirigeant (salariales et patronales en SASU, du gérant en EURL). */
+  cotisationsRemuneration: number
+  impotSocietes: number
+  /** Dividendes versés, moins les cotisations du gérant d'EURL sur leur part au-delà de 10 % du capital. */
+  dividendesNets: number
+  cotisationsSurDividendes: number
+  /** Bénéfice après IS laissé dans la société (négatif si elle est déficitaire). */
+  resultatConserve: number
+}
+
 export interface ComparaisonOptions {
   /** Activité à faire changer de statut ; le reste de la simulation ne bouge pas. */
   activityId: string
   /** Rémunération nette annuelle du dirigeant dans les colonnes SASU et EURL. */
   remunerationNette: number
-  /** Verser en dividendes tout le bénéfice disponible des colonnes SASU et EURL, plutôt que les dividendes saisis. */
-  distribuerToutLeBenefice: boolean
+  /** Partage du bénéfice des colonnes SASU et EURL entre rémunération, dividendes et réserves. */
+  repartition: RepartitionBenefice
   /** Part BNC des prestations de services quand l'activité devient une micro-entreprise (0 à 1). Ignorée si elle en est déjà une. */
   partBncPrestations: number
   /** Frais de fonctionnement annuels par statut, ajoutés aux charges de l'activité dans chaque colonne. */
@@ -504,6 +538,8 @@ export interface ScenarioStatut {
   resultatConserve: number
   /** Avertissements de l'activité dans ce statut (plafond micro dépassé, société déficitaire…). */
   warnings: string[]
+  /** SASU et EURL : partage du bénéfice de l'activité entre rémunération, prélèvements, dividendes et réserves. */
+  partage?: PartageDuBenefice
 }
 
 /** Note qualitative de protection sociale d'un statut, sur 5 étoiles. */
