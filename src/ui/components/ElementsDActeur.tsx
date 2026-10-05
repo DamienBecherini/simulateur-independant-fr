@@ -1,6 +1,7 @@
 // src/ui/components/ElementsDActeur.tsx
-// Éléments communs à la carte d'un acteur (affichage classique) et à sa ligne (affichage « Résumé ») : poignée de tri,
-// options de la micro-entreprise, pastille de relation, boutons « Modifier » et « Verrouiller ».
+// Éléments communs à la carte d'un acteur (affichage classique), à sa ligne (affichage « Résumé ») et à son panneau
+// (affichage « Panneaux ») : poignée de tri, options de la micro-entreprise, pastille de relation, boutons « Modifier »
+// et « Verrouiller ».
 
 import type { HTMLAttributes } from "react"
 import { ArrowRight, Lock, Pencil, Unlock, X } from "lucide-react"
@@ -11,6 +12,9 @@ import { getRelationshipLabel } from "@/lib/graph-logic"
 import { cn } from "@/lib/utils"
 import { POIGNEE_DE_TRI } from "../hooks/useTriAccessible"
 import { AvatarDisplay } from "./AvatarDisplay"
+
+/** Pastille d'information sur un acteur : son type, le nombre de ses relations. */
+export const PASTILLE = "rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-gray-800 dark:text-slate-300"
 
 /** Poignée de glisser-déposer d'un acteur, utilisable aussi au clavier (voir useTriAccessible). */
 export function PoigneeDeTri({ nom, className, ...proprietes }: { nom: string; className?: string } & HTMLAttributes<HTMLDivElement>) {
@@ -77,16 +81,23 @@ interface BoutonsProps {
   titre: string
 }
 
-/** Ouvre la fenêtre des autres réglages de l'acteur ; verrouille ou déverrouille l'acteur (un acteur verrouillé ne se supprime pas). */
+/** Verrouille ou déverrouille l'acteur : un acteur verrouillé ne se supprime pas. */
+export function BoutonVerrouiller({ entity, onToggleLock }: Pick<BoutonsProps, "entity" | "onToggleLock">) {
+  return (
+    <Button variant="ghost" size="icon" aria-label={entity.locked ? "Déverrouiller" : "Verrouiller"} onClick={() => onToggleLock(entity.id)}>
+      {entity.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-slate-600 dark:text-slate-400" />}
+    </Button>
+  )
+}
+
+/** Ouvre la fenêtre des autres réglages de l'acteur ; verrouille ou déverrouille l'acteur. */
 export function BoutonsModifierVerrouiller({ entity, onEdit, onToggleLock, titre }: BoutonsProps) {
   return (
     <>
       <Button variant="ghost" size="icon" aria-label="Modifier les autres réglages" title={titre} onClick={() => onEdit(entity)}>
         <Pencil className="h-4 w-4 text-slate-600 dark:text-slate-400" />
       </Button>
-      <Button variant="ghost" size="icon" aria-label={entity.locked ? "Déverrouiller" : "Verrouiller"} onClick={() => onToggleLock(entity.id)}>
-        {entity.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-slate-600 dark:text-slate-400" />}
-      </Button>
+      <BoutonVerrouiller entity={entity} onToggleLock={onToggleLock} />
     </>
   )
 }
