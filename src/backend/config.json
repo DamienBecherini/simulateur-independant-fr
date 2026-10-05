@@ -298,9 +298,16 @@
     "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F38152",
     "seuilDividendesPartDuCapital": 0.1
   },
+  "CFE": {
+    "description": "Cotisation foncière des entreprises d'une activité dont la date de création est connue : non due l'année de la création, base d'imposition réduite de moitié l'année suivante (article 1478 II du code général des impôts). Le montant saisi dans les frais de fonctionnement du comparateur est celui d'une année pleine : il est multiplié par la part due.",
+    "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F23547",
+    "sourceReduction": "https://bofip.impots.gouv.fr/bofip/4067-PGP.html/identifiant=BOI-IF-CFE-20-30-50-20141216",
+    "partDueAnneeDeCreation": 0,
+    "partDueAnneeSuivante": 0.5
+  },
   "microEntreprise": {
     "plafonds": {
-      "description": "Plafonds de chiffre d'affaires du régime micro pour 2026-2028.",
+      "description": "Plafonds de chiffre d'affaires du régime micro pour 2026-2028. Le régime s'applique en N si le chiffre d'affaires de N-1 ou de N-2 ne dépasse pas les plafonds en vigueur en N (sortie au 1er janvier qui suit deux années de suite au-delà) ; l'année de création, le plafond est réduit au prorata des jours d'activité (plafond x jours / 365).",
       "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F32353",
       "services": 83600,
       "vente": 203100
@@ -313,7 +320,16 @@
       "servicesBnc": 0.256
     },
     "reductionACRE": 0.5,
-    "reductionACREDescription": "Réduction des cotisations avec l'ACRE : 50 % pour une micro-entreprise créée avant le 01/07/2026, 25 % après (non distingué par le simulateur). Source : https://entreprendre.service-public.gouv.fr/actualites/A18795",
+    "reductionACREDescription": "Réduction des cotisations avec l'ACRE : 50 % pour une micro-entreprise créée avant le 01/07/2026, 25 % après : distingué quand la date de création est renseignée (voir ACRE), sinon 50 % sur toute l'année. Source : https://entreprendre.service-public.gouv.fr/actualites/A18795",
+    "ACRE": {
+      "description": "ACRE d'une micro-entreprise dont la date de création est connue : cotisations réduites du début d'activité jusqu'à la fin du 3e trimestre civil qui suit celui du début d'activité, de 50 % pour une création depuis le 1er janvier 2020 (décret n° 2019-1215), et de 25 % pour une création depuis le 1er juillet 2026 (décret n° 2026-69 du 6 février 2026, article D131-6-3 du code de la sécurité sociale : taux égal à 75 % des taux normaux). La réduction dépend de la date de création, pas de l'année simulée. Sans date de création, reductionACRE s'applique à toute l'année.",
+      "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F11677",
+      "trimestresCivilsApresLeDebut": 3,
+      "reductionsParDateDeCreation": [
+        { "aPartirDe": "2020-01", "reduction": 0.5, "source": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000039407613" },
+        { "aPartirDe": "2026-07", "reduction": 0.25, "source": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000053449085" }
+      ]
+    },
     "abattement": {
       "description": "Abattement forfaitaire pour frais professionnels avant impôt sur le revenu, avec un minimum en euros par nature d'activité exercée.",
       "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F23267",

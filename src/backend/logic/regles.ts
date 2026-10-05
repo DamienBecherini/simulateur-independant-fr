@@ -124,10 +124,18 @@ export interface ReglesFiscales {
   EURL: { seuilDividendesPartDuCapital: number }
   /** Seuils de la franchise en base de TVA : au-delà du seuil de base l'année suivante, au-delà du seuil majoré immédiatement. */
   TVA: Record<"services" | "vente", { franchiseBase: number; seuilMajore: number }>
+  /** Cotisation foncière des entreprises d'une activité créée récemment : part due l'année de création et la suivante. */
+  CFE: { partDueAnneeDeCreation: number; partDueAnneeSuivante: number }
   microEntreprise: {
     plafonds: { services: number; vente: number }
     cotisations: TauxMicro
+    /** Réduction de l'ACRE sur toute l'année, quand la date de création de la micro-entreprise n'est pas connue. */
     reductionACRE: number
+    /**
+     * ACRE quand la date de création est connue : du mois de création à la fin du n-ième trimestre civil suivant, avec
+     * la réduction de la dernière entrée dont le mois « AAAA-MM » ne dépasse pas celui de la création.
+     */
+    ACRE: { trimestresCivilsApresLeDebut: number; reductionsParDateDeCreation: { aPartirDe: string; reduction: number }[] }
     abattement: TauxMicro & { minimum: number }
     versementLiberatoire: { plafondRfrParPart: number; taux: TauxMicro }
   }

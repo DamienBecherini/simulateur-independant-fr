@@ -73,6 +73,17 @@ export const DeplacementsProfessionnelsSchema = z.object({
   ...champsVehicule
 })
 
+/**
+ * Mois de création d'une activité, « AAAA-MM » (début d'activité déclaré, ou immatriculation) : il borne l'ACRE,
+ * l'exonération de CFE et le prorata des plafonds de la micro-entreprise. Facultatif : sans lui, ces dispositifs gardent
+ * leur traitement d'une année entière. Une valeur mal formée est écartée seule, sans faire perdre l'activité.
+ */
+const DateDeCreationSchema = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+  .optional()
+  .catch(undefined)
+
 export const PersonSchema = z.object({
   id: z.string(),
   type: z.literal("person"),
@@ -90,6 +101,7 @@ export const CompanySchema = z.object({
   legalStatus: z.enum(["SASU", "EURL", "EI"]),
   // Sert au calcul des dividendes d'EURL soumis aux cotisations sociales (part dépassant 10 % du capital).
   capitalSocial: z.number().min(0).default(1000),
+  dateDeCreation: DateDeCreationSchema,
   deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
@@ -103,6 +115,12 @@ export const MicroEntrepriseSchema = z.object({
   opteVFL: z.boolean().default(false),
   // Revenu fiscal de référence du foyer de l'année N-2 : il conditionne l'accès au versement libératoire.
   rfrN2: z.number().min(0).optional(),
+  dateDeCreation: DateDeCreationSchema,
+  /**
+   * Chiffre d'affaires au-delà des plafonds du régime l'année qui précède la première année de la session : un nouveau
+   * dépassement cette première année fait sortir du régime au 1er janvier suivant. Absent : non.
+   */
+  horsPlafondAnneePrecedente: z.boolean().optional(),
   deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
@@ -341,7 +359,31 @@ export interface ActivityResult {
   fraisDeDeplacement?: { kilometres: number; montant: number; deductible: boolean }
   /** Société à l'IS : partage de son bénéfice, montants non arrondis. */
   partage?: PartageDuBenefice
+  /** Micro-entreprise passée au régime réel (deux années de suite au-delà des plafonds) : simulée en EI au réel. */
+  sortieDuRegimeMicro?: SortieDuRegimeMicro
+  /** Micro-entreprise à l'ACRE dont la date de création est connue : l'aide de l'année, mois par mois. */
+  acre?: ACREDeLAnnee
+  /** Dispositifs limités dans le temps qui jouent cette année (sortie du régime micro, ACRE, plafonds au prorata). */
+  dispositifs?: string[]
   warnings: string[]
+}
+
+/** Sortie du régime micro : au 1er janvier de `depuis`, après deux années de suite au-delà des plafonds. */
+export interface SortieDuRegimeMicro {
+  depuis: number
+  depassements: [number, number]
+}
+
+/** ACRE d'une micro-entreprise sur une année : la réduction, sa période (« AAAA-MM ») et les mois de l'année couverts. */
+export interface ACREDeLAnnee {
+  /** Part des cotisations retirée : 0,5 ou 0,25 selon la date de création. */
+  reduction: number
+  debut: string
+  fin: string
+  /** Mois de l'année couverts par l'aide (0 pour janvier). */
+  mois: number[]
+  /** Cotisations économisées sur l'année. */
+  economie: number
 }
 
 /** Les cotisations du régime général, une par ligne du détail : celles du barème, puis la CSG et la CRDS. */
@@ -634,6 +676,8 @@ export interface ScenarioStatut {
   resultatConserveActivite: number
   /** Micro-entreprise au-delà des plafonds de chiffre d'affaires : régime tenable deux ans au plus, jamais désigné meilleur net. */
   horsPlafond: boolean
+  /** Colonne micro d'une activité sortie du régime micro cette année-là : régime plus accessible, jamais désigné meilleur net. */
+  regimeMicroFerme?: SortieDuRegimeMicro
   protectionSociale: ProtectionSociale
   /** Indicateurs de toute la simulation, l'activité ayant pris ce statut. */
   netApresImpots: number
@@ -678,6 +722,8 @@ export interface ComparaisonResult {
   warnings: string[]
   /** Au meilleur net : l'arbitrage rémunération / dividendes calculé pour chaque statut de société, à réutiliser tel quel. */
   optimisations?: Partial<Record<StatutSociete, OptimisationRemuneration>>
+  /** CFE de l'année exonérée ou réduite d'après la date de création de l'activité comparée : ce qui est retenu. */
+  noteCFE?: string
 }
 
 /** Formats de fichier texte que l'application sait enregistrer ou ouvrir (exports, sauvegardes groupées). */

@@ -96,6 +96,9 @@ function taux(r: ReglesFiscales): [string, number][] {
     ["EURL.seuilDividendesPartDuCapital", r.EURL.seuilDividendesPartDuCapital],
     ...parActivite("microEntreprise.cotisations", micro.cotisations),
     ["microEntreprise.reductionACRE", micro.reductionACRE],
+    ...micro.ACRE.reductionsParDateDeCreation.map(({ reduction }, i): [string, number] => [`microEntreprise.ACRE.reductionsParDateDeCreation.${i}`, reduction]),
+    ["CFE.partDueAnneeDeCreation", r.CFE.partDueAnneeDeCreation],
+    ["CFE.partDueAnneeSuivante", r.CFE.partDueAnneeSuivante],
     ...parActivite("microEntreprise.abattement", micro.abattement),
     ...parActivite("microEntreprise.versementLiberatoire.taux", micro.versementLiberatoire.taux)
   ]
@@ -194,6 +197,18 @@ describe("règles par année", () => {
         expectCroissante(PUISSANCES_FISCALES.map(cv => montantBaremeKilometrique(distance, { puissanceFiscale: cv, electrique: false }, regles.baremeKilometrique)))
       }
       expect(voitures["3"][0].taux).toBeLessThan(1)
+    })
+
+    it("a des réductions de l'ACRE datées « AAAA-MM », dans l'ordre, et des sources en adresse directe", () => {
+      const { reductionsParDateDeCreation, trimestresCivilsApresLeDebut } = regles.microEntreprise.ACRE
+      expect(trimestresCivilsApresLeDebut).toBe(3)
+      reductionsParDateDeCreation.forEach(({ aPartirDe }) => expect(aPartirDe).toMatch(/^\d{4}-(0[1-9]|1[0-2])$/))
+      expect(reductionsParDateDeCreation.map(({ aPartirDe }) => aPartirDe)).toEqual(reductionsParDateDeCreation.map(({ aPartirDe }) => aPartirDe).sort())
+    })
+
+    it("a une CFE non due l'année de création et réduite l'année suivante", () => {
+      expect(regles.CFE.partDueAnneeDeCreation).toBe(0)
+      expect(regles.CFE.partDueAnneeSuivante).toBe(0.5)
     })
 
     it("a un impôt sur les sociétés au taux réduit inférieur au taux normal", () => {

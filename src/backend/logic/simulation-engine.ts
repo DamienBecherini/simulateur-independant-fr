@@ -13,6 +13,7 @@ import { buildFoyers, type Foyer } from "./foyers.js"
 import { euros } from "./format.js"
 import { fraisReelsDeLaPersonne, montantBaremeKilometrique } from "./frais-kilometriques.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
+import { acreDeLAnnee, ecrireMois, economieACRE, lireMois, noteACRE, noteAnnonce, noteProrata, noteRetour, noteSortie, prorataDesPlafonds, type ACREDuneAnnee, type RegimeMicroDeLAnnee } from "./dispositifs.js"
 
 /*
  * Le calcul va dans un seul sens :
@@ -322,8 +323,40 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     cotisationsTNS: resultat.cotisationsTNS,
     ...detailSalaries(masse),
     ...detailDeplacements(entreprise, deplacements, true),
+    ...detailSortieDuRegimeMicro(ctx, entreprise.id),
     warnings
   }
+}
+
+/** Année simulée : celle de la session, ou celle des règles pour une simulation d'un an. */
+function anneeSimulee(ctx: Contexte): number {
+  return ctx.annee.annee ?? ctx.regles.annee
+}
+
+/** Micro-entreprise sortie du régime micro, simulée en entreprise individuelle au réel : la sortie et sa note. */
+function detailSortieDuRegimeMicro(ctx: Contexte, entityId: string): Pick<ActivityResult, "sortieDuRegimeMicro" | "dispositifs"> {
+  const sortie = ctx.annee.regimeMicro?.sorties[entityId]
+  return sortie ? { sortieDuRegimeMicro: sortie, dispositifs: [noteSortie(sortie, anneeSimulee(ctx))] } : {}
+}
+
+/**
+ * Dispositifs de l'année d'une micro-entreprise : retour au régime micro, plafonds au prorata l'année de création, ACRE
+ * des mois couverts, annonce de la sortie du régime l'année du second dépassement.
+ */
+function detailDispositifsMicro(ctx: Contexte, micro: MicroEntreprise, acre: ACREDuneAnnee | null, prorata: number): Pick<ActivityResult, "acre" | "dispositifs"> {
+  const annee = anneeSimulee(ctx)
+  const regime = ctx.annee.regimeMicro
+  const creation = lireMois(micro.dateDeCreation)
+  const annonce = regime?.annonces[micro.id]
+  const economie = acre ? economieACRE(acre, ctx.regles) : 0
+  const notes = [
+    regime?.retours.includes(micro.id) ? noteRetour(annee) : null,
+    creation && prorata < 1 ? noteProrata(creation, ctx.regles.microEntreprise.plafonds, prorata) : null,
+    acre ? noteACRE(acre, annee, economie) : null,
+    annonce ? noteAnnonce(annonce) : null
+  ].filter((note): note is string => note !== null)
+  const detailACRE = acre && acre.mois.length > 0 ? { acre: { reduction: acre.reduction, debut: ecrireMois(acre.debut), fin: ecrireMois(acre.fin), mois: acre.mois, economie: Math.round(economie) } } : {}
+  return { ...detailACRE, ...(notes.length > 0 ? { dispositifs: notes } : {}) }
 }
 
 /**
@@ -367,12 +400,17 @@ function avertissementsVersementLiberatoire(micro: MicroEntreprise, vfl: Verseme
 function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): ActivityResult {
   const titulaire = personnesLiees(ctx, micro.id, ["Titulaire"])[0]
   const vfl = analyserVersementLiberatoire(ctx, micro, titulaire)
+  // Avec une date de création : ACRE limitée aux mois qu'elle couvre, plafonds au prorata l'année de création.
+  const acre = acreDeLAnnee(micro, anneeSimulee(ctx), ctx.session.monthlyData, ctx.regles)
+  const prorata = prorataDesPlafonds(lireMois(micro.dateDeCreation), anneeSimulee(ctx))
   const resultat = calculerMicro(
     {
       caVente: total(ctx, micro.id, "ca_micro_vente"),
       caServicesBic: total(ctx, micro.id, "ca_micro_services_bic"),
       caServicesBnc: total(ctx, micro.id, "ca_micro_services_bnc"),
       beneficieACRE: micro.beneficieACRE,
+      ...(acre ? { caSousACRE: acre.chiffreAffaires, reductionACRE: acre.reduction } : {}),
+      prorataPlafonds: prorata,
       opteVFL: vfl.applique
     },
     ctx.regles
@@ -412,6 +450,7 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
     versementLiberatoire: { ...vfl, plafondRfr: Math.round(vfl.plafondRfr) },
     ...detailSalaries(masse),
     ...detailDeplacements(micro, deplacements, false),
+    ...detailDispositifsMicro(ctx, micro, acre, prorata),
     warnings
   }
 }
@@ -618,6 +657,11 @@ export interface ContexteDeLAnnee {
    * chaque personne. Il remplace, pour le versement libératoire, celui saisi dans la fiche de la micro-entreprise.
    */
   rfrN2?: { annee: number; parPersonne: Record<string, number> }
+  /**
+   * Régime des micro-entreprises cette année, d'après les années de la session (voir dispositifs.ts) : celles qui en
+   * sont sorties sont déjà converties en entreprise individuelle au réel dans les données de l'année.
+   */
+  regimeMicro?: RegimeMicroDeLAnnee
 }
 
 export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): SimulationReport {

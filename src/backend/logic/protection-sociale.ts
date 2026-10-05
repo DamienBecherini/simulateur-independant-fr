@@ -19,6 +19,11 @@ export interface DonneesProtection {
   chiffreAffairesMicro: { caVente: number; caServicesBic: number; caServicesBnc: number }
   /** Micro-entreprise bénéficiant de l'ACRE : les cotisations, donc les droits, sont réduits. */
   beneficieACRE?: boolean
+  /**
+   * Avec une date de création connue : la réduction de l'ACRE et le chiffre d'affaires des seuls mois qu'elle couvre.
+   * Absente, la réduction de l'année porte sur tout le chiffre d'affaires.
+   */
+  acre?: { reduction: number; chiffreAffaires: DonneesProtection["chiffreAffairesMicro"] }
 }
 
 function trimestresValides(revenuCotise: number, regles: ReglesFiscales): number {
@@ -54,21 +59,23 @@ function protectionTNS(assiette: number, regles: ReglesFiscales): ProtectionSoci
 }
 
 /** Micro-entrepreneur : mêmes droits que les indépendants, mais proportionnels au chiffre d'affaires, sans aucun minimum. */
-function protectionMicro(ca: DonneesProtection["chiffreAffairesMicro"], beneficieACRE: boolean, regles: ReglesFiscales): ProtectionSociale {
+function protectionMicro({ chiffreAffairesMicro: ca, beneficieACRE = false, acre }: DonneesProtection, regles: ReglesFiscales): ProtectionSociale {
   const taux: TauxMicro = regles.microEntreprise.cotisations
   const part = regles.protectionSociale.partRetraiteDeBaseMicro
-  const reduction = beneficieACRE ? 1 - regles.microEntreprise.reductionACRE : 1
-  const cotisationsRetraite = (ca.caVente * taux.venteBic * part.venteBic + ca.caServicesBic * taux.servicesBic * part.servicesBic + ca.caServicesBnc * taux.servicesBnc * part.servicesBnc) * reduction
+  const retraite = (c: DonneesProtection["chiffreAffairesMicro"]) => c.caVente * taux.venteBic * part.venteBic + c.caServicesBic * taux.servicesBic * part.servicesBic + c.caServicesBnc * taux.servicesBnc * part.servicesBnc
+  // Sans date de création, l'ACRE réduit toute l'année ; avec elle, les seuls mois qu'elle couvre.
+  const sousACRE = beneficieACRE ? (acre ?? { reduction: regles.microEntreprise.reductionACRE, chiffreAffaires: ca }) : { reduction: 0, chiffreAffaires: ca }
+  const cotisationsRetraite = retraite(ca) - retraite(sousACRE.chiffreAffaires) * sousACRE.reduction
   const trimestres = trimestresValides(cotisationsRetraite / regles.protectionSociale.tauxRetraiteDeBase, regles)
   return {
     etoiles: trimestres === 4 ? 2 : 1,
     trimestres,
-    resume: `Régime des indépendants, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. ${texteTrimestres(trimestres)}${beneficieACRE ? ", en tenant compte des cotisations réduites par l'ACRE" : ""}.`
+    resume: `Régime des indépendants, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. ${texteTrimestres(trimestres)}${retraite(sousACRE.chiffreAffaires) * sousACRE.reduction > 0 ? ", en tenant compte des cotisations réduites par l'ACRE" : ""}.`
   }
 }
 
 export function evaluerProtectionSociale(statut: StatutCompare, donnees: DonneesProtection, regles: ReglesFiscales): ProtectionSociale {
   if (statut === "SASU") return protectionSASU(donnees.remunerationBrute, regles)
   if (statut === "EURL" || statut === "EI") return protectionTNS(donnees.assietteTNS, regles)
-  return protectionMicro(donnees.chiffreAffairesMicro, donnees.beneficieACRE ?? false, regles)
+  return protectionMicro(donnees, regles)
 }

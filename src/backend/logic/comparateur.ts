@@ -1,10 +1,11 @@
 // src/backend/logic/comparateur.ts
 
-import type { StatutFrais, Company, ComparaisonCouple, ComparaisonOptions, ComparaisonResult, FinancialFlow, MicroEntreprise, OptimisationRemuneration, Relationship, RemunerationOptimale, ScenarioStatut, DonneesDeLAnnee, SimulationReport, StatutCompare, StatutSociete } from "../../types.js"
+import type { StatutFrais, FraisFonctionnement, Company, ComparaisonCouple, ComparaisonOptions, ComparaisonResult, FinancialFlow, MicroEntreprise, OptimisationRemuneration, Relationship, RemunerationOptimale, ScenarioStatut, DonneesDeLAnnee, SimulationReport, StatutCompare, StatutSociete } from "../../types.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import { depassePlafondMicro } from "./calculsAE.js"
+import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, noteCFE, partDeCFEDue, prorataDesPlafonds } from "./dispositifs.js"
 import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js"
 
 /*
@@ -94,7 +95,9 @@ function entiteCible(source: Activite, statut: StatutCompare): Activite {
   // Les déplacements professionnels suivent l'activité dans chaque statut : le moteur les convertit au barème de
   // l'année, en charge déductible (société, EI) ou en simple dépense (micro-entreprise).
   const deplacements = source.deplacementsProfessionnels ? { deplacementsProfessionnels: source.deplacementsProfessionnels } : {}
-  const commun = { id: source.id, name: source.name, avatar: source.avatar, locked: source.locked, ...deplacements }
+  // La date de création suit l'activité : ACRE, plafonds au prorata et CFE en dépendent dans chaque statut.
+  const creation = source.dateDeCreation ? { dateDeCreation: source.dateDeCreation } : {}
+  const commun = { id: source.id, name: source.name, avatar: source.avatar, locked: source.locked, ...deplacements, ...creation }
   if (statut === "micro" || statut === "micro-vfl") {
     const micro = source.type === "micro-entreprise" ? source : undefined
     return { ...commun, type: "micro-entreprise", beneficieACRE: micro?.beneficieACRE ?? false, opteVFL: statut === "micro-vfl", ...(micro?.rfrN2 !== undefined ? { rfrN2: micro.rfrN2 } : {}) }
@@ -114,18 +117,33 @@ function relationsCibles(session: DonneesDeLAnnee, source: Activite, statut: Sta
   return [...autres, lien(principale, statut === "SASU" ? "Président" : "Gérant"), ...associes.map(id => lien(id, "Associé"))]
 }
 
-/** Session dans laquelle l'activité a pris le statut demandé, avec ses flux convertis. */
-function sessionConvertie(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, options: ComparaisonOptions, dividendes: number | null): DonneesDeLAnnee {
-  const partBnc = Math.min(1, Math.max(0, options.partBncPrestations))
+/**
+ * Données de l'année dans lesquelles l'activité a pris le statut demandé : entité, relations et flux convertis, sans
+ * rien ajouter. Sert aussi à simuler au réel une micro-entreprise sortie du régime micro (simulation-pluriannuelle.ts).
+ */
+export function convertirLActivite(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, partBncPrestations = 1, garderLesDividendes = false): DonneesDeLAnnee {
+  const partBnc = Math.min(1, Math.max(0, partBncPrestations))
   const monthlyData = session.monthlyData.map(mois => ({
     ...mois,
     flows: mois.flows.flatMap(flux => {
       if (flux.entityId !== source.id) return [flux]
       // Les dividendes saisis sont conservés tels quels quand on ne distribue pas tout le bénéfice.
-      if (flux.type === "dividends_payment" && estSocieteIS(statut) && dividendes === null) return [flux]
+      if (flux.type === "dividends_payment" && estSocieteIS(statut) && garderLesDividendes) return [flux]
       return convertirFlux(flux, statut, partBnc)
     })
   }))
+  return {
+    ...session,
+    entities: session.entities.map(e => (e.id === source.id ? entiteCible(source, statut) : e)),
+    relationships: relationsCibles(session, source, statut),
+    monthlyData
+  }
+}
+
+/** Session dans laquelle l'activité a pris le statut demandé, avec ses flux convertis, sa rémunération, ses dividendes et ses frais. */
+function sessionConvertie(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, options: ComparaisonOptions, dividendes: number | null): DonneesDeLAnnee {
+  const convertie = convertirLActivite(session, source, statut, options.partBncPrestations, dividendes === null)
+  const monthlyData = [...convertie.monthlyData]
 
   // La rémunération et les dividendes calculés sont saisis sur janvier : seuls les totaux annuels comptent.
   const ajouts: FinancialFlow[] = []
@@ -141,13 +159,7 @@ function sessionConvertie(session: DonneesDeLAnnee, source: Activite, statut: St
     ajouts.push({ id: `comparateur-${source.id}-frais`, label: "Frais de fonctionnement (comparateur)", amount: frais, entityId: source.id, type: statut === "micro" || statut === "micro-vfl" ? "expense" : "deductible_expense" })
   }
   monthlyData[0] = { ...monthlyData[0], flows: [...monthlyData[0].flows, ...ajouts] }
-
-  return {
-    ...session,
-    entities: session.entities.map(e => (e.id === source.id ? entiteCible(source, statut) : e)),
-    relationships: relationsCibles(session, source, statut),
-    monthlyData
-  }
+  return { ...convertie, monthlyData }
 }
 
 /** Total annuel des frais de fonctionnement saisis pour un statut. */
@@ -157,23 +169,47 @@ export function fraisDuStatut(statut: StatutCompare, options: ComparaisonOptions
   return postes ? Object.values(postes).reduce((somme, montant) => somme + Math.max(0, montant), 0) : 0
 }
 
-/** Chiffre d'affaires annuel par nature de l'activité, une fois convertie dans le statut. */
-function chiffreAffairesMicro(session: DonneesDeLAnnee, activiteId: string) {
-  const total = (type: FinancialFlow["type"]) => session.monthlyData.flatMap(m => m.flows).filter(f => f.entityId === activiteId && f.type === type).reduce((somme, f) => somme + f.amount, 0)
-  return { caVente: total("ca_micro_vente"), caServicesBic: total("ca_micro_services_bic"), caServicesBnc: total("ca_micro_services_bnc") }
+const estMicro = (statut: StatutCompare) => statut === "micro" || statut === "micro-vfl"
+
+/**
+ * Ce que la micro-entreprise de la colonne donne à la protection sociale : son ACRE (mois couverts si la date de
+ * création est connue, toute l'année sinon) et ses plafonds de l'année (au prorata l'année de création).
+ */
+function microDeLaColonne(simulation: Simulation, activiteId: string, regles: ReglesFiscales, annee: number) {
+  const micro = simulation.session.entities.find((e): e is MicroEntreprise => e.id === activiteId && e.type === "micro-entreprise")
+  const acre = micro ? acreDeLAnnee(micro, annee, simulation.session.monthlyData, regles) : null
+  return {
+    beneficieACRE: micro?.beneficieACRE ?? false,
+    ...(acre ? { acre: { reduction: acre.reduction, chiffreAffaires: acre.chiffreAffaires } } : {}),
+    prorata: prorataDesPlafonds(lireMois(micro?.dateDeCreation), annee)
+  }
 }
 
-function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation, activiteId: string, options: ComparaisonOptions, regles: ReglesFiscales): ScenarioStatut {
+/** Colonne micro d'une activité sortie du régime micro cette année : le régime fermé et pourquoi, dans les notes. */
+function regimeFerme(statut: StatutCompare, activiteId: string, contexte: ContexteDeLAnnee): Pick<ScenarioStatut, "regimeMicroFerme"> & { notes: string[] } {
+  const sortie = estMicro(statut) ? contexte.regimeMicro?.sorties[activiteId] : undefined
+  if (!sortie) return { notes: [] }
+  return { regimeMicroFerme: sortie, notes: [`Régime micro fermé en ${contexte.annee ?? sortie.depuis} : chiffre d'affaires au-delà des plafonds en ${sortie.depassements[0]} et ${sortie.depassements[1]}, sortie au 1er janvier ${sortie.depuis}. Cette colonne n'est donnée qu'à titre de comparaison.`] }
+}
+
+/** Ce sur quoi le dirigeant cotise dans la colonne : rémunération brute du président, assiette du travailleur non salarié. */
+function assiettesDeProtection(activite: SimulationReport["activities"][number] | undefined) {
+  return { remunerationBrute: activite?.cotisationsPresident?.brut ?? 0, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0 }
+}
+
+function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation, activiteId: string, options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee): ScenarioStatut {
   const { report } = simulation
   const { bilan } = report
   const activite = report.activities.find(a => a.entityId === activiteId)
-  const caMicro = chiffreAffairesMicro(simulation.session, activiteId)
+  const caMicro = chiffreAffairesDeLaMicro(simulation.session.monthlyData, activiteId)
+  const { prorata, ...acre } = microDeLaColonne(simulation, activiteId, regles, contexte.annee ?? regles.annee)
+  const { notes, ...ferme } = regimeFerme(statut, activiteId, contexte)
   return {
     statut,
     libelle: LIBELLES[statut],
     actuel,
     fraisFonctionnement: fraisDuStatut(statut, options),
-    protectionSociale: evaluerProtectionSociale(statut, { remunerationBrute: activite?.cotisationsPresident?.brut ?? 0, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0, chiffreAffairesMicro: caMicro, beneficieACRE: simulation.session.entities.some(e => e.id === activiteId && e.type === "micro-entreprise" && e.beneficieACRE) }, regles),
+    protectionSociale: evaluerProtectionSociale(statut, { ...assiettesDeProtection(activite), chiffreAffairesMicro: caMicro, ...acre }, regles),
     netApresImpots: report.totalNetApresImpots,
     revenusAvantPrelevements: bilan.revenusAvantPrelevements,
     totalPrelevements: bilan.totalPrelevements,
@@ -183,8 +219,10 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation
     prelevementsSociaux: bilan.prelevementsSociaux,
     resultatConserve: bilan.resultatConserve,
     resultatConserveActivite: Math.round(activite?.resultatConserve ?? 0),
-    horsPlafond: (statut === "micro" || statut === "micro-vfl") && depassePlafondMicro(caMicro, regles),
-    warnings: activite?.warnings ?? [],
+    horsPlafond: estMicro(statut) && depassePlafondMicro(caMicro, regles, prorata),
+    ...ferme,
+    // Les dispositifs de l'année (sortie du régime micro, ACRE…) rejoignent les notes de la colonne.
+    warnings: [...notes, ...(activite?.dispositifs ?? []), ...(activite?.warnings ?? [])],
     ...(activite?.partage ? { partage: activite.partage } : {})
   }
 }
@@ -254,7 +292,7 @@ function simulerStatut(session: DonneesDeLAnnee, source: Activite, statut: Statu
 /** Simule l'activité dans un statut, avec les réglages donnés : la colonne du comparateur et les dividendes versés. */
 export function simulerScenario(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, options: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): { scenario: ScenarioStatut; dividendes: number | null } {
   const simulation = simulerStatut(session, source, statut, options, regles, contexte)
-  return { scenario: scenario(statut, statut === statutActuel(source), simulation, source.id, options, regles), dividendes: simulation.dividendes }
+  return { scenario: scenario(statut, statut === statutActuel(source), simulation, source.id, options, regles, contexte), dividendes: simulation.dividendes }
 }
 
 /** Bénéfice après impôt sur les sociétés que la société garde avec cette rémunération, avant tout dividende. */
@@ -287,14 +325,28 @@ function comparerCouples(session: DonneesDeLAnnee, regles: ReglesFiscales, conte
     })
 }
 
-export function comparerStatuts(session: DonneesDeLAnnee, options: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): ComparaisonResult {
+/**
+ * Frais de fonctionnement de l'année : le poste CFE de chaque statut multiplié par la part due d'après la date de
+ * création de l'activité (rien l'année de création, la moitié l'année suivante), avec la note qui le dit.
+ */
+export function avecLaCFEDeLAnnee(options: ComparaisonOptions, source: Activite, annee: number, regles: ReglesFiscales): { options: ComparaisonOptions; noteCFE?: string } {
+  const creation = lireMois(source.dateDeCreation)
+  const part = partDeCFEDue(creation, annee, regles)
+  const note = noteCFE(creation, annee, regles)
+  if (!options.fraisFonctionnement || part >= 1 || !note) return { options }
+  const frais = Object.fromEntries(Object.entries(options.fraisFonctionnement).map(([statut, postes]) => [statut, { ...postes, cfe: postes.cfe * part }])) as FraisFonctionnement
+  return { options: { ...options, fraisFonctionnement: frais }, noteCFE: note }
+}
+
+export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): ComparaisonResult {
   const reportActuel = runMetaSimulation(session, regles, contexte)
   const couples = comparerCouples(session, regles, contexte, reportActuel)
 
-  const source = activiteComparee(session, options.activityId)
+  const source = activiteComparee(session, optionsSaisies.activityId)
   if (!source) {
     return { scenarios: [], meilleur: null, couples, warnings: ["Choisissez une activité à comparer."] }
   }
+  const { options, noteCFE } = avecLaCFEDeLAnnee(optionsSaisies, source, contexte.annee ?? regles.annee, regles)
 
   const warnings: string[] = []
   const { principale, associes } = personnesDeLActivite(session, source.id)
@@ -305,17 +357,17 @@ export function comparerStatuts(session: DonneesDeLAnnee, options: ComparaisonOp
   const auMeilleurNet = options.repartition.mode === "meilleurNet"
   const optimisations: Partial<Record<StatutSociete, OptimisationRemuneration>> = {}
   const scenarios = STATUTS_COMPARES.map(statut => {
-    if (!auMeilleurNet || !estSocieteIS(statut)) return scenario(statut, statut === actuel, simulerStatut(session, source, statut, options, regles, contexte), source.id, options, regles)
+    if (!auMeilleurNet || !estSocieteIS(statut)) return scenario(statut, statut === actuel, simulerStatut(session, source, statut, options, regles, contexte), source.id, options, regles, contexte)
     const colonne = colonneAuMeilleurNet(session, source, statut, options, regles, contexte)
     optimisations[statut] = colonne.optimisation
     return colonne.scenario
   })
   // Une micro-entreprise hors plafond n'est tenable que deux ans : le meilleur net se choisit parmi les autres colonnes.
-  const tenables = scenarios.filter(s => !s.horsPlafond)
+  const tenables = scenarios.filter(s => !s.horsPlafond && !s.regimeMicroFerme)
   const candidats = tenables.length > 0 ? tenables : scenarios
   const meilleur = candidats.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), candidats[0]).statut
 
-  return { scenarios, meilleur, couples, warnings, ...(auMeilleurNet ? { optimisations } : {}) }
+  return { scenarios, meilleur, couples, warnings, ...(auMeilleurNet ? { optimisations } : {}), ...(noteCFE ? { noteCFE } : {}) }
 }
 
 /** Ce que coûtent les 4 trimestres de retraite en net du foyer, arrondi à l'euro ; 0 si le meilleur net les valide déjà. */

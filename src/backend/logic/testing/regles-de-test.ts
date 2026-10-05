@@ -149,10 +149,12 @@ export const reglesDeTest: ReglesFiscales = {
   protectionSociale: { revenuParTrimestre: 2000,tauxRetraiteDeBase: 0.2, partRetraiteDeBaseMicro: { venteBic: 0.4, servicesBic: 0.4, servicesBnc: 0.5 } },
   EURL: { seuilDividendesPartDuCapital: 0.1 },
   TVA: { services: { franchiseBase: 40000, seuilMajore: 45000 }, vente: { franchiseBase: 100000, seuilMajore: 110000 } },
+  CFE: { partDueAnneeDeCreation: 0, partDueAnneeSuivante: 0.5 },
   microEntreprise: {
     plafonds: { services: 80000, vente: 200000 },
     cotisations: { venteBic: 0.1, servicesBic: 0.2, servicesBnc: 0.25 },
     reductionACRE: 0.5,
+    ACRE: { trimestresCivilsApresLeDebut: 3, reductionsParDateDeCreation: [{ aPartirDe: "2020-01", reduction: 0.5 }] },
     abattement: { venteBic: 0.7, servicesBic: 0.5, servicesBnc: 0.3, minimum: 300 },
     versementLiberatoire: { plafondRfrParPart: 28000, taux: { venteBic: 0.01, servicesBic: 0.02, servicesBnc: 0.02 } }
   }
