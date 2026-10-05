@@ -279,35 +279,32 @@ describe("ResultsPanel", () => {
 })
 
 describe("détail des cartes de résultats", () => {
-  /** Deux foyers et deux activités : chaque groupe compte plusieurs cartes. */
+  /** Deux foyers et deux activités. */
   function rapportAvecDeuxActivites(): SimulationReport {
     const report = makeReport()
     report.activities = [...report.activities, { ...report.activities[0], entityId: "micro-atelier", name: "Atelier", type: "micro-entreprise", statut: "Micro-entreprise", impotSocietes: 0, resultatConserve: 0, warnings: [] }]
     return report
   }
   const afficher = (affichage: Affichage, report = rapportAvecDeuxActivites()) => render(<AffichageContext.Provider value={affichage}><ResultsPanel report={report} error={null} /></AffichageContext.Provider>)
-  const boutons = (groupe: RegExp) => screen.getAllByRole("button", { name: groupe })
-  const FOYERS = /le détail \(tous les foyers\)$/
-  const ACTIVITES = /le détail \(toutes les activités\)$/
+  const TOUTES = /le détail \(toutes les cartes\)$/
+  const boutons = () => screen.getAllByRole("button", { name: TOUTES })
   const carte = (nom: string) => screen.getAllByRole("article").find(article => within(article).queryByText(nom))!
   /** Une ligne de détail est masquée à l'écran (classe `hidden`), mais reste imprimée. */
   const masquee = (conteneur: HTMLElement, libelle: string) => within(conteneur).getByText(libelle, { selector: "dt" }).closest(".hidden") !== null
 
-  it("affichage classique : tout est affiché, et un clic masque le détail de tous les foyers, pas celui des activités", async () => {
+  it("affichage classique : tout est affiché, et un clic sur un foyer masque le détail de toutes les cartes, foyers et activités", async () => {
     afficher("classique")
-    expect(boutons(FOYERS)).toHaveLength(2)
-    expect(boutons(ACTIVITES)).toHaveLength(2)
-    for (const bouton of [...boutons(FOYERS), ...boutons(ACTIVITES)]) expect(bouton).toHaveAttribute("aria-expanded", "true")
+    expect(boutons()).toHaveLength(4)
+    for (const bouton of boutons()) expect(bouton).toHaveAttribute("aria-expanded", "true")
     expect(masquee(carte("Bob Durand"), "Total encaissé")).toBe(false)
 
-    const clique = within(carte("Bob Durand")).getByRole("button", { name: FOYERS })
+    const clique = within(carte("Bob Durand")).getByRole("button", { name: TOUTES })
     await userEvent.click(clique)
 
-    for (const bouton of boutons(FOYERS)) {
+    for (const bouton of boutons()) {
       expect(bouton).toHaveAttribute("aria-expanded", "false")
-      expect(bouton).toHaveAccessibleName("Afficher le détail (tous les foyers)")
+      expect(bouton).toHaveAccessibleName("Afficher le détail (toutes les cartes)")
     }
-    for (const bouton of boutons(ACTIVITES)) expect(bouton).toHaveAttribute("aria-expanded", "true")
     expect(clique).toHaveFocus()
     // L'impôt et le revenu fiscal de référence restent affichés ; le reste se masque à sa place, dans chaque foyer.
     for (const nom of ["Alice Martin", "Bob Durand"]) {
@@ -316,33 +313,33 @@ describe("détail des cartes de résultats", () => {
       expect(masquee(carte(nom), "Impôt sur le revenu")).toBe(false)
       expect(masquee(carte(nom), "Revenu fiscal de référence")).toBe(false)
     }
-    expect(masquee(carte("Ma SASU"), "Chiffre d'affaires")).toBe(false)
+    expect(masquee(carte("Ma SASU"), "Chiffre d'affaires")).toBe(true)
   })
 
-  it("affichage « Résumé » : le détail est replié, et un clic ouvre celui de toutes les activités, pas celui des foyers", async () => {
+  it("affichage « Résumé » : le détail est replié, et un clic sur une activité ouvre celui de toutes les cartes", async () => {
     afficher("resume")
-    for (const bouton of [...boutons(FOYERS), ...boutons(ACTIVITES)]) expect(bouton).toHaveAttribute("aria-expanded", "false")
+    for (const bouton of boutons()) expect(bouton).toHaveAttribute("aria-expanded", "false")
     expect(masquee(carte("Ma SASU"), "Chiffre d'affaires")).toBe(true)
     expect(masquee(carte("Ma SASU"), "Versé avant impôt sur le revenu")).toBe(false)
 
-    const clique = within(carte("Atelier")).getByRole("button", { name: ACTIVITES })
+    const clique = within(carte("Atelier")).getByRole("button", { name: TOUTES })
     await userEvent.click(clique)
 
-    for (const bouton of boutons(ACTIVITES)) expect(bouton).toHaveAttribute("aria-expanded", "true")
-    for (const bouton of boutons(FOYERS)) expect(bouton).toHaveAttribute("aria-expanded", "false")
+    for (const bouton of boutons()) expect(bouton).toHaveAttribute("aria-expanded", "true")
     expect(clique).toHaveFocus()
-    expect(clique).toHaveAccessibleName("Masquer le détail (toutes les activités)")
+    expect(clique).toHaveAccessibleName("Masquer le détail (toutes les cartes)")
     expect(masquee(carte("Ma SASU"), "Chiffre d'affaires")).toBe(false)
-    expect(masquee(carte("Bob Durand"), "Total encaissé")).toBe(true)
+    expect(masquee(carte("Bob Durand"), "Total encaissé")).toBe(false)
 
-    // Au clavier aussi : Entrée referme tout le groupe.
+    // Au clavier aussi : Entrée referme toutes les cartes.
     await userEvent.keyboard("{Enter}")
-    for (const bouton of boutons(ACTIVITES)) expect(bouton).toHaveAttribute("aria-expanded", "false")
+    for (const bouton of boutons()) expect(bouton).toHaveAttribute("aria-expanded", "false")
   })
 
-  it("chaque bouton désigne le détail de sa carte ; seul, il ne parle pas de « tous »", () => {
+  it("chaque bouton désigne le détail de sa carte ; seul, il ne parle pas de « toutes »", () => {
     const report = makeReport()
     report.foyers = [report.foyers[1]]
+    report.activities = []
     afficher("resume", report)
     const bouton = within(carte("Bob Durand")).getByRole("button", { name: "Afficher le détail" })
     expect(document.getElementById(bouton.getAttribute("aria-controls")!)).toHaveTextContent("Total encaissé")
@@ -361,8 +358,8 @@ describe("détail des cartes de résultats", () => {
       </AffichageContext.Provider>
     )
     const panneau = screen.getByRole("region", { name: "Panneau" })
-    await userEvent.click(within(panneau).getByRole("button", { name: FOYERS }))
-    for (const bouton of boutons(FOYERS)) expect(bouton).toHaveAttribute("aria-expanded", "true")
+    await userEvent.click(within(panneau).getByRole("button", { name: TOUTES }))
+    for (const bouton of boutons()) expect(bouton).toHaveAttribute("aria-expanded", "true")
   })
 })
 
@@ -381,18 +378,17 @@ describe("détail des cartes retenu dans les préférences", () => {
         </AffichageContext.Provider>
       </AvecPreferences>
     )
+  const boutons = () => screen.getAllByRole("button", { name: /le détail \(toutes les cartes\)$/ })
 
-  it("reprend l'état retenu de chaque groupe, et retient la bascule d'un groupe sous son identifiant", async () => {
+  it("reprend l'état retenu, et retient la bascule sous un seul identifiant", async () => {
     let preferences: UserPreferences = { slotOrder: [] }
-    afficher({ slotOrder: [], sectionsOuvertes: { "details-activites": true } }, p => (preferences = p))
-    const activite = within(screen.getAllByRole("article").find(a => within(a).queryByText("Ma SASU"))!).getByRole("button", { name: /le détail$/ })
-    expect(activite).toHaveAttribute("aria-expanded", "true")
-    for (const bouton of screen.getAllByRole("button", { name: /\(tous les foyers\)$/ })) expect(bouton).toHaveAttribute("aria-expanded", "false")
+    afficher({ slotOrder: [], sectionsOuvertes: { "details-des-cartes": true } }, p => (preferences = p))
+    for (const bouton of boutons()) expect(bouton).toHaveAttribute("aria-expanded", "true")
 
-    await userEvent.click(screen.getAllByRole("button", { name: /\(tous les foyers\)$/ })[0])
+    await userEvent.click(boutons()[0])
 
-    expect(preferences.sectionsOuvertes).toEqual({ "details-activites": true, "details-foyers": true })
-    for (const bouton of screen.getAllByRole("button", { name: /\(tous les foyers\)$/ })) expect(bouton).toHaveAttribute("aria-expanded", "true")
+    expect(preferences.sectionsOuvertes).toEqual({ "details-des-cartes": false })
+    for (const bouton of boutons()) expect(bouton).toHaveAttribute("aria-expanded", "false")
   })
 })
 

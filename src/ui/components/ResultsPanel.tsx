@@ -4,7 +4,7 @@ import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, Pers
 import { cn } from "@/lib/utils"
 import { Fragment, useId, type ReactNode } from "react"
 import { useAffichagePanneaux, useAffichageResume } from "../hooks/useAffichage"
-import { classeDuDetail, useDetailDuGroupe } from "../hooks/useDetailsDesCartes"
+import { classeDuDetail, useDetailDesCartes } from "../hooks/useDetailsDesCartes"
 import { BoutonDActeur } from "./BoutonDActeur"
 import { BoutonDuDetailDesCartes, FournisseurDesDetails } from "./DetailsDesCartes"
 import { ReplieEnResume } from "./ReplieEnResume"
@@ -248,13 +248,13 @@ interface FoyerCardProps {
 
 function FoyerCard({ foyer, persons, showRates, nombre, nomsQuiOuvrent = false }: FoyerCardProps) {
   const resume = useAffichageResume()
-  const { ouvert } = useDetailDuGroupe("foyers")
+  const { ouvert } = useDetailDesCartes()
   const idDuDetail = useId()
   const members = membresDuFoyer(foyer, persons)
   const parts = foyer.totalParts.toLocaleString("fr-FR")
   // Affichage classique : chaque ligne de détail se masque à sa place ; ailleurs, tout le détail, sous le bouton.
   const p = piecesDuFoyer(foyer, members, showRates, resume ? undefined : classeDuDetail(ouvert, "flex"))
-  const bouton = <BoutonDuDetailDesCartes groupe="foyers" nombre={nombre} controle={idDuDetail} className="mt-2" />
+  const bouton = <BoutonDuDetailDesCartes nombre={nombre} controle={idDuDetail} className="mt-2" />
 
   return (
     <Card title={nomsQuiOuvrent ? <NomsQuiOuvrent members={members} /> : members.map(m => m.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
@@ -330,11 +330,11 @@ function DeplacementsRow({ deplacements, className }: { deplacements: NonNullabl
 
 function ActivityCard({ activity, nombre, className, enTeteMasque }: { activity: ActivityResult; nombre: number; className?: string; enTeteMasque?: boolean }) {
   const resume = useAffichageResume()
-  const { ouvert } = useDetailDuGroupe("activites")
+  const { ouvert } = useDetailDesCartes()
   const idDuDetail = useId()
   const verse = <Row label="Versé avant impôt sur le revenu" value={formatMoney(activity.revenuVerse)} hint={shareOfRevenue(activity)} strong />
   const versementLiberatoire = activity.versementLiberatoire ? <VersementLiberatoireNote info={activity.versementLiberatoire} /> : null
-  const bouton = <BoutonDuDetailDesCartes groupe="activites" nombre={nombre} controle={idDuDetail} className="mt-2" />
+  const bouton = <BoutonDuDetailDesCartes nombre={nombre} controle={idDuDetail} className="mt-2" />
 
   return (
     <Card title={activity.name} subtitle={activity.statut} warnings={activity.warnings} className={className} enTeteMasque={enTeteMasque}>
@@ -456,10 +456,10 @@ function CartesDuResume({ report, sharedCompanies }: { report: SimulationReport;
       <NoteDesAssocies sharedCompanies={sharedCompanies} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {report.foyers.map(foyer => (
-          <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length} nomsQuiOuvrent={panneaux} />
+          <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length + report.activities.length} nomsQuiOuvrent={panneaux} />
         ))}
         {report.activities.map(activity => (
-          <ActivityCard key={activity.entityId} activity={activity} nombre={report.activities.length} className={panneaux ? "hidden print:block" : undefined} />
+          <ActivityCard key={activity.entityId} activity={activity} nombre={report.foyers.length + report.activities.length} className={panneaux ? "hidden print:block" : undefined} />
         ))}
       </div>
       {panneaux ? <ListeDesActivites activities={report.activities} /> : null}
@@ -470,9 +470,9 @@ function CartesDuResume({ report, sharedCompanies }: { report: SimulationReport;
 /** Carte de résultats d'un acteur, pour son panneau : celle de l'activité, ou celle du foyer de la personne. */
 export function CarteDeLActeur({ report, entityId }: { report: SimulationReport | null; entityId: string }) {
   const activity = report?.activities.find(a => a.entityId === entityId)
-  if (report && activity) return <ActivityCard activity={activity} nombre={report.activities.length} enTeteMasque />
+  if (report && activity) return <ActivityCard activity={activity} nombre={report.foyers.length + report.activities.length} enTeteMasque />
   const foyer = report?.foyers.find(f => f.personIds.includes(entityId))
-  if (report && foyer) return <FoyerCard foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length} />
+  if (report && foyer) return <FoyerCard foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length + report.activities.length} />
   return <p className="text-sm text-slate-600 dark:text-slate-400">Pas encore de résultats pour cet acteur.</p>
 }
 
@@ -486,7 +486,7 @@ function CartesClassiques({ report, sharedCompanies }: { report: SimulationRepor
           <NoteDesAssocies sharedCompanies={sharedCompanies} />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.foyers.map(foyer => (
-              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length} />
+              <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length + report.activities.length} />
             ))}
           </div>
         </div>
@@ -497,7 +497,7 @@ function CartesClassiques({ report, sharedCompanies }: { report: SimulationRepor
           <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Par activité</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {report.activities.map(activity => (
-              <ActivityCard key={activity.entityId} activity={activity} nombre={report.activities.length} />
+              <ActivityCard key={activity.entityId} activity={activity} nombre={report.foyers.length + report.activities.length} />
             ))}
           </div>
         </div>
@@ -524,7 +524,7 @@ export function ResultsPanel({ report, error, apresLeBilan }: ResultsPanelProps)
 
       {apresLeBilan}
 
-      {/* Le détail des cartes s'ouvre et se ferme par groupe : tous les foyers ensemble, toutes les activités ensemble. */}
+      {/* Le détail des cartes s'ouvre et se ferme pour toutes à la fois, foyers et activités. */}
       {report ? (
         <FournisseurDesDetails>
           <Cartes report={report} sharedCompanies={sharedCompanies} />

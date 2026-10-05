@@ -1,32 +1,22 @@
 // src/ui/hooks/useDetailsDesCartes.ts
-// Détail des cartes de résultats : un seul état par groupe de cartes (les foyers fiscaux, les activités), pour qu'un
-// clic sur « Afficher le détail » d'une carte déplie tout le groupe d'un coup. Le bouton cliqué garde sa place à
-// l'écran et le focus, quelle que soit la hauteur gagnée ou perdue au-dessus de lui. L'état de chaque groupe est
-// retenu dans les préférences de l'utilisateur (voir useSectionOuverte).
+// Détail des cartes de résultats : un seul état pour toutes les cartes (foyers fiscaux et activités), pour qu'un clic
+// sur « Afficher le détail » de n'importe quelle carte les déplie toutes d'un coup. Le bouton cliqué garde sa place à
+// l'écran et le focus, quelle que soit la hauteur gagnée ou perdue au-dessus de lui. L'état est retenu dans les
+// préférences de l'utilisateur (voir useSectionOuverte).
 
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef } from "react"
 import { useAffichageResume } from "./useAffichage"
 import { useSectionOuverte } from "./useSectionOuverte"
 
-export type GroupeDeCartes = "foyers" | "activites"
-
-/** Détail ouvert ou fermé de chaque groupe. */
-export type EtatDesGroupes = Record<GroupeDeCartes, boolean>
-
-/** Identifiants sous lesquels l'état de chaque groupe est retenu. */
-export const ID_DES_GROUPES: Record<GroupeDeCartes, string> = { foyers: "details-foyers", activites: "details-activites" }
+/** Identifiant sous lequel l'état du détail des cartes est retenu. */
+export const ID_DU_DETAIL_DES_CARTES = "details-des-cartes"
 
 /**
- * État des groupes, retenu dans les préférences : ouvert d'office dans l'affichage classique (la page d'origine, tout
+ * Détail des cartes, retenu dans les préférences : ouvert d'office dans l'affichage classique (la page d'origine, tout
  * affiché), fermé dans les affichages qui replient le détail, tant que l'utilisateur n'a pas choisi.
  */
-export function useEtatDesGroupes(): [EtatDesGroupes, (groupe: GroupeDeCartes, ouvert: boolean) => void] {
-  const ouvertParDefaut = !useAffichageResume()
-  const [foyers, definirFoyers] = useSectionOuverte(ID_DES_GROUPES.foyers, ouvertParDefaut)
-  const [activites, definirActivites] = useSectionOuverte(ID_DES_GROUPES.activites, ouvertParDefaut)
-  const etat = useMemo(() => ({ foyers, activites }), [foyers, activites])
-  const changer = useCallback((groupe: GroupeDeCartes, ouvert: boolean) => (groupe === "foyers" ? definirFoyers : definirActivites)(ouvert), [definirFoyers, definirActivites])
-  return [etat, changer]
+export function useEtatDuDetail(): [boolean, (ouvert: boolean) => void] {
+  return useSectionOuverte(ID_DU_DETAIL_DES_CARTES, !useAffichageResume())
 }
 
 /** Classes du détail fermé d'une carte : masqué à l'écran quand il est fermé, toujours imprimé. */
@@ -56,16 +46,16 @@ export function retrouverLaPosition({ element, haut }: Ancre) {
 }
 
 export interface DetailsDesCartes {
-  etat: EtatDesGroupes
-  /** Ouvre ou ferme le détail de tout le groupe ; `bouton`, l'élément cliqué, garde sa place dans la fenêtre et le focus. */
-  basculer: (groupe: GroupeDeCartes, ouvert: boolean, bouton: HTMLElement) => void
+  ouvert: boolean
+  /** Ouvre ou ferme le détail de toutes les cartes ; `bouton`, l'élément cliqué, garde sa place dans la fenêtre et le focus. */
+  basculer: (ouvert: boolean, bouton: HTMLElement) => void
 }
 
 export const DetailsDesCartesContext = createContext<DetailsDesCartes | null>(null)
 
-/** État partagé des groupes, et l'ancrage du défilement après chaque bascule. */
+/** État partagé du détail, et l'ancrage du défilement après chaque bascule. */
 export function useDetailsDesCartes(): DetailsDesCartes {
-  const [etat, changer] = useEtatDesGroupes()
+  const [ouvert, changer] = useEtatDuDetail()
   const ancre = useRef<Ancre | null>(null)
 
   // Après la mise à jour du DOM, avant l'affichage : le bouton cliqué reprend sa place, sans saut visible.
@@ -73,16 +63,16 @@ export function useDetailsDesCartes(): DetailsDesCartes {
     const aRetrouver = ancre.current
     ancre.current = null
     if (aRetrouver) retrouverLaPosition(aRetrouver)
-  }, [etat])
+  }, [ouvert])
 
   const basculer = useCallback(
-    (groupe: GroupeDeCartes, ouvert: boolean, bouton: HTMLElement) => {
+    (ouvrir: boolean, bouton: HTMLElement) => {
       ancre.current = { element: bouton, haut: bouton.getBoundingClientRect().top }
-      changer(groupe, ouvert)
+      changer(ouvrir)
     },
     [changer]
   )
-  return useMemo(() => ({ etat, basculer }), [etat, basculer])
+  return useMemo(() => ({ ouvert, basculer }), [ouvert, basculer])
 }
 
 /** Le contexte des détails, s'il en existe un plus haut dans l'arbre. */
@@ -90,10 +80,10 @@ export function useDetailsDesCartesExistants(): DetailsDesCartes | null {
   return useContext(DetailsDesCartesContext)
 }
 
-/** Détail d'un groupe de cartes, partagé par toutes ses cartes (voir useEtatDesGroupes pour l'état par défaut). */
-export function useDetailDuGroupe(groupe: GroupeDeCartes): { ouvert: boolean; basculer: (bouton: HTMLElement) => void } {
+/** Détail des cartes, partagé par toutes (voir useEtatDuDetail pour l'état par défaut). */
+export function useDetailDesCartes(): { ouvert: boolean; basculer: (bouton: HTMLElement) => void } {
   const details = useContext(DetailsDesCartesContext)
   const resume = useAffichageResume()
-  const ouvert = details?.etat[groupe] ?? !resume
-  return { ouvert, basculer: bouton => details?.basculer(groupe, !ouvert, bouton) }
+  const ouvert = details?.ouvert ?? !resume
+  return { ouvert, basculer: bouton => details?.basculer(!ouvert, bouton) }
 }
