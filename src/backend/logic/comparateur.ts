@@ -329,13 +329,13 @@ function comparerCouples(session: DonneesDeLAnnee, regles: ReglesFiscales, conte
  * Frais de fonctionnement de l'année : le poste CFE de chaque statut multiplié par la part due d'après la date de
  * création de l'activité (rien l'année de création, la moitié l'année suivante), avec la note qui le dit.
  */
-export function avecLaCFEDeLAnnee(options: ComparaisonOptions, source: Activite, annee: number, regles: ReglesFiscales): { options: ComparaisonOptions; noteCFE?: string } {
+export function avecLaCFEDeLAnnee(options: ComparaisonOptions, source: Activite, annee: number, regles: ReglesFiscales): { options: ComparaisonOptions } & Pick<ComparaisonResult, "noteCFE" | "partCFE"> {
   const creation = lireMois(source.dateDeCreation)
   const part = partDeCFEDue(creation, annee, regles)
   const note = noteCFE(creation, annee, regles)
   if (!options.fraisFonctionnement || part >= 1 || !note) return { options }
   const frais = Object.fromEntries(Object.entries(options.fraisFonctionnement).map(([statut, postes]) => [statut, { ...postes, cfe: postes.cfe * part }])) as FraisFonctionnement
-  return { options: { ...options, fraisFonctionnement: frais }, noteCFE: note }
+  return { options: { ...options, fraisFonctionnement: frais }, noteCFE: note, partCFE: part }
 }
 
 export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): ComparaisonResult {
@@ -346,7 +346,7 @@ export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: Compar
   if (!source) {
     return { scenarios: [], meilleur: null, couples, warnings: ["Choisissez une activité à comparer."] }
   }
-  const { options, noteCFE } = avecLaCFEDeLAnnee(optionsSaisies, source, contexte.annee ?? regles.annee, regles)
+  const { options, ...cfe } = avecLaCFEDeLAnnee(optionsSaisies, source, contexte.annee ?? regles.annee, regles)
 
   const warnings: string[] = []
   const { principale, associes } = personnesDeLActivite(session, source.id)
@@ -367,7 +367,7 @@ export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: Compar
   const candidats = tenables.length > 0 ? tenables : scenarios
   const meilleur = candidats.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), candidats[0]).statut
 
-  return { scenarios, meilleur, couples, warnings, ...(auMeilleurNet ? { optimisations } : {}), ...(noteCFE ? { noteCFE } : {}) }
+  return { scenarios, meilleur, couples, warnings, ...(auMeilleurNet ? { optimisations } : {}), ...cfe }
 }
 
 /** Ce que coûtent les 4 trimestres de retraite en net du foyer, arrondi à l'euro ; 0 si le meilleur net les valide déjà. */

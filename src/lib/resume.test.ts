@@ -60,6 +60,11 @@ describe("verdict du comparateur", () => {
     expect(phraseDuVerdict({ ...comparaison("SASU"), scenarios: [scenario("SASU", "SASU", 30000)] }, "Atelier")).toBeNull()
   })
 
+  it("ne cite pas derrière le statut actuel une colonne micro qui n'est plus accessible", () => {
+    const result = { ...comparaison("micro"), scenarios: comparaison("micro").scenarios.map(s => (s.statut === "micro-vfl" ? { ...s, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] as [number, number] } } : s)) }
+    expect(espaces(phraseDuVerdict(result, "Atelier"))).toBe("Pour « Atelier », le statut actuel, Micro-entreprise, donne le meilleur net : 32 000 €. Juste derrière : SASU, −2 000 €.")
+  })
+
   it("seul en tête, le statut actuel n'a personne derrière lui", () => {
     expect(espaces(phraseDuVerdict({ ...comparaison("micro"), scenarios: [scenario("micro", "Micro-entreprise", 32000, true)] }, "Atelier"))).toBe("Pour « Atelier », le statut actuel, Micro-entreprise, donne le meilleur net : 32 000 €.")
   })

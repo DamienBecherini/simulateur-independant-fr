@@ -724,6 +724,8 @@ export interface ComparaisonResult {
   optimisations?: Partial<Record<StatutSociete, OptimisationRemuneration>>
   /** CFE de l'année exonérée ou réduite d'après la date de création de l'activité comparée : ce qui est retenu. */
   noteCFE?: string
+  /** Part de la CFE d'une année pleine comptée cette année (0 ou 0,5), quand elle n'est pas due en entier. */
+  partCFE?: number
 }
 
 /** Formats de fichier texte que l'application sait enregistrer ou ouvrir (exports, sauvegardes groupées). */

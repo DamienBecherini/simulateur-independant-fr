@@ -71,6 +71,33 @@ export function SyntheseDesAnnees({ simulation, annee }: SyntheseDesAnneesProps)
           </tbody>
         </table>
       </ZoneDefilante>
+      <DispositifsDesAnnees simulation={simulation} />
     </section>
+  )
+}
+
+/**
+ * Dispositifs limités dans le temps, année par année : sortie du régime micro et son annonce, retour au régime, ACRE,
+ * plafonds au prorata l'année de création. Rien quand aucun ne joue.
+ */
+function DispositifsDesAnnees({ simulation }: { simulation: SimulationPluriannuelle }) {
+  const notes = simulation.annees.flatMap(({ annee, report }) => (report?.activities ?? []).flatMap(activite => (activite.dispositifs ?? []).map(note => ({ annee, activite: activite.name, note }))))
+  if (notes.length === 0) return null
+  return (
+    <div className="space-y-1">
+      <h4 id="synthese-dispositifs-titre" className="text-sm font-medium text-slate-800 dark:text-slate-100">
+        Dispositifs dans le temps
+      </h4>
+      <ul aria-labelledby="synthese-dispositifs-titre" className="space-y-1 text-sm text-slate-700 dark:text-slate-300">
+        {notes.map(({ annee, activite, note }) => (
+          <li key={`${annee}-${activite}-${note}`}>
+            <span className="font-medium text-slate-900 dark:text-slate-100">
+              {annee} · {activite} :
+            </span>{" "}
+            {note}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

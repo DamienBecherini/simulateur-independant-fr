@@ -39,7 +39,8 @@ export function NoteDesFraisSupposes({ result }: { result: ComparaisonResult }) 
 
 function CarteDeStatut({ scenario, actuel, meilleur }: { scenario: ScenarioStatut; actuel: ScenarioStatut | undefined; meilleur: boolean }) {
   const ecart = actuel && !scenario.actuel ? scenario.netApresImpots - actuel.netApresImpots : null
-  const mentions = [scenario.actuel ? "actuel" : null, meilleur ? "meilleur net" : null, scenario.horsPlafond ? "hors plafond" : null].filter(Boolean).join(" · ")
+  const plafond = scenario.regimeMicroFerme ? "plus accessible" : scenario.horsPlafond ? "hors plafond" : null
+  const mentions = [scenario.actuel ? "actuel" : null, meilleur ? "meilleur net" : null, plafond].filter(Boolean).join(" · ")
   return (
     <li className={cn("flex items-center justify-between gap-3 rounded-lg border px-3 py-2", meilleur ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40" : "border-slate-200 dark:border-slate-700")}>
       <div className="min-w-0">

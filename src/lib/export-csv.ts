@@ -44,8 +44,8 @@ function lignesDuBilan(report: SimulationReport): Ligne[] {
 }
 
 function lignesDesActivites(session: SimulationAnnuelle, report: SimulationReport): Ligne[] {
-  const entete: Ligne = ["Activité", "Statut", "Chiffre d'affaires", "Charges", "Cotisations sociales", "Impôt sur les sociétés", "Revenu versé aux personnes", "Résultat conservé", "Bénéficiaires"]
-  const lignes = report.activities.map((a): Ligne => [a.name, a.statut, montant(a.chiffreAffaires), montant(a.charges), montant(a.cotisationsSociales), montant(a.impotSocietes), montant(a.revenuVerse), montant(a.resultatConserve), a.beneficiaireIds.map(id => nomDeLActeur(session, id)).join(", ")])
+  const entete: Ligne = ["Activité", "Statut", "Chiffre d'affaires", "Charges", "Cotisations sociales", "Impôt sur les sociétés", "Revenu versé aux personnes", "Résultat conservé", "Bénéficiaires", "Dispositifs de l'année"]
+  const lignes = report.activities.map((a): Ligne => [a.name, a.statut, montant(a.chiffreAffaires), montant(a.charges), montant(a.cotisationsSociales), montant(a.impotSocietes), montant(a.revenuVerse), montant(a.resultatConserve), a.beneficiaireIds.map(id => nomDeLActeur(session, id)).join(", "), (a.dispositifs ?? []).join(" ")])
   return [entete, ...lignes]
 }
 
@@ -80,6 +80,8 @@ function lignesDesIndicateurs(result: ComparaisonResult, nomActivite: string): L
   const indicateurs: [string, (s: ScenarioStatut) => CelluleCsv][] = [
     ["Statut actuel", s => ouiNon(s.actuel)],
     ["Meilleur net", s => ouiNon(s.statut === result.meilleur)],
+    // Seulement quand l'activité est sortie du régime micro : ses colonnes micro ne sont plus accessibles.
+    ...(result.scenarios.some(s => s.regimeMicroFerme) ? [["Régime plus accessible", s => ouiNon(s.regimeMicroFerme !== undefined)] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
     ["Net dans la poche", s => montant(s.netApresImpots)],
     ["Taux global de prélèvement (%)", tauxDePrelevement],
     ["Revenus avant prélèvements", s => montant(s.revenusAvantPrelevements)],
@@ -126,7 +128,8 @@ export function reglagesDuComparateur(options: ComparaisonOptions, nomActivite: 
 
 function lignesDesAvertissements(result: ComparaisonResult): Ligne[] {
   const { notes } = numeroterNotes(result.scenarios.map(s => ({ id: s.statut, libelle: s.libelle, avertissements: s.warnings })))
-  const lignes: Ligne[] = [...result.warnings.map((texte): Ligne => [texte, "Tous"]), ...notes.map((note): Ligne => [note.texte, note.colonnes.join(", ")])]
+  const cfe: Ligne[] = result.noteCFE ? [[result.noteCFE, "Tous"]] : []
+  const lignes: Ligne[] = [...result.warnings.map((texte): Ligne => [texte, "Tous"]), ...cfe, ...notes.map((note): Ligne => [note.texte, note.colonnes.join(", ")])]
   return lignes.length > 0 ? [[], ["Avertissement", "Statuts concernés"], ...lignes] : []
 }
 

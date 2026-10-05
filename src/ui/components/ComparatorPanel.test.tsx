@@ -295,6 +295,30 @@ describe("ComparatorPanel", () => {
     }
     expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent("meilleur net")
   })
+
+  it("marque les colonnes micro plus accessibles après la sortie du régime micro", async () => {
+    const sortie = { depuis: 2028, depassements: [2026, 2027] as [number, number] }
+    const fermees = comparison().scenarios.map(s => (s.statut === "micro" || s.statut === "micro-vfl" ? { ...s, actuel: false, horsPlafond: true, regimeMicroFerme: sortie } : { ...s, actuel: s.statut === "EI" }))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: fermees, meilleur: "SASU" }))
+    render(<ComparateurDeTest annee={2028} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    for (const colonne of [/^Micro-entreprise/, /versement libératoire/]) {
+      const entete = within(table).getByRole("columnheader", { name: colonne })
+      expect(entete).toHaveTextContent("plus accessible · sortie au 1er janvier 2028")
+      expect(entete).not.toHaveTextContent("hors plafond")
+    }
+    expect(within(table).getByRole("columnheader", { name: /^EI au réel/ })).toHaveTextContent("actuel")
+  })
+
+  it("dit sous le tableau des frais ce qui est retenu de la CFE l'année de création", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ noteCFE: "CFE exonérée l'année de création (2026) : le poste CFE des frais de fonctionnement n'est pas compté.", partCFE: 0 }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const frais = await screen.findByRole("table", { name: "Frais de fonctionnement annuels" })
+    await vi.waitFor(() => expect(within(frais).getByRole("rowheader", { name: /Cotisation foncière/ })).toHaveTextContent("non comptée cette année"))
+    expect(frais.closest("details")).toHaveTextContent("CFE exonérée l'année de création (2026)")
+  })
 })
 
 describe("réglages essentiels du comparateur", () => {

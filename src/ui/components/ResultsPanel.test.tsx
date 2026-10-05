@@ -276,6 +276,22 @@ describe("ResultsPanel", () => {
     rerender(<ResultsPanel report={{ ...report }} error={null} />)
     expect(rowValue(card, "dont déplacements professionnels")).toHaveTextContent(/non déductibles$/)
   })
+
+  it("annonce la sortie du régime micro et les dispositifs de l'année, à part des avertissements", () => {
+    const report = makeReport()
+    const sortie = "Sortie du régime micro au 1er janvier 2028 : chiffre d'affaires au-delà des plafonds en 2026 et 2027."
+    report.activities = [{ ...report.activities[0], name: "Mon atelier", statut: "EI au réel", sortieDuRegimeMicro: { depuis: 2028, depassements: [2026, 2027] }, dispositifs: [sortie], warnings: [] }]
+    render(<ResultsPanel report={report} error={null} />)
+
+    const card = screen.getAllByRole("article").find(article => within(article).queryByText("Mon atelier"))!
+    expect(within(card).getByText("EI au réel · sortie du régime micro au 1er janvier 2028")).toBeInTheDocument()
+    expect(within(card).getByRole("list", { name: "Dispositifs de l'année" })).toHaveTextContent(sortie)
+  })
+
+  it("n'affiche pas de liste de dispositifs quand aucun ne joue", () => {
+    render(<ResultsPanel report={makeReport()} error={null} />)
+    expect(screen.queryByRole("list", { name: "Dispositifs de l'année" })).not.toBeInTheDocument()
+  })
 })
 
 describe("détail des cartes de résultats", () => {

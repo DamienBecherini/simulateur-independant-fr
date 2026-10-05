@@ -4,7 +4,7 @@
 
 import type { ComparaisonOptions, ComparaisonResult, Entity, ModeRepartition, Relationship, ScenarioStatut, SimulationAnnuelle, SimulationReport } from "@/types"
 import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
-import { fluxParActeur, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, type LigneDeFlux } from "./export-commun"
+import { dateDeCreationLisible, fluxParActeur, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, type LigneDeFlux } from "./export-commun"
 import { numeroterNotes } from "./notes"
 
 /** Comparaison calculée à l'export pour l'activité choisie dans le comparateur, ou la raison de son absence. */
@@ -53,9 +53,12 @@ const colonnesNumeriques = (de: number, a: number) => Array.from({ length: a - d
 
 function detailDeLActeur(entity: Entity): string {
   if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}`
-  if (entity.type === "company") return entity.legalStatus === "EI" ? "Entreprise individuelle au régime réel" : `Société à l'impôt sur les sociétés, capital social ${euros(entity.capitalSocial)}`
+  const creation = dateDeCreationLisible(entity)
+  const creee = creation ? ` ; créée en ${creation}` : ""
+  if (entity.type === "company") return `${entity.legalStatus === "EI" ? "Entreprise individuelle au régime réel" : `Société à l'impôt sur les sociétés, capital social ${euros(entity.capitalSocial)}`}${creee}`
   const rfr = entity.rfrN2 === undefined ? "non renseigné" : euros(entity.rfrN2)
-  return `ACRE : ${entity.beneficieACRE ? "oui" : "non"} ; versement libératoire demandé : ${entity.opteVFL ? "oui" : "non"} ; revenu fiscal de référence N-2 : ${rfr}`
+  const horsPlafond = entity.horsPlafondAnneePrecedente ? " ; au-delà des plafonds l'année d'avant la simulation" : ""
+  return `ACRE : ${entity.beneficieACRE ? "oui" : "non"} ; versement libératoire demandé : ${entity.opteVFL ? "oui" : "non"} ; revenu fiscal de référence N-2 : ${rfr}${creee}${horsPlafond}`
 }
 
 function sectionActeurs(session: SimulationAnnuelle): string {
@@ -142,7 +145,14 @@ function sousSectionFoyers(session: SimulationAnnuelle, report: SimulationReport
 
 function sectionResultats(session: SimulationAnnuelle, report: SimulationReport | null): string {
   if (!report) return "## Résultats\n\nRésultats indisponibles : la simulation n'a pas pu être calculée."
-  return `## Résultats ${report.annee} (règles fiscales ${report.anneeDesRegles})\n\nMontants annuels, avant les éventuelles dépenses personnelles.\n\n${[sousSectionBilan(report), sousSectionActivites(session, report), sousSectionFoyers(session, report)].join("\n\n")}`
+  const sousSections = [sousSectionBilan(report), sousSectionActivites(session, report), sousSectionDispositifs(report), sousSectionFoyers(session, report)].filter(Boolean)
+  return `## Résultats ${report.annee} (règles fiscales ${report.anneeDesRegles})\n\nMontants annuels, avant les éventuelles dépenses personnelles.\n\n${sousSections.join("\n\n")}`
+}
+
+/** Dispositifs limités dans le temps de l'année (sortie du régime micro, ACRE…) ; rien quand aucun ne joue. */
+function sousSectionDispositifs(report: SimulationReport): string {
+  const notes = report.activities.flatMap(a => (a.dispositifs ?? []).map(note => `- ${echapper(a.name)} : ${echapper(note)}`))
+  return notes.length > 0 ? `### Dispositifs dans le temps\n\n${notes.join("\n")}` : ""
 }
 
 // --- Comparateur ---
@@ -195,7 +205,7 @@ function tableauDeComparaison(resultat: ComparaisonResult, nomActivite: string):
   const { scenarios } = resultat
   const actuel = scenarios.find(s => s.actuel)
   const entete = (s: ScenarioStatut) => {
-    const mentions = [s.actuel ? "actuel" : null, s.statut === resultat.meilleur ? "meilleur net" : null].filter(Boolean)
+    const mentions = [s.actuel ? "actuel" : null, s.statut === resultat.meilleur ? "meilleur net" : null, s.regimeMicroFerme ? "plus accessible" : null].filter(Boolean)
     return mentions.length > 0 ? `${s.libelle} (${mentions.join(", ")})` : s.libelle
   }
   const indicateurs: [string, (s: ScenarioStatut) => string][] = [
@@ -233,7 +243,8 @@ function sectionComparateur(session: SimulationAnnuelle, comparaison: Comparaiso
   const { options, resultat } = comparaison
   const intro = "L'activité est simulée dans chaque statut, le reste de la simulation restant identique. Les montants portent sur toute la simulation, sauf la ligne « Conservé », propre à l'activité. Comparaison calculée à l'export avec les réglages du comparateur :"
   const tableauOuAbsence = resultat.scenarios.length > 0 ? tableauDeComparaison(resultat, comparaison.nomActivite) + notesDeComparaison(resultat) : "Aucun statut comparé."
-  return `${titre}\n\n${intro}\n\n${reglagesUtilises(options, resultat.scenarios)}\n\n${tableauOuAbsence}${couplesEnUnionLibre(session, resultat)}`
+  const cfe = resultat.noteCFE ? `\n- ${echapper(resultat.noteCFE)}` : ""
+  return `${titre}\n\n${intro}\n\n${reglagesUtilises(options, resultat.scenarios)}${cfe}\n\n${tableauOuAbsence}${couplesEnUnionLibre(session, resultat)}`
 }
 
 // --- Avertissements ---
