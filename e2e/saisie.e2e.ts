@@ -1,11 +1,13 @@
 // e2e/saisie.e2e.ts
 // Parcours de saisie complet, de la session vierge aux résultats, et annulation dans l'historique.
 
-import { test, expect, deposerSession } from "./support/fixtures"
+import { test, expect, deposerAffichage, deposerSession } from "./support/fixtures"
 import { montant, netDansLaPoche, valeurDeLigne } from "./support/interface"
 import { sessionAliceSeule } from "./support/sessions"
 
-test("créer une personne et sa micro-entreprise, saisir un chiffre d'affaires, puis lire résultats et comparateur", async ({ lancer }) => {
+test("créer une personne et sa micro-entreprise, saisir un chiffre d'affaires, puis lire résultats et comparateur", async ({ dossierDonnees, lancer }) => {
+  // Affichage classique : les cartes de résultats et le tableau du comparateur y montrent toutes leurs lignes.
+  await deposerAffichage(dossierDonnees, "classique")
   const { page } = await lancer()
 
   // Une personne, puis une micro-entreprise.

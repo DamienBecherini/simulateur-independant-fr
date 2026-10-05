@@ -118,7 +118,7 @@ export function preferencesMaximales(): UserPreferences {
   return {
     slotOrder: ["slot-maximal", "slot-2"],
     flowTypeColors: { salary: "#123456", ca_services: "#abcdef" },
-    affichage: "resume",
+    affichage: "vues",
     loadedSlotId: "slot-2",
     zoom: 1.3,
     sectionsOuvertes: { "legende-des-flux": true, "detail-du-calcul": false }

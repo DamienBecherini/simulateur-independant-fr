@@ -11,7 +11,7 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { FORMAT_VERSION_ACTUEL } from "../../src/backend/logic/migrations"
-import type { SaveSlot, SessionState } from "../../src/types"
+import type { Affichage, SaveSlot, SessionState } from "../../src/types"
 
 const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const NEUTRALISER_DIALOGUES = path.join(RACINE, "e2e/support/neutraliser-dialogues.cjs")
@@ -82,6 +82,11 @@ function auFormatActuel<T extends object>(donnees: T): T & { formatVersion: numb
 /** Dépose une session en cours, au format actuel, avant le lancement de l'application. */
 export async function deposerSession(dossierDonnees: string, session: SessionState) {
   await fs.writeFile(path.join(dossierDonnees, "sessionState.json"), JSON.stringify(auFormatActuel(session), null, 2))
+}
+
+/** Choisit l'affichage de la page avant le lancement (« Résumé » sinon, l'affichage par défaut). */
+export async function deposerAffichage(dossierDonnees: string, affichage: Affichage) {
+  await fs.writeFile(path.join(dossierDonnees, "userPreferences.json"), JSON.stringify({ slotOrder: [], affichage }))
 }
 
 /** Dépose des sauvegardes, au format actuel, avant le lancement de l'application. */

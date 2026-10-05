@@ -18,9 +18,10 @@ function initialSession(): SessionState {
   return session
 }
 
-/** Rend l'application et attend que la session initiale soit chargée. */
+/** Rend l'application dans l'affichage classique, où chaque acteur a sa carte, et attend la session initiale. */
 async function renderApp() {
   vi.mocked(window.api.getCurrentSession).mockResolvedValue(initialSession())
+  vi.mocked(window.api.getUserPreferences).mockResolvedValue({ slotOrder: [], affichage: "classique" })
   const user = userEvent.setup({ delay: null })
   render(<App />)
   await screen.findByRole("heading", { name: "Simulation de test" })

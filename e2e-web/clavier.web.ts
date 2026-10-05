@@ -3,8 +3,11 @@
 // atteint montre où est le focus, et les entités se réordonnent sans souris.
 
 import { test, expect, type Page } from "@playwright/test"
+import { choisirAvantLeChargement } from "./support/affichage"
 
+/** Ouvre la démo dans l'affichage classique, où tout est affiché ; l'affichage « Résumé » a son propre parcours au clavier. */
 async function ouvrir(page: Page) {
+  await choisirAvantLeChargement(page, "classique")
   await page.goto("./")
   await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
   await expect(page.getByRole("group", { name: /Net du foyer selon la rémunération nette/ })).toBeVisible()

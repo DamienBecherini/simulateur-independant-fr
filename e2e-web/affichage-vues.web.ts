@@ -54,7 +54,7 @@ async function sousLaBarre(page: Page, cible: Locator) {
 test("l'affichage « Trois vues » se choisit dans la barre d'outils et s'ouvre sur « Ma situation »", async ({ page }) => {
   await page.goto("./")
   await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
-  await page.getByRole("combobox", { name: "Affichage : Classique" }).click()
+  await page.getByRole("combobox", { name: "Affichage : Résumé" }).click()
   await page.getByRole("option", { name: "Trois vues" }).click()
 
   await expect(barre(page)).toBeVisible()

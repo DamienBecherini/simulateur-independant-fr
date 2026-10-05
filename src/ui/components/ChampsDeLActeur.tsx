@@ -1,7 +1,6 @@
 // src/ui/components/ChampsDeLActeur.tsx
 // Réglages d'un acteur hors relations : nom, parts, statut, revenu fiscal de référence, capital, couleur, icône, frais.
-// Communs à la fenêtre « Modifier » (enregistrés à la validation) et au panneau de l'acteur de l'affichage « Panneaux »
-// (enregistrés à mesure, voir useReglagesSurPlace).
+// Affichés dans la fenêtre « Modifier », qui les enregistre à la validation.
 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"

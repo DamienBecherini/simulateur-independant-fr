@@ -237,8 +237,8 @@ export const SaveSlotSchema = SessionStateSchema.extend({
   lastModified: z.number()
 })
 
-/** Affichage de la page choisi par l'utilisateur pendant la bêta : l'affichage d'origine ou l'une des trois propositions. */
-export const AffichageSchema = z.enum(["classique", "resume", "panneaux", "vues"])
+/** Affichage de la page choisi par l'utilisateur pendant la bêta : « Résumé » (par défaut), l'affichage d'origine ou « Trois vues ». */
+export const AffichageSchema = z.enum(["resume", "classique", "vues"])
 
 /** Longueur maximale de l'identifiant d'une section repliable mémorisée. */
 export const LONGUEUR_MAXIMALE_ID_SECTION = 200
@@ -251,7 +251,7 @@ export const UserPreferencesSchema = z.object({
   slotOrder: z.array(z.string()).default([]).catch([]),
   // La clé (type de flux) est une string, la valeur (couleur) est une string
   flowTypeColors: z.record(z.string(), z.string()).optional().catch(undefined),
-  // Une valeur inconnue (affichage retiré d'une version ultérieure) est ignorée sans invalider les autres préférences.
+  // Une valeur inconnue (affichage retiré, comme « panneaux ») est ignorée sans invalider les autres préférences.
   affichage: AffichageSchema.optional().catch(undefined),
   /**
    * Sauvegarde nommée chargée : « Sauvegarder » la met à jour, même après un redémarrage. C'est un état du poste, pas

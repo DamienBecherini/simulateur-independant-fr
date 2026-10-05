@@ -1,7 +1,6 @@
 // src/ui/components/ElementsDActeur.tsx
-// Éléments communs à la carte d'un acteur (affichage classique), à sa ligne (affichage « Résumé ») et à son panneau
-// (affichage « Panneaux ») : poignée de tri, options de la micro-entreprise, pastille de relation, boutons « Modifier »
-// et « Verrouiller ».
+// Éléments communs à la carte d'un acteur (affichage classique) et à sa ligne (affichage « Résumé ») : poignée de tri,
+// options de la micro-entreprise, pastille de relation, boutons « Modifier » et « Verrouiller ».
 
 import type { HTMLAttributes } from "react"
 import { ArrowRight, Lock, Pencil, Unlock, X } from "lucide-react"
@@ -82,7 +81,7 @@ interface BoutonsProps {
 }
 
 /** Verrouille ou déverrouille l'acteur : un acteur verrouillé ne se supprime pas. */
-export function BoutonVerrouiller({ entity, onToggleLock }: Pick<BoutonsProps, "entity" | "onToggleLock">) {
+function BoutonVerrouiller({ entity, onToggleLock }: Pick<BoutonsProps, "entity" | "onToggleLock">) {
   return (
     <Button variant="ghost" size="icon" aria-label={entity.locked ? "Déverrouiller" : "Verrouiller"} onClick={() => onToggleLock(entity.id)}>
       {entity.locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4 text-slate-600 dark:text-slate-400" />}

@@ -8,8 +8,8 @@
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 
-type Affichage = "classique" | "resume" | "panneaux" | "vues"
-const AFFICHAGES: Affichage[] = ["classique", "resume", "panneaux", "vues"]
+type Affichage = "resume" | "classique" | "vues"
+const AFFICHAGES: Affichage[] = ["resume", "classique", "vues"]
 
 /** Ouvre la démo dans l'affichage voulu, sur le comparateur (sa vue, dans l'affichage « Trois vues »). */
 async function ouvrir(page: Page, affichage: Affichage) {

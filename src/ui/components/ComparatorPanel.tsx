@@ -414,7 +414,7 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
   return (
     <section className="mt-12 space-y-4" aria-labelledby="comparateur-titre">
       <div>
-        {/* Le titre reçoit le focus quand « Comparer ses statuts » mène ici (affichage « Panneaux »). */}
+        {/* Le titre peut recevoir le focus quand un lien mène au comparateur. */}
         <h2 id="comparateur-titre" tabIndex={-1} className="text-2xl font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
           Comparateur de statuts
         </h2>
