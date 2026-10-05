@@ -97,6 +97,17 @@ for (const affichage of ["classique", "resume"] as const) {
     await expect(frais).toBeHidden()
     await sectionDesFrais(page).click()
     await expect(frais).toBeVisible()
+    // Chaque colonne est calée à droite : en-tête, champs de saisie et total finissent au même endroit.
+    const bords = await frais.evaluate(table => {
+      const droite = (el: Element) => el.getBoundingClientRect().right - parseFloat(getComputedStyle(el).paddingRight)
+      const lignes = Array.from(table.querySelectorAll("tr"))
+      const colonnes = (ligne: Element, selecteur: string) => Array.from(ligne.querySelectorAll(selecteur)).map(droite)
+      return { entete: colonnes(lignes[0], "th").slice(1), champs: Array.from(lignes[1].querySelectorAll("input")).map(el => el.getBoundingClientRect().right), total: colonnes(lignes[lignes.length - 1], "td") }
+    })
+    bords.entete.forEach((bord, i) => {
+      expect(Math.abs(bords.champs[i] - bord)).toBeLessThan(1.5)
+      expect(Math.abs(bords.total[i] - bord)).toBeLessThan(1.5)
+    })
     await expect.poll(() => page.evaluate(() => window.localStorage.getItem("simulateur.preferences") ?? "")).toContain('"comparateur-plus-de-reglages":true')
     // Un nouvel onglet relit les préférences enregistrées (celui-ci les réécrit à chaque chargement).
     const autre = await page.context().newPage()

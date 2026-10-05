@@ -149,7 +149,11 @@ function FraisFonctionnementTable({ frais, onChange }: { frais: FraisFonctionnem
                 </th>
                 {statutsFrais.map(statut => (
                   <td key={statut} className="px-2 py-1">
-                    <Input className="h-8 w-28 ml-auto bg-background text-right" type="number" min="0" step="50" aria-label={`${posteFraisLabels[poste]}, ${statutFraisLabels[statut]}`} value={frais[statut][poste]} onChange={e => update(statut, poste, e.target.value)} />
+                    {/* Calé à droite comme l'en-tête et le total de sa colonne : une marge automatique ne suffit pas sur un
+                        champ de saisie, que certains navigateurs (Firefox) affichent en ligne. */}
+                    <div className="flex justify-end">
+                      <Input className="h-8 w-28 bg-background text-right" type="number" min="0" step="50" aria-label={`${posteFraisLabels[poste]}, ${statutFraisLabels[statut]}`} value={frais[statut][poste]} onChange={e => update(statut, poste, e.target.value)} />
+                    </div>
                   </td>
                 ))}
               </tr>
