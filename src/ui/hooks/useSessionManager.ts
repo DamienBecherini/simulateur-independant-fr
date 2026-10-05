@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { ANNEE_PAR_DEFAUT, grilleVide, type SessionState, type SaveSlot, type SanitizationReport, type UserPreferences } from "@/types"
 import * as SessionService from "@/lib/session-service"
+import { rapportAvecCorrections } from "@/backend/logic/data-sanitizer"
 import { useDebouncedSave } from "./useDebouncedSave"
 
 // Session vierge : une seule année, la dernière dont les règles sont connues.
@@ -159,9 +160,8 @@ export function useSessionManager() {
     if (result && result.data) {
       const { entities, relationships, annees } = result.data
       const sessionToLoad: SessionState = { name: "Simulation importée", entities, relationships, annees }
-      const { entitiesRemoved, relationshipsRemoved, flowsRemoved, migrationNotes } = result.report
       // Dès que le fichier a été corrigé ou converti, l'utilisateur confirme avant de remplacer sa session.
-      if (entitiesRemoved > 0 || relationshipsRemoved > 0 || flowsRemoved > 0 || migrationNotes.length > 0) {
+      if (rapportAvecCorrections(result.report)) {
         setImportConfirmation({ session: sessionToLoad, report: result.report })
       } else {
         setHistory({ past: [], present: sessionToLoad, future: [] })

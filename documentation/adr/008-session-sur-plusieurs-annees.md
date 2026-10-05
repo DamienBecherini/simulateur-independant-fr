@@ -35,7 +35,7 @@ SessionState = {
 ```
 
 1. **Années repérées par leur numéro.** `annee` est l'année civile simulée : elle choisit le fichier de règles (ADR 007) et se lit telle quelle dans l'interface, les exports et les fichiers. La liste est triée de la plus ancienne à la plus récente, sans doublon (le nettoyage des données trie et écarte les doublons), et contient au moins une année.
-2. **Années consécutives.** L'interface n'ajoute une année qu'avant la plus ancienne ou après la plus récente, et ne supprime que l'une des deux extrémités. Le schéma n'impose pas la continuité (un fichier modifié à la main peut avoir un trou) : le moteur n'en a pas besoin, il cherche simplement l'année N-2 dans la session.
+2. **Années consécutives.** L'interface n'ajoute une année qu'avant la plus ancienne ou après la plus récente, et ne supprime que l'une des deux extrémités. Le schéma n'impose pas la continuité (un fichier modifié à la main peut avoir un trou) : le moteur n'en a pas besoin, il cherche simplement l'année N-2 dans la session. *Remplacé par l'addendum ci-dessous : un fichier aux années non consécutives est désormais refusé.*
 3. **Acteurs et relations communs, à ce stade.** Une société créée en cours de période, un mariage ou une naissance s'appliquent à toutes les années de la session. Des acteurs ou des relations propres à une année sont reportés à plus tard (voir Conséquences).
 4. **Année affichée hors de la session.** L'année que l'utilisateur consulte et modifie est un état de l'interface (`App.tsx`), ni enregistré ni annulable : changer d'année n'est pas une modification de la simulation. Par défaut, c'est la plus récente ; si elle disparaît (suppression, annulation), l'interface revient à la plus récente.
 5. **Une année vue comme une simulation d'un an.** Le moteur, le comparateur, l'optimiseur et les exports CSV et Markdown travaillent sur une seule année : `DonneesDeLAnnee` (acteurs, relations, grille de l'année) et `SimulationAnnuelle` (avec le nom de la session et le numéro de l'année), construites par `src/backend/logic/annees.ts`. Leur code change peu : il reçoit la même forme qu'avant.
@@ -60,3 +60,25 @@ SessionState = {
   - Ajouter une année recopie (ou non) la grille voisine : les copies sont indépendantes, comme les flux recopiés d'un mois à l'autre ; les flux définis une fois pour plusieurs années restent à faire (phase 13, point 5).
   - Le comparateur et l'optimiseur travaillent sur l'année affichée seulement : pas encore d'arbitrage entre les années (dividendes versés plus tard, bénéfice mis en réserve).
   - Les fichiers au format 3 ne se relisent pas correctement dans une version précédente du simulateur : elle préviendrait que le fichier vient d'une version plus récente, puis l'ouvrirait avec ses acteurs et ses relations, mais sans aucun flux.
+
+## Addendum (2026-10-05) : dix années consécutives au plus
+
+### Contexte
+
+Rien ne bornait le nombre d'années d'une session, et un fichier modifié à la main pouvait sauter des années sans que personne ne le dise. Or les règles ne sont connues que jusqu'à la dernière année publiée (2026) : au-delà, une année est simulée avec ces règles-là (ADR 007), barèmes, plafonds et taux figés. Deux ou trois ans plus loin, les chiffres ne sont plus qu'une projection. Une longue liste d'années rend aussi le sélecteur, la synthèse et les cases « Aussi en » de la fenêtre des flux difficiles à lire, surtout sur téléphone.
+
+### Décision
+
+1. **Dix années au plus** (`NOMBRE_MAX_ANNEES`, `src/backend/logic/annees.ts`, une seule constante). Dix années couvrent largement un projet de création, de transmission ou de départ à la retraite. Une fois la limite atteinte, « Ajouter une année » est désactivé et une phrase visible, associée au bouton (`aria-describedby`), dit pourquoi et comment en ajouter une autre (supprimer une extrémité). `ajouterAnnee` renvoie la session telle quelle au-delà de la limite.
+2. **Années consécutives, garanties aussi à la lecture.** Le nettoyage (`data-sanitizer.ts`) trie les années et écarte les doublons comme avant, puis refuse la session si elle compte plus de dix années ou s'il manque une année entre la plus ancienne et la plus récente (`erreurDesAnnees`). Le message dit ce qui ne va pas : le nombre d'années et leur étendue, ou les années manquantes (leur nombre au-delà de cinq).
+3. **Refuser plutôt que corriger.** Garder les dix premières années, ou combler un trou par des grilles vides, ferait perdre ou inventer des années sans que l'utilisateur le voie. Le fichier n'est pas corrompu : il est refusé avec le motif, et l'utilisateur le corrige lui-même.
+   - Import d'une simulation (application de bureau et démo web) : « Import impossible » et le motif ; la simulation en cours n'est pas remplacée.
+   - Session ou sauvegardes relues au démarrage de l'application de bureau : une copie du fichier est gardée à côté (`*.refuse.json`) avant qu'il ne soit réécrit, et une fenêtre nomme ce qui a été refusé.
+   - Import de sauvegardes groupées : chaque sauvegarde refusée est nommée dans le bilan, avec son motif ; les autres sont importées.
+4. **Une année en double est signalée même vide.** Jusqu'ici, seuls ses flux étaient comptés parmi les flux supprimés : une année en double sans flux disparaissait sans un mot. Le rapport de nettoyage liste désormais les années écartées (`anneesEcartees`), et l'import demande confirmation comme pour toute autre correction.
+
+### Conséquences
+
+- **Positives :** la session reste lisible (sélecteur, synthèse, cases à cocher) ; un fichier aux années incohérentes ne s'ouvre plus en silence ; le moteur peut compter sur des années consécutives.
+- **Négatives ou Compromis :** une simulation sur plus de dix ans demande plusieurs sessions ; un fichier modifié à la main avec un trou doit être corrigé avant de s'ouvrir.
+- Dans la fenêtre des flux, au-delà de quatre autres années, des raccourcis cochent toutes les années, aucune, les précédentes ou les suivantes : dix années restent rapides à cocher.

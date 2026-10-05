@@ -6,13 +6,26 @@
 import type { EventPayloadMapping } from "@/globals"
 import type { ExportableState, FormatFichierTexte, NotificationPayload, SaveSlot, SessionState, UserPreferences } from "@/types"
 import { SessionStateSchema, UserPreferencesSchema } from "@/types"
-import { sanitizeSlots, sanitizeStateAndFillDefaults } from "@/backend/logic/data-sanitizer"
+import { AnneesRefuseesError, sanitizeSlots, sanitizeStateAndFillDefaults } from "@/backend/logic/data-sanitizer"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
 import { sessionExemple } from "./session-exemple"
 import { CLES, ecrire, lire } from "./stockage-navigateur"
 
 const avecFormat = <T extends object>(donnees: T) => ({ ...donnees, formatVersion: FORMAT_VERSION_ACTUEL })
+
+/**
+ * La session conservée dans le navigateur, nettoyée. Elle n'est écrite que par la démo : si ses années sont
+ * refusées (modifiées à la main dans les outils du navigateur), la démo repart d'une session vierge.
+ */
+function sessionEnregistree(enregistree: unknown): SessionState {
+  try {
+    return sanitizeStateAndFillDefaults(enregistree).safeState
+  } catch (error) {
+    console.warn("Session du navigateur refusée, démarrage avec une session vierge :", error instanceof Error ? error.message : error)
+    return SessionStateSchema.parse({})
+  }
+}
 
 /** Session reçue de l'interface, revalidée avant calcul, comme le fait le process principal. */
 function sessionValidee(session: unknown): SessionState {
@@ -64,7 +77,7 @@ export function creerApiNavigateur(): EventPayloadMapping {
     // À la première visite, la démo s'ouvre sur une simulation d'exemple plutôt que sur une page vide.
     getCurrentSession: async () => {
       const enregistree = lire(CLES.session)
-      return enregistree === null ? sessionExemple() : sanitizeStateAndFillDefaults(enregistree).safeState
+      return enregistree === null ? sessionExemple() : sessionEnregistree(enregistree)
     },
     saveCurrentSession: async session => enregistrerSession(session),
     saveCurrentSessionSync: session => enregistrerSession(session),
@@ -89,7 +102,8 @@ export function creerApiNavigateur(): EventPayloadMapping {
         return { data: { entities: safeState.entities, relationships: safeState.relationships, annees: safeState.annees }, report }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Erreur inconnue."
-        notifier({ message: `Le fichier sélectionné est invalide ou corrompu : ${message}`, type: "error" })
+        // Un fichier refusé à cause de ses années n'est pas corrompu : le motif suffit, il dit quoi corriger.
+        notifier({ message: error instanceof AnneesRefuseesError ? `Import impossible. ${message}` : `Le fichier sélectionné est invalide ou corrompu : ${message}`, type: "error" })
         return { error: message }
       }
     },

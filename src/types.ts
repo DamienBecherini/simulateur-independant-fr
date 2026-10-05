@@ -685,6 +685,8 @@ export interface SanitizationReport {
   flowsRemoved: number
   /** Réglages du comparateur invalides (hors limites, mal formés), écartés un par un. */
   reglagesRemoved: number
+  /** Années en double écartées (la première occurrence est gardée), qu'elles aient eu des flux ou non. */
+  anneesEcartees: number[]
   /** Points à vérifier après la conversion d'un fichier d'un format précédent. */
   migrationNotes: string[]
 }

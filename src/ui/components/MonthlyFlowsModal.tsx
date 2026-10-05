@@ -10,7 +10,7 @@ import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-ki
 import { FlowItem, type FlowChanges } from "./FlowItem"
 import { NewFlowItem, type NewFlowValues } from "./NewFlowItem"
 import { useTriAccessible } from "../hooks/useTriAccessible"
-import { LIBELLES_PORTEE, listerAnnees, type PorteeRecurrence } from "@/lib/flux-recurrents"
+import { anneesDuRaccourci, LIBELLES_PORTEE, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, type PorteeRecurrence, type RaccourciAnnees } from "@/lib/flux-recurrents"
 import { cn } from "@/lib/utils"
 
 /**
@@ -24,6 +24,8 @@ interface MonthlyFlowsModalProps {
   flows: FinancialFlow[]
   entity: Entity
   monthName: string
+  /** Année affichée, pour les raccourcis « Années précédentes » et « Années suivantes ». */
+  annee?: number
   /** Autres années de la session, proposées en cases à cocher ; aucune case sans autre année. */
   autresAnnees?: number[]
   /** Crée le flux dans ce mois et, selon la portée choisie, le recopie sur d'autres mois et dans les années cochées. */
@@ -48,7 +50,65 @@ function avertissement(portee: PorteeRecurrence, aussiEn: number[]): string | nu
 /** Mise en évidence d'un réglage qui étend les opérations au-delà du mois ouvert. */
 const EN_EVIDENCE = "border-amber-500 bg-amber-50 ring-2 ring-amber-300 dark:bg-amber-950 dark:ring-amber-700"
 
-export function MonthlyFlowsModal({ onClose, flows, entity, monthName, autresAnnees = [], onCreate, onRecopier, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
+/** Ordre d'affichage des raccourcis. */
+const RACCOURCIS: RaccourciAnnees[] = ["toutes", "aucune", "precedentes", "suivantes"]
+
+interface CasesDesAnneesProps {
+  annee: number
+  autresAnnees: number[]
+  aussiEn: number[]
+  setAussiEn: (annees: number[]) => void
+}
+
+/**
+ * Les autres années de la session, en cases à cocher, mises en évidence dès qu'une est cochée. Au-delà de
+ * SEUIL_RACCOURCIS_ANNEES, des raccourcis cochent toutes les années, aucune, les précédentes ou les suivantes ;
+ * la liste passe alors sur sa propre ligne et va à la ligne autant que nécessaire.
+ */
+function CasesDesAnnees({ annee, autresAnnees, aussiEn, setAussiEn }: CasesDesAnneesProps) {
+  const avecRaccourcis = autresAnnees.length > SEUIL_RACCOURCIS_ANNEES
+  const basculerAnnee = (a: number, cochee: boolean) => setAussiEn(cochee ? [...aussiEn, a] : aussiEn.filter(x => x !== a))
+
+  return (
+    <fieldset className={cn("rounded-md border border-transparent px-2", avecRaccourcis && "w-full", aussiEn.length > 0 && EN_EVIDENCE)}>
+      {/* Sur un écran étroit, avec les raccourcis, la légende prend toute la ligne : les raccourcis vont dessous. */}
+      <legend className={cn("float-left mr-2 flex min-h-9 items-center pointer-coarse:min-h-11", avecRaccourcis && "max-sm:w-full")}>Aussi en :</legend>
+      {avecRaccourcis ? (
+        <div className="flex flex-wrap items-center gap-1 py-0.5 max-sm:clear-left">
+          {RACCOURCIS.map(raccourci => {
+            const annees = anneesDuRaccourci(raccourci, annee, autresAnnees)
+            // Pas d'année avant (ou après) l'année affichée : le raccourci est désactivé. Il ne l'est jamais à la suite
+            // d'un clic (sélection déjà identique), pour que le focus ne se perde pas.
+            return (
+              <Button
+                key={raccourci}
+                type="button"
+                size="sm"
+                variant="outline"
+                className="text-sm"
+                aria-label={LIBELLES_RACCOURCIS_ANNEES[raccourci].nom}
+                disabled={raccourci !== "aucune" && annees.length === 0}
+                onClick={() => setAussiEn(annees)}
+              >
+                {LIBELLES_RACCOURCIS_ANNEES[raccourci].texte}
+              </Button>
+            )
+          })}
+        </div>
+      ) : null}
+      <div className={cn("flex flex-wrap items-center gap-x-4", avecRaccourcis && "clear-left")}>
+        {autresAnnees.map(a => (
+          <label key={a} className="flex min-h-9 cursor-pointer items-center gap-2 pointer-coarse:min-h-11">
+            <input type="checkbox" className="size-4 cursor-pointer accent-amber-600" checked={aussiEn.includes(a)} onChange={e => basculerAnnee(a, e.target.checked)} />
+            {a}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
+export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee = 0, autresAnnees = [], onCreate, onRecopier, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
   const flowIds = useMemo(() => flows.map(f => f.id), [flows])
   const tri = useTriAccessible(useMemo(() => flows.map(f => ({ id: f.id, nom: f.label || flowTypeLabels[f.type] })), [flows]))
   const allowedTypes = getFlowTypesForEntity(entity)
@@ -59,7 +119,6 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, autresAnn
   const [portee, setPortee] = useState<PorteeRecurrence>("mois")
   // Autres années où appliquer aussi ces opérations : aucune cochée à chaque ouverture.
   const [aussiEn, setAussiEn] = useState<number[]>([])
-  const basculerAnnee = (annee: number, cochee: boolean) => setAussiEn(actuelles => (cochee ? [...actuelles, annee] : actuelles.filter(a => a !== annee)))
   const texteAvertissement = avertissement(portee, aussiEn)
 
   const listRef = useRef<HTMLDivElement>(null)
@@ -140,19 +199,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, autresAnn
               </select>
             </label>
             {/* Les autres années de la session, seulement s'il y en a ; mises en évidence dès qu'une est cochée. */}
-            {autresAnnees.length > 0 ? (
-              <fieldset className={cn("rounded-md border border-transparent px-2", aussiEn.length > 0 && EN_EVIDENCE)}>
-                <legend className="float-left mr-2 flex min-h-9 items-center pointer-coarse:min-h-11">Aussi en :</legend>
-                <div className="flex flex-wrap items-center gap-x-4">
-                  {autresAnnees.map(annee => (
-                    <label key={annee} className="flex min-h-9 cursor-pointer items-center gap-2 pointer-coarse:min-h-11">
-                      <input type="checkbox" className="size-4 cursor-pointer accent-amber-600" checked={aussiEn.includes(annee)} onChange={e => basculerAnnee(annee, e.target.checked)} />
-                      {annee}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-            ) : null}
+            {autresAnnees.length > 0 ? <CasesDesAnnees annee={annee} autresAnnees={autresAnnees} aussiEn={aussiEn} setAussiEn={setAussiEn} /> : null}
           </div>
           {texteAvertissement ? <p className="px-1 text-sm text-amber-900 dark:text-amber-100">{texteAvertissement}</p> : null}
         </div>

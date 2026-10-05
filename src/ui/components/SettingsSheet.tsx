@@ -12,6 +12,7 @@
 
 import { useState, Dispatch, SetStateAction, useMemo, useEffect } from "react"
 import type { SessionState, SaveSlot, SanitizationReport } from "@/types"
+import { texteAnneesEcartees } from "@/backend/logic/data-sanitizer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -270,6 +271,9 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                       <p>Flux invalides ou orphelins supprimés : {importConfirmation.report.flowsRemoved}</p>
                     </div>
                   </>
+                )}
+                {importConfirmation && importConfirmation.report.anneesEcartees.length > 0 && (
+                  <p className="mt-3">{texteAnneesEcartees(importConfirmation.report.anneesEcartees)}. Seule la première occurrence de chaque année est gardée.</p>
                 )}
                 {importConfirmation && importConfirmation.report.migrationNotes.length > 0 && (
                   <>

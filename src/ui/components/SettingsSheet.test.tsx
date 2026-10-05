@@ -172,6 +172,22 @@ describe("SettingsSheet, import de sauvegardes", () => {
     expect(window.api.saveSlots).not.toHaveBeenCalled()
   })
 
+  it("nomme les sauvegardes refusées à cause de leurs années, avec le motif, et importe les autres", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    const a = sauvegarde("a", "Alpha")
+    const trouee = { ...sauvegarde("t", "Trouée"), annees: [2024, 2026].map(annee => ({ annee, monthlyData: emptySession().annees[0].monthlyData })) }
+    vi.mocked(window.api.openTextFile).mockResolvedValue(fichier([a, trouee]))
+    const etat = await ouvrirLaListe()
+
+    await userEvent.click(boutonImporter())
+
+    const bilan = await screen.findByRole("dialog", { name: "Import des sauvegardes" })
+    expect(bilan).toHaveTextContent("1 sauvegarde ajoutée")
+    expect(bilan).toHaveTextContent("Cette sauvegarde n'a pas été importée :")
+    expect(bilan).toHaveTextContent("« Trouée » : Les années de cette simulation ne se suivent pas : il manque 2025 entre 2024 et 2026.")
+    expect(etat.slots.map(slot => slot.name)).toEqual(["Alpha"])
+  })
+
   it("signale un fichier sans aucune sauvegarde", async () => {
     vi.mocked(window.api.openTextFile).mockResolvedValue(fichier([]))
     await ouvrirLaListe()
