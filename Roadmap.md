@@ -214,10 +214,10 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 - **Objectif :** pendant la bêta, recueillir notes, avis et rapports de bug depuis l'application, et les retrouver sur GitHub sans ressaisie.
 
-1.  **Formulaire dans l'application :** noter l'application (1 à 5), écrire un commentaire, signaler un bug ou proposer une idée ; joindre si on le souhaite un diagnostic (version, système, affichage choisi, dernières erreurs), jamais les données de la simulation sans accord explicite. Rien n'est envoyé sans clic sur « Envoyer », avec un aperçu du contenu.
+1.  **Formulaire dans l'application :** noter l'application (1 à 5), dire quel affichage on préfère (classique, A, B ou C), écrire un commentaire, signaler un bug ou proposer une idée. **Tout est facultatif**, mais il faut au moins une information pour pouvoir envoyer ; joindre si on le souhaite un diagnostic (version, système, affichage choisi, dernières erreurs), jamais les données de la simulation sans accord explicite. Rien n'est envoyé sans clic sur « Envoyer », avec un aperçu du contenu.
 2.  **Sans serveur, d'abord :** le bouton ouvre un ticket GitHub prérempli (formulaires de tickets du dépôt : bug, idée, avis avec note), sur le compte GitHub de la personne. Aucun secret dans l'application ni dans la démo.
 3.  **Sans compte GitHub, ensuite :** un petit relais (fonction serverless) qui garde seul le jeton d'une application GitHub et crée le ticket ou la discussion avec ses étiquettes ; protection contre le spam (défi anti-robot, limite de débit), aucune donnée personnelle conservée, mention RGPD.
-4.  **Note moyenne dans le README :** une GitHub Action agrège les notes des tickets « avis » et publie un badge (fichier JSON servi par GitHub Pages, lu par shields.io) : le README affiche la note sans commit automatique sur main.
+4.  **Note moyenne dans le README :** une GitHub Action agrège les notes des tickets qui en ont une (les retours sans note sont ignorés dans la moyenne, et le nombre de notes est affiché avec elle), ainsi que les préférences d'affichage exprimées, et publie un badge (fichier JSON servi par GitHub Pages, lu par shields.io) : le README affiche la note sans commit automatique sur main.
 5.  **Tri :** étiquettes automatiques (bug, idée, avis, affichage A, B, C ou d'origine), modèle de réponse, lien entre un ticket et sa correction.
 
 ---
