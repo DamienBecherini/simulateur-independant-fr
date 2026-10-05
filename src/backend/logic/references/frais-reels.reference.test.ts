@@ -1,12 +1,12 @@
 // src/backend/logic/references/frais-reels.reference.test.ts
 
 import { describe, expect, it } from "vitest"
-import type { ComparaisonOptions, FraisReels, Person, StatutCompare } from "../../../types.js"
+import type { ComparaisonOptions, FraisReels, Person, StatutCompare, Trajet } from "../../../types.js"
 import { comparerStatuts } from "../comparateur.js"
 import { montantBaremeKilometrique } from "../frais-kilometriques.js"
 import { reglesEnVigueur } from "../regles.js"
 import { casDeReference, foyerDe, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
-import { micro, personne, relation, session } from "../testing/session-de-test.js"
+import { micro, personne, relation, session, type Flux } from "../testing/session-de-test.js"
 
 /*
  * Cas de référence 2026 : frais réels d'un salarié, au barème kilométrique.
@@ -21,15 +21,16 @@ import { micro, personne, relation, session } from "../testing/session-de-test.j
  * Montant : 8 720 x 0,357 + 1 395 = 3 113,04 + 1 395 = 4 508,04 €.
  */
 
-const trajets: FraisReels = { kmParTrajet: 20, joursTravailles: 218, puissanceFiscale: "5", electrique: false, distanceJustifiee: false, autresFrais: 0 }
+const trajet: Trajet = { libelle: "", kmParTrajet: 20, joursTravailles: 218, puissanceFiscale: "5", electrique: false, distanceJustifiee: false }
+const trajets: FraisReels = { trajets: [trajet], autresFrais: 0 }
 
 const salarie = (frais?: FraisReels): Person => ({ ...personne("alice"), ...(frais ? { fraisReels: frais } : {}) })
 
 casDeReference("Cas de référence 2026 : frais réels d'un salarié", () => {
   it("20 km par trajet, 218 jours, 5 CV : 8 720 km, 4 508,04 €", () => {
-    expect(montantBaremeKilometrique(8720, trajets, reglesEnVigueur.baremeKilometrique)).toBeCloseTo(4508.04, 6)
+    expect(montantBaremeKilometrique(8720, trajet, reglesEnVigueur.baremeKilometrique)).toBeCloseTo(4508.04, 6)
     // Électrique : 4 508,04 x 1,2 = 5 409,648 €.
-    expect(montantBaremeKilometrique(8720, { ...trajets, electrique: true }, reglesEnVigueur.baremeKilometrique)).toBeCloseTo(5409.648, 6)
+    expect(montantBaremeKilometrique(8720, { ...trajet, electrique: true }, reglesEnVigueur.baremeKilometrique)).toBeCloseTo(5409.648, 6)
   })
 
   it("30 000 € nets de salaire, personne seule : les frais réels (4 508 €) battent la déduction de 10 % (3 000 €)", () => {
@@ -45,6 +46,47 @@ casDeReference("Cas de référence 2026 : frais réels d'un salarié", () => {
     // Impôt (27 000 - 11 600) x 11 % = 1 694 € ; décote 897 - 45,25 % x 1 694 = 130,47 € ; impôt 1 563,54 €, arrondi à 1 564 €.
     const report = simuler([salarie()], [], [["alice", "salary", 30000]])
     expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 27000, impotSurLeRevenu: 1564 })
+  })
+
+  describe("deux employeurs, deux trajets", () => {
+    // Employeur A : 20 km par aller simple, 130 jours, soit 20 x 2 x 130 = 5 200 km ; 18 000 € nets.
+    // Employeur B : 15 km par aller simple, 88 jours, soit 15 x 2 x 88 = 2 640 km ; 12 000 € nets.
+    const employeurA: Trajet = { ...trajet, libelle: "Employeur A", kmParTrajet: 20, joursTravailles: 130 }
+    const employeurB: Trajet = { ...trajet, libelle: "Employeur B", kmParTrajet: 15, joursTravailles: 88 }
+    const salaires: Flux[] = [
+      ["alice", "salary", 18000],
+      ["alice", "salary", 12000]
+    ]
+
+    it("avec la même voiture de 5 CV : 7 840 km au barème une seule fois, 4 193,88 €", () => {
+      // 7 840 km, deuxième tranche : 7 840 x 0,357 + 1 395 = 2 798,88 + 1 395 = 4 193,88 €. Le barème appliqué à chaque
+      // trajet séparément donnerait 5 200 x 0,357 + 1 395 = 3 251,40 € et 2 640 x 0,636 = 1 679,04 €, soit 4 930,44 € :
+      // c'est la distance de l'année avec la voiture qui choisit la tranche.
+      // Imposable 30 000 - 4 193,88 = 25 806,12 € ; impôt (25 806,12 - 11 600) x 11 % = 1 562,67 € ;
+      // décote 897 - 45,25 % x 1 562,67 = 189,89 € ; impôt 1 372,78 €, arrondi à 1 373 €.
+      const report = simuler([salarie({ trajets: [employeurA, employeurB], autresFrais: 0 })], [], salaires)
+
+      expect(report.persons[0].fraisProfessionnels).toEqual({ revenusSalariaux: 30000, deductionForfaitaire: 3000, fraisReels: 4194, fraisDeTrajet: 4194, distanceRetenue: 7840, retenue: "reels", deduction: 4194 })
+      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 25806, impotSurLeRevenu: 1373 })
+      verifierIdentiteDuBilan(report)
+    })
+
+    it("avec deux voitures, de 5 CV et de 3 CV : le barème de chacune, 4 647,96 €", () => {
+      // 5 200 km en 5 CV : 5 200 x 0,357 + 1 395 = 3 251,40 € ; 2 640 km en 3 CV : 2 640 x 0,529 = 1 396,56 €.
+      const report = simuler([salarie({ trajets: [employeurA, { ...employeurB, puissanceFiscale: "3" }], autresFrais: 0 })], [], salaires)
+
+      expect(report.persons[0].fraisProfessionnels).toMatchObject({ fraisReels: 4648, fraisDeTrajet: 4648, distanceRetenue: 7840, retenue: "reels" })
+    })
+
+    it("un trajet de 55 km non justifié, limité à 40 km, et un de 50 km justifié, retenu entier : 6 393 €", () => {
+      // 40 x 2 x 100 = 8 000 km, et 50 x 2 x 60 = 6 000 km, avec la même voiture de 5 CV : 14 000 km.
+      // 14 000 x 0,357 + 1 395 = 4 998 + 1 395 = 6 393 €.
+      const loin: Trajet = { ...employeurA, kmParTrajet: 55, joursTravailles: 100 }
+      const justifie: Trajet = { ...employeurB, kmParTrajet: 50, joursTravailles: 60, distanceJustifiee: true }
+      const report = simuler([salarie({ trajets: [loin, justifie], autresFrais: 0 })], [], salaires)
+
+      expect(report.persons[0].fraisProfessionnels).toMatchObject({ fraisDeTrajet: 6393, distanceRetenue: 14000, retenue: "reels", deduction: 6393 })
+    })
   })
 
   describe("micro-entreprise BNC de 40 000 €, avec les mêmes 8 720 km en déplacements professionnels, comparée en EI", () => {

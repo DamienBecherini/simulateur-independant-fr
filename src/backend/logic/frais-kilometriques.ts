@@ -22,8 +22,8 @@ export function montantBaremeKilometrique(distanceAnnuelle: number, vehicule: Ve
   return vehicule.electrique ? montant * (1 + bareme.majorationElectrique) : montant
 }
 
-/** Trajets domicile-travail d'une personne : distance d'un aller simple et nombre de jours travaillés dans l'année. */
-export interface TrajetsDomicileTravail {
+/** Un trajet domicile-travail : distance d'un aller simple et nombre de jours travaillés dans l'année. */
+export interface TrajetDomicileTravail {
   kmParTrajet: number
   joursTravailles: number
   /** Distance au-delà de 40 km justifiée par des circonstances particulières : elle est alors retenue entière. */
@@ -31,22 +31,42 @@ export interface TrajetsDomicileTravail {
 }
 
 /**
- * Distance annuelle déductible des trajets domicile-travail (article 83, 3° du CGI) : un aller-retour par jour travaillé
- * (un seul, sauf contraintes particulières que le simulateur ne modélise pas), chaque trajet limité à 40 km sauf
- * distance plus longue justifiée.
+ * Distance annuelle déductible d'un trajet domicile-travail (article 83, 3° du CGI) : un aller-retour par jour travaillé
+ * (un seul, sauf contraintes particulières que le simulateur ne modélise pas), limité à 40 km par trajet sauf distance
+ * plus longue justifiée. La limite vaut pour chaque trajet : celui vers un second employeur a la sienne.
  */
-export function distanceDomicileTravail(trajets: TrajetsDomicileTravail, regles: BaremeKilometrique["domicileTravail"]): number {
-  const kmParTrajet = Math.max(0, trajets.kmParTrajet)
-  const retenus = trajets.distanceJustifiee ? kmParTrajet : Math.min(kmParTrajet, regles.distanceMaxParTrajet)
-  return 2 * retenus * Math.max(0, trajets.joursTravailles)
+export function distanceDomicileTravail(trajet: TrajetDomicileTravail, regles: BaremeKilometrique["domicileTravail"]): number {
+  const kmParTrajet = Math.max(0, trajet.kmParTrajet)
+  const retenus = trajet.distanceJustifiee ? kmParTrajet : Math.min(kmParTrajet, regles.distanceMaxParTrajet)
+  return 2 * retenus * Math.max(0, trajet.joursTravailles)
+}
+
+/**
+ * Distance annuelle retenue par voiture. Le barème est dégressif et s'applique une fois par voiture, à toute la distance
+ * parcourue avec elle dans l'année : deux trajets faits avec la même voiture s'additionnent avant d'en lire la tranche,
+ * et son forfait ne compte qu'une fois. Choix du simulateur : une voiture est reconnue à sa puissance fiscale et à sa
+ * motorisation, seules caractéristiques que lit le barème. Deux voitures distinctes de même puissance et de même
+ * motorisation sont donc comptées comme une seule : le barème étant dégressif, cette prudence ne fait en pratique que
+ * réduire la déduction, jamais la gonfler.
+ */
+export function distancesParVoiture(trajets: (TrajetDomicileTravail & Vehicule)[], regles: BaremeKilometrique["domicileTravail"]): { vehicule: Vehicule; distance: number }[] {
+  const parVoiture = new Map<string, { vehicule: Vehicule; distance: number }>()
+  for (const trajet of trajets) {
+    const cle = `${trajet.puissanceFiscale}-${trajet.electrique ? "electrique" : "thermique"}`
+    const voiture = parVoiture.get(cle) ?? { vehicule: { puissanceFiscale: trajet.puissanceFiscale, electrique: trajet.electrique }, distance: 0 }
+    voiture.distance += distanceDomicileTravail(trajet, regles)
+    parVoiture.set(cle, voiture)
+  }
+  return [...parVoiture.values()]
 }
 
 /**
  * Frais réels d'une personne sur ses revenus imposés comme des salaires : ses trajets domicile-travail au barème
- * kilométrique de l'année, et ses autres frais réels saisis.
+ * kilométrique de l'année, une fois par voiture, et ses autres frais réels saisis.
  */
 export function fraisReelsDeLaPersonne(frais: FraisReels, bareme: BaremeKilometrique): { distanceRetenue: number; fraisDeTrajet: number; total: number } {
-  const distanceRetenue = distanceDomicileTravail(frais, bareme.domicileTravail)
-  const fraisDeTrajet = montantBaremeKilometrique(distanceRetenue, frais, bareme)
+  const voitures = distancesParVoiture(frais.trajets, bareme.domicileTravail)
+  const distanceRetenue = voitures.reduce((somme, voiture) => somme + voiture.distance, 0)
+  const fraisDeTrajet = voitures.reduce((somme, voiture) => somme + montantBaremeKilometrique(voiture.distance, voiture.vehicule, bareme), 0)
   return { distanceRetenue, fraisDeTrajet, total: fraisDeTrajet + Math.max(0, frais.autresFrais) }
 }

@@ -22,20 +22,47 @@ const champsVehicule = {
 }
 
 /**
- * Frais réels d'une personne sur ses revenus imposés comme des salaires (salaires, allocations chômage, rémunérations de
- * dirigeant) : trajets domicile-travail convertis au barème kilométrique, et autres frais réels. Facultatifs : sans eux,
- * seule la déduction forfaitaire de 10 % s'applique. Communs à toutes les années de la session, comme les acteurs.
+ * Un trajet domicile-travail d'une personne vers l'un de ses lieux de travail (plusieurs employeurs, un salaire et une
+ * rémunération de dirigeant…) : un aller-retour par jour travaillé sur ce lieu, avec une voiture personnelle.
  */
-export const FraisReelsSchema = z.object({
+export const TrajetSchema = z.object({
+  /** Nom libre du lieu de travail ou de l'employeur, pour distinguer les trajets entre eux. */
+  libelle: z.string().default(""),
   /** Distance d'un aller simple entre le domicile et le lieu de travail, en kilomètres. */
   kmParTrajet: z.number().min(0).default(0),
   joursTravailles: z.number().min(0).max(366).default(0),
   ...champsVehicule,
   /** Distance au-delà de 40 km par trajet justifiée (précarité de l'emploi, emploi du conjoint, santé…) : retenue entière. */
-  distanceJustifiee: z.boolean().default(false),
-  /** Autres frais réels de l'année, en euros (repas, formation, double résidence…). */
-  autresFrais: z.number().min(0).default(0)
+  distanceJustifiee: z.boolean().default(false)
 })
+
+const CHAMPS_D_UN_TRAJET = ["kmParTrajet", "joursTravailles", "puissanceFiscale", "electrique", "distanceJustifiee"]
+
+/**
+ * Frais réels enregistrés avant les trajets multiples : un seul trajet, à plat à côté des autres frais. Ils deviennent
+ * une liste d'un trajet sans changer le numéro de format des fichiers, puisque chaque lecture passe par ce schéma.
+ */
+function versListeDeTrajets(valeur: unknown): unknown {
+  if (typeof valeur !== "object" || valeur === null || Array.isArray(valeur) || "trajets" in valeur) return valeur
+  const ancien = valeur as Record<string, unknown>
+  const trajet = Object.fromEntries(CHAMPS_D_UN_TRAJET.filter(champ => champ in ancien).map(champ => [champ, ancien[champ]]))
+  return { autresFrais: ancien.autresFrais, trajets: [trajet] }
+}
+
+/**
+ * Frais réels d'une personne sur ses revenus imposés comme des salaires (salaires, allocations chômage, rémunérations de
+ * dirigeant) : trajets domicile-travail convertis au barème kilométrique, et autres frais réels. Facultatifs : sans eux,
+ * seule la déduction forfaitaire de 10 % s'applique. L'option vaut pour tous ces revenus à la fois, quel que soit le
+ * nombre d'employeurs : un trajet par lieu de travail. Communs à toutes les années de la session, comme les acteurs.
+ */
+export const FraisReelsSchema = z.preprocess(
+  versListeDeTrajets,
+  z.object({
+    trajets: z.array(TrajetSchema).default([]),
+    /** Autres frais réels de l'année, en euros (repas, formation, double résidence…). */
+    autresFrais: z.number().min(0).default(0)
+  })
+)
 
 /**
  * Déplacements professionnels d'une activité avec une voiture personnelle, convertis au barème kilométrique : une charge
@@ -173,6 +200,7 @@ export const UserPreferencesSchema = z.object({
 // ===================================================================================
 
 export type Avatar = z.infer<typeof AvatarSchema>
+export type Trajet = z.infer<typeof TrajetSchema>
 export type FraisReels = z.infer<typeof FraisReelsSchema>
 export type DeplacementsProfessionnels = z.infer<typeof DeplacementsProfessionnelsSchema>
 export type Person = z.infer<typeof PersonSchema>

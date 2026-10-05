@@ -1,10 +1,13 @@
 // src/ui/components/ChampsFrais.tsx
 
+import { useEffect, useRef } from "react"
+import { Plus, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { PUISSANCES_FISCALES, type Company, type DeplacementsProfessionnels, type FraisReels, type MicroEntreprise, type Person, type PuissanceFiscale } from "@/types"
+import { PUISSANCES_FISCALES, type Company, type DeplacementsProfessionnels, type FraisReels, type MicroEntreprise, type Person, type PuissanceFiscale, type Trajet } from "@/types"
 
 /*
  * Champs de la fenêtre de réglages d'un acteur pour les frais au barème kilométrique : frais réels d'une personne sur
@@ -59,12 +62,63 @@ function ChampsVehicule<T extends { puissanceFiscale: PuissanceFiscale; electriq
   )
 }
 
-const FRAIS_REELS_PAR_DEFAUT: FraisReels = { kmParTrajet: 0, joursTravailles: 218, puissanceFiscale: "5", electrique: false, distanceJustifiee: false, autresFrais: 0 }
+const TRAJET_PAR_DEFAUT: Trajet = { libelle: "", kmParTrajet: 0, joursTravailles: 218, puissanceFiscale: "5", electrique: false, distanceJustifiee: false }
+const FRAIS_REELS_PAR_DEFAUT: FraisReels = { trajets: [TRAJET_PAR_DEFAUT], autresFrais: 0 }
+
+/** Un trajet domicile-travail, vers l'un des lieux de travail de la personne, avec son bouton pour le retirer. */
+function ChampsTrajet({ numero, trajet, onChange, onRetirer }: { numero: number; trajet: Trajet; onChange: (trajet: Trajet) => void; onRetirer: () => void }) {
+  const prefixe = `fraisReels-${numero}`
+  const modifier = (changement: Partial<Trajet>) => onChange({ ...trajet, ...changement })
+
+  return (
+    <fieldset className="grid min-w-0 gap-3 rounded-md border p-3 sm:grid-cols-2">
+      <legend className="px-1 text-sm font-medium wrap-anywhere">
+        Trajet {numero}
+        {trajet.libelle.trim() ? ` : ${trajet.libelle.trim()}` : ""}
+      </legend>
+      <div className="space-y-1 sm:col-span-2">
+        <Label htmlFor={`${prefixe}-libelle`}>Lieu de travail ou employeur (facultatif)</Label>
+        <Input id={`${prefixe}-libelle`} name={`${prefixe}-libelle`} value={trajet.libelle} maxLength={60} onChange={e => modifier({ libelle: e.target.value })} />
+      </div>
+      <ChampNombre id={`${prefixe}-km`} label="Trajet (km, aller simple)" value={trajet.kmParTrajet} onChange={kmParTrajet => modifier({ kmParTrajet })} />
+      <ChampNombre id={`${prefixe}-jours`} label="Jours travaillés par an" value={trajet.joursTravailles} max={366} onChange={joursTravailles => modifier({ joursTravailles })} />
+      <ChampsVehicule prefixe={prefixe} valeur={trajet} onChange={modifier} />
+      <label className={`${interrupteur} sm:col-span-2`}>
+        <Switch checked={trajet.distanceJustifiee} onCheckedChange={distanceJustifiee => modifier({ distanceJustifiee })} />
+        Distance justifiée au-delà de 40 km
+      </label>
+      <Button type="button" variant="outline" size="sm" className="justify-self-start sm:col-span-2" aria-label={`Retirer le trajet ${numero}`} onClick={onRetirer}>
+        <Trash2 aria-hidden="true" />
+        Retirer
+      </Button>
+    </fieldset>
+  )
+}
 
 /** Frais réels d'une personne : trajets domicile-travail et autres frais, comparés à la déduction de 10 %. */
 export function ChampsFraisReels({ personne, onChange }: { personne: Person; onChange: (personne: Person) => void }) {
   const frais = personne.fraisReels
   const modifier = (changement: Partial<FraisReels>) => onChange({ ...personne, fraisReels: { ...(frais ?? FRAIS_REELS_PAR_DEFAUT), ...changement } })
+  const trajets = frais?.trajets ?? []
+  const boutonAjouter = useRef<HTMLButtonElement>(null)
+  // Au clavier, le focus suit la liste : sur le premier champ d'un trajet ajouté, sur le bouton d'ajout après un retrait.
+  const focusApres = useRef<"ajout" | "retrait" | null>(null)
+  useEffect(() => {
+    if (focusApres.current === "ajout") document.getElementById(`fraisReels-${trajets.length}-libelle`)?.focus()
+    if (focusApres.current === "retrait") boutonAjouter.current?.focus()
+    focusApres.current = null
+  }, [trajets.length])
+
+  const ajouter = () => {
+    focusApres.current = "ajout"
+    // Le nouveau trajet reprend la voiture du précédent : c'est le plus souvent la même.
+    const precedent = trajets[trajets.length - 1]
+    modifier({ trajets: [...trajets, precedent ? { ...TRAJET_PAR_DEFAUT, puissanceFiscale: precedent.puissanceFiscale, electrique: precedent.electrique } : TRAJET_PAR_DEFAUT] })
+  }
+  const retirer = (index: number) => {
+    focusApres.current = "retrait"
+    modifier({ trajets: trajets.filter((_, i) => i !== index) })
+  }
 
   return (
     <div className="space-y-3 border-t pt-4">
@@ -73,19 +127,23 @@ export function ChampsFraisReels({ personne, onChange }: { personne: Person; onC
         <Switch checked={frais !== undefined} onCheckedChange={actif => onChange({ ...personne, fraisReels: actif ? FRAIS_REELS_PAR_DEFAUT : undefined })} />
         Comparer mes frais réels à la déduction de 10 %
       </label>
-      <p className={aide}>Sur les salaires, allocations chômage et rémunérations de dirigeant, le simulateur retient le plus favorable : la déduction forfaitaire de 10 % ou vos frais réels. Réglage commun à toutes les années.</p>
+      <p className={aide}>Sur les salaires, allocations chômage et rémunérations de dirigeant, le simulateur retient le plus favorable : la déduction forfaitaire de 10 % ou vos frais réels, pour tous ces revenus à la fois. Réglage commun à toutes les années.</p>
       {frais ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <ChampNombre id="fraisReels-km" label="Trajet (km, aller simple)" value={frais.kmParTrajet} onChange={kmParTrajet => modifier({ kmParTrajet })} />
-          <ChampNombre id="fraisReels-jours" label="Jours travaillés par an" value={frais.joursTravailles} max={366} onChange={joursTravailles => modifier({ joursTravailles })} />
-          <ChampsVehicule prefixe="fraisReels" valeur={frais} onChange={vehicule => modifier(vehicule)} />
-          <label className={`${interrupteur} sm:col-span-2`}>
-            <Switch checked={frais.distanceJustifiee} onCheckedChange={distanceJustifiee => modifier({ distanceJustifiee })} />
-            Distance justifiée au-delà de 40 km
-          </label>
-          <p className={`${aide} sm:col-span-2`}>Un aller-retour par jour, au barème kilométrique de l'année. Au-delà de 40 km par trajet, seuls 40 km comptent, sauf circonstances particulières justifiées (emploi précaire, emploi du conjoint, santé…).</p>
-          <ChampNombre id="fraisReels-autres" label="Autres frais réels (€ par an)" value={frais.autresFrais} onChange={autresFrais => modifier({ autresFrais })} />
-        </div>
+        <>
+          <p className={aide}>
+            Un trajet par lieu de travail, un aller-retour par jour, au barème kilométrique de l'année. Au-delà de 40 km par trajet, seuls 40 km comptent, sauf circonstances particulières justifiées (emploi précaire, emploi du conjoint, santé…). Les kilomètres faits avec la même voiture (même puissance, même motorisation) s'additionnent : le barème s'applique une fois par voiture.
+          </p>
+          {trajets.map((trajet, index) => (
+            <ChampsTrajet key={index} numero={index + 1} trajet={trajet} onChange={modifie => modifier({ trajets: trajets.map((t, i) => (i === index ? modifie : t)) })} onRetirer={() => retirer(index)} />
+          ))}
+          <Button ref={boutonAjouter} type="button" variant="outline" size="sm" onClick={ajouter}>
+            <Plus aria-hidden="true" />
+            Ajouter un trajet
+          </Button>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ChampNombre id="fraisReels-autres" label="Autres frais réels (€ par an)" value={frais.autresFrais} onChange={autresFrais => modifier({ autresFrais })} />
+          </div>
+        </>
       ) : null}
     </div>
   )

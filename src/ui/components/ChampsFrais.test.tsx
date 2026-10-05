@@ -1,10 +1,10 @@
 // src/ui/components/ChampsFrais.test.tsx
 // Fenêtre de réglages d'un acteur : frais réels d'une personne, déplacements professionnels d'une activité.
 
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import type { Entity } from "@/types"
+import type { Entity, Trajet } from "@/types"
 import { makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import EditEntityModal from "./EditEntityModal"
 
@@ -21,6 +21,8 @@ async function saisir(user: ReturnType<typeof userEvent.setup>, label: string, v
   await user.type(champ, valeur)
 }
 
+const trajet20km: Trajet = { libelle: "", kmParTrajet: 20, joursTravailles: 218, puissanceFiscale: "5", electrique: false, distanceJustifiee: false }
+
 describe("frais réels d'une personne", () => {
   it("se déclarent dans la fenêtre de réglages et sont enregistrés avec la personne", async () => {
     const { onSave, user } = ouvrir(makePerson())
@@ -36,11 +38,11 @@ describe("frais réels d'une personne", () => {
     await saisir(user, "Autres frais réels (€ par an)", "300")
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
 
-    expect(onSave.mock.calls[0][0].fraisReels).toEqual({ kmParTrajet: 45, joursTravailles: 210, puissanceFiscale: "7", electrique: true, distanceJustifiee: true, autresFrais: 300 })
+    expect(onSave.mock.calls[0][0].fraisReels).toEqual({ trajets: [{ libelle: "", kmParTrajet: 45, joursTravailles: 210, puissanceFiscale: "7", electrique: true, distanceJustifiee: true }], autresFrais: 300 })
   })
 
   it("ne garde pas de nombre négatif ni plus de 366 jours, et se retirent en désactivant l'interrupteur", async () => {
-    const { onSave, user } = ouvrir(makePerson({ fraisReels: { kmParTrajet: 20, joursTravailles: 218, puissanceFiscale: "5", electrique: false, distanceJustifiee: false, autresFrais: 0 } }))
+    const { onSave, user } = ouvrir(makePerson({ fraisReels: { trajets: [trajet20km], autresFrais: 0 } }))
 
     await saisir(user, "Jours travaillés par an", "400")
     expect(screen.getByLabelText("Jours travaillés par an")).toHaveValue(366)
@@ -52,6 +54,46 @@ describe("frais réels d'une personne", () => {
     await user.click(screen.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 10 %" }))
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
     expect(onSave.mock.calls[0][0].fraisReels).toBeUndefined()
+  })
+
+  it("se déclarent pour plusieurs lieux de travail : un trajet chacun, ajouté ou retiré", async () => {
+    const { onSave, user } = ouvrir(makePerson({ fraisReels: { trajets: [{ ...trajet20km, puissanceFiscale: "3" }], autresFrais: 0 } }))
+
+    await user.click(screen.getByRole("button", { name: "Ajouter un trajet" }))
+    const second = screen.getByRole("group", { name: "Trajet 2" })
+    // Le focus passe au premier champ du nouveau trajet, qui reprend la voiture du précédent.
+    expect(within(second).getByLabelText("Lieu de travail ou employeur (facultatif)")).toHaveFocus()
+    expect(within(second).getByRole("combobox", { name: "Puissance fiscale" })).toHaveTextContent("3 CV et moins")
+    await user.keyboard("Agence de Lyon")
+    expect(screen.getByRole("group", { name: "Trajet 2 : Agence de Lyon" })).toBeInTheDocument()
+    const km = within(second).getByLabelText("Trajet (km, aller simple)")
+    await user.clear(km)
+    await user.type(km, "55")
+
+    await user.click(screen.getByRole("button", { name: "Ajouter un trajet" }))
+    await user.click(screen.getByRole("button", { name: "Retirer le trajet 1" }))
+    expect(screen.getByRole("button", { name: "Ajouter un trajet" })).toHaveFocus()
+    expect(screen.getAllByRole("group", { name: /^Trajet \d/ }).map(groupe => groupe.querySelector("legend")?.textContent)).toEqual(["Trajet 1 : Agence de Lyon", "Trajet 2"])
+
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }))
+    expect(onSave.mock.calls[0][0].fraisReels).toEqual({
+      trajets: [
+        { libelle: "Agence de Lyon", kmParTrajet: 55, joursTravailles: 218, puissanceFiscale: "3", electrique: false, distanceJustifiee: false },
+        { libelle: "", kmParTrajet: 0, joursTravailles: 218, puissanceFiscale: "3", electrique: false, distanceJustifiee: false }
+      ],
+      autresFrais: 0
+    })
+  })
+
+  it("acceptent de ne garder aucun trajet, seulement d'autres frais", async () => {
+    const { onSave, user } = ouvrir(makePerson({ fraisReels: { trajets: [trajet20km], autresFrais: 0 } }))
+
+    await user.click(screen.getByRole("button", { name: "Retirer le trajet 1" }))
+    expect(screen.queryByRole("group", { name: /^Trajet/ })).not.toBeInTheDocument()
+    await saisir(user, "Autres frais réels (€ par an)", "1200")
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }))
+
+    expect(onSave.mock.calls[0][0].fraisReels).toEqual({ trajets: [], autresFrais: 1200 })
   })
 })
 
