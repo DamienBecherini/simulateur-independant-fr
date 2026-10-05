@@ -6,7 +6,7 @@
  * disque, pour être testé seul ; le process principal (main.ts) lit et écrit les fichiers.
  */
 
-import type { ExportableState, SanitizationReport, SaveSlot, SessionState } from "../../types.js"
+import { UserPreferencesSchema, type ExportableState, type SanitizationReport, type SaveSlot, type SessionState, type UserPreferences } from "../../types.js"
 import { nettoyerLesSlots, sanitizeSlots, sanitizeStateAndFillDefaults, type SlotsNettoyes } from "./data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL, versionDuFormat } from "./migrations.js"
 
@@ -15,9 +15,14 @@ export function withFormatVersion<T extends object>(data: T): T & { formatVersio
   return { ...data, formatVersion: FORMAT_VERSION_ACTUEL }
 }
 
-/** Texte JSON d'un fichier, avec son numéro de format. */
-export function contenuDuFichier(data: object): string {
-  return JSON.stringify(withFormatVersion(data), null, 2)
+/** Ajoute à un fichier la version de l'application qui l'écrit, si elle est donnée ; sinon, il reste tel quel. */
+export function avecVersionDeLApplication<T extends object>(data: T, appVersion?: string): T {
+  return appVersion === undefined ? data : { ...data, appVersion }
+}
+
+/** Texte JSON d'un fichier, avec son numéro de format et, si elle est donnée, la version de l'application qui l'écrit. */
+export function contenuDuFichier(data: object, appVersion?: string): string {
+  return JSON.stringify(withFormatVersion(avecVersionDeLApplication(data, appVersion)), null, 2)
 }
 
 /**
@@ -50,7 +55,8 @@ export function sauvegardesAEcrire(slots: SaveSlot[]): SaveSlot[] {
 
 /**
  * Lit un fichier de simulation importé (export complet ou sauvegarde exportée) : ce qui se recharge dans la session.
- * Le nom n'est rendu que si le fichier en porte un ; les résultats exportés, recalculés, sont ignorés.
+ * Le nom n'est rendu que si le fichier en porte un ; les résultats exportés, recalculés, sont ignorés. La version de
+ * l'application qui a écrit le fichier est gardée telle quelle : elle ne change qu'au prochain enregistrement.
  * @throws Si le contenu n'est pas du JSON, ou si ses années sont refusées (`AnneesRefuseesError`).
  */
 export function lireUneSimulationImportee(contenu: string): { data: ExportableState; report: SanitizationReport } {
@@ -61,5 +67,25 @@ export function lireUneSimulationImportee(contenu: string): { data: ExportableSt
   const data: ExportableState = { entities, relationships, annees }
   if (nomDuFichier) data.name = safeState.name
   if (comparateur) data.comparateur = comparateur
+  if (safeState.appVersion !== undefined) data.appVersion = safeState.appVersion
   return { data, report }
+}
+
+/** Préférences par défaut : aucune sauvegarde ordonnée, rien d'autre de choisi. */
+export function preferencesParDefaut(): UserPreferences {
+  return { slotOrder: [] }
+}
+
+/**
+ * Préférences validées : un champ invalide est écarté seul (voir `UserPreferencesSchema`) ; ce qui n'est pas un objet
+ * donne les préférences par défaut.
+ */
+export function preferencesValides(brutes: unknown): UserPreferences {
+  const resultat = UserPreferencesSchema.safeParse(brutes)
+  return resultat.success ? resultat.data : preferencesParDefaut()
+}
+
+/** Lit le fichier des préférences. @throws Si le contenu n'est pas du JSON. */
+export function lireLesPreferences(contenu: string): UserPreferences {
+  return preferencesValides(JSON.parse(contenu))
 }

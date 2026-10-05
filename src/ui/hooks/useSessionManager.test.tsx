@@ -71,4 +71,79 @@ describe("useSessionManager et les réglages du comparateur", () => {
 
     expect(result.current.currentSession).toEqual({ name: "Simulation importée", entities, relationships, annees })
   })
+
+  it("garde la version de l'application qui a écrit le fichier importé, à confirmer comme le reste", async () => {
+    const { result } = await gestionnaire()
+    const { entities, relationships, annees } = emptySession()
+    vi.mocked(window.api.importState).mockResolvedValue({ data: { appVersion: "0.8.0", entities, relationships, annees }, report: { ...rapportVide, migrationNotes: ["À vérifier"] } })
+
+    await act(() => result.current.handleImport())
+
+    expect(result.current.importConfirmation?.session.appVersion).toBe("0.8.0")
+  })
+})
+
+describe("useSessionManager et la sauvegarde chargée", () => {
+  const slot: SaveSlot = { ...emptySession(), name: "Retenue", id: "slot-1", lastModified: 1 }
+
+  it("reprend au démarrage la sauvegarde chargée retenue dans les préférences", async () => {
+    vi.mocked(window.api.getSaveSlots).mockResolvedValue([slot])
+    vi.mocked(window.api.getUserPreferences).mockResolvedValue({ slotOrder: ["slot-1"], loadedSlotId: "slot-1" })
+
+    const { result } = await gestionnaire()
+
+    expect(result.current.loadedSlotId).toBe("slot-1")
+    expect(window.api.saveUserPreferences).not.toHaveBeenCalled()
+  })
+
+  it("oublie au démarrage une sauvegarde chargée qui n'existe plus, et corrige les préférences", async () => {
+    vi.mocked(window.api.getUserPreferences).mockResolvedValue({ slotOrder: [], loadedSlotId: "disparue" })
+
+    const { result } = await gestionnaire()
+
+    expect(result.current.loadedSlotId).toBeNull()
+    expect(window.api.saveUserPreferences).toHaveBeenCalledWith({ slotOrder: [] })
+  })
+
+  it("retient la sauvegarde chargée dans les préférences, et l'oublie pour une nouvelle simulation", async () => {
+    vi.mocked(window.api.getSaveSlots).mockResolvedValue([slot])
+    const { result } = await gestionnaire()
+
+    act(() => result.current.handleLoadSlot(slot))
+    expect(result.current.userPreferences.loadedSlotId).toBe("slot-1")
+
+    act(() => result.current.handleResetSession())
+    expect(result.current.loadedSlotId).toBeNull()
+    expect(result.current.userPreferences).not.toHaveProperty("loadedSlotId")
+  })
+
+  it("accepte une mise à jour de la sauvegarde chargée calculée à partir de la précédente", async () => {
+    vi.mocked(window.api.getSaveSlots).mockResolvedValue([slot, { ...slot, id: "slot-2" }])
+    const { result } = await gestionnaire()
+
+    act(() => result.current.setLoadedSlotId("slot-1"))
+    act(() => result.current.setLoadedSlotId(precedente => (precedente === "slot-1" ? "slot-2" : null)))
+
+    expect(result.current.loadedSlotId).toBe("slot-2")
+  })
+
+  it("oublie la sauvegarde chargée quand elle est supprimée de la liste", async () => {
+    vi.mocked(window.api.getSaveSlots).mockResolvedValue([slot])
+    const { result } = await gestionnaire()
+    act(() => result.current.handleLoadSlot(slot))
+
+    act(() => result.current.setAllSaveSlots([]))
+
+    expect(result.current.loadedSlotId).toBeNull()
+  })
+
+  it("enregistre aussi les préférences à la fermeture de la fenêtre, une fois chargées", async () => {
+    vi.mocked(window.api.getSaveSlots).mockResolvedValue([slot])
+    const { result } = await gestionnaire()
+    act(() => result.current.handleLoadSlot(slot))
+
+    window.dispatchEvent(new Event("beforeunload"))
+
+    expect(window.api.saveUserPreferences).toHaveBeenLastCalledWith({ slotOrder: ["slot-1"], loadedSlotId: "slot-1" })
+  })
 })

@@ -174,7 +174,8 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 10. **Saisie sur plusieurs années depuis la grille [✅] :** cases « Aussi en » dans la fenêtre des flux ; ajout, modification et suppression d'une série appliqués aux mêmes mois des années cochées (même portée, mêmes mois du calendrier), sans doublon, en une seule étape d'annulation, avec une notification détaillée par année. La recopie jusqu'en décembre reste limitée à l'année affichée.
 11. **Dix années au plus [✅] :** dix années consécutives au plus par session (au-delà, les chiffres ne sont plus qu'une projection) ; les fichiers aux années trop nombreuses ou non consécutives sont refusés en nommant les années manquantes, une année en double écartée est signalée (addendum à l'ADR 008) ; raccourcis « Toutes, Aucune, Années précédentes, Années suivantes » dans la fenêtre des flux, synthèse des années à colonne fixe.
 12. **Réglages du comparateur enregistrés [✅] :** activité comparée, partage du bénéfice, rémunération saisie par année, part BNC, frais de fonctionnement et statut étudié, enregistrés avec la session : rechargement, sauvegardes, exports, imports et rapport Markdown ; hors de l'historique d'annulation (ADR 009). Le nom de la simulation suit désormais l'export et l'import. Un test vérifie que rien ne se perd d'une session qui remplit chaque champ du schéma, par tous les chemins d'enregistrement.
-13. **Plus tard :** acteurs et relations propres à chaque année, exports et optimisation sur plusieurs années, revenu fiscal de référence dans les exports CSV et Markdown.
+13. **Préférences retenues [✅] :** d'une ouverture à l'autre, la sauvegarde chargée (« Sauvegarder » la met à jour), le zoom et les sections repliées ; préférences validées champ par champ dans l'application de bureau ; version de l'application écrite dans chaque fichier et indiquée à l'import.
+14. **Plus tard :** acteurs et relations propres à chaque année, exports et optimisation sur plusieurs années, revenu fiscal de référence dans les exports CSV et Markdown.
 
 ---
 
@@ -241,7 +242,13 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 2.  **ACRE :** distinguer la réduction de 50 % et celle de 25 % (micro-entreprises créées à partir du 01/07/2026).
 3.  **Répartition du capital :** part de chaque associé dans une société à plusieurs associés. Aujourd'hui, les dividendes, l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales.
 4.  **Compte courant d'associé :** solde par société, flux d'apport et de remboursement (non imposés), intérêts versés (déductibles pour la société dans une limite, imposés chez l'associé), et prise en compte du solde dans le seuil des 10 % du capital des EURL.
-5.  **Distribution :** exécutables Windows / macOS / Linux.
+5.  **Enfants et foyers :**
+    - **Date de naissance :** sur la personne, pour connaître son âge chaque année de la session. Mineur, majeur de moins de 21 ans (25 ans s'il est étudiant), naissance dans l'année (comptée pour l'année entière), garde des moins de 6 ans (crédit d'impôt).
+    - **Parents non mariés :** choisir le parent de rattachement, ou la résidence alternée (la moitié des parts de l'enfant à chaque parent). Aujourd'hui, l'enfant est rattaché au premier parent trouvé, avec un avertissement.
+    - **Parent isolé (case T) :** case « vit seul(e) avec ses enfants » sur la personne, demi-part supplémentaire avec son plafond propre. Elle ne se déduit pas des relations : sans relation de couple, rien ne dit que la personne vit seule.
+    - **Enfant qui a des revenus :** majeur, rattaché (ses revenus s'ajoutent au foyer, avec sa part) ou déclarant seul (les parents peuvent déduire une pension alimentaire, plafonnée) ; mineur, imposé avec ses parents, sauf revenus de son propre travail (imposition distincte possible) ; exonération des salaires des étudiants de moins de 26 ans dans une limite.
+    - **Comparateur :** pour chaque enfant concerné, rattachement le plus avantageux (à quel parent, ou déclaration séparée avec pension) et gain total des foyers.
+6.  **Distribution :** exécutables Windows / macOS / Linux.
 
 ---
 

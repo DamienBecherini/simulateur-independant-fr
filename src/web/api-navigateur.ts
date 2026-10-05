@@ -5,15 +5,18 @@
 
 import type { EventPayloadMapping } from "@/globals"
 import type { ExportableState, FormatFichierTexte, NotificationPayload, SaveSlot, SessionState, UserPreferences } from "@/types"
-import { SessionStateSchema, UserPreferencesSchema } from "@/types"
+import { SessionStateSchema } from "@/types"
 import { AnneesRefuseesError, sanitizeSlots, sanitizeStateAndFillDefaults } from "@/backend/logic/data-sanitizer"
-import { lireUneSimulationImportee } from "@/backend/logic/fichiers-de-donnees"
+import { avecVersionDeLApplication, lireUneSimulationImportee, preferencesValides } from "@/backend/logic/fichiers-de-donnees"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
+import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { sessionExemple } from "./session-exemple"
 import { CLES, ecrire, lire } from "./stockage-navigateur"
 
 const avecFormat = <T extends object>(donnees: T) => ({ ...donnees, formatVersion: FORMAT_VERSION_ACTUEL })
+/** Un fichier écrit par la démo (session, export) : son format et la version de l'application qui l'écrit. */
+const ecritParLaDemo = <T extends object>(donnees: T) => avecFormat(avecVersionDeLApplication(donnees, VERSION_DE_L_APPLICATION))
 
 /**
  * La session conservée dans le navigateur, nettoyée. Elle n'est écrite que par la démo : si ses années sont
@@ -72,7 +75,7 @@ export function creerApiNavigateur(): EventPayloadMapping {
   const abonnes = new Set<(payload: NotificationPayload) => void>()
   const notifier = (payload: NotificationPayload) => abonnes.forEach(abonne => abonne(payload))
 
-  const enregistrerSession = (session: SessionState) => ecrire(CLES.session, avecFormat(session))
+  const enregistrerSession = (session: SessionState) => ecrire(CLES.session, ecritParLaDemo(session))
 
   return {
     // À la première visite, la démo s'ouvre sur une simulation d'exemple plutôt que sur une page vide.
@@ -94,7 +97,7 @@ export function creerApiNavigateur(): EventPayloadMapping {
       if (!options?.silencieux) notifier({ message: "Sauvegarde réussie !", type: "success" })
     },
 
-    exportState: async (state: ExportableState) => telecharger(`simulateur-export-${Date.now()}.json`, avecFormat(state)),
+    exportState: async (state: ExportableState) => telecharger(`simulateur-export-${Date.now()}.json`, ecritParLaDemo(state)),
     importState: async () => {
       const contenu = await choisirFichier()
       if (contenu === null) return { data: undefined }
@@ -119,11 +122,9 @@ export function creerApiNavigateur(): EventPayloadMapping {
       return true
     },
 
-    getUserPreferences: async () => {
-      const resultat = UserPreferencesSchema.safeParse(lire(CLES.preferences))
-      return resultat.success ? resultat.data : { slotOrder: [] }
-    },
-    saveUserPreferences: async (prefs: UserPreferences) => ecrire(CLES.preferences, prefs),
+    // Comme dans l'application de bureau, un champ invalide est écarté seul, à la lecture comme à l'écriture.
+    getUserPreferences: async () => preferencesValides(lire(CLES.preferences)),
+    saveUserPreferences: async (prefs: UserPreferences) => ecrire(CLES.preferences, preferencesValides(prefs)),
 
     onShowNotification: callback => {
       abonnes.add(callback)

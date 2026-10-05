@@ -8,7 +8,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { TYPE_FICHIER_SAUVEGARDES } from "@/backend/logic/sauvegardes-groupees"
-import type { SaveSlot } from "@/types"
+import { VERSION_DE_L_APPLICATION } from "@/lib/version"
+import type { SanitizationReport, SaveSlot } from "@/types"
 import { emptySession, makePerson } from "@/ui/testing/fixtures"
 import { SettingsSheet } from "./SettingsSheet"
 
@@ -92,7 +93,7 @@ describe("SettingsSheet, export de toutes les sauvegardes", () => {
     expect(defaultName).toBe("sauvegardes-simulateur-2026-10-04.json")
     expect(format).toBe("json")
     const contenu = JSON.parse(content)
-    expect(contenu).toMatchObject({ formatVersion: FORMAT_VERSION_ACTUEL, type: TYPE_FICHIER_SAUVEGARDES, slotOrder: ["b", "a"] })
+    expect(contenu).toMatchObject({ formatVersion: FORMAT_VERSION_ACTUEL, appVersion: VERSION_DE_L_APPLICATION, type: TYPE_FICHIER_SAUVEGARDES, slotOrder: ["b", "a"] })
     expect(contenu.slots.map((slot: SaveSlot) => slot.name)).toEqual(["Bravo", "Alpha"])
     expect(toast.success).toHaveBeenCalledWith("2 sauvegardes exportées.")
     vi.useRealTimers()
@@ -208,5 +209,24 @@ describe("SettingsSheet, import de sauvegardes", () => {
     expect(bilan).toHaveTextContent("« Importer une simulation... »")
     expect(window.api.saveSlots).not.toHaveBeenCalled()
     expect(etat.slots).toHaveLength(1)
+  })
+})
+
+describe("confirmation d'un import ajusté", () => {
+  const rapport: SanitizationReport = { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, anneesEcartees: [], migrationNotes: ["À vérifier"] }
+
+  function confirmer(appVersion?: string) {
+    const session = appVersion === undefined ? emptySession() : { ...emptySession(), appVersion }
+    const props = { isOpen: false, onOpenChange: () => {}, allSaveSlots: [], setAllSaveSlots: () => {}, currentSession: emptySession(), setCurrentSession: () => {}, slotOrder: [], setSlotOrder: () => {}, onReset: () => {}, onLoadSlot: () => {}, onImport: async () => {}, onConfirmImport: () => {}, onCancelImport: () => {}, loadedSlotId: null, setLoadedSlotId: () => {} }
+    render(<SettingsSheet {...props} importConfirmation={{ session, report: rapport }} />)
+    return screen.getByRole("dialog", { name: "Fichier importé avec des ajustements" })
+  }
+
+  it("indique la version de l'application qui a écrit le fichier", () => {
+    expect(confirmer("0.8.0")).toHaveTextContent("Fichier écrit par la version 0.8.0 du simulateur.")
+  })
+
+  it("ne dit rien de la version quand le fichier ne l'indique pas", () => {
+    expect(confirmer()).not.toHaveTextContent("Fichier écrit par")
   })
 })

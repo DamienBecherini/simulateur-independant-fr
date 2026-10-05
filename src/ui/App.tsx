@@ -28,6 +28,8 @@ import { SelecteurAffichage } from "./components/SelecteurAffichage"
 import { BarreDeResume } from "./components/BarreDeResume"
 import { ReplieEnResume } from "./components/ReplieEnResume"
 import { AffichageContext } from "./hooks/useAffichage"
+import { MemoireDesSectionsContext, useMemoireDesSections } from "./hooks/useSectionOuverte"
+import { SectionMemorisee } from "./components/SectionMemorisee"
 import { affichageApplicable, avecPanneaux, avecResume, avecVues } from "@/lib/affichage"
 import { useVues, VuesContext } from "./hooks/useVues"
 import { VueDeLaPage } from "./components/VuesDeLaPage"
@@ -62,7 +64,6 @@ function AvecPanneau({ inspecteur, panneau, children }: { inspecteur: Inspecteur
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [isExportOpen, setExportOpen] = useState(false)
-  const { zoomIn, zoomOut, canZoomIn, canZoomOut } = useZoom()
   const [simulation, setSimulation] = useState<SimulationPluriannuelle | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
 
@@ -88,6 +89,10 @@ function App() {
   // Affichage « Trois vues » : la vue affichée, suivie dans l'adresse de la page.
   const vues = useVues(avecVues(affichage), currentSession.name)
   const choisirAffichage = useCallback((choix: Affichage) => setUserPreferences(prefs => ({ ...prefs, affichage: choix })), [setUserPreferences])
+  // Le zoom choisi est retenu dans les préférences, d'une ouverture à l'autre.
+  const { zoomIn, zoomOut, canZoomIn, canZoomOut } = useZoom(userPreferences.zoom ?? 1, zoom => setUserPreferences(prefs => ({ ...prefs, zoom })))
+  // Sections repliables ouvertes ou fermées, retenues dans les préférences (voir useSectionOuverte).
+  const memoireDesSections = useMemoireDesSections(userPreferences.sectionsOuvertes, setUserPreferences)
   // Dans l'affichage « Résumé », le comparateur transmet son meilleur statut à la barre de résumé.
   const [comparaison, setComparaison] = useState<ResumeDeLaComparaison | null>(null)
   const enTete = resume ? EN_TETE_RESUME : EN_TETE_CLASSIQUE
@@ -186,6 +191,7 @@ function App() {
 
   return (
     <AffichageContext.Provider value={affichage}>
+    <MemoireDesSectionsContext.Provider value={memoireDesSections}>
     <VuesContext.Provider value={vues}>
       <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col print:min-h-0 print:max-w-none print:p-0">
         {/* Barre de menu sticky */}
@@ -279,9 +285,11 @@ function App() {
               }
             />
 
-            <ReplieEnResume titre="Légende des flux" className="mt-3 print:mt-2">
-              <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
-            </ReplieEnResume>
+            <SectionMemorisee id="legende-des-flux">
+              <ReplieEnResume titre="Légende des flux" className="mt-3 print:mt-2">
+                <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
+              </ReplieEnResume>
+            </SectionMemorisee>
           </VueDeLaPage>
 
           <VueDeLaPage vue="resultats">
@@ -327,6 +335,7 @@ function App() {
         />
       </div>
     </VuesContext.Provider>
+    </MemoireDesSectionsContext.Provider>
     </AffichageContext.Provider>
   )
 }

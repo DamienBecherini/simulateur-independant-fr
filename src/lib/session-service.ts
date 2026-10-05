@@ -2,6 +2,7 @@
 import type { SessionState, SaveSlot, ExportableState, SanitizationReport } from "@/types"
 import type { EventPayloadMapping } from "@/globals"
 import { createId } from "@/lib/id"
+import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 
 // TypeScript augmentation for window.api
 declare global {
@@ -11,17 +12,17 @@ declare global {
 }
 
 /**
- * Crée un nouvel objet SaveSlot à partir de la session actuelle.
+ * Crée un nouvel objet SaveSlot à partir de la session actuelle, marqué de la version de l'application qui l'enregistre.
  */
 export function createNewSlotFromSession(session: SessionState): SaveSlot {
-  return { ...contenuDeLaSession(session), id: createId("slot"), lastModified: Date.now() }
+  return { ...contenuDeLaSession(session), appVersion: VERSION_DE_L_APPLICATION, id: createId("slot"), lastModified: Date.now() }
 }
 
 /**
- * Met à jour un slot existant avec les données de la session actuelle.
+ * Met à jour un slot existant avec les données de la session actuelle, marqué de la version de l'application qui l'enregistre.
  */
 export function updateSlotWithSession(slotToUpdate: SaveSlot, session: SessionState): SaveSlot {
-  return { ...contenuDeLaSession(session), id: slotToUpdate.id, lastModified: Date.now() }
+  return { ...contenuDeLaSession(session), appVersion: VERSION_DE_L_APPLICATION, id: slotToUpdate.id, lastModified: Date.now() }
 }
 
 /**
