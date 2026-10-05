@@ -1,6 +1,6 @@
 // src/ui/App.tsx
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
@@ -28,7 +28,9 @@ import { SelecteurAffichage } from "./components/SelecteurAffichage"
 import { BarreDeResume } from "./components/BarreDeResume"
 import { ReplieEnResume } from "./components/ReplieEnResume"
 import { AffichageContext } from "./hooks/useAffichage"
-import { affichageApplicable } from "@/lib/affichage"
+import { affichageApplicable, avecPanneaux, avecResume } from "@/lib/affichage"
+import { InspecteurContext, useComparerLesStatuts, useEtatDeLInspecteur, type Inspecteur } from "./hooks/useInspecteur"
+import { PanneauDActeur } from "./components/PanneauDActeur"
 import type { ResumeDeLaComparaison } from "@/lib/resume"
 import type { Affichage } from "@/types"
 import { cn } from "@/lib/utils"
@@ -36,6 +38,23 @@ import { cn } from "@/lib/utils"
 /** En-tête de la page : dans l'affichage « Résumé », un titre plus petit et sans sous-titre à l'écran. */
 const EN_TETE_CLASSIQUE = { header: "mb-10", titre: "text-4xl", sousTitre: "" }
 const EN_TETE_RESUME = { header: "mb-4", titre: "text-2xl sm:text-3xl print:text-4xl", sousTitre: "hidden print:block" }
+
+/**
+ * Affichage « Panneaux » : le contenu et, sur ordinateur, le panneau de l'acteur ouvert à sa droite, collé sous le
+ * résumé ; sur téléphone, le panneau se pose en bas de l'écran. Dans les autres affichages, le contenu seul, tel quel.
+ */
+function AvecPanneau({ inspecteur, panneau, children }: { inspecteur: Inspecteur | null; panneau: (acteurId: string, fermer: () => void) => ReactNode; children: ReactNode }) {
+  // Le contenu garde sa place dans l'arbre à l'ouverture du panneau : il n'est pas recréé, ses sections dépliées le restent.
+  if (!inspecteur) return <>{children}</>
+  return (
+    <InspecteurContext.Provider value={inspecteur}>
+      <div className="flex-grow lg:flex lg:items-start lg:gap-6">
+        {children}
+        {inspecteur.acteurOuvert ? panneau(inspecteur.acteurOuvert, inspecteur.fermer) : null}
+      </div>
+    </InspecteurContext.Provider>
+  )
+}
 
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
@@ -59,7 +78,10 @@ function App() {
 
   // Affichage de la page choisi pendant la bêta : une préférence de l'utilisateur, pas une donnée de la simulation.
   const affichage = affichageApplicable(userPreferences.affichage)
-  const resume = affichage === "resume"
+  const resume = avecResume(affichage)
+  // Affichage « Panneaux » : l'acteur dont le panneau est ouvert, quelle que soit l'année affichée.
+  const inspecteur = useEtatDeLInspecteur(useMemo(() => currentSession.entities.map(e => e.id), [currentSession.entities]), avecPanneaux(affichage))
+  const comparerLesStatuts = useComparerLesStatuts(setComparateur)
   const choisirAffichage = useCallback((choix: Affichage) => setUserPreferences(prefs => ({ ...prefs, affichage: choix })), [setUserPreferences])
   // Dans l'affichage « Résumé », le comparateur transmet son meilleur statut à la barre de résumé.
   const [comparaison, setComparaison] = useState<ResumeDeLaComparaison | null>(null)
@@ -209,7 +231,9 @@ function App() {
 
         {resume ? <BarreDeResume report={simulationReport} annees={anneesDeLaSession(currentSession)} annee={annee} onAnnee={setAnneeChoisie} comparaison={comparaison} /> : null}
 
-        <main id="contenu" tabIndex={-1} className="flex-grow scroll-mt-20 focus:outline-none">
+        <AvecPanneau inspecteur={inspecteur} panneau={(acteurId, fermer) => <PanneauDActeur acteurId={acteurId} session={currentSession} setSession={setCurrentSession} report={simulationReport} onFermer={fermer} onComparer={comparerLesStatuts} />}>
+        {/* `min-w-0` : à côté du panneau, la grille défile dans sa largeur au lieu d'élargir la page. */}
+        <main id="contenu" tabIndex={-1} className="min-w-0 flex-grow scroll-mt-20 focus:outline-none">
           <EntitiesManager session={currentSession} setSession={setCurrentSession} />
 
           <MonthlyGrid
@@ -256,6 +280,7 @@ function App() {
 
           <ComparatorPanel session={currentSession} annee={annee} onComparateurChange={setComparateur} onComparaison={resume ? setComparaison : undefined} />
         </main>
+        </AvecPanneau>
 
         <Footer />
 

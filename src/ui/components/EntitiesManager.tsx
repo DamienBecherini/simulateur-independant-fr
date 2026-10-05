@@ -3,18 +3,19 @@
 import { createPerson, createCompany, createMicroEntreprise } from "@/lib/entity-factory"
 import type { Entity, Relationship, Company, MicroEntreprise, SessionState } from "@/types"
 import { Button } from "@/components/ui/button"
-import { useState, useMemo } from "react"
+import { useState, useMemo, type ReactNode } from "react"
 import EditEntityModal from "./EditEntityModal"
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
-import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { SortableContext, arrayMove, rectSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { EntityItem } from "./EntityItem"
 import { SelectEntityTypeModal, BusinessEntityType } from "./SelectEntityTypeModal"
-import { sanitizeFlowsAfterRelationshipChange } from "@/lib/business-logic"
-import { nombreDeFlux, transformerLesGrilles } from "@/backend/logic/annees"
-import { toast } from "sonner"
 import { useTriAccessible } from "../hooks/useTriAccessible"
-import { useAffichageResume } from "../hooks/useAffichage"
+import { useAffichagePanneaux, useAffichageResume } from "../hooks/useAffichage"
+import { useActionsSurLesActeurs } from "../hooks/useActionsSurLesActeurs"
+import { ID_DU_TITRE_DES_ACTEURS } from "../hooks/useInspecteur"
+import { lignesDesReglages } from "@/lib/reglages-des-acteurs"
 import { LigneActeur } from "./LigneActeur"
+import { PuceActeur } from "./PuceActeur"
 import { cn } from "@/lib/utils"
 
 interface EntitiesManagerProps {
@@ -22,33 +23,57 @@ interface EntitiesManagerProps {
   setSession: (session: SessionState) => void
 }
 
+/**
+ * Affichage « Panneaux », sur papier : le panneau d'un acteur ne s'imprime pas, alors les réglages de chaque acteur
+ * s'impriment ici, en clair.
+ */
+function ReglagesImprimes({ entities, relationships }: { entities: Entity[]; relationships: Relationship[] }) {
+  return (
+    <ul className="hidden space-y-2 print:block">
+      {entities.map(entity => (
+        <li key={entity.id} data-impression="bloc" className="rounded-lg border p-3 text-sm">
+          <p className="font-semibold">{entity.name}</p>
+          <p className="text-slate-600">{lignesDesReglages(entity, entities, relationships).join(" · ")}</p>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** Mise en page de la liste selon l'affichage : classique, « Résumé » (une ligne par acteur), « Panneaux » (liste courte). */
+const MISE_EN_PAGE = {
+  classique: { cadre: "p-6", entete: undefined, titre: "mb-4", boutons: "mb-6 gap-4", taille: "default" },
+  resume: { cadre: "p-4", entete: undefined, titre: "mb-3", boutons: "mb-3 gap-2", taille: "sm" },
+  panneaux: { cadre: "p-4", entete: "mb-3 flex flex-wrap items-center gap-x-4 gap-y-2", titre: undefined, boutons: "gap-2", taille: "sm" }
+} as const
+
+/** Affichage « Panneaux » : avatar, nom et type de chaque acteur ; à l'impression, ses réglages en clair. */
+function ListeCourte({ entities, relationships, listeVide }: { entities: Entity[]; relationships: Relationship[]; listeVide: ReactNode }) {
+  if (entities.length === 0) return listeVide
+  return (
+    <>
+      <ul aria-labelledby={ID_DU_TITRE_DES_ACTEURS} className="flex flex-wrap gap-2 print:hidden">
+        {entities.map(entity => (
+          <PuceActeur key={entity.id} entity={entity} />
+        ))}
+      </ul>
+      <ReglagesImprimes entities={entities} relationships={relationships} />
+    </>
+  )
+}
 
 function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
   const { entities, relationships } = session
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
   const [isSelectModalOpen, setSelectModalOpen] = useState(false)
   const entityIds = useMemo(() => entities.map(e => e.id), [entities])
-  // Affichage « Résumé » : un acteur par ligne, des commandes d'ajout plus discrètes.
+  // Affichage « Résumé » : un acteur par ligne, des commandes d'ajout plus discrètes. Affichage « Panneaux » : une
+  // liste courte, les réglages de chacun dans son panneau.
   const resume = useAffichageResume()
+  const panneaux = useAffichagePanneaux()
   const Acteur = resume ? LigneActeur : EntityItem
   const tri = useTriAccessible(useMemo(() => entities.map(e => ({ id: e.id, nom: e.name })), [entities]))
-
-  /**
-   * Applique une modification des entités ou des relations en une seule étape d'historique.
-   * Quand les relations changent, les flux qui n'ont plus de bénéficiaire (rémunération sans dirigeant,
-   * dividendes sans associé) sont retirés de toutes les années, et l'utilisateur en est averti.
-   */
-  const applyChange = (changes: Partial<Pick<SessionState, "entities" | "relationships" | "annees">>) => {
-    const next = { ...session, ...changes }
-    const nettoyee = changes.relationships ? transformerLesGrilles(next, monthlyData => sanitizeFlowsAfterRelationshipChange({ relationships: next.relationships, monthlyData })) : next
-    const removedFlows = nombreDeFlux(next.annees) - nombreDeFlux(nettoyee.annees)
-    if (removedFlows > 0) {
-      toast.info(`${removedFlows} flux ${removedFlows > 1 ? "supprimés" : "supprimé"} : ${removedFlows > 1 ? "ils n'avaient" : "il n'avait"} plus de bénéficiaire. Ctrl+Z pour annuler.`)
-    }
-    setSession(nettoyee)
-  }
-
-  const addEntity = (entity: Entity) => applyChange({ entities: [...entities, entity] })
+  const { applyChange, addEntity, deleteEntity, updateEntity, toggleLock, addRelationship, deleteRelationship } = useActionsSurLesActeurs(session, setSession)
 
   const handleAddBusiness = (type: BusinessEntityType) => {
     let newEntity: Company | MicroEntreprise
@@ -64,27 +89,6 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
     }
     addEntity(newEntity)
   }
-
-  const deleteEntity = (idToDelete: string) => {
-    applyChange({
-      entities: entities.filter(e => e.id !== idToDelete),
-      relationships: relationships.filter(rel => rel.fromId !== idToDelete && rel.toId !== idToDelete),
-      // Ses flux disparaissent de toutes les années.
-      annees: transformerLesGrilles(session, grille => grille.map(month => ({ ...month, flows: month.flows.filter(flow => flow.entityId !== idToDelete) }))).annees
-    })
-  }
-
-  const updateEntity = (updatedEntity: Entity) => {
-    applyChange({ entities: entities.map(entity => (entity.id === updatedEntity.id ? updatedEntity : entity)) })
-  }
-
-  const toggleLock = (idToToggle: string) => {
-    applyChange({ entities: entities.map(entity => (entity.id === idToToggle ? { ...entity, locked: !entity.locked } : entity)) })
-  }
-
-  const addRelationship = (relationship: Relationship) => applyChange({ relationships: [...relationships, relationship] })
-
-  const deleteRelationship = (relationshipId: string) => applyChange({ relationships: relationships.filter(rel => rel.id !== relationshipId) })
 
   const handleSaveFromModal = (updatedEntity: Entity, updatedRelationships: Relationship[]) => {
     applyChange({
@@ -103,26 +107,34 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
     }
   }
 
+  const listeVide = <p className="text-slate-600 dark:text-slate-400">Aucune entité. Commencez par en ajouter une !</p>
+
+  const style = panneaux ? MISE_EN_PAGE.panneaux : resume ? MISE_EN_PAGE.resume : MISE_EN_PAGE.classique
+
   return (
-    <div className={cn("bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md", resume ? "p-4" : "p-6")}>
-      <h2 className={cn("text-2xl font-semibold", resume ? "mb-3" : "mb-4")}>Acteurs de la Simulation</h2>
-      <div className={cn("flex flex-wrap print:hidden", resume ? "mb-3 gap-2" : "mb-6 gap-4")}>
-        <Button size={resume ? "sm" : "default"} onClick={() => addEntity(createPerson())}>
-          + Ajouter une Personne
-        </Button>
-        <Button size={resume ? "sm" : "default"} onClick={() => setSelectModalOpen(true)} variant="secondary">
-          + Ajouter une Activité
-        </Button>
+    <div className={cn("bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md", style.cadre)}>
+      <div className={style.entete}>
+        <h2 id={ID_DU_TITRE_DES_ACTEURS} tabIndex={panneaux ? -1 : undefined} className={cn("text-2xl font-semibold", style.titre)}>
+          Acteurs de la Simulation
+        </h2>
+        <div className={cn("flex flex-wrap print:hidden", style.boutons)}>
+          <Button size={style.taille} onClick={() => addEntity(createPerson())}>
+            + Ajouter une Personne
+          </Button>
+          <Button size={style.taille} onClick={() => setSelectModalOpen(true)} variant="secondary">
+            + Ajouter une Activité
+          </Button>
+        </div>
       </div>
       <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={entityIds} strategy={verticalListSortingStrategy}>
-          <div className={resume ? "space-y-2" : "space-y-4"}>
-            {entities.length === 0 ? (
-              <p className="text-slate-600 dark:text-slate-400">Aucune entité. Commencez par en ajouter une !</p>
-            ) : (
-              entities.map(entity => <Acteur key={entity.id} entity={entity} allEntities={entities} relationships={relationships} onUpdate={updateEntity} onDelete={deleteEntity} onToggleLock={toggleLock} onEdit={setEditingEntity} onAddRelationship={addRelationship} onDeleteRelationship={deleteRelationship} />)
-            )}
-          </div>
+        <SortableContext items={entityIds} strategy={panneaux ? rectSortingStrategy : verticalListSortingStrategy}>
+          {panneaux ? (
+            <ListeCourte entities={entities} relationships={relationships} listeVide={listeVide} />
+          ) : (
+            <div className={resume ? "space-y-2" : "space-y-4"}>
+              {entities.length === 0 ? listeVide : entities.map(entity => <Acteur key={entity.id} entity={entity} allEntities={entities} relationships={relationships} onUpdate={updateEntity} onDelete={deleteEntity} onToggleLock={toggleLock} onEdit={setEditingEntity} onAddRelationship={addRelationship} onDeleteRelationship={deleteRelationship} />)}
+            </div>
+          )}
         </SortableContext>
       </DndContext>
 

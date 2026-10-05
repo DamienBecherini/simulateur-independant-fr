@@ -3,7 +3,7 @@
 import type { Person, Company, MicroEntreprise } from "@/types"
 import { createId } from "@/lib/id"
 
-// Couleurs par défaut des pastilles, prises dans la palette de la fenêtre d'édition (EditEntityModal) :
+// Couleurs par défaut des pastilles, prises dans la palette des réglages d'un acteur (ChampsDeLActeur) :
 // distinctes deux à deux et lisibles avec des initiales ou une icône en blanc.
 const defaultColors = {
   person: "#3b82f6",

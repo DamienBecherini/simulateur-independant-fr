@@ -2,17 +2,27 @@
 
 import { describe, expect, it } from "vitest"
 import { UserPreferencesSchema } from "@/types"
-import { AFFICHAGE_PAR_DEFAUT, AFFICHAGES, affichageApplicable, libelleDeLAffichage } from "./affichage"
+import { AFFICHAGE_PAR_DEFAUT, AFFICHAGES, affichageApplicable, avecPanneaux, avecResume, libelleDeLAffichage } from "./affichage"
 
 describe("affichages de la bêta", () => {
-  it("propose quatre affichages, l'original d'abord, puis A, C et B ; seuls Classique et Résumé sont disponibles", () => {
+  it("propose quatre affichages, l'original d'abord, puis A, C et B ; seul Trois vues est encore à venir", () => {
     expect(AFFICHAGES.map(a => a.valeur)).toEqual(["classique", "resume", "panneaux", "vues"])
-    expect(AFFICHAGES.filter(a => a.disponible).map(a => a.valeur)).toEqual(["classique", "resume"])
+    expect(AFFICHAGES.filter(a => a.disponible).map(a => a.valeur)).toEqual(["classique", "resume", "panneaux"])
     expect(AFFICHAGE_PAR_DEFAUT).toBe("classique")
+  })
+
+  it("l'affichage « Panneaux » reprend le résumé et le détail replié de l'affichage « Résumé »", () => {
+    expect(AFFICHAGES.map(a => [a.valeur, avecResume(a.valeur), avecPanneaux(a.valeur)])).toEqual([
+      ["classique", false, false],
+      ["resume", true, false],
+      ["panneaux", true, true],
+      ["vues", false, false]
+    ])
   })
 
   it("applique l'affichage des préférences s'il est disponible, l'affichage classique sinon", () => {
     expect(affichageApplicable("resume")).toBe("resume")
+    expect(affichageApplicable("panneaux")).toBe("panneaux")
     expect(affichageApplicable("classique")).toBe("classique")
     expect(affichageApplicable("vues")).toBe("classique")
     expect(affichageApplicable(undefined)).toBe("classique")

@@ -5,22 +5,13 @@ import { CSS } from "@dnd-kit/utilities"
 import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { Entity } from "@/types"
+import { typeCourt } from "@/lib/reglages-des-acteurs"
 import { useNomSurPlace } from "../hooks/useChampSurPlace"
 import { AvatarDisplay } from "./AvatarDisplay"
-import { BoutonsModifierVerrouiller, OptionsDeLaMicro, PastilleDeRelation, PoigneeDeTri } from "./ElementsDActeur"
+import { BoutonsModifierVerrouiller, OptionsDeLaMicro, PASTILLE, PastilleDeRelation, PoigneeDeTri } from "./ElementsDActeur"
 import type { EntityItemProps } from "./EntityItem"
 import { NewRelationshipForm } from "./NewRelationshipForm"
 import { cn } from "@/lib/utils"
-
-/** Type de l'acteur en une pastille : « Personne · 1 part », « Micro-entreprise », « SASU ». */
-function typeCourt(entity: Entity): string {
-  if (entity.type === "person") return `Personne · ${entity.fiscalParts.toLocaleString("fr-FR")} ${entity.fiscalParts > 1 ? "parts" : "part"}`
-  if (entity.type === "micro-entreprise") return "Micro-entreprise"
-  return entity.legalStatus === "EI" ? "EI au réel" : entity.legalStatus
-}
-
-const PASTILLE = "rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-gray-800 dark:text-slate-300"
 
 /**
  * Un acteur sur une ligne (affichage « Résumé ») : nom modifiable sur place, type et relations en pastilles, options de

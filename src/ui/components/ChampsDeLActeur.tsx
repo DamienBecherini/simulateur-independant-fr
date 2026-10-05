@@ -1,0 +1,139 @@
+// src/ui/components/ChampsDeLActeur.tsx
+// Réglages d'un acteur hors relations : nom, parts, statut, revenu fiscal de référence, capital, couleur, icône, frais.
+// Communs à la fenêtre « Modifier » (enregistrés à la validation) et au panneau de l'acteur de l'affichage « Panneaux »
+// (enregistrés à mesure, voir useReglagesSurPlace).
+
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type { Avatar, Company, Entity } from "@/types"
+import { availableIconsSmall } from "@/lib/avatar-constants"
+import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
+
+// Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
+const COULEURS_DES_ACTEURS = [
+  { color: "#3b82f6", name: "Bleu" },
+  { color: "#b91c1c", name: "Rouge" },
+  { color: "#16a34a", name: "Vert" },
+  { color: "#7e22ce", name: "Violet" },
+  { color: "#d97706", name: "Orange" },
+  { color: "#ec4899", name: "Rose" }
+]
+
+const iconNames: Record<string, string> = { Briefcase: "Mallette", Building: "Immeuble", Store: "Boutique", User: "Personne" }
+
+interface ChampsDeLActeurProps {
+  entity: Entity
+  onChange: (entity: Entity) => void
+}
+
+export function ChampsDeLActeur({ entity, onChange }: ChampsDeLActeurProps) {
+  const changerAvatar = (avatar: Partial<Avatar>) => onChange({ ...entity, avatar: { ...entity.avatar, ...avatar } })
+
+  return (
+    <>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="name" className="text-right">
+          Nom
+        </Label>
+        <Input id="name" name="name" value={entity.name || ""} onChange={e => onChange({ ...entity, name: e.target.value })} className="col-span-3" />
+      </div>
+      {entity.type === "person" && (
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="fiscalParts" className="text-right">
+            Parts propres
+          </Label>
+          <div className="col-span-3">
+            <Input id="fiscalParts" name="fiscalParts" type="number" step="0.5" value={entity.fiscalParts || 1} onChange={e => onChange({ ...entity, fiscalParts: parseFloat(e.target.value) || 0 })} />
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Hors enfants reliés : leurs parts s'ajoutent automatiquement. À modifier pour un cas particulier (parent isolé, invalidité…).</p>
+          </div>
+        </div>
+      )}
+      {entity.type === "company" && (
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="legalStatus" className="text-right">
+            Statut
+          </Label>
+          <Select value={entity.legalStatus} onValueChange={(legalStatus: Company["legalStatus"]) => onChange({ ...entity, legalStatus })}>
+            <SelectTrigger id="legalStatus" className="col-span-3">
+              <SelectValue placeholder="Choisir un statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="SASU">SASU</SelectItem>
+              <SelectItem value="EURL">EURL</SelectItem>
+              <SelectItem value="EI">Entreprise individuelle (au réel)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <StatusSpecificFields entity={entity} onChange={onChange} />
+      <div className="grid grid-cols-4 items-center gap-4">
+        <span id="avatar-couleur" className="text-right text-sm font-medium">
+          Couleur
+        </span>
+        <div className="col-span-3 flex flex-wrap gap-2" role="group" aria-labelledby="avatar-couleur">
+          {COULEURS_DES_ACTEURS.map(({ color, name }) => (
+            <button type="button" key={color} aria-label={name} aria-pressed={entity.avatar.color === color} onClick={() => changerAvatar({ color })} className={`h-8 w-8 rounded-full border-2 transition-all pointer-coarse:h-11 pointer-coarse:w-11 ${entity.avatar.color === color ? "border-primary ring-2 ring-ring" : "border-transparent"}`} style={{ backgroundColor: color }} />
+          ))}
+        </div>
+      </div>
+      {entity.type !== "person" && (
+        <div className="grid grid-cols-4 items-center gap-4">
+          <span id="avatar-icone" className="text-right text-sm font-medium">
+            Icône
+          </span>
+          <div className="col-span-3 flex flex-wrap gap-2" role="group" aria-labelledby="avatar-icone">
+            {Object.entries(availableIconsSmall).map(([key, icon]) => (
+              <button type="button" key={key} aria-label={iconNames[key] ?? key} aria-pressed={entity.avatar.value === key} onClick={() => changerAvatar({ value: key, type: "icon" })} className={`flex h-10 w-10 items-center justify-center rounded-md border-2 transition-all pointer-coarse:h-11 pointer-coarse:w-11 ${entity.avatar.value === key ? "border-primary ring-2 ring-ring bg-secondary" : "border-transparent hover:bg-secondary/80"}`}>
+                {icon}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {entity.type === "person" ? <ChampsFraisReels personne={entity} onChange={onChange} /> : <ChampsDeplacements activite={entity} onChange={onChange} />}
+    </>
+  )
+}
+
+/** Champs propres à certains statuts : revenu fiscal de référence d'une micro-entreprise, capital social d'une EURL. */
+function StatusSpecificFields({ entity, onChange }: ChampsDeLActeurProps) {
+  return (
+    <>
+      {entity.type === "micro-entreprise" && (
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="rfrN2" className="text-right">
+            RFR N-2
+          </Label>
+          <div className="col-span-3">
+            <Input
+              id="rfrN2"
+              name="rfrN2"
+              type="number"
+              min="0"
+              step="100"
+              placeholder="Non renseigné"
+              value={entity.rfrN2 ?? ""}
+              onChange={e => {
+                const value = parseFloat(e.target.value)
+                onChange({ ...entity, rfrN2: Number.isFinite(value) && value >= 0 ? value : undefined })
+              }}
+            />
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Revenu fiscal de référence du foyer d'il y a deux ans (avis d'imposition) : il décide de l'accès au versement libératoire.</p>
+          </div>
+        </div>
+      )}
+      {entity.type === "company" && entity.legalStatus === "EURL" && (
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="capitalSocial" className="text-right">
+            Capital social
+          </Label>
+          <div className="col-span-3">
+            <Input id="capitalSocial" name="capitalSocial" type="number" min="0" step="100" value={entity.capitalSocial} onChange={e => onChange({ ...entity, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })} />
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
