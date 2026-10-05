@@ -5,10 +5,13 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=DamienBecherini_simulateur-independant-fr&metric=coverage)](https://sonarcloud.io/summary/new_code?id=DamienBecherini_simulateur-independant-fr)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](./LICENSE)
 [![Démo web](https://img.shields.io/badge/démo-en%20ligne-brightgreen.svg)](https://damienbecherini.github.io/simulateur-independant-fr/)
+[![Avis des utilisateurs](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdamienbecherini.github.io%2Fsimulateur-independant-fr%2Fretours.json&query=%24.resume&label=avis&color=blue)](https://github.com/DamienBecherini/simulateur-independant-fr/issues?q=label%3Aretour)
 
 Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un bac à sable financier, juridique et fiscal pour les indépendants : on modélise personnes, sociétés et micro-entreprises, leurs liens et leurs flux mensuels, puis on calcule cotisations, impôts et net du foyer, et on compare les statuts : SASU, EURL, entreprise individuelle au réel, micro-entreprise avec ou sans versement libératoire.
 
 **[▶ Essayer la démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/)**, sans installation : la même interface, le moteur de calcul tourne dans le navigateur et les simulations restent sur votre poste.
+
+**Donner son avis :** le bouton « Donner mon avis » de l'application ouvre un [ticket GitHub prérempli](https://github.com/DamienBecherini/simulateur-independant-fr/issues/new?template=retour.yml) : note de 1 à 5, affichage préféré, avis, bug ou idée, tout facultatif. Le badge « avis » ci-dessus affiche la note moyenne et le nombre de notes, recalculés à chaque retour.
 
 *Projet personnel, né d'un besoin d'entrepreneur. Je le partage pour montrer mes standards de code et ma vision produit, et parce qu'il peut aider d'autres entrepreneurs à y voir plus clair. Ce n'est pas un logiciel de conseil fiscal : les résultats sont indicatifs et n'ont pas été validés par un expert-comptable.*
 
@@ -125,6 +128,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - `src/lib/` : fonctions utilitaires et logique pure partagée.
 - `src/web/` : démo web, qui remplace le process Electron : même `window.api`, moteur exécuté dans la page, stockage dans le navigateur.
 - `src/types.ts` : schémas Zod et types centraux.
+- `scripts/retours/` : scripts Node des retours des utilisateurs, lancés par les workflows GitHub. `etiqueter.mjs` pose les étiquettes d'un ticket du formulaire `.github/ISSUE_TEMPLATE/retour.yml` (`note-1` à `note-5`, `affichage-resume`, `affichage-classique`, `affichage-vues`, `avis`, `bug`, `idee`) ; `agreger.mjs` écrit à chaque publication de la démo le fichier `retours.json` (`nombreDeNotes`, `moyenne` au dixième, `preferencesAffichage`, `misAJour`, et `resume`, le texte du badge : « 4,2/5 (12 notes) » ou « pas encore de note »). Les retours sans note n'entrent pas dans la moyenne.
 
 ## ⚠️ Limites connues
 
