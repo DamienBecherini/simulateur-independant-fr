@@ -50,6 +50,15 @@ test("exporter toutes les sauvegardes, les supprimer, puis les retrouver en impo
   await expect(liste.getByRole("button", { name: "Charger la sauvegarde « Scénario A »" })).toBeVisible()
   await expect(liste.getByRole("button", { name: "Charger la sauvegarde « Scénario B »" })).toBeVisible()
 
+  // Réimporter le même fichier n'ajoute rien : les deux sauvegardes sont déjà là, à l'identique.
+  const secondSelecteur = page.waitForEvent("filechooser")
+  await liste.getByRole("button", { name: "Importer des sauvegardes..." }).click()
+  await (await secondSelecteur).setFiles(chemin)
+  await expect(bilan).toContainText("2 sauvegardes déjà présentes, ignorées.")
+  await expect(bilan).toContainText("Aucune sauvegarde ajoutée.")
+  await bilan.getByRole("button", { name: "OK" }).click()
+  await expect(sauvegardes).toHaveCount(2)
+
   // Les sauvegardes importées sont conservées dans le navigateur.
   await page.reload()
   await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
