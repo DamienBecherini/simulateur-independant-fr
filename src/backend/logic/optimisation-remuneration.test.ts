@@ -89,6 +89,27 @@ describe("optimiserRemuneration", () => {
     expect(optimiserRemuneration(deficitaire, options("s1"), "SASU", reglesDeTest)).toMatchObject({ points: [], meilleur: null, meilleurAvecRetraite: null, warnings: [expect.stringContaining("aucun bénéfice")] })
   })
 
+  it("n'a rien à optimiser quand le bénéfice est tout juste nul", () => {
+    // 20 000 € de chiffre d'affaires et autant de charges : bénéfice de 0 € sans rémunération, rien à partager.
+    const aZero = societeDAlice("SASU", [["s1", "ca_services", 20000], ["s1", "deductible_expense", 20000]])
+    expect(optimiserRemuneration(aZero, options("s1"), "SASU", reglesDeTest)).toMatchObject({ remunerationMaximale: 0, points: [], meilleur: null, warnings: [expect.stringContaining("aucun bénéfice en SASU")] })
+  })
+
+  it("en EURL, n'a rien à optimiser quand les cotisations minimales du gérant absorbent un petit bénéfice", () => {
+    // 1 000 € de bénéfice avant rémunération, mais au moins 1 500 € de cotisations minimales (règles de test) : déficit.
+    const petite = societeDAlice("EURL", [["s1", "ca_services", 1000]])
+    expect(optimiserRemuneration(petite, options("s1"), "EURL", reglesDeTest)).toMatchObject({ points: [], meilleur: null, meilleurAvecRetraite: null, warnings: [expect.stringContaining("aucun bénéfice en EURL")] })
+  })
+
+  it("en SASU, propose au moins un point quand le bénéfice ne permet que 100 € de rémunération", () => {
+    // 200 € de bénéfice. Règles de test : brut = net / 0,81 et 34 % de patronales, la société paie 1,654 fois le net ;
+    // le net ne peut dépasser 200 / 1,654 = 120,90 €, soit 100 € à 100 € près. Deux points : 0 et 100 €.
+    const resultat = optimiserRemuneration(societeDAlice("SASU", [["s1", "ca_services", 200]]), options("s1"), "SASU", reglesDeTest)
+    expect(resultat.remunerationMaximale).toBe(100)
+    expect(resultat.points.map(p => p.remunerationNette)).toEqual([0, 100])
+    expect(resultat.meilleur).not.toBeNull()
+  })
+
   it("demande de choisir une activité quand l'identifiant ne correspond à aucune", () => {
     expect(optimiserRemuneration(societeDAlice("SASU"), options("inconnue"), "SASU", reglesDeTest).warnings).toEqual(["Choisissez une activité à comparer."])
   })
