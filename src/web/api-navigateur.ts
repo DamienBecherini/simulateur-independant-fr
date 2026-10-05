@@ -7,6 +7,7 @@ import type { EventPayloadMapping } from "@/globals"
 import type { ExportableState, FormatFichierTexte, NotificationPayload, SaveSlot, SessionState, UserPreferences } from "@/types"
 import { SessionStateSchema, UserPreferencesSchema } from "@/types"
 import { AnneesRefuseesError, sanitizeSlots, sanitizeStateAndFillDefaults } from "@/backend/logic/data-sanitizer"
+import { lireUneSimulationImportee } from "@/backend/logic/fichiers-de-donnees"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
 import { sessionExemple } from "./session-exemple"
@@ -98,8 +99,7 @@ export function creerApiNavigateur(): EventPayloadMapping {
       const contenu = await choisirFichier()
       if (contenu === null) return { data: undefined }
       try {
-        const { safeState, report } = sanitizeStateAndFillDefaults(JSON.parse(contenu))
-        return { data: { entities: safeState.entities, relationships: safeState.relationships, annees: safeState.annees }, report }
+        return lireUneSimulationImportee(contenu)
       } catch (error) {
         const message = error instanceof Error ? error.message : "Erreur inconnue."
         // Un fichier refusé à cause de ses années n'est pas corrompu : le motif suffit, il dit quoi corriger.
