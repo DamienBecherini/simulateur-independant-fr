@@ -241,7 +241,13 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 2.  **ACRE :** distinguer la réduction de 50 % et celle de 25 % (micro-entreprises créées à partir du 01/07/2026).
 3.  **Répartition du capital :** part de chaque associé dans une société à plusieurs associés. Aujourd'hui, les dividendes, l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales.
 4.  **Compte courant d'associé :** solde par société, flux d'apport et de remboursement (non imposés), intérêts versés (déductibles pour la société dans une limite, imposés chez l'associé), et prise en compte du solde dans le seuil des 10 % du capital des EURL.
-5.  **Distribution :** exécutables Windows / macOS / Linux.
+5.  **Enfants et foyers :**
+    - **Date de naissance :** sur la personne, pour connaître son âge chaque année de la session. Mineur, majeur de moins de 21 ans (25 ans s'il est étudiant), naissance dans l'année (comptée pour l'année entière), garde des moins de 6 ans (crédit d'impôt).
+    - **Parents non mariés :** choisir le parent de rattachement, ou la résidence alternée (la moitié des parts de l'enfant à chaque parent). Aujourd'hui, l'enfant est rattaché au premier parent trouvé, avec un avertissement.
+    - **Parent isolé (case T) :** case « vit seul(e) avec ses enfants » sur la personne, demi-part supplémentaire avec son plafond propre. Elle ne se déduit pas des relations : sans relation de couple, rien ne dit que la personne vit seule.
+    - **Enfant qui a des revenus :** majeur, rattaché (ses revenus s'ajoutent au foyer, avec sa part) ou déclarant seul (les parents peuvent déduire une pension alimentaire, plafonnée) ; mineur, imposé avec ses parents, sauf revenus de son propre travail (imposition distincte possible) ; exonération des salaires des étudiants de moins de 26 ans dans une limite.
+    - **Comparateur :** pour chaque enfant concerné, rattachement le plus avantageux (à quel parent, ou déclaration séparée avec pension) et gain total des foyers.
+6.  **Distribution :** exécutables Windows / macOS / Linux.
 
 ---
 
