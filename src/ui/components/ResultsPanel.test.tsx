@@ -235,4 +235,39 @@ describe("ResultsPanel", () => {
     rerender(<ResultsPanel report={{ ...report }} error={null} />)
     expect(rowValue(card, "Coût employeur des 2 salariés")).toHaveTextContent(money(57000))
   })
+
+  it("indique la déduction retenue pour une personne qui a saisi des frais réels", () => {
+    const report = makeReport()
+    const bob = report.persons[1]
+    const frais = { revenusSalariaux: 28000, deductionForfaitaire: 2800, fraisReels: 4508, fraisDeTrajet: 4508, distanceRetenue: 8720, retenue: "reels" as const, deduction: 4508 }
+    report.persons = [report.persons[0], { ...bob, fraisProfessionnels: frais }]
+    const { rerender } = render(<ResultsPanel report={report} error={null} />)
+
+    const card = screen.getAllByRole("article").find(article => within(article).queryByText("Bob Durand"))!
+    expect(rowValue(card, "Frais réels retenus")).toHaveTextContent(`− ${money(4508)}plutôt que ${money(2800)} de déduction de 10 %`)
+    expect(rowValue(card, "dont trajets domicile-travail")).toHaveTextContent(normalize(`${money(4508)}${(8720).toLocaleString("fr-FR")} km au barème`))
+
+    report.persons = [report.persons[0], { ...bob, fraisProfessionnels: { ...frais, fraisReels: 1000, fraisDeTrajet: 1000, distanceRetenue: 2000, retenue: "forfait", deduction: 2800 } }]
+    rerender(<ResultsPanel report={{ ...report }} error={null} />)
+    expect(rowValue(card, "Déduction de 10 % retenue")).toHaveTextContent(`− ${money(2800)}plutôt que ${money(1000)} de frais réels`)
+    expect(rowValue(card, "trajets domicile-travail")).toHaveTextContent(money(1000))
+
+    report.persons = [report.persons[0], { ...bob, fraisProfessionnels: { ...frais, fraisReels: 500, fraisDeTrajet: 0, distanceRetenue: 0, retenue: "forfait", deduction: 2800 } }]
+    rerender(<ResultsPanel report={{ ...report }} error={null} />)
+    expect(within(card).queryByText("trajets domicile-travail")).not.toBeInTheDocument()
+  })
+
+  it("affiche les déplacements professionnels d'une activité, déductibles ou non", () => {
+    const report = makeReport()
+    const sasu = report.activities[0]
+    report.activities = [{ ...sasu, fraisDeDeplacement: { kilometres: 8720, montant: 4508, deductible: true } }]
+    const { rerender } = render(<ResultsPanel report={report} error={null} />)
+
+    const card = screen.getAllByRole("article").find(article => within(article).queryByText("Ma SASU"))!
+    expect(rowValue(card, "dont déplacements professionnels")).toHaveTextContent(normalize(`${money(4508)}${(8720).toLocaleString("fr-FR")} km au barème kilométrique, déductibles`))
+
+    report.activities = [{ ...sasu, type: "micro-entreprise", statut: "Micro-entreprise", fraisDeDeplacement: { kilometres: 8720, montant: 4508, deductible: false } }]
+    rerender(<ResultsPanel report={{ ...report }} error={null} />)
+    expect(rowValue(card, "dont déplacements professionnels")).toHaveTextContent(/non déductibles$/)
+  })
 })

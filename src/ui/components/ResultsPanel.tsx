@@ -1,6 +1,6 @@
 // src/ui/components/ResultsPanel.tsx
 
-import type { ActivityResult, FoyerFiscalResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
+import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
 
@@ -151,8 +151,24 @@ function PersonIncome({ person, showName }: { person: PersonResult; showName: bo
         {lines.map(key => (
           <Row key={key} label={incomeLabels[key]} value={formatMoney(person.detail[key])} />
         ))}
+        {person.fraisProfessionnels ? <FraisProfessionnelsRow frais={person.fraisProfessionnels} /> : null}
       </dl>
     </div>
+  )
+}
+
+/** Déduction pour frais professionnels d'une personne qui a saisi des frais réels : celle retenue, et l'autre pour comparer. */
+function FraisProfessionnelsRow({ frais }: { frais: FraisProfessionnelsResult }) {
+  const retenus = frais.retenue === "reels"
+  return (
+    <>
+      <Row
+        label={retenus ? "Frais réels retenus" : "Déduction de 10 % retenue"}
+        value={`− ${formatMoney(frais.deduction)}`}
+        hint={retenus ? `plutôt que ${formatMoney(frais.deductionForfaitaire)} de déduction de 10 %` : `plutôt que ${formatMoney(frais.fraisReels)} de frais réels`}
+      />
+      {frais.distanceRetenue > 0 ? <Row label={retenus ? "dont trajets domicile-travail" : "trajets domicile-travail"} value={formatMoney(frais.fraisDeTrajet)} hint={`${frais.distanceRetenue.toLocaleString("fr-FR")} km au barème`} /> : null}
+    </>
   )
 }
 
@@ -221,6 +237,12 @@ function EmployerCost({ salaries }: { salaries: SalarieDeLActivite[] }) {
   return <Row label={salaries.length > 1 ? `Coût employeur des ${salaries.length} salariés` : "Coût employeur du salarié"} value={formatMoney(sum(s => s.coutEmployeur))} hint={hint} />
 }
 
+/** Déplacements professionnels convertis au barème kilométrique, déjà compris dans les charges ou les dépenses. */
+function DeplacementsRow({ deplacements }: { deplacements: NonNullable<ActivityResult["fraisDeDeplacement"]> }) {
+  const kilometres = `${deplacements.kilometres.toLocaleString("fr-FR")} km au barème kilométrique`
+  return <Row label="dont déplacements professionnels" value={formatMoney(deplacements.montant)} hint={deplacements.deductible ? `${kilometres}, déductibles` : `${kilometres}, non déductibles`} />
+}
+
 function ActivityCard({ activity }: { activity: ActivityResult }) {
   const isMicro = activity.type === "micro-entreprise"
 
@@ -229,6 +251,7 @@ function ActivityCard({ activity }: { activity: ActivityResult }) {
       <dl className="space-y-1 text-sm">
         <Row label="Chiffre d'affaires" value={formatMoney(activity.chiffreAffaires)} />
         {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${formatMoney(activity.charges)}`} /> : null}
+        {activity.fraisDeDeplacement ? <DeplacementsRow deplacements={activity.fraisDeDeplacement} /> : null}
         <Row label="Cotisations sociales" value={`− ${formatMoney(activity.cotisationsSociales)}`} />
         {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={formatMoney(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${formatMoney(activity.cotisationsPresident.brut)} bruts`} /> : null}
         {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} /> : null}

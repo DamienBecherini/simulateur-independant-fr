@@ -10,6 +10,7 @@ import type { Entity, Relationship, Person, Company, Avatar } from "@/types"
 import { Trash2, PlusCircle, ArrowRight } from "lucide-react"
 import { AIDE_RELATION_SALARIE, getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
 import { AvatarDisplay } from "./AvatarDisplay"
+import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { updatePersonAvatar } from "@/lib/avatar-utils"
 import { createId } from "@/lib/id"
@@ -201,6 +202,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                 </div>
               </div>
             )}
+            {localEntity.type === "person" ? <ChampsFraisReels personne={localEntity} onChange={entity => setFormData(prev => ({ ...prev, entity }))} /> : <ChampsDeplacements activite={localEntity} onChange={entity => setFormData(prev => ({ ...prev, entity }))} />}
             <div className="space-y-4 pt-6 border-t">
               <h3 className="font-semibold text-base">Relations</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

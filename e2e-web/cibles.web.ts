@@ -56,7 +56,20 @@ async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]>
         await page.getByRole("button", { name: "Charger une sauvegarde..." }).click()
       }
     ],
-    ["réglages d'une entité", () => page.getByRole("button", { name: "Modifier les autres réglages" }).first().click()],
+    [
+      "réglages d'une personne, frais réels dépliés",
+      async () => {
+        await page.getByRole("button", { name: "Modifier les autres réglages" }).first().click()
+        await page.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 10 %" }).click()
+      }
+    ],
+    [
+      "réglages d'une activité, déplacements dépliés",
+      async () => {
+        await page.getByRole("button", { name: "Modifier les autres réglages" }).last().click()
+        await page.getByRole("switch", { name: "Déplacements avec une voiture personnelle" }).click()
+      }
+    ],
     ["choix du type d'activité", () => page.getByRole("button", { name: "+ Ajouter une Activité" }).click()],
     ["flux d'un mois", () => page.getByRole("button", { name: /^Flux de janvier/ }).last().click()],
     ["couleurs des flux", () => page.getByRole("button", { name: "Gérer les couleurs" }).click()]
