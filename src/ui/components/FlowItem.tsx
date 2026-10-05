@@ -185,7 +185,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
       <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
 
       {onRecopier ? (
-        <Button variant="ghost" size="icon" className="shrink-0" aria-label="Recopier ce flux jusqu'en décembre" title="Recopier ce flux sur les mois suivants, jusqu'en décembre" onClick={() => onRecopier(flow.id)}>
+        <Button variant="ghost" size="icon" className="shrink-0" aria-label="Recopier ce flux jusqu'en décembre" title="Recopier ce flux sur les mois suivants, jusqu'en décembre de l'année affichée" onClick={() => onRecopier(flow.id)}>
           <CopyPlus />
         </Button>
       ) : null}

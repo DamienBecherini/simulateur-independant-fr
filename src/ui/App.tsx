@@ -203,6 +203,9 @@ function App() {
           preferences={userPreferences}
           flowTypeToNumberMap={flowTypeToNumberMap}
           annee={annee}
+          // Une opération appliquée aussi à d'autres années remplace toutes les années d'un coup : une seule étape d'annulation.
+          annees={currentSession.annees}
+          setAnnees={annees => setCurrentSession(prev => ({ ...prev, annees }))}
           selecteurAnnee={
             <SelecteurAnnee
               annees={anneesDeLaSession(currentSession)}
