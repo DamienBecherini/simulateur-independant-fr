@@ -1,6 +1,8 @@
 // src/backend/logic/references/salarie.reference.test.ts
 
 import { describe, expect, it } from "vitest"
+import { reductionGenerale } from "../cotisationsSalarie.js"
+import { reglesEnVigueur } from "../regles.js"
 import { runMetaSimulation } from "../simulation-engine.js"
 import { activite, casDeReference, foyerDe, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
 import { personne, relation, session, societe } from "../testing/session-de-test.js"
@@ -85,5 +87,33 @@ casDeReference("Cas de référence 2026 : salarié et réduction générale", ()
     expect(bulletin.reductionGenerale).toBeCloseTo(1460.25, 2)
     expect(bulletin.coutEmployeur).toBeCloseTo(76012.33, 1)
     expect(activite(report, "s1")).toMatchObject({ charges: 54691, cotisationsSociales: 21321 })
+  })
+
+  describe("autour de 3 SMIC (65 629,20 € bruts), où la réduction générale s'éteint", () => {
+    // La RGDU ne s'applique qu'à une rémunération inférieure à 3 SMIC : 3 x 21 876,40 = 65 629,20 €.
+    const rgdu = reglesEnVigueur.regimeGeneral.reductionGenerale
+
+    it("juste sous 3 SMIC : coefficient minimal de 2 %", () => {
+      // 65 629,19 € : 1/2 x (65 629,20 / 65 629,19 - 1) est presque nul, C = 0,02 + 0,3781 x 0 = 0,0200 ;
+      // réduction 65 629,19 x 0,02 = 1 312,58 €.
+      expect(reductionGenerale(65629.19, rgdu)).toBeCloseTo(1312.58, 2)
+    })
+
+    it.each([
+      ["exactement 3 SMIC", 65629.2],
+      ["un centime au-delà", 65629.21],
+      ["au-delà", 70000]
+    ])("%s : plus de réduction", (_cas, brut) => {
+      expect(reductionGenerale(brut, rgdu)).toBe(0)
+    })
+
+    it("un salarié payé exactement 3 SMIC ne reçoit aucune réduction sur son bulletin", () => {
+      // Brut saisi 65 629,20 € (le net saisi n'entre pas dans la réduction) : aucune réduction, le coût est le brut plus les patronales.
+      const [bulletin] = activite(simulerSalarie(52000, 65629.2), "s1").salaries ?? []
+
+      expect(bulletin.brut).toBe(65629.2)
+      expect(bulletin.reductionGenerale).toBe(0)
+      expect(bulletin.coutEmployeur).toBeCloseTo(65629.2 + bulletin.totalPatronal, 6)
+    })
   })
 })

@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import type { SimulationAnnuelle } from "@/types"
+import { BOM } from "./csv"
 import { nomDuFoyer } from "./export-commun"
 import { csvComparaison, csvCourbeRemuneration, csvGrilleMensuelle, csvResultats, reglagesDuComparateur } from "./export-csv"
 import { comparaisonExemple, optimisationExemple, optionsExemple, rapportExemple, sessionExemple } from "./testing/exports-fixtures"
@@ -78,6 +79,82 @@ describe("csvResultats", () => {
 describe("nomDuFoyer", () => {
   it("liste ses membres, même supprimés depuis", () => {
     expect(nomDuFoyer(sessionExemple(), { ...rapportExemple().foyers[0], personIds: ["p2", "x"] })).toBe("Bob, x")
+  })
+})
+
+/**
+ * Relit un CSV comme le ferait un tableur : cellules séparées par des points-virgules, entre guillemets si besoin
+ * (guillemets doublés), lignes terminées par CRLF, retours à la ligne permis dans une cellule entre guillemets.
+ */
+function relire(csv: string): string[][] {
+  const lignesLues: string[][] = []
+  let ligne: string[] = []
+  let cellule = ""
+  let entreGuillemets = false
+  const texte = csv.slice(BOM.length)
+  for (let i = 0; i < texte.length; i++) {
+    const c = texte[i]
+    if (entreGuillemets) {
+      if (c === '"' && texte[i + 1] === '"') {
+        cellule += '"'
+        i++
+      } else if (c === '"') entreGuillemets = false
+      else cellule += c
+    } else if (c === '"') entreGuillemets = true
+    else if (c === ";") {
+      ligne.push(cellule)
+      cellule = ""
+    } else if (c === "\r" && texte[i + 1] === "\n") {
+      lignesLues.push([...ligne, cellule])
+      ligne = []
+      cellule = ""
+      i++
+    } else cellule += c
+  }
+  return lignesLues
+}
+
+describe("noms saisis hostiles : séparateurs, guillemets, retours à la ligne et formules", () => {
+  // Noms qu'un utilisateur peut saisir, ou trouver dans un fichier importé.
+  const NOMS = {
+    p1: 'Alice "la grande"\nMartin',
+    p2: "+33 6 12 34 56 78",
+    c1: '=HYPERLINK("http://exemple.invalid";"Cliquez")'
+  }
+
+  function sessionHostile(): SimulationAnnuelle {
+    const session = sessionExemple()
+    session.name = "-Famille; Martin"
+    session.entities = session.entities.map(e => ({ ...e, name: NOMS[e.id as keyof typeof NOMS] }))
+    return session
+  }
+
+  it("garde chaque nom dans une seule cellule de la grille, neutralisé s'il commence comme une formule", () => {
+    const cellules = relire(csvGrilleMensuelle(sessionHostile()))
+
+    expect(cellules.every(ligne => ligne.length === 17)).toBe(true)
+    expect(cellules.slice(1).map(ligne => ligne[0])).toEqual([`'${NOMS.c1}`, `'${NOMS.c1}`])
+  })
+
+  it("protège de même les résultats : activités, bénéficiaires, personnes et foyers", () => {
+    const rapport = rapportExemple()
+    rapport.activities = rapport.activities.map(a => ({ ...a, name: NOMS.c1 }))
+    rapport.persons = rapport.persons.map(p => ({ ...p, name: NOMS[p.entityId as keyof typeof NOMS] }))
+    const cellules = relire(csvResultats(sessionHostile(), rapport))
+    const ligneQuiCommencePar = (debut: string) => cellules.find(ligne => ligne[0] === debut)
+
+    // Toutes les lignes d'un même tableau ont autant de cellules que son en-tête.
+    expect(ligneQuiCommencePar(`'${NOMS.c1}`)).toHaveLength(9)
+    expect(ligneQuiCommencePar(`'${NOMS.c1}`)?.[8]).toBe(NOMS.p1)
+    expect(ligneQuiCommencePar(NOMS.p1)).toHaveLength(11)
+    expect(ligneQuiCommencePar(`'${NOMS.p2}`)).toHaveLength(11)
+    expect(ligneQuiCommencePar(`${NOMS.p1}, ${NOMS.p2}`)).toHaveLength(12)
+  })
+
+  it("protège le nom de l'activité comparée", () => {
+    const cellules = relire(csvComparaison(comparaisonExemple(), optionsExemple(), NOMS.c1))
+    expect(cellules.find(ligne => ligne[0] === "Activité comparée")).toEqual(["Activité comparée", `'${NOMS.c1}`])
+    expect(cellules.find(ligne => ligne[0].startsWith("Conservé dans"))?.[0]).toBe(`Conservé dans « ${NOMS.c1} »`)
   })
 })
 

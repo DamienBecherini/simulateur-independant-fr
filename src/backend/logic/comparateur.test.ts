@@ -278,6 +278,19 @@ describe("micro-entreprise au-delà des plafonds", () => {
     expect(resultat.scenarios.some(s => s.horsPlafond)).toBe(false)
   })
 
+  it("à un euro au-delà du plafond, la micro au meilleur net cède la place au meilleur statut tenable", () => {
+    // 80 000 € de BNC : plafond atteint, pas dépassé ; la micro avec versement libératoire donne le meilleur net.
+    // 80 001 € : les deux colonnes micro sont hors plafond, leur net reste le meilleur mais n'est plus retenu.
+    const auPlafond = comparer([personne("alice"), micro("m1")], titulaire, [["m1", "ca_micro_services_bnc", 80000]], options("m1"))
+    const auDela = comparer([personne("alice"), micro("m1")], titulaire, [["m1", "ca_micro_services_bnc", 80001]], options("m1"))
+
+    expect(auPlafond.meilleur).toBe("micro-vfl")
+    expect(auDela.scenarios.filter(s => s.horsPlafond).map(s => s.statut)).toEqual(["micro", "micro-vfl"])
+    expect(Math.max(...auDela.scenarios.map(s => s.netApresImpots))).toBe(colonne(auDela, "micro-vfl").netApresImpots)
+    expect(["SASU", "EURL", "EI"]).toContain(auDela.meilleur)
+    expect(colonne(auDela, auDela.meilleur!).netApresImpots).toBe(Math.max(...auDela.scenarios.filter(s => !s.horsPlafond).map(s => s.netApresImpots)))
+  })
+
   it("une société convertie en micro est aussi comparée au plafond", () => {
     const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 90000]], options("s1"))
     expect(colonne(resultat, "micro").horsPlafond).toBe(true)

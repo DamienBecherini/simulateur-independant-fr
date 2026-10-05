@@ -165,4 +165,18 @@ describe("ComparatorPanel", () => {
     expect(within(table).getByRole("columnheader", { name: /versement libératoire/ })).toHaveTextContent("hors plafond · 2 ans au plus")
     expect(within(table).getByRole("columnheader", { name: /^Micro-entreprise/ })).toHaveTextContent("meilleur net")
   })
+
+  it("signale les deux colonnes micro hors plafond, et met en évidence le meilleur statut tenable", async () => {
+    const horsPlafond = comparison().scenarios.map(s => (s.statut === "micro" || s.statut === "micro-vfl" ? { ...s, horsPlafond: true } : s))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: horsPlafond, meilleur: "SASU" }))
+    render(<ComparatorPanel annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    for (const colonne of [/^Micro-entreprise/, /versement libératoire/]) {
+      const entete = within(table).getByRole("columnheader", { name: colonne })
+      expect(entete).toHaveTextContent("hors plafond · 2 ans au plus")
+      expect(entete).not.toHaveTextContent("meilleur net")
+    }
+    expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent("meilleur net")
+  })
 })

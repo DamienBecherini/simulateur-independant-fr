@@ -230,4 +230,26 @@ Aucun avertissement.
     session.entities[0] = { ...session.entities[0], name: "Alice | Martin" }
     expect(rapportComplet({ session })).toContain("| Alice \\| Martin | Personne |")
   })
+
+  it("garde la structure de chaque tableau quand tous les noms contiennent des barres, des retours à la ligne ou du balisage", () => {
+    const session = sessionExemple()
+    session.name = "Famille | Martin\n# pas un titre"
+    session.entities = session.entities.map(e => ({ ...e, name: `${e.name} | *gras*\n[lien](x)` }))
+    const rapport = rapportExemple()
+    rapport.activities = rapport.activities.map(a => ({ ...a, name: "Ma SASU | *gras*\n[lien](x)" }))
+    const texte = rapportComplet({ session, report: rapport, comparaison: { nomActivite: "Ma SASU | x", options: optionsExemple(), resultat: comparaisonExemple() } })
+
+    // Le titre reste sur une ligne, et aucune ligne ne commence par un titre que l'utilisateur aurait glissé dans un nom.
+    expect(texte.split("\n")[0]).toBe("# Simulation « Famille \\| Martin \\# pas un titre »")
+    expect(texte).not.toMatch(/^# pas un titre/m)
+    expect(texte).toContain("### Ma SASU \\| \\*gras\\* \\[lien\\](x) (SASU)")
+    expect(texte).toContain("## Comparateur de statuts : « Ma SASU \\| x »")
+    // Dans chaque tableau, toutes les lignes ont autant de cellules que l'en-tête : les barres échappées n'en créent pas.
+    const tableaux = texte.split(/\n\n/).filter(bloc => bloc.startsWith("| "))
+    expect(tableaux.length).toBeGreaterThan(3)
+    for (const tableau of tableaux) {
+      const colonnes = tableau.split("\n").map(ligne => ligne.split(/(?<!\\)\|/).length)
+      expect(new Set(colonnes).size, tableau).toBe(1)
+    }
+  })
 })

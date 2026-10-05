@@ -132,6 +132,30 @@ describe("pont de la démo web", () => {
     expect(resultat.report?.migrationNotes).toEqual([expect.stringContaining("placée en 2026")])
   })
 
+  it("importe une simulation au format 1, sans numéro de format, jusqu'au format actuel", async () => {
+    // Format 1 : ni numéro de format, ni capital social pour l'EURL, une seule grille.
+    const eurl = { id: "company-eurl", type: "company", name: "Mon EURL", legalStatus: "EURL", avatar: { type: "icon", value: "Building", color: "#22c55e" }, locked: false }
+    const { annees } = sessionExemple()
+    choisirLeFichier(JSON.stringify({ name: "Ancienne", entities: [eurl], relationships: [], monthlyData: annees[0].monthlyData.map(mois => ({ ...mois, flows: [] })) }))
+
+    const resultat = await creerApiNavigateur().importState()
+
+    expect(resultat.data?.entities).toEqual([expect.objectContaining({ id: "company-eurl", capitalSocial: 1000 })])
+    expect(resultat.data?.annees.map(a => a.annee)).toEqual([2026])
+    expect(resultat.report?.migrationNotes).toEqual(expect.arrayContaining([expect.stringContaining("capital social"), expect.stringContaining("placée en 2026")]))
+  })
+
+  it("importe un fichier de plusieurs années écrit à la main : années triées, doublon écarté avec ses flux", async () => {
+    const { entities, relationships, annees } = sessionExemple()
+    const grille = annees[0].monthlyData
+    choisirLeFichier(JSON.stringify({ entities, relationships, annees: [{ annee: 2026, monthlyData: grille }, { annee: 2024, monthlyData: grille }, { annee: 2026, monthlyData: grille }], formatVersion: FORMAT_VERSION_ACTUEL }))
+
+    const resultat = await creerApiNavigateur().importState()
+
+    expect(resultat.data?.annees.map(a => a.annee)).toEqual([2024, 2026])
+    expect(resultat.report?.flowsRemoved).toBe(grille.reduce((n, mois) => n + mois.flows.length, 0))
+  })
+
   it("n'importe rien si l'utilisateur ferme le sélecteur de fichiers", async () => {
     vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(function (this: HTMLInputElement) {
       this.dispatchEvent(new Event("cancel"))

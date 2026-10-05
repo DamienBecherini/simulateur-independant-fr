@@ -135,6 +135,20 @@ describe("calculerEURL", () => {
     expect(resultat.remunerationImposable).toBeCloseTo(28200)
   })
 
+  it("laisse aux prélèvements sociaux des dividendes égaux à 10 % du capital, et soumet aux cotisations le premier euro au-delà", () => {
+    // Capital de 10 000 € : seuil de 1 000 €. À 1 000 €, rien ne s'ajoute au revenu du gérant ; à 1 001 €, 1 € s'y ajoute,
+    // soit 0,75 € d'assiette après l'abattement de 25 % : quelques centimes de cotisations, payés par le gérant.
+    const aLaLimite = calculerEURL({ ...eurl, dividendesDemandes: 1000 }, reglesDeTest)
+    const auDela = calculerEURL({ ...eurl, dividendesDemandes: 1001 }, reglesDeTest)
+
+    expect(aLaLimite).toMatchObject({ dividendesVerses: 1000, dividendesSoumisPS: 1000, cotisationsSurDividendes: 0 })
+    expect(aLaLimite.cotisationsSociales).toBeCloseTo(12700)
+    expect(auDela).toMatchObject({ dividendesVerses: 1001, dividendesSoumisPS: 1000 })
+    expect(auDela.cotisationsTNS?.revenuAvantCotisations).toBeCloseTo(40001)
+    expect(auDela.cotisationsSurDividendes).toBeGreaterThan(0)
+    expect(auDela.cotisationsSurDividendes).toBeLessThan(1)
+  })
+
   it("laisse tous les dividendes aux prélèvements sociaux quand le capital est suffisant", () => {
     const resultat = calculerEURL({ ...eurl, dividendesDemandes: 20000, capitalSocial: 200000 }, reglesDeTest)
 

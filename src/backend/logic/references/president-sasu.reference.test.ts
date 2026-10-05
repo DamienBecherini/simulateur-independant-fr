@@ -1,6 +1,7 @@
 // src/backend/logic/references/president-sasu.reference.test.ts
 
 import { describe, expect, it } from "vitest"
+import { brutPourUnNet, calculerCotisationsSalarie } from "../cotisationsSalarie.js"
 import { evaluerProtectionSociale } from "../protection-sociale.js"
 import { reglesEnVigueur } from "../regles.js"
 import { activite, casDeReference, foyerDe, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
@@ -105,6 +106,47 @@ casDeReference("Cas de référence 2026 : président de SASU", () => {
       expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 43736, impotSocietes: 7316, resultatConserve: 38948 })
       expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 55936, impotSurLeRevenu: 9885, netApresImpots: 50115 })
       verifierIdentiteDuBilan(report)
+    })
+  })
+
+  describe("seuil des 4 trimestres : 4 x 1 803 = 7 212 € bruts, soit 7 212 x 0,7915975 = 5 709,00 € nets", () => {
+    const trimestres = (brut: number) => evaluerProtectionSociale("SASU", { remunerationBrute: brut, assietteTNS: 0, chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 } }, reglesEnVigueur).trimestres
+
+    it.each([
+      // 5 700 / 0,7915975 = 7 200,63 € bruts : 7 200,63 / 1 803 = 3,99, soit 3 trimestres.
+      [5700, 7200.63, 3],
+      // 5 710 / 0,7915975 = 7 213,26 € bruts : au-delà de 7 212 €, 4 trimestres.
+      [5710, 7213.26, 4]
+    ])("%i € nets : %f € bruts, %i trimestres", (net, brut, attendus) => {
+      const bulletin = activite(simulerPresident(30000, net), "s1").cotisationsPresident
+
+      expect(bulletin?.brut).toBeCloseTo(brut, 2)
+      expect(trimestres(bulletin?.brut ?? 0)).toBe(attendus)
+    })
+  })
+
+  describe("autour du PASS : la contribution d'équilibre technique porte sur tout le brut dès qu'il dépasse 48 060 €", () => {
+    const regimeGeneral = reglesEnVigueur.regimeGeneral
+    const netDe = (brut: number) => calculerCotisationsSalarie(brut, "president", regimeGeneral).net
+
+    it("le net baisse d'un coup quand le brut franchit le PASS", () => {
+      // Au PASS : 48 060 x 0,7915975 = 38 044,18 €. Un centime au-delà : 0,8020975 x 48 060,01 - 571,91 = 37 976,91 € ;
+      // la CET (0,14 % de tout le brut, 67,28 €) coûte bien plus que le centime gagné.
+      expect(netDe(48060)).toBeCloseTo(38044.18, 2)
+      expect(netDe(48060.01)).toBeCloseTo(37976.91, 1)
+    })
+
+    it.each([38000, 38010, 38044.17, 37976.9, 30000, 60000])("retrouve un brut qui donne %f € nets au centime près, même quand deux bruts conviennent", net => {
+      // Entre 37 976,90 et 38 044,18 € nets, deux bruts conviennent : net / 0,7915975 sous le PASS, et (net + 571,91) / 0,8020975
+      // au-delà (pour 38 000 € : 48 004,19 € ou 48 088,80 €). La dichotomie peut rendre l'un ou l'autre.
+      const sousLePass = net / 0.7915975
+      const auDelaDuPass = (net + 0.0119 * 48060) / 0.8020975
+      const candidats = [...(sousLePass <= 48060 ? [sousLePass] : []), ...(auDelaDuPass > 48060 ? [auDelaDuPass] : [])]
+
+      const brut = brutPourUnNet(net, "president", regimeGeneral)
+
+      expect(Math.min(...candidats.map(b => Math.abs(b - brut)))).toBeLessThan(0.01)
+      expect(Math.abs(netDe(brut) - net)).toBeLessThan(0.01)
     })
   })
 })

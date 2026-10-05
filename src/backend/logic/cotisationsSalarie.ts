@@ -35,8 +35,11 @@ function ligne(brut: number, cotisation: CotisationRegimeGeneral, statut: Statut
  */
 export function reductionGenerale(brut: number, regles: ReglesRegimeGeneral["reductionGenerale"]): number {
   const { smicAnnuel, tMin, tDelta, puissance, plafondEnSmic } = regles
-  if (brut <= 0 || brut >= plafondEnSmic * smicAnnuel) return 0
-  const degressivite = ((plafondEnSmic * smicAnnuel) / brut - 1) / (plafondEnSmic - 1)
+  // Plafond arrondi au centime : 3 x 21 876,40 vaut 65 629,200000000001 en virgule flottante, et un brut d'exactement
+  // 3 SMIC garderait sinon la réduction minimale.
+  const plafond = Math.round(plafondEnSmic * smicAnnuel * 100) / 100
+  if (brut <= 0 || brut >= plafond) return 0
+  const degressivite = (plafond / brut - 1) / (plafondEnSmic - 1)
   const coefficient = Math.min(tMin + tDelta, tMin + tDelta * degressivite ** puissance)
   return (brut * Math.round(coefficient * 10000)) / 10000
 }

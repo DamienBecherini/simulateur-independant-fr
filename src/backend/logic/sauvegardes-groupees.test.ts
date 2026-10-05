@@ -121,6 +121,18 @@ describe("lireFichierSauvegardes", () => {
     expect(resultat.rapport).toEqual({ lues: 2, ecartees: 3, notesMigration: [] })
   })
 
+  it("lit un fichier dont la seule sauvegarde est corrompue : rien à ajouter, une sauvegarde écartée", () => {
+    const resultat = lireAvecSucces(fichier([{ ...sauvegarde("x", "Cassée"), entities: "illisible" }], { slotOrder: ["x"] }))
+
+    expect(resultat).toEqual({ ok: true, slots: [], rapport: { lues: 0, ecartees: 1, notesMigration: [] } })
+  })
+
+  it("écarte une année en double d'une sauvegarde écrite à la main, et trie les années", () => {
+    const a = sauvegarde("a", "Alpha", { annees: [{ annee: 2026, monthlyData: grille() }, { annee: 2025, monthlyData: grille() }, { annee: 2026, monthlyData: grille() }] })
+
+    expect(lireAvecSucces(fichier([a])).slots[0].annees.map(annee => annee.annee)).toEqual([2025, 2026])
+  })
+
   it("nettoie l'intérieur de chaque sauvegarde (flux orphelin retiré)", () => {
     const a = sauvegarde("a", "Alpha")
     const fluxOrphelin = { id: "f1", label: "Orphelin", amount: 100, entityId: "inconnu", type: "salary" }
@@ -270,6 +282,47 @@ describe("fusionnerSauvegardes", () => {
 
     expect(resultat.slots).toEqual([a])
     expect(resultat.rapport).toEqual({ ajoutees: 1, doublons: 1, renommees: [] })
+  })
+
+  it("réimporter le fichier qu'on vient d'importer n'ajoute rien : tout est doublon", () => {
+    const existantes = [sauvegarde("a", "Alpha")]
+    const contenu = JSON.stringify(construireFichierSauvegardes([sauvegarde("b", "Bravo"), sauvegarde("c", "Charlie")], ["b", "c"]))
+
+    const premier = fusionnerSauvegardes(existantes, ["a"], lireAvecSucces(contenu).slots, creerId)
+    const second = fusionnerSauvegardes(premier.slots, premier.slotOrder, lireAvecSucces(contenu).slots, creerId)
+
+    expect(premier.rapport).toEqual({ ajoutees: 2, doublons: 0, renommees: [] })
+    expect(second.rapport).toEqual({ ajoutees: 0, doublons: 2, renommees: [] })
+    expect(second.slots).toEqual(premier.slots)
+    expect(second.slotOrder).toEqual(["a", "b", "c"])
+  })
+
+  it("réimporter son propre export, sauvegardes inchangées, n'ajoute rien non plus", () => {
+    const existantes = [sauvegarde("a", "Alpha"), sauvegarde("b", "Alpha (importée)")]
+    const contenu = JSON.stringify(construireFichierSauvegardes(existantes, ["a", "b"]))
+
+    expect(fusionnerSauvegardes(existantes, ["a", "b"], lireAvecSucces(contenu).slots, creerId).rapport).toEqual({ ajoutees: 0, doublons: 2, renommees: [] })
+  })
+
+  it("renomme sans écraser une sauvegarde déjà suffixée « (importée) » quand ce nom est pris", () => {
+    // Le suffixe s'ajoute au nom tel qu'il est : aucun nom existant n'est réutilisé.
+    const existantes = [sauvegarde("a", "Alpha (importée)")]
+    const homonyme = sauvegarde("b", "Alpha (importée)")
+
+    const resultat = fusionnerSauvegardes(existantes, ["a"], [homonyme, { ...homonyme, id: "c" }], creerId)
+
+    expect(resultat.slots.map(slot => slot.name)).toEqual(["Alpha (importée)", "Alpha (importée) (importée)", "Alpha (importée) (importée 2)"])
+    expect(new Set(resultat.slots.map(slot => slot.id)).size).toBe(3)
+    expect(resultat.rapport.renommees).toEqual([
+      { ancienNom: "Alpha (importée)", nouveauNom: "Alpha (importée) (importée)" },
+      { ancienNom: "Alpha (importée)", nouveauNom: "Alpha (importée) (importée 2)" }
+    ])
+  })
+
+  it("n'ajoute rien et ne touche à rien pour un fichier vide", () => {
+    const existantes = [sauvegarde("a", "Alpha")]
+
+    expect(fusionnerSauvegardes(existantes, ["a"], [], creerId)).toEqual({ slots: existantes, slotOrder: ["a"], rapport: { ajoutees: 0, doublons: 0, renommees: [] } })
   })
 
   it("garde l'ordre existant tel quel et ne modifie pas les listes reçues", () => {

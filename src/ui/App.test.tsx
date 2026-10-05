@@ -131,6 +131,52 @@ describe("App : historique d'annulation", () => {
   })
 })
 
+describe("App : flux qui reviennent chaque mois", () => {
+  /** Montants des flux « ARE » d'Alice, mois par mois, dans la dernière session envoyée au moteur. */
+  function montantsDeLARE(): number[][] {
+    const [session] = vi.mocked(window.api.simulerLesAnnees).mock.lastCall ?? []
+    return (session?.annees[0].monthlyData ?? []).map(mois => mois.flows.filter(f => f.label === "ARE").map(f => f.amount))
+  }
+
+  async function appliquerA(user: UserEvent, dialog: HTMLElement, portee: "suivants" | "annee") {
+    await user.selectOptions(within(dialog).getByLabelText("Appliquer à :"), portee)
+  }
+
+  it("ajouter sur l'année, modifier à partir de juillet, supprimer sur l'année : une étape d'annulation chacune", async () => {
+    const user = await renderApp()
+
+    // 1 200 € d'ARE chaque mois, saisis en mars pour toute l'année.
+    let dialog = await openMonth(user, "mars")
+    await appliquerA(user, dialog, "annee")
+    await user.type(within(dialog).getByLabelText("Libellé du nouveau flux"), "ARE")
+    await user.type(within(dialog).getByLabelText("Montant du nouveau flux"), "1200{Enter}")
+    await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
+    await vi.waitFor(() => expect(montantsDeLARE()).toEqual(Array.from({ length: 12 }, () => [1200])))
+
+    // 1 300 € à partir de juillet.
+    dialog = await openMonth(user, "juillet")
+    await appliquerA(user, dialog, "suivants")
+    const montant = within(dialog).getByRole("textbox", { name: "Montant" })
+    await user.clear(montant)
+    await user.type(montant, "1300{Enter}")
+    await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
+    const avantSuppression = [...Array.from({ length: 6 }, () => [1200]), ...Array.from({ length: 6 }, () => [1300])]
+    await vi.waitFor(() => expect(montantsDeLARE()).toEqual(avantSuppression))
+
+    // Suppression depuis décembre, sur toute l'année : les deux montants disparaissent.
+    dialog = await openMonth(user, "décembre")
+    await appliquerA(user, dialog, "annee")
+    await user.click(within(dialog).getByRole("button", { name: "Supprimer le flux" }))
+    await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
+    await vi.waitFor(() => expect(montantsDeLARE()).toEqual(Array.from({ length: 12 }, () => [])))
+
+    expect(await countUndoSteps(user)).toBe(3)
+    // Une seule annulation rend toute la série supprimée, avec ses deux montants.
+    await user.keyboard("{Control>}z{/Control}")
+    await vi.waitFor(() => expect(montantsDeLARE()).toEqual(avantSuppression))
+  })
+})
+
 describe("App : plusieurs années", () => {
   /** La case de janvier d'Alice, qui affiche le total de ses flux du mois. */
   const caseDeJanvier = () => screen.getByRole("button", { name: "Flux de janvier : Alice Martin" })
@@ -183,6 +229,40 @@ describe("App : plusieurs années", () => {
     expect(caseDeJanvier()).toHaveTextContent(/2\s500/)
     await user.click(screen.getByRole("button", { name: "2026" }))
     expect(caseDeJanvier()).toHaveTextContent(/1\s000/)
+  })
+
+  it("annule l'ajout d'une année en une étape, revient sur une année existante, puis le rétablit avec ses flux", async () => {
+    const user = await renderApp()
+    await ajouterLAnneeSuivante(user)
+    expect(await countUndoSteps(user)).toBe(1)
+
+    await user.keyboard("{Control>}z{/Control}")
+    expect(screen.queryByRole("button", { name: "2027" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "2026" })).toHaveAttribute("aria-pressed", "true")
+    // Une seule année : ni suppression ni synthèse des années.
+    expect(screen.queryByRole("button", { name: /^Supprimer 20/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("table", { name: /chaque année de la session/ })).not.toBeInTheDocument()
+
+    await user.keyboard("{Control>}y{/Control}")
+    expect(screen.getByRole("button", { name: "2027" })).toHaveAttribute("aria-pressed", "true")
+    expect(caseDeJanvier()).toHaveTextContent(/1\s000/)
+  })
+
+  it("annule l'ajout d'une année avant la plus ancienne, puis sa suppression", async () => {
+    const user = await renderApp()
+    await user.click(screen.getByRole("button", { name: "Ajouter une année" }))
+    await user.click(screen.getByRole("radio", { name: "2025, avant 2026" }))
+    await user.click(screen.getByRole("button", { name: "Ajouter 2025" }))
+    // La plus ancienne se supprime ; 2026, désormais la plus récente, aussi.
+    await user.click(screen.getByRole("button", { name: "Supprimer 2025" }))
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Supprimer 2025" }))
+
+    expect(within(screen.getByRole("group", { name: "Année affichée" })).getByRole("button", { pressed: true })).toHaveTextContent("2026")
+    expect(await countUndoSteps(user)).toBe(2)
+    await user.keyboard("{Control>}z{/Control}")
+    expect(within(screen.getByRole("group", { name: "Année affichée" })).getAllByRole("button").map(b => b.textContent)).toEqual(["2025", "2026"])
+    await user.keyboard("{Control>}z{/Control}")
+    expect(within(screen.getByRole("group", { name: "Année affichée" })).getAllByRole("button").map(b => b.textContent)).toEqual(["2026"])
   })
 
   it("supprime une année en une étape d'annulation, et revient à la plus récente", async () => {
