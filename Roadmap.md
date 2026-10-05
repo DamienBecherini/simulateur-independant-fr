@@ -173,6 +173,17 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
+### **Phase 13 bis : Frais professionnels et frais réels [En cours 🚧]**
+
+- **Objectif :** que le comparateur tienne compte des vrais frais, et dise quand le réel l'emporte sur les forfaits (abattement de la micro, déduction de 10 % sur les salaires).
+
+1.  **Barème kilométrique par année :** barèmes officiels des voitures (selon la puissance fiscale, de 3 CV et moins à 7 CV et plus, et les tranches de kilométrage), majoration de 20 % des véhicules électriques, pour 2024, 2025 et 2026, dans les règles de chaque année avec leur source.
+2.  **Frais réels sur salaire :** sur une personne, ses trajets domicile-travail (kilomètres par trajet, jours travaillés, puissance, électrique ou non), et d'autres frais réels éventuels ; pour l'impôt, le moteur retient le plus favorable entre la déduction de 10 % et les frais réels, sur les salaires et les rémunérations de dirigeant, et l'indique. Distance retenue limitée à 40 km par trajet, sauf justification.
+3.  **Déplacements professionnels d'une activité :** kilomètres professionnels de l'année et véhicule, convertis au barème : charge réelle de l'activité, déductible au réel (EI, société), jamais en micro ; en société, ce sont les indemnités kilométriques remboursées au dirigeant, sans impôt ni cotisations pour lui.
+4.  **Catégories de charges (plus tard) :** loyer, énergie, bureau à domicile au prorata, repas (part au-delà du repas à domicile, dans la limite d'un plafond), matériel amorti sur plusieurs années, abonnements, tenues spécifiques, avec leurs règles.
+
+---
+
 ### **Phase 14 : Montages types [Planifié 🗓️]**
 
 - **Objectif :** partir d'une situation courante plutôt que d'une page vide. Peut s'intercaler entre deux autres phases.
