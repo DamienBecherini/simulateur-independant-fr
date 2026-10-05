@@ -2,16 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect, useMemo } from "react"
-import type { Entity, Relationship, Person, Company, Avatar } from "@/types"
+import type { Entity, Relationship } from "@/types"
 import { Trash2, PlusCircle, ArrowRight } from "lucide-react"
 import { AIDE_RELATION_SALARIE, getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
 import { AvatarDisplay } from "./AvatarDisplay"
-import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
-import { availableIconsSmall } from "@/lib/avatar-constants"
+import { ChampsDeLActeur } from "./ChampsDeLActeur"
 import { updatePersonAvatar } from "@/lib/avatar-utils"
 import { createId } from "@/lib/id"
 
@@ -28,18 +25,6 @@ interface LocalState {
   entity: Entity | null
   relationships: Relationship[]
 }
-
-// Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
-const availableColors = [
-  { color: "#3b82f6", name: "Bleu" },
-  { color: "#b91c1c", name: "Rouge" },
-  { color: "#16a34a", name: "Vert" },
-  { color: "#7e22ce", name: "Violet" },
-  { color: "#d97706", name: "Orange" },
-  { color: "#ec4899", name: "Rose" }
-]
-
-const iconNames: Record<string, string> = { Briefcase: "Mallette", Building: "Immeuble", Store: "Boutique", User: "Personne" }
 
 function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relationships }: EditEntityModalProps) {
   const [formData, setFormData] = useState<LocalState>({ entity: null, relationships: [] })
@@ -69,17 +54,6 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
     if (!localEntity || !targetEntity) return []
     return getAvailableRelationships(localEntity, targetEntity, localRelationships)
   }, [localEntity, targetEntity, localRelationships])
-
-  // NOTE: Les fonctions de mise à jour de l'état local sont maintenant spécifiques
-
-  const handleAvatarChange = (newAvatarProps: Partial<Avatar>) => {
-    if (localEntity) {
-      setFormData(prev => ({
-        ...prev,
-        entity: { ...prev.entity!, avatar: { ...prev.entity!.avatar, ...newAvatarProps } }
-      }))
-    }
-  }
 
   const handleAddRelationship = () => {
     if (!localEntity || !targetId || !relationshipType) return
@@ -123,86 +97,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
             <DialogTitle>Modifier : {localEntity.name}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Nom
-              </Label>
-              <Input id="name" name="name" value={localEntity.name || ""} onChange={e => setFormData(prev => ({ ...prev, entity: { ...prev.entity!, name: e.target.value } }))} className="col-span-3" />
-            </div>
-            {localEntity.type === "person" && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="fiscalParts" className="text-right">
-                  Parts propres
-                </Label>
-                <div className="col-span-3">
-                  <Input
-                    id="fiscalParts"
-                    name="fiscalParts"
-                    type="number"
-                    step="0.5"
-                    value={(localEntity as Person).fiscalParts || 1}
-                    onChange={e =>
-                      setFormData(prev => {
-                        if (prev.entity?.type !== "person") return prev
-                        return { ...prev, entity: { ...prev.entity, fiscalParts: parseFloat(e.target.value) || 0 } }
-                      })
-                    }
-                  />
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Hors enfants reliés : leurs parts s'ajoutent automatiquement. À modifier pour un cas particulier (parent isolé, invalidité…).</p>
-                </div>
-              </div>
-            )}
-            {localEntity.type === "company" && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="legalStatus" className="text-right">
-                  Statut
-                </Label>
-                <Select
-                  value={(localEntity as Company).legalStatus}
-                  onValueChange={(value: Company["legalStatus"]) =>
-                    setFormData(prev => {
-                      if (prev.entity?.type !== "company") return prev
-                      return { ...prev, entity: { ...prev.entity, legalStatus: value } }
-                    })
-                  }
-                >
-                  <SelectTrigger id="legalStatus" className="col-span-3">
-                    <SelectValue placeholder="Choisir un statut" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SASU">SASU</SelectItem>
-                    <SelectItem value="EURL">EURL</SelectItem>
-                    <SelectItem value="EI">Entreprise individuelle (au réel)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <StatusSpecificFields entity={localEntity} onChange={entity => setFormData(prev => ({ ...prev, entity }))} />
-            <div className="grid grid-cols-4 items-center gap-4">
-              <span id="avatar-couleur" className="text-right text-sm font-medium">
-                Couleur
-              </span>
-              <div className="col-span-3 flex flex-wrap gap-2" role="group" aria-labelledby="avatar-couleur">
-                {availableColors.map(({ color, name }) => (
-                  <button type="button" key={color} aria-label={name} aria-pressed={localEntity.avatar.color === color} onClick={() => handleAvatarChange({ color })} className={`h-8 w-8 rounded-full border-2 transition-all pointer-coarse:h-11 pointer-coarse:w-11 ${localEntity.avatar.color === color ? "border-primary ring-2 ring-ring" : "border-transparent"}`} style={{ backgroundColor: color }} />
-                ))}
-              </div>
-            </div>
-            {localEntity.type !== "person" && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <span id="avatar-icone" className="text-right text-sm font-medium">
-                  Icône
-                </span>
-                <div className="col-span-3 flex flex-wrap gap-2" role="group" aria-labelledby="avatar-icone">
-                  {Object.entries(availableIconsSmall).map(([key, icon]) => (
-                    <button type="button" key={key} aria-label={iconNames[key] ?? key} aria-pressed={localEntity.avatar.value === key} onClick={() => handleAvatarChange({ value: key, type: "icon" })} className={`flex h-10 w-10 items-center justify-center rounded-md border-2 transition-all pointer-coarse:h-11 pointer-coarse:w-11 ${localEntity.avatar.value === key ? "border-primary ring-2 ring-ring bg-secondary" : "border-transparent hover:bg-secondary/80"}`}>
-                      {icon}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {localEntity.type === "person" ? <ChampsFraisReels personne={localEntity} onChange={entity => setFormData(prev => ({ ...prev, entity }))} /> : <ChampsDeplacements activite={localEntity} onChange={entity => setFormData(prev => ({ ...prev, entity }))} />}
+            <ChampsDeLActeur entity={localEntity} onChange={entity => setFormData(prev => ({ ...prev, entity }))} />
             <div className="space-y-4 pt-6 border-t">
               <h3 className="font-semibold text-base">Relations</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -283,56 +178,6 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
         </form>
       </DialogContent>
     </Dialog>
-  )
-}
-
-/** Champs propres à certains statuts : revenu fiscal de référence d'une micro-entreprise, capital social d'une EURL. */
-function StatusSpecificFields({ entity, onChange }: { entity: Entity; onChange: (entity: Entity) => void }) {
-  return (
-    <>
-      {entity.type === "micro-entreprise" && (
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="rfrN2" className="text-right">
-            RFR N-2
-          </Label>
-          <div className="col-span-3">
-            <Input
-              id="rfrN2"
-              name="rfrN2"
-              type="number"
-              min="0"
-              step="100"
-              placeholder="Non renseigné"
-              value={entity.rfrN2 ?? ""}
-              onChange={e => {
-                const value = parseFloat(e.target.value)
-                onChange({ ...entity, rfrN2: Number.isFinite(value) && value >= 0 ? value : undefined })
-              }}
-            />
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Revenu fiscal de référence du foyer d'il y a deux ans (avis d'imposition) : il décide de l'accès au versement libératoire.</p>
-          </div>
-        </div>
-      )}
-      {entity.type === "company" && entity.legalStatus === "EURL" && (
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="capitalSocial" className="text-right">
-            Capital social
-          </Label>
-          <div className="col-span-3">
-            <Input
-              id="capitalSocial"
-              name="capitalSocial"
-              type="number"
-              min="0"
-              step="100"
-              value={entity.capitalSocial}
-              onChange={e => onChange({ ...entity, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })}
-            />
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
-          </div>
-        </div>
-      )}
-    </>
   )
 }
 
