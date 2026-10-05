@@ -45,7 +45,7 @@ const SOURCES = {
   plafondsMicro: { libelle: "Seuils de chiffre d'affaires de la micro-entreprise (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F32353" },
   versementLiberatoire: { libelle: "Conditions du versement libératoire (impots.gouv.fr)", url: "https://www.impots.gouv.fr/professionnel/questions/en-tant-que-micro-entrepreneur-sous-quelles-conditions-puis-je-opter-pour-l" },
   franchiseTva: { libelle: "Franchise en base de TVA (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F21746" },
-  impotSocietes: { libelle: "Impôt sur les sociétés, taux réduit de 15 % (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F23575" },
+  impotSocietes: { libelle: "Impôt sur les sociétés, taux réduit de 15 % (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F23575" },
   dividendes: { libelle: "Imposition des dividendes (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F32963" },
   cotisationsSas: { libelle: "Cotisations sociales d'une SAS (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F36007" },
   protectionDirigeant: { libelle: "Protection sociale du dirigeant (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F38152" },
@@ -58,8 +58,8 @@ const SOURCES = {
 
 // Phrases reprises d'un montage à l'autre.
 const RESERVE_LEGALE = "La réserve légale, les frais de fonctionnement et la prévoyance ne sont pas déduits : les montants sont des ordres de grandeur."
-const PLAFOND_MICRO = "Chiffre d'affaires sous le plafond des prestations de services (83 600 € pour 2026) ; dépassé deux années de suite, il fait sortir du régime."
-const TAUX_REDUIT_IS = "Taux réduit d'impôt sur les sociétés (15 % jusqu'à 42 500 € de bénéfice) : chiffre d'affaires d'au plus 10 millions d'euros, capital entièrement libéré et détenu à 75 % au moins par des personnes physiques."
+const PLAFOND_MICRO = "Chiffre d'affaires sous le plafond des prestations de services (83 600 € pour 2026) ; dépassé deux années de suite, il fait sortir du régime."
+const TAUX_REDUIT_IS = "Taux réduit d'impôt sur les sociétés (15 % jusqu'à 42 500 € de bénéfice) : chiffre d'affaires d'au plus 10 millions d'euros, capital entièrement libéré et détenu à 75 % au moins par des personnes physiques."
 const COMPARATEUR_MICRO = "Le comparateur place la micro-entreprise avec et sans versement libératoire côte à côte, face à l'entreprise individuelle au réel, l'EURL et la SASU."
 
 // --- Les montages ---
@@ -67,23 +67,23 @@ const COMPARATEUR_MICRO = "Le comparateur place la micro-entreprise avec et sans
 const microSeule: MontageType = {
   id: "micro-bnc-seule",
   titre: "Micro-entreprise seule (BNC)",
-  resume: "Sophie, célibataire, facture 3 000 € de prestations intellectuelles par mois en micro-entreprise, au versement libératoire.",
+  resume: "Sophie, célibataire, facture 3 000 € de prestations intellectuelles par mois en micro-entreprise, au versement libératoire.",
   etiquettes: ["Micro", "BNC", "Versement libératoire"],
   questions: ["Combien me reste-t-il après cotisations et impôt ?", "Le versement libératoire est-il avantageux pour moi ?", "À partir de quel chiffre d'affaires une société devient-elle intéressante ?"],
   illustre: [
-    "Les cotisations calculées en pourcentage du chiffre d'affaires (25,6 % pour une activité libérale non réglementée en 2026), sans charges déductibles.",
-    "L'impôt payé avec les cotisations au versement libératoire (2,2 % du chiffre d'affaires en BNC), au lieu du barème après l'abattement forfaitaire de 34 %.",
+    "Les cotisations calculées en pourcentage du chiffre d'affaires (25,6 % pour une activité libérale non réglementée en 2026), sans charges déductibles.",
+    "L'impôt payé avec les cotisations au versement libératoire (2,2 % du chiffre d'affaires en BNC), au lieu du barème après l'abattement forfaitaire de 34 %.",
     COMPARATEUR_MICRO
   ],
   conditions: [
-    "Versement libératoire : revenu fiscal de référence 2024 du foyer d'au plus 29 315 € par part pour 2026 (ici 24 000 € saisis, pour une part).",
+    "Versement libératoire : revenu fiscal de référence 2024 du foyer d'au plus 29 315 € par part pour 2026 (ici 24 000 € saisis, pour une part).",
     "Option à demander avant le 30 septembre pour l'année suivante, ou jusqu'au dernier jour du 3e mois après la création.",
     PLAFOND_MICRO
   ],
   pointsDAttention: [
-    "À 36 000 € de chiffre d'affaires, l'activité reste sous le seuil de franchise en base de TVA des services : au-delà, la TVA peut devenir due (le simulateur ne la calcule pas, les montants sont hors taxe).",
+    "À 36 000 € de chiffre d'affaires, l'activité reste sous le seuil de franchise en base de TVA des services : au-delà, la TVA peut devenir due (le simulateur ne la calcule pas, les montants sont hors taxe).",
     "Les dépenses professionnelles ne se déduisent pas : avec beaucoup de frais, le régime réel peut devenir plus intéressant.",
-    "Le versement libératoire n'est pas toujours gagnant : il l'est surtout quand le foyer serait imposé à 11 % ou plus au barème."
+    "Le versement libératoire n'est pas toujours gagnant : il l'est surtout quand le foyer serait imposé à 11 % ou plus au barème."
   ],
   sources: [SOURCES.cotisationsMicro, SOURCES.abattementMicro, SOURCES.versementLiberatoire, SOURCES.plafondsMicro, SOURCES.franchiseTva],
   contenu: () => ({
@@ -111,14 +111,14 @@ function sasuDeConseil(prenom: string, idPersonne: string, idSociete: string, re
 const sasuSansSalaire: MontageType = {
   id: "sasu-sans-salaire",
   titre: "SASU sans salaire, tout en dividendes",
-  resume: "Thomas préside seul une SASU qui facture 84 000 € par an ; il ne se verse aucune rémunération et distribue tout le bénéfice en dividendes.",
+  resume: "Thomas préside seul une SASU qui facture 84 000 € par an ; il ne se verse aucune rémunération et distribue tout le bénéfice en dividendes.",
   etiquettes: ["SASU", "Dividendes", "Retraite"],
   questions: ["Que reste-t-il si je ne me paie qu'en dividendes ?", "Combien coûte la validation de 4 trimestres de retraite ?", "Les dividendes sont-ils mieux imposés au prélèvement forfaitaire ou au barème ?"],
   illustre: [
-    "Sans rémunération, le président ne paie pas de cotisations sociales : le bénéfice supporte l'impôt sur les sociétés, puis les dividendes le prélèvement forfaitaire de 31,4 % (12,8 % d'impôt et 18,6 % de prélèvements sociaux) ou, sur option, le barème après un abattement de 40 %.",
-    "Le comparateur est réglé au meilleur net parmi les rémunérations qui valident 4 trimestres de retraite : il montre ce que coûte cette exigence, à comparer avec les dividendes seuls du montant « SASU avec salaire ».",
+    "Sans rémunération, le président ne paie pas de cotisations sociales : le bénéfice supporte l'impôt sur les sociétés, puis les dividendes le prélèvement forfaitaire de 31,4 % (12,8 % d'impôt et 18,6 % de prélèvements sociaux) ou, sur option, le barème après un abattement de 40 %.",
+    "Le comparateur est réglé au meilleur net parmi les rémunérations qui valident 4 trimestres de retraite : il montre ce que coûte cette exigence, à comparer avec le montage « SASU avec un salaire qui valide 4 trimestres ».",
     "« Rémunération ou dividendes ? » trace le net du foyer pour chaque rémunération possible.",
-    "84 000 € de chiffre d'affaires dépassent de peu le plafond de la micro-entreprise (83 600 €) : le comparateur la signale hors plafond et ne la désigne pas comme meilleur choix."
+    "84 000 € de chiffre d'affaires dépassent de peu le plafond de la micro-entreprise (83 600 €) : le comparateur la signale hors plafond et ne la désigne pas comme meilleur choix."
   ],
   conditions: [TAUX_REDUIT_IS, "Les dividendes ne se versent qu'après l'approbation des comptes, sur un bénéfice distribuable."],
   pointsDAttention: [
@@ -133,7 +133,7 @@ const sasuSansSalaire: MontageType = {
 const sasuAvecSalaire: MontageType = {
   id: "sasu-salaire-4-trimestres",
   titre: "SASU avec un salaire qui valide 4 trimestres",
-  resume: "Antoine préside une SASU qui facture 84 000 € par an ; il se verse 1 000 € nets par mois, puis le reste du bénéfice en dividendes.",
+  resume: "Antoine préside une SASU qui facture 84 000 € par an ; il se verse 1 000 € nets par mois, puis le reste du bénéfice en dividendes.",
   etiquettes: ["SASU", "Rémunération", "Dividendes", "Retraite"],
   questions: ["Combien faut-il se verser pour valider 4 trimestres de retraite ?", "Que coûte ce salaire par rapport aux dividendes seuls ?", "Où se situe le meilleur partage entre rémunération et dividendes ?"],
   illustre: [
@@ -154,12 +154,12 @@ const sasuAvecSalaire: MontageType = {
 const eurlIS: MontageType = {
   id: "eurl-is-remuneration-gerant",
   titre: "EURL à l'IS avec rémunération du gérant",
-  resume: "Nicolas, gérant associé unique d'une EURL à l'impôt sur les sociétés, se verse 2 500 € nets par mois et laisse le reste du bénéfice dans la société.",
+  resume: "Nicolas, gérant associé unique d'une EURL à l'impôt sur les sociétés, se verse 2 500 € nets par mois et laisse le reste du bénéfice dans la société.",
   etiquettes: ["EURL", "Rémunération", "TNS"],
   questions: ["Combien coûtent les cotisations d'un gérant non salarié ?", "Pourquoi les dividendes d'EURL sont-ils peu distribués ?", "EURL ou SASU pour la même activité ?"],
   illustre: [
     "Les cotisations du travailleur non salarié, calculées sur sa rémunération : en général moins lourdes que celles d'un président de SASU pour le même net.",
-    "Les dividendes du gérant majoritaire supportent les cotisations sociales pour leur part au-delà de 10 % du capital social : avec 5 000 € de capital, seuls 500 € de dividendes y échappent.",
+    "Les dividendes du gérant majoritaire supportent les cotisations sociales pour leur part au-delà de 10 % du capital social : avec 5 000 € de capital, seuls 500 € de dividendes y échappent.",
     "Le bénéfice non distribué reste dans la société, après l'impôt sur les sociétés. Le comparateur, réglé au meilleur net avec 4 trimestres de retraite, distribue tout le bénéfice dans chaque statut : il ne compare donc pas exactement la situation saisie."
   ],
   conditions: [TAUX_REDUIT_IS, "Gérant associé unique : il relève du régime des travailleurs non salariés."],
@@ -185,7 +185,7 @@ const eurlIS: MontageType = {
 const microEtSasuDuConjoint: MontageType = {
   id: "micro-et-sasu-du-conjoint",
   titre: "Micro-entreprise et SASU du conjoint",
-  resume: "Claire, en micro-entreprise BNC (2 500 € par mois), est mariée à Marc, président d'une SASU qui lui verse 2 000 € nets par mois et des dividendes.",
+  resume: "Claire, en micro-entreprise BNC (2 500 € par mois), est mariée à Marc, président d'une SASU qui lui verse 2 000 € nets par mois et des dividendes.",
   etiquettes: ["Micro", "SASU", "Couple", "Marié"],
   questions: ["Combien reste-t-il au foyer, une fois tout payé ?", "Le versement libératoire vaut-il le coup avec les revenus du conjoint ?", "Quelle activité gagnerait à changer de statut ?"],
   illustre: [
@@ -195,7 +195,7 @@ const microEtSasuDuConjoint: MontageType = {
   ],
   conditions: [
     "Mariés ou pacsés : une déclaration commune pour le foyer.",
-    "Versement libératoire : revenu fiscal de référence 2024 du foyer d'au plus 29 315 € par part pour 2026.",
+    "Versement libératoire : revenu fiscal de référence 2024 du foyer d'au plus 29 315 € par part pour 2026.",
     PLAFOND_MICRO
   ],
   pointsDAttention: [
@@ -219,7 +219,7 @@ const microEtSasuDuConjoint: MontageType = {
 const conjointSalarie: MontageType = {
   id: "conjoint-salarie-sasu",
   titre: "Conjoint salarié de la SASU",
-  resume: "Paul préside une SASU qui facture 9 000 € par mois ; Julie, son épouse, y est salariée à 1 500 € nets par mois.",
+  resume: "Paul préside une SASU qui facture 9 000 € par mois ; Julie, son épouse, y est salariée à 1 500 € nets par mois.",
   etiquettes: ["SASU", "Salarié", "Couple", "Marié"],
   questions: ["Que coûte à la société le salaire du conjoint ?", "Que gagne le foyer à salarier le conjoint plutôt qu'à verser des dividendes ?", "Quels droits ouvre ce salaire ?"],
   illustre: [
@@ -254,7 +254,7 @@ const conjointSalarie: MontageType = {
 const unionLibre: MontageType = {
   id: "couple-union-libre",
   titre: "Couple en union libre, puis marié ou pacsé",
-  resume: "Hugo, salarié à 3 500 € nets par mois, vit en union libre avec Emma, en micro-entreprise BNC à 1 000 € par mois : que changerait un mariage ou un Pacs ?",
+  resume: "Hugo, salarié à 3 500 € nets par mois, vit en union libre avec Emma, en micro-entreprise BNC à 1 000 € par mois : que changerait un mariage ou un Pacs ?",
   etiquettes: ["Micro", "Salarié", "Couple", "Union libre"],
   questions: ["Le mariage ou le Pacs réduirait-il notre impôt ?", "Combien chacun paie-t-il aujourd'hui ?", "Le versement libératoire reste-t-il possible après un mariage ?"],
   illustre: [
@@ -284,7 +284,7 @@ const unionLibre: MontageType = {
 const salariePlusMicro: MontageType = {
   id: "salarie-et-micro",
   titre: "Salarié avec une micro-entreprise à côté",
-  resume: "Lucas, salarié à 2 200 € nets par mois, réalise aussi 800 € de missions par mois en micro-entreprise BNC.",
+  resume: "Lucas, salarié à 2 200 € nets par mois, réalise aussi 800 € de missions par mois en micro-entreprise BNC.",
   etiquettes: ["Micro", "Salarié", "Cumul"],
   questions: ["Combien me rapporte vraiment mon activité à côté ?", "Le versement libératoire est-il intéressant avec mon salaire ?", "Quelles cotisations paie la micro-entreprise ?"],
   illustre: [
@@ -294,7 +294,7 @@ const salariePlusMicro: MontageType = {
   ],
   conditions: [
     "Le contrat de travail ne comporte pas de clause d'exclusivité, l'activité ne concurrence pas l'employeur et s'exerce hors du temps de travail.",
-    "Versement libératoire : revenu fiscal de référence 2024 du foyer d'au plus 29 315 € par part pour 2026 (ici 25 000 € saisis)."
+    "Versement libératoire : revenu fiscal de référence 2024 du foyer d'au plus 29 315 € par part pour 2026 (ici 25 000 € saisis)."
   ],
   pointsDAttention: [
     "Même sans clause, le salarié reste tenu à une obligation de loyauté envers son employeur.",
