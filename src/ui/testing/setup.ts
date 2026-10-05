@@ -27,6 +27,7 @@ function createFakeApi(): EventPayloadMapping {
     saveTextFile: vi.fn(async () => true),
     openTextFile: vi.fn(async () => null),
     printToPdf: vi.fn(async () => true),
+    ouvrirAdresseExterne: vi.fn(async () => true),
     getUserPreferences: vi.fn(async () => ({ slotOrder: [] })),
     saveUserPreferences: vi.fn(async () => {}),
     onShowNotification: vi.fn(() => () => {})

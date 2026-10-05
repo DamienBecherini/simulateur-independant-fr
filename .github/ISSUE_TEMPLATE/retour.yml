@@ -78,7 +78,7 @@ body:
     id: diagnostic
     attributes:
       label: Diagnostic (facultatif)
-      description: Informations techniques jointes par l'application si vous l'avez accepté (version, système, affichage choisi, dernières erreurs).
+      description: Informations techniques jointes par l'application si vous l'avez accepté (affichage en cours, nombre d'années et d'acteurs). Jamais de montant ni de nom.
       render: text
     validations:
       required: false

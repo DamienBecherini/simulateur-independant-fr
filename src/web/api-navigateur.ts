@@ -10,6 +10,7 @@ import { AnneesRefuseesError, sanitizeSlots, sanitizeStateAndFillDefaults } from
 import { avecVersionDeLApplication, lireUneSimulationImportee, preferencesValides } from "@/backend/logic/fichiers-de-donnees"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
+import { adresseExterneAutorisee } from "@/lib/adresses-des-retours"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { sessionExemple } from "./session-exemple"
 import { CLES, ecrire, lire } from "./stockage-navigateur"
@@ -119,6 +120,15 @@ export function creerApiNavigateur(): EventPayloadMapping {
     // Le navigateur ne sait pas écrire un PDF sans intervention : on ouvre sa fenêtre d'impression (« Enregistrer en PDF »).
     printToPdf: async () => {
       window.print()
+      return true
+    },
+
+    // Comme dans l'application de bureau, seules deux adresses s'ouvrent : le formulaire de ticket, dans un nouvel
+    // onglet sans lien avec la démo (noopener), et l'e-mail des retours, confié à la messagerie du système.
+    ouvrirAdresseExterne: async adresse => {
+      if (!adresseExterneAutorisee(adresse)) return false
+      if (adresse.startsWith("mailto:")) window.open(adresse, "_self")
+      else window.open(adresse, "_blank", "noopener,noreferrer")
       return true
     },
 

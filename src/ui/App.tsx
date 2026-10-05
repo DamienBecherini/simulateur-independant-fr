@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
-import { Settings, Undo2, Redo2, ZoomIn, ZoomOut, Download } from "lucide-react"
+import { Settings, Undo2, Redo2, ZoomIn, ZoomOut, Download, MessageSquareHeart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
 import MonthlyGrid from "./components/MonthlyGrid"
@@ -33,6 +33,9 @@ import { affichageApplicable, avecResume, avecVues } from "@/lib/affichage"
 import { useVues, VuesContext } from "./hooks/useVues"
 import { VueDeLaPage } from "./components/VuesDeLaPage"
 import { FournisseurDesDetails } from "./components/DetailsDesCartes"
+import { DialogueDAvis } from "./components/DialogueDAvis"
+import { systemeEtNavigateur, type Diagnostic } from "@/lib/retours"
+import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import type { ResumeDeLaComparaison } from "@/lib/resume"
 import type { Affichage } from "@/types"
 import { cn } from "@/lib/utils"
@@ -44,6 +47,7 @@ const EN_TETE_RESUME = { header: "mb-4", titre: "text-2xl sm:text-3xl print:text
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [isExportOpen, setExportOpen] = useState(false)
+  const [isAvisOpen, setAvisOpen] = useState(false)
   const [simulation, setSimulation] = useState<SimulationPluriannuelle | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
 
@@ -73,6 +77,8 @@ function App() {
   // Dans l'affichage « Résumé », le comparateur transmet son meilleur statut à la barre de résumé.
   const [comparaison, setComparaison] = useState<ResumeDeLaComparaison | null>(null)
   const enTete = resume ? EN_TETE_RESUME : EN_TETE_CLASSIQUE
+  // Diagnostic proposé avec un avis : aucune donnée de la simulation, seulement des nombres d'années et d'acteurs.
+  const diagnostic: Diagnostic = { version: VERSION_DE_L_APPLICATION, web: import.meta.env.VITE_CIBLE === "web", ...systemeEtNavigateur(navigator.userAgent), affichageEnCours: affichage, nombreDAnnees: currentSession.annees.length, nombreDActeurs: currentSession.entities.length }
 
   // La simulation de toutes les années est recalculée automatiquement, peu après chaque modification de la session.
   useEffect(() => {
@@ -189,6 +195,9 @@ function App() {
               <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y)" onClick={redo} disabled={!canRedo} className="h-10 w-9 sm:w-10 [&_svg]:size-6">
                 <Redo2 className="dark:text-slate-300" />
               </Button>
+              <Button variant="ghost" size="icon" aria-label="Donner mon avis" title="Donner mon avis" onClick={() => setAvisOpen(true)} className="h-10 w-9 sm:ml-2 sm:w-10 [&_svg]:size-6">
+                <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
+              </Button>
             </div>
             {/* Groupe de boutons de droite */}
             <div className="flex items-center gap-1">
@@ -285,6 +294,7 @@ function App() {
         {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
         {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
             le panneau de configuration ait tout le contexte nécessaire. */}
+        <DialogueDAvis isOpen={isAvisOpen} onClose={() => setAvisOpen(false)} diagnostic={diagnostic} />
         <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} onExportJson={handleExportAll} />
         <SettingsSheet
           isOpen={isSettingsOpen}

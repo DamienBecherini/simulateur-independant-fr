@@ -4,6 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { SaveSlot } from "@/types"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
+import { ADRESSE_E_MAIL_DES_RETOURS, ADRESSE_NOUVEAU_TICKET } from "@/lib/adresses-des-retours"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { creerApiNavigateur } from "./api-navigateur"
 import { sessionExemple } from "./session-exemple"
@@ -235,6 +236,22 @@ describe("pont de la démo web", () => {
     const imprimer = vi.spyOn(window, "print").mockImplementation(() => {})
     expect(await creerApiNavigateur().printToPdf("simulation.pdf")).toBe(true)
     expect(imprimer).toHaveBeenCalledOnce()
+  })
+
+  it("ouvre le formulaire de ticket dans un nouvel onglet détaché, l'e-mail des retours dans la messagerie, et rien d'autre", async () => {
+    const ouvrir = vi.spyOn(window, "open").mockImplementation(() => null)
+    const api = creerApiNavigateur()
+    const ticket = `${ADRESSE_NOUVEAU_TICKET}?template=retour.yml&note=%E2%98%85`
+    const eMail = `mailto:${ADRESSE_E_MAIL_DES_RETOURS}?subject=Retour`
+
+    expect(await api.ouvrirAdresseExterne(ticket)).toBe(true)
+    expect(ouvrir).toHaveBeenLastCalledWith(ticket, "_blank", "noopener,noreferrer")
+    expect(await api.ouvrirAdresseExterne(eMail)).toBe(true)
+    expect(ouvrir).toHaveBeenLastCalledWith(eMail, "_self")
+
+    expect(await api.ouvrirAdresseExterne("https://example.org/")).toBe(false)
+    expect(await api.ouvrirAdresseExterne("mailto:quelquun@example.org")).toBe(false)
+    expect(ouvrir).toHaveBeenCalledTimes(2)
   })
 
   it("signale un fichier importé illisible", async () => {
