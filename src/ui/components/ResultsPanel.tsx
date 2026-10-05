@@ -188,6 +188,7 @@ function FoyerCard({ foyer, persons, showRates }: { foyer: FoyerFiscalResult; pe
         <Row label="Impôt sur le revenu" value={`− ${formatMoney(foyer.impotSurLeRevenu)}`} hint={`sur ${formatMoney(foyer.revenuImposableGlobal)} imposables au barème`} />
         {foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(foyer.prelevementsSociaux)}`} /> : null}
         <Row label="Net après impôts" value={formatMoney(foyer.netApresImpots)} strong />
+        <Row label="Revenu fiscal de référence" value={formatMoney(foyer.revenuFiscalDeReference)} hint="pour le versement libératoire dans deux ans" />
         {foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={formatMoney(foyer.netApresImpots - foyer.depenses)} hint={`${formatMoney(foyer.depenses)} de dépenses`} /> : null}
       </dl>
       {showRates ? <FoyerRates foyer={foyer} /> : null}
@@ -199,12 +200,14 @@ function FoyerCard({ foyer, persons, showRates }: { foyer: FoyerFiscalResult; pe
 /** Seuil d'accès au versement libératoire d'une micro-entreprise, et situation du foyer par rapport à ce seuil. */
 function VersementLiberatoireNote({ info }: { info: VersementLiberatoireInfo }) {
   const parts = info.partsFiscales.toLocaleString("fr-FR")
-  const status = info.eligible === null ? "RFR N-2 non renseigné (fiche de la micro-entreprise)" : info.eligible ? `votre RFR N-2 de ${formatMoney(info.rfrN2 ?? 0)} y donne accès` : `votre RFR N-2 de ${formatMoney(info.rfrN2 ?? 0)} le dépasse`
+  const origine = info.origineRfr === "calcule" ? "calculé par la simulation" : "saisi dans la fiche"
+  const rfr = `votre RFR ${info.anneeRfr} de ${formatMoney(info.rfrN2 ?? 0)}, ${origine},`
+  const status = info.eligible === null ? `RFR ${info.anneeRfr} inconnu : ajoutez l'année ${info.anneeRfr} à la simulation ou renseignez-le dans la fiche de la micro-entreprise` : `${rfr} ${info.eligible ? "y donne accès" : "le dépasse"}`
 
   return (
     <div className="mt-3 border-t border-slate-100 pt-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
       <p>
-        <span className="font-medium text-slate-700 dark:text-slate-200">Versement libératoire</span> {info.applique ? "(appliqué)" : "(non appliqué)"} : seuil de {formatMoney(info.plafondRfr)} de revenu fiscal de référence N-2 pour {parts} {info.partsFiscales > 1 ? "parts" : "part"} ;{" "}
+        <span className="font-medium text-slate-700 dark:text-slate-200">Versement libératoire</span> {info.applique ? "(appliqué)" : "(non appliqué)"} : seuil de {formatMoney(info.plafondRfr)} de revenu fiscal de référence {info.anneeRfr} pour {parts} {info.partsFiscales > 1 ? "parts" : "part"} ;{" "}
         <span className={info.eligible === false ? "text-rose-700 dark:text-rose-400" : info.eligible ? "text-emerald-700 dark:text-emerald-400" : undefined}>{status}</span>.
       </p>
     </div>

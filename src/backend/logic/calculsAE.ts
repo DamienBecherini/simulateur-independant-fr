@@ -16,6 +16,8 @@ export interface ResultatMicro {
   cotisationsSociales: number
   /** Revenu soumis au barème de l'IR (nul si le versement libératoire est choisi). */
   revenuImposable: number
+  /** Chiffre d'affaires après abattement, versement libératoire ou non : il entre dans le revenu fiscal de référence. */
+  revenuApresAbattement: number
   /** Impôt sur le revenu payé avec les cotisations, en pourcentage du chiffre d'affaires. */
   versementLiberatoire: number
   warnings: string[]
@@ -100,6 +102,7 @@ export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales = re
   const warnings = [...verifierPlafonds(entrees, micro.plafonds), ...verifierFranchiseTVA(entrees, regles.TVA)]
 
   const cotisationsPleinTaux = appliquerTaux(entrees, micro.cotisations)
+  const revenuApresAbattement = calculerRevenuImposable(entrees, micro.abattement)
   if (entrees.beneficieACRE) {
     warnings.push(`ACRE : cotisations réduites de ${Math.round(micro.reductionACRE * 100)} %. Elles financent aussi vos droits : pendant l'aide, vous validez moins de trimestres de retraite et vos indemnités journalières sont plus faibles.`)
   }
@@ -107,7 +110,8 @@ export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales = re
   return {
     chiffreAffaires: entrees.caVente + entrees.caServicesBic + entrees.caServicesBnc,
     cotisationsSociales: entrees.beneficieACRE ? cotisationsPleinTaux * (1 - micro.reductionACRE) : cotisationsPleinTaux,
-    revenuImposable: entrees.opteVFL ? 0 : calculerRevenuImposable(entrees, micro.abattement),
+    revenuImposable: entrees.opteVFL ? 0 : revenuApresAbattement,
+    revenuApresAbattement,
     versementLiberatoire: entrees.opteVFL ? appliquerTaux(entrees, micro.versementLiberatoire.taux) : 0,
     warnings
   }

@@ -7,7 +7,7 @@
  * Le comparateur et l'optimiseur travaillent sur une seule année, celle que l'utilisateur consulte.
  */
 
-import type { ComparaisonOptions, ComparaisonResult, DonneesDeLAnnee, OptimisationRemuneration, ResultatAnnee, SessionState, SimulationPluriannuelle, StatutSociete } from "../../types.js"
+import type { ComparaisonOptions, ComparaisonResult, DonneesDeLAnnee, OptimisationRemuneration, ResultatAnnee, SessionState, SimulationPluriannuelle, SimulationReport, StatutSociete } from "../../types.js"
 import { anneeExistante, donneesDeLAnnee } from "./annees.js"
 import { comparerStatuts } from "./comparateur.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
@@ -17,27 +17,53 @@ import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js
 /** Tout ce qu'il faut pour simuler une année : ses données, ses règles et son contexte ; ou l'erreur qui l'en empêche. */
 type PreparationDeLAnnee = { donnees: DonneesDeLAnnee; regles: ReglesFiscales; contexte: ContexteDeLAnnee } | { erreur: string }
 
-function preparerLAnnee(session: SessionState, annee: number): PreparationDeLAnnee {
+/** Revenu fiscal de référence de chaque personne, celui de son foyer, d'après le rapport d'une année. */
+function rfrParPersonne(report: SimulationReport): Record<string, number> {
+  return Object.fromEntries(report.foyers.flatMap(foyer => foyer.personIds.map(id => [id, foyer.revenuFiscalDeReference])))
+}
+
+/**
+ * Prépare une année. `reportN2` est le rapport de l'année N-2 s'il a pu être calculé : son revenu fiscal de référence
+ * sert alors au versement libératoire de l'année N.
+ */
+function preparerLAnnee(session: SessionState, annee: number, reportN2: SimulationReport | null): PreparationDeLAnnee {
   const regles = reglesDeLAnnee(annee)
   if (regles.regles === null) return { erreur: regles.erreur }
-  const contexte: ContexteDeLAnnee = { annee, avertissements: regles.avertissement ? [regles.avertissement] : [] }
+  const contexte: ContexteDeLAnnee = {
+    annee,
+    avertissements: regles.avertissement ? [regles.avertissement] : [],
+    ...(reportN2 ? { rfrN2: { annee: annee - 2, parPersonne: rfrParPersonne(reportN2) } } : {})
+  }
   return { donnees: donneesDeLAnnee(session, annee), regles: regles.regles, contexte }
 }
 
-function simulerUneAnnee(session: SessionState, annee: number): ResultatAnnee {
-  const preparation = preparerLAnnee(session, annee)
+function simulerUneAnnee(session: SessionState, annee: number, reportN2: SimulationReport | null): ResultatAnnee {
+  const preparation = preparerLAnnee(session, annee, reportN2)
   if ("erreur" in preparation) return { annee, report: null, erreur: preparation.erreur }
   return { annee, report: runMetaSimulation(preparation.donnees, preparation.regles, preparation.contexte), erreur: null }
 }
 
-/** Simule chaque année de la session, de la plus ancienne à la plus récente. */
+/**
+ * Simule chaque année de la session, de la plus ancienne à la plus récente : le revenu fiscal de référence calculé
+ * pour l'année N-2 sert au versement libératoire de l'année N.
+ */
 export function simulerLesAnnees(session: SessionState): SimulationPluriannuelle {
-  return { annees: session.annees.map(({ annee }) => simulerUneAnnee(session, annee)) }
+  const annees: ResultatAnnee[] = []
+  for (const { annee } of session.annees) {
+    const reportN2 = annees.find(a => a.annee === annee - 2)?.report ?? null
+    annees.push(simulerUneAnnee(session, annee, reportN2))
+  }
+  return { annees }
 }
 
-/** Prépare l'année demandée (la plus récente si elle n'est pas dans la session) ; une année sans règles est une erreur. */
+/**
+ * Prépare l'année demandée (la plus récente si elle n'est pas dans la session), avec le revenu fiscal de référence
+ * de N-2 si la session le permet ; une année sans règles est une erreur.
+ */
 function preparerOuEchouer(session: SessionState, annee: number) {
-  const preparation = preparerLAnnee(session, anneeExistante(session, annee))
+  const existante = anneeExistante(session, annee)
+  const reportN2 = simulerLesAnnees(session).annees.find(a => a.annee === existante - 2)?.report ?? null
+  const preparation = preparerLAnnee(session, existante, reportN2)
   if ("erreur" in preparation) throw new Error(preparation.erreur)
   return preparation
 }

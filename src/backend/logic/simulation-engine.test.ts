@@ -220,11 +220,13 @@ describe("runMetaSimulation", () => {
       // Rémunération : 24 300 + 810 (CSG non déductible et CRDS) = 25 110 €, 22 599 € imposables après 10 %.
       // Forfait : 1 259,90 € d'impôt, moins 170,05 € de décote, plus 20 000 x 12 % = 3 489,85 €.
       // Barème : 22 599 + 12 000 - 1 400 = 33 199 €, soit 2 959,70 €, retenu.
+      // Revenu fiscal de référence : 33 199 + l'abattement de 40 % rajouté (8 000) = 41 199 €.
       expect(foyerDe(report, "alice")).toEqual({
         personIds: ["alice"],
         totalParts: 1,
         revenusEncaisses: 44300,
         revenuImposableGlobal: 33199,
+        revenuFiscalDeReference: 41199,
         impotSurLeRevenu: 2960,
         prelevementsSociaux: 3600,
         optionDividendes: "bareme",
@@ -412,7 +414,7 @@ describe("runMetaSimulation", () => {
         revenuVerse: 28000,
         resultatConserve: 0,
         beneficiaireIds: ["bob"],
-        versementLiberatoire: { plafondRfr: 28000, partsFiscales: 1, rfrN2: null, eligible: null, applique: false },
+        versementLiberatoire: { plafondRfr: 28000, partsFiscales: 1, rfrN2: null, anneeRfr: 1998, origineRfr: null, eligible: null, applique: false },
         warnings: []
       })
       expect(report.persons[0].detail.benefices).toBe(28000)
@@ -432,7 +434,7 @@ describe("runMetaSimulation", () => {
       it("l'applique quand le revenu fiscal de référence est sous le seuil", () => {
         const report = simuler([personne("bob"), avecVFL(20000)], [relation("bob", "m1", "Titulaire")], flux)
 
-        expect(activite(report, "m1").versementLiberatoire).toEqual({ plafondRfr: 28000, partsFiscales: 1, rfrN2: 20000, eligible: true, applique: true })
+        expect(activite(report, "m1").versementLiberatoire).toEqual({ plafondRfr: 28000, partsFiscales: 1, rfrN2: 20000, anneeRfr: 1998, origineRfr: "saisi", eligible: true, applique: true })
         expect(activite(report, "m1").warnings).toEqual([])
         expect(foyerDe(report, "bob")).toMatchObject({ impotSurLeRevenu: 500 })
       })
@@ -453,7 +455,7 @@ describe("runMetaSimulation", () => {
           flux
         )
 
-        expect(activite(report, "m1").versementLiberatoire).toEqual({ plafondRfr: 70000, partsFiscales: 2.5, rfrN2: 65000, eligible: true, applique: true })
+        expect(activite(report, "m1").versementLiberatoire).toEqual({ plafondRfr: 70000, partsFiscales: 2.5, rfrN2: 65000, anneeRfr: 1998, origineRfr: "saisi", eligible: true, applique: true })
       })
 
       it("l'applique en le signalant quand le revenu fiscal de référence n'est pas renseigné", () => {

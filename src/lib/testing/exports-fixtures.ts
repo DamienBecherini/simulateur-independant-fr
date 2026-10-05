@@ -72,6 +72,7 @@ export function rapportExemple(): SimulationReport {
         totalParts: 2.5,
         revenusEncaisses: 26499.5,
         revenuImposableGlobal: 18000,
+        revenuFiscalDeReference: 18000,
         impotSurLeRevenu: 1500,
         prelevementsSociaux: 0,
         optionDividendes: "pfu",

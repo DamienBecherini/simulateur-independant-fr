@@ -266,8 +266,15 @@ export interface VersementLiberatoireInfo {
   /** Seuil de revenu fiscal de référence N-2 pour le foyer du titulaire : seuil par part x nombre de parts. */
   plafondRfr: number
   partsFiscales: number
-  /** Revenu fiscal de référence N-2 saisi, ou `null` s'il n'est pas renseigné. */
+  /** Revenu fiscal de référence N-2 retenu (calculé ou saisi), ou `null` s'il n'est pas connu. */
   rfrN2: number | null
+  /** Année N-2 dont le revenu fiscal de référence est comparé au seuil. */
+  anneeRfr: number
+  /**
+   * D'où vient le revenu fiscal de référence retenu : calculé par la simulation quand l'année N-2 en fait partie,
+   * sinon saisi dans la fiche de la micro-entreprise ; `null` s'il n'est pas connu.
+   */
+  origineRfr: "calcule" | "saisi" | null
   /** `null` tant que le revenu fiscal de référence n'est pas renseigné. */
   eligible: boolean | null
   /** L'option est demandée et applicable : l'impôt est payé en pourcentage du chiffre d'affaires. */
@@ -306,6 +313,12 @@ export interface FoyerFiscalResult {
   revenusEncaisses: number
   /** Base soumise au barème, après abattements. */
   revenuImposableGlobal: number
+  /**
+   * Revenu fiscal de référence (article 1417 IV du CGI), tel que le simulateur peut le calculer : revenu imposable au
+   * barème, plus les dividendes imposés au prélèvement forfaitaire (montant brut) ou l'abattement de 40 % s'ils sont
+   * imposés au barème, plus le chiffre d'affaires après abattement des micro-entreprises au versement libératoire.
+   */
+  revenuFiscalDeReference: number
   /** Impôt au barème, impôt forfaitaire sur les dividendes et versement libératoire. */
   impotSurLeRevenu: number
   /** Prélèvements sociaux sur les dividendes. */

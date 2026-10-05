@@ -32,6 +32,7 @@ function makeFoyer(personId: string, overrides: Partial<FoyerFiscalResult> = {})
     totalParts: 1,
     revenusEncaisses: 30000,
     revenuImposableGlobal: 27000,
+    revenuFiscalDeReference: 27000,
     impotSurLeRevenu: 2000,
     prelevementsSociaux: 0,
     optionDividendes: null,
@@ -107,6 +108,32 @@ describe("ResultsPanel", () => {
 
     expect(screen.getByText(/année 2027 avec les règles fiscales 2026/)).toBeInTheDocument()
     expect(screen.getByRole("listitem")).toHaveTextContent(avertissement)
+  })
+
+  it("donne le revenu fiscal de référence de chaque foyer", () => {
+    render(<ResultsPanel report={makeReport()} error={null} />)
+
+    const carte = screen.getAllByRole("article").find(a => a.textContent?.includes("Bob Durand"))!
+    expect(rowValue(carte, "Revenu fiscal de référence")).toHaveTextContent(`${money(27000)}pour le versement libératoire dans deux ans`)
+  })
+
+  it.each([
+    ["calcule", true, "votre RFR 2024 de 29 040 €, calculé par la simulation, y donne accès"],
+    ["saisi", false, "votre RFR 2024 de 29 040 €, saisi dans la fiche, le dépasse"]
+  ] as const)("dit d'où vient le revenu fiscal de référence du versement libératoire (%s)", (origineRfr, eligible, attendu) => {
+    const report = makeReport()
+    report.activities = [{ ...report.activities[0], type: "micro-entreprise", statut: "Micro-entreprise", versementLiberatoire: { plafondRfr: 29315, partsFiscales: 1, rfrN2: 29040, anneeRfr: 2024, origineRfr, eligible, applique: eligible } }]
+    render(<ResultsPanel report={report} error={null} />)
+
+    expect(normalize(screen.getByText(/^Versement libératoire$/).parentElement!.textContent!)).toContain(normalize(attendu))
+  })
+
+  it("invite à ajouter l'année N-2 quand le revenu fiscal de référence est inconnu", () => {
+    const report = makeReport()
+    report.activities = [{ ...report.activities[0], versementLiberatoire: { plafondRfr: 29315, partsFiscales: 1, rfrN2: null, anneeRfr: 2024, origineRfr: null, eligible: null, applique: false } }]
+    render(<ResultsPanel report={report} error={null} />)
+
+    expect(screen.getByText(/RFR 2024 inconnu : ajoutez l'année 2024 à la simulation/)).toBeInTheDocument()
   })
 
   it("affiche l'erreur de simulation", () => {

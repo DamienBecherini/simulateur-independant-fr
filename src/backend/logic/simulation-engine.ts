@@ -32,6 +32,8 @@ interface RevenusDActivite {
   dividendes: number
   dividendesSoumisPS: number
   versementLiberatoire: number
+  /** Chiffre d'affaires après abattement des micro-entreprises au versement libératoire : hors barème, mais dans le revenu fiscal de référence. */
+  revenusAuVersementLiberatoire: number
   /** Dividendes réellement encaissés, nets des cotisations sociales éventuelles. */
   dividendesEncaisses: number
   /** Bénéfices réellement encaissés (micro-entreprise, entreprise individuelle), nets de cotisations. */
@@ -50,6 +52,7 @@ function encaisse(revenus: RevenusDActivite): number {
 interface Contexte {
   session: DonneesDeLAnnee
   regles: ReglesFiscales
+  annee: ContexteDeLAnnee
   /** Foyers fiscaux, calculés avant les activités : le versement libératoire dépend des parts du foyer. */
   foyers: Foyer[]
   flux: Map<string, FlowTotals>
@@ -152,7 +155,7 @@ function personnesLiees(ctx: Contexte, entityId: string, types: Relationship["ty
 function revenusDe(ctx: Contexte, personId: string): RevenusDActivite {
   let revenus = ctx.revenus.get(personId)
   if (!revenus) {
-    revenus = { remunerations: 0, remunerationsImposables: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, dividendesEncaisses: 0, beneficesEncaisses: 0, prelevementsActivites: 0, resultatConserve: 0 }
+    revenus = { remunerations: 0, remunerationsImposables: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, revenusAuVersementLiberatoire: 0, dividendesEncaisses: 0, beneficesEncaisses: 0, prelevementsActivites: 0, resultatConserve: 0 }
     ctx.revenus.set(personId, revenus)
   }
   return revenus
@@ -291,19 +294,32 @@ function analyserVersementLiberatoire(ctx: Contexte, micro: MicroEntreprise, tit
   const foyer = titulaire ? ctx.foyers.find(f => f.declarantIds.includes(titulaire) || f.enfantIds.includes(titulaire)) : undefined
   const partsFiscales = foyer?.totalParts ?? 1
   const plafondRfr = plafondRfrVersementLiberatoire(partsFiscales, ctx.regles)
-  const rfrN2 = micro.rfrN2 ?? null
+  const { rfrN2, origineRfr } = rfrDuTitulaire(ctx, micro, titulaire)
   const eligible = rfrN2 === null ? null : rfrN2 <= plafondRfr
-  return { plafondRfr, partsFiscales, rfrN2, eligible, applique: micro.opteVFL && eligible !== false }
+  const anneeRfr = (ctx.annee.annee ?? ctx.regles.annee) - 2
+  return { plafondRfr, partsFiscales, rfrN2, anneeRfr, origineRfr, eligible, applique: micro.opteVFL && eligible !== false }
+}
+
+/**
+ * Revenu fiscal de référence N-2 du foyer du titulaire : celui que la simulation a calculé quand l'année N-2 en fait
+ * partie, sinon celui saisi dans la fiche de la micro-entreprise.
+ */
+function rfrDuTitulaire(ctx: Contexte, micro: MicroEntreprise, titulaire: string | undefined): Pick<VersementLiberatoireInfo, "rfrN2" | "origineRfr"> {
+  const calcule = titulaire === undefined ? undefined : ctx.annee.rfrN2?.parPersonne[titulaire]
+  if (calcule !== undefined) return { rfrN2: calcule, origineRfr: "calcule" }
+  if (micro.rfrN2 !== undefined) return { rfrN2: micro.rfrN2, origineRfr: "saisi" }
+  return { rfrN2: null, origineRfr: null }
 }
 
 function avertissementsVersementLiberatoire(micro: MicroEntreprise, vfl: VersementLiberatoireInfo): string[] {
   if (!micro.opteVFL) return []
   const parts = vfl.partsFiscales.toLocaleString("fr-FR")
   if (vfl.eligible === false) {
-    return [`Versement libératoire impossible : le revenu fiscal de référence N-2 (${euros(vfl.rfrN2 ?? 0)}) dépasse le seuil de ${euros(vfl.plafondRfr)} pour ${parts} part(s). L'impôt est calculé au barème.`]
+    const origine = vfl.origineRfr === "calcule" ? "calculé par la simulation" : "saisi dans la fiche"
+    return [`Versement libératoire impossible : le revenu fiscal de référence ${vfl.anneeRfr} (${euros(vfl.rfrN2 ?? 0)}, ${origine}) dépasse le seuil de ${euros(vfl.plafondRfr)} pour ${parts} part(s). L'impôt est calculé au barème.`]
   }
   if (vfl.eligible === null) {
-    return [`Versement libératoire : il n'est ouvert que si le revenu fiscal de référence N-2 du foyer ne dépasse pas ${euros(vfl.plafondRfr)} pour ${parts} part(s). Renseignez-le dans la fiche de la micro-entreprise pour le vérifier.`]
+    return [`Versement libératoire : il n'est ouvert que si le revenu fiscal de référence ${vfl.anneeRfr} du foyer ne dépasse pas ${euros(vfl.plafondRfr)} pour ${parts} part(s). Ajoutez l'année ${vfl.anneeRfr} à la simulation pour qu'il soit calculé, ou renseignez-le dans la fiche de la micro-entreprise.`]
   }
   return []
 }
@@ -332,6 +348,7 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
     const revenus = revenusDe(ctx, titulaire)
     revenus.beneficesImposables += resultat.revenuImposable
     revenus.versementLiberatoire += resultat.versementLiberatoire
+    if (vfl.applique) revenus.revenusAuVersementLiberatoire += resultat.revenuApresAbattement
     revenus.beneficesEncaisses += revenuVerse
     revenus.prelevementsActivites += resultat.cotisationsSociales
   } else {
@@ -402,7 +419,7 @@ function abattementSalaires(salaires: number, regles: ReglesFiscales["IR"]["abat
 
 /** Additionne les revenus de tous les membres d'un foyer, par traitement fiscal. */
 function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
-  const cumul = { baseBareme: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, encaisse: 0, depenses: 0, prelevementsActivites: 0, resultatConserve: 0 }
+  const cumul = { baseBareme: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, revenusAuVersementLiberatoire: 0, encaisse: 0, depenses: 0, prelevementsActivites: 0, resultatConserve: 0 }
   for (const personId of [...foyer.declarantIds, ...foyer.enfantIds]) {
     const revenus = revenusDe(ctx, personId)
     const salarie = ctx.salaries.get(personId)?.bulletin
@@ -414,6 +431,7 @@ function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
     cumul.dividendes += revenus.dividendes
     cumul.dividendesSoumisPS += revenus.dividendesSoumisPS
     cumul.versementLiberatoire += revenus.versementLiberatoire
+    cumul.revenusAuVersementLiberatoire += revenus.revenusAuVersementLiberatoire
     cumul.encaisse += total(ctx, personId, "salary", "are", "other_taxable_income") + encaisse(revenus)
     cumul.depenses += total(ctx, personId, "expense")
     // Les cotisations patronales de son salaire comptent parmi les prélèvements de son foyer.
@@ -441,12 +459,18 @@ function calculerFoyer(ctx: Contexte, foyer: Foyer): FoyerFiscalResult {
   const impotSurLeRevenu = (optionBareme ? impotAuBareme : impotForfaitaire) + revenus.versementLiberatoire
   const prelevementsSociaux = revenus.dividendesSoumisPS * reglesDividendes.prelevementsSociaux
   const optionDividendes = optionBareme ? "bareme" : "pfu"
+  const revenuImposableGlobal = Math.max(0, optionBareme ? baseAvecDividendes : revenus.baseBareme)
+  // Revenu fiscal de référence : on rajoute ce que le barème ne voit pas. Au prélèvement forfaitaire, les dividendes
+  // bruts ; au barème, l'abattement de 40 % (le reste y est déjà, net de la CSG déductible).
+  const dividendesHorsBareme = optionBareme ? revenus.dividendes * reglesDividendes.abattementBareme : revenus.dividendes
+  const revenuFiscalDeReference = revenuImposableGlobal + dividendesHorsBareme + revenus.revenusAuVersementLiberatoire
 
   return {
     personIds: [...foyer.declarantIds, ...foyer.enfantIds],
     totalParts: foyer.totalParts,
     revenusEncaisses: Math.round(revenus.encaisse),
-    revenuImposableGlobal: Math.round(Math.max(0, optionBareme ? baseAvecDividendes : revenus.baseBareme)),
+    revenuImposableGlobal: Math.round(revenuImposableGlobal),
+    revenuFiscalDeReference: Math.round(revenuFiscalDeReference),
     impotSurLeRevenu: Math.round(impotSurLeRevenu),
     prelevementsSociaux: Math.round(prelevementsSociaux),
     optionDividendes: revenus.dividendes > 0 ? optionDividendes : null,
@@ -497,13 +521,18 @@ export interface ContexteDeLAnnee {
   annee?: number
   /** Avertissements sur l'année elle-même, repris dans le rapport. */
   avertissements?: string[]
+  /**
+   * Revenu fiscal de référence calculé pour l'année N-2, quand elle fait partie de la session : celui du foyer de
+   * chaque personne. Il remplace, pour le versement libératoire, celui saisi dans la fiche de la micro-entreprise.
+   */
+  rfrN2?: { annee: number; parPersonne: Record<string, number> }
 }
 
 export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): SimulationReport {
   const foyersFiscaux = buildFoyers(session, regles.IR.partsParEnfant)
   const flux = aggregateAnnualFlowsByEntity(session)
   const salaries = bulletinsDesSalaries(session, flux, regles)
-  const ctx: Contexte = { session, regles, foyers: foyersFiscaux, flux, cotisationsSalariales: cotisationsSalarialesParPersonne(session, flux, salaries), salaries, revenus: new Map(), nonRattache: 0 }
+  const ctx: Contexte = { session, regles, annee: contexte, foyers: foyersFiscaux, flux, cotisationsSalariales: cotisationsSalarialesParPersonne(session, flux, salaries), salaries, revenus: new Map(), nonRattache: 0 }
 
   // Les activités d'abord : elles alimentent les revenus des personnes, dont dépend l'impôt des foyers.
   const activities = session.entities.filter((e): e is Company | MicroEntreprise => e.type !== "person").map(activite => arrondirActivite(simulerActivite(ctx, activite)))
