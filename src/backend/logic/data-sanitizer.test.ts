@@ -72,7 +72,7 @@ describe("sanitizeStateAndFillDefaults", () => {
         const { safeState, report } = sanitizeStateAndFillDefaults({ formatVersion: FORMAT_VERSION_ACTUEL, entities: [{ ...alice, fraisReels: ancienFrais }] })
 
         expect(safeState.entities[0]).toEqual({ ...alice, fraisReels: { trajets: [trajetConverti], autresFrais: 300 } })
-        expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, migrationNotes: [] })
+        expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, migrationNotes: [], anneesEcartees: [] })
       })
 
       it("deviennent un trajet aux valeurs par défaut quand seuls les autres frais étaient saisis", () => {
