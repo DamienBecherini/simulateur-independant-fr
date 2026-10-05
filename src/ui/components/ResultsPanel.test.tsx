@@ -1,10 +1,14 @@
 // src/ui/components/ResultsPanel.test.tsx
 
 import { render, screen, within } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
-import type { FoyerFiscalResult, PersonResult, SalarieDeLActivite, SimulationReport } from "@/types"
+import userEvent from "@testing-library/user-event"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import type { Affichage, FoyerFiscalResult, PersonResult, SalarieDeLActivite, SimulationReport } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
-import { ResultsPanel } from "./ResultsPanel"
+import { AffichageContext } from "../hooks/useAffichage"
+import { retrouverLaPosition } from "../hooks/useDetailsDesCartes"
+import { CarteDeLActeur, ResultsPanel } from "./ResultsPanel"
+import { FournisseurDesDetails } from "./DetailsDesCartes"
 
 /**
  * Formatage attendu d'un montant (« 12 345 € ») et d'un pourcentage (« 34 % »). Le français sépare par des espaces
@@ -269,5 +273,123 @@ describe("ResultsPanel", () => {
     report.activities = [{ ...sasu, type: "micro-entreprise", statut: "Micro-entreprise", fraisDeDeplacement: { kilometres: 8720, montant: 4508, deductible: false } }]
     rerender(<ResultsPanel report={{ ...report }} error={null} />)
     expect(rowValue(card, "dont déplacements professionnels")).toHaveTextContent(/non déductibles$/)
+  })
+})
+
+describe("détail des cartes de résultats", () => {
+  /** Deux foyers et deux activités : chaque groupe compte plusieurs cartes. */
+  function rapportAvecDeuxActivites(): SimulationReport {
+    const report = makeReport()
+    report.activities = [...report.activities, { ...report.activities[0], entityId: "micro-atelier", name: "Atelier", type: "micro-entreprise", statut: "Micro-entreprise", impotSocietes: 0, resultatConserve: 0, warnings: [] }]
+    return report
+  }
+  const afficher = (affichage: Affichage, report = rapportAvecDeuxActivites()) => render(<AffichageContext.Provider value={affichage}><ResultsPanel report={report} error={null} /></AffichageContext.Provider>)
+  const boutons = (groupe: RegExp) => screen.getAllByRole("button", { name: groupe })
+  const FOYERS = /le détail \(tous les foyers\)$/
+  const ACTIVITES = /le détail \(toutes les activités\)$/
+  const carte = (nom: string) => screen.getAllByRole("article").find(article => within(article).queryByText(nom))!
+  /** Une ligne de détail est masquée à l'écran (classe `hidden`), mais reste imprimée. */
+  const masquee = (conteneur: HTMLElement, libelle: string) => within(conteneur).getByText(libelle, { selector: "dt" }).closest(".hidden") !== null
+
+  it("affichage classique : tout est affiché, et un clic masque le détail de tous les foyers, pas celui des activités", async () => {
+    afficher("classique")
+    expect(boutons(FOYERS)).toHaveLength(2)
+    expect(boutons(ACTIVITES)).toHaveLength(2)
+    for (const bouton of [...boutons(FOYERS), ...boutons(ACTIVITES)]) expect(bouton).toHaveAttribute("aria-expanded", "true")
+    expect(masquee(carte("Bob Durand"), "Total encaissé")).toBe(false)
+
+    const clique = within(carte("Bob Durand")).getByRole("button", { name: FOYERS })
+    await userEvent.click(clique)
+
+    for (const bouton of boutons(FOYERS)) {
+      expect(bouton).toHaveAttribute("aria-expanded", "false")
+      expect(bouton).toHaveAccessibleName("Afficher le détail (tous les foyers)")
+    }
+    for (const bouton of boutons(ACTIVITES)) expect(bouton).toHaveAttribute("aria-expanded", "true")
+    expect(clique).toHaveFocus()
+    // L'impôt et le revenu fiscal de référence restent affichés ; le reste se masque à sa place, dans chaque foyer.
+    for (const nom of ["Alice Martin", "Bob Durand"]) {
+      expect(masquee(carte(nom), "Total encaissé")).toBe(true)
+      expect(masquee(carte(nom), "Net après impôts")).toBe(true)
+      expect(masquee(carte(nom), "Impôt sur le revenu")).toBe(false)
+      expect(masquee(carte(nom), "Revenu fiscal de référence")).toBe(false)
+    }
+    expect(masquee(carte("Ma SASU"), "Chiffre d'affaires")).toBe(false)
+  })
+
+  it("affichage « Résumé » : le détail est replié, et un clic ouvre celui de toutes les activités, pas celui des foyers", async () => {
+    afficher("resume")
+    for (const bouton of [...boutons(FOYERS), ...boutons(ACTIVITES)]) expect(bouton).toHaveAttribute("aria-expanded", "false")
+    expect(masquee(carte("Ma SASU"), "Chiffre d'affaires")).toBe(true)
+    expect(masquee(carte("Ma SASU"), "Versé avant impôt sur le revenu")).toBe(false)
+
+    const clique = within(carte("Atelier")).getByRole("button", { name: ACTIVITES })
+    await userEvent.click(clique)
+
+    for (const bouton of boutons(ACTIVITES)) expect(bouton).toHaveAttribute("aria-expanded", "true")
+    for (const bouton of boutons(FOYERS)) expect(bouton).toHaveAttribute("aria-expanded", "false")
+    expect(clique).toHaveFocus()
+    expect(clique).toHaveAccessibleName("Masquer le détail (toutes les activités)")
+    expect(masquee(carte("Ma SASU"), "Chiffre d'affaires")).toBe(false)
+    expect(masquee(carte("Bob Durand"), "Total encaissé")).toBe(true)
+
+    // Au clavier aussi : Entrée referme tout le groupe.
+    await userEvent.keyboard("{Enter}")
+    for (const bouton of boutons(ACTIVITES)) expect(bouton).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("chaque bouton désigne le détail de sa carte ; seul, il ne parle pas de « tous »", () => {
+    const report = makeReport()
+    report.foyers = [report.foyers[1]]
+    afficher("resume", report)
+    const bouton = within(carte("Bob Durand")).getByRole("button", { name: "Afficher le détail" })
+    expect(document.getElementById(bouton.getAttribute("aria-controls")!)).toHaveTextContent("Total encaissé")
+  })
+
+  it("les cartes du panneau d'un acteur suivent le même état que celles de la page", async () => {
+    const report = rapportAvecDeuxActivites()
+    render(
+      <AffichageContext.Provider value="panneaux">
+        <FournisseurDesDetails>
+          <ResultsPanel report={report} error={null} />
+          <section aria-label="Panneau">
+            <CarteDeLActeur report={report} entityId="person-bob" />
+          </section>
+        </FournisseurDesDetails>
+      </AffichageContext.Provider>
+    )
+    const panneau = screen.getByRole("region", { name: "Panneau" })
+    await userEvent.click(within(panneau).getByRole("button", { name: FOYERS }))
+    for (const bouton of boutons(FOYERS)) expect(bouton).toHaveAttribute("aria-expanded", "true")
+  })
+})
+
+describe("retrouverLaPosition", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it("fait défiler la page d'autant que l'élément s'est déplacé, sans animation, et lui rend le focus", () => {
+    const bouton = document.body.appendChild(document.createElement("button"))
+    let haut = 540
+    vi.spyOn(bouton, "getBoundingClientRect").mockImplementation(() => ({ top: haut }) as DOMRect)
+    const scrollBy = vi.spyOn(window, "scrollBy").mockImplementation(((options: ScrollToOptions) => {
+      haut -= options.top ?? 0
+    }) as typeof window.scrollBy)
+
+    retrouverLaPosition({ element: bouton, haut: 300 })
+
+    expect(scrollBy).toHaveBeenCalledTimes(1)
+    expect(scrollBy).toHaveBeenCalledWith({ top: 240, behavior: "instant" })
+    expect(haut).toBe(300)
+    expect(bouton).toHaveFocus()
+    bouton.remove()
+  })
+
+  it("ne fait rien défiler quand l'élément n'a pas bougé", () => {
+    const bouton = document.body.appendChild(document.createElement("button"))
+    vi.spyOn(bouton, "getBoundingClientRect").mockImplementation(() => ({ top: 300.2 }) as DOMRect)
+    const scrollBy = vi.spyOn(window, "scrollBy").mockImplementation(() => {})
+    retrouverLaPosition({ element: bouton, haut: 300 })
+    expect(scrollBy).not.toHaveBeenCalled()
+    bouton.remove()
   })
 })
