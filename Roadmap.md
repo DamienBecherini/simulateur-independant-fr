@@ -169,7 +169,8 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 5.  **Flux récurrents :** un flux défini une fois pour plusieurs mois ou années (« 800 € par mois de janvier à décembre »), modifiable en une fois, avec une règle claire quand on change un seul mois d'une série. Aujourd'hui, la grille recopie le flux sur les mois choisis : les copies sont indépendantes.
 6.  **Dispositifs limités dans le temps [À faire] :** ACRE la première année, exonération de CFE l'année de création, cotisations des premières années.
 7.  **Sortie du régime micro [À faire] :** repérer deux années consécutives au-delà des plafonds et annoncer le passage au réel au 1er janvier suivant (règle de service-public.fr, F32353). Aujourd'hui, une micro hors plafond est signalée « 2 ans au plus » et n'est jamais désignée meilleur net.
-8.  **Plus tard :** acteurs et relations propres à chaque année, exports et optimisation sur plusieurs années, revenu fiscal de référence dans les exports CSV et Markdown.
+8.  **Partage du bénéfice des sociétés [✅] :** dans le comparateur, quatre modes (rémunération saisie et dividendes, tout en rémunération, répartition personnalisée, dividendes de la grille) ; barre empilée exacte du bénéfice avant rémunération (rémunération nette, cotisations, IS, dividendes, cotisations sur dividendes, réserves) avec poignées glissables à la souris, au doigt et au clavier, répartitions toutes faites, exports.
+9.  **Plus tard :** acteurs et relations propres à chaque année, exports et optimisation sur plusieurs années, revenu fiscal de référence dans les exports CSV et Markdown.
 
 ---
 
