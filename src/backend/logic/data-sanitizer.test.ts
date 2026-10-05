@@ -1,7 +1,7 @@
 // src/backend/logic/data-sanitizer.test.ts
 
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { sanitizeSlots, sanitizeStateAndFillDefaults } from "./data-sanitizer.js"
+import { AnneesRefuseesError, nettoyerLesSlots, rapportAvecCorrections, sanitizeSlots, sanitizeStateAndFillDefaults, texteAnneesEcartees } from "./data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL } from "./migrations.js"
 
 const avatar = { type: "initials", value: "AB", color: "#3b82f6" }
@@ -272,6 +272,48 @@ describe("sanitizeStateAndFillDefaults", () => {
 
       expect(safeState.annees).toEqual([{ annee: 2026, monthlyData: grille([flux("f1", "p1")]) }])
       expect(report.flowsRemoved).toBe(2)
+      expect(report.anneesEcartees).toEqual([2026])
+    })
+
+    it("signale une année en double même sans flux, une seule fois par année", () => {
+      const { report } = sanitizeStateAndFillDefaults(
+        sessionDesAnnees([
+          { annee: 2025, monthlyData: grille() },
+          { annee: 2026, monthlyData: grille() },
+          { annee: 2025, monthlyData: grille() },
+          { annee: 2025, monthlyData: grille() },
+          { annee: 2026, monthlyData: grille() }
+        ])
+      )
+
+      expect(report).toMatchObject({ flowsRemoved: 0, anneesEcartees: [2025, 2026] })
+      expect(rapportAvecCorrections(report)).toBe(true)
+    })
+
+    it("ne signale rien pour des années sans doublon", () => {
+      const { report } = sanitizeStateAndFillDefaults(sessionDesAnnees([{ annee: 2026, monthlyData: grille() }]))
+
+      expect(report.anneesEcartees).toEqual([])
+      expect(rapportAvecCorrections(report)).toBe(false)
+    })
+
+    it("accepte dix années consécutives", () => {
+      const { safeState } = sanitizeStateAndFillDefaults(sessionDesAnnees(Array.from({ length: 10 }, (_, i) => ({ annee: 2024 + i, monthlyData: grille() }))))
+
+      expect(safeState.annees).toHaveLength(10)
+    })
+
+    it("refuse plus de dix années", () => {
+      const onze = sessionDesAnnees(Array.from({ length: 11 }, (_, i) => ({ annee: 2024 + i, monthlyData: grille() })))
+
+      expect(() => sanitizeStateAndFillDefaults(onze)).toThrow(AnneesRefuseesError)
+      expect(() => sanitizeStateAndFillDefaults(onze)).toThrow("Cette simulation contient 11 années, de 2024 à 2034")
+    })
+
+    it("refuse des années qui ne se suivent pas, une fois les doublons écartés, en nommant les années manquantes", () => {
+      const avecUnTrou = sessionDesAnnees([2024, 2027, 2024].map(annee => ({ annee, monthlyData: grille() })))
+
+      expect(() => sanitizeStateAndFillDefaults(avecUnTrou)).toThrow("il manque 2025 et 2026 entre 2024 et 2027")
     })
 
     it("nettoie les flux de chaque année", () => {
@@ -402,5 +444,33 @@ describe("sanitizeSlots", () => {
 
     expect(resultat).toEqual(slot)
     expect(consoleWarn).not.toHaveBeenCalled()
+  })
+})
+
+describe("nettoyerLesSlots", () => {
+  const slot = (id: string, name: string, annees: number[]) => ({ id, lastModified: 1, name, entities: [alice], relationships: [], annees: annees.map(annee => ({ annee, monthlyData: grille() })) })
+
+  it("rend à part les sauvegardes refusées à cause de leurs années, avec leur nom et le motif", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    const bonne = slot("s1", "Bonne", [2025, 2026])
+
+    const { slots, refusees } = nettoyerLesSlots([bonne, slot("s2", "Trouée", [2024, 2026]), slot("s3", "", Array.from({ length: 11 }, (_, i) => 2024 + i)), { name: "Sans identifiant" }])
+
+    expect(slots).toEqual([bonne])
+    expect(refusees).toEqual([
+      { nom: "Trouée", raison: expect.stringContaining("il manque 2025") },
+      { nom: "Sans nom", raison: expect.stringContaining("11 années") }
+    ])
+  })
+
+  it("rend des listes vides pour autre chose qu'un tableau", () => {
+    expect(nettoyerLesSlots("slots")).toEqual({ slots: [], refusees: [] })
+  })
+})
+
+describe("texteAnneesEcartees", () => {
+  it("accorde le texte au nombre d'années", () => {
+    expect(texteAnneesEcartees([2025])).toBe("Année en double écartée : 2025")
+    expect(texteAnneesEcartees([2025, 2026])).toBe("Années en double écartées : 2025, 2026")
   })
 })

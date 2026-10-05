@@ -13,7 +13,7 @@
  */
 
 import type { SaveSlot } from "../../types.js"
-import { sanitizeSlots } from "./data-sanitizer.js"
+import { nettoyerLesSlots, type SauvegardeRefusee } from "./data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./migrations.js"
 
 /** Marqueur des fichiers de sauvegardes groupées. */
@@ -34,6 +34,8 @@ export interface RapportLecture {
   lues: number
   /** Sauvegardes irrécupérables, écartées. */
   ecartees: number
+  /** Sauvegardes lisibles mais refusées : plus de dix années, ou des années qui ne se suivent pas. */
+  refusees: SauvegardeRefusee[]
   /** Points à vérifier après la conversion de sauvegardes d'un format précédent (sans doublon). */
   notesMigration: string[]
 }
@@ -132,14 +134,14 @@ export function lireFichierSauvegardes(contenu: string): ResultatLecture {
   const versionFichier = versionDuFormat(fichier)
   const brutes = fichier.slots.map(slot => (estObjet(slot) && !("formatVersion" in slot) ? { ...slot, formatVersion: versionFichier } : slot))
 
-  const slots = sanitizeSlots(brutes)
+  const { slots, refusees } = nettoyerLesSlots(brutes)
   const idsRetenus = new Set(slots.map(slot => slot.id))
   const notesMigration = [...new Set(brutes.filter(slot => estObjet(slot) && idsRetenus.has(slot.id as string)).flatMap(slot => migrerVersFormatActuel(slot).notes))]
 
   return {
     ok: true,
     slots: trierSelonOrdre(slots, fichier.slotOrder),
-    rapport: { lues: slots.length, ecartees: brutes.length - slots.length, notesMigration }
+    rapport: { lues: slots.length, ecartees: brutes.length - slots.length - refusees.length, refusees, notesMigration }
   }
 }
 

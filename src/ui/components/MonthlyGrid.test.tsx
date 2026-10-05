@@ -168,6 +168,61 @@ describe("MonthlyGrid, sur plusieurs années", () => {
     expect(screen.getByText("Les ajouts, modifications et suppressions s'appliquent aussi aux autres mois choisis, et aux mêmes mois en 2027.")).toBeInTheDocument()
   })
 
+  it("ne propose pas de raccourcis avec quatre autres années ou moins", async () => {
+    const { user } = afficherLesAnnees([2024, 2025, 2026, 2027, 2028].map(annee => ({ annee, monthlyData: grilleVide() })))
+    await user.click(screen.getByRole("button", { name: "Flux de mars : Alice Martin" }))
+    const annees = within(screen.getByRole("dialog")).getByRole("group", { name: "Aussi en :" })
+
+    expect(within(annees).getAllByRole("checkbox")).toHaveLength(4)
+    expect(within(annees).queryByRole("button")).not.toBeInTheDocument()
+  })
+
+  it("au-delà de quatre autres années, coche toutes les années, aucune, les précédentes ou les suivantes d'un clic", async () => {
+    const dixAnnees = Array.from({ length: 10 }, (_, i) => ({ annee: 2024 + i, monthlyData: grilleVide() }))
+    const { user } = afficherLesAnnees(dixAnnees, 2027)
+    await user.click(screen.getByRole("button", { name: "Flux de mars : Alice Martin" }))
+    const annees = within(screen.getByRole("dialog")).getByRole("group", { name: "Aussi en :" })
+    const cochees = () =>
+      within(annees)
+        .getAllByRole("checkbox")
+        .filter(c => (c as HTMLInputElement).checked)
+        .map(c => Number(c.closest("label")?.textContent))
+
+    expect(within(annees).getAllByRole("button").map(b => [b.textContent, b.getAttribute("aria-label")])).toEqual([
+      ["Toutes", "Cocher toutes les années"],
+      ["Aucune", "Ne cocher aucune année"],
+      ["Années précédentes", "Cocher les années précédentes"],
+      ["Années suivantes", "Cocher les années suivantes"]
+    ])
+
+    await user.click(within(annees).getByRole("button", { name: "Cocher toutes les années" }))
+    expect(cochees()).toEqual([2024, 2025, 2026, 2028, 2029, 2030, 2031, 2032, 2033])
+    expect(screen.getByText(/s'appliquent aussi au même mois en 2024, 2025, 2026, 2028/)).toBeInTheDocument()
+
+    await user.click(within(annees).getByRole("button", { name: "Cocher les années précédentes" }))
+    expect(cochees()).toEqual([2024, 2025, 2026])
+
+    await user.click(within(annees).getByRole("button", { name: "Cocher les années suivantes" }))
+    expect(cochees()).toEqual([2028, 2029, 2030, 2031, 2032, 2033])
+
+    // Une case se décoche toujours une à une.
+    await user.click(within(annees).getByRole("checkbox", { name: "2030" }))
+    expect(cochees()).toEqual([2028, 2029, 2031, 2032, 2033])
+
+    await user.click(within(annees).getByRole("button", { name: "Ne cocher aucune année" }))
+    expect(cochees()).toEqual([])
+    expect(screen.queryByText(/s'appliquent aussi/)).not.toBeInTheDocument()
+  })
+
+  it("désactive « Années précédentes » depuis la plus ancienne année", async () => {
+    const sixAnnees = Array.from({ length: 6 }, (_, i) => ({ annee: 2026 + i, monthlyData: grilleVide() }))
+    const { user } = afficherLesAnnees(sixAnnees, 2026)
+    await user.click(screen.getByRole("button", { name: "Flux de mars : Alice Martin" }))
+
+    expect(screen.getByRole("button", { name: "Cocher les années précédentes" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Cocher les années suivantes" })).toBeEnabled()
+  })
+
   it("ajoute une charge à tous les mois de 2026 et de 2025 en une étape, annulable d'un coup", async () => {
     const { user, etat } = afficherLesAnnees(troisAnnees())
     await user.click(screen.getByRole("button", { name: "Flux de mars : Alice Martin" }))

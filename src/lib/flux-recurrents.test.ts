@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import type { AnneeSimulee, FinancialFlow, MonthlyGridData } from "@/types"
-import { ajouterDansLesAnnees, listerAnnees, modifierDansLesAnnees, modifierSerie, moisCibles, moisDesAutresAnnees, recopierFlux, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type PorteeRecurrence } from "./flux-recurrents"
+import { ajouterDansLesAnnees, anneesDuRaccourci, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, modifierDansLesAnnees, modifierSerie, moisCibles, moisDesAutresAnnees, recopierFlux, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type PorteeRecurrence } from "./flux-recurrents"
 
 const grilleVide = (): MonthlyGridData => Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
 const loyer: FinancialFlow = { id: "flux-mars", entityId: "personne-alice", type: "expense", label: "Loyer", amount: 800 }
@@ -318,5 +318,36 @@ describe("sur plusieurs années", () => {
     expect(listerAnnees([2027, 2025])).toBe("2025 et 2027")
     expect(listerAnnees([2024])).toBe("2024")
     expect(listerAnnees([])).toBe("")
+  })
+})
+
+describe("raccourcis pour cocher les autres années", () => {
+  const autres = [2024, 2025, 2027, 2028, 2029]
+
+  it("ne les propose qu'au-delà de quatre autres années", () => {
+    expect(SEUIL_RACCOURCIS_ANNEES).toBe(4)
+  })
+
+  it.each([
+    ["toutes", [2024, 2025, 2027, 2028, 2029]],
+    ["aucune", []],
+    ["precedentes", [2024, 2025]],
+    ["suivantes", [2027, 2028, 2029]]
+  ] as const)("« %s » coche les bonnes années, par rapport à l'année affichée", (raccourci, attendues) => {
+    expect(anneesDuRaccourci(raccourci, 2026, autres)).toEqual(attendues)
+  })
+
+  it("ne coche jamais l'année affichée, même si elle figure dans la liste", () => {
+    expect(anneesDuRaccourci("toutes", 2026, [2025, 2026, 2027])).toEqual([2025, 2027])
+  })
+
+  it("ne trouve aucune année précédente depuis la plus ancienne", () => {
+    expect(anneesDuRaccourci("precedentes", 2024, [2025, 2026])).toEqual([])
+  })
+
+  it("nomme chaque raccourci en reprenant son texte visible", () => {
+    for (const { texte, nom } of Object.values(LIBELLES_RACCOURCIS_ANNEES)) {
+      expect(nom.toLowerCase()).toContain(texte.toLowerCase())
+    }
   })
 })

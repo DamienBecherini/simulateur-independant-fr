@@ -67,7 +67,7 @@ describe("construireFichierSauvegardes", () => {
     const relu = lireAvecSucces(JSON.stringify(construireFichierSauvegardes(slots, ["b", "a"])))
 
     expect(relu.slots).toEqual([slots[1], slots[0]])
-    expect(relu.rapport).toEqual({ lues: 2, ecartees: 0, notesMigration: [] })
+    expect(relu.rapport).toEqual({ lues: 2, ecartees: 0, refusees: [], notesMigration: [] })
   })
 })
 
@@ -106,7 +106,7 @@ describe("lireFichierSauvegardes", () => {
   })
 
   it("lit un fichier vide de sauvegardes", () => {
-    expect(lireAvecSucces(fichier([]))).toEqual({ ok: true, slots: [], rapport: { lues: 0, ecartees: 0, notesMigration: [] } })
+    expect(lireAvecSucces(fichier([]))).toEqual({ ok: true, slots: [], rapport: { lues: 0, ecartees: 0, refusees: [], notesMigration: [] } })
   })
 
   it("écarte une sauvegarde corrompue sans perdre les autres", () => {
@@ -118,19 +118,39 @@ describe("lireFichierSauvegardes", () => {
     const resultat = lireAvecSucces(fichier([a, sansIdentifiant, "texte", grilleCassee, b]))
 
     expect(resultat.slots).toEqual([a, b])
-    expect(resultat.rapport).toEqual({ lues: 2, ecartees: 3, notesMigration: [] })
+    expect(resultat.rapport).toEqual({ lues: 2, ecartees: 3, refusees: [], notesMigration: [] })
   })
 
   it("lit un fichier dont la seule sauvegarde est corrompue : rien à ajouter, une sauvegarde écartée", () => {
     const resultat = lireAvecSucces(fichier([{ ...sauvegarde("x", "Cassée"), entities: "illisible" }], { slotOrder: ["x"] }))
 
-    expect(resultat).toEqual({ ok: true, slots: [], rapport: { lues: 0, ecartees: 1, notesMigration: [] } })
+    expect(resultat).toEqual({ ok: true, slots: [], rapport: { lues: 0, ecartees: 1, refusees: [], notesMigration: [] } })
   })
 
   it("écarte une année en double d'une sauvegarde écrite à la main, et trie les années", () => {
     const a = sauvegarde("a", "Alpha", { annees: [{ annee: 2026, monthlyData: grille() }, { annee: 2025, monthlyData: grille() }, { annee: 2026, monthlyData: grille() }] })
 
     expect(lireAvecSucces(fichier([a])).slots[0].annees.map(annee => annee.annee)).toEqual([2025, 2026])
+  })
+
+  it("refuse une sauvegarde aux années trop nombreuses ou non consécutives, la nomme et dit pourquoi, sans perdre les autres", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {})
+    const a = sauvegarde("a", "Alpha")
+    const trouee = sauvegarde("t", "Trouée", { annees: [2024, 2027].map(annee => ({ annee, monthlyData: grille() })) })
+    const onzeAnnees = sauvegarde("o", "Onze ans", { annees: Array.from({ length: 11 }, (_, i) => ({ annee: 2024 + i, monthlyData: grille() })) })
+
+    const resultat = lireAvecSucces(fichier([a, trouee, onzeAnnees, "texte"]))
+
+    expect(resultat.slots).toEqual([a])
+    expect(resultat.rapport).toEqual({
+      lues: 1,
+      ecartees: 1,
+      refusees: [
+        { nom: "Trouée", raison: expect.stringContaining("il manque 2025 et 2026 entre 2024 et 2027") },
+        { nom: "Onze ans", raison: expect.stringContaining("11 années, de 2024 à 2034") }
+      ],
+      notesMigration: []
+    })
   })
 
   it("nettoie l'intérieur de chaque sauvegarde (flux orphelin retiré)", () => {
@@ -171,7 +191,7 @@ describe("lireFichierSauvegardes", () => {
     const relation = { id: "r1", fromId: "a-p", toId: "a-p", type: "Enfant" }
     const ancienneCorrompue = { ...sauvegarde("a", "Alpha"), relationships: [relation], lastModified: "hier", formatVersion: 1 }
 
-    expect(lireAvecSucces(fichier([ancienneCorrompue])).rapport).toEqual({ lues: 0, ecartees: 1, notesMigration: [] })
+    expect(lireAvecSucces(fichier([ancienneCorrompue])).rapport).toEqual({ lues: 0, ecartees: 1, refusees: [], notesMigration: [] })
   })
 
   it("importe un fichier de sauvegardes au format 2 : chaque grille devient l'année 2026", () => {

@@ -7,12 +7,29 @@
  */
 import { EntitySchema, FinancialFlowSchema, RelationshipSchema, SessionStateSchema, SaveSlotSchema } from "../../types.js"
 import type { SessionState, SaveSlot, SanitizationReport } from "../../types.js"
-import { nombreDeFlux, ordonnerLesAnnees } from "./annees.js"
+import { erreurDesAnnees, nombreDeFlux, ordonnerLesAnnees } from "./annees.js"
 import { migrerVersFormatActuel } from "./migrations.js"
 
 interface SanitizationResult {
   safeState: SessionState
   report: SanitizationReport
+}
+
+/** Une session lisible mais refusée, et pourquoi : ses années sont trop nombreuses ou ne se suivent pas. */
+interface SessionRefusee {
+  refus: string
+}
+
+/**
+ * Fichier refusé à cause de ses années (plus de `NOMBRE_MAX_ANNEES`, ou un trou entre deux années) : rien n'y est
+ * corrompu, mais le corriger à la place de l'utilisateur ferait perdre ou inventer des années. Le message, en
+ * français, dit ce qui ne va pas et se montre tel quel.
+ */
+export class AnneesRefuseesError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "AnneesRefuseesError"
+  }
 }
 
 interface FilteredItems {
@@ -83,10 +100,11 @@ function keepValidFlowsOfYears(annees: unknown): FilteredItems {
 
 /**
  * Nettoie une session élément par élément.
- * @returns La session nettoyée et son rapport, ou `null` si la structure est irrécupérable
- * (pas un objet, aucune année, année ou grille mensuelle inutilisable, champ de premier niveau invalide).
+ * @returns La session nettoyée et son rapport ; le motif du refus si ses années sont trop nombreuses ou ne se suivent
+ * pas ; ou `null` si la structure est irrécupérable (pas un objet, aucune année, année ou grille mensuelle
+ * inutilisable, champ de premier niveau invalide).
  */
-function sanitizeSession(rawInput: unknown): SanitizationResult | null {
+function sanitizeSession(rawInput: unknown): SanitizationResult | SessionRefusee | null {
   const migration = migrerVersFormatActuel(rawInput)
   const rawData = migration.donnees
   if (!isRecord(rawData)) {
@@ -116,6 +134,9 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | null {
 
   // Étape 3 : les années dans l'ordre chronologique ; une année en double est écartée avec ses flux.
   const ordonnees = ordonnerLesAnnees(structurallySafeState.annees)
+  // Plus de NOMBRE_MAX_ANNEES années, ou un trou entre deux années : le fichier est refusé plutôt que deviné.
+  const refus = erreurDesAnnees(ordonnees.annees.map(a => a.annee))
+  if (refus !== null) return { refus }
 
   // Étape 4 : cohérence sémantique, on supprime ce qui pointe vers une entité absente
   const entityIds = new Set(structurallySafeState.entities.map(e => e.id))
@@ -137,6 +158,8 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | null {
       entitiesRemoved: entities.removed,
       relationshipsRemoved: relationships.removed + orphanRelationships,
       flowsRemoved: annees.removed + orphanFlows + nombreDeFlux(ordonnees.ecartees),
+      // Une année en double est signalée même vide : l'utilisateur doit savoir qu'une partie du fichier est ignorée.
+      anneesEcartees: [...new Set(ordonnees.ecartees.map(a => a.annee))].sort((a, b) => a - b),
       migrationNotes: migration.notes
     }
   }
@@ -150,52 +173,96 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | null {
  * 3. Trie les années et écarte celles en double.
  * 4. Supprime les relations et les flux orphelins.
  * @param rawData Les données brutes à nettoyer.
+ * 5. Refuse une session de plus de `NOMBRE_MAX_ANNEES` années, ou dont les années ne se suivent pas.
+ * @param rawData Les données brutes à nettoyer.
  * @returns Un état de session propre et un rapport des corrections. Si la structure est irrécupérable,
  * la session par défaut est renvoyée avec un rapport vide : rien n'a été nettoyé, tout a été remplacé.
+ * @throws {AnneesRefuseesError} Si les années sont trop nombreuses ou ne se suivent pas.
  */
 export function sanitizeStateAndFillDefaults(rawData: unknown): SanitizationResult {
   const result = sanitizeSession(rawData)
+  if (result && "refus" in result) throw new AnneesRefuseesError(result.refus)
   if (result) return result
 
   return {
     // .parse({}) utilise tous les .default() définis dans le schéma.
     safeState: SessionStateSchema.parse({}),
-    report: { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, migrationNotes: [] }
+    report: { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, anneesEcartees: [], migrationNotes: [] }
   }
+}
+
+/** Vrai si le nettoyage a corrigé, écarté ou converti quelque chose : l'utilisateur doit en être informé. */
+export function rapportAvecCorrections(report: SanitizationReport): boolean {
+  return report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0 || report.anneesEcartees.length > 0 || report.migrationNotes.length > 0
+}
+
+/** « Année en double écartée : 2024 », « Années en double écartées : 2024, 2025 ». */
+export function texteAnneesEcartees(annees: number[]): string {
+  return annees.length > 1 ? `Années en double écartées : ${annees.join(", ")}` : `Année en double écartée : ${annees.join("")}`
 }
 
 /** Les deux champs qu'un slot ajoute à une session. */
 const SlotIdentitySchema = SaveSlotSchema.pick({ id: true, lastModified: true })
 
+/** Une sauvegarde lisible mais refusée à cause de ses années : son nom, pour la désigner, et le motif. */
+export interface SauvegardeRefusee {
+  nom: string
+  raison: string
+}
+
+/** Les sauvegardes retenues, nettoyées, et celles refusées à cause de leurs années. */
+export interface SlotsNettoyes {
+  slots: SaveSlot[]
+  refusees: SauvegardeRefusee[]
+}
+
+/** Le nom d'une sauvegarde brute, pour la désigner dans un message. */
+function nomDuSlot(rawSlot: unknown): string {
+  return isRecord(rawSlot) && typeof rawSlot.name === "string" && rawSlot.name !== "" ? rawSlot.name : "Sans nom"
+}
+
 /**
  * Nettoie un slot comme une session, en conservant son identifiant et sa date.
- * @returns Le slot nettoyé, ou `null` s'il est irrécupérable (identité manquante ou session inutilisable).
+ * @returns Le slot nettoyé ; le motif du refus si ses années sont trop nombreuses ou ne se suivent pas ;
+ * ou `null` s'il est irrécupérable (identité manquante ou session inutilisable).
  */
-function sanitizeSlot(rawSlot: unknown): SaveSlot | null {
+function sanitizeSlot(rawSlot: unknown): SaveSlot | SauvegardeRefusee | null {
   const identity = SlotIdentitySchema.safeParse(rawSlot)
   if (!identity.success) return null
 
   const session = sanitizeSession(rawSlot)
   if (!session) return null
+  if ("refus" in session) return { nom: nomDuSlot(rawSlot), raison: session.refus }
 
   return { ...session.safeState, ...identity.data }
 }
 
 /**
+ * Comme `sanitizeSlots`, en rendant aussi les sauvegardes refusées à cause de leurs années, pour les signaler.
+ * @param rawSlotsData - Un tableau de données brutes.
+ */
+export function nettoyerLesSlots(rawSlotsData: unknown): SlotsNettoyes {
+  if (!Array.isArray(rawSlotsData)) return { slots: [], refusees: [] }
+
+  const resultats = rawSlotsData.map(sanitizeSlot)
+  const slots = resultats.filter((r): r is SaveSlot => r !== null && !("raison" in r))
+  const refusees = resultats.filter((r): r is SauvegardeRefusee => r !== null && "raison" in r)
+
+  const ignoredCount = rawSlotsData.length - slots.length
+  if (ignoredCount > 0) {
+    console.warn(`Slots de sauvegarde corrompus ou refusés ignorés : ${ignoredCount} sur ${rawSlotsData.length}.`)
+  }
+
+  return { slots, refusees }
+}
+
+/**
  * Prend un tableau de slots potentiellement corrompus et retourne un tableau de slots propres.
- * Chaque slot est validé individuellement : un slot corrompu est écarté sans faire perdre les autres.
+ * Chaque slot est validé individuellement : un slot corrompu, ou refusé à cause de ses années, est écarté sans
+ * faire perdre les autres.
  * @param rawSlotsData - Un tableau de données brutes.
  * @returns Les `SaveSlot` récupérables, nettoyés et garantis d'être complets, dans leur ordre d'origine.
  */
 export function sanitizeSlots(rawSlotsData: unknown): SaveSlot[] {
-  if (!Array.isArray(rawSlotsData)) return []
-
-  const safeSlots = rawSlotsData.map(sanitizeSlot).filter(slot => slot !== null)
-
-  const ignoredCount = rawSlotsData.length - safeSlots.length
-  if (ignoredCount > 0) {
-    console.warn(`Slots de sauvegarde corrompus ignorés : ${ignoredCount} sur ${rawSlotsData.length}.`)
-  }
-
-  return safeSlots
+  return nettoyerLesSlots(rawSlotsData).slots
 }

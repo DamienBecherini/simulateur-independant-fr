@@ -649,6 +649,8 @@ export interface SanitizationReport {
   entitiesRemoved: number
   relationshipsRemoved: number
   flowsRemoved: number
+  /** Années en double écartées (la première occurrence est gardée), qu'elles aient eu des flux ou non. */
+  anneesEcartees: number[]
   /** Points à vérifier après la conversion d'un fichier d'un format précédent. */
   migrationNotes: string[]
 }
