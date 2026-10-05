@@ -1,15 +1,16 @@
 // src/ui/exports-texte.ts
 // Enregistrement des exports CSV et Markdown : chaque contenu est produit par une fonction pure de src/lib, puis
 // enregistré par window.api, avec une notification de succès ou d'échec (aucune si l'utilisateur annule).
-// Ils portent sur une année de la session, celle qui est affichée : son numéro figure dans le nom du fichier.
+// Ils portent sur une année de la session, celle qui est affichée : son numéro figure dans le nom du fichier. Seule la
+// synthèse des années, et la partie du rapport qui la reprend, couvre toute la session.
 
 import { toast } from "sonner"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { reglagesDeLActiviteComparee } from "@/lib/comparateur-options"
-import { csvComparaison, csvCourbeRemuneration, csvGrilleMensuelle, csvResultats } from "@/lib/export-csv"
+import { csvComparaison, csvCourbeRemuneration, csvGrilleMensuelle, csvResultats, csvSyntheseDesAnnees } from "@/lib/export-csv"
 import { nomDeFichier, slugifier } from "@/lib/export-commun"
 import { rapportMarkdown, type ComparaisonDuRapport } from "@/lib/export-markdown"
-import type { ComparaisonOptions, ComparaisonResult, FormatFichierTexte, OptimisationRemuneration, SessionState, SimulationAnnuelle, SimulationReport } from "@/types"
+import type { ComparaisonOptions, ComparaisonResult, FormatFichierTexte, OptimisationRemuneration, SessionState, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 
 /** Enregistre un fichier texte et dit si c'est fait ; rien n'est signalé si l'utilisateur annule. */
 export async function enregistrerExport(defaultName: string, content: string, format: FormatFichierTexte): Promise<void> {
@@ -31,6 +32,11 @@ export async function exporterResultatsCsv(vue: SimulationAnnuelle, report: Simu
     return
   }
   await enregistrerExport(nomDeFichier(vue.name, "resultats", "csv", vue.annee), csvResultats(vue, report), "csv")
+}
+
+/** Une ligne par année de la session : le nom du fichier ne porte donc pas d'année. */
+export function exporterSyntheseCsv(vue: SimulationAnnuelle, simulation: SimulationPluriannuelle): Promise<void> {
+  return enregistrerExport(nomDeFichier(vue.name, "annees", "csv"), csvSyntheseDesAnnees(vue, simulation), "csv")
 }
 
 export function exporterComparaisonCsv(vue: SimulationAnnuelle, resultat: ComparaisonResult, options: ComparaisonOptions, nomActivite: string): Promise<void> {
@@ -57,9 +63,12 @@ async function comparaisonDuComparateur(session: SessionState, vue: SimulationAn
   }
 }
 
-/** Le rapport porte sur l'année affichée ; le comparateur reçoit toute la session, pour les années qui précèdent. */
-export async function exporterRapportMarkdown(session: SessionState, annee: number, report: SimulationReport | null): Promise<void> {
+/**
+ * Le rapport porte sur l'année affichée, suivie de la synthèse de toutes les années quand la session en compte plusieurs ;
+ * le comparateur reçoit toute la session, pour les années qui précèdent.
+ */
+export async function exporterRapportMarkdown(session: SessionState, annee: number, report: SimulationReport | null, pluriannuelle: SimulationPluriannuelle | null = null): Promise<void> {
   const vue = vueDeLAnnee(session, annee)
   const comparaison = await comparaisonDuComparateur(session, vue)
-  await enregistrerExport(nomDeFichier(vue.name, "rapport", "md", vue.annee), rapportMarkdown({ session: vue, report, comparaison, date: new Date() }), "markdown")
+  await enregistrerExport(nomDeFichier(vue.name, "rapport", "md", vue.annee), rapportMarkdown({ session: vue, report, comparaison, date: new Date(), pluriannuelle }), "markdown")
 }
