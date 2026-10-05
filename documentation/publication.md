@@ -73,7 +73,9 @@ npm run dist:linux   # sous Linux (ou WSL) : AppImage et deb
 
 Les exécutables sont écrits dans `dist/`, ignoré par Git. Les images disque macOS ne peuvent être construites que sur un Mac.
 
-Sous Windows 11 avec le **Contrôle intelligent des applications** (Smart App Control) activé, la construction de l'installateur NSIS échoue (`spawn UNKNOWN`) : electron-builder doit exécuter un programme non signé qu'il vient de produire, et Windows le bloque. L'archive zip et le dossier `dist/win-unpacked` sont produits avant cette étape et restent utilisables ; l'installateur se construit normalement sur les runners de GitHub.
+Sous Windows 11 avec le **Contrôle intelligent des applications** (Smart App Control) activé, la construction de l'installateur NSIS peut échouer (`spawn UNKNOWN`, blocage visible dans l'Observateur d'événements, journal « CodeIntegrity ») : electron-builder doit exécuter un programme non signé qu'il vient de produire, et Windows peut le bloquer. Relancer la construction suffit parfois. L'archive zip et le dossier `dist/win-unpacked` sont produits avant cette étape et restent utilisables ; l'installateur se construit normalement sur les runners de GitHub.
+
+Si le téléchargement d'Electron échoue sur `EPERM: operation not permitted, rename … win-unpacked.tmp` (antivirus qui analyse les fichiers juste extraits), on peut construire à partir de l'Electron déjà installé dans `node_modules` : `npm run dist:win -- -c.electronDist=node_modules/electron/dist` (après `node node_modules/electron/install.js` si le dossier `dist` d'Electron est absent).
 
 ## Signature du code
 
