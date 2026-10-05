@@ -173,13 +173,13 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
-### **Phase 13 bis : Frais professionnels et frais réels [En cours 🚧]**
+### **Phase 13 bis : Frais professionnels et frais réels [En cours 🚧, points 1 à 3 ✅]**
 
 - **Objectif :** que le comparateur tienne compte des vrais frais, et dise quand le réel l'emporte sur les forfaits (abattement de la micro, déduction de 10 % sur les salaires).
 
-1.  **Barème kilométrique par année :** barèmes officiels des voitures (selon la puissance fiscale, de 3 CV et moins à 7 CV et plus, et les tranches de kilométrage), majoration de 20 % des véhicules électriques, pour 2024, 2025 et 2026, dans les règles de chaque année avec leur source.
-2.  **Frais réels sur salaire :** sur une personne, ses trajets domicile-travail (kilomètres par trajet, jours travaillés, puissance, électrique ou non), et d'autres frais réels éventuels ; pour l'impôt, le moteur retient le plus favorable entre la déduction de 10 % et les frais réels, sur les salaires et les rémunérations de dirigeant, et l'indique. Distance retenue limitée à 40 km par trajet, sauf justification.
-3.  **Déplacements professionnels d'une activité :** kilomètres professionnels de l'année et véhicule, convertis au barème : charge réelle de l'activité, déductible au réel (EI, société), jamais en micro ; en société, ce sont les indemnités kilométriques remboursées au dirigeant, sans impôt ni cotisations pour lui.
+1.  **Barème kilométrique par année [✅] :** barème des voitures pour les revenus 2024, 2025 et 2026 (inchangé depuis l'arrêté du 27 mars 2023 ; celui des revenus 2026, publié au printemps 2027, est en attendant celui de 2025), selon la puissance fiscale et les tranches de kilométrage, majoré de 20 % pour un véhicule électrique, avec sa source. Non modélisés : deux-roues, péages et stationnement (déductibles en plus du barème).
+2.  **Frais réels sur salaire [✅] :** sur une personne, trajets domicile-travail (un aller-retour par jour, 40 km au plus par trajet sauf distance justifiée) et autres frais réels ; le moteur retient le plus favorable entre la déduction de 10 % et les frais réels, sur les salaires, l'allocation chômage et les rémunérations de dirigeant, et l'indique dans les résultats. Jamais au-delà de ces revenus (pas de déficit). Réglages communs à toutes les années.
+3.  **Déplacements professionnels d'une activité [✅] :** kilomètres de l'année et véhicule, au barème de l'année : dépense non déductible en micro, charge déductible en EI et en société (indemnités kilométriques remboursées au dirigeant, sans impôt ni cotisations pour lui) ; le comparateur applique la conversion à chaque statut. **Reste :** frais réels et kilométrage dans les exports CSV et Markdown, réglages par année, second aller-retour quotidien pour les repas.
 4.  **Catégories de charges (plus tard) :** loyer, énergie, bureau à domicile au prorata, repas (part au-delà du repas à domicile, dans la limite d'un plafond), matériel amorti sur plusieurs années, abonnements, tenues spécifiques, avec leurs règles.
 
 ---
