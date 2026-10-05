@@ -44,6 +44,7 @@ function PanneauDesSauvegardes({ initiales, ordreInitial, onChange }: { initiale
       onReset={() => {}}
       onLoadSlot={() => {}}
       onImport={async () => {}}
+      onLoadMontage={() => {}}
       importConfirmation={null}
       onConfirmImport={() => {}}
       onCancelImport={() => {}}
@@ -217,7 +218,7 @@ describe("confirmation d'un import ajusté", () => {
 
   function confirmer(appVersion?: string) {
     const session = appVersion === undefined ? emptySession() : { ...emptySession(), appVersion }
-    const props = { isOpen: false, onOpenChange: () => {}, allSaveSlots: [], setAllSaveSlots: () => {}, currentSession: emptySession(), setCurrentSession: () => {}, slotOrder: [], setSlotOrder: () => {}, onReset: () => {}, onLoadSlot: () => {}, onImport: async () => {}, onConfirmImport: () => {}, onCancelImport: () => {}, loadedSlotId: null, setLoadedSlotId: () => {} }
+    const props = { isOpen: false, onOpenChange: () => {}, allSaveSlots: [], setAllSaveSlots: () => {}, currentSession: emptySession(), setCurrentSession: () => {}, slotOrder: [], setSlotOrder: () => {}, onReset: () => {}, onLoadSlot: () => {}, onImport: async () => {}, onLoadMontage: () => {}, onConfirmImport: () => {}, onCancelImport: () => {}, loadedSlotId: null, setLoadedSlotId: () => {} }
     render(<SettingsSheet {...props} importConfirmation={{ session, report: rapport }} />)
     return screen.getByRole("dialog", { name: "Fichier importé avec des ajustements" })
   }

@@ -26,6 +26,8 @@ import * as SessionService from "@/lib/session-service"
 import { cn } from "@/lib/utils"
 import { POIGNEE_DE_TRI, useTriAccessible } from "../hooks/useTriAccessible"
 import { SauvegardesGroupees } from "./SauvegardesGroupees"
+import { BoutonDesMontages } from "./MontagesTypes"
+import type { MontageType } from "@/lib/montages/montages"
 
 /**
  * Props pour le composant SettingsSheet.
@@ -47,6 +49,8 @@ interface SettingsSheetProps {
   onReset: () => void
   onLoadSlot: (slot: SaveSlot) => void
   onImport: () => Promise<void>
+  /** Remplace la session par un montage type (la confirmation a déjà eu lieu si elle était nécessaire). */
+  onLoadMontage: (montage: MontageType) => void
 
   // Props pour le flux de confirmation d'import
   importConfirmation: { session: SessionState; report: SanitizationReport } | null
@@ -99,7 +103,7 @@ function VersionDuFichier({ appVersion }: { appVersion: string | undefined }) {
 }
 
 // --- MODIFICATION : Réception des nouvelles props ---
-export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId }: SettingsSheetProps) {
+export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, onLoadMontage, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId }: SettingsSheetProps) {
   const [view, setView] = useState<"main" | "load">("main")
   const [isOverwriteAlertOpen, setOverwriteAlertOpen] = useState(false)
   const [slotToOverwrite, setSlotToOverwrite] = useState<SaveSlot | null>(null)
@@ -215,6 +219,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                 <Button onClick={() => setView("load")} variant="secondary" className="w-full">
                   Charger une sauvegarde...
                 </Button>
+                <BoutonDesMontages variant="secondary" className="w-full" onCharger={onLoadMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name} />
                 <Button onClick={onReset} variant="destructive" className="w-full">
                   <RefreshCcw className="mr-2 h-4 w-4" /> Nouvelle Simulation / Réinitialiser
                 </Button>

@@ -202,6 +202,15 @@ export function useSessionManager() {
     setLoadedSlotId(null)
   }
 
+  // Un montage type remplace la session comme une sauvegarde chargée : nouvel historique, aucune sauvegarde désignée.
+  const handleLoadMontage = useCallback(
+    (session: SessionState) => {
+      setHistory({ past: [], present: session, future: [] })
+      setLoadedSlotId(null)
+    },
+    [setLoadedSlotId]
+  )
+
   // Fonction pour mettre à jour l'ordre des sauvegardes dans les préférences.
   const updateSlotOrder = useCallback((newOrder: string[] | ((prev: string[]) => string[])) => {
     setUserPreferences(currentPrefs => ({
@@ -229,6 +238,7 @@ export function useSessionManager() {
     proceedWithImport,
     cancelImport,
     handleResetSession,
+    handleLoadMontage,
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,
     undo,

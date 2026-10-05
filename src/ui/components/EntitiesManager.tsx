@@ -14,10 +14,14 @@ import { useAffichageResume } from "../hooks/useAffichage"
 import { useActionsSurLesActeurs } from "../hooks/useActionsSurLesActeurs"
 import { LigneActeur } from "./LigneActeur"
 import { cn } from "@/lib/utils"
+import type { MontageType } from "@/lib/montages/montages"
+import { BoutonDesMontages } from "./MontagesTypes"
 
 interface EntitiesManagerProps {
   session: SessionState
   setSession: (session: SessionState) => void
+  /** Une simulation vide propose de partir d'un montage type : rien n'est perdu, aucune confirmation n'est demandée. */
+  onChargerMontage?: (montage: MontageType) => void
 }
 
 /** Mise en page de la liste selon l'affichage : classique, ou « Résumé » (une ligne par acteur). */
@@ -26,7 +30,7 @@ const MISE_EN_PAGE = {
   resume: { cadre: "p-4", titre: "mb-3", boutons: "mb-3 gap-2", taille: "sm" }
 } as const
 
-function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
+function EntitiesManager({ session, setSession, onChargerMontage }: EntitiesManagerProps) {
   const { entities, relationships } = session
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
   const [isSelectModalOpen, setSelectModalOpen] = useState(false)
@@ -69,7 +73,12 @@ function EntitiesManager({ session, setSession }: EntitiesManagerProps) {
     }
   }
 
-  const listeVide = <p className="text-slate-600 dark:text-slate-400">Aucune entité. Commencez par en ajouter une !</p>
+  const listeVide = (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <p className="text-slate-600 dark:text-slate-400">Aucune entité. Commencez par en ajouter une !</p>
+      {onChargerMontage ? <BoutonDesMontages variant="outline" size="sm" className="print:hidden" onCharger={onChargerMontage} confirmationNecessaire={false} nomDeLaSession={session.name} /> : null}
+    </div>
+  )
 
   const style = resume ? MISE_EN_PAGE.resume : MISE_EN_PAGE.classique
 

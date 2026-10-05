@@ -1,7 +1,7 @@
 // src/lib/session-service.test.ts
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { createNewSlotFromSession, exportState, importState, saveAllSlots, updateSlotWithSession } from "@/lib/session-service"
+import { createNewSlotFromSession, exportState, importState, modificationsNonEnregistrees, saveAllSlots, updateSlotWithSession } from "@/lib/session-service"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import type { ExportableState, SanitizationReport, SaveSlot, SessionState } from "@/types"
 
@@ -119,5 +119,26 @@ describe("pont vers l'API Electron", () => {
 
       await expect(importState()).resolves.toBeNull()
     })
+  })
+})
+
+describe("modificationsNonEnregistrees", () => {
+  const slot: SaveSlot = { ...session, appVersion: "0.1.0", id: "slot-1", lastModified: 1 }
+
+  it("une session sans acteur n'a rien à perdre", () => {
+    expect(modificationsNonEnregistrees({ ...session, entities: [] }, [], null)).toBe(false)
+  })
+
+  it("sans sauvegarde chargée, une session avec des acteurs serait perdue", () => {
+    expect(modificationsNonEnregistrees(session, [slot], null)).toBe(true)
+    expect(modificationsNonEnregistrees(session, [], "slot-disparu")).toBe(true)
+  })
+
+  it("identique à la sauvegarde chargée, quelle que soit la version de l'application, elle ne perd rien", () => {
+    expect(modificationsNonEnregistrees({ ...session, appVersion: "0.9.0" }, [slot], "slot-1")).toBe(false)
+  })
+
+  it("modifiée depuis le chargement, elle serait perdue", () => {
+    expect(modificationsNonEnregistrees({ ...session, name: "Renommée" }, [slot], "slot-1")).toBe(true)
   })
 })

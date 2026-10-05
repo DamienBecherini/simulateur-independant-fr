@@ -63,3 +63,16 @@ export async function importState(): Promise<{ data: ExportableState; report: Sa
 export function saveAllSlots(slots: SaveSlot[], options?: { silencieux?: boolean }): void {
   void window.api.saveSlots(slots, options)
 }
+
+/** Le contenu d'une session qui compte pour savoir si elle est enregistrée : sans la version de l'application. */
+const contenuComparable = (session: SessionState) => JSON.stringify({ ...contenuDeLaSession(session), appVersion: undefined })
+
+/**
+ * La session en cours serait perdue si on la remplaçait : elle a des acteurs, et ne correspond pas à la sauvegarde
+ * chargée (ou aucune n'est chargée). Une session sans acteur n'a rien à perdre : ses flux sont forcément vides.
+ */
+export function modificationsNonEnregistrees(session: SessionState, sauvegardes: SaveSlot[], sauvegardeChargeeId: string | null): boolean {
+  if (session.entities.length === 0) return false
+  const chargee = sauvegardes.find(slot => slot.id === sauvegardeChargeeId)
+  return chargee === undefined || contenuComparable(contenuDeLaSession(chargee)) !== contenuComparable(session)
+}
