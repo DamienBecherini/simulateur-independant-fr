@@ -1,8 +1,9 @@
 // src/lib/export-commun.test.ts
 
 import { describe, expect, it } from "vitest"
-import type { Company, FinancialFlow, MicroEntreprise, Person, SimulationAnnuelle } from "@/types"
-import { fluxParActeur, natureActeur, nomDeFichier, nomDeLActeur, slugifier } from "./export-commun"
+import type { Company, FinancialFlow, MicroEntreprise, Person, SimulationAnnuelle, VersementLiberatoireInfo } from "@/types"
+import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleRetenue, libelleVoiture, natureActeur, nomDeFichier, nomDeLActeur, origineDuRfr, rfrDesAnnees, slugifier } from "./export-commun"
+import { pluriannuelleExemple, rapportAvecFrais, sessionExemple } from "./testing/exports-fixtures"
 
 const avatar = { type: "initials" as const, value: "A", color: "#000000" }
 const alice: Person = { id: "p1", type: "person", name: "Alice", fiscalParts: 1, avatar, locked: false }
@@ -85,5 +86,49 @@ describe("nomDeLActeur", () => {
   it("renvoie le nom, ou l'identifiant d'un acteur qui n'existe plus", () => {
     expect(nomDeLActeur(session({}), "p1")).toBe("Alice")
     expect(nomDeLActeur(session({}), "x")).toBe("x")
+  })
+})
+
+describe("frais au barème kilométrique", () => {
+  it("nomme la voiture d'après sa puissance fiscale et sa motorisation", () => {
+    expect(libelleVoiture({ puissanceFiscale: "3", electrique: false })).toBe("3 CV et moins")
+    expect(libelleVoiture({ puissanceFiscale: "7", electrique: true })).toBe("7 CV et plus, électrique")
+  })
+
+  it("garde les personnes qui ont des frais professionnels, et nomme la déduction retenue", () => {
+    const personnes = fraisProfessionnelsDesPersonnes(rapportAvecFrais())
+    expect(personnes.map(p => p.name)).toEqual(["Alice"])
+    expect(libelleRetenue(personnes[0].frais)).toBe("Frais réels")
+    expect(libelleRetenue({ ...personnes[0].frais, retenue: "forfait" })).toBe("Déduction de 10 %")
+  })
+})
+
+describe("versement libératoire", () => {
+  const info: VersementLiberatoireInfo = { plafondRfr: 28797, partsFiscales: 1, rfrN2: 25000, anneeRfr: 2024, origineRfr: "saisi", eligible: true, applique: true }
+
+  it("dit d'où vient le revenu fiscal de référence N-2", () => {
+    expect(origineDuRfr(info)).toBe("saisi dans la fiche")
+    expect(origineDuRfr({ ...info, origineRfr: "calcule" })).toBe("calculé par la simulation")
+    expect(origineDuRfr({ ...info, origineRfr: null })).toBe("inconnu")
+  })
+
+  it("donne l'issue de la comparaison au seuil", () => {
+    expect(issueDuVersementLiberatoire(info)).toBe("sous le seuil, versement libératoire appliqué")
+    expect(issueDuVersementLiberatoire({ ...info, applique: false })).toBe("sous le seuil, versement libératoire non appliqué")
+    expect(issueDuVersementLiberatoire({ ...info, eligible: false, applique: false })).toBe("seuil dépassé, versement libératoire inaccessible")
+    expect(issueDuVersementLiberatoire({ ...info, eligible: null, applique: false })).toBe("revenu fiscal de référence inconnu")
+  })
+})
+
+describe("toutes les années", () => {
+  it("donne le revenu fiscal de référence de chaque foyer, année par année, sans l'année non calculée", () => {
+    expect(rfrDesAnnees(sessionExemple(), pluriannuelleExemple())).toEqual([
+      { annee: 2026, foyer: "Alice, Bob", rfr: 19500 },
+      { annee: 2027, foyer: "Alice, Bob", rfr: 21000 }
+    ])
+  })
+
+  it("liste les dispositifs de chaque année, activité par activité", () => {
+    expect(dispositifsDesAnnees(pluriannuelleExemple())).toEqual([{ annee: 2027, activite: "Ma SASU", note: "Plafonds au prorata." }])
   })
 })

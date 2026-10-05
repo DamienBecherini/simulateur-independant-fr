@@ -1,7 +1,7 @@
 // src/lib/testing/exports-fixtures.ts
 // Petite simulation et ses résultats, aux chiffres ronds, pour les tests des exports CSV et Markdown.
 
-import type { ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationReport } from "@/types"
+import type { ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { defaultFraisFonctionnement } from "@/lib/comparateur-options"
 
 const avatar = { type: "initials" as const, value: "A", color: "#000000" }
@@ -72,7 +72,7 @@ export function rapportExemple(): SimulationReport {
         totalParts: 2.5,
         revenusEncaisses: 26499.5,
         revenuImposableGlobal: 18000,
-        revenuFiscalDeReference: 18000,
+        revenuFiscalDeReference: 19500,
         impotSurLeRevenu: 1500,
         prelevementsSociaux: 0,
         optionDividendes: "pfu",
@@ -85,6 +85,72 @@ export function rapportExemple(): SimulationReport {
       }
     ],
     totalNetApresImpots: 24999.5
+  }
+}
+
+/**
+ * La même simulation avec des frais au barème kilométrique : Alice a saisi deux trajets domicile-travail et 500 € d'autres
+ * frais réels, la SASU 5 000 km de déplacements professionnels ; s'y ajoute « Atelier », micro-entreprise de Bob au
+ * versement libératoire.
+ */
+export function sessionAvecFrais(): SimulationAnnuelle {
+  const session = sessionExemple()
+  const trajets = [
+    { libelle: "Bureau", kmParTrajet: 20, joursTravailles: 120, puissanceFiscale: "5" as const, electrique: false, distanceJustifiee: false },
+    { libelle: "", kmParTrajet: 50, joursTravailles: 25, puissanceFiscale: "3" as const, electrique: true, distanceJustifiee: true }
+  ]
+  session.entities = [
+    ...session.entities.map(e => {
+      if (e.type === "person" && e.id === "p1") return { ...e, fraisReels: { trajets, autresFrais: 500 } }
+      return e.type === "company" ? { ...e, deplacementsProfessionnels: { kmParAn: 5000, puissanceFiscale: "5" as const, electrique: false } } : e
+    }),
+    { id: "m1", type: "micro-entreprise", name: "Atelier", beneficieACRE: false, opteVFL: true, rfrN2: 25000, deplacementsProfessionnels: { kmParAn: 1000, puissanceFiscale: "4", electrique: false }, avatar, locked: false }
+  ]
+  session.relationships = [...session.relationships, { id: "r3", fromId: "p2", toId: "m1", type: "Titulaire" }]
+  return session
+}
+
+/** Les résultats de cette simulation : frais réels retenus pour Alice, déplacements et versement libératoire. */
+export function rapportAvecFrais(): SimulationReport {
+  const rapport = rapportExemple()
+  const [alice, bob] = rapport.persons
+  const voitures = [
+    { puissanceFiscale: "5" as const, electrique: false, distance: 4800, montant: 2880 },
+    { puissanceFiscale: "3" as const, electrique: true, distance: 2500, montant: 1500 }
+  ]
+  rapport.persons = [{ ...alice, fraisProfessionnels: { revenusSalariaux: 20000, deductionForfaitaire: 2000, fraisReels: 4880, fraisDeTrajet: 4380, distanceRetenue: 7300, nombreDeTrajets: 2, voitures, autresFrais: 500, retenue: "reels", deduction: 4880 } }, bob]
+  const atelier = {
+    ...rapport.activities[0],
+    entityId: "m1",
+    name: "Atelier",
+    type: "micro-entreprise" as const,
+    statut: "Micro-entreprise",
+    impotSocietes: 0,
+    resultatConserve: 0,
+    beneficiaireIds: ["p2"],
+    versementLiberatoire: { plafondRfr: 28797, partsFiscales: 1, rfrN2: 25000, anneeRfr: 2024, origineRfr: "saisi" as const, eligible: true, applique: true },
+    fraisDeDeplacement: { kilometres: 1000, montant: 606, deductible: false },
+    warnings: []
+  }
+  rapport.activities = [{ ...rapport.activities[0], fraisDeDeplacement: { kilometres: 5000, montant: 3180, deductible: true } }, atelier]
+  return rapport
+}
+
+/** Trois années : 2026 (le rapport d'exemple), 2027 (un foyer au revenu plus élevé, un dispositif) et 2028 en erreur. */
+export function pluriannuelleExemple(): SimulationPluriannuelle {
+  const annee2026 = rapportExemple()
+  const annee2027 = rapportExemple()
+  annee2027.annee = 2027
+  annee2027.anneeDesRegles = 2027
+  annee2027.totalNetApresImpots = 26000
+  annee2027.foyers = annee2027.foyers.map(f => ({ ...f, revenuFiscalDeReference: 21000 }))
+  annee2027.activities = annee2027.activities.map(a => ({ ...a, dispositifs: ["Plafonds au prorata."] }))
+  return {
+    annees: [
+      { annee: 2026, report: annee2026, erreur: null },
+      { annee: 2027, report: annee2027, erreur: null },
+      { annee: 2028, report: null, erreur: "Grille invalide." }
+    ]
   }
 }
 

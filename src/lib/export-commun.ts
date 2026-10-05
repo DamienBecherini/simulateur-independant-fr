@@ -1,7 +1,7 @@
 // src/lib/export-commun.ts
 // Briques partagées par les exports CSV et Markdown : noms de fichiers, nature des acteurs, flux regroupés par acteur.
 
-import type { Entity, FinancialFlow, FoyerFiscalResult, SimulationAnnuelle } from "@/types"
+import type { Entity, FinancialFlow, FoyerFiscalResult, FraisProfessionnelsResult, PuissanceFiscale, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { flowTypeLabels, libelleDuType, isOutgoingFlowType, type FlowType } from "./flow-constants"
 import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
 
@@ -82,4 +82,56 @@ export function nomDeLActeur(session: SimulationAnnuelle, id: string): string {
 /** Nom d'un foyer fiscal : ses membres, déclarants puis enfants. */
 export function nomDuFoyer(session: SimulationAnnuelle, foyer: FoyerFiscalResult): string {
   return foyer.personIds.map(id => nomDeLActeur(session, id)).join(", ")
+}
+
+// --- Frais au barème kilométrique ---
+
+const LIBELLES_PUISSANCE: Record<PuissanceFiscale, string> = { "3": "3 CV et moins", "4": "4 CV", "5": "5 CV", "6": "6 CV", "7": "7 CV et plus" }
+
+/** Puissance fiscale en clair : « 3 CV et moins », « 5 CV »… */
+export const libellePuissance = (puissanceFiscale: PuissanceFiscale) => LIBELLES_PUISSANCE[puissanceFiscale]
+
+/** Voiture du barème kilométrique en clair : « 5 CV », « 7 CV et plus, électrique ». */
+export function libelleVoiture({ puissanceFiscale, electrique }: { puissanceFiscale: PuissanceFiscale; electrique: boolean }): string {
+  return `${libellePuissance(puissanceFiscale)}${electrique ? ", électrique" : ""}`
+}
+
+/** Les frais réels d'une personne dans les résultats, avec son nom. */
+export interface FraisDUnePersonne {
+  name: string
+  frais: FraisProfessionnelsResult
+}
+
+/** Personnes qui ont saisi des frais réels et perçoivent des revenus imposés comme des salaires, avec leur déduction. */
+export function fraisProfessionnelsDesPersonnes(report: SimulationReport): FraisDUnePersonne[] {
+  return report.persons.flatMap(p => (p.fraisProfessionnels ? [{ name: p.name, frais: p.fraisProfessionnels }] : []))
+}
+
+export const libelleRetenue = (frais: FraisProfessionnelsResult) => (frais.retenue === "reels" ? "Frais réels" : "Déduction de 10 %")
+
+// --- Versement libératoire ---
+
+/** D'où vient le revenu fiscal de référence N-2 comparé au seuil du versement libératoire. */
+export function origineDuRfr(info: VersementLiberatoireInfo): string {
+  if (info.origineRfr === "calcule") return "calculé par la simulation"
+  return info.origineRfr === "saisi" ? "saisi dans la fiche" : "inconnu"
+}
+
+/** Ce que donne la comparaison au seuil : accès ou non au versement libératoire, et s'il est appliqué. */
+export function issueDuVersementLiberatoire(info: VersementLiberatoireInfo): string {
+  if (info.eligible === null) return "revenu fiscal de référence inconnu"
+  if (!info.eligible) return "seuil dépassé, versement libératoire inaccessible"
+  return info.applique ? "sous le seuil, versement libératoire appliqué" : "sous le seuil, versement libératoire non appliqué"
+}
+
+// --- Toutes les années ---
+
+/** Revenu fiscal de référence de chaque foyer, année par année : une ligne par année et par foyer calculés. */
+export function rfrDesAnnees(session: SimulationAnnuelle, simulation: SimulationPluriannuelle): { annee: number; foyer: string; rfr: number }[] {
+  return simulation.annees.flatMap(({ annee, report }) => (report?.foyers ?? []).map(f => ({ annee, foyer: nomDuFoyer(session, f), rfr: f.revenuFiscalDeReference })))
+}
+
+/** Dispositifs limités dans le temps, année par année et activité par activité. */
+export function dispositifsDesAnnees(simulation: SimulationPluriannuelle): { annee: number; activite: string; note: string }[] {
+  return simulation.annees.flatMap(({ annee, report }) => (report?.activities ?? []).flatMap(a => (a.dispositifs ?? []).map(note => ({ annee, activite: a.name, note }))))
 }

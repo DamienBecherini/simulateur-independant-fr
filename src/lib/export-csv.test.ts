@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest"
 import type { SimulationAnnuelle } from "@/types"
 import { BOM } from "./csv"
 import { nomDuFoyer } from "./export-commun"
-import { csvComparaison, csvCourbeRemuneration, csvGrilleMensuelle, csvResultats, reglagesDuComparateur } from "./export-csv"
-import { comparaisonExemple, optimisationExemple, optionsExemple, rapportExemple, sessionExemple } from "./testing/exports-fixtures"
+import { csvComparaison, csvCourbeRemuneration, csvGrilleMensuelle, csvResultats, csvSyntheseDesAnnees, reglagesDuComparateur } from "./export-csv"
+import { comparaisonExemple, optimisationExemple, optionsExemple, pluriannuelleExemple, rapportAvecFrais, rapportExemple, sessionAvecFrais, sessionExemple } from "./testing/exports-fixtures"
 
 /** Lignes d'un CSV, sans le BOM ni la dernière fin de ligne. */
 const lignes = (csv: string) => csv.slice(1).replace(/\r\n$/, "").split("\r\n")
@@ -62,8 +62,8 @@ describe("csvResultats", () => {
       "Alice;0,00;26499,50;0,00;0,00;0,00;20000,00;6499,50;0,00;0,00;0,00",
       "Bob;0,00;0,00;0,00;0,00;0,00;0,00;0,00;0,00;0,00;0,00",
       "",
-      "Foyer fiscal;Parts;Revenus encaissés;Revenu imposable;Impôt sur le revenu;Prélèvements sociaux;Imposition des dividendes;Net après impôts;Revenus avant prélèvements;Total des prélèvements;Résultat conservé;Dépenses",
-      "Alice, Bob;2,5;26499,50;18000,00;1500,00;0,00;Prélèvement forfaitaire unique;24999,50;35899,50;10500,00;400,00;0,00"
+      "Foyer fiscal;Parts;Revenus encaissés;Revenu imposable;Revenu fiscal de référence;Impôt sur le revenu;Prélèvements sociaux;Imposition des dividendes;Net après impôts;Revenus avant prélèvements;Total des prélèvements;Résultat conservé;Dépenses",
+      "Alice, Bob;2,5;26499,50;18000,00;19500,00;1500,00;0,00;Prélèvement forfaitaire unique;24999,50;35899,50;10500,00;400,00;0,00"
     ])
   })
 
@@ -79,6 +79,65 @@ describe("csvResultats", () => {
     const foyers = lignes(csvResultats(sessionExemple(), rapport)).slice(-2)
     expect(foyers[0]).toContain(";Barème progressif;")
     expect(foyers[1]).toContain(";0,00;;24999,50;")
+  })
+})
+
+describe("csvResultats avec des frais au barème kilométrique et le versement libératoire", () => {
+  it("ajoute le versement libératoire, les déplacements professionnels et les frais réels, voiture par voiture", () => {
+    const fin = lignes(csvResultats(sessionAvecFrais(), rapportAvecFrais())).slice(-14)
+    expect(fin).toEqual([
+      "",
+      "Versement libératoire;Année du revenu fiscal de référence;Revenu fiscal de référence retenu;Origine;Parts;Seuil;Issue",
+      "Atelier;2024;25000,00;saisi dans la fiche;1;28797,00;sous le seuil, versement libératoire appliqué",
+      "",
+      "Déplacements professionnels;Statut;Kilomètres;Montant au barème;Déductible",
+      "Ma SASU;SASU;5000;3180,00;oui",
+      "Atelier;Micro-entreprise;1000;606,00;non",
+      "",
+      "Frais professionnels;Revenus imposés comme des salaires;Déduction de 10 %;Frais réels;Retenue;Montant déduit;Trajets domicile-travail;Distance retenue (km);Frais de trajet;Autres frais",
+      "Alice;20000,00;2000,00;4880,00;Frais réels;4880,00;2;7300;4380,00;500,00",
+      "",
+      "Voiture des trajets;Puissance;Distance retenue (km);Montant au barème",
+      "Alice;5 CV;4800;2880,00",
+      "Alice;3 CV et moins, électrique;2500;1500,00"
+    ])
+  })
+
+  it("écrit un revenu fiscal de référence inconnu en case vide, et la déduction de 10 % quand elle l'emporte", () => {
+    const rapport = rapportAvecFrais()
+    rapport.activities = rapport.activities.map(a => (a.versementLiberatoire ? { ...a, versementLiberatoire: { ...a.versementLiberatoire, rfrN2: null, origineRfr: null, eligible: null, applique: false } } : a))
+    rapport.persons = rapport.persons.map(p => (p.fraisProfessionnels ? { ...p, fraisProfessionnels: { ...p.fraisProfessionnels, retenue: "forfait", deduction: 2000 } } : p))
+    const csv = lignes(csvResultats(sessionAvecFrais(), rapport))
+    expect(csv).toContain("Atelier;2024;;inconnu;1;28797,00;revenu fiscal de référence inconnu")
+    expect(csv).toContain("Alice;20000,00;2000,00;4880,00;Déduction de 10 %;2000,00;2;7300;4380,00;500,00")
+  })
+
+  it("omet ces tableaux quand la simulation n'a ni frais réels, ni déplacements, ni versement libératoire", () => {
+    const csv = csvResultats(sessionExemple(), rapportExemple())
+    for (const entete of ["Versement libératoire;", "Déplacements professionnels;", "Frais professionnels;", "Voiture des trajets;"]) expect(csv).not.toContain(entete)
+  })
+})
+
+describe("csvSyntheseDesAnnees", () => {
+  it("écrit une ligne par année, l'erreur d'une année non calculée, puis le revenu fiscal de référence et les dispositifs", () => {
+    expect(lignes(csvSyntheseDesAnnees(sessionExemple(), pluriannuelleExemple()))).toEqual([
+      "Année;Année des règles fiscales;Net après impôts;Total des prélèvements;Revenus avant prélèvements;Cotisations sociales des activités;Impôt sur les sociétés;Impôt sur le revenu;Résultat conservé dans les sociétés;Erreur",
+      "2026;2026;24999,50;10500,00;35899,50;8000,00;1000,00;1500,00;400,00;",
+      "2027;2027;26000,00;10500,00;35899,50;8000,00;1000,00;1500,00;400,00;",
+      "2028;;;;;;;;;Grille invalide.",
+      "",
+      "Année;Foyer fiscal;Revenu fiscal de référence",
+      "2026;Alice, Bob;19500,00",
+      "2027;Alice, Bob;21000,00",
+      "",
+      "Année;Activité;Dispositif",
+      "2027;Ma SASU;Plafonds au prorata."
+    ])
+  })
+
+  it("dit « Non calculée » sans message d'erreur, et omet les tableaux vides", () => {
+    const csv = lignes(csvSyntheseDesAnnees(sessionExemple(), { annees: [{ annee: 2026, report: null, erreur: null }] }))
+    expect(csv).toEqual([expect.stringMatching(/^Année;/), "2026;;;;;;;;;Non calculée"])
   })
 })
 
@@ -154,7 +213,32 @@ describe("noms saisis hostiles : séparateurs, guillemets, retours à la ligne e
     expect(ligneQuiCommencePar(`'${NOMS.c1}`)?.[8]).toBe(NOMS.p1)
     expect(ligneQuiCommencePar(NOMS.p1)).toHaveLength(11)
     expect(ligneQuiCommencePar(`'${NOMS.p2}`)).toHaveLength(11)
-    expect(ligneQuiCommencePar(`${NOMS.p1}, ${NOMS.p2}`)).toHaveLength(12)
+    expect(ligneQuiCommencePar(`${NOMS.p1}, ${NOMS.p2}`)).toHaveLength(13)
+  })
+
+  it("protège les noms des frais réels, des déplacements, du versement libératoire et de la synthèse des années", () => {
+    const session = sessionAvecFrais()
+    session.entities = session.entities.map(e => ({ ...e, name: NOMS[e.id as keyof typeof NOMS] ?? NOMS.c1 }))
+    const rapport = rapportAvecFrais()
+    rapport.activities = rapport.activities.map(a => ({ ...a, name: NOMS.c1 }))
+    rapport.persons = rapport.persons.map(p => ({ ...p, name: NOMS[p.entityId as keyof typeof NOMS] }))
+    const cellules = relire(csvResultats(session, rapport))
+    const tableauSous = (entete: string) => {
+      const debut = cellules.findIndex(ligne => ligne[0] === entete)
+      const fin = cellules.findIndex((ligne, i) => i > debut && ligne.length === 1 && ligne[0] === "")
+      return cellules.slice(debut, fin === -1 ? undefined : fin)
+    }
+
+    for (const [entete, colonnes] of [["Versement libératoire", 7], ["Déplacements professionnels", 5], ["Frais professionnels", 10], ["Voiture des trajets", 4]] as const) {
+      const tableau = tableauSous(entete)
+      expect(tableau.length, entete).toBeGreaterThan(1)
+      expect(tableau.every(ligne => ligne.length === colonnes), entete).toBe(true)
+    }
+    expect(tableauSous("Frais professionnels")[1][0]).toBe(NOMS.p1)
+    expect(tableauSous("Déplacements professionnels")[1][0]).toBe(`'${NOMS.c1}`)
+
+    const synthese = relire(csvSyntheseDesAnnees(session, pluriannuelleExemple()))
+    expect(synthese.find(ligne => ligne[0] === "2026" && ligne.length === 3)).toEqual(["2026", `${NOMS.p1}, ${NOMS.p2}`, "19500,00"])
   })
 
   it("protège le nom de l'activité comparée", () => {
