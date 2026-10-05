@@ -50,7 +50,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh issue list --label retour --state all --json body,labels --limit 1000 > "$RUNNER_TEMP/retours-bruts.json" || echo "[]" > "$RUNNER_TEMP/retours-bruts.json"
+          gh issue list --label retour --state all --json author,createdAt,body,labels --limit 1000 > "$RUNNER_TEMP/retours-bruts.json" || echo "[]" > "$RUNNER_TEMP/retours-bruts.json"
           node scripts/retours/agreger.mjs "$RUNNER_TEMP/retours-bruts.json" public/retours.json
           cat public/retours.json
 

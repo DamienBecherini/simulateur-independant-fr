@@ -11,7 +11,7 @@ Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un 
 
 **[▶ Essayer la démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/)**, sans installation : la même interface, le moteur de calcul tourne dans le navigateur et les simulations restent sur votre poste.
 
-**Donner son avis :** le bouton « Donner mon avis » de l'application ouvre un [ticket GitHub prérempli](https://github.com/DamienBecherini/simulateur-independant-fr/issues/new?template=retour.yml) : note de 1 à 5, affichage préféré, avis, bug ou idée, tout facultatif. Le badge « avis » ci-dessus affiche la note moyenne et le nombre de notes, recalculés à chaque retour.
+**Donner son avis :** le bouton « Donner mon avis » de l'application prépare un retour (note de 1 à 5, affichage préféré, avis, bug ou idée, tout facultatif) à envoyer en [ticket GitHub prérempli](https://github.com/DamienBecherini/simulateur-independant-fr/issues/new?template=retour.yml), public et avec un compte GitHub, ou par e-mail. Le badge « avis » ci-dessus affiche la note moyenne et le nombre de notes, recalculés à chaque retour : une seule note par compte GitHub (celle de son ticket le plus récent), sans les tickets marqués `invalide` ou `spam` ; les retours reçus par e-mail n'y entrent pas.
 
 *Projet personnel, né d'un besoin d'entrepreneur. Je le partage pour montrer mes standards de code et ma vision produit, et parce qu'il peut aider d'autres entrepreneurs à y voir plus clair. Ce n'est pas un logiciel de conseil fiscal : les résultats sont indicatifs et n'ont pas été validés par un expert-comptable.*
 
@@ -128,7 +128,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - `src/lib/` : fonctions utilitaires et logique pure partagée.
 - `src/web/` : démo web, qui remplace le process Electron : même `window.api`, moteur exécuté dans la page, stockage dans le navigateur.
 - `src/types.ts` : schémas Zod et types centraux.
-- `scripts/retours/` : scripts Node des retours des utilisateurs, lancés par les workflows GitHub. `etiqueter.mjs` pose les étiquettes d'un ticket du formulaire `.github/ISSUE_TEMPLATE/retour.yml` (`note-1` à `note-5`, `affichage-resume`, `affichage-classique`, `affichage-vues`, `avis`, `bug`, `idee`) ; `agreger.mjs` écrit à chaque publication de la démo le fichier `retours.json` (`nombreDeNotes`, `moyenne` au dixième, `preferencesAffichage`, `misAJour`, et `resume`, le texte du badge : « 4,2/5 (12 notes) » ou « pas encore de note »). Les retours sans note n'entrent pas dans la moyenne.
+- `scripts/retours/` : scripts Node des retours des utilisateurs, lancés par les workflows GitHub. `etiqueter.mjs` pose les étiquettes d'un ticket du formulaire `.github/ISSUE_TEMPLATE/retour.yml` (`note-1` à `note-5`, `affichage-resume`, `affichage-classique`, `affichage-vues`, `avis`, `bug`, `idee`) ; `agreger.mjs` écrit à chaque publication de la démo le fichier `retours.json` (`nombreDeNotes`, `moyenne` au dixième, `preferencesAffichage`, `misAJour`, et `resume`, le texte du badge : « 4,2/5 (12 notes) » ou « pas encore de note »). Les retours sans note n'entrent pas dans la moyenne ; chaque compte GitHub n'y compte qu'une fois, par son ticket le plus récent qui donne une note (de même pour l'affichage préféré), et les tickets étiquetés `invalide` ou `spam` sont écartés.
 
 ## ⚠️ Limites connues
 

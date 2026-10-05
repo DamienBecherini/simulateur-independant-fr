@@ -3,7 +3,7 @@
 // Écrit l'agrégat des retours (note moyenne, préférences d'affichage) servi par la démo web
 // et lu par le badge du README.
 // Usage : node scripts/retours/agreger.mjs [entrée.json | -] [sortie.json]
-// L'entrée est la sortie de `gh issue list --label retour --state all --json body,labels`,
+// L'entrée est la sortie de `gh issue list --label retour --state all --json author,createdAt,body,labels`,
 // lue sur l'entrée standard par défaut ; la sortie vaut public/retours.json par défaut.
 // Une entrée absente ou invalide donne un agrégat vide : la publication de la démo n'échoue pas pour autant.
 

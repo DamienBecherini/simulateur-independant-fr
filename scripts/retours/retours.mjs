@@ -198,8 +198,7 @@ function reponseDesEtiquettes(champ, noms) {
  */
 export function reponsesDuTicket(ticket) {
   const corps = typeof ticket?.body === "string" ? ticket.body : ""
-  const etiquettes = Array.isArray(ticket?.labels) ? ticket.labels : []
-  const noms = etiquettes.map((etiquette) => etiquette?.name).filter((nom) => typeof nom === "string")
+  const noms = nomsDesEtiquettes(ticket)
   const presents = champsPresents(corps)
   const retour = lireRetour(corps)
   const reponse = (champ) => (presents.has(champ) ? retour[champ] : reponseDesEtiquettes(champ, noms))
@@ -218,20 +217,63 @@ export function resumerNote(moyenne, nombreDeNotes) {
   return `${moyenne.toFixed(1).replace(".", ",")}/5 (${notes})`
 }
 
+/** Étiquettes posées à la main sur un ticket à ne pas compter. */
+export const ETIQUETTES_ECARTEES = ["invalide", "spam"]
+
+// Noms des étiquettes d'un ticket.
+function nomsDesEtiquettes(ticket) {
+  const etiquettes = Array.isArray(ticket?.labels) ? ticket.labels : []
+  return etiquettes.map((etiquette) => etiquette?.name).filter((nom) => typeof nom === "string")
+}
+
+// Auteur d'un ticket ; un ticket sans auteur connu (compte supprimé) compte pour lui seul.
+function auteurDe(ticket, index) {
+  const login = ticket?.author?.login
+  return typeof login === "string" && login !== "" ? `@${login}` : `#${index}`
+}
+
+// Date de création d'un ticket, en millisecondes ; 0 si elle manque.
+function dateDe(ticket) {
+  const date = Date.parse(typeof ticket?.createdAt === "string" ? ticket.createdAt : "")
+  return Number.isNaN(date) ? 0 : date
+}
+
+/**
+ * Une voix par compte GitHub : pour chaque auteur, la note de son ticket le plus récent qui en donne une, et de
+ * même pour l'affichage préféré. Les tickets étiquetés « invalide » ou « spam » sont écartés.
+ * @param {unknown} tickets tableau de `{ body, labels: [{ name }], author: { login }, createdAt }`
+ * @returns {{ note: number | null, affichage: string | null }[]} une réponse par auteur
+ */
+export function reponsesParAuteur(tickets) {
+  const liste = Array.isArray(tickets) ? tickets : []
+  /** @type {Map<string, { note: number | null, affichage: string | null, dateNote: number, dateAffichage: number }>} */
+  const parAuteur = new Map()
+  liste.forEach((ticket, index) => {
+    if (nomsDesEtiquettes(ticket).some((nom) => ETIQUETTES_ECARTEES.includes(nom))) return
+    const auteur = auteurDe(ticket, index)
+    const date = dateDe(ticket)
+    const { note, affichage } = reponsesDuTicket(ticket)
+    const actuelle = parAuteur.get(auteur) ?? { note: null, affichage: null, dateNote: -1, dateAffichage: -1 }
+    if (note !== null && date >= actuelle.dateNote) Object.assign(actuelle, { note, dateNote: date })
+    if (affichage !== null && date >= actuelle.dateAffichage) Object.assign(actuelle, { affichage, dateAffichage: date })
+    parAuteur.set(auteur, actuelle)
+  })
+  return [...parAuteur.values()].map(({ note, affichage }) => ({ note, affichage }))
+}
+
 /**
  * Agrégat des retours publié dans retours.json : nombre de notes, moyenne arrondie au dixième
  * (null sans note), préférences d'affichage, résumé pour le badge et date de mise à jour.
- * Les tickets sans note n'entrent pas dans la moyenne.
- * @param {unknown} tickets tableau de `{ body, labels: [{ name }] }`
+ * Une seule voix par compte GitHub (voir reponsesParAuteur) ; les tickets sans note n'entrent pas dans la moyenne.
+ * Les retours reçus par e-mail ne passent pas par les tickets et n'y entrent donc pas.
+ * @param {unknown} tickets tableau de `{ body, labels: [{ name }], author: { login }, createdAt }`
  * @param {Date} [maintenant]
  */
 export function agregerRetours(tickets, maintenant = new Date()) {
-  const liste = Array.isArray(tickets) ? tickets : []
   const preferencesAffichage = { resume: 0, classique: 0, vues: 0 }
   let nombreDeNotes = 0
   let somme = 0
-  for (const ticket of liste) {
-    const { note, affichage } = reponsesDuTicket(ticket)
+  for (const { note, affichage } of reponsesParAuteur(tickets)) {
     if (note !== null) {
       nombreDeNotes += 1
       somme += note

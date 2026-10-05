@@ -7,6 +7,7 @@ import {
   calculerEtiquettes,
   champsPresents,
   DEFINITIONS_ETIQUETTES,
+  ETIQUETTES_ECARTEES,
   ETIQUETTE_RETOUR,
   etiquetteDe,
   FAMILLES,
@@ -19,6 +20,7 @@ import {
   OPTIONS_NOTE,
   OPTIONS_TYPE,
   reponsesDuTicket,
+  reponsesParAuteur,
   resumerNote,
   TITRES
 } from "./retours.mjs"
@@ -318,5 +320,52 @@ describe("agregerRetours", () => {
 
   it("date l'agrégat de l'instant présent par défaut", () => {
     expect(Date.parse(agregerRetours([]).misAJour)).not.toBeNaN()
+  })
+})
+
+describe("une voix par compte GitHub", () => {
+  const ticket = (login, createdAt, reponses, labels = []) => ({ body: corpsDuFormulaire(reponses), labels: labels.map((name) => ({ name })), author: login === null ? null : { login }, createdAt })
+
+  it("retient, pour chaque auteur, la note et l'affichage de son ticket le plus récent qui en donne", () => {
+    const tickets = [
+      ticket("alice", "2026-10-01T10:00:00Z", { note: "★★☆☆☆ 2/5", affichage: "Classique" }),
+      ticket("alice", "2026-10-03T10:00:00Z", { note: "★★★★★ 5/5" }),
+      // Plus récent, mais sans note ni affichage : il ne retire rien aux réponses précédentes.
+      ticket("alice", "2026-10-04T10:00:00Z", { note: "Sans note", affichage: "Sans préférence", type: "Bug" }),
+      ticket("bob", "2026-10-02T10:00:00Z", { note: "★★★☆☆ 3/5", affichage: "Trois vues" }),
+      ticket("bob", "2026-09-30T10:00:00Z", { note: "★☆☆☆☆ 1/5", affichage: "Résumé" })
+    ]
+    expect(reponsesParAuteur(tickets)).toEqual([
+      { note: 5, affichage: "classique" },
+      { note: 3, affichage: "vues" }
+    ])
+    expect(agregerRetours(tickets, MAINTENANT)).toMatchObject({ nombreDeNotes: 2, moyenne: 4, preferencesAffichage: { resume: 0, classique: 1, vues: 1 }, resume: "4,0/5 (2 notes)" })
+  })
+
+  it("ne dépend pas de l'ordre des tickets", () => {
+    const ancien = ticket("alice", "2026-10-01T10:00:00Z", { note: "★☆☆☆☆ 1/5" })
+    const recent = ticket("alice", "2026-10-02T10:00:00Z", { note: "★★★★☆ 4/5" })
+    expect(reponsesParAuteur([ancien, recent])).toEqual(reponsesParAuteur([recent, ancien]))
+    expect(reponsesParAuteur([recent, ancien])).toEqual([{ note: 4, affichage: null }])
+  })
+
+  it("écarte les tickets étiquetés « invalide » ou « spam »", () => {
+    expect(ETIQUETTES_ECARTEES).toEqual(["invalide", "spam"])
+    const tickets = [
+      ticket("alice", "2026-10-01T10:00:00Z", { note: "★★★★☆ 4/5" }),
+      ticket("alice", "2026-10-02T10:00:00Z", { note: "★☆☆☆☆ 1/5" }, ["retour", "spam"]),
+      ticket("troll", "2026-10-02T10:00:00Z", { note: "★☆☆☆☆ 1/5", affichage: "Classique" }, ["invalide"])
+    ]
+    expect(agregerRetours(tickets, MAINTENANT)).toMatchObject({ nombreDeNotes: 1, moyenne: 4, preferencesAffichage: { resume: 0, classique: 0, vues: 0 } })
+  })
+
+  it("compte à part chaque ticket sans auteur connu, et accepte une date absente ou invalide", () => {
+    const tickets = [
+      ticket(null, "2026-10-01T10:00:00Z", { note: "★★★★★ 5/5" }),
+      ticket("", undefined, { note: "★★★☆☆ 3/5" }),
+      { body: corpsDuFormulaire({ note: "★★★★☆ 4/5" }), labels: "pas un tableau", author: { login: "carole" }, createdAt: "pas une date" }
+    ]
+    expect(reponsesParAuteur(tickets).map((reponse) => reponse.note)).toEqual([5, 3, 4])
+    expect(reponsesParAuteur("pas un tableau")).toEqual([])
   })
 })
