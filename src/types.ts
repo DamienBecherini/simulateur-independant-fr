@@ -230,6 +230,11 @@ export interface ActivityResult {
   cotisationsPresident?: DetailCotisationsSalarie
   /** Salariés de l'activité (relation « Salarié ») : leurs salaires bruts sont dans les charges, les cotisations patronales dans les cotisations sociales. */
   salaries?: SalarieDeLActivite[]
+  /**
+   * Déplacements professionnels au barème kilométrique, compris dans les charges : déductibles en société et en
+   * entreprise individuelle, simple dépense en micro-entreprise.
+   */
+  fraisDeDeplacement?: { kilometres: number; montant: number; deductible: boolean }
   warnings: string[]
 }
 

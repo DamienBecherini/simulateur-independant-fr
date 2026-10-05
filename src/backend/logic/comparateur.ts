@@ -90,7 +90,10 @@ function personnesDeLActivite(session: DonneesDeLAnnee, activiteId: string): { p
 }
 
 function entiteCible(source: Activite, statut: StatutCompare): Activite {
-  const commun = { id: source.id, name: source.name, avatar: source.avatar, locked: source.locked }
+  // Les déplacements professionnels suivent l'activité dans chaque statut : le moteur les convertit au barème de
+  // l'année, en charge déductible (société, EI) ou en simple dépense (micro-entreprise).
+  const deplacements = source.deplacementsProfessionnels ? { deplacementsProfessionnels: source.deplacementsProfessionnels } : {}
+  const commun = { id: source.id, name: source.name, avatar: source.avatar, locked: source.locked, ...deplacements }
   if (statut === "micro" || statut === "micro-vfl") {
     const micro = source.type === "micro-entreprise" ? source : undefined
     return { ...commun, type: "micro-entreprise", beneficieACRE: micro?.beneficieACRE ?? false, opteVFL: statut === "micro-vfl", ...(micro?.rfrN2 !== undefined ? { rfrN2: micro.rfrN2 } : {}) }

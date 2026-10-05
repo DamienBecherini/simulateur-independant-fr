@@ -1,11 +1,12 @@
 // src/backend/logic/references/frais-reels.reference.test.ts
 
-import { expect, it } from "vitest"
-import type { FraisReels, Person } from "../../../types.js"
+import { describe, expect, it } from "vitest"
+import type { ComparaisonOptions, FraisReels, Person, StatutCompare } from "../../../types.js"
+import { comparerStatuts } from "../comparateur.js"
 import { montantBaremeKilometrique } from "../frais-kilometriques.js"
 import { reglesEnVigueur } from "../regles.js"
 import { casDeReference, foyerDe, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
-import { personne } from "../testing/session-de-test.js"
+import { micro, personne, relation, session } from "../testing/session-de-test.js"
 
 /*
  * Cas de référence 2026 : frais réels d'un salarié, au barème kilométrique.
@@ -44,5 +45,31 @@ casDeReference("Cas de référence 2026 : frais réels d'un salarié", () => {
     // Impôt (27 000 - 11 600) x 11 % = 1 694 € ; décote 897 - 45,25 % x 1 694 = 130,47 € ; impôt 1 563,54 €, arrondi à 1 564 €.
     const report = simuler([salarie()], [], [["alice", "salary", 30000]])
     expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 27000, impotSurLeRevenu: 1564 })
+  })
+
+  describe("micro-entreprise BNC de 40 000 €, avec les mêmes 8 720 km en déplacements professionnels, comparée en EI", () => {
+    // Sans déplacements, voir comparateur.reference.test.ts : micro 10 240 € de cotisations, 1 468 € d'impôt ; EI 25 787 € nets.
+    const activite = { ...micro("m1"), deplacementsProfessionnels: { kmParAn: 8720, puissanceFiscale: "5" as const, electrique: false } }
+    const options: ComparaisonOptions = { activityId: "m1", remunerationNette: 0, distribuerToutLeBenefice: true, partBncPrestations: 1 }
+    const resultat = comparerStatuts(session([personne("alice"), activite], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options)
+    const colonne = (statut: StatutCompare) => resultat.scenarios.find(s => s.statut === statut)!
+
+    it("micro : les 4 508,04 € sont dépensés sans rien réduire", () => {
+      // Cotisations 40 000 x 25,6 % = 10 240 € ; imposable 40 000 x 66 % = 26 400 €, impôt 1 468 € (inchangés).
+      // Net : 40 000 - 10 240 - 4 508,04 - 1 468 = 23 783,96 €.
+      expect(colonne("micro")).toMatchObject({ cotisationsSociales: 10240, impotSurLeRevenu: 1468, netApresImpots: 23784, revenusAvantPrelevements: 35492 })
+    })
+
+    it("EI : les 4 508,04 € sont une charge déductible, qui réduit les cotisations et l'impôt", () => {
+      // Bénéfice avant cotisations 40 000 - 4 508,04 = 35 491,96 € ; assiette après 26 % : 26 264,05 €.
+      // Maladie : 1,5 % + 2,5 % x (26 264,05 - 19 224) / 9 612 = 3,3311 %, 874,87 € ; indemnités journalières 0,5 %, 131,32 € ;
+      // retraite de base 17,87 %, 4 693,39 € ; complémentaire 8,1 %, 2 127,39 € ; invalidité-décès 1,3 %, 341,43 € ;
+      // allocations familiales nulles (assiette sous 52 866 €) ; CSG déductible 6,8 %, 1 785,96 € ; CSG non déductible et
+      // CRDS 2,9 %, 761,66 € ; formation 120,15 € ; total 10 836,16 €.
+      // Encaissé 35 491,96 - 10 836,16 = 24 655,80 € ; imposable 24 655,80 + 761,66 = 25 417,46 € ;
+      // impôt brut (25 417,46 - 11 600) x 11 % = 1 519,92 € ; décote 897 - 45,25 % x 1 519,92 = 209,24 € ; impôt 1 310,68 €,
+      // soit 1 311 €. Net : 24 655,80 - 1 311 = 23 344,80 €.
+      expect(colonne("EI")).toMatchObject({ cotisationsSociales: 10836, impotSurLeRevenu: 1311, netApresImpots: 23345, revenusAvantPrelevements: 35492 })
+    })
   })
 })

@@ -9,7 +9,7 @@ import { calculerSASU } from "./calculsSASU.js"
 import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.js"
 import { buildFoyers, type Foyer } from "./foyers.js"
 import { euros } from "./format.js"
-import { fraisReelsDeLaPersonne } from "./frais-kilometriques.js"
+import { fraisReelsDeLaPersonne, montantBaremeKilometrique } from "./frais-kilometriques.js"
 import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 
 /*
@@ -136,6 +136,24 @@ function detailSalaries(masse: ReturnType<typeof masseSalariale>): Pick<Activity
   return masse.salaries.length > 0 ? { salaries: masse.salaries } : {}
 }
 
+/**
+ * Déplacements professionnels d'une activité avec une voiture personnelle, au barème kilométrique de l'année : une charge
+ * réelle. En société, ce sont les indemnités kilométriques remboursées au dirigeant : déductibles pour la société, ni
+ * imposables ni soumises à cotisations pour lui (article 81, 1° du CGI), et neutres pour sa trésorerie, puisqu'elles
+ * couvrent les frais de voiture qu'il a payés. En entreprise individuelle, une charge déductible (option des BNC pour le
+ * barème ; en BIC, une approximation des frais réels de la voiture). En micro-entreprise, une dépense jamais déductible.
+ */
+function deplacementsProfessionnels(ctx: Contexte, activite: Company | MicroEntreprise): number {
+  const deplacements = activite.deplacementsProfessionnels
+  return deplacements ? montantBaremeKilometrique(deplacements.kmParAn, deplacements, ctx.regles.baremeKilometrique) : 0
+}
+
+/** Champ du résultat d'une activité qui décrit ses déplacements professionnels, s'il y en a. */
+function detailDeplacements(activite: Company | MicroEntreprise, montant: number, deductible: boolean): Pick<ActivityResult, "fraisDeDeplacement"> {
+  const kilometres = activite.deplacementsProfessionnels?.kmParAn ?? 0
+  return montant > 0 ? { fraisDeDeplacement: { kilometres, montant: Math.round(montant), deductible } } : {}
+}
+
 /** Somme annuelle de plusieurs types de flux d'une entité. */
 function total(ctx: Contexte, entityId: string, ...types: FlowType[]): number {
   const flux = ctx.flux.get(entityId)
@@ -215,9 +233,10 @@ function verserDividendes(ctx: Contexte, societe: Company, dividendes: { verses:
 
 function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
   const masse = masseSalariale(ctx, societe.id)
+  const deplacements = deplacementsProfessionnels(ctx, societe)
   const entrees = {
     chiffreAffaires: total(ctx, societe.id, "ca_services", "ca_vente"),
-    chargesDeductibles: total(ctx, societe.id, "deductible_expense") + masse.cout,
+    chargesDeductibles: total(ctx, societe.id, "deductible_expense") + masse.cout + deplacements,
     remunerationNette: total(ctx, societe.id, "director_remuneration"),
     dividendesDemandes: total(ctx, societe.id, "dividends_payment")
   }
@@ -244,13 +263,15 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     ...(resultat.cotisationsTNS ? { cotisationsTNS: resultat.cotisationsTNS } : {}),
     ...(resultat.cotisationsPresident && resultat.remunerationNette > 0 ? { cotisationsPresident: resultat.cotisationsPresident } : {}),
     ...detailSalaries(masse),
+    ...detailDeplacements(societe, deplacements, true),
     warnings
   }
 }
 
 function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): ActivityResult {
   const masse = masseSalariale(ctx, entreprise.id)
-  const resultat = calculerEI({ chiffreAffaires: total(ctx, entreprise.id, "ca_services", "ca_vente"), chargesDeductibles: total(ctx, entreprise.id, "deductible_expense") + masse.cout }, ctx.regles)
+  const deplacements = deplacementsProfessionnels(ctx, entreprise)
+  const resultat = calculerEI({ chiffreAffaires: total(ctx, entreprise.id, "ca_services", "ca_vente"), chargesDeductibles: total(ctx, entreprise.id, "deductible_expense") + masse.cout + deplacements }, ctx.regles)
   const warnings = [...resultat.warnings]
 
   if (total(ctx, entreprise.id, "director_remuneration", "dividends_payment") > 0) {
@@ -283,6 +304,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     beneficiaireIds: exploitant ? [exploitant] : [],
     cotisationsTNS: resultat.cotisationsTNS,
     ...detailSalaries(masse),
+    ...detailDeplacements(entreprise, deplacements, true),
     warnings
   }
 }
@@ -340,9 +362,10 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
   )
   const warnings = [...resultat.warnings, ...avertissementsVersementLiberatoire(micro, vfl)]
   // Au régime micro, les dépenses réelles ne réduisent ni les cotisations ni l'impôt : elles ne pèsent que sur la trésorerie.
-  // Il en va de même du coût des salariés.
+  // Il en va de même du coût des salariés et des déplacements professionnels.
   const masse = masseSalariale(ctx, micro.id)
-  const depenses = total(ctx, micro.id, "expense") + masse.cout
+  const deplacements = deplacementsProfessionnels(ctx, micro)
+  const depenses = total(ctx, micro.id, "expense") + masse.cout + deplacements
   const revenuVerse = resultat.chiffreAffaires - resultat.cotisationsSociales - depenses
 
   if (titulaire) {
@@ -371,6 +394,7 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
     beneficiaireIds: titulaire ? [titulaire] : [],
     versementLiberatoire: { ...vfl, plafondRfr: Math.round(vfl.plafondRfr) },
     ...detailSalaries(masse),
+    ...detailDeplacements(micro, deplacements, false),
     warnings
   }
 }
