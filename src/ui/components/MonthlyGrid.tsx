@@ -331,6 +331,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           flows={monthlyData[openCell.monthIndex].flows.filter(f => f.entityId === openCell.entityId)}
           entity={openCellEntity}
           monthName={fullMonths[openCell.monthIndex]}
+          annee={annee}
           autresAnnees={autresAnnees}
           onCreate={handleCreateFlow}
           onRecopier={openCell.monthIndex < 11 ? handleRecopierFlux : undefined}

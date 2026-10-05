@@ -171,6 +171,35 @@ export function supprimerDansLesAnnees(annees: AnneeSimulee[], flux: FinancialFl
   )
 }
 
+/**
+ * Au-delà de ce nombre d'autres années, la fenêtre des flux propose des raccourcis pour les cocher d'un coup :
+ * jusque-là, quelques cases se cochent aussi vite qu'un raccourci et l'interface reste plus simple.
+ */
+export const SEUIL_RACCOURCIS_ANNEES = 4
+
+/** Raccourcis de la fenêtre des flux pour cocher les autres années. */
+export type RaccourciAnnees = "toutes" | "aucune" | "precedentes" | "suivantes"
+
+/** Texte visible de chaque raccourci et nom complet, lu par les lecteurs d'écran (il reprend le texte visible). */
+export const LIBELLES_RACCOURCIS_ANNEES: Record<RaccourciAnnees, { texte: string; nom: string }> = {
+  toutes: { texte: "Toutes", nom: "Cocher toutes les années" },
+  aucune: { texte: "Aucune", nom: "Ne cocher aucune année" },
+  precedentes: { texte: "Années précédentes", nom: "Cocher les années précédentes" },
+  suivantes: { texte: "Années suivantes", nom: "Cocher les années suivantes" }
+}
+
+/**
+ * Années cochées par un raccourci, parmi les autres années de la session : toutes, aucune, celles d'avant l'année
+ * affichée ou celles d'après. Le raccourci remplace la sélection : « Années suivantes » décoche les précédentes.
+ */
+export function anneesDuRaccourci(raccourci: RaccourciAnnees, annee: number, autresAnnees: number[]): number[] {
+  const autres = autresAnnees.filter(a => a !== annee)
+  if (raccourci === "toutes") return autres
+  if (raccourci === "precedentes") return autres.filter(a => a < annee)
+  if (raccourci === "suivantes") return autres.filter(a => a > annee)
+  return []
+}
+
 /** « a », « a et b », « a, b et c ». */
 const enumerer = (parties: string[]) => (parties.length <= 1 ? (parties[0] ?? "") : `${parties.slice(0, -1).join(", ")} et ${parties[parties.length - 1]}`)
 
