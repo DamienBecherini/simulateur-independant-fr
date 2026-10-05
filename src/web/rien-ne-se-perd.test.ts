@@ -8,11 +8,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { z } from "zod"
 import { SaveSlotSchema, SessionStateSchema, UserPreferencesSchema, type SaveSlot } from "@/types"
 import { rapportAvecCorrections, sanitizeSlots, sanitizeStateAndFillDefaults } from "@/backend/logic/data-sanitizer"
-import { contenuDesSauvegardes, contenuDuFichier, lireLaSession, lireLesSauvegardes, lireUneSimulationImportee, sauvegardesAEcrire } from "@/backend/logic/fichiers-de-donnees"
+import { contenuDesSauvegardes, contenuDuFichier, lireLaSession, lireLesPreferences, lireLesSauvegardes, lireUneSimulationImportee, sauvegardesAEcrire } from "@/backend/logic/fichiers-de-donnees"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { construireFichierSauvegardes, fusionnerSauvegardes, lireFichierSauvegardes } from "@/backend/logic/sauvegardes-groupees"
 import { contenuDeLaSession, createNewSlotFromSession, updateSlotWithSession } from "@/lib/session-service"
 import { preferencesMaximales, sauvegardeMaximale, sessionMaximale } from "@/lib/testing/session-maximale"
+import { AFFICHAGES } from "@/lib/affichage"
+import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { creerApiNavigateur } from "./api-navigateur"
 
 // --- Garde : chaque champ du schéma est rempli dans la session maximale ---
@@ -52,6 +54,7 @@ function parcourir(schema: z.ZodType, valeurs: unknown[], chemin: string, releve
   switch (def.type) {
     case "optional":
     case "default":
+    case "catch":
       return parcourir(def.innerType!, valeurs.filter(v => v !== undefined), chemin, releve)
     case "pipe":
       return parcourir(def.out!, valeurs, chemin, releve)
@@ -96,7 +99,14 @@ describe("la session maximale", () => {
   it("remplit chaque champ du schéma, chaque type et chaque option : un champ ajouté au schéma doit y être ajouté", () => {
     expect(champsNonRemplis(SessionStateSchema, [sessionMaximale()], "session")).toEqual([])
     expect(champsNonRemplis(SaveSlotSchema, [sauvegardeMaximale()], "sauvegarde")).toEqual([])
-    expect(champsNonRemplis(UserPreferencesSchema, [preferencesMaximales()], "préférences")).toEqual([])
+    // Un affichage n'est choisi qu'à la fois : les autres sont pris par des préférences qui ne diffèrent que par lui.
+    const autresAffichages = AFFICHAGES.map(({ valeur }) => ({ ...preferencesMaximales(), affichage: valeur }))
+    expect(champsNonRemplis(UserPreferencesSchema, [preferencesMaximales(), ...autresAffichages], "préférences")).toEqual([])
+  })
+
+  it("le garde-fou parcourt aussi les champs qui écartent seuls une valeur invalide (préférences)", () => {
+    const sansSections = { ...preferencesMaximales(), sectionsOuvertes: { "legende-des-flux": true } }
+    expect(champsNonRemplis(UserPreferencesSchema, [sansSections], "préférences")).toEqual(expect.arrayContaining(["préférences.sectionsOuvertes{}=false", "préférences.affichage=classique"]))
   })
 
   it("le garde-fou repère un champ, une option ou une variante oubliés", () => {
@@ -116,12 +126,8 @@ describe("la session maximale", () => {
 /** Comme si le fichier avait été écrit sur le disque puis relu. */
 const surLeDisque = <T>(valeur: T): unknown => JSON.parse(JSON.stringify({ ...valeur, formatVersion: FORMAT_VERSION_ACTUEL }))
 
-/** Ce qu'un import recharge dans la session : tout son contenu sauf le numéro de version de l'application. */
-function contenuImporte() {
-  const contenu = sessionMaximale()
-  delete contenu.appVersion
-  return contenu
-}
+/** La session maximale telle que l'écrit la version actuelle de l'application : seule sa version change. */
+const ecriteParLaVersionActuelle = () => ({ ...sessionMaximale(), appVersion: VERSION_DE_L_APPLICATION })
 
 describe("rien ne se perd au nettoyage", () => {
   it("d'une session relue", () => {
@@ -137,8 +143,8 @@ describe("rien ne se perd au nettoyage", () => {
 
 describe("rien ne se perd dans les fichiers de l'application de bureau", () => {
   it("session en cours écrite puis relue", () => {
-    const { safeState, report, versionOrigine } = lireLaSession(contenuDuFichier(sessionMaximale()))
-    expect(safeState).toEqual(sessionMaximale())
+    const { safeState, report, versionOrigine } = lireLaSession(contenuDuFichier(sessionMaximale(), VERSION_DE_L_APPLICATION))
+    expect(safeState).toEqual(ecriteParLaVersionActuelle())
     expect(versionOrigine).toBe(FORMAT_VERSION_ACTUEL)
     expect(rapportAvecCorrections(report)).toBe(false)
   })
@@ -149,24 +155,28 @@ describe("rien ne se perd dans les fichiers de l'application de bureau", () => {
     expect(lireLesSauvegardes(contenuDesSauvegardes(slots))).toMatchObject({ slots: [sauvegardeMaximale(), sauvegardeMaximale("slot-2")], refusees: [] })
   })
 
-  it("simulation complète exportée puis importée, avec son nom et les réglages du comparateur", () => {
+  it("simulation complète exportée puis importée, avec son nom, les réglages du comparateur et la version qui l'a écrite", () => {
     const exportee = { ...contenuDeLaSession(sessionMaximale()), simulation: null, simulationError: null, exportedAt: "2026-10-05T12:00:00.000Z" }
-    const { data, report } = lireUneSimulationImportee(contenuDuFichier(exportee))
-    expect(data).toEqual(contenuImporte())
+    const { data, report } = lireUneSimulationImportee(contenuDuFichier(exportee, VERSION_DE_L_APPLICATION))
+    expect(data).toEqual(ecriteParLaVersionActuelle())
     expect(rapportAvecCorrections(report)).toBe(false)
   })
 
   it("sauvegarde exportée seule puis importée", () => {
-    expect(lireUneSimulationImportee(contenuDuFichier(sauvegardeMaximale())).data).toEqual(contenuImporte())
+    expect(lireUneSimulationImportee(contenuDuFichier(sauvegardeMaximale())).data).toEqual(sessionMaximale())
+  })
+
+  it("préférences écrites puis relues", () => {
+    expect(lireLesPreferences(JSON.stringify(preferencesMaximales()))).toEqual(preferencesMaximales())
   })
 })
 
 describe("rien ne se perd entre la session et les sauvegardes", () => {
   it("enregistrer, mettre à jour puis recharger une sauvegarde", () => {
     const sauvegarde = createNewSlotFromSession(sessionMaximale())
-    expect(contenuDeLaSession(sauvegarde)).toEqual(sessionMaximale())
+    expect(contenuDeLaSession(sauvegarde)).toEqual(ecriteParLaVersionActuelle())
     const miseAJour = updateSlotWithSession({ ...sauvegarde, comparateur: undefined }, sessionMaximale())
-    expect(contenuDeLaSession(miseAJour)).toEqual(sessionMaximale())
+    expect(contenuDeLaSession(miseAJour)).toEqual(ecriteParLaVersionActuelle())
   })
 })
 
@@ -196,14 +206,14 @@ describe("rien ne se perd dans la démo web", () => {
     await api.saveUserPreferences(preferencesMaximales())
 
     const relue = creerApiNavigateur()
-    expect(await relue.getCurrentSession()).toEqual(sessionMaximale())
+    expect(await relue.getCurrentSession()).toEqual(ecriteParLaVersionActuelle())
     expect(await relue.getSaveSlots()).toEqual([sauvegardeMaximale(), sauvegardeMaximale("slot-2")])
     expect(await relue.getUserPreferences()).toEqual(preferencesMaximales())
   })
 
   it("enregistrement synchrone à la fermeture de la page", async () => {
     creerApiNavigateur().saveCurrentSessionSync(sessionMaximale())
-    expect(await creerApiNavigateur().getCurrentSession()).toEqual(sessionMaximale())
+    expect(await creerApiNavigateur().getCurrentSession()).toEqual(ecriteParLaVersionActuelle())
   })
 
   it("simulation exportée en fichier puis réimportée", async () => {
@@ -219,7 +229,7 @@ describe("rien ne se perd dans la démo web", () => {
       this.dispatchEvent(new Event("change"))
     })
     const { data, report } = await api.importState()
-    expect(data).toEqual(contenuImporte())
+    expect(data).toEqual(ecriteParLaVersionActuelle())
     expect(report && rapportAvecCorrections(report)).toBe(false)
   })
 })

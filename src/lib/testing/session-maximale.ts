@@ -51,7 +51,8 @@ function fraisModifies(delta: number): FraisFonctionnement {
 /** Trois années consécutives, toutes les entités et options, des réglages du comparateur dans chaque mode. */
 export function sessionMaximale(): SessionState {
   return {
-    appVersion: "0.9.0",
+    // Une version passée : un enregistrement par la version actuelle la remplace, une simple relecture la garde.
+    appVersion: "0.8.0",
     name: "Famille Martin — tout rempli",
     entities: [
       {
@@ -109,7 +110,17 @@ export function sauvegardeMaximale(id = "slot-maximal"): SaveSlot {
   return { ...sessionMaximale(), id, lastModified: 1_780_000_000_000 }
 }
 
-/** Préférences remplies : ordre des sauvegardes, couleurs des types de flux et affichage choisi. */
+/**
+ * Préférences remplies : ordre des sauvegardes, couleurs des types de flux, affichage choisi, sauvegarde chargée,
+ * zoom, et sections repliables ouvertes comme fermées.
+ */
 export function preferencesMaximales(): UserPreferences {
-  return { slotOrder: ["slot-maximal", "slot-2"], flowTypeColors: { salary: "#123456", ca_services: "#abcdef" }, affichage: "resume" }
+  return {
+    slotOrder: ["slot-maximal", "slot-2"],
+    flowTypeColors: { salary: "#123456", ca_services: "#abcdef" },
+    affichage: "resume",
+    loadedSlotId: "slot-2",
+    zoom: 1.3,
+    sectionsOuvertes: { "legende-des-flux": true, "detail-du-calcul": false }
+  }
 }

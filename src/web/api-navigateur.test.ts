@@ -4,6 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { SaveSlot } from "@/types"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
+import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { creerApiNavigateur } from "./api-navigateur"
 import { sessionExemple } from "./session-exemple"
 import { CLES } from "./stockage-navigateur"
@@ -28,8 +29,9 @@ describe("pont de la démo web", () => {
 
     const session = { ...sessionExemple(), name: "Ma simulation" }
     await api.saveCurrentSession(session)
-    expect(stocke(CLES.session)).toMatchObject({ name: "Ma simulation", formatVersion: FORMAT_VERSION_ACTUEL })
-    expect(await api.getCurrentSession()).toEqual(session)
+    // La session enregistrée porte la version de l'application qui l'a écrite.
+    expect(stocke(CLES.session)).toMatchObject({ name: "Ma simulation", formatVersion: FORMAT_VERSION_ACTUEL, appVersion: VERSION_DE_L_APPLICATION })
+    expect(await api.getCurrentSession()).toEqual({ ...session, appVersion: VERSION_DE_L_APPLICATION })
   })
 
   it("enregistre aussi la session de façon synchrone, à la fermeture de la page", () => {
@@ -99,6 +101,23 @@ describe("pont de la démo web", () => {
     expect(await api.getUserPreferences()).toEqual({ slotOrder: ["slot-1"] })
   })
 
+  it("écarte un champ invalide des préférences, sans perdre les autres", async () => {
+    window.localStorage.setItem(CLES.preferences, JSON.stringify({ slotOrder: "abîmé", zoom: 7, loadedSlotId: "slot-1", affichage: "vues", sectionsOuvertes: { "legende-des-flux": "oui" } }))
+    expect(await creerApiNavigateur().getUserPreferences()).toEqual({ slotOrder: [], loadedSlotId: "slot-1", affichage: "vues" })
+  })
+
+  it("repart des préférences par défaut si le stockage n'en contient pas d'utilisables", async () => {
+    window.localStorage.setItem(CLES.preferences, "[1, 2]")
+    expect(await creerApiNavigateur().getUserPreferences()).toEqual({ slotOrder: [] })
+    window.localStorage.setItem(CLES.preferences, "{pas du json")
+    expect(await creerApiNavigateur().getUserPreferences()).toEqual({ slotOrder: [] })
+  })
+
+  it("valide aussi les préférences avant de les écrire", async () => {
+    await creerApiNavigateur().saveUserPreferences({ slotOrder: ["slot-1"], zoom: -3 })
+    expect(stocke(CLES.preferences)).toEqual({ slotOrder: ["slot-1"] })
+  })
+
   it("exporte en faisant télécharger un fichier JSON", async () => {
     const creerUrl = vi.fn(() => "blob:export")
     Object.assign(URL, { createObjectURL: creerUrl, revokeObjectURL: vi.fn() })
@@ -109,7 +128,13 @@ describe("pont de la démo web", () => {
 
     expect(telechargement).toHaveBeenCalledOnce()
     const fichier = (creerUrl.mock.calls[0] as unknown as [Blob])[0]
-    expect(JSON.parse(await fichier.text())).toMatchObject({ entities, formatVersion: FORMAT_VERSION_ACTUEL })
+    expect(JSON.parse(await fichier.text())).toMatchObject({ entities, formatVersion: FORMAT_VERSION_ACTUEL, appVersion: VERSION_DE_L_APPLICATION })
+  })
+
+  it("garde à l'import la version de l'application qui a écrit le fichier", async () => {
+    const { entities, relationships, annees } = sessionExemple()
+    choisirLeFichier(JSON.stringify({ entities, relationships, annees, formatVersion: FORMAT_VERSION_ACTUEL, appVersion: "0.8.0" }))
+    expect((await creerApiNavigateur().importState()).data?.appVersion).toBe("0.8.0")
   })
 
   it("importe un fichier choisi par l'utilisateur, nettoyé comme dans l'application de bureau", async () => {
