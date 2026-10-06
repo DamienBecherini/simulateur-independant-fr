@@ -3,6 +3,8 @@
 // avec son adresse (#situation, #resultats, #comparer), pour que le retour arrière, les liens et le rechargement de
 // la page retrouvent la vue.
 
+import { ADRESSE_DES_MENTIONS_LEGALES } from "./mentions-legales"
+
 export type Vue = "situation" | "resultats" | "comparer"
 
 interface DescriptionDeVue {
@@ -54,7 +56,8 @@ export function destinationDeLAdresse(adresse: string, vueDeLElement: (id: strin
   } catch {
     // Adresse mal encodée : lue telle quelle.
   }
-  if (!nom) return null
+  // Les mentions légales s'ouvrent par-dessus la vue affichée, sans la changer.
+  if (!nom || nom === ADRESSE_DES_MENTIONS_LEGALES) return null
   if (estUneVue(nom)) return { vue: nom }
   const vue = DETAILS[nom] ?? vueDeLElement(nom)
   return vue ? { vue, detail: nom } : null

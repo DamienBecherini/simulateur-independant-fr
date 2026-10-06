@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
+import { MentionsLegalesParLAdresse } from "./components/MentionsLegales"
 import { Settings, Undo2, Redo2, ZoomIn, ZoomOut, Download, MessageSquareHeart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsSheet } from "./components/SettingsSheet"
@@ -299,6 +300,7 @@ function App() {
         </FournisseurDesDetails>
 
         <Footer />
+        <MentionsLegalesParLAdresse />
 
         {import.meta.env.DEV && <DevWindowSize />}
 
