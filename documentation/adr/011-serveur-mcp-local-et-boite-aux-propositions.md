@@ -54,3 +54,21 @@ Le serveur lit, à chaque appel, `sessionState.json` dans le dossier passé par 
   - `ELECTRON_RUN_AS_NODE` doit rester permis : si l'application active un jour les « fuses » d'Electron pour durcir l'exécutable (`RunAsNode` désactivé), il faudra un autre lanceur.
   - Sous Linux, le chemin d'une AppImage change à chaque lancement : le paquet `.deb` est recommandé pour le serveur MCP.
   - `fs.watch` peut manquer des événements sur certains systèmes de fichiers (dossier réseau) ; la boîte est de toute façon relue au démarrage.
+
+## Addendum (2026-10-06) : réponses en un seul texte, liste d'outils allégée
+
+### Contexte
+
+Chaque réponse du serveur rendait le résultat deux fois : en JSON dans le texte, et en contenu structuré (`structuredContent`), avec un schéma de sortie par outil dans `tools/list`. MCP demande le texte pour les clients qui ignorent le contenu structuré ; un client qui donne les deux au modèle lui fait lire chaque résultat deux fois. Les schémas de sortie pesaient 19 Ko des 55 Ko de la liste d'outils.
+
+### Décision
+
+- **Un seul texte par réponse** : le résumé en français, puis, à la ligne, le JSON du résultat. Plus de contenu structuré ni de schéma de sortie, `appliquer_proposition` compris. Le texte est le seul canal que tous les clients donnent au modèle ; il porte donc tout.
+- **Annotations réduites à ce qui vaut** : `readOnlyHint` et `openWorldHint` pour les outils qui n'écrivent rien ; `appliquer_proposition` garde `destructiveHint: false` et devient `idempotentHint: true`, puisqu'une proposition identique qui attend déjà n'est pas redéposée. Le titre n'est plus répété dans les annotations.
+- **`rafraichir_proposition`** (ADR 010, addendum) s'exécute comme un outil de proposition : il ne dépose rien, et son résumé dit combien d'opérations ne s'appliquent plus. La règle 4 des consignes y renvoie quand une proposition est refusée comme périmée.
+- `tools/list` passe de 55 à 32 Ko (16 outils au lieu de 15) ; un test en borne la taille.
+
+### Conséquences
+
+- **Positives :** moins de texte par échange et par réponse, quel que soit le client ; une proposition périmée se reconstruit sans tout reproposer.
+- **Négatives ou Compromis :** un client qui exploiterait le contenu structuré (affichage, validation) doit lire le JSON à la dernière ligne du texte.
