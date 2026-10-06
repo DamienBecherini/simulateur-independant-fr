@@ -146,7 +146,7 @@ export function convertirLActivite(session: DonneesDeLAnnee, source: Activite, s
 }
 
 /** Session dans laquelle l'activité a pris le statut demandé, avec ses flux convertis, sa rémunération, ses dividendes et ses frais. */
-function sessionConvertie(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, options: ComparaisonOptions, dividendes: number | null): DonneesDeLAnnee {
+export function sessionConvertie(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, options: ComparaisonOptions, dividendes: number | null): DonneesDeLAnnee {
   const convertie = convertirLActivite(session, source, statut, options.partBncPrestations, dividendes === null)
   const monthlyData = [...convertie.monthlyData]
 

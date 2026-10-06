@@ -15,6 +15,7 @@ const api: import("../globals.js", { with: { "resolution-mode": "import" } }).Ev
   simulerLesAnnees: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState) => ipcRenderer.invoke("simulerLesAnnees", session),
   compareStatuts: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState, options: import('../types.js', { with: { "resolution-mode": "import" } }).ComparaisonOptions, annee: number) => ipcRenderer.invoke("compareStatuts", session, options, annee),
   optimiserRemuneration: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState, options: import('../types.js', { with: { "resolution-mode": "import" } }).ComparaisonOptions, statut: import('../types.js', { with: { "resolution-mode": "import" } }).StatutSociete, annee: number) => ipcRenderer.invoke("optimiserRemuneration", session, options, statut, annee),
+  comparerStrategies: (session: import('../types.js', { with: { "resolution-mode": "import" } }).SessionState, activityId: string) => ipcRenderer.invoke("comparerStrategies", session, activityId),
 
   // Fonctions pour les slots
   getSaveSlots: () => ipcRenderer.invoke("getSaveSlots"),

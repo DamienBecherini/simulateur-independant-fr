@@ -10,6 +10,7 @@ import { AnneesRefuseesError, sanitizeSlots, sanitizeStateAndFillDefaults } from
 import { avecVersionDeLApplication, lireUneSimulationImportee, preferencesValides } from "@/backend/logic/fichiers-de-donnees"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
+import { comparerStrategiesDeDistribution } from "@/backend/logic/strategies-de-distribution"
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { sessionExemple } from "./session-exemple"
@@ -90,6 +91,10 @@ export function creerApiNavigateur(): EventPayloadMapping {
     simulerLesAnnees: async session => simulerLesAnnees(sessionValidee(session)),
     compareStatuts: async (session, options, annee) => comparerStatutsDeLAnnee(sessionValidee(session), options, annee),
     optimiserRemuneration: async (session, options, statut, annee) => optimiserRemunerationDeLAnnee(sessionValidee(session), options, statut, annee),
+    comparerStrategies: async (session, activityId) => {
+      const validee = sessionValidee(session)
+      return comparerStrategiesDeDistribution(validee, activityId, validee.comparateur?.reglagesParActivite[activityId])
+    },
 
     getSaveSlots: async () => sanitizeSlots(lire(CLES.sauvegardes) ?? []),
     // Validées avant écriture, comme dans l'application de bureau.

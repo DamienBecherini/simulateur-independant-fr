@@ -804,6 +804,54 @@ export interface OptimisationRemuneration {
   warnings: string[]
 }
 
+/** Stratégies de distribution comparées sur toutes les années de la session (voir l'ADR 012). */
+export const STRATEGIES_DE_DISTRIBUTION = ["toutDistribuer", "garderPuisDistribuer", "lisser"] as const
+export type StrategieDeDistribution = (typeof STRATEGIES_DE_DISTRIBUTION)[number]
+
+/** Une année d'une stratégie de distribution, montants arrondis. */
+export interface AnneeDUneStrategie {
+  annee: number
+  /** Dividendes versés par la société cette année. */
+  dividendes: number
+  /** Net après impôts de tous les foyers de la simulation. */
+  netApresImpots: number
+  /** Cotisations, impôt sur les sociétés, impôt sur le revenu et prélèvements sociaux de toute la simulation. */
+  totalPrelevements: number
+  /** Réserves distribuables de la société au 31 décembre. */
+  reservesALaFin: number
+}
+
+/** Une stratégie de distribution sur toutes les années, montants arrondis. */
+export interface ResultatDUneStrategie {
+  strategie: StrategieDeDistribution
+  libelle: string
+  netCumule: number
+  prelevementsCumules: number
+  /** Réserves distribuables laissées dans la société à la fin de la dernière année : pas encore imposées au nom du foyer. */
+  reservesALaFin: number
+  annees: AnneeDUneStrategie[]
+  warnings: string[]
+}
+
+/** Les stratégies de distribution d'une activité devenue SASU ou EURL. */
+export interface StrategiesDUnStatut {
+  statut: StatutSociete
+  strategies: ResultatDUneStrategie[]
+  /** Stratégie au meilleur net cumulé ; `null` si elles se valent à l'euro près. */
+  meilleure: StrategieDeDistribution | null
+}
+
+/** « Sur toutes les années » : les stratégies de distribution de l'activité comparée, en SASU et en EURL. */
+export interface StrategiesDeDistribution {
+  /** Années simulées, de la plus ancienne à la plus récente. */
+  annees: number[]
+  /** Part du bénéfice distribuable gardée chaque année dans « Garder puis distribuer » (0 à 1). */
+  partMiseEnReserve: number
+  statuts: StrategiesDUnStatut[]
+  /** Hypothèses et années non simulées. */
+  notes: string[]
+}
+
 export interface SanitizationReport {
   entitiesRemoved: number
   relationshipsRemoved: number
