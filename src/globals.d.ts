@@ -1,5 +1,7 @@
 // src/globals.d.ts
 import type { SessionState, SaveSlot, UserPreferences, ExportableState, SanitizationReport, NotificationPayload, SimulationPluriannuelle, ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, StatutSociete, FormatFichierTexte } from "./types.js"
+import type { PropositionRecue } from "./backend/mcp/proposition-en-attente.js"
+import type { InfosDuServeurMcp } from "./lib/configuration-mcp.js"
 
 // On importe les types depuis notre nouveau module `types.ts` pour les utiliser ici.
 export type EventPayloadMapping = {
@@ -31,6 +33,14 @@ export type EventPayloadMapping = {
   getUserPreferences: () => Promise<UserPreferences>
   saveUserPreferences: (prefs: UserPreferences) => Promise<void>
   onShowNotification: (callback: (payload: NotificationPayload) => void) => () => void
+  /** Chemins du serveur MCP local de cette installation, pour la configuration d'un client d'IA ; `null` dans la démo web. */
+  infosDuServeurMcp: () => Promise<InfosDuServeurMcp | null>
+  /** Les propositions d'un client d'IA en attente dans la boîte aux propositions (voir l'ADR 011) ; aucune dans la démo web. */
+  propositionsEnAttente: () => Promise<PropositionRecue[]>
+  /** Retire une proposition appliquée ou refusée de la boîte aux propositions ; `false` si elle n'y est plus. */
+  retirerProposition: (id: string) => Promise<boolean>
+  /** Appelé avec la liste des propositions en attente chaque fois qu'elle change ; rend la fonction de désabonnement. */
+  onPropositionsEnAttente: (callback: (propositions: PropositionRecue[]) => void) => () => void
 }
 
 // Ce fichier étend les types globaux, notamment l'objet `window` pour le preload.

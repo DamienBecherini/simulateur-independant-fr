@@ -30,7 +30,11 @@ function createFakeApi(): EventPayloadMapping {
     ouvrirAdresseExterne: vi.fn(async () => true),
     getUserPreferences: vi.fn(async () => ({ slotOrder: [] })),
     saveUserPreferences: vi.fn(async () => {}),
-    onShowNotification: vi.fn(() => () => {})
+    onShowNotification: vi.fn(() => () => {}),
+    infosDuServeurMcp: vi.fn(async () => null),
+    propositionsEnAttente: vi.fn(async () => []),
+    retirerProposition: vi.fn(async () => true),
+    onPropositionsEnAttente: vi.fn(() => () => {})
   }
 }
 

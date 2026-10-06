@@ -15,6 +15,8 @@ import { AnneesRefuseesError, rapportAvecCorrections, texteAnneesEcartees } from
 import { contenuDesSauvegardes, contenuDuFichier, lireLaSession, lireLesPreferences, lireLesSauvegardes, lireUneSimulationImportee, preferencesParDefaut, preferencesValides, sauvegardesAEcrire } from "./logic/fichiers-de-donnees.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours.js"
+import type { InfosDuServeurMcp } from "@/lib/configuration-mcp.js"
+import { ouvrirLaBoiteAuxPropositions } from "./boite-aux-propositions.js"
 
 /** Filtres des fenêtres d'enregistrement et d'ouverture, par format de fichier texte. */
 const FILTRES_FICHIERS: Record<FormatFichierTexte, Electron.FileFilter> = {
@@ -247,6 +249,19 @@ function validatedSession(session: unknown, caller: string): SessionState {
   if (parsed.success) return parsed.data
   console.warn(`${caller} : session invalide, utilisation des valeurs par défaut du schéma`, parsed.error.flatten())
   return SessionStateSchema.parse({})
+}
+
+/**
+ * Chemins du serveur MCP local de cette installation (voir l'ADR 011) : l'exécutable de l'application, lancé en mode
+ * Node, le serveur empaqueté (hors de l'archive asar une fois packagé) et le dossier de données à lui passer.
+ */
+function infosDuServeurMcp(): InfosDuServeurMcp {
+  return {
+    executable: app.getPath("exe"),
+    script: app.isPackaged ? path.join(process.resourcesPath, "mcp", "serveur-mcp.mjs") : path.join(app.getAppPath(), "dist-electron", "mcp", "serveur-mcp.mjs"),
+    donnees: app.getPath("userData"),
+    plateforme: process.platform
+  }
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -484,6 +499,19 @@ app.on("ready", () => {
     }
     return { data: undefined }
   })
+
+  // --- CLIENTS D'IA : SERVEUR MCP LOCAL ET BOÎTE AUX PROPOSITIONS (voir l'ADR 011) ---
+  // Le serveur MCP dépose les propositions dans le dossier de données ; on les transmet à l'interface, qui les montre
+  // à l'utilisateur et ne les applique qu'avec son accord.
+  const boiteAuxPropositions = ouvrirLaBoiteAuxPropositions(app.getPath("userData"), {
+    surChangement: propositions => mainWindow?.webContents.send("propositions-en-attente", propositions)
+  }).catch(error => {
+    console.error("Boîte aux propositions impossible à ouvrir :", error)
+    return null
+  })
+  ipcMainHandle("infosDuServeurMcp", async () => infosDuServeurMcp())
+  ipcMainHandle("propositionsEnAttente", async () => (await boiteAuxPropositions)?.enAttente() ?? [])
+  ipcMainHandle("retirerProposition", async (id: string) => (typeof id === "string" ? ((await (await boiteAuxPropositions)?.retirer(id)) ?? false) : false))
 
   ipcMainHandle("getUserPreferences", async () => await readPrefsFromFile())
   ipcMainHandle("saveUserPreferences", async (prefs: UserPreferences) => await writePrefsToFile(prefs))
