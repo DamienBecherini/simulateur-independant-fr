@@ -51,5 +51,17 @@ describe("App : montages types", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Salarié avec une micro-entreprise à côté" })).toBeInTheDocument()
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     expect(undoButton()).toBeDisabled()
+  })
+  it("depuis la barre d'outils, ouvre la même fenêtre et demande confirmation avant de remplacer une simulation non enregistrée", async () => {
+    const user = await renderApp({ ...emptySession(), name: "Mon brouillon", entities: [makePerson()] })
+    await user.clear(screen.getByRole("textbox", { name: "Nom" }))
+    await user.type(screen.getByRole("textbox", { name: "Nom" }), "Bob{Enter}")
+
+    await user.click(within(screen.getByRole("navigation", { name: "Barre d'outils" })).getByRole("button", { name: "Montages types" }))
+    await user.click(screen.getByRole("button", { name: "Charger le montage « SASU sans salaire, tout en dividendes »" }))
+    await user.click(within(screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).getByRole("button", { name: "Remplacer" }))
+
+    expect(await screen.findByRole("heading", { level: 1, name: "SASU sans salaire, tout en dividendes" })).toBeInTheDocument()
+    expect(undoButton()).toBeDisabled()
   })
 })

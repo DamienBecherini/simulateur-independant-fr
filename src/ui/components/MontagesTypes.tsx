@@ -5,7 +5,7 @@
 import { useRef, useState, type ReactNode } from "react"
 import { ChevronLeft, ExternalLink, LayoutTemplate } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { MONTAGES_TYPES, type MontageType } from "@/lib/montages/montages"
 
 interface FenetreDesMontagesProps {
@@ -16,6 +16,8 @@ interface FenetreDesMontagesProps {
   /** La simulation en cours serait perdue : le chargement demande d'abord une confirmation. */
   confirmationNecessaire: boolean
   nomDeLaSession: string
+  /** Le bouton qui ouvre la fenêtre : le focus y revient à la fermeture. */
+  boutonDOuverture?: ReactNode
 }
 
 function Etiquettes({ etiquettes }: { etiquettes: string[] }) {
@@ -123,7 +125,7 @@ function ListeDesMontages({ onDetails, onCharger, montageVu }: { onDetails: (mon
 }
 
 /** La fenêtre des montages types, et la confirmation avant de remplacer une simulation non enregistrée. */
-export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmationNecessaire, nomDeLaSession }: FenetreDesMontagesProps) {
+export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmationNecessaire, nomDeLaSession, boutonDOuverture }: FenetreDesMontagesProps) {
   const [detail, setDetail] = useState<MontageType | null>(null)
   // Dernier montage dont on a vu le détail : de retour à la liste, le focus revient sur sa carte.
   const [montageVu, setMontageVu] = useState<string | null>(null)
@@ -156,6 +158,7 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
   return (
     <>
       <Dialog open={open} onOpenChange={changerOuverture}>
+        {boutonDOuverture ? <DialogTrigger asChild>{boutonDOuverture}</DialogTrigger> : null}
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           {detail ? <DetailDuMontage montage={detail} onRetour={() => setDetail(null)} onCharger={() => demanderLeChargement(detail)} /> : <ListeDesMontages onDetails={voirLeDetail} onCharger={demanderLeChargement} montageVu={montageVu} />}
         </DialogContent>
@@ -187,15 +190,21 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
 }
 
 /** Le bouton « Partir d'un montage type », qui ouvre la fenêtre des montages. */
-export function BoutonDesMontages({ children, ...props }: Omit<FenetreDesMontagesProps, "open" | "onOpenChange"> & Pick<ButtonProps, "variant" | "size" | "className"> & { children?: ReactNode }) {
+export function BoutonDesMontages({ children, ...props }: Omit<FenetreDesMontagesProps, "open" | "onOpenChange"> & Pick<ButtonProps, "variant" | "size" | "className" | "aria-label"> & { children?: ReactNode }) {
   const [ouverte, setOuverte] = useState(false)
   const { onCharger, confirmationNecessaire, nomDeLaSession, ...bouton } = props
   return (
-    <>
-      <Button {...bouton} onClick={() => setOuverte(true)}>
-        <LayoutTemplate /> {children ?? "Partir d'un montage type..."}
-      </Button>
-      <FenetreDesMontages open={ouverte} onOpenChange={setOuverte} onCharger={onCharger} confirmationNecessaire={confirmationNecessaire} nomDeLaSession={nomDeLaSession} />
-    </>
+    <FenetreDesMontages
+      open={ouverte}
+      onOpenChange={setOuverte}
+      onCharger={onCharger}
+      confirmationNecessaire={confirmationNecessaire}
+      nomDeLaSession={nomDeLaSession}
+      boutonDOuverture={
+        <Button {...bouton}>
+          <LayoutTemplate /> {children ?? "Partir d'un montage type..."}
+        </Button>
+      }
+    />
   )
 }
