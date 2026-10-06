@@ -76,11 +76,13 @@ function moisAuBord(g: GeometrieDeLaGrille): number {
 
 /**
  * Défilement d'un mois vers la gauche (`sens` -1) ou vers la droite (`sens` 1). Vers la gauche, un mois coupé par le
- * bord est d'abord montré en entier ; avant janvier, la zone revient au début, sur le total annuel.
+ * bord est d'abord montré en entier ; avant janvier, la zone revient au début, sur le total annuel ; après décembre, elle
+ * va au bout.
  */
 export function defilementVoisin(g: GeometrieDeLaGrille, sens: -1 | 1): number {
   const index = moisAuBord(g)
-  if (sens === 1) return defilementPourLeMois(g, index + 1)
+  // Après décembre, il ne reste que le bout de la grille.
+  if (sens === 1) return index + 1 < g.mois.length ? defilementPourLeMois(g, index + 1) : defilementMaximal(g)
   if (index < 0) return 0
   const coupe = g.mois[index].gauche < g.defilement + g.colonneFixe - TOLERANCE
   const cible = coupe ? index : index - 1

@@ -75,6 +75,8 @@ describe("bande des mois : défilement", () => {
     expect(defilementVoisin(grille(surLeMois(0)), 1)).toBe(surLeMois(1))
     // Au milieu de mars, le mois suivant est avril.
     expect(defilementVoisin(grille(surLeMois(2) + 70), 1)).toBe(surLeMois(3))
+    // Décembre aligné avant le bout de la grille : le mois suivant mène au bout.
+    expect(defilementVoisin(grille(surLeMois(11)), 1)).toBe(defilementMaximal(grille(0)))
   })
 
   it("mois précédent : un mois coupé est d'abord montré en entier, puis le précédent ; avant janvier, le début", () => {
