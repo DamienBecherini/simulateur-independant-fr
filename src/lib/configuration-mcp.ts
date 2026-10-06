@@ -13,6 +13,43 @@ export interface InfosDuServeurMcp {
   donnees: string
   /** `process.platform` : win32, darwin, linux… */
   plateforme: string
+  /** Vrai pour la version du Microsoft Store (paquet MSIX) : l'exécutable est alors l'alias d'exécution du paquet. */
+  microsoftStore?: boolean
+}
+
+/**
+ * L'installation vue du process principal. `dossierLocalAppData` (le dossier `%LOCALAPPDATA%` de l'utilisateur) n'est
+ * donné que pour la version du Microsoft Store (`process.windowsStore`), `null` sinon.
+ */
+export interface Installation {
+  executable: string
+  /** Le serveur MCP livré avec l'application (`resources/mcp/serveur-mcp.mjs`). */
+  serveurLivre: string
+  donnees: string
+  plateforme: string
+  dossierLocalAppData: string | null
+}
+
+/**
+ * Alias d'exécution déclaré par le paquet du Microsoft Store (build/store/extensions-appx.xml). Windows le crée dans
+ * `%LOCALAPPDATA%\Microsoft\WindowsApps` : un chemin stable, alors que le dossier du paquet change à chaque version.
+ */
+export const ALIAS_D_EXECUTION = "simulateur-independant-fr.exe"
+
+/**
+ * Les chemins à donner au client d'IA. Version classique : l'exécutable et le serveur livré. Version du Microsoft
+ * Store : l'alias d'exécution, qui lance l'exécutable du paquet avec l'identité du paquet (donc la même vue du dossier
+ * de données que l'application), et une copie du serveur dans le dossier de données, faite à chaque démarrage de
+ * l'application : le dossier du paquet, sous `C:\Program Files\WindowsApps`, change à chaque mise à jour.
+ */
+export function infosDeLInstallation({ executable, serveurLivre, donnees, plateforme, dossierLocalAppData }: Installation): InfosDuServeurMcp {
+  if (dossierLocalAppData === null) return { executable, script: serveurLivre, donnees, plateforme }
+  return { executable: `${dossierLocalAppData}\\Microsoft\\WindowsApps\\${ALIAS_D_EXECUTION}`, script: copieDuServeur(donnees), donnees, plateforme, microsoftStore: true }
+}
+
+/** Où la version du Microsoft Store copie le serveur MCP : dans son dossier de données, sous Windows. */
+export function copieDuServeur(donnees: string): string {
+  return `${donnees}\\mcp\\serveur-mcp.mjs`
 }
 
 /** Nom du serveur dans la configuration du client. */

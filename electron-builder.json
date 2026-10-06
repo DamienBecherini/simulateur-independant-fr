@@ -62,6 +62,18 @@
     "allowToChangeInstallationDirectory": true,
     "deleteAppDataOnUninstall": false
   },
+  "appx": {
+    "displayName": "Simulateur Indépendant FR",
+    "applicationId": "SimulateurIndependantFR",
+    "backgroundColor": "transparent",
+    "languages": [
+      "fr-FR"
+    ],
+    "minVersion": "10.0.17763.0",
+    "maxVersionTested": "10.0.26100.0",
+    "customExtensionsPath": "build/store/extensions-appx.xml",
+    "artifactName": "Simulateur-Independant-FR-${version}-store-${arch}.${ext}"
+  },
   "electronLanguages": [
     "fr",
     "en-US"

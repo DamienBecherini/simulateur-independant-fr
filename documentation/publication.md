@@ -108,6 +108,7 @@ L'application embarque seulement ce dont elle a besoin hors ligne : le processus
 npm run dist:win     # sous Windows : installateur et zip dans dist/
 npm run dist:mac     # sous macOS uniquement : images disque arm64 et x64
 npm run dist:linux   # sous Linux (ou WSL) : AppImage et deb
+npm run dist:store   # sous Windows : paquet du Microsoft Store (.appx), voir microsoft-store/publier-sur-le-store.md
 ```
 
 Les exécutables sont écrits dans `dist/`, ignoré par Git. Les images disque macOS ne peuvent être construites que sur un Mac.
@@ -146,6 +147,10 @@ Pour supprimer ces avertissements, il faudrait :
 - **macOS :** un compte Apple Developer (payant) pour signer avec un certificat « Developer ID » et faire notariser l'application par Apple.
 
 Ces secrets ne doivent jamais être écrits dans le dépôt : ils se déclarent dans les réglages du dépôt GitHub (Settings > Secrets and variables > Actions).
+
+## Microsoft Store
+
+Sous Windows, la voie retenue pour éviter ces avertissements (et le blocage par le Contrôle intelligent des applications) est le **Microsoft Store**, qui signe lui-même le paquet. Le workflow [« Paquet du Microsoft Store »](../.github/workflows/store.yml) construit le paquet `.appx` à chaque étiquette `vX.Y.Z`, en plus des exécutables, et le garde comme artefact de l'exécution : il s'envoie à la main dans Partner Center, et n'est pas joint au brouillon de version GitHub. Tant que l'identité du paquet n'est pas remplie (`build/store/identite.json`), il ne construit rien sur une étiquette. Marche à suivre complète, du compte développeur aux mises à jour : [microsoft-store/publier-sur-le-store.md](./microsoft-store/publier-sur-le-store.md).
 
 ## Runners et versions des systèmes
 

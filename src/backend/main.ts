@@ -15,8 +15,9 @@ import { AnneesRefuseesError, rapportAvecCorrections, texteAnneesEcartees } from
 import { contenuDesSauvegardes, contenuDuFichier, lireLaSession, lireLesPreferences, lireLesSauvegardes, lireUneSimulationImportee, preferencesParDefaut, preferencesValides, sauvegardesAEcrire } from "./logic/fichiers-de-donnees.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours.js"
-import type { InfosDuServeurMcp } from "@/lib/configuration-mcp.js"
+import { infosDeLInstallation, type InfosDuServeurMcp } from "@/lib/configuration-mcp.js"
 import { ouvrirLaBoiteAuxPropositions } from "./boite-aux-propositions.js"
+import { copierLeServeurMcp } from "./copie-du-serveur-mcp.js"
 
 /** Filtres des fenêtres d'enregistrement et d'ouverture, par format de fichier texte. */
 const FILTRES_FICHIERS: Record<FormatFichierTexte, Electron.FileFilter> = {
@@ -251,17 +252,22 @@ function validatedSession(session: unknown, caller: string): SessionState {
   return SessionStateSchema.parse({})
 }
 
+/** Le serveur MCP livré avec l'application : hors de l'archive asar une fois packagé. */
+const serveurMcpLivre = () => (app.isPackaged ? path.join(process.resourcesPath, "mcp", "serveur-mcp.mjs") : path.join(app.getAppPath(), "dist-electron", "mcp", "serveur-mcp.mjs"))
+
 /**
- * Chemins du serveur MCP local de cette installation (voir l'ADR 011) : l'exécutable de l'application, lancé en mode
- * Node, le serveur empaqueté (hors de l'archive asar une fois packagé) et le dossier de données à lui passer.
+ * Chemins du serveur MCP local de cette installation (voir les ADR 011 et 012) : l'exécutable de l'application, lancé
+ * en mode Node, le serveur empaqueté et le dossier de données à lui passer. Version du Microsoft Store : l'alias
+ * d'exécution du paquet et la copie du serveur dans le dossier de données.
  */
 function infosDuServeurMcp(): InfosDuServeurMcp {
-  return {
+  return infosDeLInstallation({
     executable: app.getPath("exe"),
-    script: app.isPackaged ? path.join(process.resourcesPath, "mcp", "serveur-mcp.mjs") : path.join(app.getAppPath(), "dist-electron", "mcp", "serveur-mcp.mjs"),
+    serveurLivre: serveurMcpLivre(),
     donnees: app.getPath("userData"),
-    plateforme: process.platform
-  }
+    plateforme: process.platform,
+    dossierLocalAppData: process.windowsStore ? (process.env.LOCALAPPDATA ?? path.join(app.getPath("home"), "AppData", "Local")) : null
+  })
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -509,7 +515,14 @@ app.on("ready", () => {
     console.error("Boîte aux propositions impossible à ouvrir :", error)
     return null
   })
-  ipcMainHandle("infosDuServeurMcp", async () => infosDuServeurMcp())
+  // Version du Microsoft Store : copie du serveur à un chemin stable, avant de donner la configuration (voir l'ADR 013).
+  const copieDuServeurMcp = process.windowsStore
+    ? copierLeServeurMcp(serveurMcpLivre(), infosDuServeurMcp().script).catch(error => console.error("Serveur MCP impossible à copier dans le dossier de données :", error))
+    : Promise.resolve()
+  ipcMainHandle("infosDuServeurMcp", async () => {
+    await copieDuServeurMcp
+    return infosDuServeurMcp()
+  })
   ipcMainHandle("propositionsEnAttente", async () => (await boiteAuxPropositions)?.enAttente() ?? [])
   ipcMainHandle("retirerProposition", async (id: string) => (typeof id === "string" ? ((await (await boiteAuxPropositions)?.retirer(id)) ?? false) : false))
 

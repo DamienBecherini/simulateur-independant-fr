@@ -1,0 +1,83 @@
+name: Paquet du Microsoft Store
+
+# Construit le paquet du Microsoft Store (.appx, x64) et le garde comme artefact de l'exécution, à envoyer à la main
+# dans Partner Center (documentation/microsoft-store/publier-sur-le-store.md). Il n'est pas joint au brouillon de
+# version GitHub : un paquet du Store n'est pas signé, il ne s'installe pas hors du Store.
+# - Sur une étiquette v* : paquet à publier, si l'identité du paquet est remplie (build/store/identite.json) ; sinon,
+#   rien n'est construit et l'exécution le signale.
+# - À la main (workflow_dispatch) : paquet à publier, ou paquet d'essai tant que l'identité n'est pas remplie.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      essai:
+        description: "Paquet d'essai (identité fictive, non publiable) si l'identité n'est pas encore remplie"
+        type: boolean
+        default: false
+
+concurrency:
+  group: store-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  paquet:
+    name: Paquet du Microsoft Store
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Installer Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Vérifier que l'étiquette correspond à la version de package.json
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::L'étiquette ${GITHUB_REF_NAME} ne correspond pas à la version ${version} de package.json (attendu : v${version})."
+            exit 1
+          fi
+
+      - name: Vérifier l'identité du paquet
+        id: identite
+        shell: bash
+        run: node scripts/construire-paquet-store.mjs --verifier
+
+      - name: Signaler l'identité manquante
+        if: steps.identite.outputs.prete != 'true' && inputs.essai != true
+        shell: bash
+        run: echo "::notice::Identité du paquet pas encore remplie (build/store/identite.json) : aucun paquet construit. Lancer le workflow à la main avec « essai » pour un paquet d'essai."
+
+      - name: Installer les dépendances
+        if: steps.identite.outputs.prete == 'true' || inputs.essai == true
+        run: npm ci --ignore-scripts
+
+      - name: Tests unitaires
+        if: steps.identite.outputs.prete == 'true' || inputs.essai == true
+        run: npm test
+
+      # electron-builder télécharge lui-même l'Electron à empaqueter, ainsi que makeappx et makepri : ni binaire de
+      # node_modules/electron, ni SDK Windows. Bash : PowerShell ne transmet pas toujours le « -- » à npm.
+      - name: Construire le paquet
+        if: steps.identite.outputs.prete == 'true' || inputs.essai == true
+        shell: bash
+        run: npm run dist:store -- ${{ steps.identite.outputs.prete != 'true' && '--essai' || '' }}
+
+      - name: Conserver le paquet
+        if: steps.identite.outputs.prete == 'true' || inputs.essai == true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: paquet-microsoft-store
+          path: dist/*.appx
+          if-no-files-found: error
+          retention-days: 30

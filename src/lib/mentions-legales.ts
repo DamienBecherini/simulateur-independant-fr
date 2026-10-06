@@ -67,7 +67,7 @@ export const RUBRIQUES: readonly Rubrique[] = [
       {
         liste: [
           ["dans la démo web, dans le stockage local de votre navigateur (localStorage) : la simulation en cours, vos sauvegardes, vos préférences et le thème choisi ;"],
-          ["dans l'application de bureau, dans un dossier de votre ordinateur : ", { code: "%APPDATA%\\simulateur-independant-fr" }, " sous Windows, ", { code: "~/Library/Application Support/simulateur-independant-fr" }, " sous macOS, ", { code: "~/.config/simulateur-independant-fr" }, " sous Linux."]
+          ["dans l'application de bureau, dans un dossier de votre ordinateur : ", { code: "%APPDATA%\\simulateur-independant-fr" }, " sous Windows (la version du Microsoft Store range aussi des fichiers dans ", { code: "%LOCALAPPDATA%\\Packages" }, ", dans le dossier de l'application, que Windows supprime quand vous la désinstallez), ", { code: "~/Library/Application Support/simulateur-independant-fr" }, " sous macOS, ", { code: "~/.config/simulateur-independant-fr" }, " sous Linux."]
         ]
       },
       { paragraphe: ["Le projet n'a pas de serveur : rien ne lui est envoyé automatiquement. Des données ne quittent votre appareil que si vous le décidez, en donnant votre avis :"] },
@@ -84,7 +84,7 @@ export const RUBRIQUES: readonly Rubrique[] = [
         liste: [
           ["« Nouvelle Simulation / Réinitialiser », dans les paramètres, vide la simulation en cours ; chaque sauvegarde se supprime dans « Charger une sauvegarde » ;"],
           ["dans la démo web, effacer les données du site dans votre navigateur supprime tout ;"],
-          ["dans l'application de bureau, supprimer le dossier indiqué plus haut supprime tout."]
+          ["dans l'application de bureau, supprimer les dossiers indiqués plus haut supprime tout."]
         ]
       },
       { paragraphe: ["Pour une question sur vos données, ou pour faire effacer un avis que vous avez envoyé, écrivez à ", CONTACT, ". Vous pouvez aussi adresser une réclamation à la ", LIEN_CNIL, "."] }
