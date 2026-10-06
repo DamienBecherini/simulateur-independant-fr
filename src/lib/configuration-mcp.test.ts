@@ -4,6 +4,7 @@
 // proposition paraîtrait périmée.
 
 import { describe, expect, it } from "vitest"
+import type { SessionState } from "@/types"
 import { contenuDuFichier, lireLaSession } from "@/backend/logic/fichiers-de-donnees"
 import { empreinteDeLaSession } from "@/backend/logic/outils/commun"
 import { lireUnePropositionEnAttente, nomDUnePropositionEnAttente, NOM_DE_PROPOSITION } from "@/backend/mcp/proposition-en-attente"
@@ -46,7 +47,8 @@ describe("fichiers de la boîte aux propositions", () => {
 })
 
 describe("même session pour l'application et le serveur", () => {
-  it.each([["la simulation d'exemple", sessionExemple()], ...MONTAGES_TYPES.map(m => [`le montage « ${m.titre} »`, sessionDUnMontage(m)] as const)])("garde l'empreinte de %s après enregistrement et relecture", (_nom, session) => {
+  const sessions: [string, SessionState][] = [["la simulation d'exemple", sessionExemple()], ...MONTAGES_TYPES.map((m): [string, SessionState] => [`le montage « ${m.titre} »`, sessionDUnMontage(m)])]
+  it.each(sessions)("garde l'empreinte de %s après enregistrement et relecture", (_nom, session) => {
     const relue = lireLaSession(contenuDuFichier(session, "0.9.0")).safeState
     expect(empreinteDeLaSession(relue)).toBe(empreinteDeLaSession(session))
   })
