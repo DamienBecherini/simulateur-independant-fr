@@ -119,6 +119,8 @@ describe("expliquer_resultat", () => {
   it("détaille les cotisations d'un gérant d'EURL et d'un salarié", () => {
     const eurl = appeler<{ lignes: { libelle: string; composantes?: unknown[] }[] }>("expliquer_resultat", montage("eurl-is-remuneration-gerant"), { acteurId: "e-nicolas" })
     expect(eurl.lignes.find(l => l.libelle.startsWith("Cotisations du travailleur non salarié"))!.composantes).toHaveLength(9)
+    const gerant = appeler<{ lignes: { libelle: string }[] }>("expliquer_resultat", montage("eurl-is-remuneration-gerant"), { acteurId: "p-nicolas" })
+    expect(gerant.lignes.map(l => l.libelle)).toContain("Foyer fiscal (Nicolas, 1 part) : revenu imposable")
     const conjoint = montage("conjoint-salarie-sasu")
     const societe = conjoint.entities.find(e => e.type === "company")!
     expect(appeler<{ lignes: { libelle: string }[] }>("expliquer_resultat", conjoint, { acteurId: societe.id }).lignes.some(l => l.libelle.startsWith("Salarié "))).toBe(true)

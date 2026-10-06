@@ -47,9 +47,23 @@ export class ParametresInvalides extends Error {
 
 const messagesEnFrancais = z.locales.fr().localeError
 
+/**
+ * Le message d'un problème, complété de ce qu'un modèle doit savoir pour corriger son appel : les valeurs permises
+ * d'un discriminant (« cible », « type »), et l'écriture d'un nombre quand il a envoyé un texte (« 1 200,50 € »).
+ */
+function messageDuProbleme(issue: z.core.$ZodIssue): string {
+  if (issue.code === "invalid_union" && "options" in issue && Array.isArray(issue.options) && issue.options.length > 0) {
+    return `${issue.message} : valeurs permises ${issue.options.map(o => `« ${String(o)} »`).join(", ")}.`
+  }
+  if (issue.code === "invalid_type" && issue.expected === "number" && issue.message.includes("chaîne")) {
+    return `${issue.message}. Écrivez un nombre JSON, sans guillemets, espace ni symbole : 1200.5, pas « 1 200,50 € ».`
+  }
+  return issue.message
+}
+
 /** Les problèmes d'une validation, un par ligne : « operations.0.montant : … ». */
 export function problemes(erreur: z.ZodError): string {
-  return erreur.issues.map(issue => `- ${issue.path.length > 0 ? issue.path.join(".") : "(racine)"} : ${issue.message}`).join("\n")
+  return erreur.issues.map(issue => `- ${issue.path.length > 0 ? issue.path.join(".") : "(racine)"} : ${messageDuProbleme(issue)}`).join("\n")
 }
 
 /** Valide une valeur avec un schéma, messages en français ; lève `ParametresInvalides` si elle est refusée. */

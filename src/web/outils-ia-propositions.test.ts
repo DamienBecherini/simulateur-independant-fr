@@ -77,11 +77,32 @@ describe("proposer puis appliquer des flux", () => {
 
   it("signale un doublon probable", () => {
     const resultat = proposer("proposer_flux", exemple(), { flux: [{ annee: 2026, acteurId: "company-conseil", typeFlux: "ca_services", libelle: "Facturation", montant: 6500, mois: [1, 2] }] })
-    expect(resultat.avertissements).toEqual(["« Facturation » (6 500 €) existe déjà sur Conseil SASU en janvier et février 2026 : doublon probable."])
+    expect(resultat.avertissements).toEqual(["« Facturation » (6 500 €) existe déjà sur « Conseil SASU » en janvier et février 2026 : doublon probable."])
+  })
+
+  it("signale les séries du même type auxquelles les flux s'ajoutent, sauf si la proposition les supprime", () => {
+    const facture = { annee: 2026, acteurId: "micro-atelier", typeFlux: "ca_micro_services_bnc", libelle: "Facture F-001", montant: 3200, mois: [1] }
+    const resultat = proposer("proposer_flux", exemple(), { flux: [facture, { ...facture, libelle: "Facture F-002", mois: [2] }] })
+    expect(resultat.resume[0]).toBe("Ajouter « Facture F-001 » (ca_micro_services_bnc) sur « Atelier de Camille » : 3 200 € en janvier 2026.")
+    expect(resultat.avertissements).toEqual([
+      "Ces flux s'ajoutent à ceux déjà saisis sur « Atelier de Camille » en 2026 (ca_micro_services_bnc) : « Prestations » (34 800 €). S'ils les remplacent, proposez aussi de supprimer ou de modifier ces séries.",
+      expect.stringContaining("2026 : « Atelier de Camille » : Seuil de franchise en base de TVA dépassé (prestations de services 41 200 € pour un seuil de 37 500 €)")
+    ])
+    const remplacee = proposer("proposer_suppression", exemple(), { suppression: { cible: "serie", annee: 2026, serie: { acteurId: "micro-atelier", typeFlux: "ca_micro_services_bnc", libelle: "Prestations" } }, suiteDe: resultat.proposition })
+    expect(remplacee.resume[remplacee.resume.length - 1]).toBe("Supprimer la série « Prestations » (ca_micro_services_bnc) de « Atelier de Camille », toute l'année 2026 (12 flux, 34 800 €).")
+    expect(remplacee.avertissements).toEqual([])
+  })
+
+  it("signale les avertissements du moteur que la proposition fait apparaître", () => {
+    const session = geler(sessionDUnMontage(MONTAGES_TYPES.find(m => m.id === "sasu-sans-salaire")!))
+    const remuneration = { annee: 2026, acteurId: "s-thomas", typeFlux: "director_remuneration", libelle: "Rémunération", montant: 1000, mois: TOUTE_L_ANNEE }
+    const resultat = proposer("proposer_flux", session, { flux: [remuneration] })
+    expect(resultat.avertissements).toHaveLength(1)
+    expect(resultat.avertissements[0]).toMatch(/^2026 : « SASU de Thomas » : Dividendes saisis \(62 750 €\) supérieurs au bénéfice distribuable/)
   })
 
   it("refuse un type de flux qui ne convient pas à l'acteur, ou un brut hors salaire", () => {
-    expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, acteurId: "micro-atelier" }] })).toBe("Opération 1 (ajouter_flux) : Le type de flux « deductible_expense » ne convient pas à « Atelier de Camille » (micro-entreprise). Types possibles : ca_micro_services_bic, ca_micro_services_bnc, ca_micro_vente, expense.")
+    expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, acteurId: "micro-atelier" }] })).toBe("Opération 1 (ajouter_flux « Loyer du bureau » 2026) : Le type de flux « deductible_expense » ne convient pas à « Atelier de Camille » (micro-entreprise). Types possibles : ca_micro_services_bic, ca_micro_services_bnc, ca_micro_vente, expense.")
     expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, montantBrut: 1000 }] })).toContain("montantBrut ne s'applique qu'à un salaire")
     expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, acteurId: "person-lea", typeFlux: "salary", montant: 1000, montantBrut: 900 }] })).toContain("inférieur au net")
     const salaire = proposer("proposer_flux", exemple(), { flux: [{ ...loyer, acteurId: "person-lea", typeFlux: "salary", libelle: "Job d'été", montant: 1000, montantBrut: 1300, mois: [7, 8] }] })
@@ -146,7 +167,7 @@ describe("modifier, supprimer, régler le comparateur", () => {
         { cible: "acteur", acteurId: "micro-atelier", nom: "Atelier", reglages: { opteVFL: false } }
       ]
     })
-    expect(resultat.resume).toEqual(["Modifier la série « Facturation » (ca_services) de « Conseil SASU », juillet, août, septembre, octobre, novembre et décembre 2026 : montant → 7000.", "Modifier « Atelier » : nom → Atelier, opteVFL → non."])
+    expect(resultat.resume).toEqual(["Modifier la série « Facturation » (ca_services) de « Conseil SASU », juillet, août, septembre, octobre, novembre et décembre 2026 : montant → 7 000 €.", "Modifier « Atelier » : nom → Atelier, opteVFL → non."])
     const apres = appliquer(session, resultat.proposition)
     expect(fluxDe(apres).filter(f => f.label === "Facturation").map(f => f.amount)).toEqual([6500, 6500, 6500, 6500, 6500, 6500, 7000, 7000, 7000, 7000, 7000, 7000])
     expect(apres.entities.find(e => e.id === "micro-atelier")).toMatchObject({ name: "Atelier", opteVFL: false })
@@ -205,6 +226,16 @@ describe("limites", () => {
     expect(erreurDe("proposer_acteur", exemple(), { genre: "personne", nom: "   " })).toContain("texte vide")
     expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, mois: [3, 3] }] })).toContain("Mois en double")
     expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, montant: "800" }] })).toContain("flux.0.montant")
+  })
+
+  it("dit au modèle comment corriger son appel : nombres écrits en texte, valeurs permises, série introuvable", () => {
+    expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, montant: "1 200,50 €" }] })).toContain("Écrivez un nombre JSON, sans guillemets")
+    expect(erreurDe("proposer_suppression", exemple(), { suppression: { cible: "acteur", acteurId: "person-lea" } })).toContain("suppression.cible : Entrée invalide : valeurs permises « serie », « relation ».")
+    const serie = { acteurId: "micro-atelier", typeFlux: "ca_micro_services_bnc", libelle: "prestations" }
+    expect(erreurDe("proposer_modification", exemple(), { modifications: [{ cible: "serie", annee: 2026, serie, montant: 1 }] })).toBe(
+      "Opération 1 (modifier_serie « prestations » 2026) : Aucun flux « prestations » (ca_micro_services_bnc) de « Atelier de Camille » en 2026. Séries de « Atelier de Camille » en 2026, libellé et type exacts : « Prestations » (ca_micro_services_bnc), « Ventes » (ca_micro_vente) (voir lister_flux)."
+    )
+    expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, annee: 2028 }] })).toContain("Opération 1 (ajouter_annee 2028) : Les années d'une simulation se suivent : seules 2025 et 2027 peuvent être ajoutées (des flux sur une année absente l'ajoutent")
   })
 
   it("refuse une proposition de plus de 200 opérations, ou de plus de 10 acteurs", () => {

@@ -196,7 +196,7 @@ function expliquerPersonne(session: SessionState, rapport: SimulationReport, p: 
   const f = p.fraisProfessionnels
   const frais = f ? [ligne(`Frais professionnels retenus (${f.retenue === "reels" ? "frais réels" : "déduction forfaitaire de 10 %"})`, f.deduction, [composante("Déduction forfaitaire", f.deductionForfaitaire), composante("Frais réels", f.fraisReels), composante("dont trajets domicile-travail", f.fraisDeTrajet)])] : []
   const foyer = rapport.foyers.find(fo => fo.personIds.includes(p.entityId))
-  const lignesFoyer = foyer ? [ligne(`Foyer fiscal (${foyer.personIds.map(id => nomDe(session, id)).join(", ")}, ${foyer.totalParts} parts) : revenu imposable`, foyer.revenuImposableGlobal), ligne("Foyer : impôt sur le revenu", foyer.impotSurLeRevenu), ligne("Foyer : prélèvements sociaux", foyer.prelevementsSociaux), ligne("Foyer : net après impôts", foyer.netApresImpots)] : []
+  const lignesFoyer = foyer ? [ligne(`Foyer fiscal (${foyer.personIds.map(id => nomDe(session, id)).join(", ")}, ${foyer.totalParts} ${foyer.totalParts > 1 ? "parts" : "part"}) : revenu imposable`, foyer.revenuImposableGlobal), ligne("Foyer : impôt sur le revenu", foyer.impotSurLeRevenu), ligne("Foyer : prélèvements sociaux", foyer.prelevementsSociaux), ligne("Foyer : net après impôts", foyer.netApresImpots)] : []
   return {
     lignes: [revenus, ligne("Cotisations salariales", p.cotisationsSalariales), ligne("Dépenses personnelles", p.depenses), ...frais, ...lignesFoyer],
     informations: foyer?.optionDividendes ? [`Dividendes imposés ${foyer.optionDividendes === "pfu" ? "au prélèvement forfaitaire unique" : "au barème"}, l'option la plus favorable au foyer.`] : [],

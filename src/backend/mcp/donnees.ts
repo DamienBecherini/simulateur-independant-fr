@@ -3,12 +3,13 @@
 // lecture seule) et un fichier par proposition à appliquer, dans le dossier `propositions` (voir l'ADR 011).
 
 import { randomBytes } from "node:crypto"
-import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises"
+import { lstat, mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import type { SessionState } from "../../types.js"
 import { lireLaSession } from "../logic/fichiers-de-donnees.js"
+import { empreinte } from "../logic/outils/commun.js"
 import type { Proposition } from "../logic/outils/propositions.js"
-import { contenuDUnePropositionEnAttente, DOSSIER_DES_PROPOSITIONS, FICHIER_DE_LA_SESSION, nomDUnePropositionEnAttente } from "./proposition-en-attente.js"
+import { contenuDUnePropositionEnAttente, DOSSIER_DES_PROPOSITIONS, FICHIER_DE_LA_SESSION, lireUnePropositionEnAttente, NOM_DE_PROPOSITION, nomDUnePropositionEnAttente, TAILLE_MAX_D_UNE_PROPOSITION } from "./proposition-en-attente.js"
 
 /** Erreur de lecture des données, dont le message en français dit à l'utilisateur quoi vérifier. */
 export class ErreurDeDonnees extends Error {
@@ -50,6 +51,25 @@ export async function lireLaSessionEnregistree(dossier: string): Promise<Session
   } catch (erreur) {
     throw new ErreurDeDonnees(`Le fichier de la simulation (${fichier}) est invalide : ${message(erreur)}. Ouvrez l'application : elle le signale et repart d'une simulation vierge.`)
   }
+}
+
+/**
+ * Le fichier d'une proposition identique qui attend déjà dans la boîte (envoyée deux fois par le client d'IA, qui
+ * réessaie par exemple après une réponse tardive) ; `null` s'il n'y en a pas. Seuls les fichiers que l'application
+ * accepterait sont lus : nom simple, fichier ordinaire, taille bornée, format attendu.
+ */
+export async function propositionDejaEnAttente(dossier: string, proposition: Proposition): Promise<string | null> {
+  const boite = path.join(dossier, DOSSIER_DES_PROPOSITIONS)
+  const noms = await readdir(boite).catch(() => [] as string[])
+  const cherchee = empreinte(proposition)
+  for (const nom of noms.filter(n => NOM_DE_PROPOSITION.test(n)).sort()) {
+    const fichier = path.join(boite, nom)
+    const infos = await lstat(fichier).catch(() => null)
+    if (!infos?.isFile() || infos.size > TAILLE_MAX_D_UNE_PROPOSITION) continue
+    const lue = lireUnePropositionEnAttente(await readFile(fichier, "utf-8").catch(() => ""))
+    if (lue && empreinte(lue.proposition) === cherchee) return nom
+  }
+  return null
 }
 
 /**

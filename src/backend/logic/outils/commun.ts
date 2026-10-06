@@ -75,7 +75,7 @@ export const SENS_DES_TYPES: Record<FinancialFlow["type"], string> = {
   salary: "salaire net d'une personne (emploi salarié, avant impôt sur le revenu) ; le brut peut être précisé",
   are: "allocation chômage (ARE) d'une personne",
   other_taxable_income: "autre revenu imposable d'une personne (imposé comme un salaire)",
-  expense: "dépense non déductible : dépense personnelle d'une personne, ou charge d'une micro-entreprise",
+  expense: "dépense non déductible : dépense personnelle d'une personne, ou charge d'une micro-entreprise (loyer, logiciel, assurance…), qui réduit le net encaissé mais ni les cotisations ni l'impôt, calculés sur le chiffre d'affaires",
   income: "type réservé aux tests"
 }
 
