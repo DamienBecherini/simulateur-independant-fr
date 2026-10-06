@@ -96,6 +96,17 @@ describe("serveur MCP : lecture", () => {
     expect(JSON.parse((resultat.content[1] as { text: string }).text)).toEqual(resultat.structuredContent)
   })
 
+  it("situe la rémunération saisie par rapport au meilleur net, avec les frais de fonctionnement retenus", async () => {
+    await ecrireLaSession(sessionExemple())
+    await connecter()
+    const resultat = await appeler("optimiser_remuneration", { activiteId: "company-conseil", statut: "SASU" })
+    expect(resultat.isError).toBeFalsy()
+    const { situationActuelle, meilleur, ecartAuMeilleur, fraisFonctionnement } = resultat.structuredContent as { situationActuelle: { statut: string; netApresImpots: number }; meilleur: { netApresImpots: number }; ecartAuMeilleur: number; fraisFonctionnement: number }
+    expect(situationActuelle.statut).toBe("SASU")
+    expect(ecartAuMeilleur).toBe(meilleur.netApresImpots - situationActuelle.netApresImpots)
+    expect(fraisFonctionnement).toBeGreaterThan(0)
+  })
+
   it("relit le fichier à chaque appel : une modification enregistrée par l'application est vue tout de suite", async () => {
     await ecrireLaSession(sessionExemple())
     await connecter()
