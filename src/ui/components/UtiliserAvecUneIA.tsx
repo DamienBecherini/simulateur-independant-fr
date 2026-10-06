@@ -4,7 +4,7 @@
 // chemins réels de cette installation (voir documentation/utiliser-avec-une-ia.md et l'ADR 011). Dans la démo web :
 // ce que cela permet, et les liens vers l'application de bureau, seule à le faire.
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { Bot, Copy } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -106,6 +106,32 @@ export function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
   )
 }
 
+/** La fenêtre, ouverte par le bouton `declencheur` ; le focus y revient à sa fermeture. */
+function FenetreIA({ declencheur, children }: { declencheur: ReactNode; children: ReactNode }) {
+  const [ouverte, setOuverte] = useState(false)
+  return (
+    <Dialog open={ouverte} onOpenChange={setOuverte}>
+      <DialogTrigger asChild>{declencheur}</DialogTrigger>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>*]:min-w-0">
+        <DialogHeader>
+          <DialogTitle>{TITRE_IA}</DialogTitle>
+          <DialogDescription>Connecter un client d'IA de bureau au simulateur, par le protocole MCP (Model Context Protocol).</DialogDescription>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** La fenêtre de la démo web (renvoi vers l'application de bureau), ouverte par un autre bouton que celui des paramètres. */
+export function FenetreIADeLaDemo({ declencheur }: { declencheur: ReactNode }) {
+  return (
+    <FenetreIA declencheur={declencheur}>
+      <SeulementDansLApplicationDeBureau />
+    </FenetreIA>
+  )
+}
+
 /**
  * Le bouton des paramètres qui ouvre la fenêtre. Dans l'application de bureau, il attend les chemins de
  * l'installation ; dans la démo web, où il n'y a pas de serveur local, la fenêtre renvoie vers l'application de bureau.
@@ -113,7 +139,6 @@ export function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
 export function BoutonUtiliserAvecUneIA(bouton: Pick<ButtonProps, "variant" | "className">) {
   const web = import.meta.env.VITE_CIBLE === "web"
   const [infos, setInfos] = useState<InfosDuServeurMcp | null>(null)
-  const [ouverte, setOuverte] = useState(false)
 
   useEffect(() => {
     if (import.meta.env.VITE_CIBLE === "web") return
@@ -131,20 +156,14 @@ export function BoutonUtiliserAvecUneIA(bouton: Pick<ButtonProps, "variant" | "c
 
   if (!web && !infos) return null
   return (
-    <Dialog open={ouverte} onOpenChange={setOuverte}>
-      {/* Par le déclencheur de la fenêtre, le focus revient sur le bouton à sa fermeture. */}
-      <DialogTrigger asChild>
+    <FenetreIA
+      declencheur={
         <Button {...bouton}>
           <Bot className="mr-2 size-4" aria-hidden="true" /> {TITRE_IA}
         </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>*]:min-w-0">
-        <DialogHeader>
-          <DialogTitle>{TITRE_IA}</DialogTitle>
-          <DialogDescription>Connecter un client d'IA de bureau au simulateur, par le protocole MCP (Model Context Protocol).</DialogDescription>
-        </DialogHeader>
-        {web ? <SeulementDansLApplicationDeBureau /> : infos && <GuideDuServeurMcp infos={infos} />}
-      </DialogContent>
-    </Dialog>
+      }
+    >
+      {web ? <SeulementDansLApplicationDeBureau /> : infos && <GuideDuServeurMcp infos={infos} />}
+    </FenetreIA>
   )
 }

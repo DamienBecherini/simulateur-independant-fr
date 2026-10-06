@@ -93,14 +93,20 @@ test("avec l'invitation du navigateur, « Installer maintenant » ouvre son inst
   await expect(page.locator("body")).toHaveAttribute("data-installation-demandee", "oui")
 })
 
-test("une fois la démo installée, ni la ligne du bandeau ni le bouton des paramètres n'apparaissent", async ({ page }) => {
+test("une fois la démo installée, elle devient la « Version web installée » : plus d'invitation à installer, un renvoi vers l'application de bureau pour le MCP", async ({ page }) => {
   await page.addInitScript(() => {
     const original = window.matchMedia.bind(window)
     window.matchMedia = requete => (requete === "(display-mode: standalone)" ? ({ ...original(requete), matches: true, media: requete } as MediaQueryList) : original(requete))
   })
   await ouvrir(page)
-  await expect(bandeau(page).getByRole("button", { name: "Recommencer avec l'exemple" })).toBeVisible()
-  await expect(bandeau(page)).not.toContainText("Installer le simulateur")
+  const installee = page.getByRole("complementary", { name: "Version web installée" })
+  await expect(installee).toContainText("vos simulations restent sur cet ordinateur")
+  await expect(installee.getByRole("button", { name: "Recommencer avec l'exemple" })).toBeVisible()
+  await expect(installee).not.toContainText("Installer le simulateur")
+  // À la place de l'invitation à installer : la connexion d'une IA demande l'application de bureau.
+  await installee.getByRole("button", { name: "En savoir plus" }).click()
+  await expect(fenetre(page, TITRE_IA)).toContainText("Seulement dans l'application de bureau")
+  await page.keyboard.press("Escape")
   await page.getByRole("button", { name: "Paramètres" }).click()
   await expect(page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: TITRE_IA })).toBeVisible()
   await expect(page.getByRole("button", { name: TITRE })).toHaveCount(0)

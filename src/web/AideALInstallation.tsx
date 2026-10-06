@@ -10,7 +10,8 @@ import { HardDrive, MonitorDown, WifiOff } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { LiensVersLApplicationDeBureau } from "./ApplicationDeBureau"
-import { demoInstallee, familleDuNavigateur, installationPossible, installer, surLInstallation } from "./pwa/installation"
+import { familleDuNavigateur, installationPossible, installer, surLInstallation } from "./pwa/installation"
+import { useDemoInstallee } from "./pwa/utiliser-l-installation"
 import barreDAdresse from "./aide-installation/edge-barre-d-adresse.webp"
 import fenetreDInstallation from "./aide-installation/edge-fenetre-d-installation.webp"
 
@@ -114,8 +115,6 @@ function FenetreDInstallation({ declencheur }: { declencheur: ReactNode }) {
     </Dialog>
   )
 }
-
-const useDemoInstallee = () => useSyncExternalStore(surLInstallation, () => demoInstallee(), () => false)
 
 /** La ligne du bandeau de la démo, et son bouton « Comment faire ? » ; rien une fois la démo installée. */
 export function InvitationAInstaller({ className }: { className?: string }) {

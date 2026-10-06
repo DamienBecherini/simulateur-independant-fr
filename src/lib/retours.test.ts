@@ -47,6 +47,8 @@ describe("contenu du retour", () => {
   it("transmet toujours la version et la cible, même sans diagnostic", () => {
     expect(champsDuTicket(retour({ note: 4 }), DIAGNOSTIC)).toEqual({ note: "★★★★☆ 4/5", version: "0.9.0", environnement: "démo web" })
     expect(environnementDuRetour(RETOUR_VIDE, { ...DIAGNOSTIC, web: false })).toBe("application de bureau")
+    expect(environnementDuRetour(RETOUR_VIDE, { ...DIAGNOSTIC, installee: true })).toBe("version web installée")
+    expect(environnementDuRetour({ ...RETOUR_VIDE, diagnostic: true }, { ...DIAGNOSTIC, installee: true })).toBe("version web installée · Windows · Chrome 140")
   })
 
   it("n'ajoute système, navigateur, affichage en cours et nombres qu'avec le diagnostic", () => {

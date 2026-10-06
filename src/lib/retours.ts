@@ -25,6 +25,8 @@ export interface Diagnostic {
   version: string
   /** Démo web (navigateur) ou application de bureau. */
   web: boolean
+  /** Démo web installée comme une application (Edge, Chrome). */
+  installee?: boolean
   /** Système et navigateur, tirés de l'identification du navigateur. */
   systeme: string
   navigateur: string
@@ -69,9 +71,10 @@ export function retourEnvoyable(retour: Retour): boolean {
   return retour.note !== null || retour.affichage !== null || retour.type !== null || retour.message.trim() !== ""
 }
 
-/** « Démo web » ou « application de bureau », et, avec le diagnostic, le système et le navigateur. */
+/** « Démo web », « version web installée » ou « application de bureau », et, avec le diagnostic, le système et le navigateur. */
 export function environnementDuRetour(retour: Retour, diagnostic: Diagnostic): string {
-  const cible = diagnostic.web ? "démo web" : "application de bureau"
+  const web = diagnostic.installee ? "version web installée" : "démo web"
+  const cible = diagnostic.web ? web : "application de bureau"
   return retour.diagnostic ? [cible, diagnostic.systeme, diagnostic.navigateur].join(" · ") : cible
 }
 
