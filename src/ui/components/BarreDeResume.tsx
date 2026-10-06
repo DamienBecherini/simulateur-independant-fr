@@ -85,7 +85,7 @@ export function BarreDeResume({ report, annees, annee, onAnnee, comparaison }: B
   const vues = useVuesDeLaPage()
 
   return (
-    <div ref={barre} style={{ top: haut }} className="sticky z-40 -mx-4 mb-6 sm:mx-0 print:hidden">
+    <div ref={barre} data-barre-collante style={{ top: haut }} className="sticky z-40 -mx-4 mb-6 sm:mx-0 print:hidden">
       <section aria-label="Résumé de l'année" className={cn("border-y border-blue-200 bg-blue-50/95 px-4 py-1.5 text-sm backdrop-blur-sm sm:rounded-md sm:border dark:border-blue-900 dark:bg-slate-900/95", vues && "sm:rounded-b-none")}>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-0.5">
           <ChoixDeLAnnee annees={annees} annee={annee} onAnnee={onAnnee} />

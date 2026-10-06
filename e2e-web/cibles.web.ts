@@ -24,11 +24,15 @@ async function ouvrir(page: Page) {
 /**
  * Mesure chaque contrôle visible. Sa zone cliquable est celle de l'étiquette <label> qui l'englobe s'il y en a une
  * (un clic sur l'étiquette l'active). Les liens au fil d'un texte relèvent de l'exception « en ligne » du critère.
+ * Les mois de la bande au-dessus de la grille relèvent de l'exception « équivalent » : sur un téléphone, douze mois
+ * ne tiennent pas en 24 px chacun, mais les flèches « Mois précédent » et « Mois suivant », mesurées ici, mènent à
+ * chacun d'eux (et la bande, de 44 px de haut au doigt, se parcourt aussi en glissant tout du long).
  */
 async function mesurerLesCibles(page: Page): Promise<Cible[]> {
   return page.locator(CONTROLES).evaluateAll(elements =>
     elements.flatMap(element => {
       if (element.closest('[aria-hidden="true"], [inert]') || !element.checkVisibility({ visibilityProperty: true })) return []
+      if (element.closest('[role="toolbar"][aria-label="Mois de la grille"]')) return []
       const style = getComputedStyle(element)
       if (element.tagName === "A" && style.display === "inline") return []
       // Masqué hors focus (lien d'évitement en sr-only) : il n'est pas affiché, donc pas cliquable.

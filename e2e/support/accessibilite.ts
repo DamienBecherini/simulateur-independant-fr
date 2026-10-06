@@ -16,14 +16,22 @@ function decrire(violations: Violations): string {
     .join("\n\n")
 }
 
+/** Parties de la page laissées de côté, et règles non vérifiées : chaque usage dit pourquoi. */
+export interface ExceptionsDeLAudit {
+  exclure?: string[]
+  sansLesRegles?: string[]
+}
+
 /** Audite la page, ou la partie désignée par un sélecteur, et échoue en listant les violations trouvées. */
-export async function auditerAccessibilite(page: Page, etat: string, inclure?: string) {
+export async function auditerAccessibilite(page: Page, etat: string, inclure?: string, { exclure = [], sansLesRegles = [] }: ExceptionsDeLAudit = {}) {
   // Une fenêtre qui apparaît en fondu aurait, pendant l'animation, des contrastes faussés.
   await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"))
   // Mode « hérité » : axe s'exécute entièrement dans la page, sans ouvrir l'onglet annexe qui assemble les
   // résultats des iframes, ce qu'Electron ne permet pas. L'interface n'a pas d'iframe : le résultat est le même.
   let constructeur = new AxeBuilder({ page }).withTags(CRITERES_WCAG).setLegacyMode()
   if (inclure) constructeur = constructeur.include(inclure)
+  for (const selecteur of exclure) constructeur = constructeur.exclude(selecteur)
+  if (sansLesRegles.length > 0) constructeur = constructeur.disableRules(sansLesRegles)
   const { violations } = await constructeur.analyze()
   expect(
     violations.map(v => v.id),
