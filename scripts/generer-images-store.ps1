@@ -3,6 +3,7 @@
 # aux tailles et facteurs d'échelle que lit Windows. electron-builder les range dans le dossier « assets » du paquet et,
 # parce que des variantes « .scale-* » et « .targetsize-* » sont présentes, compile leur index (resources.pri).
 # Fond transparent : la couleur des tuiles est celle du thème de l'utilisateur (backgroundColor « transparent »).
+# Écrit aussi les logos de la fiche du Store (documentation/microsoft-store/logos/), à déposer dans Partner Center.
 #
 # Windows seulement (System.Drawing de Windows PowerShell). À relancer seulement si l'icône change :
 #   powershell -ExecutionPolicy Bypass -File scripts/generer-images-store.ps1
@@ -56,5 +57,12 @@ foreach ($t in $taillesCibles) {
   Ecrire-Image "Square44x44Logo.targetsize-$t.png" $t $t 1.0
   Ecrire-Image "Square44x44Logo.targetsize-$($t)_altform-unplated.png" $t $t 1.0
 }
+
+# Logos de la fiche du Store, à déposer à la main dans Partner Center (Fiche du Store > Logos du Store).
+$sortie = Join-Path $racine "documentation/microsoft-store/logos"
+New-Item -ItemType Directory -Force $sortie | Out-Null
+Ecrire-Image "icone-300x300.png" 300 300 1.0
+Ecrire-Image "boite-1080x1080.png" 1080 1080 0.5
+Ecrire-Image "affiche-720x1080.png" 720 1080 0.6
 $source.Dispose()
 Write-Output "Images du Microsoft Store : $sortie"
