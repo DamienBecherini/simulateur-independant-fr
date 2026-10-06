@@ -52,7 +52,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
   const resume = useAffichageResume()
   // Bande des mois et fondus des bords : seulement quand la grille déborde de sa zone et doit défiler.
   const zone = useRef<HTMLDivElement>(null)
-  const defilement = useDefilementDeLaGrille(zone, entities.length > 0)
+  const defilement = useDefilementDeLaGrille(zone, entities.length > 0, annee)
   const haut = useHautDesBarres(defilement.deborde)
   const fluxDesMois = useMemo(() => {
     const acteurs = new Set(entities.map(e => e.id))

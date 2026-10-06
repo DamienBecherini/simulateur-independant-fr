@@ -60,8 +60,8 @@ const zoneDeLaGrille = () => document.querySelector(".overflow-x-auto") as HTMLE
 
 function afficher(grille: MonthlyGridData = grilleVide()) {
   const props = { entities: [makePerson(), makeCompany()], setMonthlyData: () => {}, preferences: { slotOrder: [] }, flowTypeToNumberMap: new Map<string, number>() }
-  const rendu = render(<MonthlyGrid {...props} monthlyData={grille} />)
-  return { user: userEvent.setup(), changerDeGrille: (autre: MonthlyGridData) => rendu.rerender(<MonthlyGrid {...props} monthlyData={autre} />) }
+  const rendu = render(<MonthlyGrid {...props} monthlyData={grille} annee={2026} />)
+  return { user: userEvent.setup(), changerDeGrille: (autre: MonthlyGridData, annee = 2026) => rendu.rerender(<MonthlyGrid {...props} monthlyData={autre} annee={annee} />) }
 }
 
 const bande = () => screen.getByRole("toolbar", { name: "Mois de la grille" })
@@ -205,5 +205,19 @@ describe("bande des mois de la grille", () => {
     changerDeGrille(autre)
     expect(screen.getByRole("button", { name: "Aller à janvier" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Aller à mai, 2 flux" })).toBeInTheDocument()
+  })
+
+  it("en changeant d'année, la grille revient sur le premier mois qui se voyait, malgré des colonnes de largeur différente", async () => {
+    const defilement = espionnerLeDefilement()
+    const { user, changerDeGrille } = afficher()
+    await user.click(screen.getByRole("button", { name: "Aller à juillet" }))
+    await waitFor(() => expect(moisCourants()).toEqual(["Aller à juillet"]))
+    changerDeGrille(grilleVide(), 2027)
+    expect(defilement).toHaveBeenLastCalledWith({ left: surLeMois(6), behavior: "instant" })
+    // Au début de la grille, sur le total annuel, rien ne bouge au changement d'année.
+    defiler(zoneDeLaGrille(), 0)
+    await waitFor(() => expect(moisCourants()).toEqual(["Aller à janvier"]))
+    changerDeGrille(grilleVide(), 2028)
+    expect(defilement).toHaveBeenCalledTimes(2)
   })
 })

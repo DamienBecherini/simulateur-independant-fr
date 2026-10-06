@@ -3,8 +3,8 @@
 // mois se voient, est-on au début ou à la fin. Mesuré au défilement (une fois par image) et quand la grille change de
 // taille. La zone qui défile marque sa première colonne `data-colonne-fixe` et les en-têtes des mois `data-mois`.
 
-import { useCallback, useEffect, useState, type RefObject } from "react"
-import { aLaFin, auDebut, deborde, moisVisibles, type GeometrieDeLaGrille } from "@/lib/bande-des-mois"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react"
+import { aLaFin, auDebut, deborde, defilementPourLeMois, moisVisibles, type GeometrieDeLaGrille } from "@/lib/bande-des-mois"
 
 export interface EtatDuDefilement {
   deborde: boolean
@@ -39,9 +39,14 @@ function comportement(): ScrollBehavior {
 /**
  * @param zone La zone qui défile (absente tant qu'aucun acteur n'est saisi).
  * @param presente Vrai quand la zone est affichée : le suivi démarre alors.
+ * @param annee Année affichée : à son changement, les colonnes changent de largeur avec les flux de la nouvelle
+ *   année ; la grille revient sur le premier mois qui se voyait, pour que la bande montre toujours les mêmes mois.
  */
-export function useDefilementDeLaGrille(zone: RefObject<HTMLElement | null>, presente: boolean) {
+export function useDefilementDeLaGrille(zone: RefObject<HTMLElement | null>, presente: boolean, annee?: number) {
   const [etat, setEtat] = useState<EtatDuDefilement>(ETAT_INITIAL)
+  // Premier mois visible lors de la dernière mesure ; `null` au début de la grille, sur le total annuel.
+  const repere = useRef<number | null>(null)
+  const anneeMesuree = useRef(annee)
 
   useEffect(() => {
     const element = zone.current
@@ -52,6 +57,7 @@ export function useDefilementDeLaGrille(zone: RefObject<HTMLElement | null>, pre
       const g = mesurerLaGrille(element)
       if (!g) return
       const suivant = etatDe(g)
+      repere.current = suivant.auDebut ? null : (suivant.visibles[0] ?? null)
       setEtat(precedent => (memeEtat(precedent, suivant) ? precedent : suivant))
     }
     // Une seule mesure par image, si nombreux que soient les événements de défilement.
@@ -80,6 +86,14 @@ export function useDefilementDeLaGrille(zone: RefObject<HTMLElement | null>, pre
     },
     [zone]
   )
+
+  // Avant que le navigateur n'affiche la nouvelle année : pas de saut visible.
+  useLayoutEffect(() => {
+    if (anneeMesuree.current === annee) return
+    anneeMesuree.current = annee
+    const index = repere.current
+    if (index !== null) defiler(g => defilementPourLeMois(g, index), true)
+  }, [annee, defiler])
 
   return { ...etat, defiler }
 }
