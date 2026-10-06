@@ -221,11 +221,18 @@ test.describe("sur un téléphone", () => {
   })
 })
 
-/** Hauteur de la page au chargement, sections repliées. */
+/**
+ * Hauteur de la page au chargement, sections repliées. La page est fermée après la mesure : les pages d'un même
+ * contexte partagent leur stockage, et une page restée ouverte pourrait réécrire l'affichage choisi pour la suivante.
+ */
 async function hauteur(page: Page, affichage: "classique" | "resume") {
-  await choisirAvantLeChargement(page, affichage)
-  await ouvrir(page)
-  return page.evaluate(() => document.documentElement.scrollHeight)
+  try {
+    await choisirAvantLeChargement(page, affichage)
+    await ouvrir(page)
+    return await page.evaluate(() => document.documentElement.scrollHeight)
+  } finally {
+    await page.close()
+  }
 }
 
 // Objectifs de l'étude (docs/conception/allegement-ecran.md) : environ 3 700 px sur ordinateur, 5 900 px sur
