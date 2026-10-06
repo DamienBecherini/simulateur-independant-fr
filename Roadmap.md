@@ -6,6 +6,8 @@
 
 Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue, le moteur de simulation par foyer fiscal, le comparateur de statuts et l'arbitrage rémunération / dividendes sont en place, avec une démo web publiée sur GitHub Pages. L'accessibilité (WCAG 2.2 AA) est vérifiée automatiquement. Les chiffres s'exportent en CSV, en PDF et en rapport Markdown. Les cotisations du président de SASU et des salariés sont calculées ligne à ligne. Une session couvre désormais plusieurs années, chacune avec ses règles, et le revenu fiscal de référence est reporté sur le versement libératoire. La suite de la phase 13 : bénéfice mis en réserve, flux récurrents, sortie du régime micro.
 
+> **Prochain chantier : les professions libérales réglementées et leurs caisses (phase 14 bis).** Ostéopathes, kinésithérapeutes, infirmiers, psychologues, architectes… représentent une grande part des indépendants, et leurs cotisations sont aujourd'hui calculées comme celles d'un libéral non réglementé : le comparateur leur donne un résultat approché.
+
 > **Changement d'ordre par rapport à la v2.2 :** le comparateur de statuts passe avant l'arbitrage rémunération / dividendes, et la gestion des foyers fiscaux est intégrée à la refonte du moteur.
 
 ### **Phase 1 & 2.5 : Socle Technique & UX de Base [Terminé ✅]**
@@ -235,6 +237,22 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 1.  **Bibliothèque de montages [✅] :** huit montages types (micro-entreprise seule, SASU sans salaire, SASU avec un salaire qui valide 4 trimestres, EURL à l'IS, salarié avec une micro-entreprise, micro-entreprise et SASU du conjoint, conjoint salarié de la SASU, couple en union libre), chargés depuis les paramètres ou une simulation vide, avec confirmation avant de remplacer une simulation non enregistrée ; leurs chiffres 2026 sont figés par un test de référence. L'EURL à l'IR est approchée par l'EI au réel du comparateur.
 2.  **Explication [✅] :** pour chaque montage, ce qu'il illustre, ses conditions, ses risques et ses sources officielles.
 3.  **Plus tard :** recherche automatique d'une meilleure structure, en s'appuyant sur le comparateur et l'optimiseur.
+
+---
+
+### **Phase 14 bis : Professions libérales réglementées et leurs caisses [Prochain chantier 🎯]**
+
+- **Objectif :** des cotisations justes pour les libéraux affiliés à une caisse de la CNAVPL (CIPAV, CARPIMKO, CARMF, CARCDSF, CAVP, CARPV, CAVEC, CAVAMAC, CAVOM, CPRN) ou à la CNBF. Aujourd'hui, toute activité BNC suit les règles de la Sécurité sociale des indépendants (`cotisationsTNS.ts`, taux micro `servicesBnc`) : la retraite et l'invalidité-décès de ces professions sont fausses, et le comparateur en tire un net approché.
+- **Avant de coder :** règles 2024 à 2026 confirmées auprès de chaque caisse, de l'Urssaf et de service-public.gouv.fr ; commencer par les caisses les plus fréquentes parmi les utilisateurs (CIPAV pour les ostéopathes et les psychologues, CARPIMKO pour les kinésithérapeutes et les infirmiers).
+
+1.  **Profession sur l'activité :** choix de la profession (ou de la caisse) pour une activité BNC, en entreprise individuelle, en micro-entreprise ou pour le gérant d'EURL ; « non réglementée » par défaut, ce qui garde le calcul actuel.
+2.  **Cotisations au réel :** maladie, allocations familiales, CSG-CRDS et formation professionnelle par l'Urssaf ; retraite de base des professions libérales (tranches communes) ; retraite complémentaire et invalidité-décès selon le barème de chaque caisse (classes, forfaits ou proportionnels), cotisations minimales comprises ; cas des professionnels de santé conventionnés (prise en charge d'une partie des cotisations par l'Assurance maladie).
+3.  **Micro-entreprise :** taux global propre aux libéraux réglementés relevant de la CIPAV, et règles des autres caisses pour les micro-entrepreneurs (là où la micro-entreprise est permise).
+4.  **Trimestres et protection sociale :** trimestres de retraite de base et droits ouverts (indemnités journalières, invalidité-décès) selon la caisse, dans le comparateur et sa section « protection sociale ».
+5.  **SASU et SELAS :** le président assimilé salarié n'est pas concerné par la caisse ; vérifier les professions qui ne peuvent pas exercer en SASU ou en EURL classique (sociétés d'exercice libéral) et le signaler dans le comparateur.
+6.  **Montage type :** une profession de santé libérale (ostéopathe en micro-entreprise, puis en EI au réel), avec ses sources.
+
+- **Pour chaque point :** format de fichier suivant avec migration (ADR 005), cas de référence recalculés à la main, exports, outils pour les IA, limites de la page outil et de la FAQ du site mises à jour.
 
 ---
 
