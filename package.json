@@ -1,7 +1,7 @@
 {
   "name": "simulateur-independant-fr",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Simulateur desktop hors-ligne pour indépendants français : statuts juridiques, cotisations, impôt du foyer et comparateur de statuts.",
   "author": "Damien Becherini",
   "license": "MIT",
@@ -40,7 +40,7 @@
     "dist:win": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && electron-builder --win --x64",
     "dist:linux": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && electron-builder --linux --x64",
     "dist:store": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && node scripts/construire-paquet-store.mjs",
-    "concat":"node concat_code.cjs",
+    "concat": "node concat_code.cjs",
     "concat:stable": "node concat_code.cjs --no-timestamp"
   },
   "dependencies": {
