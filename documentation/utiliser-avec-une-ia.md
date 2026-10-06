@@ -2,7 +2,7 @@
 
 L'application de bureau comprend un **serveur MCP local**. MCP (Model Context Protocol) est un protocole ouvert qui permet à un client d'IA (Claude Desktop, LM Studio, et bien d'autres) de se servir d'outils fournis par un programme installé sur l'ordinateur. Ici, l'IA peut lire votre simulation, la faire calculer par le simulateur, comparer les statuts, et proposer des ajouts tirés de vos factures ou relevés ; c'est vous qui les appliquez.
 
-Ce n'est pas l'avis d'un expert-comptable. La démo web n'a pas ce serveur : il n'existe que dans l'application de bureau.
+Ce n'est pas l'avis d'un expert-comptable. La démo web n'a pas ce serveur : il n'existe que dans l'application de bureau (dans la démo, « Utiliser avec une IA (MCP) » renvoie vers son téléchargement).
 
 ## Ce que l'IA peut faire
 

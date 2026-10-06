@@ -50,7 +50,7 @@ La [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/
 **Dans Microsoft Edge**
 
 1. Ouvrez la [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/) et attendez que la simulation d'exemple s'affiche.
-2. Cliquez sur l'icône **Application disponible. Installer Simulateur indépendant FR** à droite de la barre d'adresse, ou ouvrez le menu **⋯** (Paramètres et plus) > **Applications** > **Installer ce site en tant qu'application**. Le bouton **Installer l'application** du bandeau de la démo, ou du panneau des paramètres, ouvre la même fenêtre.
+2. Cliquez sur l'icône **Application disponible. Installer Simulateur indépendant FR** à droite de la barre d'adresse, ou ouvrez le menu **⋯** (Paramètres et plus) > **Applications** > **Installer ce site en tant qu'application**. Le bouton **Comment faire ?** du bandeau de la démo (ou **Installer le simulateur**, dans le panneau des paramètres) montre ces étapes en images et, quand Edge le permet, propose **Installer maintenant**, qui ouvre la même fenêtre.
 3. Confirmez avec **Installer**. Edge peut ensuite proposer d'épingler l'application à la barre des tâches, au menu Démarrer ou au bureau.
 
 **Dans Google Chrome** : icône d'installation à droite de la barre d'adresse, ou menu **⋮** > **Caster, enregistrer et partager** > **Installer la page en tant qu'application** (selon la version, **Installer Simulateur indépendant FR…** directement dans le menu).

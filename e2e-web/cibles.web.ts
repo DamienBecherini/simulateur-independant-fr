@@ -83,6 +83,14 @@ async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]>
     ["flux d'un mois", () => page.getByRole("button", { name: /^Flux de janvier/ }).last().click()],
     ["couleurs des flux", () => page.getByRole("button", { name: "Gérer les couleurs" }).click()],
     ["montages types", ouvrirLesMontages],
+    ["aide à l'installation", () => page.getByRole("button", { name: "Comment faire ?" }).click()],
+    [
+      "utiliser avec une IA",
+      async () => {
+        await page.getByRole("button", { name: "Paramètres" }).click()
+        await page.getByRole("button", { name: "Utiliser avec une IA (MCP)" }).click()
+      }
+    ],
     [
       "détail d'un montage",
       async () => {

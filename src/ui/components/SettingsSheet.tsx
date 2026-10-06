@@ -31,7 +31,7 @@ import type { MontageType } from "@/lib/montages/montages"
 import { ThemeToggle } from "./ThemeToggle"
 import { BoutonDesMentionsLegales } from "./MentionsLegales"
 import { BoutonUtiliserAvecUneIA } from "./UtiliserAvecUneIA"
-import { BoutonInstaller } from "@/web/BoutonInstaller"
+import { BoutonInstaller } from "@/web/AideALInstallation"
 
 /**
  * Props pour le composant SettingsSheet.
