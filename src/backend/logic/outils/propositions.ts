@@ -5,7 +5,7 @@
 // l'hôte (application, serveur MCP) l'enregistre comme une seule étape d'annulation, une fois l'utilisateur d'accord.
 
 import { z } from "zod"
-import { SessionStateSchema, type SessionState, type SimulationReport } from "../../../types.js"
+import { SessionStateSchema, type FinancialFlow, type SessionState, type SimulationReport } from "../../../types.js"
 import { rapportAvecCorrections, sanitizeStateAndFillDefaults } from "../data-sanitizer.js"
 import { euros as eurosDuMoteur } from "../format.js"
 import { FORMAT_VERSION_ACTUEL } from "../migrations.js"
@@ -102,6 +102,14 @@ const changements = (valeurs: Record<string, unknown>) =>
     .map(([cle, v]) => `${cle} → ${typeof v === "boolean" ? (v ? "oui" : "non") : typeof v === "object" ? "nouvelles valeurs" : String(v)}`)
     .join(", ")
 
+const eurosOuAbsent = (montant: number | undefined) => (montant === undefined ? undefined : euros(montant))
+
+/** Les flux d'une série dans une année, sur les mois indiqués (tous si absents). */
+function fluxDeLaSerie(session: SessionState, annee: number, serie: { acteurId: string; typeFlux: string; libelle: string }, mois?: number[]): FinancialFlow[] {
+  const grille = session.annees.find(a => a.annee === annee)?.monthlyData ?? []
+  return grille.filter(m => !mois || mois.includes(m.month + 1)).flatMap(m => m.flows.filter(f => f.entityId === serie.acteurId && f.type === serie.typeFlux && f.label === serie.libelle))
+}
+
 /** Une ligne de résumé par opération, avec les noms des acteurs de la session obtenue (tous y sont encore). */
 function resumer(avant: SessionState, apres: SessionState, op: Operation): string {
   const nom = (id: string) => `« ${nomDe(apres, id)} »`
@@ -118,12 +126,17 @@ function resumer(avant: SessionState, apres: SessionState, op: Operation): strin
       const relation = avant.relationships.find(r => r.id === op.relationId)
       return `Supprimer la relation ${relation ? phraseDeLaRelation(avant, relation) : op.relationId}.`
     }
-    case "ajouter_flux":
-      return `Ajouter « ${op.libelle} » (${op.typeFlux}) sur ${nom(op.acteurId)} : ${euros(op.montant)} par mois, ${libelleDesMois(op.mois)} ${op.annee} (${op.mois.length} flux, ${euros(op.montant * op.mois.length)}).`
+    case "ajouter_flux": {
+      const quand = op.mois.length === 1 ? `en ${libelleDesMois(op.mois)} ${op.annee}` : `par mois, ${libelleDesMois(op.mois)} ${op.annee} (${op.mois.length} flux, ${euros(op.montant * op.mois.length)})`
+      return `Ajouter « ${op.libelle} » (${op.typeFlux}) sur ${nom(op.acteurId)} : ${euros(op.montant)} ${quand}.`
+    }
     case "modifier_serie":
-      return `Modifier la série « ${op.serie.libelle} » (${op.serie.typeFlux}) de ${nom(op.serie.acteurId)}, ${libelleDesMois(op.mois)} ${op.annee} : ${changements({ montant: op.montant, montantBrut: op.montantBrut, libelle: op.libelle })}.`
-    case "supprimer_serie":
-      return `Supprimer la série « ${op.serie.libelle} » (${op.serie.typeFlux}) de ${nom(op.serie.acteurId)}, ${libelleDesMois(op.mois)} ${op.annee}.`
+      return `Modifier la série « ${op.serie.libelle} » (${op.serie.typeFlux}) de ${nom(op.serie.acteurId)}, ${libelleDesMois(op.mois)} ${op.annee} : ${changements({ montant: eurosOuAbsent(op.montant), montantBrut: eurosOuAbsent(op.montantBrut), libelle: op.libelle })}.`
+    case "supprimer_serie": {
+      const supprimes = fluxDeLaSerie(avant, op.annee, op.serie, op.mois)
+      const total = supprimes.reduce((somme, f) => somme + f.amount, 0)
+      return `Supprimer la série « ${op.serie.libelle} » (${op.serie.typeFlux}) de ${nom(op.serie.acteurId)}, ${libelleDesMois(op.mois)} ${op.annee} (${supprimes.length} flux, ${euros(total)}).`
+    }
     case "regler_comparateur":
       return `Régler le comparateur de ${nom(op.activiteId)}${op.comparer ? ", qui devient l'activité comparée" : ""} : ${changements(op.reglages)}.`
   }
@@ -152,8 +165,44 @@ function doublons(avant: SessionState, operations: Operation[]): string[] {
     if (op.type !== "ajouter_flux") return []
     const grille = avant.annees.find(a => a.annee === op.annee)?.monthlyData
     const mois = op.mois.filter(m => grille?.[m - 1].flows.some(f => f.entityId === op.acteurId && f.type === op.typeFlux && f.label === op.libelle && f.amount === op.montant))
-    return mois.length > 0 ? [`« ${op.libelle} » (${euros(op.montant)}) existe déjà sur ${nomDe(avant, op.acteurId)} en ${libelleDesMois(mois)} ${op.annee} : doublon probable.`] : []
+    return mois.length > 0 ? [`« ${op.libelle} » (${euros(op.montant)}) existe déjà sur « ${nomDe(avant, op.acteurId)} » en ${libelleDesMois(mois)} ${op.annee} : doublon probable.`] : []
   })
+}
+
+/** Séries citées par avertissement : de quoi reconnaître une estimation à remplacer, sans allonger la réponse. */
+const SERIES_CITEES = 5
+
+/**
+ * Flux ajoutés à un acteur qui a déjà, la même année, d'autres séries du même type (une estimation « Prestations »
+ * quand arrivent les factures, par exemple) : ils s'additionnent. Les séries supprimées par la proposition ne comptent pas.
+ */
+function seriesExistantes(apres: SessionState, operations: Operation[]): string[] {
+  const ajouts = operations.filter((op): op is Extract<Operation, { type: "ajouter_flux" }> => op.type === "ajouter_flux")
+  const groupes = new Map<string, { annee: number; acteurId: string; typeFlux: string; libelles: Set<string> }>()
+  for (const op of ajouts) {
+    const cle = `${op.annee}|${op.acteurId}|${op.typeFlux}`
+    const groupe = groupes.get(cle) ?? { annee: op.annee, acteurId: op.acteurId, typeFlux: op.typeFlux, libelles: new Set<string>() }
+    groupe.libelles.add(op.libelle)
+    groupes.set(cle, groupe)
+  }
+  return [...groupes.values()].flatMap(({ annee, acteurId, typeFlux, libelles }) => {
+    const totaux = new Map<string, number>()
+    for (const f of apres.annees.find(a => a.annee === annee)?.monthlyData.flatMap(m => m.flows) ?? []) {
+      if (f.entityId === acteurId && f.type === typeFlux && !libelles.has(f.label)) totaux.set(f.label, (totaux.get(f.label) ?? 0) + f.amount)
+    }
+    if (totaux.size === 0) return []
+    const series = [...totaux].slice(0, SERIES_CITEES).map(([libelle, total]) => `« ${libelle} » (${euros(total)})`)
+    const suite = totaux.size > SERIES_CITEES ? ", …" : ""
+    return [`Ces flux s'ajoutent à ceux déjà saisis sur « ${nomDe(apres, acteurId)} » en ${annee} (${typeFlux}) : ${series.join(", ")}${suite}. S'ils les remplacent, proposez aussi de supprimer ou de modifier ces séries.`]
+  })
+}
+
+/** Les avertissements du moteur pour une année : ceux de l'année, de chaque activité (avec son nom) et de chaque foyer. */
+function avertissementsDuRapport(report: SimulationReport | null | undefined): string[] {
+  if (!report) return []
+  const textes = [...report.avertissements, ...report.activities.flatMap(a => a.warnings.map(w => `« ${a.name} » : ${w}`)), ...report.foyers.flatMap(f => f.warnings)]
+  // Espaces ordinaires, comme dans le résumé : le moteur écrit les montants avec des espaces insécables.
+  return textes.map(texte => texte.replace(/\s/g, " "))
 }
 
 /** Net après impôts et résultat conservé d'une année, arrondis ; `null` pour une année absente ou impossible à simuler. */
@@ -161,19 +210,36 @@ function chiffresCles(report: SimulationReport | null | undefined): { net: numbe
   return report ? { net: arrondir(report.totalNetApresImpots), conserve: arrondir(report.bilan.resultatConserve) } : { net: null, conserve: null }
 }
 
-/** Net après impôts et résultat conservé de chaque année, avant et après la proposition, calculés par le moteur. */
-export function apercu(avant: SessionState, apres: SessionState): z.infer<typeof ApercuSchema>[] {
+type Apercu = z.infer<typeof ApercuSchema>
+
+/**
+ * Pour chaque année : le net après impôts et le résultat conservé, avant et après la proposition, et les avertissements
+ * du moteur que la proposition fait apparaître (dividendes plafonnés, seuil de la micro-entreprise dépassé…).
+ */
+function effetsSurLesAnnees(avant: SessionState, apres: SessionState): { apercu: Apercu[]; nouveauxAvertissements: string[] } {
   const rapportsAvant = new Map(simulerLesAnnees(avant).annees.map(a => [a.annee, a.report]))
-  return simulerLesAnnees(apres).annees.map(({ annee, report, erreur }) => {
+  const annees = simulerLesAnnees(apres).annees.map(({ annee, report, erreur }) => {
     const a = chiffresCles(rapportsAvant.get(annee))
     const b = chiffresCles(report)
-    return { annee, netAvant: a.net, netApres: b.net, ecart: a.net === null || b.net === null ? null : b.net - a.net, resultatConserveAvant: a.conserve, resultatConserveApres: b.conserve, erreur }
+    const dejaLa = new Set(avertissementsDuRapport(rapportsAvant.get(annee)))
+    const nouveaux = avertissementsDuRapport(report).filter(texte => !dejaLa.has(texte)).map(texte => `${annee} : ${texte}`)
+    return { apercu: { annee, netAvant: a.net, netApres: b.net, ecart: a.net === null || b.net === null ? null : b.net - a.net, resultatConserveAvant: a.conserve, resultatConserveApres: b.conserve, erreur }, nouveaux }
   })
+  return { apercu: annees.map(a => a.apercu), nouveauxAvertissements: [...new Set(annees.flatMap(a => a.nouveaux))] }
 }
 
-/** Ce que l'hôte montre à l'utilisateur pour une proposition : récapitulatif, résumé, avertissements et effet sur le net. */
+/** Net après impôts et résultat conservé de chaque année, avant et après la proposition, calculés par le moteur. */
+export function apercu(avant: SessionState, apres: SessionState): Apercu[] {
+  return effetsSurLesAnnees(avant, apres).apercu
+}
+
+/**
+ * Ce que l'hôte montre à l'utilisateur pour une proposition : récapitulatif, résumé, avertissements (doublons probables,
+ * séries existantes auxquelles les flux s'ajoutent, avertissements du moteur nouveaux) et effet sur le net.
+ */
 export function presenterProposition(avant: SessionState, apres: SessionState, operations: Operation[]): Omit<ResultatProposition, "proposition" | "nouveauxIdentifiants"> {
-  return { recapitulatif: recapituler(operations), resume: operations.map(op => resumer(avant, apres, op)), avertissements: doublons(avant, operations), apercu: apercu(avant, apres) }
+  const effets = effetsSurLesAnnees(avant, apres)
+  return { recapitulatif: recapituler(operations), resume: operations.map(op => resumer(avant, apres, op)), avertissements: [...doublons(avant, operations), ...seriesExistantes(apres, operations), ...effets.nouveauxAvertissements], apercu: effets.apercu }
 }
 
 /**
