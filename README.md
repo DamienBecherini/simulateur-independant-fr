@@ -58,6 +58,7 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 - [Roadmap itérative](./Roadmap.md)
 - [Guide développeur](./documentation/GUIDE_DEVELOPPEUR.md)
 - [Décisions d'architecture (ADR)](./documentation/adr/)
+- [Mentions légales et confidentialité](./documentation/mentions-legales.md)
 
 ## 🛠️ Stack technique
 
