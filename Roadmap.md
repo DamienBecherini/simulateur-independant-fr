@@ -1,6 +1,6 @@
 # Roadmap de Développement Détaillée v3.0
 
-- **Dernière mise à jour :** 04/10/2026
+- **Dernière mise à jour :** 06/10/2026
 
 ## **État Actuel du Projet**
 
@@ -270,7 +270,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
     - **Méfiance envers les documents :** une facture peut contenir des instructions piégées ; les outils sont limités (pas de suppression en masse, rien hors de la simulation) et toujours soumis à validation.
     - **Confidentialité :** l'utilisateur est prévenu que ses données partent chez le fournisseur d'IA choisi, et une IA locale lui est recommandée pour les données sensibles (avec ses limites : les petits modèles enchaînent moins bien les outils et lisent moins bien les factures scannées) ; option d'anonymisation des noms.
     - **Avertissement :** ce n'est pas l'avis d'un expert-comptable.
-6.  **Mentions légales et confidentialité [✅] :** page dans l'application et la démo (pied de page, paramètres, adresse `#mentions-legales`) et en Markdown, tirées d'une même source : éditeur (particulier, art. 1-1 II de la LCEN), hébergeur, données gardées dans le navigateur ou sur la machine, aucun cookie ni traceur, ce qui sort et quand (retours), avertissement, licence.
+6.  **Mentions légales et confidentialité [✅] :** page dans l'application et la démo (pied de page, paramètres, adresse `#mentions-legales`) et en Markdown, tirées d'une même source : éditeur (entreprise individuelle, projet non commercial et open source), hébergeur, données gardées dans le navigateur ou sur la machine, aucun cookie ni traceur, ce qui sort et quand (retours), avertissement, licence.
 7.  **Sans IA, en complément :** import CSV de relevés bancaires ou du livre de recettes, avec des règles de classement ; l'IA ne sert qu'aux lignes ambiguës.
 
 ---
@@ -284,3 +284,4 @@ Tâches sans phase attitrée, à traiter entre deux fonctionnalités.
 3.  **Tests de l'interface [✅] :** tests de composants (Testing Library, jsdom) sur la saisie des flux et des salaires, les cartes des acteurs, le panneau de résultats et l'historique d'annulation de l'application entière. **Non couvert :** glisser-déposer, fenêtres d'édition et de sauvegarde, test de bout en bout de l'application packagée.
 4.  **Import [✅] :** la fenêtre de confirmation s'ouvre aussi quand seuls des flux sont écartés, ou quand le fichier a été converti.
 5.  **Cotisations des travailleurs non salariés [✅] :** calcul ligne à ligne selon les règles officielles 2026 (assiette unique après l'abattement de 26 %, maladie et allocations familiales progressives, retraites de base et complémentaire par tranches, CSG-CRDS en partie non déductible, assiettes minimales par risque), au lieu d'un taux moyen de 45 % ; rémunération brute du gérant d'EURL retrouvée par dichotomie à partir du net saisi ; trimestres de retraite comptés sur l'assiette de la retraite de base.
+6.  **Distribution sous Windows [En cours 🚧] :** Smart App Control bloque l'exécutable non signé, sans contournement possible pour l'utilisateur. **Fait :** démo web installable et utilisable hors ligne (ADR 012), avec son aide à l'installation (v0.9.1) ; paquet du Microsoft Store et serveur MCP sous MSIX (ADR 013). **Reste :** compte Partner Center, réservation du nom, première soumission ; signature du code si le Store ne suffit pas (macOS et Linux, exécutable téléchargé).

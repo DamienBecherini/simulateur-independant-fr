@@ -6,6 +6,22 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+## [0.9.1] — 2026-10-06
+
+### Ajouté
+
+- **Démo web installable :** dans Edge ou Chrome, la démo s'installe comme une application (icône sur le bureau et dans le menu Démarrer, sa propre fenêtre) et fonctionne hors ligne, sans compte. Une solution sous Windows quand Smart App Control bloque l'exécutable, qui n'est pas encore signé.
+- **Aide à l'installation :** une ligne du bandeau de la démo et un bouton des paramètres ouvrent une fenêtre « Comment faire ? », adaptée au navigateur : bouton « Installer maintenant » et étapes en images dans Edge et Chrome, solutions de remplacement dans Firefox et Safari.
+- **Version web installée :** une fois installée, la démo porte ce nom, et rappelle que la connexion d'une IA (MCP) demande l'application de bureau.
+- **« Utiliser avec une IA (MCP) » dans la démo :** la fenêtre explique ce que permet le serveur MCP et pourquoi il faut l'application de bureau, avec ses liens.
+- **Préparation du Microsoft Store :** paquet construit par un workflow dédié, serveur MCP utilisable depuis la version du Store (ADR 013), textes, captures et logos de la fiche.
+
+### Modifié
+
+- Mentions légales : l'éditeur est l'entreprise individuelle de Damien BECHERINI (SIREN et SIRET), pour un projet non commercial et open source.
+- Les retours précisent « version web installée » quand ils viennent de la démo installée.
+- Guide d'installation : que faire quand Windows bloque l'application.
+
 ## [0.9.0] — 2026-10-06
 
 Première version publiée : ces notes décrivent ce que contient l'application.
@@ -42,5 +58,6 @@ Première version publiée : ces notes décrivent ce que contient l'application.
 - Calculs : abattement minimum de la micro-entreprise appliqué séparément à chaque nature d'activité, réduction générale éteinte à exactement 3 SMIC, micro-entreprise au-delà des plafonds jamais désignée meilleur net.
 - Sauvegardes : validation avant écriture, rien de perdu à la fermeture, copie importée numérotée au lieu d'empiler « (importée) ».
 
-[Non publié]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.9.0...HEAD
+[Non publié]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/DamienBecherini/simulateur-independant-fr/releases/tag/v0.9.0
