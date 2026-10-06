@@ -6,6 +6,7 @@
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 import { choisirAvantLeChargement } from "./support/affichage"
+import { choisirLaPolice, POLICES } from "./support/police"
 
 /** Ouvre la démo et attend la simulation d'exemple, le comparateur et la courbe de l'arbitrage. */
 async function ouvrir(page: Page) {
@@ -194,15 +195,18 @@ for (const largeur of [320, 375]) {
   test.describe(`sur un téléphone de ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: 812 }, hasTouch: true, isMobile: true })
 
-    test("rien ne déborde en largeur, et le comparateur se lit en cartes", async ({ page }) => {
-      await ouvrirEnResume(page)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)
-      await expect(page.getByRole("list", { name: "Net dans la poche selon le statut" })).toBeVisible()
-      await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeHidden()
-      await page.getByRole("button", { name: /Voir le détail/ }).click()
-      await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)
-    })
+    for (const police of POLICES) {
+      test(`rien ne déborde en largeur, et le comparateur se lit en cartes, ${police}`, async ({ page, context }) => {
+        await choisirLaPolice(context, police)
+        await ouvrirEnResume(page)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)
+        await expect(page.getByRole("list", { name: "Net dans la poche selon le statut" })).toBeVisible()
+        await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeHidden()
+        await page.getByRole("button", { name: /Voir le détail/ }).click()
+        await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)
+      })
+    }
   })
 }
 

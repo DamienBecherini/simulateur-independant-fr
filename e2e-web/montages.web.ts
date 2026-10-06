@@ -4,6 +4,7 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { choisirLaPolice, POLICES } from "./support/police"
 
 const SASU_SANS_SALAIRE = "SASU sans salaire, tout en dividendes"
 
@@ -84,13 +85,16 @@ for (const theme of ["clair", "sombre"] as const) {
 test.describe("sur un téléphone", () => {
   test.use({ viewport: { width: 375, height: 800 } })
 
-  test("la fenêtre et le détail tiennent dans 375 px, sans violation WCAG", async ({ page }) => {
-    const montages = await ouvrirLesMontages(page)
-    await sansDefilementHorizontal(page)
-    await auditer(page, "montages types, 375 px", "[role=dialog]")
-    await montages.getByRole("button", { name: "Détails du montage « Couple en union libre, puis marié ou pacsé »" }).click()
-    await expect(page.getByRole("button", { name: "Charger ce montage" })).toBeVisible()
-    await sansDefilementHorizontal(page)
-    await auditer(page, "détail d'un montage, 375 px", "[role=dialog]")
-  })
+  for (const police of POLICES) {
+    test(`la fenêtre et le détail tiennent dans 375 px, sans violation WCAG, ${police}`, async ({ page, context }) => {
+      await choisirLaPolice(context, police)
+      const montages = await ouvrirLesMontages(page)
+      await sansDefilementHorizontal(page)
+      await auditer(page, "montages types, 375 px", "[role=dialog]")
+      await montages.getByRole("button", { name: "Détails du montage « Couple en union libre, puis marié ou pacsé »" }).click()
+      await expect(page.getByRole("button", { name: "Charger ce montage" })).toBeVisible()
+      await sansDefilementHorizontal(page)
+      await auditer(page, "détail d'un montage, 375 px", "[role=dialog]")
+    })
+  }
 })
