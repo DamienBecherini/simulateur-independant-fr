@@ -29,6 +29,9 @@ const CONSEIL = "Vérifiez que le paramètre --donnees désigne le dossier indiq
 
 const message = (erreur: unknown) => (erreur instanceof Error ? erreur.message : String(erreur))
 
+/** Ordre des noms de fichiers par points de code, le même sur tous les systèmes quelle que soit la langue. */
+const parPointsDeCode = (a: string, b: string) => Number(a > b) - Number(a < b)
+
 /** Le texte du fichier de la session et sa date d'écriture. */
 async function lireLeFichier(dossier: string, fichier: string): Promise<{ contenu: string; enregistreeLe: Date }> {
   try {
@@ -62,7 +65,7 @@ export async function propositionDejaEnAttente(dossier: string, proposition: Pro
   const boite = path.join(dossier, DOSSIER_DES_PROPOSITIONS)
   const noms = await readdir(boite).catch(() => [] as string[])
   const cherchee = empreinte(proposition)
-  for (const nom of noms.filter(n => NOM_DE_PROPOSITION.test(n)).sort()) {
+  for (const nom of noms.filter(n => NOM_DE_PROPOSITION.test(n)).sort(parPointsDeCode)) {
     const fichier = path.join(boite, nom)
     const infos = await lstat(fichier).catch(() => null)
     if (!infos?.isFile() || infos.size > TAILLE_MAX_D_UNE_PROPOSITION) continue
