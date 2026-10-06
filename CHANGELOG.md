@@ -19,6 +19,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 ### Modifié
 
 - Mentions légales : l'éditeur est l'entreprise individuelle de Damien BECHERINI (SIREN et SIRET), pour un projet non commercial et open source.
+- Barre d'outils : « Montages types » y a son bouton, et « Donner mon avis » montre son nom sur un écran large ; à la fermeture de la fenêtre des montages, le focus revient sur le bouton qui l'a ouverte.
 - Les retours précisent « version web installée » quand ils viennent de la démo installée.
 - Guide d'installation : que faire quand Windows bloque l'application.
 

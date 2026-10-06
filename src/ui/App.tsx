@@ -12,6 +12,7 @@ import { sessionDUnMontage, type MontageType } from "@/lib/montages/montages"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
 import * as SessionService from "@/lib/session-service"
+import { BoutonDesMontages } from "./components/MontagesTypes"
 import type { SaveSlot, SimulationPluriannuelle } from "@/types"
 import { ajouterAnnee, anneeAAjouter, anneeExistante, anneesDeLaSession, donneesDeLAnnee, remplacerGrille, supprimerAnnee, vueDeLAnnee } from "@/backend/logic/annees"
 import { PREMIERE_ANNEE_DES_REGLES } from "@/backend/logic/regles"
@@ -211,9 +212,16 @@ function App() {
               <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y)" onClick={redo} disabled={!canRedo} className="h-10 w-9 sm:w-10 [&_svg]:size-6">
                 <Redo2 className="dark:text-slate-300" />
               </Button>
-              <Button variant="ghost" size="icon" ref={boutonDAvis} aria-label="Donner mon avis" title="Donner mon avis" onClick={() => setAvisOpen(true)} className="h-10 w-9 sm:ml-2 sm:w-10 [&_svg]:size-6">
+              {/* Sur un écran large, les deux boutons les plus utiles à qui découvre le simulateur montrent leur nom ;
+                  en dessous, leur icône seule, pour que la barre tienne sur un téléphone. Sous 352 px, les montages ne
+                  restent que dans le panneau des paramètres. */}
+              <Button variant="ghost" size="icon" ref={boutonDAvis} aria-label="Donner mon avis" title="Donner mon avis" onClick={() => setAvisOpen(true)} className="h-10 w-9 sm:ml-2 sm:w-10 lg:w-auto lg:gap-2 lg:px-3 [&_svg]:size-6">
                 <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
+                <span className="hidden lg:inline">Donner mon avis</span>
               </Button>
+              <BoutonDesMontages variant="outline" size="sm" aria-label="Montages types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 max-[22rem]:hidden sm:ml-2" onCharger={chargerUnMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name}>
+                <span className="hidden md:inline">Montages types</span>
+              </BoutonDesMontages>
             </div>
             {/* Groupe de boutons de droite */}
             <div className="flex items-center gap-1">
