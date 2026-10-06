@@ -28,6 +28,7 @@ import { POIGNEE_DE_TRI, useTriAccessible } from "../hooks/useTriAccessible"
 import { SauvegardesGroupees } from "./SauvegardesGroupees"
 import { BoutonDesMontages } from "./MontagesTypes"
 import type { MontageType } from "@/lib/montages/montages"
+import { ThemeToggle } from "./ThemeToggle"
 
 /**
  * Props pour le composant SettingsSheet.
@@ -223,6 +224,11 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                 <Button onClick={onReset} variant="destructive" className="w-full">
                   <RefreshCcw className="mr-2 h-4 w-4" /> Nouvelle Simulation / Réinitialiser
                 </Button>
+                {/* Aussi dans la barre d'outils, sauf sur un écran très étroit où elle n'a pas la place. */}
+                <div className="flex items-center justify-between gap-4 border-t pt-4">
+                  <Label htmlFor="theme-parametres">Thème clair ou sombre</Label>
+                  <ThemeToggle id="theme-parametres" />
+                </div>
               </div>
             </>
           )}

@@ -146,7 +146,13 @@ for (const largeur of [320, 375]) {
     await page.setViewportSize({ width: largeur, height: 740 })
     await ouvrir(page)
     for (const nom of ["Paramètres", "Donner mon avis"]) expect((await page.getByRole("button", { name: nom }).boundingBox())!.x).toBeGreaterThanOrEqual(0)
-    const theme = (await page.getByRole("switch", { name: "Changer de thème" }).boundingBox())!
+    const interrupteur = page.getByRole("navigation", { name: "Barre d'outils" }).getByRole("switch", { name: "Changer de thème" })
+    // Sous 352 px, l'interrupteur de thème quitte la barre pour le panneau des paramètres (voir barre-etroite.web.ts).
+    if (largeur < 352) {
+      await expect(interrupteur).toBeHidden()
+      return
+    }
+    const theme = (await interrupteur.boundingBox())!
     expect(theme.x + theme.width).toBeLessThanOrEqual(largeur)
   })
 

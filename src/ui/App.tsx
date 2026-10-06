@@ -223,7 +223,8 @@ function App() {
               <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} disabled={!canZoomIn} className="h-10 w-9 pointer-coarse:max-sm:hidden max-[26rem]:hidden sm:w-10 [&_svg]:size-6 sm:mr-4">
                 <ZoomIn className="text-slate-600 dark:text-slate-400" />
               </Button>
-              <ThemeToggle />
+              {/* Sur un écran de moins de 352 px, l'interrupteur de thème passe dans le panneau des paramètres. */}
+              <ThemeToggle className="max-[22rem]:hidden" />
             </div>
           </div>
         </nav>
