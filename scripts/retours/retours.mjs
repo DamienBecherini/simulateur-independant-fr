@@ -101,7 +101,7 @@ export function lireNote(valeur) {
   return resultat ? Number(resultat[1]) : null
 }
 
-const AFFICHAGES = { resume: "resume", classique: "classique", "trois vues": "vues" }
+const AFFICHAGES = { resume: "resume", classique: "classique", "trois vues": "vues", vues: "vues" }
 const TYPES = { avis: "avis", bug: "bug", idee: "idee" }
 
 /**

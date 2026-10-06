@@ -2,8 +2,10 @@ name: Retour sur le simulateur
 description: Noter le simulateur, dire quel affichage vous préférez, signaler un bug ou proposer une idée.
 title: "[Retour] "
 labels: [retour]
-# Les identifiants (id) et les libellés des choix sont stables : l'application préremplit ce formulaire
+# Les identifiants (id) et les valeurs proposées sont stables : l'application préremplit ce formulaire
 # par son adresse, et scripts/retours/ lit les réponses pour poser les étiquettes et calculer la note moyenne.
+# Note, affichage et type sont des champs texte et non des listes : GitHub ne préremplit que les champs texte
+# depuis l'adresse. scripts/retours/ accepte aussi les variantes (« 4 », « 4/5 », « résumé »…).
 body:
   - type: markdown
     attributes:
@@ -11,42 +13,30 @@ body:
         Merci de prendre le temps de répondre. **Tout est facultatif** : une seule information suffit.
         N'indiquez aucune donnée personnelle ni chiffre de votre situation sans le vouloir : ce ticket est public.
 
-  - type: dropdown
+  - type: input
     id: note
     attributes:
       label: Note
-      description: Votre note globale du simulateur.
-      options:
-        - "★★★★★ 5/5"
-        - "★★★★☆ 4/5"
-        - "★★★☆☆ 3/5"
-        - "★★☆☆☆ 2/5"
-        - "★☆☆☆☆ 1/5"
-        - "Sans note"
+      description: "Votre note globale du simulateur, de 1 à 5 : « ★★★★★ 5/5 », « ★★★★☆ 4/5 », « ★★★☆☆ 3/5 », « ★★☆☆☆ 2/5 », « ★☆☆☆☆ 1/5 » (ou simplement 4, 4/5). Laissez vide ou écrivez « Sans note » pour ne pas noter."
+      placeholder: "★★★★☆ 4/5"
     validations:
       required: false
 
-  - type: dropdown
+  - type: input
     id: affichage
     attributes:
       label: Affichage préféré
-      description: L'affichage que vous aimeriez garder après la bêta.
-      options:
-        - "Résumé"
-        - "Classique"
-        - "Trois vues"
-        - "Sans préférence"
+      description: "L'affichage que vous aimeriez garder après la bêta : « Résumé », « Classique » ou « Trois vues ». Laissez vide ou écrivez « Sans préférence »."
+      placeholder: "Résumé"
     validations:
       required: false
 
-  - type: dropdown
+  - type: input
     id: type
     attributes:
       label: Type de retour
-      options:
-        - "Avis"
-        - "Bug"
-        - "Idée"
+      description: "« Avis », « Bug » ou « Idée »."
+      placeholder: "Avis"
     validations:
       required: false
 

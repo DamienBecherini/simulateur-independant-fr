@@ -152,9 +152,11 @@ describe("e-mail prérempli", () => {
 })
 
 describe("cohérence avec le formulaire GitHub", () => {
-  it("reprend mot pour mot les choix des listes de .github/ISSUE_TEMPLATE/retour.yml", () => {
+  it("propose mot pour mot, dans les champs texte de .github/ISSUE_TEMPLATE/retour.yml, les valeurs que l'application y écrit", () => {
     const formulaire = readFileSync(".github/ISSUE_TEMPLATE/retour.yml", "utf-8").replace(/\r\n/g, "\n")
-    for (const choix of [...Object.values(CHOIX_DU_FORMULAIRE.note), ...Object.values(CHOIX_DU_FORMULAIRE.affichage), ...Object.values(CHOIX_DU_FORMULAIRE.type)]) expect(formulaire).toContain(`- "${choix}"`)
+    for (const choix of [...Object.values(CHOIX_DU_FORMULAIRE.note), ...Object.values(CHOIX_DU_FORMULAIRE.affichage), ...Object.values(CHOIX_DU_FORMULAIRE.type)]) expect(formulaire).toContain(`« ${choix} »`)
+    // GitHub ne préremplit pas les listes déroulantes depuis l'adresse : aucun champ ne doit en être une.
+    expect(formulaire).not.toContain("type: dropdown")
     for (const id of ["note", "affichage", "type", "message", "version", "environnement", "diagnostic"]) expect(formulaire).toContain(`id: ${id}\n`)
   })
 })

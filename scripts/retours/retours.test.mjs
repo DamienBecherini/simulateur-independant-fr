@@ -47,10 +47,12 @@ const MAINTENANT = new Date("2026-10-05T08:00:00.000Z")
 describe("formulaire .github/ISSUE_TEMPLATE/retour.yml", () => {
   const modele = readFileSync(new URL("../../.github/ISSUE_TEMPLATE/retour.yml", import.meta.url), "utf-8")
 
-  it("propose exactement les choix exportés, que l'application utilise pour le préremplir", () => {
+  it("propose dans ses champs texte les valeurs exportées, que l'application utilise pour le préremplir", () => {
     for (const option of [...OPTIONS_NOTE, ...OPTIONS_AFFICHAGE, ...OPTIONS_TYPE]) {
-      expect(modele).toContain(`- "${option}"`)
+      expect(modele).toContain(`« ${option} »`)
     }
+    // GitHub ne préremplit pas les listes déroulantes depuis l'adresse.
+    expect(modele).not.toContain("type: dropdown")
   })
 
   it("a les identifiants stables et les libellés lus par les scripts", () => {
@@ -107,6 +109,8 @@ describe("lecture des réponses", () => {
   it("lit les affichages, sans tenir compte de la casse ni des accents", () => {
     expect(OPTIONS_AFFICHAGE.map(lireAffichage)).toEqual(["resume", "classique", "vues", null])
     expect(lireAffichage("  RESUME ")).toBe("resume")
+    // Champ texte : une réponse tapée à la main, sans « Trois », est reconnue aussi.
+    expect(lireAffichage("vues")).toBe("vues")
     expect(lireAffichage("trois   vues")).toBe("vues")
     expect(lireAffichage("constructor")).toBeNull()
     expect(lireAffichage("Panneaux")).toBeNull()
