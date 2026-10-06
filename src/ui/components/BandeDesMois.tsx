@@ -103,7 +103,7 @@ export function BandeDesMois({ libelles, noms, flux, visibles, auDebut, aLaFin, 
   }
 
   return (
-    <div style={{ top: haut }} className="sticky z-20 mb-1 flex h-9 gap-1 bg-slate-50 py-0.5 pointer-coarse:h-12 dark:bg-gray-950 print:hidden">
+    <div style={{ top: haut }} className="sticky z-20 mb-1 flex h-9 gap-1 bg-slate-50 py-0.5 max-sm:-mx-4 pointer-coarse:h-12 dark:bg-gray-950 print:hidden">
       <Fleche sens={-1} inactive={auDebut} onVoisin={onVoisin} />
       <div
         role="toolbar"
