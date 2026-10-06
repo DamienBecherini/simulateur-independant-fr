@@ -17,11 +17,8 @@
 import type { AnneeDUneStrategie, ReglagesComparateur, ResultatDUneStrategie, SessionState, SimulationReport, StatutSociete, StrategieDeDistribution, StrategiesDeDistribution, StrategiesDUnStatut } from "../../types.js"
 import { vueDeLAnnee } from "./annees.js"
 import { activiteComparee, avecLaCFEDeLAnnee, beneficeDistribuableDeLAnnee, sessionConvertie } from "./comparateur.js"
-import { optionsDuComparateur } from "./options-du-comparateur.js"
+import { optionsDuComparateur, PART_MISE_EN_RESERVE_PAR_DEFAUT } from "./options-du-comparateur.js"
 import { simulerLesAnnees, type AnneePreparee } from "./simulation-pluriannuelle.js"
-
-/** Part gardée chaque année proposée par défaut dans « Garder puis distribuer ». */
-export const PART_MISE_EN_RESERVE_PAR_DEFAUT = 0.5
 
 /** Dividendes de chaque année, par année. */
 type Plan = Map<number, number>
