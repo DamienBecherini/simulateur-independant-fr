@@ -101,6 +101,12 @@ export const CompanySchema = z.object({
   legalStatus: z.enum(["SASU", "EURL", "EI"]),
   // Sert au calcul des dividendes d'EURL soumis aux cotisations sociales (part dépassant 10 % du capital).
   capitalSocial: z.number().min(0).default(1000),
+  /**
+   * Société à l'IS : réserves distribuables au 1er janvier de la première année de la session (bénéfices des années
+   * d'avant gardés dans la société, réserve légale non comprise). Les années suivantes, le moteur les reporte lui-même
+   * (voir l'ADR 012). Absent : aucune.
+   */
+  reservesInitiales: z.number().min(0).optional(),
   dateDeCreation: DateDeCreationSchema,
   deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),
   avatar: AvatarSchema,
@@ -225,7 +231,9 @@ export const ReglagesComparateurSchema = z.object({
   partBncPrestations: z.number().min(0).max(1).optional(),
   fraisFonctionnement: FraisFonctionnementSchema.optional(),
   /** Statut de société étudié dans « Rémunération ou dividendes ? » et la barre de partage du bénéfice. */
-  statutEtudie: z.enum(["SASU", "EURL"]).optional()
+  statutEtudie: z.enum(["SASU", "EURL"]).optional(),
+  /** « Sur toutes les années » : part du bénéfice distribuable gardée chaque année, puis distribuée la dernière (0 à 1). */
+  partMiseEnReserve: z.number().min(0).max(1).optional()
 })
 
 /** Comparateur de statuts : l'activité comparée et les réglages choisis pour chaque activité, par identifiant. */
@@ -359,6 +367,8 @@ export interface ActivityResult {
   fraisDeDeplacement?: { kilometres: number; montant: number; deductible: boolean }
   /** Société à l'IS : partage de son bénéfice, montants non arrondis. */
   partage?: PartageDuBenefice
+  /** Société à l'IS : ses réserves, du 1er janvier au 31 décembre, montants non arrondis. */
+  reserves?: ReservesDeLaSociete
   /** Micro-entreprise passée au régime réel (deux années de suite au-delà des plafonds) : simulée en EI au réel. */
   sortieDuRegimeMicro?: SortieDuRegimeMicro
   /** Micro-entreprise à l'ACRE dont la date de création est connue : l'aide de l'année, mois par mois. */
@@ -366,6 +376,34 @@ export interface ActivityResult {
   /** Dispositifs limités dans le temps qui jouent cette année (sortie du régime micro, ACRE, plafonds au prorata). */
   dispositifs?: string[]
   warnings: string[]
+}
+
+/**
+ * Ce qu'une société à l'IS garde d'une année sur l'autre (voir l'ADR 012) : ses réserves distribuables (bénéfices
+ * gardés ; négatives, des pertes à combler), sa réserve légale et son déficit reportable sur l'impôt sur les sociétés.
+ */
+export interface EtatDeLaSociete {
+  reserves: number
+  reserveLegale: number
+  deficitReportable: number
+}
+
+/** Les réserves d'une société à l'IS sur une année, du 1er janvier au 31 décembre. */
+export interface ReservesDeLaSociete {
+  /** Au 1er janvier. */
+  auDebut: EtatDeLaSociete
+  /** Au 31 décembre : ce que l'année suivante reçoit. */
+  aLaFin: EtatDeLaSociete
+  /** Déficit des années précédentes déduit du bénéfice imposable à l'IS de l'année. */
+  deficitImpute: number
+  /** Part du bénéfice de l'année affectée à la réserve légale. */
+  dotationReserveLegale: number
+  /** Bénéfice distribuable de l'année : bénéfice après IS, moins la dotation à la réserve légale et les pertes antérieures. */
+  beneficeDistribuableDeLAnnee: number
+  /** Tout ce que la société peut distribuer dans l'année : son bénéfice distribuable et ses réserves. */
+  distribuable: number
+  /** Part des dividendes de l'année prise sur les réserves des années précédentes. */
+  dividendesPrisSurLesReserves: number
 }
 
 /** Sortie du régime micro : au 1er janvier de `depuis`, après deux années de suite au-delà des plafonds. */

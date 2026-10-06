@@ -211,6 +211,16 @@ describe("runMetaSimulation", () => {
         cotisationsPresident: expect.objectContaining({ statut: "president", brut: expect.closeTo(30000, 6), coutEmployeur: expect.closeTo(40200, 6) }),
         // Le bénéfice avant rémunération, 90 000 €, est exactement la somme des postes.
         partage: { beneficeAvantRemuneration: 90000, remunerationNette: 24300, cotisationsRemuneration: expect.closeTo(15900, 6), impotSocietes: expect.closeTo(8450, 6), dividendesNets: 20000, cotisationsSurDividendes: 0, resultatConserve: expect.closeTo(21350, 6) },
+        // Société d'avant la simulation : sa réserve légale (10 % de 1 000 € de capital) est déjà constituée.
+        reserves: {
+          auDebut: { reserves: 0, reserveLegale: 100, deficitReportable: 0 },
+          aLaFin: { reserves: expect.closeTo(21350, 6), reserveLegale: 100, deficitReportable: 0 },
+          deficitImpute: 0,
+          dotationReserveLegale: 0,
+          beneficeDistribuableDeLAnnee: expect.closeTo(41350, 6),
+          distribuable: expect.closeTo(41350, 6),
+          dividendesPrisSurLesReserves: 0
+        },
         warnings: []
       })
     })

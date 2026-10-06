@@ -1,12 +1,12 @@
 // src/backend/logic/simulation-engine.ts
 
-import type { VersementLiberatoireInfo, ActivityResult, Company, FinancialFlow, FoyerFiscalResult, FraisProfessionnelsResult, MicroEntreprise, Person, PersonResult, Relationship, SalarieDeLActivite, DonneesDeLAnnee, SimulationBilan, SimulationReport } from "../../types.js"
+import type { VersementLiberatoireInfo, ActivityResult, Company, EtatDeLaSociete, FinancialFlow, FoyerFiscalResult, FraisProfessionnelsResult, MicroEntreprise, Person, PersonResult, Relationship, SalarieDeLActivite, DonneesDeLAnnee, SimulationBilan, SimulationReport } from "../../types.js"
 import { calculerMicro, plafondRfrVersementLiberatoire } from "./calculsAE.js"
 import { calculerEI } from "./calculsEI.js"
 import { calculerEURL } from "./calculsEURL.js"
 import { calculerIR } from "./calculsIR.js"
 import { calculerSASU } from "./calculsSASU.js"
-import type { ResultatSociete } from "./calculsSociete.js"
+import { etatSansReserves, type ResultatSociete } from "./calculsSociete.js"
 import type { PartageDuBenefice } from "../../types.js"
 import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.js"
 import { buildFoyers, type Foyer } from "./foyers.js"
@@ -241,9 +241,11 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     chiffreAffaires: total(ctx, societe.id, "ca_services", "ca_vente"),
     chargesDeductibles: total(ctx, societe.id, "deductible_expense") + masse.cout + deplacements,
     remunerationNette: total(ctx, societe.id, "director_remuneration"),
-    dividendesDemandes: total(ctx, societe.id, "dividends_payment")
+    dividendesDemandes: total(ctx, societe.id, "dividends_payment"),
+    capitalSocial: societe.capitalSocial,
+    etat: ctx.annee.etatsDesSocietes?.[societe.id] ?? etatAuDebutDeLaSimulation(societe, anneeSimulee(ctx), ctx.regles)
   }
-  const resultat = societe.legalStatus === "SASU" ? calculerSASU(entrees, ctx.regles) : calculerEURL({ ...entrees, capitalSocial: societe.capitalSocial }, ctx.regles)
+  const resultat = societe.legalStatus === "SASU" ? calculerSASU(entrees, ctx.regles) : calculerEURL(entrees, ctx.regles)
   const warnings = [...resultat.warnings]
 
   verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable, cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
@@ -268,8 +270,20 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     ...detailSalaries(masse),
     ...detailDeplacements(societe, deplacements, true),
     partage: partageDuBenefice(resultat),
+    reserves: resultat.reserves,
     warnings
   }
+}
+
+/**
+ * Ce qu'une société à l'IS a au 1er janvier de la première année simulée (voir l'ADR 012) : les réserves saisies dans sa
+ * fiche, aucun déficit reportable, et une réserve légale déjà constituée, sauf si la société est créée cette année-là
+ * ou plus tard (date de création connue) : sa réserve légale part alors de zéro.
+ */
+export function etatAuDebutDeLaSimulation(societe: Company, premiereAnnee: number, regles: ReglesFiscales): EtatDeLaSociete {
+  const creation = lireMois(societe.dateDeCreation)
+  const nouvelle = creation !== null && creation.annee >= premiereAnnee
+  return { ...etatSansReserves(nouvelle ? 0 : societe.capitalSocial, regles.reserveLegale), reserves: societe.reservesInitiales ?? 0 }
 }
 
 /** Le bénéfice avant rémunération du dirigeant, poste par poste : la somme des postes le redonne exactement. */
@@ -667,6 +681,11 @@ export interface ContexteDeLAnnee {
    * sont sorties sont déjà converties en entreprise individuelle au réel dans les données de l'année.
    */
   regimeMicro?: RegimeMicroDeLAnnee
+  /**
+   * Ce que chaque société à l'IS a gardé des années précédentes de la session, par identifiant (voir l'ADR 012). Une
+   * société absente part de ce que dit sa fiche (`etatAuDebutDeLaSimulation`).
+   */
+  etatsDesSocietes?: Record<string, EtatDeLaSociete>
 }
 
 export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): SimulationReport {

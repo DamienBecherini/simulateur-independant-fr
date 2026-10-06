@@ -19,14 +19,15 @@ export interface EntreesEURL extends EntreesSociete {
  * La part des dividendes qui dépasse 10 % du capital social s'ajoute au revenu soumis à cotisations, au lieu
  * de supporter les prélèvements sociaux. Les cotisations supplémentaires qu'elle entraîne (différence entre
  * les cotisations sur la rémunération et les dividendes, et celles sur la rémunération seule) sont payées
- * par le gérant sur ces dividendes.
+ * par le gérant sur ces dividendes. Le seuil s'apprécie l'année où les dividendes sont versés, qu'ils viennent du
+ * bénéfice de l'année ou des réserves des années précédentes.
  *
  * La rémunération est imposée comme un salaire ; la CSG non déductible et la CRDS, payées par la société,
  * s'ajoutent à la rémunération nette imposable.
  */
 export function calculerEURL(entrees: EntreesEURL, regles: ReglesFiscales = reglesEnVigueur): ResultatSociete {
   const surRemuneration = calculerCotisationsTNS(revenuAvantCotisationsPourUnNet(entrees.remunerationNette, regles.TNS), regles.TNS)
-  const resultat = calculerResultatSociete(entrees, surRemuneration.total, regles.IS)
+  const resultat = calculerResultatSociete(entrees, surRemuneration.total, regles)
 
   const seuil = entrees.capitalSocial * regles.EURL.seuilDividendesPartDuCapital
   const dividendesSoumisPS = Math.min(resultat.dividendesVerses, seuil)

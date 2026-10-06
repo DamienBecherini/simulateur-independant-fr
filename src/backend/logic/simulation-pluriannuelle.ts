@@ -7,7 +7,7 @@
  * Le comparateur et l'optimiseur travaillent sur une seule année, celle que l'utilisateur consulte.
  */
 
-import type { ComparaisonOptions, ComparaisonResult, DonneesDeLAnnee, OptimisationRemuneration, ResultatAnnee, SessionState, SimulationPluriannuelle, SimulationReport, StatutSociete } from "../../types.js"
+import type { ComparaisonOptions, EtatDeLaSociete, ComparaisonResult, DonneesDeLAnnee, OptimisationRemuneration, ResultatAnnee, SessionState, SimulationPluriannuelle, SimulationReport, StatutSociete } from "../../types.js"
 import { anneeExistante, donneesDeLAnnee } from "./annees.js"
 import { activiteComparee, avecLaCFEDeLAnnee, comparerStatuts, convertirLActivite } from "./comparateur.js"
 import { regimesMicroDesAnnees, type RegimeMicroDeLAnnee } from "./dispositifs.js"
@@ -23,20 +23,37 @@ function rfrParPersonne(report: SimulationReport): Record<string, number> {
   return Object.fromEntries(report.foyers.flatMap(foyer => foyer.personIds.map(id => [id, foyer.revenuFiscalDeReference])))
 }
 
-/**
- * Prépare une année. `reportN2` est le rapport de l'année N-2 s'il a pu être calculé : son revenu fiscal de référence
- * sert alors au versement libératoire de l'année N.
- */
-function preparerLAnnee(session: SessionState, annee: number, reportN2: SimulationReport | null, regimeMicro: RegimeMicroDeLAnnee | undefined): PreparationDeLAnnee {
+/** Ce qu'une année reçoit des années précédentes de la session. */
+interface Heritage {
+  /** Rapport de l'année N-2 s'il a pu être calculé : son revenu fiscal de référence sert au versement libératoire de N. */
+  reportN2: SimulationReport | null
+  regimeMicro: RegimeMicroDeLAnnee | undefined
+  /** Réserves, réserve légale et déficit reportable de chaque société au 1er janvier (voir l'ADR 012). */
+  etatsDesSocietes: Record<string, EtatDeLaSociete>
+}
+
+/** Prépare une année avec ce qu'elle hérite des précédentes. */
+function preparerLAnnee(session: SessionState, annee: number, heritage: Heritage): PreparationDeLAnnee {
+  const { reportN2, regimeMicro, etatsDesSocietes } = heritage
   const regles = reglesDeLAnnee(annee)
   if (regles.regles === null) return { erreur: regles.erreur }
   const contexte: ContexteDeLAnnee = {
     annee,
     avertissements: regles.avertissement ? [regles.avertissement] : [],
     ...(reportN2 ? { rfrN2: { annee: annee - 2, parPersonne: rfrParPersonne(reportN2) } } : {}),
-    ...(regimeMicro ? { regimeMicro } : {})
+    ...(regimeMicro ? { regimeMicro } : {}),
+    ...(Object.keys(etatsDesSocietes).length > 0 ? { etatsDesSocietes } : {})
   }
   return { donnees: auRegimeReel(donneesDeLAnnee(session, annee), regimeMicro), regles: regles.regles, contexte }
+}
+
+/**
+ * Ce que les sociétés à l'IS passent à l'année suivante : leur situation au 31 décembre d'après le rapport de l'année,
+ * ou, pour une année qui n'a pas pu être simulée, celle qu'elles avaient au 1er janvier.
+ */
+function etatsALaFin(report: SimulationReport | null, auDebut: Record<string, EtatDeLaSociete>): Record<string, EtatDeLaSociete> {
+  if (!report) return auDebut
+  return { ...auDebut, ...Object.fromEntries(report.activities.flatMap(a => (a.reserves ? [[a.entityId, a.reserves.aLaFin]] : []))) }
 }
 
 /**
@@ -52,35 +69,54 @@ function auRegimeReel(donnees: DonneesDeLAnnee, regimeMicro: RegimeMicroDeLAnnee
   }, donnees)
 }
 
-function simulerUneAnnee(session: SessionState, annee: number, reportN2: SimulationReport | null, regimeMicro: RegimeMicroDeLAnnee | undefined): ResultatAnnee {
-  const preparation = preparerLAnnee(session, annee, reportN2, regimeMicro)
-  if ("erreur" in preparation) return { annee, report: null, erreur: preparation.erreur }
-  return { annee, report: runMetaSimulation(preparation.donnees, preparation.regles, preparation.contexte), erreur: null }
+/** Une année préparée : ses données, ses règles et son contexte. */
+export type AnneePreparee = Exclude<PreparationDeLAnnee, { erreur: string }>
+
+/** Ce que chaque année hérite des précédentes, et son résultat. */
+interface Parcours {
+  annee: number
+  heritage: Heritage
+  resultat: ResultatAnnee
 }
 
 /**
  * Simule chaque année de la session, de la plus ancienne à la plus récente : le revenu fiscal de référence calculé
- * pour l'année N-2 sert au versement libératoire de l'année N, et le chiffre d'affaires des années précédentes décide
- * du régime des micro-entreprises (voir dispositifs.ts).
+ * pour l'année N-2 sert au versement libératoire de l'année N, le chiffre d'affaires des années précédentes décide
+ * du régime des micro-entreprises (voir dispositifs.ts), et les sociétés à l'IS gardent d'une année à l'autre leurs
+ * réserves, leur réserve légale et leur déficit reportable (voir l'ADR 012). `ajuster` peut modifier les données de
+ * chaque année avant sa simulation (stratégies de distribution du comparateur).
  */
-export function simulerLesAnnees(session: SessionState): SimulationPluriannuelle {
+function parcourirLesAnnees(session: SessionState, ajuster?: (preparee: AnneePreparee) => DonneesDeLAnnee): Parcours[] {
   const regimes = regimesMicroDesAnnees(session)
-  const annees: ResultatAnnee[] = []
+  const parcours: Parcours[] = []
+  let etatsDesSocietes: Record<string, EtatDeLaSociete> = {}
   for (const { annee } of session.annees) {
-    const reportN2 = annees.find(a => a.annee === annee - 2)?.report ?? null
-    annees.push(simulerUneAnnee(session, annee, reportN2, regimes.get(annee)))
+    const reportN2 = parcours.find(p => p.annee === annee - 2)?.resultat.report ?? null
+    const heritage: Heritage = { reportN2, regimeMicro: regimes.get(annee), etatsDesSocietes }
+    const preparation = preparerLAnnee(session, annee, heritage)
+    const resultat: ResultatAnnee =
+      "erreur" in preparation
+        ? { annee, report: null, erreur: preparation.erreur }
+        : { annee, report: runMetaSimulation(ajuster ? ajuster(preparation) : preparation.donnees, preparation.regles, preparation.contexte), erreur: null }
+    parcours.push({ annee, heritage, resultat })
+    etatsDesSocietes = etatsALaFin(resultat.report, etatsDesSocietes)
   }
-  return { annees }
+  return parcours
+}
+
+/** Simule chaque année de la session (voir `parcourirLesAnnees`). */
+export function simulerLesAnnees(session: SessionState, ajuster?: (preparee: AnneePreparee) => DonneesDeLAnnee): SimulationPluriannuelle {
+  return { annees: parcourirLesAnnees(session, ajuster).map(p => p.resultat) }
 }
 
 /**
- * Prépare l'année demandée (la plus récente si elle n'est pas dans la session), avec le revenu fiscal de référence
- * de N-2 si la session le permet et le régime de ses micro-entreprises ; une année sans règles est une erreur.
+ * Prépare l'année demandée (la plus récente si elle n'est pas dans la session), avec ce qu'elle hérite des années
+ * précédentes de la session ; une année sans règles est une erreur.
  */
 function preparerOuEchouer(session: SessionState, annee: number) {
   const existante = anneeExistante(session, annee)
-  const reportN2 = simulerLesAnnees(session).annees.find(a => a.annee === existante - 2)?.report ?? null
-  const preparation = preparerLAnnee(session, existante, reportN2, regimesMicroDesAnnees(session).get(existante))
+  const { heritage } = parcourirLesAnnees(session).find(p => p.annee === existante)!
+  const preparation = preparerLAnnee(session, existante, heritage)
   if ("erreur" in preparation) throw new Error(preparation.erreur)
   return preparation
 }
