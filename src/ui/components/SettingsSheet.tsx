@@ -29,6 +29,7 @@ import { SauvegardesGroupees } from "./SauvegardesGroupees"
 import { BoutonDesMontages } from "./MontagesTypes"
 import type { MontageType } from "@/lib/montages/montages"
 import { ThemeToggle } from "./ThemeToggle"
+import { BoutonDesMentionsLegales } from "./MentionsLegales"
 
 /**
  * Props pour le composant SettingsSheet.
@@ -229,6 +230,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                   <Label htmlFor="theme-parametres">Thème clair ou sombre</Label>
                   <ThemeToggle id="theme-parametres" />
                 </div>
+                <BoutonDesMentionsLegales variant="outline" className="h-auto min-h-9 w-full whitespace-normal" icone />
               </div>
             </>
           )}
