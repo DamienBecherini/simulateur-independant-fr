@@ -49,21 +49,15 @@ export const RUBRIQUES: readonly Rubrique[] = [
     titre: "Éditeur",
     blocs: [
       { paragraphe: ["Le simulateur est édité par Damien BECHERINI, à titre personnel et non professionnel : c'est un projet non commercial et open source."] },
-      { paragraphe: ["Contact : ", CONTACT, "."] }
+      { paragraphe: ["Adresse : 20 rue des bois, 77140 Saint-Pierre-lès-Nemours, France."] },
+      { paragraphe: ["Contact : ", CONTACT, ". Activité professionnelle de l'éditeur : ", { texte: "damien.becherini.fr", adresse: "https://damien.becherini.fr" }, "."] }
     ]
   },
   {
     titre: "Hébergement",
     blocs: [
       { paragraphe: ["La démo web est hébergée par GitHub Pages, un service de GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis (", { texte: "github.com", adresse: "https://github.com" }, ")."] },
-      { paragraphe: ["L'application de bureau n'est pas hébergée : elle s'installe et fonctionne sur votre ordinateur."] },
-      {
-        paragraphe: [
-          "Comme le permet l'",
-          { texte: "article 1-1 de la loi pour la confiance dans l'économie numérique", adresse: "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049568614" },
-          ", l'éditeur, qui agit à titre non professionnel, ne publie pas son adresse postale : l'hébergeur est indiqué ci-dessus."
-        ]
-      }
+      { paragraphe: ["L'application de bureau n'est pas hébergée : elle s'installe et fonctionne sur votre ordinateur."] }
     ]
   },
   {
