@@ -43,6 +43,15 @@ La configuration se copie depuis l'application : **Paramètres** (icône en haut
 
 Si vous déplacez ou réinstallez l'application ailleurs, copiez à nouveau la configuration.
 
+### Version du Microsoft Store
+
+Installée par le Microsoft Store, l'application vit dans un dossier protégé dont le nom change à chaque mise à jour. La configuration copiée depuis l'application en tient compte ([ADR 012](./adr/012-serveur-mcp-dans-la-version-du-microsoft-store.md)) :
+
+- `command` est l'**alias d'exécution** de l'application, `%LOCALAPPDATA%\Microsoft\WindowsApps\simulateur-independant-fr.exe` (en chemin complet), qui reste valable après chaque mise à jour ;
+- le serveur est une **copie** que l'application tient à jour dans son dossier de données à chaque démarrage : `…\AppData\Roaming\simulateur-independant-fr\mcp\serveur-mcp.mjs`.
+
+Windows range les fichiers que crée cette version dans `%LOCALAPPDATA%\Packages\<nom du paquet>\LocalCache\Roaming\simulateur-independant-fr`, tout en les montrant à l'application, et au serveur lancé par l'alias, au chemin habituel : c'est pourquoi la commande passe par l'alias. Si le serveur ne démarre pas, vérifiez que l'alias est activé : Paramètres de Windows > Applications > Paramètres avancés des applications > Alias d'exécution d'application > « Simulateur Indépendant FR ».
+
 ### Avec Claude Desktop (Windows, macOS)
 
 1. Dans Claude Desktop, ouvrez **Paramètres**, onglet **Développeur**, puis **Modifier la configuration**. Le fichier est :
