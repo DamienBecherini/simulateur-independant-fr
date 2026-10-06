@@ -4,6 +4,7 @@
 import type { Entity, FinancialFlow, FoyerFiscalResult, FraisProfessionnelsResult, PuissanceFiscale, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { flowTypeLabels, libelleDuType, isOutgoingFlowType, type FlowType } from "./flow-constants"
 import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
+import { lectureDesReserves, type LectureDesReserves } from "./reserves"
 
 /** Mois de création d'une activité en toutes lettres (« septembre 2026 ») ; `null` pour une personne ou sans date. */
 export function dateDeCreationLisible(entity: Entity): string | null {
@@ -129,6 +130,19 @@ export function issueDuVersementLiberatoire(info: VersementLiberatoireInfo): str
 /** Revenu fiscal de référence de chaque foyer, année par année : une ligne par année et par foyer calculés. */
 export function rfrDesAnnees(session: SimulationAnnuelle, simulation: SimulationPluriannuelle): { annee: number; foyer: string; rfr: number }[] {
   return simulation.annees.flatMap(({ annee, report }) => (report?.foyers ?? []).map(f => ({ annee, foyer: nomDuFoyer(session, f), rfr: f.revenuFiscalDeReference })))
+}
+
+/** Réserves des sociétés à l'IS de l'année, quand il y a quelque chose à en dire (voir l'ADR 012). */
+export function reservesDeLAnnee(report: SimulationReport): { activite: string; lecture: LectureDesReserves }[] {
+  return report.activities.flatMap(a => {
+    const lecture = lectureDesReserves(a)
+    return lecture?.aSignaler ? [{ activite: a.name, lecture }] : []
+  })
+}
+
+/** Réserves des sociétés à l'IS au 31 décembre, année par année et société par société. */
+export function reservesDesAnnees(simulation: SimulationPluriannuelle): { annee: number; activite: string; lecture: LectureDesReserves }[] {
+  return simulation.annees.flatMap(({ annee, report }) => (report ? reservesDeLAnnee(report).map(r => ({ annee, ...r })) : []))
 }
 
 /** Dispositifs limités dans le temps, année par année et activité par activité. */

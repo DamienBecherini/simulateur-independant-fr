@@ -4,7 +4,7 @@
 
 import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { documentCsv, montant, type CelluleCsv } from "./csv"
-import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, rfrDesAnnees } from "./export-commun"
+import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
 import { libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
 
@@ -73,6 +73,13 @@ function lignesDuVersementLiberatoire(report: SimulationReport): Ligne[] {
   return tableauFacultatif(entete, lignes)
 }
 
+/** Réserves des sociétés à l'IS : ce qui s'y ajoute ou en sort dans l'année, et ce qu'il en reste au 31 décembre. */
+function lignesDesReserves(report: SimulationReport): Ligne[] {
+  const entete: Ligne = ["Réserves de la société", "Ajouté aux réserves", "Dont réserve légale", "Dividendes pris sur les réserves", "Déficit de l'année", "Déficit antérieur déduit avant l'IS", "Réserves au 31 décembre", "Réserve légale au 31 décembre"]
+  const lignes = reservesDeLAnnee(report).map(({ activite, lecture: l }): Ligne => [activite, ...[l.ajoutees, l.reserveLegaleDotee, l.prisesSurLesReserves, l.deficit, l.deficitImpute, l.aLaFin, l.reserveLegale].map(montant)])
+  return tableauFacultatif(entete, lignes)
+}
+
 /** Déplacements professionnels des activités au barème kilométrique, compris dans leurs charges. */
 function lignesDesDeplacements(report: SimulationReport): Ligne[] {
   const entete: Ligne = ["Déplacements professionnels", "Statut", "Kilomètres", "Montant au barème", "Déductible"]
@@ -95,7 +102,7 @@ function lignesDesFraisProfessionnels(report: SimulationReport): Ligne[] {
  */
 export function csvResultats(session: SimulationAnnuelle, report: SimulationReport): string {
   const tableaux = [...lignesDuBilan(report), [], ...lignesDesActivites(session, report), [], ...lignesDesPersonnes(report), [], ...lignesDesFoyers(session, report)]
-  return documentCsv([...tableaux, ...lignesDuVersementLiberatoire(report), ...lignesDesDeplacements(report), ...lignesDesFraisProfessionnels(report)])
+  return documentCsv([...tableaux, ...lignesDesReserves(report), ...lignesDuVersementLiberatoire(report), ...lignesDesDeplacements(report), ...lignesDesFraisProfessionnels(report)])
 }
 
 // --- Toutes les années ---
@@ -109,7 +116,8 @@ export function csvSyntheseDesAnnees(session: SimulationAnnuelle, simulation: Si
   const annees = simulation.annees.map(({ annee, report: r, erreur }): Ligne => (r ? [annee, r.anneeDesRegles, ...[r.totalNetApresImpots, r.bilan.totalPrelevements, r.bilan.revenusAvantPrelevements, r.bilan.cotisationsSociales, r.bilan.impotSocietes, r.bilan.impotSurLeRevenu, r.bilan.resultatConserve].map(montant), ""] : [annee, null, null, null, null, null, null, null, null, erreur ?? "Non calculée"]))
   const rfr = rfrDesAnnees(session, simulation).map(({ annee, foyer, rfr }): Ligne => [annee, foyer, montant(rfr)])
   const dispositifs = dispositifsDesAnnees(simulation).map(({ annee, activite, note }): Ligne => [annee, activite, note])
-  return documentCsv([entete, ...annees, ...tableauFacultatif(["Année", "Foyer fiscal", "Revenu fiscal de référence"], rfr), ...tableauFacultatif(["Année", "Activité", "Dispositif"], dispositifs)])
+  const reserves = reservesDesAnnees(simulation).map(({ annee, activite, lecture }): Ligne => [annee, activite, montant(lecture.aLaFin), montant(lecture.reserveLegale)])
+  return documentCsv([entete, ...annees, ...tableauFacultatif(["Année", "Foyer fiscal", "Revenu fiscal de référence"], rfr), ...tableauFacultatif(["Année", "Société", "Réserves au 31 décembre", "Réserve légale au 31 décembre"], reserves), ...tableauFacultatif(["Année", "Activité", "Dispositif"], dispositifs)])
 }
 
 // --- Comparateur de statuts ---
