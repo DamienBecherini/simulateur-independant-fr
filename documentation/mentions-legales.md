@@ -4,7 +4,9 @@ Ce simulateur est un projet personnel. Cette page dit qui l'édite, qui héberge
 
 ## Éditeur
 
-Le simulateur est édité par Damien BECHERINI, à titre personnel et non professionnel : c'est un projet non commercial et open source.
+Le simulateur est édité par Damien BECHERINI, entrepreneur individuel (SIREN 800 970 386, RCS Melun), comme projet non commercial et open source.
+
+SIRET : 800 970 386 00044.
 
 Adresse : 20 rue des bois, 77140 Saint-Pierre-lès-Nemours, France.
 

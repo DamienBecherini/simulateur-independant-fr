@@ -1,7 +1,7 @@
 // e2e-web/installable.web.ts
 // La démo installable et utilisable hors ligne (voir l'ADR 012) : manifeste, icônes, service worker, ouverture et
-// calcul sans réseau, bouton « Installer l'application ». Seul fichier où le service worker n'est pas bloqué
-// (playwright.web.config.ts).
+// calcul sans réseau. L'aide à l'installation (bandeau, fenêtre, « Installer maintenant ») est testée dans
+// aide-installation.web.ts. Seul fichier où le service worker n'est pas bloqué (playwright.web.config.ts).
 
 import { test, expect, type Page } from "@playwright/test"
 
@@ -41,30 +41,6 @@ test("le manifeste décrit la démo, en français, avec ses icônes", async ({ p
     expect(image.ok(), icone.src).toBe(true)
     expect(image.headers()["content-type"]).toBe("image/png")
   }
-})
-
-test("sans invitation du navigateur, le bouton « Installer l'application » n'apparaît pas ; avec, il ouvre l'installation", async ({ page }) => {
-  await ouvrir(page)
-  const bandeau = page.getByRole("complementary", { name: "Démo web" })
-  await expect(bandeau.getByRole("button", { name: "Recommencer avec l'exemple" })).toBeVisible()
-  await expect(page.getByRole("button", { name: "Installer l'application" })).toHaveCount(0)
-
-  // L'événement que Chrome et Edge envoient quand le site est installable, imité.
-  await page.evaluate(() => {
-    const invitation = Object.assign(new Event("beforeinstallprompt", { cancelable: true }), {
-      prompt: async () => document.body.setAttribute("data-installation-demandee", "oui"),
-      userChoice: Promise.resolve({ outcome: "accepted" })
-    })
-    window.dispatchEvent(invitation)
-  })
-  await expect(bandeau.getByRole("button", { name: "Installer l'application" })).toBeVisible()
-
-  await page.getByRole("button", { name: "Paramètres" }).click()
-  const parametres = page.getByRole("dialog", { name: "Configuration" })
-  await parametres.getByRole("button", { name: "Installer l'application" }).click()
-  await expect(page.locator("body")).toHaveAttribute("data-installation-demandee", "oui")
-  // L'invitation ne sert qu'une fois : le bouton disparaît.
-  await expect(page.getByRole("button", { name: "Installer l'application" })).toHaveCount(0)
 })
 
 test.describe("avec le service worker", () => {

@@ -26,7 +26,7 @@ Il reste à faire, par le propriétaire du compte : créer le compte développeu
    - la **vérification d'identité** demandée (pièce d'identité et photo).
 4. Attendre la vérification de l'entreprise : 2 à 5 jours ouvrés, revue manuelle. Partner Center l'affiche dans Paramètres du compte > Profil légal.
 
-**À trancher avant de publier :** les [mentions légales](../mentions-legales.md) disent que le simulateur est édité « à titre personnel et non professionnel ». Avec un compte entreprise, l'éditeur affiché par le Store sera l'entreprise : mettre ce passage en accord (texte dans `src/lib/mentions-legales.ts`, puis `npm run mentions-legales`), puisque cette page sert de politique de confidentialité au Store.
+**Mentions légales :** les [mentions légales](../mentions-legales.md) nomment l'éditeur comme l'entreprise individuelle qui détient le compte (SIREN, RCS et SIRET), puisque cette page sert de politique de confidentialité au Store. Si ces informations changent, modifier le texte dans `src/lib/mentions-legales.ts`, puis lancer `npm run mentions-legales`.
 
 ### Réserver le nom
 

@@ -3,15 +3,16 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { readFileSync } from 'node:fs';
-import { demoInstallable } from './vite-plugin-demo-installable';
+import { demoInstallable, sansLesImagesDeLaDemo } from './vite-plugin-demo-installable';
 
 // Version de l'application, écrite dans les fichiers de simulation (voir src/lib/version.ts).
 const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string };
 
 // Le mode « web » construit la démo en ligne, publiée sur GitHub Pages sous /simulateur-independant-fr/, installable
-// et utilisable hors ligne (manifeste et service worker : voir vite-plugin-demo-installable.ts et l'ADR 012).
+// et utilisable hors ligne (manifeste et service worker : voir vite-plugin-demo-installable.ts et l'ADR 012). Les
+// captures de l'aide à l'installation de la démo restent hors de l'application de bureau.
 export default defineConfig(({ mode }) => ({
-	plugins: [react(), tailwindcss(), tsconfigPaths(), ...(mode === 'web' ? [demoInstallable()] : [])],
+	plugins: [react(), tailwindcss(), tsconfigPaths(), ...(mode === 'web' ? [demoInstallable()] : [sansLesImagesDeLaDemo()])],
 	define: {
 		__APP_VERSION__: JSON.stringify(version),
 	},

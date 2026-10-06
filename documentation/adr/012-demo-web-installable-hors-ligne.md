@@ -29,14 +29,18 @@ Contraintes : la CI installe les dépendances sans scripts d'installation (`npm 
 
 ### Installation et données
 
-- Le bouton « Installer l'application » (bandeau de la démo et panneau des paramètres) n'apparaît que lorsque le navigateur envoie `beforeinstallprompt` (Chrome, Edge), gardé dès le démarrage : jamais dans l'application de bureau, ni dans Firefox et Safari, ni une fois la démo installée.
+- L'installation se découvre sans fenêtre qui s'ouvre d'elle-même : le bandeau de la démo porte la ligne « Installer le simulateur sur votre ordinateur : il fonctionne hors ligne, sans compte » et un bouton « Comment faire ? » ; le panneau des paramètres, un bouton « Installer le simulateur ». Tous deux ouvrent la même aide (`src/web/AideALInstallation.tsx`), qui s'adapte au navigateur :
+  - Edge, Chrome et les autres navigateurs Chromium (ou tout navigateur qui envoie `beforeinstallprompt`) : les avantages, un bouton « Installer maintenant » qui rejoue l'événement `beforeinstallprompt` gardé dès le démarrage (remplacé par une explication tant que le navigateur ne l'a pas envoyé), puis les étapes à la main, avec deux captures d'Edge (WebP, importées par le seul code de la démo ; un petit plugin de `vite-plugin-demo-installable.ts` les écarte de la compilation de l'application de bureau) ;
+  - Firefox, Safari et les navigateurs d'iPhone : ouvrir la démo dans Edge ou Chrome, ou télécharger l'application de bureau.
+- Démo déjà installée (`display-mode: standalone`, `navigator.standalone` sur iPhone, ou événement `appinstalled` dans l'onglet) : ni la ligne du bandeau ni le bouton des paramètres n'apparaissent. Rien de tout cela n'existe dans l'application de bureau.
 - `navigator.storage.persist()` est demandé une fois par visite, à la première sauvegarde nommée et à l'installation, pour que le navigateur n'efface pas de lui-même les données (localStorage) quand l'espace manque. Chrome et Edge l'accordent sans rien demander, selon l'usage du site ; Firefox demande l'autorisation.
 - La politique de sécurité du contenu reste stricte ; `worker-src 'self'` et `manifest-src 'self'` y sont écrits pour être explicites (déjà couverts par `default-src 'self'`).
 
 ### Tests
 
 - Tests unitaires du manifeste, de la stratégie, de l'enregistrement (proposition de mise à jour) et de l'installation.
-- `e2e-web/installable.web.ts` : manifeste et icônes servis, aucune erreur d'installabilité relevée par Chromium (`Page.getAppManifest`, `Page.getInstallabilityErrors` par le protocole DevTools), bouton d'installation absent sans invitation et présent avec une invitation imitée, puis réouverture et calcul de la simulation d'exemple **hors ligne** (`context.setOffline(true)`).
+- `e2e-web/installable.web.ts` : manifeste et icônes servis, aucune erreur d'installabilité relevée par Chromium (`Page.getAppManifest`, `Page.getInstallabilityErrors` par le protocole DevTools), puis réouverture et calcul de la simulation d'exemple **hors ligne** (`context.setOffline(true)`).
+- `e2e-web/aide-installation.web.ts` : la ligne du bandeau et l'aide (Chromium, Firefox imité), « Installer maintenant » avec une invitation imitée, la démo déjà installée, l'accessibilité en thèmes clair et sombre, et la largeur d'un téléphone avec les deux polices.
 - Partout ailleurs, `playwright.web.config.ts` bloque les service workers (`serviceWorkers: "block"`) : sinon, les fichiers seraient servis depuis le cache, hors de portée de `page.route`, et chaque test remplirait un cache.
 
 ## Conséquences

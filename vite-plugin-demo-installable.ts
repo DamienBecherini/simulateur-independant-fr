@@ -67,3 +67,22 @@ export function demoInstallable(): Plugin {
     }
   }
 }
+
+/** Dossier des captures d'écran de l'aide à l'installation de la démo (src/web/AideALInstallation.tsx). */
+const IMAGES_DE_L_AIDE = "/src/web/aide-installation/"
+
+/**
+ * Pour l'application de bureau : les captures de l'aide à l'installation, propres à la démo, ne sont pas publiées.
+ * Le code qui les affiche disparaît de la compilation (`VITE_CIBLE` ne vaut « web » que dans la démo), mais Vite
+ * écrirait quand même les images importées : elles y sont remplacées par une adresse vide.
+ */
+export function sansLesImagesDeLaDemo(): Plugin {
+  return {
+    name: "sans-les-images-de-la-demo",
+    apply: "build",
+    enforce: "pre",
+    load(id) {
+      return id.split("\\").join("/").includes(IMAGES_DE_L_AIDE) ? "export default ''" : null
+    }
+  }
+}

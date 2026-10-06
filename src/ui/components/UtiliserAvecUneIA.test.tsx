@@ -1,12 +1,12 @@
 // src/ui/components/UtiliserAvecUneIA.test.tsx
-// Section « Utiliser avec une IA (MCP) » des paramètres : absente sans serveur local (démo web), et sinon la
-// configuration de cette installation, prête à copier.
+// Section « Utiliser avec une IA (MCP) » des paramètres : dans l'application de bureau, absente sans serveur local, et
+// sinon la configuration de cette installation, prête à copier ; dans la démo web, un renvoi vers l'application de bureau.
 
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { InfosDuServeurMcp } from "@/lib/configuration-mcp"
-import { BoutonUtiliserAvecUneIA } from "./UtiliserAvecUneIA"
+import { BoutonUtiliserAvecUneIA, CE_QUE_PERMET_L_IA } from "./UtiliserAvecUneIA"
 
 const infos: InfosDuServeurMcp = {
   executable: "C:\\Users\\Camille\\AppData\\Local\\Programs\\Simulateur\\Simulateur Indépendant FR.exe",
@@ -71,5 +71,36 @@ describe("Utiliser avec une IA (MCP)", () => {
     expect(within(fenetre).getByLabelText("Commande de vérification")).toHaveTextContent('ELECTRON_RUN_AS_NODE=1 "/opt/Simulateur/simulateur" "/opt/Simulateur/resources/mcp/serveur-mcp.mjs" --donnees "/home/camille/.config/Simulateur"')
     await user.click(within(fenetre).getByRole("button", { name: "Copier la configuration" }))
     expect(within(fenetre).getByRole("status")).toHaveTextContent("La copie a échoué")
+  })
+
+  it("rend le focus au bouton à la fermeture de la fenêtre", async () => {
+    vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue(infos)
+    const user = userEvent.setup({ delay: null })
+    render(<BoutonUtiliserAvecUneIA />)
+    const bouton = await screen.findByRole("button", { name: "Utiliser avec une IA (MCP)" })
+    await user.click(bouton)
+    await user.keyboard("{Escape}")
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(bouton).toHaveFocus()
+  })
+
+  describe("dans la démo web", () => {
+    afterEach(() => vi.unstubAllEnvs())
+
+    it("explique ce que cela permet, et renvoie vers l'application de bureau, seule à le faire", async () => {
+      vi.stubEnv("VITE_CIBLE", "web")
+      const user = userEvent.setup({ delay: null })
+      render(<BoutonUtiliserAvecUneIA />)
+      await user.click(screen.getByRole("button", { name: "Utiliser avec une IA (MCP)" }))
+      expect(window.api.infosDuServeurMcp).not.toHaveBeenCalled()
+
+      const fenetre = screen.getByRole("dialog", { name: "Utiliser avec une IA (MCP)" })
+      expect(fenetre).toHaveTextContent(CE_QUE_PERMET_L_IA)
+      expect(within(fenetre).getByRole("note")).toHaveTextContent("Seulement dans l'application de bureau : le client d'IA y lance un petit programme du simulateur, sur votre ordinateur, et un navigateur ne peut pas démarrer de programme.")
+      expect(within(fenetre).getByRole("link", { name: /Télécharger l'application/ })).toHaveAttribute("href", "https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest")
+      expect(within(fenetre).getByRole("link", { name: /Guide d'installation/ })).toHaveAttribute("href", "https://github.com/DamienBecherini/simulateur-independant-fr/blob/main/documentation/installation.md")
+      expect(fenetre).toHaveTextContent("Bientôt sur le Microsoft Store.")
+      expect(within(fenetre).queryByLabelText("Configuration à copier")).not.toBeInTheDocument()
+    })
   })
 })
