@@ -23,6 +23,9 @@ test.describe("sur un téléphone tactile de 320 px", () => {
 
     await page.getByRole("button", { name: "Paramètres" }).click()
     const panneau = page.getByRole("dialog", { name: "Configuration" })
+    // Les boutons du panneau (« Nouvelle Simulation / Réinitialiser », le plus long) passent à la ligne sans déborder.
+    const boutonsQuiDebordent = await panneau.evaluate(dialogue => Array.from(dialogue.querySelectorAll("button")).filter(b => b.scrollWidth > b.clientWidth + 1).map(b => b.textContent))
+    expect(boutonsQuiDebordent).toEqual([])
     const interrupteur = panneau.getByRole("switch", { name: "Changer de thème" })
     const sombreAuDepart = await page.evaluate(() => document.documentElement.classList.contains("dark"))
     await interrupteur.click()

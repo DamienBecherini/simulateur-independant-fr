@@ -221,8 +221,8 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                 <Button onClick={() => setView("load")} variant="secondary" className="w-full">
                   Charger une sauvegarde...
                 </Button>
-                <BoutonDesMontages variant="secondary" className="w-full" onCharger={onLoadMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name} />
-                <Button onClick={onReset} variant="destructive" className="w-full">
+                <BoutonDesMontages variant="secondary" className="h-auto min-h-9 w-full whitespace-normal py-1.5" onCharger={onLoadMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name} />
+                <Button onClick={onReset} variant="destructive" className="h-auto min-h-9 w-full whitespace-normal py-1.5">
                   <RefreshCcw className="mr-2 h-4 w-4" /> Nouvelle Simulation / Réinitialiser
                 </Button>
                 {/* Aussi dans la barre d'outils, sauf sur un écran très étroit où elle n'a pas la place. */}
