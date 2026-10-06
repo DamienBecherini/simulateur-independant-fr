@@ -1,10 +1,11 @@
 name: Tests de bout en bout
 
-# Plus lents que les tests unitaires : lancés sur main et à la demande, pas à chaque push de branche.
+# Plus lents que les tests unitaires : lancés sur integration, la branche de recette, puis sur main et à la demande,
+# pas à chaque push de branche. La règle de protection de main exige qu’ils aient réussi sur le commit avant qu’il y arrive.
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, integration]
 
 concurrency:
   group: e2e-${{ github.ref }}
