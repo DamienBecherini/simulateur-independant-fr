@@ -6,6 +6,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Ajouté
+
+- Démo web : l'adresse `#donner-mon-avis` ouvre directement la fenêtre « Donner mon avis », déjà remplie de la version et de l'environnement (lien « Donner un avis » de la page outil du site).
+
 ### Modifié
 
 - Outils pour les IA : « autre revenu imposable » est décrit comme un montant net imposable, ajouté tel quel au barème (sans l'abattement de 10 % des salaires), ce que fait le calcul.
