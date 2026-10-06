@@ -33,6 +33,28 @@ export function ecrire(cle: Cle, valeur: unknown) {
   }
 }
 
+/** Ce qui sert ici de `navigator.storage`. */
+export type GestionnaireDuStockage = Pick<StorageManager, "persist" | "persisted">
+
+let persistanceDemandee = false
+
+/**
+ * Demande au navigateur, une fois par visite, de ne pas effacer de lui-même les données de la démo quand l'espace
+ * manque (stockage « persistant »). Appelée à la première sauvegarde et à l'installation de la démo. Chrome et Edge
+ * répondent sans rien demander, selon l'usage du site (accordé à une application installée) ; Firefox demande
+ * l'autorisation. Rien de tout cela ne protège d'un effacement des données de navigation par l'utilisateur.
+ * Vrai si le stockage est persistant ; faux aussi quand la demande a déjà été faite pendant la visite.
+ */
+export async function demanderUnStockagePersistant(stockage: GestionnaireDuStockage | undefined = globalThis.navigator?.storage): Promise<boolean> {
+  if (persistanceDemandee || !stockage?.persist) return false
+  persistanceDemandee = true
+  try {
+    return (await stockage.persisted()) || (await stockage.persist())
+  } catch {
+    return false
+  }
+}
+
 /** Efface la session en cours et recharge la page, qui repart de la simulation d'exemple. Les sauvegardes sont conservées. */
 export function reinitialiserDemo() {
   reinitialisationEnCours = true

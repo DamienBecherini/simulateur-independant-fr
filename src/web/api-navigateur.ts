@@ -13,7 +13,7 @@ import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnee
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { sessionExemple } from "./session-exemple"
-import { CLES, ecrire, lire } from "./stockage-navigateur"
+import { CLES, demanderUnStockagePersistant, ecrire, lire } from "./stockage-navigateur"
 
 const avecFormat = <T extends object>(donnees: T) => ({ ...donnees, formatVersion: FORMAT_VERSION_ACTUEL })
 /** Un fichier écrit par la démo (session, export) : son format et la version de l'application qui l'écrit. */
@@ -96,6 +96,8 @@ export function creerApiNavigateur(): EventPayloadMapping {
     saveSlots: async (slots: SaveSlot[], options) => {
       ecrire(CLES.sauvegardes, sanitizeSlots(slots.map(avecFormat)).map(avecFormat))
       if (!options?.silencieux) notifier({ message: "Sauvegarde réussie !", type: "success" })
+      // Les sauvegardes sont ce que l'utilisateur tient à garder : le navigateur est prié de ne pas les effacer de lui-même.
+      void demanderUnStockagePersistant()
     },
 
     exportState: async (state: ExportableState) => telecharger(`simulateur-export-${Date.now()}.json`, ecritParLaDemo(state)),
