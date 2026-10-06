@@ -8,7 +8,7 @@ import { test, expect, type Locator, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 import { choisirLaPolice, POLICES } from "./support/police"
 
-type Affichage = "classique" | "resume" | "panneaux" | "vues"
+type Affichage = "classique" | "resume" | "vues"
 
 /** Dépose la préférence d'affichage avant le chargement, comme si elle avait été choisie lors d'une visite précédente. */
 async function choisirAvantLeChargement(page: Page, affichage: Affichage) {
@@ -294,7 +294,7 @@ async function mesurer(page: Page, affichage: Affichage): Promise<number[]> {
 }
 
 // Estimation de l'étude (docs/conception/allegement-ecran.md) : environ 1 750 px sur ordinateur et 3 000 px sur
-// téléphone pour la vue la plus longue. Chaque vue doit être plus courte que la page de l'affichage « Panneaux », la
+// téléphone pour la vue la plus longue. Chaque vue doit être plus courte que la page de l'affichage « Résumé », la
 // plus courte des pages d'un seul tenant.
 for (const [largeur, hauteurEcran] of [
   [1440, 900],
@@ -305,13 +305,12 @@ for (const [largeur, hauteurEcran] of [
 
     test("chaque vue est plus courte que la page des autres affichages", async ({ page, context }) => {
       const [situation, enResultats, enComparaison] = await hauteurs(page, "vues")
-      const [panneaux] = await hauteurs(await context.newPage(), "panneaux")
       const [resume] = await hauteurs(await context.newPage(), "resume")
       const [classique] = await hauteurs(await context.newPage(), "classique")
-      const mesure = `${largeur} px : classique ${classique} px, résumé ${resume} px, panneaux ${panneaux} px, trois vues ${situation} / ${enResultats} / ${enComparaison} px`
+      const mesure = `${largeur} px : classique ${classique} px, résumé ${resume} px, trois vues ${situation} / ${enResultats} / ${enComparaison} px`
       test.info().annotations.push({ type: "hauteur", description: mesure })
       console.log(`Hauteur à ${mesure}`)
-      for (const vue of [situation, enResultats, enComparaison]) expect(vue).toBeLessThan(panneaux)
+      for (const vue of [situation, enResultats, enComparaison]) expect(vue).toBeLessThan(resume)
       expect(Math.max(situation, enResultats, enComparaison)).toBeLessThan(classique * 0.4)
     })
   })
