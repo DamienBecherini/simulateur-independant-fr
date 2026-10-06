@@ -48,7 +48,8 @@ export const RUBRIQUES: readonly Rubrique[] = [
   {
     titre: "Éditeur",
     blocs: [
-      { paragraphe: ["Le simulateur est édité par Damien BECHERINI, à titre personnel et non professionnel : c'est un projet non commercial et open source."] },
+      { paragraphe: ["Le simulateur est édité par Damien BECHERINI, entrepreneur individuel (SIREN 800 970 386, RCS Melun), comme projet non commercial et open source."] },
+      { paragraphe: ["SIRET : 800 970 386 00044."] },
       { paragraphe: ["Adresse : 20 rue des bois, 77140 Saint-Pierre-lès-Nemours, France."] },
       { paragraphe: ["Contact : ", CONTACT, ". Activité professionnelle de l'éditeur : ", { texte: "damien.becherini.fr", adresse: "https://damien.becherini.fr" }, "."] }
     ]

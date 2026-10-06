@@ -25,6 +25,14 @@ describe("mentions légales et confidentialité", () => {
     expect(texte).not.toContain("github.com/")
   })
 
+  it("nomme l'éditeur comme entrepreneur individuel, avec ses numéros d'immatriculation", () => {
+    const editeur = RUBRIQUES[0].blocs.flatMap(b => ("paragraphe" in b ? b.paragraphe : b.liste.flat())).filter((m): m is string => typeof m === "string").join(" ")
+    expect(editeur).toContain("Damien BECHERINI, entrepreneur individuel (SIREN 800 970 386, RCS Melun), comme projet non commercial et open source.")
+    expect(editeur).toContain("SIRET : 800 970 386 00044")
+    expect(editeur).toContain("Adresse : 20 rue des bois, 77140 Saint-Pierre-lès-Nemours, France.")
+    expect(editeur).not.toContain("titre personnel")
+  })
+
   it("n'a que des liens sûrs : https, ou l'e-mail de contact", () => {
     for (const lien of liens()) expect(estUnLienExterne(lien.adresse) || lien.adresse === `mailto:${ADRESSE_E_MAIL_DES_RETOURS}`).toBe(true)
     expect(estUnLienExterne("mailto:x@y.fr")).toBe(false)
