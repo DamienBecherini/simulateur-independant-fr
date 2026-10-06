@@ -256,12 +256,12 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
-### **Phase 16 : Travailler avec une IA [En cours 🚧, étape 1 ✅]**
+### **Phase 16 : Travailler avec une IA [En cours 🚧, étapes 1 et 2 ✅]**
 
 - **Objectif :** qu'une IA puisse remplir la simulation à partir d'un cahier de comptes ou de factures, l'interroger et en analyser les résultats, en se servant du simulateur comme d'un outil plutôt qu'en calculant elle-même.
 
 1.  **Couche d'outils commune [✅] :** quinze outils validés par Zod dans `src/backend/logic/outils` (décrire, lister les flux, simuler, synthèse des années, expliquer un résultat, comparer les statuts, arbitrer rémunération et dividendes, règles de l'année ; proposer des flux, un acteur, une relation, des modifications, une suppression, des réglages du comparateur ; appliquer une proposition), schémas JSON générés depuis Zod. Une proposition ne modifie rien, porte l'empreinte de la session et l'effet calculé par le moteur, et s'applique en une étape ; limites contre les documents piégés (200 opérations, une suppression, aucun acteur supprimé). Voir l'ADR 010.
-2.  **Serveur MCP local, pour l'application de bureau :** utilisable depuis un client d'IA de bureau (Claude Desktop, Claude Code, ou un client d'IA locale comme LM Studio) qui lit lui-même les factures et les relevés ; il travaille sur les fichiers de la simulation, que l'application recharge. Aucun serveur à héberger.
+2.  **Serveur MCP local, pour l'application de bureau [✅] :** serveur stdio (SDK officiel) lancé par l'exécutable de l'application (ELECTRON_RUN_AS_NODE), sans Node à installer ; il lit la session enregistrée et ne l'écrit jamais : une proposition envoyée est déposée dans la boîte aux propositions, que l'application montre à relire (« Appliquer » en une étape d'annulation, « Refuser », proposition périmée refusée). Configuration à copier dans les paramètres ; guide pour Claude Desktop et LM Studio. Voir l'ADR 011.
 3.  **Assistant intégré, pour la démo web (donc aussi sur téléphone) et l'application :** fenêtre de discussion, dépôt de fichiers (PDF, images, CSV), mêmes outils exécutés dans la page ; fournisseur au choix : Anthropic, ou toute adresse compatible OpenAI, IA locale comprise (Ollama sur `localhost`), pour un assistant entièrement local. Clé chiffrée par le système dans l'application de bureau, gardée en mémoire seulement dans la démo. Aucune donnée ne passe par un serveur du projet.
 4.  **Serveur MCP distant, seulement si le besoin apparaît :** les mêmes outils sur un service web, la simulation passée en paramètre (aucun stockage), avec authentification et limite de débit, pour les clients d'IA sur téléphone ou sur le web.
 5.  **Règles :**

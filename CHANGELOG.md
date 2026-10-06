@@ -8,6 +8,9 @@ Aucune version n'a encore été publiée : la section « Non publié » résume 
 
 ### Ajouté
 
+- Serveur MCP local : un client d'IA de bureau peut lire et calculer la simulation, et proposer des modifications à valider dans l'application (Paramètres > Utiliser avec une IA).
+- Page « Mentions légales et confidentialité », bande des mois au-dessus de la grille, police Inter.
+
 - **Statuts simulés :** SASU, EURL, entreprise individuelle au réel et micro-entreprise (avec ou sans versement libératoire), reliées aux personnes par des relations (président, gérant, salarié, couple, enfant…).
 - **Cotisations ligne à ligne :** indépendants selon les règles officielles (assiette unique après abattement de 26 %, cotisations minimales, trimestres de retraite), président de SASU et salariés au régime général, coût employeur porté par l'activité.
 - **Impôt du foyer :** calculé une seule fois par foyer fiscal (quotient familial plafonné, décote, dividendes au forfait ou au barème), déficit d'une entreprise individuelle imputé sur les autres revenus du foyer.
