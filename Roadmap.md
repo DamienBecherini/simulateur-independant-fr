@@ -269,7 +269,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
     - **Méfiance envers les documents :** une facture peut contenir des instructions piégées ; les outils sont limités (pas de suppression en masse, rien hors de la simulation) et toujours soumis à validation.
     - **Confidentialité :** l'utilisateur est prévenu que ses données partent chez le fournisseur d'IA choisi, et une IA locale lui est recommandée pour les données sensibles (avec ses limites : les petits modèles enchaînent moins bien les outils et lisent moins bien les factures scannées) ; option d'anonymisation des noms.
     - **Avertissement :** ce n'est pas l'avis d'un expert-comptable.
-6.  **Mentions légales et confidentialité :** une page pour l'application et la démo (éditeur, hébergeur, données gardées dans le navigateur ou sur la machine, journaux du serveur d'hébergement, données envoyées au fournisseur d'IA choisi).
+6.  **Mentions légales et confidentialité [✅] :** page dans l'application et la démo (pied de page, paramètres, adresse `#mentions-legales`) et en Markdown, tirées d'une même source : éditeur (particulier, art. 1-1 II de la LCEN), hébergeur, données gardées dans le navigateur ou sur la machine, aucun cookie ni traceur, ce qui sort et quand (retours), avertissement, licence.
 7.  **Sans IA, en complément :** import CSV de relevés bancaires ou du livre de recettes, avec des règles de classement ; l'IA ne sert qu'aux lignes ambiguës.
 
 ---
