@@ -2,7 +2,7 @@
 
 L'application se télécharge depuis la page des versions du dépôt : **[dernière version](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)**. Elle fonctionne entièrement hors ligne : aucune donnée ne quitte votre ordinateur.
 
-Pour essayer sans rien installer, la [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/) propose la même interface dans le navigateur.
+Pour essayer sans rien installer, la [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/) propose la même interface dans le navigateur ; elle s'installe aussi comme une application et fonctionne hors ligne (voir [Si Windows bloque l'application](#si-windows-bloque-lapplication)).
 
 | Votre système | Fichier à télécharger |
 |---|---|
@@ -41,7 +41,29 @@ Pour désinstaller : Paramètres > Applications > Applications installées > « 
 
 Extrayez l'archive dans un dossier (clic droit > « Extraire tout »), puis lancez `Simulateur Indépendant FR.exe`. Le même avertissement SmartScreen peut s'afficher.
 
-**Contrôle intelligent des applications.** Si ce réglage de Windows 11 est activé (Sécurité Windows > Contrôle des applications et du navigateur), il peut bloquer l'application sans proposer de la lancer quand même, car elle n'est pas signée. Il n'existe alors pas d'autre solution que de désactiver ce contrôle, ce que nous ne vous recommandons pas de faire pour cette seule application : utilisez plutôt la [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/).
+**Contrôle intelligent des applications.** Si ce réglage de Windows 11 est activé (Sécurité Windows > Contrôle des applications et du navigateur), il peut bloquer l'application sans proposer de la lancer quand même, car elle n'est pas signée. Il n'existe alors pas d'autre solution que de désactiver ce contrôle, ce que nous ne vous recommandons pas de faire pour cette seule application : installez plutôt la démo web, comme expliqué ci-dessous.
+
+## Si Windows bloque l'application
+
+La [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/) s'installe comme une application depuis Microsoft Edge (ou Google Chrome) : elle a alors sa propre fenêtre, son icône dans le menu Démarrer et la barre des tâches, et fonctionne hors ligne. Ce n'est pas un programme téléchargé : le navigateur l'exécute, donc le Contrôle intelligent des applications et SmartScreen ne la bloquent pas.
+
+**Dans Microsoft Edge**
+
+1. Ouvrez la [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/) et attendez que la simulation d'exemple s'affiche.
+2. Cliquez sur l'icône **Application disponible. Installer Simulateur indépendant FR** à droite de la barre d'adresse, ou ouvrez le menu **⋯** (Paramètres et plus) > **Applications** > **Installer ce site en tant qu'application**. Le bouton **Installer l'application** du bandeau de la démo, ou du panneau des paramètres, ouvre la même fenêtre.
+3. Confirmez avec **Installer**. Edge peut ensuite proposer d'épingler l'application à la barre des tâches, au menu Démarrer ou au bureau.
+
+**Dans Google Chrome** : icône d'installation à droite de la barre d'adresse, ou menu **⋮** > **Caster, enregistrer et partager** > **Installer la page en tant qu'application** (selon la version, **Installer Simulateur indépendant FR…** directement dans le menu).
+
+Pour désinstaller : ouvrez l'application, menu **⋯** de sa barre de titre > **Désinstaller** (ou, dans Edge, `edge://apps`).
+
+**Ce qui fonctionne hors ligne.** Une fois la démo ouverte une première fois (installée ou non), tout fonctionne sans réseau : la simulation, les calculs, le comparateur et l'arbitrage rémunération / dividendes, les sauvegardes, l'import et l'export de fichiers, l'impression en PDF. Seuls les liens vers GitHub et l'envoi d'un avis demandent une connexion.
+
+**Mises à jour.** À chaque publication, la nouvelle version se télécharge en arrière-plan et s'applique à l'ouverture suivante ; en attendant, une notification « Nouvelle version disponible » propose de recharger tout de suite. Vos simulations sont conservées.
+
+**Où sont vos données.** Dans le stockage du navigateur (localStorage), pour ce site et ce profil de navigateur seulement : elles ne quittent pas votre ordinateur et ne sont pas partagées avec l'application de bureau ni avec un autre navigateur. Elles disparaissent si vous effacez les données de navigation du site (cookies et données de sites) ou si vous désinstallez l'application en choisissant d'effacer ses données. À la première sauvegarde et à l'installation, la démo demande au navigateur de ne pas les effacer de lui-même quand l'espace disque manque (stockage persistant) ; cette protection ne vaut pas contre un effacement que vous demandez. Pour garder une copie, exportez vos simulations (panneau des paramètres > Charger une sauvegarde > Exporter) : le fichier s'ouvre aussi dans l'application de bureau.
+
+**Ce qui n'existe que dans l'application de bureau** : le serveur MCP local qui relie le simulateur à un client d'IA ([Utiliser le simulateur avec une IA](./utiliser-avec-une-ia.md)), et l'enregistrement direct en PDF (la démo passe par la fenêtre d'impression du navigateur, « Enregistrer au format PDF »).
 
 ## macOS
 

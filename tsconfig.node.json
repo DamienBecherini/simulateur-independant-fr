@@ -22,6 +22,7 @@
 	},
 	"include": [
 		"vite.config.ts",
+		"vite-plugin-demo-installable.ts",
 		"vitest.config.ts"
 	]
 }
