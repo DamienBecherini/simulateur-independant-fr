@@ -39,7 +39,8 @@
     "dist:mac": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && electron-builder --mac",
     "dist:win": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && electron-builder --win --x64",
     "dist:linux": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && electron-builder --linux --x64",
-    "concat": "node concat_code.cjs",
+    "dist:store": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && node scripts/construire-paquet-store.mjs",
+    "concat":"node concat_code.cjs",
     "concat:stable": "node concat_code.cjs --no-timestamp"
   },
   "dependencies": {

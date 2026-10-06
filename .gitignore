@@ -18,7 +18,10 @@ dist-react
 dist-web
 dist-electron
 *.local
-build
+# Ressources d'electron-builder : seules celles du paquet du Microsoft Store sont versionnées.
+/build/*
+!/build/appx/
+!/build/store/
 
 # Agrégat des retours des utilisateurs, produit à chaque publication de la démo web (scripts/retours/agreger.mjs)
 public/retours.json

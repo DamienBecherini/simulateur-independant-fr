@@ -1,0 +1,6 @@
+{
+  "$commentaire": "Identité du paquet du Microsoft Store, à recopier depuis Partner Center : l'application > Gestion des produits > Identité du produit (Product identity). Rien de secret. Voir documentation/microsoft-store/publier-sur-le-store.md.",
+  "identityName": "A_REMPLIR",
+  "publisher": "CN=A_REMPLIR",
+  "publisherDisplayName": "A_REMPLIR"
+}
