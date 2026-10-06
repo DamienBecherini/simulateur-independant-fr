@@ -59,6 +59,7 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 - [Guide développeur](./documentation/GUIDE_DEVELOPPEUR.md)
 - [Décisions d'architecture (ADR)](./documentation/adr/)
 - [Mentions légales et confidentialité](./documentation/mentions-legales.md)
+- [Utiliser le simulateur avec une IA (serveur MCP local)](./documentation/utiliser-avec-une-ia.md)
 
 ## 🛠️ Stack technique
 

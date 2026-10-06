@@ -86,6 +86,8 @@ Les simulations, sauvegardes et préférences sont enregistrées dans le dossier
 - macOS : `~/Library/Application Support/simulateur-independant-fr`
 - Linux : `~/.config/simulateur-independant-fr`
 
+Un client d'IA de bureau (Claude Desktop, LM Studio…) peut lire ce dossier par le serveur MCP de l'application, si vous l'y avez relié : voir [Utiliser le simulateur avec une IA](./utiliser-avec-une-ia.md). Les propositions qu'il dépose y attendent, dans le dossier `propositions`, que vous les appliquiez ou les refusiez.
+
 Une mise à jour de l'application les reprend telles quelles ; les fichiers d'un ancien format sont convertis à l'ouverture, et l'original est copié à côté.
 
 L'application ne se met pas à jour toute seule : pour passer à une nouvelle version, téléchargez-la et installez-la par-dessus l'ancienne.
