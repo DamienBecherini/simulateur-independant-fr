@@ -26,7 +26,7 @@ function reglagesDeLActeur(acteur: Entity, detaille: boolean): Record<string, z.
     return detaille && frais ? { ...resume, trajets: JSON.stringify(frais.trajets) } : resume
   }
   const commun = { dateDeCreation: acteur.dateDeCreation ?? null, deplacementsKmParAn: acteur.deplacementsProfessionnels?.kmParAn ?? null }
-  if (acteur.type === "company") return { capitalSocial: acteur.capitalSocial, ...commun }
+  if (acteur.type === "company") return { capitalSocial: acteur.capitalSocial, ...(acteur.reservesInitiales === undefined ? {} : { reservesInitiales: acteur.reservesInitiales }), ...commun }
   return { beneficieACRE: acteur.beneficieACRE, opteVFL: acteur.opteVFL, rfrN2: acteur.rfrN2 ?? null, horsPlafondAnneePrecedente: acteur.horsPlafondAnneePrecedente ?? false, ...commun }
 }
 

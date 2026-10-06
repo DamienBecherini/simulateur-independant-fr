@@ -3,7 +3,7 @@
 // vient de simulerLesAnnees, comme à l'écran ; l'outil ne fait qu'arrondir à l'euro et nommer les lignes en français.
 
 import { z } from "zod"
-import type { ActivityResult, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, FoyerFiscalResult, PersonResult, SessionState, SimulationReport } from "../../../types.js"
+import type { ActivityResult, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, FoyerFiscalResult, PersonResult, ReservesDeLaSociete, SessionState, SimulationReport } from "../../../types.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
 import { anneeDeLaSession, arrondir, ErreurOutil, genreDe, nomDe, trouverActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema } from "./limites.js"
@@ -46,13 +46,15 @@ function resumeDuFoyer(session: SessionState, foyer: FoyerFiscalResult): z.infer
   }
 }
 
-const ActiviteSchema = z.object({ id: z.string(), nom: z.string(), statut: z.string(), chiffreAffaires: z.number(), charges: z.number(), cotisationsSociales: z.number(), impotSocietes: z.number(), revenuVerse: z.number(), resultatConserve: z.number(), dispositifs: z.array(z.string()), avertissements: z.array(z.string()) })
+const ActiviteSchema = z.object({ id: z.string(), nom: z.string(), statut: z.string(), chiffreAffaires: z.number(), charges: z.number(), cotisationsSociales: z.number(), impotSocietes: z.number(), revenuVerse: z.number(), resultatConserve: z.number(), reservesALaFin: z.number().optional(), dispositifs: z.array(z.string()), avertissements: z.array(z.string()) })
 
 const resumeDeLActivite = (a: ActivityResult): z.infer<typeof ActiviteSchema> => ({
   id: a.entityId,
   nom: a.name,
   statut: a.statut,
   ...arrondirTout({ chiffreAffaires: a.chiffreAffaires, charges: a.charges, cotisationsSociales: a.cotisationsSociales, impotSocietes: a.impotSocietes, revenuVerse: a.revenuVerse, resultatConserve: a.resultatConserve }),
+  // Société à l'IS : ses réserves distribuables au 31 décembre, reportées d'une année à l'autre (voir l'ADR 012).
+  ...(a.reserves ? { reservesALaFin: arrondir(a.reserves.aLaFin.reserves) } : {}),
   dispositifs: a.dispositifs ?? [],
   avertissements: a.warnings
 })
@@ -66,6 +68,7 @@ export const simuler = definirOutil({
   titre: "Simuler une année",
   description: [
     "Calcule une année de la simulation avec le moteur du simulateur et en rend le résumé : bilan (chiffre d'affaires, charges, cotisations, impôt sur les sociétés, impôt sur le revenu, prélèvements sociaux, résultat conservé), chaque foyer fiscal (net après impôts, impôt sur le revenu, revenu fiscal de référence), chaque activité et chaque personne.",
+    "Société à l'IS : resultatConserve est ce que ses réserves gagnent dans l'année (négatif si elle distribue plus que son bénéfice de l'année, en puisant dans les réserves des années précédentes, ou si elle est déficitaire) ; reservesALaFin, ses réserves distribuables au 31 décembre, reportées d'une année à l'autre.",
     "Montants annuels en euros, arrondis à l'euro. C'est la seule source des chiffres à donner à l'utilisateur : ne les recalculez pas.",
     "Pour le détail d'une ligne (cotisations ligne à ligne, partage du bénéfice, versement libératoire), utilisez expliquer_resultat."
   ].join(" "),
@@ -164,6 +167,13 @@ function lignesBulletin(titre: string, bulletin: DetailCotisationsSalarie): Lign
   return ligne(`${titre} : brut ${arrondir(bulletin.brut)} €, net ${arrondir(bulletin.net)} €, coût employeur ${arrondir(bulletin.coutEmployeur)} €`, bulletin.totalSalarial + bulletin.totalPatronal - bulletin.reductionGenerale, [...composantes, composante("Réduction générale (en moins)", -bulletin.reductionGenerale)])
 }
 
+/** Les réserves d'une société à l'IS sur l'année, en une phrase (voir l'ADR 012). */
+function phraseDesReserves(r: ReservesDeLaSociete): string {
+  const deficit = r.aLaFin.deficitReportable > 0 ? ` Déficit reportable sur l'impôt sur les sociétés des années suivantes : ${arrondir(r.aLaFin.deficitReportable)} €.` : ""
+  const impute = r.deficitImpute > 0 ? ` Déficit des années précédentes déduit avant l'impôt sur les sociétés : ${arrondir(r.deficitImpute)} €.` : ""
+  return `Réserves distribuables : ${arrondir(r.auDebut.reserves)} € au 1er janvier, ${arrondir(r.aLaFin.reserves)} € au 31 décembre ; bénéfice distribuable de l'année ${arrondir(r.beneficeDistribuableDeLAnnee)} € (après ${arrondir(r.dotationReserveLegale)} € de réserve légale), dividendes pris sur les réserves ${arrondir(r.dividendesPrisSurLesReserves)} €. Réserve légale : ${arrondir(r.aLaFin.reserveLegale)} €.${impute}${deficit}`
+}
+
 function informationsDeLActivite(session: SessionState, a: ActivityResult): string[] {
   const infos: string[] = []
   const vl = a.versementLiberatoire
@@ -171,6 +181,7 @@ function informationsDeLActivite(session: SessionState, a: ActivityResult): stri
   if (a.acre) infos.push(`ACRE : réduction de ${a.acre.reduction * 100} % du ${a.acre.debut} au ${a.acre.fin}, ${arrondir(a.acre.economie)} € de cotisations économisées cette année.`)
   if (a.fraisDeDeplacement) infos.push(`Déplacements professionnels : ${a.fraisDeDeplacement.kilometres} km, ${arrondir(a.fraisDeDeplacement.montant)} € au barème kilométrique, ${a.fraisDeDeplacement.deductible ? "déductibles" : "non déductibles en micro-entreprise"}.`)
   if (a.sortieDuRegimeMicro) infos.push(`Sortie du régime micro depuis le 1er janvier ${a.sortieDuRegimeMicro.depuis} (plafonds dépassés en ${a.sortieDuRegimeMicro.depassements.join(" et ")}) : simulée en EI au réel.`)
+  if (a.reserves) infos.push(phraseDesReserves(a.reserves))
   if (a.beneficiaireIds.length > 0) infos.push(`Revenus versés à : ${a.beneficiaireIds.map(id => nomDe(session, id)).join(", ")}.`)
   return [...infos, ...(a.dispositifs ?? [])]
 }
@@ -182,7 +193,7 @@ function expliquerActivite(session: SessionState, a: ActivityResult) {
     ...(a.salaries ?? []).map(s => lignesBulletin(`Salarié ${nomDe(session, s.personId)}`, s))
   ]
   const p = a.partage
-  const partage = p ? [ligne("Partage du bénéfice avant rémunération", p.beneficeAvantRemuneration, [composante("Rémunération nette", p.remunerationNette), composante("Cotisations sur la rémunération", p.cotisationsRemuneration), composante("Impôt sur les sociétés", p.impotSocietes), composante("Dividendes nets", p.dividendesNets), composante("Cotisations sur les dividendes", p.cotisationsSurDividendes), composante("Résultat conservé", p.resultatConserve)])] : []
+  const partage = p ? [ligne("Partage du bénéfice avant rémunération", p.beneficeAvantRemuneration, [composante("Rémunération nette", p.remunerationNette), composante("Cotisations sur la rémunération", p.cotisationsRemuneration), composante("Impôt sur les sociétés", p.impotSocietes), composante("Dividendes nets", p.dividendesNets), composante("Cotisations sur les dividendes", p.cotisationsSurDividendes), composante("Ajouté aux réserves (négatif : pris sur les réserves ou déficit)", p.resultatConserve)])] : []
   return {
     lignes: [ligne("Chiffre d'affaires", a.chiffreAffaires), ligne("Charges", a.charges), ligne("Cotisations sociales", a.cotisationsSociales), ...cotisations, ligne("Impôt sur les sociétés", a.impotSocietes), ligne("Revenu versé aux personnes, avant impôt sur le revenu", a.revenuVerse), ligne("Résultat conservé dans l'activité", a.resultatConserve), ...partage],
     informations: informationsDeLActivite(session, a),
