@@ -1,0 +1,2 @@
+# Le crochet git est un script shell : fins de ligne LF, même dans une copie de travail Windows.
+/.githooks/pre-commit text eol=lf

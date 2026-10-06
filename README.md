@@ -100,6 +100,8 @@ npm run dev
 
 `npm run dev:web` lance la version navigateur (http://localhost:3524/simulateur-independant-fr/) ; `npm run build:web` la compile dans `dist-web/`.
 
+Pour contribuer : `git config core.hooksPath .githooks` (une fois par clone) active les crochets git du dépôt, qui refusent un commit directement sur `main` ([`.githooks/README.md`](.githooks/README.md)).
+
 ## ✅ Qualité
 
 ```sh

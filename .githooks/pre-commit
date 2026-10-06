@@ -1,0 +1,11 @@
+#!/bin/sh
+# Aucun commit directement sur main : on travaille sur une branche dédiée, fusionnée dans integration pour la recette,
+# puis dans main. Seule exception : conclure une fusion dont on a résolu les conflits.
+# Activé par `git config core.hooksPath .githooks` (une fois par clone).
+
+branche=$(git symbolic-ref --short HEAD 2>/dev/null)
+if [ "$branche" = "main" ] && [ ! -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]; then
+  echo "Commit refusé sur main : créez une branche (git switch -c ma-branche), testez, puis fusionnez-la." >&2
+  echo "En cas de besoin réel : git commit --no-verify, en le signalant dans le message." >&2
+  exit 1
+fi
