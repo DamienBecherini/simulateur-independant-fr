@@ -17,6 +17,8 @@
     "dev:web": "vite --mode web",
     "dev:electron": "wait-on http://localhost:3524 && npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && cross-env NODE_ENV=development electron .",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
+    "installer:chromium": "playwright install --only-shell chromium",
     "lint": "eslint .",
     "duplication": "jscpd src --min-tokens 70 --threshold 5 --ignore \"**/*.test.ts,**/*.test.tsx,src/components/ui/**,src/backend/logic/testing/**,src/lib/testing/**,src/backend/regles/**\" --reporters console",
     "test": "vitest run",

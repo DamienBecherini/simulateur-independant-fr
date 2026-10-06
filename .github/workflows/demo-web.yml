@@ -31,16 +31,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Installer Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
 
       - name: Installer les dépendances
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       # Note moyenne et préférences d'affichage, servies avec la démo et lues par le badge du README.
       # Sans accès aux tickets, le script écrit un agrégat vide : la publication continue.
@@ -57,7 +57,7 @@ jobs:
       # Un retour d'utilisateur ne change pas le code, déjà vérifié au dernier envoi sur main : on recompile seulement.
       - name: Installer Chromium
         if: github.event_name != 'issues'
-        run: npx playwright install --with-deps --only-shell chromium
+        run: npm run installer:chromium -- --with-deps
 
       - name: Compiler la démo et la tester dans le navigateur
         if: github.event_name != 'issues'
@@ -68,7 +68,7 @@ jobs:
         run: npm run build:web
 
       - name: Préparer la publication
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: dist-web
 
@@ -85,4 +85,4 @@ jobs:
     steps:
       - name: Déployer
         id: deploiement
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
