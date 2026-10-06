@@ -8,7 +8,6 @@
 //   node scripts/construire-paquet-store.mjs --verifier dit si l'identité est remplie (sortie « prete » de GitHub Actions)
 
 import { appendFileSync, readFileSync } from "node:fs"
-import builder from "electron-builder"
 import { erreursDeLIdentite, identiteDuPaquet, lireLIdentite } from "./identite-store.mjs"
 
 const options = process.argv.slice(2)
@@ -28,6 +27,9 @@ if (options.includes("--verifier")) {
 
 const { identite, essai } = identiteDuPaquet(fichier, process.env, { essai: options.includes("--essai") })
 if (essai) console.warn("Paquet d'essai, avec une identité fictive : le Microsoft Store le refuserait.")
+
+// Importé seulement ici : la vérification de l'identité tourne avant l'installation des dépendances (workflow store.yml).
+const { default: builder } = await import("electron-builder")
 
 await builder.build({
   targets: builder.Platform.WINDOWS.createTarget(["appx"], builder.Arch.x64),
