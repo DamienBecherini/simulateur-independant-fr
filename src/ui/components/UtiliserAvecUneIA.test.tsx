@@ -43,6 +43,23 @@ describe("Utiliser avec une IA (MCP)", () => {
     expect(within(fenetre).getByRole("status")).toHaveTextContent("Configuration copiée")
   })
 
+  it("explique l'alias d'exécution de la version du Microsoft Store, et seulement pour elle", async () => {
+    const store = { ...infos, executable: "C:\\Users\\Camille\\AppData\\Local\\Microsoft\\WindowsApps\\simulateur-independant-fr.exe", microsoftStore: true }
+    vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue(store)
+    const user = userEvent.setup({ delay: null })
+    const { unmount } = render(<BoutonUtiliserAvecUneIA />)
+    await user.click(await screen.findByRole("button", { name: "Utiliser avec une IA (MCP)" }))
+    const fenetre = screen.getByRole("dialog")
+    expect(within(fenetre).getByText(/Version du Microsoft Store/)).toHaveTextContent("Alias d'exécution d'application")
+    expect(JSON.parse(within(fenetre).getByLabelText("Configuration à copier").textContent!).mcpServers["simulateur-independant-fr"].command).toBe(store.executable)
+    unmount()
+
+    vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue(infos)
+    render(<BoutonUtiliserAvecUneIA />)
+    await user.click(await screen.findByRole("button", { name: "Utiliser avec une IA (MCP)" }))
+    expect(within(screen.getByRole("dialog")).queryByText(/Version du Microsoft Store/)).not.toBeInTheDocument()
+  })
+
   it("dit quand la copie échoue, et quand Claude Desktop n'existe pas sur le système", async () => {
     vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue({ ...infos, plateforme: "linux", executable: "/opt/Simulateur/simulateur", script: "/opt/Simulateur/resources/mcp/serveur-mcp.mjs", donnees: "/home/camille/.config/Simulateur" })
     const user = userEvent.setup({ delay: null })

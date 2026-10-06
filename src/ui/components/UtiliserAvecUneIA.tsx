@@ -7,7 +7,7 @@ import { useEffect, useState } from "react"
 import { Bot, Copy } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, type InfosDuServeurMcp } from "@/lib/configuration-mcp"
+import { ALIAS_D_EXECUTION, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, type InfosDuServeurMcp } from "@/lib/configuration-mcp"
 
 export const TITRE_IA = "Utiliser avec une IA (MCP)"
 
@@ -65,6 +65,11 @@ export function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
           {etat}
         </p>
         <p className={PETIT_TEXTE}>Le serveur se lance avec l'exécutable de l'application (ELECTRON_RUN_AS_NODE) : rien d'autre à installer. Il lit la simulation dans votre dossier de données, telle que l'application l'enregistre, environ une seconde après chaque modification. Si vous déplacez ou réinstallez l'application, copiez à nouveau la configuration.</p>
+        {infos.microsoftStore && (
+          <p className={PETIT_TEXTE}>
+            Version du Microsoft Store : la configuration lance l'application par son alias d'exécution « {ALIAS_D_EXECUTION} », qui reste valable après chaque mise à jour, et le serveur est recopié dans votre dossier de données à chaque démarrage de l'application. Si le serveur ne démarre pas, vérifiez que cet alias est activé dans les Paramètres de Windows : Applications, Paramètres avancés des applications, Alias d'exécution d'application.
+          </p>
+        )}
       </section>
 
       <section aria-labelledby="ia-autres" className="space-y-2">

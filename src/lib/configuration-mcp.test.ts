@@ -10,7 +10,7 @@ import { empreinteDeLaSession } from "@/backend/logic/outils/commun"
 import { lireUnePropositionEnAttente, nomDUnePropositionEnAttente, NOM_DE_PROPOSITION } from "@/backend/mcp/proposition-en-attente"
 import { MONTAGES_TYPES, sessionDUnMontage } from "@/lib/montages/montages"
 import { sessionExemple } from "@/web/session-exemple"
-import { commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, type InfosDuServeurMcp } from "./configuration-mcp"
+import { ALIAS_D_EXECUTION, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, infosDeLInstallation, type InfosDuServeurMcp } from "./configuration-mcp"
 
 const windows: InfosDuServeurMcp = { executable: "C:\\Programmes\\Simulateur.exe", script: "C:\\Programmes\\resources\\mcp\\serveur-mcp.mjs", donnees: "C:\\Users\\a\\AppData\\Roaming\\Simulateur", plateforme: "win32" }
 
@@ -30,6 +30,29 @@ describe("configuration d'un client d'IA", () => {
   it("donne la commande de vérification pour PowerShell, et pour les autres terminaux", () => {
     expect(commandeDeVerification(windows)).toBe('$env:ELECTRON_RUN_AS_NODE=1; & "C:\\Programmes\\Simulateur.exe" "C:\\Programmes\\resources\\mcp\\serveur-mcp.mjs" --donnees "C:\\Users\\a\\AppData\\Roaming\\Simulateur"')
     expect(commandeDeVerification({ ...windows, plateforme: "darwin" })).toMatch(/^ELECTRON_RUN_AS_NODE=1 "/)
+  })
+})
+
+describe("installation classique ou version du Microsoft Store", () => {
+  const installation = { executable: windows.executable, serveurLivre: windows.script, donnees: windows.donnees, plateforme: "win32" }
+  const paquet = "C:\\Program Files\\WindowsApps\\Paquet_0.9.0.0_x64__abc\\app"
+
+  it("donne l'exécutable et le serveur livré d'une installation classique", () => {
+    expect(infosDeLInstallation({ ...installation, dossierLocalAppData: null })).toEqual(windows)
+  })
+
+  it("passe par l'alias d'exécution et la copie du serveur dans le dossier de données pour le Microsoft Store", () => {
+    const store = infosDeLInstallation({ ...installation, executable: `${paquet}\\Simulateur.exe`, serveurLivre: `${paquet}\\resources\\mcp\\serveur-mcp.mjs`, dossierLocalAppData: "C:\\Users\\a\\AppData\\Local" })
+    expect(store).toEqual({
+      executable: `C:\\Users\\a\\AppData\\Local\\Microsoft\\WindowsApps\\${ALIAS_D_EXECUTION}`,
+      script: "C:\\Users\\a\\AppData\\Roaming\\Simulateur\\mcp\\serveur-mcp.mjs",
+      donnees: windows.donnees,
+      plateforme: "win32",
+      microsoftStore: true
+    })
+    // Le dossier du paquet change à chaque mise à jour : la configuration n'y renvoie jamais.
+    expect(configurationDuClient(store)).not.toContain("Paquet_0.9.0.0")
+    expect(JSON.parse(configurationDuClient(store)).mcpServers["simulateur-independant-fr"].env).toEqual({ ELECTRON_RUN_AS_NODE: "1" })
   })
 })
 
