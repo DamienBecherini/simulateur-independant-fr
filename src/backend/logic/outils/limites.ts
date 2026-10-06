@@ -53,8 +53,8 @@ export function texteCourt(quoi: string, longueurMax: number) {
     .refine(texteSansControle, `${quoi} : caractères de contrôle, sauts de ligne et caractères de mise en forme interdits.`)
 }
 
-export const LibelleSchema = texteCourt("Libellé", LIMITES.longueurLibelle).describe(`Libellé du flux, tel qu'il apparaîtra dans la grille (${LIMITES.longueurLibelle} caractères au plus, une ligne).`)
-export const NomSchema = texteCourt("Nom", LIMITES.longueurNom).describe(`Nom affiché de l'acteur (${LIMITES.longueurNom} caractères au plus).`)
+export const LibelleSchema = texteCourt("Libellé", LIMITES.longueurLibelle).describe("Libellé du flux dans la grille, sur une ligne.")
+export const NomSchema = texteCourt("Nom", LIMITES.longueurNom).describe("Nom affiché de l'acteur.")
 export const IdentifiantSchema = texteCourt("Identifiant", LIMITES.longueurIdentifiant)
 
 /** Montant en euros, positif ou nul, borné. Le sens (revenu ou dépense) vient du type de flux, jamais du signe. */
@@ -73,4 +73,4 @@ export const ListeDeMoisSchema = z
   .min(1, "Indiquez au moins un mois.")
   .max(12)
   .refine(mois => new Set(mois).size === mois.length, "Mois en double.")
-  .describe("Mois concernés, de 1 (janvier) à 12 (décembre), sans doublon. [1,2,…,12] pour toute l'année.")
+  .describe("Mois, de 1 (janvier) à 12 (décembre), sans doublon ; [1,…,12] pour toute l'année.")

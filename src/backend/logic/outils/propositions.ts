@@ -37,8 +37,8 @@ export type Proposition = z.infer<typeof PropositionSchema>
  * opérations dans la description de chaque outil : elle est validée en entier par `propositionValidee`.
  */
 export const PropositionRenvoyeeSchema = z
-  .object({ empreinteSession: z.string().max(64), operations: z.array(z.record(z.string(), z.unknown())) })
-  .describe("Proposition rendue par un outil proposer_… (champ « proposition » de son résultat), renvoyée telle quelle.")
+  .object({ empreinteSession: z.string().max(64), operations: z.array(z.unknown()) })
+  .describe("Champ « proposition » du résultat d'un outil proposer_…, tel quel.")
 
 /** La proposition renvoyée par le modèle, validée en entier (opérations et limites). */
 export function propositionValidee(brute: unknown): Proposition {
@@ -49,7 +49,7 @@ export function propositionValidee(brute: unknown): Proposition {
 
 /** Paramètre commun aux outils de proposition : compléter une proposition précédente plutôt qu'en ouvrir une autre. */
 export const SuiteDeSchema = PropositionRenvoyeeSchema.optional().describe(
-  "Proposition précédente à compléter (champ « proposition » du résultat d'un outil proposer_…) : ses opérations sont reprises, puis celles-ci ajoutées, pour que l'utilisateur valide le tout en une fois. Indispensable pour ajouter des flux ou des relations à un acteur proposé mais pas encore appliqué."
+  "Proposition précédente (champ « proposition » d'un résultat proposer_…) à compléter de ces opérations, pour tout valider en une fois ; indispensable pour lier flux et relations à un acteur proposé."
 )
 
 const ApercuSchema = z.object({ annee: z.number(), netAvant: z.number().nullable(), netApres: z.number().nullable(), ecart: z.number().nullable(), resultatConserveAvant: z.number().nullable(), resultatConserveApres: z.number().nullable(), erreur: z.string().nullable() })

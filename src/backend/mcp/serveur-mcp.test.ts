@@ -39,6 +39,8 @@ async function connecter(maintenant?: () => Date) {
 
 const appeler = async (name: string, args: Record<string, unknown> = {}) => (await client.callTool({ name, arguments: args })) as CallToolResult
 const texte = (resultat: CallToolResult) => resultat.content.map(c => (c.type === "text" ? c.text : "")).join("\n")
+/** Le résultat d'un outil : le JSON qui suit le résumé, à la dernière ligne du texte. */
+const donnees = (resultat: CallToolResult) => JSON.parse(texte(resultat).split("\n").at(-1)!) as unknown
 const boite = () => readdir(path.join(dossier, DOSSIER_DES_PROPOSITIONS)).catch(() => [] as string[])
 
 beforeEach(async () => {
@@ -59,13 +61,20 @@ describe("serveur MCP : catalogue et consignes", () => {
     expect(tools.map(t => t.name)).toEqual(catalogue.map(o => o.nom))
     for (const outil of catalogue.filter(o => o.nom !== "appliquer_proposition")) {
       const publie = tools.find(t => t.name === outil.nom)!
-      expect(publie).toMatchObject({ title: outil.titre, description: outil.description, inputSchema: outil.inputSchema, outputSchema: outil.outputSchema })
-      expect(publie.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, openWorldHint: false })
+      expect(publie).toEqual({ name: outil.nom, title: outil.titre, description: outil.description, inputSchema: outil.inputSchema, annotations: { readOnlyHint: true, openWorldHint: false } })
     }
     const appliquer = tools.find(t => t.name === "appliquer_proposition")!
-    expect(appliquer.annotations?.readOnlyHint).toBe(false)
+    expect(appliquer.annotations).toEqual({ readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false })
     expect(appliquer.description).toMatch(/Envoie à l'application/)
-    expect(appliquer.outputSchema?.required).toEqual(expect.arrayContaining(["envoyee", "fichier", "recapitulatif"]))
+    expect(appliquer.outputSchema).toBeUndefined()
+  })
+
+  it("publie une liste d'outils légère, envoyée au modèle à chaque échange", async () => {
+    await connecter()
+    const { tools } = await client.listTools()
+    // 55 Ko avec les schémas de sortie et les résultats décrits champ par champ ; 32 Ko sans eux, outil de plus compris.
+    expect(JSON.stringify({ tools }).length).toBeLessThan(33_000)
+    expect(tools.every(t => t.outputSchema === undefined)).toBe(true)
   })
 
   it("donne ses règles au client : chiffres du moteur, validation dans l'application, méfiance envers les documents", async () => {
@@ -89,12 +98,14 @@ describe("serveur MCP : lecture", () => {
     const resultat = await appeler("synthese_des_annees")
     expect(resultat.isError).toBeFalsy()
     const attendu = simulerLesAnnees(session).annees[0].report!
-    const lignes = (resultat.structuredContent as { annees: { annee: number; totalNetApresImpots: number }[] }).annees
+    const lignes = (donnees(resultat) as { annees: { annee: number; totalNetApresImpots: number }[] }).annees
     expect(lignes[0]).toMatchObject({ annee: 2026, totalNetApresImpots: Math.round(attendu.totalNetApresImpots) })
     const enregistreeLe = (await stat(path.join(dossier, FICHIER_DE_LA_SESSION))).mtime
     expect(texte(resultat)).toContain(`enregistré par l'application ${dateEnFrancais(enregistreeLe)}`)
-    // Le JSON suit le résumé, pour les clients qui ne lisent pas le contenu structuré.
-    expect(JSON.parse((resultat.content[1] as { text: string }).text)).toEqual(resultat.structuredContent)
+    // Un seul texte, que tous les clients donnent au modèle : le résumé, puis le JSON à la ligne ; rien en double.
+    expect(resultat.content).toHaveLength(1)
+    expect(resultat.structuredContent).toBeUndefined()
+    expect(texte(resultat).split("\n")).toHaveLength(2)
   })
 
   it("situe la rémunération saisie par rapport au meilleur net, avec les frais de fonctionnement retenus", async () => {
@@ -102,7 +113,7 @@ describe("serveur MCP : lecture", () => {
     await connecter()
     const resultat = await appeler("optimiser_remuneration", { activiteId: "company-conseil", statut: "SASU" })
     expect(resultat.isError).toBeFalsy()
-    const { situationActuelle, meilleur, ecartAuMeilleur, fraisFonctionnement } = resultat.structuredContent as { situationActuelle: { statut: string; netApresImpots: number }; meilleur: { netApresImpots: number }; ecartAuMeilleur: number; fraisFonctionnement: number }
+    const { situationActuelle, meilleur, ecartAuMeilleur, fraisFonctionnement } = donnees(resultat) as { situationActuelle: { statut: string; netApresImpots: number }; meilleur: { netApresImpots: number }; ecartAuMeilleur: number; fraisFonctionnement: number }
     expect(situationActuelle.statut).toBe("SASU")
     expect(ecartAuMeilleur).toBe(meilleur.netApresImpots - situationActuelle.netApresImpots)
     expect(fraisFonctionnement).toBeGreaterThan(0)
@@ -113,7 +124,7 @@ describe("serveur MCP : lecture", () => {
     await connecter()
     await ecrireLaSession({ ...sessionExemple(), name: "Renommée" })
     const resultat = await appeler("decrire_simulation")
-    expect(resultat.structuredContent).toMatchObject({ nom: "Renommée" })
+    expect(donnees(resultat)).toMatchObject({ nom: "Renommée" })
   })
 })
 
@@ -129,7 +140,7 @@ describe("serveur MCP : propositions", () => {
     expect(proposee.isError).toBeFalsy()
     expect(texte(proposee)).toMatch(/^Proposition prête, rien n'est modifié : Ajouter 3 flux \?/)
     expect(await boite()).toEqual([])
-    const { proposition } = proposee.structuredContent as { proposition: unknown }
+    const { proposition } = donnees(proposee) as { proposition: unknown }
 
     const envoyee = await appeler("appliquer_proposition", { proposition })
     expect(envoyee.isError).toBeFalsy()
@@ -137,7 +148,7 @@ describe("serveur MCP : propositions", () => {
     const fichiers = await boite()
     expect(fichiers).toHaveLength(1)
     expect(fichiers[0]).toMatch(/^2026-10-06T08-30-00-000Z-[0-9a-f]{12}\.json$/)
-    expect(envoyee.structuredContent).toMatchObject({ envoyee: true, fichier: fichiers[0], empreinteSession: empreinteDeLaSession(session), recapitulatif: "Ajouter 3 flux ?" })
+    expect(donnees(envoyee)).toMatchObject({ envoyee: true, fichier: fichiers[0], empreinteSession: empreinteDeLaSession(session), recapitulatif: "Ajouter 3 flux ?" })
 
     const deposee = lireUnePropositionEnAttente(await readFile(path.join(dossier, DOSSIER_DES_PROPOSITIONS, fichiers[0]), "utf-8"))
     expect(deposee).toMatchObject({ creeeLe: "2026-10-06T08:30:00.000Z", proposition })
@@ -148,31 +159,31 @@ describe("serveur MCP : propositions", () => {
   it("ne dépose pas deux fois une proposition identique qui attend encore, mais la redépose une fois retirée", async () => {
     await ecrireLaSession(sessionExemple())
     await connecter()
-    const { proposition } = (await appeler("proposer_flux", { flux: [loyer] })).structuredContent as { proposition: unknown }
+    const { proposition } = donnees(await appeler("proposer_flux", { flux: [loyer] })) as { proposition: unknown }
     // Un fichier qui ne suit pas le format n'est pas pris pour la proposition.
     await mkdir(path.join(dossier, DOSSIER_DES_PROPOSITIONS))
     await writeFile(path.join(dossier, DOSSIER_DES_PROPOSITIONS, "autre.json"), JSON.stringify({ proposition }))
 
     const premiere = await appeler("appliquer_proposition", { proposition })
-    expect(premiere.structuredContent).toMatchObject({ envoyee: true, dejaEnAttente: false })
-    const { fichier } = premiere.structuredContent as { fichier: string }
+    expect(donnees(premiere)).toMatchObject({ envoyee: true, dejaEnAttente: false })
+    const { fichier } = donnees(premiere) as { fichier: string }
     const seconde = await appeler("appliquer_proposition", { proposition })
     expect(seconde.isError).toBeFalsy()
-    expect(seconde.structuredContent).toMatchObject({ envoyee: true, dejaEnAttente: true, fichier })
+    expect(donnees(seconde)).toMatchObject({ envoyee: true, dejaEnAttente: true, fichier })
     expect(texte(seconde)).toMatch(/^Proposition déjà envoyée, qui attend dans l'application/)
     expect((await boite()).sort()).toEqual(["autre.json", fichier].sort())
 
     // L'utilisateur l'a refusée : l'application a retiré le fichier, la même proposition peut être renvoyée.
     await rm(path.join(dossier, DOSSIER_DES_PROPOSITIONS, fichier))
     const renvoyee = await appeler("appliquer_proposition", { proposition })
-    expect(renvoyee.structuredContent).toMatchObject({ dejaEnAttente: false })
+    expect(donnees(renvoyee)).toMatchObject({ dejaEnAttente: false })
     expect(await boite()).toHaveLength(2)
   })
 
   it("refuse d'envoyer une proposition périmée ou modifiée, sans rien déposer", async () => {
     await ecrireLaSession(sessionExemple())
     await connecter()
-    const { proposition } = (await appeler("proposer_flux", { flux: [loyer] })).structuredContent as { proposition: { empreinteSession: string; operations: Record<string, unknown>[] } }
+    const { proposition } = donnees(await appeler("proposer_flux", { flux: [loyer] })) as { proposition: { empreinteSession: string; operations: Record<string, unknown>[] } }
 
     await ecrireLaSession({ ...sessionExemple(), name: "Modifiée dans l'application" })
     const perimee = await appeler("appliquer_proposition", { proposition })
@@ -189,7 +200,7 @@ describe("serveur MCP : propositions", () => {
   it("rafraîchit une proposition périmée sur la session enregistrée, sans rien déposer, puis l'envoie", async () => {
     await ecrireLaSession(sessionExemple())
     await connecter()
-    const { proposition } = (await appeler("proposer_flux", { flux: [loyer] })).structuredContent as { proposition: unknown }
+    const { proposition } = donnees(await appeler("proposer_flux", { flux: [loyer] })) as { proposition: unknown }
     const modifiee = { ...sessionExemple(), name: "Modifiée dans l'application" }
     await ecrireLaSession(modifiee)
     expect(texte(await appeler("appliquer_proposition", { proposition }))).toContain("appelez rafraichir_proposition")
@@ -197,7 +208,7 @@ describe("serveur MCP : propositions", () => {
     const rafraichie = await appeler("rafraichir_proposition", { proposition })
     expect(rafraichie.isError).toBeFalsy()
     expect(texte(rafraichie)).toMatch(/^Proposition reconstruite sur la simulation actuelle, rien n'est modifié : Ajouter 3 flux \? Montrez le résumé/)
-    const nouvelle = rafraichie.structuredContent as { proposition: { empreinteSession: string }; retirees: unknown[] }
+    const nouvelle = donnees(rafraichie) as { proposition: { empreinteSession: string }; retirees: unknown[] }
     expect(nouvelle).toMatchObject({ proposition: { empreinteSession: empreinteDeLaSession(modifiee) }, retirees: [], dejaAJour: false })
     expect(await boite()).toEqual([])
 
@@ -211,8 +222,8 @@ describe("serveur MCP : propositions", () => {
     await ecrireLaSession(session)
     await connecter()
     const serie = { acteurId: "micro-atelier", typeFlux: "ca_micro_vente", libelle: "Ventes" }
-    const suppression = (await appeler("proposer_suppression", { suppression: { cible: "serie", annee: 2026, serie } })).structuredContent as { proposition: unknown }
-    const { proposition } = (await appeler("proposer_flux", { flux: [loyer], suiteDe: suppression.proposition })).structuredContent as { proposition: unknown }
+    const suppression = donnees(await appeler("proposer_suppression", { suppression: { cible: "serie", annee: 2026, serie } })) as { proposition: unknown }
+    const { proposition } = donnees(await appeler("proposer_flux", { flux: [loyer], suiteDe: suppression.proposition })) as { proposition: unknown }
     await ecrireLaSession({ ...session, annees: session.annees.map(a => ({ ...a, monthlyData: a.monthlyData.map(m => ({ ...m, flows: m.flows.filter(f => f.label !== "Ventes") })) })) })
     const rafraichie = await appeler("rafraichir_proposition", { proposition })
     expect(texte(rafraichie)).toContain("Ajouter 3 flux ? 1 opération ne s'applique plus et en est retirée (voir retirees) : dites-le à l'utilisateur.")
@@ -226,7 +237,7 @@ describe("serveur MCP : propositions", () => {
     // Un fichier à la place du dossier : la boîte ne peut pas être créée.
     await writeFile(path.join(dossier, DOSSIER_DES_PROPOSITIONS), "")
     await connecter()
-    const { proposition } = (await appeler("proposer_flux", { flux: [loyer] })).structuredContent as { proposition: unknown }
+    const { proposition } = donnees(await appeler("proposer_flux", { flux: [loyer] })) as { proposition: unknown }
     const resultat = await appeler("appliquer_proposition", { proposition })
     expect(resultat.isError).toBe(true)
     expect(texte(resultat)).toMatch(/^Erreur du serveur du simulateur pendant appliquer_proposition/)

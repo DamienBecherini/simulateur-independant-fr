@@ -2,7 +2,7 @@
 // Le catalogue des outils pour les clients d'IA (voir l'ADR 010) : une seule source pour le serveur MCP local et
 // l'assistant intégré. Aucun transport ici : des fonctions pures, qui reçoivent la session et rendent du JSON.
 //
-//   catalogueDesOutils()                → { nom, titre, description, inputSchema, outputSchema, lecture }[] (MCP tools/list)
+//   catalogueDesOutils()                → { nom, titre, description, inputSchema, lecture }[] (MCP tools/list)
 //   executerOutil(nom, session, args)   → { ok: true, resultat, nouvelleSession? } | { ok: false, erreur }
 //
 // Seul appliquer_proposition rend une `nouvelleSession` : l'hôte la montre à l'utilisateur et ne l'enregistre (comme
@@ -39,10 +39,14 @@ export const OUTILS: readonly Outil[] = [
 
 export type JsonSchema = Record<string, unknown>
 
-/** Schéma JSON d'un schéma Zod, tel qu'un client d'IA l'attend : ce que l'outil accepte en entrée, ou rend en sortie. */
-export function schemaJson(schema: z.ZodType, io: "input" | "output"): JsonSchema {
+/**
+ * Schéma JSON des paramètres d'un outil, tel qu'un client d'IA l'attend. Le schéma du résultat n'est pas publié : il
+ * pesait autant que celui des paramètres, et le modèle lit les champs dans le JSON rendu (les descriptions expliquent
+ * ceux qui le demandent) ; son schéma Zod sert aux tests.
+ */
+export function schemaJson(schema: z.ZodType): JsonSchema {
   // La version du format (« $schema ») est retirée : MCP et les fournisseurs attendent l'objet seul.
-  const json = z.toJSONSchema(schema, { io, unrepresentable: "any" }) as JsonSchema
+  const json = z.toJSONSchema(schema, { io: "input", unrepresentable: "any" }) as JsonSchema
   delete json.$schema
   return json
 }
@@ -52,14 +56,13 @@ export interface DescriptionOutil {
   titre: string
   description: string
   inputSchema: JsonSchema
-  outputSchema: JsonSchema
   /** Vrai si l'outil ne modifie jamais la session (MCP : `annotations.readOnlyHint`). */
   lecture: boolean
 }
 
 /** Le catalogue, prêt pour `tools/list` d'un serveur MCP ou les définitions d'outils d'un fournisseur. */
 export function catalogueDesOutils(): DescriptionOutil[] {
-  return OUTILS.map(outil => ({ nom: outil.nom, titre: outil.titre, description: outil.description, inputSchema: schemaJson(outil.parametres, "input"), outputSchema: schemaJson(outil.resultat, "output"), lecture: outil.lecture }))
+  return OUTILS.map(outil => ({ nom: outil.nom, titre: outil.titre, description: outil.description, inputSchema: schemaJson(outil.parametres), lecture: outil.lecture }))
 }
 
 export type ReponseOutil = { ok: true; resultat: unknown; nouvelleSession?: SessionState } | { ok: false; erreur: string }

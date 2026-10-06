@@ -7,7 +7,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { CallToolRequestSchema, ListToolsRequestSchema, type CallToolResult, type Tool } from "@modelcontextprotocol/sdk/types.js"
 import { z } from "zod"
-import { catalogueDesOutils, executerOutil, OUTILS, schemaJson } from "../logic/outils/catalogue.js"
+import { catalogueDesOutils, executerOutil, OUTILS } from "../logic/outils/catalogue.js"
 import { propositionValidee, ResultatPropositionSchema } from "../logic/outils/propositions.js"
 import { deposerUneProposition, ErreurDeDonnees, lireLaSessionEnregistree, propositionDejaEnAttente } from "./donnees.js"
 
@@ -53,27 +53,30 @@ export interface OptionsDuServeur {
   maintenant?: () => Date
 }
 
-/** Les outils tels que `tools/list` les publie : ceux du catalogue, appliquer_proposition adapté à la boîte aux propositions. */
+/**
+ * Les outils tels que `tools/list` les publie : ceux du catalogue, appliquer_proposition adapté à la boîte aux
+ * propositions. Sans schéma de sortie (voir `reponse`) : la liste, envoyée au modèle à chaque échange, en est presque
+ * deux fois plus légère.
+ */
 export function outilsPublies(): Tool[] {
   return catalogueDesOutils().map(outil => {
     const appliquer = outil.nom === APPLIQUER
-    return {
-      name: outil.nom,
-      title: outil.titre,
-      description: appliquer ? DESCRIPTION_D_APPLIQUER : outil.description,
-      inputSchema: outil.inputSchema as Tool["inputSchema"],
-      outputSchema: (appliquer ? schemaJson(ResultatDeLEnvoiSchema, "output") : outil.outputSchema) as Tool["outputSchema"],
-      // Seul appliquer_proposition écrit quelque chose (un fichier dans la boîte aux propositions) ; rien n'est détruit.
-      annotations: { title: outil.titre, readOnlyHint: !appliquer, destructiveHint: false, idempotentHint: outil.lecture, openWorldHint: false }
-    }
+    // Seul appliquer_proposition écrit quelque chose : un fichier dans la boîte aux propositions, jamais deux fois le
+    // même ; rien n'est détruit. Les autres indications ne valent, d'après MCP, que pour un outil qui écrit.
+    const annotations = appliquer ? { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } : { readOnlyHint: true, openWorldHint: false }
+    return { name: outil.nom, title: outil.titre, description: appliquer ? DESCRIPTION_D_APPLIQUER : outil.description, inputSchema: outil.inputSchema as Tool["inputSchema"], annotations }
   })
 }
 
 const erreur = (texte: string): CallToolResult => ({ content: [{ type: "text", text: texte }], isError: true })
 
-/** Le résultat d'un outil : un court résumé en français, puis le JSON, aussi rendu en contenu structuré. */
+/**
+ * Le résultat d'un outil : un court résumé en français, puis, à la ligne, le JSON du résultat, dans un seul texte.
+ * MCP veut ce texte pour les clients qui ignorent le contenu structuré (« structuredContent ») ; en rendre aussi un
+ * ferait lire chaque résultat deux fois au modèle des clients qui donnent les deux. Le texte suffit donc.
+ */
 function reponse(resume: string, resultat: Record<string, unknown>): CallToolResult {
-  return { content: [{ type: "text", text: resume }, { type: "text", text: JSON.stringify(resultat) }], structuredContent: resultat }
+  return { content: [{ type: "text", text: `${resume}\n${JSON.stringify(resultat)}` }] }
 }
 
 /** « le 06/10/2026 à 10:15:03 ». */

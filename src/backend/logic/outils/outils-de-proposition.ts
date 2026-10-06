@@ -20,7 +20,7 @@ function proposer(session: SessionState, suiteDe: unknown, operations: (suite: P
   return resultatSeul(construireProposition(session, suite, operations(suite)))
 }
 
-const RAPPEL_VALIDATION = "Ne modifie rien : rend une proposition (opérations, résumé en français, effet calculé par le moteur sur le net de chaque année) à montrer à l'utilisateur, qui la valide ou non. Pour plusieurs ajouts liés, passez la proposition rendue dans « suiteDe » de l'appel suivant, puis faites valider l'ensemble."
+const RAPPEL_VALIDATION = "Ne modifie rien : rend une proposition (résumé, avertissements, effet sur le net de chaque année) à faire valider par l'utilisateur ; pour des ajouts liés, passez-la dans « suiteDe » de l'appel suivant."
 
 const TYPES_EXPLIQUES = TYPES_DE_FLUX.map(type => `${type} : ${SENS_DES_TYPES[type]}`).join(" ; ")
 
@@ -52,13 +52,12 @@ export const proposerFlux = definirOutil({
   nom: "proposer_flux",
   titre: "Proposer des flux",
   description: [
-    "Propose d'ajouter des flux à la grille mensuelle : chiffre d'affaires d'une facture, charges, salaires, rémunération du dirigeant, dividendes…",
-    "Chaque élément de « flux » est une série : un acteur, un type, un libellé et un montant mensuel, répété sur les mois indiqués d'une année (un mois seul pour une facture ponctuelle, [1,…,12] pour un loyer mensuel).",
-    "Une année absente de la simulation est ajoutée si elle suit ou précède les années existantes.",
+    "Propose d'ajouter des flux à la grille mensuelle (facture, charges, salaires, rémunération du dirigeant, dividendes…).",
+    "Chaque élément de « flux » est une série : un acteur, un type, un libellé et un montant mensuel répété sur les mois indiqués d'une année ([3] pour une facture de mars, [1,…,12] pour un loyer). Une année absente est ajoutée si elle suit ou précède celles de la simulation.",
     `Types : ${TYPES_EXPLIQUES}.`,
-    "Les indemnités kilométriques et les frais réels ne sont pas des flux : l'utilisateur les règle dans l'application (déplacements de l'activité, frais réels de la personne).",
-    "Si les flux remplacent une estimation déjà saisie (lister_flux), proposez aussi de la supprimer ou de la modifier dans la même proposition (suiteDe) : sinon ils s'y ajoutent, et un avertissement le signale.",
-    `Au plus ${LIMITES.operationsParProposition} séries par proposition, ${LIMITES.longueurLibelle} caractères par libellé. Les flux identiques à un flux déjà saisi le même mois sont signalés comme doublons probables.`,
+    "Indemnités kilométriques et frais réels ne sont pas des flux : l'utilisateur les règle dans l'application.",
+    "Si les flux remplacent une estimation déjà saisie (lister_flux), proposez aussi de la supprimer ou de la modifier dans la même proposition (suiteDe) : sinon ils s'y ajoutent (un avertissement le signale).",
+    `Au plus ${LIMITES.operationsParProposition} séries par proposition ; un flux identique à un flux du même mois est signalé comme doublon probable.`,
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,
@@ -78,9 +77,8 @@ export const proposerActeur = definirOutil({
   nom: "proposer_acteur",
   titre: "Proposer un acteur",
   description: [
-    "Propose d'ajouter un acteur : une personne (membre du foyer), ou une activité (SASU, EURL, EI au réel, micro-entreprise).",
-    "Réglages possibles selon le genre : partsFiscales (personne), capitalSocial (SASU, EURL), dateDeCreation « AAAA-MM » (activités), beneficieACRE, opteVFL, rfrN2, horsPlafondAnneePrecedente (micro-entreprise).",
-    "L'identifiant du nouvel acteur est dans « nouveauxIdentifiants » : utilisez-le, avec suiteDe, pour proposer ses relations (proposer_relation : une activité doit être reliée à la personne qui la dirige ou en est titulaire) et ses flux.",
+    "Propose d'ajouter un acteur : une personne (membre du foyer) ou une activité (SASU, EURL, EI au réel, micro-entreprise), avec les réglages de son genre.",
+    "Son identifiant est dans « nouveauxIdentifiants » : utilisez-le, avec suiteDe, pour proposer ses relations (une activité est reliée à la personne qui la dirige ou en est titulaire) et ses flux.",
     `Au plus ${LIMITES.acteursParProposition} acteurs par proposition. Aucun outil ne supprime un acteur.`,
     RAPPEL_VALIDATION
   ].join(" "),
@@ -131,8 +129,8 @@ export const proposerModification = definirOutil({
   nom: "proposer_modification",
   titre: "Proposer des modifications",
   description: [
-    "Propose de modifier des séries de flux existantes (montant, brut d'un salaire, libellé ; sur tous les mois de la série ou certains, par exemple une hausse de loyer à partir de juillet) ou les réglages d'acteurs (nom, parts fiscales, capital, date de création, ACRE, versement libératoire, revenu fiscal de référence N-2).",
-    "Une série est désignée par son année, son acteur, son type et son libellé exacts, tels que lister_flux les donne. Un acteur verrouillé par l'utilisateur n'est jamais modifié. Le statut juridique d'une activité ne se change pas ici : comparez plutôt les statuts avec comparer_statuts.",
+    "Propose de modifier des séries de flux (montant, brut d'un salaire, libellé ; sur tous leurs mois ou certains, par exemple une hausse de loyer en juillet) ou le nom et les réglages d'acteurs.",
+    "Une série se désigne par son année, son acteur, son type et son libellé exacts, tels que lister_flux les donne. Un acteur verrouillé par l'utilisateur n'est jamais modifié ; le statut juridique ne se change pas (voir comparer_statuts).",
     "Au plus 50 modifications par appel.",
     RAPPEL_VALIDATION
   ].join(" "),
@@ -174,8 +172,7 @@ export const proposerReglagesComparateur = definirOutil({
   nom: "proposer_reglages_comparateur",
   titre: "Proposer des réglages du comparateur",
   description: [
-    "Propose d'enregistrer des réglages du comparateur de statuts pour une activité, ceux que comparer_statuts et l'application utilisent ensuite : partage du bénéfice en SASU et EURL (mode, partDistribuee, avecRetraite), rémunération nette annuelle saisie pour une année, part BNC des prestations, frais de fonctionnement par statut, statut étudié.",
-    "Seuls les réglages indiqués changent ; les autres gardent leur valeur. « comparer » (vrai par défaut) ouvre cette activité dans le comparateur.",
+    "Propose d'enregistrer des réglages du comparateur de statuts d'une activité, ceux qu'utilisent ensuite comparer_statuts et l'application. Seuls les réglages indiqués changent ; « comparer » (vrai par défaut) ouvre cette activité dans le comparateur.",
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,
