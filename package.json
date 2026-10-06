@@ -11,6 +11,7 @@
   },
   "type": "module",
   "main": "dist-electron/backend/main.js",
+  "desktopName": "simulateur-independant-fr.desktop",
   "scripts": {
     "dev": "npm-run-all --parallel --race dev:react dev:electron",
     "dev:react": "vite",
