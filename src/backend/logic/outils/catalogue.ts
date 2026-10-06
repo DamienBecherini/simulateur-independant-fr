@@ -14,7 +14,7 @@ import { ErreurOutil } from "./commun.js"
 import { comparerStatuts, optimiserRemuneration } from "./comparaison.js"
 import { decrireSimulation, listerFlux, reglesDeLAnneeOutil } from "./lecture.js"
 import { ParametresInvalides, type Outil } from "./outil.js"
-import { appliquerProposition, proposerActeur, proposerFlux, proposerModification, proposerReglagesComparateur, proposerRelation, proposerSuppression } from "./outils-de-proposition.js"
+import { appliquerProposition, proposerActeur, proposerFlux, proposerModification, proposerReglagesComparateur, proposerRelation, proposerSuppression, rafraichirProposition } from "./outils-de-proposition.js"
 import { expliquerResultat, simuler, syntheseDesAnnees } from "./resultats.js"
 
 /** Les outils, dans l'ordre où un modèle s'en sert le plus souvent : lire, calculer, proposer, appliquer. */
@@ -33,6 +33,7 @@ export const OUTILS: readonly Outil[] = [
   proposerModification,
   proposerSuppression,
   proposerReglagesComparateur,
+  rafraichirProposition,
   appliquerProposition
 ]
 

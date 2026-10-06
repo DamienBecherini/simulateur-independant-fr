@@ -5,9 +5,9 @@
 
 import { z } from "zod"
 import { RelationshipSchema, type SessionState } from "../../../types.js"
-import { empreinteDeLaSession, GENRES_D_ACTEUR, SENS_DES_TYPES, TYPES_DE_FLUX, type GenreDActeur } from "./commun.js"
+import { empreinteDeLaSession, ErreurOutil, GENRES_D_ACTEUR, SENS_DES_TYPES, TYPES_DE_FLUX, type GenreDActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, LIMITES, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
-import { ReglagesActeurSchema, ReglagesComparateurProposesSchema, SerieSchema, type Operation } from "./operations.js"
+import { designationDeLOperation, operationsApplicables, ReglagesActeurSchema, ReglagesComparateurProposesSchema, SerieSchema, type Operation } from "./operations.js"
 import { definirOutil, resultatSeul } from "./outil.js"
 import { construireProposition, identifiantLibre, presenterProposition, PropositionRenvoyeeSchema, propositionValidee, ResultatPropositionSchema, sessionApresLaProposition, SuiteDeSchema, type Proposition } from "./propositions.js"
 
@@ -191,6 +191,42 @@ export const proposerReglagesComparateur = definirOutil({
 })
 
 // ===================================================================================
+// == rafraichir_proposition
+// ===================================================================================
+
+/** Opérations citées une à une quand elles ne s'appliquent plus : de quoi comprendre, sans recopier toute la proposition. */
+const RETIREES_CITEES = 10
+
+const phraseDesRetirees = (retirees: { numero: number; operation: string; raison: string }[]) =>
+  retirees
+    .slice(0, RETIREES_CITEES)
+    .map(r => `n° ${r.numero} (${r.operation}) : ${r.raison}`)
+    .join(" ; ") + (retirees.length > RETIREES_CITEES ? ` ; et ${retirees.length - RETIREES_CITEES} autres` : "")
+
+export const rafraichirProposition = definirOutil({
+  nom: "rafraichir_proposition",
+  titre: "Rafraîchir une proposition périmée",
+  description: [
+    "Reconstruit, sur la simulation actuelle, une proposition refusée comme périmée (la simulation a changé depuis) : ses opérations sont revérifiées une à une, dans l'ordre.",
+    "Rend une nouvelle proposition (nouvelle empreinte, résumé, avertissements, effet sur le net), et dans « retirees » les opérations qui ne s'appliquent plus (série supprimée entre-temps, relation déjà là…) avec leur numéro et la raison ; un avertissement les signale aussi. Échoue si aucune ne s'applique.",
+    "Ne modifie et n'envoie rien : montrez le résumé et les opérations retirées à l'utilisateur, puis appliquer_proposition s'il est d'accord."
+  ].join(" "),
+  lecture: false,
+  parametres: z.strictObject({ proposition: PropositionRenvoyeeSchema }),
+  resultat: ResultatPropositionSchema.extend({ dejaAJour: z.boolean(), retirees: z.array(z.object({ numero: z.number(), operation: z.string(), raison: z.string() })) }),
+  executer: (session, parametres) => {
+    const ancienne = propositionValidee(parametres.proposition)
+    const { retenues, refusees } = operationsApplicables(session, ancienne.operations)
+    const retirees = refusees.map(r => ({ numero: r.numero, operation: designationDeLOperation(r.operation), raison: r.raison }))
+    if (retenues.length === 0) throw new ErreurOutil(`Aucune opération de la proposition ne s'applique à la simulation actuelle : ${phraseDesRetirees(retirees)}. Relisez la simulation (decrire_simulation, lister_flux) et refaites la proposition avec les outils proposer_….`)
+    const nouvelle = construireProposition(session, undefined, retenues)
+    const pluriel = retirees.length > 1
+    const avertissement = retirees.length > 0 ? [`${pluriel ? `${retirees.length} opérations retirées` : "Opération retirée"} de la proposition d'origine, car ${pluriel ? "elles ne s'appliquent" : "elle ne s'applique"} plus à la simulation actuelle : ${phraseDesRetirees(retirees)}.`] : []
+    return resultatSeul({ ...nouvelle, avertissements: [...avertissement, ...nouvelle.avertissements], dejaAJour: ancienne.empreinteSession === empreinteDeLaSession(session) && retirees.length === 0, retirees })
+  }
+})
+
+// ===================================================================================
 // == appliquer_proposition
 // ===================================================================================
 
@@ -199,7 +235,7 @@ export const appliquerProposition = definirOutil({
   titre: "Appliquer une proposition validée",
   description: [
     "Applique une proposition rendue par un outil proposer_…, telle quelle, APRÈS que l'utilisateur l'a acceptée. L'application peut encore lui demander confirmation ; tout s'annule ensuite en une étape.",
-    "Refusée si la simulation a changé depuis la proposition (empreinte différente) : relisez alors la simulation et refaites la proposition. Toutes les vérifications sont refaites : une proposition modifiée à la main est contrôlée comme une nouvelle.",
+    "Refusée si la simulation a changé depuis la proposition (empreinte différente) : rafraichir_proposition la reconstruit alors sur la simulation actuelle. Toutes les vérifications sont refaites : une proposition modifiée à la main est contrôlée comme une nouvelle.",
     "Rend le récapitulatif de ce qui a été appliqué, l'effet sur le net de chaque année et la nouvelle empreinte de la simulation."
   ].join(" "),
   lecture: false,

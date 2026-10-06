@@ -306,3 +306,39 @@ export function appliquerOperations(session: SessionState, operations: Operation
   verifierRelationsRequises(chantier)
   return chantier.session
 }
+
+/** « ajouter_flux « Loyer » 2026 » : une opération désignée pour un modèle. */
+export const designationDeLOperation = (operation: Operation): string => `${operation.type}${libelleDeLOperation(operation)}`
+
+/** Une opération que la session ne permet plus, avec son rang dans la proposition (à partir de 1) et la raison. */
+export interface OperationRefusee {
+  numero: number
+  operation: Operation
+  raison: string
+}
+
+/**
+ * Sépare les opérations d'une proposition en celles qui s'appliquent encore à la session, dans leur ordre, et celles
+ * qu'elle ne permet plus (série supprimée entre-temps, acteur verrouillé, relation déjà là…). Chaque opération est
+ * essayée sur la session obtenue par les précédentes retenues : celles qui dépendent d'une opération refusée le sont
+ * aussi. Les relations qu'exigent une rémunération ou des dividendes ne sont pas vérifiées ici, mais quand la
+ * proposition reconstruite est validée en entier. Ne modifie pas `session`.
+ */
+export function operationsApplicables(session: SessionState, operations: Operation[]): { retenues: Operation[]; refusees: OperationRefusee[] } {
+  let compteur = 0
+  const chantier: Chantier = { session, nouvelIdDeFlux: () => `essai-${++compteur}`, activitesAVerifier: new Set() }
+  const retenues: Operation[] = []
+  const refusees: OperationRefusee[] = []
+  operations.forEach((operation, index) => {
+    const avant = chantier.session
+    try {
+      ;(APPLICATIONS[operation.type] as (c: Chantier, op: Operation) => void)(chantier, operation)
+      retenues.push(operation)
+    } catch (erreur) {
+      if (!(erreur instanceof ErreurOutil)) throw erreur
+      chantier.session = avant
+      refusees.push({ numero: index + 1, operation, raison: erreur.message })
+    }
+  })
+  return { retenues, refusees }
+}

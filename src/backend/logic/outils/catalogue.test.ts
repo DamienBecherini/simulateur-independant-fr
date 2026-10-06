@@ -27,6 +27,7 @@ describe("catalogue des outils", () => {
       "proposer_modification",
       "proposer_suppression",
       "proposer_reglages_comparateur",
+      "rafraichir_proposition",
       "appliquer_proposition"
     ])
   })
@@ -40,7 +41,7 @@ describe("catalogue des outils", () => {
       expect(outil.description).not.toMatch(/\b(the|returns|this tool)\b/i)
     }
     expect(catalogueDesOutils().filter(o => o.lecture).map(o => o.nom)).toHaveLength(8)
-    expect(catalogueDesOutils().filter(o => !o.lecture).every(o => o.nom.startsWith("proposer_") || o.nom === "appliquer_proposition")).toBe(true)
+    expect(catalogueDesOutils().filter(o => !o.lecture).every(o => o.nom.startsWith("proposer_") || o.nom === "rafraichir_proposition" || o.nom === "appliquer_proposition")).toBe(true)
   })
 
   it("génère depuis Zod des schémas JSON d'objets, sérialisables, de taille raisonnable", () => {
