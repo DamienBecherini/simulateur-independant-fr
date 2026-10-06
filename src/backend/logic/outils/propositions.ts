@@ -71,7 +71,7 @@ type ResultatProposition = z.infer<typeof ResultatPropositionSchema>
 export function sessionApresLaProposition(session: SessionState, proposition: Proposition): SessionState {
   const actuelle = empreinteDeLaSession(session)
   if (proposition.empreinteSession !== actuelle) {
-    throw new ErreurOutil(`Proposition périmée : elle a été construite sur une autre version de la simulation (empreinte ${proposition.empreinteSession}, actuelle ${actuelle}). La simulation a changé depuis ; relisez-la (decrire_simulation, lister_flux) et refaites la proposition.`)
+    throw new ErreurOutil(`Proposition périmée : elle a été construite sur une autre version de la simulation (empreinte ${proposition.empreinteSession}, actuelle ${actuelle}). La simulation a changé depuis ; relisez-la (decrire_simulation, lister_flux) et refaites la proposition en rappelant les outils proposer_…, sans suiteDe : une proposition périmée ne peut pas être complétée.`)
   }
   const apres = appliquerOperations(session, proposition.operations, empreinte(proposition.operations).slice(0, 8))
   const verdict = SessionStateSchema.safeParse(apres)

@@ -156,7 +156,7 @@ function ajouterAnnee(c: Chantier, op: OperationDe<"ajouter_annee">): void {
   const annees = c.session.annees.map(a => a.annee)
   const [premiere, derniere] = [Math.min(...annees), Math.max(...annees)]
   if (annees.includes(op.annee)) throw new ErreurOutil(`L'année ${op.annee} est déjà dans la simulation.`)
-  if (op.annee !== premiere - 1 && op.annee !== derniere + 1) throw new ErreurOutil(`Les années d'une simulation se suivent : seules ${premiere - 1} et ${derniere + 1} peuvent être ajoutées.`)
+  if (op.annee !== premiere - 1 && op.annee !== derniere + 1) throw new ErreurOutil(`Les années d'une simulation se suivent : seules ${premiere - 1} et ${derniere + 1} peuvent être ajoutées (des flux sur une année absente l'ajoutent : proposez aussi les années intermédiaires).`)
   if (annees.length >= NOMBRE_MAX_ANNEES) throw new ErreurOutil(`Une simulation compte au plus ${NOMBRE_MAX_ANNEES} années.`)
   const nouvelle = { annee: op.annee, monthlyData: grilleVide() }
   c.session = { ...c.session, annees: op.annee < premiere ? [nouvelle, ...c.session.annees] : [...c.session.annees, nouvelle] }
@@ -193,7 +193,7 @@ const dansLaSerie = (serie: z.infer<typeof SerieSchema>) => (f: FinancialFlow) =
 
 /** Applique `transformer` aux flux de la série dans les mois visés ; refuse une série absente de ces mois. */
 function surLaSerie(c: Chantier, op: OperationDe<"modifier_serie" | "supprimer_serie">, transformer: (flux: FinancialFlow[]) => FinancialFlow[]): void {
-  trouverActeur(c.session, op.serie.acteurId)
+  const acteur = trouverActeur(c.session, op.serie.acteurId)
   const mois = op.mois ? new Set(op.mois.map(m => m - 1)) : null
   const estDansLaSerie = dansLaSerie(op.serie)
   let touches = 0
@@ -204,7 +204,19 @@ function surLaSerie(c: Chantier, op: OperationDe<"modifier_serie" | "supprimer_s
       return { ...m, flows: transformer(m.flows) }
     })
   )
-  if (touches === 0) throw new ErreurOutil(`Aucun flux « ${op.serie.libelle} » (${op.serie.typeFlux}) de « ${op.serie.acteurId} » en ${op.annee}${op.mois ? " dans les mois indiqués" : ""} : vérifiez avec lister_flux.`)
+  if (touches === 0) throw new ErreurOutil(`Aucun flux « ${op.serie.libelle} » (${op.serie.typeFlux}) de « ${acteur.name} » en ${op.annee}${op.mois ? " dans les mois indiqués" : ""}. ${seriesDeLActeur(c.session, acteur, op.annee)}`)
+}
+
+/** Nombre de séries citées quand une série demandée est introuvable. */
+const SERIES_CITEES = 20
+
+/** Les séries d'un acteur dans une année, pour qu'un modèle retrouve le libellé et le type exacts d'une série. */
+function seriesDeLActeur(session: SessionState, acteur: Entity, annee: number): string {
+  const flux = session.annees.find(a => a.annee === annee)?.monthlyData.flatMap(m => m.flows.filter(f => f.entityId === acteur.id)) ?? []
+  const series = [...new Set(flux.map(f => `« ${f.label} » (${f.type})`))]
+  if (series.length === 0) return `« ${acteur.name} » n'a aucun flux en ${annee} : vérifiez l'année et l'acteur avec lister_flux.`
+  const citees = series.slice(0, SERIES_CITEES).join(", ")
+  return `Séries de « ${acteur.name} » en ${annee}, libellé et type exacts : ${citees}${series.length > SERIES_CITEES ? ", …" : ""} (voir lister_flux).`
 }
 
 function modifierSerie(c: Chantier, op: OperationDe<"modifier_serie">): void {
@@ -259,6 +271,15 @@ function verifierRelationsRequises(c: Chantier): void {
   }
 }
 
+/** « « Loyer » 2026 » : de quoi retrouver l'opération fautive parmi celles de suiteDe et de l'appel. */
+function libelleDeLOperation(operation: Operation): string {
+  if (operation.type === "ajouter_flux") return ` « ${operation.libelle} » ${operation.annee}`
+  if (operation.type === "modifier_serie" || operation.type === "supprimer_serie") return ` « ${operation.serie.libelle} » ${operation.annee}`
+  if (operation.type === "ajouter_annee") return ` ${operation.annee}`
+  if (operation.type === "ajouter_acteur") return ` « ${operation.nom} »`
+  return ""
+}
+
 /**
  * Applique les opérations dans l'ordre, sans modifier la session reçue. `graine` rend les identifiants des nouveaux
  * flux déterministes (la même proposition donne toujours la même session). Lève une `ErreurOutil` qui nomme
@@ -278,7 +299,7 @@ export function appliquerOperations(session: SessionState, operations: Operation
     try {
       ;(APPLICATIONS[operation.type] as (c: Chantier, op: Operation) => void)(chantier, operation)
     } catch (erreur) {
-      if (erreur instanceof ErreurOutil) throw new ErreurOutil(`Opération ${index + 1} (${operation.type}) : ${erreur.message}`)
+      if (erreur instanceof ErreurOutil) throw new ErreurOutil(`Opération ${index + 1} (${operation.type}${libelleDeLOperation(operation)}) : ${erreur.message}`)
       throw erreur
     }
   })
