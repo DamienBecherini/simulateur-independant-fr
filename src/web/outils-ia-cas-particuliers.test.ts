@@ -140,7 +140,7 @@ describe("propositions, cas particuliers", () => {
 
   it("refuse les caractères de contrôle et de mise en forme bidirectionnelle", () => {
     expect(texteSansControle("Loyer du bureau")).toBe(true)
-    expect(texteSansControle("Loyer‮urenob")).toBe(false)
+    expect(texteSansControle("Loyer\u202Eurenob")).toBe(false)
     expect(erreurDe("proposer_acteur", geler(sessionExemple()), { genre: "personne", nom: "Bruno\u0007" })).toMatch(/invalides/)
   })
 })

@@ -7,6 +7,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Simulateur de revenus pour indépendants</title>
     <meta name="description" content="Simulation des revenus, cotisations et impôts d’un foyer d’indépendants en France (règles 2026)." />
+    <!-- 'unsafe-inline' ne vaut que pour les styles, jamais pour les scripts : les notifications (sonner) et le blocage du
+         défilement des fenêtres modales (Radix, react-remove-scroll) insèrent leurs règles dans des balises <style>
+         créées à l'exécution, au contenu variable, qu'aucune empreinte fixe ne peut autoriser. Sans lui, la démo web
+         relève ces blocages dans sa console et ses tests échouent. -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self';
     style-src 'self' 'unsafe-inline';
     script-src 'self';">

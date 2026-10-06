@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Le corps du ticket est une saisie non fiable : il passe par une variable d'environnement,
       # jamais par une expression dans le script, et le script appelle gh sans shell.

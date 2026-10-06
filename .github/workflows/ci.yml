@@ -22,25 +22,26 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Historique complet : SonarQube s'en sert pour attribuer les nouvelles lignes.
           fetch-depth: 0
 
       - name: Installer Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
 
+      # Sans les scripts d'installation des paquets : aucune étape de ce job n'a besoin du binaire d'Electron.
       - name: Installer les dépendances
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Lint (ESLint, complexité comprise)
         run: npm run lint
 
       - name: Vérifier les types de l'interface
-        run: npx tsc -b
+        run: npm run typecheck
 
       - name: Vérifier les types du backend
         run: npm run transpile:electron
@@ -52,11 +53,18 @@ jobs:
         run: npm run test:coverage
 
       - name: Build de l'interface
-        run: npx vite build
+        run: npm run build
 
       - name: Analyse SonarQube Cloud
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
+        # Attend le verdict de la porte qualité et fait échouer le job s'il est rouge : ce job est exigé sur main
+        # par la règle de protection, une porte rouge y bloque donc l'arrivée du commit.
+        timeout-minutes: 8
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
 
       - name: Détection de code dupliqué (sans SonarQube)
         if: env.SONAR_TOKEN == ''
