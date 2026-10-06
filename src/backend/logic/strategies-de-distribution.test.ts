@@ -64,6 +64,19 @@ describe("comparerStrategiesDeDistribution", () => {
     expect(eurl).toBeLessThan(10000)
   })
 
+  it("une année en perte diminue ce qui reste à distribuer, sans dividende refusé", () => {
+    // Frais de fonctionnement de 3 000 € par an : 2026, sans chiffre d'affaires, est en perte de 3 000 €.
+    const frais = { ...sansFrais, SASU: { ...sansFrais.SASU, expertComptable: 3000 } }
+    const resultat = comparerStrategiesDeDistribution(sessionSASU({ 2025: 60000, 2026: 0 }), "s1", { fraisFonctionnement: frais })
+    const garder = strategieDe(resultat, "SASU", "garderPuisDistribuer")
+    const lisser = strategieDe(resultat, "SASU", "lisser")
+
+    // 2025 : 57 000 € de bénéfice, IS 6 375 + 14 500 x 25 % = 10 000 €, 47 000 € après IS.
+    expect(garder.annees.map(a => a.dividendes)).toEqual([23500, 20500])
+    expect(lisser.annees.map(a => a.dividendes)).toEqual([22000, 22000])
+    for (const s of [garder, lisser]) expect(s).toMatchObject({ reservesALaFin: 0, warnings: [] })
+  })
+
   it("ne désigne aucune stratégie quand elles se valent", () => {
     const resultat = comparerStrategiesDeDistribution(sessionSASU({ 2025: 0, 2026: 0 }), "s1", { fraisFonctionnement: sansFrais })
 

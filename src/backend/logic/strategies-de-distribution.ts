@@ -9,14 +9,15 @@
  *
  * Aucune règle n'est refaite ici : chaque stratégie fixe seulement les dividendes de chaque année, puis toutes les
  * années sont simulées par le moteur, réserves reportées d'une année à l'autre (simulation-pluriannuelle.ts).
- * Rien ne dépend des dividendes dans le bénéfice distribuable d'une année (l'IS, la réserve légale et les cotisations
- * de la société n'en dépendent pas) : une première simulation sans dividendes donne donc celui de chaque année, et
- * ce qui reste disponible avant chaque distribution se calcule sans relancer le moteur.
+ * Le bénéfice d'une année ne dépend pas des dividendes (l'IS, la réserve légale et les cotisations de la société n'en
+ * dépendent pas, sauf la réserve légale après une perte) : une première simulation sans dividendes donne donc ce que
+ * chaque année ajoute aux réserves, et ce qui reste disponible avant chaque distribution se calcule sans relancer le
+ * moteur. Dans le cas rare où le moteur verse moins que prévu, la stratégie le signale.
  */
 
 import type { AnneeDUneStrategie, ReglagesComparateur, ResultatDUneStrategie, SessionState, SimulationReport, StatutSociete, StrategieDeDistribution, StrategiesDeDistribution, StrategiesDUnStatut } from "../../types.js"
 import { vueDeLAnnee } from "./annees.js"
-import { activiteComparee, avecLaCFEDeLAnnee, beneficeDistribuableDeLAnnee, sessionConvertie } from "./comparateur.js"
+import { activiteComparee, avecLaCFEDeLAnnee, sessionConvertie } from "./comparateur.js"
 import { optionsDuComparateur, PART_MISE_EN_RESERVE_PAR_DEFAUT } from "./options-du-comparateur.js"
 import { simulerLesAnnees, type AnneePreparee } from "./simulation-pluriannuelle.js"
 
@@ -35,15 +36,24 @@ function simulerAvec(session: SessionState, activityId: string, reglages: Reglag
   }).annees
 }
 
-/** Ce que la société a de réserves au 1er janvier de la première année simulée, et le bénéfice distribuable de chaque année. */
+/**
+ * Ce que la société a de réserves au 1er janvier de la première année simulée, et ce que chaque année y ajoute sans
+ * dividendes : son bénéfice après IS et réserve légale, ou sa perte (négatif).
+ */
 function capacites(rapports: SimulationReport[], activityId: string) {
-  const premiere = rapports[0]?.activities.find(a => a.entityId === activityId)
-  return { reservesDeDepart: Math.max(0, premiere?.reserves?.auDebut.reserves ?? 0), parAnnee: rapports.map(r => ({ annee: r.annee, benefice: beneficeDistribuableDeLAnnee(r, activityId) })) }
+  const reservesDe = (r: SimulationReport) => r.activities.find(a => a.entityId === activityId)?.reserves
+  return {
+    reservesDeDepart: reservesDe(rapports[0])?.auDebut.reserves ?? 0,
+    parAnnee: rapports.map(r => {
+      const reserves = reservesDe(r)
+      return { annee: r.annee, benefice: reserves ? reserves.aLaFin.reserves - reserves.auDebut.reserves : 0 }
+    })
+  }
 }
 
 /**
  * Les dividendes de chaque année selon la stratégie. Chacun reste dans ce qui est disponible cette année-là : réserves
- * au 1er janvier et bénéfice distribuable de l'année.
+ * au 1er janvier et bénéfice de l'année, une perte de l'année les diminuant.
  */
 function planifier(strategie: StrategieDeDistribution, partMiseEnReserve: number, { reservesDeDepart, parAnnee }: ReturnType<typeof capacites>): Plan {
   const plan: Plan = new Map()
