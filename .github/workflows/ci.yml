@@ -55,17 +55,20 @@ jobs:
       - name: Build de l'interface
         run: npm run build
 
+      # L'offre gratuite de SonarQube Cloud n'analyse que la branche principale (« Organization is not allowed to
+      # access data from non main branches ») : l'analyse tourne sur main, et ailleurs la détection de duplication
+      # prend le relais.
       - name: Analyse SonarQube Cloud
-        if: env.SONAR_TOKEN != ''
+        if: env.SONAR_TOKEN != '' && github.ref == 'refs/heads/main'
         uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
-        # Attend le verdict de la porte qualité et fait échouer le job s'il est rouge : ce job est exigé sur main
-        # par la règle de protection, une porte rouge y bloque donc l'arrivée du commit.
+        # Attend le verdict de la porte qualité et fait échouer le job s'il est rouge : main passe au rouge, et la
+        # démo n'est publiée qu'après un examen.
         timeout-minutes: 8
         with:
           args: >
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
 
-      - name: Détection de code dupliqué (sans SonarQube)
-        if: env.SONAR_TOKEN == ''
+      - name: Détection de code dupliqué (hors analyse SonarQube)
+        if: env.SONAR_TOKEN == '' || github.ref != 'refs/heads/main'
         run: npm run duplication
