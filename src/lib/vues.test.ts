@@ -23,6 +23,10 @@ describe("vues de l'affichage « Trois vues »", () => {
     expect(destinationDeLAdresse("comparer", aucunElement)).toEqual({ vue: "comparer" })
   })
 
+  it("laisse la vue affichée sous les mentions légales, qui ont leur propre adresse", () => {
+    expect(destinationDeLAdresse("#mentions-legales", () => "resultats")).toBeNull()
+  })
+
   it("mène les liens de la barre de résumé à leur vue, même avant que le détail soit affiché", () => {
     expect(destinationDeLAdresse("#bilan", aucunElement)).toEqual({ vue: "resultats", detail: "bilan" })
     expect(destinationDeLAdresse("#resultats-titre", aucunElement)).toEqual({ vue: "resultats", detail: "resultats-titre" })

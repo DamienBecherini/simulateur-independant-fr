@@ -29,6 +29,7 @@
     "build:web": "vite build --mode web",
     "captures": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && playwright test --config playwright.captures.config.ts",
     "test:mutation": "stryker run",
+    "mentions-legales": "cross-env ECRIRE_MENTIONS_LEGALES=1 vitest run --project logique src/lib/mentions-legales.test.ts",
     "typecheck:tests": "tsc --project src/backend/tsconfig.test.json",
     "preview": "vite preview",
     "transpile:electron": "tsc --project src/backend/tsconfig.json",
