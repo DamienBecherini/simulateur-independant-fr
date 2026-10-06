@@ -77,7 +77,8 @@ export const comparerStatuts = definirOutil({
   description: [
     "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro-entreprise avec et sans versement libératoire), le reste de la simulation inchangé, et désigne le statut au meilleur net après impôts pour le foyer.",
     "Utilise les réglages du comparateur enregistrés dans la simulation (partage du bénéfice, frais de fonctionnement par statut) ; les paramètres facultatifs permettent d'essayer une variante sans rien enregistrer (pour l'enregistrer, proposer_reglages_comparateur).",
-    "Montants annuels en euros, arrondis, pour toute la simulation (net de tous les foyers) ; resultatConserveActivite porte sur l'activité seule. Calcul plus long que simuler : plusieurs dizaines de simulations."
+    "Les frais de fonctionnement de ces réglages (fraisFonctionnement : expert-comptable, banque, logiciel, assurance, CFE) s'ajoutent aux charges de la grille, statut actuel compris : le net d'un scénario est donc en général inférieur à celui de simuler. Comparez les scénarios entre eux, pas avec simuler.",
+    "Montants annuels en euros, arrondis, pour toute la simulation (net de tous les foyers) ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant en SASU et EURL. Calcul plus long que simuler : plusieurs dizaines de simulations."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({
@@ -132,7 +133,8 @@ export const optimiserRemuneration = definirOutil({
   description: [
     "Pour une activité exercée en SASU ou en EURL (son statut actuel ou celui étudié), cherche la rémunération nette du dirigeant qui donne le meilleur net après impôts au foyer, tout le reste du bénéfice étant versé en dividendes ; donne aussi le meilleur choix parmi les rémunérations qui valident 4 trimestres de retraite.",
     `Rend la rémunération maximale que la société peut verser, les deux meilleurs points et ${POINTS_DE_LA_COURBE} points de la courbe. Montants annuels en euros, arrondis ; calcul à 100 € près.`,
-    "Utilise les frais de fonctionnement enregistrés dans le comparateur. Ne modifie rien : pour retenir une rémunération, proposez un flux director_remuneration avec proposer_flux ou proposer_modification."
+    "Les frais de fonctionnement enregistrés dans le comparateur (voir comparer_statuts) s'ajoutent aux charges de la grille : nets et dividendes de la courbe sont calculés après eux, et diffèrent donc de ceux de simuler ; comparez les points entre eux.",
+    "Ne modifie rien : pour retenir une rémunération, proposez un flux director_remuneration mensuel (le montant annuel divisé par 12) avec proposer_flux ou proposer_modification, et ajustez les dividendes saisis (dividends_payment) ; l'aperçu de la proposition donne le net obtenu et signale des dividendes supérieurs au bénéfice distribuable."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({ ...ParametresVariante, statut: z.enum(["SASU", "EURL"]).describe("Statut de société étudié.") }),

@@ -43,7 +43,7 @@ const FluxProposeSchema = z.strictObject({
   acteurId: IdentifiantSchema.describe("Identifiant de l'acteur qui porte le flux (decrire_simulation, ou un acteur proposé dans suiteDe)."),
   typeFlux: z.enum(TYPES_DE_FLUX).describe("Type du flux (voir la description de l'outil)."),
   libelle: LibelleSchema,
-  montant: MontantSchema.describe(`Montant de chaque mois, en euros, positif (le type dit si c'est un revenu ou une dépense) : hors taxe pour le chiffre d'affaires et les charges, net pour un salaire ou une rémunération. Au plus ${LIMITES.montantMaximal.toLocaleString("fr-FR")} €.`),
+  montant: MontantSchema.describe(`Montant de chaque mois, en euros, positif (le type dit si c'est un revenu ou une dépense) : hors taxe pour le chiffre d'affaires et les charges d'une société ou d'une EI ; montant payé, TVA comprise, pour une dépense (expense) qui ne récupère pas la TVA ; net pour un salaire ou une rémunération. Au plus ${LIMITES.montantMaximal.toLocaleString("fr-FR")} €.`),
   montantBrut: MontantSchema.optional().describe("Salaire (salary) seulement : brut mensuel, au moins égal au net."),
   mois: ListeDeMoisSchema
 })
@@ -56,6 +56,8 @@ export const proposerFlux = definirOutil({
     "Chaque élément de « flux » est une série : un acteur, un type, un libellé et un montant mensuel, répété sur les mois indiqués d'une année (un mois seul pour une facture ponctuelle, [1,…,12] pour un loyer mensuel).",
     "Une année absente de la simulation est ajoutée si elle suit ou précède les années existantes.",
     `Types : ${TYPES_EXPLIQUES}.`,
+    "Les indemnités kilométriques et les frais réels ne sont pas des flux : l'utilisateur les règle dans l'application (déplacements de l'activité, frais réels de la personne).",
+    "Si les flux remplacent une estimation déjà saisie (lister_flux), proposez aussi de la supprimer ou de la modifier dans la même proposition (suiteDe) : sinon ils s'y ajoutent, et un avertissement le signale.",
     `Au plus ${LIMITES.operationsParProposition} séries par proposition, ${LIMITES.longueurLibelle} caractères par libellé. Les flux identiques à un flux déjà saisi le même mois sont signalés comme doublons probables.`,
     RAPPEL_VALIDATION
   ].join(" "),
