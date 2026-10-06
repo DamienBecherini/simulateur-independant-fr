@@ -23,6 +23,7 @@ import { ComparatorPanel } from "./components/ComparatorPanel"
 import { FlowLegend } from "./components/FlowLegend"
 import { DevWindowSize } from "./components/DevWindowSize"
 import { BandeauDemo } from "@/web/BandeauDemo"
+import { demoInstallee } from "@/web/pwa/installation"
 import { useZoom } from "./hooks/useZoom"
 import { ExportDialog } from "./components/ExportDialog"
 import { dateDuDocument, styleDesPages } from "./impression"
@@ -86,7 +87,7 @@ function App() {
   const [comparaison, setComparaison] = useState<ResumeDeLaComparaison | null>(null)
   const enTete = resume ? EN_TETE_RESUME : EN_TETE_CLASSIQUE
   // Diagnostic proposé avec un avis : aucune donnée de la simulation, seulement des nombres d'années et d'acteurs.
-  const diagnostic: Diagnostic = { version: VERSION_DE_L_APPLICATION, web: import.meta.env.VITE_CIBLE === "web", ...systemeEtNavigateur(navigator.userAgent), affichageEnCours: affichage, nombreDAnnees: currentSession.annees.length, nombreDActeurs: currentSession.entities.length }
+  const diagnostic: Diagnostic = { version: VERSION_DE_L_APPLICATION, web: import.meta.env.VITE_CIBLE === "web", installee: demoInstallee(), ...systemeEtNavigateur(navigator.userAgent), affichageEnCours: affichage, nombreDAnnees: currentSession.annees.length, nombreDActeurs: currentSession.entities.length }
 
   // La simulation de toutes les années est recalculée automatiquement, peu après chaque modification de la session.
   useEffect(() => {

@@ -103,7 +103,7 @@ Facultatif : le **Windows App Certification Kit** (dans le SDK Windows : `winget
    - **Options de soumission** : coller les **notes pour la certification** de la fiche.
 3. **Soumettre pour certification.** Compter quelques heures à trois jours ouvrés. En cas de refus, le rapport de certification dit quoi corriger ; corriger, reconstruire si besoin (même version : le Store accepte un nouveau paquet tant que la soumission n'est pas publiée), et resoumettre.
 4. Une fois certifiée : **Publier maintenant** (si la publication manuelle a été choisie). La fiche est en ligne sous `https://apps.microsoft.com/detail/<ID Store>`, en général dans l'heure.
-5. Ensuite, dans le dépôt : ajouter le lien du Store au README, à [installation.md](../installation.md) (le Store comme moyen recommandé sous Windows) et à la page de la démo web ; mentionner la version du Store dans [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md) si l'essai de l'étape 2 a demandé des ajustements.
+5. Ensuite, dans le dépôt : ajouter le lien du Store au README, à [installation.md](../installation.md) (le Store comme moyen recommandé sous Windows) et à la démo web : dans `src/web/ApplicationDeBureau.tsx`, remplacer « Bientôt sur le Microsoft Store » par un lien vers la fiche, en premier sous Windows (il sert à l'aide à l'installation, à la fenêtre « Utiliser avec une IA (MCP) » et à la ligne MCP de la version web installée, qui renvoient aujourd'hui vers l'exécutable GitHub, bloqué par Smart App Control) ; mentionner la version du Store dans [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md) si l'essai de l'étape 2 a demandé des ajustements.
 
 ## 4. Mises à jour
 
