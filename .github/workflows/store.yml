@@ -56,7 +56,8 @@ jobs:
       - name: Signaler l'identité manquante
         if: steps.identite.outputs.prete != 'true' && inputs.essai != true
         shell: bash
-        run: echo "::notice::Identité du paquet pas encore remplie (build/store/identite.json) : aucun paquet construit. Lancer le workflow à la main avec « essai » pour un paquet d'essai."
+        run: |
+          echo "::notice::Identité du paquet pas encore remplie (build/store/identite.json) : aucun paquet construit. Lancer le workflow à la main avec « essai » pour un paquet d'essai."
 
       - name: Installer les dépendances
         if: steps.identite.outputs.prete == 'true' || inputs.essai == true
