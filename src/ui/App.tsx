@@ -38,7 +38,8 @@ import { useVues, VuesContext } from "./hooks/useVues"
 import { VueDeLaPage } from "./components/VuesDeLaPage"
 import { FournisseurDesDetails } from "./components/DetailsDesCartes"
 import { DialogueDAvis } from "./components/DialogueDAvis"
-import { systemeEtNavigateur, type Diagnostic } from "@/lib/retours"
+import { ADRESSE_DE_L_AVIS, systemeEtNavigateur, type Diagnostic } from "@/lib/retours"
+import { useFenetreParLAdresse } from "./hooks/useFenetreParLAdresse"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import type { ResumeDeLaComparaison } from "@/lib/resume"
 import type { Affichage } from "@/types"
@@ -53,7 +54,8 @@ const EN_TETE_RESUME = { header: "mb-4", titre: "text-2xl sm:text-3xl print:text
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [isExportOpen, setExportOpen] = useState(false)
-  const [isAvisOpen, setAvisOpen] = useState(false)
+  // La fenêtre d'avis s'ouvre par son bouton, ou par l'adresse #donner-mon-avis (lien de la page outil du site).
+  const [isAvisOpen, setAvisOpen] = useFenetreParLAdresse(ADRESSE_DE_L_AVIS)
   const boutonDAvis = useRef<HTMLButtonElement>(null)
   const [simulation, setSimulation] = useState<SimulationPluriannuelle | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)

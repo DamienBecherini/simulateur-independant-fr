@@ -2,10 +2,11 @@
 // Fenêtre « Mentions légales et confidentialité » : le texte de src/lib/mentions-legales.ts. Elle s'ouvre depuis le
 // pied de page, depuis les paramètres, et dans la démo web par son adresse (#mentions-legales).
 
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react"
+import { useRef, useState, type MouseEvent, type ReactNode } from "react"
 import { ExternalLink, Scale } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { useFenetreParLAdresse } from "@/ui/hooks/useFenetreParLAdresse"
 import { ADRESSE_DES_MENTIONS_LEGALES, INTRODUCTION, RUBRIQUES, TITRE_DES_MENTIONS_LEGALES, estUnLienExterne, type Bloc, type Lien, type Morceau } from "@/lib/mentions-legales"
 
 const STYLE_DU_LIEN = "text-blue-700 underline underline-offset-2 [overflow-wrap:anywhere] hover:no-underline dark:text-blue-300"
@@ -117,35 +118,11 @@ export function BoutonDesMentionsLegales({ children, icone = false, ...bouton }:
   return <FenetreDesMentionsLegales open={ouverte} onOpenChange={setOuverte} declencheur={declencheur} />
 }
 
-const estLAdresseDesMentions = (hash: string) => hash === `#${ADRESSE_DES_MENTIONS_LEGALES}`
-
 /**
  * Les mentions légales ouvertes par l'adresse de la page (#mentions-legales), au chargement ou en cours de route.
  * À la fermeture, l'adresse reprend le fragment d'avant (la vue affichée), sans nouvelle entrée dans l'historique.
  */
 export function MentionsLegalesParLAdresse() {
-  const [ouverte, setOuverte] = useState(() => estLAdresseDesMentions(window.location.hash))
-  const fragmentPrecedent = useRef("")
-
-  useEffect(() => {
-    const suivre = (evenement: HashChangeEvent) => {
-      const ouvrir = estLAdresseDesMentions(window.location.hash)
-      if (ouvrir) {
-        const precedent = new URL(evenement.oldURL).hash
-        fragmentPrecedent.current = estLAdresseDesMentions(precedent) ? "" : precedent
-      }
-      setOuverte(ouvrir)
-    }
-    window.addEventListener("hashchange", suivre)
-    return () => window.removeEventListener("hashchange", suivre)
-  }, [])
-
-  const changerOuverture = (ouvrir: boolean) => {
-    setOuverte(ouvrir)
-    if (ouvrir || !estLAdresseDesMentions(window.location.hash)) return
-    const { pathname, search } = window.location
-    window.history.replaceState(window.history.state, "", `${pathname}${search}${fragmentPrecedent.current}`)
-  }
-
+  const [ouverte, changerOuverture] = useFenetreParLAdresse(ADRESSE_DES_MENTIONS_LEGALES)
   return <FenetreDesMentionsLegales open={ouverte} onOpenChange={changerOuverture} />
 }

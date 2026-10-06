@@ -25,6 +25,7 @@ describe("vues de l'affichage « Trois vues »", () => {
 
   it("laisse la vue affichée sous les mentions légales, qui ont leur propre adresse", () => {
     expect(destinationDeLAdresse("#mentions-legales", () => "resultats")).toBeNull()
+    expect(destinationDeLAdresse("#donner-mon-avis", () => "resultats")).toBeNull()
   })
 
   it("mène les liens de la barre de résumé à leur vue, même avant que le détail soit affiché", () => {

@@ -115,6 +115,18 @@ test("l'e-mail s'ouvre prérempli dans la messagerie, et la copie remplit le pre
   expect(await pressePapiers()).toBe(ADRESSE_E_MAIL)
 })
 
+test("l'adresse #donner-mon-avis (lien de la page outil du site) ouvre la fenêtre, déjà remplie de la version ; la fermer rend l'adresse de la page", async ({ page }) => {
+  await releverLesOuvertures(page)
+  await page.goto("./#donner-mon-avis")
+  await expect(fenetre(page)).toBeVisible()
+  await expect(fenetre(page)).toContainText(/Version : \d+\.\d+\.\d+/)
+  await expect(fenetre(page)).toContainText("Environnement : démo web")
+  await page.keyboard.press("Escape")
+  await expect(fenetre(page)).toBeHidden()
+  expect(new URL(page.url()).hash).toBe("")
+  await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
+})
+
 test("la fenêtre se remplit au clavier", async ({ page }) => {
   await ouvrir(page)
   await bouton(page).focus()

@@ -20,6 +20,9 @@ export interface Retour {
   diagnostic: boolean
 }
 
+/** Adresse de la fenêtre « Donner mon avis » : `#donner-mon-avis` l'ouvre (lien de la page outil du site). Ce n'est pas une vue de la page. */
+export const ADRESSE_DE_L_AVIS = "donner-mon-avis"
+
 /** Informations techniques : la version et la cible sont toujours envoyées, le reste seulement avec le diagnostic. */
 export interface Diagnostic {
   version: string

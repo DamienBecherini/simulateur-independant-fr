@@ -4,6 +4,7 @@
 // la page retrouvent la vue.
 
 import { ADRESSE_DES_MENTIONS_LEGALES } from "./mentions-legales"
+import { ADRESSE_DE_L_AVIS } from "./retours"
 
 export type Vue = "situation" | "resultats" | "comparer"
 
@@ -56,8 +57,8 @@ export function destinationDeLAdresse(adresse: string, vueDeLElement: (id: strin
   } catch {
     // Adresse mal encodée : lue telle quelle.
   }
-  // Les mentions légales s'ouvrent par-dessus la vue affichée, sans la changer.
-  if (!nom || nom === ADRESSE_DES_MENTIONS_LEGALES) return null
+  // Les mentions légales et la fenêtre d'avis s'ouvrent par-dessus la vue affichée, sans la changer.
+  if (!nom || nom === ADRESSE_DES_MENTIONS_LEGALES || nom === ADRESSE_DE_L_AVIS) return null
   if (estUneVue(nom)) return { vue: nom }
   const vue = DETAILS[nom] ?? vueDeLElement(nom)
   return vue ? { vue, detail: nom } : null
