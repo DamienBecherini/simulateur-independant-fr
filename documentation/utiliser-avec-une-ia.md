@@ -69,7 +69,7 @@ Tout client MCP qui lance un serveur local sur l'entrée et la sortie standard c
 
 1. L'IA lit la simulation et calcule avec les outils du simulateur.
 2. Pour modifier quelque chose, elle construit une **proposition** (`proposer_flux`, `proposer_acteur`…). Une proposition ne modifie rien : elle porte un récapitulatif (« Ajouter 24 flux ? »), une ligne par opération, les doublons probables et l'effet sur le net de chaque année, calculé par le moteur.
-3. Si vous êtes d'accord, l'IA appelle `appliquer_proposition`. Le serveur revérifie la proposition, puis la **dépose dans la boîte aux propositions** de l'application (dossier `propositions` du dossier de données). Il n'écrit jamais la simulation elle-même.
+3. Si vous êtes d'accord, l'IA appelle `appliquer_proposition`. Le serveur revérifie la proposition, puis la **dépose dans la boîte aux propositions** de l'application (dossier `propositions` du dossier de données). Il n'écrit jamais la simulation elle-même. Une proposition identique qui attend déjà dans la boîte n'y est pas déposée une deuxième fois.
 4. L'application affiche la fenêtre **Proposition de votre IA** : récapitulatif, opérations, effet sur le net de chaque année, recalculés sur la simulation affichée. Choisissez :
    - **Appliquer** : la proposition entre dans la simulation en **une seule étape**, que le bouton « Annuler » défait ;
    - **Refuser** : rien ne change ;

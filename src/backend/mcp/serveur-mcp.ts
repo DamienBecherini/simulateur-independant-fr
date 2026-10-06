@@ -9,7 +9,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema, type CallToolResult, typ
 import { z } from "zod"
 import { catalogueDesOutils, executerOutil, OUTILS, schemaJson } from "../logic/outils/catalogue.js"
 import { propositionValidee, ResultatPropositionSchema } from "../logic/outils/propositions.js"
-import { deposerUneProposition, ErreurDeDonnees, lireLaSessionEnregistree } from "./donnees.js"
+import { deposerUneProposition, ErreurDeDonnees, lireLaSessionEnregistree, propositionDejaEnAttente } from "./donnees.js"
 
 /** Ce que le serveur dit au client d'IA, avant tout outil : les règles du simulateur. */
 export const INSTRUCTIONS = [
@@ -27,6 +27,8 @@ const APPLIQUER = "appliquer_proposition"
 /** Ce que rend appliquer_proposition dans l'application de bureau : la proposition est envoyée, pas encore appliquée. */
 const ResultatDeLEnvoiSchema = z.object({
   envoyee: z.literal(true),
+  /** Vrai si une proposition identique attendait déjà dans la boîte : rien n'a été déposé de plus. */
+  dejaEnAttente: z.boolean(),
   fichier: z.string(),
   empreinteSession: z.string(),
   recapitulatif: z.string(),
@@ -37,7 +39,8 @@ const ResultatDeLEnvoiSchema = z.object({
 const DESCRIPTION_D_APPLIQUER = [
   "Envoie à l'application une proposition rendue par un outil proposer_…, telle quelle, une fois que l'utilisateur en a lu le résumé et qu'il est d'accord.",
   "La proposition est d'abord revérifiée en entier sur la simulation enregistrée ; elle s'affiche ensuite dans l'application, où l'utilisateur choisit « Appliquer » ou « Refuser ». Rien n'est appliqué avant son clic : dites-lui de valider dans l'application, puis relisez la simulation pour voir le résultat.",
-  "Refusée si la simulation a changé depuis la proposition (empreinte différente) : relisez alors la simulation et refaites la proposition."
+  "Refusée si la simulation a changé depuis la proposition (empreinte différente) : relisez alors la simulation et refaites la proposition.",
+  "Une proposition identique qui attend déjà dans l'application n'est pas envoyée une deuxième fois (dejaEnAttente)."
 ].join(" ")
 
 export interface OptionsDuServeur {
@@ -88,9 +91,12 @@ function resumeDuResultat(nom: string, titre: string, resultat: Record<string, u
 /** Valide la proposition sur la session enregistrée (fait par l'appelant), puis la dépose dans la boîte aux propositions. */
 async function envoyer(dossier: string, argumentsDeLAppel: unknown, resultat: Record<string, unknown>, maintenant: Date): Promise<CallToolResult> {
   const proposition = propositionValidee((argumentsDeLAppel as { proposition: unknown }).proposition)
-  const fichier = await deposerUneProposition(dossier, proposition, maintenant)
-  const envoi = ResultatDeLEnvoiSchema.parse({ envoyee: true, fichier, empreinteSession: proposition.empreinteSession, recapitulatif: resultat.recapitulatif, resume: resultat.resume, apercu: resultat.apercu })
-  const texte = `Proposition envoyée à l'application, pas encore appliquée : ${envoi.recapitulatif} L'utilisateur la relit dans l'application et choisit « Appliquer » ou « Refuser ». Demandez-lui de le faire, puis relisez la simulation pour voir le résultat.`
+  // Une proposition identique qui attend déjà n'est pas déposée une deuxième fois : l'utilisateur la verrait deux fois.
+  const dejaEnAttente = await propositionDejaEnAttente(dossier, proposition)
+  const fichier = dejaEnAttente ?? (await deposerUneProposition(dossier, proposition, maintenant))
+  const envoi = ResultatDeLEnvoiSchema.parse({ envoyee: true, dejaEnAttente: dejaEnAttente !== null, fichier, empreinteSession: proposition.empreinteSession, recapitulatif: resultat.recapitulatif, resume: resultat.resume, apercu: resultat.apercu })
+  const debut = dejaEnAttente ? "Proposition déjà envoyée, qui attend dans l'application (elle n'est pas déposée une deuxième fois)" : "Proposition envoyée à l'application, pas encore appliquée"
+  const texte = `${debut} : ${envoi.recapitulatif} L'utilisateur la relit dans l'application et choisit « Appliquer » ou « Refuser ». Demandez-lui de le faire, puis relisez la simulation pour voir le résultat.`
   return reponse(texte, envoi)
 }
 
