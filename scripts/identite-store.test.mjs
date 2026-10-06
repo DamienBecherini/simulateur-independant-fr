@@ -4,15 +4,16 @@
 
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
-import { A_REMPLIR, IDENTITE_D_ESSAI, identiteDuPaquet, lireLIdentite } from "./identite-store.mjs"
+import { A_REMPLIR, erreursDeLIdentite, IDENTITE_D_ESSAI, identiteDuPaquet, lireLIdentite } from "./identite-store.mjs"
 
 const remplie = { identityName: "12345Damien.SimulateurIndependantFR", publisher: "CN=0A1B2C3D-0000-1111-2222-333344445555", publisherDisplayName: "Damien Becherini" }
 
 describe("identité du paquet du Microsoft Store", () => {
-  it("est encore à remplir dans le dépôt", () => {
+  it("est, dans le dépôt, encore à remplir ou bien valide", () => {
     const fichier = JSON.parse(readFileSync(new URL("../build/store/identite.json", import.meta.url), "utf-8"))
-    expect(lireLIdentite(fichier).complete).toBe(false)
-    expect(Object.values(lireLIdentite(fichier).identite)).toEqual([A_REMPLIR, `CN=${A_REMPLIR}`, A_REMPLIR])
+    const { identite, complete } = lireLIdentite(fichier)
+    if (complete) expect(erreursDeLIdentite(identite)).toEqual([])
+    else expect(Object.values(identite)).toEqual([A_REMPLIR, `CN=${A_REMPLIR}`, A_REMPLIR])
   })
 
   it("refuse de construire un paquet à publier sans identité, et donne l'identité d'essai avec --essai", () => {
