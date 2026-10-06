@@ -82,7 +82,7 @@ function resumeDuResultat(nom: string, titre: string, resultat: Record<string, u
   if (nom.startsWith("proposer_")) {
     return `Proposition prête, rien n'est modifié : ${String(resultat.recapitulatif)} Montrez le résumé à l'utilisateur ; s'il est d'accord, appelez ${APPLIQUER} avec cette proposition, pour qu'il la valide dans l'application. ${lue}`
   }
-  return `${titre} : résultat calculé par le simulateur. ${lue}`
+  return `${titre} : réponse du simulateur. ${lue}`
 }
 
 /** Valide la proposition sur la session enregistrée (fait par l'appelant), puis la dépose dans la boîte aux propositions. */

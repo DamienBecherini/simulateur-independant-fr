@@ -19,7 +19,7 @@ Les chiffres viennent toujours du moteur du simulateur, jamais de l'IA. Aucun ou
 
 Le serveur se lance avec l'exécutable de l'application, en mode Node (variable d'environnement `ELECTRON_RUN_AS_NODE=1`) : **rien d'autre à installer**, pas même Node.js.
 
-La configuration se copie depuis l'application : **Paramètres** (icône en haut à gauche) > **Utiliser avec une IA (MCP)** > **Copier la configuration**. Elle contient les chemins réels de votre installation. Elle a cette forme :
+La configuration se copie depuis l'application : **Paramètres** (icône en haut à gauche) > **Utiliser avec une IA (MCP)** > **Copier la configuration**. Elle contient les chemins réels de votre installation. Elle a cette forme (exemple sous Windows ; les chemins dépendent du dossier d'installation choisi) :
 
 ```json
 {
