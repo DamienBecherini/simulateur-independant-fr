@@ -12,7 +12,8 @@ import { commandeDeVerification, configurationDeClaudeDesktop, configurationDuCl
 export const TITRE_IA = "Utiliser avec une IA (MCP)"
 
 const PETIT_TEXTE = "text-sm text-slate-600 dark:text-slate-400"
-const CODE = "max-h-64 overflow-auto whitespace-pre rounded-md bg-slate-100 p-3 font-mono text-xs dark:bg-slate-800"
+// Les chemins de la configuration sont longs : ils passent à la ligne, sans défilement horizontal (le bouton copie le texte exact).
+const CODE = "max-h-64 overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere] rounded-md bg-slate-100 p-3 font-mono text-xs dark:bg-slate-800"
 const TITRE_DE_PARTIE = "text-sm font-semibold text-slate-800 dark:text-slate-100"
 
 /** Le contenu de la fenêtre, une fois les chemins de l'installation connus. */
@@ -108,7 +109,7 @@ export function BoutonUtiliserAvecUneIA(bouton: Pick<ButtonProps, "variant" | "c
         <Bot className="mr-2 size-4" aria-hidden="true" /> {TITRE_IA}
       </Button>
       <Dialog open={ouverte} onOpenChange={setOuverte}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>*]:min-w-0">
           <DialogHeader>
             <DialogTitle>{TITRE_IA}</DialogTitle>
             <DialogDescription>Connecter un client d'IA de bureau au simulateur, par le protocole MCP (Model Context Protocol).</DialogDescription>

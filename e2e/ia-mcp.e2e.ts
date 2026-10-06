@@ -80,3 +80,16 @@ test("une proposition déposée dans la boîte sur une autre version de la simul
   await expect.poll(() => fs.readdir(path.join(dossierDonnees, "propositions"))).toEqual([])
   await expect(page.getByRole("button", { name: "Annuler" })).toBeDisabled()
 })
+
+test("l'aide « Utiliser avec une IA » tient dans la largeur de la fenêtre, sans défilement horizontal", async ({ lancer }) => {
+  const { page } = await lancer()
+  await page.setViewportSize({ width: 900, height: 700 })
+  await page.getByRole("button", { name: "Paramètres" }).click()
+  await page.getByRole("button", { name: /Utiliser avec une IA/ }).click()
+  const fenetre = page.getByRole("dialog", { name: /Utiliser avec une IA/ })
+  await expect(fenetre.getByRole("button", { name: "Copier la configuration" })).toBeVisible()
+  // Les chemins de la configuration, très longs, passent à la ligne : ni la fenêtre ni ses blocs ne défilent en largeur.
+  const debordements = await fenetre.evaluate(dialogue => [dialogue, ...Array.from(dialogue.querySelectorAll("pre"))].filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.tagName))
+  expect(debordements).toEqual([])
+  expect((await fenetre.boundingBox())!.width).toBeLessThanOrEqual(900)
+})
