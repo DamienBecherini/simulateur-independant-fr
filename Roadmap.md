@@ -275,6 +275,25 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
+### **Phase 17 : Le foyer complet — impôt sur le revenu [Planifié 🗓️]**
+
+- **Objectif :** que l'impôt du foyer tienne compte de ce qu'un indépendant déclare à côté de son activité, en commençant par ce qui change le choix du statut et de la rémunération. Les enfants, la case T et la pension à un enfant majeur restent en phase 15.
+- **Avant de coder chaque point :** règles 2024 à 2026 confirmées sur service-public.gouv.fr et Légifrance, en particulier les dispositions récentes (prélèvements sociaux à 18,6 % et leurs exclusions, contribution différentielle sur les hauts revenus, report des plafonds du PER, location meublée, déficit foncier majoré).
+
+1.  **PER :** flux « versement PER » sur la personne ; déduction de droit commun (article 163 quatervicies du CGI : 10 % des revenus professionnels de l'année précédente, minimum et maximum liés au plafond annuel de la sécurité sociale, report des plafonds inutilisés) et plafond des indépendants (article 154 bis : 10 % du bénéfice, plus 15 % entre 1 et 8 plafonds annuels) pour l'EI et le gérant d'EURL ; plafond tiré de l'année précédente quand elle est dans la session, sinon saisi ; versement au PER proposé par le comparateur et l'optimiseur, statut par statut. À vérifier : effet sur l'assiette des cotisations des indépendants, cas de la micro-entreprise, durée du report.
+2.  **Hauts revenus :** contribution exceptionnelle (3 % et 4 % du revenu fiscal de référence au-delà des seuils) ; contribution différentielle (20 % minimum) si elle est reconduite. Utile au lissage des dividendes sur plusieurs années.
+3.  **Prélèvements sociaux par catégorie :** taux par nature de revenu dans les règles de chaque année (dividendes et placements, revenus fonciers), CSG déductible.
+4.  **Pensions de retraite :** abattement de 10 % propre aux pensions, pour le cumul emploi-retraite. Aujourd'hui, une pension se saisit en « autre revenu imposable », ajouté tel quel au barème : montant net imposable déjà calculé.
+5.  **Revenus fonciers :** bien loué, loyers et charges ; micro-foncier (30 %, sous 15 000 € de loyers) ou réel avec déficit imputable sur le revenu global (10 700 €), prélèvements sociaux.
+6.  **Réductions et crédits d'impôt :** emploi à domicile, garde des enfants de moins de 6 ans (après la date de naissance de la phase 15), dons ; réductions puis crédits après la décote, plafonnement global des avantages fiscaux.
+7.  **Placements :** intérêts et plus-values mobilières au prélèvement forfaitaire ou au barème, l'option étant commune à tous les revenus mobiliers du foyer (dividendes de la société simulée compris) ; revenu fiscal de référence complété.
+8.  **Plus tard :** location meublée non professionnelle en micro-BIC (abattements de la loi Le Meur), pension alimentaire à un ex-conjoint. **Hors périmètre :** location meublée au réel avec amortissements, rachats d'assurance-vie, IFI (avertissement seulement).
+
+- **Pour chaque point :** format de fichier suivant avec migration (ADR 005), cas de référence recalculés à la main, exports CSV et Markdown, outils pour les IA (types de flux, résultats du foyer, règles de l'année), limites de la page outil et de la FAQ du site mises à jour.
+- **Ordre conseillé :** 1, 2 et 3 (fort effet sur les décisions, peu de saisie), puis 4, 5, 6 et 7.
+
+---
+
 ### **Travaux transverses [À faire 🧰]**
 
 Tâches sans phase attitrée, à traiter entre deux fonctionnalités.

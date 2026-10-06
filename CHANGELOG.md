@@ -6,6 +6,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Modifié
+
+- Outils pour les IA : « autre revenu imposable » est décrit comme un montant net imposable, ajouté tel quel au barème (sans l'abattement de 10 % des salaires), ce que fait le calcul.
+
 ## [0.9.1] — 2026-10-06
 
 ### Ajouté
