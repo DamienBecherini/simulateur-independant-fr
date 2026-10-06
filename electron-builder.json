@@ -47,7 +47,8 @@
     ],
     "category": "Office",
     "maintainer": "Damien Becherini <damien@becherini.fr>",
-    "synopsis": "Simulateur hors-ligne pour indépendants français"
+    "synopsis": "Simulateur hors-ligne pour indépendants français",
+    "syncDesktopName": true
   },
   "win": {
     "target": [
