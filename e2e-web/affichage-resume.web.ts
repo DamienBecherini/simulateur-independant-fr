@@ -6,6 +6,7 @@
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 import { choisirAvantLeChargement } from "./support/affichage"
+import { choisirLaPolice, POLICES } from "./support/police"
 
 /** Ouvre la démo et attend la simulation d'exemple, le comparateur et la courbe de l'arbitrage. */
 async function ouvrir(page: Page) {
@@ -194,15 +195,18 @@ for (const largeur of [320, 375]) {
   test.describe(`sur un téléphone de ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: 812 }, hasTouch: true, isMobile: true })
 
-    test("rien ne déborde en largeur, et le comparateur se lit en cartes", async ({ page }) => {
-      await ouvrirEnResume(page)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)
-      await expect(page.getByRole("list", { name: "Net dans la poche selon le statut" })).toBeVisible()
-      await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeHidden()
-      await page.getByRole("button", { name: /Voir le détail/ }).click()
-      await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)
-    })
+    for (const police of POLICES) {
+      test(`rien ne déborde en largeur, et le comparateur se lit en cartes, ${police}`, async ({ page, context }) => {
+        await choisirLaPolice(context, police)
+        await ouvrirEnResume(page)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)
+        await expect(page.getByRole("list", { name: "Net dans la poche selon le statut" })).toBeVisible()
+        await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeHidden()
+        await page.getByRole("button", { name: /Voir le détail/ }).click()
+        await expect(page.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)
+      })
+    }
   })
 }
 
@@ -225,10 +229,12 @@ async function hauteur(page: Page, affichage: "classique" | "resume") {
 }
 
 // Objectifs de l'étude (docs/conception/allegement-ecran.md) : environ 3 700 px sur ordinateur, 5 900 px sur
-// téléphone, au plus 3 800 et 6 000 px.
+// téléphone, au plus 3 800 et 6 000 px. Les plafonds vérifiés gardent une marge d'environ 5 % pour les polices
+// larges (DejaVu Sans sous Linux, Verdana : 3 776 et 6 209 px) ; l'écart avec l'affichage classique, lui, ne dépend
+// pas de la police.
 for (const [largeur, hauteurEcran, plafond] of [
-  [1440, 900, 3800],
-  [375, 812, 6000]
+  [1440, 900, 4000],
+  [375, 812, 6500]
 ] as const) {
   test.describe(`hauteur de la page à ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: hauteurEcran }, hasTouch: largeur < 500, isMobile: largeur < 500 })

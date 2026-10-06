@@ -6,6 +6,7 @@
 
 import { test, expect, type Locator, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { choisirLaPolice, POLICES } from "./support/police"
 
 type Affichage = "classique" | "resume" | "panneaux" | "vues"
 
@@ -229,19 +230,22 @@ for (const largeur of [320, 375]) {
   test.describe(`sur un téléphone de ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: 812 }, hasTouch: true, isMobile: true })
 
-    test("les onglets tiennent sur une ligne, à 44 px du doigt, et aucune vue ne déborde en largeur", async ({ page }) => {
-      await ouvrirEnVues(page)
-      await expect(onglets(page).getByRole("tab")).toHaveText(["Situation", "Résultats", "Comparer"], { useInnerText: true })
-      const cadres = await onglets(page).getByRole("tab").evaluateAll(elements => elements.map(e => e.getBoundingClientRect()).map(c => ({ haut: Math.round(c.top), hauteur: c.height, largeur: c.width })))
-      expect(new Set(cadres.map(c => c.haut)).size).toBe(1)
-      for (const cadre of cadres) expect(Math.min(cadre.hauteur, cadre.largeur)).toBeGreaterThanOrEqual(44)
+    for (const police of POLICES) {
+      test(`les onglets tiennent sur une ligne, à 44 px du doigt, et aucune vue ne déborde en largeur, ${police}`, async ({ page, context }) => {
+        await choisirLaPolice(context, police)
+        await ouvrirEnVues(page)
+        await expect(onglets(page).getByRole("tab")).toHaveText(["Situation", "Résultats", "Comparer"], { useInnerText: true })
+        const cadres = await onglets(page).getByRole("tab").evaluateAll(elements => elements.map(e => e.getBoundingClientRect()).map(c => ({ haut: Math.round(c.top), hauteur: c.height, largeur: c.width })))
+        expect(new Set(cadres.map(c => c.haut)).size).toBe(1)
+        for (const cadre of cadres) expect(Math.min(cadre.hauteur, cadre.largeur)).toBeGreaterThanOrEqual(44)
 
-      for (const [nom, vue] of [[SITUATION, "situation"], [RESULTATS, "resultats"], [COMPARER, "comparer"]] as const) {
-        await onglet(page, nom).tap()
-        await attendreLaVue(page, vue)
-        expect(await page.evaluate(() => document.documentElement.scrollWidth), `vue ${vue}`).toBeLessThanOrEqual(largeur)
-      }
-    })
+        for (const [nom, vue] of [[SITUATION, "situation"], [RESULTATS, "resultats"], [COMPARER, "comparer"]] as const) {
+          await onglet(page, nom).tap()
+          await attendreLaVue(page, vue)
+          expect(await page.evaluate(() => document.documentElement.scrollWidth), `vue ${vue}`).toBeLessThanOrEqual(largeur)
+        }
+      })
+    }
   })
 }
 

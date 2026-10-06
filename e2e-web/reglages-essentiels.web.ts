@@ -7,6 +7,7 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { choisirLaPolice, POLICES } from "./support/police"
 
 type Affichage = "resume" | "classique" | "vues"
 const AFFICHAGES: Affichage[] = ["resume", "classique", "vues"]
@@ -156,23 +157,26 @@ for (const largeur of [320, 375]) {
   test.describe(`sur un téléphone de ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: 800 }, hasTouch: true, isMobile: true })
 
-    test("les réglages tiennent dans la largeur, dans tous les affichages", async ({ page, context }) => {
-      for (const affichage of AFFICHAGES) {
-        const onglet = await context.newPage()
-        await ouvrir(onglet, affichage)
-        await expect(caseRetraite(onglet)).toBeVisible()
-        expect(await onglet.evaluate(() => document.documentElement.scrollWidth), `largeur de la page, ${affichage}`).toBeLessThanOrEqual(largeur)
-        const reglages = await onglet.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).evaluate(e => e.getBoundingClientRect().right)
-        expect(reglages).toBeLessThanOrEqual(largeur)
-        // Les cinq modes tiennent en deux lignes à 375 px, en trois au plus à 320 px.
-        expect(await lignesDesModes(onglet), `lignes des modes, ${affichage}`).toBeLessThanOrEqual(largeur >= 375 ? 2 : 3)
-        await onglet.getByRole("radio", { name: "Sur mesure" }).check({ force: true })
-        await expect(curseur(onglet)).toBeVisible()
-        expect(await onglet.evaluate(() => document.documentElement.scrollWidth), `largeur de la page avec le curseur, ${affichage}`).toBeLessThanOrEqual(largeur)
-        await onglet.close()
-      }
-      await page.close()
-    })
+    for (const police of POLICES) {
+      test(`les réglages tiennent dans la largeur, dans tous les affichages, ${police}`, async ({ page, context }) => {
+        await choisirLaPolice(context, police)
+        for (const affichage of AFFICHAGES) {
+          const onglet = await context.newPage()
+          await ouvrir(onglet, affichage)
+          await expect(caseRetraite(onglet)).toBeVisible()
+          expect(await onglet.evaluate(() => document.documentElement.scrollWidth), `largeur de la page, ${affichage}`).toBeLessThanOrEqual(largeur)
+          const reglages = await onglet.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).evaluate(e => e.getBoundingClientRect().right)
+          expect(reglages).toBeLessThanOrEqual(largeur)
+          // Les cinq modes tiennent en deux lignes à 375 px, en trois au plus à 320 px.
+          expect(await lignesDesModes(onglet), `lignes des modes, ${affichage}`).toBeLessThanOrEqual(largeur >= 375 ? 2 : 3)
+          await onglet.getByRole("radio", { name: "Sur mesure" }).check({ force: true })
+          await expect(curseur(onglet)).toBeVisible()
+          expect(await onglet.evaluate(() => document.documentElement.scrollWidth), `largeur de la page avec le curseur, ${affichage}`).toBeLessThanOrEqual(largeur)
+          await onglet.close()
+        }
+        await page.close()
+      })
+    }
 
     test("les réglages ne présentent aucune violation WCAG", async ({ page }) => {
       await ouvrir(page, "resume")

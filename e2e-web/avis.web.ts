@@ -6,6 +6,7 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { choisirLaPolice, POLICES } from "./support/police"
 
 const ADRESSE_NOUVEAU_TICKET = "https://github.com/DamienBecherini/simulateur-independant-fr/issues/new"
 const ADRESSE_E_MAIL = "simulateur-independant@damien.becherini.fr"
@@ -152,23 +153,26 @@ for (const largeur of [320, 375]) {
   test.describe(`sur un téléphone de ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: 740 }, hasTouch: true, isMobile: true })
 
-    test("le bouton tient dans la barre d'outils, la fenêtre dans la largeur, et tout reste accessible", async ({ page }) => {
-      await ouvrir(page)
-      const boite = await bouton(page).boundingBox()
-      expect(boite!.x + boite!.width).toBeLessThanOrEqual(largeur)
-      expect(Math.min(boite!.width, boite!.height)).toBeGreaterThanOrEqual(24)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)
+    for (const police of POLICES) {
+      test(`le bouton tient dans la barre d'outils, la fenêtre dans la largeur, et tout reste accessible, ${police}`, async ({ page, context }) => {
+        await choisirLaPolice(context, police)
+        await ouvrir(page)
+        const boite = await bouton(page).boundingBox()
+        expect(boite!.x + boite!.width).toBeLessThanOrEqual(largeur)
+        expect(Math.min(boite!.width, boite!.height)).toBeGreaterThanOrEqual(24)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)
 
-      await ouvrirLaFenetre(page)
-      await remplir(page)
-      const largeurs = await fenetre(page).evaluate(element => ({ contenu: element.scrollWidth, visible: element.clientWidth }))
-      expect(largeurs.contenu).toBeLessThanOrEqual(largeurs.visible)
-      // Cibles au doigt : 44 px au moins.
-      const etoiles = fenetre(page).locator("label", { has: page.getByRole("radio", { name: "5 sur 5" }) })
-      for (const cible of [etoiles, envoyerSurGitHub(page), fenetre(page).getByRole("button", { name: "Copier le message" })]) {
-        expect((await cible.boundingBox())!.height).toBeGreaterThanOrEqual(43.5)
-      }
-      await auditer(page, `avis, ${largeur} px`, "[role=dialog]")
-    })
+        await ouvrirLaFenetre(page)
+        await remplir(page)
+        const largeurs = await fenetre(page).evaluate(element => ({ contenu: element.scrollWidth, visible: element.clientWidth }))
+        expect(largeurs.contenu).toBeLessThanOrEqual(largeurs.visible)
+        // Cibles au doigt : 44 px au moins.
+        const etoiles = fenetre(page).locator("label", { has: page.getByRole("radio", { name: "5 sur 5" }) })
+        for (const cible of [etoiles, envoyerSurGitHub(page), fenetre(page).getByRole("button", { name: "Copier le message" })]) {
+          expect((await cible.boundingBox())!.height).toBeGreaterThanOrEqual(43.5)
+        }
+        await auditer(page, `avis, ${largeur} px`, "[role=dialog]")
+      })
+    }
   })
 }

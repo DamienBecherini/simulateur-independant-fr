@@ -5,6 +5,7 @@
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 import { deplierLeTableauDuComparateur } from "./support/affichage"
+import { choisirLaPolice, POLICES } from "./support/police"
 
 /** Ouvre la démo, déplie le tableau du comparateur et le passe en répartition personnalisée, poignées comprises. */
 async function ouvrirEnRepartitionPersonnalisee(page: Page) {
@@ -67,12 +68,15 @@ test("le partage du bénéfice ne présente aucune violation WCAG, en clair et e
 test.describe("sur un téléphone", () => {
   test.use({ viewport: { width: 375, height: 800 } })
 
-  test("le partage du bénéfice tient dans la largeur et ne présente aucune violation WCAG", async ({ page }) => {
-    await ouvrirEnRepartitionPersonnalisee(page)
-    const section = page.locator("section[aria-labelledby=repartition-titre]")
-    const largeur = await section.evaluate(element => ({ contenu: element.scrollWidth, visible: element.clientWidth }))
-    expect(largeur.contenu).toBeLessThanOrEqual(largeur.visible)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
-    await auditer(page, "partage du bénéfice, 375 px", "section[aria-labelledby=repartition-titre]")
-  })
+  for (const police of POLICES) {
+    test(`le partage du bénéfice tient dans la largeur et ne présente aucune violation WCAG, ${police}`, async ({ page, context }) => {
+      await choisirLaPolice(context, police)
+      await ouvrirEnRepartitionPersonnalisee(page)
+      const section = page.locator("section[aria-labelledby=repartition-titre]")
+      const largeur = await section.evaluate(element => ({ contenu: element.scrollWidth, visible: element.clientWidth }))
+      expect(largeur.contenu).toBeLessThanOrEqual(largeur.visible)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
+      await auditer(page, "partage du bénéfice, 375 px", "section[aria-labelledby=repartition-titre]")
+    })
+  }
 })

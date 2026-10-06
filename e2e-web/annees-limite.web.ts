@@ -6,6 +6,7 @@
 import { writeFile } from "node:fs/promises"
 import { test, expect, type Page, type TestInfo } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { choisirLaPolice, POLICES } from "./support/police"
 
 const DIX_ANNEES = Array.from({ length: 10 }, (_, i) => 2024 + i)
 
@@ -118,32 +119,35 @@ test("dix années ne présentent aucune violation WCAG, en thème clair comme en
 test.describe("sur un téléphone", () => {
   test.use({ viewport: { width: 375, height: 800 } })
 
-  test("dix années tiennent dans la largeur : la synthèse défile seule, au clavier, colonne des années fixe", async ({ page }, testInfo) => {
-    await ouvrirDixAnnees(page, testInfo)
-    expect(await largeurDeLaPage(page)).toBeLessThanOrEqual(375)
+  for (const police of POLICES) {
+    test(`dix années tiennent dans la largeur : la synthèse défile seule, au clavier, colonne des années fixe, ${police}`, async ({ page, context }, testInfo) => {
+      await choisirLaPolice(context, police)
+      await ouvrirDixAnnees(page, testInfo)
+      expect(await largeurDeLaPage(page)).toBeLessThanOrEqual(375)
 
-    // La synthèse défile dans sa région, au clavier ; la colonne des années reste au bord gauche.
-    const region = page.getByRole("region", { name: "Synthèse des années" })
-    await region.scrollIntoViewIfNeeded()
-    expect(await region.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true)
-    await region.focus()
-    for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight")
-    await expect.poll(() => region.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
-    const bordGauche = (await region.boundingBox())!.x
-    for (const cellule of [region.getByRole("columnheader", { name: "Année" }), region.getByRole("rowheader", { name: "2024" }), region.getByRole("rowheader", { name: /^2033/ })]) {
-      expect(Math.abs((await cellule.boundingBox())!.x - bordGauche)).toBeLessThan(1)
-    }
-    // Le fond de la colonne fixe est opaque : les montants qui passent dessous ne se voient pas au travers.
-    const fond = await region.getByRole("rowheader", { name: "2024" }).evaluate(element => getComputedStyle(element).backgroundColor)
-    expect(fond).not.toMatch(/rgba\(.*, 0\)|transparent/)
+      // La synthèse défile dans sa région, au clavier ; la colonne des années reste au bord gauche.
+      const region = page.getByRole("region", { name: "Synthèse des années" })
+      await region.scrollIntoViewIfNeeded()
+      expect(await region.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true)
+      await region.focus()
+      for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight")
+      await expect.poll(() => region.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+      const bordGauche = (await region.boundingBox())!.x
+      for (const cellule of [region.getByRole("columnheader", { name: "Année" }), region.getByRole("rowheader", { name: "2024" }), region.getByRole("rowheader", { name: /^2033/ })]) {
+        expect(Math.abs((await cellule.boundingBox())!.x - bordGauche)).toBeLessThan(1)
+      }
+      // Le fond de la colonne fixe est opaque : les montants qui passent dessous ne se voient pas au travers.
+      const fond = await region.getByRole("rowheader", { name: "2024" }).evaluate(element => getComputedStyle(element).backgroundColor)
+      expect(fond).not.toMatch(/rgba\(.*, 0\)|transparent/)
 
-    // La fenêtre des flux, avec ses raccourcis et ses neuf cases, ne déborde pas non plus.
-    await ouvrirLesFluxDeJanvier(page)
-    const fenetre = page.getByRole("dialog")
-    expect(await fenetre.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
-    expect(await largeurDeLaPage(page)).toBeLessThanOrEqual(375)
-    await auditer(page, "fenêtre des flux avec raccourcis, 375 px", "[role=dialog]")
-  })
+      // La fenêtre des flux, avec ses raccourcis et ses neuf cases, ne déborde pas non plus.
+      await ouvrirLesFluxDeJanvier(page)
+      const fenetre = page.getByRole("dialog")
+      expect(await fenetre.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+      expect(await largeurDeLaPage(page)).toBeLessThanOrEqual(375)
+      await auditer(page, "fenêtre des flux avec raccourcis, 375 px", "[role=dialog]")
+    })
+  }
 })
 
 test("un fichier dont les années ne se suivent pas est refusé, avec les années manquantes", async ({ page }, testInfo) => {

@@ -6,6 +6,7 @@
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 import { deplierLeTableauDuComparateur } from "./support/affichage"
+import { choisirLaPolice, POLICES } from "./support/police"
 
 /**
  * Ouvre la démo : l'atelier de la simulation d'exemple, sans dividendes saisis, est comparé au meilleur net ; le
@@ -70,10 +71,13 @@ test("le comparateur au meilleur net ne présente aucune violation WCAG, en clai
 test.describe("sur un téléphone", () => {
   test.use({ viewport: { width: 375, height: 800 } })
 
-  test("les réglages du meilleur net tiennent dans la largeur et ne présentent aucune violation WCAG", async ({ page }) => {
-    await ouvrir(page)
-    await expect(enTete(page, "EURL")).toContainText("rémunération optimale")
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
-    await auditer(page, "comparateur au meilleur net, 375 px", "section[aria-labelledby=comparateur-titre]")
-  })
+  for (const police of POLICES) {
+    test(`les réglages du meilleur net tiennent dans la largeur et ne présentent aucune violation WCAG, ${police}`, async ({ page, context }) => {
+      await choisirLaPolice(context, police)
+      await ouvrir(page)
+      await expect(enTete(page, "EURL")).toContainText("rémunération optimale")
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
+      await auditer(page, "comparateur au meilleur net, 375 px", "section[aria-labelledby=comparateur-titre]")
+    })
+  }
 })

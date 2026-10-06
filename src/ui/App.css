@@ -2,6 +2,30 @@
 
 @plugin "tailwindcss-animate";
 
+/* Police Inter (variable, de 100 à 900), servie avec l'application pour fonctionner hors ligne et rendre la même
+   largeur de texte sur tous les systèmes. Seuls les jeux latin et latin étendu sont repris du paquet
+   @fontsource-variable/inter : le navigateur ne télécharge le second que si un caractère de sa plage s'affiche. */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
 /* Thème sombre à l'écran seulement : un document imprimé ou enregistré en PDF est toujours en couleurs claires. */
 @custom-variant dark {
   @media not print {
@@ -111,6 +135,11 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Chiffres à chasse fixe dans les tableaux et les champs : les montants s'alignent d'une ligne à l'autre (ceux
+     d'Inter sont proportionnels par défaut). */
+  :where(table, input) {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Indicateur de focus par défaut, pour les éléments qui n'en définissent pas (cases de la grille, sections

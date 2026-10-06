@@ -26,16 +26,17 @@ const MODES = Object.keys(libellesCourtsRepartition) as ModeRepartition[]
 
 /**
  * Choix du partage du bénéfice des colonnes SASU et EURL : des boutons radio aux libellés courts, présentés comme un
- * sélecteur segmenté qui passe à la ligne sur téléphone. La phrase de chaque mode le décrit (aria-describedby) et
+ * sélecteur segmenté qui passe à la ligne sur téléphone. De 352 à 640 px de large, une grille de deux lignes (trois
+ * boutons, puis deux) dont les libellés vont à la ligne au besoin : elle tient aussi avec une police large. La phrase de chaque mode le décrit (aria-describedby) et
  * s'affiche au survol ; celle du mode choisi est écrite sous les boutons.
  */
 export function ChoixDeLaRepartition({ mode, avecRetraite, onChange }: { mode: ModeRepartition; avecRetraite: boolean; onChange: (mode: ModeRepartition) => void }) {
   return (
     <fieldset className="min-w-0 max-w-full space-y-1">
       <legend className="mb-1 text-sm font-medium leading-none">Bénéfice de la société (SASU, EURL)</legend>
-      <div className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-md border border-slate-300 bg-background p-0.5 dark:border-slate-600">
-        {MODES.map(m => (
-          <label key={m} title={descriptionDuMode(m, avecRetraite)} className={cn("flex min-h-8 flex-auto cursor-pointer items-center justify-center whitespace-nowrap rounded px-2 py-1 text-xs font-medium leading-tight sm:px-3 sm:text-sm pointer-coarse:min-h-11 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--ring)]", m === mode ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 print:hidden")}>
+      <div className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-md border border-slate-300 bg-background p-0.5 min-[22rem]:max-sm:grid min-[22rem]:max-sm:w-full min-[22rem]:max-sm:grid-cols-6 dark:border-slate-600">
+        {MODES.map((m, i) => (
+          <label key={m} title={descriptionDuMode(m, avecRetraite)} className={cn("flex min-h-8 flex-auto cursor-pointer items-center justify-center whitespace-nowrap rounded px-2 py-1 text-center text-xs font-medium leading-tight sm:px-3 sm:text-sm pointer-coarse:min-h-11 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--ring)] min-[22rem]:max-sm:whitespace-normal min-[22rem]:max-sm:px-1", i < 3 ? "min-[22rem]:max-sm:col-span-2" : "min-[22rem]:max-sm:col-span-3", m === mode ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 print:hidden")}>
             <input type="radio" name="comparateur-repartition" value={m} checked={m === mode} aria-describedby={`comparateur-mode-${m}`} onChange={() => onChange(m)} className="sr-only" />
             {libellesCourtsRepartition[m]}
           </label>
