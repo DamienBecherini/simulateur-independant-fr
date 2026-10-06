@@ -228,7 +228,8 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation
     ...ferme,
     // Les dispositifs de l'année (sortie du régime micro, ACRE…) rejoignent les notes de la colonne.
     warnings: [...notes, ...(activite?.dispositifs ?? []), ...(activite?.warnings ?? [])],
-    ...(activite?.partage ? { partage: activite.partage } : {})
+    ...(activite?.partage ? { partage: activite.partage } : {}),
+    ...(activite?.reserves ? { reserves: activite.reserves } : {})
   }
 }
 

@@ -736,6 +736,8 @@ export interface ScenarioStatut {
   warnings: string[]
   /** SASU et EURL : partage du bénéfice de l'activité entre rémunération, prélèvements, dividendes et réserves. */
   partage?: PartageDuBenefice
+  /** SASU et EURL : réserves de l'activité, du 1er janvier au 31 décembre (voir l'ADR 012). */
+  reserves?: ReservesDeLaSociete
   /** SASU et EURL, au meilleur net : la rémunération retenue pour ce statut. */
   remunerationOptimale?: RemunerationOptimale
 }

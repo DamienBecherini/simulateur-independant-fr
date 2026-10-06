@@ -2,6 +2,7 @@
 // Synthèse des années de la session, une ligne par année : ce que les foyers gardent et ce qui part en prélèvements.
 
 import type { SimulationPluriannuelle } from "@/types"
+import { reservesDesSocietes } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
 import { ZoneDefilante } from "./ZoneDefilante"
 import { COLONNE_FIXE } from "../colonne-fixe"
@@ -23,6 +24,9 @@ interface SyntheseDesAnneesProps {
 /** Rien à synthétiser tant que la session ne compte qu'une année. */
 export function SyntheseDesAnnees({ simulation, annee }: SyntheseDesAnneesProps) {
   if (!simulation || simulation.annees.length < 2) return null
+  // Réserves des sociétés à l'IS au 31 décembre, cumulées d'une année à l'autre : une colonne dès qu'une année en a.
+  const reserves = simulation.annees.map(({ report }) => (report ? reservesDesSocietes(report) : null))
+  const avecReserves = reserves.some(montant => montant !== null)
 
   return (
     <section className="mt-8 space-y-3" aria-labelledby="synthese-annees-titre">
@@ -31,7 +35,7 @@ export function SyntheseDesAnnees({ simulation, annee }: SyntheseDesAnneesProps)
       </h3>
       <ZoneDefilante libelle="Synthèse des années">
         <table className="w-full min-w-[32rem] text-sm">
-          <caption className="sr-only">Net après impôts et prélèvements de chaque année de la session</caption>
+          <caption className="sr-only">Net après impôts et prélèvements de chaque année de la session{avecReserves ? ", et réserves des sociétés à la fin de l'année" : ""}</caption>
           <thead>
             <tr className="border-b border-slate-200 text-left dark:border-slate-700">
               <th scope="col" className={cn(COLONNE_DES_ANNEES, "bg-background py-2 pr-4 font-medium")}>
@@ -43,13 +47,18 @@ export function SyntheseDesAnnees({ simulation, annee }: SyntheseDesAnneesProps)
               <th scope="col" className="py-2 pr-4 text-right font-medium">
                 Total des prélèvements
               </th>
-              <th scope="col" className="py-2 text-right font-medium">
+              <th scope="col" className={cn("py-2 text-right font-medium", avecReserves && "pr-4")}>
                 Revenus avant prélèvements
               </th>
+              {avecReserves ? (
+                <th scope="col" className="py-2 text-right font-medium">
+                  Réserves des sociétés au 31 décembre
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
-            {simulation.annees.map(({ annee: a, report, erreur }) => (
+            {simulation.annees.map(({ annee: a, report, erreur }, i) => (
               <tr key={a} className={cn("border-b border-slate-100 dark:border-slate-800", a === annee && "bg-blue-50 font-semibold dark:bg-blue-950/40")} aria-current={a === annee ? "true" : undefined}>
                 <th scope="row" className={cn(COLONNE_DES_ANNEES, "py-2 pr-4 text-left font-medium", a === annee ? FOND_ANNEE_AFFICHEE : "bg-background")}>
                   {a}
@@ -59,10 +68,11 @@ export function SyntheseDesAnnees({ simulation, annee }: SyntheseDesAnneesProps)
                   <>
                     <td className="py-2 pr-4 text-right tabular-nums text-emerald-700 dark:text-emerald-400">{euros(report.totalNetApresImpots)}</td>
                     <td className="py-2 pr-4 text-right tabular-nums">{euros(report.bilan.totalPrelevements)}</td>
-                    <td className="py-2 text-right tabular-nums">{euros(report.bilan.revenusAvantPrelevements)}</td>
+                    <td className={cn("py-2 text-right tabular-nums", avecReserves && "pr-4")}>{euros(report.bilan.revenusAvantPrelevements)}</td>
+                    {avecReserves ? <td className="py-2 text-right tabular-nums">{euros(reserves[i] ?? 0)}</td> : null}
                   </>
                 ) : (
-                  <td colSpan={3} className="py-2 text-slate-600 dark:text-slate-400">
+                  <td colSpan={avecReserves ? 4 : 3} className="py-2 text-slate-600 dark:text-slate-400">
                     {erreur ?? "Non calculée"}
                   </td>
                 )}

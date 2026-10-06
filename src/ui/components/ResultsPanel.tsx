@@ -1,6 +1,7 @@
 // src/ui/components/ResultsPanel.tsx
 
 import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
+import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
 import { useId, type ReactNode } from "react"
 import { useAffichageResume } from "../hooks/useAffichage"
@@ -349,7 +350,10 @@ function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: 
       {resume ? (
         // Affichage « Résumé » : ce que l'activité verse d'abord, le calcul replié.
         <>
-          <dl className="text-sm">{verse}</dl>
+          <dl className="text-sm">
+            {verse}
+            <ReservesALaFin activity={activity} />
+          </dl>
           {bouton}
           <div id={idDuDetail} className={classeDuDetail(ouvert)}>
             <dl className="mt-2 space-y-1 text-sm">
@@ -365,6 +369,7 @@ function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: 
             <dl className="space-y-1 text-sm">
               <LignesDeLActivite activity={activity} className={classeDuDetail(ouvert, "flex")} />
               {verse}
+              <ReservesALaFin activity={activity} />
             </dl>
             <div className={classeDuDetail(ouvert)}>{versementLiberatoire}</div>
           </div>
@@ -387,9 +392,35 @@ function LignesDeLActivite({ activity, className }: { activity: ActivityResult; 
       {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={formatMoney(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${formatMoney(activity.cotisationsPresident.brut)} bruts`} className={className} /> : null}
       {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} className={className} /> : null}
       {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(activity.impotSocietes)}`} className={className} /> : null}
-      {activity.resultatConserve !== 0 ? <Row label={activity.resultatConserve > 0 ? "Conservé dans la société" : "Déficit de la société"} value={formatMoney(activity.resultatConserve)} className={className} /> : null}
+      {activity.reserves ? <MouvementsDesReserves activity={activity} className={className} /> : null}
     </>
   )
+}
+
+/**
+ * Société à l'IS : ce que ses réserves gagnent ou perdent dans l'année (bénéfice gardé, dividendes pris sur les
+ * réserves, déficit) et le déficit des années précédentes déduit avant l'IS (voir l'ADR 012).
+ */
+function MouvementsDesReserves({ activity, className }: { activity: ActivityResult; className?: string }) {
+  const lecture = lectureDesReserves(activity)
+  if (!lecture) return null
+  const { ajoutees, reserveLegaleDotee, prisesSurLesReserves, deficit, deficitImpute } = lecture
+  return (
+    <>
+      {deficitImpute >= 0.5 ? <Row label="Déficit des années précédentes déduit" value={formatMoney(deficitImpute)} hint="avant l'impôt sur les sociétés" className={className} /> : null}
+      {deficit >= 0.5 ? <Row label="Déficit de la société" value={`− ${formatMoney(deficit)}`} hint="pris sur les réserves, déduit des bénéfices suivants" className={className} /> : null}
+      {ajoutees >= 0.5 ? <Row label="Ajouté aux réserves" value={formatMoney(ajoutees)} hint={reserveLegaleDotee >= 0.5 ? `dont ${formatMoney(reserveLegaleDotee)} de réserve légale` : null} className={className} /> : null}
+      {prisesSurLesReserves >= 0.5 ? <Row label="Dividendes pris sur les réserves" value={`− ${formatMoney(prisesSurLesReserves)}`} className={className} /> : null}
+    </>
+  )
+}
+
+/** Société à l'IS : ses réserves distribuables au 31 décembre, cumulées depuis le début de la simulation. */
+function ReservesALaFin({ activity }: { activity: ActivityResult }) {
+  const lecture = lectureDesReserves(activity)
+  if (!lecture?.aSignaler) return null
+  const label = lecture.aLaFin < 0 ? "Pertes à combler au 31 décembre" : "Réserves au 31 décembre"
+  return <Row label={label} value={formatMoney(Math.abs(lecture.aLaFin))} hint={lecture.reserveLegale >= 0.5 ? `plus ${formatMoney(lecture.reserveLegale)} de réserve légale` : null} />
 }
 
 /** Titre des résultats, année et règles appliquées, et avertissements propres à l'année (règles reprises d'une autre année). */

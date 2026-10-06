@@ -86,6 +86,15 @@ function makeReport(): SimulationReport {
         revenuVerse: 38000,
         resultatConserve: 10000,
         beneficiaireIds: ["person-alice"],
+        reserves: {
+          auDebut: { reserves: 15000, reserveLegale: 100, deficitReportable: 0 },
+          aLaFin: { reserves: 25000, reserveLegale: 100, deficitReportable: 0 },
+          deficitImpute: 0,
+          dotationReserveLegale: 0,
+          beneficeDistribuableDeLAnnee: 10000,
+          distribuable: 25000,
+          dividendesPrisSurLesReserves: 0
+        },
         warnings: ["Rémunération inférieure au seuil de validation de trimestres."]
       }
     ],
@@ -216,10 +225,37 @@ describe("ResultsPanel", () => {
 
     const card = screen.getAllByRole("article").find(article => within(article).queryByText("Ma SASU"))!
     expect(rowValue(card, "Charges déductibles")).toHaveTextContent(`− ${money(10000)}`)
-    expect(rowValue(card, "Conservé dans la société")).toHaveTextContent(money(10000))
+    expect(rowValue(card, "Ajouté aux réserves")).toHaveTextContent(money(10000))
+    expect(rowValue(card, "Réserves au 31 décembre")).toHaveTextContent(`${money(25000)}plus ${money(100)} de réserve légale`)
     expect(rowValue(card, "Versé avant impôt sur le revenu")).toHaveTextContent(`${money(38000)}48 % du CA`)
     expect(within(card).getByRole("listitem")).toHaveTextContent("Rémunération inférieure au seuil de validation de trimestres.")
     expect(within(card).queryByText(/Coût employeur/)).not.toBeInTheDocument()
+  })
+
+  it("montre les dividendes pris sur les réserves, la réserve légale dotée et un déficit reporté", () => {
+    const report = makeReport()
+    const sasu = report.activities[0]
+    const reserves = sasu.reserves!
+    report.activities = [{ ...sasu, resultatConserve: -5000, reserves: { ...reserves, aLaFin: { ...reserves.aLaFin, reserves: 10000 }, dividendesPrisSurLesReserves: 5000 } }]
+    const { rerender } = render(<ResultsPanel report={report} error={null} />)
+    const card = () => screen.getAllByRole("article").find(article => within(article).queryByText("Ma SASU"))!
+
+    expect(rowValue(card(), "Dividendes pris sur les réserves")).toHaveTextContent(`− ${money(5000)}`)
+    expect(within(card()).queryByText("Ajouté aux réserves")).not.toBeInTheDocument()
+
+    const legale = { ...sasu, reserves: { ...reserves, dotationReserveLegale: 500, aLaFin: { ...reserves.aLaFin, reserveLegale: 600 } } }
+    rerender(<ResultsPanel report={{ ...report, activities: [legale] }} error={null} />)
+    expect(rowValue(card(), "Ajouté aux réserves")).toHaveTextContent(`${money(10000)}dont ${money(500)} de réserve légale`)
+
+    const deficitaire = { ...sasu, resultatConserve: -4000, reserves: { ...reserves, auDebut: { ...reserves.auDebut, reserves: 0 }, aLaFin: { reserves: -4000, reserveLegale: 100, deficitReportable: 4000 } } }
+    rerender(<ResultsPanel report={{ ...report, activities: [deficitaire] }} error={null} />)
+    expect(rowValue(card(), "Déficit de la société")).toHaveTextContent(`− ${money(4000)}`)
+    expect(rowValue(card(), "Pertes à combler au 31 décembre")).toHaveTextContent(money(4000))
+
+    const reporte = { ...sasu, reserves: { ...reserves, auDebut: { ...reserves.auDebut, deficitReportable: 3000 }, deficitImpute: 3000 } }
+    rerender(<ResultsPanel report={{ ...report, activities: [reporte] }} error={null} />)
+    expect(rowValue(card(), "Déficit des années précédentes déduit")).toHaveTextContent(`${money(3000)}avant l'impôt sur les sociétés`)
+    expect(within(card()).queryByText("Déficit de la société")).not.toBeInTheDocument()
   })
 
   it("affiche le coût de la rémunération du président et celui des salariés", () => {
