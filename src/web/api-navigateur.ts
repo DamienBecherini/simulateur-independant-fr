@@ -139,6 +139,12 @@ export function creerApiNavigateur(): EventPayloadMapping {
     onShowNotification: callback => {
       abonnes.add(callback)
       return () => abonnes.delete(callback)
-    }
+    },
+
+    // Le serveur MCP local et sa boîte aux propositions n'existent que dans l'application de bureau.
+    infosDuServeurMcp: async () => null,
+    propositionsEnAttente: async () => [],
+    retirerProposition: async () => false,
+    onPropositionsEnAttente: () => () => undefined
   }
 }

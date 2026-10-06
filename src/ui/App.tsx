@@ -41,6 +41,8 @@ import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import type { ResumeDeLaComparaison } from "@/lib/resume"
 import type { Affichage } from "@/types"
 import { cn } from "@/lib/utils"
+import { RelectureDesPropositions } from "./components/RelectureDesPropositions"
+import { usePropositionsEnAttente } from "./hooks/usePropositionsEnAttente"
 
 /** En-tête de la page : dans l'affichage « Résumé », un titre plus petit et sans sous-titre à l'écran. */
 const EN_TETE_CLASSIQUE = { header: "mb-10", titre: "text-4xl", sousTitre: "" }
@@ -56,7 +58,10 @@ function App() {
 
   // --- MODIFICATION : Récupération des nouveaux états et fonctions du hook ---
   // On récupère tout ce dont on a besoin depuis le "cerveau" de l'application.
-  const { currentSession, setCurrentSession, setComparateur, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, handleLoadMontage, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot } = useSessionManager()
+  const { currentSession, setCurrentSession, setComparateur, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, handleLoadMontage, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot, sessionChargee } = useSessionManager()
+
+  // Propositions d'un client d'IA déposées par le serveur MCP local (application de bureau seulement, voir l'ADR 011).
+  const { propositions, retirer: retirerProposition } = usePropositionsEnAttente(sessionChargee)
 
   // L'année affichée : celle de la grille, des résultats, du comparateur et des exports. Elle n'est pas enregistrée
   // dans la session (voir l'ADR 008) ; par défaut, ou si elle disparaît, c'est la plus récente.
@@ -307,6 +312,9 @@ function App() {
         {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
         {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
             le panneau de configuration ait tout le contexte nécessaire. */}
+        {/* Appliquer une proposition remplace la session comme toute modification : une seule étape d'annulation. Rien
+            n'est montré avant le chargement de la session : la proposition paraîtrait périmée. */}
+        <RelectureDesPropositions session={currentSession} propositions={propositions} onAppliquer={setCurrentSession} onRetirer={retirerProposition} />
         <DialogueDAvis isOpen={isAvisOpen} onClose={() => setAvisOpen(false)} diagnostic={diagnostic} declencheur={boutonDAvis} />
         <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} simulation={simulation} onExportJson={handleExportAll} />
         <SettingsSheet

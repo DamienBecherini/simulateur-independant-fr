@@ -10,13 +10,20 @@
     "dist-electron",
     "dist-react",
     "splash.html",
+    "!dist-electron/mcp/**/*",
+    "!dist-electron/backend/mcp/serveur*.js",
+    "!dist-electron/backend/mcp/donnees.js",
     "!node_modules/**/*",
     "node_modules/zod/**/*",
     "!node_modules/zod/src/**/*",
     "!**/*.{map,ts,cts,mts}"
   ],
   "extraResources": [
-    "dist-electron/backend/preload.cjs"
+    "dist-electron/backend/preload.cjs",
+    {
+      "from": "dist-electron/mcp/serveur-mcp.mjs",
+      "to": "mcp/serveur-mcp.mjs"
+    }
   ],
   "icon": "./templateIcon.png",
   "mac": {

@@ -2,7 +2,7 @@
 // Simulation fictive, chargée à la première visite de la démo web et utilisée pour les captures d'écran du README :
 // une indépendante en micro-entreprise mixte, pacsée avec le président d'une SASU, avec un enfant.
 
-import type { Company, FinancialFlow, MicroEntreprise, Person, Relationship, SessionState } from "../types"
+import type { Company, FinancialFlow, MicroEntreprise, Person, Relationship, SessionState } from "../types.js"
 
 const personne = (id: string, name: string, initiales: string, color: string): Person => ({ id, type: "person", name, fiscalParts: 1, avatar: { type: "initials", value: initiales, color }, locked: false })
 

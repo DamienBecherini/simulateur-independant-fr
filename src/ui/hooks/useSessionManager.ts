@@ -239,6 +239,8 @@ export function useSessionManager() {
     cancelImport,
     handleResetSession,
     handleLoadMontage,
+    /** Vrai une fois la session enregistrée chargée : avant, la session affichée est une session vierge provisoire. */
+    sessionChargee: isLoaded,
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,
     undo,

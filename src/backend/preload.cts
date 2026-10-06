@@ -32,6 +32,21 @@ const api: import("../globals.js", { with: { "resolution-mode": "import" } }).Ev
   getUserPreferences: () => ipcRenderer.invoke("getUserPreferences"),
   saveUserPreferences: (prefs: import('../types.js', { with: { "resolution-mode": "import" } }).UserPreferences) => ipcRenderer.invoke("saveUserPreferences", prefs),
 
+  // Serveur MCP local et boîte aux propositions d'un client d'IA (voir l'ADR 011)
+  infosDuServeurMcp: () => ipcRenderer.invoke("infosDuServeurMcp"),
+  propositionsEnAttente: () => ipcRenderer.invoke("propositionsEnAttente"),
+  retirerProposition: (id: string) => ipcRenderer.invoke("retirerProposition", id),
+  onPropositionsEnAttente: (callback) => {
+    const listener = (
+      _event: import("electron").IpcRendererEvent,
+      propositions: import('./mcp/proposition-en-attente.js', { with: { "resolution-mode": "import" } }).PropositionRecue[]
+    ) => callback(propositions);
+
+    ipcRenderer.on("propositions-en-attente", listener);
+
+    return () => ipcRenderer.removeListener("propositions-en-attente", listener);
+  },
+
   // Gestionnaire d'événements pour les notifications
   onShowNotification: (callback) => {
     const listener = (
