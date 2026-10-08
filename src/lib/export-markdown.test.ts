@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonOptions, SimulationAnnuelle } from "@/types"
 import { echapper, euros, LIMITES, rapportMarkdown, repartition, type DonneesDuRapport } from "./export-markdown"
-import { comparaisonExemple, optionsExemple, pluriannuelleExemple, rapportAvecFrais, rapportExemple, sessionAvecFrais, sessionExemple } from "./testing/exports-fixtures"
+import { comparaisonExemple, optionsExemple, pluriannuelleExemple, rapportAvecFrais, rapportAvecReserves, rapportExemple, sessionAvecFrais, sessionExemple } from "./testing/exports-fixtures"
 
 const DATE = new Date(2026, 9, 4)
 
@@ -400,5 +400,28 @@ Une ligne par année de la session, avec les mêmes acteurs et la grille de chaq
       const colonnes = tableau.split("\n").map(ligne => ligne.split(/(?<!\\)\|/).length)
       expect(new Set(colonnes).size, tableau).toBe(1)
     }
+  })
+})
+
+describe("réserves des sociétés", () => {
+  it("donne les réserves de départ dans les acteurs, et les réserves de l'année et de chaque année", () => {
+    const session = sessionExemple()
+    session.entities = session.entities.map(e => (e.type === "company" ? { ...e, reservesInitiales: 1000 } : e))
+    const pluriannuelle = { annees: [{ annee: 2026, report: rapportAvecReserves(), erreur: null }, { annee: 2027, report: { ...rapportAvecReserves(), annee: 2027 }, erreur: null }] }
+    const rapport = rapportComplet({ session, report: rapportAvecReserves(), pluriannuelle })
+
+    expect(rapport).toContain("Société à l'impôt sur les sociétés, capital social 1 000 €, réserves au début de la simulation 1 000 €")
+    expect(rapport).toContain(`### Réserves des sociétés
+
+Bénéfices gardés dans la société d'une année sur l'autre : l'impôt sur les sociétés est payé, l'impôt du foyer le sera quand ils seront distribués.
+
+| Société | Ajouté aux réserves | Dont réserve légale | Dividendes pris sur les réserves | Déficit de l'année | Déficit antérieur déduit avant l'IS | Réserves au 31 décembre | Réserve légale |`)
+    expect(rapport).toContain("| Ma SASU | 400 € | 20 € | 0 € | 0 € | 0 € | **1 380 €** | 100 € |")
+    expect(rapport).toContain("### Réserves des sociétés, année par année")
+    expect(rapport).toContain("| 2027 | Ma SASU | 1 380 € | 100 € |")
+  })
+
+  it("rien sans réserves", () => {
+    expect(rapportComplet()).not.toContain("### Réserves des sociétés")
   })
 })

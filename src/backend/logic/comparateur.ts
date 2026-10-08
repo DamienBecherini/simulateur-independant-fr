@@ -103,7 +103,12 @@ function entiteCible(source: Activite, statut: StatutCompare): Activite {
     return { ...commun, type: "micro-entreprise", beneficieACRE: micro?.beneficieACRE ?? false, opteVFL: statut === "micro-vfl", ...(micro?.rfrN2 !== undefined ? { rfrN2: micro.rfrN2 } : {}) }
   }
   const capitalSource = source.type === "company" && source.legalStatus !== "EI" ? source.capitalSocial : 1000
-  return { ...commun, type: "company", legalStatus: statut, capitalSocial: statut === "EI" ? 0 : capitalSource }
+  return { ...commun, type: "company", legalStatus: statut, capitalSocial: statut === "EI" ? 0 : capitalSource, ...reservesQuiSuivent(source, statut) }
+}
+
+/** Les réserves de départ d'une société à l'IS la suivent dans l'autre statut de société (voir l'ADR 012). */
+function reservesQuiSuivent(source: Activite, statut: StatutCompare): Pick<Company, "reservesInitiales"> {
+  return source.type === "company" && source.reservesInitiales !== undefined && estSocieteIS(statut) ? { reservesInitiales: source.reservesInitiales } : {}
 }
 
 function relationsCibles(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare): Relationship[] {
@@ -141,7 +146,7 @@ export function convertirLActivite(session: DonneesDeLAnnee, source: Activite, s
 }
 
 /** Session dans laquelle l'activité a pris le statut demandé, avec ses flux convertis, sa rémunération, ses dividendes et ses frais. */
-function sessionConvertie(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, options: ComparaisonOptions, dividendes: number | null): DonneesDeLAnnee {
+export function sessionConvertie(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, options: ComparaisonOptions, dividendes: number | null): DonneesDeLAnnee {
   const convertie = convertirLActivite(session, source, statut, options.partBncPrestations, dividendes === null)
   const monthlyData = [...convertie.monthlyData]
 
@@ -223,7 +228,8 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation
     ...ferme,
     // Les dispositifs de l'année (sortie du régime micro, ACRE…) rejoignent les notes de la colonne.
     warnings: [...notes, ...(activite?.dispositifs ?? []), ...(activite?.warnings ?? [])],
-    ...(activite?.partage ? { partage: activite.partage } : {})
+    ...(activite?.partage ? { partage: activite.partage } : {}),
+    ...(activite?.reserves ? { reserves: activite.reserves } : {})
   }
 }
 
@@ -273,20 +279,24 @@ function simulerStatut(session: DonneesDeLAnnee, source: Activite, statut: Statu
   }
   const { remunerationNette, part } = remunerationEtPart(session, source, statut, options, regles, contexte)
   const reglages = { ...options, remunerationNette }
-  // On verse la part choisie du bénéfice distribuable (dividendes déjà versés et reste), et on recommence tant que
-  // les dividendes changent : les cotisations peuvent en dépendre (part au-delà de 10 % du capital en EURL).
+  // On verse la part choisie du bénéfice distribuable de l'année (les réserves des années précédentes restent dans la
+  // société), et on recommence tant que les dividendes changent, par prudence : ce bénéfice n'en dépend pas aujourd'hui.
   let dividendes = 0
   let convertie = sessionConvertie(session, source, statut, reglages, dividendes)
   let report = runMetaSimulation(convertie, regles, contexte)
   for (let tour = 0; tour < 5; tour++) {
-    const reste = report.activities.find(a => a.entityId === source.id)?.resultatConserve ?? 0
-    const suivants = Math.max(0, part * (dividendes + reste))
+    const suivants = Math.max(0, part * beneficeDistribuableDeLAnnee(report, source.id))
     if (Math.abs(suivants - dividendes) < 1) break
     dividendes = suivants
     convertie = sessionConvertie(session, source, statut, reglages, dividendes)
     report = runMetaSimulation(convertie, regles, contexte)
   }
   return { report, session: convertie, dividendes }
+}
+
+/** Bénéfice distribuable de l'année de l'activité dans un rapport : après IS et réserve légale, pertes antérieures déduites. */
+export function beneficeDistribuableDeLAnnee(report: SimulationReport, activiteId: string): number {
+  return report.activities.find(a => a.entityId === activiteId)?.reserves?.beneficeDistribuableDeLAnnee ?? 0
 }
 
 /** Simule l'activité dans un statut, avec les réglages donnés : la colonne du comparateur et les dividendes versés. */

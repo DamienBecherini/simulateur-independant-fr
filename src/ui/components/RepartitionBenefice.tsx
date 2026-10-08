@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { avecRemuneration, libellesRepartition } from "@/lib/comparateur-options"
 import { apercuDuPartage, auPas, coutRemuneration, dividendesVerses, libellesPostes, PAS_PART, PAS_REMUNERATION, partDistribueeDe, POSTES, postesArrondis, remunerationPourUnCout, type PosteDuPartage } from "@/lib/repartition-benefice"
 import { cn } from "@/lib/utils"
-import type { ComparaisonOptions, OptimisationRemuneration, PartageDuBenefice, ScenarioStatut, StatutSociete } from "@/types"
+import type { ComparaisonOptions, OptimisationRemuneration, PartageDuBenefice, ReservesDeLaSociete, ScenarioStatut, StatutSociete } from "@/types"
 import { clavierDuCurseur, gestesDuCurseur, montantAuPointeur, type Glissement as GlissementDuCurseur } from "../curseur"
 import { PoigneeDeCurseur } from "./Curseur"
 import { ChoixDuStatut } from "./RemunerationOptimizer"
@@ -86,7 +86,8 @@ function Montants({ affiche, echelle, largeur }: { affiche: Record<PosteDuPartag
 function Barre({ partage, remunerationMaximale, remuneration, part, glissement, onGlisser, onValider }: BarreProps) {
   const { ref, largeur } = useLargeurDeLaBarre()
   const affiche = postesArrondis(partage)
-  const echelle = Math.max(1, partage.beneficeAvantRemuneration, coutRemuneration(partage))
+  // Des dividendes pris sur les réserves dépassent le bénéfice de l'année : la barre s'élargit pour les montrer.
+  const echelle = Math.max(1, partage.beneficeAvantRemuneration, POSTES.reduce((somme, poste) => somme + Math.max(0, partage[poste]), 0))
   const cout = coutRemuneration(partage)
   const avantDividendes = cout + partage.impotSocietes
   const distribuable = Math.max(0, partage.beneficeAvantRemuneration - avantDividendes)
@@ -126,13 +127,22 @@ function Barre({ partage, remunerationMaximale, remuneration, part, glissement, 
         {modifiable ? (
           <>
             <PoigneeDeCurseur nom="remuneration" position={cout / echelle} libelle="Rémunération nette du dirigeant" valeur={remuneration} max={remunerationMaximale ?? 0} texte={`${euros(remuneration)} de rémunération nette`} onClavier={auClavier("remuneration")} />
-            {distribuable > 0 ? <PoigneeDeCurseur nom="part" position={(avantDividendes + part * distribuable) / echelle} libelle="Part du bénéfice distribuable versée en dividendes" valeur={Math.round(part * 100)} max={100} texte={`${pourcentage(part)} du bénéfice distribuable en dividendes, ${pourcentage(1 - part)} conservés`} onClavier={auClavier("part")} /> : null}
+            {distribuable > 0 ? <PoigneeDeCurseur nom="part" position={(avantDividendes + part * distribuable) / echelle} libelle="Part du bénéfice distribuable versée en dividendes" valeur={Math.round(part * 100)} max={100} texte={`${pourcentage(part)} du bénéfice distribuable en dividendes, ${pourcentage(1 - part)} ajoutés aux réserves`} onClavier={auClavier("part")} /> : null}
           </>
         ) : null}
       </div>
       <Montants affiche={affiche} echelle={echelle} largeur={largeur} />
     </div>
   )
+}
+
+/**
+ * Libellé d'un poste dans la légende : une part négative des réserves dit d'où elle vient, dividendes pris sur les
+ * réserves des années précédentes ou déficit de l'année.
+ */
+function libelleDuPoste(poste: PosteDuPartage, partage: PartageDuBenefice): string {
+  if (poste !== "resultatConserve" || partage.resultatConserve >= 0) return libellesPostes[poste]
+  return partage.resultatConserve + dividendesVerses(partage) >= 0 ? "Pris sur les réserves" : "Déficit de l'année"
 }
 
 /** Légende de la barre, qui en est aussi le tableau des valeurs : poste, montant et part du bénéfice. */
@@ -154,7 +164,7 @@ function Legende({ partage, statut, estimation }: { partage: PartageDuBenefice; 
           <tr key={poste} className="border-t border-slate-100 first:border-t-0 dark:border-slate-800">
             <th scope="row" className="py-1 pr-3 text-left font-normal text-slate-700 dark:text-slate-200">
               <span aria-hidden="true" className={cn("mr-2 inline-block size-3 rounded-[3px] align-[-1px]", COULEURS[poste])} />
-              {libellesPostes[poste]}
+              {libelleDuPoste(poste, partage)}
             </th>
             <td className="whitespace-nowrap py-1 pr-3 text-right">{estimation ? "≈ " : ""}{euros(arrondis[poste])}</td>
             <td className="whitespace-nowrap py-1 text-right text-slate-600 dark:text-slate-300">{total > 0 ? pourcentage(arrondis[poste] / total) : "—"}</td>
@@ -212,10 +222,10 @@ function Lecture({ partage, part, personnalisee }: { partage: PartageDuBenefice;
       <span className="font-medium">{euros(partage.remunerationNette)}</span> de rémunération nette,{" "}
       {personnalisee ? (
         <>
-          <span className="font-medium">{pourcentage(part)}</span> du bénéfice distribuable en dividendes ({euros(dividendesVerses(partage))}), {euros(Math.max(0, partage.resultatConserve))} conservés.
+          <span className="font-medium">{pourcentage(part)}</span> du bénéfice distribuable en dividendes ({euros(dividendesVerses(partage))}), {euros(Math.max(0, partage.resultatConserve))} ajoutés aux réserves.
         </>
       ) : (
-        <>{euros(dividendesVerses(partage))} de dividendes, {euros(Math.max(0, partage.resultatConserve))} conservés.</>
+        <>{euros(dividendesVerses(partage))} de dividendes, {euros(Math.max(0, partage.resultatConserve))} ajoutés aux réserves.</>
       )}
     </p>
   )
@@ -268,9 +278,10 @@ export function RepartitionDuBenefice({ activityName, statut, onStatut, scenario
       {affiche && affiche.beneficeAvantRemuneration > 0 ? (
         <>
           <Lecture partage={affiche} part={part} personnalisee={personnalisee} />
-          {personnalisee ? <p className="text-sm text-slate-600 dark:text-slate-300 print:hidden">Faites glisser les poignées, ou réglez-les au clavier : la première fixe la rémunération nette, la seconde la part du bénéfice distribuable versée en dividendes, le reste étant conservé.</p> : null}
+          {personnalisee ? <p className="text-sm text-slate-600 dark:text-slate-300 print:hidden">Faites glisser les poignées, ou réglez-les au clavier : la première fixe la rémunération nette, la seconde la part du bénéfice distribuable versée en dividendes, le reste étant ajouté aux réserves de la société.</p> : null}
           <Barre partage={affiche} remunerationMaximale={remunerationMaximale} remuneration={remuneration} part={part} glissement={glissement} onGlisser={setGlissement} onValider={valider} />
           <Deficit partage={affiche} />
+          <Reserves reserves={scenario?.reserves} estimation={estimation} />
           {personnalisee && optimisationAJour ? <Raccourcis optimisation={optimisationAJour} options={options} onChange={onChange} /> : null}
           <Legende partage={affiche} statut={statut} estimation={estimation} />
         </>
@@ -282,6 +293,25 @@ export function RepartitionDuBenefice({ activityName, statut, onStatut, scenario
 }
 
 function Deficit({ partage }: { partage: PartageDuBenefice }) {
-  if (partage.resultatConserve >= -0.5) return null
-  return <p className="text-sm text-amber-800 dark:text-amber-200">La rémunération, cotisations comprises, dépasse le bénéfice de {euros(-partage.resultatConserve)} : la société est déficitaire.</p>
+  // Les dividendes pris sur les réserves des années précédentes ne rendent pas la société déficitaire.
+  const resultat = partage.resultatConserve + dividendesVerses(partage)
+  if (resultat >= -0.5) return null
+  return <p className="text-sm text-amber-800 dark:text-amber-200">La rémunération, cotisations comprises, dépasse le bénéfice de {euros(-resultat)} : la société est déficitaire.</p>
+}
+
+/**
+ * Les réserves de la société au 31 décembre, cumulées depuis le début de la simulation, et les dividendes de l'année
+ * pris sur celles des années précédentes (voir l'ADR 012). Rien tant que le moteur n'a pas recalculé.
+ */
+function Reserves({ reserves, estimation }: { reserves: ReservesDeLaSociete | undefined; estimation: boolean }) {
+  if (!reserves || estimation) return null
+  const { aLaFin, auDebut, dividendesPrisSurLesReserves } = reserves
+  if (Math.abs(aLaFin.reserves) < 0.5 && Math.abs(auDebut.reserves) < 0.5) return null
+  const prises = dividendesPrisSurLesReserves >= 0.5 ? `, après ${euros(dividendesPrisSurLesReserves)} de dividendes pris sur les réserves des années précédentes` : ""
+  const montant = aLaFin.reserves < 0 ? `des pertes de ${euros(-aLaFin.reserves)} à combler` : euros(aLaFin.reserves)
+  return (
+    <p className="text-sm text-slate-700 dark:text-slate-200">
+      Réserves de la société au 31 décembre : <span className="font-medium">{montant}</span> (au 1er janvier : {euros(auDebut.reserves)}{prises}).
+    </p>
+  )
 }

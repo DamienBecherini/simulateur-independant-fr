@@ -154,6 +154,17 @@ export function pluriannuelleExemple(): SimulationPluriannuelle {
   }
 }
 
+/**
+ * Le rapport d'exemple, la SASU ayant des réserves : 1 000 € au 1er janvier, 400 € gardés dans l'année (dont 20 € de
+ * réserve légale), 1 380 € au 31 décembre et 100 € de réserve légale.
+ */
+export function rapportAvecReserves(): SimulationReport {
+  const rapport = rapportExemple()
+  const reserves = { auDebut: { reserves: 1000, reserveLegale: 80, deficitReportable: 0 }, aLaFin: { reserves: 1380, reserveLegale: 100, deficitReportable: 0 }, deficitImpute: 0, dotationReserveLegale: 20, beneficeDistribuableDeLAnnee: 6879.5, distribuable: 7879.5, dividendesPrisSurLesReserves: 0 }
+  rapport.activities = rapport.activities.map(a => ({ ...a, reserves }))
+  return rapport
+}
+
 function scenario(statut: ScenarioStatut["statut"], libelle: string, net: number, changements: Partial<ScenarioStatut> = {}): ScenarioStatut {
   return {
     statut,

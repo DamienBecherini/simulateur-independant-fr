@@ -106,3 +106,43 @@ describe("comparateur et optimiseur sur une année", () => {
     expect(en2025.remunerationMaximale).toBeLessThan(en2026.remunerationMaximale)
   })
 })
+
+describe("réserves des sociétés d'une année à l'autre", () => {
+  /** Alice préside une SASU : 50 000 € de chiffre d'affaires la première année, aucun dividende ; ensuite, rien. */
+  function sessionReserves(annees: number[]): SessionState {
+    return {
+      name: "Réserves",
+      entities: [personne("alice"), { ...societe("s1"), reservesInitiales: 1000 }],
+      relationships: [relation("alice", "s1", "Président")],
+      annees: annees.map((annee, i) => ({ annee, monthlyData: i === 0 ? grilleAvecCA("s1", "ca_services", 50000) : grilleVide() }))
+    }
+  }
+  const reservesDe = (session: SessionState) => simulerLesAnnees(session).annees.map(a => a.report?.activities[0].reserves)
+
+  it("part des réserves saisies dans la fiche, puis reprend celles de la fin de l'année précédente", () => {
+    const [en2025, en2026] = reservesDe(sessionReserves([2025, 2026]))
+
+    expect(en2025?.auDebut.reserves).toBe(1000)
+    expect(en2026?.auDebut).toEqual(en2025?.aLaFin)
+    expect(en2026?.aLaFin.reserves).toBeCloseTo(en2025!.aLaFin.reserves)
+  })
+
+  it("une année non simulée transmet les réserves qu'elle a reçues", () => {
+    const [en2023, en2024] = reservesDe(sessionReserves([2023, 2024]))
+
+    expect(en2023).toBeUndefined()
+    expect(en2024?.auDebut.reserves).toBe(1000)
+  })
+
+  it("le comparateur d'une année part des réserves de la session : des dividendes saisis peuvent y puiser", () => {
+    const session = sessionReserves([2025, 2026])
+    session.annees[1].monthlyData[0].flows.push({ id: "div", label: "Dividendes", amount: 20000, entityId: "s1", type: "dividends_payment" })
+    const grille = { activityId: "s1", remunerationNette: 0, repartition: { mode: "grille" as const, partDistribuee: 1 }, partBncPrestations: 1 }
+
+    const sasu = comparerStatutsDeLAnnee(session, grille, 2026).scenarios.find(s => s.statut === "SASU")!
+
+    expect(sasu.warnings).toEqual([])
+    expect(sasu.partage?.dividendesNets).toBe(20000)
+    expect(sasu.resultatConserveActivite).toBe(-20000)
+  })
+})

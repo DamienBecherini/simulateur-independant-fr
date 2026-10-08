@@ -13,6 +13,6 @@ import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
  */
 export function calculerSASU(entrees: EntreesSociete, regles: ReglesFiscales = reglesEnVigueur): ResultatSociete {
   const president = calculerCotisationsSalarie(brutPourUnNet(entrees.remunerationNette, "president", regles.regimeGeneral), "president", regles.regimeGeneral)
-  const resultat = calculerResultatSociete(entrees, president.coutEmployeur - president.net, regles.IS)
+  const resultat = calculerResultatSociete(entrees, president.coutEmployeur - president.net, regles)
   return { ...resultat, remunerationImposable: resultat.remunerationNette + president.partNonDeductible, cotisationsPresident: president }
 }

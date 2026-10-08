@@ -5,7 +5,7 @@ import type { SimulationAnnuelle } from "@/types"
 import { BOM } from "./csv"
 import { nomDuFoyer } from "./export-commun"
 import { csvComparaison, csvCourbeRemuneration, csvGrilleMensuelle, csvResultats, csvSyntheseDesAnnees, reglagesDuComparateur } from "./export-csv"
-import { comparaisonExemple, optimisationExemple, optionsExemple, pluriannuelleExemple, rapportAvecFrais, rapportExemple, sessionAvecFrais, sessionExemple } from "./testing/exports-fixtures"
+import { comparaisonExemple, optimisationExemple, optionsExemple, pluriannuelleExemple, rapportAvecFrais, rapportAvecReserves, rapportExemple, sessionAvecFrais, sessionExemple } from "./testing/exports-fixtures"
 
 /** Lignes d'un CSV, sans le BOM ni la dernière fin de ligne. */
 const lignes = (csv: string) => csv.slice(1).replace(/\r\n$/, "").split("\r\n")
@@ -364,5 +364,20 @@ describe("csvCourbeRemuneration", () => {
 
   it("se limite à l'en-tête sans point", () => {
     expect(lignes(csvCourbeRemuneration({ ...optimisationExemple(), points: [], meilleur: null, meilleurAvecRetraite: null }))).toHaveLength(1)
+  })
+})
+
+describe("réserves des sociétés", () => {
+  it("ajoutent un tableau aux résultats de l'année", () => {
+    const fin = lignes(csvResultats(sessionExemple(), rapportAvecReserves())).slice(-2)
+
+    expect(fin).toEqual(["Réserves de la société;Ajouté aux réserves;Dont réserve légale;Dividendes pris sur les réserves;Déficit de l'année;Déficit antérieur déduit avant l'IS;Réserves au 31 décembre;Réserve légale au 31 décembre", "Ma SASU;400,00;20,00;0,00;0,00;0,00;1380,00;100,00"])
+  })
+
+  it("et une ligne par année et par société à la synthèse des années", () => {
+    const simulation = { annees: [{ annee: 2026, report: rapportAvecReserves(), erreur: null }, { annee: 2027, report: { ...rapportAvecReserves(), annee: 2027 }, erreur: null }] }
+    const csv = lignes(csvSyntheseDesAnnees(sessionExemple(), simulation))
+
+    expect(csv).toEqual(expect.arrayContaining(["Année;Société;Réserves au 31 décembre;Réserve légale au 31 décembre", "2026;Ma SASU;1380,00;100,00", "2027;Ma SASU;1380,00;100,00"]))
   })
 })

@@ -111,7 +111,13 @@ export interface ReglesFiscales {
     partsParEnfant: { deuxPremiers: number; suivants: number }
   }
   baremeKilometrique: BaremeKilometrique
-  IS: { tauxReduit: number; plafondTauxReduit: number; tauxNormal: number }
+  IS: {
+    tauxReduit: number
+    plafondTauxReduit: number
+    tauxNormal: number
+    /** Imputation d'un déficit sur les bénéfices suivants : au plus le plafond fixe, plus une part du bénéfice qui le dépasse. */
+    reportEnAvantDesDeficits: { plafondFixe: number; partAuDela: number }
+  }
   dividendes: { tauxIrForfaitaire: number; prelevementsSociaux: number; abattementBareme: number; csgDeductible: number }
   regimeGeneral: ReglesRegimeGeneral
   TNS: ReglesTNS
@@ -122,6 +128,8 @@ export interface ReglesFiscales {
     partRetraiteDeBaseMicro: TauxMicro
   }
   EURL: { seuilDividendesPartDuCapital: number }
+  /** Réserve légale des sociétés à l'IS : une part du bénéfice y est affectée tant qu'elle n'atteint pas une part du capital. */
+  reserveLegale: { partDuBenefice: number; plafondPartDuCapital: number }
   /** Seuils de la franchise en base de TVA : au-delà du seuil de base l'année suivante, au-delà du seuil majoré immédiatement. */
   TVA: Record<"services" | "vente", { franchiseBase: number; seuilMajore: number }>
   /** Cotisation foncière des entreprises d'une activité créée récemment : part due l'année de création et la suivante. */

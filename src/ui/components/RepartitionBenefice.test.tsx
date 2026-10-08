@@ -3,7 +3,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { ComparaisonOptions, ModeRepartition, OptimisationRemuneration, PartageDuBenefice, PointRemuneration, ScenarioStatut } from "@/types"
+import type { ComparaisonOptions, ModeRepartition, OptimisationRemuneration, PartageDuBenefice, PointRemuneration, ReservesDeLaSociete, ScenarioStatut } from "@/types"
 import { emptySession, makePerson, makeMicro } from "@/ui/testing/fixtures"
 import { ComparateurDeTest } from "@/ui/testing/comparateur"
 import { RepartitionDuBenefice } from "./RepartitionBenefice"
@@ -14,17 +14,17 @@ const money = (n: number) => `${n.toLocaleString("fr-FR")} €`.replace(/\s/g, "
 /** 40 000 € de bénéfice : 10 000 € nets coûtent 17 000 €, 3 450 € d'IS, 19 550 € distribuables. */
 const partage = (changements: Partial<PartageDuBenefice> = {}): PartageDuBenefice => ({ beneficeAvantRemuneration: 40000, remunerationNette: 10000, cotisationsRemuneration: 7000, impotSocietes: 3450, dividendesNets: 19550, cotisationsSurDividendes: 0, resultatConserve: 0, ...changements })
 
-const scenario = (p: PartageDuBenefice | undefined): ScenarioStatut => ({ statut: "SASU", libelle: "SASU", actuel: false, fraisFonctionnement: 0, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: "" }, netApresImpots: 0, revenusAvantPrelevements: 0, totalPrelevements: 0, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...(p ? { partage: p } : {}) })
+const scenario = (p: PartageDuBenefice | undefined, reserves?: ReservesDeLaSociete): ScenarioStatut => ({ statut: "SASU", libelle: "SASU", actuel: false, fraisFonctionnement: 0, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: "" }, netApresImpots: 0, revenusAvantPrelevements: 0, totalPrelevements: 0, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...(p ? { partage: p } : {}), ...(reserves ? { reserves } : {}) })
 
 const point = (remunerationNette: number, trimestres: number): PointRemuneration => ({ remunerationNette, dividendes: 0, netApresImpots: 30000, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, trimestres })
 const optimisation = (changements: Partial<OptimisationRemuneration> = {}): OptimisationRemuneration => ({ statut: "SASU", remunerationMaximale: 23000, points: [], meilleur: point(4000, 0), meilleurAvecRetraite: point(5700, 4), warnings: [], ...changements })
 
 const options = (mode: ModeRepartition, partDistribuee = 1): ComparaisonOptions => ({ activityId: "s1", remunerationNette: 10000, repartition: { mode, partDistribuee }, partBncPrestations: 1 })
 
-function afficher({ mode = "personnalisee" as ModeRepartition, part = 1, p = partage(), opt = optimisation() } = {}) {
+function afficher({ mode = "personnalisee" as ModeRepartition, part = 1, p = partage(), opt = optimisation(), reserves = undefined as ReservesDeLaSociete | undefined } = {}) {
   const onChange = vi.fn()
   const onStatut = vi.fn()
-  render(<RepartitionDuBenefice activityName="Ma SASU" statut="SASU" onStatut={onStatut} scenario={scenario(p)} optimisation={opt} options={options(mode, part)} onChange={onChange} />)
+  render(<RepartitionDuBenefice activityName="Ma SASU" statut="SASU" onStatut={onStatut} scenario={scenario(p, reserves)} optimisation={opt} options={options(mode, part)} onChange={onChange} />)
   return { onChange, onStatut }
 }
 
@@ -50,7 +50,25 @@ describe("RepartitionDuBenefice", () => {
     expect(within(tableau).queryByRole("row", { name: /Cotisations sur les dividendes/ })).not.toBeInTheDocument()
     expect(screen.queryByRole("slider")).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Tout en dividendes" })).not.toBeInTheDocument()
-    expect(screen.getByText(/de dividendes, .* conservés/)).toHaveTextContent(`${money(10000)} de rémunération nette, ${money(19550)} de dividendes`)
+    expect(screen.getByText(/de dividendes, .* ajoutés aux réserves/)).toHaveTextContent(`${money(10000)} de rémunération nette, ${money(19550)} de dividendes`)
+  })
+
+  it("donne les réserves au 31 décembre, et des dividendes pris sur les réserves sans parler de déficit", () => {
+    // Grille : 25 000 € de dividendes, dont 5 450 € pris sur les 8 000 € de réserves du 1er janvier.
+    const reserves: ReservesDeLaSociete = { auDebut: { reserves: 8000, reserveLegale: 100, deficitReportable: 0 }, aLaFin: { reserves: 2550, reserveLegale: 100, deficitReportable: 0 }, deficitImpute: 0, dotationReserveLegale: 0, beneficeDistribuableDeLAnnee: 19550, distribuable: 27550, dividendesPrisSurLesReserves: 5450 }
+    afficher({ mode: "grille", p: partage({ dividendesNets: 25000, resultatConserve: -5450 }), reserves })
+
+    expect(screen.getByText(/^Réserves de la société au 31 décembre/)).toHaveTextContent(`Réserves de la société au 31 décembre : ${money(2550)} (au 1er janvier : ${money(8000)}, après ${money(5450)} de dividendes pris sur les réserves des années précédentes).`)
+    expect(screen.queryByText(/déficitaire/)).not.toBeInTheDocument()
+    expect(within(screen.getByRole("table")).getByRole("row", { name: /Dividendes/ })).toHaveTextContent(money(25000))
+    expect(within(screen.getByRole("table")).getByRole("row", { name: /^Pris sur les réserves/ })).toHaveTextContent(`-${money(5450)}`)
+  })
+
+  it("ne parle pas de réserves quand la société n'en a pas", () => {
+    const reserves: ReservesDeLaSociete = { auDebut: { reserves: 0, reserveLegale: 100, deficitReportable: 0 }, aLaFin: { reserves: 0, reserveLegale: 100, deficitReportable: 0 }, deficitImpute: 0, dotationReserveLegale: 0, beneficeDistribuableDeLAnnee: 19550, distribuable: 19550, dividendesPrisSurLesReserves: 0 }
+    afficher({ mode: "dividendes", reserves })
+
+    expect(screen.queryByText(/^Réserves de la société/)).not.toBeInTheDocument()
   })
 
   it("présente deux curseurs accessibles en répartition personnalisée", () => {
@@ -61,7 +79,7 @@ describe("RepartitionDuBenefice", () => {
     expect(remuneration.getAttribute("aria-valuetext")).toMatch(/^10\s000 € de rémunération nette$/)
     const part = screen.getByRole("slider", { name: "Part du bénéfice distribuable versée en dividendes" })
     expect(part).toHaveAttribute("aria-valuenow", "100")
-    expect(part.getAttribute("aria-valuetext")).toMatch(/^100 % du bénéfice distribuable en dividendes, 0 % conservés$/)
+    expect(part.getAttribute("aria-valuetext")).toMatch(/^100 % du bénéfice distribuable en dividendes, 0 % ajoutés aux réserves$/)
   })
 
   it("règle la rémunération au clavier : flèches, pages, début et fin", async () => {

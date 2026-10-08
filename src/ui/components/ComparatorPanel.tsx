@@ -5,12 +5,14 @@ import { useOptimisation } from "../hooks/useOptimisation"
 import { appliquerRemuneration, avecActiviteComparee, avecReglagesDeLActivite, comparableActivities, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
 import { vueDeLAnnee } from "@/backend/logic/annees"
+import { PART_MISE_EN_RESERVE_PAR_DEFAUT } from "@/backend/logic/options-du-comparateur"
 import { cn } from "@/lib/utils"
 import { exporterComparaisonCsv } from "../exports-texte"
 import { BoutonExportCsv } from "./BoutonExportCsv"
 import { Depliable } from "./Depliable"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
 import { RepartitionDuBenefice } from "./RepartitionBenefice"
+import { SurToutesLesAnnees } from "./SurToutesLesAnnees"
 import { ReglagesDuComparateur } from "./ReglagesDuComparateur"
 import { ZoneDefilante } from "./ZoneDefilante"
 import { BoutonDuDetail, CartesDesStatuts, NoteDesFraisSupposes, VerdictDuComparateur } from "./SyntheseDuComparateur"
@@ -389,9 +391,11 @@ function useReglages(vue: SimulationAnnuelle, comparateur: Comparateur | undefin
   }
   const setOptions = (nouvelles: ComparaisonOptions) => modifierReglages(actuels => retenirLesReglages(actuels, effectiveOptions, nouvelles, vue.annee))
   const setStatutEtudie = (statutEtudie: StatutSociete) => modifierReglages(actuels => ({ ...actuels, statutEtudie }))
+  const setPartMiseEnReserve = (partMiseEnReserve: number) => modifierReglages(actuels => ({ ...actuels, partMiseEnReserve }))
   const selectActivity = (activityId: string) => onComparateurChange(actuel => avecActiviteComparee(actuel, activityId))
+  const partMiseEnReserve = reglages?.partMiseEnReserve ?? PART_MISE_EN_RESERVE_PAR_DEFAUT
 
-  return { selected, effectiveOptions, statutEtudie: reglages?.statutEtudie, setOptions, setStatutEtudie, selectActivity }
+  return { selected, effectiveOptions, statutEtudie: reglages?.statutEtudie, setOptions, setStatutEtudie, selectActivity, partMiseEnReserve, setPartMiseEnReserve }
 }
 
 /** Transmet l'activité comparée et le résultat à qui le demande ; rien quand il n'y a pas d'activité à comparer. */
@@ -411,7 +415,7 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
   // Le comparateur porte sur l'année affichée : réglages par défaut tirés de sa grille, exports à son nom.
   const vue = useMemo(() => vueDeLAnnee(session, annee), [session, annee])
   const activities = comparableActivities(vue)
-  const { selected, effectiveOptions, statutEtudie, setOptions, setStatutEtudie, selectActivity } = useReglages(vue, session.comparateur, onComparateurChange)
+  const { selected, effectiveOptions, statutEtudie, setOptions, setStatutEtudie, selectActivity, partMiseEnReserve, setPartMiseEnReserve } = useReglages(vue, session.comparateur, onComparateurChange)
 
   const { result, error } = useComparison(session, effectiveOptions, vue.annee)
   const arbitrage = useArbitrage(session, effectiveOptions, vue.annee, selected, result, { statutEtudie, setStatutEtudie })
@@ -458,6 +462,7 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
       {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
 
       {result ? <ComparisonResults result={result} activityName={selected?.name ?? ""} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, selected?.name ?? "")} /> : null}
+      {selected ? <SurToutesLesAnnees session={session} activityId={selected.id} activityName={selected.name} partMiseEnReserve={partMiseEnReserve} onPartMiseEnReserve={setPartMiseEnReserve} /> : null}
       <OptimiseurDeLActivite session={session} annee={vue.annee} selected={selected} options={effectiveOptions} arbitrage={arbitrage} result={result} onChange={setOptions} />
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
     </section>

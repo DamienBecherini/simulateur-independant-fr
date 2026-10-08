@@ -108,6 +108,17 @@ describe("expliquer_resultat", () => {
     expect(explication.lignes.find(l => l.libelle === "Impôt sur les sociétés")!.montant).toBe(Math.round(activite.impotSocietes))
   })
 
+  it("donne les réserves d'une société à l'IS, dans simuler comme dans expliquer_resultat", () => {
+    const session = exemple()
+    const activite = rapport2026(session).activities.find(a => a.entityId === "company-conseil")!
+    const simulation = appeler<{ activites: { id: string; reservesALaFin?: number }[] }>("simuler", session)
+    expect(simulation.activites.find(a => a.id === "company-conseil")!.reservesALaFin).toBe(Math.round(activite.reserves!.aLaFin.reserves))
+    expect(simulation.activites.find(a => a.id === "micro-atelier")).not.toHaveProperty("reservesALaFin")
+
+    const explication = appeler<{ informations: string[] }>("expliquer_resultat", session, { acteurId: "company-conseil" })
+    expect(explication.informations).toContainEqual(expect.stringMatching(/^Réserves distribuables : 0 € au 1er janvier, .* € au 31 décembre ; bénéfice distribuable de l'année/))
+  })
+
   it("explique le versement libératoire d'une micro-entreprise et l'impôt du foyer d'une personne", () => {
     const session = exemple()
     const micro = appeler<{ informations: string[] }>("expliquer_resultat", session, { acteurId: "micro-atelier" })

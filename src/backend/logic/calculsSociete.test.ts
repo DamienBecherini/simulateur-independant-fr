@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import { calculerEURL } from "./calculsEURL.js"
 import { calculerSASU } from "./calculsSASU.js"
-import { calculerIS } from "./calculsSociete.js"
+import { calculerIS, deficitImputable, dotationReserveLegale, etatSansReserves } from "./calculsSociete.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 
 // Règles de test : IS à 15 % jusqu'à 40 000 € puis 25 % ; président de SASU : net = 81 % du brut sous le plafond de
@@ -176,5 +176,48 @@ describe("calculerEURL", () => {
 
   it("utilise par défaut les règles en vigueur", () => {
     expect(calculerEURL({ ...activite, capitalSocial: 1000 }).chiffreAffaires).toBe(100000)
+  })
+})
+
+describe("réserves d'une année sur l'autre", () => {
+  const regles = reglesDeTest.IS.reportEnAvantDesDeficits
+  const sansRien = { reserves: 0, reserveLegale: 0, deficitReportable: 0 }
+
+  it("impute le déficit dans la limite de 1 000 000 € plus 50 % du bénéfice au-delà", () => {
+    expect(deficitImputable(30000, 10000, regles)).toBe(10000)
+    expect(deficitImputable(30000, 50000, regles)).toBe(30000)
+    // 1 000 000 + 50 % x 1 000 000 = 1 500 000 € au plus.
+    expect(deficitImputable(2000000, 3000000, regles)).toBe(1500000)
+    expect(deficitImputable(-5000, 10000, regles)).toBe(0)
+    expect(deficitImputable(5000, 0, regles)).toBe(0)
+  })
+
+  it("dote la réserve légale de 5 % du bénéfice diminué des pertes antérieures, jusqu'à 10 % du capital", () => {
+    expect(dotationReserveLegale(10000, sansRien, 100000, reglesDeTest.reserveLegale)).toBe(500)
+    expect(dotationReserveLegale(10000, sansRien, 1000, reglesDeTest.reserveLegale)).toBe(100)
+    expect(dotationReserveLegale(10000, { ...sansRien, reserves: -4000 }, 100000, reglesDeTest.reserveLegale)).toBe(300)
+    expect(dotationReserveLegale(10000, { ...sansRien, reserves: -12000 }, 100000, reglesDeTest.reserveLegale)).toBe(0)
+    expect(dotationReserveLegale(10000, { ...sansRien, reserveLegale: 100 }, 1000, reglesDeTest.reserveLegale)).toBe(0)
+  })
+
+  it("sans situation de départ, ni réserves ni déficit et une réserve légale déjà constituée", () => {
+    expect(etatSansReserves(1000, reglesDeTest.reserveLegale)).toEqual({ reserves: 0, reserveLegale: 100, deficitReportable: 0 })
+    expect(etatSansReserves(undefined, reglesDeTest.reserveLegale)).toEqual(sansRien)
+  })
+
+  it("verse des dividendes pris sur les réserves sans nouvel IS, et ne prélève pas la réserve légale sur un déficit", () => {
+    // Bénéfice nul : 15 000 € de réserves distribuables, 10 000 € versés.
+    const resultat = calculerSASU({ chiffreAffaires: 0, chargesDeductibles: 0, remunerationNette: 0, dividendesDemandes: 10000, capitalSocial: 1000, etat: { ...sansRien, reserves: 15000 } }, reglesDeTest)
+
+    expect(resultat.impotSocietes).toBe(0)
+    expect(resultat.dividendesVerses).toBe(10000)
+    expect(resultat.reserves).toMatchObject({ distribuable: 15000, dividendesPrisSurLesReserves: 10000, dotationReserveLegale: 0, aLaFin: { reserves: 5000, reserveLegale: 0 } })
+    expect(resultat.warnings).toEqual([])
+  })
+
+  it("un déficit entame les réserves et s'ajoute au déficit reportable", () => {
+    const resultat = calculerSASU({ chiffreAffaires: 0, chargesDeductibles: 4000, remunerationNette: 0, dividendesDemandes: 0, etat: { reserves: 15000, reserveLegale: 0, deficitReportable: 1000 } }, reglesDeTest)
+
+    expect(resultat.reserves).toMatchObject({ distribuable: 11000, aLaFin: { reserves: 11000, deficitReportable: 5000 } })
   })
 })
