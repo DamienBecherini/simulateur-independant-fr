@@ -1,6 +1,6 @@
 {
   "annee": 2024,
-  "derniereMiseAJour": "2026-10-04",
+  "derniereMiseAJour": "2026-10-08",
   "IR": {
     "description": "Barème de l'impôt sur le revenu qui impose les revenus de 2024 : loi de finances pour 2025 (loi n° 2025-127 du 14 février 2025, article 2), limites des tranches indexées de 1,8 %. La dernière tranche n'a pas de plafond (null).",
     "source": "https://bofip.impots.gouv.fr/bofip/14613-PGP.html/ACTU-2025-00038",
@@ -291,6 +291,146 @@
       "invaliditeDeces": 5332
     }
   },
+  "liberauxReglementes": {
+    "description": "Professions libérales réglementées affiliées à une caisse de la CNAVPL, pour les revenus de 2024 (ADR 015, dossier documentation/recherche/caisses-des-liberaux.md, pages consultées le 2026-10-08). La maladie-maternité, les allocations familiales, la CSG-CRDS et la formation professionnelle sont recouvrées par l'Urssaf avec les barèmes et l'assiette du bloc TNS (abattement de 26 % compris : en 2024, la même APPROXIMATION d'assiette que pour les autres indépendants, voir la description du bloc TNS). Les indemnités journalières, la retraite de base, la retraite complémentaire et l'invalidité-décès suivent les règles ci-dessous ; s'y ajoutent, pour les auxiliaires médicaux, la CURPS, l'ASV et la prise en charge par l'Assurance maladie. Une activité sans profession, « non réglementée » ou « autre profession réglementée » est calculée avec le bloc TNS. L'assiette forfaitaire des deux premières années d'activité n'est pas modélisée.",
+    "source": "https://web.archive.org/web/20250220162136/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-plr-hors-cipav.html",
+    "professions": {
+      "description": "Professions proposées et leurs particularités, dans l'ordre de la liste : la caisse (CARPIMKO, CIPAV, ou aucune pour « autre profession réglementée », calculée comme une profession non réglementée), la micro-entreprise permise (« En tant que praticien ou auxiliaire médical vous ne pouvez pas être auto-entrepreneur », Urssaf ; ouverte aux affiliés de la CIPAV), le conventionnement possible avec l'Assurance maladie, la CURPS, et l'avertissement sur les sociétés d'exercice libéral (ordonnance n° 2023-77, en vigueur au 01/09/2024 : professions soumises à un statut législatif ou réglementaire ou dont le titre est protégé, https://entreprendre.service-public.gouv.fr/actualites/A16510). Aucune page officielle consultée n'autorise ni n'interdit en toutes lettres l'EURL ou la SASU classique à ces professions : l'avertissement le dit, et la liste qui le reçoit est une lecture du simulateur (statut législatif des auxiliaires médicaux, des architectes et des géomètres experts ; titre protégé des ostéopathes, psychologues, psychothérapeutes et chiropracteurs), à confirmer. Affiliés de la CIPAV : https://www.lacipav.fr/qui-est-assure-a-la-cipav ; option des pédicures-podologues vers le régime des libéraux, à exercer avant le 31/07/2024, non modélisée.",
+      "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav",
+      "liste": [
+        { "id": "infirmier", "libelle": "Infirmier ou infirmière", "caisse": "CARPIMKO", "microEntreprise": false, "conventionnable": true, "curps": true, "societeExerciceLiberal": true, "source": "https://www.urssaf.fr/accueil/independant/creer-activite-independant/devenir-PAM.html" },
+        { "id": "masseur-kinesitherapeute", "libelle": "Masseur-kinésithérapeute", "caisse": "CARPIMKO", "microEntreprise": false, "conventionnable": true, "curps": true, "societeExerciceLiberal": true, "source": "https://www.urssaf.fr/accueil/independant/creer-activite-independant/devenir-PAM.html" },
+        { "id": "orthophoniste", "libelle": "Orthophoniste", "caisse": "CARPIMKO", "microEntreprise": false, "conventionnable": true, "curps": true, "societeExerciceLiberal": true, "source": "https://www.urssaf.fr/accueil/independant/creer-activite-independant/devenir-PAM.html" },
+        { "id": "orthoptiste", "libelle": "Orthoptiste", "caisse": "CARPIMKO", "microEntreprise": false, "conventionnable": true, "curps": true, "societeExerciceLiberal": true, "source": "https://www.urssaf.fr/accueil/independant/creer-activite-independant/devenir-PAM.html" },
+        { "id": "pedicure-podologue", "libelle": "Pédicure-podologue", "caisse": "CARPIMKO", "microEntreprise": false, "conventionnable": true, "curps": true, "societeExerciceLiberal": true, "source": "https://www.urssaf.fr/accueil/independant/praticien-auxiliaire-medical/cotisations-auxiliaire-medical.html" },
+        { "id": "architecte", "libelle": "Architecte", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": true, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "architecte-interieur", "libelle": "Architecte d'intérieur", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "economiste-construction", "libelle": "Économiste de la construction", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "maitre-oeuvre", "libelle": "Maître d'œuvre", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "geometre-expert", "libelle": "Géomètre expert", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": true, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "ingenieur-conseil", "libelle": "Ingénieur conseil", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "moniteur-ski", "libelle": "Moniteur de ski", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "guide-haute-montagne", "libelle": "Guide de haute montagne", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "accompagnateur-moyenne-montagne", "libelle": "Accompagnateur de moyenne montagne", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "osteopathe", "libelle": "Ostéopathe", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": true, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "psychologue", "libelle": "Psychologue", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": true, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "psychotherapeute", "libelle": "Psychothérapeute", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": true, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "ergotherapeute", "libelle": "Ergothérapeute", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": true, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "dieteticien", "libelle": "Diététicien ou diététicienne", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": true, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "chiropracteur", "libelle": "Chiropracteur", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": true, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "psychomotricien", "libelle": "Psychomotricien ou psychomotricienne", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": true, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "artiste-hors-maison-des-artistes", "libelle": "Artiste non affilié à la Maison des artistes", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "expert-automobile", "libelle": "Expert en automobile", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "expert-judiciaire", "libelle": "Expert devant les tribunaux", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "mandataire-protection-majeurs", "libelle": "Mandataire judiciaire à la protection des majeurs", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "guide-conferencier", "libelle": "Guide-conférencier", "caisse": "CIPAV", "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+        { "id": "autre-reglementee", "libelle": "Autre profession réglementée", "caisse": null, "microEntreprise": true, "conventionnable": false, "curps": false, "societeExerciceLiberal": false, "source": "https://entreprendre.service-public.gouv.fr/vosdroits/F23458" }
+      ]
+    },
+    "commun": {
+      "description": "Règles communes aux professions libérales réglementées de la CNAVPL, quelle que soit leur caisse.",
+      "source": "https://web.archive.org/web/20250220162136/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-plr-hors-cipav.html",
+      "maladieMaternite": {
+        "description": "Barème propre aux libéraux réglementés pour les revenus de 2024 : 0 % jusqu'à 40 % du PASS, progressif jusqu'à 4 % à 60 %, puis jusqu'à 6,5 % à 110 %, et 6,5 % au-delà, appliqué à toute l'assiette (page des taux 2024 de l'Urssaf, capture de février 2025). Il plafonnait à 6,5 %, contre 6,7 % pour les autres indépendants. C'est aussi le barème des praticiens et auxiliaires médicaux en 2024 (0 à 6,50 % sur les revenus conventionnés, avec une prise en charge de 0 à 6,40 %).",
+        "source": "https://web.archive.org/web/20250220162136/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-plr-hors-cipav.html",
+        "points": [
+          { "partDuPlafond": 0.4, "taux": 0 },
+          { "partDuPlafond": 0.6, "taux": 0.04 },
+          { "partDuPlafond": 1.1, "taux": 0.065 }
+        ],
+        "tauxAuDela": 0.065
+      },
+      "indemnitesJournalieres": {
+        "description": "Indemnités journalières des libéraux : 0,30 % de l'assiette dans la limite de 3 PASS (139 104 €), au moins sur 40 % du PASS (article D621-3 du code de la sécurité sociale). La page de l'Urssaf affiche « 3,5 Pass » alors que 139 104 € correspond à 3 PASS : les montants en euros sont retenus.",
+        "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000043656764",
+        "tranches": [{ "jusquA": 3, "taux": 0.003 }]
+      },
+      "retraiteDeBase": {
+        "description": "Retraite de base du régime commun des professions libérales (CNAVPL) : 8,23 % jusqu'à 1 PASS et 1,87 % jusqu'à 5 PASS, les deux dès le premier euro (guide de la CNAVPL 2024), soit, en tranches marginales, 10,10 % jusqu'à 1 PASS puis 1,87 % de 1 à 5 PASS ; 8 151 € au plus (page des taux 2024 de l'Urssaf).",
+        "source": "https://www.cnavpl.fr/wp-content/uploads/2024/03/Guide-2024.pdf",
+        "tranches": [
+          { "jusquA": 1, "taux": 0.101 },
+          { "jusquA": 5, "taux": 0.0187 }
+        ]
+      },
+      "cotisationsMinimales": {
+        "description": "Assiettes minimales des libéraux réglementés : 18 547 € (40 % du PASS) pour les indemnités journalières (56 €), 5 243 € (450 heures au SMIC horaire, article D642-4 du code de la sécurité sociale) pour la retraite de base (529 €, 3 trimestres validés), due par les affiliés d'au moins 90 jours dans l'année. Les minimums propres à chaque caisse (complémentaire de la CARPIMKO, invalidité-décès de la CIPAV) sont dans leur barème.",
+        "source": "https://web.archive.org/web/20250220162136/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-plr-hors-cipav.html",
+        "indemnitesJournalieres": 18547,
+        "retraiteDeBase": 5243
+      },
+      "curps": {
+        "description": "Contribution aux unions régionales des professionnels de santé (CURPS) des auxiliaires médicaux : 0,10 % du revenu d'activité non salarié, dans la limite de 232 € en 2024, soit 0,5 % du PASS (article L4031-4 du code de la santé publique). Le simulateur la calcule sur l'assiette des cotisations.",
+        "source": "https://web.archive.org/web/20240908022648/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-pam.html",
+        "taux": 0.001,
+        "plafondPartDuPlafond": 0.005
+      }
+    },
+    "CIPAV": {
+      "description": "Caisse interprofessionnelle de prévoyance et d'assurance vieillesse : la retraite de base, la retraite complémentaire et l'invalidité-décès sont recouvrées par l'Urssaf depuis le 01/01/2023, sur le revenu de l'année.",
+      "source": "https://www.cnavpl.fr/wp-content/uploads/2024/03/Guide-2024.pdf",
+      "retraiteComplementaire": {
+        "description": "9 % jusqu'à 1 PASS (46 368 €), 22 % de 1 à 3,5 PASS (162 288 €), sans minimum (guide de la CNAVPL 2024).",
+        "source": "https://www.cnavpl.fr/wp-content/uploads/2024/03/Guide-2024.pdf",
+        "tranches": [
+          { "jusquA": 1, "taux": 0.09 },
+          { "jusquA": 3.5, "taux": 0.22 }
+        ]
+      },
+      "invaliditeDeces": {
+        "description": "0,5 % de l'assiette, au moins sur 37 % du PASS (17 156 €) et au plus sur 185 % du PASS (85 781 €) : « Depuis le 1er janvier 2023, la cotisation du régime est proportionnelle aux revenus d'activité » (guide de la CNAVPL 2024, qui écrit « 0,37 % PASS », coquille pour 37 % puisque 17 156 € = 0,37 x 46 368 €). Formule du simulateur : forfait + taux x assiette ramenée entre l'assiette minimale et le plafond.",
+        "source": "https://www.cnavpl.fr/wp-content/uploads/2024/03/Guide-2024.pdf",
+        "forfait": 0,
+        "taux": 0.005,
+        "assietteMinimalePartDuPlafond": 0.37,
+        "plafondPartDuPlafond": 1.85
+      },
+      "microEntreprise": {
+        "description": "Micro-entreprise d'un affilié de la CIPAV : 21,2 % du chiffre d'affaires BNC au 01/01/2024, puis 23,2 % à partir du 01/07/2024 (« depuis le 1er juillet 2024, passant de 21,2 % à 23,2 % », Urssaf), non distingués : le taux du 1er janvier est retenu, comme pour les autres micro-entrepreneurs (ADR 007). Formation professionnelle, abattement et versement libératoire inchangés. Répartition du forfait et seuil des trimestres en 2024 NON SOURCÉS (les seuils publiés par l'Urssaf comme ceux de 2024 sont ceux que la CIPAV donne pour 2025) : la répartition de 2025 et le taux de la retraite de base de 2024, 10,10 % (8,23 % + 1,87 %), sont repris.",
+        "source": "https://www.urssaf.fr/accueil/actualites/taux-cotisations-autoentrepeneur.html",
+        "sourceRepartition": "https://web.archive.org/web/20250915163052/https://www.lacipav.fr/cotiser-pour-acquerir-des-droits-retraite-prevoyance",
+        "cotisations": 0.212,
+        "tauxRetraiteDeBase": 0.101,
+        "repartition": { "csgCrds": 0.34, "maladie": 0.102, "indemnitesJournalieres": 0, "retraiteDeBase": 0.288, "retraiteComplementaire": 0.256, "invaliditeDeces": 0.014 }
+      }
+    },
+    "CARPIMKO": {
+      "description": "Caisse des infirmiers, masseurs-kinésithérapeutes, orthophonistes, orthoptistes et pédicures-podologues. Elle appelle elle-même la retraite de base, la retraite complémentaire, l'ASV et l'invalidité-décès, sur l'assiette sociale de l'année précédente (bulletin d'avril 2026, qui décrit 2025 et 2026 : la même règle est supposée pour 2024) ; seule la retraite de base est régularisée sur le revenu de l'année (page « Adapter mes cotisations »). Le simulateur calcule donc la retraite de base sur le revenu de l'année simulée, la complémentaire et l'ASV sur celui de l'année précédente quand elle est dans la simulation, sinon sur celui de l'année simulée (ADR 015). L'absence de régularisation de la complémentaire et de l'ASV est déduite du silence des sources : aucune ne l'écrit.",
+      "source": "https://www.carpimko.com/Portals/0/BulletinSpecialAssietteSocialeAvril2026.pdf",
+      "retraiteComplementaire": {
+        "description": "Part forfaitaire de 2 176 €, plus 3 % de la part de l'assiette sociale comprise entre 25 246 € et 224 713 € (décret n° 2024-1214, articles 6 et 7). Lecture « part comprise entre », à confirmer dans les statuts. Formule du simulateur : forfait + taux x (assiette ramenée entre l'assiette minimale et le plafond, moins le seuil), montants en euros. Dispenses ou réductions à faible revenu : non sourcées, non modélisées.",
+        "source": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000050854329",
+        "forfait": 2176,
+        "taux": 0.03,
+        "seuil": 25246,
+        "plafond": 224713,
+        "assietteMinimale": 0
+      },
+      "invaliditeDeces": {
+        "description": "Forfait de 1 022 € (dossier de recherche, §5.2). La page de la CARPIMKO le dit dû par tous les affiliés depuis le 01/01/2025 : sa situation en 2024 n'est pas détaillée, le même forfait est repris.",
+        "source": "https://www.carpimko.com/je-suis-en-activite/ma-prevoyance/cotisation-invalidite-deces",
+        "forfait": 1022,
+        "taux": 0,
+        "assietteMinimalePartDuPlafond": 0,
+        "plafondPartDuPlafond": 0
+      },
+      "asv": {
+        "description": "Avantage social vieillesse (ASV) des auxiliaires médicaux conventionnés, sur leurs revenus conventionnés de l'année précédente, dans la limite de 5 PASS (décret n° 2008-1044, article 2). Montants 2024 NON SOURCÉS : ceux de 2025 sont repris (221 € + 0,16 % à la charge du praticien, 443 € + 0,24 % payés par l'Assurance maladie, bulletin d'avril 2026 de la CARPIMKO). Sans part conventionnée, le simulateur ne compte pas d'ASV (lecture non vérifiée).",
+        "source": "https://www.carpimko.com/Portals/0/BulletinSpecialAssietteSocialeAvril2026.pdf",
+        "forfaitPraticien": 221,
+        "tauxPraticien": 0.0016,
+        "forfaitAssuranceMaladie": 443,
+        "tauxAssuranceMaladie": 0.0024,
+        "plafondPartDuPlafond": 5
+      },
+      "priseEnChargeMaladie": {
+        "description": "Auxiliaires médicaux conventionnés en 2024 : sur les revenus conventionnés, maladie de 0 à 6,50 %, avec une prise en charge de 0 à 6,40 % par l'Assurance maladie, soit 0,10 point au praticien ; sur les autres revenus, de 3,25 % à 9,75 %, soit le barème majoré de 3,25 points (page des taux des praticiens et auxiliaires médicaux de l'Urssaf, capture de septembre 2024). Les allocations familiales ne sont pas prises en charge.",
+        "source": "https://web.archive.org/web/20240908022648/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-pam.html",
+        "resteALaChargeDuPraticien": 0.001,
+        "majorationHorsConvention": 0.0325
+      }
+    }
+  },
   "protectionSociale": {
     "description": "Validation des trimestres de retraite en 2024 : 150 heures au SMIC horaire du 1er janvier (11,65 €) par trimestre, soit 1 747,50 €, 4 au maximum ; la hausse du SMIC au 01/11/2024 ne change pas ce seuil. En micro-entreprise, part des cotisations affectée à la retraite de base au 01/01/2024 (article D613-6 du code de la sécurité sociale : 41,80 % en vente et services commerciaux, 55,50 % en libéral, puis 50,75 % en libéral à partir du 01/07/2024, non distingué), ramenée au taux de 17,75 %. Sources : https://legislation.lassuranceretraite.fr/Pdf/circulaire_cnav_2024_03_09012024.pdf et https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000043656780/2024-03-01",
     "revenuParTrimestre": 1747.5,
@@ -323,7 +463,7 @@
       "vente": 188700
     },
     "cotisations": {
-      "description": "Taux de cotisations sociales sur le chiffre d'affaires au 01/01/2024 (hors contribution à la formation professionnelle, comptée à part : voir formationProfessionnelle), article D613-4 du code de la sécurité sociale : 21,1 % pour les professions libérales non réglementées jusqu'au 30/06/2024, puis 23,1 % à partir du 01/07/2024 (décret 2024-484, non distingué : une moyenne sur l'année serait de 22,1 % pour un chiffre d'affaires régulier). Les professions libérales relevant de la CIPAV (21,2 % puis 23,2 %) ne sont pas distinguées.",
+      "description": "Taux de cotisations sociales sur le chiffre d'affaires au 01/01/2024 (hors contribution à la formation professionnelle, comptée à part : voir formationProfessionnelle), article D613-4 du code de la sécurité sociale : 21,1 % pour les professions libérales non réglementées jusqu'au 30/06/2024, puis 23,1 % à partir du 01/07/2024 (décret 2024-484, non distingué : une moyenne sur l'année serait de 22,1 % pour un chiffre d'affaires régulier). Les professions libérales relevant de la CIPAV ont leur propre taux : voir liberauxReglementes.CIPAV.microEntreprise.",
       "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000046714712/2024-03-01",
       "venteBic": 0.123,
       "servicesBic": 0.212,

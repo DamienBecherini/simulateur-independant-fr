@@ -5,7 +5,7 @@ import config from "../config.json" with { type: "json" }
 import { PUISSANCES_FISCALES } from "../../types.js"
 import { reductionGenerale } from "../logic/cotisationsSalarie.js"
 import { montantBaremeKilometrique } from "../logic/frais-kilometriques.js"
-import type { BaremeProgressif, ReglesFiscales, TrancheCotisation } from "../logic/regles.js"
+import { CAISSES_LIBERALES, type BaremeProgressif, type ReglesFiscales, type ReglesLiberauxReglementes, type TrancheCotisation } from "../logic/regles.js"
 import fichier2024 from "./2024.json" with { type: "json" }
 import fichier2025 from "./2025.json" with { type: "json" }
 
@@ -91,6 +91,7 @@ function taux(r: ReglesFiscales): [string, number][] {
     ["TNS.csgCrds.csgNonDeductible", tns.csgCrds.csgNonDeductible],
     ["TNS.csgCrds.crds", tns.csgCrds.crds],
     ["TNS.formationProfessionnelle.tauxSurPlafond", tns.formationProfessionnelle.tauxSurPlafond],
+    ...tauxDesLiberaux(r.liberauxReglementes),
     ["protectionSociale.tauxRetraiteDeBase", r.protectionSociale.tauxRetraiteDeBase],
     ...parActivite("protectionSociale.partRetraiteDeBaseMicro", r.protectionSociale.partRetraiteDeBaseMicro),
     ["EURL.seuilDividendesPartDuCapital", r.EURL.seuilDividendesPartDuCapital],
@@ -104,6 +105,31 @@ function taux(r: ReglesFiscales): [string, number][] {
     ["CFE.partDueAnneeSuivante", r.CFE.partDueAnneeSuivante],
     ...parActivite("microEntreprise.abattement", micro.abattement),
     ...parActivite("microEntreprise.versementLiberatoire.taux", micro.versementLiberatoire.taux)
+  ]
+}
+
+/** Les taux des professions libérales réglementées, avec leur nom (« liberaux.CIPAV.invaliditeDeces.taux »). */
+function tauxDesLiberaux(l: ReglesLiberauxReglementes): [string, number][] {
+  const parTranches = (nom: string, tranches: TrancheCotisation[]) => tranches.map(({ taux }, i): [string, number] => [`liberaux.${nom}.${i}`, taux])
+  const { CIPAV: cipav, CARPIMKO: carpimko, commun } = l
+  return [
+    ...commun.maladieMaternite.points.map(({ taux }, i): [string, number] => [`liberaux.commun.maladieMaternite.${i}`, taux]),
+    ["liberaux.commun.maladieMaternite.auDela", commun.maladieMaternite.tauxAuDela],
+    ...parTranches("commun.indemnitesJournalieres", commun.indemnitesJournalieres.tranches),
+    ...parTranches("commun.retraiteDeBase", commun.retraiteDeBase.tranches),
+    ["liberaux.commun.curps.taux", commun.curps.taux],
+    ["liberaux.commun.curps.plafondPartDuPlafond", commun.curps.plafondPartDuPlafond],
+    ...parTranches("CIPAV.retraiteComplementaire", cipav.retraiteComplementaire.tranches),
+    ["liberaux.CIPAV.invaliditeDeces.taux", cipav.invaliditeDeces.taux],
+    ["liberaux.CIPAV.microEntreprise.cotisations", cipav.microEntreprise.cotisations],
+    ["liberaux.CIPAV.microEntreprise.tauxRetraiteDeBase", cipav.microEntreprise.tauxRetraiteDeBase],
+    ...Object.entries(cipav.microEntreprise.repartition).map(([nom, part]): [string, number] => [`liberaux.CIPAV.microEntreprise.repartition.${nom}`, part]),
+    ["liberaux.CARPIMKO.retraiteComplementaire.taux", carpimko.retraiteComplementaire.taux],
+    ["liberaux.CARPIMKO.invaliditeDeces.taux", carpimko.invaliditeDeces.taux],
+    ["liberaux.CARPIMKO.asv.tauxPraticien", carpimko.asv.tauxPraticien],
+    ["liberaux.CARPIMKO.asv.tauxAssuranceMaladie", carpimko.asv.tauxAssuranceMaladie],
+    ["liberaux.CARPIMKO.priseEnChargeMaladie.resteALaChargeDuPraticien", carpimko.priseEnChargeMaladie.resteALaChargeDuPraticien],
+    ["liberaux.CARPIMKO.priseEnChargeMaladie.majorationHorsConvention", carpimko.priseEnChargeMaladie.majorationHorsConvention]
   ]
 }
 
@@ -244,6 +270,49 @@ describe("règles par année", () => {
       expect(cotisationsMinimales.retraiteDeBase).toBeLessThan(plafondSecuriteSociale)
     })
 
+    it("a une liste de professions réglementées dans l'ordre de l'ADR 015, chacune avec une caisse connue et sa source", () => {
+      const { liste } = regles.liberauxReglementes.professions
+      const ids = liste.map(p => p.id)
+      expect(new Set(ids).size).toBe(ids.length)
+      expect(ids).not.toContain("non-reglementee")
+      // Santé (CARPIMKO), puis CIPAV, enfin « autre profession réglementée », seule sans caisse.
+      const caisses = liste.map(p => p.caisse)
+      expect(caisses).toEqual([...caisses.filter(c => c === "CARPIMKO"), ...caisses.filter(c => c === "CIPAV"), null])
+      expect(caisses.filter(c => c === "CARPIMKO")).toHaveLength(5)
+      expect(caisses.filter(c => c === "CIPAV")).toHaveLength(21)
+      for (const p of liste) {
+        expect(p.caisse === null || (CAISSES_LIBERALES as readonly string[]).includes(p.caisse), p.id).toBe(true)
+        expect(p.libelle, p.id).toMatch(/\S{3,}/)
+        expect(p.id, p.id).toMatch(/^[a-z]+(-[a-z]+)*$/)
+        // Micro-entreprise interdite aux praticiens et auxiliaires médicaux, seuls conventionnables et redevables de la CURPS.
+        expect(p.microEntreprise, p.id).toBe(p.caisse !== "CARPIMKO")
+        expect(p.conventionnable, p.id).toBe(p.caisse === "CARPIMKO")
+        expect(p.curps, p.id).toBe(p.caisse === "CARPIMKO")
+      }
+    })
+
+    it("a des barèmes de libéraux réglementés cohérents avec le plafond de la sécurité sociale et ceux des indépendants", () => {
+      const { commun, CIPAV: cipav, CARPIMKO: carpimko } = regles.liberauxReglementes
+      const pass = regles.TNS.plafondSecuriteSociale
+      // Indemnités journalières : 0,30 % jusqu'à 3 PASS, au moins sur 40 % du PASS ; retraite de base : même assiette minimale.
+      expect(commun.indemnitesJournalieres.tranches).toEqual([{ jusquA: 3, taux: 0.003 }])
+      expect(Math.abs(commun.cotisationsMinimales.indemnitesJournalieres - 0.4 * pass)).toBeLessThanOrEqual(1)
+      expect(commun.cotisationsMinimales.retraiteDeBase).toBe(regles.TNS.cotisationsMinimales.retraiteDeBase)
+      // Retraite de base : 1,87 % dès le premier euro jusqu'à 5 PASS, plus la tranche 1.
+      expect(commun.retraiteDeBase.tranches.map(t => t.jusquA)).toEqual([1, 5])
+      expect(commun.retraiteDeBase.tranches[1].taux).toBe(0.0187)
+      expect(commun.curps).toMatchObject({ taux: 0.001, plafondPartDuPlafond: 0.005 })
+      // Répartition du forfait micro de la CIPAV : la somme fait 100 %.
+      const parts = Object.values(cipav.microEntreprise.repartition)
+      expect(parts.reduce((somme, part) => somme + part, 0)).toBeCloseTo(1, 10)
+      expect(cipav.invaliditeDeces).toMatchObject({ forfait: 0, taux: 0.005, assietteMinimalePartDuPlafond: 0.37, plafondPartDuPlafond: 1.85 })
+      expect(carpimko.invaliditeDeces).toMatchObject({ forfait: 1022, taux: 0 })
+      const rc = carpimko.retraiteComplementaire
+      expect(rc.plafond).toBeGreaterThan(Math.max(rc.seuil, rc.assietteMinimale))
+      expect(carpimko.asv.forfaitAssuranceMaladie).toBeGreaterThan(carpimko.asv.forfaitPraticien)
+      expect(carpimko.priseEnChargeMaladie).toMatchObject({ resteALaChargeDuPraticien: 0.001, majorationHorsConvention: 0.0325 })
+    })
+
     it("a des cotisations du régime général par tranches ordonnées du plafond de la sécurité sociale", () => {
       const rg = regles.regimeGeneral
       expect(rg.plafondSecuriteSociale).toBe(regles.TNS.plafondSecuriteSociale)
@@ -332,6 +401,52 @@ describe("règles par année", () => {
         const precedent = tauxAvant.get(nom)
         if (precedent !== undefined && !nom.startsWith("TNS.")) expect(Math.abs(valeur - precedent), nom).toBeLessThanOrEqual(0.1)
       }
+    })
+  })
+
+  describe("professions libérales réglementées (dossier caisses-des-liberaux.md)", () => {
+    it("ont la même liste de professions chaque année : le fichier enregistre la profession, la caisse s'en déduit", () => {
+      const ids = (r: ReglesFiscales) => r.liberauxReglementes.professions.liste.map(p => p.id)
+      expect(ids(regles2024)).toEqual(ids(regles2026))
+      expect(ids(regles2025)).toEqual(ids(regles2026))
+    })
+
+    it("complémentaire de la CIPAV : 9 % puis 22 % jusqu'à 3,5 PASS en 2024 ; 11 % puis 21 % jusqu'à 4 PASS en 2025 (décret) et 2026 (Urssaf)", () => {
+      expect(regles2024.liberauxReglementes.CIPAV.retraiteComplementaire.tranches).toEqual([{ jusquA: 1, taux: 0.09 }, { jusquA: 3.5, taux: 0.22 }])
+      for (const r of [regles2025, regles2026]) expect(r.liberauxReglementes.CIPAV.retraiteComplementaire.tranches).toEqual([{ jusquA: 1, taux: 0.11 }, { jusquA: 4, taux: 0.21 }])
+      expect(fichier2025.liberauxReglementes.CIPAV.retraiteComplementaire.description).toContain("décret n° 2025-1076")
+      expect(config.liberauxReglementes.CIPAV.retraiteComplementaire.description).toContain("l'Urssaf SEULE")
+    })
+
+    it("retraite de base des libéraux : 8,23 % + 1,87 % en 2024, 8,73 % + 1,87 % à la régularisation de 2025 et en 2026 ; 573 € au minimum en 2026", () => {
+      expect(regles2024.liberauxReglementes.commun.retraiteDeBase.tranches[0].taux).toBe(0.101)
+      expect(regles2025.liberauxReglementes.commun.retraiteDeBase.tranches[0].taux).toBe(0.106)
+      const commun = regles2026.liberauxReglementes.commun
+      expect(commun.retraiteDeBase.tranches[0].taux).toBe(0.106)
+      expect(Math.round(commun.cotisationsMinimales.retraiteDeBase * 0.106)).toBe(573)
+    })
+
+    it("micro-entreprise de la CIPAV : retrouve les seuils de trimestre publiés (2 694 € en 2025, 2 792 € en 2026)", () => {
+      const seuil = (r: ReglesFiscales) => {
+        const micro = r.liberauxReglementes.CIPAV.microEntreprise
+        return (r.protectionSociale.revenuParTrimestre * micro.tauxRetraiteDeBase) / (micro.cotisations * micro.repartition.retraiteDeBase)
+      }
+      expect(Math.round(seuil(regles2025))).toBe(2694)
+      expect(Math.round(seuil(regles2026))).toBe(2792)
+      expect(regles2024.liberauxReglementes.CIPAV.microEntreprise.cotisations).toBe(0.212)
+      expect(regles2026.liberauxReglementes.CIPAV.microEntreprise.cotisations).toBe(0.232)
+    })
+
+    it("CARPIMKO : complémentaire forfaitaire jusqu'en 2025, proportionnelle en 2026 (2 091 € à 12 544 €) ; ASV 2024 non sourcée, reprise de 2025", () => {
+      expect(regles2025.liberauxReglementes.CARPIMKO.retraiteComplementaire).toMatchObject({ forfait: 2312, taux: 0.03, seuil: 25246, plafond: 237179 })
+      const rc = regles2026.liberauxReglementes.CARPIMKO.retraiteComplementaire
+      expect(rc.forfait).toBe(0)
+      expect(Math.round(rc.assietteMinimale * rc.taux)).toBe(2091)
+      expect(Math.round(rc.plafond * rc.taux)).toBe(12544)
+      expect(regles2024.liberauxReglementes.CARPIMKO.asv).toMatchObject({ forfaitPraticien: 221, forfaitAssuranceMaladie: 443 })
+      expect(fichier2024.liberauxReglementes.CARPIMKO.asv.description).toContain("NON SOURCÉS")
+      // CURPS 2026 : 0,10 %, au plus 240 €.
+      expect(Math.round(regles2026.TNS.plafondSecuriteSociale * regles2026.liberauxReglementes.commun.curps.plafondPartDuPlafond)).toBe(240)
     })
   })
 
