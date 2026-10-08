@@ -39,7 +39,7 @@ export interface FluxDuMontage {
   mois?: number
 }
 
-function fluxDuMois(flux: FluxDuMontage, mois: number): FinancialFlow {
+export function fluxDuMois(flux: FluxDuMontage, mois: number): FinancialFlow {
   const { entityId, type, amount, label, grossAmount } = flux
   return { id: `${entityId}-${type}-${mois}`, label, amount, entityId, type, ...(grossAmount === undefined ? {} : { grossAmount }) }
 }

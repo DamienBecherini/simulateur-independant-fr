@@ -13,7 +13,8 @@ import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
 import * as SessionService from "@/lib/session-service"
 import { BoutonDesMontages } from "./components/MontagesTypes"
-import type { SaveSlot, SimulationPluriannuelle } from "@/types"
+import { BoutonDesTests } from "./components/BoutonDesTests"
+import type { SaveSlot, SessionState, SimulationPluriannuelle } from "@/types"
 import { ajouterAnnee, anneeAAjouter, anneeExistante, anneesDeLaSession, donneesDeLAnnee, remplacerGrille, supprimerAnnee, vueDeLAnnee } from "@/backend/logic/annees"
 import { PREMIERE_ANNEE_DES_REGLES } from "@/backend/logic/regles"
 import { createId } from "@/lib/id"
@@ -168,12 +169,13 @@ function App() {
     setSettingsOpen(false)
   }
 
-  // Un montage type remplace la session, nommée d'après lui ; la page remonte en haut, sur ses acteurs.
-  const chargerUnMontage = (montage: MontageType) => {
-    handleLoadMontage(sessionDUnMontage(montage))
+  // Un montage type (ou un scénario de test) remplace la session, nommée d'après lui ; la page remonte en haut, sur ses acteurs.
+  const chargerUneSession = (session: SessionState) => {
+    handleLoadMontage(session)
     setSettingsOpen(false)
     window.scrollTo(0, 0)
   }
+  const chargerUnMontage = (montage: MontageType) => chargerUneSession(sessionDUnMontage(montage))
 
 
   const flowTypeToNumberMap = useMemo(() => {
@@ -224,6 +226,8 @@ function App() {
               <BoutonDesMontages variant="outline" size="sm" aria-label="Montages types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 max-[22rem]:hidden sm:ml-2" onCharger={chargerUnMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name}>
                 <span className="hidden md:inline">Montages types</span>
               </BoutonDesMontages>
+              {/* En mode développement seulement : scénarios prêts à charger pour vérifier une fonctionnalité. */}
+              <BoutonDesTests onCharger={chargerUneSession} />
             </div>
             {/* Groupe de boutons de droite */}
             <div className="flex items-center gap-1">
