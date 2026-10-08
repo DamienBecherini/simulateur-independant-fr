@@ -7,6 +7,7 @@ import { documentCsv, montant, type CelluleCsv } from "./csv"
 import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
 import { libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
+import { libelleDeLaProfession, lignesDeLaCaisse, statutEtProfession } from "./professions"
 
 type Ligne = CelluleCsv[]
 
@@ -45,7 +46,7 @@ function lignesDuBilan(report: SimulationReport): Ligne[] {
 
 function lignesDesActivites(session: SimulationAnnuelle, report: SimulationReport): Ligne[] {
   const entete: Ligne = ["Activité", "Statut", "Chiffre d'affaires", "Charges", "Cotisations sociales", "Impôt sur les sociétés", "Revenu versé aux personnes", "Résultat conservé", "Bénéficiaires", "Dispositifs de l'année"]
-  const lignes = report.activities.map((a): Ligne => [a.name, a.statut, montant(a.chiffreAffaires), montant(a.charges), montant(a.cotisationsSociales), montant(a.impotSocietes), montant(a.revenuVerse), montant(a.resultatConserve), a.beneficiaireIds.map(id => nomDeLActeur(session, id)).join(", "), (a.dispositifs ?? []).join(" ")])
+  const lignes = report.activities.map((a): Ligne => [a.name, statutEtProfession(a), montant(a.chiffreAffaires), montant(a.charges), montant(a.cotisationsSociales), montant(a.impotSocietes), montant(a.revenuVerse), montant(a.resultatConserve), a.beneficiaireIds.map(id => nomDeLActeur(session, id)).join(", "), (a.dispositifs ?? []).join(" ")])
   return [entete, ...lignes]
 }
 
@@ -80,6 +81,13 @@ function lignesDesReserves(report: SimulationReport): Ligne[] {
   return tableauFacultatif(entete, lignes)
 }
 
+/** Professions libérales réglementées au réel : les cotisations que leur caisse change, ligne à ligne (ADR 015). */
+function lignesDesCaisses(report: SimulationReport): Ligne[] {
+  const entete: Ligne = ["Cotisations par caisse", "Profession", "Cotisation", "Montant", "Précision"]
+  const lignes = report.activities.flatMap(({ name, profession, cotisationsTNS }): Ligne[] => (cotisationsTNS && profession ? lignesDeLaCaisse(cotisationsTNS, v => `${Math.round(v)} €`).map(l => [name, libelleDeLaProfession(profession), l.libelle.replace(/^dont /, ""), montant(l.montant), l.precision ?? ""]) : []))
+  return tableauFacultatif(entete, lignes)
+}
+
 /** Déplacements professionnels des activités au barème kilométrique, compris dans leurs charges. */
 function lignesDesDeplacements(report: SimulationReport): Ligne[] {
   const entete: Ligne = ["Déplacements professionnels", "Statut", "Kilomètres", "Montant au barème", "Déductible"]
@@ -102,7 +110,7 @@ function lignesDesFraisProfessionnels(report: SimulationReport): Ligne[] {
  */
 export function csvResultats(session: SimulationAnnuelle, report: SimulationReport): string {
   const tableaux = [...lignesDuBilan(report), [], ...lignesDesActivites(session, report), [], ...lignesDesPersonnes(report), [], ...lignesDesFoyers(session, report)]
-  return documentCsv([...tableaux, ...lignesDesReserves(report), ...lignesDuVersementLiberatoire(report), ...lignesDesDeplacements(report), ...lignesDesFraisProfessionnels(report)])
+  return documentCsv([...tableaux, ...lignesDesCaisses(report), ...lignesDesReserves(report), ...lignesDuVersementLiberatoire(report), ...lignesDesDeplacements(report), ...lignesDesFraisProfessionnels(report)])
 }
 
 // --- Toutes les années ---

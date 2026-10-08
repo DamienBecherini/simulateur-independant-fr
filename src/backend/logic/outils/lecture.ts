@@ -25,7 +25,9 @@ function reglagesDeLActeur(acteur: Entity, detaille: boolean): Record<string, z.
     const resume = { partsFiscales: acteur.fiscalParts, fraisReels: frais ? `${frais.trajets.length} trajet(s), ${auCentime(frais.autresFrais)} € d'autres frais` : null }
     return detaille && frais ? { ...resume, trajets: JSON.stringify(frais.trajets) } : resume
   }
-  const commun = { dateDeCreation: acteur.dateDeCreation ?? null, deplacementsKmParAn: acteur.deplacementsProfessionnels?.kmParAn ?? null }
+  // Profession libérale réglementée et part conventionnée : seulement quand elles sont saisies (voir l'ADR 015).
+  const profession = { ...(acteur.profession === undefined ? {} : { profession: acteur.profession }), ...(acteur.partConventionnee === undefined ? {} : { partConventionnee: acteur.partConventionnee }) }
+  const commun = { dateDeCreation: acteur.dateDeCreation ?? null, deplacementsKmParAn: acteur.deplacementsProfessionnels?.kmParAn ?? null, ...profession }
   if (acteur.type === "company") return { capitalSocial: acteur.capitalSocial, ...(acteur.reservesInitiales === undefined ? {} : { reservesInitiales: acteur.reservesInitiales }), ...commun }
   return { beneficieACRE: acteur.beneficieACRE, opteVFL: acteur.opteVFL, rfrN2: acteur.rfrN2 ?? null, horsPlafondAnneePrecedente: acteur.horsPlafondAnneePrecedente ?? false, ...commun }
 }
@@ -174,7 +176,23 @@ function reglesCles(r: ReglesFiscales): z.infer<typeof RegleSchema>[] {
     { sujet: "Micro-entreprise : contribution à la formation professionnelle sur le chiffre d'affaires, en plus des cotisations", valeurs: valeurs(micro.formationProfessionnelle), source: source(micro.formationProfessionnelle) },
     { sujet: "Micro-entreprise : abattement forfaitaire avant impôt", valeurs: valeurs(micro.abattement), source: source(micro.abattement) },
     { sujet: "Micro-entreprise : versement libératoire (taux sur le chiffre d'affaires, plafond de revenu fiscal de référence par part)", valeurs: { plafondRfrParPart: micro.versementLiberatoire.plafondRfrParPart, ...valeurs(micro.versementLiberatoire.taux) }, source: source(micro.versementLiberatoire) },
-    { sujet: "Franchise en base de TVA (seuils de chiffre d'affaires)", valeurs: valeurs(r.TVA), source: source(r.TVA) }
+    { sujet: "Franchise en base de TVA (seuils de chiffre d'affaires)", valeurs: valeurs(r.TVA), source: source(r.TVA) },
+    ...reglesDesLiberaux(r.liberauxReglementes)
+  ]
+}
+
+/** Professions libérales réglementées : professions proposées et barèmes de leurs caisses (voir l'ADR 015). */
+function reglesDesLiberaux(l: ReglesFiscales["liberauxReglementes"]): z.infer<typeof RegleSchema>[] {
+  const { commun, CIPAV: cipav, CARPIMKO: carpimko } = l
+  return [
+    {
+      sujet: "Professions libérales réglementées : profession (identifiant à donner au réglage profession), caisse (null : pas encore prise en compte, calcul d'une profession non réglementée), micro-entreprise permise, conventionnable, CURPS, avertissement sur les sociétés d'exercice libéral",
+      valeurs: { professions: l.professions.liste.map(({ id, libelle, caisse, microEntreprise, conventionnable, curps, societeExerciceLiberal }) => ({ id, libelle, caisse, microEntreprise, conventionnable, curps, societeExerciceLiberal })) },
+      source: source(l.professions)
+    },
+    { sujet: "Libéraux réglementés (CNAVPL) : retraite de base et indemnités journalières, par tranches en part du PASS ; assiettes minimales en euros ; CURPS des auxiliaires médicaux", valeurs: { retraiteDeBase: commun.retraiteDeBase.tranches, indemnitesJournalieres: commun.indemnitesJournalieres.tranches, ...valeurs(commun.cotisationsMinimales), curps: valeurs(commun.curps) }, source: source(commun.retraiteDeBase) },
+    { sujet: "CIPAV : retraite complémentaire (tranches en part du PASS), invalidité-décès, taux global et répartition en micro-entreprise", valeurs: { retraiteComplementaire: cipav.retraiteComplementaire.tranches, invaliditeDeces: valeurs(cipav.invaliditeDeces), microEntreprise: { cotisations: cipav.microEntreprise.cotisations, repartition: cipav.microEntreprise.repartition } }, source: source(cipav.retraiteComplementaire) },
+    { sujet: "CARPIMKO : retraite complémentaire (en euros ; sur le revenu de l'année précédente quand elle est simulée), invalidité-décès, ASV, prise en charge de la maladie des conventionnés ; micro-entreprise interdite", valeurs: { retraiteComplementaire: valeurs(carpimko.retraiteComplementaire), invaliditeDeces: valeurs(carpimko.invaliditeDeces), asv: valeurs(carpimko.asv), priseEnChargeMaladie: valeurs(carpimko.priseEnChargeMaladie) }, source: source(carpimko) }
   ]
 }
 
@@ -182,7 +200,7 @@ export const reglesDeLAnneeOutil = definirOutil({
   nom: "regles_de_l_annee",
   titre: "Règles fiscales et sociales d'une année",
   description: [
-    "Donne les principaux seuils et taux que le simulateur applique pour une année (barème de l'impôt sur le revenu, plafond de la sécurité sociale, impôt sur les sociétés, dividendes, plafonds et taux de la micro-entreprise, TVA), avec leur source officielle.",
+    "Donne les principaux seuils et taux que le simulateur applique pour une année (barème de l'impôt sur le revenu, plafond de la sécurité sociale, impôt sur les sociétés, dividendes, plafonds et taux de la micro-entreprise, TVA, caisses des libéraux réglementés), avec leur source officielle.",
     "Pour expliquer un résultat ou vérifier une hypothèse, jamais pour refaire un calcul : les montants viennent de simuler, comparer_statuts et expliquer_resultat.",
     "Taux en fraction (0,15 = 15 %), montants annuels en euros. Une année plus récente que les dernières règles connues reprend celles-ci, avec un avertissement ; une année plus ancienne que les premières est refusée."
   ].join(" "),

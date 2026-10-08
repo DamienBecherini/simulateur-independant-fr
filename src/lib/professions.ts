@@ -4,7 +4,7 @@
 
 import { caisseDe, LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE, professionDe } from "@/backend/logic/professions"
 import { reglesEnVigueur, type ReglesFiscales } from "@/backend/logic/regles"
-import type { Company, MicroEntreprise } from "@/types"
+import type { ActivityResult, Company, DetailCotisationsTNS, MicroEntreprise, ProfessionDeLActivite } from "@/types"
 
 export { LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE }
 
@@ -70,6 +70,60 @@ export function avecLaProfession<T extends Company | MicroEntreprise>(activite: 
   if (id === PROFESSION_NON_REGLEMENTEE) return reste
   const garderLaPart = activite.partConventionnee !== undefined && estConventionnable({ profession: id }, regles)
   return { ...reste, profession: id, ...(garderLaPart ? { partConventionnee: activite.partConventionnee } : {}) }
+}
+
+/** « Ostéopathe (CIPAV, 23,2 % du chiffre d'affaires) », « Infirmier ou infirmière (CARPIMKO) ». */
+export function libelleDeLaProfession({ libelle, caisse, tauxMicro }: ProfessionDeLActivite): string {
+  if (!caisse) return `${libelle} (caisse non prise en compte)`
+  const taux = tauxMicro === undefined ? "" : `, ${tauxMicro.toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 })} du chiffre d'affaires`
+  return `${libelle} (${caisse}${taux})`
+}
+
+/** Statut d'une activité suivi de sa profession réglementée : « EI au réel · Ostéopathe (CIPAV) ». */
+export function statutEtProfession(activite: Pick<ActivityResult, "statut" | "profession">): string {
+  return activite.profession ? `${activite.statut} · ${libelleDeLaProfession(activite.profession)}` : activite.statut
+}
+
+/**
+ * La profession saisie sur une activité, pour une fiche ou un export : « Ostéopathe (CIPAV) », « Infirmier ou
+ * infirmière (CARPIMKO), part conventionnée 80 % » ; `null` sans profession réglementée.
+ */
+export function professionDeLaFiche(activite: Pick<Company | MicroEntreprise, "profession" | "partConventionnee">, regles: ReglesFiscales = reglesEnVigueur): string | null {
+  const profession = professionDe(activite, regles)
+  if (!profession) return null
+  const libelle = libelleDeLaProfession({ id: profession.id, libelle: profession.libelle, caisse: caisseDe(profession) })
+  const part = profession.conventionnable ? `, part conventionnée ${Math.round((activite.partConventionnee ?? 1) * 100)} %` : ""
+  return `${libelle}${part}`
+}
+
+/** Une ligne des cotisations d'une profession libérale réglementée au réel, et ce qui la précise. */
+export interface LigneDeLaCaisse {
+  libelle: string
+  montant: number
+  precision: string | null
+}
+
+/**
+ * Les cotisations que la caisse d'une profession libérale réglementée change, ligne à ligne, avec ce que l'Assurance
+ * maladie prend en charge et, pour la CARPIMKO, l'année du revenu de la complémentaire et de l'ASV ; rien sans caisse.
+ * `montant` met en forme les montants des précisions.
+ */
+export function lignesDeLaCaisse(tns: DetailCotisationsTNS, montant: (valeur: number) => string): LigneDeLaCaisse[] {
+  const caisse = tns.caisse
+  if (!caisse) return []
+  const base = caisse.baseDesCotisationsDeLAnneePrecedente
+  const surLeRevenu = base ? `calculée sur le revenu ${base.annee}${base.anneePrecedenteConnue ? "" : ` (${base.annee - 1} n'est pas dans la simulation)`}` : null
+  const priseEnCharge = (valeur: number) => (valeur >= 0.5 ? `${montant(valeur)} pris en charge par l'Assurance maladie` : null)
+  const c = tns.cotisations
+  const lignes: LigneDeLaCaisse[] = [
+    { libelle: "dont maladie (Urssaf)", montant: c.maladieMaternite, precision: priseEnCharge(caisse.priseEnCharge.maladie) },
+    { libelle: "dont retraite de base (CNAVPL)", montant: c.retraiteDeBase, precision: null },
+    { libelle: `dont retraite complémentaire (${caisse.caisse})`, montant: c.retraiteComplementaire, precision: surLeRevenu },
+    { libelle: `dont invalidité-décès (${caisse.caisse})`, montant: c.invaliditeDeces, precision: null }
+  ]
+  if (caisse.asv > 0) lignes.push({ libelle: "dont avantage social vieillesse (ASV)", montant: caisse.asv, precision: [surLeRevenu, priseEnCharge(caisse.priseEnCharge.asv)].filter(Boolean).join(" ; ") })
+  if (caisse.curps > 0) lignes.push({ libelle: "dont CURPS", montant: caisse.curps, precision: "unions régionales des professionnels de santé" })
+  return lignes
 }
 
 /** La liste vaut pour une micro-entreprise, une entreprise individuelle au réel et un gérant d'EURL, pas une SASU. */

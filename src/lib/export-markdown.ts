@@ -6,6 +6,7 @@ import type { ComparaisonOptions, ComparaisonResult, DeplacementsProfessionnels,
 import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libellePuissance, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { numeroterNotes } from "./notes"
+import { libelleDeLaProfession, lignesDeLaCaisse, professionDeLaFiche, statutEtProfession } from "./professions"
 
 /** Comparaison calculée à l'export pour l'activité choisie dans le comparateur, ou la raison de son absence. */
 export type ComparaisonDuRapport = { nomActivite: string; options: ComparaisonOptions; resultat: ComparaisonResult } | { nomActivite: string; erreur: string }
@@ -25,6 +26,7 @@ export const LIMITES = [
   "Montants annuels en euros, hors taxe ; la grille saisit des montants mensuels, additionnés sur l'année.",
   "Résultats indicatifs, non validés par un expert-comptable : ce n'est pas un conseil fiscal.",
   "Cotisations des travailleurs non salariés (gérant d'EURL, entrepreneur individuel au réel) calculées selon le barème des artisans, commerçants et professions libérales non réglementées ; celles du président de SASU approchées par un ratio moyen entre coût total et net.",
+  "Professions libérales réglementées : seules la CIPAV et la CARPIMKO sont calculées (au réel et en micro-entreprise) ; les autres caisses le sont comme une profession non réglementée, avec un avertissement. CARPIMKO : retraite complémentaire et ASV calculées sur le revenu de l'année précédente quand elle est dans la simulation, sinon sur celui de l'année. En SASU ou en EURL, la rémunération d'un associé de société d'exercice libéral (BNC, caisse de la profession) n'est pas modélisée : un avertissement le signale.",
   "Micro-entreprise : cotisations au taux de chaque nature d'activité, plus la contribution à la formation professionnelle, comptée au taux des artisans pour les prestations de services BIC (artisan et commerçant ne sont pas distingués).",
   "La note de protection sociale est indicative ; l'arbitrage rémunération / dividendes porte sur une seule année.",
   "Non modélisés : réductions et crédits d'impôt, résidence alternée, report des déficits, TVA (seul le dépassement des seuils de franchise est signalé), répartition du capital entre associés (dividendes partagés à parts égales)."
@@ -73,7 +75,8 @@ function detailDesDeplacements(deplacements: DeplacementsProfessionnels | undefi
 function detailDeLActeur(entity: Entity): string {
   if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}${detailDesFraisReels(entity)}`
   const creation = dateDeCreationLisible(entity)
-  const creee = `${creation ? ` ; créée en ${creation}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}`
+  const profession = professionDeLaFiche(entity)
+  const creee = `${creation ? ` ; créée en ${creation}` : ""}${profession ? ` ; profession : ${profession}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}`
   if (entity.type === "company") return `${entity.legalStatus === "EI" ? "Entreprise individuelle au régime réel" : `Société à l'impôt sur les sociétés, capital social ${euros(entity.capitalSocial)}${entity.reservesInitiales ? `, réserves au début de la simulation ${euros(entity.reservesInitiales)}` : ""}`}${creee}`
   const rfr = entity.rfrN2 === undefined ? "non renseigné" : euros(entity.rfrN2)
   const horsPlafond = entity.horsPlafondAnneePrecedente ? " ; au-delà des plafonds l'année d'avant la simulation" : ""
@@ -158,7 +161,7 @@ function sousSectionBilan(report: SimulationReport): string {
 
 function sousSectionActivites(session: SimulationAnnuelle, report: SimulationReport): string {
   if (report.activities.length === 0) return "### Par activité\n\nAucune activité."
-  const lignes = report.activities.map(a => [echapper(a.name), a.statut, euros(a.chiffreAffaires), euros(a.charges), euros(a.cotisationsSociales), euros(a.impotSocietes), euros(a.revenuVerse), euros(a.resultatConserve), a.beneficiaireIds.map(id => echapper(nomDeLActeur(session, id))).join(", ") || "—"])
+  const lignes = report.activities.map(a => [echapper(a.name), statutEtProfession(a), euros(a.chiffreAffaires), euros(a.charges), euros(a.cotisationsSociales), euros(a.impotSocietes), euros(a.revenuVerse), euros(a.resultatConserve), a.beneficiaireIds.map(id => echapper(nomDeLActeur(session, id))).join(", ") || "—"])
   return `### Par activité\n\n${tableau(["Activité", "Statut", "Chiffre d'affaires", "Charges", "Cotisations sociales", "Impôt sur les sociétés", "Versé aux personnes", "Conservé", "Bénéficiaires"], lignes, colonnesNumeriques(2, 7))}`
 }
 
@@ -175,6 +178,7 @@ function sectionResultats(session: SimulationAnnuelle, report: SimulationReport 
   const sousSections = [
     sousSectionBilan(report),
     sousSectionActivites(session, report),
+    sousSectionCaisses(report),
     sousSectionReserves(report),
     sousSectionDeplacements(report),
     sousSectionVersementLiberatoire(report),
@@ -183,6 +187,13 @@ function sectionResultats(session: SimulationAnnuelle, report: SimulationReport 
     sousSectionFraisProfessionnels(report)
   ].filter(Boolean)
   return `## Résultats ${report.annee} (règles fiscales ${report.anneeDesRegles})\n\nMontants annuels, avant les éventuelles dépenses personnelles.\n\n${sousSections.join("\n\n")}`
+}
+
+/** Professions libérales réglementées au réel : les cotisations que leur caisse change, ligne à ligne ; rien sans elles. */
+function sousSectionCaisses(report: SimulationReport): string {
+  const lignes = report.activities.flatMap(({ name, profession, cotisationsTNS }) => (cotisationsTNS && profession ? lignesDeLaCaisse(cotisationsTNS, euros).map(l => [echapper(name), libelleDeLaProfession(profession), l.libelle.replace(/^dont /, ""), euros(l.montant), l.precision ?? "—"]) : []))
+  if (lignes.length === 0) return ""
+  return `### Cotisations par caisse\n\nProfessions libérales réglementées : les cotisations que leur caisse change, comprises dans les cotisations sociales de l'activité.\n\n${tableau(["Activité", "Profession", "Cotisation", "Montant", "Précision"], lignes, [3])}`
 }
 
 /** Réserves des sociétés à l'IS : ce qui s'y ajoute ou en sort dans l'année, et ce qu'il en reste ; rien sans réserves. */

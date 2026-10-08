@@ -6,6 +6,8 @@
 import { z } from "zod"
 import { grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
 import { NOMBRE_MAX_ANNEES } from "../annees.js"
+import { professionDe, professionsConnues } from "../professions.js"
+import { reglesEnVigueur } from "../regles.js"
 import { anneeDeLaSession, enumerer, ErreurOutil, genreDe, GENRES_D_ACTEUR, RELATIONS_REQUISES, trouverActeur, TYPES_DE_FLUX, verifierNouvelleRelation, verifierTypePermis, type GenreDActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
 
@@ -28,7 +30,12 @@ export const ReglagesActeurSchema = z.strictObject({
   beneficieACRE: z.boolean().optional().describe("Micro-entreprise : bénéficie de l'ACRE."),
   opteVFL: z.boolean().optional().describe("Micro-entreprise : versement libératoire de l'impôt sur le revenu."),
   rfrN2: MontantSchema.optional().describe("Micro-entreprise : revenu fiscal de référence N-2 du foyer, en euros."),
-  horsPlafondAnneePrecedente: z.boolean().optional().describe("Micro-entreprise : au-delà des plafonds l'année d'avant la première de la simulation.")
+  horsPlafondAnneePrecedente: z.boolean().optional().describe("Micro-entreprise : au-delà des plafonds l'année d'avant la première de la simulation."),
+  profession: z
+    .string()
+    .optional()
+    .describe("EI, EURL, micro : profession réglementée (regles_de_l_annee)."),
+  partConventionnee: z.number().min(0).max(1).optional().describe("Part conventionnée (CARPIMKO), 0 à 1.")
 })
 type ReglagesActeur = z.infer<typeof ReglagesActeurSchema>
 
@@ -40,7 +47,20 @@ const REGLAGE_PAR_GENRE: Record<keyof ReglagesActeur, GenreDActeur[]> = {
   beneficieACRE: ["micro-entreprise"],
   opteVFL: ["micro-entreprise"],
   rfrN2: ["micro-entreprise"],
-  horsPlafondAnneePrecedente: ["micro-entreprise"]
+  horsPlafondAnneePrecedente: ["micro-entreprise"],
+  profession: ["EURL", "EI", "micro-entreprise"],
+  partConventionnee: ["EURL", "EI", "micro-entreprise"]
+}
+
+/**
+ * La profession proposée doit être connue des règles ; une part conventionnée n'a de sens que pour une profession
+ * conventionnable, celle que l'acteur aura après l'opération.
+ */
+function verifierProfession(acteur: Entity): void {
+  if (acteur.type === "person") return
+  if (acteur.profession !== undefined && !professionsConnues().has(acteur.profession)) throw new ErreurOutil(`Profession inconnue : « ${acteur.profession} » (identifiants : regles_de_l_annee, ou « non-reglementee »).`)
+  if (acteur.partConventionnee === undefined || professionDe(acteur, reglesEnVigueur)?.conventionnable) return
+  throw new ErreurOutil(`La part conventionnée ne vaut que pour une profession conventionnable (auxiliaires médicaux de la CARPIMKO) : « ${acteur.name} » n'en a pas.`)
 }
 
 /**
@@ -133,7 +153,9 @@ function ajouterActeur(c: Chantier, op: OperationDe<"ajouter_acteur">): void {
     EURL: () => ({ type: "company", legalStatus: "EURL", capitalSocial: 1000, ...commun }) as Entity,
     EI: () => ({ type: "company", legalStatus: "EI", capitalSocial: 0, ...commun }) as Entity
   }
-  c.session = { ...c.session, entities: [...c.session.entities, acteurs[op.genre]()] }
+  const nouvel = acteurs[op.genre]()
+  verifierProfession(nouvel)
+  c.session = { ...c.session, entities: [...c.session.entities, nouvel] }
 }
 
 function modifierActeur(c: Chantier, op: OperationDe<"modifier_acteur">): void {
@@ -142,6 +164,7 @@ function modifierActeur(c: Chantier, op: OperationDe<"modifier_acteur">): void {
   if (op.nom === undefined && Object.keys(sansValeursAbsentes(op.reglages)).length === 0) throw new ErreurOutil("Rien à modifier : indiquez un nom ou des réglages.")
   verifierReglages(genreDe(acteur), op.reglages)
   const modifie = { ...acteur, ...(op.nom ? { name: op.nom } : {}), ...champsDeLActeur(op.reglages) } as Entity
+  verifierProfession(modifie)
   c.session = { ...c.session, entities: c.session.entities.map(e => (e.id === acteur.id ? modifie : e)) }
 }
 

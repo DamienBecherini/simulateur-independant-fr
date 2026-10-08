@@ -79,7 +79,8 @@ export const comparerStatuts = definirOutil({
     "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro-entreprise avec et sans versement libératoire), le reste de la simulation inchangé, et désigne le statut au meilleur net après impôts du foyer.",
     "Utilise les réglages du comparateur enregistrés (partage du bénéfice, frais de fonctionnement par statut) ; les paramètres essaient une variante sans rien enregistrer (pour l'enregistrer : proposer_reglages_comparateur).",
     "Les frais de fonctionnement (fraisFonctionnement : expert-comptable, banque, logiciel, assurance, CFE) s'ajoutent aux charges de la grille, statut actuel compris : comparez les scénarios entre eux, pas avec simuler.",
-    "Montants annuels en euros, arrondis, pour toute la simulation (tous les foyers) ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant en SASU et EURL."
+    "Montants annuels en euros, arrondis, pour toute la simulation (tous les foyers) ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant en SASU et EURL.",
+    "Pas de colonne micro pour un auxiliaire médical (CARPIMKO) : la raison est dans les avertissements."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({

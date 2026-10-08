@@ -1,6 +1,7 @@
 // src/ui/components/ResultsPanel.tsx
 
 import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
+import { lignesDeLaCaisse, statutEtProfession } from "@/lib/professions"
 import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
 import { useId, type ReactNode } from "react"
@@ -333,15 +334,8 @@ export function NotesDesDispositifs({ notes, className }: { notes: string[] | un
 
 /** Statut affiché sous le nom : celui de l'année, et la sortie du régime micro quand elle a eu lieu. */
 function statutAffiche(activity: ActivityResult): string {
-  const statut = activity.sortieDuRegimeMicro ? `${activity.statut} · sortie du régime micro au 1er janvier ${activity.sortieDuRegimeMicro.depuis}` : activity.statut
-  return activity.profession ? `${statut} · ${libelleDeLaProfession(activity.profession)}` : statut
-}
-
-/** « Ostéopathe (CIPAV, 23,2 % en micro-entreprise) », « Infirmier ou infirmière (CARPIMKO) ». */
-function libelleDeLaProfession({ libelle, caisse, tauxMicro }: NonNullable<ActivityResult["profession"]>): string {
-  if (!caisse) return `${libelle} (caisse non prise en compte)`
-  const taux = tauxMicro === undefined ? "" : `, ${tauxMicro.toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 })} du chiffre d'affaires`
-  return `${libelle} (${caisse}${taux})`
+  const statut = statutEtProfession(activity)
+  return activity.sortieDuRegimeMicro ? `${statut} · sortie du régime micro au 1er janvier ${activity.sortieDuRegimeMicro.depuis}` : statut
 }
 
 /**
@@ -349,20 +343,11 @@ function libelleDeLaProfession({ libelle, caisse, tauxMicro }: NonNullable<Activ
  * l'Assurance maladie prend en charge et, pour la CARPIMKO, l'année du revenu de la complémentaire et de l'ASV.
  */
 function LignesDeLaCaisse({ tns, className }: { tns: NonNullable<ActivityResult["cotisationsTNS"]>; className?: string }) {
-  const caisse = tns.caisse
-  if (!caisse) return null
-  const base = caisse.baseDesCotisationsDeLAnneePrecedente
-  const surLeRevenu = base ? `calculée sur le revenu ${base.annee}${base.anneePrecedenteConnue ? "" : ` (${base.annee - 1} n'est pas dans la simulation)`}` : null
-  const priseEnCharge = (montant: number) => (montant >= 0.5 ? `${formatMoney(montant)} pris en charge par l'Assurance maladie` : null)
-  const c = tns.cotisations
   return (
     <>
-      <Row label="dont maladie (Urssaf)" value={formatMoney(c.maladieMaternite)} hint={priseEnCharge(caisse.priseEnCharge.maladie)} className={className} />
-      <Row label="dont retraite de base (CNAVPL)" value={formatMoney(c.retraiteDeBase)} className={className} />
-      <Row label={`dont retraite complémentaire (${caisse.caisse})`} value={formatMoney(c.retraiteComplementaire)} hint={surLeRevenu} className={className} />
-      <Row label={`dont invalidité-décès (${caisse.caisse})`} value={formatMoney(c.invaliditeDeces)} className={className} />
-      {caisse.asv > 0 ? <Row label="dont avantage social vieillesse (ASV)" value={formatMoney(caisse.asv)} hint={[surLeRevenu, priseEnCharge(caisse.priseEnCharge.asv)].filter(Boolean).join(" ; ")} className={className} /> : null}
-      {caisse.curps > 0 ? <Row label="dont CURPS" value={formatMoney(caisse.curps)} hint="unions régionales des professionnels de santé" className={className} /> : null}
+      {lignesDeLaCaisse(tns, formatMoney).map(ligne => (
+        <Row key={ligne.libelle} label={ligne.libelle} value={formatMoney(ligne.montant)} hint={ligne.precision} className={className} />
+      ))}
     </>
   )
 }
