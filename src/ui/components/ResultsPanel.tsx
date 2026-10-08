@@ -333,7 +333,38 @@ export function NotesDesDispositifs({ notes, className }: { notes: string[] | un
 
 /** Statut affiché sous le nom : celui de l'année, et la sortie du régime micro quand elle a eu lieu. */
 function statutAffiche(activity: ActivityResult): string {
-  return activity.sortieDuRegimeMicro ? `${activity.statut} · sortie du régime micro au 1er janvier ${activity.sortieDuRegimeMicro.depuis}` : activity.statut
+  const statut = activity.sortieDuRegimeMicro ? `${activity.statut} · sortie du régime micro au 1er janvier ${activity.sortieDuRegimeMicro.depuis}` : activity.statut
+  return activity.profession ? `${statut} · ${libelleDeLaProfession(activity.profession)}` : statut
+}
+
+/** « Ostéopathe (CIPAV, 23,2 % en micro-entreprise) », « Infirmier ou infirmière (CARPIMKO) ». */
+function libelleDeLaProfession({ libelle, caisse, tauxMicro }: NonNullable<ActivityResult["profession"]>): string {
+  if (!caisse) return `${libelle} (caisse non prise en compte)`
+  const taux = tauxMicro === undefined ? "" : `, ${tauxMicro.toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 })} du chiffre d'affaires`
+  return `${libelle} (${caisse}${taux})`
+}
+
+/**
+ * Profession libérale réglementée au réel : les cotisations que sa caisse change, ligne à ligne, avec ce que
+ * l'Assurance maladie prend en charge et, pour la CARPIMKO, l'année du revenu de la complémentaire et de l'ASV.
+ */
+function LignesDeLaCaisse({ tns, className }: { tns: NonNullable<ActivityResult["cotisationsTNS"]>; className?: string }) {
+  const caisse = tns.caisse
+  if (!caisse) return null
+  const base = caisse.baseDesCotisationsDeLAnneePrecedente
+  const surLeRevenu = base ? `calculée sur le revenu ${base.annee}${base.anneePrecedenteConnue ? "" : ` (${base.annee - 1} n'est pas dans la simulation)`}` : null
+  const priseEnCharge = (montant: number) => (montant >= 0.5 ? `${formatMoney(montant)} pris en charge par l'Assurance maladie` : null)
+  const c = tns.cotisations
+  return (
+    <>
+      <Row label="dont maladie (Urssaf)" value={formatMoney(c.maladieMaternite)} hint={priseEnCharge(caisse.priseEnCharge.maladie)} className={className} />
+      <Row label="dont retraite de base (CNAVPL)" value={formatMoney(c.retraiteDeBase)} className={className} />
+      <Row label={`dont retraite complémentaire (${caisse.caisse})`} value={formatMoney(c.retraiteComplementaire)} hint={surLeRevenu} className={className} />
+      <Row label={`dont invalidité-décès (${caisse.caisse})`} value={formatMoney(c.invaliditeDeces)} className={className} />
+      {caisse.asv > 0 ? <Row label="dont avantage social vieillesse (ASV)" value={formatMoney(caisse.asv)} hint={[surLeRevenu, priseEnCharge(caisse.priseEnCharge.asv)].filter(Boolean).join(" ; ")} className={className} /> : null}
+      {caisse.curps > 0 ? <Row label="dont CURPS" value={formatMoney(caisse.curps)} hint="unions régionales des professionnels de santé" className={className} /> : null}
+    </>
+  )
 }
 
 function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: number }) {
@@ -389,6 +420,7 @@ function LignesDeLActivite({ activity, className }: { activity: ActivityResult; 
       {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${formatMoney(activity.charges)}`} className={className} /> : null}
       {activity.fraisDeDeplacement ? <DeplacementsRow deplacements={activity.fraisDeDeplacement} className={className} /> : null}
       <Row label="Cotisations sociales" value={`− ${formatMoney(activity.cotisationsSociales)}`} className={className} />
+      {activity.cotisationsTNS ? <LignesDeLaCaisse tns={activity.cotisationsTNS} className={className} /> : null}
       {activity.formationProfessionnelle ? <Row label="dont formation professionnelle" value={formatMoney(activity.formationProfessionnelle)} hint="contribution sur le chiffre d'affaires, non réduite par l'ACRE" className={className} /> : null}
       {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={formatMoney(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${formatMoney(activity.cotisationsPresident.brut)} bruts`} className={className} /> : null}
       {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} className={className} /> : null}
