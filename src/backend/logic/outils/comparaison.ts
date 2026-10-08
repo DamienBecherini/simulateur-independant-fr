@@ -146,6 +146,7 @@ export const optimiserRemuneration = definirOutil({
     "Pour une activité en SASU ou en EURL (son statut actuel ou étudié), cherche la rémunération nette du dirigeant au meilleur net après impôts du foyer, le reste du bénéfice en dividendes, et la meilleure parmi celles qui valident 4 trimestres de retraite.",
     `Rend la rémunération maximale, ces deux points, ${POINTS_DE_LA_COURBE} points de la courbe, et situationActuelle : l'activité telle que saisie (statut, rémunération et dividendes de la grille), avec ecartAuMeilleur et ecartAuMeilleurAvecRetraite, le net que le foyer gagnerait à chaque point (« vous êtes à X € du meilleur net »). Montants annuels en euros, arrondis ; calcul à 100 € près.`,
     "Ces nets comptent les frais de fonctionnement du comparateur (fraisFonctionnement du statut étudié, situationActuelle.fraisFonctionnement de l'actuel ; noteCFE si la CFE est réduite après une création) : ils diffèrent de ceux de simuler ; comparez-les entre eux.",
+    "Les points ne distribuent que le bénéfice de l'année ; les dividendes de la grille peuvent puiser dans les réserves des années précédentes : un écart négatif peut venir de là.",
     "Ne modifie rien : pour retenir une rémunération, proposez un flux director_remuneration mensuel (montant annuel / 12) et ajustez les dividendes saisis (dividends_payment) ; l'aperçu de la proposition donne le net obtenu."
   ].join(" "),
   lecture: true,
