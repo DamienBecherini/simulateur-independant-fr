@@ -216,6 +216,71 @@ describe("modifier, supprimer, régler le comparateur", () => {
   })
 })
 
+describe("rafraîchir une proposition périmée", () => {
+  type Rafraichie = ResultatProposition & { dejaAJour: boolean; retirees: { numero: number; operation: string; raison: string }[] }
+  const ventes = { acteurId: "micro-atelier", typeFlux: "ca_micro_vente", libelle: "Ventes" }
+  const ventesReelles = { annee: 2026, acteurId: "micro-atelier", typeFlux: "ca_micro_vente", libelle: "Ventes réelles", montant: 450, mois: [1, 2] }
+  /** Remplacer l'estimation « Ventes » par les ventes réelles : une suppression, puis un ajout. */
+  const remplacement = (session: SessionState) => {
+    const suppression = proposer("proposer_suppression", session, { suppression: { cible: "serie", annee: 2026, serie: ventes } })
+    return proposer("proposer_flux", session, { flux: [ventesReelles], suiteDe: suppression.proposition }).proposition
+  }
+  /** La session après que l'utilisateur a, dans l'application, supprimé lui-même l'estimation « Ventes ». */
+  const sansLesVentes = () => {
+    const session = sessionExemple()
+    return geler({ ...session, annees: session.annees.map(a => ({ ...a, monthlyData: a.monthlyData.map(m => ({ ...m, flows: m.flows.filter(f => f.label !== "Ventes") })) })) })
+  }
+
+  it("reconstruit la proposition sur la simulation actuelle, sans les opérations qui ne s'appliquent plus, et le dit", () => {
+    const proposition = remplacement(exemple())
+    const actuelle = sansLesVentes()
+    expect(erreurDe("appliquer_proposition", actuelle, { proposition })).toContain("appelez rafraichir_proposition")
+    const avant = JSON.stringify(actuelle)
+
+    const rafraichie = appeler<Rafraichie>("rafraichir_proposition", actuelle, { proposition })
+    expect(JSON.stringify(actuelle)).toBe(avant)
+    expect(rafraichie.dejaAJour).toBe(false)
+    expect(rafraichie.retirees).toEqual([{ numero: 1, operation: "supprimer_serie « Ventes » 2026", raison: expect.stringContaining("Aucun flux « Ventes » (ca_micro_vente) de « Atelier de Camille » en 2026") }])
+    expect(rafraichie.avertissements[0]).toMatch(/^Opération retirée de la proposition d'origine, car elle ne s'applique plus à la simulation actuelle : n° 1 \(supprimer_serie « Ventes » 2026\) : Aucun flux/)
+    expect(rafraichie.proposition).toEqual({ empreinteSession: empreinteDeLaSession(actuelle), operations: [expect.objectContaining({ type: "ajouter_flux", libelle: "Ventes réelles" })] })
+    expect(rafraichie.recapitulatif).toBe("Ajouter 2 flux ?")
+    // Les mêmes chiffres du moteur qu'une proposition faite directement sur la simulation actuelle.
+    expect(rafraichie.apercu).toEqual(proposer("proposer_flux", actuelle, { flux: [ventesReelles] }).apercu)
+    expect(fluxDe(appliquer(actuelle, rafraichie.proposition)).filter(f => f.label === "Ventes réelles")).toHaveLength(2)
+  })
+
+  it("rend telle quelle une proposition encore à jour, et refuse une proposition dont rien ne s'applique plus", () => {
+    const session = exemple()
+    const { proposition } = proposer("proposer_flux", session, { flux: [loyer] })
+    const aJour = appeler<Rafraichie>("rafraichir_proposition", session, { proposition })
+    expect(aJour).toMatchObject({ dejaAJour: true, retirees: [], proposition })
+
+    const suppression = proposer("proposer_suppression", session, { suppression: { cible: "serie", annee: 2026, serie: ventes } }).proposition
+    expect(erreurDe("rafraichir_proposition", sansLesVentes(), { proposition: suppression })).toMatch(/^Aucune opération de la proposition ne s'applique à la simulation actuelle : n° 1 \(supprimer_serie « Ventes » 2026\) : .*refaites la proposition/)
+  })
+
+  it("retire aussi les opérations qui dépendent d'une opération retirée, et revérifie le tout", () => {
+    const session = exemple()
+    const acteur = proposer("proposer_acteur", session, { genre: "personne", nom: "Bruno Durand" })
+    const id = acteur.nouveauxIdentifiants[0].id
+    const salaire = proposer("proposer_flux", session, { flux: [{ annee: 2026, acteurId: id, typeFlux: "salary", libelle: "Salaire", montant: 2000, mois: [1] }], suiteDe: acteur.proposition })
+    const loyerEnPlus = proposer("proposer_flux", session, { flux: [loyer], suiteDe: salaire.proposition }).proposition
+    // Entre-temps, une relation saisie dans l'application a pris l'identifiant de l'acteur proposé.
+    const base = sessionExemple()
+    const occupee = geler({ ...base, relationships: [...base.relationships, { id, fromId: "person-lea", toId: "company-conseil", type: "Associé" as const }] })
+    const rafraichie = appeler<Rafraichie>("rafraichir_proposition", occupee, { proposition: loyerEnPlus })
+    expect(rafraichie.retirees.map(r => [r.numero, r.operation])).toEqual([
+      [1, "ajouter_acteur « Bruno Durand »"],
+      [2, "ajouter_flux « Salaire » 2026"]
+    ])
+    expect(rafraichie.retirees[0].raison).toBe(`L'identifiant « ${id} » est déjà pris.`)
+    expect(rafraichie.retirees[1].raison).toContain(`Aucun acteur « ${id} » dans la simulation.`)
+    expect(rafraichie.proposition.operations.map(o => o.type)).toEqual(["ajouter_flux"])
+    expect(rafraichie.avertissements[0]).toMatch(/^2 opérations retirées de la proposition d'origine, car elles ne s'appliquent plus/)
+    expect(erreurDe("rafraichir_proposition", session, { proposition: { ...loyerEnPlus, operations: [{ type: "supprimer_acteur" }] } })).toMatch(/^Proposition refusée/)
+  })
+})
+
 describe("limites", () => {
   it("refuse les montants démesurés, négatifs, les textes trop longs et les caractères de contrôle", () => {
     expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, montant: 1e9 }] })).toContain("vérifiez l'unité")

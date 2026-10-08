@@ -6,7 +6,8 @@ import { z } from "zod"
 import { MODES_REPARTITION, type ComparaisonOptions, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
 import { vueDeLAnnee } from "../annees.js"
 import { optionsDuComparateur } from "../options-du-comparateur.js"
-import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee } from "../simulation-pluriannuelle.js"
+import type { SituationActuelle } from "../comparateur.js"
+import { arbitrageDeLAnnee, comparerStatutsDeLAnnee } from "../simulation-pluriannuelle.js"
 import { anneeDeLaSession, arrondir, ErreurOutil, nomDe, trouverActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, MontantSchema } from "./limites.js"
 import { definirOutil, resultatSeul } from "./outil.js"
@@ -75,15 +76,15 @@ export const comparerStatuts = definirOutil({
   nom: "comparer_statuts",
   titre: "Comparer les statuts d'une activité",
   description: [
-    "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro-entreprise avec et sans versement libératoire), le reste de la simulation inchangé, et désigne le statut au meilleur net après impôts pour le foyer.",
-    "Utilise les réglages du comparateur enregistrés dans la simulation (partage du bénéfice, frais de fonctionnement par statut) ; les paramètres facultatifs permettent d'essayer une variante sans rien enregistrer (pour l'enregistrer, proposer_reglages_comparateur).",
-    "Les frais de fonctionnement de ces réglages (fraisFonctionnement : expert-comptable, banque, logiciel, assurance, CFE) s'ajoutent aux charges de la grille, statut actuel compris : le net d'un scénario est donc en général inférieur à celui de simuler. Comparez les scénarios entre eux, pas avec simuler.",
-    "Montants annuels en euros, arrondis, pour toute la simulation (net de tous les foyers) ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant en SASU et EURL. Calcul plus long que simuler : plusieurs dizaines de simulations."
+    "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro-entreprise avec et sans versement libératoire), le reste de la simulation inchangé, et désigne le statut au meilleur net après impôts du foyer.",
+    "Utilise les réglages du comparateur enregistrés (partage du bénéfice, frais de fonctionnement par statut) ; les paramètres essaient une variante sans rien enregistrer (pour l'enregistrer : proposer_reglages_comparateur).",
+    "Les frais de fonctionnement (fraisFonctionnement : expert-comptable, banque, logiciel, assurance, CFE) s'ajoutent aux charges de la grille, statut actuel compris : comparez les scénarios entre eux, pas avec simuler.",
+    "Montants annuels en euros, arrondis, pour toute la simulation (tous les foyers) ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant en SASU et EURL."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({
     ...ParametresVariante,
-    mode: z.enum(MODES_REPARTITION).optional().describe("Partage du bénéfice en SASU et EURL : meilleurNet (rémunération au meilleur net, le reste en dividendes), dividendes (rémunération saisie, le reste en dividendes), remuneration (tout en rémunération), personnalisee (rémunération saisie et part distribuée), grille (montants de la grille)."),
+    mode: z.enum(MODES_REPARTITION).optional().describe("Partage du bénéfice en SASU et EURL : meilleurNet (rémunération au meilleur net, reste en dividendes), dividendes (rémunération saisie, reste en dividendes), remuneration (tout), personnalisee (rémunération saisie et part distribuée), grille (montants saisis)."),
     remunerationNette: MontantSchema.optional().describe("Rémunération nette annuelle du dirigeant en SASU et EURL, en euros (modes dividendes et personnalisee)."),
     partDistribuee: z.number().min(0).max(1).optional().describe("Mode personnalisee : part du bénéfice distribuable versée en dividendes, de 0 à 1."),
     avecRetraite: z.boolean().optional().describe("Mode meilleurNet : ne retenir que les rémunérations qui valident 4 trimestres de retraite."),
@@ -127,29 +128,60 @@ export function echantillon<T>(points: T[], nombre: number): T[] {
   return [...indices].map(i => points[i])
 }
 
+/** La situation actuelle de l'activité, comme un point de la courbe, avec son statut et ses frais de fonctionnement. */
+const SituationSchema = PointSchema.extend({ statut: z.string(), remunerationNette: z.number().nullable(), dividendes: z.number().nullable(), fraisFonctionnement: z.number() })
+
+function resumeDeLaSituation({ scenario, remunerationNette, dividendes }: SituationActuelle): z.infer<typeof SituationSchema> {
+  const montants = arrondirTout({ netApresImpots: scenario.netApresImpots, cotisationsSociales: scenario.cotisationsSociales, impotSocietes: scenario.impotSocietes, impotSurLeRevenu: scenario.impotSurLeRevenu, prelevementsSociaux: scenario.prelevementsSociaux, fraisFonctionnement: scenario.fraisFonctionnement })
+  return { statut: scenario.statut, remunerationNette: remunerationNette === null ? null : arrondir(remunerationNette), dividendes: dividendes === null ? null : arrondir(dividendes), ...montants, trimestres: scenario.protectionSociale.trimestres }
+}
+
+/** Net d'un point moins celui de la situation actuelle : ce que le foyer gagnerait (ou perdrait, si négatif). */
+const ecart = (point: PointRemuneration | null, actuelle: SituationActuelle | null) => (point && actuelle ? arrondir(point.netApresImpots - actuelle.scenario.netApresImpots) : null)
+
 export const optimiserRemuneration = definirOutil({
   nom: "optimiser_remuneration",
   titre: "Arbitrer rémunération et dividendes",
   description: [
-    "Pour une activité exercée en SASU ou en EURL (son statut actuel ou celui étudié), cherche la rémunération nette du dirigeant qui donne le meilleur net après impôts au foyer, tout le reste du bénéfice étant versé en dividendes ; donne aussi le meilleur choix parmi les rémunérations qui valident 4 trimestres de retraite.",
-    `Rend la rémunération maximale que la société peut verser, les deux meilleurs points et ${POINTS_DE_LA_COURBE} points de la courbe. Montants annuels en euros, arrondis ; calcul à 100 € près.`,
-    "Les frais de fonctionnement enregistrés dans le comparateur (voir comparer_statuts) s'ajoutent aux charges de la grille : nets et dividendes de la courbe sont calculés après eux, et diffèrent donc de ceux de simuler ; comparez les points entre eux.",
-    "Ne modifie rien : pour retenir une rémunération, proposez un flux director_remuneration mensuel (le montant annuel divisé par 12) avec proposer_flux ou proposer_modification, et ajustez les dividendes saisis (dividends_payment) ; l'aperçu de la proposition donne le net obtenu et signale des dividendes supérieurs au bénéfice distribuable."
+    "Pour une activité en SASU ou en EURL (son statut actuel ou étudié), cherche la rémunération nette du dirigeant au meilleur net après impôts du foyer, le reste du bénéfice en dividendes, et la meilleure parmi celles qui valident 4 trimestres de retraite.",
+    `Rend la rémunération maximale, ces deux points, ${POINTS_DE_LA_COURBE} points de la courbe, et situationActuelle : l'activité telle que saisie (statut, rémunération et dividendes de la grille), avec ecartAuMeilleur et ecartAuMeilleurAvecRetraite, le net que le foyer gagnerait à chaque point (« vous êtes à X € du meilleur net »). Montants annuels en euros, arrondis ; calcul à 100 € près.`,
+    "Ces nets comptent les frais de fonctionnement du comparateur (fraisFonctionnement du statut étudié, situationActuelle.fraisFonctionnement de l'actuel ; noteCFE si la CFE est réduite après une création) : ils diffèrent de ceux de simuler ; comparez-les entre eux.",
+    "Ne modifie rien : pour retenir une rémunération, proposez un flux director_remuneration mensuel (montant annuel / 12) et ajustez les dividendes saisis (dividends_payment) ; l'aperçu de la proposition donne le net obtenu."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({ ...ParametresVariante, statut: z.enum(["SASU", "EURL"]).describe("Statut de société étudié.") }),
-  resultat: z.object({ annee: z.number(), activiteId: z.string(), activite: z.string(), statut: z.string(), remunerationMaximale: z.number(), meilleur: PointSchema.nullable(), meilleurAvecRetraite: PointSchema.nullable(), courbe: z.array(PointSchema), avertissements: z.array(z.string()) }),
+  resultat: z.object({
+    annee: z.number(),
+    activiteId: z.string(),
+    activite: z.string(),
+    statut: z.string(),
+    remunerationMaximale: z.number(),
+    fraisFonctionnement: z.number(),
+    noteCFE: z.string().nullable(),
+    situationActuelle: SituationSchema.nullable(),
+    meilleur: PointSchema.nullable(),
+    meilleurAvecRetraite: PointSchema.nullable(),
+    ecartAuMeilleur: z.number().nullable(),
+    ecartAuMeilleurAvecRetraite: z.number().nullable(),
+    courbe: z.array(PointSchema),
+    avertissements: z.array(z.string())
+  }),
   executer: (session, { activiteId, annee, statut }) => {
     const { options, annee: anneeRetenue, activite } = optionsEnregistrees(session, activiteId, annee)
-    const optimisation = optimiserRemunerationDeLAnnee(session, options, statut, anneeRetenue)
+    const { optimisation, situationActuelle, fraisFonctionnement, noteCFE } = arbitrageDeLAnnee(session, options, statut, anneeRetenue)
     return resultatSeul({
       annee: anneeRetenue,
       activiteId: activite.id,
       activite: activite.name,
       statut,
       remunerationMaximale: arrondir(optimisation.remunerationMaximale),
+      fraisFonctionnement: arrondir(fraisFonctionnement),
+      noteCFE: noteCFE ?? null,
+      situationActuelle: situationActuelle ? resumeDeLaSituation(situationActuelle) : null,
       meilleur: optimisation.meilleur ? resumeDuPoint(optimisation.meilleur) : null,
       meilleurAvecRetraite: optimisation.meilleurAvecRetraite ? resumeDuPoint(optimisation.meilleurAvecRetraite) : null,
+      ecartAuMeilleur: ecart(optimisation.meilleur, situationActuelle),
+      ecartAuMeilleurAvecRetraite: ecart(optimisation.meilleurAvecRetraite, situationActuelle),
       courbe: echantillon(optimisation.points, POINTS_DE_LA_COURBE).map(resumeDuPoint),
       avertissements: optimisation.warnings
     })

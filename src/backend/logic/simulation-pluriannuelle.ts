@@ -9,7 +9,7 @@
 
 import type { ComparaisonOptions, ComparaisonResult, DonneesDeLAnnee, OptimisationRemuneration, ResultatAnnee, SessionState, SimulationPluriannuelle, SimulationReport, StatutSociete } from "../../types.js"
 import { anneeExistante, donneesDeLAnnee } from "./annees.js"
-import { activiteComparee, avecLaCFEDeLAnnee, comparerStatuts, convertirLActivite } from "./comparateur.js"
+import { activiteComparee, avecLaCFEDeLAnnee, comparerStatuts, convertirLActivite, fraisDuStatut, situationActuelle, type SituationActuelle } from "./comparateur.js"
 import { regimesMicroDesAnnees, type RegimeMicroDeLAnnee } from "./dispositifs.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { reglesDeLAnnee, type ReglesFiscales } from "./regles.js"
@@ -91,11 +91,44 @@ export function comparerStatutsDeLAnnee(session: SessionState, options: Comparai
   return comparerStatuts(donnees, options, regles, contexte)
 }
 
+/**
+ * Prépare l'arbitrage d'une année : ses données, ses règles, l'activité étudiée et les réglages, dont la CFE des frais
+ * de fonctionnement tient compte, comme dans le comparateur, de la date de création de l'activité.
+ */
+function preparerLArbitrage(session: SessionState, options: ComparaisonOptions, annee: number) {
+  const { donnees, regles, contexte } = preparerOuEchouer(session, annee)
+  const source = activiteComparee(donnees, options.activityId)
+  const cfe = source ? avecLaCFEDeLAnnee(options, source, contexte.annee ?? regles.annee, regles) : { options }
+  return { donnees, regles, contexte, source, ...cfe }
+}
+
 /** Arbitre rémunération et dividendes sur une année de la session, avec les règles de cette année. */
 export function optimiserRemunerationDeLAnnee(session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number): OptimisationRemuneration {
-  const { donnees, regles, contexte } = preparerOuEchouer(session, annee)
-  // Comme dans le comparateur, la CFE des frais de fonctionnement tient compte de la date de création de l'activité.
-  const source = activiteComparee(donnees, options.activityId)
-  const avecCFE = source ? avecLaCFEDeLAnnee(options, source, contexte.annee ?? regles.annee, regles).options : options
+  const { donnees, regles, contexte, options: avecCFE } = preparerLArbitrage(session, options, annee)
   return optimiserRemuneration(donnees, avecCFE, statut, regles, contexte)
+}
+
+/** L'arbitrage d'une année, avec la situation actuelle de l'activité et les frais de fonctionnement retenus. */
+export interface ArbitrageDeLAnnee {
+  optimisation: OptimisationRemuneration
+  /** L'activité telle que la grille la décrit, dans son statut actuel ; `null` sans activité à étudier. */
+  situationActuelle: SituationActuelle | null
+  /** Frais de fonctionnement annuels retenus pour le statut étudié, CFE de l'année comprise. */
+  fraisFonctionnement: number
+  /** CFE exonérée ou réduite l'année de création ou la suivante : ce qui est retenu. */
+  noteCFE?: string
+}
+
+/**
+ * L'arbitrage rémunération / dividendes d'une année et, en une simulation de plus, la situation actuelle de l'activité
+ * avec les mêmes réglages : de quoi dire l'écart entre ce qui est saisi et le meilleur net.
+ */
+export function arbitrageDeLAnnee(session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number): ArbitrageDeLAnnee {
+  const { donnees, regles, contexte, source, options: avecCFE, noteCFE } = preparerLArbitrage(session, options, annee)
+  return {
+    optimisation: optimiserRemuneration(donnees, avecCFE, statut, regles, contexte),
+    situationActuelle: source ? situationActuelle(donnees, source, avecCFE, regles, contexte) : null,
+    fraisFonctionnement: fraisDuStatut(statut, avecCFE),
+    ...(noteCFE ? { noteCFE } : {})
+  }
 }

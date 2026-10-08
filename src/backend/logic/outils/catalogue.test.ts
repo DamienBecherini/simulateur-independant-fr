@@ -27,6 +27,7 @@ describe("catalogue des outils", () => {
       "proposer_modification",
       "proposer_suppression",
       "proposer_reglages_comparateur",
+      "rafraichir_proposition",
       "appliquer_proposition"
     ])
   })
@@ -40,19 +41,30 @@ describe("catalogue des outils", () => {
       expect(outil.description).not.toMatch(/\b(the|returns|this tool)\b/i)
     }
     expect(catalogueDesOutils().filter(o => o.lecture).map(o => o.nom)).toHaveLength(8)
-    expect(catalogueDesOutils().filter(o => !o.lecture).every(o => o.nom.startsWith("proposer_") || o.nom === "appliquer_proposition")).toBe(true)
+    expect(catalogueDesOutils().filter(o => !o.lecture).every(o => o.nom.startsWith("proposer_") || o.nom === "rafraichir_proposition" || o.nom === "appliquer_proposition")).toBe(true)
   })
 
   it("génère depuis Zod des schémas JSON d'objets, sérialisables, de taille raisonnable", () => {
     const catalogue = catalogueDesOutils()
     for (const outil of catalogue) {
       expect(outil.inputSchema).toMatchObject({ type: "object", additionalProperties: false })
-      expect(outil.outputSchema).toMatchObject({ type: "object" })
+      expect(outil).not.toHaveProperty("outputSchema")
       expect(outil.inputSchema).not.toHaveProperty("$schema")
       expect(JSON.parse(JSON.stringify(outil.inputSchema))).toEqual(outil.inputSchema)
     }
-    // Le catalogue entier est envoyé au modèle à chaque échange : il doit rester léger.
-    expect(JSON.stringify(catalogue.map(({ nom, description, inputSchema }) => ({ nom, description, inputSchema }))).length).toBeLessThan(40_000)
+    // Le catalogue entier est envoyé au modèle à chaque échange : il doit rester léger (55 Ko avec les schémas de
+    // sortie, 31 Ko sans eux et avec des descriptions resserrées).
+    expect(JSON.stringify(catalogue.map(({ nom, description, inputSchema }) => ({ nom, description, inputSchema }))).length).toBeLessThan(31_000)
+  })
+
+  it("garde dans les schémas compacts les contraintes que le modèle doit connaître", () => {
+    const reglages = (catalogueDesOutils().find(o => o.nom === "proposer_reglages_comparateur")!.inputSchema as { properties: { reglages: { properties: { fraisFonctionnement: unknown } } } }).properties.reglages.properties.fraisFonctionnement
+    expect(reglages).toMatchObject({ propertyNames: { enum: ["SASU", "EURL", "EI", "micro"] }, required: ["SASU", "EURL", "EI", "micro"], additionalProperties: { propertyNames: { enum: ["expertComptable", "banque", "logiciel", "assurance", "cfe"] }, required: ["expertComptable", "banque", "logiciel", "assurance", "cfe"] } })
+    const outil = OUTILS.find(o => o.nom === "proposer_reglages_comparateur")!
+    const frais = { SASU: { expertComptable: 1, banque: 1, logiciel: 1, assurance: 1, cfe: 1 } }
+    expect(outil.parametres.safeParse({ activiteId: "a", reglages: { fraisFonctionnement: frais } }).success).toBe(false)
+    const tous = Object.fromEntries(["SASU", "EURL", "EI", "micro"].map(statut => [statut, frais.SASU]))
+    expect(outil.parametres.safeParse({ activiteId: "a", reglages: { fraisFonctionnement: tous } }).success).toBe(true)
   })
 
   it("décrit les paramètres : unités, mois de 1 à 12, valeurs possibles", () => {

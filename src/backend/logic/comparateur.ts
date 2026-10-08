@@ -370,6 +370,29 @@ export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: Compar
   return { scenarios, meilleur, couples, warnings, ...(auMeilleurNet ? { optimisations } : {}), ...cfe }
 }
 
+/** La situation actuelle d'une activité, simulée comme une colonne du comparateur (voir `situationActuelle`). */
+export interface SituationActuelle {
+  scenario: ScenarioStatut
+  /** Rémunération nette annuelle et dividendes saisis dans la grille, en SASU et en EURL ; `null` dans les autres statuts. */
+  remunerationNette: number | null
+  dividendes: number | null
+}
+
+/**
+ * L'activité telle que la grille la décrit, dans son statut actuel : rémunération et dividendes saisis, frais de
+ * fonctionnement de ce statut compris, comme la colonne « actuel » du comparateur avec le partage « grille ». Sert de
+ * point de départ à l'arbitrage rémunération / dividendes : ses nets se comparent à ceux de la courbe.
+ */
+export function situationActuelle(session: DonneesDeLAnnee, source: Activite, options: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): SituationActuelle {
+  const statut = statutActuel(source)
+  const flux = session.monthlyData.flatMap(mois => mois.flows).filter(f => f.entityId === source.id)
+  const total = (type: FinancialFlow["type"]) => flux.filter(f => f.type === type).reduce((somme, f) => somme + f.amount, 0)
+  const societe = estSocieteIS(statut)
+  const remunerationNette = societe ? total("director_remuneration") : 0
+  const { scenario } = simulerScenario(session, source, statut, { ...options, remunerationNette, repartition: { mode: "grille", partDistribuee: 1 } }, regles, contexte)
+  return { scenario, remunerationNette: societe ? remunerationNette : null, dividendes: societe ? total("dividends_payment") : null }
+}
+
 /** Ce que coûtent les 4 trimestres de retraite en net du foyer, arrondi à l'euro ; 0 si le meilleur net les valide déjà. */
 export function coutDesQuatreTrimestres({ meilleur, meilleurAvecRetraite }: OptimisationRemuneration): number {
   if (!meilleur || !meilleurAvecRetraite) return 0

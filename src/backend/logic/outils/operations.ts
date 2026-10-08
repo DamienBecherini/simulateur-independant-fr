@@ -4,7 +4,7 @@
 // proposition, avec un message qui dit quelle opération et pourquoi.
 
 import { z } from "zod"
-import { FraisFonctionnementSchema, grilleVide, MODES_REPARTITION, RelationshipSchema, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
+import { grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
 import { NOMBRE_MAX_ANNEES } from "../annees.js"
 import { anneeDeLaSession, enumerer, ErreurOutil, genreDe, GENRES_D_ACTEUR, RELATIONS_REQUISES, trouverActeur, TYPES_DE_FLUX, verifierNouvelleRelation, verifierTypePermis, type GenreDActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
@@ -22,13 +22,13 @@ export const SerieSchema = z.strictObject({
 
 /** Réglages d'un acteur qu'une proposition peut fixer ; chacun ne vaut que pour certains genres d'acteur. */
 export const ReglagesActeurSchema = z.strictObject({
-  partsFiscales: z.number().min(0.5).max(20).optional().describe("Personne : parts fiscales propres (1 pour un adulte ; les enfants passent par la relation Enfant)."),
+  partsFiscales: z.number().min(0.5).max(20).optional().describe("Personne : parts fiscales propres (1 par adulte ; enfants : relation Enfant)."),
   capitalSocial: MontantSchema.optional().describe("SASU ou EURL : capital social, en euros."),
   dateDeCreation: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Date de création : « AAAA-MM », par exemple 2026-03.").optional().describe("Activité : mois de création, « AAAA-MM »."),
   beneficieACRE: z.boolean().optional().describe("Micro-entreprise : bénéficie de l'ACRE."),
-  opteVFL: z.boolean().optional().describe("Micro-entreprise : a opté pour le versement libératoire de l'impôt sur le revenu."),
-  rfrN2: MontantSchema.optional().describe("Micro-entreprise : revenu fiscal de référence du foyer de l'année N-2, en euros."),
-  horsPlafondAnneePrecedente: z.boolean().optional().describe("Micro-entreprise : chiffre d'affaires au-delà des plafonds l'année précédant la première année de la simulation.")
+  opteVFL: z.boolean().optional().describe("Micro-entreprise : versement libératoire de l'impôt sur le revenu."),
+  rfrN2: MontantSchema.optional().describe("Micro-entreprise : revenu fiscal de référence N-2 du foyer, en euros."),
+  horsPlafondAnneePrecedente: z.boolean().optional().describe("Micro-entreprise : au-delà des plafonds l'année d'avant la première de la simulation.")
 })
 type ReglagesActeur = z.infer<typeof ReglagesActeurSchema>
 
@@ -43,13 +43,19 @@ const REGLAGE_PAR_GENRE: Record<keyof ReglagesActeur, GenreDActeur[]> = {
   horsPlafondAnneePrecedente: ["micro-entreprise"]
 }
 
+/**
+ * Frais de fonctionnement proposés : chaque statut, chaque poste, comme FraisFonctionnementSchema, écrits en
+ * enregistrements pour que le schéma publié ne répète pas quatre fois les mêmes postes.
+ */
+const FraisProposesSchema = z.record(z.enum(STATUTS_FRAIS), z.record(z.enum(POSTES_FRAIS), z.number().min(0)))
+
 export const ReglagesComparateurProposesSchema = z.strictObject({
   mode: z.enum(MODES_REPARTITION).optional().describe("Partage du bénéfice en SASU et EURL."),
   partDistribuee: z.number().min(0).max(1).optional().describe("Mode personnalisee : part du bénéfice distribuable versée en dividendes, de 0 à 1."),
   avecRetraite: z.boolean().optional().describe("Mode meilleurNet : exiger 4 trimestres de retraite."),
   remunerationNette: MontantSchema.optional().describe("Rémunération nette annuelle saisie pour l'année indiquée, en euros."),
   partBncPrestations: z.number().min(0).max(1).optional().describe("Part BNC des prestations si l'activité devient une micro-entreprise, de 0 à 1."),
-  fraisFonctionnement: FraisFonctionnementSchema.optional().describe("Frais de fonctionnement annuels par statut (SASU, EURL, EI, micro) et par poste (expertComptable, banque, logiciel, assurance, cfe), en euros. Tous les statuts et postes sont requis."),
+  fraisFonctionnement: FraisProposesSchema.optional().describe("Frais de fonctionnement annuels par statut et par poste, en euros ; tous les statuts et postes sont requis."),
   statutEtudie: z.enum(["SASU", "EURL"]).optional().describe("Statut étudié dans « Rémunération ou dividendes ? ».")
 })
 
@@ -305,4 +311,40 @@ export function appliquerOperations(session: SessionState, operations: Operation
   })
   verifierRelationsRequises(chantier)
   return chantier.session
+}
+
+/** « ajouter_flux « Loyer » 2026 » : une opération désignée pour un modèle. */
+export const designationDeLOperation = (operation: Operation): string => `${operation.type}${libelleDeLOperation(operation)}`
+
+/** Une opération que la session ne permet plus, avec son rang dans la proposition (à partir de 1) et la raison. */
+export interface OperationRefusee {
+  numero: number
+  operation: Operation
+  raison: string
+}
+
+/**
+ * Sépare les opérations d'une proposition en celles qui s'appliquent encore à la session, dans leur ordre, et celles
+ * qu'elle ne permet plus (série supprimée entre-temps, acteur verrouillé, relation déjà là…). Chaque opération est
+ * essayée sur la session obtenue par les précédentes retenues : celles qui dépendent d'une opération refusée le sont
+ * aussi. Les relations qu'exigent une rémunération ou des dividendes ne sont pas vérifiées ici, mais quand la
+ * proposition reconstruite est validée en entier. Ne modifie pas `session`.
+ */
+export function operationsApplicables(session: SessionState, operations: Operation[]): { retenues: Operation[]; refusees: OperationRefusee[] } {
+  let compteur = 0
+  const chantier: Chantier = { session, nouvelIdDeFlux: () => `essai-${++compteur}`, activitesAVerifier: new Set() }
+  const retenues: Operation[] = []
+  const refusees: OperationRefusee[] = []
+  operations.forEach((operation, index) => {
+    const avant = chantier.session
+    try {
+      ;(APPLICATIONS[operation.type] as (c: Chantier, op: Operation) => void)(chantier, operation)
+      retenues.push(operation)
+    } catch (erreur) {
+      if (!(erreur instanceof ErreurOutil)) throw erreur
+      chantier.session = avant
+      refusees.push({ numero: index + 1, operation, raison: erreur.message })
+    }
+  })
+  return { retenues, refusees }
 }
