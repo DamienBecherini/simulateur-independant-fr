@@ -366,7 +366,7 @@ Le périmètre est fixé par l'article L640-1 et la loi 2017-1836. Les autres li
 4. **Micro-entreprise.**
    - `calculerMicro` choisit le taux BNC selon `regimeLiberal` : 23,2 % pour la CIPAV, refus avec avertissement pour la CARPIMKO et les autres caisses.
    - Le comparateur masque les colonnes « micro » et « micro-vfl » quand la profession les interdit. Il les remplace par une note.
-   - Formation professionnelle en micro (0,2 % du CA) : elle n'est modélisée pour aucun micro-entrepreneur aujourd'hui. C'est un chantier séparé, à décider.
+   - Formation professionnelle en micro (0,2 % du CA) : modélisée depuis pour tous les micro-entrepreneurs, à part de ce chantier (0,1 % de la vente, 0,2 % des BNC, 0,3 % des BIC).
 5. **Trimestres et protection sociale** (`protection-sociale.ts`).
    - `protectionTNS` utilise `revenuParTrimestre` (inchangé : 150 × SMIC horaire) et l'assiette minimale CNAVPL (450 × SMIC horaire, 3 trimestres), qui est déjà la même valeur que la SSI.
    - `protectionMicro` utilise pour la CIPAV `part` = 0,295 et `tauxRetraiteDeBase` = 0,106 en 2026. Cela reproduit exactement le seuil de 2 792 € (§5.1).
@@ -410,7 +410,7 @@ Le périmètre est fixé par l'article L640-1 et la loi 2017-1836. Les autres li
 ### Cas 1 : ostéopathe en micro-entreprise, 40 000 € de CA en 2026
 
 - Cotisations : 23,2 % × 40 000 = **9 280,00 €** (CSS-D613-4, AE-ESS). Moteur actuel : 25,6 % = 10 240,00 €, soit 960 € de trop.
-- Formation professionnelle : 0,2 % = 80,00 € (AE-ESS, non modélisée).
+- Formation professionnelle : 0,2 % = 80,00 € (AE-ESS, modélisée depuis).
 - Versement libératoire, s'il est choisi : 2,2 % = 880,00 €.
 - Revenu imposable sans versement libératoire : 40 000 × (1 − 34 %) = 26 400 €.
 - Trimestres : 40 000 ≥ 11 168 € → **4** (CIP-WEB).
@@ -571,5 +571,5 @@ Sur les cas calculés à la main (§9), le moteur actuel se trompe de −2 900 �
 2. CARPIMKO calculée sur N-1 : calculer sur le revenu de l'année simulée (même convention que la SSI, recommandé) ou modéliser le décalage avec la simulation sur plusieurs années ?
 3. Saisie de la profession (liste de professions) ou de la caisse ?
 4. Pour une profession réglementée en société : simple avertissement, ou modélisation de la rémunération BNC de l'associé de SEL à l'IS (président de SELAS compris) ?
-5. Modéliser la formation professionnelle en micro (0,2 % du CA, pour tous les micro-entrepreneurs, pas seulement les libéraux) dans ce chantier ou à part ?
+5. Modéliser la formation professionnelle en micro (0,2 % du CA, pour tous les micro-entrepreneurs, pas seulement les libéraux) dans ce chantier ou à part ? Fait à part.
 6. CURPS et part conventionnée : les modéliser dès la CARPIMKO, ou les approcher (100 % conventionné, CURPS ignorée) dans un premier temps ?
