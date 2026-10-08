@@ -8,10 +8,17 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ### Ajouté
 
+- **Bénéfice mis en réserve :** une SASU ou une EURL garde d'une année à l'autre ses réserves, sa réserve légale (un vingtième du bénéfice jusqu'au dixième du capital) et son déficit, imputé sur l'impôt sur les sociétés des années suivantes ; les dividendes de la grille peuvent être pris sur les réserves des années précédentes (ADR 014).
+- **Capital et réserves de départ** dans la fiche d'une SASU ou d'une EURL.
+- **Réserves de chaque société, année par année :** dans la carte de l'activité, la synthèse des années, la barre de partage du comparateur et les exports CSV et Markdown.
+- **« Sur toutes les années » dans le comparateur :** trois stratégies de distribution du bénéfice (tout distribuer chaque année, garder une part puis tout distribuer la dernière année, lisser), comparées au net cumulé de toutes les années, en SASU et en EURL.
+- **Outils pour les IA :** `rafraichir_proposition` reconstruit une proposition périmée sur la simulation actuelle et dit quelles opérations ne s'appliquent plus ; `optimiser_remuneration` situe la rémunération et les dividendes saisis par rapport au meilleur net (écart en euros, frais de fonctionnement compris) ; `simuler` et `expliquer_resultat` donnent les réserves des sociétés, `regles_de_l_annee` la réserve légale et le report des déficits.
 - Démo web : l'adresse `#donner-mon-avis` ouvre directement la fenêtre « Donner mon avis », déjà remplie de la version et de l'environnement (lien « Donner un avis » de la page outil du site).
 
 ### Modifié
 
+- Comparateur d'une année : les modes « tout en dividendes » et « répartition personnalisée » distribuent le bénéfice distribuable de l'année, après réserve légale et pertes antérieures ; les réserves des années précédentes restent dans la société.
+- Serveur MCP : chaque réponse est un seul texte (résumé, puis JSON du résultat), et la liste des outils, sans schémas de sortie, est presque deux fois plus légère.
 - Outils pour les IA : « autre revenu imposable » est décrit comme un montant net imposable, ajouté tel quel au barème (sans l'abattement de 10 % des salaires), ce que fait le calcul.
 
 ## [0.9.1] — 2026-10-06
