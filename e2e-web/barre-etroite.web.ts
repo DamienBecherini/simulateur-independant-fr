@@ -52,6 +52,8 @@ for (const { largeur, avis, montages } of LARGEURS) {
     const boutonDesMontages = barre.getByRole("button", { name: "Montages types" })
     await expect(boutonDAvis.getByText("Donner mon avis")).toBeVisible({ visible: avis })
     await expect(boutonDesMontages.getByText("Montages types")).toBeVisible({ visible: montages })
+    // Le bouton « Tests » n'existe qu'en mode développement : jamais dans la démo publiée.
+    await expect(barre.getByRole("button", { name: "Scénarios de test" })).toHaveCount(0)
     const debordements = await barre.evaluate(nav => Array.from(nav.querySelectorAll("button")).filter(el => el.getBoundingClientRect().right > window.innerWidth).length)
     expect(debordements).toBe(0)
 
