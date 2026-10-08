@@ -84,6 +84,21 @@ const DateDeCreationSchema = z
   .optional()
   .catch(undefined)
 
+/**
+ * Profession libérale réglementée d'une activité BNC (micro-entreprise, entreprise individuelle au réel, gérant d'EURL) :
+ * l'identifiant d'une profession des règles de l'année, dont la caisse et les particularités se déduisent (voir l'ADR 015).
+ * Facultative : absente, l'activité est non réglementée et calculée comme avant. Une profession inconnue des règles est
+ * écartée par le nettoyage, qui le signale ; une valeur qui n'est pas un texte est écartée seule.
+ */
+const ProfessionSchema = z.string().min(1).optional().catch(undefined)
+
+/**
+ * Part des recettes conventionnées, nettes de dépassements d'honoraires, d'une profession conventionnable (0 à 1) :
+ * la prise en charge par l'Assurance maladie ne porte que sur elle. Absente : 1 (tout est conventionné). Une valeur hors
+ * limites est écartée seule.
+ */
+const PartConventionneeSchema = z.number().min(0).max(1).optional().catch(undefined)
+
 export const PersonSchema = z.object({
   id: z.string(),
   type: z.literal("person"),
@@ -108,6 +123,8 @@ export const CompanySchema = z.object({
    */
   reservesInitiales: z.number().min(0).optional(),
   dateDeCreation: DateDeCreationSchema,
+  profession: ProfessionSchema,
+  partConventionnee: PartConventionneeSchema,
   deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
@@ -127,6 +144,8 @@ export const MicroEntrepriseSchema = z.object({
    * dépassement cette première année fait sortir du régime au 1er janvier suivant. Absent : non.
    */
   horsPlafondAnneePrecedente: z.boolean().optional(),
+  profession: ProfessionSchema,
+  partConventionnee: PartConventionneeSchema,
   deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
@@ -862,6 +881,8 @@ export interface SanitizationReport {
   flowsRemoved: number
   /** Réglages du comparateur invalides (hors limites, mal formés), écartés un par un. */
   reglagesRemoved: number
+  /** Professions inconnues des règles, écartées : l'activité redevient non réglementée (voir l'ADR 015). */
+  professionsRemoved: number
   /** Années en double écartées (la première occurrence est gardée), qu'elles aient eu des flux ou non. */
   anneesEcartees: number[]
   /** Points à vérifier après la conversion d'un fichier d'un format précédent. */

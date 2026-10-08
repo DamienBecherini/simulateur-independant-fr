@@ -12,7 +12,7 @@
 
 import { useState, Dispatch, SetStateAction, useMemo, useEffect } from "react"
 import type { SessionState, SaveSlot, SanitizationReport } from "@/types"
-import { texteAnneesEcartees } from "@/backend/logic/data-sanitizer"
+import { texteAnneesEcartees, texteProfessionsEcartees } from "@/backend/logic/data-sanitizer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -285,30 +285,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
             <DialogTitle>Fichier importé avec des ajustements</DialogTitle>
             <DialogDescription asChild>
               <div>
-                {importConfirmation && importConfirmation.report.entitiesRemoved + importConfirmation.report.relationshipsRemoved + importConfirmation.report.flowsRemoved + importConfirmation.report.reglagesRemoved > 0 && (
-                  <>
-                    <p>Des données corrompues ou obsolètes ont été retirées pour que la simulation reste utilisable.</p>
-                    <div className="mt-3 font-mono text-sm bg-slate-100 dark:bg-slate-800 p-3 rounded-md">
-                      <p>Entités invalides supprimées : {importConfirmation.report.entitiesRemoved}</p>
-                      <p>Relations invalides ou orphelines supprimées : {importConfirmation.report.relationshipsRemoved}</p>
-                      <p>Flux invalides ou orphelins supprimés : {importConfirmation.report.flowsRemoved}</p>
-                      {importConfirmation.report.reglagesRemoved > 0 ? <p>Réglages du comparateur invalides écartés : {importConfirmation.report.reglagesRemoved}</p> : null}
-                    </div>
-                  </>
-                )}
-                {importConfirmation && importConfirmation.report.anneesEcartees.length > 0 && (
-                  <p className="mt-3">{texteAnneesEcartees(importConfirmation.report.anneesEcartees)}. Seule la première occurrence de chaque année est gardée.</p>
-                )}
-                {importConfirmation && importConfirmation.report.migrationNotes.length > 0 && (
-                  <>
-                    <p className="mt-3">Le fichier a été converti au nouveau format du simulateur. Points à vérifier :</p>
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
-                      {importConfirmation.report.migrationNotes.map((note, i) => (
-                        <li key={i}>{note}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
+                {importConfirmation ? <RapportDImport report={importConfirmation.report} /> : null}
                 <VersionDuFichier appVersion={importConfirmation?.session.appVersion} />
                 <p className="mt-4">Voulez-vous remplacer la simulation en cours par ce fichier ?</p>
               </div>
@@ -322,6 +299,39 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  )
+}
+
+/** Ce que le nettoyage a corrigé dans un fichier importé : données retirées, professions écartées, années en double, conversion. */
+function RapportDImport({ report }: { report: SanitizationReport }) {
+  return (
+    <>
+      {report.entitiesRemoved + report.relationshipsRemoved + report.flowsRemoved + report.reglagesRemoved > 0 && (
+        <>
+          <p>Des données corrompues ou obsolètes ont été retirées pour que la simulation reste utilisable.</p>
+          <div className="mt-3 font-mono text-sm bg-slate-100 dark:bg-slate-800 p-3 rounded-md">
+            <p>Entités invalides supprimées : {report.entitiesRemoved}</p>
+            <p>Relations invalides ou orphelines supprimées : {report.relationshipsRemoved}</p>
+            <p>Flux invalides ou orphelins supprimés : {report.flowsRemoved}</p>
+            {report.reglagesRemoved > 0 ? <p>Réglages du comparateur invalides écartés : {report.reglagesRemoved}</p> : null}
+          </div>
+        </>
+      )}
+      {report.professionsRemoved > 0 && <p className="mt-3">{texteProfessionsEcartees(report.professionsRemoved)}</p>}
+      {report.anneesEcartees.length > 0 && (
+        <p className="mt-3">{texteAnneesEcartees(report.anneesEcartees)}. Seule la première occurrence de chaque année est gardée.</p>
+      )}
+      {report.migrationNotes.length > 0 && (
+        <>
+          <p className="mt-3">Le fichier a été converti au nouveau format du simulateur. Points à vérifier :</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+            {report.migrationNotes.map((note, i) => (
+              <li key={i}>{note}</li>
+            ))}
+          </ul>
+        </>
+      )}
     </>
   )
 }

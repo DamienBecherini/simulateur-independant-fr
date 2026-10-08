@@ -245,6 +245,11 @@ const REGLES_PAR_ANNEE: ReadonlyMap<number, ReglesFiscales> = new Map<number, Re
   [config.annee, config]
 ])
 
+/** Les règles de chaque année connue, de la plus ancienne à la plus récente. */
+export function reglesDesAnneesConnues(): ReglesFiscales[] {
+  return [...REGLES_PAR_ANNEE.values()]
+}
+
 /** Première et dernière années dont le simulateur connaît les règles. */
 export const PREMIERE_ANNEE_DES_REGLES = Math.min(...REGLES_PAR_ANNEE.keys())
 export const DERNIERE_ANNEE_DES_REGLES = Math.max(...REGLES_PAR_ANNEE.keys())

@@ -12,7 +12,7 @@ import path from "path"
 import fs from "fs/promises"
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs"
 import { ipcMain } from "electron"
-import { AnneesRefuseesError, rapportAvecCorrections, texteAnneesEcartees } from "./logic/data-sanitizer.js"
+import { AnneesRefuseesError, rapportAvecCorrections, texteAnneesEcartees, texteProfessionsEcartees } from "./logic/data-sanitizer.js"
 import { contenuDesSauvegardes, contenuDuFichier, lireLaSession, lireLesPreferences, lireLesSauvegardes, lireUneSimulationImportee, preferencesParDefaut, preferencesValides, sauvegardesAEcrire } from "./logic/fichiers-de-donnees.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours.js"
@@ -115,6 +115,9 @@ async function readSessionFromFile(): Promise<SessionState> {
     const sections: string[] = []
     if (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0 || report.reglagesRemoved > 0) {
       sections.push(`Des données corrompues ont dû être nettoyées :\n- Entités invalides supprimées : ${report.entitiesRemoved}\n- Relations invalides ou orphelines supprimées : ${report.relationshipsRemoved}\n- Flux invalides ou orphelins supprimés : ${report.flowsRemoved}\n- Réglages du comparateur invalides écartés : ${report.reglagesRemoved}`)
+    }
+    if (report.professionsRemoved > 0) {
+      sections.push(texteProfessionsEcartees(report.professionsRemoved))
     }
     if (report.anneesEcartees.length > 0) {
       sections.push(`${texteAnneesEcartees(report.anneesEcartees)}. Seule la première occurrence de chaque année a été gardée.`)

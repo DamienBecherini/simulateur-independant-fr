@@ -10,6 +10,7 @@ import type { SessionState, SaveSlot, SanitizationReport } from "../../types.js"
 import { erreurDesAnnees, nombreDeFlux, ordonnerLesAnnees } from "./annees.js"
 import { migrerVersFormatActuel } from "./migrations.js"
 import { nettoyerComparateurBrut, sansReglagesOrphelins } from "./nettoyage-comparateur.js"
+import { professionsConnues } from "./professions.js"
 
 interface SanitizationResult {
   safeState: SessionState
@@ -100,6 +101,23 @@ function keepValidFlowsOfYears(annees: unknown): FilteredItems {
 }
 
 /**
+ * Écarte des activités brutes une profession inconnue des règles (fichier abîmé, profession retirée) : l'activité
+ * redevient non réglementée, sans être perdue (voir l'ADR 015). Une profession qui n'est pas un texte est laissée au
+ * schéma, qui l'écarte seule.
+ */
+function sansProfessionsInconnues(entities: unknown): FilteredItems {
+  if (!Array.isArray(entities)) return { kept: entities, removed: 0 }
+  const connues = professionsConnues()
+  let removed = 0
+  const kept = entities.map((entity: unknown) => {
+    if (!isRecord(entity) || typeof entity.profession !== "string" || connues.has(entity.profession)) return entity
+    removed++
+    return Object.fromEntries(Object.entries(entity).filter(([cle]) => cle !== "profession"))
+  })
+  return { kept, removed }
+}
+
+/**
  * Nettoie une session élément par élément.
  * @returns La session nettoyée et son rapport ; le motif du refus si ses années sont trop nombreuses ou ne se suivent
  * pas ; ou `null` si la structure est irrécupérable (pas un objet, aucune année, année ou grille mensuelle
@@ -114,7 +132,8 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | SessionRefusee
   }
 
   // Étape 1 : on écarte les éléments structurellement invalides, un par un
-  const entities = keepValidItems(EntitySchema, rawData.entities)
+  const professions = sansProfessionsInconnues(rawData.entities)
+  const entities = keepValidItems(EntitySchema, professions.kept)
   const relationships = keepValidItems(RelationshipSchema, rawData.relationships)
   const annees = keepValidFlowsOfYears(rawData.annees)
   const comparateur = nettoyerComparateurBrut(rawData.comparateur)
@@ -168,6 +187,7 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | SessionRefusee
       relationshipsRemoved: relationships.removed + orphanRelationships,
       flowsRemoved: annees.removed + orphanFlows + nombreDeFlux(ordonnees.ecartees),
       reglagesRemoved: comparateur.removed,
+      professionsRemoved: professions.removed,
       // Une année en double est signalée même vide : l'utilisateur doit savoir qu'une partie du fichier est ignorée.
       anneesEcartees: [...new Set(ordonnees.ecartees.map(a => a.annee))].sort((a, b) => a - b),
       migrationNotes: migration.notes
@@ -197,18 +217,24 @@ export function sanitizeStateAndFillDefaults(rawData: unknown): SanitizationResu
   return {
     // .parse({}) utilise tous les .default() définis dans le schéma.
     safeState: SessionStateSchema.parse({}),
-    report: { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, anneesEcartees: [], migrationNotes: [] }
+    report: { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, professionsRemoved: 0, anneesEcartees: [], migrationNotes: [] }
   }
 }
 
 /** Vrai si le nettoyage a corrigé, écarté ou converti quelque chose : l'utilisateur doit en être informé. */
 export function rapportAvecCorrections(report: SanitizationReport): boolean {
-  return report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0 || report.reglagesRemoved > 0 || report.anneesEcartees.length > 0 || report.migrationNotes.length > 0
+  return report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0 || report.reglagesRemoved > 0 || report.professionsRemoved > 0 || report.anneesEcartees.length > 0 || report.migrationNotes.length > 0
 }
 
 /** « Année en double écartée : 2024 », « Années en double écartées : 2024, 2025 ». */
 export function texteAnneesEcartees(annees: number[]): string {
   return annees.length > 1 ? `Années en double écartées : ${annees.join(", ")}` : `Année en double écartée : ${annees.join("")}`
+}
+
+/** « Profession inconnue écartée… » : le message du rapport quand le nettoyage a retiré des professions. */
+export function texteProfessionsEcartees(nombre: number): string {
+  if (nombre === 1) return "Profession inconnue écartée : l'activité est calculée comme une profession libérale non réglementée. Choisissez à nouveau sa profession dans sa fiche."
+  return `Professions inconnues écartées : ${nombre} activités sont calculées comme des professions libérales non réglementées. Choisissez à nouveau leur profession dans leur fiche.`
 }
 
 /** Les deux champs qu'un slot ajoute à une session. */

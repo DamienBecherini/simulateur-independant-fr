@@ -214,14 +214,20 @@ describe("SettingsSheet, import de sauvegardes", () => {
 })
 
 describe("confirmation d'un import ajusté", () => {
-  const rapport: SanitizationReport = { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, anneesEcartees: [], migrationNotes: ["À vérifier"] }
+  const rapport: SanitizationReport = { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, professionsRemoved: 0, anneesEcartees: [], migrationNotes: ["À vérifier"] }
 
-  function confirmer(appVersion?: string) {
+  function confirmer(appVersion?: string, report: SanitizationReport = rapport) {
     const session = appVersion === undefined ? emptySession() : { ...emptySession(), appVersion }
     const props = { isOpen: false, onOpenChange: () => {}, allSaveSlots: [], setAllSaveSlots: () => {}, currentSession: emptySession(), setCurrentSession: () => {}, slotOrder: [], setSlotOrder: () => {}, onReset: () => {}, onLoadSlot: () => {}, onImport: async () => {}, onLoadMontage: () => {}, onConfirmImport: () => {}, onCancelImport: () => {}, loadedSlotId: null, setLoadedSlotId: () => {} }
-    render(<SettingsSheet {...props} importConfirmation={{ session, report: rapport }} />)
+    render(<SettingsSheet {...props} importConfirmation={{ session, report }} />)
     return screen.getByRole("dialog", { name: "Fichier importé avec des ajustements" })
   }
+
+  it("signale une profession inconnue écartée, sans parler de données corrompues", () => {
+    const dialogue = confirmer(undefined, { ...rapport, migrationNotes: [], professionsRemoved: 1 })
+    expect(dialogue).toHaveTextContent("Profession inconnue écartée : l'activité est calculée comme une profession libérale non réglementée.")
+    expect(dialogue).not.toHaveTextContent("Entités invalides supprimées")
+  })
 
   it("indique la version de l'application qui a écrit le fichier", () => {
     expect(confirmer("0.8.0")).toHaveTextContent("Fichier écrit par la version 0.8.0 du simulateur.")

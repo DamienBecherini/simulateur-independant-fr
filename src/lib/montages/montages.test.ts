@@ -52,7 +52,7 @@ describe("Bibliothèque des montages types", () => {
 
     it("passe le nettoyage au format actuel sans rien perdre ni changer", () => {
       const { safeState, report } = sanitizeStateAndFillDefaults(withFormatVersion(session))
-      expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, anneesEcartees: [], migrationNotes: [] })
+      expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, professionsRemoved: 0, anneesEcartees: [], migrationNotes: [] })
       expect(rapportAvecCorrections(report)).toBe(false)
       expect(safeState).toEqual(session)
     })

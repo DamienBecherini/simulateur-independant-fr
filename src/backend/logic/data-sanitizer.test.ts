@@ -1,7 +1,7 @@
 // src/backend/logic/data-sanitizer.test.ts
 
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { AnneesRefuseesError, nettoyerLesSlots, rapportAvecCorrections, sanitizeSlots, sanitizeStateAndFillDefaults, texteAnneesEcartees } from "./data-sanitizer.js"
+import { AnneesRefuseesError, nettoyerLesSlots, rapportAvecCorrections, sanitizeSlots, sanitizeStateAndFillDefaults, texteAnneesEcartees, texteProfessionsEcartees } from "./data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL } from "./migrations.js"
 
 const avatar = { type: "initials", value: "AB", color: "#3b82f6" }
@@ -72,7 +72,7 @@ describe("sanitizeStateAndFillDefaults", () => {
         const { safeState, report } = sanitizeStateAndFillDefaults({ formatVersion: FORMAT_VERSION_ACTUEL, entities: [{ ...alice, fraisReels: ancienFrais }] })
 
         expect(safeState.entities[0]).toEqual({ ...alice, fraisReels: { trajets: [trajetConverti], autresFrais: 300 } })
-        expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, migrationNotes: [], anneesEcartees: [] })
+        expect(report).toEqual({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, professionsRemoved: 0, migrationNotes: [], anneesEcartees: [] })
       })
 
       it("deviennent un trajet aux valeurs par défaut quand seuls les autres frais étaient saisis", () => {
@@ -527,5 +527,43 @@ describe("réglages du comparateur", () => {
 
     expect(safeState.comparateur).toEqual({ reglagesParActivite: { c1: { remunerationParAnnee: { "2026": 1 } } } })
     expect(rapportAvecCorrections(report)).toBe(false)
+  })
+})
+
+describe("professions libérales réglementées (ADR 015)", () => {
+  const ei = { id: "c2", type: "company", name: "Cabinet", legalStatus: "EI", capitalSocial: 0, avatar, locked: false }
+  const micro = { id: "m1", type: "micro-entreprise", name: "Consultations", beneficieACRE: false, opteVFL: false, avatar, locked: false }
+  const session = (...entities: unknown[]) => ({ formatVersion: FORMAT_VERSION_ACTUEL, entities: [alice, ...entities], relationships: [], annees: [{ annee: 2026, monthlyData: grille() }] })
+
+  it("lit tels quels un fichier d'avant, sans profession, et une profession connue avec sa part conventionnée", () => {
+    const { safeState, report } = sanitizeStateAndFillDefaults(session({ ...ei, profession: "masseur-kinesitherapeute", partConventionnee: 0.8 }, { ...micro, profession: "non-reglementee" }, sasu))
+    expect(safeState.entities[1]).toMatchObject({ profession: "masseur-kinesitherapeute", partConventionnee: 0.8 })
+    expect(safeState.entities[2]).toMatchObject({ profession: "non-reglementee" })
+    expect(safeState.entities[3]).not.toHaveProperty("profession")
+    expect(rapportAvecCorrections(report)).toBe(false)
+  })
+
+  it("écarte une profession inconnue des règles et le signale : l'activité redevient non réglementée, sans être perdue", () => {
+    const { safeState, report } = sanitizeStateAndFillDefaults(session({ ...ei, profession: "astronaute", partConventionnee: 0.5 }, { ...micro, profession: "druide" }))
+    expect(safeState.entities).toHaveLength(3)
+    expect(safeState.entities[1]).not.toHaveProperty("profession")
+    expect(safeState.entities[2]).not.toHaveProperty("profession")
+    expect(report.professionsRemoved).toBe(2)
+    expect(report.entitiesRemoved).toBe(0)
+    expect(rapportAvecCorrections(report)).toBe(true)
+  })
+
+  it("écarte seules, sans les signaler, une profession qui n'est pas un texte et une part conventionnée hors limites", () => {
+    const { safeState, report } = sanitizeStateAndFillDefaults(session({ ...ei, profession: 42, partConventionnee: 1.5 }, { ...micro, partConventionnee: "toute" }))
+    expect(safeState.entities).toHaveLength(3)
+    expect((safeState.entities[1] as { profession?: string }).profession).toBeUndefined()
+    expect((safeState.entities[1] as { partConventionnee?: number }).partConventionnee).toBeUndefined()
+    expect((safeState.entities[2] as { partConventionnee?: number }).partConventionnee).toBeUndefined()
+    expect(report.professionsRemoved).toBe(0)
+  })
+
+  it("dit combien d'activités redeviennent non réglementées", () => {
+    expect(texteProfessionsEcartees(1)).toContain("l'activité est calculée comme une profession libérale non réglementée")
+    expect(texteProfessionsEcartees(3)).toContain("3 activités")
   })
 })
