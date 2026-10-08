@@ -6,6 +6,7 @@ import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import { depassePlafondMicro } from "./calculsAE.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, noteCFE, partDeCFEDue, prorataDesPlafonds } from "./dispositifs.js"
+import { microInterdite, professionDe, raisonMicroInterdite, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
 import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js"
 
 /*
@@ -97,7 +98,10 @@ function entiteCible(source: Activite, statut: StatutCompare): Activite {
   const deplacements = source.deplacementsProfessionnels ? { deplacementsProfessionnels: source.deplacementsProfessionnels } : {}
   // La date de création suit l'activité : ACRE, plafonds au prorata et CFE en dépendent dans chaque statut.
   const creation = source.dateDeCreation ? { dateDeCreation: source.dateDeCreation } : {}
-  const commun = { id: source.id, name: source.name, avatar: source.avatar, locked: source.locked, ...deplacements, ...creation }
+  // La profession aussi : sa caisse, son taux micro et ses avertissements s'appliquent dans chaque statut (ADR 015).
+  const profession = source.profession === undefined ? {} : { profession: source.profession }
+  const partConventionnee = source.partConventionnee === undefined ? {} : { partConventionnee: source.partConventionnee }
+  const commun = { id: source.id, name: source.name, avatar: source.avatar, locked: source.locked, ...deplacements, ...creation, ...profession, ...partConventionnee }
   if (statut === "micro" || statut === "micro-vfl") {
     const micro = source.type === "micro-entreprise" ? source : undefined
     return { ...commun, type: "micro-entreprise", beneficieACRE: micro?.beneficieACRE ?? false, opteVFL: statut === "micro-vfl", ...(micro?.rfrN2 !== undefined ? { rfrN2: micro.rfrN2 } : {}) }
@@ -182,11 +186,17 @@ const estMicro = (statut: StatutCompare) => statut === "micro" || statut === "mi
  */
 function microDeLaColonne(simulation: Simulation, activiteId: string, regles: ReglesFiscales, annee: number) {
   const micro = simulation.session.entities.find((e): e is MicroEntreprise => e.id === activiteId && e.type === "micro-entreprise")
-  const acre = micro ? acreDeLAnnee(micro, annee, simulation.session.monthlyData, regles) : null
+  // Un micro-entrepreneur de la CIPAV a son taux global et sa part de retraite de base (ADR 015).
+  const profession = micro ? professionDe(micro, regles) : null
+  const reglesMicro = reglesDeLaMicro(regles, profession)
+  const retraite = retraiteMicroDeLaProfession(regles, profession)
+  const acre = micro ? acreDeLAnnee(micro, annee, simulation.session.monthlyData, reglesMicro) : null
   return {
     beneficieACRE: micro?.beneficieACRE ?? false,
     ...(acre ? { acre: { reduction: acre.reduction, chiffreAffaires: acre.chiffreAffaires } } : {}),
-    prorata: prorataDesPlafonds(lireMois(micro?.dateDeCreation), annee)
+    ...(retraite ? { retraiteBnc: retraite } : {}),
+    prorata: prorataDesPlafonds(lireMois(micro?.dateDeCreation), annee),
+    reglesMicro
   }
 }
 
@@ -197,9 +207,13 @@ function regimeFerme(statut: StatutCompare, activiteId: string, contexte: Contex
   return { regimeMicroFerme: sortie, notes: [`Régime micro fermé en ${contexte.annee ?? sortie.depuis} : chiffre d'affaires au-delà des plafonds en ${sortie.depassements[0]} et ${sortie.depassements[1]}, sortie au 1er janvier ${sortie.depuis}. Cette colonne n'est donnée qu'à titre de comparaison.`] }
 }
 
-/** Ce sur quoi le dirigeant cotise dans la colonne : rémunération brute du président, assiette du travailleur non salarié. */
+/**
+ * Ce sur quoi le dirigeant cotise dans la colonne : rémunération brute du président, assiette du travailleur non salarié
+ * et, pour une profession libérale réglementée, sa caisse.
+ */
 function assiettesDeProtection(activite: SimulationReport["activities"][number] | undefined) {
-  return { remunerationBrute: activite?.cotisationsPresident?.brut ?? 0, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0 }
+  const caisse = activite?.cotisationsTNS?.caisse?.caisse
+  return { remunerationBrute: activite?.cotisationsPresident?.brut ?? 0, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0, ...(caisse ? { caisse } : {}) }
 }
 
 function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation, activiteId: string, options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee): ScenarioStatut {
@@ -207,14 +221,14 @@ function scenario(statut: StatutCompare, actuel: boolean, simulation: Simulation
   const { bilan } = report
   const activite = report.activities.find(a => a.entityId === activiteId)
   const caMicro = chiffreAffairesDeLaMicro(simulation.session.monthlyData, activiteId)
-  const { prorata, ...acre } = microDeLaColonne(simulation, activiteId, regles, contexte.annee ?? regles.annee)
+  const { prorata, reglesMicro, ...acre } = microDeLaColonne(simulation, activiteId, regles, contexte.annee ?? regles.annee)
   const { notes, ...ferme } = regimeFerme(statut, activiteId, contexte)
   return {
     statut,
     libelle: LIBELLES[statut],
     actuel,
     fraisFonctionnement: fraisDuStatut(statut, options),
-    protectionSociale: evaluerProtectionSociale(statut, { ...assiettesDeProtection(activite), chiffreAffairesMicro: caMicro, ...acre }, regles),
+    protectionSociale: evaluerProtectionSociale(statut, { ...assiettesDeProtection(activite), chiffreAffairesMicro: caMicro, ...acre }, estMicro(statut) ? reglesMicro : regles),
     netApresImpots: report.totalNetApresImpots,
     revenusAvantPrelevements: bilan.revenusAvantPrelevements,
     totalPrelevements: bilan.totalPrelevements,
@@ -366,7 +380,12 @@ export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: Compar
   const actuel = statutActuel(source)
   const auMeilleurNet = options.repartition.mode === "meilleurNet"
   const optimisations: Partial<Record<StatutSociete, OptimisationRemuneration>> = {}
-  const scenarios = STATUTS_COMPARES.map(statut => {
+  // La micro-entreprise est interdite aux praticiens et auxiliaires médicaux : ses colonnes sont retirées, avec la raison.
+  const profession = professionDe(source, regles)
+  const sansMicro = profession !== null && microInterdite(profession)
+  if (profession && sansMicro) warnings.push(raisonMicroInterdite(profession))
+  const statuts = STATUTS_COMPARES.filter(statut => !(sansMicro && estMicro(statut)))
+  const scenarios = statuts.map(statut => {
     if (!auMeilleurNet || !estSocieteIS(statut)) return scenario(statut, statut === actuel, simulerStatut(session, source, statut, options, regles, contexte), source.id, options, regles, contexte)
     const colonne = colonneAuMeilleurNet(session, source, statut, options, regles, contexte)
     optimisations[statut] = colonne.optimisation

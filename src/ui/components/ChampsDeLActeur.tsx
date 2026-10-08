@@ -1,5 +1,5 @@
 // src/ui/components/ChampsDeLActeur.tsx
-// Réglages d'un acteur hors relations : nom, parts, statut, revenu fiscal de référence, date de création, capital, couleur,
+// Réglages d'un acteur hors relations : nom, parts, statut, profession, revenu fiscal de référence, date de création, capital, couleur,
 // icône, frais. Affichés dans la fenêtre « Modifier », qui les enregistre à la validation.
 
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,8 @@ import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 import { ChampNumerique } from "./ChampNumerique"
 import { ChampDateDeCreation, ChampHorsPlafondAnneePrecedente } from "./ChampDateDeCreation"
+import { ChampProfession } from "./ChampProfession"
+import { proposeLaProfession } from "@/lib/professions"
 
 // Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
 const COULEURS_DES_ACTEURS = [
@@ -101,6 +103,7 @@ export function ChampsDeLActeur({ entity, onChange }: ChampsDeLActeurProps) {
 function StatusSpecificFields({ entity, onChange }: ChampsDeLActeurProps) {
   return (
     <>
+      {entity.type !== "person" && proposeLaProfession(entity) && <ChampProfession activite={entity} onChange={onChange} />}
       {entity.type === "micro-entreprise" && (
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="rfrN2" className="text-right">

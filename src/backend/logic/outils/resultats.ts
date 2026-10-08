@@ -159,7 +159,22 @@ const composante = (libelle: string, montant: number) => ({ libelle, montant: ar
 
 function lignesTNS(detail: DetailCotisationsTNS): Ligne {
   const composantes = (Object.keys(LIBELLES_TNS) as CotisationTNS[]).map(cle => composante(LIBELLES_TNS[cle], detail.cotisations[cle]))
-  return ligne(`Cotisations du travailleur non salarié (assiette ${arrondir(detail.assiette)} € après abattement)`, detail.total, composantes)
+  // Profession libérale réglementée : l'ASV et la CURPS s'ajoutent aux lignes, comprises dans le total.
+  const caisse = detail.caisse ? [composante("Avantage social vieillesse (ASV)", detail.caisse.asv), composante("CURPS", detail.caisse.curps)] : []
+  const titre = detail.caisse ? `Cotisations du travailleur non salarié, ${detail.caisse.libelleProfession} (${detail.caisse.caisse})` : "Cotisations du travailleur non salarié"
+  return ligne(`${titre} (assiette ${arrondir(detail.assiette)} € après abattement)`, detail.total, [...composantes, ...caisse])
+}
+
+/** Profession libérale réglementée : profession, caisse, prise en charge et revenu de la complémentaire de la CARPIMKO. */
+function informationsDeLaProfession(a: ActivityResult): string[] {
+  if (!a.profession) return []
+  const caisse = a.cotisationsTNS?.caisse
+  const taux = a.profession.tauxMicro === undefined ? "" : `, taux global de ${(a.profession.tauxMicro * 100).toLocaleString("fr-FR")} % du chiffre d'affaires en micro-entreprise`
+  const infos = [`Profession : ${a.profession.libelle}, ${a.profession.caisse ? `caisse ${a.profession.caisse}` : "caisse pas encore prise en compte (calcul d'une profession non réglementée)"}${taux}.`]
+  if (caisse && caisse.priseEnCharge.maladie + caisse.priseEnCharge.asv > 0) infos.push(`Pris en charge par l'Assurance maladie (part conventionnée ${arrondir(caisse.partConventionnee * 100)} %), hors des cotisations : maladie ${arrondir(caisse.priseEnCharge.maladie)} €, ASV ${arrondir(caisse.priseEnCharge.asv)} €.`)
+  const base = caisse?.baseDesCotisationsDeLAnneePrecedente
+  if (base) infos.push(`Retraite complémentaire et ASV de la CARPIMKO calculées sur l'assiette ${base.annee} (${arrondir(base.assiette)} €)${base.anneePrecedenteConnue ? ", celle de l'année précédente" : `, faute de l'année ${base.annee - 1} dans la simulation`}.`)
+  return infos
 }
 
 function lignesBulletin(titre: string, bulletin: DetailCotisationsSalarie): Ligne {
@@ -183,7 +198,7 @@ function informationsDeLActivite(session: SessionState, a: ActivityResult): stri
   if (a.sortieDuRegimeMicro) infos.push(`Sortie du régime micro depuis le 1er janvier ${a.sortieDuRegimeMicro.depuis} (plafonds dépassés en ${a.sortieDuRegimeMicro.depassements.join(" et ")}) : simulée en EI au réel.`)
   if (a.reserves) infos.push(phraseDesReserves(a.reserves))
   if (a.beneficiaireIds.length > 0) infos.push(`Revenus versés à : ${a.beneficiaireIds.map(id => nomDe(session, id)).join(", ")}.`)
-  return [...infos, ...(a.dispositifs ?? [])]
+  return [...informationsDeLaProfession(a), ...infos, ...(a.dispositifs ?? [])]
 }
 
 function expliquerActivite(session: SessionState, a: ActivityResult) {
@@ -221,7 +236,7 @@ export const expliquerResultat = definirOutil({
   titre: "Expliquer le résultat d'un acteur",
   description: [
     "Détaille, ligne à ligne, le résultat calculé par le moteur pour un acteur et une année.",
-    "Activité : chiffre d'affaires, charges, cotisations (ligne à ligne pour un travailleur non salarié, un président de SASU ou un salarié), impôt sur les sociétés, partage du bénéfice, versement libératoire, ACRE, avertissements.",
+    "Activité : chiffre d'affaires, charges, cotisations (ligne à ligne pour un travailleur non salarié, un président de SASU ou un salarié, caisse d'un libéral réglementé), impôt sur les sociétés, partage du bénéfice, versement libératoire, ACRE, avertissements.",
     "Personne : revenus par nature, cotisations salariales, frais professionnels retenus, et l'impôt de son foyer fiscal.",
     "Montants annuels en euros, arrondis à l'euro. Pour répondre à « pourquoi ce montant ? » sans refaire le calcul."
   ].join(" "),

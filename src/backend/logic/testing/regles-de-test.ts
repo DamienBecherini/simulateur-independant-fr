@@ -1,5 +1,6 @@
 // src/backend/logic/testing/regles-de-test.ts
 
+import config from "../../config.json" with { type: "json" }
 import type { ReglesFiscales } from "../regles.js"
 
 /**
@@ -146,6 +147,8 @@ export const reglesDeTest: ReglesFiscales = {
     // Sans revenu : 160 € (IJ) + 1 200 € (retraite de base, 3 trimestres) + 40 € (invalidité-décès) + 100 € = 1 500 €.
     cotisationsMinimales: { indemnitesJournalieres: 16000, retraiteDeBase: 6000, invaliditeDeces: 4000 }
   },
+  // Les professions libérales réglementées gardent les règles réelles de 2026 : leurs tests portent sur les cas de référence.
+  liberauxReglementes: config.liberauxReglementes,
   protectionSociale: { revenuParTrimestre: 2000,tauxRetraiteDeBase: 0.2, partRetraiteDeBaseMicro: { venteBic: 0.4, servicesBic: 0.4, servicesBnc: 0.5 } },
   EURL: { seuilDividendesPartDuCapital: 0.1 },
   reserveLegale: { partDuBenefice: 0.05, plafondPartDuCapital: 0.1 },

@@ -12,7 +12,9 @@ import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.
 import { buildFoyers, type Foyer } from "./foyers.js"
 import { euros } from "./format.js"
 import { fraisReelsDeLaPersonne, montantBaremeKilometrique } from "./frais-kilometriques.js"
-import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
+import { reglesEnVigueur, type ProfessionReglementee, type ReglesFiscales } from "./regles.js"
+import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
+import { avertissementsDeLaProfession, parametresDeLaCaisse, professionDe, professionDeLActivite, reglesDeLaMicro } from "./professions.js"
 import { acreDeLAnnee, ecrireMois, economieACRE, lireMois, noteACRE, noteAnnonce, noteProrata, noteRetour, noteSortie, prorataDesPlafonds, type ACREDuneAnnee, type RegimeMicroDeLAnnee } from "./dispositifs.js"
 
 /*
@@ -245,8 +247,10 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     capitalSocial: societe.capitalSocial,
     etat: ctx.annee.etatsDesSocietes?.[societe.id] ?? etatAuDebutDeLaSimulation(societe, anneeSimulee(ctx), ctx.regles)
   }
-  const resultat = societe.legalStatus === "SASU" ? calculerSASU(entrees, ctx.regles) : calculerEURL(entrees, ctx.regles)
-  const warnings = [...resultat.warnings]
+  // Le gérant d'EURL cotise à la caisse de sa profession ; le président de SASU reste au régime général.
+  const resultat = societe.legalStatus === "SASU" ? calculerSASU(entrees, ctx.regles) : calculerEURL(entrees, ctx.regles, caisseDeLActivite(ctx, societe))
+  const profession = professionDe(societe, ctx.regles)
+  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, societe.legalStatus === "SASU" ? "SASU" : "EURL")]
 
   verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable, cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
   attribuerResultatSociete(ctx, societe, resultat)
@@ -271,8 +275,23 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     ...detailDeplacements(societe, deplacements, true),
     partage: partageDuBenefice(resultat),
     reserves: resultat.reserves,
+    ...detailProfession(profession, ctx.regles, false),
     warnings
   }
+}
+
+/**
+ * Paramètres de la caisse de l'activité pour l'année, avec, pour la CARPIMKO, son assiette de l'année précédente quand
+ * celle-ci est dans la session (ADR 015) ; `undefined` sans profession réglementée dont le simulateur connaît la caisse.
+ */
+function caisseDeLActivite(ctx: Contexte, activite: Company | MicroEntreprise): ParametresDeLaCaisse | undefined {
+  return parametresDeLaCaisse(activite, ctx.regles, anneeSimulee(ctx), ctx.annee.assiettesAnneePrecedente?.parActivite[activite.id])
+}
+
+/** Champ du résultat d'une activité qui décrit sa profession réglementée, si elle en a une. */
+function detailProfession(profession: ProfessionReglementee | null, regles: ReglesFiscales, enMicro: boolean): Pick<ActivityResult, "profession"> {
+  const detail = professionDeLActivite(profession, regles, enMicro)
+  return detail ? { profession: detail } : {}
 }
 
 /**
@@ -303,8 +322,9 @@ function partageDuBenefice(resultat: ResultatSociete): PartageDuBenefice {
 function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): ActivityResult {
   const masse = masseSalariale(ctx, entreprise.id)
   const deplacements = deplacementsProfessionnels(ctx, entreprise)
-  const resultat = calculerEI({ chiffreAffaires: total(ctx, entreprise.id, "ca_services", "ca_vente"), chargesDeductibles: total(ctx, entreprise.id, "deductible_expense") + masse.cout + deplacements }, ctx.regles)
-  const warnings = [...resultat.warnings]
+  const resultat = calculerEI({ chiffreAffaires: total(ctx, entreprise.id, "ca_services", "ca_vente"), chargesDeductibles: total(ctx, entreprise.id, "deductible_expense") + masse.cout + deplacements }, ctx.regles, caisseDeLActivite(ctx, entreprise))
+  const profession = professionDe(entreprise, ctx.regles)
+  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, "EI")]
 
   if (total(ctx, entreprise.id, "director_remuneration", "dividends_payment") > 0) {
     warnings.push("Une entreprise individuelle ne verse ni rémunération de dirigeant ni dividendes : ces flux sont ignorés, tout le bénéfice revient à l'entrepreneur.")
@@ -338,6 +358,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     ...detailSalaries(masse),
     ...detailDeplacements(entreprise, deplacements, true),
     ...detailSortieDuRegimeMicro(ctx, entreprise.id),
+    ...detailProfession(profession, ctx.regles, false),
     warnings
   }
 }
@@ -357,12 +378,12 @@ function detailSortieDuRegimeMicro(ctx: Contexte, entityId: string): Pick<Activi
  * Dispositifs de l'année d'une micro-entreprise : retour au régime micro, plafonds au prorata l'année de création, ACRE
  * des mois couverts, annonce de la sortie du régime l'année du second dépassement.
  */
-function detailDispositifsMicro(ctx: Contexte, micro: MicroEntreprise, acre: ACREDuneAnnee | null, prorata: number): Pick<ActivityResult, "acre" | "dispositifs"> {
+function detailDispositifsMicro(ctx: Contexte, micro: MicroEntreprise, acre: ACREDuneAnnee | null, prorata: number, reglesMicro: ReglesFiscales): Pick<ActivityResult, "acre" | "dispositifs"> {
   const annee = anneeSimulee(ctx)
   const regime = ctx.annee.regimeMicro
   const creation = lireMois(micro.dateDeCreation)
   const annonce = regime?.annonces[micro.id]
-  const economie = acre ? economieACRE(acre, ctx.regles) : 0
+  const economie = acre ? economieACRE(acre, reglesMicro) : 0
   const notes = [
     regime?.retours.includes(micro.id) ? noteRetour(annee) : null,
     creation && prorata < 1 ? noteProrata(creation, ctx.regles.microEntreprise.plafonds, prorata) : null,
@@ -414,8 +435,11 @@ function avertissementsVersementLiberatoire(micro: MicroEntreprise, vfl: Verseme
 function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): ActivityResult {
   const titulaire = personnesLiees(ctx, micro.id, ["Titulaire"])[0]
   const vfl = analyserVersementLiberatoire(ctx, micro, titulaire)
+  // Un affilié de la CIPAV a son propre taux global sur ses BNC (cotisations, ACRE) ; les autres, celui de l'année.
+  const profession = professionDe(micro, ctx.regles)
+  const reglesMicro = reglesDeLaMicro(ctx.regles, profession)
   // Avec une date de création : ACRE limitée aux mois qu'elle couvre, plafonds au prorata l'année de création.
-  const acre = acreDeLAnnee(micro, anneeSimulee(ctx), ctx.session.monthlyData, ctx.regles)
+  const acre = acreDeLAnnee(micro, anneeSimulee(ctx), ctx.session.monthlyData, reglesMicro)
   const prorata = prorataDesPlafonds(lireMois(micro.dateDeCreation), anneeSimulee(ctx))
   const resultat = calculerMicro(
     {
@@ -427,9 +451,9 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
       prorataPlafonds: prorata,
       opteVFL: vfl.applique
     },
-    ctx.regles
+    reglesMicro
   )
-  const warnings = [...resultat.warnings, ...avertissementsVersementLiberatoire(micro, vfl)]
+  const warnings = [...resultat.warnings, ...avertissementsVersementLiberatoire(micro, vfl), ...avertissementsDeLaProfession(profession, "micro")]
   // Au régime micro, les dépenses réelles ne réduisent ni les cotisations ni l'impôt : elles ne pèsent que sur la trésorerie.
   // Il en va de même du coût des salariés et des déplacements professionnels.
   const masse = masseSalariale(ctx, micro.id)
@@ -465,7 +489,8 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
     formationProfessionnelle: Math.round(resultat.formationProfessionnelle),
     ...detailSalaries(masse),
     ...detailDeplacements(micro, deplacements, false),
-    ...detailDispositifsMicro(ctx, micro, acre, prorata),
+    ...detailDispositifsMicro(ctx, micro, acre, prorata, reglesMicro),
+    ...detailProfession(profession, ctx.regles, true),
     warnings
   }
 }
@@ -687,6 +712,11 @@ export interface ContexteDeLAnnee {
    * société absente part de ce que dit sa fiche (`etatAuDebutDeLaSimulation`).
    */
   etatsDesSocietes?: Record<string, EtatDeLaSociete>
+  /**
+   * Assiette sociale de chaque activité au réel l'année précédente, quand elle fait partie de la session : la CARPIMKO
+   * y assoit la retraite complémentaire et l'ASV de l'année (voir l'ADR 015). Une activité absente part de son année.
+   */
+  assiettesAnneePrecedente?: { annee: number; parActivite: Record<string, number> }
 }
 
 export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): SimulationReport {

@@ -84,6 +84,21 @@ const DateDeCreationSchema = z
   .optional()
   .catch(undefined)
 
+/**
+ * Profession libérale réglementée d'une activité BNC (micro-entreprise, entreprise individuelle au réel, gérant d'EURL) :
+ * l'identifiant d'une profession des règles de l'année, dont la caisse et les particularités se déduisent (voir l'ADR 015).
+ * Facultative : absente, l'activité est non réglementée et calculée comme avant. Une profession inconnue des règles est
+ * écartée par le nettoyage, qui le signale ; une valeur qui n'est pas un texte est écartée seule.
+ */
+const ProfessionSchema = z.string().min(1).optional().catch(undefined)
+
+/**
+ * Part des recettes conventionnées, nettes de dépassements d'honoraires, d'une profession conventionnable (0 à 1) :
+ * la prise en charge par l'Assurance maladie ne porte que sur elle. Absente : 1 (tout est conventionné). Une valeur hors
+ * limites est écartée seule.
+ */
+const PartConventionneeSchema = z.number().min(0).max(1).optional().catch(undefined)
+
 export const PersonSchema = z.object({
   id: z.string(),
   type: z.literal("person"),
@@ -108,6 +123,8 @@ export const CompanySchema = z.object({
    */
   reservesInitiales: z.number().min(0).optional(),
   dateDeCreation: DateDeCreationSchema,
+  profession: ProfessionSchema,
+  partConventionnee: PartConventionneeSchema,
   deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
@@ -127,6 +144,8 @@ export const MicroEntrepriseSchema = z.object({
    * dépassement cette première année fait sortir du régime au 1er janvier suivant. Absent : non.
    */
   horsPlafondAnneePrecedente: z.boolean().optional(),
+  profession: ProfessionSchema,
+  partConventionnee: PartConventionneeSchema,
   deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
@@ -377,6 +396,8 @@ export interface ActivityResult {
   acre?: ACREDeLAnnee
   /** Dispositifs limités dans le temps qui jouent cette année (sortie du régime micro, ACRE, plafonds au prorata). */
   dispositifs?: string[]
+  /** Profession libérale réglementée de l'activité (voir l'ADR 015). */
+  profession?: ProfessionDeLActivite
   warnings: string[]
 }
 
@@ -483,6 +504,39 @@ export type CotisationTNS =
   | "csgNonDeductibleEtCrds"
   | "formationProfessionnelle"
 
+/**
+ * Ce que la caisse d'une profession libérale réglementée change aux cotisations d'un travailleur non salarié (voir
+ * l'ADR 015) : les lignes communes portent alors ses barèmes, et s'y ajoutent l'ASV et la CURPS.
+ */
+export interface DetailCaisseLiberale {
+  caisse: "CIPAV" | "CARPIMKO"
+  profession: string
+  libelleProfession: string
+  /** Part des revenus conventionnés, nets de dépassements (0 pour une profession qui ne peut pas être conventionnée). */
+  partConventionnee: number
+  /** Avantage social vieillesse à la charge du praticien, compris dans le total. */
+  asv: number
+  /** Contribution aux unions régionales des professionnels de santé, comprise dans le total. */
+  curps: number
+  /** Ce que l'Assurance maladie paie pour un praticien conventionné, hors du total : sa maladie et son ASV. */
+  priseEnCharge: { maladie: number; asv: number }
+  /**
+   * CARPIMKO : l'année et l'assiette sur lesquelles la retraite complémentaire et l'ASV sont calculées, celles de
+   * l'année précédente quand elle est dans la session, sinon celles de l'année simulée.
+   */
+  baseDesCotisationsDeLAnneePrecedente?: { annee: number; assiette: number; anneePrecedenteConnue: boolean }
+}
+
+/** Profession libérale réglementée d'une activité, telle que les règles de l'année la décrivent. */
+export interface ProfessionDeLActivite {
+  id: string
+  libelle: string
+  /** Sa caisse, si le simulateur la calcule ; `null` pour « autre profession réglementée ». */
+  caisse: "CIPAV" | "CARPIMKO" | null
+  /** Micro-entreprise d'un affilié de la CIPAV : son taux global de cotisations sur le chiffre d'affaires BNC. */
+  tauxMicro?: number
+}
+
 /** Cotisations annuelles d'un travailleur non salarié (gérant d'EURL, entrepreneur individuel au réel). */
 export interface DetailCotisationsTNS {
   /** Revenu professionnel avant cotisations : bénéfice de l'entreprise individuelle, ou rémunération du gérant cotisations comprises et dividendes au-delà de 10 % du capital. */
@@ -493,6 +547,8 @@ export interface DetailCotisationsTNS {
   total: number
   /** CSG non déductible et CRDS : elles ne réduisent pas le revenu imposable. */
   partNonDeductible: number
+  /** Profession libérale réglementée d'une caisse que le simulateur calcule : sa caisse, l'ASV et la CURPS. */
+  caisse?: DetailCaisseLiberale
 }
 
 export interface VersementLiberatoireInfo {
@@ -862,6 +918,8 @@ export interface SanitizationReport {
   flowsRemoved: number
   /** Réglages du comparateur invalides (hors limites, mal formés), écartés un par un. */
   reglagesRemoved: number
+  /** Professions inconnues des règles, écartées : l'activité redevient non réglementée (voir l'ADR 015). */
+  professionsRemoved: number
   /** Années en double écartées (la première occurrence est gardée), qu'elles aient eu des flux ou non. */
   anneesEcartees: number[]
   /** Points à vérifier après la conversion d'un fichier d'un format précédent. */

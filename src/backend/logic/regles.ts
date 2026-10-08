@@ -54,6 +54,79 @@ export interface ReglesTNS {
   cotisationsMinimales: { indemnitesJournalieres: number; retraiteDeBase: number; invaliditeDeces: number }
 }
 
+/** Les caisses de libéraux réglementés que le simulateur calcule (voir l'ADR 015). */
+export const CAISSES_LIBERALES = ["CIPAV", "CARPIMKO"] as const
+export type CaisseLiberale = (typeof CAISSES_LIBERALES)[number]
+
+/**
+ * Une profession libérale réglementée proposée sur une activité BNC, et ses particularités. `caisse` vaut `null` pour
+ * « autre profession réglementée », calculée comme une profession non réglementée.
+ */
+export interface ProfessionReglementee {
+  id: string
+  libelle: string
+  /** Une caisse de `CAISSES_LIBERALES`, ou `null`. */
+  caisse: string | null
+  /** La micro-entreprise lui est ouverte. */
+  microEntreprise: boolean
+  /** Elle peut être conventionnée avec l'Assurance maladie : part conventionnée, prise en charge, ASV. */
+  conventionnable: boolean
+  /** Elle doit la contribution aux unions régionales des professionnels de santé. */
+  curps: boolean
+  /** Avertissement en SASU ou en EURL : elle exerce en principe en société d'exercice libéral. */
+  societeExerciceLiberal: boolean
+  source: string
+}
+
+/**
+ * Invalidité-décès d'une caisse : un forfait, plus un taux appliqué à l'assiette ramenée entre une assiette minimale et
+ * un plafond, en part du plafond de la sécurité sociale (forfait seul : taux nul).
+ */
+export interface BaremeInvaliditeDecesLiberal {
+  forfait: number
+  taux: number
+  assietteMinimalePartDuPlafond: number
+  plafondPartDuPlafond: number
+}
+
+/** Répartition du taux global de la micro-entreprise entre les risques, en part du taux (la somme vaut 1). */
+export interface RepartitionMicroLiberale {
+  csgCrds: number
+  maladie: number
+  indemnitesJournalieres: number
+  retraiteDeBase: number
+  retraiteComplementaire: number
+  invaliditeDeces: number
+}
+
+/** Règles des professions libérales réglementées d'une année (voir l'ADR 015). */
+export interface ReglesLiberauxReglementes {
+  professions: { liste: ProfessionReglementee[] }
+  /** Règles communes aux caisses de la CNAVPL ; maladie, allocations familiales, CSG-CRDS et formation : bloc TNS. */
+  commun: {
+    maladieMaternite: BaremeProgressif
+    indemnitesJournalieres: { tranches: TrancheCotisation[] }
+    retraiteDeBase: { tranches: TrancheCotisation[] }
+    /** Assiettes minimales, en euros. */
+    cotisationsMinimales: { indemnitesJournalieres: number; retraiteDeBase: number }
+    curps: { taux: number; plafondPartDuPlafond: number }
+  }
+  CIPAV: {
+    retraiteComplementaire: { tranches: TrancheCotisation[] }
+    invaliditeDeces: BaremeInvaliditeDecesLiberal
+    microEntreprise: { cotisations: number; tauxRetraiteDeBase: number; repartition: RepartitionMicroLiberale }
+  }
+  CARPIMKO: {
+    /** forfait + taux x (assiette ramenée entre `assietteMinimale` et `plafond`, moins `seuil`), en euros. */
+    retraiteComplementaire: { forfait: number; taux: number; seuil: number; plafond: number; assietteMinimale: number }
+    invaliditeDeces: BaremeInvaliditeDecesLiberal
+    /** Avantage social vieillesse : part du praticien et part de l'Assurance maladie, sur les revenus conventionnés. */
+    asv: { forfaitPraticien: number; tauxPraticien: number; forfaitAssuranceMaladie: number; tauxAssuranceMaladie: number; plafondPartDuPlafond: number }
+    /** Maladie : ce qui reste au praticien sur ses revenus conventionnés, et la majoration de ses autres revenus. */
+    priseEnChargeMaladie: { resteALaChargeDuPraticien: number; majorationHorsConvention: number }
+  }
+}
+
 /** Les cotisations du régime général qui ont un barème propre : toutes sauf la CSG et la CRDS. */
 export type LigneRegimeGeneral = Exclude<CotisationSalarie, "csgDeductible" | "csgNonDeductibleEtCrds">
 
@@ -121,6 +194,8 @@ export interface ReglesFiscales {
   dividendes: { tauxIrForfaitaire: number; prelevementsSociaux: number; abattementBareme: number; csgDeductible: number }
   regimeGeneral: ReglesRegimeGeneral
   TNS: ReglesTNS
+  /** Professions libérales réglementées : professions proposées, caisses et leurs barèmes (voir l'ADR 015). */
+  liberauxReglementes: ReglesLiberauxReglementes
   protectionSociale: {
     /** Revenu soumis à cotisations qui valide un trimestre de retraite. */
     revenuParTrimestre: number
@@ -169,6 +244,11 @@ const REGLES_PAR_ANNEE: ReadonlyMap<number, ReglesFiscales> = new Map<number, Re
   [2025, regles2025],
   [config.annee, config]
 ])
+
+/** Les règles de chaque année connue, de la plus ancienne à la plus récente. */
+export function reglesDesAnneesConnues(): ReglesFiscales[] {
+  return [...REGLES_PAR_ANNEE.values()]
+}
 
 /** Première et dernière années dont le simulateur connaît les règles. */
 export const PREMIERE_ANNEE_DES_REGLES = Math.min(...REGLES_PAR_ANNEE.keys())

@@ -95,7 +95,7 @@ describe("pont vers l'API Electron", () => {
 
   describe("importState", () => {
     const data: ExportableState = { entities: session.entities, relationships: [], annees: session.annees }
-    const report: SanitizationReport = { entitiesRemoved: 0, relationshipsRemoved: 1, flowsRemoved: 2, reglagesRemoved: 0, anneesEcartees: [], migrationNotes: [] }
+    const report: SanitizationReport = { entitiesRemoved: 0, relationshipsRemoved: 1, flowsRemoved: 2, reglagesRemoved: 0, professionsRemoved: 0, anneesEcartees: [], migrationNotes: [] }
 
     it("renvoie les données et le rapport de nettoyage", async () => {
       api.importState.mockResolvedValue({ data, report })

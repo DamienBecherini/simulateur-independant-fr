@@ -7,7 +7,7 @@ import { emptySession, makeCompany, makePerson } from "@/ui/testing/fixtures"
 import { useSessionManager } from "./useSessionManager"
 
 const comparateur: Comparateur = { activiteComparee: "company-sasu", reglagesParActivite: { "company-sasu": { partBncPrestations: 0.5 } } }
-const rapportVide = { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, anneesEcartees: [], migrationNotes: [] }
+const rapportVide = { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, professionsRemoved: 0, anneesEcartees: [], migrationNotes: [] }
 
 async function gestionnaire() {
   const rendu = renderHook(() => useSessionManager())

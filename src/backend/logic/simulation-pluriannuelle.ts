@@ -23,10 +23,17 @@ function rfrParPersonne(report: SimulationReport): Record<string, number> {
   return Object.fromEntries(report.foyers.flatMap(foyer => foyer.personIds.map(id => [id, foyer.revenuFiscalDeReference])))
 }
 
+/** Assiette sociale de chaque activité au réel (entreprise individuelle, gérant d'EURL), d'après le rapport d'une année. */
+function assiettesParActivite(report: SimulationReport): Record<string, number> {
+  return Object.fromEntries(report.activities.flatMap(a => (a.cotisationsTNS ? [[a.entityId, a.cotisationsTNS.assiette]] : [])))
+}
+
 /** Ce qu'une année reçoit des années précédentes de la session. */
 interface Heritage {
   /** Rapport de l'année N-2 s'il a pu être calculé : son revenu fiscal de référence sert au versement libératoire de N. */
   reportN2: SimulationReport | null
+  /** Rapport de l'année N-1 s'il a pu être calculé : la CARPIMKO assoit sur son assiette la complémentaire et l'ASV de N. */
+  reportN1: SimulationReport | null
   regimeMicro: RegimeMicroDeLAnnee | undefined
   /** Réserves, réserve légale et déficit reportable de chaque société au 1er janvier (voir l'ADR 014). */
   etatsDesSocietes: Record<string, EtatDeLaSociete>
@@ -34,13 +41,15 @@ interface Heritage {
 
 /** Prépare une année avec ce qu'elle hérite des précédentes. */
 function preparerLAnnee(session: SessionState, annee: number, heritage: Heritage): PreparationDeLAnnee {
-  const { reportN2, regimeMicro, etatsDesSocietes } = heritage
+  const { reportN2, reportN1, regimeMicro, etatsDesSocietes } = heritage
   const regles = reglesDeLAnnee(annee)
   if (regles.regles === null) return { erreur: regles.erreur }
+  const assiettes = reportN1 ? assiettesParActivite(reportN1) : {}
   const contexte: ContexteDeLAnnee = {
     annee,
     avertissements: regles.avertissement ? [regles.avertissement] : [],
     ...(reportN2 ? { rfrN2: { annee: annee - 2, parPersonne: rfrParPersonne(reportN2) } } : {}),
+    ...(Object.keys(assiettes).length > 0 ? { assiettesAnneePrecedente: { annee: annee - 1, parActivite: assiettes } } : {}),
     ...(regimeMicro ? { regimeMicro } : {}),
     ...(Object.keys(etatsDesSocietes).length > 0 ? { etatsDesSocietes } : {})
   }
@@ -92,7 +101,8 @@ function parcourirLesAnnees(session: SessionState, ajuster?: (preparee: AnneePre
   let etatsDesSocietes: Record<string, EtatDeLaSociete> = {}
   for (const { annee } of session.annees) {
     const reportN2 = parcours.find(p => p.annee === annee - 2)?.resultat.report ?? null
-    const heritage: Heritage = { reportN2, regimeMicro: regimes.get(annee), etatsDesSocietes }
+    const reportN1 = parcours.find(p => p.annee === annee - 1)?.resultat.report ?? null
+    const heritage: Heritage = { reportN2, reportN1, regimeMicro: regimes.get(annee), etatsDesSocietes }
     const preparation = preparerLAnnee(session, annee, heritage)
     const resultat: ResultatAnnee =
       "erreur" in preparation
