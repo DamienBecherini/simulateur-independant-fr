@@ -29,6 +29,8 @@ async function reglagesDe(page: Page, nom: string) {
   const nombre = await boutons.count()
   for (let i = 0; i < nombre; i++) {
     await boutons.nth(i).click()
+    // Attendre la fenêtre avant de lire son nom : sous la charge, elle met un instant à s'ouvrir.
+    await expect(page.getByRole("dialog")).toBeVisible()
     const fenetre = page.getByRole("dialog", { name: `Modifier : ${nom}` })
     if (await fenetre.isVisible()) return fenetre
     await page.keyboard.press("Escape")
