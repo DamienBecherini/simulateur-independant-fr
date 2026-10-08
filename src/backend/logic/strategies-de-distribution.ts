@@ -104,7 +104,7 @@ function resultatDeLaStrategie(strategie: StrategieDeDistribution, partMiseEnRes
 function meilleure(strategies: ResultatDUneStrategie[]): StrategieDeDistribution | null {
   const nets = strategies.map(s => s.netCumule)
   if (Math.max(...nets) - Math.min(...nets) < 1) return null
-  return strategies.reduce((a, b) => (b.netCumule > a.netCumule ? b : a)).strategie
+  return strategies.reduce((a, b) => (b.netCumule > a.netCumule ? b : a), strategies[0]).strategie
 }
 
 function strategiesDuStatut(session: SessionState, activityId: string, reglages: ReglagesComparateur | undefined, statut: StatutSociete, partMiseEnReserve: number): StrategiesDUnStatut {
