@@ -1,7 +1,7 @@
 # Professions libérales réglementées et leurs caisses : dossier de règles (phase 14 bis)
 
 - **Date :** 2026-10-08 (toutes les pages citées ont été consultées ce jour-là)
-- **Statut :** recherche, rien n'est codé ; décisions prises dans l'[ADR 015](../adr/015-professions-liberales-reglementees.md)
+- **Statut :** recherche ; décisions prises dans l'[ADR 015](../adr/015-professions-liberales-reglementees.md), codées pour la CIPAV et la CARPIMKO (phase 14 bis : règles `liberauxReglementes` de 2024 à 2026, cas du §9 dans `src/backend/logic/references/liberaux.reference.test.ts`)
 - **Périmètre détaillé :** CIPAV et CARPIMKO, revenus 2024, 2025 et 2026
 - **Périmètre d'orientation :** CARMF, CARCDSF, CAVP, CARPV, CAVEC, CAVAMAC, CAVOM, CPRN, CNBF
 
