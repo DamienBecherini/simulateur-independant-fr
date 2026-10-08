@@ -21,6 +21,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 - Serveur MCP : chaque réponse est un seul texte (résumé, puis JSON du résultat), et la liste des outils, sans schémas de sortie, est presque deux fois plus légère.
 - Outils pour les IA : « autre revenu imposable » est décrit comme un montant net imposable, ajouté tel quel au barème (sans l'abattement de 10 % des salaires), ce que fait le calcul.
 
+### Corrigé
+
+- **Micro-entreprise : contribution à la formation professionnelle comptée.** Elle s'ajoute aux cotisations, en part du chiffre d'affaires (article L6331-48 du code du travail) : 0,1 % pour la vente de marchandises, 0,2 % pour les prestations BNC, 0,3 % pour les prestations BIC, comptées au taux des artisans faute de distinguer le commerçant (0,2 %). L'ACRE ne la réduit pas et elle n'ouvre aucun trimestre de retraite. Elle entre dans le net, le comparateur, l'optimiseur, les exports et les outils pour les IA, et figure à part sous les cotisations de l'activité (« dont formation professionnelle ») : 80 € pour 40 000 € de prestations BNC.
+
 ## [0.9.1] — 2026-10-06
 
 ### Ajouté

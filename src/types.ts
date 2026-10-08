@@ -354,6 +354,8 @@ export interface ActivityResult {
   beneficiaireIds: string[]
   /** Micro-entreprise seulement : accès au versement libératoire selon le revenu fiscal de référence du foyer. */
   versementLiberatoire?: VersementLiberatoireInfo
+  /** Micro-entreprise seulement : contribution à la formation professionnelle, comprise dans les cotisations sociales. */
+  formationProfessionnelle?: number
   /** EURL et entreprise individuelle au réel : détail des cotisations du travailleur non salarié. */
   cotisationsTNS?: DetailCotisationsTNS
   /** SASU : détail des cotisations du président, assimilé salarié, sur sa rémunération. */

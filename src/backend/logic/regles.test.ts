@@ -29,6 +29,10 @@ describe("reglesDeLAnnee", () => {
     expect("avertissement" in resultat && resultat.avertissement).toMatch(/^Les règles de 2028 ne sont pas encore connues : 2028 est simulée avec celles de 2026/)
   })
 
+  it.each([2024, 2025, 2026])("%i : formation professionnelle des micro-entrepreneurs de 0,1 %, 0,3 % et 0,2 % du chiffre d'affaires (article L6331-48 du code du travail)", annee => {
+    expect(reglesDeLAnnee(annee).regles?.microEntreprise.formationProfessionnelle).toMatchObject({ venteBic: 0.001, servicesBic: 0.003, servicesBnc: 0.002 })
+  })
+
   it("refuse une année antérieure aux premières règles connues", () => {
     expect(reglesDeLAnnee(2023)).toEqual({ regles: null, erreur: "Le simulateur ne connaît pas les règles d'avant 2024 : l'année 2023 n'est pas simulée." })
   })

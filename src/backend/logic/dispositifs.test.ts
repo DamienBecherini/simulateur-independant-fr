@@ -81,14 +81,15 @@ describe("cotisations d'une micro-entreprise avec l'ACRE sur une partie de l'ann
   const entrees = { caVente: 0, caServicesBic: 0, caServicesBnc: 40000, beneficieACRE: true, opteVFL: false }
 
   it("ne réduit que le chiffre d'affaires des mois couverts, sans l'avertissement d'une année entière", () => {
-    // 40 000 x 25,6 % = 10 240 € ; réduction 10 000 x 25,6 % x 25 % = 640 € ; dû : 9 600 €.
+    // 40 000 x 25,6 % = 10 240 € ; réduction 10 000 x 25,6 % x 25 % = 640 € ; dû : 9 600 €, plus 0,2 % de formation
+    // professionnelle que l'ACRE ne réduit pas (80 €).
     const resultat = calculerMicro({ ...entrees, caSousACRE: { caVente: 0, caServicesBic: 0, caServicesBnc: 10000 }, reductionACRE: 0.25 }, reglesEnVigueur)
-    expect(resultat.cotisationsSociales).toBeCloseTo(9600, 6)
+    expect(resultat.cotisationsSociales).toBeCloseTo(9600 + 80, 6)
     expect(resultat.warnings.some(w => w.startsWith("ACRE"))).toBe(false)
   })
 
   it("sans mois couverts, à plein taux", () => {
-    expect(calculerMicro({ ...entrees, caSousACRE: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 }, reductionACRE: 0.25 }, reglesEnVigueur).cotisationsSociales).toBeCloseTo(10240, 6)
+    expect(calculerMicro({ ...entrees, caSousACRE: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 }, reductionACRE: 0.25 }, reglesEnVigueur).cotisationsSociales).toBeCloseTo(10240 + 80, 6)
   })
 
   it("compte les droits à la retraite sur les cotisations réduites des seuls mois couverts", () => {

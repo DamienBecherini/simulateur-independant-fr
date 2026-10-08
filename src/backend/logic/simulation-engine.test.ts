@@ -85,7 +85,8 @@ describe("runMetaSimulation", () => {
     it("isole les revenus d'une activité qui n'est rattachée à personne", () => {
       const report = simuler([personne("bob"), micro("m1")], [], [["m1", "ca_micro_vente", 50000]])
 
-      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 50000, cotisationsSociales: 5000, totalPrelevements: 5000, nonRattache: 45000 })
+      // 50 000 € de ventes : 5 000 € de cotisations, plus 0,1 % de formation professionnelle (50 €).
+      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 50000, cotisationsSociales: 5050, totalPrelevements: 5050, nonRattache: 44950 })
       expect(report.totalNetApresImpots).toBe(0)
     })
 
@@ -413,7 +414,8 @@ describe("runMetaSimulation", () => {
         ]
       )
 
-      // Les dépenses réduisent la trésorerie, pas le revenu imposable (40 000 x 70 % = 28 000 €).
+      // Les dépenses réduisent la trésorerie, pas le revenu imposable (40 000 x 70 % = 28 000 €). Cotisations : 10 000 €,
+      // plus 0,2 % de formation professionnelle (80 €).
       expect(activite(report, "m1")).toEqual({
         entityId: "m1",
         name: "m1",
@@ -421,22 +423,23 @@ describe("runMetaSimulation", () => {
         statut: "Micro-entreprise",
         chiffreAffaires: 40000,
         charges: 2000,
-        cotisationsSociales: 10000,
+        cotisationsSociales: 10080,
         impotSocietes: 0,
-        revenuVerse: 28000,
+        revenuVerse: 27920,
         resultatConserve: 0,
         beneficiaireIds: ["bob"],
         versementLiberatoire: { plafondRfr: 28000, partsFiscales: 1, rfrN2: null, anneeRfr: 1998, origineRfr: null, eligible: null, applique: false },
+        formationProfessionnelle: 80,
         warnings: []
       })
-      expect(report.persons[0].detail.benefices).toBe(28000)
-      expect(foyerDe(report, "bob")).toMatchObject({ revenusEncaisses: 28000, revenuImposableGlobal: 28000, impotSurLeRevenu: 1800, netApresImpots: 26200 })
+      expect(report.persons[0].detail.benefices).toBe(27920)
+      expect(foyerDe(report, "bob")).toMatchObject({ revenusEncaisses: 27920, revenuImposableGlobal: 28000, impotSurLeRevenu: 1800, netApresImpots: 26120 })
     })
 
     it("remplace l'impôt au barème par le versement libératoire quand l'option est prise", () => {
       const report = simuler([personne("bob"), micro("m1", { opteVFL: true })], [relation("bob", "m1", "Titulaire")], [["m1", "ca_micro_vente", 50000]])
 
-      expect(foyerDe(report, "bob")).toMatchObject({ revenusEncaisses: 45000, revenuImposableGlobal: 0, impotSurLeRevenu: 500, netApresImpots: 44500 })
+      expect(foyerDe(report, "bob")).toMatchObject({ revenusEncaisses: 44950, revenuImposableGlobal: 0, impotSurLeRevenu: 500, netApresImpots: 44450 })
     })
 
     describe("versement libératoire", () => {
@@ -499,7 +502,7 @@ describe("runMetaSimulation", () => {
 
       // Base : 32 400 + 28 000 = 60 400 €, soit 30 200 € par part : 2 x 2 060 € d'impôt.
       expect(report.foyers).toHaveLength(1)
-      expect(report.foyers[0]).toMatchObject({ personIds: ["alice", "bob"], totalParts: 2, revenusEncaisses: 66000, revenuImposableGlobal: 60400, impotSurLeRevenu: 4120, netApresImpots: 61880 })
+      expect(report.foyers[0]).toMatchObject({ personIds: ["alice", "bob"], totalParts: 2, revenusEncaisses: 65920, revenuImposableGlobal: 60400, impotSurLeRevenu: 4120, netApresImpots: 61800 })
     })
 
     it("ajoute les revenus d'un enfant rattaché à ceux de son parent, avec plafonnement du quotient familial", () => {
@@ -550,8 +553,8 @@ describe("runMetaSimulation", () => {
         ]
       )
 
-      // Cotisations : 2 000 € (micro) + 12 700 € (EI). Base imposable : 6 000 + 28 200 = 34 200 €, soit 2 000 + 4 200 x 30 % = 3 260 € d'impôt.
-      expect(foyerDe(report, "bob")).toMatchObject({ revenusAvantPrelevements: 60000, totalPrelevements: 17960, resultatConserve: 0, netApresImpots: 42040 })
+      // Cotisations : 2 000 € (micro, plus 20 € de formation professionnelle) + 12 700 € (EI). Base imposable : 6 000 + 28 200 = 34 200 €, soit 2 000 + 4 200 x 30 % = 3 260 € d'impôt.
+      expect(foyerDe(report, "bob")).toMatchObject({ revenusAvantPrelevements: 60000, totalPrelevements: 17980, resultatConserve: 0, netApresImpots: 42020 })
     })
 
     it("additionne les nets de tous les foyers", () => {
@@ -633,13 +636,13 @@ describe("runMetaSimulation", () => {
     })
 
     it("retire le coût employeur de ce que laisse une micro-entreprise, sans réduire ses cotisations", () => {
-      // 100 000 € de ventes : 10 000 € de cotisations ; reste 100 000 - 10 000 - 35 400 = 54 600 €.
+      // 100 000 € de ventes : 10 000 € de cotisations et 100 € de formation professionnelle ; reste 100 000 - 10 100 - 35 400 = 54 500 €.
       const report = simuler([personne("carl"), personne("bob"), micro("m1")], [relation("carl", "m1", "Titulaire"), relation("bob", "m1", "Salarié")], [
         ["m1", "ca_micro_vente", 100000],
         ["bob", "salary", 24300]
       ])
 
-      expect(activite(report, "m1")).toMatchObject({ charges: 30000, cotisationsSociales: 15400, revenuVerse: 54600 })
+      expect(activite(report, "m1")).toMatchObject({ charges: 30000, cotisationsSociales: 15500, revenuVerse: 54500 })
     })
 
     it("ne retient qu'un employeur, et ignore une relation sans salaire ou vers autre chose qu'une activité", () => {

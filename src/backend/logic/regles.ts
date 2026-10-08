@@ -137,6 +137,11 @@ export interface ReglesFiscales {
   microEntreprise: {
     plafonds: { services: number; vente: number }
     cotisations: TauxMicro
+    /**
+     * Contribution à la formation professionnelle, en part du chiffre d'affaires : elle s'ajoute aux cotisations, l'ACRE
+     * ne la réduit pas et elle n'ouvre aucun droit à la retraite.
+     */
+    formationProfessionnelle: TauxMicro
     /** Réduction de l'ACRE sur toute l'année, quand la date de création de la micro-entreprise n'est pas connue. */
     reductionACRE: number
     /**

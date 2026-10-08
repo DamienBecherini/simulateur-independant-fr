@@ -13,6 +13,9 @@ import type { MicroEntreprise } from "../../../types.js"
  *
  * Règles utilisées (sources dans config.json) :
  * - cotisations sur le CA : vente 12,3 %, prestations BIC 21,2 %, prestations BNC 25,6 % ; ACRE : - 50 % ;
+ * - contribution à la formation professionnelle, en plus (article L6331-48 du code du travail) : vente 0,1 %,
+ *   prestations BNC 0,2 %, prestations BIC 0,3 % (taux des artisans, le simulateur ne distinguant pas le commerçant,
+ *   à 0,2 %) ; l'ACRE ne la réduit pas ;
  * - abattement forfaitaire : vente 71 %, BIC 50 %, BNC 34 %, au minimum 305 € par nature d'activité,
  *   sans pouvoir dépasser le chiffre d'affaires ;
  * - versement libératoire : vente 1 %, BIC 1,7 %, BNC 2,2 % du CA, si le RFR 2024 ne dépasse pas 29 315 € par part ;
@@ -41,65 +44,67 @@ function simulerMicro(flux: Flux[], options: Partial<Pick<MicroEntreprise, "bene
 
 casDeReference("Cas de référence 2026 : micro-entreprise", () => {
   it("prestations BNC seules, 40 000 €", () => {
-    // Cotisations : 40 000 x 25,6 % = 10 240 €.
+    // Cotisations : 40 000 x 25,6 % = 10 240 €, plus 40 000 x 0,2 % = 80 € de formation professionnelle : 10 320 €.
     // Revenu imposable : 40 000 - 34 % (13 600 €) = 26 400 €.
     // Impôt brut : (26 400 - 11 600) x 11 % = 1 628 € ; décote 897 - 45,25 % x 1 628 = 160,33 € ; impôt 1 467,67 €.
-    // Net : 40 000 - 10 240 - 1 467,67 = 28 292,33 €.
+    // Net : 40 000 - 10 320 - 1 467,67 = 28 212,33 €.
     const report = simulerMicro([["m1", "ca_micro_services_bnc", 40000]])
 
-    expect(activite(report, "m1")).toMatchObject({ chiffreAffaires: 40000, cotisationsSociales: 10240, revenuVerse: 29760, warnings: [tvaAnneeSuivante] })
-    expect(foyerDe(report, "alice")).toMatchObject({ totalParts: 1, revenuImposableGlobal: 26400, impotSurLeRevenu: 1468, prelevementsSociaux: 0, netApresImpots: 28292 })
+    expect(activite(report, "m1")).toMatchObject({ chiffreAffaires: 40000, cotisationsSociales: 10320, formationProfessionnelle: 80, revenuVerse: 29680, warnings: [tvaAnneeSuivante] })
+    expect(foyerDe(report, "alice")).toMatchObject({ totalParts: 1, revenuImposableGlobal: 26400, impotSurLeRevenu: 1468, prelevementsSociaux: 0, netApresImpots: 28212 })
     verifierIdentiteDuBilan(report)
   })
 
   it("vente seule, 100 000 €", () => {
-    // Cotisations : 100 000 x 12,3 % = 12 300 €.
+    // Cotisations : 100 000 x 12,3 % = 12 300 €, plus 100 000 x 0,1 % = 100 € de formation professionnelle : 12 400 €.
     // Revenu imposable : 100 000 - 71 % (71 000 €) = 29 000 €.
     // Impôt brut : (29 000 - 11 600) x 11 % = 1 914 € ; décote 897 - 866,085 = 30,915 € ; impôt 1 883,085 €.
-    // Net : 100 000 - 12 300 - 1 883,085 = 85 816,915 €.
+    // Net : 100 000 - 12 400 - 1 883,085 = 85 716,915 €.
     const report = simulerMicro([["m1", "ca_micro_vente", 100000]])
 
-    expect(activite(report, "m1").cotisationsSociales).toBe(12300)
-    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 29000, impotSurLeRevenu: 1883, netApresImpots: 85817 })
+    expect(activite(report, "m1").cotisationsSociales).toBe(12400)
+    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 29000, impotSurLeRevenu: 1883, netApresImpots: 85717 })
     verifierIdentiteDuBilan(report)
   })
 
   it("prestations BIC seules, 60 000 €, revenu imposable dans la tranche à 30 %", () => {
-    // Cotisations : 60 000 x 21,2 % = 12 720 €.
+    // Cotisations : 60 000 x 21,2 % = 12 720 €, plus 60 000 x 0,3 % = 180 € de formation professionnelle : 12 900 €.
     // Revenu imposable : 60 000 - 50 % = 30 000 €.
     // Impôt : 1 977,69 + (30 000 - 29 579) x 30 % = 1 977,69 + 126,30 = 2 103,99 € ; décote 897 - 952,06 < 0, nulle.
-    // Net : 60 000 - 12 720 - 2 103,99 = 45 176,01 €.
+    // Net : 60 000 - 12 900 - 2 103,99 = 44 996,01 €.
     const report = simulerMicro([["m1", "ca_micro_services_bic", 60000]])
 
-    expect(activite(report, "m1").cotisationsSociales).toBe(12720)
-    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 30000, impotSurLeRevenu: 2104, netApresImpots: 45176 })
+    expect(activite(report, "m1").cotisationsSociales).toBe(12900)
+    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 30000, impotSurLeRevenu: 2104, netApresImpots: 44996 })
     verifierIdentiteDuBilan(report)
   })
 
   it("activité mixte : vente 50 000 €, BIC 20 000 €, BNC 10 000 €", () => {
     // Plafonds respectés : 30 000 € de services (<= 83 600 €), 80 000 € au total (<= 203 100 €).
-    // Cotisations : 50 000 x 12,3 % + 20 000 x 21,2 % + 10 000 x 25,6 % = 6 150 + 4 240 + 2 560 = 12 950 €.
+    // Cotisations : 50 000 x 12,3 % + 20 000 x 21,2 % + 10 000 x 25,6 % = 6 150 + 4 240 + 2 560 = 12 950 € ; formation
+    // professionnelle : 50 + 60 + 20 = 130 € ; total 13 080 €.
     // Abattements : 35 500 + 10 000 + 3 400 = 48 900 € ; revenu imposable 80 000 - 48 900 = 31 100 €.
     // Impôt : 1 977,69 + (31 100 - 29 579) x 30 % = 1 977,69 + 456,30 = 2 433,99 € (pas de décote).
-    // Net : 80 000 - 12 950 - 2 433,99 = 64 616,01 €.
+    // Net : 80 000 - 13 080 - 2 433,99 = 64 486,01 €.
     const report = simulerMicro([
       ["m1", "ca_micro_vente", 50000],
       ["m1", "ca_micro_services_bic", 20000],
       ["m1", "ca_micro_services_bnc", 10000]
     ])
 
-    expect(activite(report, "m1")).toMatchObject({ chiffreAffaires: 80000, cotisationsSociales: 12950, warnings: [] })
-    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 31100, impotSurLeRevenu: 2434, netApresImpots: 64616 })
+    expect(activite(report, "m1")).toMatchObject({ chiffreAffaires: 80000, cotisationsSociales: 13080, formationProfessionnelle: 130, warnings: [] })
+    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 31100, impotSurLeRevenu: 2434, netApresImpots: 64486 })
     verifierIdentiteDuBilan(report)
   })
 
   it("petit chiffre d'affaires BNC : l'abattement minimum de 305 € s'applique", () => {
     // Abattement : max(600 x 34 % = 204 €, 305 €) = 305 € ; revenu imposable 600 - 305 = 295 €.
-    // Cotisations : 600 x 25,6 % = 153,60 € ; impôt nul (sous 11 600 €). Net : 600 - 153,60 = 446,40 €.
+    // Cotisations : 600 x 25,6 % = 153,60 €, plus 600 x 0,2 % = 1,20 € de formation professionnelle : 154,80 € ;
+    // impôt nul (sous 11 600 €). Net : 600 - 154,80 = 445,20 €.
     const report = simulerMicro([["m1", "ca_micro_services_bnc", 600]])
 
-    expect(activite(report, "m1").cotisationsSociales).toBe(154)
-    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 295, impotSurLeRevenu: 0, netApresImpots: 446 })
+    expect(activite(report, "m1").cotisationsSociales).toBe(155)
+    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 295, impotSurLeRevenu: 0, netApresImpots: 445 })
   })
 
   it("chiffre d'affaires inférieur à l'abattement minimum : revenu imposable nul, jamais négatif", () => {
@@ -125,27 +130,27 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
   })
 
   it("avec l'ACRE : cotisations réduites de moitié, impôt inchangé", () => {
-    // Cotisations : 40 000 x 25,6 % x 50 % = 5 120 €. Impôt identique au cas BNC sans ACRE : 1 467,67 €.
-    // Net : 40 000 - 5 120 - 1 467,67 = 33 412,33 €.
+    // Cotisations : 40 000 x 25,6 % x 50 % = 5 120 €, plus 80 € de formation professionnelle, que l'ACRE ne réduit pas :
+    // 5 200 €. Impôt identique au cas BNC sans ACRE : 1 467,67 €. Net : 40 000 - 5 200 - 1 467,67 = 33 332,33 €.
     const report = simulerMicro([["m1", "ca_micro_services_bnc", 40000]], { beneficieACRE: true })
 
-    expect(activite(report, "m1").cotisationsSociales).toBe(5120)
-    expect(foyerDe(report, "alice")).toMatchObject({ impotSurLeRevenu: 1468, netApresImpots: 33412 })
+    expect(activite(report, "m1")).toMatchObject({ cotisationsSociales: 5200, formationProfessionnelle: 80 })
+    expect(foyerDe(report, "alice")).toMatchObject({ impotSurLeRevenu: 1468, netApresImpots: 33332 })
     verifierIdentiteDuBilan(report)
   })
 
   it("versement libératoire, RFR sous le seuil : 2,2 % du CA remplace le barème", () => {
     // Seuil pour 1 part : 29 315 € ; RFR 25 000 € : éligible.
     // Versement libératoire : 40 000 x 2,2 % = 880 € ; plus rien au barème (revenu imposable 0 €).
-    // Net : 40 000 - 10 240 - 880 = 28 880 €.
+    // Net : 40 000 - 10 320 - 880 = 28 800 €.
     const report = simulerMicro([["m1", "ca_micro_services_bnc", 40000]], { opteVFL: true, rfrN2: 25000 })
 
     expect(activite(report, "m1")).toMatchObject({
-      cotisationsSociales: 10240,
+      cotisationsSociales: 10320,
       versementLiberatoire: { plafondRfr: 29315, partsFiscales: 1, rfrN2: 25000, eligible: true, applique: true },
       warnings: [tvaAnneeSuivante]
     })
-    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 0, impotSurLeRevenu: 880, netApresImpots: 28880 })
+    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 0, impotSurLeRevenu: 880, netApresImpots: 28800 })
     verifierIdentiteDuBilan(report)
   })
 
@@ -164,7 +169,7 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
 
     expect(resultat.versementLiberatoire).toMatchObject({ plafondRfr: 29315, eligible: false, applique: false })
     expect(resultat.warnings.some(w => w.startsWith("Versement libératoire impossible"))).toBe(true)
-    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 26400, impotSurLeRevenu: 1468, netApresImpots: 28292 })
+    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 26400, impotSurLeRevenu: 1468, netApresImpots: 28212 })
   })
 
   it("versement libératoire, RFR non renseigné : appliqué, avec un rappel du seuil", () => {
@@ -173,20 +178,21 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
 
     expect(resultat.versementLiberatoire).toMatchObject({ rfrN2: null, eligible: null, applique: true })
     expect(resultat.warnings.some(w => /29\s315/.test(w))).toBe(true)
-    expect(foyerDe(report, "alice")).toMatchObject({ impotSurLeRevenu: 880, netApresImpots: 28880 })
+    expect(foyerDe(report, "alice")).toMatchObject({ impotSurLeRevenu: 880, netApresImpots: 28800 })
   })
 
   it("prestations BNC de 90 000 € : plafond des services dépassé", () => {
     // 90 000 € > 83 600 € : avertissement (le régime reste calculé, un dépassement isolé est toléré).
-    // Cotisations : 90 000 x 25,6 % = 23 040 € ; revenu imposable 90 000 - 30 600 = 59 400 €.
+    // Cotisations : 90 000 x 25,6 % = 23 040 €, plus 180 € de formation professionnelle : 23 220 € ;
+    // revenu imposable 90 000 - 30 600 = 59 400 €.
     // Impôt : 1 977,69 + (59 400 - 29 579) x 30 % = 1 977,69 + 8 946,30 = 10 923,99 €.
-    // Net : 90 000 - 23 040 - 10 923,99 = 56 036,01 €.
+    // Net : 90 000 - 23 220 - 10 923,99 = 55 856,01 €.
     const report = simulerMicro([["m1", "ca_micro_services_bnc", 90000]])
     const resultat = activite(report, "m1")
 
-    expect(resultat.cotisationsSociales).toBe(23040)
+    expect(resultat.cotisationsSociales).toBe(23220)
     expect(plafonds(resultat.warnings)).toEqual([expect.stringContaining("prestations de services")])
-    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 59400, impotSurLeRevenu: 10924, netApresImpots: 56036 })
+    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 59400, impotSurLeRevenu: 10924, netApresImpots: 55856 })
   })
 
   it("prestations BNC de 83 600 € : plafond atteint mais pas dépassé", () => {
@@ -210,22 +216,23 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
 
   it("activité mixte : vente 180 000 € et BIC 30 000 €, plafond total dépassé", () => {
     // Services 30 000 € (<= 83 600 €) mais total 210 000 € > 203 100 € : seul le plafond total est signalé.
-    // Cotisations : 180 000 x 12,3 % + 30 000 x 21,2 % = 22 140 + 6 360 = 28 500 €.
+    // Cotisations : 180 000 x 12,3 % + 30 000 x 21,2 % = 22 140 + 6 360 = 28 500 €, plus 180 + 90 = 270 € de formation
+    // professionnelle : 28 770 €.
     // Revenu imposable : 210 000 - (127 800 + 15 000) = 67 200 €.
     // Impôt : 1 977,69 + (67 200 - 29 579) x 30 % = 1 977,69 + 11 286,30 = 13 263,99 €.
-    // Net : 210 000 - 28 500 - 13 263,99 = 168 236,01 €.
+    // Net : 210 000 - 28 770 - 13 263,99 = 167 966,01 €.
     const report = simulerMicro([
       ["m1", "ca_micro_vente", 180000],
       ["m1", "ca_micro_services_bic", 30000]
     ])
     const resultat = activite(report, "m1")
 
-    expect(resultat.cotisationsSociales).toBe(28500)
+    expect(resultat.cotisationsSociales).toBe(28770)
     const [plafond, ...autres] = plafonds(resultat.warnings)
     expect(autres).toEqual([])
     expect(plafond).toContain("chiffre d'affaires total")
     expect(plafond).not.toContain("prestations de services")
-    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 67200, impotSurLeRevenu: 13264, netApresImpots: 168236 })
+    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 67200, impotSurLeRevenu: 13264, netApresImpots: 167966 })
   })
 
   describe("plafonds du régime, à l'euro près : le plafond peut être atteint, pas dépassé", () => {
@@ -290,17 +297,18 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
   })
 
   it("dépenses saisies : elles ne changent ni les cotisations ni l'impôt, seulement le net", () => {
-    // Au régime micro, les frais réels ne sont pas déductibles : cotisations 10 240 € et impôt 1 467,67 € inchangés.
-    // Encaissé : 40 000 - 10 240 - 5 000 = 24 760 € ; net 24 760 - 1 467,67 = 23 292,33 €.
-    // Bilan : revenus avant prélèvements 40 000 - 5 000 = 35 000 € = 11 708 € de prélèvements + 23 292 € de net.
+    // Au régime micro, les frais réels ne sont pas déductibles : cotisations 10 320 € (formation professionnelle comprise)
+    // et impôt 1 467,67 € inchangés.
+    // Encaissé : 40 000 - 10 320 - 5 000 = 24 680 € ; net 24 680 - 1 467,67 = 23 212,33 €.
+    // Bilan : revenus avant prélèvements 40 000 - 5 000 = 35 000 € = 11 788 € de prélèvements + 23 212 € de net.
     const report = simulerMicro([
       ["m1", "ca_micro_services_bnc", 40000],
       ["m1", "expense", 5000]
     ])
 
-    expect(activite(report, "m1")).toMatchObject({ cotisationsSociales: 10240, charges: 5000, revenuVerse: 24760 })
-    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 26400, impotSurLeRevenu: 1468, netApresImpots: 23292 })
-    expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 35000, totalPrelevements: 11708 })
+    expect(activite(report, "m1")).toMatchObject({ cotisationsSociales: 10320, charges: 5000, revenuVerse: 24680 })
+    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 26400, impotSurLeRevenu: 1468, netApresImpots: 23212 })
+    expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 35000, totalPrelevements: 11788 })
     verifierIdentiteDuBilan(report)
   })
 })

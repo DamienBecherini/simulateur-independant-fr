@@ -462,6 +462,7 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
     resultatConserve: 0,
     beneficiaireIds: titulaire ? [titulaire] : [],
     versementLiberatoire: { ...vfl, plafondRfr: Math.round(vfl.plafondRfr) },
+    formationProfessionnelle: Math.round(resultat.formationProfessionnelle),
     ...detailSalaries(masse),
     ...detailDeplacements(micro, deplacements, false),
     ...detailDispositifsMicro(ctx, micro, acre, prorata),

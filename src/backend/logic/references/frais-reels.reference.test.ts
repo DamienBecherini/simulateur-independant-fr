@@ -90,16 +90,17 @@ casDeReference("Cas de référence 2026 : frais réels d'un salarié", () => {
   })
 
   describe("micro-entreprise BNC de 40 000 €, avec les mêmes 8 720 km en déplacements professionnels, comparée en EI", () => {
-    // Sans déplacements, voir comparateur.reference.test.ts : micro 10 240 € de cotisations, 1 468 € d'impôt ; EI 25 787 € nets.
+    // Sans déplacements, voir comparateur.reference.test.ts : micro 10 320 € de cotisations (formation professionnelle
+    // comprise), 1 468 € d'impôt ; EI 25 787 € nets.
     const activite = { ...micro("m1"), deplacementsProfessionnels: { kmParAn: 8720, puissanceFiscale: "5" as const, electrique: false } }
     const options: ComparaisonOptions = { activityId: "m1", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }
     const resultat = comparerStatuts(session([personne("alice"), activite], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options)
     const colonne = (statut: StatutCompare) => resultat.scenarios.find(s => s.statut === statut)!
 
     it("micro : les 4 508,04 € sont dépensés sans rien réduire", () => {
-      // Cotisations 40 000 x 25,6 % = 10 240 € ; imposable 40 000 x 66 % = 26 400 €, impôt 1 468 € (inchangés).
-      // Net : 40 000 - 10 240 - 4 508,04 - 1 468 = 23 783,96 €.
-      expect(colonne("micro")).toMatchObject({ cotisationsSociales: 10240, impotSurLeRevenu: 1468, netApresImpots: 23784, revenusAvantPrelevements: 35492 })
+      // Cotisations 40 000 x 25,6 % = 10 240 €, plus 80 € de formation professionnelle ; imposable 40 000 x 66 % = 26 400 €,
+      // impôt 1 468 € (inchangés). Net : 40 000 - 10 320 - 4 508,04 - 1 468 = 23 703,96 €.
+      expect(colonne("micro")).toMatchObject({ cotisationsSociales: 10320, impotSurLeRevenu: 1468, netApresImpots: 23704, revenusAvantPrelevements: 35492 })
     })
 
     it("EI : les 4 508,04 € sont une charge déductible, qui réduit les cotisations et l'impôt", () => {

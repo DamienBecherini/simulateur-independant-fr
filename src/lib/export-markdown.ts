@@ -25,6 +25,7 @@ export const LIMITES = [
   "Montants annuels en euros, hors taxe ; la grille saisit des montants mensuels, additionnés sur l'année.",
   "Résultats indicatifs, non validés par un expert-comptable : ce n'est pas un conseil fiscal.",
   "Cotisations des travailleurs non salariés (gérant d'EURL, entrepreneur individuel au réel) calculées selon le barème des artisans, commerçants et professions libérales non réglementées ; celles du président de SASU approchées par un ratio moyen entre coût total et net.",
+  "Micro-entreprise : cotisations au taux de chaque nature d'activité, plus la contribution à la formation professionnelle, comptée au taux des artisans pour les prestations de services BIC (artisan et commerçant ne sont pas distingués).",
   "La note de protection sociale est indicative ; l'arbitrage rémunération / dividendes porte sur une seule année.",
   "Non modélisés : réductions et crédits d'impôt, résidence alternée, report des déficits, TVA (seul le dépassement des seuils de franchise est signalé), répartition du capital entre associés (dividendes partagés à parts égales)."
 ]

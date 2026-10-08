@@ -171,6 +171,7 @@ function reglesCles(r: ReglesFiscales): z.infer<typeof RegleSchema>[] {
     { sujet: "EURL : dividendes soumis à cotisations au-delà de cette part du capital", valeurs: valeurs(r.EURL), source: source(r.EURL) },
     { sujet: "Micro-entreprise : plafonds de chiffre d'affaires", valeurs: valeurs(micro.plafonds), source: source(micro.plafonds) },
     { sujet: "Micro-entreprise : taux de cotisations sur le chiffre d'affaires", valeurs: valeurs(micro.cotisations), source: source(micro.cotisations) },
+    { sujet: "Micro-entreprise : contribution à la formation professionnelle sur le chiffre d'affaires, en plus des cotisations", valeurs: valeurs(micro.formationProfessionnelle), source: source(micro.formationProfessionnelle) },
     { sujet: "Micro-entreprise : abattement forfaitaire avant impôt", valeurs: valeurs(micro.abattement), source: source(micro.abattement) },
     { sujet: "Micro-entreprise : versement libératoire (taux sur le chiffre d'affaires, plafond de revenu fiscal de référence par part)", valeurs: { plafondRfrParPart: micro.versementLiberatoire.plafondRfrParPart, ...valeurs(micro.versementLiberatoire.taux) }, source: source(micro.versementLiberatoire) },
     { sujet: "Franchise en base de TVA (seuils de chiffre d'affaires)", valeurs: valeurs(r.TVA), source: source(r.TVA) }
