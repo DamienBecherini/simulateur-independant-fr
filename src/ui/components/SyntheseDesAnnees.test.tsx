@@ -36,6 +36,26 @@ describe("SyntheseDesAnnees", () => {
     expect(lignes[2]).not.toHaveAttribute("aria-current")
   })
 
+  it("ajoute les réserves des sociétés au 31 décembre dès qu'une année en a", () => {
+    const avecReserves = (annee: number, conserve: number, aLaFin: number): SimulationReport => {
+      const r = rapport(annee, 1000, 500)
+      const etat = { reserveLegale: 100, deficitReportable: 0 }
+      const reserves = { auDebut: { ...etat, reserves: aLaFin - conserve }, aLaFin: { ...etat, reserves: aLaFin }, deficitImpute: 0, dotationReserveLegale: 0, beneficeDistribuableDeLAnnee: Math.max(0, conserve), distribuable: aLaFin, dividendesPrisSurLesReserves: Math.max(0, -conserve) }
+      return { ...r, activities: [{ entityId: "s1", name: "Ma SASU", type: "company", statut: "SASU", chiffreAffaires: 0, charges: 0, cotisationsSociales: 0, impotSocietes: 0, revenuVerse: 0, resultatConserve: conserve, beneficiaireIds: [], warnings: [], reserves }] }
+    }
+    render(<SyntheseDesAnnees simulation={{ annees: [{ annee: 2025, report: avecReserves(2025, 24625, 24625), erreur: null }, { annee: 2026, report: avecReserves(2026, -24625, 0), erreur: null }] }} annee={2026} />)
+
+    expect(screen.getByRole("columnheader", { name: "Réserves des sociétés au 31 décembre" })).toBeInTheDocument()
+    const lignes = within(screen.getByRole("table", { name: /réserves des sociétés/ })).getAllByRole("row").slice(1)
+    expect(lignes.map(texte)).toEqual(["20251 000 €500 €1 500 €24 625 €", "20261 000 €500 €1 500 €0 €"])
+  })
+
+  it("sans société à l'IS, pas de colonne des réserves", () => {
+    render(<SyntheseDesAnnees simulation={{ annees: [2025, 2026].map(annee => ({ annee, report: rapport(annee, 1000, 500), erreur: null })) }} annee={2026} />)
+
+    expect(screen.queryByRole("columnheader", { name: /Réserves/ })).not.toBeInTheDocument()
+  })
+
   it("défile dans une région nommée, atteignable au clavier, et garde la colonne des années fixe, sur un fond opaque", () => {
     const simulation = { annees: [2025, 2026, 2027].map(annee => ({ annee, report: rapport(annee, 1000, 500), erreur: null })) }
     render(<SyntheseDesAnnees simulation={simulation} annee={2026} />)

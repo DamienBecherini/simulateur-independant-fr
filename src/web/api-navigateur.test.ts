@@ -68,6 +68,9 @@ describe("pont de la démo web", () => {
 
     const comparaison = await api.compareStatuts(sessionExemple(), { activityId: "micro-atelier", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }, 2026)
     expect(comparaison.scenarios.map(s => s.statut)).toContain("SASU")
+
+    const strategies = await api.comparerStrategies(sessionExemple(), "micro-atelier")
+    expect(strategies.statuts.map(s => s.statut)).toEqual(["SASU", "EURL"])
   })
 
   it("conserve les sauvegardes et prévient l'interface", async () => {

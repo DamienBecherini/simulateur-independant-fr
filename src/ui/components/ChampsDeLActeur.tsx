@@ -97,7 +97,7 @@ export function ChampsDeLActeur({ entity, onChange }: ChampsDeLActeurProps) {
   )
 }
 
-/** Champs propres à certains statuts : revenu fiscal de référence d'une micro-entreprise, capital social d'une EURL. */
+/** Champs propres à certains statuts : revenu fiscal de référence d'une micro-entreprise, capital et réserves d'une société à l'IS. */
 function StatusSpecificFields({ entity, onChange }: ChampsDeLActeurProps) {
   return (
     <>
@@ -126,17 +126,46 @@ function StatusSpecificFields({ entity, onChange }: ChampsDeLActeurProps) {
       )}
       {entity.type !== "person" && <ChampDateDeCreation activite={entity} onChange={onChange} />}
       {entity.type === "micro-entreprise" && <ChampHorsPlafondAnneePrecedente activite={entity} onChange={onChange} />}
-      {entity.type === "company" && entity.legalStatus === "EURL" && (
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="capitalSocial" className="text-right">
-            Capital social
-          </Label>
-          <div className="col-span-3">
-            <ChampNumerique id="capitalSocial" name="capitalSocial" min="0" step="100" quoi="le capital social" value={entity.capitalSocial} onChange={e => onChange({ ...entity, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })} />
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant.</p>
-          </div>
+      {entity.type === "company" && entity.legalStatus !== "EI" && <ChampsDeLaSociete societe={entity} onChange={onChange} />}
+    </>
+  )
+}
+
+/** Société à l'IS : son capital (réserve légale, dividendes d'EURL soumis à cotisations) et ses réserves de départ. */
+function ChampsDeLaSociete({ societe, onChange }: { societe: Company; onChange: (entity: Entity) => void }) {
+  const aideCapital = societe.legalStatus === "EURL" ? "Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant. " : ""
+  return (
+    <>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="capitalSocial" className="text-right">
+          Capital social
+        </Label>
+        <div className="col-span-3">
+          <ChampNumerique id="capitalSocial" name="capitalSocial" min="0" step="100" quoi="le capital social" value={societe.capitalSocial} onChange={e => onChange({ ...societe, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })} />
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{aideCapital}5 % du bénéfice vont à la réserve légale, non distribuable, jusqu'à ce qu'elle atteigne 10 % du capital.</p>
         </div>
-      )}
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="reservesInitiales" className="text-right">
+          Réserves au début
+        </Label>
+        <div className="col-span-3">
+          <ChampNumerique
+            id="reservesInitiales"
+            name="reservesInitiales"
+            min="0"
+            step="100"
+            quoi="les réserves au début de la simulation"
+            placeholder="Aucune"
+            value={societe.reservesInitiales ?? ""}
+            onChange={e => {
+              const value = parseFloat(e.target.value)
+              onChange({ ...societe, reservesInitiales: Number.isFinite(value) && value > 0 ? value : undefined })
+            }}
+          />
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Bénéfices des années d'avant la simulation gardés dans la société, réserve légale non comprise : ils pourront être distribués. Les années suivantes, la simulation les reporte elle-même.</p>
+        </div>
+      </div>
     </>
   )
 }

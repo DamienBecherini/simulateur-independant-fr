@@ -15,7 +15,7 @@ export const libellesPostes: Record<PosteDuPartage, string> = {
   impotSocietes: "Impôt sur les sociétés",
   dividendesNets: "Dividendes",
   cotisationsSurDividendes: "Cotisations sur les dividendes",
-  resultatConserve: "Conservé dans la société"
+  resultatConserve: "Ajouté aux réserves"
 }
 
 /** Pas des poignées : 100 € de rémunération, 5 % de part distribuée. */

@@ -32,10 +32,11 @@ test("une proposition envoyée par le serveur MCP s'applique dans l'application 
   const client = new Client({ name: "client-e2e", version: "1.0.0" })
   await client.connect(new StdioClientTransport({ command: infos.executable, args: [infos.script, "--donnees", infos.donnees], env: { ...env, ELECTRON_RUN_AS_NODE: "1" }, stderr: "ignore" }))
   try {
-    expect((await client.listTools()).tools).toHaveLength(15)
+    expect((await client.listTools()).tools).toHaveLength(16)
     const proposee = (await client.callTool({ name: "proposer_flux", arguments: { flux: [mission] } })) as CallToolResult
     expect(proposee.isError).toBeFalsy()
-    const { proposition } = proposee.structuredContent as { proposition: unknown }
+    // Le résultat suit le résumé, en JSON, à la dernière ligne du texte.
+    const { proposition } = JSON.parse((proposee.content as { text: string }[])[0].text.split("\n").at(-1)!) as { proposition: unknown }
     const envoyee = (await client.callTool({ name: "appliquer_proposition", arguments: { proposition } })) as CallToolResult
     expect(envoyee.isError).toBeFalsy()
   } finally {

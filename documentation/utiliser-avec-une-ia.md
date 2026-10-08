@@ -6,11 +6,11 @@ Ce n'est pas l'avis d'un expert-comptable. La démo web n'a pas ce serveur : il 
 
 ## Ce que l'IA peut faire
 
-Quinze outils, décrits dans l'[ADR 010](./adr/010-outils-pour-les-clients-d-ia.md) :
+Seize outils, décrits dans l'[ADR 010](./adr/010-outils-pour-les-clients-d-ia.md) :
 
 - **lire** : décrire la simulation (années, acteurs, relations), lister les flux saisis, les règles fiscales de l'année ;
-- **calculer** : simuler une année, la synthèse des années, le détail du résultat d'un acteur, le comparateur de statuts, l'arbitrage rémunération et dividendes ;
-- **proposer** : des flux, un acteur, une relation, des modifications, une suppression, des réglages du comparateur ;
+- **calculer** : simuler une année, la synthèse des années, le détail du résultat d'un acteur, le comparateur de statuts, l'arbitrage rémunération et dividendes (avec l'écart entre la rémunération et les dividendes saisis et le meilleur net, frais de fonctionnement compris) ;
+- **proposer** : des flux, un acteur, une relation, des modifications, une suppression, des réglages du comparateur ; **rafraîchir** une proposition périmée ;
 - **envoyer une proposition à l'application** (`appliquer_proposition`).
 
 Les chiffres viennent toujours du moteur du simulateur, jamais de l'IA. Aucun outil ne supprime un acteur ou une année, et une proposition supprime au plus une série de flux ou une relation.
@@ -83,7 +83,7 @@ Tout client MCP qui lance un serveur local sur l'entrée et la sortie standard c
    - **Appliquer** : la proposition entre dans la simulation en **une seule étape**, que le bouton « Annuler » défait ;
    - **Refuser** : rien ne change ;
    - **Plus tard** : la proposition reste dans la boîte et revient au prochain démarrage.
-5. Une proposition **périmée** (vous avez modifié la simulation depuis qu'elle a été construite) ne peut pas être appliquée : demandez à l'IA de relire la simulation et de recommencer.
+5. Une proposition **périmée** (vous avez modifié la simulation depuis qu'elle a été construite) ne peut pas être appliquée : l'IA la reconstruit sur la simulation actuelle (`rafraichir_proposition`), en disant quelles opérations ne s'appliquent plus, et vous la soumet à nouveau.
 
 L'application enregistre la simulation **environ une seconde après chaque modification** (et tout de suite à la fermeture) : c'est ce fichier que le serveur lit. Chaque réponse du serveur indique quand il a été enregistré.
 
@@ -122,7 +122,7 @@ L'application enregistre la simulation **environ une seconde après chaque modif
   ```
 
 - **« Aucune simulation enregistrée »** : ouvrez une fois l'application, et vérifiez que `--donnees` désigne bien son dossier de données.
-- **« Proposition périmée »** : la simulation a changé depuis la proposition ; demandez à l'IA de la relire et de recommencer.
+- **« Proposition périmée »** : la simulation a changé depuis la proposition ; demandez à l'IA de la rafraîchir (`rafraichir_proposition`), puis relisez-la.
 - **Aucune fenêtre ne s'ouvre dans l'application** après un envoi : l'application doit être ouverte ; sinon, la proposition s'affichera à son prochain démarrage.
 
 ## Pour les développeurs

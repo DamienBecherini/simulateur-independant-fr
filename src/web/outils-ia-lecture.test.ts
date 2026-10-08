@@ -108,6 +108,17 @@ describe("expliquer_resultat", () => {
     expect(explication.lignes.find(l => l.libelle === "Impôt sur les sociétés")!.montant).toBe(Math.round(activite.impotSocietes))
   })
 
+  it("donne les réserves d'une société à l'IS, dans simuler comme dans expliquer_resultat", () => {
+    const session = exemple()
+    const activite = rapport2026(session).activities.find(a => a.entityId === "company-conseil")!
+    const simulation = appeler<{ activites: { id: string; reservesALaFin?: number }[] }>("simuler", session)
+    expect(simulation.activites.find(a => a.id === "company-conseil")!.reservesALaFin).toBe(Math.round(activite.reserves!.aLaFin.reserves))
+    expect(simulation.activites.find(a => a.id === "micro-atelier")).not.toHaveProperty("reservesALaFin")
+
+    const explication = appeler<{ informations: string[] }>("expliquer_resultat", session, { acteurId: "company-conseil" })
+    expect(explication.informations).toContainEqual(expect.stringMatching(/^Réserves distribuables : 0 € au 1er janvier, .* € au 31 décembre ; bénéfice distribuable de l'année/))
+  })
+
   it("explique le versement libératoire d'une micro-entreprise et l'impôt du foyer d'une personne", () => {
     const session = exemple()
     const micro = appeler<{ informations: string[] }>("expliquer_resultat", session, { acteurId: "micro-atelier" })
@@ -167,6 +178,40 @@ describe("comparer_statuts et optimiser_remuneration", () => {
     expect(optimisation.meilleurAvecRetraite.trimestres).toBe(4)
     expect(optimisation.courbe).toHaveLength(11)
     expect(optimisation.courbe[10].remunerationNette).toBe(attendu.remunerationMaximale)
+  })
+
+  it("situent la grille actuelle sur la courbe : rémunération et dividendes saisis, net du foyer, écarts aux meilleurs points", () => {
+    const session = exemple()
+    const options = optionsDuComparateur(vueDeLAnnee(session, 2026), "company-conseil", undefined)
+    // Les réglages de l'exemple partagent le bénéfice d'après la grille : la colonne actuelle du comparateur est la situation actuelle.
+    expect(options.repartition.mode).toBe("grille")
+    const colonne = comparerStatutsDeLAnnee(session, options, 2026).scenarios.find(s => s.actuel)!
+    const flux = session.annees[0].monthlyData.flatMap(m => m.flows).filter(f => f.entityId === "company-conseil")
+    const total = (type: string) => Math.round(flux.filter(f => f.type === type).reduce((somme, f) => somme + f.amount, 0))
+    type Point = { netApresImpots: number; trimestres: number }
+    const optimisation = appeler<{ fraisFonctionnement: number; noteCFE: string | null; situationActuelle: Point & { statut: string; remunerationNette: number; dividendes: number; fraisFonctionnement: number }; meilleur: Point; meilleurAvecRetraite: Point; ecartAuMeilleur: number; ecartAuMeilleurAvecRetraite: number }>("optimiser_remuneration", session, { activiteId: "company-conseil", statut: "SASU" })
+    expect(optimisation.situationActuelle).toMatchObject({ statut: "SASU", remunerationNette: total("director_remuneration"), dividendes: total("dividends_payment"), netApresImpots: Math.round(colonne.netApresImpots), trimestres: colonne.protectionSociale.trimestres, fraisFonctionnement: colonne.fraisFonctionnement })
+    expect(total("director_remuneration")).toBeGreaterThan(0)
+    expect(optimisation.ecartAuMeilleur).toBe(optimisation.meilleur.netApresImpots - optimisation.situationActuelle.netApresImpots)
+    expect(optimisation.ecartAuMeilleurAvecRetraite).toBe(optimisation.meilleurAvecRetraite.netApresImpots - optimisation.situationActuelle.netApresImpots)
+    // Les frais de fonctionnement retenus, ceux de l'application par défaut : de quoi rapprocher ces nets de ceux de simuler.
+    expect(optimisation).toMatchObject({ fraisFonctionnement: 2900, noteCFE: null })
+  })
+
+  it("comptent la CFE de l'année de création comme le comparateur, et situent une activité d'un autre statut", () => {
+    const base = sessionExemple()
+    const creeeCetteAnnee = geler({ ...base, entities: base.entities.map(e => (e.id === "company-conseil" ? { ...e, dateDeCreation: "2026-03" } : e)) })
+    const options = optionsDuComparateur(vueDeLAnnee(creeeCetteAnnee, 2026), "company-conseil", undefined)
+    const comparaison = comparerStatutsDeLAnnee(creeeCetteAnnee, options, 2026)
+    const eurl = appeler<{ fraisFonctionnement: number; noteCFE: string; situationActuelle: { statut: string; netApresImpots: number; fraisFonctionnement: number } }>("optimiser_remuneration", creeeCetteAnnee, { activiteId: "company-conseil", statut: "EURL" })
+    expect(eurl.noteCFE).toBe(comparaison.noteCFE)
+    expect(eurl.fraisFonctionnement).toBe(comparaison.scenarios.find(s => s.statut === "EURL")!.fraisFonctionnement)
+    expect(eurl.fraisFonctionnement).toBe(2600)
+    // La situation actuelle reste celle de la SASU saisie, avec ses propres frais.
+    expect(eurl.situationActuelle).toMatchObject({ statut: "SASU", netApresImpots: Math.round(comparaison.scenarios.find(s => s.actuel)!.netApresImpots), fraisFonctionnement: 2600 })
+
+    const micro = appeler<{ situationActuelle: { statut: string; remunerationNette: null; dividendes: null } }>("optimiser_remuneration", exemple(), { activiteId: "micro-atelier", statut: "SASU" })
+    expect(micro.situationActuelle).toMatchObject({ statut: expect.stringMatching(/^micro/), remunerationNette: null, dividendes: null })
   })
 
   it("refusent une personne, ou une simulation sans activité", () => {

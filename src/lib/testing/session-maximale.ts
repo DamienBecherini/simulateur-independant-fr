@@ -73,7 +73,7 @@ export function sessionMaximale(): SessionState {
       { id: "p-bob", type: "person", name: "Bob Martin", fiscalParts: 1.5, fraisReels: { trajets: [{ libelle: "Atelier", kmParTrajet: 5, joursTravailles: 200, puissanceFiscale: "4", electrique: false, distanceJustifiee: false }, { libelle: "Client A", kmParTrajet: 22, joursTravailles: 10, puissanceFiscale: "5", electrique: true, distanceJustifiee: false }, { libelle: "Client B", kmParTrajet: 60, joursTravailles: 4, puissanceFiscale: "6", electrique: false, distanceJustifiee: true }], autresFrais: 0 }, avatar: initiales("BM", "#10b981"), locked: false },
       { id: "p-chloe", type: "person", name: "Chloé", fiscalParts: 0.5, avatar: icone("Baby", "#f59e0b"), locked: false },
       { id: "p-dan", type: "person", name: "Dan", fiscalParts: 1, avatar: icone("User", "#64748b"), locked: false },
-      { id: "c-sasu", type: "company", name: "Martin Conseil", legalStatus: "SASU", capitalSocial: 5000, deplacementsProfessionnels: { kmParAn: 8000, puissanceFiscale: "6", electrique: true }, avatar: icone("Briefcase", "#ef4444"), locked: true },
+      { id: "c-sasu", type: "company", name: "Martin Conseil", legalStatus: "SASU", capitalSocial: 5000, reservesInitiales: 12500.5, deplacementsProfessionnels: { kmParAn: 8000, puissanceFiscale: "6", electrique: true }, avatar: icone("Briefcase", "#ef4444"), locked: true },
       { id: "c-eurl", type: "company", name: "Martin Bois", legalStatus: "EURL", capitalSocial: 1500, deplacementsProfessionnels: { kmParAn: 450, puissanceFiscale: "7", electrique: false }, avatar: icone("Hammer", "#8b5cf6"), locked: false },
       { id: "c-ei", type: "company", name: "Bob Réparations", legalStatus: "EI", capitalSocial: 0, dateDeCreation: "2025-04", deplacementsProfessionnels: { kmParAn: 1200, puissanceFiscale: "5", electrique: false }, avatar: icone("Wrench", "#0ea5e9"), locked: false },
       { id: "m-bic", type: "micro-entreprise", name: "Alice Formations", beneficieACRE: true, opteVFL: true, rfrN2: 24000, dateDeCreation: "2026-09", horsPlafondAnneePrecedente: false, deplacementsProfessionnels: { kmParAn: 300, puissanceFiscale: "3", electrique: false }, avatar: icone("Store", "#f97316"), locked: false },
@@ -95,7 +95,7 @@ export function sessionMaximale(): SessionState {
     comparateur: {
       activiteComparee: "c-eurl",
       reglagesParActivite: {
-        "c-sasu": { repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true }, partBncPrestations: 0.3, fraisFonctionnement: fraisModifies(50), statutEtudie: "EURL" },
+        "c-sasu": { repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true }, partBncPrestations: 0.3, fraisFonctionnement: fraisModifies(50), statutEtudie: "EURL", partMiseEnReserve: 0.4 },
         "c-eurl": { repartition: { mode: "personnalisee", partDistribuee: 0.35 }, remunerationParAnnee: { "2024": 12000, "2026": 18500.5 }, fraisFonctionnement: fraisModifies(-20), statutEtudie: "SASU" },
         "c-ei": { repartition: { mode: "dividendes", partDistribuee: 1, avecRetraite: false }, remunerationParAnnee: { "2025": 9000 }, partBncPrestations: 0 },
         "m-bic": { repartition: { mode: "remuneration", partDistribuee: 0.8 }, fraisFonctionnement: fraisModifies(0) },

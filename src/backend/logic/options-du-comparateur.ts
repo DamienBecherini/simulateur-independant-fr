@@ -19,6 +19,9 @@ export function defaultFraisFonctionnement(): FraisFonctionnement {
   }
 }
 
+/** « Sur toutes les années » : part du bénéfice distribuable gardée chaque année proposée par défaut (voir l'ADR 014). */
+export const PART_MISE_EN_RESERVE_PAR_DEFAUT = 0.5
+
 /**
  * Au meilleur net, la case « avec 4 trimestres de retraite » est cochée d'office : une rémunération qui ne valide aucun
  * trimestre est rarement un bon choix sans le savoir. Seul un choix de l'utilisateur est enregistré (ADR 009) : une

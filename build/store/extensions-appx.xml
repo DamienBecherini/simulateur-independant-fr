@@ -1,7 +1,7 @@
 
         <!-- Alias d'exécution : %LOCALAPPDATA%\Microsoft\WindowsApps\simulateur-independant-fr.exe lance l'exécutable du
              paquet avec l'identité du paquet. C'est la commande que l'application donne aux clients d'IA pour le serveur
-             MCP local (voir l'ADR 012). Le nom doit rester celui de ALIAS_D_EXECUTION (src/lib/configuration-mcp.ts). -->
+             MCP local (voir l'ADR 013). Le nom doit rester celui de ALIAS_D_EXECUTION (src/lib/configuration-mcp.ts). -->
         <uap3:Extension xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3" Category="windows.appExecutionAlias" Executable="app\Simulateur Indépendant FR.exe" EntryPoint="Windows.FullTrustApplication">
           <uap3:AppExecutionAlias>
             <desktop:ExecutionAlias Alias="simulateur-independant-fr.exe" />

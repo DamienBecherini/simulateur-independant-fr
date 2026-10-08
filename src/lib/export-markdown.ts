@@ -4,7 +4,7 @@
 
 import type { ComparaisonOptions, ComparaisonResult, DeplacementsProfessionnels, Entity, FraisProfessionnelsResult, ModeRepartition, Person, Relationship, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
-import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libellePuissance, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
+import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libellePuissance, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { numeroterNotes } from "./notes"
 
 /** Comparaison calculée à l'export pour l'activité choisie dans le comparateur, ou la raison de son absence. */
@@ -73,7 +73,7 @@ function detailDeLActeur(entity: Entity): string {
   if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}${detailDesFraisReels(entity)}`
   const creation = dateDeCreationLisible(entity)
   const creee = `${creation ? ` ; créée en ${creation}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}`
-  if (entity.type === "company") return `${entity.legalStatus === "EI" ? "Entreprise individuelle au régime réel" : `Société à l'impôt sur les sociétés, capital social ${euros(entity.capitalSocial)}`}${creee}`
+  if (entity.type === "company") return `${entity.legalStatus === "EI" ? "Entreprise individuelle au régime réel" : `Société à l'impôt sur les sociétés, capital social ${euros(entity.capitalSocial)}${entity.reservesInitiales ? `, réserves au début de la simulation ${euros(entity.reservesInitiales)}` : ""}`}${creee}`
   const rfr = entity.rfrN2 === undefined ? "non renseigné" : euros(entity.rfrN2)
   const horsPlafond = entity.horsPlafondAnneePrecedente ? " ; au-delà des plafonds l'année d'avant la simulation" : ""
   return `ACRE : ${entity.beneficieACRE ? "oui" : "non"} ; versement libératoire demandé : ${entity.opteVFL ? "oui" : "non"} ; revenu fiscal de référence N-2 : ${rfr}${creee}${horsPlafond}`
@@ -174,6 +174,7 @@ function sectionResultats(session: SimulationAnnuelle, report: SimulationReport 
   const sousSections = [
     sousSectionBilan(report),
     sousSectionActivites(session, report),
+    sousSectionReserves(report),
     sousSectionDeplacements(report),
     sousSectionVersementLiberatoire(report),
     sousSectionDispositifs(report),
@@ -181,6 +182,14 @@ function sectionResultats(session: SimulationAnnuelle, report: SimulationReport 
     sousSectionFraisProfessionnels(report)
   ].filter(Boolean)
   return `## Résultats ${report.annee} (règles fiscales ${report.anneeDesRegles})\n\nMontants annuels, avant les éventuelles dépenses personnelles.\n\n${sousSections.join("\n\n")}`
+}
+
+/** Réserves des sociétés à l'IS : ce qui s'y ajoute ou en sort dans l'année, et ce qu'il en reste ; rien sans réserves. */
+function sousSectionReserves(report: SimulationReport): string {
+  const lignes = reservesDeLAnnee(report).map(({ activite, lecture: l }) => [echapper(activite), euros(l.ajoutees), euros(l.reserveLegaleDotee), euros(l.prisesSurLesReserves), euros(l.deficit), euros(l.deficitImpute), `**${euros(l.aLaFin)}**`, euros(l.reserveLegale)])
+  if (lignes.length === 0) return ""
+  const entete = ["Société", "Ajouté aux réserves", "Dont réserve légale", "Dividendes pris sur les réserves", "Déficit de l'année", "Déficit antérieur déduit avant l'IS", "Réserves au 31 décembre", "Réserve légale"]
+  return `### Réserves des sociétés\n\nBénéfices gardés dans la société d'une année sur l'autre : l'impôt sur les sociétés est payé, l'impôt du foyer le sera quand ils seront distribués.\n\n${tableau(entete, lignes, [1, 2, 3, 4, 5, 6, 7])}`
 }
 
 /** Dispositifs limités dans le temps de l'année (sortie du régime micro, ACRE…) ; rien quand aucun ne joue. */
@@ -226,9 +235,11 @@ function sectionToutesLesAnnees(session: SimulationAnnuelle, pluriannuelle: Simu
   const synthese = tableau(["Année", "Règles fiscales", "Net après impôts", "Total des prélèvements", "Revenus avant prélèvements"], lignes, [2, 3, 4])
   const rfr = rfrDesAnnees(session, pluriannuelle).map(({ annee, foyer, rfr }) => [String(annee), echapper(foyer), euros(rfr)])
   const blocRfr = rfr.length > 0 ? `\n\n### Revenu fiscal de référence, année par année\n\n${tableau(["Année", "Foyer (membres)", "Revenu fiscal de référence"], rfr, [2])}` : ""
+  const reserves = reservesDesAnnees(pluriannuelle).map(({ annee, activite, lecture }) => [String(annee), echapper(activite), euros(lecture.aLaFin), euros(lecture.reserveLegale)])
+  const blocReserves = reserves.length > 0 ? `\n\n### Réserves des sociétés, année par année\n\n${tableau(["Année", "Société", "Réserves au 31 décembre", "Réserve légale"], reserves, [2, 3])}` : ""
   const dispositifs = dispositifsDesAnnees(pluriannuelle).map(({ annee, activite, note }) => `- ${annee}, ${echapper(activite)} : ${echapper(note)}`)
   const blocDispositifs = dispositifs.length > 0 ? `\n\n### Dispositifs dans le temps, année par année\n\n${dispositifs.join("\n")}` : ""
-  return `## Toutes les années\n\nUne ligne par année de la session, avec les mêmes acteurs et la grille de chaque année.\n\n${synthese}${blocRfr}${blocDispositifs}`
+  return `## Toutes les années\n\nUne ligne par année de la session, avec les mêmes acteurs et la grille de chaque année.\n\n${synthese}${blocRfr}${blocReserves}${blocDispositifs}`
 }
 
 // --- Comparateur ---

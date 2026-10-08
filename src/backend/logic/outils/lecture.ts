@@ -26,7 +26,7 @@ function reglagesDeLActeur(acteur: Entity, detaille: boolean): Record<string, z.
     return detaille && frais ? { ...resume, trajets: JSON.stringify(frais.trajets) } : resume
   }
   const commun = { dateDeCreation: acteur.dateDeCreation ?? null, deplacementsKmParAn: acteur.deplacementsProfessionnels?.kmParAn ?? null }
-  if (acteur.type === "company") return { capitalSocial: acteur.capitalSocial, ...commun }
+  if (acteur.type === "company") return { capitalSocial: acteur.capitalSocial, ...(acteur.reservesInitiales === undefined ? {} : { reservesInitiales: acteur.reservesInitiales }), ...commun }
   return { beneficieACRE: acteur.beneficieACRE, opteVFL: acteur.opteVFL, rfrN2: acteur.rfrN2 ?? null, horsPlafondAnneePrecedente: acteur.horsPlafondAnneePrecedente ?? false, ...commun }
 }
 
@@ -164,7 +164,9 @@ function reglesCles(r: ReglesFiscales): z.infer<typeof RegleSchema>[] {
     { sujet: "Impôt sur le revenu : parts par enfant et plafonnement du quotient familial", valeurs: { ...valeurs(r.IR.partsParEnfant), avantageMaxParDemiPart: r.IR.plafonnementQuotientFamilial.avantageMaxParDemiPart }, source: source(r.IR.partsParEnfant) },
     { sujet: "Plafond annuel de la sécurité sociale (PASS)", valeurs: { montant: r.regimeGeneral.plafondSecuriteSociale }, source: source(r.regimeGeneral) },
     { sujet: "Retraite : revenu soumis à cotisations qui valide un trimestre", valeurs: { montant: r.protectionSociale.revenuParTrimestre }, source: null },
-    { sujet: "Impôt sur les sociétés", valeurs: valeurs(r.IS), source: source(r.IS) },
+    { sujet: "Impôt sur les sociétés", valeurs: { tauxReduit: r.IS.tauxReduit, plafondTauxReduit: r.IS.plafondTauxReduit, tauxNormal: r.IS.tauxNormal }, source: source(r.IS) },
+    { sujet: "Impôt sur les sociétés : déficit d'une année imputé sur les bénéfices suivants (au plus le plafond fixe, plus cette part du bénéfice au-delà)", valeurs: valeurs(r.IS.reportEnAvantDesDeficits), source: source(r.IS.reportEnAvantDesDeficits) },
+    { sujet: "Réserve légale des sociétés à l'IS : part du bénéfice mise en réserve jusqu'à cette part du capital", valeurs: valeurs(r.reserveLegale), source: source(r.reserveLegale) },
     { sujet: "Dividendes : prélèvement forfaitaire unique ou barème", valeurs: valeurs(r.dividendes), source: source(r.dividendes) },
     { sujet: "EURL : dividendes soumis à cotisations au-delà de cette part du capital", valeurs: valeurs(r.EURL), source: source(r.EURL) },
     { sujet: "Micro-entreprise : plafonds de chiffre d'affaires", valeurs: valeurs(micro.plafonds), source: source(micro.plafonds) },

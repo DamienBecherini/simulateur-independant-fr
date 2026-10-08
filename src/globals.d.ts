@@ -1,5 +1,5 @@
 // src/globals.d.ts
-import type { SessionState, SaveSlot, UserPreferences, ExportableState, SanitizationReport, NotificationPayload, SimulationPluriannuelle, ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, StatutSociete, FormatFichierTexte } from "./types.js"
+import type { SessionState, SaveSlot, UserPreferences, ExportableState, SanitizationReport, NotificationPayload, SimulationPluriannuelle, ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, StatutSociete, FormatFichierTexte, StrategiesDeDistribution } from "./types.js"
 import type { PropositionRecue } from "./backend/mcp/proposition-en-attente.js"
 import type { InfosDuServeurMcp } from "./lib/configuration-mcp.js"
 
@@ -14,6 +14,8 @@ export type EventPayloadMapping = {
   /** Le comparateur et l'optimiseur portent sur une année de la session. */
   compareStatuts: (session: SessionState, options: ComparaisonOptions, annee: number) => Promise<ComparaisonResult>
   optimiserRemuneration: (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) => Promise<OptimisationRemuneration>
+  /** « Sur toutes les années » : stratégies de distribution d'une activité en SASU et en EURL, avec les réglages enregistrés du comparateur. */
+  comparerStrategies: (session: SessionState, activityId: string) => Promise<StrategiesDeDistribution>
   getSaveSlots: () => Promise<SaveSlot[]>
   /** Enregistre toutes les sauvegardes ; `silencieux` évite la notification « Sauvegarde réussie ! » (après un import, qui a son propre bilan). */
   saveSlots: (slots: SaveSlot[], options?: { silencieux?: boolean }) => Promise<void>

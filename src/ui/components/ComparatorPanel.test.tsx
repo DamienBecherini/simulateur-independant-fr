@@ -56,6 +56,20 @@ describe("ComparatorPanel sur plusieurs années", () => {
     expect(window.api.optimiserRemuneration).not.toHaveBeenCalled()
   })
 
+  it("ajoute « Sur toutes les années », dont la part gardée chaque année est enregistrée avec les réglages", async () => {
+    const onComparateur = vi.fn()
+    render(<ComparateurDeTest annee={2026} session={deuxAnnees()} onComparateur={onComparateur} />)
+
+    expect(screen.getByRole("heading", { name: "Sur toutes les années" })).toBeInTheDocument()
+    await vi.waitFor(() => expect(window.api.comparerStrategies).toHaveBeenCalledWith(expect.anything(), "company-sasu"))
+    const part = screen.getByLabelText("Part gardée chaque année (%)")
+    await userEvent.clear(part)
+    await userEvent.type(part, "40")
+
+    expect(onComparateur).toHaveBeenLastCalledWith(expect.objectContaining({ reglagesParActivite: { "company-sasu": expect.objectContaining({ partMiseEnReserve: 0.4 }) } }))
+    await vi.waitFor(() => expect(window.api.comparerStrategies).toHaveBeenLastCalledWith(expect.objectContaining({ comparateur: expect.objectContaining({ reglagesParActivite: { "company-sasu": expect.objectContaining({ partMiseEnReserve: 0.4 }) } }) }), "company-sasu"))
+  })
+
   it("hors du meilleur net, l'arbitrage rémunération / dividendes porte sur l'année affichée", async () => {
     const session = deuxAnnees()
     render(<ComparateurDeTest annee={2026} session={session} />)

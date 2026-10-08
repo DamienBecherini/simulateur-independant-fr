@@ -18,6 +18,7 @@ function createFakeApi(): EventPayloadMapping {
     saveCurrentSession: vi.fn(async () => {}),
     saveCurrentSessionSync: vi.fn(),
     simulerLesAnnees: vi.fn(async (session: SessionState) => ({ annees: session.annees.map(({ annee }) => ({ annee, report: { ...emptyReport(), annee }, erreur: null })) })),
+    comparerStrategies: vi.fn(async () => ({ annees: [], partMiseEnReserve: 0.5, statuts: [], notes: [] })),
     compareStatuts: vi.fn(async () => ({ scenarios: [], meilleur: null, couples: [], warnings: [] })),
     optimiserRemuneration: vi.fn(async (_session, _options, statut) => ({ statut, remunerationMaximale: 0, points: [], meilleur: null, meilleurAvecRetraite: null, warnings: [] })),
     getSaveSlots: vi.fn(async () => []),

@@ -5,9 +5,9 @@
 
 import { z } from "zod"
 import { RelationshipSchema, type SessionState } from "../../../types.js"
-import { empreinteDeLaSession, GENRES_D_ACTEUR, SENS_DES_TYPES, TYPES_DE_FLUX, type GenreDActeur } from "./commun.js"
+import { empreinteDeLaSession, ErreurOutil, GENRES_D_ACTEUR, SENS_DES_TYPES, TYPES_DE_FLUX, type GenreDActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, LIMITES, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
-import { ReglagesActeurSchema, ReglagesComparateurProposesSchema, SerieSchema, type Operation } from "./operations.js"
+import { designationDeLOperation, operationsApplicables, ReglagesActeurSchema, ReglagesComparateurProposesSchema, SerieSchema, type Operation } from "./operations.js"
 import { definirOutil, resultatSeul } from "./outil.js"
 import { construireProposition, identifiantLibre, presenterProposition, PropositionRenvoyeeSchema, propositionValidee, ResultatPropositionSchema, sessionApresLaProposition, SuiteDeSchema, type Proposition } from "./propositions.js"
 
@@ -20,7 +20,7 @@ function proposer(session: SessionState, suiteDe: unknown, operations: (suite: P
   return resultatSeul(construireProposition(session, suite, operations(suite)))
 }
 
-const RAPPEL_VALIDATION = "Ne modifie rien : rend une proposition (opérations, résumé en français, effet calculé par le moteur sur le net de chaque année) à montrer à l'utilisateur, qui la valide ou non. Pour plusieurs ajouts liés, passez la proposition rendue dans « suiteDe » de l'appel suivant, puis faites valider l'ensemble."
+const RAPPEL_VALIDATION = "Ne modifie rien : rend une proposition (résumé, avertissements, effet sur le net de chaque année) à faire valider par l'utilisateur ; pour des ajouts liés, passez-la dans « suiteDe » de l'appel suivant."
 
 const TYPES_EXPLIQUES = TYPES_DE_FLUX.map(type => `${type} : ${SENS_DES_TYPES[type]}`).join(" ; ")
 
@@ -52,13 +52,12 @@ export const proposerFlux = definirOutil({
   nom: "proposer_flux",
   titre: "Proposer des flux",
   description: [
-    "Propose d'ajouter des flux à la grille mensuelle : chiffre d'affaires d'une facture, charges, salaires, rémunération du dirigeant, dividendes…",
-    "Chaque élément de « flux » est une série : un acteur, un type, un libellé et un montant mensuel, répété sur les mois indiqués d'une année (un mois seul pour une facture ponctuelle, [1,…,12] pour un loyer mensuel).",
-    "Une année absente de la simulation est ajoutée si elle suit ou précède les années existantes.",
+    "Propose d'ajouter des flux à la grille mensuelle (facture, charges, salaires, rémunération du dirigeant, dividendes…).",
+    "Chaque élément de « flux » est une série : un acteur, un type, un libellé et un montant mensuel répété sur les mois indiqués d'une année ([3] pour une facture de mars, [1,…,12] pour un loyer). Une année absente est ajoutée si elle suit ou précède celles de la simulation.",
     `Types : ${TYPES_EXPLIQUES}.`,
-    "Les indemnités kilométriques et les frais réels ne sont pas des flux : l'utilisateur les règle dans l'application (déplacements de l'activité, frais réels de la personne).",
-    "Si les flux remplacent une estimation déjà saisie (lister_flux), proposez aussi de la supprimer ou de la modifier dans la même proposition (suiteDe) : sinon ils s'y ajoutent, et un avertissement le signale.",
-    `Au plus ${LIMITES.operationsParProposition} séries par proposition, ${LIMITES.longueurLibelle} caractères par libellé. Les flux identiques à un flux déjà saisi le même mois sont signalés comme doublons probables.`,
+    "Indemnités kilométriques et frais réels ne sont pas des flux : l'utilisateur les règle dans l'application.",
+    "Si les flux remplacent une estimation déjà saisie (lister_flux), proposez aussi de la supprimer ou de la modifier dans la même proposition (suiteDe) : sinon ils s'y ajoutent (un avertissement le signale).",
+    `Au plus ${LIMITES.operationsParProposition} séries par proposition ; un flux identique à un flux du même mois est signalé comme doublon probable.`,
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,
@@ -78,9 +77,8 @@ export const proposerActeur = definirOutil({
   nom: "proposer_acteur",
   titre: "Proposer un acteur",
   description: [
-    "Propose d'ajouter un acteur : une personne (membre du foyer), ou une activité (SASU, EURL, EI au réel, micro-entreprise).",
-    "Réglages possibles selon le genre : partsFiscales (personne), capitalSocial (SASU, EURL), dateDeCreation « AAAA-MM » (activités), beneficieACRE, opteVFL, rfrN2, horsPlafondAnneePrecedente (micro-entreprise).",
-    "L'identifiant du nouvel acteur est dans « nouveauxIdentifiants » : utilisez-le, avec suiteDe, pour proposer ses relations (proposer_relation : une activité doit être reliée à la personne qui la dirige ou en est titulaire) et ses flux.",
+    "Propose d'ajouter un acteur : une personne (membre du foyer) ou une activité (SASU, EURL, EI au réel, micro-entreprise), avec les réglages de son genre.",
+    "Son identifiant est dans « nouveauxIdentifiants » : utilisez-le, avec suiteDe, pour proposer ses relations (une activité est reliée à la personne qui la dirige ou en est titulaire) et ses flux.",
     `Au plus ${LIMITES.acteursParProposition} acteurs par proposition. Aucun outil ne supprime un acteur.`,
     RAPPEL_VALIDATION
   ].join(" "),
@@ -131,8 +129,8 @@ export const proposerModification = definirOutil({
   nom: "proposer_modification",
   titre: "Proposer des modifications",
   description: [
-    "Propose de modifier des séries de flux existantes (montant, brut d'un salaire, libellé ; sur tous les mois de la série ou certains, par exemple une hausse de loyer à partir de juillet) ou les réglages d'acteurs (nom, parts fiscales, capital, date de création, ACRE, versement libératoire, revenu fiscal de référence N-2).",
-    "Une série est désignée par son année, son acteur, son type et son libellé exacts, tels que lister_flux les donne. Un acteur verrouillé par l'utilisateur n'est jamais modifié. Le statut juridique d'une activité ne se change pas ici : comparez plutôt les statuts avec comparer_statuts.",
+    "Propose de modifier des séries de flux (montant, brut d'un salaire, libellé ; sur tous leurs mois ou certains, par exemple une hausse de loyer en juillet) ou le nom et les réglages d'acteurs.",
+    "Une série se désigne par son année, son acteur, son type et son libellé exacts, tels que lister_flux les donne. Un acteur verrouillé par l'utilisateur n'est jamais modifié ; le statut juridique ne se change pas (voir comparer_statuts).",
     "Au plus 50 modifications par appel.",
     RAPPEL_VALIDATION
   ].join(" "),
@@ -174,8 +172,7 @@ export const proposerReglagesComparateur = definirOutil({
   nom: "proposer_reglages_comparateur",
   titre: "Proposer des réglages du comparateur",
   description: [
-    "Propose d'enregistrer des réglages du comparateur de statuts pour une activité, ceux que comparer_statuts et l'application utilisent ensuite : partage du bénéfice en SASU et EURL (mode, partDistribuee, avecRetraite), rémunération nette annuelle saisie pour une année, part BNC des prestations, frais de fonctionnement par statut, statut étudié.",
-    "Seuls les réglages indiqués changent ; les autres gardent leur valeur. « comparer » (vrai par défaut) ouvre cette activité dans le comparateur.",
+    "Propose d'enregistrer des réglages du comparateur de statuts d'une activité, ceux qu'utilisent ensuite comparer_statuts et l'application. Seuls les réglages indiqués changent ; « comparer » (vrai par défaut) ouvre cette activité dans le comparateur.",
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,
@@ -191,6 +188,42 @@ export const proposerReglagesComparateur = definirOutil({
 })
 
 // ===================================================================================
+// == rafraichir_proposition
+// ===================================================================================
+
+/** Opérations citées une à une quand elles ne s'appliquent plus : de quoi comprendre, sans recopier toute la proposition. */
+const RETIREES_CITEES = 10
+
+const phraseDesRetirees = (retirees: { numero: number; operation: string; raison: string }[]) =>
+  retirees
+    .slice(0, RETIREES_CITEES)
+    .map(r => `n° ${r.numero} (${r.operation}) : ${r.raison}`)
+    .join(" ; ") + (retirees.length > RETIREES_CITEES ? ` ; et ${retirees.length - RETIREES_CITEES} autres` : "")
+
+export const rafraichirProposition = definirOutil({
+  nom: "rafraichir_proposition",
+  titre: "Rafraîchir une proposition périmée",
+  description: [
+    "Reconstruit, sur la simulation actuelle, une proposition refusée comme périmée (la simulation a changé depuis) : ses opérations sont revérifiées une à une, dans l'ordre.",
+    "Rend une nouvelle proposition (nouvelle empreinte, résumé, avertissements, effet sur le net), et dans « retirees » les opérations qui ne s'appliquent plus (série supprimée entre-temps, relation déjà là…) avec leur numéro et la raison ; un avertissement les signale aussi. Échoue si aucune ne s'applique.",
+    "Ne modifie et n'envoie rien : montrez le résumé et les opérations retirées à l'utilisateur, puis appliquer_proposition s'il est d'accord."
+  ].join(" "),
+  lecture: false,
+  parametres: z.strictObject({ proposition: PropositionRenvoyeeSchema }),
+  resultat: ResultatPropositionSchema.extend({ dejaAJour: z.boolean(), retirees: z.array(z.object({ numero: z.number(), operation: z.string(), raison: z.string() })) }),
+  executer: (session, parametres) => {
+    const ancienne = propositionValidee(parametres.proposition)
+    const { retenues, refusees } = operationsApplicables(session, ancienne.operations)
+    const retirees = refusees.map(r => ({ numero: r.numero, operation: designationDeLOperation(r.operation), raison: r.raison }))
+    if (retenues.length === 0) throw new ErreurOutil(`Aucune opération de la proposition ne s'applique à la simulation actuelle : ${phraseDesRetirees(retirees)}. Relisez la simulation (decrire_simulation, lister_flux) et refaites la proposition avec les outils proposer_….`)
+    const nouvelle = construireProposition(session, undefined, retenues)
+    const pluriel = retirees.length > 1
+    const avertissement = retirees.length > 0 ? [`${pluriel ? `${retirees.length} opérations retirées` : "Opération retirée"} de la proposition d'origine, car ${pluriel ? "elles ne s'appliquent" : "elle ne s'applique"} plus à la simulation actuelle : ${phraseDesRetirees(retirees)}.`] : []
+    return resultatSeul({ ...nouvelle, avertissements: [...avertissement, ...nouvelle.avertissements], dejaAJour: ancienne.empreinteSession === empreinteDeLaSession(session) && retirees.length === 0, retirees })
+  }
+})
+
+// ===================================================================================
 // == appliquer_proposition
 // ===================================================================================
 
@@ -199,7 +232,7 @@ export const appliquerProposition = definirOutil({
   titre: "Appliquer une proposition validée",
   description: [
     "Applique une proposition rendue par un outil proposer_…, telle quelle, APRÈS que l'utilisateur l'a acceptée. L'application peut encore lui demander confirmation ; tout s'annule ensuite en une étape.",
-    "Refusée si la simulation a changé depuis la proposition (empreinte différente) : relisez alors la simulation et refaites la proposition. Toutes les vérifications sont refaites : une proposition modifiée à la main est contrôlée comme une nouvelle.",
+    "Refusée si la simulation a changé depuis la proposition (empreinte différente) : rafraichir_proposition la reconstruit alors sur la simulation actuelle. Toutes les vérifications sont refaites : une proposition modifiée à la main est contrôlée comme une nouvelle.",
     "Rend le récapitulatif de ce qui a été appliqué, l'effet sur le net de chaque année et la nouvelle empreinte de la simulation."
   ].join(" "),
   lecture: false,

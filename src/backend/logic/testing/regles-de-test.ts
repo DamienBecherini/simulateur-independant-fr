@@ -55,7 +55,7 @@ export const reglesDeTest: ReglesFiscales = {
     },
     domicileTravail: { distanceMaxParTrajet: 40 }
   },
-  IS: { tauxReduit: 0.15, plafondTauxReduit: 40000, tauxNormal: 0.25 },
+  IS: { tauxReduit: 0.15, plafondTauxReduit: 40000, tauxNormal: 0.25, reportEnAvantDesDeficits: { plafondFixe: 1000000, partAuDela: 0.5 } },
   dividendes: { tauxIrForfaitaire: 0.12, prelevementsSociaux: 0.18, abattementBareme: 0.4, csgDeductible: 0.07 },
   regimeGeneral: {
     // Plafond de 40 000 €. Sous le plafond, cotisations salariales de 10 % (vieillesse 5 + 1, complémentaire 4) et
@@ -148,6 +148,7 @@ export const reglesDeTest: ReglesFiscales = {
   },
   protectionSociale: { revenuParTrimestre: 2000,tauxRetraiteDeBase: 0.2, partRetraiteDeBaseMicro: { venteBic: 0.4, servicesBic: 0.4, servicesBnc: 0.5 } },
   EURL: { seuilDividendesPartDuCapital: 0.1 },
+  reserveLegale: { partDuBenefice: 0.05, plafondPartDuCapital: 0.1 },
   TVA: { services: { franchiseBase: 40000, seuilMajore: 45000 }, vente: { franchiseBase: 100000, seuilMajore: 110000 } },
   CFE: { partDueAnneeDeCreation: 0, partDueAnneeSuivante: 0.5 },
   microEntreprise: {
