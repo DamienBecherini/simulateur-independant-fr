@@ -389,6 +389,7 @@ function LignesDeLActivite({ activity, className }: { activity: ActivityResult; 
       {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${formatMoney(activity.charges)}`} className={className} /> : null}
       {activity.fraisDeDeplacement ? <DeplacementsRow deplacements={activity.fraisDeDeplacement} className={className} /> : null}
       <Row label="Cotisations sociales" value={`− ${formatMoney(activity.cotisationsSociales)}`} className={className} />
+      {activity.formationProfessionnelle ? <Row label="dont formation professionnelle" value={formatMoney(activity.formationProfessionnelle)} hint="contribution sur le chiffre d'affaires, non réduite par l'ACRE" className={className} /> : null}
       {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={formatMoney(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${formatMoney(activity.cotisationsPresident.brut)} bruts`} className={className} /> : null}
       {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} className={className} /> : null}
       {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(activity.impotSocietes)}`} className={className} /> : null}

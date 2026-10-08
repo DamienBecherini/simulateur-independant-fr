@@ -38,6 +38,12 @@ describe("expliquer_resultat, cas particuliers", () => {
     expect(informations.join("\n")).toMatch(/Déplacements professionnels : 4000 km, .* non déductibles en micro-entreprise/)
   })
 
+  it("détaille la formation professionnelle d'une micro-entreprise, que l'ACRE ne réduit pas", () => {
+    // Atelier : 34 800 € de prestations BNC (0,2 %) et 5 400 € de ventes (0,1 %) : 69,60 + 5,40 = 75 €.
+    const { lignes } = appeler<Explication>("expliquer_resultat", exempleParticulier(), { acteurId: "micro-atelier" })
+    expect(lignes).toContainEqual({ libelle: "dont contribution à la formation professionnelle (micro-entreprise, non réduite par l'ACRE)", montant: 75 })
+  })
+
   it("détaille les déplacements déductibles d'une société et les frais réels d'une personne", () => {
     const session = exempleParticulier()
     expect(appeler<Explication>("expliquer_resultat", session, { acteurId: "company-conseil" }).informations.join("\n")).toMatch(/8000 km, .* déductibles\./)

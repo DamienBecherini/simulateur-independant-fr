@@ -394,7 +394,7 @@ L'[ADR 015](../adr/015-professions-liberales-reglementees.md) a tranché les que
 4. **Micro-entreprise.**
    - `calculerMicro` choisit le taux BNC selon `regimeLiberal` : 23,2 % pour la CIPAV, refus avec avertissement pour la CARPIMKO et les autres caisses.
    - Le comparateur masque les colonnes « micro » et « micro-vfl » quand la profession les interdit. Il les remplace par une note.
-   - Formation professionnelle en micro (0,2 % du CA pour un libéral) : elle n'est modélisée pour aucun micro-entrepreneur aujourd'hui. Elle sera corrigée à part, pour tous (§11).
+   - Formation professionnelle en micro (0,2 % du CA) : modélisée depuis pour tous les micro-entrepreneurs, à part de ce chantier (0,1 % de la vente, 0,2 % des BNC, 0,3 % des BIC).
 5. **Trimestres et protection sociale** (`protection-sociale.ts`).
    - `protectionTNS` utilise `revenuParTrimestre` (inchangé : 150 × SMIC horaire) et l'assiette minimale CNAVPL (450 × SMIC horaire, 3 trimestres), qui est déjà la même valeur que la SSI.
    - `protectionMicro` utilise pour la CIPAV `part` = 0,295 et `tauxRetraiteDeBase` = 0,106 en 2026. Cela reproduit exactement le seuil de 2 792 € (§5.1).
@@ -438,7 +438,7 @@ L'[ADR 015](../adr/015-professions-liberales-reglementees.md) a tranché les que
 ### Cas 1 : ostéopathe en micro-entreprise, 40 000 € de CA en 2026
 
 - Cotisations : 23,2 % × 40 000 = **9 280,00 €** (CSS-D613-4, AE-ESS). Moteur actuel : 25,6 % = 10 240,00 €, soit 960 € de trop.
-- Formation professionnelle : 0,2 % = 80,00 € (AE-ESS, non modélisée).
+- Formation professionnelle : 0,2 % = 80,00 € (AE-ESS, modélisée depuis).
 - Versement libératoire, s'il est choisi : 2,2 % = 880,00 €.
 - Revenu imposable sans versement libératoire : 40 000 × (1 − 34 %) = 26 400 €.
 - Trimestres : 40 000 ≥ 11 168 € → **4** (CIP-WEB).
@@ -575,6 +575,6 @@ Le brouillon qui figurait ici est devenu l'[ADR 015 : professions libérales ré
 - Le tableau des autres caisses (§6) est indicatif : il doit être revérifié caisse par caisse.
 
 **Hors de ce chantier, constaté en chemin :**
-- **Formation professionnelle en micro-entreprise :** 0,1 % du chiffre d'affaires pour les commerçants, 0,2 % pour les libéraux, 0,3 % pour les artisans (CT-L6331-48 ; AE-ESS). Le moteur ne la calcule pour aucun micro-entrepreneur. Elle sera corrigée à part, pour tous, hors de l'ADR 015.
+- **Formation professionnelle en micro-entreprise :** 0,1 % du chiffre d'affaires pour les commerçants, 0,2 % pour les libéraux, 0,3 % pour les artisans (CT-L6331-48 ; AE-ESS). Corrigée depuis à part, pour tous les micro-entrepreneurs (0,1 % de la vente, 0,2 % des BNC, 0,3 % des BIC), hors de l'ADR 015.
 
 **Tranché par le propriétaire :** les six questions qui figuraient ici le sont dans l'ADR 015 (résumé au §10).

@@ -31,14 +31,14 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
     const resultat = comparerStatuts(session([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options("m1"))
 
     it("micro : 25,6 % de cotisations, 34 % d'abattement, barème", () => {
-      // Cotisations 10 240 € ; revenu imposable 26 400 € ; impôt brut 1 628 €, décote 160,33 €, impôt 1 468 €.
-      // Net : 40 000 - 10 240 - 1 468 = 28 292 €.
-      expect(colonne(resultat, "micro")).toMatchObject({ actuel: true, cotisationsSociales: 10240, impotSocietes: 0, impotSurLeRevenu: 1468, prelevementsSociaux: 0, netApresImpots: 28292, totalPrelevements: 11708 })
+      // Cotisations 10 240 €, plus 40 000 x 0,2 % = 80 € de formation professionnelle : 10 320 € ; revenu imposable 26 400 € ;
+      // impôt brut 1 628 €, décote 160,33 €, impôt 1 468 €. Net : 40 000 - 10 320 - 1 468 = 28 212 €.
+      expect(colonne(resultat, "micro")).toMatchObject({ actuel: true, cotisationsSociales: 10320, impotSocietes: 0, impotSurLeRevenu: 1468, prelevementsSociaux: 0, netApresImpots: 28212, totalPrelevements: 11788 })
     })
 
     it("micro + versement libératoire : 2,2 % du chiffre d'affaires", () => {
-      // RFR non renseigné : l'option est appliquée. Impôt : 40 000 x 2,2 % = 880 €. Net : 40 000 - 10 240 - 880 = 28 880 €.
-      expect(colonne(resultat, "micro-vfl")).toMatchObject({ cotisationsSociales: 10240, impotSurLeRevenu: 880, netApresImpots: 28880 })
+      // RFR non renseigné : l'option est appliquée. Impôt : 40 000 x 2,2 % = 880 €. Net : 40 000 - 10 320 - 880 = 28 800 €.
+      expect(colonne(resultat, "micro-vfl")).toMatchObject({ cotisationsSociales: 10320, impotSurLeRevenu: 880, netApresImpots: 28800 })
     })
 
     it("EI au réel : cotisations TNS sur le bénéfice", () => {
@@ -86,7 +86,7 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
     const entreprise = { ...micro("m1"), rfrN2: 50000 }
     const resultat = comparerStatuts(session([personne("alice"), entreprise], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options("m1"))
 
-    expect(colonne(resultat, "micro-vfl")).toMatchObject({ impotSurLeRevenu: 1468, netApresImpots: 28292 })
+    expect(colonne(resultat, "micro-vfl")).toMatchObject({ impotSurLeRevenu: 1468, netApresImpots: 28212 })
     expect(colonne(resultat, "micro-vfl").warnings.some(w => w.startsWith("Versement libératoire impossible"))).toBe(true)
     expect(resultat.meilleur).toBe("micro")
   })
@@ -140,14 +140,15 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
     })
 
     it("micro : prestations converties en BNC, charges devenues des dépenses non déductibles", () => {
-      // Cotisations 60 000 x 25,6 % = 15 360 € ; revenu imposable 60 000 - 20 400 = 39 600 € ;
-      // impôt 1 977,69 + 10 021 x 30 % = 4 983,99 €, soit 4 984 €. Net : 60 000 - 15 360 - 5 000 - 4 984 = 34 656 €.
-      expect(colonne(resultat, "micro")).toMatchObject({ cotisationsSociales: 15360, impotSurLeRevenu: 4984, netApresImpots: 34656 })
+      // Cotisations 60 000 x 25,6 % = 15 360 €, plus 60 000 x 0,2 % = 120 € de formation professionnelle : 15 480 € ;
+      // revenu imposable 60 000 - 20 400 = 39 600 € ; impôt 1 977,69 + 10 021 x 30 % = 4 983,99 €, soit 4 984 €.
+      // Net : 60 000 - 15 480 - 5 000 - 4 984 = 34 536 €.
+      expect(colonne(resultat, "micro")).toMatchObject({ cotisationsSociales: 15480, impotSurLeRevenu: 4984, netApresImpots: 34536 })
     })
 
     it("micro + versement libératoire : meilleur net", () => {
-      // Impôt : 60 000 x 2,2 % = 1 320 €. Net : 60 000 - 15 360 - 5 000 - 1 320 = 38 320 €.
-      expect(colonne(resultat, "micro-vfl")).toMatchObject({ impotSurLeRevenu: 1320, netApresImpots: 38320 })
+      // Impôt : 60 000 x 2,2 % = 1 320 €. Net : 60 000 - 15 480 - 5 000 - 1 320 = 38 200 €.
+      expect(colonne(resultat, "micro-vfl")).toMatchObject({ impotSurLeRevenu: 1320, netApresImpots: 38200 })
       expect(resultat.meilleur).toBe("micro-vfl")
     })
   })

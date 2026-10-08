@@ -71,7 +71,7 @@ const microSeule: MontageType = {
   etiquettes: ["Micro", "BNC", "Versement libératoire"],
   questions: ["Combien me reste-t-il après cotisations et impôt ?", "Le versement libératoire est-il avantageux pour moi ?", "À partir de quel chiffre d'affaires une société devient-elle intéressante ?"],
   illustre: [
-    "Les cotisations calculées en pourcentage du chiffre d'affaires (25,6 % pour une activité libérale non réglementée en 2026), sans charges déductibles.",
+    "Les cotisations calculées en pourcentage du chiffre d'affaires (25,6 % pour une activité libérale non réglementée en 2026, plus 0,2 % de contribution à la formation professionnelle), sans charges déductibles.",
     "L'impôt payé avec les cotisations au versement libératoire (2,2 % du chiffre d'affaires en BNC), au lieu du barème après l'abattement forfaitaire de 34 %.",
     COMPARATEUR_MICRO
   ],

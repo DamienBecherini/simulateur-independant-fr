@@ -19,7 +19,9 @@ describe("calculerMicro", () => {
     const resultat = micro({ caVente: 10000, caServicesBic: 20000, caServicesBnc: 30000 })
 
     expect(resultat.chiffreAffaires).toBe(60000)
-    expect(resultat.cotisationsSociales).toBeCloseTo(1000 + 4000 + 7500)
+    // Cotisations, plus la formation professionnelle : 0,1 % de la vente, 0,3 % des prestations BIC, 0,2 % des BNC.
+    expect(resultat.formationProfessionnelle).toBeCloseTo(10 + 60 + 60)
+    expect(resultat.cotisationsSociales).toBeCloseTo(1000 + 4000 + 7500 + 130)
     expect(resultat.revenuImposable).toBeCloseTo(3000 + 10000 + 21000)
     expect(resultat.versementLiberatoire).toBe(0)
     expect(plafonds(resultat.warnings)).toEqual([])
@@ -34,7 +36,9 @@ describe("calculerMicro", () => {
   it("réduit les cotisations avec l'ACRE, sans toucher au revenu imposable", () => {
     const resultat = micro({ caServicesBnc: 50000, beneficieACRE: true })
 
-    expect(resultat.cotisationsSociales).toBeCloseTo(6250)
+    // L'ACRE ne réduit pas la formation professionnelle : 6 250 € de cotisations, plus 100 €.
+    expect(resultat.formationProfessionnelle).toBeCloseTo(100)
+    expect(resultat.cotisationsSociales).toBeCloseTo(6250 + 100)
     expect(resultat.revenuImposable).toBeCloseTo(35000)
   })
 
@@ -121,7 +125,7 @@ describe("calculerMicro", () => {
     it("continue de calculer cotisations et revenu imposable au-dessus du plafond", () => {
       const resultat = micro({ caServicesBnc: 100000 })
 
-      expect(resultat.cotisationsSociales).toBeCloseTo(25000)
+      expect(resultat.cotisationsSociales).toBeCloseTo(25000 + 200)
       expect(resultat.revenuImposable).toBeCloseTo(70000)
     })
   })

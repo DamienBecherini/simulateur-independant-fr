@@ -325,11 +325,18 @@
       "vente": 188700
     },
     "cotisations": {
-      "description": "Taux de cotisations sociales sur le chiffre d'affaires en 2025 (hors contribution à la formation professionnelle), article D613-4 du code de la sécurité sociale dans sa rédaction issue du décret 2024-484 : 24,6 % pour les professions libérales non réglementées. Les professions libérales relevant de la CIPAV (23,2 %) ne sont pas distinguées.",
+      "description": "Taux de cotisations sociales sur le chiffre d'affaires en 2025 (hors contribution à la formation professionnelle, comptée à part : voir formationProfessionnelle), article D613-4 du code de la sécurité sociale dans sa rédaction issue du décret 2024-484 : 24,6 % pour les professions libérales non réglementées. Les professions libérales relevant de la CIPAV (23,2 %) ne sont pas distinguées.",
       "source": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000049620955",
       "venteBic": 0.123,
       "servicesBic": 0.212,
       "servicesBnc": 0.246
+    },
+    "formationProfessionnelle": {
+      "description": "Contribution à la formation professionnelle, en part du chiffre d'affaires, qui s'ajoute aux cotisations (article L6331-48 du code du travail, inchangé depuis le 01/01/2023) : 0,1 % pour la vente de marchandises (première catégorie de l'article 50-0 du code général des impôts), 0,2 % pour les autres activités, prestations de services commerciales et professions libérales, 0,3 % pour un artisan immatriculé au secteur des métiers et de l'artisanat, sur tout son chiffre d'affaires. Le simulateur ne distingue pas l'artisan du commerçant : il retient 0,3 % pour les prestations de services BIC, artisanales le plus souvent, ce qui ne sous-estime jamais la contribution (0,2 % pour un commerçant). L'ACRE ne la réduit pas ; elle n'ouvre aucun droit à la retraite.",
+      "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044056633",
+      "venteBic": 0.001,
+      "servicesBic": 0.003,
+      "servicesBnc": 0.002
     },
     "reductionACRE": 0.5,
     "reductionACREDescription": "Réduction des cotisations avec l'ACRE en 2025 : 50 % (taux égal à 50 % des taux de l'article D613-4). Source : https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000041968018",

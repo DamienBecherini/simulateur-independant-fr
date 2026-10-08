@@ -312,6 +312,15 @@ describe("ResultsPanel", () => {
     expect(rowValue(card, "dont déplacements professionnels")).toHaveTextContent(/non déductibles$/)
   })
 
+  it("détaille la formation professionnelle d'une micro-entreprise, comprise dans ses cotisations", () => {
+    const report = makeReport()
+    report.activities = [{ ...report.activities[0], name: "Mon atelier", type: "micro-entreprise", statut: "Micro-entreprise", formationProfessionnelle: 80 }]
+    render(<ResultsPanel report={report} error={null} />)
+
+    const card = screen.getAllByRole("article").find(article => within(article).queryByText("Mon atelier"))!
+    expect(rowValue(card, "dont formation professionnelle")).toHaveTextContent(normalize(`${money(80)}contribution sur le chiffre d'affaires, non réduite par l'ACRE`))
+  })
+
   it("annonce la sortie du régime micro et les dispositifs de l'année, à part des avertissements", () => {
     const report = makeReport()
     const sortie = "Sortie du régime micro au 1er janvier 2028 : chiffre d'affaires au-delà des plafonds en 2026 et 2027."

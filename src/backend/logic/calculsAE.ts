@@ -24,7 +24,10 @@ export type ChiffreAffairesMicro = Pick<EntreesMicro, "caVente" | "caServicesBic
 
 export interface ResultatMicro {
   chiffreAffaires: number
+  /** Cotisations sociales, contribution à la formation professionnelle comprise. */
   cotisationsSociales: number
+  /** Contribution à la formation professionnelle, comprise dans les cotisations sociales : l'ACRE ne la réduit pas. */
+  formationProfessionnelle: number
   /** Revenu soumis au barème de l'IR (nul si le versement libératoire est choisi). */
   revenuImposable: number
   /** Chiffre d'affaires après abattement, versement libératoire ou non : il entre dans le revenu fiscal de référence. */
@@ -121,14 +124,15 @@ export function plafondRfrVersementLiberatoire(partsFiscales: number, regles: Re
 }
 
 /**
- * Micro-entreprise : cotisations sociales en pourcentage du chiffre d'affaires (réduites avec l'ACRE),
- * puis soit un revenu imposable après abattement forfaitaire, soit le versement libératoire de l'impôt.
+ * Micro-entreprise : cotisations sociales en pourcentage du chiffre d'affaires (réduites avec l'ACRE), plus la
+ * contribution à la formation professionnelle (que l'ACRE ne réduit pas), puis soit un revenu imposable après abattement forfaitaire, soit le versement libératoire de l'impôt.
  */
 export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales = reglesEnVigueur): ResultatMicro {
   const micro = regles.microEntreprise
   const warnings = [...verifierPlafonds(entrees, plafondsAuProrata(micro.plafonds, entrees.prorataPlafonds ?? 1)), ...verifierFranchiseTVA(entrees, regles.TVA)]
 
   const cotisationsPleinTaux = appliquerTaux(entrees, micro.cotisations)
+  const formationProfessionnelle = appliquerTaux(entrees, micro.formationProfessionnelle)
   const revenuApresAbattement = calculerRevenuImposable(entrees, micro.abattement)
   // Sans date de création, la réduction de l'année porte sur tout le chiffre d'affaires ; avec elle, le moteur donne le
   // chiffre d'affaires des seuls mois couverts (voir dispositifs.ts) et le dit dans une note de l'activité.
@@ -139,7 +143,8 @@ export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales = re
 
   return {
     chiffreAffaires: entrees.caVente + entrees.caServicesBic + entrees.caServicesBnc,
-    cotisationsSociales: cotisationsPleinTaux - reductionACRE,
+    cotisationsSociales: cotisationsPleinTaux - reductionACRE + formationProfessionnelle,
+    formationProfessionnelle,
     revenuImposable: entrees.opteVFL ? 0 : revenuApresAbattement,
     revenuApresAbattement,
     versementLiberatoire: entrees.opteVFL ? appliquerTaux(entrees, micro.versementLiberatoire.taux) : 0,

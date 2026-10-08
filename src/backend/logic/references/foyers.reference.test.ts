@@ -177,16 +177,17 @@ casDeReference("Cas de référence 2026 : salaires et foyers", () => {
     const flux: Flux[] = [["m1", "ca_micro_services_bnc", 40000]]
 
     it("seule (1 part) : seuil de 29 315 € dépassé, impôt au barème", () => {
-      // Barème : 26 400 € imposables, impôt 1 467,67 €, soit 1 468 €. Net : 40 000 - 10 240 - 1 468 = 28 292 €.
+      // Barème : 26 400 € imposables, impôt 1 467,67 €, soit 1 468 €. Cotisations 10 240 €, plus 80 € de formation
+      // professionnelle (0,2 %). Net : 40 000 - 10 320 - 1 468 = 28 212 €.
       const report = simuler([alice, microVFL], [relation("alice", "m1", "Titulaire")], flux)
 
       expect(activite(report, "m1").versementLiberatoire).toMatchObject({ partsFiscales: 1, plafondRfr: 29315, eligible: false, applique: false })
-      expect(foyerDe(report, "alice")).toMatchObject({ impotSurLeRevenu: 1468, netApresImpots: 28292 })
+      expect(foyerDe(report, "alice")).toMatchObject({ impotSurLeRevenu: 1468, netApresImpots: 28212 })
     })
 
     it("mariée avec un enfant (2,5 parts) : seuil de 73 287,50 €, versement libératoire appliqué", () => {
       // Seuil : 29 315 x 2,5 = 73 287,50 € (affiché arrondi à 73 288 €) >= 60 000 € : éligible.
-      // Impôt : 40 000 x 2,2 % = 880 €, rien au barème. Net : 40 000 - 10 240 - 880 = 28 880 €.
+      // Impôt : 40 000 x 2,2 % = 880 €, rien au barème. Net : 40 000 - 10 320 - 880 = 28 800 €.
       const report = simuler(
         [alice, bob, personne("enfant1"), microVFL],
         [relation("alice", "bob", "Marié(e)"), relation("alice", "enfant1", "Enfant"), relation("bob", "enfant1", "Enfant"), relation("alice", "m1", "Titulaire")],
@@ -194,13 +195,14 @@ casDeReference("Cas de référence 2026 : salaires et foyers", () => {
       )
 
       expect(activite(report, "m1").versementLiberatoire).toMatchObject({ partsFiscales: 2.5, plafondRfr: 73288, eligible: true, applique: true })
-      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 0, impotSurLeRevenu: 880, netApresImpots: 28880 })
+      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 0, impotSurLeRevenu: 880, netApresImpots: 28800 })
     })
   })
 
   describe("cumul d'activités d'une personne", () => {
     it("salaire, micro-entreprise et EURL", () => {
-      // Micro BIC 20 000 € : cotisations 4 240 €, revenu imposable 10 000 €, encaissé 15 760 €.
+      // Micro BIC 20 000 € : cotisations 4 240 €, plus 60 € de formation professionnelle (0,3 %) : 4 300 € ; revenu
+      // imposable 10 000 €, encaissé 15 700 €.
       // EURL (capital 5 000 €, seuil 500 €), cotisations TNS selon le barème détaillé dans societes.reference.test.ts :
       //   rémunération nette 20 000 € : revenu avant cotisations 28 412,04 €, 8 412,04 € de cotisations, dont 609,72 € de
       //   CSG non déductible et de CRDS (voir comparateur.reference.test.ts) ;
@@ -213,8 +215,8 @@ casDeReference("Cas de référence 2026 : salaires et foyers", () => {
       // Revenu au barème : 45 548,75 + 10 000 = 55 548,75 € ; impôt 1 977,69 + 25 969,75 x 30 % = 9 768,62 €, soit 9 769 €.
       // Forfait : 9 769 + 1 280 = 11 049 €. Barème : 55 548,75 + 6 000 - 34 = 61 514,75 €, impôt 11 558,42 €. Forfait retenu.
       // Prélèvements sociaux : 500 x 18,6 % = 93 €.
-      // Net : 30 000 + 20 000 + 6 714,51 + 15 760 - 11 049 - 93 = 61 332,51 €.
-      // Bilan : 120 000 € = 4 240 + 11 698 + 6 238 + 11 049 + 93 (prélèvements, 33 318 €) + 25 350 (conservé) + 61 333 (net), à 1 € près.
+      // Net : 30 000 + 20 000 + 6 714,51 + 15 700 - 11 049 - 93 = 61 272,51 €.
+      // Bilan : 120 000 € = 4 300 + 11 698 + 6 238 + 11 049 + 93 (prélèvements, 33 378 €) + 25 350 (conservé) + 61 273 (net), à 1 € près.
       const report = simuler(
         [alice, micro("m1"), societe("s1", "EURL", 5000)],
         [relation("alice", "m1", "Titulaire"), relation("alice", "s1", "Gérant")],
@@ -228,10 +230,10 @@ casDeReference("Cas de référence 2026 : salaires et foyers", () => {
         ]
       )
 
-      expect(activite(report, "m1")).toMatchObject({ cotisationsSociales: 4240, revenuVerse: 15760 })
+      expect(activite(report, "m1")).toMatchObject({ cotisationsSociales: 4300, revenuVerse: 15700 })
       expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 11698, impotSocietes: 6238, resultatConserve: 25350, revenuVerse: 26715 })
-      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 55549, impotSurLeRevenu: 11049, prelevementsSociaux: 93, optionDividendes: "pfu", netApresImpots: 61333 })
-      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 120000, totalPrelevements: 33318, resultatConserve: 25350 })
+      expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 55549, impotSurLeRevenu: 11049, prelevementsSociaux: 93, optionDividendes: "pfu", netApresImpots: 61273 })
+      expect(report.bilan).toMatchObject({ revenusAvantPrelevements: 120000, totalPrelevements: 33378, resultatConserve: 25350 })
       verifierIdentiteDuBilan(report)
     })
   })

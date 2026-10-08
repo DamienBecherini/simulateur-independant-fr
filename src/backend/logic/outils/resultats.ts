@@ -189,6 +189,7 @@ function informationsDeLActivite(session: SessionState, a: ActivityResult): stri
 function expliquerActivite(session: SessionState, a: ActivityResult) {
   const cotisations: Ligne[] = [
     ...(a.cotisationsTNS ? [lignesTNS(a.cotisationsTNS)] : []),
+    ...(a.formationProfessionnelle ? [ligne("dont contribution à la formation professionnelle (micro-entreprise, non réduite par l'ACRE)", a.formationProfessionnelle)] : []),
     ...(a.cotisationsPresident ? [lignesBulletin("Cotisations du président (assimilé salarié)", a.cotisationsPresident)] : []),
     ...(a.salaries ?? []).map(s => lignesBulletin(`Salarié ${nomDe(session, s.personId)}`, s))
   ]

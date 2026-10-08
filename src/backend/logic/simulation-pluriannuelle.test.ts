@@ -41,9 +41,9 @@ describe("simulerLesAnnees", () => {
     const [en2025, en2026] = simulerLesAnnees(meme).annees.map(a => a.report!)
 
     expect([en2025.anneeDesRegles, en2026.anneeDesRegles]).toEqual([2025, 2026])
-    // 30 000 € de prestations BNC : 24,6 % en 2025, 25,6 % en 2026 (fichiers de règles).
-    expect(en2025.activities[0].cotisationsSociales).toBe(7380)
-    expect(en2026.activities[0].cotisationsSociales).toBe(7680)
+    // 30 000 € de prestations BNC : 24,6 % en 2025, 25,6 % en 2026 (fichiers de règles), plus 0,2 % de formation professionnelle (60 €).
+    expect(en2025.activities[0].cotisationsSociales).toBe(7380 + 60)
+    expect(en2026.activities[0].cotisationsSociales).toBe(7680 + 60)
     expect(en2026.avertissements).toEqual([])
   })
 

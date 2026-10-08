@@ -227,6 +227,11 @@ describe("regles_de_l_annee", () => {
     expect(regles.anneeDesRegles).toBe(2026)
     expect(regles.avertissement).toBeNull()
     expect(regles.regles.find(r => r.sujet === "Impôt sur les sociétés")).toEqual({ sujet: "Impôt sur les sociétés", valeurs: { tauxReduit: 0.15, plafondTauxReduit: 42500, tauxNormal: 0.25 }, source: expect.stringMatching(/^https:\/\//) })
+    expect(regles.regles.find(r => r.sujet.startsWith("Micro-entreprise : contribution à la formation professionnelle"))).toEqual({
+      sujet: expect.any(String),
+      valeurs: { venteBic: 0.001, servicesBic: 0.003, servicesBnc: 0.002 },
+      source: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044056633"
+    })
     expect(JSON.stringify(regles)).not.toContain("description")
   })
 

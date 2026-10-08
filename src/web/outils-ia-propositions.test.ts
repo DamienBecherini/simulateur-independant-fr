@@ -28,7 +28,7 @@ describe("proposer puis appliquer des flux", () => {
 
     const apres = appliquer(session, resultat.proposition)
     const conserve = (s: SessionState) => Math.round(simulerLesAnnees(s).annees[0].report!.bilan.resultatConserve)
-    expect(resultat.apercu).toEqual([{ annee: 2026, netAvant: 69575, netApres: 69575, ecart: 0, resultatConserveAvant: conserve(session), resultatConserveApres: conserve(apres), erreur: null }])
+    expect(resultat.apercu).toEqual([{ annee: 2026, netAvant: 69500, netApres: 69500, ecart: 0, resultatConserveAvant: conserve(session), resultatConserveApres: conserve(apres), erreur: null }])
   })
 
   it("applique en une seule nouvelle session, l'ancienne restant intacte pour l'annulation", () => {
@@ -66,7 +66,7 @@ describe("proposer puis appliquer des flux", () => {
     const resultat = proposer("proposer_flux", session, { flux: [{ ...loyer, annee: 2027 }] })
     expect(resultat.proposition.operations.map(o => o.type)).toEqual(["ajouter_annee", "ajouter_flux"])
     expect(resultat.apercu.map(a => [a.annee, a.netAvant])).toEqual([
-      [2026, 69575],
+      [2026, 69500],
       [2027, null]
     ])
     expect(appliquer(session, resultat.proposition).annees.map(a => a.annee)).toEqual([2026, 2027])
@@ -127,7 +127,7 @@ describe("proposer un acteur, ses relations et ses flux, validés en une fois", 
     expect(apres.entities.find(e => e.id === id)).toMatchObject({ type: "company", legalStatus: "SASU", name: "Studio", capitalSocial: 500, dateDeCreation: "2026-03", avatar: { type: "icon", value: "Briefcase" } })
     const resultat = appeler<{ activites: { id: string; chiffreAffaires: number }[] }>("simuler", apres)
     expect(resultat.activites.find(a => a.id === id)!.chiffreAffaires).toBe(60000)
-    expect(flux.apercu[0].ecart).toBe(Math.round(simulerLesAnnees(apres).annees[0].report!.totalNetApresImpots) - 69575)
+    expect(flux.apercu[0].ecart).toBe(Math.round(simulerLesAnnees(apres).annees[0].report!.totalNetApresImpots) - 69500)
   })
 
   it("donne une pastille à chaque genre d'acteur et refuse un réglage qui ne le concerne pas", () => {

@@ -41,10 +41,10 @@ describe("comparerStatuts", () => {
     })
 
     it("calcule le net de chaque statut", () => {
-      // Micro : 40 000 - 10 000 de cotisations - 1 800 d'impôt (28 000 € imposables).
-      expect(colonne(resultat, "micro")).toMatchObject({ netApresImpots: 28200, cotisationsSociales: 10000, impotSurLeRevenu: 1800 })
+      // Micro : 40 000 - 10 000 de cotisations - 80 de formation professionnelle (0,2 %) - 1 800 d'impôt (28 000 € imposables).
+      expect(colonne(resultat, "micro")).toMatchObject({ netApresImpots: 28120, cotisationsSociales: 10080, impotSurLeRevenu: 1800 })
       // Versement libératoire : 2 % du chiffre d'affaires au lieu du barème.
-      expect(colonne(resultat, "micro-vfl")).toMatchObject({ netApresImpots: 29200, impotSurLeRevenu: 800 })
+      expect(colonne(resultat, "micro-vfl")).toMatchObject({ netApresImpots: 29120, impotSurLeRevenu: 800 })
       // EI au réel : 40 000 € de bénéfice, 12 700 € de cotisations, 27 300 € encaissés ; 28 200 € imposables
       // (CSG non déductible et CRDS réintégrées), 1 820 € d'impôt.
       expect(colonne(resultat, "EI")).toMatchObject({ netApresImpots: 25480, cotisationsSociales: 12700, impotSurLeRevenu: 1820 })
@@ -68,10 +68,11 @@ describe("comparerStatuts", () => {
 
   describe("conversion des flux", () => {
     it("répartit les prestations d'une société entre BNC et BIC selon la part choisie", () => {
-      // 40 000 € de prestations, moitié BNC (25 %), moitié BIC (20 %) : 9 000 € de cotisations.
+      // 40 000 € de prestations, moitié BNC (25 %), moitié BIC (20 %) : 9 000 € de cotisations, plus 40 + 60 € de
+      // formation professionnelle (0,2 % des BNC, 0,3 % des BIC).
       const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 40000]], options("s1", { partBncPrestations: 0.5 }))
 
-      expect(colonne(resultat, "micro").cotisationsSociales).toBe(9000)
+      expect(colonne(resultat, "micro").cotisationsSociales).toBe(9000 + 100)
       expect(colonne(resultat, "SASU").actuel).toBe(true)
     })
 
@@ -84,9 +85,9 @@ describe("comparerStatuts", () => {
 
       const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], flux, options("m1", { partBncPrestations: 0 }))
 
-      // 1 000 + 2 000 + 2 500 € : la part BNC choisie ne s'applique pas à une micro existante.
+      // 1 000 + 2 000 + 2 500 €, plus 10 + 30 + 20 € de formation professionnelle : la part BNC choisie ne s'applique pas à une micro existante.
       // En EI, 30 000 € de bénéfice, assiette 22 500 € : 112,50 (maladie à 0,5 %) + 225 + 4 500 + 1 800 + 225 + 2 250 + 100 = 9 212,50 €.
-      expect(colonne(resultat, "micro").cotisationsSociales).toBe(5500)
+      expect(colonne(resultat, "micro").cotisationsSociales).toBe(5500 + 60)
       expect(colonne(resultat, "EI").cotisationsSociales).toBe(9213)
     })
 
@@ -95,7 +96,7 @@ describe("comparerStatuts", () => {
 
       // En EI, 30 000 € de bénéfice : 9 213 € de cotisations. En micro, les dépenses ne changent pas les cotisations.
       expect(colonne(resultat, "EI").cotisationsSociales).toBe(9213)
-      expect(colonne(resultat, "micro").cotisationsSociales).toBe(10000)
+      expect(colonne(resultat, "micro").cotisationsSociales).toBe(10000 + 80)
     })
 
     it("applique la rémunération choisie et conserve les dividendes saisis quand on ne distribue pas tout", () => {
@@ -114,7 +115,8 @@ describe("comparerStatuts", () => {
 
   it("garde les salariés de l'activité dans chaque statut", () => {
     // Bob : 24 300 € nets, 30 000 € bruts, 5 400 € de cotisations patronales après réduction générale (voir simulation-engine.test.ts).
-    // La colonne compte aussi les 5 700 € de cotisations salariales. En micro BNC : 25 % de 100 000 € = 25 000 €, en plus.
+    // La colonne compte aussi les 5 700 € de cotisations salariales. En micro BNC : 25 % de 100 000 € = 25 000 €, en plus,
+    // et 200 € de formation professionnelle.
     const resultat = comparer(
       [personne("alice"), personne("bob"), societe("s1", "SASU")],
       [relation("alice", "s1", "Président"), relation("bob", "s1", "Salarié")],
@@ -125,7 +127,7 @@ describe("comparerStatuts", () => {
       options("s1")
     )
 
-    expect(colonne(resultat, "micro").cotisationsSociales).toBe(25000 + 5400 + 5700)
+    expect(colonne(resultat, "micro").cotisationsSociales).toBe(25000 + 200 + 5400 + 5700)
     expect(colonne(resultat, "SASU").cotisationsSociales).toBe(5400 + 5700)
   })
 
@@ -134,8 +136,8 @@ describe("comparerStatuts", () => {
     const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]], options("m1", { fraisFonctionnement: { SASU: frais(2000), EURL: frais(2000), EI: frais(1000), micro: frais(1000) } }))
 
     it("retire de la poche les frais d'une micro, sans changer cotisations ni impôt", () => {
-      // Comme sans frais (28 200 €), moins 1 000 € de dépenses non déductibles.
-      expect(colonne(resultat, "micro")).toMatchObject({ fraisFonctionnement: 1000, netApresImpots: 27200, cotisationsSociales: 10000, impotSurLeRevenu: 1800 })
+      // Comme sans frais (28 120 €), moins 1 000 € de dépenses non déductibles.
+      expect(colonne(resultat, "micro")).toMatchObject({ fraisFonctionnement: 1000, netApresImpots: 27120, cotisationsSociales: 10080, impotSurLeRevenu: 1800 })
       expect(colonne(resultat, "micro-vfl").fraisFonctionnement).toBe(1000)
     })
 

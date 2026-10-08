@@ -34,10 +34,10 @@ const activite = (cotisationsSociales: number, impotSocietes: number, resultatCo
 
 const ATTENDUS: Record<string, ChiffresAttendus> = {
   "micro-bnc-seule": {
-    // 36 000 € : cotisations 25,6 % = 9 216 € ; versement libératoire 2,2 % = 792 €.
-    totalNetApresImpots: 25992,
-    foyers: [foyer(["p-sophie"], 792, 0, 10008, 25992)],
-    activites: { "m-sophie": activite(9216, 0) },
+    // 36 000 € : cotisations 25,6 % = 9 216 €, plus 0,2 % de formation professionnelle = 72 € ; versement libératoire 2,2 % = 792 €.
+    totalNetApresImpots: 25920,
+    foyers: [foyer(["p-sophie"], 792, 0, 10080, 25920)],
+    activites: { "m-sophie": activite(9288, 0) },
     comparateur: { activite: "m-sophie", meilleur: "micro-vfl" }
   },
   "sasu-sans-salaire": {
@@ -60,15 +60,15 @@ const ATTENDUS: Record<string, ChiffresAttendus> = {
     comparateur: { activite: "e-nicolas", meilleur: "SASU" }
   },
   "salarie-et-micro": {
-    totalNetApresImpots: 31409,
-    foyers: [foyer(["p-lucas"], 2133, 0, 12031, 31409)],
-    activites: { "m-lucas": activite(2458, 0) },
+    totalNetApresImpots: 31390,
+    foyers: [foyer(["p-lucas"], 2133, 0, 12050, 31390)],
+    activites: { "m-lucas": activite(2477, 0) },
     comparateur: { activite: "m-lucas", meilleur: "micro-vfl" }
   },
   "micro-et-sasu-du-conjoint": {
-    totalNetApresImpots: 63119,
-    foyers: [foyer(["p-claire", "p-marc"], 3551, 4650, 38036, 63119)],
-    activites: { "m-claire": activite(7680, 0), "s-marc": activite(17594, 4561, 845) },
+    totalNetApresImpots: 63059,
+    foyers: [foyer(["p-claire", "p-marc"], 3551, 4650, 38096, 63059)],
+    activites: { "m-claire": activite(7740, 0), "s-marc": activite(17594, 4561, 845) },
     comparateur: { activite: "m-claire", meilleur: "micro-vfl" }
   },
   "conjoint-salarie-sasu": {
@@ -78,9 +78,9 @@ const ATTENDUS: Record<string, ChiffresAttendus> = {
     comparateur: { activite: "s-paul", meilleur: "EI" }
   },
   "couple-union-libre": {
-    totalNetApresImpots: 46484,
-    foyers: [foyer(["p-hugo"], 4444, 0, 16444, 37556), foyer(["p-emma"], 0, 0, 3072, 8928)],
-    activites: { "m-emma": activite(3072, 0) },
+    totalNetApresImpots: 46460,
+    foyers: [foyer(["p-hugo"], 4444, 0, 16444, 37556), foyer(["p-emma"], 0, 0, 3096, 8904)],
+    activites: { "m-emma": activite(3096, 0) },
     comparateur: { activite: "m-emma", meilleur: "micro" }
   }
 }
@@ -142,6 +142,6 @@ casDeReference("Montages types : chiffres de référence", () => {
 
   it("couple en union libre : marié ou pacsé, il paierait 2 115 € d'impôt au lieu de 4 444 €", () => {
     const { comparaison } = simulerLeMontage(MONTAGES_TYPES.find(m => m.id === "couple-union-libre")!)
-    expect(comparaison.couples).toEqual([{ personIds: ["p-hugo", "p-emma"], netApresImpotsActuel: 46484, impotSurLeRevenuActuel: 4444, netApresImpotsMaries: 48813, impotSurLeRevenuMaries: 2115 }])
+    expect(comparaison.couples).toEqual([{ personIds: ["p-hugo", "p-emma"], netApresImpotsActuel: 46460, impotSurLeRevenuActuel: 4444, netApresImpotsMaries: 48789, impotSurLeRevenuMaries: 2115 }])
   })
 })

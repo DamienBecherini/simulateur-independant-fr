@@ -154,6 +154,7 @@ export const reglesDeTest: ReglesFiscales = {
   microEntreprise: {
     plafonds: { services: 80000, vente: 200000 },
     cotisations: { venteBic: 0.1, servicesBic: 0.2, servicesBnc: 0.25 },
+    formationProfessionnelle: { venteBic: 0.001, servicesBic: 0.003, servicesBnc: 0.002 },
     reductionACRE: 0.5,
     ACRE: { trimestresCivilsApresLeDebut: 3, reductionsParDateDeCreation: [{ aPartirDe: "2020-01", reduction: 0.5 }] },
     abattement: { venteBic: 0.7, servicesBic: 0.5, servicesBnc: 0.3, minimum: 300 },
