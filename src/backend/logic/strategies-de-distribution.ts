@@ -1,7 +1,7 @@
 // src/backend/logic/strategies-de-distribution.ts
 
 /*
- * « Sur toutes les années » (voir l'ADR 012) : pour l'activité comparée, devenue SASU puis EURL, quelques façons de
+ * « Sur toutes les années » (voir l'ADR 014) : pour l'activité comparée, devenue SASU puis EURL, quelques façons de
  * distribuer le bénéfice au fil des années de la session, comparées sur le net cumulé de tous les foyers :
  * - tout distribuer chaque année : le bénéfice distribuable de l'année, comme le comparateur d'une année ;
  * - garder une part du bénéfice distribuable chaque année, et distribuer toutes les réserves la dernière ;

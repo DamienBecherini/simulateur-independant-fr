@@ -6,7 +6,7 @@ import { comparerStrategiesDeDistribution } from "../strategies-de-distribution.
 import { personne, relation, societe } from "../testing/session-de-test.js"
 
 /*
- * Cas de référence de « Sur toutes les années » (voir l'ADR 012), avec les règles réelles de 2025 et 2026 : le cas de
+ * Cas de référence de « Sur toutes les années » (voir l'ADR 014), avec les règles réelles de 2025 et 2026 : le cas de
  * reserves.reference.test.ts, vu par le comparateur. Alice, célibataire, préside une SASU sans rémunération ; la
  * société facture 60 000 € en 2025 et rien en 2026. Sans frais de fonctionnement, pour rester sur les mêmes chiffres.
  *

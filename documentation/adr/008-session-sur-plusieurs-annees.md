@@ -58,7 +58,7 @@ SessionState = {
 - **Négatives ou Compromis :**
   - Les acteurs et les relations ne changent pas d'une année à l'autre : une création de société, un mariage ou une naissance en cours de période ne se représentent pas encore. Supprimer un acteur supprime ses flux de toutes les années.
   - Ajouter une année recopie (ou non) la grille voisine : les copies sont indépendantes, comme les flux recopiés d'un mois à l'autre ; les flux définis une fois pour plusieurs années restent à faire (phase 13, point 5).
-  - Le comparateur et l'optimiseur travaillent sur l'année affichée seulement : pas encore d'arbitrage entre les années (dividendes versés plus tard, bénéfice mis en réserve). Depuis l'ADR 012, les réserves des sociétés passent d'une année à l'autre, et le comparateur compare des stratégies de distribution sur toutes les années.
+  - Le comparateur et l'optimiseur travaillent sur l'année affichée seulement : pas encore d'arbitrage entre les années (dividendes versés plus tard, bénéfice mis en réserve). Depuis l'ADR 014, les réserves des sociétés passent d'une année à l'autre, et le comparateur compare des stratégies de distribution sur toutes les années.
   - Les fichiers au format 3 ne se relisent pas correctement dans une version précédente du simulateur : elle préviendrait que le fichier vient d'une version plus récente, puis l'ouvrirait avec ses acteurs et ses relations, mais sans aucun flux.
 
 ## Addendum (2026-10-05) : dix années consécutives au plus

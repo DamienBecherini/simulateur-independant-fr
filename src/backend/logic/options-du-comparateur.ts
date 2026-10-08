@@ -19,7 +19,7 @@ export function defaultFraisFonctionnement(): FraisFonctionnement {
   }
 }
 
-/** « Sur toutes les années » : part du bénéfice distribuable gardée chaque année proposée par défaut (voir l'ADR 012). */
+/** « Sur toutes les années » : part du bénéfice distribuable gardée chaque année proposée par défaut (voir l'ADR 014). */
 export const PART_MISE_EN_RESERVE_PAR_DEFAUT = 0.5
 
 /**

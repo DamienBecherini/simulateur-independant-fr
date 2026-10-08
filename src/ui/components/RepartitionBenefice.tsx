@@ -301,7 +301,7 @@ function Deficit({ partage }: { partage: PartageDuBenefice }) {
 
 /**
  * Les réserves de la société au 31 décembre, cumulées depuis le début de la simulation, et les dividendes de l'année
- * pris sur celles des années précédentes (voir l'ADR 012). Rien tant que le moteur n'a pas recalculé.
+ * pris sur celles des années précédentes (voir l'ADR 014). Rien tant que le moteur n'a pas recalculé.
  */
 function Reserves({ reserves, estimation }: { reserves: ReservesDeLaSociete | undefined; estimation: boolean }) {
   if (!reserves || estimation) return null

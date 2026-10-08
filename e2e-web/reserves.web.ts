@@ -1,5 +1,5 @@
 // e2e-web/reserves.web.ts
-// Bénéfice mis en réserve puis distribué (voir l'ADR 012) : la SASU d'Alice facture 60 000 € en 2025, en distribue la
+// Bénéfice mis en réserve puis distribué (voir l'ADR 014) : la SASU d'Alice facture 60 000 € en 2025, en distribue la
 // moitié et garde le reste, qu'elle distribue en 2026. Réserves dans la carte de l'activité et la synthèse des années,
 // stratégies de distribution du comparateur « Sur toutes les années », dans les trois affichages, sur téléphone et en
 // thème sombre. Les chiffres sont ceux des cas de référence (src/backend/logic/references/reserves.reference.test.ts).

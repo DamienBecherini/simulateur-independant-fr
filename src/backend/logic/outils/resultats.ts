@@ -53,7 +53,7 @@ const resumeDeLActivite = (a: ActivityResult): z.infer<typeof ActiviteSchema> =>
   nom: a.name,
   statut: a.statut,
   ...arrondirTout({ chiffreAffaires: a.chiffreAffaires, charges: a.charges, cotisationsSociales: a.cotisationsSociales, impotSocietes: a.impotSocietes, revenuVerse: a.revenuVerse, resultatConserve: a.resultatConserve }),
-  // Société à l'IS : ses réserves distribuables au 31 décembre, reportées d'une année à l'autre (voir l'ADR 012).
+  // Société à l'IS : ses réserves distribuables au 31 décembre, reportées d'une année à l'autre (voir l'ADR 014).
   ...(a.reserves ? { reservesALaFin: arrondir(a.reserves.aLaFin.reserves) } : {}),
   dispositifs: a.dispositifs ?? [],
   avertissements: a.warnings
@@ -167,7 +167,7 @@ function lignesBulletin(titre: string, bulletin: DetailCotisationsSalarie): Lign
   return ligne(`${titre} : brut ${arrondir(bulletin.brut)} €, net ${arrondir(bulletin.net)} €, coût employeur ${arrondir(bulletin.coutEmployeur)} €`, bulletin.totalSalarial + bulletin.totalPatronal - bulletin.reductionGenerale, [...composantes, composante("Réduction générale (en moins)", -bulletin.reductionGenerale)])
 }
 
-/** Les réserves d'une société à l'IS sur l'année, en une phrase (voir l'ADR 012). */
+/** Les réserves d'une société à l'IS sur l'année, en une phrase (voir l'ADR 014). */
 function phraseDesReserves(r: ReservesDeLaSociete): string {
   const deficit = r.aLaFin.deficitReportable > 0 ? ` Déficit reportable sur l'impôt sur les sociétés des années suivantes : ${arrondir(r.aLaFin.deficitReportable)} €.` : ""
   const impute = r.deficitImpute > 0 ? ` Déficit des années précédentes déduit avant l'impôt sur les sociétés : ${arrondir(r.deficitImpute)} €.` : ""

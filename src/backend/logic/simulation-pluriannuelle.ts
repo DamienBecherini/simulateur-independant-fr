@@ -28,7 +28,7 @@ interface Heritage {
   /** Rapport de l'année N-2 s'il a pu être calculé : son revenu fiscal de référence sert au versement libératoire de N. */
   reportN2: SimulationReport | null
   regimeMicro: RegimeMicroDeLAnnee | undefined
-  /** Réserves, réserve légale et déficit reportable de chaque société au 1er janvier (voir l'ADR 012). */
+  /** Réserves, réserve légale et déficit reportable de chaque société au 1er janvier (voir l'ADR 014). */
   etatsDesSocietes: Record<string, EtatDeLaSociete>
 }
 
@@ -83,7 +83,7 @@ interface Parcours {
  * Simule chaque année de la session, de la plus ancienne à la plus récente : le revenu fiscal de référence calculé
  * pour l'année N-2 sert au versement libératoire de l'année N, le chiffre d'affaires des années précédentes décide
  * du régime des micro-entreprises (voir dispositifs.ts), et les sociétés à l'IS gardent d'une année à l'autre leurs
- * réserves, leur réserve légale et leur déficit reportable (voir l'ADR 012). `ajuster` peut modifier les données de
+ * réserves, leur réserve légale et leur déficit reportable (voir l'ADR 014). `ajuster` peut modifier les données de
  * chaque année avant sa simulation (stratégies de distribution du comparateur).
  */
 function parcourirLesAnnees(session: SessionState, ajuster?: (preparee: AnneePreparee) => DonneesDeLAnnee): Parcours[] {

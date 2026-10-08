@@ -257,7 +257,7 @@ function validatedSession(session: unknown, caller: string): SessionState {
 const serveurMcpLivre = () => (app.isPackaged ? path.join(process.resourcesPath, "mcp", "serveur-mcp.mjs") : path.join(app.getAppPath(), "dist-electron", "mcp", "serveur-mcp.mjs"))
 
 /**
- * Chemins du serveur MCP local de cette installation (voir les ADR 011 et 012) : l'exécutable de l'application, lancé
+ * Chemins du serveur MCP local de cette installation (voir les ADR 011 et 013) : l'exécutable de l'application, lancé
  * en mode Node, le serveur empaqueté et le dossier de données à lui passer. Version du Microsoft Store : l'alias
  * d'exécution du paquet et la copie du serveur dans le dossier de données.
  */

@@ -14,7 +14,7 @@ export interface EntreesSociete {
   dividendesDemandes: number
   /** Capital social : la réserve légale en dépend. Absent : aucune réserve légale. */
   capitalSocial?: number
-  /** Ce que la société a gardé des années précédentes (voir l'ADR 012). Absent : ni réserves ni déficit, réserve légale constituée. */
+  /** Ce que la société a gardé des années précédentes (voir l'ADR 014). Absent : ni réserves ni déficit, réserve légale constituée. */
   etat?: EtatDeLaSociete
 }
 

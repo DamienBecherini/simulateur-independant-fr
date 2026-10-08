@@ -276,7 +276,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
 }
 
 /**
- * Ce qu'une société à l'IS a au 1er janvier de la première année simulée (voir l'ADR 012) : les réserves saisies dans sa
+ * Ce qu'une société à l'IS a au 1er janvier de la première année simulée (voir l'ADR 014) : les réserves saisies dans sa
  * fiche, aucun déficit reportable, et une réserve légale déjà constituée, sauf si la société est créée cette année-là
  * ou plus tard (date de création connue) : sa réserve légale part alors de zéro.
  */
@@ -682,7 +682,7 @@ export interface ContexteDeLAnnee {
    */
   regimeMicro?: RegimeMicroDeLAnnee
   /**
-   * Ce que chaque société à l'IS a gardé des années précédentes de la session, par identifiant (voir l'ADR 012). Une
+   * Ce que chaque société à l'IS a gardé des années précédentes de la session, par identifiant (voir l'ADR 014). Une
    * société absente part de ce que dit sa fiche (`etatAuDebutDeLaSimulation`).
    */
   etatsDesSocietes?: Record<string, EtatDeLaSociete>

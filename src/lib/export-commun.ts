@@ -132,7 +132,7 @@ export function rfrDesAnnees(session: SimulationAnnuelle, simulation: Simulation
   return simulation.annees.flatMap(({ annee, report }) => (report?.foyers ?? []).map(f => ({ annee, foyer: nomDuFoyer(session, f), rfr: f.revenuFiscalDeReference })))
 }
 
-/** Réserves des sociétés à l'IS de l'année, quand il y a quelque chose à en dire (voir l'ADR 012). */
+/** Réserves des sociétés à l'IS de l'année, quand il y a quelque chose à en dire (voir l'ADR 014). */
 export function reservesDeLAnnee(report: SimulationReport): { activite: string; lecture: LectureDesReserves }[] {
   return report.activities.flatMap(a => {
     const lecture = lectureDesReserves(a)

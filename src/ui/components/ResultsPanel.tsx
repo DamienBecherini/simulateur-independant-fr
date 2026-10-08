@@ -399,7 +399,7 @@ function LignesDeLActivite({ activity, className }: { activity: ActivityResult; 
 
 /**
  * Société à l'IS : ce que ses réserves gagnent ou perdent dans l'année (bénéfice gardé, dividendes pris sur les
- * réserves, déficit) et le déficit des années précédentes déduit avant l'IS (voir l'ADR 012).
+ * réserves, déficit) et le déficit des années précédentes déduit avant l'IS (voir l'ADR 014).
  */
 function MouvementsDesReserves({ activity, className }: { activity: ActivityResult; className?: string }) {
   const lecture = lectureDesReserves(activity)

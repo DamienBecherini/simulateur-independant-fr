@@ -104,7 +104,7 @@ export const CompanySchema = z.object({
   /**
    * Société à l'IS : réserves distribuables au 1er janvier de la première année de la session (bénéfices des années
    * d'avant gardés dans la société, réserve légale non comprise). Les années suivantes, le moteur les reporte lui-même
-   * (voir l'ADR 012). Absent : aucune.
+   * (voir l'ADR 014). Absent : aucune.
    */
   reservesInitiales: z.number().min(0).optional(),
   dateDeCreation: DateDeCreationSchema,
@@ -379,7 +379,7 @@ export interface ActivityResult {
 }
 
 /**
- * Ce qu'une société à l'IS garde d'une année sur l'autre (voir l'ADR 012) : ses réserves distribuables (bénéfices
+ * Ce qu'une société à l'IS garde d'une année sur l'autre (voir l'ADR 014) : ses réserves distribuables (bénéfices
  * gardés ; négatives, des pertes à combler), sa réserve légale et son déficit reportable sur l'impôt sur les sociétés.
  */
 export interface EtatDeLaSociete {
@@ -736,7 +736,7 @@ export interface ScenarioStatut {
   warnings: string[]
   /** SASU et EURL : partage du bénéfice de l'activité entre rémunération, prélèvements, dividendes et réserves. */
   partage?: PartageDuBenefice
-  /** SASU et EURL : réserves de l'activité, du 1er janvier au 31 décembre (voir l'ADR 012). */
+  /** SASU et EURL : réserves de l'activité, du 1er janvier au 31 décembre (voir l'ADR 014). */
   reserves?: ReservesDeLaSociete
   /** SASU et EURL, au meilleur net : la rémunération retenue pour ce statut. */
   remunerationOptimale?: RemunerationOptimale
@@ -806,7 +806,7 @@ export interface OptimisationRemuneration {
   warnings: string[]
 }
 
-/** Stratégies de distribution comparées sur toutes les années de la session (voir l'ADR 012). */
+/** Stratégies de distribution comparées sur toutes les années de la session (voir l'ADR 014). */
 export const STRATEGIES_DE_DISTRIBUTION = ["toutDistribuer", "garderPuisDistribuer", "lisser"] as const
 export type StrategieDeDistribution = (typeof STRATEGIES_DE_DISTRIBUTION)[number]
 

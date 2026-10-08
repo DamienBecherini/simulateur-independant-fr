@@ -1,6 +1,6 @@
 // src/ui/components/SurToutesLesAnnees.tsx
 // « Sur toutes les années » : stratégies de distribution du bénéfice de l'activité comparée, en SASU et en EURL,
-// comparées sur le net cumulé de toutes les années de la session (voir l'ADR 012).
+// comparées sur le net cumulé de toutes les années de la session (voir l'ADR 014).
 
 import { useEffect, useId, useState } from "react"
 import { Label } from "@/components/ui/label"

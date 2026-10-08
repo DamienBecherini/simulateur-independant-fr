@@ -1,4 +1,4 @@
-# ADR-012: Le bénéfice mis en réserve, d'une année à l'autre
+# ADR-014: Le bénéfice mis en réserve, d'une année à l'autre
 
 - **Date :** 2026-10-06
 - **Statut :** Accepté

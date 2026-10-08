@@ -106,7 +106,7 @@ function entiteCible(source: Activite, statut: StatutCompare): Activite {
   return { ...commun, type: "company", legalStatus: statut, capitalSocial: statut === "EI" ? 0 : capitalSource, ...reservesQuiSuivent(source, statut) }
 }
 
-/** Les réserves de départ d'une société à l'IS la suivent dans l'autre statut de société (voir l'ADR 012). */
+/** Les réserves de départ d'une société à l'IS la suivent dans l'autre statut de société (voir l'ADR 014). */
 function reservesQuiSuivent(source: Activite, statut: StatutCompare): Pick<Company, "reservesInitiales"> {
   return source.type === "company" && source.reservesInitiales !== undefined && estSocieteIS(statut) ? { reservesInitiales: source.reservesInitiales } : {}
 }

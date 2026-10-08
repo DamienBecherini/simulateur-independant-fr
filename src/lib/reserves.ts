@@ -1,5 +1,5 @@
 // src/lib/reserves.ts
-// Lecture des réserves d'une société à l'IS sur une année (voir l'ADR 012), pour la carte de l'activité, la synthèse
+// Lecture des réserves d'une société à l'IS sur une année (voir l'ADR 014), pour la carte de l'activité, la synthèse
 // des années et les exports : ce qui s'y ajoute, ce qui en sort, et ce qu'il en reste au 31 décembre.
 
 import type { ActivityResult, SimulationReport } from "@/types"

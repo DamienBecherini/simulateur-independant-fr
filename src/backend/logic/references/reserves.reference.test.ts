@@ -8,7 +8,7 @@ import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
 import { personne, relation, societe, type Flux } from "../testing/session-de-test.js"
 
 /*
- * Cas de référence du bénéfice mis en réserve puis distribué (voir l'ADR 012), avec les règles réelles de 2025
+ * Cas de référence du bénéfice mis en réserve puis distribué (voir l'ADR 014), avec les règles réelles de 2025
  * (src/backend/regles/2025.json) et de 2026 (config.json). Chaque attendu est dérivé à la main.
  *
  * Règles officielles utilisées :
