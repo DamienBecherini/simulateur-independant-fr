@@ -2,7 +2,11 @@
 
 import type { CotisationTNS, DetailCotisationsTNS } from "../../types.js"
 import { euros } from "./format.js"
-import type { BaremeProgressif, ReglesTNS, TrancheCotisation } from "./regles.js"
+import { parTranches, progressive } from "./baremes.js"
+import { cotisationsDeLaCaisse, type CotisationsDeLaCaisse, type ParametresDeLaCaisse } from "./cotisations-liberales.js"
+import type { ReglesTNS, TrancheCotisation } from "./regles.js"
+
+export { parTranches } from "./baremes.js"
 
 /*
  * Cotisations et contributions sociales d'un travailleur non salarié (gérant majoritaire d'EURL, entrepreneur
@@ -30,65 +34,57 @@ export function assietteSociale(revenuAvantCotisations: number, regles: ReglesTN
   return Math.max(0, revenuAvantCotisations - abattement)
 }
 
-/** Cotisation à taux marginaux : chaque tranche ne s'applique qu'à la part de l'assiette comprise entre ses bornes. */
-export function parTranches(assiette: number, tranches: TrancheCotisation[], pass: number): number {
-  let cotisation = 0
-  let bas = 0
-  for (const { jusquA, taux } of tranches) {
-    const haut = jusquA === null ? Infinity : jusquA * pass
-    cotisation += Math.max(0, Math.min(assiette, haut) - bas) * taux
-    bas = haut
-  }
-  return cotisation
-}
-
-/**
- * Cotisation à taux progressif (maladie-maternité, allocations familiales) : sous le dernier point du barème,
- * un seul taux, interpolé linéairement entre les deux points qui encadrent l'assiette, s'applique à toute
- * l'assiette ; au-delà, le taux du dernier point jusqu'à son seuil, et `tauxAuDela` sur le surplus.
- */
-function progressive(assiette: number, bareme: BaremeProgressif, pass: number): number {
-  const { points, tauxAuDela } = bareme
-  const dernier = points[points.length - 1]
-  const seuilDernier = dernier.partDuPlafond * pass
-  if (assiette >= seuilDernier) return seuilDernier * dernier.taux + (assiette - seuilDernier) * tauxAuDela
-
-  const part = assiette / pass
-  const suivant = points.findIndex(point => part <= point.partDuPlafond)
-  if (suivant === 0) return assiette * points[0].taux
-  const [a, b] = [points[suivant - 1], points[suivant]]
-  return assiette * (a.taux + ((b.taux - a.taux) * (part - a.partDuPlafond)) / (b.partDuPlafond - a.partDuPlafond))
-}
-
-/** Toutes les cotisations et contributions d'une année, à partir du revenu professionnel avant cotisations. */
-export function calculerCotisationsTNS(revenuAvantCotisations: number, regles: ReglesTNS): CotisationsTNS {
+/** Les cotisations des indépendants qui ne relèvent pas d'une caisse de libéraux réglementés (bloc TNS). */
+function cotisationsDesIndependants(assiette: number, regles: ReglesTNS): Omit<CotisationsDeLaCaisse, "detail"> & { detail?: undefined } {
   const pass = regles.plafondSecuriteSociale
-  const assiette = assietteSociale(revenuAvantCotisations, regles)
   const minimales = regles.cotisationsMinimales
-  const { csgDeductible, csgNonDeductible, crds } = regles.csgCrds
   const avecMinimum = (minimum: number, tranches: TrancheCotisation[]) => parTranches(Math.max(assiette, minimum), tranches, pass)
-
-  const cotisations: Record<CotisationTNS, number> = {
+  const lignes = {
     maladieMaternite: progressive(assiette, regles.maladieMaternite, pass),
     indemnitesJournalieres: avecMinimum(minimales.indemnitesJournalieres, regles.indemnitesJournalieres.tranches),
     retraiteDeBase: avecMinimum(minimales.retraiteDeBase, regles.retraiteDeBase.tranches),
     retraiteComplementaire: parTranches(assiette, regles.retraiteComplementaire.tranches, pass),
-    invaliditeDeces: avecMinimum(minimales.invaliditeDeces, regles.invaliditeDeces.tranches),
+    invaliditeDeces: avecMinimum(minimales.invaliditeDeces, regles.invaliditeDeces.tranches)
+  }
+  const surAssietteReelle = [regles.indemnitesJournalieres, regles.retraiteDeBase, regles.invaliditeDeces].reduce((somme, { tranches }) => somme + parTranches(assiette, tranches, pass), 0)
+  return {
+    lignes,
+    supplementMinimum: lignes.indemnitesJournalieres + lignes.retraiteDeBase + lignes.invaliditeDeces - surAssietteReelle,
+    minimumRetraiteApplique: assiette < minimales.retraiteDeBase
+  }
+}
+
+/**
+ * Toutes les cotisations et contributions d'une année, à partir du revenu professionnel avant cotisations. Avec une
+ * caisse de libéraux réglementés (voir cotisations-liberales.ts), ses barèmes remplacent ceux des indépendants pour la
+ * maladie, les indemnités journalières, la retraite et l'invalidité-décès, et l'ASV et la CURPS s'ajoutent au total ;
+ * les allocations familiales, la CSG-CRDS et la formation professionnelle restent celles du bloc TNS.
+ */
+export function calculerCotisationsTNS(revenuAvantCotisations: number, regles: ReglesTNS, caisse?: ParametresDeLaCaisse): CotisationsTNS {
+  const pass = regles.plafondSecuriteSociale
+  const assiette = assietteSociale(revenuAvantCotisations, regles)
+  const { csgDeductible, csgNonDeductible, crds } = regles.csgCrds
+  const propres = caisse ? cotisationsDeLaCaisse(assiette, pass, caisse) : cotisationsDesIndependants(assiette, regles)
+
+  const cotisations: Record<CotisationTNS, number> = {
+    ...propres.lignes,
     allocationsFamiliales: progressive(assiette, regles.allocationsFamiliales, pass),
     csgDeductible: assiette * csgDeductible,
     csgNonDeductibleEtCrds: assiette * (csgNonDeductible + crds),
     formationProfessionnelle: pass * regles.formationProfessionnelle.tauxSurPlafond
   }
-  const surAssietteReelle = [regles.indemnitesJournalieres, regles.retraiteDeBase, regles.invaliditeDeces].reduce((somme, { tranches }) => somme + parTranches(assiette, tranches, pass), 0)
+  const detailDeLaCaisse = propres.detail
+  const enPlus = detailDeLaCaisse ? detailDeLaCaisse.asv + detailDeLaCaisse.curps : 0
 
   return {
     revenuAvantCotisations,
     assiette,
     cotisations,
-    total: Object.values(cotisations).reduce((somme, montant) => somme + montant, 0),
+    total: Object.values(cotisations).reduce((somme, montant) => somme + montant, enPlus),
     partNonDeductible: cotisations.csgNonDeductibleEtCrds,
-    supplementMinimum: cotisations.indemnitesJournalieres + cotisations.retraiteDeBase + cotisations.invaliditeDeces - surAssietteReelle,
-    minimumRetraiteApplique: assiette < minimales.retraiteDeBase
+    supplementMinimum: propres.supplementMinimum,
+    minimumRetraiteApplique: propres.minimumRetraiteApplique,
+    ...(detailDeLaCaisse ? { caisse: detailDeLaCaisse } : {})
   }
 }
 
@@ -101,8 +97,8 @@ export function calculerCotisationsTNS(revenuAvantCotisations: number, regles: R
  * sont positives) et `net + écart`, l'écart doublant jusqu'à couvrir les cotisations ; l'intervalle est ensuite
  * divisé par deux à chaque tour, jusqu'à une précision bien inférieure au centime.
  */
-export function revenuAvantCotisationsPourUnNet(net: number, regles: ReglesTNS): number {
-  const netDe = (revenu: number) => revenu - calculerCotisationsTNS(revenu, regles).total
+export function revenuAvantCotisationsPourUnNet(net: number, regles: ReglesTNS, caisse?: ParametresDeLaCaisse): number {
+  const netDe = (revenu: number) => revenu - calculerCotisationsTNS(revenu, regles, caisse).total
   let ecart = Math.max(1, Math.abs(net))
   while (netDe(net + ecart) < net) ecart *= 2
 
