@@ -1,7 +1,7 @@
 {
   "name": "simulateur-independant-fr",
   "private": true,
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Simulateur desktop hors-ligne pour indépendants français : statuts juridiques, cotisations, impôt du foyer et comparateur de statuts.",
   "author": "Damien Becherini",
   "license": "MIT",
