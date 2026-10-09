@@ -103,7 +103,7 @@ function EntitiesManager({ session, setSession, onChargerMontage }: EntitiesMana
         </SortableContext>
       </DndContext>
 
-      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleSaveFromModal} allEntities={entities} relationships={relationships} />
+      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleSaveFromModal} allEntities={entities} relationships={relationships} anneesSimulees={session.annees.map(a => a.annee)} />
 
       <SelectEntityTypeModal isOpen={isSelectModalOpen} onClose={() => setSelectModalOpen(false)} onSelect={handleAddBusiness} />
     </div>

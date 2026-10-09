@@ -12,6 +12,7 @@ import { ChampNumerique } from "./ChampNumerique"
 import { ChampDateDeCreation, ChampHorsPlafondAnneePrecedente } from "./ChampDateDeCreation"
 import { ChampProfession } from "./ChampProfession"
 import { proposeLaProfession } from "@/lib/professions"
+import { texteDuRfrN2 } from "@/lib/rfr-n2"
 
 // Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
 const COULEURS_DES_ACTEURS = [
@@ -28,9 +29,11 @@ const iconNames: Record<string, string> = { Briefcase: "Mallette", Building: "Im
 interface ChampsDeLActeurProps {
   entity: Entity
   onChange: (entity: Entity) => void
+  /** Années de la simulation : le champ du RFR N-2 nomme celles qu'il couvre. */
+  anneesSimulees?: number[]
 }
 
-export function ChampsDeLActeur({ entity, onChange }: ChampsDeLActeurProps) {
+export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [] }: ChampsDeLActeurProps) {
   const changerAvatar = (avatar: Partial<Avatar>) => onChange({ ...entity, avatar: { ...entity.avatar, ...avatar } })
 
   return (
@@ -69,7 +72,7 @@ export function ChampsDeLActeur({ entity, onChange }: ChampsDeLActeurProps) {
           </Select>
         </div>
       )}
-      <StatusSpecificFields entity={entity} onChange={onChange} />
+      <StatusSpecificFields entity={entity} onChange={onChange} anneesSimulees={anneesSimulees} />
       <div className="grid grid-cols-4 items-center gap-4">
         <span id="avatar-couleur" className="text-right text-sm font-medium">
           Couleur
@@ -100,14 +103,15 @@ export function ChampsDeLActeur({ entity, onChange }: ChampsDeLActeurProps) {
 }
 
 /** Champs propres à certains statuts : revenu fiscal de référence d'une micro-entreprise, capital et réserves d'une société à l'IS. */
-function StatusSpecificFields({ entity, onChange }: ChampsDeLActeurProps) {
+function StatusSpecificFields({ entity, onChange, anneesSimulees = [] }: ChampsDeLActeurProps) {
+  const rfr = texteDuRfrN2(anneesSimulees)
   return (
     <>
       {entity.type !== "person" && proposeLaProfession(entity) && <ChampProfession activite={entity} onChange={onChange} />}
       {entity.type === "micro-entreprise" && (
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="rfrN2" className="text-right">
-            RFR N-2
+            {rfr.libelle}
           </Label>
           <div className="col-span-3">
             <ChampNumerique
@@ -117,13 +121,16 @@ function StatusSpecificFields({ entity, onChange }: ChampsDeLActeurProps) {
               step="100"
               quoi="le revenu fiscal de référence"
               placeholder="Non renseigné"
+              aria-describedby="rfrN2-aide"
               value={entity.rfrN2 ?? ""}
               onChange={e => {
                 const value = parseFloat(e.target.value)
                 onChange({ ...entity, rfrN2: Number.isFinite(value) && value >= 0 ? value : undefined })
               }}
             />
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Revenu fiscal de référence du foyer d'il y a deux ans (avis d'imposition) : il décide de l'accès au versement libératoire.</p>
+            <p id="rfrN2-aide" className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              {rfr.aide}
+            </p>
           </div>
         </div>
       )}
