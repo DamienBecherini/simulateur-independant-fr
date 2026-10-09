@@ -392,7 +392,11 @@ export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: Compar
     return colonne.scenario
   })
   // Une micro-entreprise hors plafond n'est tenable que deux ans : le meilleur net se choisit parmi les autres colonnes.
-  const tenables = scenarios.filter(s => !s.horsPlafond && !s.regimeMicroFerme)
+  // Une profession qui exerce en principe en société d'exercice libéral n'a pas de SASU ou d'EURL classique à désigner :
+  // leurs colonnes restent, avec leur avertissement, mais le meilleur net se choisit ailleurs (ADR 015).
+  const sansSocieteClassique = profession?.societeExerciceLiberal === true
+  if (sansSocieteClassique && scenarios.some(s => estSocieteIS(s.statut))) warnings.push(`${profession.libelle} : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut, cette profession exerçant en principe en société d'exercice libéral, dont la rémunération n'est pas encore modélisée. Leurs colonnes restent indicatives.`)
+  const tenables = scenarios.filter(s => !s.horsPlafond && !s.regimeMicroFerme && !(sansSocieteClassique && estSocieteIS(s.statut)))
   const candidats = tenables.length > 0 ? tenables : scenarios
   const meilleur = candidats.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), candidats[0]).statut
 

@@ -70,7 +70,8 @@ Six questions ont été posées au propriétaire du produit (dossier, §11).
   - La première année d'une session calcule la complémentaire et l'ASV de la CARPIMKO sur son propre revenu, faute de l'année précédente, tant que le champ facultatif n'existe pas.
   - Une version précédente du simulateur qui ouvre un fichier récent calcule l'activité comme non réglementée, sans le dire.
   - « Autre profession réglementée » ne fait qu'avertir : ces professions restent approchées tant que leur caisse n'est pas codée.
-  - En SASU ou en EURL, une profession réglementée reste calculée comme aujourd'hui : l'avertissement signale l'écart sans le chiffrer.
+  - En SASU, le président d'une profession réglementée reste calculé comme un assimilé salarié ; en EURL, le gérant majoritaire cotise à la caisse de sa profession (comme le gérant majoritaire d'une SELARL). Dans les deux cas, l'avertissement signale que la rémunération d'une société d'exercice libéral n'est pas modélisée, sans chiffrer l'écart.
+  - Pour une profession qui exerce en principe en société d'exercice libéral, le comparateur ne désigne jamais la SASU ni l'EURL classiques comme meilleur statut : leurs colonnes restent, indicatives, et le meilleur net se choisit parmi les autres.
   - La complémentaire CIPAV 2026 repose sur l'Urssaf seule ; la prise en charge maladie repose sur une lecture de pages contradictoires, et n'est écrite nulle part au-delà de 3 PASS.
 
 ## À vérifier
