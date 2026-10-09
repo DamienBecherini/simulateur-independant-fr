@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import { grilleVide, type Company, type SessionState } from "../../../types.js"
 import { revenuAvantCotisationsPourUnNet } from "../cotisationsTNS.js"
-import { reglesEnVigueur } from "../regles.js"
+import { reglesPubliees } from "../regles.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
 import { personne, relation, societe, type Flux } from "../testing/session-de-test.js"
 
@@ -214,7 +214,7 @@ describe("une EURL distribue ses réserves en 2026 : le seuil de 10 % du capital
     expect(en2026.foyers[0].prelevementsSociaux).toBe(186)
     // Le revenu avant cotisations du gérant : celui de sa rémunération (nulle, mais il doit les cotisations minimales),
     // plus les dividendes au-delà du seuil.
-    expect(eurl.cotisationsTNS!.revenuAvantCotisations - revenuAvantCotisationsPourUnNet(0, reglesEnVigueur.TNS)).toBeCloseTo(5000, 6)
+    expect(eurl.cotisationsTNS!.revenuAvantCotisations - revenuAvantCotisationsPourUnNet(0, reglesPubliees(2026).TNS)).toBeCloseTo(5000, 6)
     expect(eurl.partage?.cotisationsSurDividendes).toBeGreaterThan(0)
   })
 })

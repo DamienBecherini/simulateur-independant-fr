@@ -3,10 +3,10 @@
 import { describe, expect, it } from "vitest"
 import { grilleVide, type Company, type MicroEntreprise, type SessionState } from "../../../types.js"
 import { comparerStatuts } from "../comparateur.js"
-import { reglesDeLAnnee } from "../regles.js"
+import { reglesPubliees } from "../regles.js"
 import { runMetaSimulation } from "../simulation-engine.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
-import { activite, casDeReference, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
+import { activite, casDeReference, REGLES_DES_CAS, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
 import { micro, personne, relation, session, societe, type Flux } from "../testing/session-de-test.js"
 import { defaultComparisonOptions } from "../options-du-comparateur.js"
 
@@ -50,7 +50,7 @@ casDeReference("Cas de référence : professions libérales réglementées (doss
     it("versement libératoire de 2,2 % (880 €) ; 4 trimestres (40 000 € ≥ 11 168 €)", () => {
       const vfl = simuler([alice, enMicro("m1", "osteopathe", { opteVFL: true, rfrN2: 10000 })], liens, flux)
       expect(vfl.foyers[0].impotSurLeRevenu).toBe(880)
-      const comparaison = comparerStatuts(session(entites, liens, flux), defaultComparisonOptions(session(entites, liens, flux), "m1"))
+      const comparaison = comparerStatuts(session(entites, liens, flux), defaultComparisonOptions(session(entites, liens, flux), "m1"), REGLES_DES_CAS)
       expect(comparaison.scenarios.find(s => s.statut === "micro")?.protectionSociale.trimestres).toBe(4)
     })
   })
@@ -63,7 +63,7 @@ casDeReference("Cas de référence : professions libérales réglementées (doss
     expect(activite(report, "m1").cotisationsSociales).toBe(2106)
     // 9 000 x 23,2 % x 29,5 % / 10,6 % = 5 811 € de revenu validant : 3 trimestres de 1 803 €.
     const donnees = session([alice, enMicro("m1", "osteopathe")], liens, flux)
-    const comparaison = comparerStatuts(donnees, defaultComparisonOptions(donnees, "m1"))
+    const comparaison = comparerStatuts(donnees, defaultComparisonOptions(donnees, "m1"), REGLES_DES_CAS)
     expect(comparaison.scenarios.find(s => s.statut === "micro")?.protectionSociale.trimestres).toBe(3)
   })
 
@@ -167,12 +167,12 @@ casDeReference("Cas de référence : professions libérales réglementées (doss
   })
 
   it("cas 7 : psychologue en micro-entreprise, 30 000 € de CA en 2025 (CIPAV) : 6 960 € au lieu de 7 380 € ; 4 trimestres", () => {
-    const { regles } = reglesDeLAnnee(2025)
+    const regles = reglesPubliees(2025)
     const donnees = session([alice, enMicro("m1", "psychologue")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 30000]])
-    const report = runMetaSimulation(donnees, regles!, { annee: 2025 })
+    const report = runMetaSimulation(donnees, regles, { annee: 2025 })
     // 30 000 x 23,2 % = 6 960 €, plus 30 000 x 0,2 % = 60 € de formation professionnelle.
     expect(activite(report, "m1").cotisationsSociales).toBe(7020)
-    const comparaison = comparerStatuts(donnees, defaultComparisonOptions(donnees, "m1"), regles!, { annee: 2025 })
+    const comparaison = comparerStatuts(donnees, defaultComparisonOptions(donnees, "m1"), regles, { annee: 2025 })
     expect(comparaison.scenarios.find(s => s.statut === "micro")?.protectionSociale.trimestres).toBe(4)
   })
 
@@ -188,7 +188,7 @@ casDeReference("Cas de référence : professions libérales réglementées (doss
     })
 
     it("le comparateur ne propose pas de colonne micro, et dit pourquoi", () => {
-      const comparaison = comparerStatuts(session(entites, liens, flux), defaultComparisonOptions(session(entites, liens, flux), "m1"))
+      const comparaison = comparerStatuts(session(entites, liens, flux), defaultComparisonOptions(session(entites, liens, flux), "m1"), REGLES_DES_CAS)
       expect(comparaison.scenarios.map(s => s.statut)).toEqual(["SASU", "EURL", "EI"])
       expect(comparaison.warnings).toContainEqual(expect.stringContaining("Micro-entreprise non proposée"))
       expect(comparaison.meilleur).not.toBe("micro")

@@ -8,7 +8,7 @@ import type { Relationship } from "../../../types.js"
 /*
  * Cas de référence 2026 : salaires, foyers fiscaux et cumul d'activités.
  *
- * Démarche : le moteur tourne avec les règles réelles de config.json, et chaque attendu est dérivé à la main
+ * Démarche : le moteur tourne avec les règles réelles de 2026 (REGLES_DES_CAS), et chaque attendu est dérivé à la main
  * à partir des règles officielles 2026, sans lancer le moteur. En cas d'écart, c'est le moteur qui est suspect.
  *
  * Règles officielles utilisées :

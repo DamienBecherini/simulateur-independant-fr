@@ -2,14 +2,14 @@
 
 import { describe, expect, it } from "vitest"
 import { comparerStatuts } from "../comparateur.js"
-import { casDeReference } from "../testing/cas-de-reference.js"
+import { casDeReference, REGLES_DES_CAS } from "../testing/cas-de-reference.js"
 import { micro, personne, relation, session, societe } from "../testing/session-de-test.js"
 import type { ComparaisonOptions, ComparaisonResult, StatutCompare } from "../../../types.js"
 
 /*
  * Cas de référence 2026 : comparateur de statuts et imposition d'un couple en union libre.
  *
- * Démarche : le moteur tourne avec les règles réelles de config.json, et chaque colonne attendue est dérivée
+ * Démarche : le moteur tourne avec les règles réelles de 2026 (REGLES_DES_CAS), et chaque colonne attendue est dérivée
  * à la main à partir des règles officielles 2026 (voir les en-têtes de micro.reference.test.ts et de
  * societes.reference.test.ts pour le détail des taux), sans lancer le moteur. En cas d'écart, c'est le moteur
  * qui est suspect. L'impôt sur le revenu est arrondi à l'euro avant d'être retranché du net.
@@ -28,7 +28,7 @@ function colonne(resultat: ComparaisonResult, statut: StatutCompare) {
 
 casDeReference("Cas de référence 2026 : comparateur", () => {
   describe("micro-entreprise BNC de 40 000 €, titulaire célibataire, sans rémunération en société", () => {
-    const resultat = comparerStatuts(session([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options("m1"))
+    const resultat = comparerStatuts(session([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options("m1"), REGLES_DES_CAS)
 
     it("micro : 25,6 % de cotisations, 34 % d'abattement, barème", () => {
       // Cotisations 10 240 €, plus 40 000 x 0,2 % = 80 € de formation professionnelle : 10 320 € ; revenu imposable 26 400 € ;
@@ -84,7 +84,7 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
   it("versement libératoire inaccessible : la colonne reprend le barème", () => {
     // RFR 50 000 € > 29 315 € : la colonne « micro + versement libératoire » est identique à la colonne micro.
     const entreprise = { ...micro("m1"), rfrN2: 50000 }
-    const resultat = comparerStatuts(session([personne("alice"), entreprise], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options("m1"))
+    const resultat = comparerStatuts(session([personne("alice"), entreprise], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options("m1"), REGLES_DES_CAS)
 
     expect(colonne(resultat, "micro-vfl")).toMatchObject({ impotSurLeRevenu: 1468, netApresImpots: 28212 })
     expect(colonne(resultat, "micro-vfl").warnings.some(w => w.startsWith("Versement libératoire impossible"))).toBe(true)
@@ -101,7 +101,8 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
           ["s1", "deductible_expense", 5000]
         ]
       ),
-      options("s1", { remunerationNette: 20000 })
+      options("s1", { remunerationNette: 20000 }),
+      REGLES_DES_CAS
     )
 
     it("SASU : rémunération et solde distribué, dividendes au barème", () => {
@@ -165,7 +166,8 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
           ["bob", "salary", 20000]
         ]
       ),
-      options("")
+      options(""),
+      REGLES_DES_CAS
     )
 
     expect(resultat.couples).toEqual([{ personIds: ["alice", "bob"], netApresImpotsActuel: 57777, impotSurLeRevenuActuel: 2223, netApresImpotsMaries: 57489, impotSurLeRevenuMaries: 2511 }])

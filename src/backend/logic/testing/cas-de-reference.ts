@@ -1,39 +1,38 @@
 // src/backend/logic/testing/cas-de-reference.ts
 
-import { describe, expect, it } from "vitest"
-import { reglesEnVigueur } from "../regles.js"
+import { describe, expect } from "vitest"
+import { reglesPubliees } from "../regles.js"
 import { runMetaSimulation } from "../simulation-engine.js"
 import { session, type Flux } from "./session-de-test.js"
 import type { Entity, Relationship, SimulationReport } from "../../../types.js"
 
 /*
- * Outils communs aux cas de référence (src/backend/logic/references/) : ils lancent le moteur avec les règles réelles (`config.json`)
- * et lisent son rapport. Aucun montant attendu n'est calculé ici : chaque cas porte sa propre dérivation.
+ * Outils communs aux cas de référence (src/backend/logic/references/, montages types) : ils lancent le moteur avec
+ * les règles réelles de 2026 et lisent son rapport. Aucun montant attendu n'est calculé ici : chaque cas porte sa
+ * propre dérivation.
+ *
+ * Les cas sont liés à 2026 pour toujours, et non à « l'année en cours » : une dérivation faite à la main avec les
+ * règles de 2026 reste vraie pour simuler 2026 quand les règles de 2027 arrivent. Seule la mise à jour de l'impôt sur
+ * le revenu de 2026, au vote de la loi de finances suivante (ADR 007), peut en changer quelques-uns. L'année 2027
+ * aura ses propres cas. Le test « annee-suivante.test.ts » vérifie qu'une année de règles ajoutée ne les touche pas.
  */
 
-/** Année des règles avec lesquelles tous les montants attendus ont été dérivés à la main. */
+/** Année des règles avec lesquelles tous les montants attendus ont été dérivés à la main ; ne change jamais. */
 export const ANNEE_DES_CAS = 2026
 
+/** Les règles de 2026, lues dans leur fichier : jamais les dernières connues, qui changeront avec les années. */
+export const REGLES_DES_CAS = reglesPubliees(ANNEE_DES_CAS)
+
 /**
- * Regroupe des cas de référence derrière une garde sur l'année des règles : si `config.json` passe à une
- * autre année, un seul test échoue avec un message explicite, et les cas sont ignorés au lieu de produire
- * des écarts incompréhensibles. Il faut alors refaire les dérivations avec le nouveau barème.
+ * Regroupe des cas de référence, tous calculés avec les règles de `ANNEE_DES_CAS`. Il n'y a plus de garde sur
+ * l'année en cours : les cas tournent quelle que soit la dernière année de règles connue.
  */
 export function casDeReference(titre: string, corps: () => void) {
-  describe(titre, () => {
-    it(`portent sur les règles ${ANNEE_DES_CAS}`, () => {
-      expect(
-        reglesEnVigueur.annee,
-        `Les cas de référence ont été dérivés à la main avec les règles ${ANNEE_DES_CAS}, mais config.json décrit l'année ${reglesEnVigueur.annee} : refaites les dérivations de src/backend/logic/references/ avec les nouvelles règles.`
-      ).toBe(ANNEE_DES_CAS)
-    })
-
-    describe.runIf(reglesEnVigueur.annee === ANNEE_DES_CAS)(`règles ${ANNEE_DES_CAS}`, corps)
-  })
+  describe(titre, corps)
 }
 
-/** Lance le moteur avec les règles en vigueur. */
-export const simuler = (entities: Entity[], relationships: Relationship[] = [], flux: Flux[] = []) => runMetaSimulation(session(entities, relationships, flux))
+/** Lance le moteur sur une année 2026, avec les règles de 2026. */
+export const simuler = (entities: Entity[], relationships: Relationship[] = [], flux: Flux[] = []) => runMetaSimulation(session(entities, relationships, flux), REGLES_DES_CAS, { annee: ANNEE_DES_CAS })
 
 export function activite(report: SimulationReport, entityId: string) {
   const resultat = report.activities.find(a => a.entityId === entityId)

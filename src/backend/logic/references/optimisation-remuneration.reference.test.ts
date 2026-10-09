@@ -2,7 +2,7 @@
 
 import { expect, it } from "vitest"
 import { optimiserRemuneration } from "../optimisation-remuneration.js"
-import { casDeReference } from "../testing/cas-de-reference.js"
+import { casDeReference, REGLES_DES_CAS } from "../testing/cas-de-reference.js"
 import { personne, relation, session, societe } from "../testing/session-de-test.js"
 
 /*
@@ -17,7 +17,7 @@ const options = { activityId: "s1", remunerationNette: 0, repartition: { mode: "
 casDeReference("Arbitrage rémunération / dividendes", () => {
   it("président de SASU : 4 trimestres de retraite à partir de 5 800 € nets de rémunération", () => {
     const s = session([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 80000]])
-    const { points } = optimiserRemuneration(s, options, "SASU")
+    const { points } = optimiserRemuneration(s, options, "SASU", REGLES_DES_CAS)
 
     expect(points.find(p => p.remunerationNette === 5700)?.trimestres).toBe(3)
     expect(points.find(p => p.trimestres >= 4)?.remunerationNette).toBe(5800)
@@ -25,6 +25,6 @@ casDeReference("Arbitrage rémunération / dividendes", () => {
 
   it("président de SASU : sans rémunération, aucun trimestre de retraite", () => {
     const s = session([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 80000]])
-    expect(optimiserRemuneration(s, options, "SASU").points[0]).toMatchObject({ remunerationNette: 0, trimestres: 0 })
+    expect(optimiserRemuneration(s, options, "SASU", REGLES_DES_CAS).points[0]).toMatchObject({ remunerationNette: 0, trimestres: 0 })
   })
 })
