@@ -6,6 +6,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Modifié
+
+- Maintenance : les cas de référence et les montages types sont liés explicitement aux règles de 2026, et non plus à l'année en cours ; l'ajout des règles de 2027 ne les désactivera plus (un test le vérifie avec une année fictive).
+
 ## [0.10.0] — 2026-10-09
 
 ### Ajouté
