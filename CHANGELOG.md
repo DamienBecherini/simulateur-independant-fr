@@ -11,6 +11,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 - Maintenance : les cas de référence et les montages types sont liés explicitement aux règles de 2026, et non plus à l'année en cours ; l'ajout des règles de 2027 ne les désactivera plus (un test le vérifie avec une année fictive).
 - Maintenance : les règles de 2026 passent de `src/backend/config.json` à `src/backend/regles/2026.json`, comme les autres années ; l'année en cours du simulateur (nouvelle session, démo) est la plus récente des fichiers de règles et n'est plus écrite en dur (ADR 007 mise à jour).
 - Maintenance : les fonctions du moteur reçoivent toujours les règles de l'année calculée ; il n'y a plus de « règles de l'année en cours » par défaut, qu'un appel pouvait utiliser sans le dire.
+- Maintenance : chaque caisse de libéraux (CIPAV, CARPIMKO) a son calcul, ses particularités et ses textes dans des tables typées par caisse ; une caisse ajoutée sans ses règles est refusée à la compilation au lieu d'être calculée comme la CARPIMKO.
 
 ### Corrigé
 
