@@ -59,8 +59,8 @@ Pour bien comprendre comment les pièces s'emboîtent, suivons une action simple
 4.  **Pont Sécurisé :** `SessionService` appelle `window.api.saveSlots(slots)`. Cette fonction n'existe pas nativement ; elle est exposée de manière sécurisée par le script de preload.
 5.  **Script de `preload` :** Le fichier `src/backend/preload.cts` reçoit l'appel et le relaie au processus Main via `ipcRenderer.invoke('saveSlots', slots)`.
 6.  **Handler IPC (Backend) :** Dans `src/backend/main.ts`, le handler `ipcMain.handle('saveSlots', ...)` est déclenché.
-7.  **Logique Système (Backend) :** Ce handler exécute la fonction `writeSlotsToFile(slots)`, qui utilise `fs.writeFile` de Node.js pour écrire les données sur le disque.
-8.  **Retour d'Information (Feedback) :** Après l'écriture, le handler envoie une notification de succès au frontend via `mainWindow.webContents.send('show-notification', ...)`, qui sera interceptée par `NotificationProvider.tsx` pour afficher un toast.
+7.  **Logique Système (Backend) :** Ce handler appelle `ecrireLesSauvegardes(slots)` (`src/backend/donnees-de-l-application.ts`), qui valide les sauvegardes et les écrit de façon atomique (`ecrireAtomiquement`, `src/backend/fichiers-surs.ts` : fichier temporaire renommé).
+8.  **Retour d'Information (Feedback) :** Après l'écriture, une notification de succès, ou d'échec si le fichier n'a pas pu être écrit, part vers le frontend via `mainWindow.webContents.send('show-notification', ...)` ; `NotificationProvider.tsx` l'affiche. `saveSlots` renvoie `false` en cas d'échec : `SettingsSheet` ne change alors ni la liste ni le panneau.
 
 Ce flux garantit que le code de l'interface (Renderer) ne manipule jamais directement les fichiers, préservant ainsi la sécurité et la stabilité de l'application.
 
