@@ -6,6 +6,8 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+## [0.10.0] — 2026-10-09
+
 ### Ajouté
 
 - **Professions libérales réglementées (ADR 015) :** une micro-entreprise, une entreprise individuelle au réel ou une EURL choisit sa profession (« Non réglementée » par défaut, puis les professions de santé de la CARPIMKO, celles de la CIPAV, et « Autre profession réglementée »), dont la caisse se déduit des règles de chaque année. Une ligne sous la liste dit la caisse, si la micro-entreprise est possible et les principaux taux. Les sessions existantes ne changent pas.
@@ -87,6 +89,7 @@ Première version publiée : ces notes décrivent ce que contient l'application.
 - Calculs : abattement minimum de la micro-entreprise appliqué séparément à chaque nature d'activité, réduction générale éteinte à exactement 3 SMIC, micro-entreprise au-delà des plafonds jamais désignée meilleur net.
 - Sauvegardes : validation avant écriture, rien de perdu à la fermeture, copie importée numérotée au lieu d'empiler « (importée) ».
 
-[Non publié]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.9.1...HEAD
+[Non publié]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/DamienBecherini/simulateur-independant-fr/releases/tag/v0.9.0
