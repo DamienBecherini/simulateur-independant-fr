@@ -20,6 +20,8 @@ import { BoutonDesMontages } from "./MontagesTypes"
 interface EntitiesManagerProps {
   session: SessionState
   setSession: (session: SessionState) => void
+  /** L'année affichée : la fenêtre « Modifier » décrit la profession avec ses règles. */
+  annee: number
   /** Une simulation vide propose de partir d'un montage type : rien n'est perdu, aucune confirmation n'est demandée. */
   onChargerMontage?: (montage: MontageType) => void
 }
@@ -30,7 +32,7 @@ const MISE_EN_PAGE = {
   resume: { cadre: "p-4", titre: "mb-3", boutons: "mb-3 gap-2", taille: "sm" }
 } as const
 
-function EntitiesManager({ session, setSession, onChargerMontage }: EntitiesManagerProps) {
+function EntitiesManager({ session, setSession, annee, onChargerMontage }: EntitiesManagerProps) {
   const { entities, relationships } = session
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
   const [isSelectModalOpen, setSelectModalOpen] = useState(false)
@@ -103,7 +105,7 @@ function EntitiesManager({ session, setSession, onChargerMontage }: EntitiesMana
         </SortableContext>
       </DndContext>
 
-      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleSaveFromModal} allEntities={entities} relationships={relationships} anneesSimulees={session.annees.map(a => a.annee)} />
+      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleSaveFromModal} allEntities={entities} relationships={relationships} anneesSimulees={session.annees.map(a => a.annee)} annee={annee} />
 
       <SelectEntityTypeModal isOpen={isSelectModalOpen} onClose={() => setSelectModalOpen(false)} onSelect={handleAddBusiness} />
     </div>

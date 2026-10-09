@@ -3,10 +3,20 @@
 // l'accompagne (voir l'ADR 015). Les professions, leur caisse et leurs taux viennent des règles de l'année.
 
 import { caisseDe, LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE, professionDe } from "@/backend/logic/professions"
-import { reglesEnVigueur, type ReglesFiscales } from "@/backend/logic/regles"
+import { PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, reglesPubliees, type ReglesFiscales } from "@/backend/logic/regles"
 import type { ActivityResult, Company, DetailCotisationsTNS, MicroEntreprise, ProfessionDeLActivite } from "@/types"
 
 export { LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE }
+
+/**
+ * Les règles qui décrivent les professions de l'année affichée ou exportée : celles avec lesquelles l'année est
+ * simulée (les dernières connues au-delà). Une année d'avant les premières règles n'est pas simulée, mais la fiche
+ * d'une activité reste modifiable : la liste et la ligne d'information prennent alors les règles de la première année
+ * connue, les plus proches.
+ */
+export function reglesDesProfessions(annee: number): ReglesFiscales {
+  return reglesDeLAnnee(annee).regles ?? reglesPubliees(PREMIERE_ANNEE_DES_REGLES)
+}
 
 /** Un groupe de la liste : son titre et ses professions, dans l'ordre des règles. */
 export interface GroupeDeProfessions {
@@ -21,7 +31,7 @@ const TITRES_DES_CAISSES: Record<string, string> = { CARPIMKO: "Santé (CARPIMKO
  * La liste proposée, dans l'ordre de l'ADR 015 : « Non réglementée » (hors des groupes, en tête), puis la santé
  * (CARPIMKO), puis la CIPAV, enfin « Autre profession réglementée ».
  */
-export function groupesDeProfessions(regles: ReglesFiscales = reglesEnVigueur): { groupes: GroupeDeProfessions[]; autres: { id: string; libelle: string }[] } {
+export function groupesDeProfessions(regles: ReglesFiscales): { groupes: GroupeDeProfessions[]; autres: { id: string; libelle: string }[] } {
   const liste = regles.liberauxReglementes.professions.liste
   const groupes = Object.entries(TITRES_DES_CAISSES).map(([caisse, titre]) => ({ titre, professions: liste.filter(p => p.caisse === caisse).map(({ id, libelle }) => ({ id, libelle })) }))
   return { groupes, autres: liste.filter(p => p.caisse === null).map(({ id, libelle }) => ({ id, libelle })) }
@@ -43,7 +53,7 @@ function complementaire(regles: ReglesFiscales, caisse: "CIPAV" | "CARPIMKO"): s
  * La ligne d'information sous la liste : la caisse, la micro-entreprise possible ou non, et les principaux taux de
  * l'année des règles.
  */
-export function informationSurLaProfession(activite: Pick<Company | MicroEntreprise, "profession">, regles: ReglesFiscales = reglesEnVigueur): string {
+export function informationSurLaProfession(activite: Pick<Company | MicroEntreprise, "profession">, regles: ReglesFiscales): string {
   const profession = professionDe(activite, regles)
   if (!profession) return "Profession libérale non réglementée, artisan ou commerçant : cotisations de la Sécurité sociale des indépendants."
   const caisse = caisseDe(profession)
@@ -57,7 +67,7 @@ export function informationSurLaProfession(activite: Pick<Company | MicroEntrepr
 }
 
 /** La profession peut être conventionnée : le champ « part conventionnée » a un sens. */
-export function estConventionnable(activite: Pick<Company | MicroEntreprise, "profession">, regles: ReglesFiscales = reglesEnVigueur): boolean {
+export function estConventionnable(activite: Pick<Company | MicroEntreprise, "profession">, regles: ReglesFiscales): boolean {
   return professionDe(activite, regles)?.conventionnable ?? false
 }
 
@@ -65,7 +75,7 @@ export function estConventionnable(activite: Pick<Company | MicroEntreprise, "pr
  * L'activité après le choix d'une profession : « non réglementée » retire le champ, comme une profession qui ne peut
  * pas être conventionnée retire la part conventionnée.
  */
-export function avecLaProfession<T extends Company | MicroEntreprise>(activite: T, id: string, regles: ReglesFiscales = reglesEnVigueur): T {
+export function avecLaProfession<T extends Company | MicroEntreprise>(activite: T, id: string, regles: ReglesFiscales): T {
   const reste = Object.fromEntries(Object.entries(activite).filter(([cle]) => cle !== "profession" && cle !== "partConventionnee")) as T
   if (id === PROFESSION_NON_REGLEMENTEE) return reste
   const garderLaPart = activite.partConventionnee !== undefined && estConventionnable({ profession: id }, regles)
@@ -88,7 +98,7 @@ export function statutEtProfession(activite: Pick<ActivityResult, "statut" | "pr
  * La profession saisie sur une activité, pour une fiche ou un export : « Ostéopathe (CIPAV) », « Infirmier ou
  * infirmière (CARPIMKO), part conventionnée 80 % » ; `null` sans profession réglementée.
  */
-export function professionDeLaFiche(activite: Pick<Company | MicroEntreprise, "profession" | "partConventionnee">, regles: ReglesFiscales = reglesEnVigueur): string | null {
+export function professionDeLaFiche(activite: Pick<Company | MicroEntreprise, "profession" | "partConventionnee">, regles: ReglesFiscales): string | null {
   const profession = professionDe(activite, regles)
   if (!profession) return null
   const libelle = libelleDeLaProfession({ id: profession.id, libelle: profession.libelle, caisse: caisseDe(profession) })

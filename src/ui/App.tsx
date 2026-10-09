@@ -266,7 +266,7 @@ function App() {
         <main id="contenu" tabIndex={-1} className="min-w-0 flex-grow scroll-mt-20 focus:outline-none">
           {/* Affichage « Trois vues » : les acteurs et la grille, puis les résultats, puis le comparateur, chacun dans sa vue. */}
           <VueDeLaPage vue="situation">
-            <EntitiesManager session={currentSession} setSession={setCurrentSession} onChargerMontage={chargerUnMontage} />
+            <EntitiesManager session={currentSession} setSession={setCurrentSession} annee={annee} onChargerMontage={chargerUnMontage} />
 
             <MonthlyGrid
               entities={currentSession.entities}

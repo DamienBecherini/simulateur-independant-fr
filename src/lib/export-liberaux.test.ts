@@ -2,6 +2,7 @@
 // Exports CSV et Markdown d'une profession libérale réglementée : profession dans le statut, cotisations par caisse.
 
 import { describe, expect, it } from "vitest"
+import { reglesPubliees } from "@/backend/logic/regles"
 import { runMetaSimulation } from "@/backend/logic/simulation-engine"
 import { grilleVide, type SimulationAnnuelle } from "@/types"
 import { makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
@@ -21,9 +22,11 @@ function sessionDeKine(): SimulationAnnuelle {
   }
 }
 
+const regles2026 = reglesPubliees(2026)
+
 describe("exports d'une profession libérale réglementée", () => {
   const session = sessionDeKine()
-  const report = runMetaSimulation(session)
+  const report = runMetaSimulation(session, regles2026)
 
   it("CSV : la profession suit le statut, et les cotisations par caisse ont leur tableau", () => {
     const csv = csvResultats(session, report)
@@ -43,9 +46,9 @@ describe("exports d'une profession libérale réglementée", () => {
 
   it("une activité non réglementée n'a ni profession ni tableau par caisse", () => {
     const sans = { ...session, entities: [session.entities[0], makeCompany({ id: "e1", name: "Cabinet", legalStatus: "EI" })] }
-    const csv = csvResultats(sans, runMetaSimulation(sans))
+    const csv = csvResultats(sans, runMetaSimulation(sans, regles2026))
     expect(csv).not.toContain("Cotisations par caisse")
-    expect(professionDeLaFiche(makeMicro())).toBeNull()
-    expect(professionDeLaFiche(makeMicro({ profession: "osteopathe" }))).toBe("Ostéopathe (CIPAV)")
+    expect(professionDeLaFiche(makeMicro(), regles2026)).toBeNull()
+    expect(professionDeLaFiche(makeMicro({ profession: "osteopathe" }), regles2026)).toBe("Ostéopathe (CIPAV)")
   })
 })

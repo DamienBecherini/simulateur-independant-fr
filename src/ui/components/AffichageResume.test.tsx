@@ -133,7 +133,7 @@ describe("acteurs dans l'affichage « Résumé »", () => {
   it("présente chaque acteur sur une ligne : nom modifiable, type, relations et commandes", async () => {
     const setSession = vi.fn()
     const avecRelation = { ...session(), relationships: [{ id: "r", fromId: "person-alice", toId: "micro-atelier", type: "Titulaire" as const }] }
-    render(dans("resume", <EntitiesManager session={avecRelation} setSession={setSession} />))
+    render(dans("resume", <EntitiesManager session={avecRelation} setSession={setSession} annee={2026} />))
 
     expect(screen.getByText("Personne · 1 part")).toBeInTheDocument()
     expect(screen.getByText("Micro-entreprise")).toBeInTheDocument()

@@ -10,7 +10,7 @@ import EditEntityModal from "./EditEntityModal"
 
 function ouvrir(entity: Entity) {
   const onSave = vi.fn()
-  render(<EditEntityModal entity={entity} isOpen onClose={() => {}} onSave={onSave} allEntities={[entity]} relationships={[]} />)
+  render(<EditEntityModal entity={entity} isOpen onClose={() => {}} onSave={onSave} allEntities={[entity]} relationships={[]} annee={2026} />)
   return { onSave, user: userEvent.setup() }
 }
 
