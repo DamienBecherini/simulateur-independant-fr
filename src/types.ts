@@ -10,6 +10,15 @@ import { ANNEE_COURANTE } from "./backend/regles/index.js"
 export const PUISSANCES_FISCALES = ["3", "4", "5", "6", "7"] as const
 export type PuissanceFiscale = (typeof PUISSANCES_FISCALES)[number]
 
+/**
+ * Les caisses de libéraux réglementés que le simulateur calcule (voir l'ADR 015) : la seule liste, d'où se déduit le
+ * type `CaisseLiberale`. Chaque particularité d'une caisse vit dans une table typée par caisse (calcul des cotisations,
+ * micro-entreprise, couverture, textes) : ajouter une caisse ici sans ses règles ni ses entrées est une erreur de
+ * compilation, jamais un calcul fait comme pour une autre caisse.
+ */
+export const CAISSES_LIBERALES = ["CIPAV", "CARPIMKO"] as const
+export type CaisseLiberale = (typeof CAISSES_LIBERALES)[number]
+
 export const AvatarSchema = z.object({
   type: z.enum(["initials", "icon"]),
   value: z.string(),
@@ -510,7 +519,7 @@ export type CotisationTNS =
  * l'ADR 015) : les lignes communes portent alors ses barèmes, et s'y ajoutent l'ASV et la CURPS.
  */
 export interface DetailCaisseLiberale {
-  caisse: "CIPAV" | "CARPIMKO"
+  caisse: CaisseLiberale
   profession: string
   libelleProfession: string
   /** Part des revenus conventionnés, nets de dépassements (0 pour une profession qui ne peut pas être conventionnée). */
@@ -533,7 +542,7 @@ export interface ProfessionDeLActivite {
   id: string
   libelle: string
   /** Sa caisse, si le simulateur la calcule ; `null` pour « autre profession réglementée ». */
-  caisse: "CIPAV" | "CARPIMKO" | null
+  caisse: CaisseLiberale | null
   /** Micro-entreprise d'un affilié de la CIPAV : son taux global de cotisations sur le chiffre d'affaires BNC. */
   tauxMicro?: number
 }

@@ -1,6 +1,6 @@
 // src/backend/logic/regles.ts
 
-import type { CotisationSalarie, PuissanceFiscale } from "../../types.js"
+import type { CaisseLiberale, CotisationSalarie, PuissanceFiscale } from "../../types.js"
 import { ANNEE_COURANTE, FICHIERS_DE_REGLES } from "../regles/index.js"
 
 export { ANNEE_COURANTE }
@@ -54,10 +54,6 @@ export interface ReglesTNS {
   cotisationsMinimales: { indemnitesJournalieres: number; retraiteDeBase: number; invaliditeDeces: number }
 }
 
-/** Les caisses de libéraux réglementés que le simulateur calcule (voir l'ADR 015). */
-export const CAISSES_LIBERALES = ["CIPAV", "CARPIMKO"] as const
-export type CaisseLiberale = (typeof CAISSES_LIBERALES)[number]
-
 /**
  * Une profession libérale réglementée proposée sur une activité BNC, et ses particularités. `caisse` vaut `null` pour
  * « autre profession réglementée », calculée comme une profession non réglementée.
@@ -65,7 +61,11 @@ export type CaisseLiberale = (typeof CAISSES_LIBERALES)[number]
 export interface ProfessionReglementee {
   id: string
   libelle: string
-  /** Une caisse de `CAISSES_LIBERALES`, ou `null`. */
+  /**
+   * Une caisse de `CAISSES_LIBERALES` (src/types.ts), ou `null`. Lue telle quelle dans le fichier JSON, d'où le type
+   * `string` : `caisseDe` (professions.ts) la ramène à une `CaisseLiberale`, et un test vérifie que chaque fichier de
+   * règles ne nomme que des caisses de la liste.
+   */
   caisse: string | null
   /** La micro-entreprise lui est ouverte. */
   microEntreprise: boolean
@@ -99,8 +99,19 @@ export interface RepartitionMicroLiberale {
   invaliditeDeces: number
 }
 
-/** Règles des professions libérales réglementées d'une année (voir l'ADR 015). */
-export interface ReglesLiberauxReglementes {
+/** Taux global d'une caisse qui a le sien en micro-entreprise, et sa répartition entre les risques. */
+export interface MicroEntrepriseLiberale {
+  cotisations: number
+  tauxRetraiteDeBase: number
+  repartition: RepartitionMicroLiberale
+}
+
+/**
+ * Règles des professions libérales réglementées d'une année (voir l'ADR 015) : un bloc par caisse de
+ * `CAISSES_LIBERALES`. Les calculs lisent le bloc d'une caisse par `ReglesLiberauxReglementes[caisse]` : une caisse de
+ * la liste sans bloc ici ne compile pas.
+ */
+export interface ReglesLiberauxReglementes extends Record<CaisseLiberale, object> {
   professions: { liste: ProfessionReglementee[] }
   /** Règles communes aux caisses de la CNAVPL ; maladie, allocations familiales, CSG-CRDS et formation : bloc TNS. */
   commun: {
@@ -114,7 +125,7 @@ export interface ReglesLiberauxReglementes {
   CIPAV: {
     retraiteComplementaire: { tranches: TrancheCotisation[] }
     invaliditeDeces: BaremeInvaliditeDecesLiberal
-    microEntreprise: { cotisations: number; tauxRetraiteDeBase: number; repartition: RepartitionMicroLiberale }
+    microEntreprise: MicroEntrepriseLiberale
   }
   CARPIMKO: {
     /** forfait + taux x (assiette ramenée entre `assietteMinimale` et `plafond`, moins `seuil`), en euros. */

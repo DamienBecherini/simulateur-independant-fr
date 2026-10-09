@@ -2,10 +2,10 @@
 
 import { readdirSync } from "node:fs"
 import { describe, expect, it } from "vitest"
-import { PUISSANCES_FISCALES } from "../../types.js"
+import { CAISSES_LIBERALES, PUISSANCES_FISCALES } from "../../types.js"
 import { reductionGenerale } from "../logic/cotisationsSalarie.js"
 import { montantBaremeKilometrique } from "../logic/frais-kilometriques.js"
-import { CAISSES_LIBERALES, type BaremeProgressif, type ReglesFiscales, type ReglesLiberauxReglementes, type TrancheCotisation } from "../logic/regles.js"
+import { type BaremeProgressif, type ReglesFiscales, type ReglesLiberauxReglementes, type TrancheCotisation } from "../logic/regles.js"
 import fichier2024 from "./2024.json" with { type: "json" }
 import fichier2025 from "./2025.json" with { type: "json" }
 import fichier2026 from "./2026.json" with { type: "json" }
@@ -303,6 +303,14 @@ describe("règles par année", () => {
         expect(p.microEntreprise, p.id).toBe(p.caisse !== "CARPIMKO")
         expect(p.conventionnable, p.id).toBe(p.caisse === "CARPIMKO")
         expect(p.curps, p.id).toBe(p.caisse === "CARPIMKO")
+      }
+    })
+
+    it("a, pour chaque caisse calculée, son bloc de règles et au moins une profession", () => {
+      // Une caisse de CAISSES_LIBERALES sans profession ne serait jamais calculée ; sans bloc, elle ne compilerait pas.
+      for (const caisse of CAISSES_LIBERALES) {
+        expect(regles.liberauxReglementes[caisse], caisse).toBeTypeOf("object")
+        expect(regles.liberauxReglementes.professions.liste.some(p => p.caisse === caisse), caisse).toBe(true)
       }
     })
 
