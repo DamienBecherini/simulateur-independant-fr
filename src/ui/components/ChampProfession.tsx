@@ -3,7 +3,7 @@
 // d'EURL), et la part conventionnée de ses recettes quand elle peut être conventionnée (voir l'ADR 015).
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { avecLaProfession, estConventionnable, groupesDeProfessions, informationSurLaProfession, LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE } from "@/lib/professions"
+import { avecLaProfession, estConventionnable, groupesDeProfessions, informationSurLaProfession, LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE, reglesDesProfessions } from "@/lib/professions"
 import type { Company, MicroEntreprise } from "@/types"
 import { ChampNumerique } from "./ChampNumerique"
 
@@ -14,8 +14,14 @@ interface Props<T extends Company | MicroEntreprise> {
   onChange: (activite: T) => void
 }
 
-export function ChampProfession<T extends Company | MicroEntreprise>({ activite, onChange }: Props<T>) {
-  const { groupes, autres } = groupesDeProfessions()
+interface PropsDuChamp<T extends Company | MicroEntreprise> extends Props<T> {
+  /** L'année affichée : la liste et la ligne d'information décrivent ses règles (taux, caisse), pas celles d'une autre. */
+  annee: number
+}
+
+export function ChampProfession<T extends Company | MicroEntreprise>({ activite, onChange, annee }: PropsDuChamp<T>) {
+  const regles = reglesDesProfessions(annee)
+  const { groupes, autres } = groupesDeProfessions(regles)
   return (
     <>
       <div className="grid grid-cols-4 items-start gap-4">
@@ -23,7 +29,7 @@ export function ChampProfession<T extends Company | MicroEntreprise>({ activite,
           Profession
         </label>
         <div className="col-span-3">
-          <Select value={activite.profession ?? PROFESSION_NON_REGLEMENTEE} onValueChange={id => onChange(avecLaProfession(activite, id))}>
+          <Select value={activite.profession ?? PROFESSION_NON_REGLEMENTEE} onValueChange={id => onChange(avecLaProfession(activite, id, regles))}>
             <SelectTrigger id="profession" aria-describedby="profession-aide" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -49,11 +55,11 @@ export function ChampProfession<T extends Company | MicroEntreprise>({ activite,
             </SelectContent>
           </Select>
           <p id="profession-aide" className={aide}>
-            {informationSurLaProfession(activite)}
+            {informationSurLaProfession(activite, regles)}
           </p>
         </div>
       </div>
-      {estConventionnable(activite) ? <ChampPartConventionnee activite={activite} onChange={onChange} /> : null}
+      {estConventionnable(activite, regles) ? <ChampPartConventionnee activite={activite} onChange={onChange} /> : null}
     </>
   )
 }

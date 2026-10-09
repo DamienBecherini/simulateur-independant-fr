@@ -8,10 +8,10 @@ import type { MicroEntreprise } from "../../../types.js"
 /*
  * Cas de référence 2026 : micro-entreprise seule, titulaire célibataire (1 part).
  *
- * Démarche : le moteur tourne avec les règles réelles de config.json, et chaque attendu est dérivé à la main
+ * Démarche : le moteur tourne avec les règles réelles de 2026 (REGLES_DES_CAS), et chaque attendu est dérivé à la main
  * à partir des règles officielles 2026, sans lancer le moteur. En cas d'écart, c'est le moteur qui est suspect.
  *
- * Règles utilisées (sources dans config.json) :
+ * Règles utilisées (sources dans le fichier des règles de 2026) :
  * - cotisations sur le CA : vente 12,3 %, prestations BIC 21,2 %, prestations BNC 25,6 % ; ACRE : - 50 % ;
  * - contribution à la formation professionnelle, en plus (article L6331-48 du code du travail) : vente 0,1 %,
  *   prestations BNC 0,2 %, prestations BIC 0,3 % (taux des artisans, le simulateur ne distinguant pas le commerçant,

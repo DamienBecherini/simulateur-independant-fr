@@ -2,7 +2,7 @@
 
 import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, DonneesDeLAnnee, StatutSociete } from "../../types.js"
 import { activiteComparee, beneficeAvantDividendes, PRECISION_REMUNERATION, remunerationMaximale, simulerScenario, type Activite } from "./comparateur.js"
-import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
+import type { ReglesFiscales } from "./regles.js"
 import type { ContexteDeLAnnee } from "./simulation-engine.js"
 
 /*
@@ -47,7 +47,7 @@ function meilleurPoint(points: PointRemuneration[]): PointRemuneration | null {
   }, null)
 }
 
-export function optimiserRemuneration(session: DonneesDeLAnnee, options: ComparaisonOptions, statut: StatutSociete, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): OptimisationRemuneration {
+export function optimiserRemuneration(session: DonneesDeLAnnee, options: ComparaisonOptions, statut: StatutSociete, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): OptimisationRemuneration {
   const vide = (warnings: string[]): OptimisationRemuneration => ({ statut, remunerationMaximale: 0, points: [], meilleur: null, meilleurAvecRetraite: null, warnings })
 
   const source = activiteComparee(session, options.activityId)

@@ -1,19 +1,20 @@
 // src/backend/logic/cotisations-liberales.test.ts
 
 import { describe, expect, it } from "vitest"
-import { asv, complementaireCarpimko, cotisationsDeLaCaisse, curps, invaliditeDecesLiberale, maladieAuxiliaire } from "./cotisations-liberales.js"
+import { CAISSES_LIBERALES, type CaisseLiberale } from "../../types.js"
+import { asv, CALCUL_PAR_CAISSE, complementaireCarpimko, cotisationsDeLaCaisse, curps, invaliditeDecesLiberale, maladieAuxiliaire } from "./cotisations-liberales.js"
 import { calculerCotisationsTNS, revenuAvantCotisationsPourUnNet } from "./cotisationsTNS.js"
 import { parametresDeLaCaisse } from "./professions.js"
-import { reglesDeLAnnee, reglesEnVigueur } from "./regles.js"
+import { reglesPubliees } from "./regles.js"
 
 /*
  * Barèmes des caisses de libéraux réglementés (voir l'ADR 015). Les montants attendus se recalculent de tête à partir
- * des règles de 2026 (config.json) et de 2025 (regles/2025.json) ; les cas complets sont dans
+ * des règles de 2026 (regles/2026.json) et de 2025 (regles/2025.json) ; les cas complets sont dans
  * references/liberaux.reference.test.ts.
  */
 
-const regles2026 = reglesEnVigueur
-const regles2025 = reglesDeLAnnee(2025).regles!
+const regles2026 = reglesPubliees(2026)
+const regles2025 = reglesPubliees(2025)
 const pass = regles2026.TNS.plafondSecuriteSociale
 const { CIPAV: cipav, CARPIMKO: carpimko, commun } = regles2026.liberauxReglementes
 
@@ -118,7 +119,7 @@ describe("cotisations d'un libéral réglementé au réel", () => {
   })
 
   it("2024 : barème maladie propre aux libéraux réglementés (6,5 % au-delà de 110 % du PASS)", () => {
-    const regles2024 = reglesDeLAnnee(2024).regles!
+    const regles2024 = reglesPubliees(2024)
     const tns = calculerCotisationsTNS(100000, regles2024.TNS, parametresDeLaCaisse({ profession: "architecte" }, regles2024, 2024))
     expect(tns.cotisations.maladieMaternite).toBeCloseTo(0.065 * tns.assiette, 6)
     expect(tns.cotisations.retraiteComplementaire).toBeCloseTo(0.09 * 46368 + 0.22 * (tns.assiette - 46368), 6)
@@ -128,5 +129,22 @@ describe("cotisations d'un libéral réglementé au réel", () => {
     const caisse = parametresDeLaCaisse(kine, regles2026, 2026)
     const brut = revenuAvantCotisationsPourUnNet(30000, regles2026.TNS, caisse)
     expect(brut - calculerCotisationsTNS(brut, regles2026.TNS, caisse).total).toBeCloseTo(30000, 4)
+  })
+})
+
+describe("une caisse de plus", () => {
+  it("chaque caisse de CAISSES_LIBERALES a son calcul, sans cas par défaut", () => {
+    expect(Object.keys(CALCUL_PAR_CAISSE).sort()).toEqual([...CAISSES_LIBERALES].sort())
+  })
+
+  it("une caisse ajoutée à la liste sans son calcul ni ses règles est refusée à la compilation (vérifié par tsc)", () => {
+    // Si « CARMF » rejoignait CAISSES_LIBERALES, la table des calculs, typée par caisse, n'aurait pas son entrée : la
+    // ligne suivante, qui le simule, ne compile pas (sinon @ts-expect-error ferait échouer la vérification des types).
+    // @ts-expect-error : la table n'a pas d'entrée « CARMF ».
+    const avecUneCaisseDePlus: Record<CaisseLiberale | "CARMF", unknown> = CALCUL_PAR_CAISSE
+    // Et les règles des libéraux d'une année n'ont pas de bloc « CARMF » à donner à son calcul.
+    // @ts-expect-error : pas de bloc « CARMF » dans les règles.
+    const blocDeLaCaisse = regles2026.liberauxReglementes.CARMF
+    expect([avecUneCaisseDePlus, blocDeLaCaisse].map(valeur => typeof valeur)).toEqual(["object", "undefined"])
   })
 })

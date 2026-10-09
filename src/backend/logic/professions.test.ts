@@ -6,11 +6,11 @@ import { comparerStatuts } from "./comparateur.js"
 import { defaultComparisonOptions } from "./options-du-comparateur.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import { avertissementsDeLaProfession, caisseDe, microInterdite, partConventionneeDe, PROFESSION_NON_REGLEMENTEE, professionDe, professionDeLActivite, professionsConnues, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
-import { reglesEnVigueur } from "./regles.js"
+import { reglesPubliees } from "./regles.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
 
-const regles = reglesEnVigueur
+const regles = reglesPubliees(2026)
 const alice = personne("alice")
 const profession = (id: string) => professionDe({ profession: id }, regles)!
 
@@ -73,7 +73,7 @@ describe("moteur : la profession dans chaque statut", () => {
   it("gérant d'EURL kinésithérapeute : cotisations de la CARPIMKO et avertissement sur les sociétés d'exercice libéral", () => {
     const eurl: Company = { ...societe("c1", "EURL", 1000), profession: "masseur-kinesitherapeute" }
     const flux: Flux[] = [["c1", "ca_services", 80000], ["c1", "director_remuneration", 30000]]
-    const resultat = runMetaSimulation(session([alice, eurl], [relation("alice", "c1", "Gérant")], flux)).activities[0]
+    const resultat = runMetaSimulation(session([alice, eurl], [relation("alice", "c1", "Gérant")], flux), regles).activities[0]
     expect(resultat.cotisationsTNS?.caisse).toMatchObject({ caisse: "CARPIMKO", profession: "masseur-kinesitherapeute" })
     expect(resultat.cotisationsTNS?.cotisations.invaliditeDeces).toBe(1022)
     expect(resultat.profession).toEqual({ id: "masseur-kinesitherapeute", libelle: "Masseur-kinésithérapeute", caisse: "CARPIMKO" })
@@ -82,15 +82,15 @@ describe("moteur : la profession dans chaque statut", () => {
 
   it("président de SASU ostéopathe : régime général inchangé, avec l'avertissement", () => {
     const sasu: Company = { ...societe("c1", "SASU", 1000), profession: "osteopathe" }
-    const resultat = runMetaSimulation(session([alice, sasu], [relation("alice", "c1", "Président")], [["c1", "ca_services", 80000], ["c1", "director_remuneration", 30000]])).activities[0]
+    const resultat = runMetaSimulation(session([alice, sasu], [relation("alice", "c1", "Président")], [["c1", "ca_services", 80000], ["c1", "director_remuneration", 30000]]), regles).activities[0]
     expect(resultat.cotisationsPresident).toBeDefined()
     expect(resultat.warnings).toContainEqual(expect.stringContaining("Ostéopathe en SASU"))
   })
 
   it("« autre profession réglementée » en EI : calcul des indépendants, avec l'avertissement", () => {
     const ei: Company = { ...societe("e1", "EI", 0), profession: "autre-reglementee" }
-    const sans = runMetaSimulation(session([alice, societe("e1", "EI", 0)], titulaire("e1"), [["e1", "ca_services", 50000]])).activities[0]
-    const avec = runMetaSimulation(session([alice, ei], titulaire("e1"), [["e1", "ca_services", 50000]])).activities[0]
+    const sans = runMetaSimulation(session([alice, societe("e1", "EI", 0)], titulaire("e1"), [["e1", "ca_services", 50000]]), regles).activities[0]
+    const avec = runMetaSimulation(session([alice, ei], titulaire("e1"), [["e1", "ca_services", 50000]]), regles).activities[0]
     expect(avec.cotisationsSociales).toBe(sans.cotisationsSociales)
     expect(avec.cotisationsTNS?.caisse).toBeUndefined()
     expect(avec.profession).toEqual({ id: "autre-reglementee", libelle: "Autre profession réglementée", caisse: null })
@@ -99,7 +99,7 @@ describe("moteur : la profession dans chaque statut", () => {
 
   it("micro-entreprise de la CIPAV avec l'ACRE : la réduction porte sur son taux de 23,2 %", () => {
     const m: MicroEntreprise = { ...micro("m1", { beneficieACRE: true }), profession: "psychologue" }
-    const resultat = runMetaSimulation(session([alice, m], titulaire("m1"), [["m1", "ca_micro_services_bnc", 20000]])).activities[0]
+    const resultat = runMetaSimulation(session([alice, m], titulaire("m1"), [["m1", "ca_micro_services_bnc", 20000]]), regles).activities[0]
     // 20 000 x 23,2 % x 50 % = 2 320 €, plus 40 € de formation professionnelle.
     expect(resultat.cotisationsSociales).toBe(2360)
   })
@@ -107,7 +107,7 @@ describe("moteur : la profession dans chaque statut", () => {
   it("le comparateur garde la profession dans chaque colonne : caisse en EI et en EURL, taux de la CIPAV en micro, avertissement en SASU", () => {
     const ei: Company = { ...societe("e1", "EI", 0), profession: "osteopathe" }
     const donnees = session([alice, ei], titulaire("e1"), [["e1", "ca_services", 40000]])
-    const { scenarios } = comparerStatuts(donnees, { ...defaultComparisonOptions(donnees, "e1"), partBncPrestations: 1 })
+    const { scenarios } = comparerStatuts(donnees, { ...defaultComparisonOptions(donnees, "e1"), partBncPrestations: 1 }, regles)
     const colonne = (statut: string) => scenarios.find(s => s.statut === statut)!
     expect(colonne("SASU").warnings).toContainEqual(expect.stringContaining("Ostéopathe en SASU"))
     expect(colonne("EURL").warnings).toContainEqual(expect.stringContaining("Ostéopathe en EURL"))

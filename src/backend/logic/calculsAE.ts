@@ -1,7 +1,7 @@
 // src/backend/logic/calculsAE.ts
 
 import { euros } from "./format.js"
-import { reglesEnVigueur, type ReglesFiscales, type TauxMicro } from "./regles.js"
+import type { ReglesFiscales, TauxMicro } from "./regles.js"
 
 export interface EntreesMicro {
   caVente: number
@@ -50,7 +50,7 @@ function appliquerTaux({ caVente, caServicesBic, caServicesBnc }: ChiffreAffaire
  * deux années de suite, il prend fin au 1er janvier suivant (pas de seuil qui fasse sortir immédiatement). L'année de
  * création, les plafonds sont réduits au prorata des jours d'activité (`prorata`, voir dispositifs.ts).
  */
-export function depassePlafondMicro(ca: ChiffreAffairesMicro, regles: ReglesFiscales = reglesEnVigueur, prorata = 1): boolean {
+export function depassePlafondMicro(ca: ChiffreAffairesMicro, regles: ReglesFiscales, prorata = 1): boolean {
   const plafonds = plafondsAuProrata(regles.microEntreprise.plafonds, prorata)
   const services = ca.caServicesBic + ca.caServicesBnc
   return services > plafonds.services || ca.caVente + services > plafonds.vente
@@ -119,7 +119,7 @@ function calculerRevenuImposable(entrees: EntreesMicro, abattement: ReglesMicro[
  * Seuil de revenu fiscal de référence N-2 qui ouvre le versement libératoire : un montant par part,
  * majoré de 50 % par demi-part (et de 25 % par quart de part), soit ce montant multiplié par le nombre de parts.
  */
-export function plafondRfrVersementLiberatoire(partsFiscales: number, regles: ReglesFiscales = reglesEnVigueur): number {
+export function plafondRfrVersementLiberatoire(partsFiscales: number, regles: ReglesFiscales): number {
   return regles.microEntreprise.versementLiberatoire.plafondRfrParPart * partsFiscales
 }
 
@@ -127,7 +127,7 @@ export function plafondRfrVersementLiberatoire(partsFiscales: number, regles: Re
  * Micro-entreprise : cotisations sociales en pourcentage du chiffre d'affaires (réduites avec l'ACRE), plus la
  * contribution à la formation professionnelle (que l'ACRE ne réduit pas), puis soit un revenu imposable après abattement forfaitaire, soit le versement libératoire de l'impôt.
  */
-export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales = reglesEnVigueur): ResultatMicro {
+export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales): ResultatMicro {
   const micro = regles.microEntreprise
   const warnings = [...verifierPlafonds(entrees, plafondsAuProrata(micro.plafonds, entrees.prorataPlafonds ?? 1)), ...verifierFranchiseTVA(entrees, regles.TVA)]
 

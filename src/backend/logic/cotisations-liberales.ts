@@ -1,8 +1,8 @@
 // src/backend/logic/cotisations-liberales.ts
 
-import type { CotisationTNS, DetailCaisseLiberale } from "../../types.js"
+import type { CaisseLiberale, CotisationTNS, DetailCaisseLiberale } from "../../types.js"
 import { parTranches, progressive } from "./baremes.js"
-import type { BaremeInvaliditeDecesLiberal, CaisseLiberale, ProfessionReglementee, ReglesLiberauxReglementes, TrancheCotisation } from "./regles.js"
+import type { BaremeInvaliditeDecesLiberal, ProfessionReglementee, ReglesLiberauxReglementes, TrancheCotisation } from "./regles.js"
 
 /*
  * Cotisations d'une profession libérale réglementée dont le simulateur connaît la caisse (voir l'ADR 015 et le dossier
@@ -74,6 +74,56 @@ export function maladieAuxiliaire(assiette: number, maladieAuBareme: number, par
   return { praticien: resteConventionnes + horsConvention, priseEnCharge: surConventionnes - resteConventionnes }
 }
 
+/** Ce que le calcul propre à une caisse reçoit : l'assiette de l'année et ce que la caisse peut en faire. */
+interface EntreesDeLaCaisse {
+  assiette: number
+  pass: number
+  /** Maladie au barème des libéraux, avant toute prise en charge. */
+  maladieAuBareme: number
+  partConventionnee: number
+  annee: number
+  anneePrecedente?: { annee: number; assiette: number }
+}
+
+/** Ce que chaque caisse calcule à sa façon : maladie restant due, retraite complémentaire, ASV et prise en charge. */
+type PartDeLaCaisse = Pick<CotisationsDeLaCaisse["lignes"], "maladieMaternite" | "retraiteComplementaire"> & Pick<DetailCaisseLiberale, "asv" | "priseEnCharge" | "baseDesCotisationsDeLAnneePrecedente">
+
+/** Le calcul d'une caisse, à partir de son bloc des règles de l'année. */
+type CalculDeLaCaisse<C extends CaisseLiberale> = (bareme: ReglesLiberauxReglementes[C], entrees: EntreesDeLaCaisse) => PartDeLaCaisse
+
+/**
+ * Le calcul propre à chaque caisse, une entrée par caisse de `CAISSES_LIBERALES` : le compilateur refuse une caisse
+ * ajoutée à la liste sans son entrée (ni le bloc de ses règles, que l'entrée lit). Il n'y a pas de cas « par défaut » :
+ * une nouvelle caisse ne peut pas être calculée comme une autre par oubli.
+ */
+export const CALCUL_PAR_CAISSE: { [C in CaisseLiberale]: CalculDeLaCaisse<C> } = {
+  CIPAV: (cipav, { assiette, pass, maladieAuBareme }) => ({
+    maladieMaternite: maladieAuBareme,
+    retraiteComplementaire: parTranches(assiette, cipav.retraiteComplementaire.tranches, pass),
+    asv: 0,
+    priseEnCharge: { maladie: 0, asv: 0 }
+  }),
+  // Complémentaire et ASV sur l'assiette de l'année précédente quand elle est connue.
+  CARPIMKO: (carpimko, { assiette, pass, maladieAuBareme, partConventionnee, annee, anneePrecedente }) => {
+    const base = anneePrecedente ?? { annee, assiette }
+    const maladie = maladieAuxiliaire(assiette, maladieAuBareme, partConventionnee, carpimko.priseEnChargeMaladie)
+    const avantage = asv(base.assiette * partConventionnee, partConventionnee, carpimko.asv, pass)
+    return {
+      maladieMaternite: maladie.praticien,
+      retraiteComplementaire: complementaireCarpimko(base.assiette, carpimko.retraiteComplementaire),
+      asv: avantage.praticien,
+      priseEnCharge: { maladie: maladie.priseEnCharge, asv: avantage.assuranceMaladie },
+      baseDesCotisationsDeLAnneePrecedente: { annee: base.annee, assiette: base.assiette, anneePrecedenteConnue: anneePrecedente !== undefined }
+    }
+  }
+}
+
+/** Le calcul de la caisse `caisse`, avec son bloc des règles : le type relie l'un à l'autre, sans conversion. */
+function partDeLaCaisse<C extends CaisseLiberale>(caisse: C, regles: ReglesLiberauxReglementes, entrees: EntreesDeLaCaisse): PartDeLaCaisse {
+  const calcul: CalculDeLaCaisse<C> = CALCUL_PAR_CAISSE[caisse]
+  return calcul(regles[caisse], entrees)
+}
+
 /** Les cotisations propres à la caisse d'une profession libérale réglementée, sur l'assiette de l'année. */
 export function cotisationsDeLaCaisse(assiette: number, pass: number, p: ParametresDeLaCaisse): CotisationsDeLaCaisse {
   const { commun } = p.regles
@@ -85,30 +135,11 @@ export function cotisationsDeLaCaisse(assiette: number, pass: number, p: Paramet
   const bareme = p.regles[p.caisse].invaliditeDeces
   const invaliditeDeces = invaliditeDecesLiberale(assiette, bareme, pass)
   const surAssietteReelle = parTranches(assiette, commun.indemnitesJournalieres.tranches, pass) + parTranches(assiette, commun.retraiteDeBase.tranches, pass) + invaliditeDecesLiberale(assiette, { ...bareme, assietteMinimalePartDuPlafond: 0 }, pass)
-  const minimums = {
+  const { maladieMaternite, retraiteComplementaire, ...propre } = partDeLaCaisse(p.caisse, p.regles, { assiette, pass, maladieAuBareme, partConventionnee: p.partConventionnee, annee: p.annee, anneePrecedente: p.anneePrecedente })
+  return {
+    lignes: { maladieMaternite, indemnitesJournalieres, retraiteDeBase, retraiteComplementaire, invaliditeDeces },
+    detail: { caisse: p.caisse, profession: p.profession.id, libelleProfession: p.profession.libelle, partConventionnee: p.partConventionnee, curps: p.profession.curps ? curps(assiette, commun.curps, pass) : 0, ...propre },
     supplementMinimum: indemnitesJournalieres + retraiteDeBase + invaliditeDeces - surAssietteReelle,
     minimumRetraiteApplique: assiette < minimales.retraiteDeBase
-  }
-  const detail = { caisse: p.caisse, profession: p.profession.id, libelleProfession: p.profession.libelle, partConventionnee: p.partConventionnee, curps: p.profession.curps ? curps(assiette, commun.curps, pass) : 0 }
-
-  if (p.caisse === "CIPAV") {
-    const retraiteComplementaire = parTranches(assiette, p.regles.CIPAV.retraiteComplementaire.tranches, pass)
-    return { lignes: { maladieMaternite: maladieAuBareme, indemnitesJournalieres, retraiteDeBase, retraiteComplementaire, invaliditeDeces }, detail: { ...detail, asv: 0, priseEnCharge: { maladie: 0, asv: 0 } }, ...minimums }
-  }
-
-  // CARPIMKO : complémentaire et ASV sur l'assiette de l'année précédente quand elle est connue.
-  const carpimko = p.regles.CARPIMKO
-  const base = p.anneePrecedente ?? { annee: p.annee, assiette }
-  const maladie = maladieAuxiliaire(assiette, maladieAuBareme, p.partConventionnee, carpimko.priseEnChargeMaladie)
-  const avantage = asv(base.assiette * p.partConventionnee, p.partConventionnee, carpimko.asv, pass)
-  return {
-    lignes: { maladieMaternite: maladie.praticien, indemnitesJournalieres, retraiteDeBase, retraiteComplementaire: complementaireCarpimko(base.assiette, carpimko.retraiteComplementaire), invaliditeDeces },
-    detail: {
-      ...detail,
-      asv: avantage.praticien,
-      priseEnCharge: { maladie: maladie.priseEnCharge, asv: avantage.assuranceMaladie },
-      baseDesCotisationsDeLAnneePrecedente: { annee: base.annee, assiette: base.assiette, anneePrecedenteConnue: p.anneePrecedente !== undefined }
-    },
-    ...minimums
   }
 }

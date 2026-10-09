@@ -266,7 +266,7 @@ Il n'existe aucun code PER, Madelin, 154 bis ou 163 quatervicies. Seule la feuil
 | EURL (gérant) | `src/backend/logic/calculsEURL.ts`, `calculerEURL` | `remunerationImposable = net + part non déductible`, puis comptée dans `revenusSalariaux` (déduction de 10 %). |
 | SASU (président) | `src/backend/logic/calculsSASU.ts`, `calculerSASU` ; `verserRemuneration` | Même chemin que l'EURL, par `remunerationsImposables`. |
 | Micro-entreprise | `src/backend/logic/calculsAE.ts`, `calculerMicro` et `calculerRevenuImposable` ; `simulerMicroEntreprise` (simulation-engine.ts) | Revenu après abattement : au barème (`beneficesImposables`) ou, sous versement libératoire, dans `revenusAuVersementLiberatoire` (revenu fiscal de référence seulement). |
-| Règles par année | `src/backend/logic/regles.ts` (`ReglesFiscales.IR`, `TNS.plafondSecuriteSociale`) ; `src/backend/regles/2024.json`, `2025.json` et `src/backend/config.json` (2026) | PASS en double : `regimeGeneral` et `TNS`. Toute nouvelle clé doit être ajoutée dans les trois fichiers (test `MemeForme` dans `regles.test.ts`), dans `testing/regles-de-test.ts` et dans `outils/lecture.ts` (`reglesCles`). |
+| Règles par année | `src/backend/logic/regles.ts` (`ReglesFiscales.IR`, `TNS.plafondSecuriteSociale`) ; `src/backend/regles/2024.json`, `2025.json` et `2026.json` (liste dans `src/backend/regles/index.ts`) | PASS en double : `regimeGeneral` et `TNS`. Toute nouvelle clé doit être ajoutée dans les trois fichiers (test `MemeForme` dans `regles.test.ts`), dans `testing/regles-de-test.ts` et dans `outils/lecture.ts` (`reglesCles`). |
 | Flux | `src/types.ts`, `FinancialFlowSchema` (énumération des types) | Les types de flux d'une personne sont `salary`, `are`, `other_taxable_income` et `expense`. |
 
 ---

@@ -6,7 +6,7 @@ import type { ComparaisonOptions, ComparaisonResult, DeplacementsProfessionnels,
 import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libellePuissance, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { numeroterNotes } from "./notes"
-import { libelleDeLaProfession, lignesDeLaCaisse, professionDeLaFiche, statutEtProfession } from "./professions"
+import { libelleDeLaProfession, lignesDeLaCaisse, professionDeLaFiche, reglesDesProfessions, statutEtProfession } from "./professions"
 
 /** Comparaison calculée à l'export pour l'activité choisie dans le comparateur, ou la raison de son absence. */
 export type ComparaisonDuRapport = { nomActivite: string; options: ComparaisonOptions; resultat: ComparaisonResult } | { nomActivite: string; erreur: string }
@@ -72,10 +72,10 @@ function detailDesDeplacements(deplacements: DeplacementsProfessionnels | undefi
   return deplacements ? ` ; déplacements professionnels : ${kilometres(deplacements.kmParAn)} par an, ${libelleVoiture(deplacements)}` : ""
 }
 
-function detailDeLActeur(entity: Entity): string {
+function detailDeLActeur(entity: Entity, annee: number): string {
   if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}${detailDesFraisReels(entity)}`
   const creation = dateDeCreationLisible(entity)
-  const profession = professionDeLaFiche(entity)
+  const profession = professionDeLaFiche(entity, reglesDesProfessions(annee))
   const creee = `${creation ? ` ; créée en ${creation}` : ""}${profession ? ` ; profession : ${profession}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}`
   if (entity.type === "company") return `${entity.legalStatus === "EI" ? "Entreprise individuelle au régime réel" : `Société à l'impôt sur les sociétés, capital social ${euros(entity.capitalSocial)}${entity.reservesInitiales ? `, réserves au début de la simulation ${euros(entity.reservesInitiales)}` : ""}`}${creee}`
   const rfr = entity.rfrN2 === undefined ? "non renseigné" : euros(entity.rfrN2)
@@ -93,7 +93,7 @@ function trajetsDesPersonnes(session: SimulationAnnuelle): string {
 
 function sectionActeurs(session: SimulationAnnuelle): string {
   if (session.entities.length === 0) return "## Acteurs\n\nAucun acteur saisi."
-  const lignes = session.entities.map(e => [echapper(e.name), natureActeur(e), detailDeLActeur(e)])
+  const lignes = session.entities.map(e => [echapper(e.name), natureActeur(e), detailDeLActeur(e, session.annee)])
   return `## Acteurs\n\n${tableau(["Nom", "Nature", "Détails"], lignes)}${trajetsDesPersonnes(session)}`
 }
 

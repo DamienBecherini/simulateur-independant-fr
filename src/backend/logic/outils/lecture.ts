@@ -4,7 +4,7 @@
 
 import { z } from "zod"
 import type { Entity, FinancialFlow, SessionState } from "../../../types.js"
-import { DERNIERE_ANNEE_DES_REGLES, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, type ReglesFiscales } from "../regles.js"
+import { ANNEE_COURANTE, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, type ReglesFiscales } from "../regles.js"
 import { anneeDeLaSession, empreinteDeLaSession, ErreurOutil, genreDe, GENRES_D_ACTEUR, nomDe, phraseDeLaRelation, trouverActeur, TYPES_DE_FLUX } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LIMITES, ListeDeMoisSchema } from "./limites.js"
 import { definirOutil, resultatSeul } from "./outil.js"
@@ -63,7 +63,7 @@ export const decrireSimulation = definirOutil({
       nom: session.name,
       empreinte: empreinteDeLaSession(session),
       annees: session.annees.map(a => a.annee),
-      reglesConnues: { premiere: PREMIERE_ANNEE_DES_REGLES, derniere: DERNIERE_ANNEE_DES_REGLES },
+      reglesConnues: { premiere: PREMIERE_ANNEE_DES_REGLES, derniere: ANNEE_COURANTE },
       acteurs: session.entities.map(acteur => ({ id: acteur.id, nom: acteur.name, genre: genreDe(acteur), verrouille: acteur.locked, reglages: reglagesDeLActeur(acteur, detaille) })),
       relations: session.relationships.map(r => ({ id: r.id, deId: r.fromId, versId: r.toId, type: r.type, phrase: phraseDeLaRelation(session, r) })),
       flux: session.annees.map(({ annee, monthlyData }) => {

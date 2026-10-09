@@ -3,6 +3,8 @@
 // service worker garde pour l'ouvrir hors ligne. Fonctions pures, utilisées à la compilation par le plugin
 // vite-plugin-demo-installable.ts (voir l'ADR 012).
 
+import { ANNEE_COURANTE } from "../../backend/regles/index.js"
+
 /** Couleur de fond de la page en thème clair (`--background` de App.css) : barre de titre et écran de lancement. */
 export const COULEUR_CLAIRE = "#f5f5f5"
 /** Couleur de fond en thème sombre (`--background` de `.dark`). */
@@ -31,7 +33,7 @@ export function manifesteDeLaDemo(base: string) {
     id: base,
     name: "Simulateur indépendant FR",
     short_name: "Simulateur",
-    description: "Simulation des revenus, cotisations et impôts d'un foyer d'indépendants en France (règles 2026), hors ligne : les simulations restent sur cet appareil.",
+    description: `Simulation des revenus, cotisations et impôts d'un foyer d'indépendants en France (règles ${ANNEE_COURANTE}), hors ligne : les simulations restent sur cet appareil.`,
     lang: "fr",
     dir: "ltr",
     start_url: base,

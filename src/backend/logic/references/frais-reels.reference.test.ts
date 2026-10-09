@@ -4,14 +4,13 @@ import { describe, expect, it } from "vitest"
 import type { ComparaisonOptions, FraisReels, Person, StatutCompare, Trajet } from "../../../types.js"
 import { comparerStatuts } from "../comparateur.js"
 import { montantBaremeKilometrique } from "../frais-kilometriques.js"
-import { reglesEnVigueur } from "../regles.js"
-import { casDeReference, foyerDe, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
+import { casDeReference, foyerDe, REGLES_DES_CAS, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
 import { micro, personne, relation, session, type Flux } from "../testing/session-de-test.js"
 
 /*
  * Cas de référence 2026 : frais réels d'un salarié, au barème kilométrique.
  *
- * Démarche : le moteur tourne avec les règles réelles de config.json, et chaque attendu est dérivé à la main.
+ * Démarche : le moteur tourne avec les règles réelles de 2026 (REGLES_DES_CAS), et chaque attendu est dérivé à la main.
  * Barème kilométrique des revenus de 2025, repris pour 2026 (service-public.gouv.fr, actualité A14686), 5 CV :
  * de 5 001 à 20 000 km, d x 0,357 + 1 395 €. Déduction de 10 % : au moins 509 €, au plus 14 555 €.
  * Barème de l'impôt (loi de finances pour 2026) : 0 % jusqu'à 11 600 €, 11 % jusqu'à 29 579 € ; décote d'une personne
@@ -28,9 +27,9 @@ const salarie = (frais?: FraisReels): Person => ({ ...personne("alice"), ...(fra
 
 casDeReference("Cas de référence 2026 : frais réels d'un salarié", () => {
   it("20 km par trajet, 218 jours, 5 CV : 8 720 km, 4 508,04 €", () => {
-    expect(montantBaremeKilometrique(8720, trajet, reglesEnVigueur.baremeKilometrique)).toBeCloseTo(4508.04, 6)
+    expect(montantBaremeKilometrique(8720, trajet, REGLES_DES_CAS.baremeKilometrique)).toBeCloseTo(4508.04, 6)
     // Électrique : 4 508,04 x 1,2 = 5 409,648 €.
-    expect(montantBaremeKilometrique(8720, { ...trajet, electrique: true }, reglesEnVigueur.baremeKilometrique)).toBeCloseTo(5409.648, 6)
+    expect(montantBaremeKilometrique(8720, { ...trajet, electrique: true }, REGLES_DES_CAS.baremeKilometrique)).toBeCloseTo(5409.648, 6)
   })
 
   it("30 000 € nets de salaire, personne seule : les frais réels (4 508 €) battent la déduction de 10 % (3 000 €)", () => {
@@ -94,7 +93,7 @@ casDeReference("Cas de référence 2026 : frais réels d'un salarié", () => {
     // comprise), 1 468 € d'impôt ; EI 25 787 € nets.
     const activite = { ...micro("m1"), deplacementsProfessionnels: { kmParAn: 8720, puissanceFiscale: "5" as const, electrique: false } }
     const options: ComparaisonOptions = { activityId: "m1", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }
-    const resultat = comparerStatuts(session([personne("alice"), activite], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options)
+    const resultat = comparerStatuts(session([personne("alice"), activite], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]]), options, REGLES_DES_CAS)
     const colonne = (statut: StatutCompare) => resultat.scenarios.find(s => s.statut === statut)!
 
     it("micro : les 4 508,04 € sont dépensés sans rien réduire", () => {

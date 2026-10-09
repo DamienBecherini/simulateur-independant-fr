@@ -31,9 +31,11 @@ interface ChampsDeLActeurProps {
   onChange: (entity: Entity) => void
   /** Années de la simulation : le champ du RFR N-2 nomme celles qu'il couvre. */
   anneesSimulees?: number[]
+  /** L'année affichée, dont les règles décrivent la profession. */
+  annee: number
 }
 
-export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [] }: ChampsDeLActeurProps) {
+export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee }: ChampsDeLActeurProps) {
   const changerAvatar = (avatar: Partial<Avatar>) => onChange({ ...entity, avatar: { ...entity.avatar, ...avatar } })
 
   return (
@@ -72,7 +74,7 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [] }: Champ
           </Select>
         </div>
       )}
-      <StatusSpecificFields entity={entity} onChange={onChange} anneesSimulees={anneesSimulees} />
+      <StatusSpecificFields entity={entity} onChange={onChange} anneesSimulees={anneesSimulees} annee={annee} />
       <div className="grid grid-cols-4 items-center gap-4">
         <span id="avatar-couleur" className="text-right text-sm font-medium">
           Couleur
@@ -103,11 +105,11 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [] }: Champ
 }
 
 /** Champs propres à certains statuts : revenu fiscal de référence d'une micro-entreprise, capital et réserves d'une société à l'IS. */
-function StatusSpecificFields({ entity, onChange, anneesSimulees = [] }: ChampsDeLActeurProps) {
+function StatusSpecificFields({ entity, onChange, anneesSimulees = [], annee }: ChampsDeLActeurProps) {
   const rfr = texteDuRfrN2(anneesSimulees)
   return (
     <>
-      {entity.type !== "person" && proposeLaProfession(entity) && <ChampProfession activite={entity} onChange={onChange} />}
+      {entity.type !== "person" && proposeLaProfession(entity) && <ChampProfession activite={entity} onChange={onChange} annee={annee} />}
       {entity.type === "micro-entreprise" && (
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="rfrN2" className="text-right">

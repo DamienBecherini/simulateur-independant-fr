@@ -4,6 +4,7 @@
 // caractères de contrôle, et des propositions de taille raisonnable. Tout passe ensuite par la validation de l'utilisateur.
 
 import { z } from "zod"
+import { ANNEE_COURANTE } from "../regles.js"
 
 export const LIMITES = {
   /** Opérations d'une proposition : 200 séries de flux couvrent une année de relevés détaillés. */
@@ -63,7 +64,7 @@ export const MontantSchema = z
   .min(0, "Montant négatif : le sens du flux vient de son type (une dépense est un type de flux), le montant est toujours positif.")
   .max(LIMITES.montantMaximal, `Montant supérieur à ${LIMITES.montantMaximal.toLocaleString("fr-FR")} € : vérifiez l'unité (euros, pas centimes) et le séparateur décimal.`)
 
-export const AnneeSchema = z.number().int().min(1900).max(2200).describe("Année civile, par exemple 2026.")
+export const AnneeSchema = z.number().int().min(1900).max(2200).describe(`Année civile, par exemple ${ANNEE_COURANTE}.`)
 
 /** Mois du calendrier, de 1 (janvier) à 12 (décembre) ; la grille de la session les range de 0 à 11. */
 export const MoisSchema = z.number().int().min(1, "Mois : de 1 (janvier) à 12 (décembre).").max(12, "Mois : de 1 (janvier) à 12 (décembre).")

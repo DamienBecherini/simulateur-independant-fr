@@ -4,7 +4,7 @@
 // renvoient aux sources officielles, et les chiffres de chaque montage sont figés par montages.reference.test.ts.
 
 import type { SessionState } from "@/types"
-import { comparateurAuMeilleurNet, microEntreprise, personne, relation, sessionDuMontage, societe, type ContenuDuMontage } from "./construction"
+import { ANNEE_DES_MONTAGES, comparateurAuMeilleurNet, microEntreprise, personne, relation, sessionDuMontage, societe, type ContenuDuMontage } from "./construction"
 
 /** Un lien vers une page officielle qui fonde une explication. */
 export interface SourceOfficielle {
@@ -58,7 +58,7 @@ const SOURCES = {
 
 // Phrases reprises d'un montage à l'autre.
 const RESERVE_LEGALE = "La réserve légale, les frais de fonctionnement et la prévoyance ne sont pas déduits : les montants sont des ordres de grandeur."
-const PLAFOND_MICRO = "Chiffre d'affaires sous le plafond des prestations de services (83 600 € pour 2026) ; dépassé deux années de suite, il fait sortir du régime."
+const PLAFOND_MICRO = `Chiffre d'affaires sous le plafond des prestations de services (83\u202f600\u00a0€ pour ${ANNEE_DES_MONTAGES}) ; dépassé deux années de suite, il fait sortir du régime.`
 const TAUX_REDUIT_IS = "Taux réduit d'impôt sur les sociétés (15 % jusqu'à 42 500 € de bénéfice) : chiffre d'affaires d'au plus 10 millions d'euros, capital entièrement libéré et détenu à 75 % au moins par des personnes physiques."
 const COMPARATEUR_MICRO = "Le comparateur place la micro-entreprise avec et sans versement libératoire côte à côte, face à l'entreprise individuelle au réel, l'EURL et la SASU."
 
@@ -71,12 +71,12 @@ const microSeule: MontageType = {
   etiquettes: ["Micro", "BNC", "Versement libératoire"],
   questions: ["Combien me reste-t-il après cotisations et impôt ?", "Le versement libératoire est-il avantageux pour moi ?", "À partir de quel chiffre d'affaires une société devient-elle intéressante ?"],
   illustre: [
-    "Les cotisations calculées en pourcentage du chiffre d'affaires (25,6 % pour une activité libérale non réglementée en 2026, plus 0,2 % de contribution à la formation professionnelle), sans charges déductibles.",
+    `Les cotisations calculées en pourcentage du chiffre d'affaires (25,6\u00a0% pour une activité libérale non réglementée en ${ANNEE_DES_MONTAGES}, plus 0,2\u00a0% de contribution à la formation professionnelle), sans charges déductibles.`,
     "L'impôt payé avec les cotisations au versement libératoire (2,2 % du chiffre d'affaires en BNC), au lieu du barème après l'abattement forfaitaire de 34 %.",
     COMPARATEUR_MICRO
   ],
   conditions: [
-    "Versement libératoire : revenu fiscal de référence 2024 du foyer d'au plus 29 315 € par part pour 2026 (ici 24 000 € saisis, pour une part).",
+    `Versement libératoire : revenu fiscal de référence ${ANNEE_DES_MONTAGES - 2} du foyer d'au plus 29\u202f315\u00a0€ par part pour ${ANNEE_DES_MONTAGES} (ici 24\u202f000\u00a0€ saisis, pour une part).`,
     "Option à demander avant le 30 septembre pour l'année suivante, ou jusqu'au dernier jour du 3e mois après la création.",
     PLAFOND_MICRO
   ],
@@ -195,7 +195,7 @@ const microEtSasuDuConjoint: MontageType = {
   ],
   conditions: [
     "Mariés ou pacsés : une déclaration commune pour le foyer.",
-    "Versement libératoire : revenu fiscal de référence 2024 du foyer d'au plus 29 315 € par part pour 2026.",
+    `Versement libératoire : revenu fiscal de référence ${ANNEE_DES_MONTAGES - 2} du foyer d'au plus 29\u202f315\u00a0€ par part pour ${ANNEE_DES_MONTAGES}.`,
     PLAFOND_MICRO
   ],
   pointsDAttention: [
@@ -294,7 +294,7 @@ const salariePlusMicro: MontageType = {
   ],
   conditions: [
     "Le contrat de travail ne comporte pas de clause d'exclusivité, l'activité ne concurrence pas l'employeur et s'exerce hors du temps de travail.",
-    "Versement libératoire : revenu fiscal de référence 2024 du foyer d'au plus 29 315 € par part pour 2026 (ici 25 000 € saisis)."
+    `Versement libératoire : revenu fiscal de référence ${ANNEE_DES_MONTAGES - 2} du foyer d'au plus 29\u202f315\u00a0€ par part pour ${ANNEE_DES_MONTAGES} (ici 25\u202f000\u00a0€ saisis).`
   ],
   pointsDAttention: [
     "Même sans clause, le salarié reste tenu à une obligation de loyauté envers son employeur.",

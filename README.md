@@ -74,7 +74,7 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 
 - `src/backend/logic/simulation-engine.ts` : moteur de simulation à sens unique (activités → revenus des personnes → impôt du foyer).
 - `src/backend/logic/foyers.ts` : regroupement des foyers fiscaux par union-find (couples, enfants rattachés, parts).
-- `src/backend/logic/regles.ts` + `src/backend/config.json` : toutes les règles fiscales de l'année, typées et sourcées, hors du code.
+- `src/backend/logic/regles.ts` + `src/backend/regles/<année>.json` : les règles fiscales et sociales, un fichier par année (liste dans `src/backend/regles/index.ts`), typées et sourcées, hors du code. L'année en cours du simulateur est la plus récente de ces années.
 - `src/backend/logic/data-sanitizer.ts` : validation et réparation des sessions (relations et flux orphelins).
 - `src/backend/logic/optimisation-remuneration.ts` : arbitrage rémunération / dividendes, par balayage puis affinage autour des optimums.
 - `src/backend/util.ts` + `src/backend/preload.cts` : contrat IPC typé de bout en bout, sans `any` sur la surface exposée.
@@ -119,7 +119,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 ```
 
 - **Tests** : fichiers `*.test.ts` placés à côté du code testé ; le moteur est testé avec des règles fictives aux chiffres ronds (`src/backend/logic/testing/`), pour que les montants attendus se vérifient de tête et ne dépendent pas du barème de l'année.
-- **Cas de référence 2026** : `src/backend/logic/references/` fait tourner le moteur avec les règles réelles de `config.json` sur une soixantaine de situations (micro-entreprise, SASU, EURL, EI, salaires, familles, comparateur), dont chaque montant attendu est dérivé à la main des règles officielles ; ils échouent explicitement si `config.json` change d'année.
+- **Cas de référence 2026** : `src/backend/logic/references/` fait tourner le moteur avec les règles réelles de 2026 sur une soixantaine de situations (micro-entreprise, SASU, EURL, EI, salaires, familles, comparateur), dont chaque montant attendu est dérivé à la main des règles officielles. Ils sont liés à 2026 pour toujours, comme les montages types : l'ajout des règles d'une année plus récente ne les désactive pas et ne change pas leurs chiffres (un test le vérifie avec une année fictive).
 - **Valeurs limites** : chaque seuil est testé pile dessus et un euro au-delà (plafonds et TVA de la micro, revenu fiscal de référence du versement libératoire, 4 trimestres, plafond de la sécurité sociale, 3 SMIC de la réduction générale, dividendes d'EURL à 10 % du capital), ainsi que les noms hostiles dans les exports (séparateurs, retours à la ligne, formules), les fichiers retouchés à la main et les séries de flux en bord d'année.
 - **Tests de composants** : fichiers `*.test.tsx` (React Testing Library, user-event, jsdom) qui rejouent les parcours de saisie au clavier, la fenêtre des flux, les cartes d'entités, les résultats et l'historique d'annulation ; `window.api` y est simulé (`src/ui/testing/`).
 - **Tests de bout en bout** (optionnels) : fichiers `e2e/*.e2e.ts`, où Playwright pilote l'application Electron compilée (création d'entités, saisie dans la grille, résultats, historique, sauvegarde automatique, conversion d'un ancien format, sauvegardes nommées). Chaque test lance l'application sur un dossier de données temporaire (`--user-data-dir`), sans toucher aux vraies données ; aucun navigateur à télécharger. En intégration continue, ils tournent sur `main` et à la demande.

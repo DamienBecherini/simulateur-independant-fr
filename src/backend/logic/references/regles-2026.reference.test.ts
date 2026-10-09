@@ -1,22 +1,21 @@
 // src/backend/logic/references/regles-2026.reference.test.ts
 
 import { expect, it } from "vitest"
-import { reglesEnVigueur } from "../regles.js"
-import { casDeReference } from "../testing/cas-de-reference.js"
+import { casDeReference, REGLES_DES_CAS } from "../testing/cas-de-reference.js"
 
 /*
- * Cas de référence 2026 : le moteur est lancé avec les règles réelles (config.json), et chaque montant attendu
+ * Cas de référence 2026 : le moteur est lancé avec les règles réelles (regles/2026.json), et chaque montant attendu
  * est dérivé à la main, indépendamment du code, à partir des règles officielles. Si un cas échoue, c'est le
  * moteur qui est suspect, pas l'attendu.
  *
  * Ce fichier recopie, depuis les sources officielles, les valeurs 2026 sur lesquelles reposent toutes les
- * dérivations des autres fichiers. Si config.json est corrigé en cours d'année, ce test dit quelles dérivations
+ * dérivations des autres fichiers. Si regles/2026.json est corrigé en cours d'année, ce test dit quelles dérivations
  * refaire, au lieu de laisser des écarts sans explication.
  */
 
 casDeReference("Valeurs officielles utilisées par les cas de référence", () => {
   it("barème 2026 de l'impôt sur le revenu (revenus 2025), service-public.gouv.fr F1419", () => {
-    expect(reglesEnVigueur.IR.bareme).toEqual([
+    expect(REGLES_DES_CAS.IR.bareme).toEqual([
       { trancheJusqua: 11600, taux: 0 },
       { trancheJusqua: 29579, taux: 0.11 },
       { trancheJusqua: 84577, taux: 0.3 },
@@ -26,7 +25,7 @@ casDeReference("Valeurs officielles utilisées par les cas de référence", () =
   })
 
   it("quotient familial, décote et déduction de 10 % (F2705, F34328, F1989)", () => {
-    expect(reglesEnVigueur.IR).toMatchObject({
+    expect(REGLES_DES_CAS.IR).toMatchObject({
       plafonnementQuotientFamilial: { avantageMaxParDemiPart: 1807 },
       decote: { taux: 0.4525, forfaitSeul: 897, forfaitCouple: 1483 },
       abattementSalaires: { taux: 0.1, minimum: 509, maximum: 14555 },
@@ -35,13 +34,13 @@ casDeReference("Valeurs officielles utilisées par les cas de référence", () =
   })
 
   it("impôt sur les sociétés et dividendes (F23575, F32963)", () => {
-    expect(reglesEnVigueur.IS).toMatchObject({ tauxReduit: 0.15, plafondTauxReduit: 42500, tauxNormal: 0.25 })
-    expect(reglesEnVigueur.dividendes).toMatchObject({ tauxIrForfaitaire: 0.128, prelevementsSociaux: 0.186, abattementBareme: 0.4, csgDeductible: 0.068 })
-    expect(reglesEnVigueur.EURL.seuilDividendesPartDuCapital).toBe(0.1)
+    expect(REGLES_DES_CAS.IS).toMatchObject({ tauxReduit: 0.15, plafondTauxReduit: 42500, tauxNormal: 0.25 })
+    expect(REGLES_DES_CAS.dividendes).toMatchObject({ tauxIrForfaitaire: 0.128, prelevementsSociaux: 0.186, abattementBareme: 0.4, csgDeductible: 0.068 })
+    expect(REGLES_DES_CAS.EURL.seuilDividendesPartDuCapital).toBe(0.1)
   })
 
   it("micro-entreprise : plafonds, cotisations, ACRE, abattements et versement libératoire (F32353, F36232, F23267)", () => {
-    expect(reglesEnVigueur.microEntreprise).toMatchObject({
+    expect(REGLES_DES_CAS.microEntreprise).toMatchObject({
       plafonds: { services: 83600, vente: 203100 },
       cotisations: { venteBic: 0.123, servicesBic: 0.212, servicesBnc: 0.256 },
       reductionACRE: 0.5,
@@ -51,11 +50,11 @@ casDeReference("Valeurs officielles utilisées par les cas de référence", () =
   })
 
   it("cotisations des travailleurs non salariés : assiette et abattement (urssaf.fr, reforme-cotisations-independants ; article D136-5 du CSS)", () => {
-    expect(reglesEnVigueur.TNS).toMatchObject({ plafondSecuriteSociale: 48060, abattement: { taux: 0.26, minimumPartDuPlafond: 0.0176, maximumPartDuPlafond: 1.3 } })
+    expect(REGLES_DES_CAS.TNS).toMatchObject({ plafondSecuriteSociale: 48060, abattement: { taux: 0.26, minimumPartDuPlafond: 0.0176, maximumPartDuPlafond: 1.3 } })
   })
 
   it("cotisations des travailleurs non salariés : barèmes 2026 (urssaf.fr, taux-cotisations-ac-plnr ; articles D621-1, D621-2 et D613-1 du CSS)", () => {
-    expect(reglesEnVigueur.TNS).toMatchObject({
+    expect(REGLES_DES_CAS.TNS).toMatchObject({
       maladieMaternite: {
         points: [
           { partDuPlafond: 0.2, taux: 0 },
@@ -94,15 +93,15 @@ casDeReference("Valeurs officielles utilisées par les cas de référence", () =
   })
 
   it("CSG-CRDS des travailleurs non salariés : 9,7 %, dont 6,8 points de CSG déductibles (article 154 quinquies du CGI)", () => {
-    expect(reglesEnVigueur.TNS.csgCrds).toMatchObject({ csgDeductible: 0.068, csgNonDeductible: 0.024, crds: 0.005 })
+    expect(REGLES_DES_CAS.TNS.csgCrds).toMatchObject({ csgDeductible: 0.068, csgNonDeductible: 0.024, crds: 0.005 })
   })
 
   it("régime général : cotisations salariales et patronales 2026 (urssaf.fr, taux-cotisations-secteur-prive ; agirc-arrco.fr)", () => {
-    const { regimeGeneral } = reglesEnVigueur
+    const { regimeGeneral } = REGLES_DES_CAS
     const taux = (tranches: { jusquA: number | null; taux: number }[]) => tranches.map(t => [t.jusquA, t.taux])
     const lignes = Object.fromEntries(Object.entries(regimeGeneral.cotisations).map(([nom, c]) => [nom, { salariale: taux(c.salariale), patronale: taux(c.patronale) }]))
 
-    expect(regimeGeneral.plafondSecuriteSociale).toBe(reglesEnVigueur.TNS.plafondSecuriteSociale)
+    expect(regimeGeneral.plafondSecuriteSociale).toBe(REGLES_DES_CAS.TNS.plafondSecuriteSociale)
     expect(lignes).toEqual({
       maladie: { salariale: [], patronale: [[null, 0.13]] },
       vieillessePlafonnee: { salariale: [[1, 0.069]], patronale: [[1, 0.0855]] },
@@ -145,6 +144,6 @@ casDeReference("Valeurs officielles utilisées par les cas de référence", () =
   })
 
   it("réduction générale dégressive unique 2026 (article D241-7 du CSS ; SMIC horaire de 12,02 € x 1 820 heures)", () => {
-    expect(reglesEnVigueur.regimeGeneral.reductionGenerale).toMatchObject({ smicAnnuel: 21876.4, tMin: 0.02, tDelta: 0.3781, puissance: 1.75, plafondEnSmic: 3 })
+    expect(REGLES_DES_CAS.regimeGeneral.reductionGenerale).toMatchObject({ smicAnnuel: 21876.4, tMin: 0.02, tDelta: 0.3781, puissance: 1.75, plafondEnSmic: 3 })
   })
 })

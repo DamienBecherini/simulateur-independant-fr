@@ -1,9 +1,9 @@
 // src/backend/logic/regles.ts
 
-import type { CotisationSalarie, PuissanceFiscale } from "../../types.js"
-import config from "../config.json" with { type: "json" }
-import regles2024 from "../regles/2024.json" with { type: "json" }
-import regles2025 from "../regles/2025.json" with { type: "json" }
+import type { CaisseLiberale, CotisationSalarie, PuissanceFiscale } from "../../types.js"
+import { ANNEE_COURANTE, FICHIERS_DE_REGLES } from "../regles/index.js"
+
+export { ANNEE_COURANTE }
 
 /** Une tranche du barème de l'impôt sur le revenu. `trancheJusqua` vaut `null` pour la dernière tranche. */
 export interface TrancheIR {
@@ -54,10 +54,6 @@ export interface ReglesTNS {
   cotisationsMinimales: { indemnitesJournalieres: number; retraiteDeBase: number; invaliditeDeces: number }
 }
 
-/** Les caisses de libéraux réglementés que le simulateur calcule (voir l'ADR 015). */
-export const CAISSES_LIBERALES = ["CIPAV", "CARPIMKO"] as const
-export type CaisseLiberale = (typeof CAISSES_LIBERALES)[number]
-
 /**
  * Une profession libérale réglementée proposée sur une activité BNC, et ses particularités. `caisse` vaut `null` pour
  * « autre profession réglementée », calculée comme une profession non réglementée.
@@ -65,7 +61,11 @@ export type CaisseLiberale = (typeof CAISSES_LIBERALES)[number]
 export interface ProfessionReglementee {
   id: string
   libelle: string
-  /** Une caisse de `CAISSES_LIBERALES`, ou `null`. */
+  /**
+   * Une caisse de `CAISSES_LIBERALES` (src/types.ts), ou `null`. Lue telle quelle dans le fichier JSON, d'où le type
+   * `string` : `caisseDe` (professions.ts) la ramène à une `CaisseLiberale`, et un test vérifie que chaque fichier de
+   * règles ne nomme que des caisses de la liste.
+   */
   caisse: string | null
   /** La micro-entreprise lui est ouverte. */
   microEntreprise: boolean
@@ -99,8 +99,19 @@ export interface RepartitionMicroLiberale {
   invaliditeDeces: number
 }
 
-/** Règles des professions libérales réglementées d'une année (voir l'ADR 015). */
-export interface ReglesLiberauxReglementes {
+/** Taux global d'une caisse qui a le sien en micro-entreprise, et sa répartition entre les risques. */
+export interface MicroEntrepriseLiberale {
+  cotisations: number
+  tauxRetraiteDeBase: number
+  repartition: RepartitionMicroLiberale
+}
+
+/**
+ * Règles des professions libérales réglementées d'une année (voir l'ADR 015) : un bloc par caisse de
+ * `CAISSES_LIBERALES`. Les calculs lisent le bloc d'une caisse par `ReglesLiberauxReglementes[caisse]` : une caisse de
+ * la liste sans bloc ici ne compile pas.
+ */
+export interface ReglesLiberauxReglementes extends Record<CaisseLiberale, object> {
   professions: { liste: ProfessionReglementee[] }
   /** Règles communes aux caisses de la CNAVPL ; maladie, allocations familiales, CSG-CRDS et formation : bloc TNS. */
   commun: {
@@ -114,7 +125,7 @@ export interface ReglesLiberauxReglementes {
   CIPAV: {
     retraiteComplementaire: { tranches: TrancheCotisation[] }
     invaliditeDeces: BaremeInvaliditeDecesLiberal
-    microEntreprise: { cotisations: number; tauxRetraiteDeBase: number; repartition: RepartitionMicroLiberale }
+    microEntreprise: MicroEntrepriseLiberale
   }
   CARPIMKO: {
     /** forfait + taux x (assiette ramenée entre `assietteMinimale` et `plafond`, moins `seuil`), en euros. */
@@ -171,8 +182,8 @@ export interface BaremeKilometrique {
 }
 
 /**
- * Les règles fiscales et sociales lues par le moteur.
- * Elles vivent dans `config.json` : changer d'année ne demande aucune modification du code.
+ * Les règles fiscales et sociales d'une année, lues par le moteur. Elles vivent dans `src/backend/regles/<année>.json`
+ * (liste dans `src/backend/regles/index.ts`) : ajouter une année ne demande qu'un fichier et une ligne de cette liste.
  */
 export interface ReglesFiscales {
   annee: number
@@ -229,9 +240,6 @@ export interface ReglesFiscales {
   }
 }
 
-/** Les règles de l'année en cours, telles que définies dans `config.json`. */
-export const reglesEnVigueur: ReglesFiscales = config
-
 /*
  * Règles par année (convention : ADR 007, l'année N d'un fichier est celle de l'activité et des revenus).
  * Une année après la dernière connue reprend les dernières règles, avec un avertissement : l'écart vient surtout de
@@ -239,31 +247,42 @@ export const reglesEnVigueur: ReglesFiscales = config
  * simulée : les règles ont changé de structure (assiette des indépendants avant 2025, taux micro de 2024, etc.) et
  * reprendre celles de 2024 donnerait des résultats faux sans qu'on puisse le chiffrer.
  */
-const REGLES_PAR_ANNEE: ReadonlyMap<number, ReglesFiscales> = new Map<number, ReglesFiscales>([
-  [2024, regles2024],
-  [2025, regles2025],
-  [config.annee, config]
-])
+const REGLES_PAR_ANNEE: ReadonlyMap<number, ReglesFiscales> = new Map(FICHIERS_DE_REGLES.map(regles => [regles.annee, regles]))
 
 /** Les règles de chaque année connue, de la plus ancienne à la plus récente. */
 export function reglesDesAnneesConnues(): ReglesFiscales[] {
   return [...REGLES_PAR_ANNEE.values()]
 }
 
-/** Première et dernière années dont le simulateur connaît les règles. */
+/** Première année dont le simulateur connaît les règles ; la dernière est `ANNEE_COURANTE`. */
 export const PREMIERE_ANNEE_DES_REGLES = Math.min(...REGLES_PAR_ANNEE.keys())
-export const DERNIERE_ANNEE_DES_REGLES = Math.max(...REGLES_PAR_ANNEE.keys())
+
+/**
+ * Les règles publiées pour une année, sans reprise des dernières connues : pour un calcul figé sur une année précise
+ * (cas de référence, montages types), qui ne doit pas changer quand une année plus récente est ajoutée. Une année
+ * sans fichier de règles est une erreur de programmation, pas une situation de l'utilisateur.
+ */
+export function reglesPubliees(annee: number): ReglesFiscales {
+  const regles = REGLES_PAR_ANNEE.get(annee)
+  if (!regles) throw new Error(`Aucun fichier de règles pour l'année ${annee}.`)
+  return regles
+}
 
 /** Les règles qui s'appliquent à une année, ou la raison pour laquelle l'année ne peut pas être simulée. */
 export type ReglesDeLAnnee = { regles: ReglesFiscales; avertissement: string | null } | { regles: null; erreur: string }
 
+/*
+ * Il n'y a pas de « règles en vigueur » par défaut : chaque fonction du moteur reçoit les règles de l'année qu'elle
+ * calcule. Un appel qui oublierait l'année est une erreur de compilation, au lieu d'un calcul silencieux avec les
+ * règles de l'année en cours.
+ */
 export function reglesDeLAnnee(annee: number): ReglesDeLAnnee {
   const connues = REGLES_PAR_ANNEE.get(annee)
   if (connues) return { regles: connues, avertissement: null }
-  if (annee > DERNIERE_ANNEE_DES_REGLES) {
+  if (annee > ANNEE_COURANTE) {
     return {
-      regles: REGLES_PAR_ANNEE.get(DERNIERE_ANNEE_DES_REGLES)!,
-      avertissement: `Les règles de ${annee} ne sont pas encore connues : ${annee} est simulée avec celles de ${DERNIERE_ANNEE_DES_REGLES}, les dernières connues. Les seuils et barèmes revalorisés chaque année (plafond de la sécurité sociale, SMIC, barème de l'impôt) n'en tiennent pas compte.`
+      regles: reglesPubliees(ANNEE_COURANTE),
+      avertissement: `Les règles de ${annee} ne sont pas encore connues : ${annee} est simulée avec celles de ${ANNEE_COURANTE}, les dernières connues. Les seuils et barèmes revalorisés chaque année (plafond de la sécurité sociale, SMIC, barème de l'impôt) n'en tiennent pas compte.`
     }
   }
   return { regles: null, erreur: `Le simulateur ne connaît pas les règles d'avant ${PREMIERE_ANNEE_DES_REGLES} : l'année ${annee} n'est pas simulée.` }

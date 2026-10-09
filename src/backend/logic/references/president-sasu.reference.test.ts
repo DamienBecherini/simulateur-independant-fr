@@ -3,14 +3,13 @@
 import { describe, expect, it } from "vitest"
 import { brutPourUnNet, calculerCotisationsSalarie } from "../cotisationsSalarie.js"
 import { evaluerProtectionSociale } from "../protection-sociale.js"
-import { reglesEnVigueur } from "../regles.js"
-import { activite, casDeReference, foyerDe, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
+import { activite, casDeReference, foyerDe, REGLES_DES_CAS, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
 import { personne, relation, societe } from "../testing/session-de-test.js"
 
 /*
  * Cas de référence 2026 : bulletin de paie annuel du président de SASU, assimilé salarié, sans contrat de travail.
  *
- * Démarche : le moteur tourne avec les règles réelles de config.json, et chaque attendu est dérivé à la main à partir des
+ * Démarche : le moteur tourne avec les règles réelles de 2026 (REGLES_DES_CAS), et chaque attendu est dérivé à la main à partir des
  * taux officiels 2026 (urssaf.fr, taux-cotisations-secteur-prive ; agirc-arrco.fr ; modèle de l'Urssaf pour le dirigeant
  * assimilé salarié), sans lancer le moteur. PASS : 48 060 €.
  *
@@ -62,7 +61,7 @@ casDeReference("Cas de référence 2026 : président de SASU", () => {
     it("société, impôt et trimestres", () => {
       expect(activite(report, "s1")).toMatchObject({ cotisationsSociales: 4252, impotSocietes: 2992, resultatConserve: 16956, revenuVerse: 5800 })
       expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 5408, impotSurLeRevenu: 0, netApresImpots: 5800 })
-      expect(evaluerProtectionSociale("SASU", { remunerationBrute: 7326.96, assietteTNS: 0, chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 } }, reglesEnVigueur).trimestres).toBe(4)
+      expect(evaluerProtectionSociale("SASU", { remunerationBrute: 7326.96, assietteTNS: 0, chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 } }, REGLES_DES_CAS).trimestres).toBe(4)
       verifierIdentiteDuBilan(report)
     })
   })
@@ -110,7 +109,7 @@ casDeReference("Cas de référence 2026 : président de SASU", () => {
   })
 
   describe("seuil des 4 trimestres : 4 x 1 803 = 7 212 € bruts, soit 7 212 x 0,7915975 = 5 709,00 € nets", () => {
-    const trimestres = (brut: number) => evaluerProtectionSociale("SASU", { remunerationBrute: brut, assietteTNS: 0, chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 } }, reglesEnVigueur).trimestres
+    const trimestres = (brut: number) => evaluerProtectionSociale("SASU", { remunerationBrute: brut, assietteTNS: 0, chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 } }, REGLES_DES_CAS).trimestres
 
     it.each([
       // 5 700 / 0,7915975 = 7 200,63 € bruts : 7 200,63 / 1 803 = 3,99, soit 3 trimestres.
@@ -126,7 +125,7 @@ casDeReference("Cas de référence 2026 : président de SASU", () => {
   })
 
   describe("autour du PASS : la contribution d'équilibre technique porte sur tout le brut dès qu'il dépasse 48 060 €", () => {
-    const regimeGeneral = reglesEnVigueur.regimeGeneral
+    const regimeGeneral = REGLES_DES_CAS.regimeGeneral
     const netDe = (brut: number) => calculerCotisationsSalarie(brut, "president", regimeGeneral).net
 
     it("le net baisse d'un coup quand le brut franchit le PASS", () => {

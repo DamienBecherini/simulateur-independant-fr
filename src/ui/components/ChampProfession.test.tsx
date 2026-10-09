@@ -8,9 +8,9 @@ import type { Entity } from "@/types"
 import { makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import EditEntityModal from "./EditEntityModal"
 
-function ouvrir(entity: Entity) {
+function ouvrir(entity: Entity, annee = 2026) {
   const onSave = vi.fn()
-  render(<EditEntityModal entity={entity} isOpen onClose={() => {}} onSave={onSave} allEntities={[entity]} relationships={[]} />)
+  render(<EditEntityModal entity={entity} isOpen onClose={() => {}} onSave={onSave} allEntities={[entity]} relationships={[]} annee={annee} />)
   return { onSave, user: userEvent.setup() }
 }
 
@@ -69,6 +69,20 @@ describe("profession d'une activité BNC", () => {
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
     expect(onSave.mock.calls[0][0]).not.toHaveProperty("profession")
     expect(onSave.mock.calls[0][0]).not.toHaveProperty("partConventionnee")
+  })
+
+  it("la ligne d'information décrit les règles de l'année affichée, pas celles de l'année en cours", () => {
+    // CARPIMKO : complémentaire forfaitaire (2 312 € plus 3 % au-delà de 25 246 €) jusqu'en 2025, 8,70 % en 2026.
+    ouvrir(makeCompany({ legalStatus: "EI", profession: "infirmier" }), 2025)
+    const description = screen.getByRole("combobox", { name: "Profession" }).getAttribute("aria-describedby")
+    const ligne = document.getElementById(description ?? "")?.textContent?.replace(/\s/g, " ")
+    expect(ligne).toContain("En 2025 : ")
+    expect(ligne).toContain("complémentaire de 2 312 € plus 3 % au-delà de 25 246 €")
+  })
+
+  it("une profession de la CIPAV affichée en 2024 : micro-entreprise au taux de 2024", () => {
+    ouvrir(makeMicro({ profession: "osteopathe" }), 2024)
+    expect(screen.getByRole("combobox", { name: "Profession" })).toHaveAccessibleDescription(/Caisse : CIPAV\. Micro-entreprise possible, au taux de 21,2 %/)
   })
 
   it("« Autre profession réglementée » : la caisse n'est pas prise en compte, et la ligne le dit", async () => {

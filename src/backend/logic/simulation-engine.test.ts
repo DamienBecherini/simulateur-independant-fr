@@ -1,7 +1,6 @@
 // src/backend/logic/simulation-engine.test.ts
 
 import { describe, expect, it } from "vitest"
-import { reglesEnVigueur } from "./regles.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
@@ -41,10 +40,6 @@ describe("runMetaSimulation", () => {
       expect(report.activities.map(a => a.entityId)).toEqual(["s1", "m1"])
       expect(report.persons.map(p => p.entityId)).toEqual(["alice", "bob"])
       expect(report.foyers).toHaveLength(2)
-    })
-
-    it("applique par défaut les règles en vigueur", () => {
-      expect(runMetaSimulation(session([personne("alice")])).annee).toBe(reglesEnVigueur.annee)
     })
   })
 

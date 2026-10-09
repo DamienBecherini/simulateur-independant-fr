@@ -3,7 +3,7 @@
 import { calculerResultatSociete, type EntreesSociete, type ResultatSociete } from "./calculsSociete.js"
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementCotisationsMinimales, calculerCotisationsTNS, revenuAvantCotisationsPourUnNet } from "./cotisationsTNS.js"
-import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
+import type { ReglesFiscales } from "./regles.js"
 
 export interface EntreesEURL extends EntreesSociete {
   capitalSocial: number
@@ -26,7 +26,7 @@ export interface EntreesEURL extends EntreesSociete {
  * La rémunération est imposée comme un salaire ; la CSG non déductible et la CRDS, payées par la société,
  * s'ajoutent à la rémunération nette imposable.
  */
-export function calculerEURL(entrees: EntreesEURL, regles: ReglesFiscales = reglesEnVigueur, caisse?: ParametresDeLaCaisse): ResultatSociete {
+export function calculerEURL(entrees: EntreesEURL, regles: ReglesFiscales, caisse?: ParametresDeLaCaisse): ResultatSociete {
   const surRemuneration = calculerCotisationsTNS(revenuAvantCotisationsPourUnNet(entrees.remunerationNette, regles.TNS, caisse), regles.TNS, caisse)
   const resultat = calculerResultatSociete(entrees, surRemuneration.total, regles)
 

@@ -1,6 +1,6 @@
 // src/backend/logic/calculsIR.ts
 
-import { reglesEnVigueur, type ReglesFiscales, type TrancheIR } from "./regles.js"
+import type { ReglesFiscales, TrancheIR } from "./regles.js"
 
 type ReglesIR = ReglesFiscales["IR"]
 
@@ -29,7 +29,7 @@ export function impotPourUnePart(revenuParPart: number, bareme: TrancheIR[]): nu
  * Impôt sur le revenu d'un foyer : barème par part, plafonnement de l'avantage du quotient familial,
  * puis décote. Les réductions et crédits d'impôt ne sont pas modélisés.
  */
-export function calculerIR({ revenuNetGlobalImposable, partsFiscales, nombreDeclarants }: EntreesIR, regles: ReglesIR = reglesEnVigueur.IR): number {
+export function calculerIR({ revenuNetGlobalImposable, partsFiscales, nombreDeclarants }: EntreesIR, regles: ReglesIR): number {
   if (revenuNetGlobalImposable <= 0 || !(partsFiscales > 0)) return 0
 
   const partsDeBase = Math.min(partsFiscales, nombreDeclarants)

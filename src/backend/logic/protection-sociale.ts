@@ -1,7 +1,7 @@
 // src/backend/logic/protection-sociale.ts
 
-import type { ProtectionSociale, StatutCompare } from "../../types.js"
-import type { CaisseLiberale, ReglesFiscales, TauxMicro } from "./regles.js"
+import type { CaisseLiberale, ProtectionSociale, StatutCompare } from "../../types.js"
+import type { ReglesFiscales, TauxMicro } from "./regles.js"
 
 /*
  * Note qualitative de protection sociale, sur 5 étoiles, pour le comparateur. Elle combine le régime

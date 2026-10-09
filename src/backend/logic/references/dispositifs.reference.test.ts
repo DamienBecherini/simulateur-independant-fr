@@ -7,9 +7,10 @@ import { micro, personne, relation } from "../testing/session-de-test.js"
 
 /*
  * Cas de référence des dispositifs limités dans le temps, sur plusieurs années, avec les règles réelles
- * (config.json pour 2026, reprises pour 2027 et au-delà). Chaque attendu est dérivé à la main.
+ * (regles/2026.json, reprises pour 2027 et au-delà tant que les règles de 2027 ne sont pas connues : ces
+ * attendus-là changeront avec elles). Chaque attendu est dérivé à la main.
  *
- * Règles utilisées (sources dans config.json) :
+ * Règles utilisées (sources dans regles/2026.json) :
  * - cotisations micro : prestations BIC 21,2 % du chiffre d'affaires, plus 0,3 % de contribution à la formation
  *   professionnelle (article L6331-48 du code du travail, taux des artisans), que l'ACRE ne réduit pas ;
  * - ACRE d'une micro-entreprise (F11677, décret n° 2026-69) : du mois de création à la fin du 3e trimestre civil qui suit

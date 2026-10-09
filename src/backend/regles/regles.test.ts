@@ -1,13 +1,15 @@
 // src/backend/regles/regles.test.ts
 
+import { readdirSync } from "node:fs"
 import { describe, expect, it } from "vitest"
-import config from "../config.json" with { type: "json" }
-import { PUISSANCES_FISCALES } from "../../types.js"
+import { CAISSES_LIBERALES, PUISSANCES_FISCALES } from "../../types.js"
 import { reductionGenerale } from "../logic/cotisationsSalarie.js"
 import { montantBaremeKilometrique } from "../logic/frais-kilometriques.js"
-import { CAISSES_LIBERALES, type BaremeProgressif, type ReglesFiscales, type ReglesLiberauxReglementes, type TrancheCotisation } from "../logic/regles.js"
+import { type BaremeProgressif, type ReglesFiscales, type ReglesLiberauxReglementes, type TrancheCotisation } from "../logic/regles.js"
 import fichier2024 from "./2024.json" with { type: "json" }
 import fichier2025 from "./2025.json" with { type: "json" }
+import fichier2026 from "./2026.json" with { type: "json" }
+import { ANNEE_COURANTE, FICHIERS_DE_REGLES } from "./index.js"
 
 /*
  * Garde-fous des règles par année (convention : documentation/adr/007-convention-annee-des-regles.md).
@@ -18,17 +20,17 @@ import fichier2025 from "./2025.json" with { type: "json" }
 // Vérification de type : chaque fichier respecte le schéma du moteur (champ manquant ou de mauvais type : erreur de compilation)…
 const regles2024: ReglesFiscales = fichier2024
 const regles2025: ReglesFiscales = fichier2025
-const regles2026: ReglesFiscales = config
+const regles2026: ReglesFiscales = fichier2026
 
-// … et a exactement la forme de config.json, descriptions et sources comprises (champ en trop ou manquant : erreur de compilation).
+// … et a exactement la forme du fichier de l'année en cours, descriptions et sources comprises (champ en trop ou manquant : erreur de compilation).
 type MemeForme<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false
-const formesIdentiques: [MemeForme<typeof fichier2024, typeof config>, MemeForme<typeof fichier2025, typeof config>] = [true, true]
+const formesIdentiques: [MemeForme<typeof fichier2024, typeof fichier2026>, MemeForme<typeof fichier2025, typeof fichier2026>] = [true, true]
 
 /** Les années connues, dans l'ordre chronologique, avec leur fichier brut (pour parcourir descriptions et sources). */
 const annees = [
   { annee: 2024, regles: regles2024, brut: fichier2024 as unknown },
   { annee: 2025, regles: regles2025, brut: fichier2025 as unknown },
-  { annee: 2026, regles: regles2026, brut: config as unknown }
+  { annee: 2026, regles: regles2026, brut: fichier2026 as unknown }
 ]
 
 /** Les paires d'années consécutives : l'année précédente et la suivante. */
@@ -142,12 +144,25 @@ function expectCroissante(valeurs: number[]) {
 }
 
 describe("règles par année", () => {
-  it("ont exactement la forme de config.json", () => {
+  it("chaque fichier du dossier est chargé, une seule fois, et les années se suivent de la plus ancienne à la plus récente", () => {
+    // Un fichier ajouté au dossier mais oublié dans index.ts ne serait jamais lu : ce test le signale.
+    const anneesDesFichiers = readdirSync(new URL(".", import.meta.url)).flatMap(nom => /^(\d{4})\.json$/.exec(nom)?.slice(1) ?? []).map(Number)
+    const chargees = FICHIERS_DE_REGLES.map(r => r.annee)
+    expect(chargees).toEqual([...anneesDesFichiers].sort((a, b) => a - b))
+    expect(chargees).toEqual(chargees.map((_, i) => chargees[0] + i))
+    expect(annees.map(a => a.annee)).toEqual(chargees)
+  })
+
+  it("l'année en cours est la plus récente des années dont un fichier existe", () => {
+    expect(ANNEE_COURANTE).toBe(FICHIERS_DE_REGLES.at(-1)?.annee)
+  })
+
+  it("ont exactement la même forme", () => {
     expect(formesIdentiques).toEqual([true, true])
     // Même vérification à l'exécution, indices des listes confondus.
     const cles = (brut: unknown) => [...new Set(feuilles(brut).map(([chemin]) => chemin.replace(/\.\d+(?=\.|$)/g, ".n")))].sort()
-    expect(cles(fichier2024)).toEqual(cles(config))
-    expect(cles(fichier2025)).toEqual(cles(config))
+    expect(cles(fichier2024)).toEqual(cles(fichier2026))
+    expect(cles(fichier2025)).toEqual(cles(fichier2026))
   })
 
   describe.each(annees)("$annee", ({ annee, regles, brut }) => {
@@ -291,6 +306,14 @@ describe("règles par année", () => {
       }
     })
 
+    it("a, pour chaque caisse calculée, son bloc de règles et au moins une profession", () => {
+      // Une caisse de CAISSES_LIBERALES sans profession ne serait jamais calculée ; sans bloc, elle ne compilerait pas.
+      for (const caisse of CAISSES_LIBERALES) {
+        expect(regles.liberauxReglementes[caisse], caisse).toBeTypeOf("object")
+        expect(regles.liberauxReglementes.professions.liste.some(p => p.caisse === caisse), caisse).toBe(true)
+      }
+    })
+
     it("a des barèmes de libéraux réglementés cohérents avec le plafond de la sécurité sociale et ceux des indépendants", () => {
       const { commun, CIPAV: cipav, CARPIMKO: carpimko } = regles.liberauxReglementes
       const pass = regles.TNS.plafondSecuriteSociale
@@ -415,7 +438,7 @@ describe("règles par année", () => {
       expect(regles2024.liberauxReglementes.CIPAV.retraiteComplementaire.tranches).toEqual([{ jusquA: 1, taux: 0.09 }, { jusquA: 3.5, taux: 0.22 }])
       for (const r of [regles2025, regles2026]) expect(r.liberauxReglementes.CIPAV.retraiteComplementaire.tranches).toEqual([{ jusquA: 1, taux: 0.11 }, { jusquA: 4, taux: 0.21 }])
       expect(fichier2025.liberauxReglementes.CIPAV.retraiteComplementaire.description).toContain("décret n° 2025-1076")
-      expect(config.liberauxReglementes.CIPAV.retraiteComplementaire.description).toContain("l'Urssaf SEULE")
+      expect(fichier2026.liberauxReglementes.CIPAV.retraiteComplementaire.description).toContain("l'Urssaf SEULE")
     })
 
     it("retraite de base des libéraux : 8,23 % + 1,87 % en 2024, 8,73 % + 1,87 % à la régularisation de 2025 et en 2026 ; 573 € au minimum en 2026", () => {

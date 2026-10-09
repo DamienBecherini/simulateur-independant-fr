@@ -2,16 +2,15 @@
 
 import { describe, expect, it } from "vitest"
 import { reductionGenerale } from "../cotisationsSalarie.js"
-import { reglesEnVigueur } from "../regles.js"
 import { runMetaSimulation } from "../simulation-engine.js"
-import { activite, casDeReference, foyerDe, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
+import { activite, casDeReference, foyerDe, REGLES_DES_CAS, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
 import { personne, relation, session, societe } from "../testing/session-de-test.js"
 
 /*
  * Cas de référence 2026 : salarié non cadre d'une SASU de la simulation (relation « Salarié »), avec la réduction
  * générale dégressive unique (RGDU) des cotisations patronales.
  *
- * Démarche : le moteur tourne avec les règles réelles de config.json, et chaque attendu est dérivé à la main à partir des
+ * Démarche : le moteur tourne avec les règles réelles de 2026 (REGLES_DES_CAS), et chaque attendu est dérivé à la main à partir des
  * taux officiels 2026, sans lancer le moteur. PASS : 48 060 €. SMIC annuel de la RGDU : 12,02 € x 1 820 h = 21 876,40 €.
  *
  * Cotisations salariales : celles du président de SASU (voir president-sasu.reference.test.ts) : 20,84025 % du brut sous le PASS.
@@ -25,7 +24,7 @@ import { personne, relation, session, societe } from "../testing/session-de-test
 function simulerSalarie(net: number, brut?: number) {
   const donnees = session([personne("alice"), personne("bob"), societe("s1", "SASU")], [relation("alice", "s1", "Président"), relation("bob", "s1", "Salarié")], [["s1", "ca_services", 100000]])
   donnees.monthlyData[0].flows.push({ id: "paie", label: "Salaire", amount: net, ...(brut === undefined ? {} : { grossAmount: brut }), entityId: "bob", type: "salary" })
-  return runMetaSimulation(donnees)
+  return runMetaSimulation(donnees, REGLES_DES_CAS)
 }
 
 casDeReference("Cas de référence 2026 : salarié et réduction générale", () => {
@@ -91,7 +90,7 @@ casDeReference("Cas de référence 2026 : salarié et réduction générale", ()
 
   describe("autour de 3 SMIC (65 629,20 € bruts), où la réduction générale s'éteint", () => {
     // La RGDU ne s'applique qu'à une rémunération inférieure à 3 SMIC : 3 x 21 876,40 = 65 629,20 €.
-    const rgdu = reglesEnVigueur.regimeGeneral.reductionGenerale
+    const rgdu = REGLES_DES_CAS.regimeGeneral.reductionGenerale
 
     it("juste sous 3 SMIC : coefficient minimal de 2 %", () => {
       // 65 629,19 € : 1/2 x (65 629,20 / 65 629,19 - 1) est presque nul, C = 0,02 + 0,3781 x 0 = 0,0200 ;
