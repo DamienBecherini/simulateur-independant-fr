@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import config from "../config.json" with { type: "json" }
 import fichier2024 from "../regles/2024.json" with { type: "json" }
 import fichier2025 from "../regles/2025.json" with { type: "json" }
-import { DERNIERE_ANNEE_DES_REGLES, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, reglesEnVigueur } from "./regles.js"
+import { DERNIERE_ANNEE_DES_REGLES, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, reglesEnVigueur, reglesPubliees } from "./regles.js"
 
 describe("reglesDeLAnnee", () => {
   it("connaît les règles de 2024 à 2026", () => {
@@ -35,5 +35,15 @@ describe("reglesDeLAnnee", () => {
 
   it("refuse une année antérieure aux premières règles connues", () => {
     expect(reglesDeLAnnee(2023)).toEqual({ regles: null, erreur: "Le simulateur ne connaît pas les règles d'avant 2024 : l'année 2023 n'est pas simulée." })
+  })
+})
+
+describe("reglesPubliees", () => {
+  it("donne le fichier de l'année", () => {
+    expect(reglesPubliees(2025)).toBe(fichier2025)
+  })
+
+  it("refuse une année sans fichier, au lieu de reprendre les dernières règles connues", () => {
+    expect(() => reglesPubliees(2028)).toThrow("Aucun fichier de règles pour l'année 2028.")
   })
 })

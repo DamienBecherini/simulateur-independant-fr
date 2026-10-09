@@ -254,6 +254,17 @@ export function reglesDesAnneesConnues(): ReglesFiscales[] {
 export const PREMIERE_ANNEE_DES_REGLES = Math.min(...REGLES_PAR_ANNEE.keys())
 export const DERNIERE_ANNEE_DES_REGLES = Math.max(...REGLES_PAR_ANNEE.keys())
 
+/**
+ * Les règles publiées pour une année, sans reprise des dernières connues : pour un calcul figé sur une année précise
+ * (cas de référence, montages types), qui ne doit pas changer quand une année plus récente est ajoutée. Une année
+ * sans fichier de règles est une erreur de programmation, pas une situation de l'utilisateur.
+ */
+export function reglesPubliees(annee: number): ReglesFiscales {
+  const regles = REGLES_PAR_ANNEE.get(annee)
+  if (!regles) throw new Error(`Aucun fichier de règles pour l'année ${annee}.`)
+  return regles
+}
+
 /** Les règles qui s'appliquent à une année, ou la raison pour laquelle l'année ne peut pas être simulée. */
 export type ReglesDeLAnnee = { regles: ReglesFiscales; avertissement: string | null } | { regles: null; erreur: string }
 
