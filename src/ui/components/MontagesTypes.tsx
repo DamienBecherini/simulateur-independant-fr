@@ -6,6 +6,7 @@ import { useRef, useState, type ReactNode } from "react"
 import { ChevronLeft, ExternalLink, LayoutTemplate } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ANNEE_DES_MONTAGES } from "@/lib/montages/construction"
 import { MONTAGES_TYPES, type MontageType } from "@/lib/montages/montages"
 
 interface FenetreDesMontagesProps {
@@ -96,7 +97,7 @@ function DetailDuMontage({ montage, onRetour, onCharger }: { montage: MontageTyp
             ))}
           </ul>
         </section>
-        <p className="text-xs text-slate-600 dark:text-slate-400">Chiffres fictifs, calculés avec les règles 2026 du simulateur : des estimations simplifiées, à adapter à votre situation et à vérifier avec un professionnel.</p>
+        <p className="text-xs text-slate-600 dark:text-slate-400">Chiffres fictifs, calculés avec les règles {ANNEE_DES_MONTAGES} du simulateur : des estimations simplifiées, à adapter à votre situation et à vérifier avec un professionnel.</p>
       </div>
       <DialogFooter className="gap-2">
         <Button variant="outline" onClick={onRetour}>

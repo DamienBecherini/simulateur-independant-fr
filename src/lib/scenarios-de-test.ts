@@ -2,7 +2,8 @@
 // Scénarios de test, pour vérifier à la main une fonctionnalité dans l'application : des sessions prêtes à charger,
 // chacune avec la liste de ce qu'il faut regarder. Ils ne servent qu'en mode développement (bouton « Tests » de la
 // barre d'outils) : ce ne sont pas des montages types, leurs chiffres sont choisis pour faire apparaître un cas, pas
-// pour décrire une situation courante.
+// pour décrire une situation courante. Comme les montages types, ils portent sur des années fixes (2024 à 2026) et
+// leurs chiffres attendus viennent des règles de ces années : ils ne suivent pas l'année en cours.
 
 import type { Company, MicroEntreprise, Relationship, SessionState } from "@/types"
 import { comparateurAuMeilleurNet, fluxDuMois, microEntreprise, personne, relation, societe, type FluxDuMontage } from "./montages/construction"
