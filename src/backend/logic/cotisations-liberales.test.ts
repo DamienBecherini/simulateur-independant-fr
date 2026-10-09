@@ -8,7 +8,7 @@ import { reglesDeLAnnee, reglesEnVigueur } from "./regles.js"
 
 /*
  * Barèmes des caisses de libéraux réglementés (voir l'ADR 015). Les montants attendus se recalculent de tête à partir
- * des règles de 2026 (config.json) et de 2025 (regles/2025.json) ; les cas complets sont dans
+ * des règles de 2026 (regles/2026.json) et de 2025 (regles/2025.json) ; les cas complets sont dans
  * references/liberaux.reference.test.ts.
  */
 

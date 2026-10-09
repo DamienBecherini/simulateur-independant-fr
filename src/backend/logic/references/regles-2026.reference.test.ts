@@ -4,12 +4,12 @@ import { expect, it } from "vitest"
 import { casDeReference, REGLES_DES_CAS } from "../testing/cas-de-reference.js"
 
 /*
- * Cas de référence 2026 : le moteur est lancé avec les règles réelles (config.json), et chaque montant attendu
+ * Cas de référence 2026 : le moteur est lancé avec les règles réelles (regles/2026.json), et chaque montant attendu
  * est dérivé à la main, indépendamment du code, à partir des règles officielles. Si un cas échoue, c'est le
  * moteur qui est suspect, pas l'attendu.
  *
  * Ce fichier recopie, depuis les sources officielles, les valeurs 2026 sur lesquelles reposent toutes les
- * dérivations des autres fichiers. Si config.json est corrigé en cours d'année, ce test dit quelles dérivations
+ * dérivations des autres fichiers. Si regles/2026.json est corrigé en cours d'année, ce test dit quelles dérivations
  * refaire, au lieu de laisser des écarts sans explication.
  */
 

@@ -21,7 +21,7 @@
     "typecheck": "tsc -b",
     "installer:chromium": "playwright install --only-shell chromium",
     "lint": "eslint .",
-    "duplication": "jscpd src --min-tokens 70 --threshold 5 --ignore \"**/*.test.ts,**/*.test.tsx,src/components/ui/**,src/backend/logic/testing/**,src/lib/testing/**,src/backend/regles/**,src/backend/config.json\" --reporters console",
+    "duplication": "jscpd src --min-tokens 70 --threshold 5 --ignore \"**/*.test.ts,**/*.test.tsx,src/components/ui/**,src/backend/logic/testing/**,src/lib/testing/**,src/backend/regles/*.json\" --reporters console",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

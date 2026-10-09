@@ -9,7 +9,7 @@ import { personne, relation, societe, type Flux } from "../testing/session-de-te
 
 /*
  * Cas de référence du bénéfice mis en réserve puis distribué (voir l'ADR 014), avec les règles réelles de 2025
- * (src/backend/regles/2025.json) et de 2026 (config.json). Chaque attendu est dérivé à la main.
+ * (src/backend/regles/2025.json) et de 2026 (src/backend/regles/2026.json). Chaque attendu est dérivé à la main.
  *
  * Règles officielles utilisées :
  * - IS (entreprendre.service-public.gouv.fr F23575) : 15 % jusqu'à 42 500 € de bénéfice, 25 % au-delà, en 2025 comme

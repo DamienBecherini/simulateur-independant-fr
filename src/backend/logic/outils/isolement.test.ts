@@ -51,7 +51,7 @@ describe("isolement des outils", () => {
   })
 
   it("ne touchent qu'au moteur pur, aux types et aux règles fiscales", () => {
-    const horsDuMoteur = [...fichiers].map(f => relative(SRC, f).replace(/\\/g, "/")).filter(f => !f.startsWith("backend/logic/") && f !== "types.ts" && !/^backend\/(config\.json|regles\/\d{4}\.json)$/.test(f))
+    const horsDuMoteur = [...fichiers].map(f => relative(SRC, f).replace(/\\/g, "/")).filter(f => !f.startsWith("backend/logic/") && f !== "types.ts" && !/^backend\/regles\/(\d{4}\.json|index\.ts)$/.test(f))
     expect(horsDuMoteur).toEqual([])
     expect(fichiers.size).toBeGreaterThan(20)
   })

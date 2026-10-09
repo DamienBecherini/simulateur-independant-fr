@@ -7,7 +7,7 @@ import { micro, personne, relation } from "../testing/session-de-test.js"
 
 /*
  * Cas de référence sur plusieurs années, avec les règles réelles (src/backend/regles/2024.json, 2025.json et
- * config.json pour 2026) : le versement libératoire de 2026 dépend du revenu fiscal de référence (RFR) de 2024,
+ * regles/2026.json) : le versement libératoire de 2026 dépend du revenu fiscal de référence (RFR) de 2024,
  * que la simulation calcule puisque 2024 en fait partie.
  *
  * Alice, célibataire (1 part), titulaire d'une micro-entreprise de prestations BNC qui demande le versement
@@ -15,7 +15,7 @@ import { micro, personne, relation } from "../testing/session-de-test.js"
  *
  * Règles utilisées :
  * - 2024 : abattement BNC de 34 % (2024.json, microEntreprise.abattement.servicesBnc) ;
- * - 2026 : seuil de RFR 2024 de 29 315 € par part pour le versement libératoire (config.json,
+ * - 2026 : seuil de RFR 2024 de 29 315 € par part pour le versement libératoire (regles/2026.json,
  *   microEntreprise.versementLiberatoire.plafondRfrParPart : limite de la 2e tranche du barème des revenus de 2024).
  *
  * RFR 2024 (article 1417 IV du CGI) : au versement libératoire, le chiffre d'affaires après abattement sort du barème

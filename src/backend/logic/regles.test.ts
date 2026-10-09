@@ -1,20 +1,20 @@
 // src/backend/logic/regles.test.ts
 
 import { describe, expect, it } from "vitest"
-import config from "../config.json" with { type: "json" }
 import fichier2024 from "../regles/2024.json" with { type: "json" }
 import fichier2025 from "../regles/2025.json" with { type: "json" }
-import { DERNIERE_ANNEE_DES_REGLES, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, reglesEnVigueur, reglesPubliees } from "./regles.js"
+import fichier2026 from "../regles/2026.json" with { type: "json" }
+import { ANNEE_COURANTE, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, reglesPubliees } from "./regles.js"
 
 describe("reglesDeLAnnee", () => {
   it("connaît les règles de 2024 à 2026", () => {
-    expect([PREMIERE_ANNEE_DES_REGLES, DERNIERE_ANNEE_DES_REGLES]).toEqual([2024, 2026])
+    expect([PREMIERE_ANNEE_DES_REGLES, ANNEE_COURANTE]).toEqual([2024, 2026])
   })
 
   it.each([
     [2024, fichier2024],
     [2025, fichier2025],
-    [2026, config]
+    [2026, fichier2026]
   ])("donne le fichier de %i, sans avertissement", (annee, fichier) => {
     const resultat = reglesDeLAnnee(annee)
 
@@ -25,7 +25,7 @@ describe("reglesDeLAnnee", () => {
   it("reprend les dernières règles connues pour une année plus récente, avec un avertissement", () => {
     const resultat = reglesDeLAnnee(2028)
 
-    expect(resultat.regles).toBe(reglesEnVigueur)
+    expect(resultat.regles).toBe(fichier2026)
     expect("avertissement" in resultat && resultat.avertissement).toMatch(/^Les règles de 2028 ne sont pas encore connues : 2028 est simulée avec celles de 2026/)
   })
 
