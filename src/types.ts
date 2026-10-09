@@ -1,5 +1,6 @@
 // src/types.ts
 import { z } from "zod"
+import { ANNEE_COURANTE } from "./backend/regles/index.js"
 
 // ===================================================================================
 // == 1. DÉFINITION DES SCHÉMAS DE VALIDATION (LA SOURCE DE VÉRITÉ)
@@ -201,10 +202,10 @@ export const MonthlyGridDataSchema = z
   .length(12, "La grille mensuelle doit contenir exactement 12 mois")
 
 /**
- * Année d'une nouvelle session : la dernière dont le simulateur connaît les règles (un test le vérifie).
- * C'est aussi l'année où les migrations placent la grille d'une session d'avant les années multiples (format 2).
+ * Année d'une nouvelle session : l'année en cours du simulateur, c'est-à-dire la plus récente dont un fichier de
+ * règles existe (src/backend/regles/index.ts). Elle n'est écrite nulle part ailleurs : elle avance avec les fichiers.
  */
-export const ANNEE_PAR_DEFAUT = 2026
+export const ANNEE_PAR_DEFAUT = ANNEE_COURANTE
 
 /** Douze mois sans flux. */
 export function grilleVide(): z.infer<typeof MonthlyGridDataSchema> {

@@ -14,7 +14,11 @@
 
 export const FORMAT_VERSION_ACTUEL = 3
 
-/** Année des sessions écrites avant les années multiples (formats 1 et 2) : celle des seules règles alors connues. */
+/**
+ * Année des sessions écrites avant les années multiples (formats 1 et 2) : celle des seules règles alors connues.
+ * Valeur historique, à ne jamais modifier : ce n'est pas l'année en cours. Une session du format 2 a été remplie avec
+ * les règles de 2026 ; la placer dans une autre année changerait ses résultats.
+ */
 export const ANNEE_DES_SESSIONS_D_UNE_ANNEE = 2026
 
 /** Un fichier sans numéro de format date d'avant le versionnage : c'est la version 1. */

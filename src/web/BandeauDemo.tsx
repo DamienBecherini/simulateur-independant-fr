@@ -5,6 +5,7 @@
 
 import { useId } from "react"
 import { Button } from "@/components/ui/button"
+import { ANNEE_COURANTE } from "@/backend/regles/index"
 import { FenetreIADeLaDemo } from "@/ui/components/UtiliserAvecUneIA"
 import { reinitialiserDemo } from "./stockage-navigateur"
 import { InvitationAInstaller } from "./AideALInstallation"
@@ -40,7 +41,7 @@ export function BandeauDemo() {
   return (
     <aside aria-label={nom} className="print:hidden mx-auto mt-4 max-w-3xl rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
       <p>
-        {nom} : vos simulations restent {installee ? "sur cet ordinateur" : "dans ce navigateur"}, rien n'est envoyé. Les montants sont indicatifs (règles 2026).{" "}
+        {nom} : vos simulations restent {installee ? "sur cet ordinateur" : "dans ce navigateur"}, rien n'est envoyé. Les montants sont indicatifs (règles {ANNEE_COURANTE}).{" "}
         <a className="underline" href="https://github.com/DamienBecherini/simulateur-independant-fr">Code source et application de bureau</a>
         <Button variant="link" size="sm" className={BOUTON_DU_BANDEAU} onClick={reinitialiserDemo}>
           Recommencer avec l'exemple

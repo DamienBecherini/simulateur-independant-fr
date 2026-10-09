@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import { ANNEE_PAR_DEFAUT, grilleVide, type AnneeSimulee, type FinancialFlow } from "../../types.js"
 import { ajouterAnnee, anneeAAjouter, anneeExistante, anneesDeLaSession, anneesManquantes, donneesDeLAnnee, erreurDesAnnees, NOMBRE_MAX_ANNEES, nombreDeFlux, ordonnerLesAnnees, peutAjouterAnnee, peutSupprimerAnnee, remplacerGrille, supprimerAnnee, transformerLesGrilles, vueDeLAnnee, type SessionAnnuelle } from "./annees.js"
-import { reglesEnVigueur } from "./regles.js"
+import { reglesDesAnneesConnues } from "./regles.js"
 import { personne } from "./testing/session-de-test.js"
 
 const flux = (id: string, amount = 1000): FinancialFlow => ({ id, label: "Revenu", amount, entityId: "alice", type: "other_taxable_income" })
@@ -25,7 +25,7 @@ const compteur = () => {
 }
 
 it("crée les nouvelles sessions dans la dernière année dont les règles sont connues", () => {
-  expect(ANNEE_PAR_DEFAUT).toBe(reglesEnVigueur.annee)
+  expect(ANNEE_PAR_DEFAUT).toBe(Math.max(...reglesDesAnneesConnues().map(r => r.annee)))
 })
 
 describe("lecture des années", () => {

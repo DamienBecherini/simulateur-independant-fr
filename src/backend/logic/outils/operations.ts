@@ -7,7 +7,7 @@ import { z } from "zod"
 import { grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
 import { NOMBRE_MAX_ANNEES } from "../annees.js"
 import { professionDe, professionsConnues } from "../professions.js"
-import { reglesEnVigueur } from "../regles.js"
+import { ANNEE_COURANTE, reglesEnVigueur } from "../regles.js"
 import { anneeDeLaSession, enumerer, ErreurOutil, genreDe, GENRES_D_ACTEUR, RELATIONS_REQUISES, trouverActeur, TYPES_DE_FLUX, verifierNouvelleRelation, verifierTypePermis, type GenreDActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
 
@@ -26,7 +26,7 @@ export const SerieSchema = z.strictObject({
 export const ReglagesActeurSchema = z.strictObject({
   partsFiscales: z.number().min(0.5).max(20).optional().describe("Personne : parts fiscales propres (1 par adulte ; enfants : relation Enfant)."),
   capitalSocial: MontantSchema.optional().describe("SASU ou EURL : capital social, en euros."),
-  dateDeCreation: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Date de création : « AAAA-MM », par exemple 2026-03.").optional().describe("Activité : mois de création, « AAAA-MM »."),
+  dateDeCreation: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, `Date de création : « AAAA-MM », par exemple ${ANNEE_COURANTE}-03.`).optional().describe("Activité : mois de création, « AAAA-MM »."),
   beneficieACRE: z.boolean().optional().describe("Micro-entreprise : bénéficie de l'ACRE."),
   opteVFL: z.boolean().optional().describe("Micro-entreprise : versement libératoire de l'impôt sur le revenu."),
   rfrN2: MontantSchema.optional().describe("Micro-entreprise : revenu fiscal de référence N-2 du foyer, en euros."),
