@@ -1,7 +1,7 @@
 // src/backend/logic/references/annee-suivante.test.ts
 
 import { expect, it, vi } from "vitest"
-import { ANNEE_COURANTE, reglesDeLAnnee, reglesEnVigueur } from "../regles.js"
+import { ANNEE_COURANTE, reglesDeLAnnee } from "../regles.js"
 import { ANNEE_AJOUTEE } from "../testing/annee-suivante.js"
 import { casDeReference } from "../testing/cas-de-reference.js"
 
@@ -22,7 +22,7 @@ import { casDeReference } from "../testing/cas-de-reference.js"
 vi.mock("../../regles/index.js", async importOriginal => (await import("../testing/annee-suivante.js")).avecUneAnneeDePlus(await importOriginal()))
 
 it("l'année fictive est bien l'année en cours pendant ce test", () => {
-  expect([reglesEnVigueur.annee, ANNEE_COURANTE, reglesDeLAnnee(ANNEE_AJOUTEE).regles?.annee]).toEqual([ANNEE_AJOUTEE, ANNEE_AJOUTEE, ANNEE_AJOUTEE])
+  expect([ANNEE_COURANTE, reglesDeLAnnee(ANNEE_AJOUTEE).regles?.annee]).toEqual([ANNEE_AJOUTEE, ANNEE_AJOUTEE])
 })
 
 await import("./comparateur.reference.test.js")

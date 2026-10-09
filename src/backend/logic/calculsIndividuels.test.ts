@@ -53,7 +53,6 @@ describe("calculerMicro", () => {
   it("calcule le seuil de revenu fiscal de référence du versement libératoire selon le nombre de parts", () => {
     expect(plafondRfrVersementLiberatoire(1, reglesDeTest)).toBe(28000)
     expect(plafondRfrVersementLiberatoire(2.5, reglesDeTest)).toBe(70000)
-    expect(plafondRfrVersementLiberatoire(1)).toBeGreaterThan(0)
   })
 
   describe("abattement minimum", () => {
@@ -130,11 +129,6 @@ describe("calculerMicro", () => {
     })
   })
 
-  it("utilise par défaut les règles en vigueur", () => {
-    const resultat = calculerMicro({ caVente: 0, caServicesBic: 0, caServicesBnc: 10000, beneficieACRE: false, opteVFL: false })
-
-    expect(resultat.cotisationsSociales).toBeGreaterThan(0)
-  })
 })
 
 describe("calculerEI", () => {
@@ -178,9 +172,6 @@ describe("calculerEI", () => {
     expect(resultat.warnings).toEqual([expect.stringContaining("Cotisations minimales des indépendants appliquées")])
   })
 
-  it("utilise par défaut les règles en vigueur", () => {
-    expect(calculerEI({ chiffreAffaires: 10000, chargesDeductibles: 0 }).revenuNet).toBeLessThan(10000)
-  })
 })
 
 describe("depassePlafondMicro", () => {

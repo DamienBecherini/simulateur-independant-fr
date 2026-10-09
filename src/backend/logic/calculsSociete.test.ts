@@ -94,9 +94,6 @@ describe("calculerSASU", () => {
     expect(resultat.warnings).toHaveLength(2)
   })
 
-  it("utilise par défaut les règles en vigueur", () => {
-    expect(calculerSASU(activite).chiffreAffaires).toBe(100000)
-  })
 })
 
 
@@ -174,9 +171,6 @@ describe("calculerEURL", () => {
     expect(resultat.warnings).toEqual([expect.stringContaining("Cotisations minimales du gérant")])
   })
 
-  it("utilise par défaut les règles en vigueur", () => {
-    expect(calculerEURL({ ...activite, capitalSocial: 1000 }).chiffreAffaires).toBe(100000)
-  })
 })
 
 describe("réserves d'une année sur l'autre", () => {

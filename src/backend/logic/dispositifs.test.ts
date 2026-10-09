@@ -5,9 +5,10 @@ import { grilleVide } from "../../types.js"
 import { calculerMicro } from "./calculsAE.js"
 import { acreDeLAnnee, ecrireMois, joursDActivite, libelleDuMois, lireMois, moisCouverts, noteACRE, noteCFE, partDeCFEDue, periodeACRE, prorataDesPlafonds, regimesMicroDesAnnees } from "./dispositifs.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
-import { reglesDeLAnnee, reglesEnVigueur } from "./regles.js"
+import { reglesPubliees } from "./regles.js"
 
-const regles2025 = reglesDeLAnnee(2025).regles!
+const regles2025 = reglesPubliees(2025)
+const regles2026 = reglesPubliees(2026)
 
 describe("mois de création", () => {
   it("lit et écrit « AAAA-MM »", () => {
@@ -40,22 +41,22 @@ describe("prorata des plafonds l'année de création", () => {
 describe("période de l'ACRE d'une micro-entreprise", () => {
   it("court jusqu'à la fin du 3e trimestre civil qui suit celui du début d'activité (exemple de F11677)", () => {
     // Début le 3 septembre 2026 (3e trimestre) : fin le 30 juin 2027. Début en juillet : même fin, sur 12 mois.
-    expect(periodeACRE({ annee: 2026, mois: 9 }, reglesEnVigueur)).toEqual({ debut: { annee: 2026, mois: 9 }, fin: { annee: 2027, mois: 6 }, reduction: 0.25 })
-    expect(periodeACRE({ annee: 2026, mois: 7 }, reglesEnVigueur).fin).toEqual({ annee: 2027, mois: 6 })
-    expect(periodeACRE({ annee: 2026, mois: 12 }, reglesEnVigueur).fin).toEqual({ annee: 2027, mois: 9 })
-    expect(periodeACRE({ annee: 2026, mois: 1 }, reglesEnVigueur).fin).toEqual({ annee: 2026, mois: 12 })
+    expect(periodeACRE({ annee: 2026, mois: 9 }, regles2026)).toEqual({ debut: { annee: 2026, mois: 9 }, fin: { annee: 2027, mois: 6 }, reduction: 0.25 })
+    expect(periodeACRE({ annee: 2026, mois: 7 }, regles2026).fin).toEqual({ annee: 2027, mois: 6 })
+    expect(periodeACRE({ annee: 2026, mois: 12 }, regles2026).fin).toEqual({ annee: 2027, mois: 9 })
+    expect(periodeACRE({ annee: 2026, mois: 1 }, regles2026).fin).toEqual({ annee: 2026, mois: 12 })
   })
 
   it("réduit de 50 % pour une création jusqu'en juin 2026, de 25 % à partir de juillet 2026", () => {
-    expect(periodeACRE({ annee: 2026, mois: 6 }, reglesEnVigueur).reduction).toBe(0.5)
-    expect(periodeACRE({ annee: 2026, mois: 7 }, reglesEnVigueur).reduction).toBe(0.25)
+    expect(periodeACRE({ annee: 2026, mois: 6 }, regles2026).reduction).toBe(0.5)
+    expect(periodeACRE({ annee: 2026, mois: 7 }, regles2026).reduction).toBe(0.25)
     expect(periodeACRE({ annee: 2025, mois: 3 }, regles2025).reduction).toBe(0.5)
     // Avant les taux connus (création d'avant 2020), la réduction de l'année.
-    expect(periodeACRE({ annee: 2019, mois: 3 }, reglesEnVigueur).reduction).toBe(reglesEnVigueur.microEntreprise.reductionACRE)
+    expect(periodeACRE({ annee: 2019, mois: 3 }, regles2026).reduction).toBe(regles2026.microEntreprise.reductionACRE)
   })
 
   it("donne les mois couverts de chaque année", () => {
-    const periode = periodeACRE({ annee: 2026, mois: 9 }, reglesEnVigueur)
+    const periode = periodeACRE({ annee: 2026, mois: 9 }, regles2026)
     expect(moisCouverts(periode, 2025)).toEqual([])
     expect(moisCouverts(periode, 2026)).toEqual([8, 9, 10, 11])
     expect(moisCouverts(periode, 2027)).toEqual([0, 1, 2, 3, 4, 5])
@@ -64,15 +65,15 @@ describe("période de l'ACRE d'une micro-entreprise", () => {
 
   it("ne s'applique qu'avec l'ACRE et une date de création", () => {
     const grille = grilleVide()
-    expect(acreDeLAnnee({ id: "m1", beneficieACRE: false, dateDeCreation: "2026-09" }, 2026, grille, reglesEnVigueur)).toBeNull()
-    expect(acreDeLAnnee({ id: "m1", beneficieACRE: true }, 2026, grille, reglesEnVigueur)).toBeNull()
-    expect(acreDeLAnnee({ id: "m1", beneficieACRE: true, dateDeCreation: "2026-09" }, 2026, grille, reglesEnVigueur)?.mois).toEqual([8, 9, 10, 11])
+    expect(acreDeLAnnee({ id: "m1", beneficieACRE: false, dateDeCreation: "2026-09" }, 2026, grille, regles2026)).toBeNull()
+    expect(acreDeLAnnee({ id: "m1", beneficieACRE: true }, 2026, grille, regles2026)).toBeNull()
+    expect(acreDeLAnnee({ id: "m1", beneficieACRE: true, dateDeCreation: "2026-09" }, 2026, grille, regles2026)?.mois).toEqual([8, 9, 10, 11])
   })
 
   it("n'écrit pas de note une année que l'aide ne couvre pas, et dit « en » pour un seul mois", () => {
-    const acre = acreDeLAnnee({ id: "m1", beneficieACRE: true, dateDeCreation: "2026-12" }, 2028, grilleVide(), reglesEnVigueur)!
+    const acre = acreDeLAnnee({ id: "m1", beneficieACRE: true, dateDeCreation: "2026-12" }, 2028, grilleVide(), regles2026)!
     expect(noteACRE(acre, 2028, 0)).toBeNull()
-    const decembre = acreDeLAnnee({ id: "m1", beneficieACRE: true, dateDeCreation: "2026-12" }, 2026, grilleVide(), reglesEnVigueur)!
+    const decembre = acreDeLAnnee({ id: "m1", beneficieACRE: true, dateDeCreation: "2026-12" }, 2026, grilleVide(), regles2026)!
     expect(noteACRE(decembre, 2026, 0)).toMatch(/sur le chiffre d'affaires en décembre 2026,/)
   })
 })
@@ -83,20 +84,20 @@ describe("cotisations d'une micro-entreprise avec l'ACRE sur une partie de l'ann
   it("ne réduit que le chiffre d'affaires des mois couverts, sans l'avertissement d'une année entière", () => {
     // 40 000 x 25,6 % = 10 240 € ; réduction 10 000 x 25,6 % x 25 % = 640 € ; dû : 9 600 €, plus 0,2 % de formation
     // professionnelle que l'ACRE ne réduit pas (80 €).
-    const resultat = calculerMicro({ ...entrees, caSousACRE: { caVente: 0, caServicesBic: 0, caServicesBnc: 10000 }, reductionACRE: 0.25 }, reglesEnVigueur)
+    const resultat = calculerMicro({ ...entrees, caSousACRE: { caVente: 0, caServicesBic: 0, caServicesBnc: 10000 }, reductionACRE: 0.25 }, regles2026)
     expect(resultat.cotisationsSociales).toBeCloseTo(9600 + 80, 6)
     expect(resultat.warnings.some(w => w.startsWith("ACRE"))).toBe(false)
   })
 
   it("sans mois couverts, à plein taux", () => {
-    expect(calculerMicro({ ...entrees, caSousACRE: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 }, reductionACRE: 0.25 }, reglesEnVigueur).cotisationsSociales).toBeCloseTo(10240 + 80, 6)
+    expect(calculerMicro({ ...entrees, caSousACRE: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 }, reductionACRE: 0.25 }, regles2026).cotisationsSociales).toBeCloseTo(10240 + 80, 6)
   })
 
   it("compte les droits à la retraite sur les cotisations réduites des seuls mois couverts", () => {
     const chiffreAffairesMicro = { caVente: 0, caServicesBic: 0, caServicesBnc: 40000 }
-    const toute = evaluerProtectionSociale("micro", { remunerationBrute: 0, assietteTNS: 0, chiffreAffairesMicro, beneficieACRE: true }, reglesEnVigueur)
-    const partielle = evaluerProtectionSociale("micro", { remunerationBrute: 0, assietteTNS: 0, chiffreAffairesMicro, beneficieACRE: true, acre: { reduction: 0.25, chiffreAffaires: { caVente: 0, caServicesBic: 0, caServicesBnc: 10000 } } }, reglesEnVigueur)
-    const terminee = evaluerProtectionSociale("micro", { remunerationBrute: 0, assietteTNS: 0, chiffreAffairesMicro, beneficieACRE: true, acre: { reduction: 0.25, chiffreAffaires: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 } } }, reglesEnVigueur)
+    const toute = evaluerProtectionSociale("micro", { remunerationBrute: 0, assietteTNS: 0, chiffreAffairesMicro, beneficieACRE: true }, regles2026)
+    const partielle = evaluerProtectionSociale("micro", { remunerationBrute: 0, assietteTNS: 0, chiffreAffairesMicro, beneficieACRE: true, acre: { reduction: 0.25, chiffreAffaires: { caVente: 0, caServicesBic: 0, caServicesBnc: 10000 } } }, regles2026)
+    const terminee = evaluerProtectionSociale("micro", { remunerationBrute: 0, assietteTNS: 0, chiffreAffairesMicro, beneficieACRE: true, acre: { reduction: 0.25, chiffreAffaires: { caVente: 0, caServicesBic: 0, caServicesBnc: 0 } } }, regles2026)
     expect(partielle.trimestres).toBeGreaterThanOrEqual(toute.trimestres)
     expect(partielle.resume).toMatch(/ACRE/)
     expect(terminee.resume).not.toMatch(/ACRE/)
@@ -107,14 +108,14 @@ describe("CFE d'une activité créée récemment", () => {
   const mars2026 = { annee: 2026, mois: 3 }
 
   it("rien l'année de création (ni avant), la moitié l'année suivante, tout ensuite", () => {
-    expect([2025, 2026, 2027, 2028].map(annee => partDeCFEDue(mars2026, annee, reglesEnVigueur))).toEqual([0, 0, 0.5, 1])
-    expect(partDeCFEDue(null, 2026, reglesEnVigueur)).toBe(1)
+    expect([2025, 2026, 2027, 2028].map(annee => partDeCFEDue(mars2026, annee, regles2026))).toEqual([0, 0, 0.5, 1])
+    expect(partDeCFEDue(null, 2026, regles2026)).toBe(1)
   })
 
   it("le dit, sauf quand elle est due en entier", () => {
-    expect(noteCFE(mars2026, 2025, reglesEnVigueur)).toBe("CFE non comptée en 2025 : l'activité n'est créée qu'en mars 2026.")
-    expect(noteCFE(mars2026, 2028, reglesEnVigueur)).toBeNull()
-    expect(noteCFE(null, 2026, reglesEnVigueur)).toBeNull()
+    expect(noteCFE(mars2026, 2025, regles2026)).toBe("CFE non comptée en 2025 : l'activité n'est créée qu'en mars 2026.")
+    expect(noteCFE(mars2026, 2028, regles2026)).toBeNull()
+    expect(noteCFE(null, 2026, regles2026)).toBeNull()
   })
 })
 

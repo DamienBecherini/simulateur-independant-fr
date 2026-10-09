@@ -82,10 +82,4 @@ describe("calculerIR", () => {
     })
   })
 
-  it("utilise par défaut les règles en vigueur", () => {
-    const impot = calculerIR({ revenuNetGlobalImposable: 60000, partsFiscales: 1, nombreDeclarants: 1 })
-
-    expect(impot).toBeGreaterThan(0)
-    expect(impot).toBeLessThan(60000)
-  })
 })

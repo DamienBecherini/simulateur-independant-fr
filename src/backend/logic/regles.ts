@@ -260,12 +260,11 @@ export function reglesPubliees(annee: number): ReglesFiscales {
 /** Les règles qui s'appliquent à une année, ou la raison pour laquelle l'année ne peut pas être simulée. */
 export type ReglesDeLAnnee = { regles: ReglesFiscales; avertissement: string | null } | { regles: null; erreur: string }
 
-/**
- * Les règles de l'année en cours. Elles servent encore de valeur par défaut à quelques fonctions du moteur ; un appel
- * qui oublie l'année calcule alors avec elles (voir la branche « regles-explicites » de la relecture d'octobre 2026).
+/*
+ * Il n'y a pas de « règles en vigueur » par défaut : chaque fonction du moteur reçoit les règles de l'année qu'elle
+ * calcule. Un appel qui oublierait l'année est une erreur de compilation, au lieu d'un calcul silencieux avec les
+ * règles de l'année en cours.
  */
-export const reglesEnVigueur: ReglesFiscales = reglesPubliees(ANNEE_COURANTE)
-
 export function reglesDeLAnnee(annee: number): ReglesDeLAnnee {
   const connues = REGLES_PAR_ANNEE.get(annee)
   if (connues) return { regles: connues, avertissement: null }

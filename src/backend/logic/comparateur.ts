@@ -2,7 +2,7 @@
 
 import type { StatutFrais, FraisFonctionnement, Company, ComparaisonCouple, ComparaisonOptions, ComparaisonResult, FinancialFlow, MicroEntreprise, OptimisationRemuneration, Relationship, RemunerationOptimale, ScenarioStatut, DonneesDeLAnnee, SimulationReport, StatutCompare, StatutSociete } from "../../types.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
-import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
+import type { ReglesFiscales } from "./regles.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import { depassePlafondMicro } from "./calculsAE.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, noteCFE, partDeCFEDue, prorataDesPlafonds } from "./dispositifs.js"
@@ -314,13 +314,13 @@ export function beneficeDistribuableDeLAnnee(report: SimulationReport, activiteI
 }
 
 /** Simule l'activité dans un statut, avec les réglages donnés : la colonne du comparateur et les dividendes versés. */
-export function simulerScenario(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, options: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): { scenario: ScenarioStatut; dividendes: number | null } {
+export function simulerScenario(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): { scenario: ScenarioStatut; dividendes: number | null } {
   const simulation = simulerStatut(session, source, statut, options, regles, contexte)
   return { scenario: scenario(statut, statut === statutActuel(source), simulation, source.id, options, regles, contexte), dividendes: simulation.dividendes }
 }
 
 /** Bénéfice après impôt sur les sociétés que la société garde avec cette rémunération, avant tout dividende. */
-export function beneficeAvantDividendes(session: DonneesDeLAnnee, source: Activite, statut: "SASU" | "EURL", options: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): number {
+export function beneficeAvantDividendes(session: DonneesDeLAnnee, source: Activite, statut: "SASU" | "EURL", options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): number {
   const report = runMetaSimulation(sessionConvertie(session, source, statut, options, 0), regles, contexte)
   return report.activities.find(a => a.entityId === source.id)?.resultatConserve ?? 0
 }
@@ -362,7 +362,7 @@ export function avecLaCFEDeLAnnee(options: ComparaisonOptions, source: Activite,
   return { options: { ...options, fraisFonctionnement: frais }, noteCFE: note, partCFE: part }
 }
 
-export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): ComparaisonResult {
+export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): ComparaisonResult {
   const reportActuel = runMetaSimulation(session, regles, contexte)
   const couples = comparerCouples(session, regles, contexte, reportActuel)
 
@@ -416,7 +416,7 @@ export interface SituationActuelle {
  * fonctionnement de ce statut compris, comme la colonne « actuel » du comparateur avec le partage « grille ». Sert de
  * point de départ à l'arbitrage rémunération / dividendes : ses nets se comparent à ceux de la courbe.
  */
-export function situationActuelle(session: DonneesDeLAnnee, source: Activite, options: ComparaisonOptions, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): SituationActuelle {
+export function situationActuelle(session: DonneesDeLAnnee, source: Activite, options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): SituationActuelle {
   const statut = statutActuel(source)
   const flux = session.monthlyData.flatMap(mois => mois.flows).filter(f => f.entityId === source.id)
   const total = (type: FinancialFlow["type"]) => flux.filter(f => f.type === type).reduce((somme, f) => somme + f.amount, 0)

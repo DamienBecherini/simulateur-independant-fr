@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import { assietteSociale, avertissementCotisationsMinimales, calculerCotisationsTNS, revenuAvantCotisationsPourUnNet } from "./cotisationsTNS.js"
-import { reglesEnVigueur } from "./regles.js"
+import { reglesPubliees } from "./regles.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 
 /*
@@ -120,9 +120,9 @@ describe("revenuAvantCotisationsPourUnNet", () => {
   })
 
   it.each([0, 5000, 30000, 80000, 300000])("vérifie revenu - cotisations = net pour %i € avec les règles en vigueur", net => {
-    const revenu = revenuAvantCotisationsPourUnNet(net, reglesEnVigueur.TNS)
+    const revenu = revenuAvantCotisationsPourUnNet(net, reglesPubliees(2026).TNS)
 
-    expect(revenu - calculerCotisationsTNS(revenu, reglesEnVigueur.TNS).total).toBeCloseTo(net, 6)
+    expect(revenu - calculerCotisationsTNS(revenu, reglesPubliees(2026).TNS).total).toBeCloseTo(net, 6)
   })
 })
 

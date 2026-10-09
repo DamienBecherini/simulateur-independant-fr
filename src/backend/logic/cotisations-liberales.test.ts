@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { asv, complementaireCarpimko, cotisationsDeLaCaisse, curps, invaliditeDecesLiberale, maladieAuxiliaire } from "./cotisations-liberales.js"
 import { calculerCotisationsTNS, revenuAvantCotisationsPourUnNet } from "./cotisationsTNS.js"
 import { parametresDeLaCaisse } from "./professions.js"
-import { reglesDeLAnnee, reglesEnVigueur } from "./regles.js"
+import { reglesPubliees } from "./regles.js"
 
 /*
  * Barèmes des caisses de libéraux réglementés (voir l'ADR 015). Les montants attendus se recalculent de tête à partir
@@ -12,8 +12,8 @@ import { reglesDeLAnnee, reglesEnVigueur } from "./regles.js"
  * references/liberaux.reference.test.ts.
  */
 
-const regles2026 = reglesEnVigueur
-const regles2025 = reglesDeLAnnee(2025).regles!
+const regles2026 = reglesPubliees(2026)
+const regles2025 = reglesPubliees(2025)
 const pass = regles2026.TNS.plafondSecuriteSociale
 const { CIPAV: cipav, CARPIMKO: carpimko, commun } = regles2026.liberauxReglementes
 
@@ -118,7 +118,7 @@ describe("cotisations d'un libéral réglementé au réel", () => {
   })
 
   it("2024 : barème maladie propre aux libéraux réglementés (6,5 % au-delà de 110 % du PASS)", () => {
-    const regles2024 = reglesDeLAnnee(2024).regles!
+    const regles2024 = reglesPubliees(2024)
     const tns = calculerCotisationsTNS(100000, regles2024.TNS, parametresDeLaCaisse({ profession: "architecte" }, regles2024, 2024))
     expect(tns.cotisations.maladieMaternite).toBeCloseTo(0.065 * tns.assiette, 6)
     expect(tns.cotisations.retraiteComplementaire).toBeCloseTo(0.09 * 46368 + 0.22 * (tns.assiette - 46368), 6)

@@ -12,7 +12,7 @@ import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.
 import { buildFoyers, type Foyer } from "./foyers.js"
 import { euros } from "./format.js"
 import { fraisReelsDeLaPersonne, montantBaremeKilometrique } from "./frais-kilometriques.js"
-import { reglesEnVigueur, type ProfessionReglementee, type ReglesFiscales } from "./regles.js"
+import type { ProfessionReglementee, ReglesFiscales } from "./regles.js"
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementsDeLaProfession, parametresDeLaCaisse, professionDe, professionDeLActivite, reglesDeLaMicro } from "./professions.js"
 import { acreDeLAnnee, ecrireMois, economieACRE, lireMois, noteACRE, noteAnnonce, noteProrata, noteRetour, noteSortie, prorataDesPlafonds, type ACREDuneAnnee, type RegimeMicroDeLAnnee } from "./dispositifs.js"
@@ -719,7 +719,7 @@ export interface ContexteDeLAnnee {
   assiettesAnneePrecedente?: { annee: number; parActivite: Record<string, number> }
 }
 
-export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales = reglesEnVigueur, contexte: ContexteDeLAnnee = {}): SimulationReport {
+export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): SimulationReport {
   const foyersFiscaux = buildFoyers(session, regles.IR.partsParEnfant)
   const flux = aggregateAnnualFlowsByEntity(session)
   const salaries = bulletinsDesSalaries(session, flux, regles)

@@ -3,7 +3,7 @@
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementCotisationsMinimales, calculerCotisationsTNS, type CotisationsTNS } from "./cotisationsTNS.js"
 import { euros } from "./format.js"
-import { reglesEnVigueur, type ReglesFiscales } from "./regles.js"
+import type { ReglesFiscales } from "./regles.js"
 
 export interface EntreesEI {
   chiffreAffaires: number
@@ -29,7 +29,7 @@ export interface ResultatEI {
  * elles sont déductibles du bénéfice imposable, sauf la CSG non déductible et la CRDS. En cas de déficit,
  * seules les cotisations minimales sont dues, et le déficit vient en déduction des autres revenus du foyer.
  */
-export function calculerEI({ chiffreAffaires, chargesDeductibles }: EntreesEI, regles: ReglesFiscales = reglesEnVigueur, caisse?: ParametresDeLaCaisse): ResultatEI {
+export function calculerEI({ chiffreAffaires, chargesDeductibles }: EntreesEI, regles: ReglesFiscales, caisse?: ParametresDeLaCaisse): ResultatEI {
   const beneficeAvantCotisations = chiffreAffaires - chargesDeductibles
   const cotisationsTNS = calculerCotisationsTNS(beneficeAvantCotisations, regles.TNS, caisse)
   const revenuNet = beneficeAvantCotisations - cotisationsTNS.total
