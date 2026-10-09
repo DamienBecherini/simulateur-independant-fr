@@ -77,6 +77,9 @@ describe("chiffres « À vérifier » des scénarios des professions libérales 
     const apres = activite(baisse2025).cotisationsTNS!
     expect([apres.cotisations.retraiteComplementaire, apres.caisse!.asv, apres.cotisations.retraiteDeBase].map(arrondi)).toEqual([2575, 271, 4706])
     expect(comparer(session).warnings).toContainEqual(expect.stringContaining("Micro-entreprise non proposée"))
+    // La SASU et l'EURL classiques ne sont pas désignées : le kiné exerce en principe en société d'exercice libéral.
+    expect(comparer(session).meilleur).toBe("EI")
+    expect(comparer(session).warnings).toContainEqual(expect.stringContaining("ne sont pas désignées comme meilleur statut"))
   })
 
   it("psychologue en EI au réel", () => {
