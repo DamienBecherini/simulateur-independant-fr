@@ -7,7 +7,7 @@ import { z } from "zod"
 import { grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
 import { NOMBRE_MAX_ANNEES } from "../annees.js"
 import { professionDe, professionsConnues } from "../professions.js"
-import { ANNEE_COURANTE, reglesEnVigueur } from "../regles.js"
+import { ANNEE_COURANTE, reglesDesAnneesConnues } from "../regles.js"
 import { anneeDeLaSession, enumerer, ErreurOutil, genreDe, GENRES_D_ACTEUR, RELATIONS_REQUISES, trouverActeur, TYPES_DE_FLUX, verifierNouvelleRelation, verifierTypePermis, type GenreDActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
 
@@ -54,12 +54,13 @@ const REGLAGE_PAR_GENRE: Record<keyof ReglagesActeur, GenreDActeur[]> = {
 
 /**
  * La profession proposée doit être connue des règles ; une part conventionnée n'a de sens que pour une profession
- * conventionnable, celle que l'acteur aura après l'opération.
+ * conventionnable, celle que l'acteur aura après l'opération. Un acteur vaut pour toutes les années de la session :
+ * comme pour `professionsConnues`, il suffit que la profession soit conventionnable dans les règles d'une année.
  */
 function verifierProfession(acteur: Entity): void {
   if (acteur.type === "person") return
   if (acteur.profession !== undefined && !professionsConnues().has(acteur.profession)) throw new ErreurOutil(`Profession inconnue : « ${acteur.profession} » (identifiants : regles_de_l_annee, ou « non-reglementee »).`)
-  if (acteur.partConventionnee === undefined || professionDe(acteur, reglesEnVigueur)?.conventionnable) return
+  if (acteur.partConventionnee === undefined || reglesDesAnneesConnues().some(regles => professionDe(acteur, regles)?.conventionnable)) return
   throw new ErreurOutil(`La part conventionnée ne vaut que pour une profession conventionnable (auxiliaires médicaux de la CARPIMKO) : « ${acteur.name} » n'en a pas.`)
 }
 
