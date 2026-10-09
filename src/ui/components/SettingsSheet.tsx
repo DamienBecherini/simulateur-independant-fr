@@ -118,70 +118,63 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
     }
   }, [isOpen])
 
-  // --- LOGIQUE DE SAUVEGARDE ENTIÈREMENT RÉÉCRITE ---
-  const handleSave = () => {
-    // On récupère le slot qui est actuellement chargé en mémoire (s'il y en a un)
+  // Les sauvegardes ne changent à l'écran qu'une fois écrites : si l'écriture échoue (l'échec est notifié par le pont),
+  // la liste et le panneau restent tels quels, et l'utilisateur peut réessayer.
+  const handleSave = async () => {
+    // La sauvegarde chargée, s'il y en a une.
     const loadedSlot = loadedSlotId ? allSaveSlots.find(s => s.id === loadedSlotId) : null
 
-    // CAS 1: MISE À JOUR (comportement "Save")
-    // Si un slot est "chargé" ET que son nom n'a PAS changé.
+    // Mise à jour : une sauvegarde est chargée et la session porte toujours son nom ; elle est remplacée sans question.
     if (loadedSlot && loadedSlot.name === currentSession.name) {
-      // C'est une simple mise à jour, on écrase directement sans poser de question.
       const updatedSlot = SessionService.updateSlotWithSession(loadedSlot, currentSession)
       const updatedSlots = allSaveSlots.map(s => (s.id === loadedSlot.id ? updatedSlot : s))
+      if (!(await SessionService.saveAllSlots(updatedSlots))) return
       setAllSaveSlots(updatedSlots)
-      SessionService.saveAllSlots(updatedSlots)
-      onOpenChange(false) // On ferme le panneau, la sauvegarde est réussie.
-      return // On arrête l'exécution de la fonction ici.
+      onOpenChange(false)
+      return
     }
 
-    // CAS 2: CRÉATION ou "SAUVEGARDER SOUS..." (comportement "Save As")
-    // Ce cas se produit si aucun slot n'était chargé OU si l'utilisateur a modifié le nom de la session.
+    // Création, ou « sauvegarder sous » : aucune sauvegarde chargée, ou la session a changé de nom.
     const existingSlotByName = allSaveSlots.find(slot => slot.name === currentSession.name)
 
     if (existingSlotByName) {
-      // Un conflit de nom existe, on demande à l'utilisateur s'il veut écraser.
+      // Une sauvegarde porte déjà ce nom : l'utilisateur confirme avant de l'écraser.
       setSlotToOverwrite(existingSlotByName)
       setOverwriteAlertOpen(true)
     } else {
-      // Pas de conflit, on peut créer une nouvelle sauvegarde en toute sécurité.
       const newSlot = SessionService.createNewSlotFromSession(currentSession)
       const updatedSlots = [...allSaveSlots, newSlot]
+      if (!(await SessionService.saveAllSlots(updatedSlots))) return
       setAllSaveSlots(updatedSlots)
-      setSlotOrder(prevOrder => [newSlot.id, ...prevOrder]) // On ajoute le nouvel slot en haut de la liste
-      SessionService.saveAllSlots(updatedSlots)
-      // ACTION CRUCIALE: Le nouveau slot devient le "slot chargé" pour les prochaines sauvegardes.
+      setSlotOrder(prevOrder => [newSlot.id, ...prevOrder]) // La nouvelle sauvegarde en haut de la liste.
+      // La nouvelle sauvegarde devient la sauvegarde chargée : « Sauvegarder » la mettra à jour.
       setLoadedSlotId(newSlot.id)
       onOpenChange(false)
     }
   }
 
-  // --- LOGIQUE D'ÉCRASEMENT MISE À JOUR ---
-  const performOverwrite = () => {
+  const performOverwrite = async () => {
     if (!slotToOverwrite) return
     const updatedSlot = SessionService.updateSlotWithSession(slotToOverwrite, currentSession)
     const updatedSlots = allSaveSlots.map(slot => (slot.id === slotToOverwrite.id ? updatedSlot : slot))
-    setAllSaveSlots(updatedSlots)
-    SessionService.saveAllSlots(updatedSlots)
-
-    // ACTION CRUCIALE: Le slot qui vient d'être écrasé devient le nouveau "slot chargé".
-    // Cela garantit que la prochaine sauvegarde (sans changer de nom) mettra à jour ce même slot.
-    setLoadedSlotId(updatedSlot.id)
-
     setOverwriteAlertOpen(false)
     setSlotToOverwrite(null)
+    if (!(await SessionService.saveAllSlots(updatedSlots))) return
+    setAllSaveSlots(updatedSlots)
+    // La sauvegarde écrasée devient la sauvegarde chargée : « Sauvegarder » sans changer de nom la mettra à jour.
+    setLoadedSlotId(updatedSlot.id)
     onOpenChange(false)
   }
 
-  const handleDeleteSlot = (idToDelete: string) => {
+  const handleDeleteSlot = async (idToDelete: string) => {
     const updatedSlots = allSaveSlots.filter(slot => slot.id !== idToDelete)
+    if (!(await SessionService.saveAllSlots(updatedSlots))) return
     setAllSaveSlots(updatedSlots)
-    SessionService.saveAllSlots(updatedSlots)
     setSlotOrder(prev => prev.filter(id => id !== idToDelete))
   }
 
   const handleExportSlot = (slotToExport: SaveSlot) => {
-    SessionService.exportState(slotToExport)
+    void SessionService.exportState(slotToExport)
   }
 
   const handleDragEnd = (event: DragEndEvent) => {

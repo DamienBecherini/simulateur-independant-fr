@@ -36,8 +36,8 @@ export function contenuDeLaSession({ appVersion, name, entities, relationships, 
 /**
  * Exporte l'état d'un slot ou d'une session vers un fichier JSON.
  */
-export function exportState(state: Pick<ExportableState, "entities" | "relationships" | "annees">): void {
-  void window.api.exportState(state)
+export function exportState(state: Pick<ExportableState, "entities" | "relationships" | "annees">): Promise<void> {
+  return window.api.exportState(state)
 }
 
 /**
@@ -59,9 +59,10 @@ export async function importState(): Promise<{ data: ExportableState; report: Sa
 
 /**
  * Sauvegarde la liste complète des slots sur le disque ; `silencieux` évite la notification de réussite.
+ * `false` si l'écriture a échoué : le pont a déjà notifié l'échec, et les sauvegardes enregistrées sont intactes.
  */
-export function saveAllSlots(slots: SaveSlot[], options?: { silencieux?: boolean }): void {
-  void window.api.saveSlots(slots, options)
+export function saveAllSlots(slots: SaveSlot[], options?: { silencieux?: boolean }): Promise<boolean> {
+  return window.api.saveSlots(slots, options)
 }
 
 /** Le contenu d'une session qui compte pour savoir si elle est enregistrée : sans la version de l'application. */
