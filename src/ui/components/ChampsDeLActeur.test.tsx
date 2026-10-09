@@ -5,7 +5,7 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { Entity } from "@/types"
-import { makeCompany } from "@/ui/testing/fixtures"
+import { makeCompany, makeMicro } from "@/ui/testing/fixtures"
 import EditEntityModal from "./EditEntityModal"
 
 function ouvrir(entity: Entity) {
@@ -44,5 +44,14 @@ describe("réglages d'une société à l'IS", () => {
 
     expect(screen.queryByLabelText("Capital social")).not.toBeInTheDocument()
     expect(screen.queryByLabelText("Réserves au début")).not.toBeInTheDocument()
+  })
+})
+
+describe("revenu fiscal de référence d'une micro-entreprise", () => {
+  it("le champ nomme les années de RFR qu'il couvre, d'après les années de la simulation", () => {
+    const micro = makeMicro()
+    render(<EditEntityModal entity={micro} isOpen onClose={() => {}} onSave={vi.fn()} allEntities={[micro]} relationships={[]} anneesSimulees={[2024, 2025, 2026]} />)
+    const champ = screen.getByLabelText("RFR 2022 et 2023")
+    expect(champ).toHaveAccessibleDescription(/avis d'imposition reçus en 2023 et 2024 : il décide de l'accès au versement libératoire en 2024 et 2025. .* Pour 2026, la simulation utilise le revenu fiscal de référence qu'elle calcule elle-même./)
   })
 })

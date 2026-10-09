@@ -19,6 +19,8 @@ interface EditEntityModalProps {
   onSave: (updatedEntity: Entity, updatedRelationships: Relationship[]) => void
   allEntities: Entity[]
   relationships: Relationship[]
+  /** Années de la simulation, pour les champs qui en dépendent (RFR N-2 d'une micro-entreprise). */
+  anneesSimulees?: number[]
 }
 
 interface LocalState {
@@ -26,7 +28,7 @@ interface LocalState {
   relationships: Relationship[]
 }
 
-function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relationships }: EditEntityModalProps) {
+function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relationships, anneesSimulees }: EditEntityModalProps) {
   const [formData, setFormData] = useState<LocalState>({ entity: null, relationships: [] })
 
   const [addingRelation, setAddingRelation] = useState(false)
@@ -97,7 +99,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
             <DialogTitle>Modifier : {localEntity.name}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
-            <ChampsDeLActeur entity={localEntity} onChange={entity => setFormData(prev => ({ ...prev, entity }))} />
+            <ChampsDeLActeur entity={localEntity} anneesSimulees={anneesSimulees} onChange={entity => setFormData(prev => ({ ...prev, entity }))} />
             <div className="space-y-4 pt-6 border-t">
               <h3 className="font-semibold text-base">Relations</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

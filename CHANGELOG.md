@@ -25,6 +25,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ### Modifié
 
+- Micro-entreprise : le champ du revenu fiscal de référence nomme les années qu'il couvre (« RFR 2024 », sur l'avis d'imposition reçu en 2025) et dit à partir de quelle année la simulation calcule elle-même ce revenu.
 - Comparateur d'une année : les modes « tout en dividendes » et « répartition personnalisée » distribuent le bénéfice distribuable de l'année, après réserve légale et pertes antérieures ; les réserves des années précédentes restent dans la société.
 - Serveur MCP : chaque réponse est un seul texte (résumé, puis JSON du résultat), et la liste des outils, sans schémas de sortie, est presque deux fois plus légère.
 - Outils pour les IA : « autre revenu imposable » est décrit comme un montant net imposable, ajouté tel quel au barème (sans l'abattement de 10 % des salaires), ce que fait le calcul.
