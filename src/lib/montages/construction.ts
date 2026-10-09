@@ -3,7 +3,11 @@
 
 import type { Comparateur, Company, FinancialFlow, MicroEntreprise, Person, Relationship, SessionState } from "@/types"
 
-/** Année des montages types : celle dont les règles ont servi à figer leurs chiffres de référence. */
+/**
+ * Année des montages types : celle dont les règles ont servi à figer leurs chiffres de référence et leurs textes
+ * (plafonds, taux). Elle ne suit pas l'année en cours : les montages de 2026 restent en 2026, l'année 2027 aura les
+ * siens. Ce n'est donc pas l'année d'une nouvelle session.
+ */
 export const ANNEE_DES_MONTAGES = 2026
 
 /** Couleurs des pastilles, prises dans la palette des réglages d'un acteur (voir entity-factory.ts). */

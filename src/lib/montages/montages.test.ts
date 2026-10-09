@@ -3,10 +3,10 @@
 
 import { describe, expect, it } from "vitest"
 import { erreurDesAnnees, NOMBRE_MAX_ANNEES } from "@/backend/logic/annees"
+import { reglesDeLAnnee } from "@/backend/logic/regles"
 import { rapportAvecCorrections, sanitizeStateAndFillDefaults } from "@/backend/logic/data-sanitizer"
 import { withFormatVersion } from "@/backend/logic/fichiers-de-donnees"
 import { availableIcons } from "@/lib/avatar-constants"
-import { ANNEE_PAR_DEFAUT } from "@/types"
 import { ANNEE_DES_MONTAGES, comparateurAuMeilleurNet, sessionDuMontage } from "./construction"
 import { MONTAGES_TYPES, sessionDUnMontage } from "./montages"
 
@@ -22,8 +22,10 @@ describe("Bibliothèque des montages types", () => {
     expect(doublons(MONTAGES_TYPES.map(m => m.titre))).toEqual([])
   })
 
-  it("portent sur l'année par défaut d'une nouvelle session", () => {
-    expect(ANNEE_DES_MONTAGES).toBe(ANNEE_PAR_DEFAUT)
+  it("portent sur une année dont les règles sont publiées, simulée sans reprise d'autres règles", () => {
+    // Les montages restent en 2026 quand une année plus récente arrive (leurs chiffres et leurs textes sont ceux de
+    // 2026) : ils ne suivent pas l'année d'une nouvelle session.
+    expect(reglesDeLAnnee(ANNEE_DES_MONTAGES)).toMatchObject({ regles: { annee: ANNEE_DES_MONTAGES }, avertissement: null })
   })
 
   describe.each(MONTAGES_TYPES.map(montage => [montage.id, montage] as const))("%s", (_id, montage) => {
