@@ -149,6 +149,8 @@ export function donneesDeLApplication({ dossier, versionDeLApplication, avertir,
       lue = lireLaSession(lecture.contenu)
     } catch (error) {
       if (error instanceof AnneesRefuseesError) return sessionMiseDeCote("refuse", "Chargement refusé", `Votre session précédente n'a pas été chargée.\n\n${error.message}`)
+      // Session refusée en bloc par le schéma (SessionIrrecuperableError : un nom qui n'est pas un texte, une grille
+      // inutilisable…) : rien n'en serait gardé, c'est un fichier illisible, pas une session vierge.
       console.warn("Session impossible à nettoyer, mise de côté :", error)
       return illisible()
     }

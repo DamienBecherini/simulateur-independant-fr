@@ -7,7 +7,7 @@
  */
 
 import { UserPreferencesSchema, type ExportableState, type SanitizationReport, type SaveSlot, type SessionState, type UserPreferences } from "../../types.js"
-import { nettoyerLesSlots, sanitizeSlots, sanitizeStateAndFillDefaults, type SlotsNettoyes } from "./data-sanitizer.js"
+import { nettoyerLaSession, nettoyerLesSlots, sanitizeSlots, type SlotsNettoyes } from "./data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL, versionDuFormat } from "./migrations.js"
 
 /** Ajoute à un fichier le numéro du format dans lequel il est écrit. */
@@ -27,11 +27,13 @@ export function contenuDuFichier(data: object, appVersion?: string): string {
 
 /**
  * Lit le fichier de la session en cours : converti s'il vient d'un format précédent, puis nettoyé.
- * @throws Si le contenu n'est pas du JSON, ou si ses années sont refusées (`AnneesRefuseesError`).
+ * @throws Si le contenu n'est pas du JSON, si la session est refusée en bloc par le schéma (`SessionIrrecuperableError` :
+ * le fichier est alors illisible, pas remplacé en silence par une session vierge) ou si ses années sont refusées
+ * (`AnneesRefuseesError`).
  */
 export function lireLaSession(contenu: string): { safeState: SessionState; report: SanitizationReport; versionOrigine: number } {
   const brut: unknown = JSON.parse(contenu)
-  return { ...sanitizeStateAndFillDefaults(brut), versionOrigine: versionDuFormat(brut) }
+  return { ...nettoyerLaSession(brut), versionOrigine: versionDuFormat(brut) }
 }
 
 /** Texte JSON du fichier des sauvegardes : chacune porte son numéro de format. */
@@ -57,11 +59,13 @@ export function sauvegardesAEcrire(slots: SaveSlot[]): SaveSlot[] {
  * Lit un fichier de simulation importé (export complet ou sauvegarde exportée) : ce qui se recharge dans la session.
  * Le nom n'est rendu que si le fichier en porte un ; les résultats exportés, recalculés, sont ignorés. La version de
  * l'application qui a écrit le fichier est gardée telle quelle : elle ne change qu'au prochain enregistrement.
- * @throws Si le contenu n'est pas du JSON, ou si ses années sont refusées (`AnneesRefuseesError`).
+ * @throws Si le contenu n'est pas du JSON, s'il n'a rien d'une simulation (`SessionIrrecuperableError` : l'import est
+ * refusé plutôt que de remplacer la simulation en cours par une simulation vierge) ou si ses années sont refusées
+ * (`AnneesRefuseesError`).
  */
 export function lireUneSimulationImportee(contenu: string): { data: ExportableState; report: SanitizationReport } {
   const brut: unknown = JSON.parse(contenu)
-  const { safeState, report } = sanitizeStateAndFillDefaults(brut)
+  const { safeState, report } = nettoyerLaSession(brut)
   const { entities, relationships, annees, comparateur } = safeState
   const nomDuFichier = typeof brut === "object" && brut !== null && typeof (brut as { name?: unknown }).name === "string"
   const data: ExportableState = { entities, relationships, annees }

@@ -124,13 +124,17 @@ describe("démo web : valeurs illisibles", () => {
     expect(window.localStorage.getItem(`${CLES.sauvegardes}.illisible-20261009-143005-2`)).toBe("autre")
   })
 
-  it("une session illisible est mise de côté ; la démo repart de l'exemple", async () => {
-    window.localStorage.setItem(CLES.session, "{pas du json")
+  it.each([
+    ["du JSON invalide", "{pas du json"],
+    // Lisible, mais refusée en bloc par le schéma : rien n'en serait gardé, elle ne doit pas disparaître en silence.
+    ["un nom qui n'est pas un texte", JSON.stringify({ ...sessionExemple(), name: 42, formatVersion: 3 })]
+  ])("une session illisible (%s) est mise de côté ; la démo repart de l'exemple", async (_cas, contenu) => {
+    window.localStorage.setItem(CLES.session, contenu)
     const { api, notifications } = await pont()
 
     expect(await api.getCurrentSession()).toEqual(sessionExemple())
 
-    expect(window.localStorage.getItem(`${CLES.session}.illisible-20261009-143005`)).toBe("{pas du json")
+    expect(window.localStorage.getItem(`${CLES.session}.illisible-20261009-143005`)).toBe(contenu)
     expect(window.localStorage.getItem(CLES.session)).toBeNull()
     expect(notifications[0]).toMatchObject({ type: "warning", message: expect.stringContaining("La démo a redémarré sur la simulation d'exemple.") })
   })
