@@ -102,7 +102,7 @@ Convention d'année : comme le prévoit l'ADR 007, l'année N d'une règle est *
 
 ## 3. Cotisations recouvrées par l'Urssaf : comparaison avec le moteur
 
-Le moteur calcule un travailleur non salarié avec `calculerCotisationsTNS` (`src/backend/logic/cotisationsTNS.ts`) et le bloc `TNS` des fichiers de règles (`src/backend/regles/2024.json`, `2025.json`, `src/backend/config.json` pour 2026).
+Le moteur calcule un travailleur non salarié avec `calculerCotisationsTNS` (`src/backend/logic/cotisationsTNS.ts`) et le bloc `TNS` des fichiers de règles (`src/backend/regles/2024.json`, `2025.json`, `2026.json`).
 
 ### 3.1 Assiette : la réforme s'applique aux libéraux réglementés
 

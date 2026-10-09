@@ -9,6 +9,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 ### Modifié
 
 - Maintenance : les cas de référence et les montages types sont liés explicitement aux règles de 2026, et non plus à l'année en cours ; l'ajout des règles de 2027 ne les désactivera plus (un test le vérifie avec une année fictive).
+- Maintenance : les règles de 2026 passent de `src/backend/config.json` à `src/backend/regles/2026.json`, comme les autres années ; l'année en cours du simulateur (nouvelle session, démo) est la plus récente des fichiers de règles et n'est plus écrite en dur (ADR 007 mise à jour).
 
 ## [0.10.0] — 2026-10-09
 
