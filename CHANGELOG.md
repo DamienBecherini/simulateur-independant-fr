@@ -10,6 +10,11 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 - Maintenance : les cas de référence et les montages types sont liés explicitement aux règles de 2026, et non plus à l'année en cours ; l'ajout des règles de 2027 ne les désactivera plus (un test le vérifie avec une année fictive).
 - Maintenance : les règles de 2026 passent de `src/backend/config.json` à `src/backend/regles/2026.json`, comme les autres années ; l'année en cours du simulateur (nouvelle session, démo) est la plus récente des fichiers de règles et n'est plus écrite en dur (ADR 007 mise à jour).
+- Maintenance : les fonctions du moteur reçoivent toujours les règles de l'année calculée ; il n'y a plus de « règles de l'année en cours » par défaut, qu'un appel pouvait utiliser sans le dire.
+
+### Corrigé
+
+- Fiche d'une activité : la ligne d'information sous le choix de la profession (caisse, taux de la micro-entreprise, complémentaire) décrit les règles de l'année affichée, et non toujours celles de 2026 (par exemple, pour un infirmier en 2025, la complémentaire forfaitaire de la CARPIMKO).
 
 ## [0.10.0] — 2026-10-09
 
