@@ -1,8 +1,9 @@
 // src/ui/hooks/useSessionManager.test.tsx
 
 import { act, renderHook, waitFor } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
-import type { Comparateur, SaveSlot } from "@/types"
+import { StrictMode } from "react"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import type { Comparateur, SaveSlot, SessionState } from "@/types"
 import { emptySession, makeCompany, makePerson } from "@/ui/testing/fixtures"
 import { useSessionManager } from "./useSessionManager"
 
@@ -145,5 +146,51 @@ describe("useSessionManager et la sauvegarde chargée", () => {
     window.dispatchEvent(new Event("beforeunload"))
 
     expect(window.api.saveUserPreferences).toHaveBeenLastCalledWith({ slotOrder: ["slot-1"], loadedSlotId: "slot-1" })
+  })
+})
+
+describe("useSessionManager : pas de sauvegarde automatique avant la fin du chargement", () => {
+  afterEach(() => vi.useRealTimers())
+
+  /** Le gestionnaire sous `StrictMode` (effets exécutés deux fois), avec un chargement qui attend `charger`. */
+  function sousStrictMode() {
+    vi.useFakeTimers()
+    let charger: (session: SessionState) => void = () => {}
+    vi.mocked(window.api.getCurrentSession).mockReturnValue(new Promise(resolve => (charger = resolve)))
+    const rendu = renderHook(() => useSessionManager(), { wrapper: StrictMode })
+    return { ...rendu, charger: (session: SessionState) => act(async () => charger(session)) }
+  }
+
+  it("la session vierge provisoire n'est jamais enregistrée, même si le chargement tarde", async () => {
+    sousStrictMode()
+    await act(async () => vi.advanceTimersByTime(10_000))
+    expect(window.api.saveCurrentSession).not.toHaveBeenCalled()
+    expect(window.api.saveUserPreferences).not.toHaveBeenCalled()
+  })
+
+  it("ni la session tout juste chargée ; une modification ultérieure l'est, une seconde après", async () => {
+    const { result, charger } = sousStrictMode()
+    await charger({ ...emptySession(), name: "Sur le disque" })
+    await act(async () => vi.advanceTimersByTime(5_000))
+    expect(result.current.currentSession.name).toBe("Sur le disque")
+    expect(window.api.saveCurrentSession).not.toHaveBeenCalled()
+
+    act(() => result.current.setCurrentSession(session => ({ ...session, name: "Modifiée" })))
+    await act(async () => vi.advanceTimersByTime(999))
+    expect(window.api.saveCurrentSession).not.toHaveBeenCalled()
+    await act(async () => vi.advanceTimersByTime(1))
+    expect(window.api.saveCurrentSession).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ name: "Modifiée" }))
+  })
+
+  it("un chargement qui échoue n'entraîne aucune sauvegarde, ni à la fermeture de la fenêtre", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.useFakeTimers()
+    vi.mocked(window.api.getCurrentSession).mockRejectedValue(new Error("illisible"))
+    renderHook(() => useSessionManager(), { wrapper: StrictMode })
+    await act(async () => vi.advanceTimersByTime(10_000))
+    window.dispatchEvent(new Event("beforeunload"))
+
+    expect(window.api.saveCurrentSession).not.toHaveBeenCalled()
+    expect(window.api.saveCurrentSessionSync).not.toHaveBeenCalled()
   })
 })

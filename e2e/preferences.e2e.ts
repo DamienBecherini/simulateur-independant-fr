@@ -68,6 +68,7 @@ test("des préférences abîmées sont validées champ par champ, et un fichier 
   const second = await lancer()
   await expect(second.page.getByRole("textbox", { name: "Nom" })).toHaveValue("Alice Martin")
   await expect.poll(() => second.page.evaluate(() => document.body.style.zoom)).toBe("1")
-  expect(await fs.readFile(path.join(dossierDonnees, "userPreferences.refuse.json"), "utf-8")).toBe(illisible)
+  const [copie] = (await fs.readdir(dossierDonnees)).filter(nom => /^userPreferences\.illisible-\d{8}-\d{6}\.json$/.test(nom))
+  expect(await fs.readFile(path.join(dossierDonnees, copie), "utf-8")).toBe(illisible)
   expect(await second.dialogues()).toEqual([])
 })

@@ -17,8 +17,12 @@ export type EventPayloadMapping = {
   /** « Sur toutes les années » : stratégies de distribution d'une activité en SASU et en EURL, avec les réglages enregistrés du comparateur. */
   comparerStrategies: (session: SessionState, activityId: string) => Promise<StrategiesDeDistribution>
   getSaveSlots: () => Promise<SaveSlot[]>
-  /** Enregistre toutes les sauvegardes ; `silencieux` évite la notification « Sauvegarde réussie ! » (après un import, qui a son propre bilan). */
-  saveSlots: (slots: SaveSlot[], options?: { silencieux?: boolean }) => Promise<void>
+  /**
+   * Enregistre toutes les sauvegardes ; `silencieux` évite la notification « Sauvegarde réussie ! » (après un import, qui
+   * a son propre bilan). `false` si elles n'ont pas pu être écrites : l'échec est déjà notifié, les sauvegardes
+   * précédentes sont intactes.
+   */
+  saveSlots: (slots: SaveSlot[], options?: { silencieux?: boolean }) => Promise<boolean>
   exportState: (state: ExportableState) => Promise<void>
   importState: () => Promise<{ data?: ExportableState; report?: SanitizationReport; error?: string }>
   /** Fait enregistrer un fichier texte à l'utilisateur ; `true` s'il a été enregistré, `false` s'il a annulé. */

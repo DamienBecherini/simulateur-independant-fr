@@ -6,6 +6,13 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Corrigé
+
+- **Sauvegardes et session ne sont plus perdues sur un fichier abîmé.** Un fichier de sauvegardes, de session ou de préférences illisible (tronqué par un arrêt brutal, modifié à la main) n'est plus lu comme vide puis écrasé : il est mis de côté, intact, sous un nom daté (`simulationSlots.illisible-20261009-143005.json`), et une fenêtre le nomme à l'ouverture. Une sauvegarde illisible ou refusée, ou des éléments retirés au nettoyage d'une session, sont gardés dans une copie (`*.refuse-….json`) avant que le fichier ne soit réécrit. Un fichier qui n'a pu être ni lu ni copié n'est plus jamais remplacé pendant que l'application est ouverte.
+- **« Sauvegarde réussie ! » ne s'affiche plus quand l'écriture échoue.** Le message devient « Échec de la sauvegarde : le fichier des sauvegardes n'a pas pu être écrit. Vos sauvegardes précédentes sont intactes. », le panneau reste ouvert et la liste ne change pas. Un échec de la sauvegarde automatique est signalé lui aussi. Dans la démo web, un stockage du navigateur plein ou bloqué est signalé de la même façon.
+- Les fichiers de données sont écrits dans un fichier temporaire puis renommés : un arrêt brutal ne laisse plus un fichier à moitié écrit.
+- La sauvegarde automatique attend la fin du chargement : la simulation vierge affichée au démarrage ne peut plus remplacer celle du disque.
+
 ## [0.10.0] — 2026-10-09
 
 ### Ajouté

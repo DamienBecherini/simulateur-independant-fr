@@ -71,8 +71,9 @@ export function useSessionManager() {
     }).catch(error => console.error("Chargement de la session, des sauvegardes ou des préférences impossible :", error))
   }, []) // Le tableau de dépendances vide [] assure que cet effet ne s'exécute qu'une fois.
 
-  // Hooks pour la sauvegarde automatique décalée (debounced).
-  useDebouncedSave(history.present, 1000, window.api.saveCurrentSession)
+  // Sauvegarde automatique, une seconde après la dernière modification ; jamais avant la fin du chargement, pour que la
+  // session vierge provisoire ne remplace pas celle du disque.
+  useDebouncedSave(history.present, 1000, window.api.saveCurrentSession, isLoaded)
 
   // À la fermeture de la fenêtre, la session est enregistrée tout de suite, sans attendre la sauvegarde différée.
   // On attend le premier chargement : sinon une session vide remplacerait celle sur le disque.
@@ -87,7 +88,7 @@ export function useSessionManager() {
     window.addEventListener("beforeunload", saveNow)
     return () => window.removeEventListener("beforeunload", saveNow)
   }, [])
-  useDebouncedSave(userPreferences, 1000, window.api.saveUserPreferences)
+  useDebouncedSave(userPreferences, 1000, window.api.saveUserPreferences, isLoaded)
 
   // Les préférences aussi sont enregistrées à la fermeture, sans attendre : une sauvegarde chargée ou un zoom choisi
   // juste avant de fermer seraient sinon oubliés. Comme pour la session, pas avant le premier chargement.

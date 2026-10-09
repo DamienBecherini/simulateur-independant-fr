@@ -237,3 +237,72 @@ describe("confirmation d'un import ajusté", () => {
     expect(confirmer()).not.toHaveTextContent("Fichier écrit par")
   })
 })
+
+describe("échec de l'enregistrement des sauvegardes", () => {
+  /** Le panneau ouvert, sur une session nommée ; renvoie les fonctions de rappel observées. */
+  function panneau(slots: SaveSlot[] = [], loadedSlotId: string | null = null) {
+    const rappels = { onOpenChange: vi.fn(), setAllSaveSlots: vi.fn(), setSlotOrder: vi.fn(), setLoadedSlotId: vi.fn() }
+    const session = { ...emptySession(), name: "Mon scénario" }
+    render(<SettingsSheet isOpen allSaveSlots={slots} currentSession={session} setCurrentSession={() => {}} slotOrder={slots.map(slot => slot.id)} onReset={() => {}} onLoadSlot={() => {}} onImport={async () => {}} onLoadMontage={() => {}} importConfirmation={null} onConfirmImport={() => {}} onCancelImport={() => {}} loadedSlotId={loadedSlotId} {...rappels} />)
+    return rappels
+  }
+
+  it("une sauvegarde écrite ferme le panneau et rejoint la liste", async () => {
+    const rappels = panneau()
+    await userEvent.click(screen.getByRole("button", { name: "Sauvegarder" }))
+    expect(rappels.setAllSaveSlots).toHaveBeenCalledWith([expect.objectContaining({ name: "Mon scénario" })])
+    expect(rappels.setLoadedSlotId).toHaveBeenCalledOnce()
+    expect(rappels.onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it("si l'écriture échoue, le panneau reste ouvert et rien ne change : l'utilisateur peut réessayer", async () => {
+    vi.mocked(window.api.saveSlots).mockResolvedValue(false)
+    const rappels = panneau()
+
+    await userEvent.click(screen.getByRole("button", { name: "Sauvegarder" }))
+
+    expect(window.api.saveSlots).toHaveBeenCalledOnce()
+    expect(rappels.setAllSaveSlots).not.toHaveBeenCalled()
+    expect(rappels.setLoadedSlotId).not.toHaveBeenCalled()
+    expect(rappels.onOpenChange).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog", { name: "Configuration" })).toBeInTheDocument()
+  })
+
+  it("la mise à jour de la sauvegarde chargée ne change rien si l'écriture échoue", async () => {
+    vi.mocked(window.api.saveSlots).mockResolvedValue(false)
+    const rappels = panneau([sauvegarde("a", "Mon scénario")], "a")
+    await userEvent.click(screen.getByRole("button", { name: "Sauvegarder" }))
+    expect(window.api.saveSlots).toHaveBeenCalledWith([expect.objectContaining({ id: "a" })], undefined)
+    expect(rappels.setAllSaveSlots).not.toHaveBeenCalled()
+    expect(rappels.onOpenChange).not.toHaveBeenCalled()
+  })
+
+  it("l'écrasement et la suppression ne changent rien si l'écriture échoue", async () => {
+    vi.mocked(window.api.saveSlots).mockResolvedValue(false)
+    const rappels = panneau([sauvegarde("a", "Mon scénario")])
+    await userEvent.click(screen.getByRole("button", { name: "Sauvegarder" }))
+    await userEvent.click(await screen.findByRole("button", { name: "Écraser" }))
+    expect(window.api.saveSlots).toHaveBeenCalledOnce()
+    expect(rappels.setAllSaveSlots).not.toHaveBeenCalled()
+    expect(rappels.setLoadedSlotId).not.toHaveBeenCalled()
+    expect(rappels.onOpenChange).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole("button", { name: "Charger une sauvegarde..." }))
+    await userEvent.click(screen.getByRole("button", { name: "Supprimer la sauvegarde « Mon scénario »" }))
+    expect(window.api.saveSlots).toHaveBeenLastCalledWith([], undefined)
+    expect(rappels.setAllSaveSlots).not.toHaveBeenCalled()
+    expect(rappels.setSlotOrder).not.toHaveBeenCalled()
+  })
+
+  it("un import de sauvegardes qui ne peut pas être écrit n'ajoute rien et n'affiche pas de bilan", async () => {
+    vi.mocked(window.api.saveSlots).mockResolvedValue(false)
+    vi.mocked(window.api.openTextFile).mockResolvedValue(fichier([sauvegarde("b", "Bravo")]))
+    const etat = await ouvrirLaListe([sauvegarde("a", "Alpha")])
+
+    await userEvent.click(boutonImporter())
+
+    expect(window.api.saveSlots).toHaveBeenCalledOnce()
+    expect(etat.slots.map(slot => slot.name)).toEqual(["Alpha"])
+    expect(screen.queryByRole("dialog", { name: "Import des sauvegardes" })).not.toBeInTheDocument()
+  })
+})

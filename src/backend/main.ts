@@ -10,11 +10,11 @@ import { isDev } from "./isDev.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import path from "path"
 import fs from "fs/promises"
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs"
+import { copyFileSync, existsSync, mkdirSync } from "fs"
 import { ipcMain } from "electron"
-import { AnneesRefuseesError, rapportAvecCorrections, texteAnneesEcartees, texteProfessionsEcartees } from "./logic/data-sanitizer.js"
-import { contenuDesSauvegardes, contenuDuFichier, lireLaSession, lireLesPreferences, lireLesSauvegardes, lireUneSimulationImportee, preferencesParDefaut, preferencesValides, sauvegardesAEcrire } from "./logic/fichiers-de-donnees.js"
-import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./logic/migrations.js"
+import { AnneesRefuseesError, rapportAvecCorrections } from "./logic/data-sanitizer.js"
+import { contenuDuFichier, lireUneSimulationImportee } from "./logic/fichiers-de-donnees.js"
+import { donneesDeLApplication } from "./donnees-de-l-application.js"
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours.js"
 import { infosDeLInstallation, type InfosDuServeurMcp } from "@/lib/configuration-mcp.js"
 import { ouvrirLaBoiteAuxPropositions } from "./boite-aux-propositions.js"
@@ -49,204 +49,18 @@ function recopierAncienDossierDeDonnees() {
 }
 recopierAncienDossierDeDonnees()
 
-const sessionStatePath = path.join(app.getPath("userData"), "sessionState.json")
-const slotsFilePath = path.join(app.getPath("userData"), "simulationSlots.json")
-const userPreferencesPath = path.join(app.getPath("userData"), "userPreferences.json")
-
-/** Session vierge : une année, la dernière dont les règles sont connues, sans acteur ni flux. */
-function getDefaultSessionState(): SessionState {
-  return SessionStateSchema.parse({})
-}
-
 /** Affiche une boîte de dialogue d'information ; si elle ne peut pas s'afficher, l'échec est journalisé. */
 function showInfoDialog(options: Electron.MessageBoxOptions) {
   dialog.showMessageBox(options).catch(error => console.error("Boîte de dialogue impossible à afficher :", error))
 }
 
-/**
- * Avant de réécrire un fichier converti d'un format précédent, on en garde une copie à côté
- * (par exemple `sessionState.format-1.json`), au cas où la conversion poserait problème.
- */
-async function backupBeforeMigration(filePath: string, rawContent: string, version: number) {
-  await keepCopy(filePath, rawContent, `format-${version}`)
-}
-
-/** Garde une copie d'un fichier à côté de lui (`sessionState.<suffixe>.json`), sans écraser une copie existante. */
-async function keepCopy(filePath: string, rawContent: string, suffix: string) {
-  const backupPath = filePath.replace(/\.json$/, `.${suffix}.json`)
-  try {
-    await fs.writeFile(backupPath, rawContent, { flag: "wx" })
-  } catch {
-    // Une copie existe déjà : on la conserve.
-  }
-}
-
-/** Suffixe de la copie gardée d'un fichier refusé à cause de ses années (trop nombreuses ou non consécutives). */
-const SUFFIXE_REFUS = "refuse"
-
-/** Texte des points à vérifier après conversion, pour une boîte de dialogue. */
-function formatMigrationNotes(notes: string[]): string {
-  return notes.map(note => `- ${note}`).join("\n\n")
-}
-
-/** Session refusée au démarrage à cause de ses années : on en garde une copie, on prévient, on repart d'une session vierge. */
-async function refuseSession(rawContent: string, reason: string): Promise<SessionState> {
-  await keepCopy(sessionStatePath, rawContent, SUFFIXE_REFUS)
-  showInfoDialog({
-    type: "warning",
-    title: "Chargement refusé",
-    message: `Votre session précédente n'a pas été chargée.\n\n${reason}\n\nUne copie du fichier a été gardée à côté de lui (sessionState.${SUFFIXE_REFUS}.json). L'application a démarré avec une nouvelle simulation vierge.`
-  })
-  return getDefaultSessionState()
-}
-
-async function readSessionFromFile(): Promise<SessionState> {
-  let data = ""
-  try {
-    data = await fs.readFile(sessionStatePath, "utf-8")
-    const { safeState, report, versionOrigine: originalVersion } = lireLaSession(data)
-
-    // Un fichier d'un format précédent est converti une fois pour toutes, après copie de l'original.
-    if (originalVersion < FORMAT_VERSION_ACTUEL) {
-      await backupBeforeMigration(sessionStatePath, data, originalVersion)
-      await writeSessionToFile(safeState)
-    }
-
-    const sections: string[] = []
-    if (report.entitiesRemoved > 0 || report.relationshipsRemoved > 0 || report.flowsRemoved > 0 || report.reglagesRemoved > 0) {
-      sections.push(`Des données corrompues ont dû être nettoyées :\n- Entités invalides supprimées : ${report.entitiesRemoved}\n- Relations invalides ou orphelines supprimées : ${report.relationshipsRemoved}\n- Flux invalides ou orphelins supprimés : ${report.flowsRemoved}\n- Réglages du comparateur invalides écartés : ${report.reglagesRemoved}`)
-    }
-    if (report.professionsRemoved > 0) {
-      sections.push(texteProfessionsEcartees(report.professionsRemoved))
-    }
-    if (report.anneesEcartees.length > 0) {
-      sections.push(`${texteAnneesEcartees(report.anneesEcartees)}. Seule la première occurrence de chaque année a été gardée.`)
-    }
-    if (report.migrationNotes.length > 0) {
-      sections.push(`Elle a été convertie au nouveau format du simulateur. Points à vérifier :\n\n${formatMigrationNotes(report.migrationNotes)}`)
-    }
-    if (sections.length > 0) {
-      showInfoDialog({
-        type: "info",
-        title: "Chargement de la session",
-        message: `Votre session précédente a été chargée.\n\n${sections.join("\n\n")}`
-      })
-    }
-    return safeState
-  } catch (error) {
-    // Premier lancement : il n'y a simplement pas encore de session, ce n'est pas une erreur.
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return getDefaultSessionState()
-    if (error instanceof AnneesRefuseesError) return refuseSession(data, error.message)
-
-    const errorMessage = error instanceof Error ? error.message : "Erreur inconnue."
-    console.warn(`Échec du chargement de la session : ${errorMessage}. Démarrage avec une session par défaut.`)
-
-    // AVERTIR L'UTILISATEUR AU DÉMARRAGE (BONUS)
-    showInfoDialog({
-      type: "warning",
-      title: "Chargement échoué",
-      message: "Impossible de charger votre session précédente car le fichier est peut-être corrompu ou obsolète. L'application a démarré avec une nouvelle simulation vierge."
-    })
-
-    return getDefaultSessionState()
-  }
-}
-
-async function writeSessionToFile(session: SessionState) {
-  try {
-    await fs.writeFile(sessionStatePath, contenuDuFichier(session, app.getVersion()))
-    // On envoie une notification de succès au frontend
-    // if (mainWindow) {
-    //   mainWindow.webContents.send("show-notification", {
-    //     message: "Sauvegarde automatique réussie.",
-    //     type: "success"
-    //   })
-    // }
-  } catch (error) {
-    console.error("Erreur lors de la sauvegarde de la session:", error)
-    // On notifie l'échec
-    if (mainWindow) {
-      mainWindow.webContents.send("show-notification", {
-        message: "Échec de la sauvegarde automatique.",
-        type: "error"
-      })
-    }
-  }
-}
-
-async function readSlotsFromFile(): Promise<SaveSlot[]> {
-  try {
-    const data = await fs.readFile(slotsFilePath, "utf-8")
-    // Les slots corrompus sont écartés (et signalés dans la console) par le nettoyeur, les autres sont conservés.
-    const { slots, refusees, brutes: rawSlots } = lireLesSauvegardes(data)
-
-    // Des sauvegardes refusées à cause de leurs années disparaîtront à la prochaine écriture : on garde une copie du fichier.
-    if (refusees.length > 0) {
-      await keepCopy(slotsFilePath, data, SUFFIXE_REFUS)
-      showInfoDialog({
-        type: "warning",
-        title: "Sauvegardes refusées",
-        message: `${refusees.length > 1 ? "Ces sauvegardes n'ont pas été chargées" : "Cette sauvegarde n'a pas été chargée"} :\n\n${refusees.map(({ nom, raison }) => `- « ${nom} » : ${raison}`).join("\n\n")}\n\nUne copie du fichier a été gardée à côté de lui (simulationSlots.${SUFFIXE_REFUS}.json).`
-      })
-    }
-
-    // Des sauvegardes d'un format précédent sont converties une fois pour toutes, après copie de l'original.
-    const oldSlots = rawSlots.filter(slot => versionDuFormat(slot) < FORMAT_VERSION_ACTUEL)
-    if (oldSlots.length > 0) {
-      await backupBeforeMigration(slotsFilePath, data, Math.min(...oldSlots.map(versionDuFormat)))
-      await writeSlotsToFile(slots)
-      const notes = [...new Set(oldSlots.flatMap(slot => migrerVersFormatActuel(slot).notes))]
-      showInfoDialog({
-        type: "info",
-        title: "Sauvegardes converties",
-        message: `${oldSlots.length} sauvegarde${oldSlots.length > 1 ? "s ont été converties" : " a été convertie"} au nouveau format du simulateur.${notes.length > 0 ? `\n\nÀ l'ouverture de chacune, vérifiez :\n\n${formatMigrationNotes(notes)}` : ""}`
-      })
-    }
-    return slots
-  } catch {
-    console.log("Aucun fichier de slots trouvé ou fichier illisible, démarrage avec un état vide.")
-    return []
-  }
-}
-
-async function writeSlotsToFile(slots: SaveSlot[]) {
-  try {
-    await fs.writeFile(slotsFilePath, contenuDesSauvegardes(slots))
-    console.log("Slots de sauvegarde enregistrés avec succès dans:", slotsFilePath)
-  } catch (error) {
-    console.error("Erreur lors de la sauvegarde des slots:", error)
-  }
-}
-
-/**
- * Lit les préférences, validées comme dans la démo web : un champ invalide est écarté seul. Un fichier illisible
- * (JSON abîmé) donne les préférences par défaut ; on en garde une copie (userPreferences.refuse.json), comme des
- * autres fichiers refusés, sans boîte de dialogue : rien de la simulation n'est perdu.
- */
-async function readPrefsFromFile(): Promise<UserPreferences> {
-  let data = ""
-  try {
-    data = await fs.readFile(userPreferencesPath, "utf-8")
-    return lireLesPreferences(data)
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return preferencesParDefaut()
-    console.warn("Fichier de préférences illisible, retour aux valeurs par défaut :", error instanceof Error ? error.message : error)
-    if (data !== "") await keepCopy(userPreferencesPath, data, SUFFIXE_REFUS)
-    return preferencesParDefaut()
-  }
-}
-
-async function writePrefsToFile(prefs: UserPreferences) {
-  try {
-    // Validées avant écriture, comme à la lecture. Écrites à côté puis renommées : enregistrées aussi à la fermeture de
-    // la fenêtre, elles ne doivent pas rester à moitié écrites si l'application se termine pendant l'écriture.
-    const provisoire = `${userPreferencesPath}.tmp`
-    await fs.writeFile(provisoire, JSON.stringify(preferencesValides(prefs), null, 2))
-    await fs.rename(provisoire, userPreferencesPath)
-  } catch (error) {
-    console.error("Erreur lors de la sauvegarde des préférences:", error)
-  }
-}
+// Session, sauvegardes et préférences : lecture prudente, écriture atomique, échecs signalés (voir l'ADR 005).
+const donnees = donneesDeLApplication({
+  dossier: app.getPath("userData"),
+  versionDeLApplication: app.getVersion(),
+  avertir: showInfoDialog,
+  notifier: notification => mainWindow?.webContents.send("show-notification", notification)
+})
 
 /** Session reçue de l'interface, revalidée avant calcul ; une session invalide est remplacée par la session par défaut. */
 function validatedSession(session: unknown, caller: string): SessionState {
@@ -353,20 +167,16 @@ app.on("ready", () => {
   createSplashWindow()
   createMainWindow()
 
-  ipcMainHandle("getCurrentSession", async () => await readSessionFromFile())
-  ipcMainHandle("saveCurrentSession", async (session: SessionState) => await writeSessionToFile(session))
+  ipcMainHandle("getCurrentSession", async () => await donnees.lireLaSession())
+  ipcMainHandle("saveCurrentSession", async (session: SessionState) => {
+    await donnees.ecrireLaSession(session)
+  })
 
   // Enregistrement synchrone, appelé par l'interface quand la fenêtre se ferme : la sauvegarde automatique
   // est différée d'une seconde, et une modification faite juste avant la fermeture serait sinon perdue.
   ipcMain.on("saveCurrentSessionSync", (event, session: SessionState) => {
     if (event.senderFrame) validateEventFrame(event.senderFrame)
-    try {
-      writeFileSync(sessionStatePath, contenuDuFichier(session, app.getVersion()))
-      event.returnValue = true
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde de la session à la fermeture :", error)
-      event.returnValue = false
-    }
+    event.returnValue = donnees.ecrireLaSessionSync(session)
   })
 
   ipcMainHandle("simulerLesAnnees", async (session: SessionState) => simulerLesAnnees(validatedSession(session, "simulerLesAnnees")))
@@ -378,20 +188,8 @@ app.on("ready", () => {
     return comparerStrategiesDeDistribution(validee, String(activityId), validee.comparateur?.reglagesParActivite[String(activityId)])
   })
 
-  ipcMainHandle("getSaveSlots", async () => await readSlotsFromFile())
-
-  ipcMainHandle("saveSlots", async (slots: SaveSlot[], options?: { silencieux?: boolean }) => {
-    // Validation avant écriture, comme à la lecture : un slot invalide est écarté au lieu d'abîmer le fichier.
-    const slotsValides = sauvegardesAEcrire(slots)
-    if (slotsValides.length < slots.length) console.warn(`Sauvegardes invalides écartées avant écriture : ${slots.length - slotsValides.length}.`)
-    await writeSlotsToFile(slotsValides)
-    if (mainWindow && !options?.silencieux) {
-      mainWindow.webContents.send("show-notification", {
-        message: "Sauvegarde réussie !",
-        type: "success"
-      })
-    }
-  })
+  ipcMainHandle("getSaveSlots", async () => await donnees.lireLesSauvegardes())
+  ipcMainHandle("saveSlots", async (slots: SaveSlot[], options?: { silencieux?: boolean }) => await donnees.ecrireLesSauvegardes(slots, options))
 
   ipcMainHandle("exportState", async (state: ExportableState) => {
     if (!mainWindow) return
@@ -534,8 +332,8 @@ app.on("ready", () => {
   ipcMainHandle("propositionsEnAttente", async () => (await boiteAuxPropositions)?.enAttente() ?? [])
   ipcMainHandle("retirerProposition", async (id: string) => (typeof id === "string" ? ((await (await boiteAuxPropositions)?.retirer(id)) ?? false) : false))
 
-  ipcMainHandle("getUserPreferences", async () => await readPrefsFromFile())
-  ipcMainHandle("saveUserPreferences", async (prefs: UserPreferences) => await writePrefsToFile(prefs))
+  ipcMainHandle("getUserPreferences", async () => await donnees.lireLesPreferences())
+  ipcMainHandle("saveUserPreferences", async (prefs: UserPreferences) => await donnees.ecrireLesPreferences(prefs))
 })
 
 app.on("window-all-closed", () => {

@@ -1,35 +1,27 @@
 import { useEffect, useRef } from "react"
 
 /**
- * Un hook personnalisé qui exécute une fonction après un certain délai d'inactivité.
- * @param data Les données à passer à la fonction de rappel.
- * @param delay Le délai en millisecondes.
- * @param saveCallback La fonction à appeler avec les données après le délai.
+ * Enregistre des données après un délai d'inactivité (sauvegarde automatique).
+ *
+ * Rien n'est enregistré tant que `actif` est faux : la session affichée avant la fin du chargement est une session
+ * vierge provisoire, qui ne doit jamais remplacer celle du disque (même si le chargement échoue, ou sous `StrictMode`,
+ * qui exécute les effets deux fois). Les données présentes quand `actif` devient vrai, celles qu'on vient de charger,
+ * ne sont pas réenregistrées : seule une modification ultérieure déclenche une sauvegarde.
+ * @param data Les données à enregistrer.
+ * @param delay Le délai d'inactivité, en millisecondes.
+ * @param saveCallback La fonction d'enregistrement.
+ * @param actif Faux tant que les données enregistrées ne sont pas chargées.
  */
-export function useDebouncedSave<T>(data: T, delay: number, saveCallback: (data: T) => void) {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const isInitialMount = useRef(true) // Ajout d'une ref pour suivre le premier rendu
+export function useDebouncedSave<T>(data: T, delay: number, saveCallback: (data: T) => void, actif: boolean) {
+  // Les données chargées, retenues quand `actif` devient vrai.
+  const chargees = useRef<{ donnees: T } | null>(null)
 
   useEffect(() => {
-    // Au premier montage, on ne fait rien.
-    // Cela évite de sauvegarder un état initial potentiellement vide avant le chargement.
-    if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
-    }
+    if (!actif) return
+    chargees.current ??= { donnees: data }
+    if (Object.is(data, chargees.current.donnees)) return
 
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-    }
-
-    timeoutRef.current = setTimeout(() => {
-      saveCallback(data)
-    }, delay)
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-    }
-  }, [data, delay, saveCallback]) // On ajoute saveCallback aux dépendances
+    const minuterie = setTimeout(() => saveCallback(data), delay)
+    return () => clearTimeout(minuterie)
+  }, [data, delay, saveCallback, actif])
 }

@@ -54,7 +54,7 @@ export default defineConfig({
       // Les composants sont vérifiés par leurs tests, sans seuil chiffré.
       // Le serveur MCP et la boîte aux propositions aussi ; pas leurs points d'entrée (serveur.ts, empaquetage), vérifiés
       // par les tests de bout en bout, comme le service worker de la démo web (e2e-web/installable.web.ts).
-      include: ["src/backend/logic/**/*.ts", "src/backend/mcp/**/*.ts", "src/backend/boite-aux-propositions.ts", "src/backend/copie-du-serveur-mcp.ts", "src/lib/**/*.ts", "src/web/**/*.ts", "scripts/**/*.mjs"],
+      include: ["src/backend/logic/**/*.ts", "src/backend/mcp/**/*.ts", "src/backend/boite-aux-propositions.ts", "src/backend/copie-du-serveur-mcp.ts", "src/backend/fichiers-surs.ts", "src/backend/donnees-de-l-application.ts", "src/lib/**/*.ts", "src/web/**/*.ts", "scripts/**/*.mjs"],
       exclude: ["**/*.test.ts", "**/*.test.mjs", "src/backend/logic/testing/**", "src/web/*.tsx", "src/backend/mcp/serveur.ts", "src/web/pwa/service-worker.ts", "scripts/empaqueter-serveur-mcp.mjs", "scripts/construire-paquet-store.mjs"],
       // Seuils bloquants, fixés à la dizaine inférieure de la couverture réellement atteinte.
       thresholds: {

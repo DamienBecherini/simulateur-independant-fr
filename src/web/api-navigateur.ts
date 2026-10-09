@@ -14,7 +14,7 @@ import { comparerStrategiesDeDistribution } from "@/backend/logic/strategies-de-
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { sessionExemple } from "./session-exemple"
-import { CLES, demanderUnStockagePersistant, ecrire, lire } from "./stockage-navigateur"
+import { CLES, demanderUnStockagePersistant, ecrire, lire, lireAvecEtat, mettreDeCote } from "./stockage-navigateur"
 
 const avecFormat = <T extends object>(donnees: T) => ({ ...donnees, formatVersion: FORMAT_VERSION_ACTUEL })
 /** Un fichier écrit par la démo (session, export) : son format et la version de l'application qui l'écrit. */
@@ -73,17 +73,53 @@ function choisirFichier(format: FormatFichierTexte = "json"): Promise<string | n
   })
 }
 
+/** Messages de la démo quand le stockage du navigateur refuse une écriture ou rend une valeur illisible. */
+export const MESSAGES_DE_LA_DEMO = {
+  sauvegardeReussie: "Sauvegarde réussie !",
+  echecDesSauvegardes: "Échec de la sauvegarde : le stockage du navigateur est plein ou bloqué. Vos sauvegardes précédentes sont intactes.",
+  echecDeLaSession: "Échec de la sauvegarde automatique : le stockage du navigateur est plein ou bloqué. Vos dernières modifications ne sont pas enregistrées.",
+  echecDesPreferences: "Échec de l'enregistrement des préférences : le stockage du navigateur est plein ou bloqué.",
+  stockageBloque: "Le stockage du navigateur est bloqué (réglages de confidentialité ?) : la démo fonctionne, mais rien ne sera enregistré."
+} as const
+
+/** Phrase qui désigne la copie d'une valeur illisible, ou qui dit qu'elle est protégée faute de copie. */
+function phraseDeLaCopie(copie: string | null, sansCopie: string): string {
+  return copie === null ? sansCopie : `Une copie, telle quelle, a été gardée sous la clé « ${copie} » du stockage du navigateur.`
+}
+
 export function creerApiNavigateur(): EventPayloadMapping {
   const abonnes = new Set<(payload: NotificationPayload) => void>()
-  const notifier = (payload: NotificationPayload) => abonnes.forEach(abonne => abonne(payload))
+  // Les messages du chargement partent avant que l'interface soit abonnée : ils attendent le premier abonné.
+  const enAttente: NotificationPayload[] = []
+  const notifier = (payload: NotificationPayload) => {
+    if (abonnes.size === 0) enAttente.push(payload)
+    abonnes.forEach(abonne => abonne(payload))
+  }
 
-  const enregistrerSession = (session: SessionState) => ecrire(CLES.session, ecritParLaDemo(session))
+  /** Un échec d'écriture automatique n'est notifié qu'une fois, jusqu'à la prochaine écriture réussie. */
+  const echecsSignales = new Set<string>()
+  const ecrireOuSignaler = (cle: (typeof CLES)[keyof typeof CLES], valeur: unknown, message: string) => {
+    if (ecrire(cle, valeur)) echecsSignales.delete(cle)
+    else if (!echecsSignales.has(cle)) {
+      echecsSignales.add(cle)
+      notifier({ message, type: "error" })
+    }
+  }
+
+  const enregistrerSession = (session: SessionState) => ecrireOuSignaler(CLES.session, ecritParLaDemo(session), MESSAGES_DE_LA_DEMO.echecDeLaSession)
 
   return {
-    // À la première visite, la démo s'ouvre sur une simulation d'exemple plutôt que sur une page vide.
+    // À la première visite, la démo s'ouvre sur une simulation d'exemple plutôt que sur une page vide. Une session
+    // illisible est mise de côté, et la démo repart aussi de l'exemple.
     getCurrentSession: async () => {
-      const enregistree = lire(CLES.session)
-      return enregistree === null ? sessionExemple() : sessionEnregistree(enregistree)
+      const lecture = lireAvecEtat(CLES.session)
+      if (lecture.etat === "lu" && typeof lecture.valeur === "object" && lecture.valeur !== null && !Array.isArray(lecture.valeur)) return sessionEnregistree(lecture.valeur)
+      if (lecture.etat === "inaccessible") notifier({ message: MESSAGES_DE_LA_DEMO.stockageBloque, type: "warning" })
+      else if (lecture.etat !== "absent") {
+        const copie = mettreDeCote(CLES.session, lecture.brut)
+        notifier({ message: `Votre session enregistrée dans ce navigateur n'a pas pu être lue. ${phraseDeLaCopie(copie, "Elle n'a pas pu être mise de côté (stockage plein ?) : elle ne sera pas remplacée pendant cette visite.")} La démo a redémarré sur la simulation d'exemple.`, type: "warning" })
+      }
+      return sessionExemple()
     },
     saveCurrentSession: async session => enregistrerSession(session),
     saveCurrentSessionSync: session => enregistrerSession(session),
@@ -96,13 +132,26 @@ export function creerApiNavigateur(): EventPayloadMapping {
       return comparerStrategiesDeDistribution(validee, activityId, validee.comparateur?.reglagesParActivite[activityId])
     },
 
-    getSaveSlots: async () => sanitizeSlots(lire(CLES.sauvegardes) ?? []),
+    // Des sauvegardes illisibles sont mises de côté avant que la prochaine sauvegarde ne les remplace.
+    getSaveSlots: async () => {
+      const lecture = lireAvecEtat(CLES.sauvegardes)
+      if (lecture.etat === "lu" && Array.isArray(lecture.valeur)) return sanitizeSlots(lecture.valeur)
+      if (lecture.etat === "lu" || lecture.etat === "illisible") {
+        const copie = mettreDeCote(CLES.sauvegardes, lecture.brut)
+        notifier({ message: `Vos sauvegardes enregistrées dans ce navigateur n'ont pas pu être lues. ${phraseDeLaCopie(copie, "Elles n'ont pas pu être mises de côté (stockage plein ?) : elles ne seront pas remplacées pendant cette visite.")} La liste des sauvegardes est vide.`, type: "warning" })
+      }
+      return []
+    },
     // Validées avant écriture, comme dans l'application de bureau.
     saveSlots: async (slots: SaveSlot[], options) => {
-      ecrire(CLES.sauvegardes, sanitizeSlots(slots.map(avecFormat)).map(avecFormat))
-      if (!options?.silencieux) notifier({ message: "Sauvegarde réussie !", type: "success" })
+      if (!ecrire(CLES.sauvegardes, sanitizeSlots(slots.map(avecFormat)).map(avecFormat))) {
+        notifier({ message: MESSAGES_DE_LA_DEMO.echecDesSauvegardes, type: "error" })
+        return false
+      }
+      if (!options?.silencieux) notifier({ message: MESSAGES_DE_LA_DEMO.sauvegardeReussie, type: "success" })
       // Les sauvegardes sont ce que l'utilisateur tient à garder : le navigateur est prié de ne pas les effacer de lui-même.
       void demanderUnStockagePersistant()
+      return true
     },
 
     exportState: async (state: ExportableState) => telecharger(`simulateur-export-${Date.now()}.json`, ecritParLaDemo(state)),
@@ -141,10 +190,11 @@ export function creerApiNavigateur(): EventPayloadMapping {
 
     // Comme dans l'application de bureau, un champ invalide est écarté seul, à la lecture comme à l'écriture.
     getUserPreferences: async () => preferencesValides(lire(CLES.preferences)),
-    saveUserPreferences: async (prefs: UserPreferences) => ecrire(CLES.preferences, preferencesValides(prefs)),
+    saveUserPreferences: async (prefs: UserPreferences) => ecrireOuSignaler(CLES.preferences, preferencesValides(prefs), MESSAGES_DE_LA_DEMO.echecDesPreferences),
 
     onShowNotification: callback => {
       abonnes.add(callback)
+      enAttente.splice(0).forEach(callback)
       return () => abonnes.delete(callback)
     },
 

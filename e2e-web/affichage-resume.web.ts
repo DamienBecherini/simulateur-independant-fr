@@ -38,7 +38,8 @@ test("l'affichage « Résumé » s'ouvre par défaut ; un autre se choisit dans 
 
   // La préférence est enregistrée peu après le choix, dans le stockage du navigateur, à part de la simulation.
   await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("simulateur.preferences") ?? "{}").affichage)).toBe("classique")
-  expect(await page.evaluate(() => window.localStorage.getItem("simulateur.session"))).not.toContain("affichage")
+  // La session n'est enregistrée qu'après une modification : ici, elle peut ne pas l'être du tout.
+  expect((await page.evaluate(() => window.localStorage.getItem("simulateur.session"))) ?? "").not.toContain("affichage")
 
   await page.reload()
   await expect(page.getByRole("combobox", { name: "Affichage : Classique" })).toBeVisible()
