@@ -6,7 +6,7 @@ import { euros, pourcent } from "@/backend/logic/format"
 import { caisseDe, PROFESSION_NON_REGLEMENTEE, professionDe } from "@/backend/logic/professions"
 import type { ReglesFiscales } from "@/backend/logic/regles"
 import { REGIME_DU_DIRIGEANT } from "@/backend/logic/statuts"
-import type { ActivityResult, CaisseLiberale, Company, DetailCotisationsTNS, MicroEntreprise, ProfessionDeLActivite } from "@/types"
+import type { ActivityResult, CaisseLiberale, Company, CotisationTNS, DetailCotisationsTNS, MicroEntreprise, ProfessionDeLActivite } from "@/types"
 
 export { LIBELLE_NON_REGLEMENTEE } from "@/backend/logic/professions"
 export { PROFESSION_NON_REGLEMENTEE }
@@ -111,6 +111,8 @@ export interface LigneDeLaCaisse {
   libelle: string
   montant: number
   precision: string | null
+  /** La ligne commune des travailleurs non salariés que la caisse change ; absente pour l'ASV et la CURPS, qui s'ajoutent. */
+  cle?: CotisationTNS
 }
 
 /**
@@ -126,10 +128,10 @@ export function lignesDeLaCaisse(tns: DetailCotisationsTNS, montant: (valeur: nu
   const priseEnCharge = (valeur: number) => (valeur >= 0.5 ? `${montant(valeur)} pris en charge par l'Assurance maladie` : null)
   const c = tns.cotisations
   const lignes: LigneDeLaCaisse[] = [
-    { libelle: "dont maladie (Urssaf)", montant: c.maladieMaternite, precision: priseEnCharge(caisse.priseEnCharge.maladie) },
-    { libelle: "dont retraite de base (CNAVPL)", montant: c.retraiteDeBase, precision: null },
-    { libelle: `dont retraite complémentaire (${caisse.caisse})`, montant: c.retraiteComplementaire, precision: surLeRevenu },
-    { libelle: `dont invalidité-décès (${caisse.caisse})`, montant: c.invaliditeDeces, precision: null }
+    { libelle: "dont maladie (Urssaf)", montant: c.maladieMaternite, precision: priseEnCharge(caisse.priseEnCharge.maladie), cle: "maladieMaternite" },
+    { libelle: "dont retraite de base (CNAVPL)", montant: c.retraiteDeBase, precision: null, cle: "retraiteDeBase" },
+    { libelle: `dont retraite complémentaire (${caisse.caisse})`, montant: c.retraiteComplementaire, precision: surLeRevenu, cle: "retraiteComplementaire" },
+    { libelle: `dont invalidité-décès (${caisse.caisse})`, montant: c.invaliditeDeces, precision: null, cle: "invaliditeDeces" }
   ]
   if (caisse.asv > 0) lignes.push({ libelle: "dont avantage social vieillesse (ASV)", montant: caisse.asv, precision: [surLeRevenu, priseEnCharge(caisse.priseEnCharge.asv)].filter(Boolean).join(" ; ") })
   if (caisse.curps > 0) lignes.push({ libelle: "dont CURPS", montant: caisse.curps, precision: "unions régionales des professionnels de santé" })

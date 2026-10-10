@@ -39,12 +39,29 @@ describe("carte d'une activité de profession libérale réglementée", () => {
     afficher(session(makeCompany({ id: "a1", name: "Cabinet", legalStatus: "EI", profession: "masseur-kinesitherapeute" }), "ca_services", [2025, 2026], 60000))
 
     expect(screen.getByText("EI au réel · Masseur-kinésithérapeute (CARPIMKO)")).toBeInTheDocument()
-    expect(ligne("dont maladie (Urssaf)")).toBe("dont maladie (Urssaf)44 €2 451 € pris en charge par l'Assurance maladie")
+    // 44,4 € avant arrondi : l'euro qui manque à la somme des lignes arrondies va à la plus forte partie décimale.
+    expect(ligne("dont maladie (Urssaf)")).toBe("dont maladie (Urssaf)45 €0,1 % de l'assiette ; 2 451 € pris en charge par l'Assurance maladie")
     expect(ligne("dont retraite de base (CNAVPL)")).toContain("4 706 €")
     expect(ligne("dont retraite complémentaire (CARPIMKO)")).toBe("dont retraite complémentaire (CARPIMKO)3 863 €calculée sur le revenu 2025")
     expect(ligne("dont invalidité-décès (CARPIMKO)")).toContain("1 022 €")
     expect(ligne("dont avantage social vieillesse (ASV)")).toBe("dont avantage social vieillesse (ASV)295 €calculée sur le revenu 2025 ; 554 € pris en charge par l'Assurance maladie")
     expect(ligne("dont CURPS")).toContain("44 €")
+  })
+
+  it("ostéopathe en EI, 54 000 € en 2026 : toutes les lignes, dont la somme est le total des cotisations (P-06)", () => {
+    afficher(session(makeCompany({ id: "a1", name: "Cabinet", legalStatus: "EI", profession: "osteopathe" }), "ca_services", [2026], 54000))
+
+    expect(ligne("Cotisations sociales")).toBe("Cotisations sociales− 15 008 €assiette de 39 960 € (54 000 € de revenu avant cotisations, après l'abattement forfaitaire) ; montant définitif de l'année, que l'Urssaf appelle d'abord en acomptes provisionnels puis régularise")
+    // Avant arrondi : 2 060,86 + 119,88 + 4 235,76 + 4 395,60 + 199,80 + 2 717,28 + 1 158,84 + 120,15 = 15 008,17 €.
+    expect(ligne("dont maladie (Urssaf)")).toBe("dont maladie (Urssaf)2 061 €5,16 % de l'assiette")
+    expect(ligne("dont indemnités journalières")).toBe("dont indemnités journalières120 €0,3 % de l'assiette")
+    expect(ligne("dont retraite de base (CNAVPL)")).toBe("dont retraite de base (CNAVPL)4 236 €10,6 % de l'assiette")
+    expect(ligne("dont retraite complémentaire (CIPAV)")).toBe("dont retraite complémentaire (CIPAV)4 395 €11 % de l'assiette")
+    expect(ligne("dont invalidité-décès (CIPAV)")).toBe("dont invalidité-décès (CIPAV)200 €0,5 % de l'assiette")
+    expect(ligne("dont CSG déductible")).toBe("dont CSG déductible2 717 €6,8 % de l'assiette")
+    expect(ligne("dont CSG non déductible et CRDS")).toBe("dont CSG non déductible et CRDS1 159 €2,9 % de l'assiette")
+    expect(ligne("dont formation professionnelle")).toBe("dont formation professionnelle120 €forfait annuel, dû même sans revenu")
+    expect(screen.queryByText("dont allocations familiales")).not.toBeInTheDocument()
   })
 
   it("sans l'année précédente dans la simulation, la ligne le dit", () => {

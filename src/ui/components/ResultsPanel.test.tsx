@@ -259,9 +259,11 @@ describe("ResultsPanel", () => {
   })
 
   it("affiche le coût de la rémunération du président et celui des salariés", () => {
-    // Seuls les montants affichés sont renseignés.
+    // Seuls les montants affichés sont renseignés ; chaque ligne du bulletin vaut zéro (le détail des cotisations, qui
+    // ne rejoint alors pas le total de l'activité, n'est pas affiché).
+    const lignesNulles = new Proxy({}, { get: () => ({ salariale: 0, patronale: 0 }) }) as SalarieDeLActivite["cotisations"]
     const bulletin = (personId: string, brut: number, totalPatronal: number, reductionGenerale: number) =>
-      ({ personId, statut: "salarie", brut, totalPatronal, reductionGenerale, coutEmployeur: brut + totalPatronal - reductionGenerale }) as SalarieDeLActivite
+      ({ personId, statut: "salarie", brut, totalPatronal, reductionGenerale, coutEmployeur: brut + totalPatronal - reductionGenerale, cotisations: lignesNulles }) as SalarieDeLActivite
     const report = makeReport()
     const sasu = report.activities[0]
     const president = { ...bulletin("person-alice", 20000, 7000, 0), statut: "president" as const }

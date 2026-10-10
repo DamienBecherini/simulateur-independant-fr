@@ -2,7 +2,8 @@
 
 import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { libelleDeduction } from "@/lib/export-commun"
-import { lignesDeLaCaisse, statutEtProfession } from "@/lib/professions"
+import { detailDesCotisations, precisionDesCotisations } from "@/lib/detail-des-cotisations"
+import { statutEtProfession } from "@/lib/professions"
 import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
 import { useId, type ReactNode } from "react"
@@ -338,13 +339,13 @@ function statutAffiche(activity: ActivityResult): string {
 }
 
 /**
- * Profession libérale réglementée au réel : les cotisations que sa caisse change, ligne à ligne, avec ce que
- * l'Assurance maladie prend en charge et, pour la CARPIMKO, l'année du revenu de la complémentaire et de l'ASV.
+ * Les cotisations sociales de l'activité ligne à ligne, toutes celles que le moteur calcule (avec, pour une profession
+ * libérale réglementée, ce que l'Assurance maladie prend en charge) : leur somme est exactement le total affiché.
  */
-function LignesDeLaCaisse({ tns, className }: { tns: NonNullable<ActivityResult["cotisationsTNS"]>; className?: string }) {
+function DetailDesCotisations({ activity, className }: { activity: ActivityResult; className?: string }) {
   return (
     <>
-      {lignesDeLaCaisse(tns, euros).map(ligne => (
+      {detailDesCotisations(activity).map(ligne => (
         <Row key={ligne.libelle} label={ligne.libelle} value={euros(ligne.montant)} hint={ligne.precision} className={className} />
       ))}
     </>
@@ -403,9 +404,8 @@ function LignesDeLActivite({ activity, className }: { activity: ActivityResult; 
       <Row label="Chiffre d'affaires" value={euros(activity.chiffreAffaires)} className={className} />
       {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${euros(activity.charges)}`} className={className} /> : null}
       {activity.fraisDeDeplacement ? <DeplacementsRow deplacements={activity.fraisDeDeplacement} className={className} /> : null}
-      <Row label="Cotisations sociales" value={`− ${euros(activity.cotisationsSociales)}`} className={className} />
-      {activity.cotisationsTNS ? <LignesDeLaCaisse tns={activity.cotisationsTNS} className={className} /> : null}
-      {activity.formationProfessionnelle ? <Row label="dont formation professionnelle" value={euros(activity.formationProfessionnelle)} hint="contribution sur le chiffre d'affaires, non réduite par l'ACRE" className={className} /> : null}
+      <Row label="Cotisations sociales" value={`− ${euros(activity.cotisationsSociales)}`} hint={precisionDesCotisations(activity)} className={className} />
+      <DetailDesCotisations activity={activity} className={className} />
       {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={euros(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${euros(activity.cotisationsPresident.brut)} bruts`} className={className} /> : null}
       {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} className={className} /> : null}
       {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${euros(activity.impotSocietes)}`} className={className} /> : null}
