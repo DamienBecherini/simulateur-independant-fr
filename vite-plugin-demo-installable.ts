@@ -68,21 +68,24 @@ export function demoInstallable(): Plugin {
   }
 }
 
-/** Dossier des captures d'écran de l'aide à l'installation de la démo (src/web/AideALInstallation.tsx). */
-const IMAGES_DE_L_AIDE = "/src/web/aide-installation/"
+/** Racines de composition de l'application de bureau et de la démo web (voir src/ui/plateforme.ts). */
+export const ENTREE_DU_BUREAU = "/src/ui/main.tsx"
+export const ENTREE_DE_LA_DEMO = "/src/web/main.tsx"
 
 /**
- * Pour l'application de bureau : les captures de l'aide à l'installation, propres à la démo, ne sont pas publiées.
- * Le code qui les affiche disparaît de la compilation (`VITE_CIBLE` ne vaut « web » que dans la démo), mais Vite
- * écrirait quand même les images importées : elles y sont remplacées par une adresse vide.
+ * Pour la démo web, en développement (vite --mode web) comme à la compilation : index.html charge la racine de
+ * composition de la démo à la place de celle du bureau. L'application de bureau n'importe ainsi rien de src/web, et ne
+ * contient ni le code ni les images de la démo, sans compter sur l'élimination du code mort.
  */
-export function sansLesImagesDeLaDemo(): Plugin {
+export function entreeDeLaDemo(): Plugin {
   return {
-    name: "sans-les-images-de-la-demo",
-    apply: "build",
-    enforce: "pre",
-    load(id) {
-      return id.split("\\").join("/").includes(IMAGES_DE_L_AIDE) ? "export default ''" : null
+    name: "entree-de-la-demo",
+    transformIndexHtml: {
+      order: "pre",
+      handler(html) {
+        if (!html.includes(ENTREE_DU_BUREAU)) throw new Error(`index.html ne charge plus ${ENTREE_DU_BUREAU} : la démo web ne saurait pas quoi charger à sa place.`)
+        return html.replace(ENTREE_DU_BUREAU, ENTREE_DE_LA_DEMO)
+      }
     }
   }
 }

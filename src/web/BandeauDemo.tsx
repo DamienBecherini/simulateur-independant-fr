@@ -6,9 +6,9 @@
 import { useId } from "react"
 import { Button } from "@/components/ui/button"
 import { ANNEE_COURANTE } from "@/backend/regles/index"
-import { FenetreIADeLaDemo } from "@/ui/components/UtiliserAvecUneIA"
 import { reinitialiserDemo } from "./stockage-navigateur"
 import { InvitationAInstaller } from "./AideALInstallation"
+import { FenetreIADeLaDemo } from "./FenetreIADeLaDemo"
 import { useDemoInstallee } from "./pwa/utiliser-l-installation"
 
 const BOUTON_DU_BANDEAU = "h-auto min-h-6 p-0 pl-3 text-amber-900 dark:text-amber-100"

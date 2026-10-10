@@ -2,9 +2,7 @@
 
 import { app, BrowserWindow, dialog, shell } from "electron"
 import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions, StatutSociete, FormatFichierTexte } from "@/types.js"
-import { estSocieteIS, SessionStateSchema } from "@/types.js"
-import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./logic/simulation-pluriannuelle.js"
-import { comparerStrategiesDeDistribution } from "./logic/strategies-de-distribution.js"
+import { calculsDuPont } from "./logic/calculs-du-pont.js"
 import { ipcMainHandle, validateEventFrame } from "./util.js"
 import { isDev } from "./isDev.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
@@ -61,14 +59,6 @@ const donnees = donneesDeLApplication({
   avertir: showInfoDialog,
   notifier: notification => mainWindow?.webContents.send("show-notification", notification)
 })
-
-/** Session reçue de l'interface, revalidée avant calcul ; une session invalide est remplacée par la session par défaut. */
-function validatedSession(session: unknown, caller: string): SessionState {
-  const parsed = SessionStateSchema.safeParse(session)
-  if (parsed.success) return parsed.data
-  console.warn(`${caller} : session invalide, utilisation des valeurs par défaut du schéma`, parsed.error.flatten())
-  return SessionStateSchema.parse({})
-}
 
 /** Le serveur MCP livré avec l'application : hors de l'archive asar une fois packagé. */
 const serveurMcpLivre = () => (app.isPackaged ? path.join(process.resourcesPath, "mcp", "serveur-mcp.mjs") : path.join(app.getAppPath(), "dist-electron", "mcp", "serveur-mcp.mjs"))
@@ -179,14 +169,12 @@ app.on("ready", () => {
     event.returnValue = donnees.ecrireLaSessionSync(session)
   })
 
-  ipcMainHandle("simulerLesAnnees", async (session: SessionState) => simulerLesAnnees(validatedSession(session, "simulerLesAnnees")))
+  // Calculs communs avec la démo web (logic/calculs-du-pont.ts) : la session reçue y est revalidée.
+  ipcMainHandle("simulerLesAnnees", async (session: SessionState) => calculsDuPont.simulerLesAnnees(session))
 
-  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions, annee: number) => comparerStatutsDeLAnnee(validatedSession(session, "compareStatuts"), options, annee))
-  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) => optimiserRemunerationDeLAnnee(validatedSession(session, "optimiserRemuneration"), options, estSocieteIS(statut) ? statut : "SASU", annee))
-  ipcMainHandle("comparerStrategies", async (session: SessionState, activityId: string) => {
-    const validee = validatedSession(session, "comparerStrategies")
-    return comparerStrategiesDeDistribution(validee, String(activityId), validee.comparateur?.reglagesParActivite[String(activityId)])
-  })
+  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions, annee: number) => calculsDuPont.compareStatuts(session, options, annee))
+  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) => calculsDuPont.optimiserRemuneration(session, options, statut, annee))
+  ipcMainHandle("comparerStrategies", async (session: SessionState, activityId: string) => calculsDuPont.comparerStrategies(session, activityId))
 
   ipcMainHandle("getSaveSlots", async () => await donnees.lireLesSauvegardes())
   ipcMainHandle("saveSlots", async (slots: SaveSlot[], options?: { silencieux?: boolean }) => await donnees.ecrireLesSauvegardes(slots, options))

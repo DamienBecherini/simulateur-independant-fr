@@ -78,7 +78,7 @@ npx eslint . && npx tsc -b && npm run transpile:electron && npm run typecheck:te
 | `src/lib/` | Logique côté interface, pure et testée : exports CSV et Markdown, montages types, scénarios de test, professions affichées, avis des utilisateurs… |
 | `src/ui/` | Application React : `App.tsx`, `components/`, `hooks/` (`useSessionManager` : état, annuler et rétablir, sauvegarde différée). |
 | `src/components/ui/` | Composants shadcn/ui, copiés tels quels (exclus de SonarQube). |
-| `src/web/` | La démo web : `api-navigateur.ts` remplace le process principal (même `window.api`), `stockage-navigateur.ts` le disque ; `pwa/` la rend installable (ADR 012). |
+| `src/web/` | La démo web : `api-navigateur.ts` remplace le process principal (même `window.api`), `stockage-navigateur.ts` le disque ; `main.tsx` est sa racine de composition (plateforme de la démo : `plateforme-web.ts`) ; `pwa/` la rend installable (ADR 012). |
 | `src/globals.d.ts` | `EventPayloadMapping` : le contrat de `window.api`, commun à Electron et à la démo. |
 | `e2e/`, `e2e-web/` | Tests de bout en bout (application de bureau, démo web). |
 | `documentation/` | Ce guide, les ADR, la publication, les dossiers de recherche (`recherche/`), la relecture d'octobre 2026. |
@@ -119,9 +119,9 @@ flowchart TD
   end
   MCP["src/backend/mcp<br/>serveur MCP (stdio)"]
   MAIN["src/backend/main.ts + preload.cts<br/>donnees-de-l-application, fichiers-surs"]
-  WEB["src/web/api-navigateur.ts<br/>stockage du navigateur"]
+  WEB["src/web : main.tsx, api-navigateur.ts<br/>stockage du navigateur, plateforme de la démo"]
   LIB["src/lib<br/>exports, montages, scénarios"]
-  UI["src/ui (React)"]
+  UI["src/ui (React) : main.tsx du bureau<br/>plateforme.ts"]
 
   TYPES --> Moteur
   REGLES --> R --> PLURI --> ENG --> CALC
@@ -137,14 +137,17 @@ flowchart TD
   UI --> LIB
   UI -->|window.api| MAIN
   UI -->|window.api| WEB
+  WEB -->|"plateforme (bandeau, installation, liens)"| UI
 ```
 
 Règles de dépendance :
 
-- `src/backend/logic` n'importe que `src/types.ts`, `src/backend/regles` et Zod. Un test (`outils/isolement.test.ts`) le vérifie pour les outils pour les IA ; pour le reste, vérifiez les imports d'un module ajouté.
-- `src/lib` et `src/ui` peuvent importer le moteur ; le moteur ne les importe jamais.
-- L'interface ne parle au disque que par `window.api` (contrat `EventPayloadMapping`, `src/globals.d.ts`), fourni par Electron (`preload.cts` → canaux de `main.ts`) ou par la démo (`creerApiNavigateur`).
-- Écarts connus, assumés en attendant les branches prévues par la relecture : cycle `comparateur.ts` ⇄ `optimisation-remuneration.ts` (commenté dans le code), `simulation-pluriannuelle.ts` → `comparateur.ts` (conversion d'une micro sortie du régime), cycle `src/ui` ⇄ `src/web` (bandeau de la démo).
+- `src/backend/logic` n'importe que `src/types.ts`, `src/backend/regles` et Zod : ni `src/lib`, ni `src/ui`, ni `src/web`. Un test (`outils/isolement.test.ts`) vérifie en plus que les outils pour les IA n'atteignent que Zod, les types et le moteur.
+- `src/lib` et `src/ui` peuvent importer le moteur ; le moteur ne les importe jamais. `src/lib` n'importe ni `src/ui` ni `src/web` (ses tests, eux, empruntent `src/ui/testing` et la simulation d'exemple).
+- `src/web` peut importer `src/ui` ; `src/ui` n'importe jamais `src/web`. Ce qui est propre à la démo (bandeau, bouton d'installation, renvoi vers l'application de bureau, diagnostic d'un avis) arrive à l'interface par le contexte `Plateforme` (`src/ui/plateforme.ts`), fourni par la racine de composition de chaque cible : `src/ui/main.tsx` pour le bureau (`PLATEFORME_DE_BUREAU`), `src/web/main.tsx` pour la démo (`PLATEFORME_WEB`, `src/web/plateforme-web.ts`), que `index.html` charge à la place de la première en mode `web` (plugin `entreeDeLaDemo`, `vite-plugin-demo-installable.ts`). L'application de bureau ne contient ainsi rien de la démo, sans dépendre de l'élimination du code mort. Pour un nouvel élément propre à la démo : un champ de `Plateforme`, rempli dans `plateforme-web.ts`.
+- L'interface ne parle au disque que par `window.api` (contrat `EventPayloadMapping`, `src/globals.d.ts`), fourni par Electron (`preload.cts` → canaux de `main.ts`) ou par la démo (`creerApiNavigateur`). Les calculs et la revalidation de ce qu'envoie l'interface sont communs aux deux ponts (`logic/calculs-du-pont.ts`).
+- **Ces règles entre dossiers sont vérifiées par ESLint** (`no-restricted-imports`, `eslint.config.js`) : un import interdit, par l'alias `@/` ou par un chemin relatif, fait échouer `npm run lint`. La règle lit les `import` et `export … from` statiques, pas les `import()` ni les chaînes de `vi.mock`. Elles n'ont plus d'écart connu.
+- À l'intérieur du moteur, restent en attendant la branche `comparateur-allege` : le cycle `comparateur.ts` ⇄ `optimisation-remuneration.ts` (commenté dans le code) et `simulation-pluriannuelle.ts` → `comparateur.ts` (conversion d'une micro sortie du régime).
 
 ### 2.2 Flux de données
 

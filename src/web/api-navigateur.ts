@@ -9,8 +9,7 @@ import { SessionStateSchema } from "@/types"
 import { AnneesRefuseesError, nettoyerLaSession, sanitizeSlots, SessionIrrecuperableError } from "@/backend/logic/data-sanitizer"
 import { avecVersionDeLApplication, lireUneSimulationImportee, preferencesValides } from "@/backend/logic/fichiers-de-donnees"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
-import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
-import { comparerStrategiesDeDistribution } from "@/backend/logic/strategies-de-distribution"
+import { calculsDuPont } from "@/backend/logic/calculs-du-pont"
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { sessionExemple } from "./session-exemple"
@@ -34,12 +33,6 @@ function sessionEnregistree(enregistree: unknown): SessionState | null {
     console.warn("Session du navigateur refusée, démarrage avec une session vierge :", error instanceof Error ? error.message : error)
     return SessionStateSchema.parse({})
   }
-}
-
-/** Session reçue de l'interface, revalidée avant calcul, comme le fait le process principal. */
-function sessionValidee(session: unknown): SessionState {
-  const resultat = SessionStateSchema.safeParse(session)
-  return resultat.success ? resultat.data : SessionStateSchema.parse({})
 }
 
 const TYPES_MIME: Record<FormatFichierTexte, string> = { csv: "text/csv;charset=utf-8", markdown: "text/markdown;charset=utf-8", json: "application/json" }
@@ -128,13 +121,11 @@ export function creerApiNavigateur(): EventPayloadMapping {
     saveCurrentSession: async session => enregistrerSession(session),
     saveCurrentSessionSync: session => enregistrerSession(session),
 
-    simulerLesAnnees: async session => simulerLesAnnees(sessionValidee(session)),
-    compareStatuts: async (session, options, annee) => comparerStatutsDeLAnnee(sessionValidee(session), options, annee),
-    optimiserRemuneration: async (session, options, statut, annee) => optimiserRemunerationDeLAnnee(sessionValidee(session), options, statut, annee),
-    comparerStrategies: async (session, activityId) => {
-      const validee = sessionValidee(session)
-      return comparerStrategiesDeDistribution(validee, activityId, validee.comparateur?.reglagesParActivite[activityId])
-    },
+    // Calculs communs avec l'application de bureau (calculs-du-pont.ts) : la session reçue y est revalidée.
+    simulerLesAnnees: async session => calculsDuPont.simulerLesAnnees(session),
+    compareStatuts: async (session, options, annee) => calculsDuPont.compareStatuts(session, options, annee),
+    optimiserRemuneration: async (session, options, statut, annee) => calculsDuPont.optimiserRemuneration(session, options, statut, annee),
+    comparerStrategies: async (session, activityId) => calculsDuPont.comparerStrategies(session, activityId),
 
     // Des sauvegardes illisibles sont mises de côté avant que la prochaine sauvegarde ne les remplace.
     getSaveSlots: async () => {
