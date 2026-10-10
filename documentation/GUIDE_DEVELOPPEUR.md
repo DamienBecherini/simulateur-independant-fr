@@ -74,8 +74,8 @@ npx eslint . && npx tsc -b && npm run transpile:electron && npm run typecheck:te
 | `src/backend/logic/testing/` | Outils de test du moteur : règles fictives aux chiffres ronds (`regles-de-test.ts`), sessions de test, `casDeReference`. |
 | `src/backend/logic/outils/` | Les outils pour les clients d'IA (ADR 010) : catalogue, lecture, propositions. Purs eux aussi. |
 | `src/backend/mcp/` | Le serveur MCP local (ADR 011), processus à part lancé par le client d'IA. |
-| `src/backend/*.ts` | Le process principal d'Electron : `main.ts` (fenêtre, canaux IPC), `preload.cts` (pont `window.api`), `util.ts` (canaux typés, vérification de l'émetteur), `securite-des-fenetres.ts` (options de sécurité des fenêtres, navigation et adresses externes permises ; les paramètres des canaux se vérifient dans `logic/entrees-ipc.ts`), `donnees-de-l-application.ts` (lecture et écriture des trois fichiers de données), `fichiers-surs.ts` (écriture atomique, copies), `boite-aux-propositions.ts`. |
-| `src/lib/` | Logique côté interface, pure et testée : exports CSV et Markdown, montages types, scénarios de test, professions affichées, avis des utilisateurs… |
+| `src/backend/*.ts` | Le process principal d'Electron (rôle de chaque fichier au § 2.4) : `main.ts` (point d'entrée, assemblage), `fenetres.ts` (écran de démarrage, fenêtre principale, protections), `canaux-*.ts` (canaux IPC par domaine), `preload.cts` (pont `window.api`), `util.ts` (canaux typés, vérification de l'émetteur), `securite-des-fenetres.ts` (options de sécurité des fenêtres, navigation et adresses externes permises ; les paramètres des canaux se vérifient dans `logic/entrees-ipc.ts`), `donnees-de-l-application.ts` (lecture et écriture des trois fichiers de données), `fichiers-surs.ts` (écriture atomique, copies), `boite-aux-propositions.ts`. |
+| `src/lib/` | Logique côté interface, pure et testée : exports CSV et Markdown, montages types, scénarios de test, professions affichées, avis des utilisateurs, sauvegardes nommées (`session-service.ts`), barres de la grille (`grille-mensuelle.ts`), raccourcis d'annulation (`raccourcis-clavier.ts`)… Les composants affichent ; une décision ou un calcul va ici, avec son test. |
 | `src/ui/` | Application React : `App.tsx`, `components/`, `hooks/` (`useSessionManager` : état, annuler et rétablir, sauvegarde différée). |
 | `src/components/ui/` | Composants shadcn/ui, copiés tels quels (exclus de SonarQube). |
 | `src/web/` | La démo web : `api-navigateur.ts` remplace le process principal (même `window.api`), `stockage-navigateur.ts` le disque ; `pwa/` la rend installable (ADR 012). |
@@ -118,7 +118,7 @@ flowchart TD
     OUT["outils/ : outils pour les clients d'IA"]
   end
   MCP["src/backend/mcp<br/>serveur MCP (stdio)"]
-  MAIN["src/backend/main.ts + preload.cts<br/>donnees-de-l-application, fichiers-surs"]
+  MAIN["src/backend/main.ts + preload.cts<br/>fenetres, canaux-*<br/>donnees-de-l-application, fichiers-surs"]
   WEB["src/web/api-navigateur.ts<br/>stockage du navigateur"]
   LIB["src/lib<br/>exports, montages, scénarios"]
   UI["src/ui (React)"]
@@ -143,7 +143,7 @@ Règles de dépendance :
 
 - `src/backend/logic` n'importe que `src/types.ts`, `src/backend/regles` et Zod. Un test (`outils/isolement.test.ts`) le vérifie pour les outils pour les IA ; pour le reste, vérifiez les imports d'un module ajouté.
 - `src/lib` et `src/ui` peuvent importer le moteur ; le moteur ne les importe jamais.
-- L'interface ne parle au disque que par `window.api` (contrat `EventPayloadMapping`, `src/globals.d.ts`), fourni par Electron (`preload.cts` → canaux de `main.ts`) ou par la démo (`creerApiNavigateur`). Un canal Electron se déclare par `ipcMainHandle` (émetteur vérifié) et vérifie lui-même ses paramètres avec un schéma de `logic/entrees-ipc.ts` : le process principal ne fait pas confiance à la page (ADR 003).
+- L'interface ne parle au disque que par `window.api` (contrat `EventPayloadMapping`, `src/globals.d.ts`), fourni par Electron (`preload.cts` → canaux déclarés par `canaux-*.ts`) ou par la démo (`creerApiNavigateur`). Un canal Electron se déclare par `ipcMainHandle` (émetteur vérifié) et vérifie lui-même ses paramètres avec un schéma de `logic/entrees-ipc.ts` : le process principal ne fait pas confiance à la page (ADR 003).
 - Écart connu, assumé en attendant la branche prévue par la relecture : cycle `src/ui` ⇄ `src/web` (bandeau de la démo). Le moteur (`src/backend/logic`) n'a plus de cycle d'import : n'en introduisez pas.
 
 ### 2.2 Flux de données
@@ -168,17 +168,17 @@ flowchart TD
   RES --> OUT["outils pour les IA → serveur MCP<br/>→ boîte aux propositions → interface"]
 ```
 
-- **Persistance, application de bureau** : `main.ts` délègue à `donneesDeLApplication` (`src/backend/donnees-de-l-application.ts`) la lecture et l'écriture de `sessionState.json`, `simulationSlots.json` et `userPreferences.json` dans le dossier de données d'Electron. Toute écriture est atomique (`fichiers-surs.ts`) ; un fichier illisible ou en partie refusé est copié avant d'être remplacé (ADR 002, 005).
+- **Persistance, application de bureau** : les canaux de la session (`canaux-de-la-session.ts`) délèguent à `donneesDeLApplication` (`src/backend/donnees-de-l-application.ts`) la lecture et l'écriture de `sessionState.json`, `simulationSlots.json` et `userPreferences.json` dans le dossier de données d'Electron. Toute écriture est atomique (`fichiers-surs.ts`) ; un fichier illisible ou en partie refusé est copié avant d'être remplacé (ADR 002, 005).
 - **Persistance, démo web** : `src/web/api-navigateur.ts` applique les mêmes règles au `localStorage` (`stockage-navigateur.ts`) ; une session illisible y est remplacée par la simulation d'exemple.
 - **Calcul** : dans Electron, l'interface appelle le moteur par IPC (`simulerLesAnnees`, `compareStatuts`, `optimiserRemuneration`, `comparerStrategies`), qui revalide la session ; dans la démo, le même moteur tourne dans la page.
-- **Serveur MCP** : il relit `sessionState.json` à chaque appel (jamais ne l'écrit) et dépose les propositions acceptées dans `propositions/`, que `main.ts` surveille et transmet à l'interface (ADR 011).
+- **Serveur MCP** : il relit `sessionState.json` à chaque appel (jamais ne l'écrit) et dépose les propositions acceptées dans `propositions/`, que le process principal surveille (`canaux-des-clients-d-ia.ts`, `boite-aux-propositions.ts`) et transmet à l'interface (ADR 011).
 
 ### 2.3 Où vit quoi : carte du moteur
 
 | Module (`src/backend/logic/`) | Rôle | Appelé par |
 |---|---|---|
 | `regles.ts` | Types des règles (`ReglesFiscales`), `reglesDeLAnnee`, `reglesPubliees`, `reglesDesAnneesConnues`. | tout le moteur, `src/lib`, l'interface |
-| `simulation-pluriannuelle.ts` | `simulerLesAnnees` (toutes les années, héritages), `comparerStatutsDeLAnnee`, `optimiserRemunerationDeLAnnee`, `arbitrageDeLAnnee`. | `main.ts`, démo, outils pour les IA, tests |
+| `simulation-pluriannuelle.ts` | `simulerLesAnnees` (toutes les années, héritages), `comparerStatutsDeLAnnee`, `optimiserRemunerationDeLAnnee`, `arbitrageDeLAnnee`. | `canaux-de-calcul.ts`, démo, outils pour les IA, tests |
 | `simulation-engine.ts` | `runMetaSimulation` : une année. Point d'entrée du moteur : enchaîne les modules ci-dessous (activités, puis personnes, puis foyers, puis bilan) ; seul importé par les appelants. | `simulation-pluriannuelle.ts`, comparateur, cas de référence |
 | `routage-des-flux.ts` | Contexte d'une année (`Contexte`, `ContexteDeLAnnee`), totaux annuels de la grille par entité (`total`), bulletins des salariés des activités, personnes reliées à une activité, et inscription de ce que les activités versent sur le compte de chaque personne (`verserRemuneration`, `verserDividendes`, `revenusDe`). | modules du moteur ci-dessous |
 | `simulation-au-reel.ts` | Activités au réel par statut (`SIMULATION_PAR_STATUT`) : sociétés à l'IS (`simulerSocieteIS`, `CALCUL_DES_SOCIETES`, réserves au début de la simulation), entreprise individuelle. | `simulation-engine.ts` |
@@ -208,6 +208,25 @@ flowchart TD
 | `baremes.ts`, `format.ts` | Barèmes par tranches et progressifs ; formatage. | calculs |
 
 ADR à lire selon le sujet : persistance 002 et 005 ; IPC 003 ; état de l'interface 004 ; grille 006 ; années de règles 007 ; plusieurs années 008 ; réglages du comparateur 009 ; outils pour les IA 010 et 011 ; démo installable 012 ; Microsoft Store 013 ; réserves 014 ; libéraux réglementés 015.
+
+### 2.4 Process principal d'Electron
+
+| Fichier (`src/backend/`) | Rôle |
+|---|---|
+| `main.ts` | Point d'entrée : reprise de l'ancien dossier de données, création de `donneesDeLApplication`, protections des fenêtres, puis, l'application prête, ouverture des fenêtres et déclaration des canaux. Aucun canal n'y est écrit. |
+| `fenetres.ts` | Écran de démarrage et fenêtre principale (`fenetrePrincipale()` pour les canaux), fenêtres discrètes des tests de bout en bout, boutons « précédent » / « suivant » de la souris ; `protegerChaqueFenetre` applique à chaque fenêtre les règles de `securite-des-fenetres.ts` (aucune nouvelle fenêtre, aucune navigation hors de l'interface, aucune `<webview>`). |
+| `securite-des-fenetres.ts` | Options de sécurité des fenêtres, navigation permise, adresses ouvertes hors de l'application (pur, testé). |
+| `util.ts` | `ipcMainHandle` (canal typé par `EventPayloadMapping`, émetteur vérifié par `validateEventFrame`). |
+| `canaux-de-la-session.ts` | Session en cours (dont l'enregistrement synchrone à la fermeture), sauvegardes nommées, préférences. |
+| `canaux-de-calcul.ts` | Simulation des années, comparateur, optimiseur, stratégies de distribution ; session revalidée par `sessionACalculer`. |
+| `canaux-des-fichiers.ts` | Export et import JSON, fichiers texte, PDF, adresses des retours ; textes et erreurs dans `logic/messages-des-fichiers.ts` (pur, testé). |
+| `canaux-des-clients-d-ia.ts` | Configuration du serveur MCP local, boîte aux propositions (ADR 011, 013). |
+| `ancien-dossier-de-donnees.ts` | Reprise des données d'avant le changement de nom du paquet (version 0.9). |
+| `donnees-de-l-application.ts`, `fichiers-surs.ts` | Lecture et écriture des trois fichiers de données, écriture atomique et copies (ADR 002, 005). |
+| `boite-aux-propositions.ts`, `copie-du-serveur-mcp.ts` | Propositions déposées par le serveur MCP ; copie du serveur pour la version du Microsoft Store. |
+| `preload.cts` | Pont `window.api`, seul lien entre la page et le process principal. |
+
+Un nouveau canal : sa signature dans `EventPayloadMapping` (`src/globals.d.ts`), son entrée dans `preload.cts` et dans `creerApiNavigateur` (démo web), puis sa déclaration dans le fichier `canaux-*.ts` de son domaine, toujours par `ipcMainHandle`, avec un schéma de `logic/entrees-ipc.ts` pour chaque paramètre.
 
 ---
 

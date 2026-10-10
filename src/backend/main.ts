@@ -3,7 +3,7 @@
 /*
  * Point d'entrée du process principal d'Electron : il reprend les données d'avant le changement de nom, prépare la
  * lecture et l'écriture des données, protège chaque fenêtre, puis, une fois l'application prête, ouvre les fenêtres et
- * déclare les canaux IPC, regroupés par domaine (voir le guide du développeur, § 2) :
+ * déclare les canaux IPC, regroupés par domaine (voir le guide du développeur, § 2.4) :
  * - canaux-de-la-session.ts : session en cours, sauvegardes nommées, préférences ;
  * - canaux-de-calcul.ts : simulation, comparateur, optimiseur, stratégies de distribution ;
  * - canaux-des-fichiers.ts : export, import, fichiers texte, PDF, adresses des retours ;
