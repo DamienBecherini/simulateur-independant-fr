@@ -6,7 +6,7 @@ import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import type { FlowChanges } from "./FlowItem"
 import type { NewFlowValues } from "./NewFlowItem"
 import { CellChartDisplay } from "./CellChartDisplay"
-import { deMois, donneesDeLaGrille, MOIS_ABREGES, nombreDeFluxParMois } from "@/lib/grille-mensuelle"
+import { deMois, donneesDeLaGrille, MOIS_ABREGES, nombreDeFluxParMois, type LigneDeLaGrille } from "@/lib/grille-mensuelle"
 import { MOIS } from "@/lib/export-commun"
 import { createId } from "@/lib/id"
 import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlux, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type MoisTouches, type PorteeRecurrence } from "@/lib/flux-recurrents"
@@ -40,9 +40,66 @@ interface MonthlyGridProps {
   setAnnees?: (annees: AnneeSimulee[]) => void
 }
 
-function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees }: MonthlyGridProps) {
+/** Les années de la session autres que celle de la grille ; aucune si la grille ne les connaît pas. */
+function autresAnneesQue(annees: AnneeSimulee[] | undefined, annee: number | undefined): number[] {
+  if (!annees || annee === undefined) return []
+  return annees.map(a => a.annee).filter(a => a !== annee)
+}
+
+/** La ligne d'un acteur : son nom, son total annuel et ses douze mois, chaque mois ouvrant la fenêtre de ses flux. */
+function LigneDeLActeur({ ligne, onOuvrir }: { ligne: LigneDeLaGrille; onOuvrir: (monthIndex: number) => void }) {
+  const { entity, monthlyScale, monthlyCellData, annualCellData, annualScale } = ligne
   // Affichage « Résumé » : lignes plus basses, avatar en petit à côté du nom.
   const resume = useAffichageResume()
+  return (
+    <>
+      {/* Colonne 1 : Nom de l'entité + Avatar */}
+      <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center print:static print:p-1">
+        <div className={cn("flex items-center gap-2 py-1 mx-0 text-sm sm:mx-3 sm:text-base print:mx-0 print:gap-1 print:text-[9pt]", resume ? "max-sm:flex-col" : "flex-col")}>
+          <AvatarDisplay avatar={entity.avatar} size={resume ? "sm" : "md"} />
+          {/* Un nom long passe à la ligne ; un mot plus large que la colonne est coupé. */}
+          <span className="text-center [overflow-wrap:anywhere]">{entity.name}</span>
+        </div>
+      </div>
+
+      {/* Colonne 2 : Total Annuel */}
+      <div role="group" aria-label={`Total annuel : ${entity.name}`} className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start print:p-1">
+        <CellChartDisplay
+          gains={annualCellData.gains}
+          expenses={annualCellData.expenses}
+          totalGains={annualCellData.totalGains}
+          totalExpenses={annualCellData.totalExpenses}
+          absoluteMaxValue={annualScale}
+          flowCount={annualCellData.flowCount}
+          readOnly
+        />
+      </div>
+
+      {/* Colonnes 3 à 14 : Les 12 mois */}
+      {monthlyCellData.map((cellData, monthIndex) => (
+        <div
+          key={monthIndex}
+          className={cn("bg-slate-100 dark:bg-gray-800 p-2 group transition-colors cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start print:min-h-0 print:p-1", resume ? "min-h-12" : "min-h-[80px]")}
+          role="button"
+          tabIndex={0}
+          aria-label={`Flux ${deMois(MOIS[monthIndex])} : ${entity.name}`}
+          onClick={() => onOuvrir(monthIndex)}
+          onKeyDown={event => {
+            // Une case s'ouvre aussi au clavier, comme un bouton.
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault()
+              onOuvrir(monthIndex)
+            }
+          }}
+        >
+          <CellChartDisplay gains={cellData.gains} expenses={cellData.expenses} totalGains={cellData.totalGains} totalExpenses={cellData.totalExpenses} absoluteMaxValue={monthlyScale} flowCount={cellData.flowCount} />
+        </div>
+      ))}
+    </>
+  )
+}
+
+function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees }: MonthlyGridProps) {
   // Bande des mois et fondus des bords : seulement quand la grille déborde de sa zone et doit défiler.
   const zone = useRef<HTMLDivElement>(null)
   const defilement = useDefilementDeLaGrille(zone, entities.length > 0, annee)
@@ -53,9 +110,9 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
   // ===================================================================================
   // Case (entité + mois) dont la fenêtre des flux est ouverte ; `null` quand elle est fermée.
   const [openCell, setOpenCell] = useState<{ entityId: string; monthIndex: number } | null>(null)
-  const openCellEntity = openCell ? entities.find(e => e.id === openCell.entityId) : undefined
+  const openCellEntity = entities.find(e => e.id === openCell?.entityId)
   // Autres années de la session, proposées dans la fenêtre des flux ; aucune si la grille ne les connaît pas.
-  const autresAnnees = annees && setAnnees && annee !== undefined ? annees.map(a => a.annee).filter(a => a !== annee) : []
+  const autresAnnees = setAnnees ? autresAnneesQue(annees, annee) : []
 
   // ===================================================================================
   // == HANDLERS POUR LES ACTIONS UTILISATEUR
@@ -212,51 +269,10 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                     </div>
                   ))}
                   {/* Corps de la grille */}
-                  {gridData.map(({ entity, monthlyScale, monthlyCellData, annualCellData, annualScale }) => (
-                    // L'utilisation de React.Fragment est cruciale pour que `position: sticky` fonctionne correctement.
-                    <React.Fragment key={entity.id}>
-                      {/* Colonne 1 : Nom de l'entité + Avatar */}
-                      <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center print:static print:p-1">
-                        <div className={cn("flex items-center gap-2 py-1 mx-0 text-sm sm:mx-3 sm:text-base print:mx-0 print:gap-1 print:text-[9pt]", resume ? "max-sm:flex-col" : "flex-col")}>
-                          <AvatarDisplay avatar={entity.avatar} size={resume ? "sm" : "md"} />
-                          {/* Un nom long passe à la ligne ; un mot plus large que la colonne est coupé. */}
-                          <span className="text-center [overflow-wrap:anywhere]">{entity.name}</span>
-                        </div>
-                      </div>
-
-                      {/* Colonne 2 : Total Annuel */}
-                      <div role="group" aria-label={`Total annuel : ${entity.name}`} className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start print:p-1">
-                        <CellChartDisplay
-                          gains={annualCellData.gains}
-                          expenses={annualCellData.expenses}
-                          totalGains={annualCellData.totalGains}
-                          totalExpenses={annualCellData.totalExpenses}
-                          absoluteMaxValue={annualScale}
-                          flowCount={annualCellData.flowCount}
-                          readOnly
-                        />
-                      </div>
-
-                      {/* Colonnes 3 à 14 : Les 12 mois */}
-                      {monthlyCellData.map((cellData, monthIndex) => (
-                        <div
-                          key={monthIndex}
-                          className={cn("bg-slate-100 dark:bg-gray-800 p-2 group transition-colors cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start print:min-h-0 print:p-1", resume ? "min-h-12" : "min-h-[80px]")}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`Flux ${deMois(MOIS[monthIndex])} : ${entity.name}`}
-                          onClick={() => setOpenCell({ entityId: entity.id, monthIndex })}
-                          onKeyDown={event => {
-                            // Une case s'ouvre aussi au clavier, comme un bouton.
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault()
-                              setOpenCell({ entityId: entity.id, monthIndex })
-                            }
-                          }}
-                        >
-                          <CellChartDisplay gains={cellData.gains} expenses={cellData.expenses} totalGains={cellData.totalGains} totalExpenses={cellData.totalExpenses} absoluteMaxValue={monthlyScale} flowCount={cellData.flowCount} />
-                        </div>
-                      ))}
+                  {gridData.map(ligne => (
+                    // Un fragment par acteur, sans élément englobant : `position: sticky` de la première colonne en dépend.
+                    <React.Fragment key={ligne.entity.id}>
+                      <LigneDeLActeur ligne={ligne} onOuvrir={monthIndex => setOpenCell({ entityId: ligne.entity.id, monthIndex })} />
                     </React.Fragment>
                   ))}
                 </div>

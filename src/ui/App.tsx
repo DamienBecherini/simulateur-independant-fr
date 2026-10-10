@@ -54,6 +54,12 @@ import { numerosDesTypesDeFlux } from "@/lib/grille-mensuelle"
 const EN_TETE_CLASSIQUE = { header: "mb-10", titre: "text-4xl", sousTitre: "" }
 const EN_TETE_RESUME = { header: "mb-4", titre: "text-2xl sm:text-3xl print:text-4xl", sousTitre: "hidden print:block" }
 
+/** Rapport et erreur de l'année affichée ; une simulation qui a échoué en entier donne son erreur à chaque année. */
+function resultatsDeLAnnee(simulation: SimulationPluriannuelle | null, erreurDeLaSimulation: string | null, annee: number) {
+  const resultat = simulation?.annees.find(a => a.annee === annee)
+  return { report: resultat?.report ?? null, erreur: erreurDeLaSimulation ?? resultat?.erreur ?? null }
+}
+
 function App() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [isExportOpen, setExportOpen] = useState(false)
@@ -74,9 +80,7 @@ function App() {
   const [anneeChoisie, setAnneeChoisie] = useState<number | null>(null)
   const annee = anneeExistante(currentSession, anneeChoisie)
   const vue = useMemo(() => vueDeLAnnee(currentSession, annee), [currentSession, annee])
-  const resultatDeLAnnee = simulation?.annees.find(a => a.annee === annee)
-  const simulationReport = resultatDeLAnnee?.report ?? null
-  const erreurDeLAnnee = simulationError ?? resultatDeLAnnee?.erreur ?? null
+  const { report: simulationReport, erreur: erreurDeLAnnee } = resultatsDeLAnnee(simulation, simulationError, annee)
 
   // Affichage de la page choisi pendant la bêta : une préférence de l'utilisateur, pas une donnée de la simulation.
   const affichage = affichageApplicable(userPreferences.affichage)
