@@ -25,16 +25,21 @@ const LARGEUR_IMPRIMEE = 660
  * Largeur réelle du conteneur, pour dessiner le graphique à l'échelle 1 : le texte garde sa taille sur téléphone.
  * À l'impression, la page est mise en forme sans que le code ne s'exécute : le graphique est redessiné à la largeur
  * de la feuille dès l'annonce de l'impression (beforeprint), de façon synchrone, pour ne pas y être réduit.
+ * La première mesure est faite avant que la page ne soit peinte (useLayoutEffect) : sans elle, le graphique paraîtrait
+ * un instant à sa largeur par défaut et élargirait la page sur téléphone, le temps que ResizeObserver se manifeste.
  */
 function useLargeur(defaut: number) {
   const ref = useRef<HTMLDivElement>(null)
   const [largeur, setLargeur] = useState(defaut)
   const [impression, setImpression] = useState(false)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = ref.current
-    if (!element || typeof ResizeObserver === "undefined") return
+    if (!element) return
     // Une largeur nulle est celle d'une vue masquée (affichage « Trois vues ») : le graphique garde sa dernière largeur.
-    const observateur = new ResizeObserver(([entree]) => entree.contentRect.width > 0 && setLargeur(Math.round(entree.contentRect.width)))
+    const mesurer = (mesure: number) => mesure > 0 && setLargeur(Math.round(mesure))
+    mesurer(element.clientWidth)
+    if (typeof ResizeObserver === "undefined") return
+    const observateur = new ResizeObserver(([entree]) => mesurer(entree.contentRect.width))
     observateur.observe(element)
     return () => observateur.disconnect()
   }, [])

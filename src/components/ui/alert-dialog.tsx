@@ -3,11 +3,20 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import { FermetureDeLaCouche, useEchapDeLaCouche, useOuverture } from "@/components/ui/couches"
 
 function AlertDialog({
+  open,
+  defaultOpen,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
-  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
+  const { ouvert, changer, fermer } = useOuverture(open, defaultOpen, onOpenChange)
+  return (
+    <FermetureDeLaCouche value={fermer}>
+      <AlertDialogPrimitive.Root data-slot="alert-dialog" open={ouvert} onOpenChange={changer} {...props} />
+    </FermetureDeLaCouche>
+  )
 }
 
 function AlertDialogTrigger({
@@ -44,8 +53,11 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
+  ref,
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+  const echap = useEchapDeLaCouche({ ref, onEscapeKeyDown })
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -56,6 +68,7 @@ function AlertDialogContent({
           className
         )}
         {...props}
+        {...echap}
       />
     </AlertDialogPortal>
   )

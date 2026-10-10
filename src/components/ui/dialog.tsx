@@ -3,11 +3,20 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { FermetureDeLaCouche, useEchapDeLaCouche, useOuverture } from "@/components/ui/couches"
 
 function Dialog({
+  open,
+  defaultOpen,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+  const { ouvert, changer, fermer } = useOuverture(open, defaultOpen, onOpenChange)
+  return (
+    <FermetureDeLaCouche value={fermer}>
+      <DialogPrimitive.Root data-slot="dialog" open={ouvert} onOpenChange={changer} {...props} />
+    </FermetureDeLaCouche>
+  )
 }
 
 function DialogTrigger({
@@ -48,10 +57,13 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  ref,
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const echap = useEchapDeLaCouche({ ref, onEscapeKeyDown })
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -62,6 +74,7 @@ function DialogContent({
           className
         )}
         {...props}
+        {...echap}
       >
         {children}
         {showCloseButton && (

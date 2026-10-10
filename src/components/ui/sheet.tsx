@@ -3,9 +3,15 @@ import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { FermetureDeLaCouche, useEchapDeLaCouche, useOuverture } from "@/components/ui/couches"
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />
+function Sheet({ open, defaultOpen, onOpenChange, ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  const { ouvert, changer, fermer } = useOuverture(open, defaultOpen, onOpenChange)
+  return (
+    <FermetureDeLaCouche value={fermer}>
+      <SheetPrimitive.Root data-slot="sheet" open={ouvert} onOpenChange={changer} {...props} />
+    </FermetureDeLaCouche>
+  )
 }
 
 function SheetTrigger({
@@ -46,10 +52,13 @@ function SheetContent({
   className,
   children,
   side = "right",
+  ref,
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
 }) {
+  const echap = useEchapDeLaCouche({ ref, onEscapeKeyDown })
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -68,6 +77,7 @@ function SheetContent({
           className
         )}
         {...props}
+        {...echap}
       >
         {children}
         <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-3 right-3 inline-flex size-6 items-center justify-center rounded-xs opacity-70 pointer-coarse:top-1 pointer-coarse:right-1 pointer-coarse:size-11 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
