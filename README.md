@@ -72,7 +72,7 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 
 ## ✨ Points d'intérêt dans le code
 
-- `src/backend/logic/simulation-engine.ts` : moteur de simulation à sens unique (activités → revenus des personnes → impôt du foyer).
+- `src/backend/logic/simulation-engine.ts` : moteur de simulation à sens unique (activités → revenus des personnes → impôt du foyer), point d'entrée d'une année ; les étapes sont dans `routage-des-flux.ts`, `simulation-au-reel.ts`, `simulation-micro.ts`, `details-des-activites.ts`, `impot-du-foyer.ts` et `bilan-de-la-simulation.ts`.
 - `src/backend/logic/foyers.ts` : regroupement des foyers fiscaux par union-find (couples, enfants rattachés, parts).
 - `src/backend/logic/regles.ts` + `src/backend/regles/<année>.json` : les règles fiscales et sociales, un fichier par année (liste dans `src/backend/regles/index.ts`), typées et sourcées, hors du code. L'année en cours du simulateur est la plus récente de ces années.
 - `src/backend/logic/data-sanitizer.ts` : validation et réparation des sessions (relations et flux orphelins).
@@ -147,7 +147,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - Les cotisations des travailleurs non salariés (gérant d'EURL, entrepreneur individuel au réel) sont calculées ligne à ligne selon le barème 2026 des artisans, commerçants et professions libérales non réglementées (assiette unique abattue de 26 %, assiettes minimales), ou, pour une profession libérale réglementée de la CIPAV ou de la CARPIMKO, selon les règles de sa caisse (ADR 015) ; ne sont pas modélisés les autres caisses de libéraux (CARMF, CARCDSF, CNBF…, calculées comme une profession non réglementée, avec un avertissement), la rémunération d'un associé de société d'exercice libéral, la contribution des artisans à la formation (0,29 %), le décalage entre cotisations provisionnelles et régularisation, ni la CSG déductible sur les dividendes soumis à cotisations. Celles du président de SASU et des salariés sont calculées ligne à ligne selon les taux 2026 du régime général (salarié : réduction générale dégressive comprise ; président : sans chômage ni réduction générale) ; ne sont pas modélisés la prévoyance et la mutuelle, l'APEC des salariés cadres, le régime d'Alsace-Moselle, le temps partiel, ni plus d'un employeur par personne ; le taux d'accident du travail retenu est celui des fonctions support (0,64 %).
 - La note de protection sociale du comparateur est indicative : elle combine le régime et les trimestres de retraite validés.
 - L'arbitrage rémunération / dividendes porte sur une année : il hérite des approximations ci-dessus et ne tient compte ni des droits à la retraite complémentaire ni du lissage sur plusieurs années.
-- Non modélisés : réductions et crédits d'impôt, résidence alternée, report des déficits, TVA (seul le dépassement des seuils de franchise est signalé en micro-entreprise ; les montants sont hors taxe), répartition du capital entre associés (dividendes partagés à parts égales).
+- Non modélisés : réductions et crédits d'impôt, résidence alternée, report sur les années suivantes du déficit d'une entreprise individuelle supérieur aux autres revenus du foyer (celui d'une société à l'IS est reporté), TVA (seul le dépassement des seuils de franchise est signalé en micro-entreprise ; les montants sont hors taxe), répartition du capital entre associés (dividendes partagés à parts égales).
 
 ## 📄 Licence
 

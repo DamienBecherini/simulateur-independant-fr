@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { grilleVide, SessionStateSchema, type SessionState, type StatutSociete } from "../../types.js"
 import { calculsDuPont, sessionRevalidee } from "./calculs-du-pont.js"
+import { EntreeIpcInvalide } from "./entrees-ipc.js"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./simulation-pluriannuelle.js"
 import { comparerStrategiesDeDistribution } from "./strategies-de-distribution.js"
 import { personne, relation, societe } from "./testing/session-de-test.js"
@@ -51,11 +52,19 @@ describe("calculsDuPont", () => {
     expect(calculsDuPont.optimiserRemuneration(sasu, options, "EI" as StatutSociete, 2026)).toEqual(optimiserRemunerationDeLAnnee(lue, options, "SASU", 2026))
   })
 
-  it("prend les réglages enregistrés de l'activité, même désignée par un identifiant qui n'est pas un texte", () => {
+  it("prend les réglages enregistrés de l'activité", () => {
     const avecReglages = { ...sasu, comparateur: { reglagesParActivite: { s1: { partMiseEnReserve: 0.5 } } } }
     const lue = SessionStateSchema.parse(avecReglages)
-    const attendu = comparerStrategiesDeDistribution(lue, "s1", lue.comparateur?.reglagesParActivite.s1)
-    expect(calculsDuPont.comparerStrategies(avecReglages, "s1")).toEqual(attendu)
-    expect(calculsDuPont.comparerStrategies(avecReglages, { toString: () => "s1" } as unknown as string)).toEqual(attendu)
+    expect(calculsDuPont.comparerStrategies(avecReglages, "s1")).toEqual(comparerStrategiesDeDistribution(lue, "s1", lue.comparateur?.reglagesParActivite.s1))
+  })
+
+  it("refuse des réglages, une année ou une activité invalides, dans les deux ponts", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined)
+    const horsBornes = { ...options, partBncPrestations: 2 }
+    expect(() => calculsDuPont.compareStatuts(sasu, horsBornes, 2026)).toThrow(EntreeIpcInvalide)
+    expect(() => calculsDuPont.compareStatuts(sasu, options, 2026.5)).toThrow("compareStatuts : paramètres invalides.")
+    expect(() => calculsDuPont.optimiserRemuneration(sasu, horsBornes, "SASU", 2026)).toThrow(EntreeIpcInvalide)
+    expect(() => calculsDuPont.optimiserRemuneration(sasu, options, "SASU", "2026" as unknown as number)).toThrow(EntreeIpcInvalide)
+    expect(() => calculsDuPont.comparerStrategies(sasu, 42 as unknown as string)).toThrow("comparerStrategies : paramètres invalides.")
   })
 })

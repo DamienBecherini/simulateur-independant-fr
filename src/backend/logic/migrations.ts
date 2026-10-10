@@ -14,6 +14,7 @@
 
 import { CAPITAL_SOCIAL_PAR_DEFAUT } from "../../types.js"
 import { euros } from "./format.js"
+import { estObjet, type DonneesBrutes } from "./donnees-brutes.js"
 
 export const FORMAT_VERSION_ACTUEL = 3
 
@@ -27,17 +28,11 @@ export const ANNEE_DES_SESSIONS_D_UNE_ANNEE = 2026
 /** Un fichier sans numéro de format date d'avant le versionnage : c'est la version 1. */
 const VERSION_SANS_NUMERO = 1
 
-type DonneesBrutes = Record<string, unknown>
-
 export interface ResultatMigration {
   donnees: unknown
   versionOrigine: number
   /** Points à vérifier par l'utilisateur après conversion. */
   notes: string[]
-}
-
-function estObjet(valeur: unknown): valeur is DonneesBrutes {
-  return typeof valeur === "object" && valeur !== null && !Array.isArray(valeur)
 }
 
 function tableau(valeur: unknown): DonneesBrutes[] {

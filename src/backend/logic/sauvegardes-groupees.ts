@@ -15,6 +15,7 @@
 import type { SaveSlot } from "../../types.js"
 import { nettoyerLesSlots, type SauvegardeRefusee } from "./data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./migrations.js"
+import { estObjet, type DonneesBrutes } from "./donnees-brutes.js"
 
 /** Marqueur des fichiers de sauvegardes groupées. */
 export const TYPE_FICHIER_SAUVEGARDES = "sauvegardes-simulateur"
@@ -62,12 +63,6 @@ export interface ResultatFusion {
   slots: SaveSlot[]
   slotOrder: string[]
   rapport: RapportFusion
-}
-
-type DonneesBrutes = Record<string, unknown>
-
-function estObjet(valeur: unknown): valeur is DonneesBrutes {
-  return typeof valeur === "object" && valeur !== null && !Array.isArray(valeur)
 }
 
 /** Les sauvegardes dans l'ordre d'affichage : celles de `ordre` d'abord, les autres ensuite, dans leur ordre d'origine. */

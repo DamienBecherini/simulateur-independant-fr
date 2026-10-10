@@ -11,8 +11,7 @@
 
 import { ReglagesComparateurSchema } from "../../types.js"
 import type { Comparateur, Entity, ReglagesComparateur } from "../../types.js"
-
-type DonneesBrutes = Record<string, unknown>
+import { estObjet, type DonneesBrutes } from "./donnees-brutes.js"
 
 /** Les données d'origine privées de leurs réglages invalides (`undefined` s'il n'en reste rien), et leur nombre. */
 interface ReglagesFiltres {
@@ -22,10 +21,6 @@ interface ReglagesFiltres {
 
 const ANNEE = /^\d{4}$/
 const champsDesReglages = ReglagesComparateurSchema.shape
-
-function estObjet(valeur: unknown): valeur is DonneesBrutes {
-  return typeof valeur === "object" && valeur !== null && !Array.isArray(valeur)
-}
 
 /** Les rémunérations saisies par année : chaque année au nom ou au montant invalide est écartée. */
 function nettoyerRemunerations(brutes: unknown): ReglagesFiltres {
