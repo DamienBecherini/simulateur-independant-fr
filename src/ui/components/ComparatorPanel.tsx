@@ -27,6 +27,9 @@ import { ecartSigne, euros } from "@/backend/logic/format"
 /** Fond de l'en-tête du tableau, rendu opaque pour sa première cellule, fixe : le gris translucide sur le fond de la page. */
 const FOND_DE_L_EN_TETE = "bg-slate-100 dark:bg-[color-mix(in_oklab,var(--color-slate-800)_80%,var(--background))]"
 
+/** Activité que le comparateur peut étudier : une société ou une micro-entreprise. */
+type ActiviteComparable = Company | MicroEntreprise
+
 interface ComparatorPanelProps {
   session: SessionState
   /** Année comparée : celle qui est affichée. */
@@ -341,7 +344,7 @@ function ErreurDuCalcul({ erreur }: { erreur: string | null }) {
  * Statut de société étudié pour l'activité comparée (son statut s'il en est un, la SASU sinon) et son arbitrage
  * rémunération / dividendes : partagés entre la barre de partage du bénéfice et la section « Rémunération ou dividendes ? ».
  */
-function useArbitrage(session: SessionState, options: ComparaisonOptions, annee: number, selected: Company | MicroEntreprise | undefined, result: ComparaisonResult | null, choix: { statutEtudie: StatutSociete | undefined; setStatutEtudie: (statut: StatutSociete) => void }) {
+function useArbitrage(session: SessionState, options: ComparaisonOptions, annee: number, selected: ActiviteComparable | undefined, result: ComparaisonResult | null, choix: { statutEtudie: StatutSociete | undefined; setStatutEtudie: (statut: StatutSociete) => void }) {
   const statutInitial: StatutSociete = selected?.type === "company" && estSocieteIS(selected.legalStatus) ? selected.legalStatus : "SASU"
   // Le statut choisi est enregistré avec les réglages de l'activité ; sans choix, c'est celui de l'activité.
   const statut = choix.statutEtudie ?? statutInitial
@@ -357,7 +360,7 @@ const scenarioDuStatut = (result: ComparaisonResult | null, statut: StatutSociet
 interface OptimiseurProps {
   session: SessionState
   annee: number
-  selected: Company | MicroEntreprise | undefined
+  selected: ActiviteComparable | undefined
   options: ComparaisonOptions
   arbitrage: ReturnType<typeof useArbitrage>
   result: ComparaisonResult | null
@@ -398,7 +401,7 @@ function useReglages(vue: SimulationAnnuelle, comparateur: Comparateur | undefin
 }
 
 /** Transmet l'activité comparée et le résultat à qui le demande ; rien quand il n'y a pas d'activité à comparer. */
-function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onComparaison"], selected: Company | MicroEntreprise | undefined, result: ComparaisonResult | null) {
+function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onComparaison"], selected: ActiviteComparable | undefined, result: ComparaisonResult | null) {
   const activite = selected?.name ?? null
   useEffect(() => {
     onComparaison?.(activite === null ? null : { activite, result })
@@ -407,8 +410,8 @@ function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onCompara
 
 interface ReglagesEtPartageProps {
   vue: SimulationAnnuelle
-  activities: (Company | MicroEntreprise)[]
-  selected: Company | MicroEntreprise
+  activities: ActiviteComparable[]
+  selected: ActiviteComparable
   options: ComparaisonOptions
   result: ComparaisonResult | null
   arbitrage: ReturnType<typeof useArbitrage>

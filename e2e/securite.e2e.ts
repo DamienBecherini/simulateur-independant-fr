@@ -36,6 +36,8 @@ test("la fenêtre ne quitte jamais l'interface ; une page en https s'ouvre dans 
       return { adresse: contenu?.getURL(), simulationAffichee: (await contenu?.executeJavaScript("/avec les règles fiscales \\d{4}/.test(document.body.textContent)")) as boolean }
     })
   await expect.poll(fenetre).toEqual({ adresse: `${adresseDeLInterface}#contenu`, simulationAffichee: true })
+  // Aucune fenêtre n'a été ajoutée par ces navigations.
+  expect(electronApp.windows()).toHaveLength(1)
 })
 
 test("aucune nouvelle fenêtre : seule une page en https s'ouvre, dans le navigateur du système", async ({ lancer }) => {
@@ -47,7 +49,7 @@ test("aucune nouvelle fenêtre : seule une page en https s'ouvre, dans le naviga
   )
   expect(ouvertes).toEqual([false, false, false, false, false])
   await expect.poll(() => adressesOuvertes(electronApp)).toEqual(["https://example.org/fenetre"])
-  expect(electronApp.windows().length).toBe(fenetres)
+  expect(electronApp.windows()).toHaveLength(fenetres)
 })
 
 test("le process principal refuse les paramètres invalides des canaux IPC", async ({ lancer, dossierDonnees }) => {
