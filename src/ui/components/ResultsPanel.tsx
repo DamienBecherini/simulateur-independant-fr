@@ -3,6 +3,7 @@
 import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { libelleDeduction } from "@/lib/export-commun"
 import { detailDesCotisations, precisionDesCotisations } from "@/lib/detail-des-cotisations"
+import { LIMITES, TITRE_DES_LIMITES } from "@/lib/limites-du-modele"
 import { statutEtProfession } from "@/lib/professions"
 import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
@@ -10,6 +11,7 @@ import { useId, type ReactNode } from "react"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { classeDuDetail, useDetailDesCartes } from "../hooks/useDetailsDesCartes"
 import { BoutonDuDetailDesCartes, FournisseurDesDetails } from "./DetailsDesCartes"
+import { Depliable } from "./Depliable"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { euros } from "@/backend/logic/format"
 
@@ -440,6 +442,22 @@ function ReservesALaFin({ activity }: { activity: ActivityResult }) {
   return <Row label={label} value={euros(Math.abs(lecture.aLaFin))} hint={lecture.reserveLegale >= 0.5 ? `plus ${euros(lecture.reserveLegale)} de réserve légale` : null} />
 }
 
+/**
+ * Ce que le simulateur suppose et ne calcule pas (appel provisionnel, prévoyance, crédits d'impôt, autres caisses…),
+ * replié sous le titre des résultats : la liste du rapport Markdown et du README.
+ */
+function HypothesesEtLimites() {
+  return (
+    <Depliable titre={TITRE_DES_LIMITES} id="hypotheses-et-limites" className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+      <ul className="mt-2 list-inside list-disc space-y-1">
+        {LIMITES.map(limite => (
+          <li key={limite}>{limite}</li>
+        ))}
+      </ul>
+    </Depliable>
+  )
+}
+
 /** Titre des résultats, année et règles appliquées, et avertissements propres à l'année (règles reprises d'une autre année). */
 function EnTeteDesResultats({ report }: { report: SimulationReport | null }) {
   return (
@@ -451,6 +469,7 @@ function EnTeteDesResultats({ report }: { report: SimulationReport | null }) {
         <p className="text-sm text-slate-600 dark:text-slate-400">
           Recalculés à chaque modification{report ? `, année ${report.annee} avec les règles fiscales ${report.anneeDesRegles}` : ""}. Estimations simplifiées, non validées par un expert-comptable.
         </p>
+        <HypothesesEtLimites />
       </div>
 
       {report?.avertissements.length ? (

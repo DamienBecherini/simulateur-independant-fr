@@ -90,7 +90,7 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
       <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={entityIds} strategy={verticalListSortingStrategy}>
           <div className={resume ? "space-y-2" : "space-y-4"}>
-            {entities.length === 0 ? listeVide : entities.map(entity => <Acteur key={entity.id} entity={entity} allEntities={entities} relationships={relationships} onUpdate={updateEntity} onDelete={deleteEntity} onToggleLock={toggleLock} onEdit={setEditingEntity} onAddRelationship={addRelationship} onDeleteRelationship={deleteRelationship} />)}
+            {entities.length === 0 ? listeVide : entities.map(entity => <Acteur key={entity.id} entity={entity} allEntities={entities} relationships={relationships} annee={annee} onUpdate={updateEntity} onDelete={deleteEntity} onToggleLock={toggleLock} onEdit={setEditingEntity} onAddRelationship={addRelationship} onDeleteRelationship={deleteRelationship} />)}
           </div>
         </SortableContext>
       </DndContext>

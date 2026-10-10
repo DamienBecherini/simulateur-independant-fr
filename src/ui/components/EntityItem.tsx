@@ -15,6 +15,8 @@ export interface EntityItemProps {
   entity: Entity
   allEntities: Entity[]
   relationships: Relationship[]
+  /** Année affichée : ses règles donnent les taux et les seuils des explications de la micro-entreprise. */
+  annee: number
   onUpdate: (entity: Entity) => void
   onDelete: (id: string) => void
   onToggleLock: (id: string) => void
@@ -31,7 +33,7 @@ function entitySubtitle(entity: Entity): string {
 }
 
 
-export function EntityItem({ entity, allEntities, relationships, onUpdate, onDelete, onToggleLock, onEdit, onAddRelationship, onDeleteRelationship }: EntityItemProps) {
+export function EntityItem({ entity, allEntities, relationships, annee, onUpdate, onDelete, onToggleLock, onEdit, onAddRelationship, onDeleteRelationship }: EntityItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: entity.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
   const relevantRelationships = relationships.filter(r => r.fromId === entity.id || r.toId === entity.id)
@@ -73,7 +75,7 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
               />
             </label>
           )}
-          {entity.type === "micro-entreprise" && <OptionsDeLaMicro entity={entity} onUpdate={onUpdate} />}
+          {entity.type === "micro-entreprise" && <OptionsDeLaMicro entity={entity} onUpdate={onUpdate} annee={annee} />}
           <div className="flex items-center gap-1 print:hidden">
             <BoutonsModifierVerrouiller entity={entity} onEdit={onEdit} onToggleLock={onToggleLock} titre="Statut, couleur, icône…" />
             <Button variant="destructive" size="sm" disabled={entity.locked} onClick={() => onDelete(entity.id)}>

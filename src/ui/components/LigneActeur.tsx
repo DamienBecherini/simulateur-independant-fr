@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils"
  * Un acteur sur une ligne (affichage « Résumé ») : nom modifiable sur place, type et relations en pastilles, options de
  * la micro-entreprise. Les parts et les autres réglages se modifient dans la fenêtre « Modifier ».
  */
-export function LigneActeur({ entity, allEntities, relationships, onUpdate, onDelete, onToggleLock, onEdit, onAddRelationship, onDeleteRelationship }: EntityItemProps) {
+export function LigneActeur({ entity, allEntities, relationships, annee, onUpdate, onDelete, onToggleLock, onEdit, onAddRelationship, onDeleteRelationship }: EntityItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: entity.id })
   const nom = useNomSurPlace(entity, onUpdate)
   const relations = relationships.filter(r => r.fromId === entity.id || r.toId === entity.id)
@@ -28,7 +28,7 @@ export function LigneActeur({ entity, allEntities, relationships, onUpdate, onDe
       <AvatarDisplay avatar={entity.avatar} size="sm" />
       <Input aria-label="Nom" className="h-8 w-40 border-transparent bg-transparent px-1 font-semibold shadow-none dark:bg-transparent hover:border-input focus-visible:border-input" {...nom} />
       <span className={PASTILLE}>{typeCourt(entity)}</span>
-      {entity.type === "micro-entreprise" ? <OptionsDeLaMicro entity={entity} onUpdate={onUpdate} compactes /> : null}
+      {entity.type === "micro-entreprise" ? <OptionsDeLaMicro entity={entity} onUpdate={onUpdate} annee={annee} compactes /> : null}
       {/* Sur téléphone, le nombre de relations seulement : elles se modifient dans la fenêtre « Modifier ». */}
       {relations.length > 0 ? <span className={cn(PASTILLE, "sm:hidden")}>{relations.length > 1 ? `${relations.length} relations` : "1 relation"}</span> : null}
       <div className="contents max-sm:hidden">

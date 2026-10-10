@@ -93,7 +93,7 @@ describe("detailDesCotisations : le détail somme exactement au total", () => {
     const libelles = detailDesCotisations(activite).map(l => l.libelle)
     expect(libelles).toEqual(["dont maladie-maternité", "dont indemnités journalières", "dont retraite de base", "dont retraite complémentaire", "dont invalidité-décès", "dont CSG déductible", "dont CSG non déductible et CRDS", "dont formation professionnelle"])
     expect(detailDesCotisations(activite).find(l => l.libelle === "dont CSG déductible")?.precision).toMatch(/^[\d,]+ % de l'assiette$/)
-    expect(detailDesCotisations(activite).at(-1)?.precision).toBe("forfait annuel, dû même sans revenu")
+    expect(detailDesCotisations(activite).slice(-1)[0]?.precision).toBe("forfait annuel, dû même sans revenu")
     expect(precisionDesCotisations(activite)).toMatch(/^assiette de [\d\s]+ € \(54\s000 € de revenu avant cotisations, après l'abattement forfaitaire\) ; montant définitif de l'année, que l'Urssaf appelle d'abord en acomptes provisionnels puis régularise$/)
   })
 
@@ -116,7 +116,7 @@ describe("detailDesCotisations : le détail somme exactement au total", () => {
   })
 
   it("salariés : leurs cotisations patronales, réduction générale déduite", () => {
-    const ligne = detailDesCotisations(activiteSimulee(situation("EI avec un salarié"))).at(-1)
+    const ligne = detailDesCotisations(activiteSimulee(situation("EI avec un salarié"))).slice(-1)[0]
     expect(ligne?.libelle).toBe("dont cotisations patronales du salarié")
     expect(ligne?.precision).toMatch(/^après [\d\s]+ € de réduction générale$/)
   })

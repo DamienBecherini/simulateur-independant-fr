@@ -3,11 +3,14 @@
 // options de la micro-entreprise, pastille de relation, boutons « Modifier » et « Verrouiller ».
 
 import type { HTMLAttributes } from "react"
-import { ArrowRight, Lock, Pencil, Unlock, X } from "lucide-react"
+import { ArrowRight, CircleHelp, Lock, Pencil, Unlock, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import type { Entity, MicroEntreprise, Relationship } from "@/types"
+import { explicationDeLACRE, explicationDuVersementLiberatoire, type ExplicationDUneOption } from "@/lib/aides-de-la-micro"
 import { getRelationshipLabel } from "@/lib/graph-logic"
+import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
 import { cn } from "@/lib/utils"
 import { POIGNEE_DE_TRI } from "../hooks/useTriAccessible"
 import { AvatarDisplay } from "./AvatarDisplay"
@@ -60,20 +63,59 @@ export function PastilleDeRelation({ relation, entity, allEntities, onDelete, co
   )
 }
 
-/** ACRE et versement libératoire d'une micro-entreprise, à basculer sur place. */
-export function OptionsDeLaMicro({ entity, onUpdate, compactes = false }: { entity: MicroEntreprise; onUpdate: (entity: Entity) => void; compactes?: boolean }) {
+/**
+ * Le bouton « ? » d'une option : il ouvre une courte explication, lisible au toucher comme au clavier (une info-bulle
+ * ne l'est pas), avec la page officielle de ses conditions.
+ */
+function BoutonDExplication({ explication, nom }: { explication: ExplicationDUneOption; nom: string }) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="size-7 pointer-coarse:size-11 text-slate-500 dark:text-slate-400 print:hidden" aria-label={`Qu'est-ce que ${nom} ?`}>
+          <CircleHelp className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="pr-6 leading-snug">{explication.titre}</DialogTitle>
+          <DialogDescription>{explication.paragraphes[0]}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+          {explication.paragraphes.slice(1).map(paragraphe => (
+            <p key={paragraphe}>{paragraphe}</p>
+          ))}
+          <p>
+            <a href={explication.source.url} target="_blank" rel="noreferrer" className="text-blue-700 underline underline-offset-2 hover:no-underline dark:text-blue-300">
+              {explication.source.libelle}
+            </a>
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** ACRE et versement libératoire d'une micro-entreprise, à basculer sur place, chacun avec son explication pour l'année affichée. */
+export function OptionsDeLaMicro({ entity, onUpdate, annee, compactes = false }: { entity: MicroEntreprise; onUpdate: (entity: Entity) => void; annee: number; compactes?: boolean }) {
   const etiquette = cn("flex items-center whitespace-nowrap text-sm pointer-coarse:min-h-11 text-slate-600 dark:text-slate-400", compactes ? "gap-1.5" : "gap-2")
+  const regles = reglesDeLAnneeAffichee(annee)
   return (
     <>
-      <label className={etiquette} title="Aide à la création : cotisations réduites pendant les premiers trimestres, mais droits à la retraite et indemnités journalières réduits d'autant.">
-        <Switch checked={entity.beneficieACRE} onCheckedChange={beneficieACRE => onUpdate({ ...entity, beneficieACRE })} />
-        ACRE
-        {entity.beneficieACRE && <span className="text-xs text-amber-700 dark:text-amber-400">(retraite réduite)</span>}
-      </label>
-      <label className={etiquette}>
-        <Switch checked={entity.opteVFL} onCheckedChange={opteVFL => onUpdate({ ...entity, opteVFL })} />
-        Versement libératoire
-      </label>
+      <span className="flex items-center gap-0.5">
+        <label className={etiquette}>
+          <Switch checked={entity.beneficieACRE} onCheckedChange={beneficieACRE => onUpdate({ ...entity, beneficieACRE })} />
+          ACRE
+          {entity.beneficieACRE && <span className="text-xs text-amber-700 dark:text-amber-400">(retraite réduite)</span>}
+        </label>
+        <BoutonDExplication explication={explicationDeLACRE(regles)} nom="l'ACRE" />
+      </span>
+      <span className="flex items-center gap-0.5">
+        <label className={etiquette}>
+          <Switch checked={entity.opteVFL} onCheckedChange={opteVFL => onUpdate({ ...entity, opteVFL })} />
+          Versement libératoire
+        </label>
+        <BoutonDExplication explication={explicationDuVersementLiberatoire(regles)} nom="le versement libératoire" />
+      </span>
     </>
   )
 }
