@@ -8,6 +8,7 @@
 import { EntitySchema, FinancialFlowSchema, RelationshipSchema, SessionStateSchema, SaveSlotSchema } from "../../types.js"
 import type { SessionState, SaveSlot, SanitizationReport } from "../../types.js"
 import { erreurDesAnnees, nombreDeFlux, ordonnerLesAnnees } from "./annees.js"
+import { estObjet } from "./donnees-brutes.js"
 import { migrerVersFormatActuel } from "./migrations.js"
 import { nettoyerComparateurBrut, sansReglagesOrphelins } from "./nettoyage-comparateur.js"
 import { professionsConnues } from "./professions.js"
@@ -57,10 +58,6 @@ interface ItemSchema {
   safeParse(data: unknown): { success: boolean }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
 /**
  * Écarte d'une liste les éléments que le schéma refuse.
  * Une valeur qui n'est pas un tableau est rendue telle quelle : le schéma de session tranchera (valeur par défaut ou rejet).
@@ -81,7 +78,7 @@ function keepValidFlows(monthlyData: unknown): FilteredItems {
 
   let removed = 0
   const kept = monthlyData.map((month: unknown) => {
-    if (!isRecord(month)) return month
+    if (!estObjet(month)) return month
 
     const flows = keepValidItems(FinancialFlowSchema, month.flows)
     removed += flows.removed
@@ -102,7 +99,7 @@ function keepValidFlowsOfYears(annees: unknown): FilteredItems {
 
   let removed = 0
   const kept = annees.map((annee: unknown) => {
-    if (!isRecord(annee)) return annee
+    if (!estObjet(annee)) return annee
 
     const monthlyData = keepValidFlows(annee.monthlyData)
     removed += monthlyData.removed
@@ -122,7 +119,7 @@ function sansProfessionsInconnues(entities: unknown): FilteredItems {
   const connues = professionsConnues()
   let removed = 0
   const kept = entities.map((entity: unknown) => {
-    if (!isRecord(entity) || typeof entity.profession !== "string" || connues.has(entity.profession)) return entity
+    if (!estObjet(entity) || typeof entity.profession !== "string" || connues.has(entity.profession)) return entity
     removed++
     return Object.fromEntries(Object.entries(entity).filter(([cle]) => cle !== "profession"))
   })
@@ -138,7 +135,7 @@ function sansProfessionsInconnues(entities: unknown): FilteredItems {
 function sanitizeSession(rawInput: unknown): SanitizationResult | SessionRefusee | null {
   const migration = migrerVersFormatActuel(rawInput)
   const rawData = migration.donnees
-  if (!isRecord(rawData)) {
+  if (!estObjet(rawData)) {
     console.error("Données de session invalides : un objet était attendu.")
     return null
   }
@@ -279,7 +276,7 @@ export interface SlotsNettoyes {
 
 /** Le nom d'une sauvegarde brute, pour la désigner dans un message. */
 function nomDuSlot(rawSlot: unknown): string {
-  return isRecord(rawSlot) && typeof rawSlot.name === "string" && rawSlot.name !== "" ? rawSlot.name : "Sans nom"
+  return estObjet(rawSlot) && typeof rawSlot.name === "string" && rawSlot.name !== "" ? rawSlot.name : "Sans nom"
 }
 
 /**

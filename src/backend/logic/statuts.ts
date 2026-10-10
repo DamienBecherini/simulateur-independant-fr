@@ -6,7 +6,7 @@ import { STATUTS_JURIDIQUES, type Relationship, type StatutJuridique } from "../
  * Ce que chaque statut juridique au réel est, indépendamment de son calcul : son nom affiché, le titre de son
  * dirigeant et le régime social de celui-ci. Tables typées par statut (`Record<StatutJuridique, …>`) : un statut ajouté
  * à `STATUTS_JURIDIQUES` (types.ts) sans ses lignes ici ne compile pas. Les calculs propres à chaque statut ont leurs
- * propres tables, au plus près du calcul (simulation-engine.ts, protection-sociale.ts, frais-de-fonctionnement.ts).
+ * propres tables, au plus près du calcul (simulation-au-reel.ts, protection-sociale.ts, frais-de-fonctionnement.ts).
  */
 
 /** Nom court d'un statut au réel, tel que l'affichent l'application, les exports et le comparateur. */
