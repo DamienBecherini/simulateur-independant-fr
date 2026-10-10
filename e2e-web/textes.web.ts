@@ -9,7 +9,8 @@ async function ouvrir(page: Page) {
   await page.goto("./")
   await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
   await expect(page.getByRole("group", { name: /Net du foyer selon la rémunération nette/ })).toBeVisible()
-  const sommaires = page.locator("details:not([open]) > summary")
+  // Seules les sections visibles : le détail des frais d'une colonne est dans le tableau, masqué sur téléphone.
+  const sommaires = page.locator("details:not([open]) > summary:visible")
   while ((await sommaires.count()) > 0) await sommaires.first().click()
   // La courbe parcourue au clavier affiche aussi son info-bulle.
   await page.getByRole("group", { name: /Net du foyer selon la rémunération nette/ }).focus()

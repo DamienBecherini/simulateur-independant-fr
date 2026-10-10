@@ -104,7 +104,8 @@ test("le tableau réduit montre le reste des lignes à la demande", async ({ pag
 
 /** Ouvre toutes les sections repliables et le détail du tableau. */
 async function toutDeplier(page: Page) {
-  const sommaires = page.locator("details:not([open]) > summary")
+  // Seules les sections visibles : le détail des frais d'une colonne est dans le tableau, masqué sur téléphone.
+  const sommaires = page.locator("details:not([open]) > summary:visible")
   while ((await sommaires.count()) > 0) await sommaires.first().click()
   await page.getByRole("button", { name: /Voir le détail/ }).click()
 }
