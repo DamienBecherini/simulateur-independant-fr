@@ -30,33 +30,35 @@ interface LocalState {
   relationships: Relationship[]
 }
 
-/**
- * Copies de travail de l'acteur et des liens : rien ne change dans la session avant « Enregistrer ». Elles sont faites
- * pendant le rendu qui ouvre la fenêtre (ou qui lui donne un autre acteur), et non dans un effet : la fenêtre paraît
- * dès le clic, avec l'acteur demandé, au lieu d'arriver une tâche plus tard, voire de montrer un instant l'acteur
- * précédent. À la fermeture, la copie reste affichée le temps que la fenêtre disparaisse.
- */
-function useCopieDeTravail(isOpen: boolean, entity: Entity | null, relationships: Relationship[], reinitialiser: () => void) {
-  const [formData, setFormData] = useState<LocalState>({ entity: null, relationships: [] })
-  const [copieDe, setCopieDe] = useState<{ entity: Entity; relationships: Relationship[] } | null>(null)
-  const aCopier = isOpen && entity ? { entity, relationships } : null
-  if (aCopier?.entity !== copieDe?.entity || aCopier?.relationships !== copieDe?.relationships) {
-    setCopieDe(aCopier)
-    if (aCopier) setFormData({ entity: structuredClone(aCopier.entity), relationships: structuredClone(aCopier.relationships) })
-    reinitialiser()
-  }
-  return [formData, setFormData] as const
+/** Ce dont le formulaire est parti, pour le réinitialiser quand cela change. */
+interface SourceDuFormulaire {
+  entity: Entity | null
+  relationships: Relationship[]
+  isOpen: boolean
 }
 
+const memeSource = (a: SourceDuFormulaire | null, b: SourceDuFormulaire) => a !== null && a.entity === b.entity && a.relationships === b.relationships && a.isOpen === b.isOpen
+
 function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relationships, anneesSimulees, annee }: EditEntityModalProps) {
+  const [formData, setFormData] = useState<LocalState>({ entity: null, relationships: [] })
+
   const [addingRelation, setAddingRelation] = useState(false)
   const [targetId, setTargetId] = useState<string | undefined>()
   const [relationshipType, setRelationshipType] = useState<Relationship["type"] | undefined>()
-  const [formData, setFormData] = useCopieDeTravail(isOpen, entity, relationships, () => {
+
+  // À l'ouverture et à chaque changement de l'acteur ou des relations reçus, le formulaire repart d'eux ; mise à jour
+  // pendant le rendu plutôt que dans un effet.
+  const [source, setSource] = useState<SourceDuFormulaire | null>(null)
+  if (!memeSource(source, { entity, relationships, isOpen })) {
+    setSource({ entity, relationships, isOpen })
+    if (isOpen && entity) {
+      // Copies de travail : rien ne change dans la session avant « Enregistrer ».
+      setFormData({ entity: structuredClone(entity), relationships: structuredClone(relationships) })
+    }
     setAddingRelation(false)
     setTargetId(undefined)
     setRelationshipType(undefined)
-  })
+  }
 
   const localEntity = formData.entity
   const localRelationships = formData.relationships

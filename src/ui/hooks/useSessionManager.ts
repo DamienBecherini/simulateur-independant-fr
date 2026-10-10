@@ -101,9 +101,8 @@ export function useSessionManager() {
   }, [])
 
   // Une sauvegarde chargée qui disparaît (supprimée de la liste) est oubliée : « Sauvegarder » en créera une nouvelle.
-  useEffect(() => {
-    if (isLoaded && loadedSlotId !== null && !allSaveSlots.some(slot => slot.id === loadedSlotId)) setLoadedSlotId(null)
-  }, [isLoaded, loadedSlotId, allSaveSlots, setLoadedSlotId])
+  // Mise à jour pendant le rendu plutôt que dans un effet.
+  if (isLoaded && loadedSlotId !== null && !allSaveSlots.some(slot => slot.id === loadedSlotId)) setLoadedSlotId(null)
 
   // Fonction pour mettre à jour l'état de la session tout en gérant l'historique.
   const setSession = useCallback((newSession: SessionState | ((prevState: SessionState) => SessionState)) => {

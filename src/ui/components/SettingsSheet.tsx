@@ -4,7 +4,7 @@
 // jour, « sauvegarder sous », écrasement confirmé) est décidé par `enregistrerLaSession` (src/lib/session-service.ts) ;
 // le panneau l'affiche, demande la confirmation et n'actualise la liste qu'une fois les sauvegardes écrites.
 
-import { useState, Dispatch, SetStateAction, useMemo, useEffect } from "react"
+import { useState, Dispatch, SetStateAction, useMemo } from "react"
 import type { SessionState, SaveSlot, SanitizationReport } from "@/types"
 import { texteAnneesEcartees, texteProfessionsEcartees } from "@/backend/logic/data-sanitizer"
 import { Button } from "@/components/ui/button"
@@ -104,11 +104,12 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
   const [isOverwriteAlertOpen, setOverwriteAlertOpen] = useState(false)
   const [slotToOverwrite, setSlotToOverwrite] = useState<SaveSlot | null>(null)
 
-  useEffect(() => {
-    if (isOpen) {
-      setView("main")
-    }
-  }, [isOpen])
+  // Le panneau s'ouvre toujours sur sa page principale (mise à jour pendant le rendu plutôt que dans un effet).
+  const [ouvert, setOuvert] = useState(isOpen)
+  if (ouvert !== isOpen) {
+    setOuvert(isOpen)
+    if (isOpen) setView("main")
+  }
 
   // Les sauvegardes ne changent à l'écran qu'une fois écrites : si l'écriture échoue (l'échec est notifié par le pont),
   // la liste et le panneau restent tels quels, et l'utilisateur peut réessayer.

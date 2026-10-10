@@ -61,15 +61,22 @@ interface BarreProps {
   onValider: (glissement: Glissement) => void
 }
 
+/** Segments de la barre, dans l'ordre des postes : montant (un poste négatif n'en a pas) et début, somme des précédents. */
+function segments(montants: Record<PosteDuPartage, number>): { poste: PosteDuPartage; montant: number; gauche: number }[] {
+  let debut = 0
+  return POSTES.map(poste => {
+    const montant = Math.max(0, montants[poste])
+    const gauche = debut
+    debut += montant
+    return { poste, montant, gauche }
+  })
+}
+
 /** Montants sous les segments, quand ils y tiennent ; la légende les donne tous. */
 function Montants({ affiche, echelle, largeur }: { affiche: Record<PosteDuPartage, number>; echelle: number; largeur: number }) {
-  let debut = 0
   return (
     <div aria-hidden="true" className="relative h-5 text-xs tabular-nums text-slate-700 dark:text-slate-200">
-      {POSTES.map(poste => {
-        const montant = Math.max(0, affiche[poste])
-        const gauche = debut
-        debut += montant
+      {segments(affiche).map(({ poste, montant, gauche }) => {
         const texte = euros(montant)
         if (montant <= 0 || (montant / echelle) * largeur < largeurDuTexte(texte)) return null
         return (
@@ -93,8 +100,8 @@ function Barre({ partage, remunerationMaximale, remuneration, part, glissement, 
   const distribuable = Math.max(0, partage.beneficeAvantRemuneration - avantDividendes)
   const modifiable = remunerationMaximale !== null
 
-  const valeurAuPointeur = (poignee: Poignee, clientX: number): number => {
-    const montant = montantAuPointeur(ref.current!, clientX, echelle)
+  const valeurAuPointeur = (poignee: Poignee, e: PointerEvent<HTMLDivElement>): number => {
+    const montant = montantAuPointeur(e.currentTarget, e.clientX, echelle)
     if (poignee === "remuneration") return auPas(remunerationPourUnCout(partage, remunerationMaximale ?? 0, montant), PAS_REMUNERATION, 0, remunerationMaximale ?? 0)
     return distribuable > 0 ? auPas((montant - avantDividendes) / distribuable, PAS_PART, 0, 1) : part
   }
@@ -102,7 +109,7 @@ function Barre({ partage, remunerationMaximale, remuneration, part, glissement, 
   const poigneeVisee = (e: PointerEvent<HTMLDivElement>): Poignee => {
     const saisie = (e.target as HTMLElement).closest<HTMLElement>("[data-poignee]")?.dataset.poignee
     if (saisie === "remuneration" || saisie === "part") return saisie
-    const montant = montantAuPointeur(ref.current!, e.clientX, echelle)
+    const montant = montantAuPointeur(e.currentTarget, e.clientX, echelle)
     return distribuable > 0 && Math.abs(montant - (avantDividendes + dividendesVerses(partage))) < Math.abs(montant - cout) ? "part" : "remuneration"
   }
 
@@ -110,15 +117,11 @@ function Barre({ partage, remunerationMaximale, remuneration, part, glissement, 
   const auClavier = (poignee: Poignee) =>
     poignee === "remuneration" ? clavierDuCurseur(remuneration, { min: 0, max: remunerationMaximale ?? 0, pas: PAS_REMUNERATION, grandPas: 1000 }, valeur => onValider({ poignee, valeur })) : clavierDuCurseur(part, { min: 0, max: 1, pas: PAS_PART, grandPas: 0.25 }, valeur => onValider({ poignee, valeur }))
 
-  let debut = 0
   return (
     <div>
       <div ref={ref} className={cn("relative py-2.5", modifiable && "cursor-pointer touch-none")} {...gestes}>
         <div className="relative h-6">
-          {POSTES.map(poste => {
-            const montant = Math.max(0, partage[poste])
-            const gauche = debut
-            debut += montant
+          {segments(partage).map(({ poste, montant, gauche }) => {
             if (montant <= 0) return null
             // Un espace de 2 px, couleur du fond, sépare les segments voisins.
             return <div key={poste} data-poste={poste} aria-hidden="true" title={`${libellesPostes[poste]} : ${euros(affiche[poste])}`} className={cn("absolute inset-y-0 rounded-[3px]", COULEURS[poste])} style={{ left: `calc(${(gauche / echelle) * 100}% + 1px)`, width: `max(0px, calc(${(montant / echelle) * 100}% - 2px))` }} />
