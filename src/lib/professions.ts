@@ -4,6 +4,7 @@
 
 import { caisseDe, LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE, professionDe } from "@/backend/logic/professions"
 import { PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, reglesPubliees, type ReglesFiscales } from "@/backend/logic/regles"
+import { REGIME_DU_DIRIGEANT } from "@/backend/logic/statuts"
 import type { ActivityResult, CaisseLiberale, Company, DetailCotisationsTNS, MicroEntreprise, ProfessionDeLActivite } from "@/types"
 
 export { LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE }
@@ -146,7 +147,10 @@ export function lignesDeLaCaisse(tns: DetailCotisationsTNS, montant: (valeur: nu
   return lignes
 }
 
-/** La liste vaut pour une micro-entreprise, une entreprise individuelle au réel et un gérant d'EURL, pas une SASU. */
+/**
+ * La liste vaut pour une micro-entreprise et pour un statut au réel dont le dirigeant est non salarié (entreprise
+ * individuelle, gérant d'EURL), qui cotise à la caisse de sa profession ; pas pour une SASU (`REGIME_DU_DIRIGEANT`).
+ */
 export function proposeLaProfession(activite: Company | MicroEntreprise): boolean {
-  return activite.type === "micro-entreprise" || activite.legalStatus !== "SASU"
+  return activite.type === "micro-entreprise" || REGIME_DU_DIRIGEANT[activite.legalStatus] === "non salarié"
 }

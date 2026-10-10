@@ -4,6 +4,7 @@
 import type { Entity, FinancialFlow, FoyerFiscalResult, FraisProfessionnelsResult, PuissanceFiscale, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { flowTypeLabels, libelleDuType, isOutgoingFlowType, type FlowType } from "./flow-constants"
 import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
+import { LIBELLES_DES_STATUTS } from "@/backend/logic/statuts"
 import { lectureDesReserves, type LectureDesReserves } from "./reserves"
 
 /** Mois de création d'une activité en toutes lettres (« septembre 2026 ») ; `null` pour une personne ou sans date. */
@@ -40,7 +41,7 @@ export function nomDeFichier(nomSimulation: string, contenu: string, extension: 
 export function natureActeur(entity: Entity): string {
   if (entity.type === "person") return "Personne"
   if (entity.type === "micro-entreprise") return "Micro-entreprise"
-  return entity.legalStatus === "EI" ? "EI au réel" : entity.legalStatus
+  return LIBELLES_DES_STATUTS[entity.legalStatus]
 }
 
 /** Les flux d'un même type pour un acteur : montants des douze mois et total de l'année. */

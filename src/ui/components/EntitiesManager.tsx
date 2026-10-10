@@ -44,17 +44,7 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
   const { applyChange, addEntity, deleteEntity, updateEntity, toggleLock, addRelationship, deleteRelationship } = useActionsSurLesActeurs(session, setSession)
 
   const handleAddBusiness = (type: BusinessEntityType) => {
-    let newEntity: Company | MicroEntreprise
-    switch (type) {
-      case "MicroEntreprise":
-        newEntity = createMicroEntreprise()
-        break
-      case "EI":
-      case "SASU":
-      case "EURL":
-        newEntity = createCompany(type)
-        break
-    }
+    const newEntity: Company | MicroEntreprise = type === "MicroEntreprise" ? createMicroEntreprise() : createCompany(type)
     addEntity(newEntity)
   }
 

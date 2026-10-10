@@ -4,10 +4,11 @@
 // proposition, avec un message qui dit quelle opération et pourquoi.
 
 import { z } from "zod"
-import { grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
+import { grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, STATUTS_JURIDIQUES, STATUTS_SOCIETE, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
 import { NOMBRE_MAX_ANNEES } from "../annees.js"
 import { professionDe, professionsConnues } from "../professions.js"
 import { ANNEE_COURANTE, reglesDesAnneesConnues } from "../regles.js"
+import { STATUTS_A_PROFESSION } from "../statuts.js"
 import { anneeDeLaSession, enumerer, ErreurOutil, genreDe, GENRES_D_ACTEUR, RELATIONS_REQUISES, trouverActeur, TYPES_DE_FLUX, verifierNouvelleRelation, verifierTypePermis, type GenreDActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
 
@@ -39,17 +40,21 @@ export const ReglagesActeurSchema = z.strictObject({
 })
 type ReglagesActeur = z.infer<typeof ReglagesActeurSchema>
 
-/** Genres d'acteur auxquels chaque réglage s'applique. */
+/**
+ * Genres d'acteur auxquels chaque réglage s'applique. Ceux des statuts au réel se déduisent des tables de statuts : le
+ * capital, des sociétés à l'IS (`IMPOSITION_DES_STATUTS`) ; la profession, des dirigeants non salariés, qui cotisent à
+ * sa caisse (`REGIME_DU_DIRIGEANT`).
+ */
 const REGLAGE_PAR_GENRE: Record<keyof ReglagesActeur, GenreDActeur[]> = {
   partsFiscales: ["personne"],
-  capitalSocial: ["SASU", "EURL"],
-  dateDeCreation: ["SASU", "EURL", "EI", "micro-entreprise"],
+  capitalSocial: [...STATUTS_SOCIETE],
+  dateDeCreation: [...STATUTS_JURIDIQUES, "micro-entreprise"],
   beneficieACRE: ["micro-entreprise"],
   opteVFL: ["micro-entreprise"],
   rfrN2: ["micro-entreprise"],
   horsPlafondAnneePrecedente: ["micro-entreprise"],
-  profession: ["EURL", "EI", "micro-entreprise"],
-  partConventionnee: ["EURL", "EI", "micro-entreprise"]
+  profession: [...STATUTS_A_PROFESSION, "micro-entreprise"],
+  partConventionnee: [...STATUTS_A_PROFESSION, "micro-entreprise"]
 }
 
 /**
@@ -77,7 +82,7 @@ export const ReglagesComparateurProposesSchema = z.strictObject({
   remunerationNette: MontantSchema.optional().describe("Rémunération nette annuelle saisie pour l'année indiquée, en euros."),
   partBncPrestations: z.number().min(0).max(1).optional().describe("Part BNC des prestations si l'activité devient une micro-entreprise, de 0 à 1."),
   fraisFonctionnement: FraisProposesSchema.optional().describe("Frais de fonctionnement annuels par statut et par poste, en euros ; tous les statuts et postes sont requis."),
-  statutEtudie: z.enum(["SASU", "EURL"]).optional().describe("Statut étudié dans « Rémunération ou dividendes ? ».")
+  statutEtudie: z.enum(STATUTS_SOCIETE).optional().describe("Statut étudié dans « Rémunération ou dividendes ? ».")
 })
 
 export const OperationSchema = z.discriminatedUnion("type", [

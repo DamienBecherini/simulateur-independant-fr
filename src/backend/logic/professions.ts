@@ -1,6 +1,6 @@
 // src/backend/logic/professions.ts
 
-import { CAISSES_LIBERALES, type CaisseLiberale, type Company, type MicroEntreprise, type ProfessionDeLActivite } from "../../types.js"
+import { CAISSES_LIBERALES, estSocieteIS, type CaisseLiberale, type Company, type MicroEntreprise, type ProfessionDeLActivite, type StatutJuridique, type StatutSociete } from "../../types.js"
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { reglesDesAnneesConnues, type MicroEntrepriseLiberale, type ProfessionReglementee, type ReglesFiscales, type ReglesLiberauxReglementes } from "./regles.js"
 
@@ -115,10 +115,20 @@ export function raisonMicroInterdite(profession: ProfessionReglementee): string 
 }
 
 /**
+ * Ce que le simulateur calcule pour une profession de société d'exercice libéral en société classique, selon le statut :
+ * le gérant d'EURL cotise déjà à sa caisse, le président de SASU au régime général. Un nouveau statut à l'IS doit dire
+ * comment son dirigeant est calculé.
+ */
+const REGIME_EN_SOCIETE_D_EXERCICE_LIBERAL: Record<StatutSociete, string> = {
+  SASU: "Le président est calculé comme un assimilé salarié du régime général, et",
+  EURL: "Les cotisations du gérant sont calculées avec celles de sa caisse, mais"
+}
+
+/**
  * Avertissements propres à la profession de l'activité dans un statut : caisse pas encore calculée, micro-entreprise
  * interdite, société d'exercice libéral en SASU ou en EURL.
  */
-export function avertissementsDeLaProfession(profession: ProfessionReglementee | null, statut: "SASU" | "EURL" | "EI" | "micro"): string[] {
+export function avertissementsDeLaProfession(profession: ProfessionReglementee | null, statut: StatutJuridique | "micro"): string[] {
   if (!profession) return []
   const avertissements: string[] = []
   // Une caisse que le simulateur ne calcule pas (« autre profession réglementée ») : calcul des indépendants, signalé.
@@ -128,9 +138,8 @@ export function avertissementsDeLaProfession(profession: ProfessionReglementee |
   if (statut === "micro" && microInterdite(profession)) {
     avertissements.push(`${raisonMicroInterdite(profession)} Ce résultat, calculé au taux des libéraux non réglementés, n'est donné qu'à titre indicatif.`)
   }
-  if ((statut === "SASU" || statut === "EURL") && profession.societeExerciceLiberal) {
-    const regime = statut === "EURL" ? "Les cotisations du gérant sont calculées avec celles de sa caisse, mais" : "Le président est calculé comme un assimilé salarié du régime général, et"
-    avertissements.push(`${profession.libelle} en ${statut} : cette profession exerce en principe en société d'exercice libéral (SELARL, SELAS…). La rémunération de son activité y relève alors des bénéfices non commerciaux et de sa caisse, y compris pour un président de SELAS, dont seul le mandat social relève du régime général. ${regime} cette rémunération n'est pas encore modélisée : l'écart n'est pas chiffré. Aucun texte consulté n'autorise ni n'interdit en toutes lettres l'EURL ou la SASU classique à cette profession.`)
+  if (estSocieteIS(statut) && profession.societeExerciceLiberal) {
+    avertissements.push(`${profession.libelle} en ${statut} : cette profession exerce en principe en société d'exercice libéral (SELARL, SELAS…). La rémunération de son activité y relève alors des bénéfices non commerciaux et de sa caisse, y compris pour un président de SELAS, dont seul le mandat social relève du régime général. ${REGIME_EN_SOCIETE_D_EXERCICE_LIBERAL[statut]} cette rémunération n'est pas encore modélisée : l'écart n'est pas chiffré. Aucun texte consulté n'autorise ni n'interdit en toutes lettres l'EURL ou la SASU classique à cette profession.`)
   }
   return avertissements
 }

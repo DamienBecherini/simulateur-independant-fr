@@ -1,6 +1,6 @@
 // src/lib/flow-constants.ts
 
-import type { Entity, FinancialFlow } from "@/types"
+import { estSocieteIS, type Entity, type FinancialFlow } from "@/types"
 
 export type FlowType = FinancialFlow["type"]
 
@@ -97,6 +97,7 @@ const individualBusinessFlowTypes: ReadonlyArray<FlowType> = ["ca_services", "ca
 
 /** Types de flux proposés à la saisie pour une entité donnée, selon son type et son statut juridique. */
 export function getFlowTypesForEntity(entity: Entity): ReadonlyArray<FlowType> {
-  if (entity.type === "company" && entity.legalStatus === "EI") return individualBusinessFlowTypes
+  // Rémunération et dividendes ne se versent que dans une société à l'IS : une entreprise individuelle au réel ne les a pas.
+  if (entity.type === "company" && !estSocieteIS(entity.legalStatus)) return individualBusinessFlowTypes
   return flowTypesByEntityType[entity.type]
 }

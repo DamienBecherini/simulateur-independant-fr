@@ -3,7 +3,7 @@
 // l'outil compare ce que l'utilisateur voit à l'écran, sauf réglages passés en paramètres pour essayer une variante.
 
 import { z } from "zod"
-import { MODES_REPARTITION, type ComparaisonOptions, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
+import { MODES_REPARTITION, STATUTS_SOCIETE, type ComparaisonOptions, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
 import { vueDeLAnnee } from "../annees.js"
 import { optionsDuComparateur } from "../options-du-comparateur.js"
 import type { SituationActuelle } from "../comparateur.js"
@@ -151,7 +151,7 @@ export const optimiserRemuneration = definirOutil({
     "Ne modifie rien : pour retenir une rémunération, proposez un flux director_remuneration mensuel (montant annuel / 12) et ajustez les dividendes saisis (dividends_payment) ; l'aperçu de la proposition donne le net obtenu."
   ].join(" "),
   lecture: true,
-  parametres: z.strictObject({ ...ParametresVariante, statut: z.enum(["SASU", "EURL"]).describe("Statut de société étudié.") }),
+  parametres: z.strictObject({ ...ParametresVariante, statut: z.enum(STATUTS_SOCIETE).describe("Statut de société étudié.") }),
   resultat: z.object({
     annee: z.number(),
     activiteId: z.string(),
