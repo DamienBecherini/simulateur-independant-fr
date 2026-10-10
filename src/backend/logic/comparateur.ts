@@ -1,7 +1,6 @@
 // src/backend/logic/comparateur.ts
 
-import { CAPITAL_SOCIAL_PAR_DEFAUT } from "../../types.js"
-import type { StatutFrais, FraisFonctionnement, Company, ComparaisonCouple, ComparaisonOptions, ComparaisonResult, FinancialFlow, MicroEntreprise, OptimisationRemuneration, Relationship, RemunerationOptimale, ScenarioStatut, DonneesDeLAnnee, SimulationReport, StatutCompare, StatutSociete } from "../../types.js"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, estSocieteIS, STATUTS_COMPARES, type StatutFrais, type FraisFonctionnement, type Company, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type FinancialFlow, type MicroEntreprise, type OptimisationRemuneration, type Relationship, type RemunerationOptimale, type ScenarioStatut, type DonneesDeLAnnee, type SimulationReport, type StatutCompare, type StatutSociete } from "../../types.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import type { ReglesFiscales } from "./regles.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
@@ -9,6 +8,7 @@ import { depassePlafondMicro } from "./calculsAE.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, noteCFE, partDeCFEDue, prorataDesPlafonds } from "./dispositifs.js"
 import { microInterdite, professionDe, raisonMicroInterdite, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
 import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js"
+import { DIRIGEANT_DES_STATUTS, LIBELLES_DES_STATUTS } from "./statuts.js"
 
 /*
  * Comparateur de statuts : l'activité choisie est convertie dans chaque statut (SASU, EURL, entreprise
@@ -17,12 +17,9 @@ import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js
  * colonnes vient donc uniquement du statut de cette activité.
  */
 
-export const STATUTS_COMPARES: StatutCompare[] = ["SASU", "EURL", "EI", "micro", "micro-vfl"]
-
+/** Titre de chaque colonne : le nom du statut au réel, et les deux variantes de la micro-entreprise. */
 const LIBELLES: Record<StatutCompare, string> = {
-  SASU: "SASU",
-  EURL: "EURL",
-  EI: "EI au réel",
+  ...LIBELLES_DES_STATUTS,
   micro: "Micro-entreprise",
   "micro-vfl": "Micro + versement libératoire"
 }
@@ -42,8 +39,9 @@ const NATURE_DES_FLUX: Partial<Record<FinancialFlow["type"], Nature>> = {
   dividends_payment: "dividendes"
 }
 
-export function estSocieteIS(statut: StatutCompare): statut is "SASU" | "EURL" {
-  return statut === "SASU" || statut === "EURL"
+/** Les deux colonnes de la micro-entreprise, avec et sans versement libératoire : tout autre statut est au réel. */
+function estMicro(statut: StatutCompare): statut is "micro" | "micro-vfl" {
+  return statut === "micro" || statut === "micro-vfl"
 }
 
 export function statutActuel(activite: Activite): StatutCompare {
@@ -53,7 +51,7 @@ export function statutActuel(activite: Activite): StatutCompare {
 
 /** Type d'un flux de l'activité dans le statut cible ; `null` si le flux n'y a pas d'équivalent. */
 function typeCible(nature: Nature, statut: StatutCompare): FinancialFlow["type"] | null {
-  if (statut === "micro" || statut === "micro-vfl") {
+  if (estMicro(statut)) {
     const pourMicro: Partial<Record<Nature, FinancialFlow["type"]>> = { vente: "ca_micro_vente", bic: "ca_micro_services_bic", bnc: "ca_micro_services_bnc", charges: "expense" }
     return pourMicro[nature] ?? null
   }
@@ -70,7 +68,7 @@ function convertirFlux(flux: FinancialFlow, statut: StatutCompare, partBnc: numb
   if (nature === "autre") return [flux]
   if (nature === "remuneration" || nature === "dividendes") return []
 
-  if (nature === "services" && (statut === "micro" || statut === "micro-vfl")) {
+  if (nature === "services" && estMicro(statut)) {
     const parts: [FinancialFlow["type"], number][] = [
       ["ca_micro_services_bnc", flux.amount * partBnc],
       ["ca_micro_services_bic", flux.amount * (1 - partBnc)]
@@ -103,12 +101,13 @@ function entiteCible(source: Activite, statut: StatutCompare): Activite {
   const profession = source.profession === undefined ? {} : { profession: source.profession }
   const partConventionnee = source.partConventionnee === undefined ? {} : { partConventionnee: source.partConventionnee }
   const commun = { id: source.id, name: source.name, avatar: source.avatar, locked: source.locked, ...deplacements, ...creation, ...profession, ...partConventionnee }
-  if (statut === "micro" || statut === "micro-vfl") {
+  if (estMicro(statut)) {
     const micro = source.type === "micro-entreprise" ? source : undefined
     return { ...commun, type: "micro-entreprise", beneficieACRE: micro?.beneficieACRE ?? false, opteVFL: statut === "micro-vfl", ...(micro?.rfrN2 !== undefined ? { rfrN2: micro.rfrN2 } : {}) }
   }
-  const capitalSource = source.type === "company" && source.legalStatus !== "EI" ? source.capitalSocial : CAPITAL_SOCIAL_PAR_DEFAUT
-  return { ...commun, type: "company", legalStatus: statut, capitalSocial: statut === "EI" ? 0 : capitalSource, ...reservesQuiSuivent(source, statut) }
+  // Le capital d'une société à l'IS la suit dans l'autre statut de société (capital par défaut sinon) ; l'EI n'en a pas.
+  const capitalSource = source.type === "company" && estSocieteIS(source.legalStatus) ? source.capitalSocial : CAPITAL_SOCIAL_PAR_DEFAUT
+  return { ...commun, type: "company", legalStatus: statut, capitalSocial: estSocieteIS(statut) ? capitalSource : 0, ...reservesQuiSuivent(source, statut) }
 }
 
 /** Les réserves de départ d'une société à l'IS la suivent dans l'autre statut de société (voir l'ADR 014). */
@@ -123,8 +122,10 @@ function relationsCibles(session: DonneesDeLAnnee, source: Activite, statut: Sta
   if (!principale) return autres
 
   const lien = (personId: string, type: Relationship["type"]): Relationship => ({ id: `comparateur-${source.id}-${personId}-${type}`, fromId: personId, toId: source.id, type })
-  if (!estSocieteIS(statut)) return [...autres, lien(principale, "Titulaire")]
-  return [...autres, lien(principale, statut === "SASU" ? "Président" : "Gérant"), ...associes.map(id => lien(id, "Associé"))]
+  // Une micro-entreprise a un titulaire, chaque statut au réel le dirigeant de `DIRIGEANT_DES_STATUTS` ; seule une
+  // société garde ses associés.
+  const dirigeant = lien(principale, estMicro(statut) ? "Titulaire" : DIRIGEANT_DES_STATUTS[statut])
+  return estSocieteIS(statut) ? [...autres, dirigeant, ...associes.map(id => lien(id, "Associé"))] : [...autres, dirigeant]
 }
 
 /**
@@ -166,20 +167,30 @@ export function sessionConvertie(session: DonneesDeLAnnee, source: Activite, sta
   const frais = fraisDuStatut(statut, options)
   if (frais > 0) {
     // Déductibles en société et en EI ; en micro, une simple dépense qui ne réduit ni cotisations ni impôt.
-    ajouts.push({ id: `comparateur-${source.id}-frais`, label: "Frais de fonctionnement (comparateur)", amount: frais, entityId: source.id, type: statut === "micro" || statut === "micro-vfl" ? "expense" : "deductible_expense" })
+    ajouts.push({ id: `comparateur-${source.id}-frais`, label: "Frais de fonctionnement (comparateur)", amount: frais, entityId: source.id, type: estMicro(statut) ? "expense" : "deductible_expense" })
   }
   monthlyData[0] = { ...monthlyData[0], flows: [...monthlyData[0].flows, ...ajouts] }
   return { ...convertie, monthlyData }
 }
 
-/** Total annuel des frais de fonctionnement saisis pour un statut. */
-export function fraisDuStatut(statut: StatutCompare, options: ComparaisonOptions): number {
-  const cle: StatutFrais = statut === "micro-vfl" ? "micro" : statut
-  const postes = options.fraisFonctionnement?.[cle]
-  return postes ? Object.values(postes).reduce((somme, montant) => somme + Math.max(0, montant), 0) : 0
+/**
+ * Frais de fonctionnement saisis que reprend chaque colonne : ceux de son statut, et ceux de la micro-entreprise pour
+ * ses deux variantes. Un nouveau statut doit y dire lesquels il reprend : les siens (ajoutés à `STATUTS_FRAIS`, avec des
+ * frais par défaut) ou ceux d'un statut proche.
+ */
+const FRAIS_DES_COLONNES: Record<StatutCompare, StatutFrais> = {
+  SASU: "SASU",
+  EURL: "EURL",
+  EI: "EI",
+  micro: "micro",
+  "micro-vfl": "micro"
 }
 
-const estMicro = (statut: StatutCompare) => statut === "micro" || statut === "micro-vfl"
+/** Total annuel des frais de fonctionnement saisis pour un statut. */
+export function fraisDuStatut(statut: StatutCompare, options: ComparaisonOptions): number {
+  const postes = options.fraisFonctionnement?.[FRAIS_DES_COLONNES[statut]]
+  return postes ? Object.values(postes).reduce((somme, montant) => somme + Math.max(0, montant), 0) : 0
+}
 
 /**
  * Ce que la micro-entreprise de la colonne donne à la protection sociale : son ACRE (mois couverts si la date de
@@ -278,7 +289,7 @@ export function remunerationMaximale(benefice: (remuneration: number) => number)
  * Rémunération et part du bénéfice distribuable versée en dividendes, selon la répartition choisie. Au meilleur net,
  * le comparateur fixe d'abord la rémunération de chaque statut ; appelée seule, la simulation verse alors celle saisie.
  */
-function remunerationEtPart(session: DonneesDeLAnnee, source: Activite, statut: "SASU" | "EURL", options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee): { remunerationNette: number; part: number } {
+function remunerationEtPart(session: DonneesDeLAnnee, source: Activite, statut: StatutSociete, options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee): { remunerationNette: number; part: number } {
   const { mode, partDistribuee } = options.repartition
   if (mode === "remuneration") {
     const benefice = (remunerationNette: number) => beneficeAvantDividendes(session, source, statut, { ...options, remunerationNette }, regles, contexte)
@@ -321,7 +332,7 @@ export function simulerScenario(session: DonneesDeLAnnee, source: Activite, stat
 }
 
 /** Bénéfice après impôt sur les sociétés que la société garde avec cette rémunération, avant tout dividende. */
-export function beneficeAvantDividendes(session: DonneesDeLAnnee, source: Activite, statut: "SASU" | "EURL", options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): number {
+export function beneficeAvantDividendes(session: DonneesDeLAnnee, source: Activite, statut: StatutSociete, options: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): number {
   const report = runMetaSimulation(sessionConvertie(session, source, statut, options, 0), regles, contexte)
   return report.activities.find(a => a.entityId === source.id)?.resultatConserve ?? 0
 }

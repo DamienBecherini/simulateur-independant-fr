@@ -2,7 +2,8 @@
 // Ce que partagent les outils : erreurs lisibles par un modèle, arrondis, vocabulaire des acteurs et des flux, règles
 // des relations, et empreinte d'une session (pour refuser une proposition construite sur une session qui a changé).
 
-import type { Entity, FinancialFlow, Relationship, SessionState } from "../../../types.js"
+import { STATUTS_JURIDIQUES, type Entity, type FinancialFlow, type Relationship, type SessionState } from "../../../types.js"
+import { RELATIONS_PAR_STATUT } from "../statuts.js"
 
 /** Erreur prévue, dont le message en français dit au modèle ce qui ne va pas et comment s'y prendre autrement. */
 export class ErreurOutil extends Error {
@@ -26,7 +27,7 @@ export function enumerer(parties: (string | number)[], conjonction: "et" | "ou" 
 // ===================================================================================
 
 /** Ce qu'est un acteur, en un mot : une personne, ou une activité et son statut. */
-export const GENRES_D_ACTEUR = ["personne", "SASU", "EURL", "EI", "micro-entreprise"] as const
+export const GENRES_D_ACTEUR = ["personne", ...STATUTS_JURIDIQUES, "micro-entreprise"] as const
 export type GenreDActeur = (typeof GENRES_D_ACTEUR)[number]
 
 export function genreDe(acteur: Entity): GenreDActeur {
@@ -108,11 +109,9 @@ export function verifierTypePermis(acteur: Entity, typeFlux: TypeDeFlux): void {
 export const TYPES_DE_RELATION_FAMILIALE: Relationship["type"][] = ["Marié(e)", "PACSé(e)", "En couple", "Enfant"]
 const DIRECTION: Relationship["type"][] = ["Président", "Gérant", "Titulaire"]
 
-/** Relations possibles d'une personne vers une activité, selon le statut de l'activité. */
+/** Relations possibles d'une personne vers une activité, selon le statut de l'activité (voir `RELATIONS_PAR_STATUT`). */
 const RELATIONS_VERS_UNE_ACTIVITE: Record<Exclude<GenreDActeur, "personne">, Relationship["type"][]> = {
-  SASU: ["Président", "Associé", "Salarié"],
-  EURL: ["Gérant", "Associé", "Salarié"],
-  EI: ["Titulaire", "Salarié"],
+  ...RELATIONS_PAR_STATUT,
   "micro-entreprise": ["Titulaire"]
 }
 

@@ -39,6 +39,7 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run dev:web` | La démo web (moteur dans la page) sur http://localhost:3524/simulateur-independant-fr/. | Développer la démo. |
 | `npm test` | Tests Vitest (logique sous Node, composants sous jsdom), sans couverture. | En continu. |
 | `npx vitest run <fichiers>` | Seulement ces fichiers. Ajoutez `--reporter=verbose` pour voir les `console.log` d'un test qui réussit. | Après chaque petite modification. |
+| `npm run simuler -- <fichier.json>` | Passe une session dans le moteur et affiche, année par année, les montants clés de chaque activité et de chaque foyer, les avertissements et l'année des règles. Options `--annee`, `--acteur`, `--json` (§ 3.7). | Déboguer un calcul. |
 | `npm run test:coverage` | Tous les tests, avec la couverture (seuil bloquant : 90 % sur `src/backend/logic` et `src/lib`). Rapport dans `coverage/`. | Avant de commiter. |
 | `npx tsc -b` | Types de l'interface, de `src/lib`, de `src/web` et des tests de bout en bout (pas `tsc -p .`, qui ne vérifie rien : `tsconfig.json` ne fait que référencer les projets). | Avant de commiter. |
 | `npm run transpile:electron` | Types et compilation de `src/backend` (process principal, moteur, serveur MCP), puis empaquetage du serveur MCP. | Avant de commiter si `src/backend` a changé. |
@@ -66,7 +67,7 @@ npx eslint . && npx tsc -b && npm run transpile:electron && npm run typecheck:te
 
 | Dossier | Contenu |
 |---|---|
-| `src/types.ts` | Schémas Zod des données enregistrées (session, acteurs, flux, sauvegardes, préférences) et types des résultats du moteur. Listes fermées partagées : `CAISSES_LIBERALES`, `PUISSANCES_FISCALES`, `STATUTS_FRAIS`… |
+| `src/types.ts` | Schémas Zod des données enregistrées (session, acteurs, flux, sauvegardes, préférences) et types des résultats du moteur. Listes fermées partagées : `STATUTS_JURIDIQUES` (et `IMPOSITION_DES_STATUTS`), `CAISSES_LIBERALES`, `PUISSANCES_FISCALES`, `STATUTS_FRAIS`… |
 | `src/backend/regles/` | Les règles fiscales et sociales, un fichier JSON par année (`2024.json`…), la liste `FICHIERS_DE_REGLES` et `ANNEE_COURANTE` (`index.ts`), leurs garde-fous (`regles.test.ts`). |
 | `src/backend/logic/` | **Le moteur** : calculs purs, sans Electron, Node, React ni `src/lib`. Malgré son dossier, ce n'est pas un « backend » : il tourne aussi dans la page (démo web, interface) et dans le serveur MCP. Carte au § 2.3. |
 | `src/backend/logic/references/` | Cas de référence : le moteur avec les règles réelles d'une année, montants dérivés à la main en commentaire. |
@@ -81,7 +82,7 @@ npx eslint . && npx tsc -b && npm run transpile:electron && npm run typecheck:te
 | `src/globals.d.ts` | `EventPayloadMapping` : le contrat de `window.api`, commun à Electron et à la démo. |
 | `e2e/`, `e2e-web/` | Tests de bout en bout (application de bureau, démo web). |
 | `documentation/` | Ce guide, les ADR, la publication, les dossiers de recherche (`recherche/`), la relecture d'octobre 2026. |
-| `scripts/` | Empaquetage du serveur MCP, paquet du Microsoft Store, scripts des retours des utilisateurs (`scripts/retours/`). |
+| `scripts/` | Empaquetage du serveur MCP, paquet du Microsoft Store, commande `npm run simuler` (`simuler.mjs`, logique dans `src/lib/simuler-en-ligne-de-commande.ts`), scripts des retours des utilisateurs (`scripts/retours/`). |
 
 ### 1.4 Conventions
 
@@ -179,6 +180,7 @@ flowchart TD
 | `regles.ts` | Types des règles (`ReglesFiscales`), `reglesDeLAnnee`, `reglesPubliees`, `reglesDesAnneesConnues`. | tout le moteur, `src/lib`, l'interface |
 | `simulation-pluriannuelle.ts` | `simulerLesAnnees` (toutes les années, héritages), `comparerStatutsDeLAnnee`, `optimiserRemunerationDeLAnnee`, `arbitrageDeLAnnee`. | `main.ts`, démo, outils pour les IA, tests |
 | `simulation-engine.ts` | `runMetaSimulation` : une année ; routage des flux selon les relations ; micro-entreprises, sociétés, EI, salariés, foyers, bilan. | `simulation-pluriannuelle.ts`, comparateur, cas de référence |
+| `statuts.ts` | Ce qu'est chaque statut au réel, en tables typées par statut : libellé, dirigeant, relations permises, régime social du dirigeant (§ 3.4). | moteur, outils, `src/lib`, interface |
 | `calculsAE.ts` | Micro-entreprise : cotisations, abattement, versement libératoire, plafonds. | moteur |
 | `calculsEI.ts`, `calculsEURL.ts`, `calculsSASU.ts`, `calculsSociete.ts` | Entreprise individuelle au réel ; sociétés à l'IS (IS, réserve légale, déficits). | moteur |
 | `cotisationsTNS.ts` | Cotisations d'un travailleur non salarié (assiette abattue, lignes) ; revenu pour un net voulu. | EI, EURL |
@@ -280,7 +282,37 @@ Le compilateur **ne réclame pas** le reste, et un oubli fait **ignorer le flux 
 - les outils pour les IA : `TYPES_DE_FLUX`, `TYPES_PERMIS` et, s'il exige une relation, `RELATIONS_REQUISES` (`outils/commun.ts`) ;
 - le format de fichier : une version précédente du simulateur écarte un flux de type inconnu et le compte dans « Flux invalides supprimés ». Le numéro de format n'a pas à changer (§ 3.5) ; dites-le dans le CHANGELOG.
 
-**Un statut juridique** (essai : `"SARL"` dans `legalStatus` de `CompanySchema`). Le compilateur ne signale que `comparateur.ts` (`StatutCompare`), `outils/commun.ts` (genre d'acteur), `src/lib/entity-factory.ts` et `src/lib/montages/construction.ts`. **Le reste tombe dans un « sinon » sans erreur** : `simulation-engine.ts` calcule `legalStatus === "SASU" ? calculerSASU : calculerEURL` (une SARL serait calculée comme une EURL), `src/lib/graph-logic.ts` donne les relations permises de la même façon. Avant tout, cherchez `legalStatus ===` et `legalStatus !==` dans `src/` (une vingtaine d'endroits : moteur, exports, interface, migrations) et remplacez chaque ternaire du calcul par une table `Record<Company["legalStatus"], …>`. Puis : le calcul (`calculs<Statut>.ts` et son test), le comparateur (`STATUTS_COMPARES`, `STATUTS_FRAIS`, frais par défaut), la protection sociale, les exports, les outils (`TYPES_PERMIS`), `session-maximale.ts`, une ADR et des cas de référence. C'est une évolution de plusieurs jours, à découper.
+**Un statut juridique** (essai : `"SARL"`). C'est une évolution de plusieurs jours, à découper ; avant le code, une ADR (régime du gérant, majoritaire ou non, imposition) et un dossier de recherche avec des cas calculés à la main.
+
+**Le compilateur guide l'ajout.** Les statuts au réel n'ont qu'une liste, `STATUTS_JURIDIQUES` (`src/types.ts`), d'où se déduisent `legalStatus`, `StatutJuridique`, `StatutCompare` (et `STATUTS_COMPARES`), `GENRES_D_ACTEUR` des outils, et, par la table `IMPOSITION_DES_STATUTS`, `StatutSociete`, `STATUTS_SOCIETE` et `estSocieteIS`. Chaque particularité d'un statut vit dans une table typée par statut : il n'y a plus de `legalStatus === …` dans `src/` hors des migrations. Ajoutez `"SARL"` à `STATUTS_JURIDIQUES` et lancez `npx tsc -b`, `npm run transpile:electron` et `npm run typecheck:tests`. L'essai donne exactement ces erreurs, une par endroit à compléter :
+
+| Erreur | Fichier | À écrire |
+|---|---|---|
+| `does not satisfy the expected type` sur `IMPOSITION_DES_STATUTS` (et deux erreurs qui en découlent dans `StatutSociete` et `estSocieteIS`) | `src/types.ts` | « IS » ou « IR » : décide de `StatutSociete`, donc du capital social, des flux de rémunération et de dividendes, du comparateur au meilleur net et de « Sur toutes les années » |
+| `Property 'SARL' is missing` dans `LIBELLES_DES_STATUTS`, `DIRIGEANT_DES_STATUTS`, `RELATIONS_PAR_STATUT`, `REGIME_DU_DIRIGEANT` | `src/backend/logic/statuts.ts` | Nom affiché, relation du dirigeant (« Gérant »), relations permises (saisie et outils pour les IA), régime social du dirigeant (« non salarié » : la profession lui est proposée) |
+| `Property 'SARL' is missing` dans `SIMULATION_PAR_STATUT` | `logic/simulation-engine.ts` | Comment le moteur simule une activité de ce statut (`simulerSocieteIS` ou un calcul propre) |
+| `Property 'SARL' is missing` dans `PROTECTION_PAR_STATUT` | `logic/protection-sociale.ts` | La protection sociale de la colonne du comparateur |
+| `Property 'SARL' is missing` dans `FRAIS_DES_COLONNES` | `logic/comparateur.ts` | Les frais de fonctionnement que reprend sa colonne : les siens (à ajouter à `STATUTS_FRAIS`, avec des frais par défaut dans `options-du-comparateur.ts`) ou ceux d'un autre statut |
+| `Property 'SARL' is missing` dans `TYPES_PERMIS` | `logic/outils/commun.ts` | Les flux qu'une IA peut lui proposer |
+| `Property 'SARL' is missing` (deux fois) | `logic/outils/operations.ts` | Icône et couleur, puis l'acteur créé par `ajouter_acteur` |
+| `Property 'SARL' is missing` | `logic/outils/outils-de-proposition.ts` | Le libellé du genre d'acteur |
+| `Property 'SARL' is missing` dans `companyDefaults` | `src/lib/entity-factory.ts` | Nom, icône, couleur, capital d'une nouvelle activité |
+| `Element implicitly has an 'any' type` (deux fois) | `src/lib/montages/construction.ts` | Icône et couleur des montages types |
+| `Property 'SARL' is missing` dans `CHOIX_DU_STATUT` | `src/ui/components/ChampsDeLActeur.tsx` | Son nom dans la liste « Statut » de la fiche |
+| `Property 'SARL' is missing` dans `OPTIONS_PAR_TYPE` | `src/ui/components/SelectEntityTypeModal.tsx` | Le choix « Ajouter une activité » |
+
+Si la SARL est déclarée « IS », une seconde passe réclame les tables typées par société (`Record<StatutSociete, …>`) :
+
+| Erreur | Fichier | À écrire |
+|---|---|---|
+| `Property 'SARL' is missing` dans `CALCUL_DES_SOCIETES` | `logic/simulation-engine.ts` | Le calcul de la société (celui de l'EURL pour un gérant majoritaire non salarié, celui de la SASU pour un gérant minoritaire assimilé salarié, ou un `calculsSARL.ts` avec son test) |
+| `Property 'SARL' is missing` dans `REGIME_EN_SOCIETE_D_EXERCICE_LIBERAL` | `logic/professions.ts` | L'avertissement d'une profession de société d'exercice libéral |
+| `Property 'SARL' is missing` dans `AIDE_DU_CAPITAL` | `src/ui/components/ChampsDeLActeur.tsx` | Ce que le capital change pour ce statut |
+| `Property 'SARL' is missing` dans un `Record<StatutSociete, number>` | `src/ui/components/ReglagesDuComparateur.test.tsx` | Compléter le test |
+
+Tant qu'une table manque, rien ne passe à l'exécution non plus : le comparateur propose une colonne de chaque statut de `STATUTS_COMPARES`, et l'essai fait échouer une quarantaine de tests (comparateur, cas de référence, stratégies, outils pour les IA) au lieu de calculer la SARL comme un autre statut. `statuts.test.ts` vérifie que chaque table de `statuts.ts` a une ligne par statut.
+
+**Ce que le compilateur ne voit pas** (à compléter à la main) : les textes des outils pour les IA qui énumèrent les statuts (« SASU, EURL, EI au réel… » dans `outils/comparaison.ts`, `outils/operations.ts`, `outils/outils-de-proposition.ts`), en surveillant la taille du catalogue (§ 3.9) ; les textes de l'interface qui opposent société et entreprise individuelle d'après `estSocieteIS` (`ChampsFrais.tsx`, export Markdown) ; `migrations.ts`, qui décrit les formats anciens, où le nouveau statut n'existe pas, et ne change pas ; le changement de régime d'une micro-entreprise sortie du régime micro (toujours une EI au réel, `simulation-pluriannuelle.ts`). Puis : une activité du nouveau statut dans `src/lib/testing/session-maximale.ts`, le calcul (`calculs<Statut>.ts` et son test), des cas de référence, le README. Une version précédente du simulateur écarte une activité d'un statut inconnu et le signale (§ 3.5).
 
 ### 3.5 Faire évoluer le format de fichier
 
@@ -322,7 +354,24 @@ Un cas de référence lance le moteur avec les règles **réelles** d'une année
    - le **rapport Markdown** : « Exporter » → « Rapport complet (Markdown) » ; il contient les hypothèses, les acteurs, les flux, le détail des cotisations ligne à ligne, l'impôt du foyer et le comparateur ;
    - ou le **fichier de la simulation** : l'enregistrer dans une sauvegarde, puis panneau des paramètres → « Exporter cette sauvegarde… » (JSON).
 2. **Reproduire dans l'application** : `npm run dev`, panneau des paramètres → « Importer une simulation… », puis lire la carte de l'activité (détail des cotisations dépliable), le foyer et la synthèse des années. Sans fichier, chercher un scénario proche dans le bouton « Tests » (§ 3.8) ou un montage type, et l'adapter.
-3. **Reproduire dans un test**, pour isoler l'année et la ligne : un fichier temporaire `src/lib/debogage.test.ts` (à ne pas commiter) :
+3. **Simuler le fichier en ligne de commande**, sans écrire de test :
+
+   ```sh
+   npm run simuler -- chemin/vers/simulation.json
+   npm run simuler -- chemin/vers/simulation.json --annee 2025 --acteur "Martin Conseil"
+   npm run --silent simuler -- chemin/vers/simulation.json --annee 2025 --json > rapport-2025.json
+   ```
+
+   (`--silent` : sans lui, npm écrit en tête de la sortie le nom du script et la commande lancée, et le fichier n'est plus du JSON.)
+
+   Le fichier (export d'une sauvegarde, export complet ou `sessionState.json`) est lu comme à l'ouverture dans l'application : conversion d'un format précédent, validation par le schéma, nettoyage (`lireLaSession`) ; ce qui a été écarté ou converti est dit en tête. Toutes les années sont calculées (`simulerLesAnnees` : une année hérite des précédentes), puis, pour chacune : l'année des règles appliquées (« règles de 2026, les dernières connues » pour une année plus récente) et ses avertissements ; chaque activité (chiffre d'affaires, charges, cotisations, brut, net et coût du président, assiette du TNS, IS, revenu versé, résultat conservé, versement libératoire, dispositifs, avertissements précédés de `!`) ; chaque foyer (parts, revenus encaissés, revenu imposable, revenu fiscal de référence, impôt, prélèvements sociaux, imposition des dividendes, net après impôts) ; le bilan de l'année. Options :
+   - `--annee AAAA` : cette année seulement ;
+   - `--acteur NOM` : ce qui concerne cet acteur (identifiant, nom, ou partie du nom qui ne désigne que lui, sans tenir compte de la casse) : pour une personne, ses activités et son foyer ; pour une activité, elle et les foyers de ses bénéficiaires ; le bilan, qui porte sur toute la session, n'est alors pas affiché ;
+   - `--json` : les rapports entiers du moteur (`{ annees: ResultatAnnee[] }`), pour chercher une ligne précise (`cotisationsTNS.cotisations`, `salaries`, `reserves`…) ; il se combine avec `--annee`, pas avec `--acteur` ;
+   - `--aide` : l'usage.
+
+   Un chemin relatif se lit depuis le dossier où la commande est tapée. Codes de sortie : 0 ; 1 pour un fichier introuvable, illisible (pas du JSON) ou refusé (session refusée en bloc par le schéma, précédée alors du détail des erreurs de Zod ; années qui ne se suivent pas), avec le message sur la sortie d'erreur ; 2 pour une option invalide, une année absente de la session ou un acteur introuvable. Le script (`scripts/simuler.mjs`) compile en mémoire, avec esbuild, `src/lib/simuler-en-ligne-de-commande.ts`, qui contient toute la logique et ses tests.
+4. **Reproduire dans un test**, pour isoler l'année et la ligne quand les montants clés ne suffisent pas : un fichier temporaire `src/lib/debogage.test.ts` (à ne pas commiter) :
 
    ```ts
    import { readFileSync } from "node:fs"
@@ -341,10 +390,10 @@ Un cas de référence lance le moteur avec les règles **réelles** d'une année
    })
    ```
 
-   `npx vitest run src/lib/debogage.test.ts --reporter=verbose` (sans `--reporter=verbose`, les `console.log` d'un test qui réussit ne s'affichent pas). Écrire `annees[annees.length - 1]` et non `annees.at(-1)` : la cible de compilation de l'interface ne connaît pas `at` (erreur de `npx tsc -b`). Dans le rapport : `activities[].cotisationsTNS.cotisations` (lignes d'un indépendant), `cotisationsPresident`, `salaries`, `versementLiberatoire`, `acre`, `reserves`, `foyers[].impotSurLeRevenu`, `avertissements`. Une commande `npm run simuler -- fichier.json [année]` qui imprime ce rapport est à venir (branche `script-simuler`).
-4. **Retrouver la règle** : `reglesDeLAnnee(annee)` (rapport : `anneeDesRegles`, et un avertissement si l'année reprend les dernières règles connues), le bloc du fichier `src/backend/regles/<année>.json`, sa `description` et sa `source`. Vérifier la valeur sur la source : l'erreur peut être dans les règles, pas dans le code.
-5. **Refaire le calcul à la main** et l'écrire comme un **cas de référence** (§ 3.6) qui échoue avec le code actuel. Identité du bilan fausse : un montant est perdu ou compté deux fois entre activités et foyers (routage des flux dans `simulation-engine.ts`).
-6. **Corriger**, dans les règles (avec une source) ou dans le calcul (avec un test unitaire sur `reglesDeTest`), jusqu'à ce que le cas passe ; vérifier qu'aucun autre cas de référence ne change sans raison. CHANGELOG (Corrigé), et réponse au ticket.
+   `npx vitest run src/lib/debogage.test.ts --reporter=verbose` (sans `--reporter=verbose`, les `console.log` d'un test qui réussit ne s'affichent pas). Écrire `annees[annees.length - 1]` et non `annees.at(-1)` : la cible de compilation de l'interface ne connaît pas `at` (erreur de `npx tsc -b`). Dans le rapport : `activities[].cotisationsTNS.cotisations` (lignes d'un indépendant), `cotisationsPresident`, `salaries`, `versementLiberatoire`, `acre`, `reserves`, `foyers[].impotSurLeRevenu`, `avertissements`.
+5. **Retrouver la règle** : `reglesDeLAnnee(annee)` (rapport : `anneeDesRegles`, et un avertissement si l'année reprend les dernières règles connues), le bloc du fichier `src/backend/regles/<année>.json`, sa `description` et sa `source`. Vérifier la valeur sur la source : l'erreur peut être dans les règles, pas dans le code.
+6. **Refaire le calcul à la main** et l'écrire comme un **cas de référence** (§ 3.6) qui échoue avec le code actuel. Identité du bilan fausse : un montant est perdu ou compté deux fois entre activités et foyers (routage des flux dans `simulation-engine.ts`).
+7. **Corriger**, dans les règles (avec une source) ou dans le calcul (avec un test unitaire sur `reglesDeTest`), jusqu'à ce que le cas passe ; vérifier qu'aucun autre cas de référence ne change sans raison. CHANGELOG (Corrigé), et réponse au ticket.
 
 ### 3.8 Ajouter un scénario au bouton « Tests »
 

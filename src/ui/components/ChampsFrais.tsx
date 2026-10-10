@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { PUISSANCES_FISCALES, type Company, type DeplacementsProfessionnels, type FraisReels, type MicroEntreprise, type Person, type PuissanceFiscale, type Trajet } from "@/types"
+import { estSocieteIS, PUISSANCES_FISCALES, type Company, type DeplacementsProfessionnels, type FraisReels, type MicroEntreprise, type Person, type PuissanceFiscale, type Trajet } from "@/types"
 import { pourcent } from "@/backend/logic/format"
 import type { ReglesFiscales } from "@/backend/logic/regles"
 import { ChampNumerique } from "./ChampNumerique"
@@ -161,7 +161,7 @@ const DEPLACEMENTS_PAR_DEFAUT: DeplacementsProfessionnels = { kmParAn: 0, puissa
 /** Ce que deviennent les déplacements dans le statut de l'activité. */
 function aideDeplacements(activite: Company | MicroEntreprise): string {
   if (activite.type === "micro-entreprise") return "En micro-entreprise, ils sont payés mais jamais déductibles : l'abattement forfaitaire couvre déjà les frais."
-  if (activite.legalStatus === "EI") return "En entreprise individuelle, une charge déductible : c'est l'option du barème des BNC ; en BIC, le barème approche les frais réels de la voiture."
+  if (!estSocieteIS(activite.legalStatus)) return "En entreprise individuelle, une charge déductible : c'est l'option du barème des BNC ; en BIC, le barème approche les frais réels de la voiture."
   return "Indemnités kilométriques remboursées au dirigeant : charge déductible de la société, ni imposées ni soumises à cotisations pour lui."
 }
 
