@@ -92,6 +92,18 @@ describe("boîte aux propositions", () => {
     expect(await readdir(path.join(dossier, DOSSIER_DES_PROPOSITIONS))).toEqual([])
   })
 
+  it("ne signale qu'une fois un fichier écarté quand deux examens sont demandés en même temps", async () => {
+    await mkdir(path.join(dossier, DOSSIER_DES_PROPOSITIONS))
+    const ouverte = await ouvrir()
+    for (const nom of ["un.json", "deux.json", "trois.json"]) await writeFile(dansLaBoite(nom), "{ pas du JSON")
+    await writeFile(dansLaBoite("bonne.json"), valide())
+    // Comme un événement du dossier qui arrive pendant un examen : le second attend le premier au lieu de le doubler.
+    await Promise.all([ouverte.examiner(), ouverte.examiner(), ouverte.examiner()])
+    expect(journal.warn).toHaveBeenCalledTimes(3)
+    expect(ouverte.enAttente().map(p => p.id)).toEqual(["bonne.json"])
+    expect(await readdir(path.join(dossier, DOSSIER_DES_PROPOSITIONS))).toEqual(["bonne.json"])
+  })
+
   it("ignore les noms qui ne sont pas des propositions, les sous-dossiers et les fichiers hors de la boîte", async () => {
     await mkdir(path.join(dossier, DOSSIER_DES_PROPOSITIONS, "sous-dossier.json"), { recursive: true })
     await writeFile(path.join(dossier, DOSSIER_DES_PROPOSITIONS, "sous-dossier.json", "c.json"), valide())

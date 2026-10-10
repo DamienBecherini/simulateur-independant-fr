@@ -82,12 +82,36 @@ export async function ouvrirLaBoiteAuxPropositions(dossierDeDonnees: string, { s
     }
   }
 
-  const examiner = async () => {
+  const examinerUneFois = async () => {
     const noms = new Set(await readdir(boite).catch(() => [] as string[]))
     for (const id of [...propositions.keys()]) if (!noms.has(id)) propositions.delete(id)
     for (const id of [...ecartees]) if (!noms.has(id)) ecartees.delete(id)
     for (const id of noms) if (!propositions.has(id) && !ecartees.has(id) && NOM_DE_PROPOSITION.test(id)) await examinerUnFichier(id)
     publier()
+  }
+
+  // Deux examens ne se chevauchent jamais : sinon chacun lirait les mêmes fichiers avant que l'autre ne les ait
+  // écartés, et un même fichier serait signalé plusieurs fois (les suppressions de l'examen en cours réveillent la
+  // surveillance). Une demande reçue pendant un examen en déclenche un seul de plus, à sa suite ; chaque appelant
+  // attend la fin de ce dernier, qui voit l'état du dossier au moment de sa demande.
+  let examenEnCours: Promise<void> | null = null
+  let aReprendre = false
+  const examiner = (): Promise<void> => {
+    if (examenEnCours) {
+      aReprendre = true
+      return examenEnCours
+    }
+    examenEnCours = (async () => {
+      try {
+        do {
+          aReprendre = false
+          await examinerUneFois()
+        } while (aReprendre)
+      } finally {
+        examenEnCours = null
+      }
+    })()
+    return examenEnCours
   }
 
   // Les événements arrivent souvent par rafales (création, écriture, renommage) : on relit le dossier une fois.
