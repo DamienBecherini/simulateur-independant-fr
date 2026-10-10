@@ -2,30 +2,18 @@
 
 /*
  * Canaux IPC des calculs : simulation de toutes les années, comparateur de statuts, optimiseur de rémunération et
- * stratégies de distribution. Chaque canal passe par `ipcMainHandle` (émetteur vérifié) ; la session est revalidée
- * (`sessionACalculer`), les réglages, l'année et l'activité vérifiés (logic/entrees-ipc.ts) : un paramètre invalide
- * fait échouer l'appel.
+ * stratégies de distribution. Chaque canal passe par `ipcMainHandle` (émetteur vérifié) et confie le calcul à
+ * `calculsDuPont` (logic/calculs-du-pont.ts), commun avec la démo web : la session y est revalidée, et les réglages,
+ * l'année et l'activité vérifiés par les schémas de logic/entrees-ipc.ts (un paramètre invalide fait échouer l'appel).
  */
 
-import { estSocieteIS, type ComparaisonOptions, type SessionState, type StatutSociete } from "../types.js"
-import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./logic/simulation-pluriannuelle.js"
-import { comparerStrategiesDeDistribution } from "./logic/strategies-de-distribution.js"
-import { AnneeSchema, ComparaisonOptionsSchema, IdentifiantSchema, entreeValide, sessionACalculer } from "./logic/entrees-ipc.js"
+import type { ComparaisonOptions, SessionState, StatutSociete } from "../types.js"
+import { calculsDuPont } from "./logic/calculs-du-pont.js"
 import { ipcMainHandle } from "./util.js"
 
 export function declarerLesCanauxDeCalcul() {
-  ipcMainHandle("simulerLesAnnees", async (session: SessionState) => simulerLesAnnees(sessionACalculer(session, "simulerLesAnnees")))
-
-  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions, annee: number) =>
-    comparerStatutsDeLAnnee(sessionACalculer(session, "compareStatuts"), entreeValide(ComparaisonOptionsSchema, options, "compareStatuts"), entreeValide(AnneeSchema, annee, "compareStatuts"))
-  )
-  // Un statut qui n'est pas une société à l'IS est optimisé comme une SASU.
-  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) =>
-    optimiserRemunerationDeLAnnee(sessionACalculer(session, "optimiserRemuneration"), entreeValide(ComparaisonOptionsSchema, options, "optimiserRemuneration"), estSocieteIS(statut) ? statut : "SASU", entreeValide(AnneeSchema, annee, "optimiserRemuneration"))
-  )
-  ipcMainHandle("comparerStrategies", async (session: SessionState, activityId: string) => {
-    const validee = sessionACalculer(session, "comparerStrategies")
-    const activite = entreeValide(IdentifiantSchema, activityId, "comparerStrategies")
-    return comparerStrategiesDeDistribution(validee, activite, validee.comparateur?.reglagesParActivite[activite])
-  })
+  ipcMainHandle("simulerLesAnnees", async (session: SessionState) => calculsDuPont.simulerLesAnnees(session))
+  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions, annee: number) => calculsDuPont.compareStatuts(session, options, annee))
+  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) => calculsDuPont.optimiserRemuneration(session, options, statut, annee))
+  ipcMainHandle("comparerStrategies", async (session: SessionState, activityId: string) => calculsDuPont.comparerStrategies(session, activityId))
 }

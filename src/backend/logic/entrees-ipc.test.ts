@@ -3,8 +3,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { defaultFraisFonctionnement } from "./options-du-comparateur.js"
-import { AnneeSchema, ComparaisonOptionsSchema, EntreeIpcInvalide, FichierTexteAEnregistrerSchema, FichierTexteAOuvrirSchema, OptionsDesSauvegardesSchema, SimulationRecueSchema, entreeValide, sessionACalculer } from "./entrees-ipc.js"
-import { ANNEE_PAR_DEFAUT } from "../../types.js"
+import { AnneeSchema, ComparaisonOptionsSchema, EntreeIpcInvalide, FichierTexteAEnregistrerSchema, FichierTexteAOuvrirSchema, OptionsDesSauvegardesSchema, SimulationRecueSchema, entreeValide } from "./entrees-ipc.js"
 
 beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {})
@@ -81,19 +80,5 @@ describe("options des sauvegardes", () => {
     expect(entreeValide(OptionsDesSauvegardesSchema, undefined, "saveSlots")).toBeUndefined()
     expect(entreeValide(OptionsDesSauvegardesSchema, { silencieux: true }, "saveSlots")).toEqual({ silencieux: true })
     expect(() => entreeValide(OptionsDesSauvegardesSchema, { silencieux: "oui" }, "saveSlots")).toThrow(EntreeIpcInvalide)
-  })
-})
-
-describe("session à calculer", () => {
-  it("garde une session valide", () => {
-    const session = { name: "Essai", entities: [], relationships: [], annees: [{ annee: 2025, monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: [] })) }] }
-    expect(sessionACalculer(session, "simulerLesAnnees")).toEqual(session)
-  })
-
-  it("remplace une session invalide par la session par défaut du schéma, et le signale", () => {
-    const session = sessionACalculer({ name: 42 }, "simulerLesAnnees")
-    expect(session.name).toBe("Nouvelle Simulation")
-    expect(session.annees.map(a => a.annee)).toEqual([ANNEE_PAR_DEFAUT])
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("simulerLesAnnees : session invalide"), expect.anything())
   })
 })

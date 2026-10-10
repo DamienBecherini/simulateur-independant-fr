@@ -24,8 +24,7 @@ import { ResultsPanel } from "./components/ResultsPanel"
 import { ComparatorPanel } from "./components/ComparatorPanel"
 import { FlowLegend } from "./components/FlowLegend"
 import { DevWindowSize } from "./components/DevWindowSize"
-import { BandeauDemo } from "@/web/BandeauDemo"
-import { demoInstallee } from "@/web/pwa/installation"
+import { usePlateforme } from "./plateforme"
 import { useZoom } from "./hooks/useZoom"
 import { ExportDialog } from "./components/ExportDialog"
 import { dateDuDocument, styleDesPages } from "./impression"
@@ -61,6 +60,8 @@ function resultatsDeLAnnee(simulation: SimulationPluriannuelle | null, erreurDeL
 }
 
 function App() {
+  // Démo web ou application de bureau : fournie par la racine de composition (main.tsx de chaque cible).
+  const plateforme = usePlateforme()
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [isExportOpen, setExportOpen] = useState(false)
   // La fenêtre d'avis s'ouvre par son bouton, ou par l'adresse #donner-mon-avis (lien de la page outil du site).
@@ -96,7 +97,7 @@ function App() {
   const [comparaison, setComparaison] = useState<ResumeDeLaComparaison | null>(null)
   const enTete = resume ? EN_TETE_RESUME : EN_TETE_CLASSIQUE
   // Diagnostic proposé avec un avis : aucune donnée de la simulation, seulement des nombres d'années et d'acteurs.
-  const diagnostic: Diagnostic = { version: VERSION_DE_L_APPLICATION, web: import.meta.env.VITE_CIBLE === "web", installee: demoInstallee(), ...systemeEtNavigateur(navigator.userAgent), affichageEnCours: affichage, nombreDAnnees: currentSession.annees.length, nombreDActeurs: currentSession.entities.length }
+  const diagnostic: Diagnostic = { version: VERSION_DE_L_APPLICATION, web: plateforme.web, installee: plateforme.installee(), ...systemeEtNavigateur(navigator.userAgent), affichageEnCours: affichage, nombreDAnnees: currentSession.annees.length, nombreDActeurs: currentSession.entities.length }
 
   // La simulation de toutes les années est recalculée automatiquement, peu après chaque modification de la session.
   useEffect(() => {
@@ -223,7 +224,7 @@ function App() {
           {/* Sur papier, la date du document (les chiffres valent pour les données de ce jour-là), et l'en-tête des pages suivantes. */}
           <p className="hidden text-sm text-slate-600 print:block">Document du {dateDuDocument()}</p>
           <style>{styleDesPages(currentSession.name, dateDuDocument())}</style>
-          {import.meta.env.VITE_CIBLE === "web" && <BandeauDemo />}
+          {plateforme.Bandeau && <plateforme.Bandeau />}
         </header>
 
         {resume ? <BarreDeResume report={simulationReport} annees={anneesDeLaSession(currentSession)} annee={annee} onAnnee={setAnneeChoisie} comparaison={comparaison} /> : null}
