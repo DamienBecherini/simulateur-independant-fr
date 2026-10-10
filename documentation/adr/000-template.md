@@ -1,4 +1,4 @@
-# ADR-001: Titre de la décision
+# ADR-NNN: Titre de la décision
 
 - **Date :** YYYY-MM-DD
 - **Statut :** Proposé / Accepté / Remplacé

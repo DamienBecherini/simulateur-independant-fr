@@ -145,7 +145,10 @@ describe("session en cours", () => {
 
   it.each([
     ["tronquée", '{"name": "Ma sim'],
-    ["qui n'est pas un objet", "[1, 2]"]
+    ["qui n'est pas un objet", "[1, 2]"],
+    // Lisible, mais refusée en bloc par le schéma : rien n'en serait gardé, elle ne doit pas devenir une session vierge en silence.
+    ["dont le nom n'est pas un texte", JSON.stringify({ ...session(), name: 42, formatVersion: FORMAT_VERSION_ACTUEL })],
+    ["dont la grille d'une année est inutilisable", JSON.stringify({ ...session(), annees: [{ annee: 2026, monthlyData: grilleVide().slice(0, 11) }], formatVersion: FORMAT_VERSION_ACTUEL })]
   ])("illisible (%s) : mise de côté, message qui la nomme, session vierge", async (_cas, contenu) => {
     await writeFile(fichier("sessionState.json"), contenu)
 

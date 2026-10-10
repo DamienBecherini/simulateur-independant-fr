@@ -34,6 +34,18 @@ export class AnneesRefuseesError extends Error {
   }
 }
 
+/**
+ * Session refusée en bloc : ce n'est pas un objet, ou un champ de premier niveau (nom, liste des années, grille d'un
+ * mois…) est inutilisable, si bien qu'il n'y a rien à garder élément par élément. À la lecture du fichier de la
+ * session, c'est un fichier illisible : il est mis de côté et l'utilisateur est prévenu (voir l'ADR 005).
+ */
+export class SessionIrrecuperableError extends Error {
+  constructor() {
+    super("La session n'a pas la forme d'une session du simulateur : aucune de ses données n'a pu être reprise.")
+    this.name = "SessionIrrecuperableError"
+  }
+}
+
 interface FilteredItems {
   /** Les données d'origine, privées de leurs éléments invalides. */
   kept: unknown
@@ -201,23 +213,36 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | SessionRefusee
  * 1. Écarte individuellement les entités, relations et flux invalides.
  * 2. Valide la structure d'ensemble et applique les valeurs par défaut avec Zod.
  * 3. Trie les années et écarte celles en double.
- * 4. Supprime les relations et les flux orphelins.
+ * 4. Refuse une session de plus de `NOMBRE_MAX_ANNEES` années, ou dont les années ne se suivent pas.
+ * 5. Supprime les relations et les flux orphelins.
  * @param rawData Les données brutes à nettoyer.
- * 5. Refuse une session de plus de `NOMBRE_MAX_ANNEES` années, ou dont les années ne se suivent pas.
- * @param rawData Les données brutes à nettoyer.
- * @returns Un état de session propre et un rapport des corrections. Si la structure est irrécupérable,
- * la session par défaut est renvoyée avec un rapport vide : rien n'a été nettoyé, tout a été remplacé.
+ * @returns Un état de session propre et un rapport des corrections.
+ * @throws {SessionIrrecuperableError} Si la structure est irrécupérable : rien ne peut en être gardé.
+ * @throws {AnneesRefuseesError} Si les années sont trop nombreuses ou ne se suivent pas.
+ */
+export function nettoyerLaSession(rawData: unknown): SanitizationResult {
+  const result = sanitizeSession(rawData)
+  if (result === null) throw new SessionIrrecuperableError()
+  if ("refus" in result) throw new AnneesRefuseesError(result.refus)
+  return result
+}
+
+/**
+ * Comme `nettoyerLaSession`, mais une structure irrécupérable donne la session par défaut avec un rapport vide : rien
+ * n'a été nettoyé, tout a été remplacé. Réservé aux données qui ne viennent pas d'un fichier de l'utilisateur, ou dont
+ * l'appelant n'a rien à garder ; la lecture du fichier de la session utilise `nettoyerLaSession`, pour le mettre de côté.
  * @throws {AnneesRefuseesError} Si les années sont trop nombreuses ou ne se suivent pas.
  */
 export function sanitizeStateAndFillDefaults(rawData: unknown): SanitizationResult {
-  const result = sanitizeSession(rawData)
-  if (result && "refus" in result) throw new AnneesRefuseesError(result.refus)
-  if (result) return result
-
-  return {
-    // .parse({}) utilise tous les .default() définis dans le schéma.
-    safeState: SessionStateSchema.parse({}),
-    report: { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, professionsRemoved: 0, anneesEcartees: [], migrationNotes: [] }
+  try {
+    return nettoyerLaSession(rawData)
+  } catch (error) {
+    if (!(error instanceof SessionIrrecuperableError)) throw error
+    return {
+      // .parse({}) utilise tous les .default() définis dans le schéma.
+      safeState: SessionStateSchema.parse({}),
+      report: { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, professionsRemoved: 0, anneesEcartees: [], migrationNotes: [] }
+    }
   }
 }
 

@@ -1,7 +1,8 @@
 // src/backend/logic/fichiers-de-donnees.test.ts
 
-import { describe, expect, it } from "vitest"
-import { avecVersionDeLApplication, contenuDuFichier, lireLesPreferences, lireUneSimulationImportee, preferencesParDefaut, preferencesValides } from "./fichiers-de-donnees.js"
+import { describe, expect, it, vi } from "vitest"
+import { SessionIrrecuperableError } from "./data-sanitizer.js"
+import { avecVersionDeLApplication, contenuDuFichier, lireLaSession, lireLesPreferences, lireUneSimulationImportee, preferencesParDefaut, preferencesValides } from "./fichiers-de-donnees.js"
 import { FORMAT_VERSION_ACTUEL } from "./migrations.js"
 
 const grille = () => Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
@@ -22,6 +23,20 @@ describe("version de l'application dans les fichiers", () => {
   it("garde à l'import la version qui a écrit le fichier, et n'en invente pas", () => {
     expect(lireUneSimulationImportee(contenuDuFichier(simulation, "0.8.0")).data.appVersion).toBe("0.8.0")
     expect(lireUneSimulationImportee(contenuDuFichier(simulation)).data).not.toHaveProperty("appVersion")
+  })
+})
+
+describe("fichier refusé en bloc par le schéma", () => {
+  // Rien n'en serait gardé : l'import ou la lecture échouent comme pour un JSON invalide, au lieu de rendre une
+  // simulation vierge présentée comme un succès.
+  it.each([
+    ["dont le nom n'est pas un texte", { ...simulation, name: 42 }],
+    ["qui n'est pas un objet", [simulation]]
+  ])("refuse l'import d'un fichier %s", (_cas, contenu) => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    expect(() => lireUneSimulationImportee(JSON.stringify(contenu))).toThrow(SessionIrrecuperableError)
+    expect(() => lireLaSession(JSON.stringify(contenu))).toThrow(SessionIrrecuperableError)
+    vi.restoreAllMocks()
   })
 })
 

@@ -57,7 +57,7 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 
 - [Cahier des charges & architecture globale](./Cahier%20des%20charges.md)
 - [Roadmap itérative](./Roadmap.md)
-- [Guide développeur](./documentation/GUIDE_DEVELOPPEUR.md)
+- [Guide du développeur](./documentation/GUIDE_DEVELOPPEUR.md) : prise en main, architecture, procédures pas à pas (nouvelle année de règles, nouvelle caisse, format de fichier, cas de référence, débogage d'un calcul…), sources officielles et glossaire
 - [Décisions d'architecture (ADR)](./documentation/adr/)
 - [Mentions légales et confidentialité](./documentation/mentions-legales.md)
 - [Utiliser le simulateur avec une IA (serveur MCP local)](./documentation/utiliser-avec-une-ia.md)
@@ -133,8 +133,8 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 
 ## 🗂️ Structure du projet
 
-- `documentation/` : guide développeur et ADR.
-- `src/backend/` : process principal Electron (logique métier, calculs fiscaux, accès fichiers, IPC).
+- `documentation/` : guide du développeur et ADR.
+- `src/backend/` : process principal Electron (accès fichiers, IPC), serveur MCP et, dans `src/backend/logic/`, le moteur de calcul pur, partagé avec l'interface et la démo web (carte des modules dans le [guide du développeur](./documentation/GUIDE_DEVELOPPEUR.md#23-où-vit-quoi--carte-du-moteur)).
 - `src/ui/` : application React (composants, hooks, interface).
 - `src/lib/` : fonctions utilitaires et logique pure partagée.
 - `src/web/` : démo web, qui remplace le process Electron : même `window.api`, moteur exécuté dans la page, stockage dans le navigateur. `src/web/pwa/` la rend installable et utilisable hors ligne (manifeste, service worker écrit à la main, compilé par `vite-plugin-demo-installable.ts` : voir l'[ADR 012](./documentation/adr/012-demo-web-installable-hors-ligne.md)).

@@ -6,7 +6,7 @@
 import type { EventPayloadMapping } from "@/globals"
 import type { ExportableState, FormatFichierTexte, NotificationPayload, SaveSlot, SessionState, UserPreferences } from "@/types"
 import { SessionStateSchema } from "@/types"
-import { AnneesRefuseesError, sanitizeSlots, sanitizeStateAndFillDefaults } from "@/backend/logic/data-sanitizer"
+import { AnneesRefuseesError, nettoyerLaSession, sanitizeSlots, SessionIrrecuperableError } from "@/backend/logic/data-sanitizer"
 import { avecVersionDeLApplication, lireUneSimulationImportee, preferencesValides } from "@/backend/logic/fichiers-de-donnees"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
@@ -21,13 +21,16 @@ const avecFormat = <T extends object>(donnees: T) => ({ ...donnees, formatVersio
 const ecritParLaDemo = <T extends object>(donnees: T) => avecFormat(avecVersionDeLApplication(donnees, VERSION_DE_L_APPLICATION))
 
 /**
- * La session conservée dans le navigateur, nettoyée. Elle n'est écrite que par la démo : si ses années sont
- * refusées (modifiées à la main dans les outils du navigateur), la démo repart d'une session vierge.
+ * La session conservée dans le navigateur, nettoyée ; `null` si elle est refusée en bloc par le schéma (pas un
+ * objet, nom qui n'est pas un texte, grille inutilisable…) : elle est alors illisible, et mise de côté comme un JSON
+ * invalide. Elle n'est écrite que par la démo : si ses années sont refusées (modifiées à la main dans les outils du
+ * navigateur), la démo repart d'une session vierge.
  */
-function sessionEnregistree(enregistree: unknown): SessionState {
+function sessionEnregistree(enregistree: unknown): SessionState | null {
   try {
-    return sanitizeStateAndFillDefaults(enregistree).safeState
+    return nettoyerLaSession(enregistree).safeState
   } catch (error) {
+    if (error instanceof SessionIrrecuperableError) return null
     console.warn("Session du navigateur refusée, démarrage avec une session vierge :", error instanceof Error ? error.message : error)
     return SessionStateSchema.parse({})
   }
@@ -113,7 +116,8 @@ export function creerApiNavigateur(): EventPayloadMapping {
     // illisible est mise de côté, et la démo repart aussi de l'exemple.
     getCurrentSession: async () => {
       const lecture = lireAvecEtat(CLES.session)
-      if (lecture.etat === "lu" && typeof lecture.valeur === "object" && lecture.valeur !== null && !Array.isArray(lecture.valeur)) return sessionEnregistree(lecture.valeur)
+      const session = lecture.etat === "lu" ? sessionEnregistree(lecture.valeur) : null
+      if (session !== null) return session
       if (lecture.etat === "inaccessible") notifier({ message: MESSAGES_DE_LA_DEMO.stockageBloque, type: "warning" })
       else if (lecture.etat !== "absent") {
         const copie = mettreDeCote(CLES.session, lecture.brut)

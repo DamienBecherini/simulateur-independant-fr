@@ -12,6 +12,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 - Maintenance : les règles de 2026 passent de `src/backend/config.json` à `src/backend/regles/2026.json`, comme les autres années ; l'année en cours du simulateur (nouvelle session, démo) est la plus récente des fichiers de règles et n'est plus écrite en dur (ADR 007 mise à jour).
 - Maintenance : les fonctions du moteur reçoivent toujours les règles de l'année calculée ; il n'y a plus de « règles de l'année en cours » par défaut, qu'un appel pouvait utiliser sans le dire.
 - Maintenance : chaque caisse de libéraux (CIPAV, CARPIMKO) a son calcul, ses particularités et ses textes dans des tables typées par caisse ; une caisse ajoutée sans ses règles est refusée à la compilation au lieu d'être calculée comme la CARPIMKO.
+- Documentation : le guide du développeur est réécrit (architecture, carte du moteur, procédures pas à pas pour une nouvelle année de règles, un paramètre, une caisse, un statut ou un type de flux, le format de fichier, un cas de référence, le débogage d'un calcul, les scénarios de test et les outils pour les IA ; sources officielles, glossaire), et les ADR périmées sont complétées.
 
 ### Corrigé
 
@@ -19,6 +20,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 - **« Sauvegarde réussie ! » ne s'affiche plus quand l'écriture échoue.** Le message devient « Échec de la sauvegarde : le fichier des sauvegardes n'a pas pu être écrit. Vos sauvegardes précédentes sont intactes. », le panneau reste ouvert et la liste ne change pas. Un échec de la sauvegarde automatique est signalé lui aussi. Dans la démo web, un stockage du navigateur plein ou bloqué est signalé de la même façon.
 - Les fichiers de données sont écrits dans un fichier temporaire puis renommés : un arrêt brutal ne laisse plus un fichier à moitié écrit.
 - La sauvegarde automatique attend la fin du chargement : la simulation vierge affichée au démarrage ne peut plus remplacer celle du disque.
+- Une session lisible mais dont rien ne peut être repris (par exemple un nom qui n'est pas un texte, ou la grille d'une année sans ses douze mois) n'est plus remplacée en silence par une simulation vierge : elle est traitée comme un fichier illisible, mise de côté sous un nom daté (`sessionState.illisible-….json`) et nommée dans une fenêtre à l'ouverture. Même chose dans la démo web, qui la garde sous une clé datée du stockage du navigateur et repart de la simulation d'exemple. L'import d'un tel fichier est refusé (« Erreur d'importation ») au lieu de remplacer la simulation en cours par une simulation vierge annoncée « importée avec succès ».
 - Fiche d'une activité : la ligne d'information sous le choix de la profession (caisse, taux de la micro-entreprise, complémentaire) décrit les règles de l'année affichée, et non toujours celles de 2026 (par exemple, pour un infirmier en 2025, la complémentaire forfaitaire de la CARPIMKO).
 
 ## [0.10.0] — 2026-10-09

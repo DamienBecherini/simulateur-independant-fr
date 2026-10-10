@@ -1,7 +1,7 @@
 // src/backend/logic/data-sanitizer.test.ts
 
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { AnneesRefuseesError, nettoyerLesSlots, rapportAvecCorrections, sanitizeSlots, sanitizeStateAndFillDefaults, texteAnneesEcartees, texteProfessionsEcartees } from "./data-sanitizer.js"
+import { AnneesRefuseesError, nettoyerLaSession, nettoyerLesSlots, rapportAvecCorrections, sanitizeSlots, sanitizeStateAndFillDefaults, SessionIrrecuperableError, texteAnneesEcartees, texteProfessionsEcartees } from "./data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL } from "./migrations.js"
 
 const avatar = { type: "initials", value: "AB", color: "#3b82f6" }
@@ -348,7 +348,7 @@ describe("sanitizeStateAndFillDefaults", () => {
   })
 
   describe("données irrécupérables", () => {
-    it.each([
+    const irrecuperables: [string, unknown][] = [
       ["null", null],
       ["une chaîne", "pas une session"],
       ["un tableau", [1, 2, 3]],
@@ -356,7 +356,9 @@ describe("sanitizeStateAndFillDefaults", () => {
       ["un mois qui n'est pas un objet", { monthlyData: [...grille().slice(0, 11), "décembre"] }],
       ["un mois sans liste de flux", { monthlyData: [...grille().slice(0, 11), { month: 11 }] }],
       ["un nom qui n'est pas une chaîne", { name: 42, entities: [alice] }]
-    ])("repart d'une session vide pour %s", (_cas, donnees) => {
+    ]
+
+    it.each(irrecuperables)("repart d'une session vide pour %s", (_cas, donnees) => {
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
 
       const { safeState, report } = sanitizeStateAndFillDefaults(donnees)
@@ -364,6 +366,23 @@ describe("sanitizeStateAndFillDefaults", () => {
       expect(safeState).toEqual({ name: "Nouvelle Simulation", entities: [], relationships: [], annees: [{ annee: 2026, monthlyData: grille() }] })
       expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
       expect(consoleError).toHaveBeenCalledOnce()
+    })
+
+    // La lecture du fichier de la session s'en sert pour le traiter comme illisible (copie et message), au lieu de le
+    // remplacer en silence par une session vierge.
+    it.each(irrecuperables)("nettoyerLaSession les refuse en bloc : %s", (_cas, donnees) => {
+      vi.spyOn(console, "error").mockImplementation(() => {})
+
+      expect(() => nettoyerLaSession(donnees)).toThrow(SessionIrrecuperableError)
+    })
+
+    it("nettoyerLaSession garde le nettoyage élément par élément et le refus des années", () => {
+      const abimee = { name: "Test", entities: [alice, { id: "x", type: "inconnu" }], formatVersion: FORMAT_VERSION_ACTUEL }
+      expect(nettoyerLaSession(abimee)).toEqual(sanitizeStateAndFillDefaults(abimee))
+      expect(nettoyerLaSession(abimee).report.entitiesRemoved).toBe(1)
+
+      const avecUnTrou = { formatVersion: FORMAT_VERSION_ACTUEL, annees: [2024, 2026].map(annee => ({ annee, monthlyData: grille() })) }
+      expect(() => nettoyerLaSession(avecUnTrou)).toThrow(AnneesRefuseesError)
     })
   })
 })

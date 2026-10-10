@@ -28,3 +28,14 @@ Nous avons choisi d'implémenter la communication IPC en utilisant le pattern re
 
 - **Négatives ou Compromis :**
   - **Configuration Initiale :** Cette approche requiert une configuration un peu plus verbeuse qu'une solution non sécurisée (`nodeIntegration: true`). Il faut créer le script `preload`, définir les types, et configurer le `webPreferences` du `BrowserWindow`. C'est un coût initial jugé indispensable pour la sécurité.
+
+## Note (2026-10-10) : état du code
+
+Le principe tient ; quelques précisions sur ce qui est réellement écrit :
+
+- Les canaux ne sont pas déclarés par `ipcMain.handle` directement mais par `ipcMainHandle` (`src/backend/util.ts`), typé par `EventPayloadMapping` (`src/globals.d.ts`), qui vérifie d'abord l'adresse de la fenêtre émettrice (`validateEventFrame`).
+- Un seul canal est synchrone : `saveCurrentSessionSync` (`ipcMain.on` / `ipcRenderer.sendSync`), pour enregistrer la session à la fermeture de la fenêtre.
+- Le process principal pousse aussi des événements vers l'interface (`show-notification`, propositions en attente des clients d'IA, ADR 011).
+- Les liens externes sont refusés dans l'application et ouverts dans le navigateur du système (`setWindowOpenHandler`, https seulement).
+- « Le Renderer est sandboxé » repose sur les valeurs par défaut d'Electron (`contextIsolation`, `sandbox`, `nodeIntegration` ne sont pas écrits dans `webPreferences`). La relecture d'octobre 2026 (P7, branche `electron-durci`) prévoit de les écrire explicitement et de bloquer la navigation.
+- La démo web fournit le même `window.api` sans IPC (`src/web/api-navigateur.ts`).

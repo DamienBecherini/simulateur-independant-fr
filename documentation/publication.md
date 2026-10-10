@@ -12,7 +12,7 @@ Le numéro de version est celui de `package.json` (champ `version`), et nulle pa
 
 Le workflow refuse une étiquette qui ne correspond pas à `package.json` : l'étiquette `v1.2.0` exige la version `1.2.0`.
 
-Numérotation ([versionnage sémantique](https://semver.org/lang/fr/)) : le dernier chiffre pour une correction, celui du milieu pour une fonctionnalité, le premier pour un changement qui rend les anciens fichiers ou habitudes incompatibles. Les fichiers de simulation ont leur propre numéro de format, indépendant de la version de l'application (voir l'ADR 005).
+Numérotation ([versionnage sémantique](https://semver.org/lang/fr/)) : le dernier chiffre pour une correction, celui du milieu pour une fonctionnalité, le premier pour un changement qui rend les anciens fichiers ou habitudes incompatibles. Les fichiers de simulation ont leur propre numéro de format, indépendant de la version de l'application (`FORMAT_VERSION_ACTUEL`, `src/backend/logic/migrations.ts` ; règle de décision dans l'ADR 005, « Versionnage du format », et l'ADR 008).
 
 ## Avant de publier : liste de vérification
 

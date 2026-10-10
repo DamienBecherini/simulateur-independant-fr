@@ -112,3 +112,14 @@ Un essai avec un modèle jouant le client d'IA a montré trois manques. `optimis
 
 - **Positives :** le modèle dit l'écart entre la grille et le meilleur net avec les chiffres du moteur, et explique la différence avec `simuler` par les frais affichés ; une proposition périmée se rafraîchit en un appel, et l'utilisateur voit ce qui n'a pas pu être repris ; le catalogue est presque deux fois plus léger, un outil de plus compris.
 - **Négatives ou Compromis :** un client qui validerait les résultats avec un schéma de sortie ne le peut plus ; `optimiser_remuneration` fait une simulation de plus ; une proposition rafraîchie peut perdre des opérations dont d'autres dépendaient sans que le moteur le détecte (une suppression d'estimation retirée, des factures gardées) : l'avertissement des séries existantes le signale, et l'utilisateur relit la proposition avant de l'appliquer.
+
+## État au 2026-10-10
+
+Le corps de cette ADR date d'avant son addendum ; quand ils divergent, l'addendum et l'ADR 011 font foi :
+
+- le catalogue compte **seize** outils (`rafraichir_proposition` en plus) ;
+- `catalogueDesOutils()` ne publie plus d'`outputSchema` (le schéma Zod du résultat reste dans chaque outil, pour les tests) ;
+- dans l'application de bureau, `appliquer_proposition` **envoie** la proposition dans la boîte aux propositions au lieu de rendre une session à écrire (ADR 011) ;
+- l'assistant intégré (étape 3) n'existe pas encore.
+
+Les tests bornent le catalogue à 31 000 caractères (`outils/catalogue.test.ts`) et la liste publiée par le serveur MCP à 33 000 (`mcp/serveur-mcp.test.ts`). Mesuré le 2026-10-10, le catalogue est à une cinquantaine de caractères de sa borne : toute description allongée doit être compensée ailleurs (voir le [guide du développeur](../GUIDE_DEVELOPPEUR.md#39-ajouter-ou-modifier-un-outil-pour-les-ia)).

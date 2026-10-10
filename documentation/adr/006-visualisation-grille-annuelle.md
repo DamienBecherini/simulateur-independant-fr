@@ -1,4 +1,4 @@
-# **ADR-001: Représentation Visuelle des Flux dans la Grille Annuelle**
+# **ADR-006: Représentation Visuelle des Flux dans la Grille Annuelle**
 
 - **Date :** 2025-11-08
 - **Statut :** Accepté
@@ -40,3 +40,9 @@ Nous allons transformer chaque cellule de la grille en un mini tableau de bord v
   - **Complexité du Composant :** Le composant `MonthlyGrid` et son nouveau sous-composant `CellChartDisplay` seront significativement plus complexes que l'affichage d'un simple nombre.
   - **Pas de Liaison Automatique :** Pour l'instant, la saisie d'une "Rémunération de dirigeant" dans une société ne crée pas automatiquement le flux de revenu correspondant pour la personne. Ce lien est logique (pour le moteur de calcul) mais pas encore transactionnel (dans l'UI).
   - **Simplification de la TVA :** La décision de tout traiter en HT pour les sociétés est une simplification forte. Elle est acceptable car le but est la simulation fiscale et non la comptabilité exacte, mais c'est un compromis à garder en tête.
+
+## Note (2026-10-10)
+
+- Le titre de ce document portait par erreur le numéro « ADR-001 » ; il est corrigé en « ADR-006 ».
+- « Pas de liaison automatique » n'est plus un compromis du calcul : depuis la refonte du moteur, une rémunération ou des dividendes saisis sur une société sont routés vers la personne reliée (Président, Gérant, Associé) par `simulation-engine.ts`, sans flux à saisir sur la personne. La grille montre le flux sur la société seulement.
+- Depuis l'ADR 008, chaque année de la session a sa propre grille.
