@@ -22,12 +22,13 @@ function dans(affichage: Affichage, contenu: ReactNode) {
 }
 
 function scenario(statut: StatutCompare, libelle: string, net: number, autres: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return { statut, libelle, actuel: false, fraisFonctionnement: 0, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...autres }
+  return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...autres }
 }
 
-/** La micro actuelle compte 850 € de frais supposés ; le versement libératoire donne le meilleur net. */
+/** La micro actuelle est la situation saisie ; la SASU compte 2 050 € de frais de gestion en plus ; le versement libératoire donne le meilleur net. */
 function comparaison(): ComparaisonResult {
-  return { scenarios: [scenario("SASU", "SASU", 30000), scenario("micro", "Micro-entreprise", 32000, { actuel: true, fraisFonctionnement: 850 }), scenario("micro-vfl", "Micro + versement libératoire", 35000)], meilleur: "micro-vfl", couples: [], warnings: [] }
+  const sasu = scenario("SASU", "SASU", 30000, { ecartDeFrais: { total: 2050, postes: { expertComptable: 2000, banque: 100, logiciel: 50, assurance: -100 } } })
+  return { scenarios: [sasu, scenario("micro", "Micro-entreprise", 32000, { actuel: true, telleQueSaisie: true }), scenario("micro-vfl", "Micro + versement libératoire", 35000)], meilleur: "micro-vfl", situationSaisie: { statut: "micro", libelle: "Micro-entreprise", netApresImpots: 32000 }, couples: [], warnings: [] }
 }
 
 function report(): SimulationReport {
@@ -94,10 +95,10 @@ describe("comparateur dans l'affichage « Résumé »", () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparaison())
     render(dans("resume", <ComparateurDeTest annee={2026} session={session()} />))
 
-    expect(espaces((await screen.findByText(/^Pour « Mon atelier »/)).textContent ?? "")).toBe("Pour « Mon atelier », Micro + versement libératoire donnerait le meilleur net : 35 000 €, soit +3 000 € par rapport au statut actuel, Micro-entreprise.")
+    expect(espaces((await screen.findByText(/^Pour « Mon atelier »/)).textContent ?? "")).toBe("Pour « Mon atelier », Micro + versement libératoire donnerait le meilleur net : 35 000 €, soit +3 000 € par rapport à votre situation telle que saisie (Micro-entreprise, 32 000 €).")
     const table = screen.getByRole("table", { name: "Comparaison des statuts" })
     const lignes = within(table).getAllByRole("row").map(ligne => within(ligne).queryByRole("rowheader")?.textContent)
-    expect(lignes.slice(1, 4)).toEqual(["Net dans la poche", "Écart avec le statut actuel", "Protection sociale"])
+    expect(lignes.slice(1, 4)).toEqual(["Net dans la poche", "Écart avec votre situation actuelle", "Protection sociale"])
     // Les autres lignes sont masquées à l'écran (classe `hidden`), affichées à l'impression.
     expect(within(table).getByRole("rowheader", { name: "Impôt sur le revenu" }).closest("tbody")).toHaveClass("hidden", "print:table-row-group")
 
@@ -120,12 +121,17 @@ describe("comparateur dans l'affichage « Résumé »", () => {
     expect(screen.queryByRole("button", { name: /Voir le détail/ })).not.toBeInTheDocument()
   })
 
-  it.each(["classique", "resume"] as const)("affichage %s : dit que le net du statut actuel compte des frais supposés, absents des résultats du foyer", async affichage => {
+  it.each(["classique", "resume"] as const)("affichage %s : écrit l'écart de frais de gestion dans la cellule du net, et rappelle que les frais réels sont dans la grille", async affichage => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparaison())
     render(dans(affichage, <ComparateurDeTest annee={2026} session={session()} />))
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
-    expect(within(table).getByRole("columnheader", { name: /Micro-entreprise\s*actuel\s*frais supposés compris/ })).toBeInTheDocument()
-    expect(espaces(screen.getByText(/^Les nets du comparateur comptent les frais de fonctionnement supposés/).textContent ?? "")).toContain("ces 850 € de frais ne figurent pas dans les résultats du foyer : son net de 32 000 €")
+    // La colonne actuelle est la situation saisie : aucune mention de frais supposés.
+    expect(within(table).getByRole("columnheader", { name: /^Micro-entreprise\s*actuel$/ })).toBeInTheDocument()
+    const net = within(table).getByRole("rowheader", { name: "Net dans la poche" }).closest("tr")!
+    const cellules = within(net).getAllByRole("cell")
+    expect(espaces(cellules[0].textContent ?? "")).toContain("30 000 €dont environ 2 050 € de frais de gestion en plus qu'en micro-entreprise")
+    expect(cellules[1]).toHaveTextContent(/^32.000.€$/)
+    expect(screen.getByText(/^Vos frais réels sont ceux que vous avez saisis dans la grille/)).toBeInTheDocument()
   })
 })
 

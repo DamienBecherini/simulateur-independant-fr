@@ -197,12 +197,13 @@ describe("chiffre d'affaires au-delà des plafonds l'année qui précède la ses
 })
 
 describe("CFE d'une activité créée en mars 2026, dans le comparateur", () => {
-  // Frais annuels saisis : micro 850 € dont 300 € de CFE ; EI au réel 2 050 € dont 300 € de CFE.
-  // 2026 (création) : CFE non due, 550 € et 1 750 € ; 2027 : base réduite de moitié, 700 € et 1 900 € ; 2028 : 850 € et 2 050 €.
+  // Frais annuels supposés : micro 850 € dont 300 € de CFE ; EI au réel 2 250 € dont 500 € de CFE. La micro est le statut
+  // actuel : sa colonne ne reçoit rien, celle de l'EI l'écart, 1 200 € hors CFE plus 200 € de CFE multipliés par la part due.
+  // 2026 (création) : CFE non due, 1 200 € ; 2027 : base réduite de moitié, 1 300 € dont 100 € de CFE ; 2028 : 1 400 €.
   const frais: FraisFonctionnement = {
     SASU: { expertComptable: 2000, banque: 200, logiciel: 150, assurance: 250, cfe: 300 },
     EURL: { expertComptable: 2000, banque: 200, logiciel: 150, assurance: 250, cfe: 300 },
-    EI: { expertComptable: 1200, banque: 150, logiciel: 150, assurance: 250, cfe: 300 },
+    EI: { expertComptable: 1200, banque: 150, logiciel: 150, assurance: 250, cfe: 500 },
     micro: { expertComptable: 0, banque: 100, logiciel: 100, assurance: 350, cfe: 300 }
   }
   const options: ComparaisonOptions = { activityId: "m1", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1, fraisFonctionnement: frais }
@@ -210,18 +211,19 @@ describe("CFE d'une activité créée en mars 2026, dans le comparateur", () => 
   const s = session({ ...micro("m1"), dateDeCreation: "2026-03" }, [annee(2026), annee(2027), annee(2028)])
   const fraisDe = (a: number) => {
     const resultat = comparerStatutsDeLAnnee(s, options, a)
-    return { micro: resultat.scenarios.find(c => c.statut === "micro")!.fraisFonctionnement, EI: resultat.scenarios.find(c => c.statut === "EI")!.fraisFonctionnement, note: resultat.noteCFE }
+    return { micro: resultat.scenarios.find(c => c.statut === "micro")!.ecartDeFrais.total, EI: resultat.scenarios.find(c => c.statut === "EI")!.ecartDeFrais, note: resultat.noteCFE }
   }
+  const horsCFE = { expertComptable: 1200, banque: 50, logiciel: 50, assurance: -100 }
 
   it("2026 : exonérée l'année de création", () => {
-    expect(fraisDe(2026)).toEqual({ micro: 550, EI: 1750, note: "CFE exonérée l'année de création (2026) : le poste CFE des frais de fonctionnement n'est pas compté." })
+    expect(fraisDe(2026)).toEqual({ micro: 0, EI: { total: 1200, postes: horsCFE }, note: "CFE exonérée l'année de création (2026) : le poste CFE des frais de fonctionnement n'est pas compté." })
   })
 
   it("2027 : base réduite de moitié", () => {
-    expect(fraisDe(2027)).toEqual({ micro: 700, EI: 1900, note: "CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié, le poste CFE des frais de fonctionnement est compté pour 50\u00A0%." })
+    expect(fraisDe(2027)).toEqual({ micro: 0, EI: { total: 1300, postes: { ...horsCFE, cfe: 100 } }, note: "CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié, le poste CFE des frais de fonctionnement est compté pour 50\u00A0%." })
   })
 
   it("2028 : due en entier", () => {
-    expect(fraisDe(2028)).toEqual({ micro: 850, EI: 2050, note: undefined })
+    expect(fraisDe(2028)).toEqual({ micro: 0, EI: { total: 1400, postes: { ...horsCFE, cfe: 200 } }, note: undefined })
   })
 })

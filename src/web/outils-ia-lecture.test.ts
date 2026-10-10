@@ -148,11 +148,17 @@ describe("comparer_statuts et optimiser_remuneration", () => {
     const session = exemple()
     const options = optionsDuComparateur(vueDeLAnnee(session, 2026), "company-conseil", undefined)
     const attendu = comparerStatutsDeLAnnee(session, options, 2026)
-    const comparaison = appeler<{ meilleur: string; reglages: { mode: string }; scenarios: { statut: string; netApresImpots: number; actuel: boolean }[] }>("comparer_statuts", session, { activiteId: "company-conseil" })
+    const comparaison = appeler<{ meilleur: string; reglages: { mode: string }; situationNet: number; scenarios: { statut: string; netApresImpots: number; actuel: boolean; telleQueSaisie: boolean; ecartDeFrais: number }[] }>("comparer_statuts", session, { activiteId: "company-conseil" })
     expect(comparaison.meilleur).toBe(attendu.meilleur)
     expect(comparaison.reglages.mode).toBe("grille")
     expect(comparaison.scenarios.map(s => s.netApresImpots)).toEqual(attendu.scenarios.map(s => Math.round(s.netApresImpots)))
-    expect(comparaison.scenarios.find(s => s.actuel)!.statut).toBe("SASU")
+    expect(comparaison.scenarios.map(s => s.ecartDeFrais)).toEqual(attendu.scenarios.map(s => Math.round(s.ecartDeFrais.total)))
+    // Au partage « grille », la colonne actuelle est la situation saisie : son net est celui de simuler.
+    const actuelle = comparaison.scenarios.find(s => s.actuel)!
+    expect(actuelle).toMatchObject({ statut: "SASU", telleQueSaisie: true, ecartDeFrais: 0 })
+    const simule = simulerLesAnnees(session).annees.find(a => a.annee === 2026)!.report!.totalNetApresImpots
+    expect(comparaison.situationNet).toBe(Math.round(simule))
+    expect(actuelle.netApresImpots).toBe(Math.round(simule))
   })
 
   it("essaient une variante sans rien enregistrer", () => {
@@ -186,17 +192,20 @@ describe("comparer_statuts et optimiser_remuneration", () => {
     const options = optionsDuComparateur(vueDeLAnnee(session, 2026), "company-conseil", undefined)
     // Les réglages de l'exemple partagent le bénéfice d'après la grille : la colonne actuelle du comparateur est la situation actuelle.
     expect(options.repartition.mode).toBe("grille")
-    const colonne = comparerStatutsDeLAnnee(session, options, 2026).scenarios.find(s => s.actuel)!
+    const comparaison = comparerStatutsDeLAnnee(session, options, 2026)
+    const colonne = comparaison.scenarios.find(s => s.telleQueSaisie)!
     const flux = session.annees[0].monthlyData.flatMap(m => m.flows).filter(f => f.entityId === "company-conseil")
     const total = (type: string) => Math.round(flux.filter(f => f.type === type).reduce((somme, f) => somme + f.amount, 0))
     type Point = { netApresImpots: number; trimestres: number }
-    const optimisation = appeler<{ fraisFonctionnement: number; noteCFE: string | null; situationActuelle: Point & { statut: string; remunerationNette: number; dividendes: number; fraisFonctionnement: number }; meilleur: Point; meilleurAvecRetraite: Point; ecartAuMeilleur: number; ecartAuMeilleurAvecRetraite: number }>("optimiser_remuneration", session, { activiteId: "company-conseil", statut: "SASU" })
-    expect(optimisation.situationActuelle).toMatchObject({ statut: "SASU", remunerationNette: total("director_remuneration"), dividendes: total("dividends_payment"), netApresImpots: Math.round(colonne.netApresImpots), trimestres: colonne.protectionSociale.trimestres, fraisFonctionnement: colonne.fraisFonctionnement })
+    const optimisation = appeler<{ ecartDeFrais: number; noteCFE: string | null; situationActuelle: Point & { statut: string; remunerationNette: number; dividendes: number }; meilleur: Point; meilleurAvecRetraite: Point; ecartAuMeilleur: number; ecartAuMeilleurAvecRetraite: number }>("optimiser_remuneration", session, { activiteId: "company-conseil", statut: "SASU" })
+    expect(optimisation.situationActuelle).toMatchObject({ statut: "SASU", remunerationNette: total("director_remuneration"), dividendes: total("dividends_payment"), netApresImpots: Math.round(colonne.netApresImpots), trimestres: colonne.protectionSociale.trimestres })
+    // Sans frais supposés, la situation actuelle a le net des résultats de l'année, celui de simuler.
+    expect(optimisation.situationActuelle.netApresImpots).toBe(Math.round(comparaison.situationSaisie!.netApresImpots))
     expect(total("director_remuneration")).toBeGreaterThan(0)
     expect(optimisation.ecartAuMeilleur).toBe(optimisation.meilleur.netApresImpots - optimisation.situationActuelle.netApresImpots)
     expect(optimisation.ecartAuMeilleurAvecRetraite).toBe(optimisation.meilleurAvecRetraite.netApresImpots - optimisation.situationActuelle.netApresImpots)
-    // Les frais de fonctionnement retenus, ceux de l'application par défaut : de quoi rapprocher ces nets de ceux de simuler.
-    expect(optimisation).toMatchObject({ fraisFonctionnement: 2900, noteCFE: null })
+    // Le statut étudié est le statut actuel : aucun écart de frais de fonctionnement.
+    expect(optimisation).toMatchObject({ ecartDeFrais: 0, noteCFE: null })
   })
 
   it("comptent la CFE de l'année de création comme le comparateur, et situent une activité d'un autre statut", () => {
@@ -204,15 +213,18 @@ describe("comparer_statuts et optimiser_remuneration", () => {
     const creeeCetteAnnee = geler({ ...base, entities: base.entities.map(e => (e.id === "company-conseil" ? { ...e, dateDeCreation: "2026-03" } : e)) })
     const options = optionsDuComparateur(vueDeLAnnee(creeeCetteAnnee, 2026), "company-conseil", undefined)
     const comparaison = comparerStatutsDeLAnnee(creeeCetteAnnee, options, 2026)
-    const eurl = appeler<{ fraisFonctionnement: number; noteCFE: string; situationActuelle: { statut: string; netApresImpots: number; fraisFonctionnement: number } }>("optimiser_remuneration", creeeCetteAnnee, { activiteId: "company-conseil", statut: "EURL" })
+    const eurl = appeler<{ ecartDeFrais: number; noteCFE: string; situationActuelle: { statut: string; netApresImpots: number } }>("optimiser_remuneration", creeeCetteAnnee, { activiteId: "company-conseil", statut: "EURL" })
     expect(eurl.noteCFE).toBe(comparaison.noteCFE)
-    expect(eurl.fraisFonctionnement).toBe(comparaison.scenarios.find(s => s.statut === "EURL")!.fraisFonctionnement)
-    expect(eurl.fraisFonctionnement).toBe(2600)
-    // La situation actuelle reste celle de la SASU saisie, avec ses propres frais.
-    expect(eurl.situationActuelle).toMatchObject({ statut: "SASU", netApresImpots: Math.round(comparaison.scenarios.find(s => s.actuel)!.netApresImpots), fraisFonctionnement: 2600 })
+    // SASU et EURL ont les mêmes frais supposés par défaut, CFE de création comprise : aucun écart, comme dans le comparateur.
+    expect(eurl.ecartDeFrais).toBe(comparaison.scenarios.find(s => s.statut === "EURL")!.ecartDeFrais.total)
+    expect(eurl.ecartDeFrais).toBe(0)
+    // La situation actuelle reste celle de la SASU saisie, au net des résultats.
+    expect(eurl.situationActuelle).toMatchObject({ statut: "SASU", netApresImpots: Math.round(comparaison.situationSaisie!.netApresImpots) })
 
-    const micro = appeler<{ situationActuelle: { statut: string; remunerationNette: null; dividendes: null } }>("optimiser_remuneration", exemple(), { activiteId: "micro-atelier", statut: "SASU" })
+    // Depuis une micro-entreprise, la SASU étudiée ajoute l'écart des frais par défaut : 2 900 € moins 850 €.
+    const micro = appeler<{ ecartDeFrais: number; situationActuelle: { statut: string; remunerationNette: null; dividendes: null } }>("optimiser_remuneration", exemple(), { activiteId: "micro-atelier", statut: "SASU" })
     expect(micro.situationActuelle).toMatchObject({ statut: expect.stringMatching(/^micro/), remunerationNette: null, dividendes: null })
+    expect(micro.ecartDeFrais).toBe(2050)
   })
 
   it("refusent une personne, ou une simulation sans activité", () => {

@@ -66,9 +66,10 @@ describe("comparerStrategiesDeDistribution", () => {
   })
 
   it("une année en perte diminue ce qui reste à distribuer, sans dividende refusé", () => {
-    // Frais de fonctionnement de 3 000 € par an : 2026, sans chiffre d'affaires, est en perte de 3 000 €.
+    // L'activité est une EURL : la SASU étudiée reçoit l'écart de frais de fonctionnement avec elle, 3 000 € par an ;
+    // 2026, sans chiffre d'affaires, est en perte de 3 000 €.
     const frais = { ...sansFrais, SASU: { ...sansFrais.SASU, expertComptable: 3000 } }
-    const resultat = comparerStrategiesDeDistribution(sessionSASU({ 2025: 60000, 2026: 0 }), "s1", { fraisFonctionnement: frais })
+    const resultat = comparerStrategiesDeDistribution(sessionSASU({ 2025: 60000, 2026: 0 }, societe("s1", "EURL")), "s1", { fraisFonctionnement: frais })
     const garder = strategieDe(resultat, "SASU", "garderPuisDistribuer")
     const lisser = strategieDe(resultat, "SASU", "lisser")
 

@@ -284,7 +284,7 @@ Une ligne par année de la session, avec les mêmes acteurs et la grille de chaq
     resultat.noteCFE = "CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié."
     const rapport = rapportComplet({ comparaison: { nomActivite: "Ma SASU", options: optionsExemple(), resultat } })
     expect(rapport).toContain("| Indicateur | SASU (actuel) | Micro-entreprise (meilleur net, plus accessible) |")
-    expect(rapport).toContain("- CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié.\n\n| Indicateur |")
+    expect(rapport).toContain("- CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié.\n- Votre situation telle que saisie (SASU) : 20 000 € de net, comme dans les résultats\n\n| Indicateur |")
   })
 
   it("gère un rapport sans revenus, sans activité ni foyer", () => {
@@ -310,13 +310,15 @@ Une ligne par année de la session, avec les mêmes acteurs et la grille de chaq
     const rapport = rapportComplet()
     expect(rapport).toContain(`- Bénéfice de la société en SASU et EURL : Rémunération saisie, le reste en dividendes (rémunération nette de 20 000 €, tout le bénéfice restant versé en dividendes)
 - En micro-entreprise, part des prestations de services en BNC : 50 % (le reste en BIC)
-- Frais de fonctionnement annuels ajoutés aux charges : SASU 2 900 €, EURL 2 900 €, EI au réel 2 050 €, micro-entreprise 850 €
+- Frais de fonctionnement supposés : SASU 2 900 €, EURL 2 900 €, EI au réel 2 050 €, micro-entreprise 850 € ; la grille contient déjà les frais réels du statut actuel, chaque autre statut ne reçoit que l'écart avec lui
+- Votre situation telle que saisie (SASU) : 20 000 € de net, comme dans les résultats
 
 | Indicateur | SASU (actuel) | Micro-entreprise (meilleur net) |
 | --- | ---: | ---: |
 | **Net dans la poche** | **20 000 €** | **22 501 €** |
-| Taux global de prélèvement | 25 % | 25 % |`)
-    expect(rapport).toContain("| Protection sociale | 3/5, 4 trim. de retraite | 2/5, 4 trim. de retraite |\n| Écart avec le statut actuel | — | +2 501 € |\n\nNotes :\n\n1. Micro-entreprise : Plafond dépassé.")
+| Taux global de prélèvement | 25 % | 25 % |
+| Frais de gestion par rapport au statut actuel | — | -2 050 € |`)
+    expect(rapport).toContain("| Protection sociale | 3/5, 4 trim. de retraite | 2/5, 4 trim. de retraite |\n| Écart avec votre situation telle que saisie | — | +2 501 € |\n\nNotes :\n\n1. Micro-entreprise : Plafond dépassé.")
     expect(rapport).toContain(`## Avertissements
 
 - Ma SASU : Société peu rentable.
@@ -344,7 +346,7 @@ Une ligne par année de la session, avec les mêmes acteurs et la grille de chaq
   it("au meilleur net, décrit le mode et la rémunération retenue dans chaque colonne de société", () => {
     const resultat = comparaisonExemple()
     const optimale = (remunerationNette: number, retraiteHorsDAtteinte = false) => ({ remunerationOptimale: { remunerationNette, avecRetraite: !retraiteHorsDAtteinte, retraiteHorsDAtteinte } })
-    resultat.scenarios = [{ ...resultat.scenarios[0], ...optimale(12300) }, { ...resultat.scenarios[0], statut: "EURL", libelle: "EURL", actuel: false, ...optimale(25700, true) }, resultat.scenarios[1]]
+    resultat.scenarios = [{ ...resultat.scenarios[0], ...optimale(12300) }, { ...resultat.scenarios[0], statut: "EURL", libelle: "EURL", actuel: false, telleQueSaisie: false, ...optimale(25700, true) }, resultat.scenarios[1]]
     const options = { ...optionsExemple(), repartition: { mode: "meilleurNet" as const, partDistribuee: 1, avecRetraite: true } }
 
     const rapport = rapportComplet({ comparaison: { nomActivite: "Ma SASU", options, resultat } })
@@ -357,26 +359,27 @@ Une ligne par année de la session, avec les mêmes acteurs et la grille de chaq
   it("au meilleur net, dit ce que coûtent les 4 trimestres de retraite dans chaque colonne de société", () => {
     const resultat = comparaisonExemple()
     const sasu = { ...resultat.scenarios[0], remunerationOptimale: { remunerationNette: 5800, avecRetraite: true, retraiteHorsDAtteinte: false, coutDesQuatreTrimestres: 1234 } }
-    const eurl = { ...resultat.scenarios[0], statut: "EURL" as const, libelle: "EURL", actuel: false, remunerationOptimale: { remunerationNette: 9000, avecRetraite: true, retraiteHorsDAtteinte: false } }
+    const eurl = { ...resultat.scenarios[0], statut: "EURL" as const, libelle: "EURL", actuel: false, telleQueSaisie: false, remunerationOptimale: { remunerationNette: 9000, avecRetraite: true, retraiteHorsDAtteinte: false } }
     resultat.scenarios = [sasu, eurl, resultat.scenarios[1]]
     const options = { ...optionsExemple(), repartition: { mode: "meilleurNet" as const, partDistribuee: 1, avecRetraite: true } }
 
     expect(rapportComplet({ comparaison: { nomActivite: "Ma SASU", options, resultat } })).toContain(`rémunération nette retenue : SASU ${euros(5800)} (4 trimestres : −${euros(1234)} de net), EURL ${euros(9000)})`)
   })
 
-  it("adapte les réglages, l'écart négatif et les colonnes sans revenus ni statut actuel", () => {
+  it("adapte les réglages, l'écart négatif et les colonnes sans revenus ni situation saisie", () => {
     const resultat = comparaisonExemple()
     resultat.scenarios = [{ ...resultat.scenarios[1], netApresImpots: 15000, revenusAvantPrelevements: 0, warnings: [] }, { ...resultat.scenarios[0], warnings: [] }]
     const options = { ...optionsExemple(), repartition: { mode: "grille" as const, partDistribuee: 1 }, fraisFonctionnement: undefined }
     const rapport = rapportComplet({ comparaison: { nomActivite: "Ma SASU", options, resultat } })
     expect(rapport).toContain("- Bénéfice de la société en SASU et EURL : Dividendes saisis dans la grille (rémunération nette de 20 000 €, dividendes saisis dans la grille)")
-    expect(rapport).toContain("- Frais de fonctionnement annuels ajoutés aux charges : aucun")
+    expect(rapport).toContain("- Frais de fonctionnement supposés : aucun ;")
     expect(rapport).toContain("| Taux global de prélèvement | — | 25 % |")
-    expect(rapport).toContain("| Écart avec le statut actuel | -5 000 € | — |")
+    expect(rapport).toContain("| Écart avec votre situation telle que saisie | -5 000 € | — |")
     expect(rapport).not.toContain("Notes :")
 
-    resultat.scenarios = resultat.scenarios.map(s => ({ ...s, actuel: false }))
-    expect(rapportComplet({ comparaison: { nomActivite: "Ma SASU", options, resultat } })).toContain("| Écart avec le statut actuel | — | — |")
+    resultat.scenarios = resultat.scenarios.map(s => ({ ...s, actuel: false, telleQueSaisie: false }))
+    resultat.situationSaisie = undefined
+    expect(rapportComplet({ comparaison: { nomActivite: "Ma SASU", options, resultat } })).toContain("| Écart avec votre situation telle que saisie | — | — |")
   })
 
   it("réunit les mentions d'un statut à la fois actuel et meilleur net", () => {

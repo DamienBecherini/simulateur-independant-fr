@@ -6,16 +6,18 @@ import { describe, expect, it, vi } from "vitest"
 import type { Affichage, ComparaisonResult, ScenarioStatut, SessionState, StatutCompare } from "@/types"
 import { emptySession, makeCompany, makeFlow, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { ComparateurDeTest } from "@/ui/testing/comparateur"
+import { SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { AffichageContext } from "../hooks/useAffichage"
 
 function scenario(statut: StatutCompare, libelle: string, net: number, overrides: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return { statut, libelle, actuel: false, fraisFonctionnement: 0, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
+  return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
 }
 
 function comparison(overrides: Partial<ComparaisonResult> = {}): ComparaisonResult {
   return {
-    scenarios: [scenario("SASU", "SASU", 30000), scenario("EURL", "EURL", 28000), scenario("EI", "EI au réel", 27000), scenario("micro", "Micro-entreprise", 32000, { actuel: true }), scenario("micro-vfl", "Micro + versement libératoire", 35000, { warnings: ["Seuil à vérifier."] })],
+    scenarios: [scenario("SASU", "SASU", 30000), scenario("EURL", "EURL", 28000), scenario("EI", "EI au réel", 27000), scenario("micro", "Micro-entreprise", 32000, { actuel: true, telleQueSaisie: true }), scenario("micro-vfl", "Micro + versement libératoire", 35000, { warnings: ["Seuil à vérifier."] })],
     meilleur: "micro-vfl",
+    situationSaisie: { statut: "micro", libelle: "Micro-entreprise", netApresImpots: 32000 },
     couples: [],
     warnings: [],
     ...overrides
@@ -168,7 +170,7 @@ describe("ComparatorPanel", () => {
     expect(within(table).getByRole("columnheader", { name: /Micro-entreprise\s*actuel/ })).toBeInTheDocument()
     expect(within(table).getByRole("columnheader", { name: /versement libératoire\s*meilleur net/ })).toBeInTheDocument()
 
-    const ecart = within(table).getByRole("row", { name: /Écart avec le statut actuel/ })
+    const ecart = within(table).getByRole("row", { name: /Écart avec votre situation actuelle/ })
     expect(ecart).toHaveTextContent(`+${money(3000)}`)
     expect(ecart).toHaveTextContent(`−${money(2000)}`)
   })
@@ -296,6 +298,44 @@ describe("ComparatorPanel", () => {
     expect(within(table).getByRole("columnheader", { name: /^Micro-entreprise/ })).toHaveTextContent("meilleur net")
   })
 
+  it("grise une colonne micro hors plafond et écrit dans la cellule de l'écart qu'elle n'est pas retenue (P-14)", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "micro-vfl" ? { ...s, horsPlafond: true } : s)), meilleur: "micro" }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    const cellules = within(within(table).getByRole("row", { name: /Écart avec votre situation actuelle/ })).getAllByRole("cell")
+    const vfl = cellules[4]
+    expect(vfl).toHaveTextContent(`+${money(3000)}non retenue : plafond dépassé`)
+    // Pas de vert pour un gain qui n'est pas retenu : la cellule est grisée.
+    expect(vfl.className).not.toMatch(/emerald/)
+    expect(vfl.className).toMatch(/bg-slate-100/)
+    expect(cellules[0]).not.toHaveTextContent("non retenue")
+  })
+
+  it("sans chiffre d'affaires, invite à en saisir un et ne désigne aucun statut (P-13)", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ meilleur: null, sansChiffreDAffaires: true, warnings: [SANS_CHIFFRE_D_AFFAIRES] }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    expect(await screen.findByRole("status")).toHaveTextContent(SANS_CHIFFRE_D_AFFAIRES)
+    // Le message n'est écrit qu'une fois, et aucune colonne n'est marquée « meilleur net ».
+    expect(screen.getAllByText(SANS_CHIFFRE_D_AFFAIRES)).toHaveLength(1)
+    const table = screen.getByRole("table", { name: "Comparaison des statuts" })
+    expect(within(table).queryByText("meilleur net")).not.toBeInTheDocument()
+  })
+
+  it("en société hors partage « grille », nomme la colonne du statut actuel par son partage et rappelle la situation saisie (P-04)", async () => {
+    const scenarios = comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, libelle: "SASU, rémunération optimisée", actuel: true, netApresImpots: 41000 } : { ...s, actuel: false, telleQueSaisie: false }))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios, meilleur: "SASU", situationSaisie: { statut: "SASU", libelle: "SASU", netApresImpots: 40000 } }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    const entete = within(table).getByRole("columnheader", { name: /^SASU, rémunération optimisée/ })
+    expect(entete).not.toHaveTextContent("actuel")
+    expect(screen.getByText(/^Votre situation telle que saisie \(SASU\)/)).toHaveTextContent(`Votre situation telle que saisie (SASU) : ${money(40000)} de net, comme dans les résultats.`)
+    const ecart = within(table).getByRole("row", { name: /Écart avec votre situation actuelle/ })
+    expect(within(ecart).getAllByRole("cell")[0]).toHaveTextContent(`+${money(1000)}`)
+  })
+
   it("signale les deux colonnes micro hors plafond, et met en évidence le meilleur statut tenable", async () => {
     const horsPlafond = comparison().scenarios.map(s => (s.statut === "micro" || s.statut === "micro-vfl" ? { ...s, horsPlafond: true } : s))
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: horsPlafond, meilleur: "SASU" }))
@@ -312,8 +352,8 @@ describe("ComparatorPanel", () => {
 
   it("marque les colonnes micro plus accessibles après la sortie du régime micro", async () => {
     const sortie = { depuis: 2028, depassements: [2026, 2027] as [number, number] }
-    const fermees = comparison().scenarios.map(s => (s.statut === "micro" || s.statut === "micro-vfl" ? { ...s, actuel: false, horsPlafond: true, regimeMicroFerme: sortie } : { ...s, actuel: s.statut === "EI" }))
-    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: fermees, meilleur: "SASU" }))
+    const fermees = comparison().scenarios.map(s => (s.statut === "micro" || s.statut === "micro-vfl" ? { ...s, actuel: false, telleQueSaisie: false, horsPlafond: true, regimeMicroFerme: sortie } : { ...s, actuel: s.statut === "EI", telleQueSaisie: s.statut === "EI" }))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: fermees, meilleur: "SASU", situationSaisie: { statut: "EI", libelle: "EI au réel", netApresImpots: 27000 } }))
     render(<ComparateurDeTest annee={2028} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })

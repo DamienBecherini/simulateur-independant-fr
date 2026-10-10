@@ -261,11 +261,12 @@ describe("csvComparaison", () => {
     expect(lignes(csvComparaison(comparaisonExemple(), optionsExemple(), "Ma SASU"))).toEqual([
       "Indicateur;SASU;Micro-entreprise",
       "Statut actuel;oui;non",
+      "Situation telle que saisie;oui;non",
       "Meilleur net;non;oui",
       "Net dans la poche;20000,00;22500,50",
       "Taux global de prélèvement (%);25;25",
       "Revenus avant prélèvements;30000,00;30000,00",
-      "Frais de fonctionnement;1000,00;1000,00",
+      "Frais de gestion en plus (+) ou en moins (-) qu'au statut actuel;0,00;-2050,00",
       "Cotisations sociales;6000,00;6000,00",
       "Impôt sur les sociétés;0,00;0,00",
       "Impôt sur le revenu;1500,00;1500,00",
@@ -274,17 +275,18 @@ describe("csvComparaison", () => {
       "Conservé dans « Ma SASU »;400,00;0,00",
       "Protection sociale (étoiles sur 5);3;2",
       "Trimestres de retraite validés;4;4",
-      "Écart avec le statut actuel;0,00;2500,50",
+      "Écart avec la situation telle que saisie;0,00;2500,50",
+      "Net de votre situation telle que saisie;20000,00",
       "",
       "Réglage;Valeur",
       "Activité comparée;Ma SASU",
       "Bénéfice de la société (SASU, EURL);Rémunération saisie, le reste en dividendes",
       "Rémunération nette annuelle (SASU, EURL);20000,00",
       "Part des prestations en BNC en micro (%);50",
-      "Frais de fonctionnement annuels, SASU;2900,00",
-      "Frais de fonctionnement annuels, EURL;2900,00",
-      "Frais de fonctionnement annuels, EI au réel;2050,00",
-      "Frais de fonctionnement annuels, Micro-entreprise;850,00",
+      "Frais de fonctionnement supposés (pour l'écart entre statuts), SASU;2900,00",
+      "Frais de fonctionnement supposés (pour l'écart entre statuts), EURL;2900,00",
+      "Frais de fonctionnement supposés (pour l'écart entre statuts), EI au réel;2050,00",
+      "Frais de fonctionnement supposés (pour l'écart entre statuts), Micro-entreprise;850,00",
       "",
       "Avertissement;Statuts concernés",
       "Comparaison indicative.;Tous",
@@ -297,17 +299,24 @@ describe("csvComparaison", () => {
     result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? { ...s, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] } } : s))
     result.noteCFE = "CFE exonérée l'année de création (2026)."
     const csv = lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))
-    expect(csv.slice(1, 4)).toEqual(["Statut actuel;oui;non", "Meilleur net;non;oui", "Régime plus accessible;non;oui"])
+    expect(csv.slice(1, 5)).toEqual(["Statut actuel;oui;non", "Situation telle que saisie;oui;non", "Meilleur net;non;oui", "Régime plus accessible;non;oui"])
     expect(csv).toContain("CFE exonérée l'année de création (2026).;Tous")
   })
 
-  it("laisse vides le taux sans revenus et l'écart sans statut actuel, et omet les avertissements absents", () => {
+  it("signale une colonne micro non retenue, plafond dépassé", () => {
     const result = comparaisonExemple()
-    result.scenarios = result.scenarios.map(s => ({ ...s, actuel: false, warnings: [], revenusAvantPrelevements: 0 }))
+    result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? { ...s, horsPlafond: true } : s))
+    expect(lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))).toContain("Non retenue : plafond dépassé;non;oui")
+  })
+
+  it("laisse vides le taux sans revenus et l'écart sans situation saisie, et omet les avertissements absents", () => {
+    const result = comparaisonExemple()
+    result.scenarios = result.scenarios.map(s => ({ ...s, actuel: false, telleQueSaisie: false, warnings: [], revenusAvantPrelevements: 0 }))
+    result.situationSaisie = undefined
     result.warnings = []
     const csv = lignes(csvComparaison(result, { ...optionsExemple(), fraisFonctionnement: undefined, repartition: { mode: "grille", partDistribuee: 1 } }, "Ma SASU"))
     expect(csv).toContain("Taux global de prélèvement (%);;")
-    expect(csv).toContain("Écart avec le statut actuel;;")
+    expect(csv).toContain("Écart avec la situation telle que saisie;;")
     expect(csv).toContain("Bénéfice de la société (SASU, EURL);Dividendes saisis dans la grille")
     expect(csv[csv.length - 1]).toBe("Part des prestations en BNC en micro (%);50")
   })

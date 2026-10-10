@@ -3,16 +3,16 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
-import { coutsDesQuatreTrimestres, libelleDuCoutDesTrimestres, meilleurStatut, nombreDAlertes, phraseDuVerdict, tauxDePrelevement } from "./resume"
+import { coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, phraseDuVerdict, tauxDePrelevement } from "./resume"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
 
 function scenario(statut: StatutCompare, libelle: string, net: number, actuel = false): ScenarioStatut {
-  return { statut, libelle, actuel, fraisFonctionnement: 0, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 2, trimestres: 4, resume: "" }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [] }
+  return { statut, libelle, actuel, telleQueSaisie: actuel, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 2, trimestres: 4, resume: "" }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [] }
 }
 
 function comparaison(meilleur: StatutCompare): ComparaisonResult {
-  return { scenarios: [scenario("SASU", "SASU", 30000), scenario("micro", "Micro-entreprise", 32000, true), scenario("micro-vfl", "Micro + versement libératoire", 31000)], meilleur, couples: [], warnings: [] }
+  return { scenarios: [scenario("SASU", "SASU", 30000), scenario("micro", "Micro-entreprise", 32000, true), scenario("micro-vfl", "Micro + versement libératoire", 31000)], meilleur, situationSaisie: { statut: "micro", libelle: "Micro-entreprise", netApresImpots: 32000 }, couples: [], warnings: [] }
 }
 
 describe("barre de résumé", () => {
@@ -35,7 +35,22 @@ describe("barre de résumé", () => {
     expect(meilleurStatut(null)).toBeNull()
     expect(meilleurStatut(comparaison("micro"))).toBe("Micro-entreprise (actuel)")
     expect(espaces(meilleurStatut({ ...comparaison("SASU"), scenarios: comparaison("SASU").scenarios.map(s => (s.statut === "SASU" ? { ...s, netApresImpots: 33500 } : s)) }))).toBe("SASU, +1 500 €")
-    expect(meilleurStatut({ ...comparaison("SASU"), scenarios: [scenario("SASU", "SASU", 30000)] })).toBe("SASU")
+    expect(meilleurStatut({ ...comparaison("SASU"), situationSaisie: undefined, scenarios: [scenario("SASU", "SASU", 30000)] })).toBe("SASU")
+  })
+
+  it("au meilleur net d'une société, mesure l'écart à la situation saisie, qui n'est pas une colonne", () => {
+    const optimisee = { ...scenario("SASU", "SASU, rémunération optimisée", 41000), actuel: true }
+    const result: ComparaisonResult = { scenarios: [optimisee, scenario("EI", "EI au réel", 38000)], meilleur: "SASU", situationSaisie: { statut: "SASU", libelle: "SASU", netApresImpots: 40000 }, couples: [], warnings: [] }
+    expect(espaces(meilleurStatut(result))).toBe("SASU, rémunération optimisée, +1 000 €")
+    expect(netDeLaSituationSaisie(result)).toBe(40000)
+    expect(ecartAvecLaSituationSaisie(result, result.scenarios[1])).toBe(-2000)
+    expect(espaces(phraseDuVerdict(result, "Conseil"))).toBe("Pour « Conseil », SASU, rémunération optimisée donnerait le meilleur net : 41 000 €, soit +1 000 € par rapport à votre situation telle que saisie (SASU, 40 000 €).")
+  })
+
+  it("sans chiffre d'affaires, invite à en saisir un au lieu de désigner un statut", () => {
+    const result: ComparaisonResult = { ...comparaison("micro"), meilleur: null, sansChiffreDAffaires: true }
+    expect(meilleurStatut(result)).toBe("saisissez un chiffre d'affaires")
+    expect(phraseDuVerdict(result, "Atelier")).toBeNull()
   })
 })
 
@@ -46,12 +61,12 @@ describe("verdict du comparateur", () => {
 
   it("quand un autre statut est meilleur, donne son gain par rapport au statut actuel", () => {
     const result = { ...comparaison("SASU"), scenarios: comparaison("SASU").scenarios.map(s => (s.statut === "SASU" ? { ...s, netApresImpots: 34000 } : s)) }
-    expect(espaces(phraseDuVerdict(result, "Atelier"))).toBe("Pour « Atelier », SASU donnerait le meilleur net : 34 000 €, soit +2 000 € par rapport au statut actuel, Micro-entreprise.")
+    expect(espaces(phraseDuVerdict(result, "Atelier"))).toBe("Pour « Atelier », SASU donnerait le meilleur net : 34 000 €, soit +2 000 € par rapport à votre situation telle que saisie (Micro-entreprise, 32 000 €).")
   })
 
   it("ne conclut pas sans meilleur statut ou sans statut actuel", () => {
     expect(phraseDuVerdict({ ...comparaison("micro"), meilleur: null }, "Atelier")).toBeNull()
-    expect(phraseDuVerdict({ ...comparaison("SASU"), scenarios: [scenario("SASU", "SASU", 30000)] }, "Atelier")).toBeNull()
+    expect(phraseDuVerdict({ ...comparaison("SASU"), situationSaisie: undefined }, "Atelier")).toBeNull()
   })
 
   it("ne cite pas derrière le statut actuel une colonne micro qui n'est plus accessible", () => {
