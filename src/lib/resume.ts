@@ -3,6 +3,7 @@
 
 import type { ComparaisonResult, ScenarioStatut, SimulationReport } from "@/types"
 import { ecartSigne, euros } from "@/backend/logic/format"
+import { SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 
 /** Ce que la barre retient du comparateur : l'activité comparée et le résultat de la comparaison. */
 export interface ResumeDeLaComparaison {
@@ -31,25 +32,54 @@ export function tauxDePrelevement(report: SimulationReport): string | null {
   return base > 0 ? (report.bilan.totalPrelevements / base).toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 }) : null
 }
 
-/** « Micro + VL (actuel) », ou « SASU, +1 234 € » quand le meilleur statut n'est pas le statut actuel. */
-export function meilleurStatut(result: ComparaisonResult | null): string | null {
-  const meilleur = result?.scenarios.find(s => s.statut === result.meilleur)
-  if (!meilleur) return null
-  if (meilleur.actuel) return `${meilleur.libelle} (actuel)`
-  const actuel = result?.scenarios.find(s => s.actuel)
-  if (!actuel) return meilleur.libelle
-  return `${meilleur.libelle}, ${ecartSigne(meilleur.netApresImpots - actuel.netApresImpots)}`
+/**
+ * Net de référence des écarts du comparateur : celui de la situation telle que saisie, égal au « Net du foyer » des
+ * résultats ; `null` sans activité comparée.
+ */
+export function netDeLaSituationSaisie(result: ComparaisonResult): number | null {
+  return result.situationSaisie?.netApresImpots ?? result.scenarios.find(s => s.telleQueSaisie)?.netApresImpots ?? null
 }
 
-/** Le verdict : quel statut donne le meilleur net, et de combien il devance le statut actuel ou le suivant. */
+/** Écart du net d'une colonne avec la situation telle que saisie ; `null` pour cette situation elle-même, ou sans référence. */
+export function ecartAvecLaSituationSaisie(result: ComparaisonResult, scenario: ScenarioStatut): number | null {
+  const reference = netDeLaSituationSaisie(result)
+  return reference === null || scenario.telleQueSaisie ? null : scenario.netApresImpots - reference
+}
+
+/** Une colonne micro hors plafond ou au régime fermé : jamais retenue comme meilleur statut. */
+export const estNonRetenue = (s: ScenarioStatut) => s.horsPlafond || s.regimeMicroFerme !== undefined
+
+/** Pourquoi une colonne micro n'est jamais retenue, écrit dans la cellule : la couleur seule ne le dit pas. */
+export function raisonDeNonRetenue(scenario: ScenarioStatut): string | null {
+  if (scenario.regimeMicroFerme) return "non retenue : régime micro fermé"
+  return scenario.horsPlafond ? "non retenue : plafond dépassé" : null
+}
+
+/** Les avertissements de la comparaison, sans l'invitation à saisir un chiffre d'affaires, déjà en tête du comparateur. */
+export const avertissementsSansLeVerdict = (warnings: string[]) => warnings.filter(w => w !== SANS_CHIFFRE_D_AFFAIRES)
+
+/**
+ * « Micro + VL (actuel) », ou « SASU, +1 234 € » quand le meilleur statut n'est pas la situation saisie ; sans chiffre
+ * d'affaires, l'invitation à en saisir un.
+ */
+export function meilleurStatut(result: ComparaisonResult | null): string | null {
+  if (result?.sansChiffreDAffaires) return "saisissez un chiffre d'affaires"
+  const meilleur = result?.scenarios.find(s => s.statut === result.meilleur)
+  if (!result || !meilleur) return null
+  if (meilleur.telleQueSaisie) return `${meilleur.libelle} (actuel)`
+  const ecart = ecartAvecLaSituationSaisie(result, meilleur)
+  return ecart === null ? meilleur.libelle : `${meilleur.libelle}, ${ecartSigne(ecart)}`
+}
+
+/** Le verdict : quel statut donne le meilleur net, et de combien il devance la situation saisie ou le suivant. */
 export function phraseDuVerdict(result: ComparaisonResult, activite: string): string | null {
   const meilleur = result.scenarios.find(s => s.statut === result.meilleur)
-  const actuel = result.scenarios.find(s => s.actuel)
-  if (!meilleur || !actuel) return null
-  if (meilleur.actuel) {
-    const suivant = [...result.scenarios].filter(s => !s.actuel && !s.horsPlafond && !s.regimeMicroFerme).sort((a, b) => b.netApresImpots - a.netApresImpots)[0]
-    const derriere = suivant ? ` Juste derrière : ${suivant.libelle}, ${ecartSigne(suivant.netApresImpots - actuel.netApresImpots)}.` : ""
-    return `Pour « ${activite} », le statut actuel, ${actuel.libelle}, donne le meilleur net : ${euros(actuel.netApresImpots)}.${derriere}`
+  const saisie = result.situationSaisie
+  if (!meilleur || !saisie) return null
+  if (meilleur.telleQueSaisie) {
+    const suivant = [...result.scenarios].filter(s => !s.telleQueSaisie && !estNonRetenue(s)).sort((a, b) => b.netApresImpots - a.netApresImpots)[0]
+    const derriere = suivant ? ` Juste derrière : ${suivant.libelle}, ${ecartSigne(suivant.netApresImpots - saisie.netApresImpots)}.` : ""
+    return `Pour « ${activite} », le statut actuel, ${meilleur.libelle}, donne le meilleur net : ${euros(meilleur.netApresImpots)}.${derriere}`
   }
-  return `Pour « ${activite} », ${meilleur.libelle} donnerait le meilleur net : ${euros(meilleur.netApresImpots)}, soit ${ecartSigne(meilleur.netApresImpots - actuel.netApresImpots)} par rapport au statut actuel, ${actuel.libelle}.`
+  return `Pour « ${activite} », ${meilleur.libelle} donnerait le meilleur net : ${euros(meilleur.netApresImpots)}, soit ${ecartSigne(meilleur.netApresImpots - saisie.netApresImpots)} par rapport à votre situation telle que saisie (${saisie.libelle}, ${euros(saisie.netApresImpots)}).`
 }

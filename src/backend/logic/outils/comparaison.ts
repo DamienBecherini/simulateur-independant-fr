@@ -47,6 +47,7 @@ const ScenarioSchema = z.object({
   statut: z.string(),
   libelle: z.string(),
   actuel: z.boolean(),
+  telleQueSaisie: z.boolean(),
   netApresImpots: z.number(),
   totalPrelevements: z.number(),
   cotisationsSociales: z.number(),
@@ -54,7 +55,7 @@ const ScenarioSchema = z.object({
   impotSurLeRevenu: z.number(),
   prelevementsSociaux: z.number(),
   resultatConserveActivite: z.number(),
-  fraisFonctionnement: z.number(),
+  ecartDeFrais: z.number(),
   horsPlafond: z.boolean(),
   protectionSociale: z.object({ etoiles: z.number(), trimestres: z.number(), resume: z.string() }),
   remunerationRetenue: z.number().nullable(),
@@ -65,7 +66,8 @@ const resumeDuScenario = (s: ScenarioStatut): z.infer<typeof ScenarioSchema> => 
   statut: s.statut,
   libelle: s.libelle,
   actuel: s.actuel,
-  ...arrondirTout({ netApresImpots: s.netApresImpots, totalPrelevements: s.totalPrelevements, cotisationsSociales: s.cotisationsSociales, impotSocietes: s.impotSocietes, impotSurLeRevenu: s.impotSurLeRevenu, prelevementsSociaux: s.prelevementsSociaux, resultatConserveActivite: s.resultatConserveActivite, fraisFonctionnement: s.fraisFonctionnement }),
+  telleQueSaisie: s.telleQueSaisie,
+  ...arrondirTout({ netApresImpots: s.netApresImpots, totalPrelevements: s.totalPrelevements, cotisationsSociales: s.cotisationsSociales, impotSocietes: s.impotSocietes, impotSurLeRevenu: s.impotSurLeRevenu, prelevementsSociaux: s.prelevementsSociaux, resultatConserveActivite: s.resultatConserveActivite, ecartDeFrais: s.ecartDeFrais.total }),
   horsPlafond: s.horsPlafond,
   protectionSociale: s.protectionSociale,
   remunerationRetenue: s.remunerationOptimale ? arrondir(s.remunerationOptimale.remunerationNette) : s.partage ? arrondir(s.partage.remunerationNette) : null,
@@ -78,7 +80,7 @@ export const comparerStatuts = definirOutil({
   description: [
     "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro-entreprise avec et sans versement libératoire), le reste de la simulation inchangé, et désigne le statut au meilleur net après impôts du foyer.",
     "Utilise les réglages enregistrés du comparateur ; les paramètres essaient une variante sans rien enregistrer (pour l'enregistrer : proposer_reglages_comparateur).",
-    "Les frais de fonctionnement de chaque statut (fraisFonctionnement : expert-comptable, banque, logiciel, assurance, CFE) s'ajoutent aux charges de la grille, statut actuel compris : comparez les scénarios entre eux, pas avec simuler.",
+    "La colonne telleQueSaisie est la situation saisie : son net est celui de simuler (situationNet). Les frais réels étant dans la grille, les autres colonnes n'ajoutent aux charges que l'écart de frais de fonctionnement supposés avec le statut actuel (ecartDeFrais, négatif si le statut en coûte moins). Une société hors partage grille n'est pas la situation saisie. Sans chiffre d'affaires, meilleur est null.",
     "Montants annuels en euros, arrondis, pour tous les foyers ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant.",
     "Pas de colonne micro pour un auxiliaire médical (CARPIMKO) : la raison est dans les avertissements."
   ].join(" "),
@@ -91,7 +93,7 @@ export const comparerStatuts = definirOutil({
     avecRetraite: z.boolean().optional().describe("Mode meilleurNet : exiger 4 trimestres de retraite."),
     partBncPrestations: z.number().min(0).max(1).optional().describe("Part BNC des prestations si l'activité devient une micro-entreprise, de 0 à 1.")
   }),
-  resultat: z.object({ annee: z.number(), activiteId: z.string(), activite: z.string(), reglages: z.object({ mode: z.string(), remunerationNette: z.number(), partDistribuee: z.number(), avecRetraite: z.boolean(), partBncPrestations: z.number() }), meilleur: z.string().nullable(), scenarios: z.array(ScenarioSchema), couples: z.array(z.object({ personnes: z.array(z.string()), netActuel: z.number(), netMaries: z.number() })), notes: z.array(z.string()) }),
+  resultat: z.object({ annee: z.number(), activiteId: z.string(), activite: z.string(), reglages: z.object({ mode: z.string(), remunerationNette: z.number(), partDistribuee: z.number(), avecRetraite: z.boolean(), partBncPrestations: z.number() }), meilleur: z.string().nullable(), situationNet: z.number().nullable(), scenarios: z.array(ScenarioSchema), couples: z.array(z.object({ personnes: z.array(z.string()), netActuel: z.number(), netMaries: z.number() })), notes: z.array(z.string()) }),
   executer: (session, { activiteId, annee, mode, remunerationNette, partDistribuee, avecRetraite, partBncPrestations }) => {
     const enregistrees = optionsEnregistrees(session, activiteId, annee)
     const base = enregistrees.options
@@ -104,6 +106,7 @@ export const comparerStatuts = definirOutil({
       activite: enregistrees.activite.name,
       reglages: { mode: repartition.mode, remunerationNette: arrondir(options.remunerationNette), partDistribuee: repartition.partDistribuee, avecRetraite: repartition.avecRetraite ?? false, partBncPrestations: options.partBncPrestations },
       meilleur: comparaison.meilleur,
+      situationNet: comparaison.situationSaisie ? arrondir(comparaison.situationSaisie.netApresImpots) : null,
       scenarios: comparaison.scenarios.map(resumeDuScenario),
       couples: comparaison.couples.map(c => ({ personnes: c.personIds.map(id => nomDe(session, id)), netActuel: arrondir(c.netApresImpotsActuel), netMaries: arrondir(c.netApresImpotsMaries) })),
       notes: [...comparaison.warnings, ...(comparaison.noteCFE ? [comparaison.noteCFE] : [])]
@@ -129,11 +132,11 @@ export function echantillon<T>(points: T[], nombre: number): T[] {
   return [...indices].map(i => points[i])
 }
 
-/** La situation actuelle de l'activité, comme un point de la courbe, avec son statut et ses frais de fonctionnement. */
-const SituationSchema = PointSchema.extend({ statut: z.string(), remunerationNette: z.number().nullable(), dividendes: z.number().nullable(), fraisFonctionnement: z.number() })
+/** La situation actuelle de l'activité, comme un point de la courbe, avec son statut. */
+const SituationSchema = PointSchema.extend({ statut: z.string(), remunerationNette: z.number().nullable(), dividendes: z.number().nullable() })
 
 function resumeDeLaSituation({ scenario, remunerationNette, dividendes }: SituationActuelle): z.infer<typeof SituationSchema> {
-  const montants = arrondirTout({ netApresImpots: scenario.netApresImpots, cotisationsSociales: scenario.cotisationsSociales, impotSocietes: scenario.impotSocietes, impotSurLeRevenu: scenario.impotSurLeRevenu, prelevementsSociaux: scenario.prelevementsSociaux, fraisFonctionnement: scenario.fraisFonctionnement })
+  const montants = arrondirTout({ netApresImpots: scenario.netApresImpots, cotisationsSociales: scenario.cotisationsSociales, impotSocietes: scenario.impotSocietes, impotSurLeRevenu: scenario.impotSurLeRevenu, prelevementsSociaux: scenario.prelevementsSociaux })
   return { statut: scenario.statut, remunerationNette: remunerationNette === null ? null : arrondir(remunerationNette), dividendes: dividendes === null ? null : arrondir(dividendes), ...montants, trimestres: scenario.protectionSociale.trimestres }
 }
 
@@ -146,7 +149,7 @@ export const optimiserRemuneration = definirOutil({
   description: [
     "Pour une activité en SASU ou EURL (statut actuel ou étudié), cherche la rémunération nette du dirigeant au meilleur net après impôts du foyer (le reste du bénéfice en dividendes), et la meilleure qui valide 4 trimestres de retraite.",
     `Rend la rémunération maximale, ces deux points, ${POINTS_DE_LA_COURBE} points de la courbe, et situationActuelle (l'activité telle que saisie), avec ecartAuMeilleur et ecartAuMeilleurAvecRetraite : le net que le foyer gagnerait à chaque point (« vous êtes à X € du meilleur net »). Montants annuels en euros, arrondis ; calcul à 100 € près.`,
-    "Ces nets comptent les frais de fonctionnement du comparateur (fraisFonctionnement, situationActuelle.fraisFonctionnement ; noteCFE si la CFE est réduite après une création) : comparez-les entre eux, pas avec simuler.",
+    "situationActuelle a le net de simuler. Dans un autre statut que l'actuel, les points ajoutent aux charges l'écart de frais de fonctionnement supposés avec le statut actuel (ecartDeFrais, négatif s'il en coûte moins, 0 dans le même statut ; noteCFE si la CFE est réduite après une création).",
     "Les points ne distribuent que le bénéfice de l'année, alors que les dividendes saisis peuvent puiser dans les réserves : un écart négatif peut venir de là.",
     "Ne modifie rien : pour retenir une rémunération, proposez un flux director_remuneration mensuel (montant annuel / 12) et ajustez les dividends_payment ; l'aperçu de la proposition donne le net obtenu."
   ].join(" "),
@@ -158,7 +161,7 @@ export const optimiserRemuneration = definirOutil({
     activite: z.string(),
     statut: z.string(),
     remunerationMaximale: z.number(),
-    fraisFonctionnement: z.number(),
+    ecartDeFrais: z.number(),
     noteCFE: z.string().nullable(),
     situationActuelle: SituationSchema.nullable(),
     meilleur: PointSchema.nullable(),
@@ -170,14 +173,14 @@ export const optimiserRemuneration = definirOutil({
   }),
   executer: (session, { activiteId, annee, statut }) => {
     const { options, annee: anneeRetenue, activite } = optionsEnregistrees(session, activiteId, annee)
-    const { optimisation, situationActuelle, fraisFonctionnement, noteCFE } = arbitrageDeLAnnee(session, options, statut, anneeRetenue)
+    const { optimisation, situationActuelle, ecartDeFrais, noteCFE } = arbitrageDeLAnnee(session, options, statut, anneeRetenue)
     return resultatSeul({
       annee: anneeRetenue,
       activiteId: activite.id,
       activite: activite.name,
       statut,
       remunerationMaximale: arrondir(optimisation.remunerationMaximale),
-      fraisFonctionnement: arrondir(fraisFonctionnement),
+      ecartDeFrais: arrondir(ecartDeFrais),
       noteCFE: noteCFE ?? null,
       situationActuelle: situationActuelle ? resumeDeLaSituation(situationActuelle) : null,
       meilleur: optimisation.meilleur ? resumeDuPoint(optimisation.meilleur) : null,

@@ -19,6 +19,12 @@ export function defaultFraisFonctionnement(): FraisFonctionnement {
   }
 }
 
+/**
+ * Message du comparateur quand l'activité comparée n'a aucun chiffre d'affaires : aucun statut n'est désigné. Il vit
+ * ici, module léger, pour que l'interface le reconnaisse sans importer le comparateur.
+ */
+export const SANS_CHIFFRE_D_AFFAIRES = "Saisissez un chiffre d'affaires pour comparer les statuts."
+
 /** « Sur toutes les années » : part du bénéfice distribuable gardée chaque année proposée par défaut (voir l'ADR 014). */
 export const PART_MISE_EN_RESERVE_PAR_DEFAUT = 0.5
 

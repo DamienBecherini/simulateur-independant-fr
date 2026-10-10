@@ -829,8 +829,29 @@ export interface ComparaisonOptions {
   repartition: RepartitionBenefice
   /** Part BNC des prestations de services quand l'activité devient une micro-entreprise (0 à 1). Ignorée si elle en est déjà une. */
   partBncPrestations: number
-  /** Frais de fonctionnement annuels par statut, ajoutés aux charges de l'activité dans chaque colonne. */
+  /**
+   * Frais de fonctionnement annuels supposés par statut. Ils ne servent qu'à estimer l'écart entre statuts : chaque
+   * colonne reçoit les frais de son statut moins ceux du statut actuel, dont les frais réels sont déjà dans la grille.
+   */
   fraisFonctionnement?: FraisFonctionnement
+}
+
+/**
+ * Écart de frais de fonctionnement supposés entre le statut d'une colonne et le statut actuel de l'activité : positif
+ * quand le statut étudié en coûte plus, négatif quand il en coûte moins ; nul pour le statut actuel.
+ */
+export interface EcartDeFrais {
+  /** Total de l'écart, en euros par an, ajouté aux charges de l'activité dans la colonne (retiré s'il est négatif). */
+  total: number
+  /** Écart de chaque poste qui diffère, CFE de l'année comprise. */
+  postes: Partial<Record<PosteFrais, number>>
+}
+
+/** La situation telle que la grille la décrit, simulée sans rien y ajouter : son net est celui des résultats de l'année. */
+export interface SituationSaisie {
+  statut: StatutCompare
+  libelle: string
+  netApresImpots: number
 }
 
 export interface ScenarioStatut {
@@ -838,8 +859,13 @@ export interface ScenarioStatut {
   libelle: string
   /** Statut actuel de l'activité. */
   actuel: boolean
-  /** Frais de fonctionnement annuels ajoutés pour ce statut. */
-  fraisFonctionnement: number
+  /**
+   * La colonne est la situation telle que saisie, sans rien y ajouter : statut actuel, et en société partage « grille ».
+   * Son net est celui des résultats de l'année.
+   */
+  telleQueSaisie: boolean
+  /** Frais de fonctionnement supposés de ce statut moins ceux du statut actuel, ajoutés aux charges de la colonne. */
+  ecartDeFrais: EcartDeFrais
   /** Bénéfice laissé dans l'activité comparée (négatif si elle est déficitaire) ; les autres montants portent sur toute la simulation. */
   resultatConserveActivite: number
   /** Micro-entreprise au-delà des plafonds de chiffre d'affaires : régime tenable deux ans au plus, jamais désigné meilleur net. */
@@ -885,8 +911,12 @@ export interface ComparaisonCouple {
 
 export interface ComparaisonResult {
   scenarios: ScenarioStatut[]
-  /** Statut au meilleur net après impôts. */
+  /** Statut au meilleur net après impôts ; `null` sans activité, ou sans chiffre d'affaires à comparer. */
   meilleur: StatutCompare | null
+  /** L'activité comparée telle que saisie, référence des écarts : son net est celui des résultats de l'année. */
+  situationSaisie?: SituationSaisie
+  /** L'activité comparée n'a aucun chiffre d'affaires cette année : aucun statut n'est désigné. */
+  sansChiffreDAffaires?: true
   /** Une entrée par couple en union libre. */
   couples: ComparaisonCouple[]
   warnings: string[]

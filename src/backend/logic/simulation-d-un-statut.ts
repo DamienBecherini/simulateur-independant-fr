@@ -2,13 +2,14 @@
 
 import { estSocieteIS, type ComparaisonOptions, type DonneesDeLAnnee, type FinancialFlow, type ScenarioStatut, type SimulationReport, type StatutCompare, type StatutSociete } from "../../types.js"
 import { scenarioDeLaColonne, type ColonneEtudiee, type SimulationDeLaColonne } from "./colonne-du-comparateur.js"
-import { convertirLActivite, estMicro } from "./conversion-de-statut.js"
-import { fraisDuStatut } from "./frais-de-fonctionnement.js"
+import { convertirLActivite, estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
+import { ecartDeFrais } from "./frais-de-fonctionnement.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 
 /*
  * Simulation d'une activité dans un statut, avec les réglages de la colonne : l'activité est convertie, reçoit la
- * rémunération, les dividendes et les frais de fonctionnement du statut, puis toute l'année est simulée par le moteur.
+ * rémunération, les dividendes et l'écart de frais de fonctionnement entre ce statut et le statut actuel, puis toute
+ * l'année est simulée par le moteur.
  * En SASU ou en EURL, les dividendes suivent la répartition choisie : part du bénéfice distribuable de l'année, ou
  * rémunération la plus haute que la société peut verser. Le comparateur (une colonne par statut) et l'optimiseur
  * (une simulation par rémunération essayée) s'appuient tous deux sur ce module.
@@ -27,8 +28,12 @@ export function toutEnDividendes(remunerationNette: number): Partial<Comparaison
   return { remunerationNette, repartition: { mode: "dividendes", partDistribuee: 1 } }
 }
 
-/** Les flux que le comparateur ajoute à l'activité convertie : rémunération, dividendes et frais de fonctionnement. */
-function fluxAjoutes(sourceId: string, statut: StatutCompare, options: ComparaisonOptions, dividendes: number | null): FinancialFlow[] {
+/**
+ * Les flux que le comparateur ajoute à l'activité convertie : rémunération, dividendes, et l'écart de frais de
+ * fonctionnement avec le statut actuel, dont les frais réels sont déjà dans la grille.
+ */
+function fluxAjoutes(source: Activite, statut: StatutCompare, options: ComparaisonOptions, dividendes: number | null): FinancialFlow[] {
+  const sourceId = source.id
   const ajouts: FinancialFlow[] = []
   if (estSocieteIS(statut) && options.remunerationNette > 0) {
     ajouts.push({ id: `comparateur-${sourceId}-remuneration`, label: "Rémunération (comparateur)", amount: options.remunerationNette, entityId: sourceId, type: "director_remuneration" })
@@ -36,23 +41,24 @@ function fluxAjoutes(sourceId: string, statut: StatutCompare, options: Comparais
   if (estSocieteIS(statut) && dividendes !== null && dividendes > 0) {
     ajouts.push({ id: `comparateur-${sourceId}-dividendes`, label: "Dividendes (comparateur)", amount: dividendes, entityId: sourceId, type: "dividends_payment" })
   }
-  const frais = fraisDuStatut(statut, options)
-  if (frais > 0) {
-    // Déductibles en société et en EI ; en micro, une simple dépense qui ne réduit ni cotisations ni impôt.
-    ajouts.push({ id: `comparateur-${sourceId}-frais`, label: "Frais de fonctionnement (comparateur)", amount: frais, entityId: sourceId, type: estMicro(statut) ? "expense" : "deductible_expense" })
+  const frais = ecartDeFrais(statut, statutActuel(source), options).total
+  if (frais !== 0) {
+    // Déductibles en société et en EI ; en micro, une simple dépense qui ne réduit ni cotisations ni impôt. Négatif,
+    // l'écart diminue d'autant les charges saisies : le statut étudié coûte moins que le statut actuel.
+    ajouts.push({ id: `comparateur-${sourceId}-frais`, label: "Écart de frais de fonctionnement (comparateur)", amount: frais, entityId: sourceId, type: estMicro(statut) ? "expense" : "deductible_expense" })
   }
   return ajouts
 }
 
 /**
  * Données de l'année dans lesquelles l'activité a pris le statut demandé, avec ses flux convertis, sa rémunération, ses
- * dividendes et ses frais ; `dividendes` à `null` garde ceux de la grille.
+ * dividendes et l'écart de frais avec son statut actuel ; `dividendes` à `null` garde ceux de la grille.
  */
 export function sessionConvertie({ donnees, source, options }: Pick<ColonneEtudiee, "donnees" | "source" | "options">, statut: StatutCompare, dividendes: number | null): DonneesDeLAnnee {
   const convertie = convertirLActivite(donnees, source, statut, options.partBncPrestations, dividendes === null)
   const monthlyData = [...convertie.monthlyData]
   // La rémunération et les dividendes calculés sont saisis sur janvier : seuls les totaux annuels comptent.
-  monthlyData[0] = { ...monthlyData[0], flows: [...monthlyData[0].flows, ...fluxAjoutes(source.id, statut, options, dividendes)] }
+  monthlyData[0] = { ...monthlyData[0], flows: [...monthlyData[0].flows, ...fluxAjoutes(source, statut, options, dividendes)] }
   return { ...convertie, monthlyData }
 }
 

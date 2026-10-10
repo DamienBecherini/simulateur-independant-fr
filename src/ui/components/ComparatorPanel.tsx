@@ -1,6 +1,6 @@
 // src/ui/components/ComparatorPanel.tsx
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useOptimisation } from "../hooks/useOptimisation"
 import { appliquerRemuneration, avecActiviteComparee, avecReglagesDeLActivite, comparableActivities, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
@@ -15,14 +15,17 @@ import { RepartitionDuBenefice } from "./RepartitionBenefice"
 import { SurToutesLesAnnees } from "./SurToutesLesAnnees"
 import { ReglagesDuComparateur } from "./ReglagesDuComparateur"
 import { ZoneDefilante } from "./ZoneDefilante"
-import { BoutonDuDetail, CartesDesStatuts, NoteDesFraisSupposes, VerdictDuComparateur } from "./SyntheseDuComparateur"
+import { BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
-import { libelleDuCoutDesTrimestres, type ResumeDeLaComparaison } from "@/lib/resume"
-import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutSociete } from "@/types"
+import { avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
+import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutCompare, type StatutSociete } from "@/types"
 import { COLONNE_FIXE } from "../colonne-fixe"
 import { ecartSigne, euros } from "@/backend/logic/format"
+
+/** Colonne micro non retenue (plafond dépassé, régime fermé) : grisée, la cellule de l'écart dit pourquoi. */
+const GRISE = "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
 
 /** Fond de l'en-tête du tableau, rendu opaque pour sa première cellule, fixe : le gris translucide sur le fond de la page. */
 const FOND_DE_L_EN_TETE = "bg-slate-100 dark:bg-[color-mix(in_oklab,var(--color-slate-800)_80%,var(--background))]"
@@ -55,11 +58,17 @@ function rate(scenario: ScenarioStatut): string {
   return (scenario.totalPrelevements / scenario.revenusAvantPrelevements).toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 })
 }
 
-/** Lignes du tableau : libellé et valeur d'une colonne. Seule la dernière porte sur l'activité comparée. */
-const rows = (activityName: string): { label: string; value: (s: ScenarioStatut) => string; strong?: boolean }[] => [
-  { label: "Net dans la poche", value: s => euros(s.netApresImpots), strong: true },
+/** Écart de frais de gestion d'une colonne avec le statut actuel : « +2 050 € », « −850 € », « — » s'il n'y en a pas. */
+const ecartDeFrais = (s: ScenarioStatut) => (Math.round(s.ecartDeFrais.total) === 0 ? "—" : ecartSigne(s.ecartDeFrais.total))
+
+/**
+ * Lignes du tableau : libellé et valeur d'une colonne, et ce que la cellule précise dessous (l'écart de frais de gestion
+ * sous le net). Seule la dernière porte sur l'activité comparée.
+ */
+const rows = (activityName: string, actuel: StatutCompare | undefined): { label: string; value: (s: ScenarioStatut) => string; detail?: (s: ScenarioStatut) => ReactNode; strong?: boolean }[] => [
+  { label: "Net dans la poche", value: s => euros(s.netApresImpots), detail: s => <EcartDeFraisDeLaColonne scenario={s} actuel={actuel} />, strong: true },
   { label: "Taux global de prélèvement", value: rate },
-  { label: "Frais de fonctionnement", value: s => euros(s.fraisFonctionnement) },
+  { label: "Frais de gestion par rapport au statut actuel", value: ecartDeFrais },
   { label: "Cotisations sociales", value: s => euros(s.cotisationsSociales) },
   { label: "Impôt sur les sociétés", value: s => euros(s.impotSocietes) },
   { label: "Impôt sur le revenu", value: s => euros(s.impotSurLeRevenu) },
@@ -99,15 +108,16 @@ function MentionDuPlafond({ scenario }: { scenario: ScenarioStatut }) {
 
 const pastilleNote ="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-100"
 
-/** En-tête d'une colonne : le statut, ses mentions (actuel, meilleur net) et ses renvois aux notes sous le tableau. */
+/**
+ * En-tête d'une colonne : le statut, ses mentions (actuel : la situation saisie, au net des résultats ; meilleur net) et
+ * ses renvois aux notes sous le tableau. Une colonne micro non retenue est grisée.
+ */
 function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioStatut; meilleur: boolean; renvois: number[] }) {
-  const mentions = [scenario.actuel ? "actuel" : null, meilleur ? "meilleur net" : null].filter(Boolean).join(" · ")
+  const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null].filter(Boolean).join(" · ")
   return (
-    <th scope="col" className={cn("px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "bg-emerald-100 dark:bg-emerald-900/40")}>
+    <th scope="col" className={cn("px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "bg-emerald-100 dark:bg-emerald-900/40", estNonRetenue(scenario) && GRISE)}>
       {scenario.libelle}
       <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{mentions || " "}</span>
-      {/* Le net du statut actuel diffère de celui des résultats du foyer : il compte des frais de fonctionnement supposés. */}
-      {scenario.actuel && scenario.fraisFonctionnement > 0 ? <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">frais supposés compris</span> : null}
       <RemunerationRetenue scenario={scenario} />
       <MentionDuPlafond scenario={scenario} />
       {renvois.length > 0 ? (
@@ -123,6 +133,37 @@ function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioSta
   )
 }
 
+/** Fond d'une cellule de colonne : vert pour le meilleur net, gris pour une colonne micro non retenue. */
+function fondDeLaCellule(s: ScenarioStatut, meilleur: ComparaisonResult["meilleur"]): string | undefined {
+  if (s.statut === meilleur) return "bg-emerald-50 dark:bg-emerald-950/30"
+  return estNonRetenue(s) ? GRISE : undefined
+}
+
+/**
+ * Écart du net de chaque colonne avec la situation telle que saisie (le net des résultats). Une colonne micro non
+ * retenue n'est pas colorée : la cellule dit pourquoi elle ne l'est pas.
+ */
+function LigneDeLEcart({ result }: { result: ComparaisonResult }) {
+  if (netDeLaSituationSaisie(result) === null) return null
+  return (
+    <tr className="border-t border-slate-200 dark:border-slate-700">
+      <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
+        Écart avec votre situation actuelle
+      </th>
+      {result.scenarios.map(s => {
+        const ecart = ecartAvecLaSituationSaisie(result, s)
+        const raison = raisonDeNonRetenue(s)
+        return (
+          <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", ecart !== null && !raison && deltaClass(ecart), fondDeLaCellule(s, result.meilleur))}>
+            {ecart === null ? "—" : ecartSigne(ecart)}
+            {raison ? <span className="block text-xs font-medium text-slate-700 dark:text-slate-300">{raison}</span> : null}
+          </td>
+        )
+      })}
+    </tr>
+  )
+}
+
 interface ComparisonTableProps {
   result: ComparaisonResult
   activityName: string
@@ -135,17 +176,17 @@ interface ComparisonTableProps {
 
 function ComparisonTable({ result, activityName, renvois, reduit = false, detailOuvert = false, className }: ComparisonTableProps) {
   if (result.scenarios.length === 0) return null
-  const current = result.scenarios.find(s => s.actuel)
-  const best = (s: ScenarioStatut) => s.statut === result.meilleur
+  const fond = (s: ScenarioStatut) => fondDeLaCellule(s, result.meilleur)
 
-  const lignes = rows(activityName).map(row => (
+  const lignes = rows(activityName, result.situationSaisie?.statut).map(row => (
     <tr key={row.label} className="border-t border-slate-200 dark:border-slate-700">
       <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
         {row.label}
       </th>
       {result.scenarios.map(s => (
-        <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", row.strong && "font-semibold", best(s) && "bg-emerald-50 dark:bg-emerald-950/30")}>
+        <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", row.strong && "font-semibold", fond(s))}>
           {row.value(s)}
+          {row.detail?.(s)}
         </td>
       ))}
     </tr>
@@ -156,7 +197,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
         Protection sociale
       </th>
       {result.scenarios.map(s => (
-        <td key={s.statut} className={cn("px-3 py-2 text-right", best(s) && "bg-emerald-50 dark:bg-emerald-950/30")} title={s.protectionSociale.resume}>
+        <td key={s.statut} className={cn("px-3 py-2 text-right", fond(s))} title={s.protectionSociale.resume}>
           <span aria-hidden="true" className="tracking-wider text-amber-500">
             {stars(s.protectionSociale.etoiles)}
           </span>
@@ -166,19 +207,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
       ))}
     </tr>
   )
-  const ecart = current ? (
-    <tr className="border-t border-slate-200 dark:border-slate-700">
-      <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
-        Écart avec le statut actuel
-      </th>
-      {result.scenarios.map(s => (
-        <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", deltaClass(s.netApresImpots - current.netApresImpots), best(s) && "bg-emerald-50 dark:bg-emerald-950/30")}>
-          {s.actuel ? "—" : ecartSigne(s.netApresImpots - current.netApresImpots)}
-        </td>
-      ))}
-    </tr>
-  ) : null
-
+  const ecart = <LigneDeLEcart result={result} />
   return (
     <ZoneDefilante libelle="Tableau de comparaison" className={cn("rounded-lg border border-slate-200 dark:border-slate-700", className)}>
       <table className="w-full min-w-[48rem] text-sm print:min-w-0 print:text-[8pt]" aria-label="Comparaison des statuts">
@@ -188,7 +217,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
               <span className="sr-only">Indicateur</span>
             </th>
             {result.scenarios.map(s => (
-              <EnTeteDeStatut key={s.statut} scenario={s} meilleur={best(s)} renvois={renvois.get(s.statut) ?? []} />
+              <EnTeteDeStatut key={s.statut} scenario={s} meilleur={s.statut === result.meilleur} renvois={renvois.get(s.statut) ?? []} />
             ))}
           </tr>
         </thead>
@@ -298,10 +327,11 @@ function ComparisonResults({ result, activityName, onExporter }: { result: Compa
           <BoutonExportCsv contenu="le tableau de comparaison" onClick={onExporter} />
         </div>
       ) : null}
+      <SituationTelleQueSaisie result={result} />
       {reduit ? <CartesDesStatuts result={result} className="sm:hidden print:hidden" /> : null}
       <ComparisonTable result={result} activityName={activityName} renvois={renvois} reduit={reduit} detailOuvert={detailOuvert} className={reduit && !detailOuvert ? "max-sm:hidden print:block" : undefined} />
       {reduit ? <BoutonDuDetail ouvert={detailOuvert} onClick={() => setDetailOuvert(!detailOuvert)} /> : null}
-      <NoteDesFraisSupposes result={result} />
+      <RappelDesFrais result={result} />
       <NotesDuTableau notes={notes} activityName={activityName} />
       <ProtectionDetails scenarios={result.scenarios} />
     </>
@@ -434,7 +464,7 @@ function ReglagesEtPartage({ vue, activities, selected, options, result, arbitra
         onSelect={onSelect}
         onChange={changes => onChange({ ...options, ...changes })}
       />
-      <WarningList warnings={result?.warnings ?? []} />
+      <WarningList warnings={avertissementsSansLeVerdict(result?.warnings ?? [])} />
       {/* Affichage « Résumé » : le partage du bénéfice n'est déplié d'office qu'en répartition personnalisée, où il sert à régler. */}
       <ReplieEnResume titre={`Partage du bénéfice en ${arbitrage.statut} (barre réglable)`} id="comparateur-partage" className="text-sm" replie={options.repartition.mode !== "personnalisee"}>
         <RepartitionDuBenefice activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} scenario={scenarioDuStatut(result, arbitrage.statut)} optimisation={arbitrage.resultat} options={options} onChange={onChange} />
@@ -472,7 +502,7 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
           Comparateur de statuts
         </h2>
         <ReplieEnResume titre={`Année ${vue.annee} : ce que compare le tableau`} id="comparateur-explication" className="text-sm text-slate-600 dark:text-slate-400">
-          <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée. Les charges d'une micro-entreprise y deviennent déductibles dans les statuts au réel (société, EI).</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée. Les charges d'une micro-entreprise y deviennent déductibles dans les statuts au réel (société, EI). La colonne « actuel » est votre situation telle que saisie, au même net que les résultats ; les autres statuts y ajoutent seulement l'écart de frais de gestion estimé avec le vôtre.</p>
         </ReplieEnResume>
       </div>
       <VerdictDuComparateur result={result} activite={selected?.name} />

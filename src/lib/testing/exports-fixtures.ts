@@ -170,7 +170,8 @@ function scenario(statut: ScenarioStatut["statut"], libelle: string, net: number
     statut,
     libelle,
     actuel: false,
-    fraisFonctionnement: 1000,
+    telleQueSaisie: false,
+    ecartDeFrais: { total: 1000, postes: { expertComptable: 1000 } },
     resultatConserveActivite: 0,
     horsPlafond: false,
     protectionSociale: { etoiles: 3, trimestres: 4, resume: "Régime général." },
@@ -189,8 +190,9 @@ function scenario(statut: ScenarioStatut["statut"], libelle: string, net: number
 
 export function comparaisonExemple(): ComparaisonResult {
   return {
-    scenarios: [scenario("SASU", "SASU", 20000, { actuel: true, resultatConserveActivite: 400 }), scenario("micro", "Micro-entreprise", 22500.5, { warnings: ["Plafond dépassé."], protectionSociale: { etoiles: 2, trimestres: 4, resume: "Indépendant." } })],
+    scenarios: [scenario("SASU", "SASU", 20000, { actuel: true, telleQueSaisie: true, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 400 }), scenario("micro", "Micro-entreprise", 22500.5, { ecartDeFrais: { total: -2050, postes: { expertComptable: -2000, banque: -50 } }, warnings: ["Plafond dépassé."], protectionSociale: { etoiles: 2, trimestres: 4, resume: "Indépendant." } })],
     meilleur: "micro",
+    situationSaisie: { statut: "SASU", libelle: "SASU", netApresImpots: 20000 },
     couples: [],
     warnings: ["Comparaison indicative."]
   }
