@@ -17,8 +17,10 @@
 
 import { STATUTS_SOCIETE, type AnneeDUneStrategie, type ReglagesComparateur, type ResultatDUneStrategie, type SessionState, type SimulationReport, type StatutSociete, type StrategieDeDistribution, type StrategiesDeDistribution, type StrategiesDUnStatut } from "../../types.js"
 import { vueDeLAnnee } from "./annees.js"
-import { activiteComparee, avecLaCFEDeLAnnee, sessionConvertie } from "./comparateur.js"
+import { activiteComparee } from "./conversion-de-statut.js"
+import { avecLaCFEDeLAnnee } from "./frais-de-fonctionnement.js"
 import { optionsDuComparateur, PART_MISE_EN_RESERVE_PAR_DEFAUT } from "./options-du-comparateur.js"
+import { sessionConvertie } from "./simulation-d-un-statut.js"
 import { simulerLesAnnees, type AnneePreparee } from "./simulation-pluriannuelle.js"
 
 /** Dividendes de chaque année, par année. */
@@ -32,7 +34,7 @@ function simulerAvec(session: SessionState, activityId: string, reglages: Reglag
     const annee = contexte.annee ?? regles.annee
     // Les réglages de l'année : la rémunération saisie pour elle (sinon celle de sa grille), les frais avec sa CFE.
     const options = avecLaCFEDeLAnnee(optionsDuComparateur(vueDeLAnnee(session, annee), activityId, reglages), source, annee, regles).options
-    return sessionConvertie(donnees, source, statut, options, plan?.get(annee) ?? 0)
+    return sessionConvertie({ donnees, source, options }, statut, plan?.get(annee) ?? 0)
   }).annees
 }
 

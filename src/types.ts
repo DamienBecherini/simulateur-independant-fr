@@ -287,7 +287,7 @@ export const POSTES_FRAIS = ["expertComptable", "banque", "logiciel", "assurance
  * Statuts pour lesquels on saisit des frais : la micro-entreprise a les mêmes, avec ou sans versement libératoire.
  * Liste écrite à part de `STATUTS_JURIDIQUES` : chaque statut y est une clé obligatoire des fichiers enregistrés. Un
  * nouveau statut s'y ajoute (avec ses frais par défaut) ou reprend les frais d'un autre ; `FRAIS_DES_COLONNES`
- * (comparateur.ts) oblige à choisir.
+ * (frais-de-fonctionnement.ts) oblige à choisir.
  */
 export const STATUTS_FRAIS = ["SASU", "EURL", "EI", "micro"] as const
 
