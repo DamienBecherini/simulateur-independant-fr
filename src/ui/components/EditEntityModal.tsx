@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import type { Entity, Relationship } from "@/types"
 import { Trash2, PlusCircle, ArrowRight } from "lucide-react"
 import { AIDE_RELATION_SALARIE, getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
@@ -30,6 +30,15 @@ interface LocalState {
   relationships: Relationship[]
 }
 
+/** Ce dont le formulaire est parti, pour le réinitialiser quand cela change. */
+interface SourceDuFormulaire {
+  entity: Entity | null
+  relationships: Relationship[]
+  isOpen: boolean
+}
+
+const memeSource = (a: SourceDuFormulaire | null, b: SourceDuFormulaire) => a !== null && a.entity === b.entity && a.relationships === b.relationships && a.isOpen === b.isOpen
+
 function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relationships, anneesSimulees, annee }: EditEntityModalProps) {
   const [formData, setFormData] = useState<LocalState>({ entity: null, relationships: [] })
 
@@ -37,7 +46,11 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
   const [targetId, setTargetId] = useState<string | undefined>()
   const [relationshipType, setRelationshipType] = useState<Relationship["type"] | undefined>()
 
-  useEffect(() => {
+  // À l'ouverture et à chaque changement de l'acteur ou des relations reçus, le formulaire repart d'eux ; mise à jour
+  // pendant le rendu plutôt que dans un effet.
+  const [source, setSource] = useState<SourceDuFormulaire | null>(null)
+  if (!memeSource(source, { entity, relationships, isOpen })) {
+    setSource({ entity, relationships, isOpen })
     if (isOpen && entity) {
       // Copies de travail : rien ne change dans la session avant « Enregistrer ».
       setFormData({ entity: structuredClone(entity), relationships: structuredClone(relationships) })
@@ -45,7 +58,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
     setAddingRelation(false)
     setTargetId(undefined)
     setRelationshipType(undefined)
-  }, [entity, relationships, isOpen])
+  }
 
   const localEntity = formData.entity
   const localRelationships = formData.relationships
