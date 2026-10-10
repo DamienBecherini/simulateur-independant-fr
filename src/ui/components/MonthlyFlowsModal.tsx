@@ -15,6 +15,7 @@ import { NatureDuChiffreDAffaires } from "./NatureDuChiffreDAffaires"
 import { useTriAccessible } from "../hooks/useTriAccessible"
 import { anneesDuRaccourci, LIBELLES_PORTEE, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, type PorteeRecurrence, type RaccourciAnnees } from "@/lib/flux-recurrents"
 import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
+import type { ReglesFiscales } from "@/backend/logic/regles"
 import { cn } from "@/lib/utils"
 
 /**
@@ -76,6 +77,21 @@ function CaseMontantAnnuel({ coche, onChange }: { coche: boolean; onChange: (coc
       Montant annuel, réparti sur les 12 mois
     </label>
   )
+}
+
+interface NatureSiMicroEntrepriseProps {
+  entity: Entity
+  regles: ReglesFiscales
+  type: FlowType
+  onChange: (type: FlowType) => void
+  flows: FinancialFlow[]
+}
+
+/** Le choix expliqué de la nature du chiffre d'affaires, pour une micro-entreprise seulement ; la note sur les achats dès qu'une vente est en jeu. */
+function NatureSiMicroEntreprise({ entity, regles, type, onChange, flows }: NatureSiMicroEntrepriseProps) {
+  if (entity.type !== "micro-entreprise") return null
+  const avecLaVente = type === "ca_micro_vente" || flows.some(f => f.type === "ca_micro_vente")
+  return <NatureDuChiffreDAffaires activite={entity} regles={regles} valeur={type} onChange={onChange} avecLaVente={avecLaVente} />
 }
 
 /** Mise en évidence d'un réglage qui étend les opérations au-delà du mois ouvert. */
@@ -222,7 +238,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
           )}
 
           <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee, aussiEn, repartirSurLAnnee)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} regles={regles} montantAnnuel={repartirSurLAnnee} />
-          {entity.type === "micro-entreprise" ? <NatureDuChiffreDAffaires activite={entity} regles={regles} valeur={newFlowType} onChange={setNewFlowType} avecLaVente={newFlowType === "ca_micro_vente" || flows.some(f => f.type === "ca_micro_vente")} /> : null}
+          <NatureSiMicroEntreprise entity={entity} regles={regles} type={newFlowType} onChange={setNewFlowType} flows={flows} />
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-sm text-slate-700 dark:text-slate-300">
             {/* `min-w-0 max-w-full` : avec une police large, la liste se resserre à la largeur de la fenêtre au lieu de la déborder. */}
             <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
