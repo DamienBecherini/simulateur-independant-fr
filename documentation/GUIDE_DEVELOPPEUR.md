@@ -39,6 +39,7 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run dev:web` | La démo web (moteur dans la page) sur http://localhost:3524/simulateur-independant-fr/. | Développer la démo. |
 | `npm test` | Tests Vitest (logique sous Node, composants sous jsdom), sans couverture. | En continu. |
 | `npx vitest run <fichiers>` | Seulement ces fichiers. Ajoutez `--reporter=verbose` pour voir les `console.log` d'un test qui réussit. | Après chaque petite modification. |
+| `npm run simuler -- <fichier.json>` | Passe une session dans le moteur et affiche, année par année, les montants clés de chaque activité et de chaque foyer, les avertissements et l'année des règles. Options `--annee`, `--acteur`, `--json` (§ 3.7). | Déboguer un calcul. |
 | `npm run test:coverage` | Tous les tests, avec la couverture (seuil bloquant : 90 % sur `src/backend/logic` et `src/lib`). Rapport dans `coverage/`. | Avant de commiter. |
 | `npx tsc -b` | Types de l'interface, de `src/lib`, de `src/web` et des tests de bout en bout (pas `tsc -p .`, qui ne vérifie rien : `tsconfig.json` ne fait que référencer les projets). | Avant de commiter. |
 | `npm run transpile:electron` | Types et compilation de `src/backend` (process principal, moteur, serveur MCP), puis empaquetage du serveur MCP. | Avant de commiter si `src/backend` a changé. |
@@ -81,7 +82,7 @@ npx eslint . && npx tsc -b && npm run transpile:electron && npm run typecheck:te
 | `src/globals.d.ts` | `EventPayloadMapping` : le contrat de `window.api`, commun à Electron et à la démo. |
 | `e2e/`, `e2e-web/` | Tests de bout en bout (application de bureau, démo web). |
 | `documentation/` | Ce guide, les ADR, la publication, les dossiers de recherche (`recherche/`), la relecture d'octobre 2026. |
-| `scripts/` | Empaquetage du serveur MCP, paquet du Microsoft Store, scripts des retours des utilisateurs (`scripts/retours/`). |
+| `scripts/` | Empaquetage du serveur MCP, paquet du Microsoft Store, commande `npm run simuler` (`simuler.mjs`, logique dans `src/lib/simuler-en-ligne-de-commande.ts`), scripts des retours des utilisateurs (`scripts/retours/`). |
 
 ### 1.4 Conventions
 
@@ -322,7 +323,24 @@ Un cas de référence lance le moteur avec les règles **réelles** d'une année
    - le **rapport Markdown** : « Exporter » → « Rapport complet (Markdown) » ; il contient les hypothèses, les acteurs, les flux, le détail des cotisations ligne à ligne, l'impôt du foyer et le comparateur ;
    - ou le **fichier de la simulation** : l'enregistrer dans une sauvegarde, puis panneau des paramètres → « Exporter cette sauvegarde… » (JSON).
 2. **Reproduire dans l'application** : `npm run dev`, panneau des paramètres → « Importer une simulation… », puis lire la carte de l'activité (détail des cotisations dépliable), le foyer et la synthèse des années. Sans fichier, chercher un scénario proche dans le bouton « Tests » (§ 3.8) ou un montage type, et l'adapter.
-3. **Reproduire dans un test**, pour isoler l'année et la ligne : un fichier temporaire `src/lib/debogage.test.ts` (à ne pas commiter) :
+3. **Simuler le fichier en ligne de commande**, sans écrire de test :
+
+   ```sh
+   npm run simuler -- chemin/vers/simulation.json
+   npm run simuler -- chemin/vers/simulation.json --annee 2025 --acteur "Martin Conseil"
+   npm run --silent simuler -- chemin/vers/simulation.json --annee 2025 --json > rapport-2025.json
+   ```
+
+   (`--silent` : sans lui, npm écrit en tête de la sortie le nom du script et la commande lancée, et le fichier n'est plus du JSON.)
+
+   Le fichier (export d'une sauvegarde, export complet ou `sessionState.json`) est lu comme à l'ouverture dans l'application : conversion d'un format précédent, validation par le schéma, nettoyage (`lireLaSession`) ; ce qui a été écarté ou converti est dit en tête. Toutes les années sont calculées (`simulerLesAnnees` : une année hérite des précédentes), puis, pour chacune : l'année des règles appliquées (« règles de 2026, les dernières connues » pour une année plus récente) et ses avertissements ; chaque activité (chiffre d'affaires, charges, cotisations, brut, net et coût du président, assiette du TNS, IS, revenu versé, résultat conservé, versement libératoire, dispositifs, avertissements précédés de `!`) ; chaque foyer (parts, revenus encaissés, revenu imposable, revenu fiscal de référence, impôt, prélèvements sociaux, imposition des dividendes, net après impôts) ; le bilan de l'année. Options :
+   - `--annee AAAA` : cette année seulement ;
+   - `--acteur NOM` : ce qui concerne cet acteur (identifiant, nom, ou partie du nom qui ne désigne que lui, sans tenir compte de la casse) : pour une personne, ses activités et son foyer ; pour une activité, elle et les foyers de ses bénéficiaires ; le bilan, qui porte sur toute la session, n'est alors pas affiché ;
+   - `--json` : les rapports entiers du moteur (`{ annees: ResultatAnnee[] }`), pour chercher une ligne précise (`cotisationsTNS.cotisations`, `salaries`, `reserves`…) ; il se combine avec `--annee`, pas avec `--acteur` ;
+   - `--aide` : l'usage.
+
+   Un chemin relatif se lit depuis le dossier où la commande est tapée. Codes de sortie : 0 ; 1 pour un fichier introuvable, illisible (pas du JSON) ou refusé (session refusée en bloc par le schéma, précédée alors du détail des erreurs de Zod ; années qui ne se suivent pas), avec le message sur la sortie d'erreur ; 2 pour une option invalide, une année absente de la session ou un acteur introuvable. Le script (`scripts/simuler.mjs`) compile en mémoire, avec esbuild, `src/lib/simuler-en-ligne-de-commande.ts`, qui contient toute la logique et ses tests.
+4. **Reproduire dans un test**, pour isoler l'année et la ligne quand les montants clés ne suffisent pas : un fichier temporaire `src/lib/debogage.test.ts` (à ne pas commiter) :
 
    ```ts
    import { readFileSync } from "node:fs"
@@ -341,10 +359,10 @@ Un cas de référence lance le moteur avec les règles **réelles** d'une année
    })
    ```
 
-   `npx vitest run src/lib/debogage.test.ts --reporter=verbose` (sans `--reporter=verbose`, les `console.log` d'un test qui réussit ne s'affichent pas). Écrire `annees[annees.length - 1]` et non `annees.at(-1)` : la cible de compilation de l'interface ne connaît pas `at` (erreur de `npx tsc -b`). Dans le rapport : `activities[].cotisationsTNS.cotisations` (lignes d'un indépendant), `cotisationsPresident`, `salaries`, `versementLiberatoire`, `acre`, `reserves`, `foyers[].impotSurLeRevenu`, `avertissements`. Une commande `npm run simuler -- fichier.json [année]` qui imprime ce rapport est à venir (branche `script-simuler`).
-4. **Retrouver la règle** : `reglesDeLAnnee(annee)` (rapport : `anneeDesRegles`, et un avertissement si l'année reprend les dernières règles connues), le bloc du fichier `src/backend/regles/<année>.json`, sa `description` et sa `source`. Vérifier la valeur sur la source : l'erreur peut être dans les règles, pas dans le code.
-5. **Refaire le calcul à la main** et l'écrire comme un **cas de référence** (§ 3.6) qui échoue avec le code actuel. Identité du bilan fausse : un montant est perdu ou compté deux fois entre activités et foyers (routage des flux dans `simulation-engine.ts`).
-6. **Corriger**, dans les règles (avec une source) ou dans le calcul (avec un test unitaire sur `reglesDeTest`), jusqu'à ce que le cas passe ; vérifier qu'aucun autre cas de référence ne change sans raison. CHANGELOG (Corrigé), et réponse au ticket.
+   `npx vitest run src/lib/debogage.test.ts --reporter=verbose` (sans `--reporter=verbose`, les `console.log` d'un test qui réussit ne s'affichent pas). Écrire `annees[annees.length - 1]` et non `annees.at(-1)` : la cible de compilation de l'interface ne connaît pas `at` (erreur de `npx tsc -b`). Dans le rapport : `activities[].cotisationsTNS.cotisations` (lignes d'un indépendant), `cotisationsPresident`, `salaries`, `versementLiberatoire`, `acre`, `reserves`, `foyers[].impotSurLeRevenu`, `avertissements`.
+5. **Retrouver la règle** : `reglesDeLAnnee(annee)` (rapport : `anneeDesRegles`, et un avertissement si l'année reprend les dernières règles connues), le bloc du fichier `src/backend/regles/<année>.json`, sa `description` et sa `source`. Vérifier la valeur sur la source : l'erreur peut être dans les règles, pas dans le code.
+6. **Refaire le calcul à la main** et l'écrire comme un **cas de référence** (§ 3.6) qui échoue avec le code actuel. Identité du bilan fausse : un montant est perdu ou compté deux fois entre activités et foyers (routage des flux dans `simulation-engine.ts`).
+7. **Corriger**, dans les règles (avec une source) ou dans le calcul (avec un test unitaire sur `reglesDeTest`), jusqu'à ce que le cas passe ; vérifier qu'aucun autre cas de référence ne change sans raison. CHANGELOG (Corrigé), et réponse au ticket.
 
 ### 3.8 Ajouter un scénario au bouton « Tests »
 
