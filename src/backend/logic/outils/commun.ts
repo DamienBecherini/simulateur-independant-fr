@@ -126,7 +126,7 @@ export function verifierTypePermis(acteur: Entity, typeFlux: TypeDeFlux): void {
 // ===================================================================================
 
 export const TYPES_DE_RELATION_FAMILIALE: Relationship["type"][] = ["Marié(e)", "PACSé(e)", "En couple", "Enfant"]
-const DIRECTION: Relationship["type"][] = ["Président", "Gérant", "Titulaire"]
+const DIRECTION = new Set<Relationship["type"]>(["Président", "Gérant", "Titulaire"])
 
 /** Relations possibles d'une personne vers une activité, selon le statut de l'activité (voir `RELATIONS_PAR_STATUT`). */
 const RELATIONS_VERS_UNE_ACTIVITE: Record<Exclude<GenreDActeur, "personne">, Relationship["type"][]> = {
@@ -156,16 +156,28 @@ export function verifierNouvelleRelation(session: Pick<SessionState, "entities" 
   if (existantes.includes(type)) throw new ErreurOutil(`La relation « ${type} » existe déjà entre « ${de.name} » et « ${vers.name} ».`)
 
   if (de.type === "person" && vers.type === "person") {
-    if (!TYPES_DE_RELATION_FAMILIALE.includes(type)) throw new ErreurOutil(`Entre deux personnes, seules ces relations existent : ${TYPES_DE_RELATION_FAMILIALE.join(", ")}.`)
-    if (existantes.length > 0) throw new ErreurOutil(`« ${de.name} » et « ${vers.name} » ont déjà un lien familial (${existantes.join(", ")}) : un seul est possible.`)
+    verifierLienFamilial(de, vers, type, existantes)
     return
   }
   if (de.type !== "person") throw new ErreurOutil("Une relation part d'une personne : « deId » est la personne (le parent pour « Enfant »), « versId » la personne ou l'activité.")
+  verifierRelationVersUneActivite(de, vers, type, existantes)
+}
 
+/** Entre deux personnes : un lien familial, un seul. `existantes` : les relations déjà présentes entre elles. */
+function verifierLienFamilial(de: Entity, vers: Entity, type: Relationship["type"], existantes: Relationship["type"][]): void {
+  if (!TYPES_DE_RELATION_FAMILIALE.includes(type)) throw new ErreurOutil(`Entre deux personnes, seules ces relations existent : ${TYPES_DE_RELATION_FAMILIALE.join(", ")}.`)
+  if (existantes.length > 0) throw new ErreurOutil(`« ${de.name} » et « ${vers.name} » ont déjà un lien familial (${existantes.join(", ")}) : un seul est possible.`)
+}
+
+/**
+ * D'une personne vers une activité : les relations du statut de l'activité, et jamais direction et salariat ensemble.
+ * `existantes` : les relations déjà présentes entre elles.
+ */
+function verifierRelationVersUneActivite(de: Entity, vers: Entity, type: Relationship["type"], existantes: Relationship["type"][]): void {
   const possibles = RELATIONS_VERS_UNE_ACTIVITE[genreDe(vers) as Exclude<GenreDActeur, "personne">]
   if (!possibles.includes(type)) throw new ErreurOutil(`Relations possibles d'une personne vers « ${vers.name} » (${genreDe(vers)}) : ${possibles.join(", ")}.`)
-  if (type === "Salarié" && existantes.some(t => DIRECTION.includes(t))) throw new ErreurOutil(`« ${de.name} » dirige déjà « ${vers.name} » : pas de relation « Salarié » en plus.`)
-  if (DIRECTION.includes(type) && existantes.includes("Salarié")) throw new ErreurOutil(`« ${de.name} » est déjà salarié(e) de « ${vers.name} » : pas de relation de direction en plus.`)
+  if (type === "Salarié" && existantes.some(t => DIRECTION.has(t))) throw new ErreurOutil(`« ${de.name} » dirige déjà « ${vers.name} » : pas de relation « Salarié » en plus.`)
+  if (DIRECTION.has(type) && existantes.includes("Salarié")) throw new ErreurOutil(`« ${de.name} » est déjà salarié(e) de « ${vers.name} » : pas de relation de direction en plus.`)
 }
 
 // ===================================================================================
@@ -177,12 +189,17 @@ function jsonCanonique(valeur: unknown): string {
   if (Array.isArray(valeur)) return `[${valeur.map(jsonCanonique).join(",")}]`
   if (valeur !== null && typeof valeur === "object") {
     const entrees = Object.entries(valeur as Record<string, unknown>).filter(([, v]) => v !== undefined)
-    return `{${entrees
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-      .map(([cle, v]) => `${JSON.stringify(cle)}:${jsonCanonique(v)}`)
-      .join(",")}}`
+    entrees.sort(([a], [b]) => comparerLesCles(a, b))
+    const membres = entrees.map(([cle, v]) => `${JSON.stringify(cle)}:${jsonCanonique(v)}`)
+    return `{${membres.join(",")}}`
   }
   return JSON.stringify(valeur) ?? "null"
+}
+
+/** Ordre des unités de code UTF-16, indépendant de la langue (pas `localeCompare`) : le même sur toutes les machines. */
+function comparerLesCles(a: string, b: string): number {
+  if (a < b) return -1
+  return a > b ? 1 : 0
 }
 
 /** Hachage FNV-1a sur 32 bits, en hexadécimal. Sert à repérer un changement, pas à protéger un secret. */

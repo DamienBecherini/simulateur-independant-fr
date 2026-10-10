@@ -8,7 +8,7 @@
  */
 
 import { app, type BrowserWindow } from "electron"
-import path from "path"
+import path from "node:path"
 import { infosDeLInstallation, type InfosDuServeurMcp } from "@/lib/configuration-mcp.js"
 import { ouvrirLaBoiteAuxPropositions } from "./boite-aux-propositions.js"
 import { copierLeServeurMcp } from "./copie-du-serveur-mcp.js"

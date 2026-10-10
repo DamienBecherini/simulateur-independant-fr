@@ -20,9 +20,19 @@ describe("parseAmount", () => {
   })
 
   it("renvoie null pour une saisie vide, négative ou non numérique", () => {
-    for (const saisie of ["", "   ", "-5", "abc", "12abc", "1,2,3", "1e3"]) {
+    for (const saisie of ["", "   ", "-5", "abc", "12abc", "1,2,3", "1e3", ".", "1..2"]) {
       expect(parseAmount(saisie)).toBeNull()
     }
+  })
+
+  it("accepte un point final sans décimales, comme avant", () => {
+    expect(parseAmount("12.")).toBe(12)
+  })
+
+  it("lit en temps linéaire une saisie très longue (expression sans retour arrière)", () => {
+    // L'ancienne expression (\d+\.?\d*) essayait chaque découpage des chiffres avant d'échouer : quadratique.
+    expect(parseAmount(`${"1".repeat(50_000)}x`)).toBeNull()
+    expect(parseAmount(`${"1".repeat(50_000)}.${"2".repeat(50_000)}x`)).toBeNull()
   })
 })
 

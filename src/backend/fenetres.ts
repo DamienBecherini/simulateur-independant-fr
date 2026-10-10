@@ -7,7 +7,7 @@
  */
 
 import { app, BrowserWindow, shell } from "electron"
-import path from "path"
+import path from "node:path"
 import { isDev } from "./isDev.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
 import { ADRESSE_DU_SERVEUR_DE_DEVELOPPEMENT, PREFERENCES_SURES, adresseAOuvrirHorsDeLApplication, navigationAutorisee } from "./securite-des-fenetres.js"

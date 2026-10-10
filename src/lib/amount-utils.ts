@@ -7,7 +7,8 @@
  */
 export function parseAmount(input: string): number | null {
   const normalized = input.replace(/[\s€]/g, "").replace(",", ".")
-  if (!/^(\d+\.?\d*|\.\d+)$/.test(normalized)) return null
+  // Des chiffres, avec au plus un point suivi de chiffres : une seule lecture possible de la saisie (pas de retour arrière).
+  if (!/^(\d+(\.\d*)?|\.\d+)$/.test(normalized)) return null
   const amount = Number(normalized)
   return Number.isFinite(amount) ? amount : null
 }

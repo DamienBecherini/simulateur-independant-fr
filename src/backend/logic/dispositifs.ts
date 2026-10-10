@@ -61,7 +61,7 @@ export function joursDActivite(creation: MoisCivil): number {
  * (sauf création en janvier : année entière), l'année entière sinon ou sans date de création.
  */
 export function prorataDesPlafonds(creation: MoisCivil | null, annee: number): number {
-  if (!creation || creation.annee !== annee) return 1
+  if (creation?.annee !== annee) return 1
   return Math.min(1, joursDActivite(creation) / JOURS_DU_PRORATA)
 }
 

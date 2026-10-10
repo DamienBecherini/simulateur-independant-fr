@@ -2,7 +2,7 @@
 
 import { ipcMain, type WebFrameMain } from "electron"
 import { getUIPath } from "./pathResolver.js"
-import { pathToFileURL } from "url"
+import { pathToFileURL } from "node:url"
 import type { EventPayloadMapping } from "@/globals.js"
 import { isDev } from "./isDev.js"
 import { ADRESSE_DU_SERVEUR_DE_DEVELOPPEMENT } from "./securite-des-fenetres.js"

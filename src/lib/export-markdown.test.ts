@@ -29,6 +29,17 @@ describe("echapper", () => {
     expect(echapper("*gras* _x_ [lien] <b> `code` #1 \\")).toBe("\\*gras\\* \\_x\\_ \\[lien\\] \\<b\\> \\`code\\` \\#1 \\\\")
     expect(echapper("ligne 1\r\n  ligne 2")).toBe("ligne 1 ligne 2")
   })
+
+  it("remplace toute suite d'espaces qui contient un retour à la ligne par une seule espace, et garde les autres", () => {
+    expect(echapper("a \n \n b")).toBe("a b")
+    expect(echapper("  a  b\n")).toBe("  a  b ")
+    expect(echapper("\t\r\t")).toBe(" ")
+  })
+
+  it("traite en temps linéaire un texte très long fait d'espaces", () => {
+    // L'ancienne expression (\s*[\r\n]+\s*) recommençait à chaque espace d'une longue suite sans retour à la ligne.
+    expect(echapper(`a${" ".repeat(50_000)}b`)).toBe(`a${" ".repeat(50_000)}b`)
+  })
 })
 
 describe("repartition", () => {

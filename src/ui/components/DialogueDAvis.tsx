@@ -4,7 +4,7 @@
 // ticket GitHub ou un e-mail préremplis, ou se copie pour une messagerie en ligne. L'aperçu montre le texte envoyé.
 
 import { useId, useRef, useState, type ReactNode, type RefObject } from "react"
-import { Copy, Github, Mail, Star } from "lucide-react"
+import { Copy, ExternalLink, Mail, Star } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { AFFICHAGES } from "@/lib/affichage"
@@ -130,7 +130,7 @@ function ZoneDEnvoi({ retour, diagnostic }: { retour: Retour; diagnostic: Diagno
         <MoyenDEnvoi
           bouton={
             <Button type="button" className="h-auto min-h-9 w-full whitespace-normal py-1.5" disabled={!envoyable} aria-describedby={decrit} onClick={envoyerSurGitHub}>
-              <Github aria-hidden />
+              <ExternalLink aria-hidden />
               Envoyer sur GitHub (compte requis, message public)
             </Button>
           }

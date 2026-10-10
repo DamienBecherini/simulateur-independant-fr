@@ -176,4 +176,15 @@ describe("système et navigateur", () => {
   ])("%s", (userAgent, systeme, navigateur) => {
     expect(systemeEtNavigateur(userAgent)).toEqual({ systeme, navigateur })
   })
+
+  it("ne prend pour Safari qu'une version suivie plus loin de « Safari »", () => {
+    expect(systemeEtNavigateur("Opera/9.80 (Windows NT 6.1) Presto/2.12 Version/12.16").navigateur).toBe("navigateur inconnu")
+    expect(systemeEtNavigateur("Safari/604.1 Version/18.0").navigateur).toBe("navigateur inconnu")
+  })
+
+  it("lit en temps linéaire une identification très longue", () => {
+    // L'ancienne expression (Version\/(\d+).*Safari) reparcourait la fin du texte pour chaque « Version/ ».
+    expect(systemeEtNavigateur("Version/1 ".repeat(20_000)).navigateur).toBe("navigateur inconnu")
+    expect(systemeEtNavigateur(`${"Version/1 ".repeat(20_000)}Safari`).navigateur).toBe("Safari 1")
+  })
 })

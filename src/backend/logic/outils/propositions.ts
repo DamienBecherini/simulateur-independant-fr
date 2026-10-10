@@ -95,11 +95,18 @@ export function libelleDesMois(mois: number[] | undefined): string {
   return enumerer([...mois].sort((a, b) => a - b).map(m => NOMS_DES_MOIS[m - 1]))
 }
 
+/** Une valeur changée, en texte : « oui », « non », « nouvelles valeurs » pour un objet (ou `null`), sinon la valeur. */
+function valeurChangee(valeur: unknown): string {
+  if (typeof valeur === "boolean") return valeur ? "oui" : "non"
+  if (typeof valeur === "object") return "nouvelles valeurs"
+  return String(valeur as string | number | bigint | symbol | undefined)
+}
+
 /** « mode → meilleurNet, opteVFL → oui ». */
 const changements = (valeurs: Record<string, unknown>) =>
   Object.entries(valeurs)
     .filter(([, v]) => v !== undefined)
-    .map(([cle, v]) => `${cle} → ${typeof v === "boolean" ? (v ? "oui" : "non") : typeof v === "object" ? "nouvelles valeurs" : String(v)}`)
+    .map(([cle, v]) => `${cle} → ${valeurChangee(v)}`)
     .join(", ")
 
 const eurosOuAbsent = (montant: number | undefined) => (montant === undefined ? undefined : euros(montant))
@@ -110,6 +117,20 @@ function fluxDeLaSerie(session: SessionState, annee: number, serie: { acteurId: 
   return grille.filter(m => !mois || mois.includes(m.month + 1)).flatMap(m => m.flows.filter(f => f.entityId === serie.acteurId && f.type === serie.typeFlux && f.label === serie.libelle))
 }
 
+/** « : mode → meilleurNet » après le nom d'un acteur ajouté, ou rien s'il est ajouté sans réglages. */
+const reglagesDeLAjout = (reglages: Record<string, unknown>) => (Object.keys(reglages).length > 0 ? ` : ${changements(reglages)}` : "")
+
+/** La relation supprimée, en phrase si elle existe dans la session de départ, sinon son identifiant. */
+function relationSupprimee(avant: SessionState, relationId: string): string {
+  const relation = avant.relationships.find(r => r.id === relationId)
+  return relation ? phraseDeLaRelation(avant, relation) : relationId
+}
+
+/** « en mars 2026 » pour un seul mois ; sinon les mois, le nombre de flux et leur total. */
+function moisDesFluxAjoutes(op: Extract<Operation, { type: "ajouter_flux" }>): string {
+  return op.mois.length === 1 ? `en ${libelleDesMois(op.mois)} ${op.annee}` : `par mois, ${libelleDesMois(op.mois)} ${op.annee} (${op.mois.length} flux, ${euros(op.montant * op.mois.length)})`
+}
+
 /** Une ligne de résumé par opération, avec les noms des acteurs de la session obtenue (tous y sont encore). */
 function resumer(avant: SessionState, apres: SessionState, op: Operation): string {
   const nom = (id: string) => `« ${nomDe(apres, id)} »`
@@ -117,19 +138,15 @@ function resumer(avant: SessionState, apres: SessionState, op: Operation): strin
     case "ajouter_annee":
       return `Ajouter l'année ${op.annee}, avec une grille vide.`
     case "ajouter_acteur":
-      return `Ajouter l'acteur « ${op.nom} » (${op.genre}, identifiant ${op.id})${Object.keys(op.reglages).length > 0 ? ` : ${changements(op.reglages)}` : ""}.`
+      return `Ajouter l'acteur « ${op.nom} » (${op.genre}, identifiant ${op.id})${reglagesDeLAjout(op.reglages)}.`
     case "modifier_acteur":
       return `Modifier ${nom(op.acteurId)} : ${changements({ nom: op.nom, ...op.reglages })}.`
     case "ajouter_relation":
       return `Ajouter la relation ${phraseDeLaRelation(apres, { id: op.id, fromId: op.deId, toId: op.versId, type: op.typeRelation })}.`
-    case "supprimer_relation": {
-      const relation = avant.relationships.find(r => r.id === op.relationId)
-      return `Supprimer la relation ${relation ? phraseDeLaRelation(avant, relation) : op.relationId}.`
-    }
-    case "ajouter_flux": {
-      const quand = op.mois.length === 1 ? `en ${libelleDesMois(op.mois)} ${op.annee}` : `par mois, ${libelleDesMois(op.mois)} ${op.annee} (${op.mois.length} flux, ${euros(op.montant * op.mois.length)})`
-      return `Ajouter « ${op.libelle} » (${op.typeFlux}) sur ${nom(op.acteurId)} : ${euros(op.montant)} ${quand}.`
-    }
+    case "supprimer_relation":
+      return `Supprimer la relation ${relationSupprimee(avant, op.relationId)}.`
+    case "ajouter_flux":
+      return `Ajouter « ${op.libelle} » (${op.typeFlux}) sur ${nom(op.acteurId)} : ${euros(op.montant)} ${moisDesFluxAjoutes(op)}.`
     case "modifier_serie":
       return `Modifier la série « ${op.serie.libelle} » (${op.serie.typeFlux}) de ${nom(op.serie.acteurId)}, ${libelleDesMois(op.mois)} ${op.annee} : ${changements({ montant: eurosOuAbsent(op.montant), montantBrut: eurosOuAbsent(op.montantBrut), libelle: op.libelle })}.`
     case "supprimer_serie": {

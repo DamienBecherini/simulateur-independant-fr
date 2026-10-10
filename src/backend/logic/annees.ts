@@ -122,7 +122,8 @@ export function ordonnerLesAnnees(annees: AnneeSimulee[]): { annees: AnneeSimule
     vues.add(a.annee)
     gardees.push(a)
   }
-  return { annees: gardees.sort((a, b) => a.annee - b.annee), ecartees }
+  gardees.sort((a, b) => a.annee - b.annee)
+  return { annees: gardees, ecartees }
 }
 
 /** Années absentes entre la plus ancienne et la plus récente ; la liste reçue est triée et sans doublon. */

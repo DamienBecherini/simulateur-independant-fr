@@ -2,7 +2,7 @@
 // Rapport Markdown de la simulation, à lire tel quel ou à confier à une IA pour l'analyser : hypothèses et limites,
 // acteurs et relations, flux saisis, résultats, comparateur de statuts et avertissements.
 
-import { estSocieteIS, type ComparaisonOptions, type ComparaisonResult, type DeplacementsProfessionnels, type Entity, type FraisProfessionnelsResult, type ModeRepartition, type Person, type Relationship, type ScenarioStatut, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport } from "@/types"
+import { estSocieteIS, type ComparaisonOptions, type ComparaisonResult, type Company, type DeplacementsProfessionnels, type Entity, type FraisProfessionnelsResult, type MicroEntreprise, type ModeRepartition, type Person, type Relationship, type ScenarioStatut, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport } from "@/types"
 import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { numeroterNotes } from "./notes"
@@ -40,7 +40,9 @@ const pourcentage = (ratio: number) => `${(Math.round(ratio * 1000) / 10).toLoca
 
 /** Texte saisi par l'utilisateur, protégé pour qu'il ne casse ni un tableau ni la mise en forme. */
 export function echapper(texte: string): string {
-  return texte.replace(/\s*[\r\n]+\s*/g, " ").replace(/([\\`*_[\]<>|#])/g, "\\$1")
+  // Chaque suite d'espaces qui contient un retour à la ligne devient une espace (une seule expression `\s+`, sans retour
+  // arrière sur un texte très long), puis les caractères de Markdown sont protégés.
+  return texte.replace(/\s+/g, espaces => (/[\r\n]/.test(espaces) ? " " : espaces)).replace(/([\\`*_[\]<>|#])/g, String.raw`\$1`)
 }
 
 function tableau(entete: string[], lignes: string[][], alignesADroite: number[] = []): string {
@@ -70,13 +72,29 @@ function detailDesDeplacements(deplacements: DeplacementsProfessionnels | undefi
 
 function detailDeLActeur(entity: Entity, annee: number): string {
   if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}${detailDesFraisReels(entity)}`
+  const creee = detailCommunDesActivites(entity, annee)
+  if (entity.type === "company") return `${natureDeLaSociete(entity)}${creee}`
+  return `${detailDeLaMicroEntreprise(entity)}${creee}${entity.horsPlafondAnneePrecedente ? " ; au-delà des plafonds l'année d'avant la simulation" : ""}`
+}
+
+/** Ce que les activités ont en commun : date de création, profession, déplacements professionnels. */
+function detailCommunDesActivites(entity: Company | MicroEntreprise, annee: number): string {
   const creation = dateDeCreationLisible(entity)
   const profession = professionDeLaFiche(entity, reglesDeLAnneeAffichee(annee))
-  const creee = `${creation ? ` ; créée en ${creation}` : ""}${profession ? ` ; profession : ${profession}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}`
-  if (entity.type === "company") return `${estSocieteIS(entity.legalStatus) ? `Société à l'impôt sur les sociétés, capital social ${eurosEnTexteBrut(entity.capitalSocial)}${entity.reservesInitiales ? `, réserves au début de la simulation ${eurosEnTexteBrut(entity.reservesInitiales)}` : ""}` : "Entreprise individuelle au régime réel"}${creee}`
+  return `${creation ? ` ; créée en ${creation}` : ""}${profession ? ` ; profession : ${profession}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}`
+}
+
+/** Société à l'IS (capital, réserves de départ) ou entreprise individuelle au régime réel. */
+function natureDeLaSociete(entity: Company): string {
+  if (!estSocieteIS(entity.legalStatus)) return "Entreprise individuelle au régime réel"
+  const reserves = entity.reservesInitiales ? `, réserves au début de la simulation ${eurosEnTexteBrut(entity.reservesInitiales)}` : ""
+  return `Société à l'impôt sur les sociétés, capital social ${eurosEnTexteBrut(entity.capitalSocial)}${reserves}`
+}
+
+/** ACRE, versement libératoire et revenu fiscal de référence d'une micro-entreprise. */
+function detailDeLaMicroEntreprise(entity: MicroEntreprise): string {
   const rfr = entity.rfrN2 === undefined ? "non renseigné" : eurosEnTexteBrut(entity.rfrN2)
-  const horsPlafond = entity.horsPlafondAnneePrecedente ? " ; au-delà des plafonds l'année d'avant la simulation" : ""
-  return `ACRE : ${entity.beneficieACRE ? "oui" : "non"} ; versement libératoire demandé : ${entity.opteVFL ? "oui" : "non"} ; revenu fiscal de référence N-2 : ${rfr}${creee}${horsPlafond}`
+  return `ACRE : ${entity.beneficieACRE ? "oui" : "non"} ; versement libératoire demandé : ${entity.opteVFL ? "oui" : "non"} ; revenu fiscal de référence N-2 : ${rfr}`
 }
 
 /** Trajets domicile-travail saisis sur les personnes, un par ligne ; rien quand aucune n'en a. */

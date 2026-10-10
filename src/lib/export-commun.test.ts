@@ -28,6 +28,12 @@ describe("slugifier", () => {
     const slug = slugifier(`${"a".repeat(59)} b`)
     expect(slug).toBe("a".repeat(59))
   })
+
+  it("ne laisse jamais deux tirets de suite ni de tiret au bord, même sur un nom très long", () => {
+    expect(slugifier("--a -- b--")).toBe("a-b")
+    expect(slugifier(`${"- ".repeat(50_000)}x`)).toBe("x")
+    expect(slugifier(`x${" -".repeat(50_000)}`)).toBe("x")
+  })
 })
 
 describe("nomDeFichier", () => {

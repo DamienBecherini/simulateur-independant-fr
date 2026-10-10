@@ -6,6 +6,7 @@
 // optimiser qui n'est pas une société à l'IS est ramené à la SASU. Seuls le stockage et les fichiers diffèrent d'un
 // pont à l'autre.
 
+import { z } from "zod"
 import { estSocieteIS, SessionStateSchema, type ComparaisonOptions, type ComparaisonResult, type OptimisationRemuneration, type SessionState, type SimulationPluriannuelle, type StatutSociete, type StrategiesDeDistribution } from "../../types.js"
 import { AnneeSchema, ComparaisonOptionsSchema, entreeValide, IdentifiantSchema } from "./entrees-ipc.js"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./simulation-pluriannuelle.js"
@@ -15,7 +16,7 @@ import { comparerStrategiesDeDistribution } from "./strategies-de-distribution.j
 export function sessionRevalidee(session: unknown, appelant: string): SessionState {
   const resultat = SessionStateSchema.safeParse(session)
   if (resultat.success) return resultat.data
-  console.warn(`${appelant} : session invalide, utilisation des valeurs par défaut du schéma`, resultat.error.flatten())
+  console.warn(`${appelant} : session invalide, utilisation des valeurs par défaut du schéma`, z.flattenError(resultat.error))
   return SessionStateSchema.parse({})
 }
 
