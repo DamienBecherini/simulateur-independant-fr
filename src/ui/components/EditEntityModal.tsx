@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import type { Entity, Relationship } from "@/types"
 import { Trash2, PlusCircle, ArrowRight } from "lucide-react"
 import { AIDE_RELATION_SALARIE, getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
@@ -30,22 +30,33 @@ interface LocalState {
   relationships: Relationship[]
 }
 
-function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relationships, anneesSimulees, annee }: EditEntityModalProps) {
+/**
+ * Copies de travail de l'acteur et des liens : rien ne change dans la session avant « Enregistrer ». Elles sont faites
+ * pendant le rendu qui ouvre la fenêtre (ou qui lui donne un autre acteur), et non dans un effet : la fenêtre paraît
+ * dès le clic, avec l'acteur demandé, au lieu d'arriver une tâche plus tard, voire de montrer un instant l'acteur
+ * précédent. À la fermeture, la copie reste affichée le temps que la fenêtre disparaisse.
+ */
+function useCopieDeTravail(isOpen: boolean, entity: Entity | null, relationships: Relationship[], reinitialiser: () => void) {
   const [formData, setFormData] = useState<LocalState>({ entity: null, relationships: [] })
+  const [copieDe, setCopieDe] = useState<{ entity: Entity; relationships: Relationship[] } | null>(null)
+  const aCopier = isOpen && entity ? { entity, relationships } : null
+  if (aCopier?.entity !== copieDe?.entity || aCopier?.relationships !== copieDe?.relationships) {
+    setCopieDe(aCopier)
+    if (aCopier) setFormData({ entity: structuredClone(aCopier.entity), relationships: structuredClone(aCopier.relationships) })
+    reinitialiser()
+  }
+  return [formData, setFormData] as const
+}
 
+function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relationships, anneesSimulees, annee }: EditEntityModalProps) {
   const [addingRelation, setAddingRelation] = useState(false)
   const [targetId, setTargetId] = useState<string | undefined>()
   const [relationshipType, setRelationshipType] = useState<Relationship["type"] | undefined>()
-
-  useEffect(() => {
-    if (isOpen && entity) {
-      // Copies de travail : rien ne change dans la session avant « Enregistrer ».
-      setFormData({ entity: structuredClone(entity), relationships: structuredClone(relationships) })
-    }
+  const [formData, setFormData] = useCopieDeTravail(isOpen, entity, relationships, () => {
     setAddingRelation(false)
     setTargetId(undefined)
     setRelationshipType(undefined)
-  }, [entity, relationships, isOpen])
+  })
 
   const localEntity = formData.entity
   const localRelationships = formData.relationships
