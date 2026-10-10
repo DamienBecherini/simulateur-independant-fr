@@ -4,7 +4,7 @@
 // session : une proposition à appliquer est déposée dans la boîte de l'application, qui la montre à l'utilisateur.
 // Sans transport ici : serveur.ts le relie à l'entrée et à la sortie standard, les tests à un client en mémoire.
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js"
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { CallToolRequestSchema, ListToolsRequestSchema, type CallToolResult, type Tool } from "@modelcontextprotocol/sdk/types.js"
 import { z } from "zod"
 import { catalogueDesOutils, executerOutil, OUTILS } from "../logic/outils/catalogue.js"
@@ -124,12 +124,18 @@ export async function appelerOutil(dossier: string, nom: string, argumentsDeLApp
   }
 }
 
-/** Le serveur, prêt à être relié à un transport. */
-export function creerServeurMcp({ dossier, version, maintenant }: OptionsDuServeur): Server {
-  const serveur = new Server({ name: "simulateur-independant-fr", title: "Simulateur Indépendant FR", version }, { capabilities: { tools: {} }, instructions: INSTRUCTIONS })
+/**
+ * Le serveur, prêt à être relié à un transport. `McpServer` porte la connexion et les consignes ; les outils ne passent
+ * pas par son `registerTool`, qui publierait le schéma JSON qu'il tire lui-même des schémas Zod (avec « $schema » et
+ * `execution` en plus) et validerait les arguments avant l'outil, avec un message en anglais. Les deux requêtes des
+ * outils sont donc traitées par le serveur MCP sous-jacent (`serveur.server`) : la liste publiée reste celle du
+ * catalogue (`outilsPublies`), et une erreur d'arguments reste expliquée en français par l'outil.
+ */
+export function creerServeurMcp({ dossier, version, maintenant }: OptionsDuServeur): McpServer {
+  const serveur = new McpServer({ name: "simulateur-independant-fr", title: "Simulateur Indépendant FR", version }, { capabilities: { tools: {} }, instructions: INSTRUCTIONS })
   const outils = outilsPublies()
-  serveur.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: outils }))
-  serveur.setRequestHandler(CallToolRequestSchema, async requete => appelerOutil(dossier, requete.params.name, requete.params.arguments, maintenant))
+  serveur.server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: outils }))
+  serveur.server.setRequestHandler(CallToolRequestSchema, async requete => appelerOutil(dossier, requete.params.name, requete.params.arguments, maintenant))
   return serveur
 }
 
