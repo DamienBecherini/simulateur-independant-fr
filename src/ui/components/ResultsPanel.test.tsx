@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Affichage, FoyerFiscalResult, PersonResult, SalarieDeLActivite, SimulationReport, UserPreferences } from "@/types"
+import { LIMITES } from "@/lib/limites-du-modele"
 import { emptyReport } from "@/ui/testing/fixtures"
 import { AffichageContext } from "../hooks/useAffichage"
 import { retrouverLaPosition } from "../hooks/useDetailsDesCartes"
@@ -121,7 +122,19 @@ describe("ResultsPanel", () => {
     render(<ResultsPanel report={{ ...emptyReport(), annee: 2027, anneeDesRegles: 2026, avertissements: [avertissement] }} error={null} />)
 
     expect(screen.getByText(/année 2027 avec les règles fiscales 2026/)).toBeInTheDocument()
-    expect(screen.getByRole("listitem")).toHaveTextContent(avertissement)
+    expect(screen.getByText(avertissement).tagName).toBe("LI")
+  })
+
+  it("replie sous le titre les hypothèses et limites du modèle, la liste du rapport Markdown", async () => {
+    render(<ResultsPanel report={emptyReport()} error={null} />)
+    const resume = screen.getByText("Hypothèses et limites")
+    const depliable = resume.closest("details")!
+    expect(depliable).not.toHaveAttribute("open")
+
+    await userEvent.setup({ delay: null }).click(resume)
+
+    expect(depliable).toHaveAttribute("open")
+    expect(within(depliable).getAllByRole("listitem").map(li => li.textContent)).toEqual(LIMITES)
   })
 
   it("donne le revenu fiscal de référence de chaque foyer", () => {
@@ -259,9 +272,11 @@ describe("ResultsPanel", () => {
   })
 
   it("affiche le coût de la rémunération du président et celui des salariés", () => {
-    // Seuls les montants affichés sont renseignés.
+    // Seuls les montants affichés sont renseignés ; chaque ligne du bulletin vaut zéro (le détail des cotisations, qui
+    // ne rejoint alors pas le total de l'activité, n'est pas affiché).
+    const lignesNulles = new Proxy({}, { get: () => ({ salariale: 0, patronale: 0 }) }) as SalarieDeLActivite["cotisations"]
     const bulletin = (personId: string, brut: number, totalPatronal: number, reductionGenerale: number) =>
-      ({ personId, statut: "salarie", brut, totalPatronal, reductionGenerale, coutEmployeur: brut + totalPatronal - reductionGenerale }) as SalarieDeLActivite
+      ({ personId, statut: "salarie", brut, totalPatronal, reductionGenerale, coutEmployeur: brut + totalPatronal - reductionGenerale, cotisations: lignesNulles }) as SalarieDeLActivite
     const report = makeReport()
     const sasu = report.activities[0]
     const president = { ...bulletin("person-alice", 20000, 7000, 0), statut: "president" as const }
