@@ -1,6 +1,6 @@
 // src/ui/App.montages.test.tsx
 // Montages types dans l'application entière : chargés depuis les paramètres ou depuis une simulation vide, ils
-// remplacent la session comme une sauvegarde chargée (nouvel historique) et la page remonte en haut.
+// remplacent la session, restent annulables, et la page remonte en haut.
 
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -34,10 +34,10 @@ describe("App : montages types", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "SASU sans salaire, tout en dividendes" })).toBeInTheDocument()
     expect(screen.getAllByText("SASU de Thomas").length).toBeGreaterThan(0)
     expect(remonter).toHaveBeenCalledWith(0, 0)
-    expect(undoButton()).toBeDisabled()
+    expect(undoButton()).toBeEnabled()
   })
 
-  it("depuis les paramètres, demande confirmation avant de remplacer une simulation non enregistrée, et repart d'un historique vide", async () => {
+  it("depuis les paramètres, demande confirmation avant de remplacer une simulation non enregistrée, puis reste annulable", async () => {
     const session = { ...emptySession(), name: "Mon brouillon", entities: [makePerson()] }
     const user = await renderApp(session)
     await user.clear(screen.getByRole("textbox", { name: "Nom" }))
@@ -54,7 +54,7 @@ describe("App : montages types", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Salarié avec une micro-entreprise à côté" })).toBeInTheDocument()
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-    expect(undoButton()).toBeDisabled()
+    expect(undoButton()).toBeEnabled()
   })
   it("depuis la barre d'outils, ouvre la même fenêtre et demande confirmation avant de remplacer une simulation non enregistrée", async () => {
     const user = await renderApp({ ...emptySession(), name: "Mon brouillon", entities: [makePerson()] })
@@ -66,6 +66,6 @@ describe("App : montages types", () => {
     await user.click(within(screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).getByRole("button", { name: "Remplacer" }))
 
     expect(await screen.findByRole("heading", { level: 1, name: "SASU sans salaire, tout en dividendes" })).toBeInTheDocument()
-    expect(undoButton()).toBeDisabled()
+    expect(undoButton()).toBeEnabled()
   })
 })

@@ -193,18 +193,19 @@ export function useSessionManager() {
   const cancelImport = () => setImportConfirmation(null)
 
   // Fonction pour réinitialiser la session de travail à un état vierge.
-  const handleResetSession = () => {
-    setHistory({ past: [], present: getInitialSessionState(), future: [] })
+  // La simulation remplacée reste dans l'historique : « Annuler » la restaure (la confirmation, elle, est demandée par l'interface).
+  const handleResetSession = useCallback(() => {
+    setSession(getInitialSessionState())
     setLoadedSlotId(null)
-  }
+  }, [setSession, setLoadedSlotId])
 
-  // Un montage type remplace la session comme une sauvegarde chargée : nouvel historique, aucune sauvegarde désignée.
+  // Un montage type remplace la session, sans sauvegarde désignée ; comme une réinitialisation, il reste annulable.
   const handleLoadMontage = useCallback(
     (session: SessionState) => {
-      setHistory({ past: [], present: session, future: [] })
+      setSession(session)
       setLoadedSlotId(null)
     },
-    [setLoadedSlotId]
+    [setSession, setLoadedSlotId]
   )
 
   // Fonction pour mettre à jour l'ordre des sauvegardes dans les préférences.

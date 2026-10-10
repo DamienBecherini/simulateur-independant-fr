@@ -213,6 +213,47 @@ describe("SettingsSheet, import de sauvegardes", () => {
   })
 })
 
+describe("réinitialisation de la simulation", () => {
+  function panneau(avecEntites: boolean) {
+    const onReset = vi.fn()
+    const session = { ...emptySession(), name: "Mon brouillon", entities: avecEntites ? [makePerson()] : [] }
+    render(<SettingsSheet isOpen onOpenChange={() => {}} allSaveSlots={[]} setAllSaveSlots={() => {}} currentSession={session} setCurrentSession={() => {}} slotOrder={[]} setSlotOrder={() => {}} onReset={onReset} onLoadSlot={() => {}} onImport={async () => {}} onLoadMontage={() => {}} importConfirmation={null} onConfirmImport={() => {}} onCancelImport={() => {}} loadedSlotId={null} setLoadedSlotId={() => {}} />)
+    return onReset
+  }
+  const reinitialiser = () => screen.getByRole("button", { name: "Nouvelle Simulation / Réinitialiser" })
+
+  it("demande confirmation quand la simulation n'est dans aucune sauvegarde, et ne réinitialise qu'après « Remplacer »", async () => {
+    const onReset = panneau(true)
+
+    await userEvent.click(reinitialiser())
+    const confirmation = screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
+    expect(confirmation).toHaveTextContent("« Mon brouillon » n'est pas enregistrée dans une sauvegarde.")
+    expect(onReset).not.toHaveBeenCalled()
+
+    await userEvent.click(within(confirmation).getByRole("button", { name: "Remplacer" }))
+    expect(onReset).toHaveBeenCalledOnce()
+  })
+
+  it("« Annuler » ne réinitialise rien et rend le focus au bouton", async () => {
+    const onReset = panneau(true)
+
+    await userEvent.click(reinitialiser())
+    await userEvent.click(within(screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).getByRole("button", { name: "Annuler" }))
+
+    expect(onReset).not.toHaveBeenCalled()
+    expect(screen.queryByRole("dialog", { name: "Remplacer la simulation en cours ?" })).not.toBeInTheDocument()
+    expect(reinitialiser()).toHaveFocus()
+  })
+
+  it("réinitialise sans question quand la simulation est vide", async () => {
+    const onReset = panneau(false)
+
+    await userEvent.click(reinitialiser())
+
+    expect(onReset).toHaveBeenCalledOnce()
+  })
+})
+
 describe("confirmation d'un import ajusté", () => {
   const rapport: SanitizationReport = { entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0, reglagesRemoved: 0, professionsRemoved: 0, anneesEcartees: [], migrationNotes: ["À vérifier"] }
 

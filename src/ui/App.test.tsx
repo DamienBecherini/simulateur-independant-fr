@@ -321,4 +321,33 @@ describe("App : plusieurs années", () => {
     await user.keyboard("{Control>}z{/Control}")
     expect(screen.getByRole("button", { name: "2027" })).toBeInTheDocument()
   })
+
+  it("réinitialise après confirmation, et Ctrl+Z restaure la simulation", async () => {
+    const user = await renderApp()
+
+    await user.click(screen.getByRole("button", { name: "Paramètres" }))
+    await user.click(screen.getByRole("button", { name: "Nouvelle Simulation / Réinitialiser" }))
+    const confirmation = screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
+    expect(confirmation).toHaveTextContent("« Simulation de test » n'est pas enregistrée dans une sauvegarde.")
+    await user.click(within(confirmation).getByRole("button", { name: "Remplacer" }))
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Nouvelle Simulation" })).toBeInTheDocument()
+    expect(undoButton()).toBeEnabled()
+
+    await user.keyboard("{Control>}z{/Control}")
+    expect(await screen.findByRole("heading", { level: 1, name: "Simulation de test" })).toBeInTheDocument()
+    expect(nameInput()).toHaveValue("Alice Martin")
+  })
+
+  it("garde la simulation quand on annule la confirmation de la réinitialisation", async () => {
+    const user = await renderApp()
+
+    await user.click(screen.getByRole("button", { name: "Paramètres" }))
+    await user.click(screen.getByRole("button", { name: "Nouvelle Simulation / Réinitialiser" }))
+    await user.click(within(screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).getByRole("button", { name: "Annuler" }))
+
+    // Le panneau des paramètres reste ouvert derrière la confirmation : la page est masquée aux lecteurs d'écran.
+    expect(screen.getByRole("heading", { level: 1, name: "Simulation de test", hidden: true })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Annuler", hidden: true })).toBeDisabled()
+  })
 })

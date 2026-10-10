@@ -6,6 +6,7 @@ import { useRef, useState, type ReactNode } from "react"
 import { ChevronLeft, ExternalLink, LayoutTemplate } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { ConfirmationDeRemplacement } from "./ConfirmationDeRemplacement"
 import { ANNEE_DES_MONTAGES } from "@/lib/montages/construction"
 import { MONTAGES_TYPES, type MontageType } from "@/lib/montages/montages"
 
@@ -165,27 +166,9 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
         </DialogContent>
       </Dialog>
 
-      <Dialog open={aConfirmer !== null} onOpenChange={ouverte => !ouverte && setAConfirmer(null)}>
-        <DialogContent
-          onCloseAutoFocus={evenement => {
-            evenement.preventDefault()
-            if (declencheur.current?.isConnected) declencheur.current.focus()
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>Remplacer la simulation en cours ?</DialogTitle>
-            <DialogDescription>
-              « {nomDeLaSession} » n'est pas enregistrée dans une sauvegarde. Le montage « {aConfirmer?.titre} » la remplacera, et l'historique d'annulation repartira de zéro.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setAConfirmer(null)}>
-              Annuler
-            </Button>
-            <Button onClick={() => aConfirmer && charger(aConfirmer)}>Remplacer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmationDeRemplacement open={aConfirmer !== null} onAnnuler={() => setAConfirmer(null)} onConfirmer={() => aConfirmer && charger(aConfirmer)} titre="Remplacer la simulation en cours ?" libelleDeConfirmation="Remplacer" declencheur={declencheur}>
+        « {nomDeLaSession} » n'est pas enregistrée dans une sauvegarde. Le montage « {aConfirmer?.titre} » la remplacera ; le bouton « Annuler » de la barre d'outils la rétablira.
+      </ConfirmationDeRemplacement>
     </>
   )
 }

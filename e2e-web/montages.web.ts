@@ -44,8 +44,8 @@ test("charger « SASU sans salaire » depuis les paramètres, après confirmatio
   // 62 750 € de dividendes après 15 250 € d'impôt sur les sociétés : 47 960 € nets pour le foyer (montages.reference.test.ts).
   await expect(page.getByText(/^47\s960\s€$/).first()).toBeVisible()
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
-  // Comme le chargement d'une sauvegarde, celui d'un montage repart d'un historique d'annulation vide.
-  await expect(page.getByRole("button", { name: "Annuler" })).toBeDisabled()
+  // Le montage remplace la simulation sans effacer l'historique : « Annuler » la restaure.
+  await expect(page.getByRole("button", { name: "Annuler" })).toBeEnabled()
 
   // Le montage est conservé dans le navigateur, comme toute modification de la démo.
   await page.reload()
