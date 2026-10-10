@@ -2,7 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest"
 import { SessionIrrecuperableError } from "./data-sanitizer.js"
-import { avecVersionDeLApplication, contenuDuFichier, lireLaSession, lireLesPreferences, lireUneSimulationImportee, preferencesParDefaut, preferencesValides } from "./fichiers-de-donnees.js"
+import { avecVersionDeLApplication, contenuDuFichier, lireLaSession, lireLesPreferences, lireUneSimulationImportee, preferencesParDefaut, preferencesValides, sessionAEcrire } from "./fichiers-de-donnees.js"
 import { FORMAT_VERSION_ACTUEL } from "./migrations.js"
 
 const grille = () => Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
@@ -63,5 +63,29 @@ describe("préférences", () => {
   it("se lisent depuis le texte du fichier, qui doit être du JSON", () => {
     expect(lireLesPreferences('{"slotOrder":["a"],"zoom":0.8}')).toEqual({ slotOrder: ["a"], zoom: 0.8 })
     expect(() => lireLesPreferences("{pas du json")).toThrow()
+  })
+})
+
+describe("session reçue de l'interface, avant écriture", () => {
+  it("garde une session valide", () => {
+    expect(sessionAEcrire(simulation)).toEqual(simulation)
+  })
+
+  it("la nettoie comme à la lecture : un élément invalide est écarté, le reste est gardé", () => {
+    const session = { ...simulation, entities: [{ id: "x", type: "inconnu" }], relationships: [{ id: "r", fromId: "absent", toId: "absent" }] }
+    expect(sessionAEcrire(session)).toEqual(simulation)
+  })
+
+  it.each([
+    ["qui n'est pas un objet", "session"],
+    ["nulle", null],
+    ["sans année", { ...simulation, annees: [] }],
+    ["sans acteurs", { name: "Essai", relationships: [], annees: simulation.annees }],
+    ["dont le nom n'est pas un texte", { ...simulation, name: 42 }],
+    ["dont les années ne se suivent pas", { ...simulation, annees: [{ annee: 2024, monthlyData: grille() }, { annee: 2026, monthlyData: grille() }] }]
+  ])("n'écrit pas une session %s", (_cas, session) => {
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    expect(sessionAEcrire(session)).toBeNull()
+    vi.restoreAllMocks()
   })
 })
