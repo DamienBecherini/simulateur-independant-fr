@@ -4,12 +4,12 @@
 
 import { estSocieteIS, type ComparaisonOptions, type ComparaisonResult, type Company, type DeplacementsProfessionnels, type Entity, type FraisProfessionnelsResult, type MicroEntreprise, type ModeRepartition, type Person, type Relationship, type ScenarioStatut, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport } from "@/types"
 import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
-import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
+import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { LIMITES, TITRE_DES_LIMITES } from "./limites-du-modele"
 import { numeroterNotes } from "./notes"
-import { libelleDeLaProfession, lignesDeLaCaisse, professionDeLaFiche, statutEtProfession } from "./professions"
+import { professionDeLaFiche, statutEtProfession } from "./professions"
 import { reglesDeLAnneeAffichee } from "./regles-affichees"
-import { eurosEnTexteBrut } from "@/backend/logic/format"
+import { enTexteBrut, eurosEnTexteBrut, pourcentDeNombre } from "@/backend/logic/format"
 
 /** Comparaison calculée à l'export pour l'activité choisie dans le comparateur, ou la raison de son absence. */
 export type ComparaisonDuRapport = { nomActivite: string; options: ComparaisonOptions; resultat: ComparaisonResult } | { nomActivite: string; erreur: string }
@@ -28,7 +28,7 @@ export { LIMITES }
 
 // --- Mise en forme ---
 
-const pourcentage = (ratio: number) => `${(Math.round(ratio * 1000) / 10).toLocaleString("fr-FR")} %`
+const pourcentage = (ratio: number) => pourcentDeNombre(Math.round(ratio * 1000) / 10, 1)
 
 /** Texte saisi par l'utilisateur, protégé pour qu'il ne casse ni un tableau ni la mise en forme. */
 export function echapper(texte: string): string {
@@ -196,11 +196,11 @@ function sectionResultats(session: SimulationAnnuelle, report: SimulationReport 
   return `## Résultats ${report.annee} (règles fiscales ${report.anneeDesRegles})\n\nMontants annuels, avant les éventuelles dépenses personnelles.\n\n${sousSections.join("\n\n")}`
 }
 
-/** Professions libérales réglementées au réel : les cotisations que leur caisse change, ligne à ligne ; rien sans elles. */
+/** Les cotisations sociales de chaque activité, ligne à ligne : celles de l'écran, à l'euro, dont la somme est le total ; rien sans détail. */
 function sousSectionCaisses(report: SimulationReport): string {
-  const lignes = report.activities.flatMap(({ name, profession, cotisationsTNS }) => (cotisationsTNS && profession ? lignesDeLaCaisse(cotisationsTNS, eurosEnTexteBrut).map(l => [echapper(name), libelleDeLaProfession(profession), l.libelle.replace(/^dont /, ""), eurosEnTexteBrut(l.montant), l.precision ?? "—"]) : []))
+  const lignes = lignesDesCotisations(report).map(l => [echapper(l.activite), l.profession ?? "—", l.cotisation, eurosEnTexteBrut(l.montant), l.precision ? enTexteBrut(l.precision) : "—"])
   if (lignes.length === 0) return ""
-  return `### Cotisations par caisse\n\nProfessions libérales réglementées : les cotisations que leur caisse change, comprises dans les cotisations sociales de l'activité.\n\n${tableau(["Activité", "Profession", "Cotisation", "Montant", "Précision"], lignes, [3])}`
+  return `### Détail des cotisations\n\nLes cotisations sociales de chaque activité, ligne à ligne, comme à l'écran : leur somme est le total des cotisations sociales de l'activité.\n\n${tableau(["Activité", "Profession", "Cotisation", "Montant", "Précision"], lignes, [3])}`
 }
 
 /** Réserves des sociétés à l'IS : ce qui s'y ajoute ou en sort dans l'année, et ce qu'il en reste ; rien sans réserves. */
@@ -378,5 +378,5 @@ export function rapportMarkdown({ session, report, comparaison, date, pluriannue
     `## ${TITRE_DES_LIMITES}\n\n${LIMITES.map(l => `- ${l}`).join("\n")}`
   ]
   const sections = [sectionActeurs(session), sectionRelations(session), sectionFlux(session), sectionResultats(session, report), sectionToutesLesAnnees(session, pluriannuelle), sectionComparateur(session, comparaison), sectionAvertissements(session, report, comparaison)].filter(Boolean)
-  return `${[...entete, ...sections].join("\n\n")}\n`
+  return enTexteBrut(`${[...entete, ...sections].join("\n\n")}\n`)
 }

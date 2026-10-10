@@ -4,7 +4,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import { pourcent } from "@/backend/logic/format"
+import { enTexteBrut, pourcent } from "@/backend/logic/format"
 import { reglesPubliees } from "@/backend/logic/regles"
 import type { Entity } from "@/types"
 import { makeCompany, makeMicro } from "@/ui/testing/fixtures"
@@ -20,7 +20,7 @@ describe("réglages d'une société à l'IS", () => {
   it("une SASU a un capital social, pour sa réserve légale, et des réserves au début de la simulation", async () => {
     const { onSave, user } = ouvrir(makeCompany({ legalStatus: "SASU" }))
 
-    expect(screen.getByText(/5 % du bénéfice vont à la réserve légale/)).toBeInTheDocument()
+    expect(screen.getByText(/5\s% du bénéfice vont à la réserve légale/)).toBeInTheDocument()
     expect(screen.queryByText(/supportent les cotisations sociales du gérant/)).not.toBeInTheDocument()
     const reserves = screen.getByLabelText("Réserves au début")
     expect(reserves).toHaveValue(null)
@@ -34,7 +34,7 @@ describe("réglages d'une société à l'IS", () => {
   it("vider le champ retire les réserves de départ", async () => {
     const { onSave, user } = ouvrir(makeCompany({ legalStatus: "EURL", reservesInitiales: 5000 }))
 
-    expect(screen.getByText(/Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant/)).toBeInTheDocument()
+    expect(screen.getByText(/Les dividendes au-delà de 10\s% du capital supportent les cotisations sociales du gérant/)).toBeInTheDocument()
     await user.clear(screen.getByLabelText("Réserves au début"))
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
 
@@ -44,7 +44,7 @@ describe("réglages d'une société à l'IS", () => {
   it("l'aide du capital cite la réserve légale et le seuil des dividendes d'EURL des règles de l'année", () => {
     const r = reglesPubliees(2026)
     ouvrir(makeCompany({ legalStatus: "EURL" }))
-    expect(screen.getByText(`Les dividendes au-delà de ${pourcent(r.EURL.seuilDividendesPartDuCapital)} du capital supportent les cotisations sociales du gérant. ${pourcent(r.reserveLegale.partDuBenefice)} du bénéfice vont à la réserve légale, non distribuable, jusqu'à ce qu'elle atteigne ${pourcent(r.reserveLegale.plafondPartDuCapital)} du capital.`)).toBeInTheDocument()
+    expect(screen.getByText(enTexteBrut(`Les dividendes au-delà de ${pourcent(r.EURL.seuilDividendesPartDuCapital)} du capital supportent les cotisations sociales du gérant. ${pourcent(r.reserveLegale.partDuBenefice)} du bénéfice vont à la réserve légale, non distribuable, jusqu'à ce qu'elle atteigne ${pourcent(r.reserveLegale.plafondPartDuCapital)} du capital.`))).toBeInTheDocument()
   })
 
   it("une entreprise individuelle n'a ni capital ni réserves", () => {

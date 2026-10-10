@@ -170,7 +170,7 @@ describe("plafonds au prorata l'année de création et sortie du régime", () =>
     ])
 
   it("30 000 € en 2026, au-delà du plafond au prorata, puis 90 000 € en 2027 : régime réel en 2028", () => {
-    expect(activiteDe(avec(30000), 2026).warnings[0]).toMatch(/^Plafond du régime micro dépassé \(prestations de services 30\s000 € pour un plafond de 27\s943 €\)/)
+    expect(activiteDe(avec(30000), 2026).warnings[0]).toMatch(/^Plafond du régime micro dépassé \(prestations de services 30\s000\s€ pour un plafond de 27\s943\s€\)/)
     expect(activiteDe(avec(30000), 2028)).toMatchObject({ statut: "EI au réel", sortieDuRegimeMicro: { depuis: 2028, depassements: [2026, 2027] } })
   })
 
@@ -218,7 +218,7 @@ describe("CFE d'une activité créée en mars 2026, dans le comparateur", () => 
   })
 
   it("2027 : base réduite de moitié", () => {
-    expect(fraisDe(2027)).toEqual({ micro: 700, EI: 1900, note: "CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié, le poste CFE des frais de fonctionnement est compté pour 50 %." })
+    expect(fraisDe(2027)).toEqual({ micro: 700, EI: 1900, note: "CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié, le poste CFE des frais de fonctionnement est compté pour 50\u00A0%." })
   })
 
   it("2028 : due en entier", () => {

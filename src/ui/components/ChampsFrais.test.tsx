@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-import { pourcent } from "@/backend/logic/format"
+import { ESPACE_INSECABLE, pourcent } from "@/backend/logic/format"
 import { reglesPubliees } from "@/backend/logic/regles"
 import type { Entity, Trajet } from "@/types"
 import { makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
@@ -31,12 +31,12 @@ describe("frais réels d'une personne", () => {
     const { onSave, user } = ouvrir(makePerson())
     expect(screen.queryByLabelText("Jours travaillés par an")).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 10 %" }))
+    await user.click(screen.getByRole("switch", { name: `Comparer mes frais réels à la déduction de 10${ESPACE_INSECABLE}%` }))
     await saisir(user, "Trajet (km, aller simple)", "45")
     await saisir(user, "Jours travaillés par an", "210")
     await user.click(screen.getByRole("combobox", { name: "Puissance fiscale" }))
     await user.click(await screen.findByRole("option", { name: "7 CV et plus" }))
-    await user.click(screen.getByRole("switch", { name: "Voiture électrique (+ 20 %)" }))
+    await user.click(screen.getByRole("switch", { name: `Voiture électrique (+ 20${ESPACE_INSECABLE}%)` }))
     await user.click(screen.getByRole("switch", { name: "Distance justifiée au-delà de 40 km" }))
     await saisir(user, "Autres frais réels (€ par an)", "300")
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
@@ -54,7 +54,7 @@ describe("frais réels d'une personne", () => {
     await saisir(user, "Trajet (km, aller simple)", "12.5")
     expect(screen.getByLabelText("Trajet (km, aller simple)")).toHaveValue(12.5)
 
-    await user.click(screen.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 10 %" }))
+    await user.click(screen.getByRole("switch", { name: `Comparer mes frais réels à la déduction de 10${ESPACE_INSECABLE}%` }))
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
     expect(onSave.mock.calls[0][0].fraisReels).toBeUndefined()
   })
@@ -117,10 +117,10 @@ describe("taux et distances cités par les textes", () => {
       baremeKilometrique: { ...r.baremeKilometrique, majorationElectrique: 0.25, domicileTravail: { distanceMaxParTrajet: 50 } }
     }
     render(<ChampsFraisReels personne={makePerson({ fraisReels: { trajets: [trajet20km], autresFrais: 0 } })} onChange={vi.fn()} regles={autres} />)
-    expect(screen.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 12 %" })).toBeInTheDocument()
-    expect(screen.getByText(/la déduction forfaitaire de 12 % ou vos frais réels/)).toBeInTheDocument()
+    expect(screen.getByRole("switch", { name: `Comparer mes frais réels à la déduction de 12${ESPACE_INSECABLE}%` })).toBeInTheDocument()
+    expect(screen.getByText(/la déduction forfaitaire de 12\s% ou vos frais réels/)).toBeInTheDocument()
     expect(screen.getByText(/Au-delà de 50 km par trajet, seuls 50 km comptent/)).toBeInTheDocument()
-    expect(screen.getByRole("switch", { name: "Voiture électrique (+ 25 %)" })).toBeInTheDocument()
+    expect(screen.getByRole("switch", { name: `Voiture électrique (+ 25${ESPACE_INSECABLE}%)` })).toBeInTheDocument()
     expect(screen.getByRole("switch", { name: "Distance justifiée au-delà de 50 km" })).toBeInTheDocument()
   })
 })
@@ -141,7 +141,7 @@ describe("déplacements professionnels d'une activité", () => {
     ouvrir(makeMicro({ deplacementsProfessionnels: { kmParAn: 5000, puissanceFiscale: "4", electrique: true } }))
     expect(screen.getByText(/jamais déductibles/)).toBeInTheDocument()
     expect(screen.getByLabelText("Kilomètres professionnels par an")).toHaveValue(5000)
-    expect(screen.getByRole("switch", { name: "Voiture électrique (+ 20 %)" })).toBeChecked()
+    expect(screen.getByRole("switch", { name: `Voiture électrique (+ 20${ESPACE_INSECABLE}%)` })).toBeChecked()
   })
 
   it("expliquent l'option du barème en entreprise individuelle", () => {

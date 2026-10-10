@@ -76,10 +76,10 @@ describe("RepartitionDuBenefice", () => {
     const remuneration = screen.getByRole("slider", { name: "Rémunération nette du dirigeant" })
     expect(remuneration).toHaveAttribute("aria-valuemax", "23000")
     expect(remuneration).toHaveAttribute("aria-valuenow", "10000")
-    expect(remuneration.getAttribute("aria-valuetext")).toMatch(/^10\s000 € de rémunération nette$/)
+    expect(remuneration.getAttribute("aria-valuetext")).toMatch(/^10\s000\s€ de rémunération nette$/)
     const part = screen.getByRole("slider", { name: "Part du bénéfice distribuable versée en dividendes" })
     expect(part).toHaveAttribute("aria-valuenow", "100")
-    expect(part.getAttribute("aria-valuetext")).toMatch(/^100 % du bénéfice distribuable en dividendes, 0 % ajoutés aux réserves$/)
+    expect(part.getAttribute("aria-valuetext")).toMatch(/^100\s% du bénéfice distribuable en dividendes, 0\s% ajoutés aux réserves$/)
   })
 
   it("règle la rémunération au clavier : flèches, pages, début et fin", async () => {

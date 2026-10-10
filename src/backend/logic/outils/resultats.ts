@@ -4,7 +4,7 @@
 
 import { z } from "zod"
 import type { ActivityResult, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, FoyerFiscalResult, PersonResult, ReservesDeLaSociete, SessionState, SimulationReport } from "../../../types.js"
-import { pourcent } from "../format.js"
+import { pourcent, pourcentDeNombre } from "../format.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
 import { anneeDeLaSession, arrondir, ErreurOutil, genreDe, nomDe, trouverActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema } from "./limites.js"
@@ -169,9 +169,9 @@ function lignesTNS(detail: DetailCotisationsTNS): Ligne {
 function informationsDeLaProfession(a: ActivityResult): string[] {
   if (!a.profession) return []
   const caisse = a.cotisationsTNS?.caisse
-  const taux = a.profession.tauxMicro === undefined ? "" : `, taux global de ${(a.profession.tauxMicro * 100).toLocaleString("fr-FR")} % du chiffre d'affaires en micro-entreprise`
+  const taux = a.profession.tauxMicro === undefined ? "" : `, taux global de ${pourcentDeNombre(a.profession.tauxMicro * 100, 2)} du chiffre d'affaires en micro-entreprise`
   const infos = [`Profession : ${a.profession.libelle}, ${a.profession.caisse ? `caisse ${a.profession.caisse}` : "caisse pas encore prise en compte (calcul d'une profession non réglementée)"}${taux}.`]
-  if (caisse && caisse.priseEnCharge.maladie + caisse.priseEnCharge.asv > 0) infos.push(`Pris en charge par l'Assurance maladie (part conventionnée ${arrondir(caisse.partConventionnee * 100)} %), hors des cotisations : maladie ${arrondir(caisse.priseEnCharge.maladie)} €, ASV ${arrondir(caisse.priseEnCharge.asv)} €.`)
+  if (caisse && caisse.priseEnCharge.maladie + caisse.priseEnCharge.asv > 0) infos.push(`Pris en charge par l'Assurance maladie (part conventionnée ${pourcentDeNombre(arrondir(caisse.partConventionnee * 100))}), hors des cotisations : maladie ${arrondir(caisse.priseEnCharge.maladie)} €, ASV ${arrondir(caisse.priseEnCharge.asv)} €.`)
   const base = caisse?.baseDesCotisationsDeLAnneePrecedente
   if (base) infos.push(`Retraite complémentaire et ASV de la CARPIMKO calculées sur l'assiette ${base.annee} (${arrondir(base.assiette)} €)${base.anneePrecedenteConnue ? ", celle de l'année précédente" : `, faute de l'année ${base.annee - 1} dans la simulation`}.`)
   return infos
@@ -193,7 +193,7 @@ function informationsDeLActivite(session: SessionState, a: ActivityResult): stri
   const infos: string[] = []
   const vl = a.versementLiberatoire
   if (vl) infos.push(`Versement libératoire ${vl.applique ? "appliqué" : "non appliqué"} : revenu fiscal de référence ${vl.anneeRfr} ${vl.rfrN2 === null ? "inconnu" : `de ${arrondir(vl.rfrN2)} € (${vl.origineRfr})`}, plafond ${arrondir(vl.plafondRfr)} € pour ${vl.partsFiscales} part(s).`)
-  if (a.acre) infos.push(`ACRE : réduction de ${a.acre.reduction * 100} % du ${a.acre.debut} au ${a.acre.fin}, ${arrondir(a.acre.economie)} € de cotisations économisées cette année.`)
+  if (a.acre) infos.push(`ACRE : réduction de ${pourcentDeNombre(a.acre.reduction * 100)} du ${a.acre.debut} au ${a.acre.fin}, ${arrondir(a.acre.economie)} € de cotisations économisées cette année.`)
   if (a.fraisDeDeplacement) infos.push(`Déplacements professionnels : ${a.fraisDeDeplacement.kilometres} km, ${arrondir(a.fraisDeDeplacement.montant)} € au barème kilométrique, ${a.fraisDeDeplacement.deductible ? "déductibles" : "non déductibles en micro-entreprise"}.`)
   if (a.sortieDuRegimeMicro) infos.push(`Sortie du régime micro depuis le 1er janvier ${a.sortieDuRegimeMicro.depuis} (plafonds dépassés en ${a.sortieDuRegimeMicro.depassements.join(" et ")}) : simulée en EI au réel.`)
   if (a.reserves) infos.push(phraseDesReserves(a.reserves))

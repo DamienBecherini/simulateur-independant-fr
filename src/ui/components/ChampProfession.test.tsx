@@ -39,7 +39,7 @@ describe("profession d'une activité BNC", () => {
     const { onSave, user } = ouvrir(makeMicro())
     await choisirLaProfession(user, "Ostéopathe")
 
-    expect(screen.getByRole("combobox", { name: "Profession" })).toHaveAccessibleDescription(/Caisse : CIPAV\. Micro-entreprise possible, au taux de 23,2 %/)
+    expect(screen.getByRole("combobox", { name: "Profession" })).toHaveAccessibleDescription(/Caisse : CIPAV\. Micro-entreprise possible, au taux de 23,2\s%/)
     expect(screen.queryByLabelText("Part conventionnée (%)")).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
     expect(onSave.mock.calls[0][0]).toMatchObject({ profession: "osteopathe" })
@@ -77,12 +77,12 @@ describe("profession d'une activité BNC", () => {
     const description = screen.getByRole("combobox", { name: "Profession" }).getAttribute("aria-describedby")
     const ligne = document.getElementById(description ?? "")?.textContent?.replace(/\s/g, " ")
     expect(ligne).toContain("En 2025 : ")
-    expect(ligne).toContain("complémentaire de 2 312 € plus 3 % au-delà de 25 246 €")
+    expect(ligne).toMatch(/complémentaire\sde\s2\s312\s€\splus\s3\s%\sau-delà\sde\s25\s246\s€/)
   })
 
   it("une profession de la CIPAV affichée en 2024 : micro-entreprise au taux de 2024", () => {
     ouvrir(makeMicro({ profession: "osteopathe" }), 2024)
-    expect(screen.getByRole("combobox", { name: "Profession" })).toHaveAccessibleDescription(/Caisse : CIPAV\. Micro-entreprise possible, au taux de 21,2 %/)
+    expect(screen.getByRole("combobox", { name: "Profession" })).toHaveAccessibleDescription(/Caisse : CIPAV\. Micro-entreprise possible, au taux de 21,2\s%/)
   })
 
   it("« Autre profession réglementée » : la caisse n'est pas prise en compte, et la ligne le dit", async () => {

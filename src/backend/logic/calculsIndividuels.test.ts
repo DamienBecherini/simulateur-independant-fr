@@ -30,7 +30,7 @@ describe("calculerMicro", () => {
   it("prévient qu'avec l'ACRE, les droits à la retraite sont réduits", () => {
     const resultat = micro({ caServicesBnc: 50000, beneficieACRE: true })
 
-    expect(resultat.warnings).toContainEqual(expect.stringMatching(/^ACRE : cotisations réduites de 50 %.*moins de trimestres de retraite/))
+    expect(resultat.warnings).toContainEqual(expect.stringMatching(/^ACRE : cotisations réduites de 50\s%.*moins de trimestres de retraite/))
   })
 
   it("réduit les cotisations avec l'ACRE, sans toucher au revenu imposable", () => {
@@ -86,16 +86,16 @@ describe("calculerMicro", () => {
     it("au-delà du seuil de base, la TVA est due à partir de l'année suivante", () => {
       const [avertissement, ...autres] = tva({ caServicesBnc: 42000 })
       expect(autres).toEqual([])
-      expect(avertissement).toMatch(/^Seuil de franchise en base de TVA dépassé \(prestations de services .* pour un seuil de 40\s000 €\) : la TVA sera due à partir du 1er janvier suivant\. .*hors taxe/)
+      expect(avertissement).toMatch(/^Seuil de franchise en base de TVA dépassé \(prestations de services .* pour un seuil de 40\s000\s€\) : la TVA sera due à partir du 1er janvier suivant\. .*hors taxe/)
     })
 
     it("au-delà du seuil majoré, la TVA est due immédiatement", () => {
-      expect(tva({ caServicesBic: 46000 })).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue \(prestations de services .* pour un seuil de 45\s000 €\) : la TVA est due dès le jour du dépassement/)])
+      expect(tva({ caServicesBic: 46000 })).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue \(prestations de services .* pour un seuil de 45\s000\s€\) : la TVA est due dès le jour du dépassement/)])
     })
 
     it("une activité mixte est aussi comparée au seuil du chiffre d'affaires total", () => {
       const [avertissement] = tva({ caVente: 80000, caServicesBic: 25000 })
-      expect(avertissement).toMatch(/^Seuil de franchise .*chiffre d'affaires total .* pour un seuil de 100\s000 €/)
+      expect(avertissement).toMatch(/^Seuil de franchise .*chiffre d'affaires total .* pour un seuil de 100\s000\s€/)
       expect(avertissement).not.toContain("prestations de services")
     })
   })
@@ -152,7 +152,7 @@ describe("calculerEI", () => {
     expect(resultat.revenuImposable).toBe(-4500)
     expect(resultat.warnings).toHaveLength(2)
     expect(resultat.warnings[0]).toContain("Cotisations minimales")
-    expect(resultat.warnings[1]).toMatch(/déficitaire de 4\s500 €/)
+    expect(resultat.warnings[1]).toMatch(/déficitaire de 4\s500\s€/)
   })
 
   it("doit les cotisations minimales même sans activité", () => {

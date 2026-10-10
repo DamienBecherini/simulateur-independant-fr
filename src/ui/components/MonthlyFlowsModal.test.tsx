@@ -5,7 +5,7 @@ import { render, screen } from "@testing-library/react"
 import userEvent, { type UserEvent } from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { Entity, FinancialFlow } from "@/types"
-import { pourcent } from "@/backend/logic/format"
+import { enTexteBrut, pourcent } from "@/backend/logic/format"
 import { ANNEE_COURANTE, reglesPubliees } from "@/backend/logic/regles"
 import { formatAmount } from "@/lib/amount-utils"
 import { brutCalcule, netCalcule } from "@/lib/salary-utils"
@@ -403,7 +403,7 @@ describe("MonthlyFlowsModal : nature du chiffre d'affaires d'une micro-entrepris
     expect(screen.queryByText(/Vos achats/)).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("radio", { name: "Vente de marchandises (BIC)" }))
-    expect(screen.getByText(/^Vos achats \(marchandises, matériaux, outils\) ne se déduisent pas en micro-entreprise/)).toHaveTextContent(`l'abattement de ${pourcent(abattement.venteBic)} est censé les couvrir`)
+    expect(screen.getByText(/^Vos achats \(marchandises, matériaux, outils\) ne se déduisent pas en micro-entreprise/)).toHaveTextContent(enTexteBrut(`l'abattement de ${pourcent(abattement.venteBic)} est censé les couvrir`))
     await user.type(textbox("Montant du nouveau flux"), "1000{Enter}")
 
     expect(onCreate).toHaveBeenCalledWith({ type: "ca_micro_vente", label: "Vente de marchandises (BIC)", amount: 1000 })

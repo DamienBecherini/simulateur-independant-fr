@@ -94,7 +94,7 @@ describe("csvResultats avec des frais au barème kilométrique et le versement l
       "Ma SASU;SASU;5000;3180,00;oui",
       "Atelier;Micro-entreprise;1000;606,00;non",
       "",
-      "Frais professionnels;Revenus imposés comme des salaires;Déduction de 10 %;Frais réels;Retenue;Montant déduit;Trajets domicile-travail;Distance retenue (km);Frais de trajet;Autres frais",
+      "Frais professionnels;Revenus imposés comme des salaires;Déduction de 10\u00A0%;Frais réels;Retenue;Montant déduit;Trajets domicile-travail;Distance retenue (km);Frais de trajet;Autres frais",
       "Alice;20000,00;2000,00;4880,00;Frais réels;4880,00;2;7300;4380,00;500,00",
       "",
       "Voiture des trajets;Puissance;Distance retenue (km);Montant au barème",
@@ -109,15 +109,15 @@ describe("csvResultats avec des frais au barème kilométrique et le versement l
     rapport.persons = rapport.persons.map(p => (p.fraisProfessionnels ? { ...p, fraisProfessionnels: { ...p.fraisProfessionnels, retenue: "forfait", deduction: 2000 } } : p))
     const csv = lignes(csvResultats(sessionAvecFrais(), rapport))
     expect(csv).toContain("Atelier;2024;;inconnu;1;28797,00;revenu fiscal de référence inconnu")
-    expect(csv).toContain("Alice;20000,00;2000,00;4880,00;Déduction de 10 %;2000,00;2;7300;4380,00;500,00")
+    expect(csv).toContain("Alice;20000,00;2000,00;4880,00;Déduction de 10\u00A0%;2000,00;2;7300;4380,00;500,00")
   })
 
   it("nomme la déduction au taux du résultat, tiré des règles de son année", () => {
     const rapport = rapportAvecFrais()
     rapport.persons = rapport.persons.map(p => (p.fraisProfessionnels ? { ...p, fraisProfessionnels: { ...p.fraisProfessionnels, tauxDeductionForfaitaire: 0.12, retenue: "forfait", deduction: 2000 } } : p))
     const csv = lignes(csvResultats(sessionAvecFrais(), rapport))
-    expect(csv).toContain("Frais professionnels;Revenus imposés comme des salaires;Déduction de 12 %;Frais réels;Retenue;Montant déduit;Trajets domicile-travail;Distance retenue (km);Frais de trajet;Autres frais")
-    expect(csv).toContain("Alice;20000,00;2000,00;4880,00;Déduction de 12 %;2000,00;2;7300;4380,00;500,00")
+    expect(csv).toContain("Frais professionnels;Revenus imposés comme des salaires;Déduction de 12\u00A0%;Frais réels;Retenue;Montant déduit;Trajets domicile-travail;Distance retenue (km);Frais de trajet;Autres frais")
+    expect(csv).toContain("Alice;20000,00;2000,00;4880,00;Déduction de 12\u00A0%;2000,00;2;7300;4380,00;500,00")
   })
 
   it("omet ces tableaux quand la simulation n'a ni frais réels, ni déplacements, ni versement libératoire", () => {

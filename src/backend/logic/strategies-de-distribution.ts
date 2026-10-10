@@ -16,6 +16,7 @@
  */
 
 import { STATUTS_SOCIETE, type AnneeDUneStrategie, type ReglagesComparateur, type ResultatDUneStrategie, type SessionState, type SimulationReport, type StatutSociete, type StrategieDeDistribution, type StrategiesDeDistribution, type StrategiesDUnStatut } from "../../types.js"
+import { pourcentDeNombre } from "./format.js"
 import { vueDeLAnnee } from "./annees.js"
 import { activiteComparee } from "./conversion-de-statut.js"
 import { avecLaCFEDeLAnnee } from "./frais-de-fonctionnement.js"
@@ -74,7 +75,7 @@ function planifier(strategie: StrategieDeDistribution, partMiseEnReserve: number
 }
 
 function libelle(strategie: StrategieDeDistribution, partMiseEnReserve: number): string {
-  const pourcentage = `${Math.round(partMiseEnReserve * 100)} %`
+  const pourcentage = pourcentDeNombre(Math.round(partMiseEnReserve * 100))
   return { toutDistribuer: "Tout distribuer chaque année", garderPuisDistribuer: `Garder ${pourcentage} et distribuer la dernière année`, lisser: "Lisser les dividendes" }[strategie]
 }
 

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { avecLeMode, avecRemunerationSaisie, defaultFraisFonctionnement, descriptionDuMode, libellesCourtsRepartition, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
 import { coutsDesQuatreTrimestres } from "@/lib/resume"
-import { ecartSigne, euros } from "@/backend/logic/format"
+import { ecartSigne, euros, pourcentDeNombre } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
 import type { ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, PosteFrais, StatutFrais, StatutSociete } from "@/types"
 import { CurseurDeRemuneration } from "./Curseur"
@@ -144,7 +144,7 @@ function FraisFonctionnementTable({ frais, cfe, onChange }: { frais: FraisFoncti
               <tr key={poste} className="border-t border-slate-100 dark:border-slate-800">
                 <th scope="row" className="py-1 text-left font-normal text-slate-600 dark:text-slate-300">
                   {posteFraisLabels[poste]}
-                  {poste === "cfe" && cfe ? <span className="block text-xs text-blue-800 dark:text-blue-300">{cfe.part === 0 ? "non comptée cette année" : `comptée pour ${Math.round(cfe.part * 100)} % cette année`}</span> : null}
+                  {poste === "cfe" && cfe ? <span className="block text-xs text-blue-800 dark:text-blue-300">{cfe.part === 0 ? "non comptée cette année" : `comptée pour ${pourcentDeNombre(Math.round(cfe.part * 100))} cette année`}</span> : null}
                 </th>
                 {statutsFrais.map(statut => (
                   <td key={statut} className="px-2 py-1">
@@ -198,7 +198,7 @@ function FraisEtPartBnc({ options, bncUtile, cfe, onChange }: { options: Compara
       <div className="mt-3 space-y-3">
         {bncUtile ? (
           <div className="space-y-1">
-            <Label htmlFor="comparateur-bnc">En micro, prestations en BNC : {Math.round(options.partBncPrestations * 100)} % (le reste en BIC)</Label>
+            <Label htmlFor="comparateur-bnc">En micro, prestations en BNC : {pourcentDeNombre(Math.round(options.partBncPrestations * 100))} (le reste en BIC)</Label>
             <input id="comparateur-bnc" className="block w-56 max-w-full accent-slate-700 print:hidden" type="range" min="0" max="100" step="10" value={Math.round(options.partBncPrestations * 100)} onChange={e => onChange({ partBncPrestations: Number(e.target.value) / 100 })} />
           </div>
         ) : null}

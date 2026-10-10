@@ -14,7 +14,7 @@
 
 import type { FinancialFlow, MicroEntreprise, MonthlyGridData, SortieDuRegimeMicro } from "../../types.js"
 import { depassePlafondMicro, type ChiffreAffairesMicro } from "./calculsAE.js"
-import { euros } from "./format.js"
+import { euros, pourcentDeNombre } from "./format.js"
 import { reglesDeLAnnee, type ReglesFiscales } from "./regles.js"
 
 /** Un mois du calendrier : son année et son numéro, de 1 (janvier) à 12. */
@@ -138,8 +138,8 @@ function moisDeLAnnee(mois: number[], annee: number): string {
 /** Ce que l'ACRE change cette année, pour les résultats et les exports ; `null` si l'aide ne couvre aucun mois de l'année. */
 export function noteACRE(acre: ACREDuneAnnee, annee: number, economie: number): string | null {
   if (acre.mois.length === 0) return null
-  const pourcentage = Math.round(acre.reduction * 100)
-  return `ACRE : cotisations réduites de ${pourcentage} % sur le chiffre d'affaires ${moisDeLAnnee(acre.mois, annee)}, soit ${euros(economie)} de moins ; l'aide court de ${libelleDuMois(acre.debut)} à fin ${libelleDuMois(acre.fin)}. Pendant l'aide, les droits (trimestres de retraite, indemnités journalières) sont calculés sur les cotisations réduites.`
+  const pourcentage = pourcentDeNombre(Math.round(acre.reduction * 100))
+  return `ACRE : cotisations réduites de ${pourcentage} sur le chiffre d'affaires ${moisDeLAnnee(acre.mois, annee)}, soit ${euros(economie)} de moins ; l'aide court de ${libelleDuMois(acre.debut)} à fin ${libelleDuMois(acre.fin)}. Pendant l'aide, les droits (trimestres de retraite, indemnités journalières) sont calculés sur les cotisations réduites.`
 }
 
 /** Plafonds réduits au prorata l'année de création : ce qu'il faut savoir, pour les résultats et les exports. */
@@ -161,7 +161,7 @@ export function noteCFE(creation: MoisCivil | null, annee: number, regles: Regle
   if (!creation || part >= 1) return null
   if (annee < creation.annee) return `CFE non comptée en ${annee} : l'activité n'est créée qu'en ${libelleDuMois(creation)}.`
   if (annee === creation.annee) return `CFE exonérée l'année de création (${annee}) : le poste CFE des frais de fonctionnement n'est pas compté.`
-  return `CFE de ${annee}, l'année qui suit la création : base d'imposition réduite de moitié, le poste CFE des frais de fonctionnement est compté pour ${Math.round(part * 100)} %.`
+  return `CFE de ${annee}, l'année qui suit la création : base d'imposition réduite de moitié, le poste CFE des frais de fonctionnement est compté pour ${pourcentDeNombre(Math.round(part * 100))}.`
 }
 
 // --- Sortie du régime micro ---

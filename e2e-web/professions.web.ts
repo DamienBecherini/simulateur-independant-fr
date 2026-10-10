@@ -71,7 +71,7 @@ test("une profession de la CIPAV garde la micro-entreprise, au taux de 23,2 %", 
   const fenetre = await reglagesDe(page, "Cabinet")
   await fenetre.getByRole("combobox", { name: "Profession" }).click()
   await page.getByRole("option", { name: "Ostéopathe" }).click()
-  await expect(fenetre.getByRole("combobox", { name: "Profession" })).toHaveAccessibleDescription(/Micro-entreprise possible, au taux de 23,2 %/)
+  await expect(fenetre.getByRole("combobox", { name: "Profession" })).toHaveAccessibleDescription(/Micro-entreprise possible, au taux de 23,2\s%/)
   await expect(fenetre.getByLabel("Part conventionnée (%)")).toHaveCount(0)
   await fenetre.getByRole("button", { name: "Enregistrer" }).click()
 

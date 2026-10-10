@@ -6,6 +6,8 @@ import { flowTypeLabels, libelleDuType, isOutgoingFlowType, type FlowType } from
 import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
 import { pourcent } from "@/backend/logic/format"
 import { LIBELLES_DES_STATUTS } from "@/backend/logic/statuts"
+import { detailDesCotisations } from "./detail-des-cotisations"
+import { libelleDeLaProfession } from "./professions"
 import { lectureDesReserves, type LectureDesReserves } from "./reserves"
 
 /** Mois de création d'une activité en toutes lettres (« septembre 2026 ») ; `null` pour une personne ou sans date. */
@@ -155,4 +157,26 @@ export function reservesDesAnnees(simulation: SimulationPluriannuelle): { annee:
 /** Dispositifs limités dans le temps, année par année et activité par activité. */
 export function dispositifsDesAnnees(simulation: SimulationPluriannuelle): { annee: number; activite: string; note: string }[] {
   return simulation.annees.flatMap(({ annee, report }) => (report?.activities ?? []).flatMap(a => (a.dispositifs ?? []).map(note => ({ annee, activite: a.name, note }))))
+}
+
+/** Une ligne du détail des cotisations d'une activité, telle que l'écran la montre : mêmes lignes, mêmes montants. */
+export interface LigneDesCotisationsExportee {
+  activite: string
+  /** Profession libérale réglementée de l'activité (caisse comprise) ; `null` sans elle. */
+  profession: string | null
+  /** Le libellé sans son « dont ». */
+  cotisation: string
+  montant: number
+  precision: string | null
+}
+
+/**
+ * Le détail des cotisations sociales de chaque activité, ligne à ligne : celui de l'écran (`detailDesCotisations`), à
+ * l'euro, dont la somme par activité est exactement son total. Rien pour une activité dont le détail n'apprend rien.
+ */
+export function lignesDesCotisations(report: SimulationReport): LigneDesCotisationsExportee[] {
+  return report.activities.flatMap(activite => {
+    const profession = activite.profession ? libelleDeLaProfession(activite.profession) : null
+    return detailDesCotisations(activite).map(l => ({ activite: activite.name, profession, cotisation: l.libelle.replace(/^dont /, ""), montant: l.montant, precision: l.precision }))
+  })
 }

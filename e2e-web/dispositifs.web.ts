@@ -63,8 +63,8 @@ test("2028 sous le régime réel, annoncé dans les résultats, la synthèse et 
   // La synthèse des années reprend chaque dispositif, année par année.
   const dispositifs = page.getByRole("list", { name: "Dispositifs dans le temps" })
   await expect(dispositifs).toContainText(/2026 · Atelier : Année de création \(septembre 2026\) : plafonds du régime micro réduits au prorata de 122 jours/)
-  await expect(dispositifs).toContainText(/2026 · Atelier : ACRE : cotisations réduites de 25 % sur le chiffre d'affaires de septembre à décembre 2026/)
-  await expect(dispositifs).toContainText(/2027 · Atelier : ACRE : cotisations réduites de 25 % sur le chiffre d'affaires de janvier à juin 2027/)
+  await expect(dispositifs).toContainText(/2026 · Atelier : ACRE : cotisations réduites de 25\s% sur le chiffre d'affaires de septembre à décembre 2026/)
+  await expect(dispositifs).toContainText(/2027 · Atelier : ACRE : cotisations réduites de 25\s% sur le chiffre d'affaires de janvier à juin 2027/)
   await expect(dispositifs).toContainText("2027 · Atelier : Deuxième année de suite au-delà des plafonds (2026 et 2027) : sortie du régime micro au 1er janvier 2028")
   await expect(dispositifs).toContainText(`2028 · Atelier : ${sortie}`)
 
@@ -78,7 +78,7 @@ test("2028 sous le régime réel, annoncé dans les résultats, la synthèse et 
   await annee(page, "2026").click()
   await expect(page.getByText(ligneDeLAnnee(2026))).toBeVisible()
   await expect(carteAtelier(page)).toContainText("Micro-entreprise")
-  await expect(carteAtelier(page).getByRole("list", { name: "Dispositifs de l'année" })).toContainText(/ACRE : cotisations réduites de 25 % sur le chiffre d'affaires de septembre à décembre 2026, soit 1\s590 € de moins ; l'aide court de septembre 2026 à fin juin 2027/)
+  await expect(carteAtelier(page).getByRole("list", { name: "Dispositifs de l'année" })).toContainText(/ACRE : cotisations réduites de 25\s% sur le chiffre d'affaires de septembre à décembre 2026, soit 1\s590\s€ de moins ; l'aide court de septembre 2026 à fin juin 2027/)
   await auditer(page, "année de création, ACRE")
 })
 

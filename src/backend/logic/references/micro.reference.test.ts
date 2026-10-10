@@ -34,8 +34,8 @@ const titulaire = [relation("alice", "m1", "Titulaire")]
 
 /** Avertissements sur les plafonds du régime, sans ceux de la franchise de TVA. */
 const plafonds = (warnings: string[]) => warnings.filter(w => w.startsWith("Plafond"))
-/** 40 000 € de prestations : au-dessus du seuil de franchise de TVA (37 500 €), sous le seuil majoré (41 250 €). */
-const tvaAnneeSuivante = expect.stringMatching(/^Seuil de franchise en base de TVA dépassé \(prestations de services 40\s000 € pour un seuil de 37\s500 €\)/)
+/** 40 000\u00A0€ de prestations : au-dessus du seuil de franchise de TVA (37 500\u00A0€), sous le seuil majoré (41 250\u00A0€). */
+const tvaAnneeSuivante = expect.stringMatching(/^Seuil de franchise en base de TVA dépassé \(prestations de services 40\s000\s€ pour un seuil de 37\s500\s€\)/)
 
 function simulerMicro(flux: Flux[], options: Partial<Pick<MicroEntreprise, "beneficieACRE" | "opteVFL" | "rfrN2">> = {}) {
   const entreprise: MicroEntreprise = { ...micro("m1"), ...options }
@@ -207,13 +207,13 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
     const tva = (ca: number) => activite(simulerMicro([["m1", "ca_micro_services_bnc", ca]]), "m1").warnings.filter(w => w.includes("TVA"))
 
     expect(tva(37500)).toEqual([])
-    expect(tva(37600)).toEqual([expect.stringMatching(/^Seuil de franchise .*37\s500 €.*1er janvier suivant/)])
-    expect(tva(41300)).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue .*41\s250 €.*dès le jour du dépassement/)])
+    expect(tva(37600)).toEqual([expect.stringMatching(/^Seuil de franchise .*37\s500\s€.*1er janvier suivant/)])
+    expect(tva(41300)).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue .*41\s250\s€.*dès le jour du dépassement/)])
   })
 
   it("franchise en base de TVA : 93 600 € de vente dépassent le seuil majoré de 93 500 €", () => {
     const report = simulerMicro([["m1", "ca_micro_vente", 93600]])
-    expect(activite(report, "m1").warnings).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue \(chiffre d'affaires total 93\s600 € pour un seuil de 93\s500 €\)/)])
+    expect(activite(report, "m1").warnings).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue \(chiffre d'affaires total 93\s600\s€ pour un seuil de 93\s500\s€\)/)])
   })
 
   it("activité mixte : vente 180 000 € et BIC 30 000 €, plafond total dépassé", () => {

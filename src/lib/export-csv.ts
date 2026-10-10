@@ -4,10 +4,10 @@
 
 import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { documentCsv, montant, type CelluleCsv } from "./csv"
-import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
+import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
 import { libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
-import { libelleDeLaProfession, lignesDeLaCaisse, statutEtProfession } from "./professions"
+import { statutEtProfession } from "./professions"
 
 type Ligne = CelluleCsv[]
 
@@ -81,10 +81,10 @@ function lignesDesReserves(report: SimulationReport): Ligne[] {
   return tableauFacultatif(entete, lignes)
 }
 
-/** Professions libérales réglementées au réel : les cotisations que leur caisse change, ligne à ligne (ADR 015). */
+/** Les cotisations sociales de chaque activité, une ligne par cotisation : celles de l'écran, à l'euro, dont la somme est le total. */
 function lignesDesCaisses(report: SimulationReport): Ligne[] {
-  const entete: Ligne = ["Cotisations par caisse", "Profession", "Cotisation", "Montant", "Précision"]
-  const lignes = report.activities.flatMap(({ name, profession, cotisationsTNS }): Ligne[] => (cotisationsTNS && profession ? lignesDeLaCaisse(cotisationsTNS, v => `${Math.round(v)} €`).map(l => [name, libelleDeLaProfession(profession), l.libelle.replace(/^dont /, ""), montant(l.montant), l.precision ?? ""]) : []))
+  const entete: Ligne = ["Détail des cotisations", "Profession", "Cotisation", "Montant", "Précision"]
+  const lignes = lignesDesCotisations(report).map((l): Ligne => [l.activite, l.profession ?? "", l.cotisation, montant(l.montant), l.precision ?? ""])
   return tableauFacultatif(entete, lignes)
 }
 

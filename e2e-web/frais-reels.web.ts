@@ -39,7 +39,7 @@ test("saisir les trajets de Julien : ses frais réels l'emportent sur la déduct
   await expect(fenetre).toBeHidden()
 
   const ligne = (libelle: string) => resultats.locator("div").filter({ has: page.getByText(libelle, { exact: true }) }).last()
-  await expect(ligne("Frais réels retenus")).toContainText(/− 6\s065\s€plutôt que .* de déduction de 10 %/)
+  await expect(ligne("Frais réels retenus")).toContainText(/− 6\s065\s€plutôt que .* de déduction de 10\s%/)
   await expect(ligne("dont trajets domicile-travail")).toContainText(/6\s065\s€13\s080 km au barème/)
 
   // Les déplacements professionnels de la SASU : 5 000 km en 5 CV, soit 3 180 € d'indemnités kilométriques.
@@ -73,7 +73,7 @@ test("saisir deux trajets de Julien avec la même voiture : le barème s'appliqu
   await expect(fenetre).toBeHidden()
 
   const ligne = (libelle: string) => resultats.locator("div").filter({ has: page.getByText(libelle, { exact: true }) }).last()
-  await expect(ligne("Frais réels retenus")).toContainText(/− 6\s764\s€plutôt que .* de déduction de 10 %/)
+  await expect(ligne("Frais réels retenus")).toContainText(/− 6\s764\s€plutôt que .* de déduction de 10\s%/)
   await expect(ligne("dont trajets domicile-travail")).toContainText(/6\s764\s€15\s040 km au barème/)
 
   // Les trajets sont gardés à la réouverture, et le second se retire.

@@ -31,23 +31,23 @@ describe("exports d'une profession libérale réglementée", () => {
   it("CSV : la profession suit le statut, et les cotisations par caisse ont leur tableau", () => {
     const csv = csvResultats(session, report)
     expect(csv).toContain("EI au réel · Masseur-kinésithérapeute (CARPIMKO)")
-    expect(csv).toContain("Cotisations par caisse;Profession;Cotisation;Montant;Précision")
-    expect(csv).toMatch(/Cabinet;Masseur-kinésithérapeute \(CARPIMKO\);retraite complémentaire \(CARPIMKO\);3862,80;calculée sur le revenu 2026 \(2025 n'est pas dans la simulation\)/)
+    expect(csv).toContain("Détail des cotisations;Profession;Cotisation;Montant;Précision")
+    expect(csv).toMatch(/Cabinet;Masseur-kinésithérapeute \(CARPIMKO\);retraite complémentaire \(CARPIMKO\);3863,00;calculée sur le revenu 2026 \(2025 n'est pas dans la simulation\)/)
     expect(csv).toContain("avantage social vieillesse (ASV)")
   })
 
   it("Markdown : profession et part conventionnée dans les acteurs, cotisations par caisse, limite des caisses", () => {
     const markdown = rapportMarkdown({ session, report, comparaison: null, date: new Date(2026, 9, 8) })
     expect(markdown).toContain("profession : Masseur-kinésithérapeute (CARPIMKO), part conventionnée 80 %")
-    expect(markdown).toContain("### Cotisations par caisse")
+    expect(markdown).toContain("### Détail des cotisations")
     expect(markdown).toMatch(/\| Cabinet \| Masseur-kinésithérapeute \(CARPIMKO\) \| maladie \(Urssaf\) \|/)
     expect(LIMITES.join(" ")).toContain("seules la CIPAV et la CARPIMKO sont calculées")
   })
 
-  it("une activité non réglementée n'a ni profession ni tableau par caisse", () => {
+  it("une activité non réglementée a son détail des cotisations, sans profession", () => {
     const sans = { ...session, entities: [session.entities[0], makeCompany({ id: "e1", name: "Cabinet", legalStatus: "EI" })] }
     const csv = csvResultats(sans, runMetaSimulation(sans, regles2026))
-    expect(csv).not.toContain("Cotisations par caisse")
+    expect(csv).not.toContain("Masseur-kinésithérapeute")
     expect(professionDeLaFiche(makeMicro(), regles2026)).toBeNull()
     expect(professionDeLaFiche(makeMicro({ profession: "osteopathe" }), regles2026)).toBe("Ostéopathe (CIPAV)")
   })

@@ -92,9 +92,9 @@ describe("detailDesCotisations : le détail somme exactement au total", () => {
     const activite = activiteSimulee(situation("EI non réglementée, 54000"))
     const libelles = detailDesCotisations(activite).map(l => l.libelle)
     expect(libelles).toEqual(["dont maladie-maternité", "dont indemnités journalières", "dont retraite de base", "dont retraite complémentaire", "dont invalidité-décès", "dont CSG déductible", "dont CSG non déductible et CRDS", "dont formation professionnelle"])
-    expect(detailDesCotisations(activite).find(l => l.libelle === "dont CSG déductible")?.precision).toMatch(/^[\d,]+ % de l'assiette$/)
+    expect(detailDesCotisations(activite).find(l => l.libelle === "dont CSG déductible")?.precision).toMatch(/^[\d,]+\s% de l'assiette$/)
     expect(detailDesCotisations(activite).slice(-1)[0]?.precision).toBe("forfait annuel, dû même sans revenu")
-    expect(precisionDesCotisations(activite)).toMatch(/^assiette de [\d\s]+ € \(54\s000 € de revenu avant cotisations, après l'abattement forfaitaire\) ; montant définitif de l'année, que l'Urssaf appelle d'abord en acomptes provisionnels puis régularise$/)
+    expect(precisionDesCotisations(activite)).toMatch(/^assiette de [\d\s]+\s€ \(54\s000\s€ de revenu avant cotisations, après l'abattement forfaitaire\) ; montant définitif de l'année, que l'Urssaf appelle d'abord en acomptes provisionnels puis régularise$/)
   })
 
   it("au-delà du seuil des allocations familiales, la ligne apparaît", () => {
@@ -111,21 +111,21 @@ describe("detailDesCotisations : le détail somme exactement au total", () => {
     const activite = activiteSimulee(situation("SASU, rémunération"))
     const detail = detailDesCotisations(activite)
     expect(detail.map(l => l.libelle)).toEqual(["dont maladie", "dont retraite de base", "dont retraite complémentaire (Agirc-Arrco)", "dont allocations familiales", "dont CSG et CRDS", "dont autres contributions"])
-    expect(detail[0].precision).toMatch(/^[\d\s]+ € salariales, [\d\s]+ € patronales$/)
+    expect(detail[0].precision).toMatch(/^[\d\s]+\s€ salariales, [\d\s]+\s€ patronales$/)
     expect(precisionDesCotisations(activite)).toBeNull()
   })
 
   it("salariés : leurs cotisations patronales, réduction générale déduite", () => {
     const ligne = detailDesCotisations(activiteSimulee(situation("EI avec un salarié"))).slice(-1)[0]
     expect(ligne?.libelle).toBe("dont cotisations patronales du salarié")
-    expect(ligne?.precision).toMatch(/^après [\d\s]+ € de réduction générale$/)
+    expect(ligne?.precision).toMatch(/^après [\d\s]+\s€ de réduction générale$/)
   })
 
   it("micro-entreprise : cotisations au taux de la caisse, puis formation professionnelle ; l'ACRE est rappelée", () => {
-    expect(detailDesCotisations(activiteSimulee(situation("Micro-entreprise d.un ostéopathe")))[0].precision).toMatch(/^[\d,]+ % du chiffre d'affaires \(CIPAV\)$/)
+    expect(detailDesCotisations(activiteSimulee(situation("Micro-entreprise d.un ostéopathe")))[0].precision).toMatch(/^[\d,]+\s% du chiffre d'affaires \(CIPAV\)$/)
     const acre = detailDesCotisations(activiteSimulee(situation("Micro-entreprise à l.ACRE, créée")))
     expect(acre.map(l => l.libelle)).toEqual(["dont cotisations sociales", "dont formation professionnelle"])
-    expect(acre[0].precision).toMatch(/^pourcentage du chiffre d'affaires de chaque nature d'activité ; après [\d\s]+ € de réduction ACRE$/)
+    expect(acre[0].precision).toMatch(/^pourcentage du chiffre d'affaires de chaque nature d'activité ; après [\d\s]+\s€ de réduction ACRE$/)
   })
 })
 

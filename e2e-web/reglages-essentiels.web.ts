@@ -43,8 +43,8 @@ for (const affichage of AFFICHAGES) {
     await expect(caseRetraite(page)).toBeVisible()
     await expect(caseRetraite(page)).toBeChecked()
     // Ce que coûtent les 4 trimestres : près de la case, et dans l'en-tête de la colonne SASU.
-    await expect(caseRetraite(page)).toHaveAccessibleDescription(/^coût en net : SASU −[\d\s]+ €/)
-    await expect(enTete(page, "SASU")).toContainText(/4 trimestres : −[\d\s]+ € de net/)
+    await expect(caseRetraite(page)).toHaveAccessibleDescription(/^coût en net : SASU −[\d\s]+\s€/)
+    await expect(enTete(page, "SASU")).toContainText(/4 trimestres : −[\d\s]+\s€ de net/)
   })
 }
 
@@ -61,7 +61,7 @@ test("décochée, la case des 4 trimestres le reste après rechargement, et la c
   await expect(caseRetraite(page)).not.toBeChecked()
   await expect(enTete(page, "SASU")).not.toContainText("avec 4 trimestres de retraite")
   // Le coût reste dit, pour revenir sur ce choix en connaissance de cause.
-  await expect(enTete(page, "SASU")).toContainText(/4 trimestres : −[\d\s]+ € de net/)
+  await expect(enTete(page, "SASU")).toContainText(/4 trimestres : −[\d\s]+\s€ de net/)
 })
 
 for (const affichage of ["classique", "resume"] as const) {
@@ -123,7 +123,7 @@ for (const affichage of ["classique", "resume"] as const) {
     await expect(curseur(page)).toBeVisible()
     const maximum = Number(await curseur(page).getAttribute("aria-valuemax"))
     expect(maximum).toBeGreaterThan(0)
-    await expect(page.locator("#comparateur-remuneration-plafond")).toHaveText(/^jusqu'à [\d\s]+ € en SASU sans déficit$/)
+    await expect(page.locator("#comparateur-remuneration-plafond")).toHaveText(/^jusqu'à [\d\s]+\s€ en SASU sans déficit$/)
     await expect(netSasu(page)).toBeVisible()
     const avant = await netSasu(page).textContent()
 
