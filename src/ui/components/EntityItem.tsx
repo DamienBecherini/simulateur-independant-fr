@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { Entity, Relationship } from "@/types"
+import { LIBELLES_DES_STATUTS } from "@/backend/logic/statuts"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { AvatarDisplay } from "./AvatarDisplay"
@@ -26,7 +27,7 @@ export interface EntityItemProps {
 function entitySubtitle(entity: Entity): string {
   if (entity.type === "person") return "Personne physique"
   if (entity.type === "micro-entreprise") return "Activité - Micro-entreprise"
-  return `Activité - ${entity.legalStatus === "EI" ? "EI au réel" : entity.legalStatus}`
+  return `Activité - ${LIBELLES_DES_STATUTS[entity.legalStatus]}`
 }
 
 

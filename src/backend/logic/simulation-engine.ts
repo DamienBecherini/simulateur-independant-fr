@@ -1,9 +1,9 @@
 // src/backend/logic/simulation-engine.ts
 
-import type { VersementLiberatoireInfo, ActivityResult, Company, EtatDeLaSociete, FinancialFlow, FoyerFiscalResult, FraisProfessionnelsResult, MicroEntreprise, Person, PersonResult, Relationship, SalarieDeLActivite, DonneesDeLAnnee, SimulationBilan, SimulationReport } from "../../types.js"
+import type { VersementLiberatoireInfo, ActivityResult, Company, EtatDeLaSociete, FinancialFlow, FoyerFiscalResult, FraisProfessionnelsResult, MicroEntreprise, Person, PersonResult, Relationship, SalarieDeLActivite, DonneesDeLAnnee, SimulationBilan, SimulationReport, StatutJuridique, StatutSociete } from "../../types.js"
 import { calculerMicro, plafondRfrVersementLiberatoire } from "./calculsAE.js"
 import { calculerEI } from "./calculsEI.js"
-import { calculerEURL } from "./calculsEURL.js"
+import { calculerEURL, type EntreesEURL } from "./calculsEURL.js"
 import { calculerIR } from "./calculsIR.js"
 import { calculerSASU } from "./calculsSASU.js"
 import { etatSansReserves, type ResultatSociete } from "./calculsSociete.js"
@@ -236,7 +236,17 @@ function verserDividendes(ctx: Contexte, societe: Company, dividendes: { verses:
   }
 }
 
-function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
+/**
+ * Calcul de la société à l'IS de chaque statut de société : le président de SASU est assimilé salarié et reste au
+ * régime général ; le gérant d'EURL est travailleur non salarié et cotise à la caisse de sa profession, y compris sur
+ * ses dividendes au-delà de 10 % du capital. Un nouveau statut à l'IS doit y dire quel calcul est le sien.
+ */
+const CALCUL_DES_SOCIETES: Record<StatutSociete, (entrees: EntreesEURL, ctx: Contexte, societe: Company) => ResultatSociete> = {
+  SASU: (entrees, ctx) => calculerSASU(entrees, ctx.regles),
+  EURL: (entrees, ctx, societe) => calculerEURL(entrees, ctx.regles, caisseDeLActivite(ctx, societe))
+}
+
+function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete): ActivityResult {
   const masse = masseSalariale(ctx, societe.id)
   const deplacements = deplacementsProfessionnels(ctx, societe)
   const entrees = {
@@ -247,10 +257,9 @@ function simulerSocieteIS(ctx: Contexte, societe: Company): ActivityResult {
     capitalSocial: societe.capitalSocial,
     etat: ctx.annee.etatsDesSocietes?.[societe.id] ?? etatAuDebutDeLaSimulation(societe, anneeSimulee(ctx), ctx.regles)
   }
-  // Le gérant d'EURL cotise à la caisse de sa profession ; le président de SASU reste au régime général.
-  const resultat = societe.legalStatus === "SASU" ? calculerSASU(entrees, ctx.regles) : calculerEURL(entrees, ctx.regles, caisseDeLActivite(ctx, societe))
+  const resultat = CALCUL_DES_SOCIETES[statut](entrees, ctx, societe)
   const profession = professionDe(societe, ctx.regles)
-  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, societe.legalStatus === "SASU" ? "SASU" : "EURL")]
+  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, statut)]
 
   verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable, cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
   attribuerResultatSociete(ctx, societe, resultat)
@@ -495,9 +504,21 @@ function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): Activity
   }
 }
 
+/**
+ * Simulation d'une activité au réel selon son statut : les sociétés à l'IS versent rémunération et dividendes et gardent
+ * des réserves (`simulerSocieteIS`, puis le calcul de `CALCUL_DES_SOCIETES`) ; le bénéfice de l'entreprise individuelle
+ * est le revenu de son titulaire. Un nouveau statut doit y dire comment il se calcule, au lieu d'être calculé comme un
+ * autre.
+ */
+const SIMULATION_PAR_STATUT: Record<StatutJuridique, (ctx: Contexte, activite: Company) => ActivityResult> = {
+  SASU: (ctx, societe) => simulerSocieteIS(ctx, societe, "SASU"),
+  EURL: (ctx, societe) => simulerSocieteIS(ctx, societe, "EURL"),
+  EI: simulerEntrepriseIndividuelle
+}
+
 function simulerActivite(ctx: Contexte, activite: Company | MicroEntreprise): ActivityResult {
   if (activite.type === "micro-entreprise") return simulerMicroEntreprise(ctx, activite)
-  return activite.legalStatus === "EI" ? simulerEntrepriseIndividuelle(ctx, activite) : simulerSocieteIS(ctx, activite)
+  return SIMULATION_PAR_STATUT[activite.legalStatus](ctx, activite)
 }
 
 function arrondirActivite(activite: ActivityResult): ActivityResult {

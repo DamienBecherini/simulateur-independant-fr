@@ -5,7 +5,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { Avatar, Company, Entity } from "@/types"
+import { estSocieteIS, STATUTS_JURIDIQUES, type Avatar, type Company, type Entity, type StatutJuridique, type StatutSociete } from "@/types"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 import { ChampNumerique } from "./ChampNumerique"
@@ -25,6 +25,13 @@ const COULEURS_DES_ACTEURS = [
 ]
 
 const iconNames: Record<string, string> = { Briefcase: "Mallette", Building: "Immeuble", Store: "Boutique", User: "Personne" }
+
+/** Nom de chaque statut au réel dans la liste « Statut » de la fiche d'une activité. */
+const CHOIX_DU_STATUT: Record<StatutJuridique, string> = {
+  SASU: "SASU",
+  EURL: "EURL",
+  EI: "Entreprise individuelle (au réel)"
+}
 
 interface ChampsDeLActeurProps {
   entity: Entity
@@ -67,9 +74,11 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee }
               <SelectValue placeholder="Choisir un statut" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="SASU">SASU</SelectItem>
-              <SelectItem value="EURL">EURL</SelectItem>
-              <SelectItem value="EI">Entreprise individuelle (au réel)</SelectItem>
+              {STATUTS_JURIDIQUES.map(statut => (
+                <SelectItem key={statut} value={statut}>
+                  {CHOIX_DU_STATUT[statut]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -138,14 +147,23 @@ function StatusSpecificFields({ entity, onChange, anneesSimulees = [], annee }: 
       )}
       {entity.type !== "person" && <ChampDateDeCreation activite={entity} onChange={onChange} />}
       {entity.type === "micro-entreprise" && <ChampHorsPlafondAnneePrecedente activite={entity} onChange={onChange} />}
-      {entity.type === "company" && entity.legalStatus !== "EI" && <ChampsDeLaSociete societe={entity} onChange={onChange} />}
+      {entity.type === "company" && estSocieteIS(entity.legalStatus) && <ChampsDeLaSociete societe={entity} onChange={onChange} />}
     </>
   )
 }
 
+/**
+ * Ce que le capital social change pour chaque société à l'IS, en plus de la réserve légale : rien de plus en SASU ; en
+ * EURL, les dividendes au-delà de 10 % du capital supportent les cotisations du gérant (voir calculsEURL.ts).
+ */
+const AIDE_DU_CAPITAL: Record<StatutSociete, string> = {
+  SASU: "",
+  EURL: "Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant. "
+}
+
 /** Société à l'IS : son capital (réserve légale, dividendes d'EURL soumis à cotisations) et ses réserves de départ. */
 function ChampsDeLaSociete({ societe, onChange }: { societe: Company; onChange: (entity: Entity) => void }) {
-  const aideCapital = societe.legalStatus === "EURL" ? "Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant. " : ""
+  const aideCapital = estSocieteIS(societe.legalStatus) ? AIDE_DU_CAPITAL[societe.legalStatus] : ""
   return (
     <>
       <div className="grid grid-cols-4 items-center gap-4">

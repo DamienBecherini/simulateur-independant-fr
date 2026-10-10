@@ -3,9 +3,11 @@
 // import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Briefcase, Building, Store, User } from "lucide-react"
+import type { ReactNode } from "react"
+import type { StatutJuridique } from "@/types"
 
-// On définit un type pour les choix possibles, qui correspond à nos types d'entités "business"
-export type BusinessEntityType = "MicroEntreprise" | "EI" | "SASU" | "EURL"
+/** Les activités qu'on peut ajouter : une micro-entreprise, ou une activité au réel dans l'un des statuts juridiques. */
+export type BusinessEntityType = "MicroEntreprise" | StatutJuridique
 
 interface SelectEntityTypeModalProps {
   isOpen: boolean
@@ -13,12 +15,21 @@ interface SelectEntityTypeModalProps {
   onSelect: (type: BusinessEntityType) => void
 }
 
-const entityOptions = [
-  { type: "MicroEntreprise" as BusinessEntityType, label: "Micro-Entreprise", description: "Entreprise individuelle au régime simplifié, charges forfaitaires.", icon: <Store className="h-8 w-8 text-blue-500" /> },
-  { type: "EI" as BusinessEntityType, label: "Entreprise individuelle (au réel)", description: "Charges réelles déduites, bénéfice imposé à l'impôt sur le revenu.", icon: <User className="h-8 w-8 text-violet-500" /> },
-  { type: "SASU" as BusinessEntityType, label: "SASU (à l'IS)", description: "Société par actions, dirigeant assimilé-salarié.", icon: <Briefcase className="h-8 w-8 text-red-500" /> },
-  { type: "EURL" as BusinessEntityType, label: "EURL (à l'IS)", description: "Société à responsabilité limitée, gérant TNS.", icon: <Building className="h-8 w-8 text-green-500" /> }
-]
+interface OptionDActivite {
+  label: string
+  description: string
+  icon: ReactNode
+}
+
+/** Le choix proposé pour chaque activité, dans l'ordre d'affichage. Un nouveau statut doit y avoir le sien. */
+const OPTIONS_PAR_TYPE: Record<BusinessEntityType, OptionDActivite> = {
+  MicroEntreprise: { label: "Micro-Entreprise", description: "Entreprise individuelle au régime simplifié, charges forfaitaires.", icon: <Store className="h-8 w-8 text-blue-500" /> },
+  EI: { label: "Entreprise individuelle (au réel)", description: "Charges réelles déduites, bénéfice imposé à l'impôt sur le revenu.", icon: <User className="h-8 w-8 text-violet-500" /> },
+  SASU: { label: "SASU (à l'IS)", description: "Société par actions, dirigeant assimilé-salarié.", icon: <Briefcase className="h-8 w-8 text-red-500" /> },
+  EURL: { label: "EURL (à l'IS)", description: "Société à responsabilité limitée, gérant TNS.", icon: <Building className="h-8 w-8 text-green-500" /> }
+}
+
+const entityOptions = (Object.keys(OPTIONS_PAR_TYPE) as BusinessEntityType[]).map(type => ({ type, ...OPTIONS_PAR_TYPE[type] }))
 
 export function SelectEntityTypeModal({ isOpen, onClose, onSelect }: SelectEntityTypeModalProps) {
   const handleSelect = (type: BusinessEntityType) => {

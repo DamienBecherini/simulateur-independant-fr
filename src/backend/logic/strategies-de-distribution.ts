@@ -15,7 +15,7 @@
  * moteur. Dans le cas rare où le moteur verse moins que prévu, la stratégie le signale.
  */
 
-import type { AnneeDUneStrategie, ReglagesComparateur, ResultatDUneStrategie, SessionState, SimulationReport, StatutSociete, StrategieDeDistribution, StrategiesDeDistribution, StrategiesDUnStatut } from "../../types.js"
+import { STATUTS_SOCIETE, type AnneeDUneStrategie, type ReglagesComparateur, type ResultatDUneStrategie, type SessionState, type SimulationReport, type StatutSociete, type StrategieDeDistribution, type StrategiesDeDistribution, type StrategiesDUnStatut } from "../../types.js"
 import { vueDeLAnnee } from "./annees.js"
 import { activiteComparee, avecLaCFEDeLAnnee, sessionConvertie } from "./comparateur.js"
 import { optionsDuComparateur, PART_MISE_EN_RESERVE_PAR_DEFAUT } from "./options-du-comparateur.js"
@@ -127,7 +127,7 @@ export function comparerStrategiesDeDistribution(session: SessionState, activity
   return {
     annees: simulees.filter(a => a.report !== null).map(a => a.annee),
     partMiseEnReserve,
-    statuts: (["SASU", "EURL"] as const).map(statut => strategiesDuStatut(session, activityId, reglages, statut, partMiseEnReserve)),
+    statuts: STATUTS_SOCIETE.map(statut => strategiesDuStatut(session, activityId, reglages, statut, partMiseEnReserve)),
     notes
   }
 }
