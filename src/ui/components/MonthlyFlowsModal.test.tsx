@@ -108,6 +108,7 @@ describe("MonthlyFlowsModal : ligne d'ajout", () => {
     await user.type(amount, "12abc{Enter}")
 
     expect(amount).toHaveAttribute("aria-invalid", "true")
+    expect(amount).toHaveAccessibleDescription(/Montant positif attendu/)
     expect(amount).toHaveFocus()
     expect(onCreate).not.toHaveBeenCalled()
   })
@@ -152,7 +153,7 @@ describe("MonthlyFlowsModal : lignes existantes", () => {
     expect(amount).toHaveValue(formatAmount(1250.75))
   })
 
-  it("restaure l'ancien montant quand la saisie est invalide", async () => {
+  it("signale un montant invalide par un message lié au champ, sans rien enregistrer", async () => {
     const { user, onUpdate } = renderModal({ flows: [flow] })
     const amount = textbox("Montant")
 
@@ -161,7 +162,50 @@ describe("MonthlyFlowsModal : lignes existantes", () => {
     await user.tab()
 
     expect(onUpdate).not.toHaveBeenCalled()
+    expect(amount).toHaveAttribute("aria-invalid", "true")
+    const message = screen.getByRole("alert")
+    expect(message).toHaveTextContent("Montant positif attendu")
+    expect(amount).toHaveAccessibleDescription(message.textContent ?? "")
+    expect(amount).toHaveValue("mille")
+  })
+
+  it("refuse aussi un montant négatif, avec le même message", async () => {
+    const { user, onUpdate } = renderModal({ flows: [flow] })
+    const amount = textbox("Montant")
+
+    await user.clear(amount)
+    await user.type(amount, "-500{Enter}")
+
+    expect(onUpdate).not.toHaveBeenCalled()
+    expect(screen.getByRole("alert")).toHaveTextContent("Montant positif attendu")
+  })
+
+  it("restaure l'ancien montant et retire le message avec Échap", async () => {
+    const { user, onUpdate } = renderModal({ flows: [flow] })
+    const amount = textbox("Montant")
+
+    await user.clear(amount)
+    await user.type(amount, "mille{Enter}")
+    await user.keyboard("{Escape}")
+
+    expect(onUpdate).not.toHaveBeenCalled()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(amount).not.toHaveAttribute("aria-invalid", "true")
     expect(amount).toHaveValue(formatAmount(1000))
+  })
+
+  it("retire le message dès que le montant est corrigé, puis l'enregistre", async () => {
+    const { user, onUpdate } = renderModal({ flows: [flow] })
+    const amount = textbox("Montant")
+
+    await user.clear(amount)
+    await user.type(amount, "mille{Enter}")
+    expect(screen.getByRole("alert")).toBeInTheDocument()
+    await user.clear(amount)
+    await user.type(amount, "1200{Enter}")
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(onUpdate).toHaveBeenCalledWith("flow-1", { amount: 1200 })
   })
 
   it("n'enregistre rien quand la valeur validée est inchangée", async () => {

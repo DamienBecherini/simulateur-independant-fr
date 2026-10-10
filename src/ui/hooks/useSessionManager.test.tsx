@@ -194,3 +194,33 @@ describe("useSessionManager : pas de sauvegarde automatique avant la fin du char
     expect(window.api.saveCurrentSessionSync).not.toHaveBeenCalled()
   })
 })
+
+describe("useSessionManager : réinitialisation et montage type annulables", () => {
+  it("garde la simulation remplacée dans l'historique : annuler la restaure, rétablir la vide à nouveau", async () => {
+    const { result } = await gestionnaire()
+    act(() => result.current.setCurrentSession(session => ({ ...session, name: "Ma simulation", entities: [makePerson(), makeCompany()] })))
+
+    act(() => result.current.handleResetSession())
+    expect(result.current.currentSession.entities).toEqual([])
+    expect(result.current.canUndo).toBe(true)
+
+    act(() => result.current.undo())
+    expect(result.current.currentSession.name).toBe("Ma simulation")
+    expect(result.current.currentSession.entities).toHaveLength(2)
+
+    act(() => result.current.redo())
+    expect(result.current.currentSession.entities).toEqual([])
+  })
+
+  it("garde aussi la simulation remplacée par un montage type dans l'historique", async () => {
+    const { result } = await gestionnaire()
+    act(() => result.current.setCurrentSession(session => ({ ...session, name: "Ma simulation", entities: [makePerson()] })))
+
+    act(() => result.current.handleLoadMontage({ ...emptySession(), name: "Un montage" }))
+    expect(result.current.currentSession.name).toBe("Un montage")
+
+    act(() => result.current.undo())
+    expect(result.current.currentSession.name).toBe("Ma simulation")
+    expect(result.current.currentSession.entities).toHaveLength(1)
+  })
+})

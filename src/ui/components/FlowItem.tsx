@@ -1,6 +1,6 @@
 // src/ui/components/FlowItem.tsx
 
-import { useState, type KeyboardEvent } from "react"
+import { useId, useState, type KeyboardEvent } from "react"
 import type { Entity, FinancialFlow } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { FlowTypeSelect, RetourALaLigneSurTelephone } from "./FlowTypeSelect"
 import { POIGNEE_DE_TRI } from "../hooks/useTriAccessible"
+import { MessageDeMontantInvalide } from "./MessageDeMontantInvalide"
 
 /** Champs d'un flux modifiables depuis la liste. */
 export type FlowChanges = Partial<Pick<FinancialFlow, "type" | "label" | "amount" | "grossAmount">>
@@ -112,6 +113,55 @@ function ChampsDuBrut({ flow, onUpdate, regles }: Pick<FlowItemProps, "flow" | "
   )
 }
 
+/**
+ * Montant d'un flux, écrit à la validation seulement. Une saisie invalide (« abc », montant négatif) n'est pas
+ * ignorée en silence : elle reste affichée avec son message, jusqu'à ce qu'on la corrige ou qu'Échap rétablisse
+ * l'ancien montant. La saisie vide, elle, rétablit simplement l'ancien montant.
+ */
+function ChampDuMontant({ flow, onUpdate, isInvalid, onInvalidChange }: Pick<FlowItemProps, "flow" | "onUpdate"> & { isInvalid: boolean; onInvalidChange: (invalide: boolean) => void }) {
+  const [draft, setDraft] = useState<string | null>(null)
+  const idErreur = useId()
+  const isSalary = flow.type === "salary"
+
+  const cancel = () => {
+    setDraft(null)
+    onInvalidChange(false)
+  }
+  const commit = () => {
+    if (draft === null) return
+    const amount = parseAmount(draft)
+    if (amount === null && draft.trim() !== "") return onInvalidChange(true)
+    cancel()
+    if (amount === null || amount === flow.amount) return
+    // Un net supérieur au brut rend ce dernier incohérent : il est effacé.
+    onUpdate(flow.id, flow.grossAmount !== undefined && amount > flow.grossAmount ? { amount, grossAmount: undefined } : { amount })
+  }
+
+  return (
+    <>
+      <Input
+        className={cn("w-28 shrink-0 bg-background text-right font-mono", isOutgoingFlowType(flow.type) ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400")}
+        aria-label={isSalary ? "Salaire net" : "Montant"}
+        title={isSalary ? "Salaire net" : undefined}
+        inputMode="decimal"
+        value={draft ?? formatAmount(flow.amount)}
+        aria-invalid={isInvalid}
+        aria-describedby={isInvalid ? idErreur : undefined}
+        data-editing={draft !== null}
+        onFocus={e => e.target.select()}
+        onChange={e => {
+          setDraft(e.target.value)
+          onInvalidChange(false)
+        }}
+        onBlur={commit}
+        onKeyDown={handleKeyDown(commit, cancel)}
+      />
+      <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
+      {isInvalid && <MessageDeMontantInvalide id={idErreur} />}
+    </>
+  )
+}
+
 export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, onTypeUsed, typeActeur, regles }: FlowItemProps) {
   // Hook de la bibliothèque dnd-kit pour rendre l'élément "triable" (sortable).
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: flow.id })
@@ -119,7 +169,8 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
   // Saisies en cours : `null` tant que le champ n'est pas modifié, il affiche alors la valeur du flux.
   // La session n'est écrite qu'à la validation : une seule entrée d'historique par modification, jamais une par frappe.
   const [labelDraft, setLabelDraft] = useState<string | null>(null)
-  const [amountDraft, setAmountDraft] = useState<string | null>(null)
+  // Montant refusé : le champ le dit (voir `ChampDuMontant`), et la ligne passe à la ligne suivante pour son message.
+  const [isAmountInvalid, setAmountInvalid] = useState(false)
 
   // Style CSS dynamique pour animer le déplacement de l'élément pendant le glisser-déposer.
   const style = {
@@ -150,18 +201,8 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
     if (label !== flow.label) onUpdate(flow.id, { label })
   }
 
-  const commitAmount = () => {
-    if (amountDraft === null) return
-    setAmountDraft(null)
-    // Saisie vide ou invalide : l'ancienne valeur est restaurée.
-    const amount = parseAmount(amountDraft)
-    if (amount === null || amount === flow.amount) return
-    // Un net supérieur au brut rend ce dernier incohérent : il est effacé.
-    onUpdate(flow.id, flow.grossAmount !== undefined && amount > flow.grossAmount ? { amount, grossAmount: undefined } : { amount })
-  }
-
   return (
-    <div ref={setNodeRef} style={style} className={cn("flex flex-wrap items-center gap-2 rounded-md border bg-slate-50 p-2 sm:flex-nowrap dark:bg-gray-800", isDragging && "relative z-10 shadow-md")}>
+    <div ref={setNodeRef} style={style} className={cn("flex flex-wrap items-center gap-2 rounded-md border bg-slate-50 p-2 sm:flex-nowrap dark:bg-gray-800", isAmountInvalid && "sm:flex-wrap", isDragging && "relative z-10 shadow-md")}>
       {/* Poignée de glisser-déposer : au clavier, Espace la saisit et les flèches déplacent le flux. */}
       <div {...attributes} {...listeners} aria-label="Réordonner le flux" className={POIGNEE_DE_TRI}>
         <GripVertical className="h-4 w-4" aria-hidden="true" />
@@ -183,19 +224,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
 
       {isSalary && <ChampsDuBrut flow={flow} onUpdate={onUpdate} regles={regles} />}
 
-      <Input
-        className={cn("w-28 shrink-0 bg-background text-right font-mono", isOutgoingFlowType(flow.type) ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400")}
-        aria-label={isSalary ? "Salaire net" : "Montant"}
-        title={isSalary ? "Salaire net" : undefined}
-        inputMode="decimal"
-        value={amountDraft ?? formatAmount(flow.amount)}
-        data-editing={amountDraft !== null}
-        onFocus={e => e.target.select()}
-        onChange={e => setAmountDraft(e.target.value)}
-        onBlur={commitAmount}
-        onKeyDown={handleKeyDown(commitAmount, () => setAmountDraft(null))}
-      />
-      <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
+      <ChampDuMontant flow={flow} onUpdate={onUpdate} isInvalid={isAmountInvalid} onInvalidChange={setAmountInvalid} />
 
       {onRecopier ? (
         <Button variant="ghost" size="icon" className="shrink-0" aria-label="Recopier ce flux jusqu'en décembre" title="Recopier ce flux sur les mois suivants, jusqu'en décembre de l'année affichée" onClick={() => onRecopier(flow.id)}>

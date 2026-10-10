@@ -1,6 +1,6 @@
 // src/ui/components/NewFlowItem.tsx
 
-import { useRef, useState, type KeyboardEvent, type RefObject } from "react"
+import { useId, useRef, useState, type KeyboardEvent, type RefObject } from "react"
 import type { Entity, FinancialFlow } from "@/types"
 import { Input } from "@/components/ui/input"
 import { formatAmount, parseAmount } from "@/lib/amount-utils"
@@ -8,7 +8,9 @@ import { libelleDuType, type FlowType } from "@/lib/flow-constants"
 import { brutCalcule, grossFromNet, netCalcule, netFromGross, parsePercent } from "@/lib/salary-utils"
 import type { ReglesFiscales } from "@/backend/logic/regles"
 import { Plus } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { FlowTypeSelect, RetourALaLigneSurTelephone } from "./FlowTypeSelect"
+import { MessageDeMontantInvalide } from "./MessageDeMontantInvalide"
 
 /** Valeurs saisies pour un nouveau flux. */
 export type NewFlowValues = Pick<FinancialFlow, "type" | "label" | "amount" | "grossAmount">
@@ -34,6 +36,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
   const [label, setLabel] = useState("")
   const [amount, setAmount] = useState("")
   const [isAmountInvalid, setAmountInvalid] = useState(false)
+  const idErreurDuMontant = useId()
   const amountInputRef = useRef<HTMLInputElement>(null)
 
   // Pour un salaire, le brut et le pourcentage sont facultatifs. Tant que le net n'a pas été saisi à la main,
@@ -110,7 +113,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2 sm:flex-nowrap">
+    <div className={cn("flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2 sm:flex-nowrap", isAmountInvalid && "sm:flex-wrap")}>
       <Plus className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
 
       <FlowTypeSelect value={type} options={allowedTypes} onChange={onTypeChange} typeActeur={typeActeur} />
@@ -156,6 +159,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
         className="w-28 shrink-0 bg-background text-right font-mono"
         aria-label={isSalary ? "Salaire net du nouveau flux" : "Montant du nouveau flux"}
         aria-invalid={isAmountInvalid}
+        aria-describedby={isAmountInvalid ? idErreurDuMontant : undefined}
         inputMode="decimal"
         placeholder={isSalary ? "Net" : "Montant"}
         value={amount}
@@ -169,6 +173,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
         onKeyDown={handleAmountKeyDown}
       />
       <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
+      {isAmountInvalid && <MessageDeMontantInvalide id={idErreurDuMontant} />}
 
       {/* Réserve la largeur du bouton de suppression pour aligner les colonnes sur les lignes existantes. */}
       <div className="h-9 w-9 shrink-0 pointer-coarse:w-11" />
