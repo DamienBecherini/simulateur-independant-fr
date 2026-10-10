@@ -1,7 +1,8 @@
 // src/backend/logic/comparateur.test.ts
 
 import { describe, expect, it } from "vitest"
-import { comparerStatuts, coutDesQuatreTrimestres, remunerationOptimale, statutActuel } from "./comparateur.js"
+import { comparerStatuts, coutDesQuatreTrimestres, remunerationOptimale } from "./comparateur.js"
+import { statutActuel } from "./conversion-de-statut.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"

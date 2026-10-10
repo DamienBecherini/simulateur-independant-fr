@@ -1,8 +1,10 @@
 // src/backend/logic/optimisation-remuneration.ts
 
 import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, DonneesDeLAnnee, StatutSociete } from "../../types.js"
-import { activiteComparee, beneficeAvantDividendes, PRECISION_REMUNERATION, remunerationMaximale, simulerScenario, type Activite } from "./comparateur.js"
+import type { ColonneEtudiee } from "./colonne-du-comparateur.js"
+import { activiteComparee } from "./conversion-de-statut.js"
 import type { ReglesFiscales } from "./regles.js"
+import { avecLesReglages, beneficeAvantDividendes, PRECISION_REMUNERATION, remunerationMaximale, simulerScenario, toutEnDividendes } from "./simulation-d-un-statut.js"
 import type { ContexteDeLAnnee } from "./simulation-engine.js"
 
 /*
@@ -15,8 +17,8 @@ import type { ContexteDeLAnnee } from "./simulation-engine.js"
  * une grille d'une soixantaine de points, puis à 100 € près autour des meilleurs. Une simulation coûte moins d'une
  * milliseconde : le calcul complet reste sous la seconde.
  *
- * Le comparateur, au meilleur net, appelle cet arbitrage, qui s'appuie lui-même sur le comparateur : les deux modules
- * s'importent l'un l'autre. Rien n'y est lu au chargement, seulement à l'appel, quel que soit l'ordre de chargement.
+ * Chaque point est une colonne simulée par simulation-d-un-statut.ts, comme dans le comparateur, qui appelle cet
+ * arbitrage au meilleur net.
  */
 
 /** Nombre de points visés sur la grille. */
@@ -24,8 +26,9 @@ const POINTS_DE_GRILLE = 60
 
 const arrondiInferieur = (montant: number) => Math.floor(montant / PRECISION_REMUNERATION) * PRECISION_REMUNERATION
 
-function calculerPoint(session: DonneesDeLAnnee, source: Activite, statut: StatutSociete, options: ComparaisonOptions, remunerationNette: number, regles: ReglesFiscales, contexte: ContexteDeLAnnee): PointRemuneration {
-  const { scenario, dividendes } = simulerScenario(session, source, statut, { ...options, remunerationNette, repartition: { mode: "dividendes", partDistribuee: 1 } }, regles, contexte)
+/** La colonne à cette rémunération, tout le bénéfice restant versé en dividendes. */
+function calculerPoint(colonne: ColonneEtudiee, statut: StatutSociete, remunerationNette: number): PointRemuneration {
+  const { scenario, dividendes } = simulerScenario(avecLesReglages(colonne, toutEnDividendes(remunerationNette)), statut)
   return {
     remunerationNette,
     dividendes: Math.round(dividendes ?? 0),
@@ -47,20 +50,27 @@ function meilleurPoint(points: PointRemuneration[]): PointRemuneration | null {
   }, null)
 }
 
+function sansArbitrage(statut: StatutSociete, warnings: string[]): OptimisationRemuneration {
+  return { statut, remunerationMaximale: 0, points: [], meilleur: null, meilleurAvecRetraite: null, warnings }
+}
+
+/** Arbitre rémunération et dividendes pour l'activité des réglages, dans ce statut de société. */
 export function optimiserRemuneration(session: DonneesDeLAnnee, options: ComparaisonOptions, statut: StatutSociete, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): OptimisationRemuneration {
-  const vide = (warnings: string[]): OptimisationRemuneration => ({ statut, remunerationMaximale: 0, points: [], meilleur: null, meilleurAvecRetraite: null, warnings })
-
   const source = activiteComparee(session, options.activityId)
-  if (!source) return vide(["Choisissez une activité à comparer."])
+  if (!source) return sansArbitrage(statut, ["Choisissez une activité à comparer."])
+  return optimiserLaColonne({ donnees: session, source, options, regles, contexte }, statut)
+}
 
-  const benefice = (remuneration: number) => beneficeAvantDividendes(session, source, statut, { ...options, remunerationNette: remuneration }, regles, contexte)
-  if (benefice(0) <= 0) return vide([`Sans rémunération, l'activité ne dégage aucun bénéfice en ${statut} : il n'y a rien à partager entre rémunération et dividendes.`])
+/** Arbitre rémunération et dividendes pour la colonne d'un statut de société (voir l'en-tête du fichier). */
+export function optimiserLaColonne(colonne: ColonneEtudiee, statut: StatutSociete): OptimisationRemuneration {
+  const benefice = (remunerationNette: number) => beneficeAvantDividendes(avecLesReglages(colonne, { remunerationNette }), statut)
+  if (benefice(0) <= 0) return sansArbitrage(statut, [`Sans rémunération, l'activité ne dégage aucun bénéfice en ${statut} : il n'y a rien à partager entre rémunération et dividendes.`])
 
   const maximum = remunerationMaximale(benefice)
   const calcules = new Map<number, PointRemuneration>()
   const point = (remuneration: number) => {
     const montant = Math.min(maximum, Math.max(0, remuneration))
-    if (!calcules.has(montant)) calcules.set(montant, calculerPoint(session, source, statut, options, montant, regles, contexte))
+    if (!calcules.has(montant)) calcules.set(montant, calculerPoint(colonne, statut, montant))
     return calcules.get(montant)!
   }
   /** Parcourt à 100 € près les rémunérations entre deux bornes. */

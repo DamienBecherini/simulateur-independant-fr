@@ -1,8 +1,10 @@
 // src/backend/logic/optimisation-remuneration.test.ts
 
 import { describe, expect, it } from "vitest"
-import { activiteComparee, beneficeAvantDividendes, comparerStatuts } from "./comparateur.js"
+import { comparerStatuts } from "./comparateur.js"
+import { activiteComparee } from "./conversion-de-statut.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
+import { beneficeAvantDividendes } from "./simulation-d-un-statut.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
 import type { ComparaisonOptions, SimulationAnnuelle, StatutSociete } from "../../types.js"
@@ -29,7 +31,7 @@ describe("optimiserRemuneration", () => {
     })
 
     it("s'arrête à la rémunération la plus haute qui laisse un bénéfice, à 100 € près", () => {
-      const benefice = (remunerationNette: number) => beneficeAvantDividendes(s, activiteComparee(s, "s1")!, statut, { ...options("s1"), remunerationNette }, reglesDeTest)
+      const benefice = (remunerationNette: number) => beneficeAvantDividendes({ donnees: s, source: activiteComparee(s, "s1")!, options: { ...options("s1"), remunerationNette }, regles: reglesDeTest, contexte: {} }, statut)
       expect(benefice(resultat.remunerationMaximale)).toBeGreaterThanOrEqual(0)
       expect(benefice(resultat.remunerationMaximale + 100)).toBeLessThan(0)
     })

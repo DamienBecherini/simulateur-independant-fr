@@ -114,7 +114,7 @@ flowchart TD
     PLURI["simulation-pluriannuelle.ts<br/>toutes les années, héritage N-1 / N-2, réserves"]
     ENG["simulation-engine.ts<br/>runMetaSimulation : une année"]
     CALC["calculs par statut et par ligne<br/>calculsAE / EI / EURL / SASU / Societe / IR,<br/>cotisationsTNS, cotisationsSalarie, cotisations-liberales…"]
-    COMP["comparateur ⇄ optimisation-remuneration<br/>strategies-de-distribution"]
+    COMP["comparateur → optimisation-remuneration<br/>→ simulation-d-un-statut → conversion-de-statut<br/>strategies-de-distribution"]
     OUT["outils/ : outils pour les clients d'IA"]
   end
   MCP["src/backend/mcp<br/>serveur MCP (stdio)"]
@@ -144,7 +144,7 @@ Règles de dépendance :
 - `src/backend/logic` n'importe que `src/types.ts`, `src/backend/regles` et Zod. Un test (`outils/isolement.test.ts`) le vérifie pour les outils pour les IA ; pour le reste, vérifiez les imports d'un module ajouté.
 - `src/lib` et `src/ui` peuvent importer le moteur ; le moteur ne les importe jamais.
 - L'interface ne parle au disque que par `window.api` (contrat `EventPayloadMapping`, `src/globals.d.ts`), fourni par Electron (`preload.cts` → canaux de `main.ts`) ou par la démo (`creerApiNavigateur`).
-- Écarts connus, assumés en attendant les branches prévues par la relecture : cycle `comparateur.ts` ⇄ `optimisation-remuneration.ts` (commenté dans le code), `simulation-pluriannuelle.ts` → `comparateur.ts` (conversion d'une micro sortie du régime), cycle `src/ui` ⇄ `src/web` (bandeau de la démo).
+- Écart connu, assumé en attendant la branche prévue par la relecture : cycle `src/ui` ⇄ `src/web` (bandeau de la démo). Le moteur (`src/backend/logic`) n'a plus de cycle d'import : n'en introduisez pas.
 
 ### 2.2 Flux de données
 
@@ -190,7 +190,13 @@ flowchart TD
 | `frais-kilometriques.ts` | Barème kilométrique, frais réels. | moteur |
 | `dispositifs.ts` | ACRE, CFE de création, sortie du régime micro, prorata des plafonds. | moteur, `simulation-pluriannuelle.ts` |
 | `protection-sociale.ts` | Trimestres de retraite, couverture par régime (note du comparateur). | comparateur |
-| `comparateur.ts`, `optimisation-remuneration.ts`, `options-du-comparateur.ts`, `strategies-de-distribution.ts` | Comparaison des statuts, rémunération ou dividendes, stratégies sur plusieurs années. | `simulation-pluriannuelle.ts`, interface, outils |
+| `conversion-de-statut.ts` | `convertirLActivite` : une activité dans un autre statut (entité, relations, flux), sans rien ajouter ; `activiteComparee`, `statutActuel`. | comparateur, `simulation-pluriannuelle.ts` (micro sortie du régime), stratégies |
+| `frais-de-fonctionnement.ts` | Frais que reprend chaque colonne (`FRAIS_DES_COLONNES`, `fraisDuStatut`), CFE de l'année selon la date de création (`avecLaCFEDeLAnnee`). | comparateur, `simulation-pluriannuelle.ts`, stratégies |
+| `colonne-du-comparateur.ts` | `ColonneEtudiee` (données, activité, réglages, règles, contexte : ce que se passent le comparateur et l'optimiseur) ; `ScenarioStatut` d'une colonne d'après sa simulation. | `simulation-d-un-statut.ts` |
+| `simulation-d-un-statut.ts` | `simulerScenario` : une colonne simulée (rémunération, dividendes selon la répartition, frais) ; `sessionConvertie`, `beneficeAvantDividendes`, `remunerationMaximale`. | comparateur, optimiseur, stratégies |
+| `comparateur.ts` | `comparerStatuts` : colonnes à comparer, meilleur net, couples en union libre ; `situationActuelle`, `remunerationOptimale`. | `simulation-pluriannuelle.ts` |
+| `optimisation-remuneration.ts` | Rémunération ou dividendes : la courbe du net d'une société à l'IS, la meilleure rémunération (`optimiserRemuneration`, `optimiserLaColonne`). | comparateur (au meilleur net), `simulation-pluriannuelle.ts` |
+| `options-du-comparateur.ts`, `strategies-de-distribution.ts` | Réglages par défaut du comparateur ; stratégies de distribution sur plusieurs années. | `simulation-pluriannuelle.ts`, interface, outils |
 | `annees.ts` | Années d'une session (`donneesDeLAnnee`, `NOMBRE_MAX_ANNEES`, `erreurDesAnnees`). | partout |
 | `migrations.ts`, `data-sanitizer.ts`, `nettoyage-comparateur.ts`, `fichiers-de-donnees.ts`, `sauvegardes-groupees.ts` | Format de fichier : conversion, nettoyage, lecture et écriture des contenus. | `donnees-de-l-application.ts`, démo, serveur MCP |
 | `baremes.ts`, `format.ts` | Barèmes par tranches et progressifs ; formatage. | calculs |
@@ -287,7 +293,7 @@ Le compilateur **ne réclame pas** le reste, et un oubli fait **ignorer le flux 
 | `Property 'SARL' is missing` dans `LIBELLES_DES_STATUTS`, `DIRIGEANT_DES_STATUTS`, `RELATIONS_PAR_STATUT`, `REGIME_DU_DIRIGEANT` | `src/backend/logic/statuts.ts` | Nom affiché, relation du dirigeant (« Gérant »), relations permises (saisie et outils pour les IA), régime social du dirigeant (« non salarié » : la profession lui est proposée) |
 | `Property 'SARL' is missing` dans `SIMULATION_PAR_STATUT` | `logic/simulation-engine.ts` | Comment le moteur simule une activité de ce statut (`simulerSocieteIS` ou un calcul propre) |
 | `Property 'SARL' is missing` dans `PROTECTION_PAR_STATUT` | `logic/protection-sociale.ts` | La protection sociale de la colonne du comparateur |
-| `Property 'SARL' is missing` dans `FRAIS_DES_COLONNES` | `logic/comparateur.ts` | Les frais de fonctionnement que reprend sa colonne : les siens (à ajouter à `STATUTS_FRAIS`, avec des frais par défaut dans `options-du-comparateur.ts`) ou ceux d'un autre statut |
+| `Property 'SARL' is missing` dans `FRAIS_DES_COLONNES` | `logic/frais-de-fonctionnement.ts` | Les frais de fonctionnement que reprend sa colonne : les siens (à ajouter à `STATUTS_FRAIS`, avec des frais par défaut dans `options-du-comparateur.ts`) ou ceux d'un autre statut |
 | `Property 'SARL' is missing` dans `TYPES_PERMIS` | `logic/outils/commun.ts` | Les flux qu'une IA peut lui proposer |
 | `Property 'SARL' is missing` (deux fois) | `logic/outils/operations.ts` | Icône et couleur, puis l'acteur créé par `ajouter_acteur` |
 | `Property 'SARL' is missing` | `logic/outils/outils-de-proposition.ts` | Le libellé du genre d'acteur |

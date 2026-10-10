@@ -9,8 +9,10 @@
 
 import type { ComparaisonOptions, EtatDeLaSociete, ComparaisonResult, DonneesDeLAnnee, OptimisationRemuneration, ResultatAnnee, SessionState, SimulationPluriannuelle, SimulationReport, StatutSociete } from "../../types.js"
 import { anneeExistante, donneesDeLAnnee } from "./annees.js"
-import { activiteComparee, avecLaCFEDeLAnnee, comparerStatuts, convertirLActivite, fraisDuStatut, situationActuelle, type SituationActuelle } from "./comparateur.js"
+import { comparerStatuts, situationActuelle, type SituationActuelle } from "./comparateur.js"
+import { activiteComparee, convertirLActivite } from "./conversion-de-statut.js"
 import { regimesMicroDesAnnees, type RegimeMicroDeLAnnee } from "./dispositifs.js"
+import { avecLaCFEDeLAnnee, fraisDuStatut } from "./frais-de-fonctionnement.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { reglesDeLAnnee, type ReglesFiscales } from "./regles.js"
 import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js"
@@ -67,8 +69,8 @@ function etatsALaFin(report: SimulationReport | null, auDebut: Record<string, Et
 
 /**
  * Les micro-entreprises sorties du régime micro cette année (deux années de suite au-delà des plafonds) sont simulées
- * en entreprise individuelle au réel, avec la conversion du comparateur : chiffre d'affaires en recettes, dépenses en
- * charges déductibles, relation « Titulaire » conservée. La session elle-même ne change pas.
+ * en entreprise individuelle au réel, avec la conversion du comparateur (conversion-de-statut.ts) : chiffre d'affaires
+ * en recettes, dépenses en charges déductibles, relation « Titulaire » conservée. La session elle-même ne change pas.
  */
 function auRegimeReel(donnees: DonneesDeLAnnee, regimeMicro: RegimeMicroDeLAnnee | undefined): DonneesDeLAnnee {
   const sorties = Object.keys(regimeMicro?.sorties ?? {})
@@ -173,7 +175,7 @@ export function arbitrageDeLAnnee(session: SessionState, options: ComparaisonOpt
   const { donnees, regles, contexte, source, options: avecCFE, noteCFE } = preparerLArbitrage(session, options, annee)
   return {
     optimisation: optimiserRemuneration(donnees, avecCFE, statut, regles, contexte),
-    situationActuelle: source ? situationActuelle(donnees, source, avecCFE, regles, contexte) : null,
+    situationActuelle: source ? situationActuelle({ donnees, source, options: avecCFE, regles, contexte }) : null,
     fraisFonctionnement: fraisDuStatut(statut, avecCFE),
     ...(noteCFE ? { noteCFE } : {})
   }
