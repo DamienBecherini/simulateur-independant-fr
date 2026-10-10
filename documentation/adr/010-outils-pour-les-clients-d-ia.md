@@ -130,3 +130,11 @@ Les tests bornent le catalogue à 31 000 caractères (`outils/catalogue.test.ts`
 - les avertissements restent : les chiffres viennent du moteur (`simuler`, `regles_de_l_annee`, `expliquer_resultat`), rien n'est modifié sans la validation de l'utilisateur, une seule suppression par proposition, pas de suppression d'acteur ni d'année, frais de fonctionnement du comparateur à ne pas comparer avec `simuler`.
 
 Toute description allongée doit encore être compensée ailleurs (voir le [guide du développeur](../GUIDE_DEVELOPPEUR.md#39-ajouter-ou-modifier-un-outil-pour-les-ia)).
+
+## Addendum (2026-10-10) : un seul net pour la situation saisie
+
+Avec l'addendum du même jour à l'ADR 009, le comparateur n'ajoute plus de frais supposés au statut actuel : les nets de `comparer_statuts` et d'`optimiser_remuneration` se rapprochent désormais de ceux de `simuler`.
+
+- `comparer_statuts` rend, par colonne, `telleQueSaisie` (la colonne est la situation saisie, au net de `simuler`) et `ecartDeFrais` (frais supposés du statut moins ceux du statut actuel, négatif s'il en coûte moins) au lieu de `fraisFonctionnement`, et `situationNet`, le net de la situation saisie, référence des écarts. Sans chiffre d'affaires, `meilleur` vaut `null` et les notes le disent.
+- `optimiser_remuneration` rend `ecartDeFrais` (0 quand le statut étudié est le statut actuel) au lieu de `fraisFonctionnement` ; `situationActuelle` n'a plus de frais : son net est celui de `simuler`.
+- L'avertissement « frais de fonctionnement du comparateur à ne pas comparer avec `simuler` » de l'état ci-dessus n'a plus lieu d'être.
