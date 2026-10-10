@@ -66,7 +66,7 @@ npx eslint . && npx tsc -b && npm run transpile:electron && npm run typecheck:te
 
 | Dossier | Contenu |
 |---|---|
-| `src/types.ts` | Schémas Zod des données enregistrées (session, acteurs, flux, sauvegardes, préférences) et types des résultats du moteur. Listes fermées partagées : `CAISSES_LIBERALES`, `PUISSANCES_FISCALES`, `STATUTS_FRAIS`… |
+| `src/types.ts` | Schémas Zod des données enregistrées (session, acteurs, flux, sauvegardes, préférences) et types des résultats du moteur. Listes fermées partagées : `STATUTS_JURIDIQUES` (et `IMPOSITION_DES_STATUTS`), `CAISSES_LIBERALES`, `PUISSANCES_FISCALES`, `STATUTS_FRAIS`… |
 | `src/backend/regles/` | Les règles fiscales et sociales, un fichier JSON par année (`2024.json`…), la liste `FICHIERS_DE_REGLES` et `ANNEE_COURANTE` (`index.ts`), leurs garde-fous (`regles.test.ts`). |
 | `src/backend/logic/` | **Le moteur** : calculs purs, sans Electron, Node, React ni `src/lib`. Malgré son dossier, ce n'est pas un « backend » : il tourne aussi dans la page (démo web, interface) et dans le serveur MCP. Carte au § 2.3. |
 | `src/backend/logic/references/` | Cas de référence : le moteur avec les règles réelles d'une année, montants dérivés à la main en commentaire. |
@@ -179,6 +179,7 @@ flowchart TD
 | `regles.ts` | Types des règles (`ReglesFiscales`), `reglesDeLAnnee`, `reglesPubliees`, `reglesDesAnneesConnues`. | tout le moteur, `src/lib`, l'interface |
 | `simulation-pluriannuelle.ts` | `simulerLesAnnees` (toutes les années, héritages), `comparerStatutsDeLAnnee`, `optimiserRemunerationDeLAnnee`, `arbitrageDeLAnnee`. | `main.ts`, démo, outils pour les IA, tests |
 | `simulation-engine.ts` | `runMetaSimulation` : une année ; routage des flux selon les relations ; micro-entreprises, sociétés, EI, salariés, foyers, bilan. | `simulation-pluriannuelle.ts`, comparateur, cas de référence |
+| `statuts.ts` | Ce qu'est chaque statut au réel, en tables typées par statut : libellé, dirigeant, relations permises, régime social du dirigeant (§ 3.4). | moteur, outils, `src/lib`, interface |
 | `calculsAE.ts` | Micro-entreprise : cotisations, abattement, versement libératoire, plafonds. | moteur |
 | `calculsEI.ts`, `calculsEURL.ts`, `calculsSASU.ts`, `calculsSociete.ts` | Entreprise individuelle au réel ; sociétés à l'IS (IS, réserve légale, déficits). | moteur |
 | `cotisationsTNS.ts` | Cotisations d'un travailleur non salarié (assiette abattue, lignes) ; revenu pour un net voulu. | EI, EURL |
@@ -280,7 +281,37 @@ Le compilateur **ne réclame pas** le reste, et un oubli fait **ignorer le flux 
 - les outils pour les IA : `TYPES_DE_FLUX`, `TYPES_PERMIS` et, s'il exige une relation, `RELATIONS_REQUISES` (`outils/commun.ts`) ;
 - le format de fichier : une version précédente du simulateur écarte un flux de type inconnu et le compte dans « Flux invalides supprimés ». Le numéro de format n'a pas à changer (§ 3.5) ; dites-le dans le CHANGELOG.
 
-**Un statut juridique** (essai : `"SARL"` dans `legalStatus` de `CompanySchema`). Le compilateur ne signale que `comparateur.ts` (`StatutCompare`), `outils/commun.ts` (genre d'acteur), `src/lib/entity-factory.ts` et `src/lib/montages/construction.ts`. **Le reste tombe dans un « sinon » sans erreur** : `simulation-engine.ts` calcule `legalStatus === "SASU" ? calculerSASU : calculerEURL` (une SARL serait calculée comme une EURL), `src/lib/graph-logic.ts` donne les relations permises de la même façon. Avant tout, cherchez `legalStatus ===` et `legalStatus !==` dans `src/` (une vingtaine d'endroits : moteur, exports, interface, migrations) et remplacez chaque ternaire du calcul par une table `Record<Company["legalStatus"], …>`. Puis : le calcul (`calculs<Statut>.ts` et son test), le comparateur (`STATUTS_COMPARES`, `STATUTS_FRAIS`, frais par défaut), la protection sociale, les exports, les outils (`TYPES_PERMIS`), `session-maximale.ts`, une ADR et des cas de référence. C'est une évolution de plusieurs jours, à découper.
+**Un statut juridique** (essai : `"SARL"`). C'est une évolution de plusieurs jours, à découper ; avant le code, une ADR (régime du gérant, majoritaire ou non, imposition) et un dossier de recherche avec des cas calculés à la main.
+
+**Le compilateur guide l'ajout.** Les statuts au réel n'ont qu'une liste, `STATUTS_JURIDIQUES` (`src/types.ts`), d'où se déduisent `legalStatus`, `StatutJuridique`, `StatutCompare` (et `STATUTS_COMPARES`), `GENRES_D_ACTEUR` des outils, et, par la table `IMPOSITION_DES_STATUTS`, `StatutSociete`, `STATUTS_SOCIETE` et `estSocieteIS`. Chaque particularité d'un statut vit dans une table typée par statut : il n'y a plus de `legalStatus === …` dans `src/` hors des migrations. Ajoutez `"SARL"` à `STATUTS_JURIDIQUES` et lancez `npx tsc -b`, `npm run transpile:electron` et `npm run typecheck:tests`. L'essai donne exactement ces erreurs, une par endroit à compléter :
+
+| Erreur | Fichier | À écrire |
+|---|---|---|
+| `does not satisfy the expected type` sur `IMPOSITION_DES_STATUTS` (et deux erreurs qui en découlent dans `StatutSociete` et `estSocieteIS`) | `src/types.ts` | « IS » ou « IR » : décide de `StatutSociete`, donc du capital social, des flux de rémunération et de dividendes, du comparateur au meilleur net et de « Sur toutes les années » |
+| `Property 'SARL' is missing` dans `LIBELLES_DES_STATUTS`, `DIRIGEANT_DES_STATUTS`, `RELATIONS_PAR_STATUT`, `REGIME_DU_DIRIGEANT` | `src/backend/logic/statuts.ts` | Nom affiché, relation du dirigeant (« Gérant »), relations permises (saisie et outils pour les IA), régime social du dirigeant (« non salarié » : la profession lui est proposée) |
+| `Property 'SARL' is missing` dans `SIMULATION_PAR_STATUT` | `logic/simulation-engine.ts` | Comment le moteur simule une activité de ce statut (`simulerSocieteIS` ou un calcul propre) |
+| `Property 'SARL' is missing` dans `PROTECTION_PAR_STATUT` | `logic/protection-sociale.ts` | La protection sociale de la colonne du comparateur |
+| `Property 'SARL' is missing` dans `FRAIS_DES_COLONNES` | `logic/comparateur.ts` | Les frais de fonctionnement que reprend sa colonne : les siens (à ajouter à `STATUTS_FRAIS`, avec des frais par défaut dans `options-du-comparateur.ts`) ou ceux d'un autre statut |
+| `Property 'SARL' is missing` dans `TYPES_PERMIS` | `logic/outils/commun.ts` | Les flux qu'une IA peut lui proposer |
+| `Property 'SARL' is missing` (deux fois) | `logic/outils/operations.ts` | Icône et couleur, puis l'acteur créé par `ajouter_acteur` |
+| `Property 'SARL' is missing` | `logic/outils/outils-de-proposition.ts` | Le libellé du genre d'acteur |
+| `Property 'SARL' is missing` dans `companyDefaults` | `src/lib/entity-factory.ts` | Nom, icône, couleur, capital d'une nouvelle activité |
+| `Element implicitly has an 'any' type` (deux fois) | `src/lib/montages/construction.ts` | Icône et couleur des montages types |
+| `Property 'SARL' is missing` dans `CHOIX_DU_STATUT` | `src/ui/components/ChampsDeLActeur.tsx` | Son nom dans la liste « Statut » de la fiche |
+| `Property 'SARL' is missing` dans `OPTIONS_PAR_TYPE` | `src/ui/components/SelectEntityTypeModal.tsx` | Le choix « Ajouter une activité » |
+
+Si la SARL est déclarée « IS », une seconde passe réclame les tables typées par société (`Record<StatutSociete, …>`) :
+
+| Erreur | Fichier | À écrire |
+|---|---|---|
+| `Property 'SARL' is missing` dans `CALCUL_DES_SOCIETES` | `logic/simulation-engine.ts` | Le calcul de la société (celui de l'EURL pour un gérant majoritaire non salarié, celui de la SASU pour un gérant minoritaire assimilé salarié, ou un `calculsSARL.ts` avec son test) |
+| `Property 'SARL' is missing` dans `REGIME_EN_SOCIETE_D_EXERCICE_LIBERAL` | `logic/professions.ts` | L'avertissement d'une profession de société d'exercice libéral |
+| `Property 'SARL' is missing` dans `AIDE_DU_CAPITAL` | `src/ui/components/ChampsDeLActeur.tsx` | Ce que le capital change pour ce statut |
+| `Property 'SARL' is missing` dans un `Record<StatutSociete, number>` | `src/ui/components/ReglagesDuComparateur.test.tsx` | Compléter le test |
+
+Tant qu'une table manque, rien ne passe à l'exécution non plus : le comparateur propose une colonne de chaque statut de `STATUTS_COMPARES`, et l'essai fait échouer une quarantaine de tests (comparateur, cas de référence, stratégies, outils pour les IA) au lieu de calculer la SARL comme un autre statut. `statuts.test.ts` vérifie que chaque table de `statuts.ts` a une ligne par statut.
+
+**Ce que le compilateur ne voit pas** (à compléter à la main) : les textes des outils pour les IA qui énumèrent les statuts (« SASU, EURL, EI au réel… » dans `outils/comparaison.ts`, `outils/operations.ts`, `outils/outils-de-proposition.ts`), en surveillant la taille du catalogue (§ 3.9) ; les textes de l'interface qui opposent société et entreprise individuelle d'après `estSocieteIS` (`ChampsFrais.tsx`, export Markdown) ; `migrations.ts`, qui décrit les formats anciens, où le nouveau statut n'existe pas, et ne change pas ; le changement de régime d'une micro-entreprise sortie du régime micro (toujours une EI au réel, `simulation-pluriannuelle.ts`). Puis : une activité du nouveau statut dans `src/lib/testing/session-maximale.ts`, le calcul (`calculs<Statut>.ts` et son test), des cas de référence, le README. Une version précédente du simulateur écarte une activité d'un statut inconnu et le signale (§ 3.5).
 
 ### 3.5 Faire évoluer le format de fichier
 
