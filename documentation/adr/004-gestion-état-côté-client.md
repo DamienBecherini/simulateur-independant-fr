@@ -31,3 +31,12 @@ Ce hook centralise toute la logique de l'état de la session et implémente les 
   - **Absence d'Outils de Débogage Avancés :** Nous renonçons aux outils spécialisés comme les Redux DevTools, qui permettent de voyager dans le temps et d'inspecter l'état. Le débogage se fait avec les outils standards de React.
   - **Ré-implémentation d'un Pattern Connu :** La logique de l'historique est un problème déjà résolu par de nombreuses bibliothèques. Nous la ré-implémentons ici, ce qui est un choix conscient en faveur de la simplicité et de l'autonomie.
   - **Moins Adapté à une Très Grande Complexité :** Si l'état de l'application devait grandir de manière exponentielle avec de nombreuses logiques asynchrones complexes, cette solution pourrait devenir plus difficile à maintenir qu'une bibliothèque structurée.
+
+## Mise à jour (2026-10-10) : le mécanisme du point 2 a été remplacé
+
+Le point 2 de la décision ne décrit plus le code ; il est gardé pour l'histoire. Ce qui est vrai aujourd'hui (`src/ui/hooks/useSessionManager.ts`, `useDebouncedSave.ts`) :
+
+- Il n'y a pas d'état `sessionForSaving`. La sauvegarde automatique observe `history.present` : annuler ou rétablir enregistre aussi la session affichée (le fichier suit l'écran).
+- Rien n'est enregistré avant la fin du chargement (`isLoaded`), ni pour la session tout juste chargée : la session vierge provisoire ne peut pas remplacer celle du disque (ADR 005, « Robustesse de l'écriture », point 6).
+- À la fermeture de la fenêtre (`beforeunload`), la session et les préférences sont enregistrées de façon synchrone (`saveCurrentSessionSync`), pour ne pas perdre la dernière seconde.
+- Les réglages du comparateur sont dans la session mais hors de l'historique d'annulation (`setComparateur`, ADR 009) ; l'année affichée est un état de l'interface (ADR 008) ; les préférences (zoom, sauvegarde chargée, sections ouvertes) ont leur propre sauvegarde différée (ADR 002).

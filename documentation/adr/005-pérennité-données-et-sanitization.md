@@ -1,7 +1,7 @@
 # ADR-005: Pérennité des Données via la "Sanitization" à la Volée
 
 - **Date :** 2025-11-08
-- **Statut :** Accepté
+- **Statut :** Accepté ; complétée par l'ADR 008 et par la section « Versionnage du format » (2026-10-10) : les migrations de format existent désormais
 
 ## Contexte
 
@@ -30,6 +30,16 @@ Nous avons adopté une stratégie de **validation et de réparation automatique 
 - **Négatives ou Compromis :**
   - **Perte de Données Contrôlée :** Dans des cas extrêmes où des données sont totalement méconnaissables ou si une fonctionnalité est supprimée, les données correspondantes seront perdues (supprimées) lors du nettoyage. C'est un choix délibéré qui privilégie la stabilité de l'application à la conservation de données invalides.
   - **Couplage Fort à Zod :** L'architecture de la pérennité des données est intrinsèquement liée à la bibliothèque Zod. Un changement de bibliothèque de validation nécessiterait une réécriture significative de cette logique.
+
+## Versionnage du format (2026-10-10)
+
+La conséquence « supprime le besoin de scripts de migration » ne tient plus : les valeurs par défaut de Zod suffisent pour ajouter un champ, pas pour changer le sens d'une donnée ni la déplacer. Depuis la refonte du moteur (format 2) et l'ADR 008 (format 3), chaque fichier porte un numéro `formatVersion`, et `src/backend/logic/migrations.ts` convertit un fichier ancien, version par version, **avant** le nettoyage décrit plus haut, qui reste le second étage. La règle pour décider :
+
+- **Pas de nouveau numéro** pour un champ facultatif dont l'absence a un sens, avec sa valeur par défaut (`.optional()`, `.default()`, `.catch()` pour écarter seule une valeur invalide) : un fichier ancien se lit tel quel, une version précédente ignore le champ (ADR 009, 014, 015). De même pour une nouvelle valeur d'une énumération (type de flux, statut) : une version précédente écarte l'élément inconnu et le signale dans son rapport.
+- **Nouveau numéro et migration** quand une donnée existante change de sens ou de place (format 2 : sens de la relation « Enfant » et des dividendes ; format 3 : la grille devient celle d'une année). La migration travaille sur les données brutes, convertit ce qui peut l'être et rend des notes à l'utilisateur pour le reste ; l'original est copié à côté (`*.format-N.json`) avant la première réécriture. Un numéro plus récent que celui de l'application est lu avec un avertissement, en ignorant ce qu'elle ne connaît pas.
+- Dans les deux cas, la session « maximale » (`src/lib/testing/session-maximale.ts`) doit remplir le nouveau champ ou la nouvelle valeur : le test « rien ne se perd » le vérifie.
+
+La marche à suivre pas à pas est dans le [guide du développeur](../GUIDE_DEVELOPPEUR.md#35-faire-évoluer-le-format-de-fichier).
 
 ## Complément (octobre 2026) : robustesse de l'écriture
 

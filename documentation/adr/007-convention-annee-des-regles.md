@@ -37,6 +37,8 @@ D'autres règles changent en cours d'année : taux de cotisation des micro-entre
 
 **Ajouter une année N.** Écrire `regles/<N>.json` (règles 1 à 5 ci-dessus), l'ajouter à `FICHIERS_DE_REGLES`, compléter les tests nommés par année de `regles/regles.test.ts` ; au vote de la loi de finances pour N, mettre à jour l'impôt sur le revenu du fichier N-1 (règle 1).
 
+*Précision du 2026-10-10.* Un essai d'ajout de 2027 a montré que le code suit bien l'année en cours, mais pas tous les tests : ceux qui portent sur une session vierge, la simulation d'exemple de la démo ou « la dernière année connue » attendent 2026 en dur (une cinquantaine de tests unitaires, une trentaine de tests de bout en bout). La procédure complète, avec la liste de ces fichiers, est dans le [guide du développeur](../GUIDE_DEVELOPPEUR.md#31-ajouter-lannée-de-règles-2027).
+
 ## Conséquences
 
 - **Positives :**

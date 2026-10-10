@@ -81,3 +81,7 @@ Six questions ont été posées au propriétaire du produit (dossier, §11).
 1. Prise en charge maladie au-delà de 3 PASS : la règle à appliquer, ou à défaut celle retenue et dite dans la `description`.
 2. Les professions qui reçoivent l'avertissement sur les sociétés d'exercice libéral, chacune avec sa source (le dossier n'a trouvé aucun texte qui autorise ou interdise en toutes lettres l'EURL ou la SASU classique).
 3. Les décrets n° 2026-418 du 29/05/2026 et n° 2026-239, pour un barème CIPAV 2026 éventuel, et les règlements de la CARPIMKO approuvés par l'arrêté du 10/07/2026.
+
+## Complément (2026-10-10) : ajouter une caisse
+
+Depuis la relecture d'octobre 2026 (branche `caisses-exhaustives`), chaque particularité d'une caisse vit dans une table typée par `CaisseLiberale` (`CAISSES_LIBERALES`, `src/types.ts`) : ajouter une caisse à la liste fait échouer la compilation à chaque endroit à compléter, au lieu de la calculer comme une autre. La marche à suivre, avec les erreurs obtenues en ajoutant la CARMF à l'essai et ce que le compilateur ne voit pas (textes des outils pour les IA, limites de l'export Markdown), est dans le [guide du développeur](../GUIDE_DEVELOPPEUR.md#33-ajouter-une-caisse-de-libéraux-exemple--carmf).
