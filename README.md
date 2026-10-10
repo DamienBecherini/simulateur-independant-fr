@@ -72,7 +72,7 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 
 ## ✨ Points d'intérêt dans le code
 
-- `src/backend/logic/simulation-engine.ts` : moteur de simulation à sens unique (activités → revenus des personnes → impôt du foyer).
+- `src/backend/logic/simulation-engine.ts` : moteur de simulation à sens unique (activités → revenus des personnes → impôt du foyer), point d'entrée d'une année ; les étapes sont dans `routage-des-flux.ts`, `simulation-au-reel.ts`, `simulation-micro.ts`, `details-des-activites.ts`, `impot-du-foyer.ts` et `bilan-de-la-simulation.ts`.
 - `src/backend/logic/foyers.ts` : regroupement des foyers fiscaux par union-find (couples, enfants rattachés, parts).
 - `src/backend/logic/regles.ts` + `src/backend/regles/<année>.json` : les règles fiscales et sociales, un fichier par année (liste dans `src/backend/regles/index.ts`), typées et sourcées, hors du code. L'année en cours du simulateur est la plus récente de ces années.
 - `src/backend/logic/data-sanitizer.ts` : validation et réparation des sessions (relations et flux orphelins).

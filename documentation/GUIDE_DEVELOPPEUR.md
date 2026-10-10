@@ -179,7 +179,13 @@ flowchart TD
 |---|---|---|
 | `regles.ts` | Types des règles (`ReglesFiscales`), `reglesDeLAnnee`, `reglesPubliees`, `reglesDesAnneesConnues`. | tout le moteur, `src/lib`, l'interface |
 | `simulation-pluriannuelle.ts` | `simulerLesAnnees` (toutes les années, héritages), `comparerStatutsDeLAnnee`, `optimiserRemunerationDeLAnnee`, `arbitrageDeLAnnee`. | `main.ts`, démo, outils pour les IA, tests |
-| `simulation-engine.ts` | `runMetaSimulation` : une année ; routage des flux selon les relations ; micro-entreprises, sociétés, EI, salariés, foyers, bilan. | `simulation-pluriannuelle.ts`, comparateur, cas de référence |
+| `simulation-engine.ts` | `runMetaSimulation` : une année. Point d'entrée du moteur : enchaîne les modules ci-dessous (activités, puis personnes, puis foyers, puis bilan) ; seul importé par les appelants. | `simulation-pluriannuelle.ts`, comparateur, cas de référence |
+| `routage-des-flux.ts` | Contexte d'une année (`Contexte`, `ContexteDeLAnnee`), totaux annuels de la grille par entité (`total`), bulletins des salariés des activités, personnes reliées à une activité, et inscription de ce que les activités versent sur le compte de chaque personne (`verserRemuneration`, `verserDividendes`, `revenusDe`). | modules du moteur ci-dessous |
+| `simulation-au-reel.ts` | Activités au réel par statut (`SIMULATION_PAR_STATUT`) : sociétés à l'IS (`simulerSocieteIS`, `CALCUL_DES_SOCIETES`, réserves au début de la simulation), entreprise individuelle. | `simulation-engine.ts` |
+| `simulation-micro.ts` | Micro-entreprise : calcul de l'année, accès au versement libératoire (RFR N-2), ACRE, prorata, retour et sortie du régime. | `simulation-engine.ts` |
+| `details-des-activites.ts` | Commun à toutes les activités : masse salariale, déplacements professionnels, profession réglementée, et leurs champs dans le résultat. | `simulation-au-reel.ts`, `simulation-micro.ts` |
+| `impot-du-foyer.ts` | Résultat de chaque personne, déduction pour frais professionnels (10 % ou frais réels), revenus et impôt de chaque foyer (`calculerFoyer` : barème, dividendes, RFR). | `simulation-engine.ts` |
+| `bilan-de-la-simulation.ts` | Bilan de l'année (`calculerBilan`), additionné sur les résultats arrondis. | `simulation-engine.ts` |
 | `statuts.ts` | Ce qu'est chaque statut au réel, en tables typées par statut : libellé, dirigeant, relations permises, régime social du dirigeant (§ 3.4). | moteur, outils, `src/lib`, interface |
 | `calculsAE.ts` | Micro-entreprise : cotisations, abattement, versement libératoire, plafonds. | moteur |
 | `calculsEI.ts`, `calculsEURL.ts`, `calculsSASU.ts`, `calculsSociete.ts` | Entreprise individuelle au réel ; sociétés à l'IS (IS, réserve légale, déficits). | moteur |
@@ -192,7 +198,7 @@ flowchart TD
 | `protection-sociale.ts` | Trimestres de retraite, couverture par régime (note du comparateur). | comparateur |
 | `comparateur.ts`, `optimisation-remuneration.ts`, `options-du-comparateur.ts`, `strategies-de-distribution.ts` | Comparaison des statuts, rémunération ou dividendes, stratégies sur plusieurs années. | `simulation-pluriannuelle.ts`, interface, outils |
 | `annees.ts` | Années d'une session (`donneesDeLAnnee`, `NOMBRE_MAX_ANNEES`, `erreurDesAnnees`). | partout |
-| `migrations.ts`, `data-sanitizer.ts`, `nettoyage-comparateur.ts`, `fichiers-de-donnees.ts`, `sauvegardes-groupees.ts` | Format de fichier : conversion, nettoyage, lecture et écriture des contenus. | `donnees-de-l-application.ts`, démo, serveur MCP |
+| `migrations.ts`, `data-sanitizer.ts`, `nettoyage-comparateur.ts`, `fichiers-de-donnees.ts`, `sauvegardes-groupees.ts`, `donnees-brutes.ts` | Format de fichier : conversion, nettoyage, lecture et écriture des contenus (`estObjet`, commun, teste un objet JSON encore non validé). | `donnees-de-l-application.ts`, démo, serveur MCP |
 | `baremes.ts`, `format.ts` | Barèmes par tranches et progressifs ; formatage. | calculs |
 
 ADR à lire selon le sujet : persistance 002 et 005 ; IPC 003 ; état de l'interface 004 ; grille 006 ; années de règles 007 ; plusieurs années 008 ; réglages du comparateur 009 ; outils pour les IA 010 et 011 ; démo installable 012 ; Microsoft Store 013 ; réserves 014 ; libéraux réglementés 015.
@@ -272,7 +278,7 @@ Puis les tests à l'exécution :
 
 Le compilateur **ne réclame pas** le reste, et un oubli fait **ignorer le flux en silence** :
 
-- le moteur : `simulation-engine.ts` additionne les types par listes (`total(ctx, id, "salary", "are", "other_taxable_income")`) ; ajouter le type là où il compte (revenu imposable, encaissé, chiffre d'affaires, charge…), avec un test unitaire et un cas de référence ;
+- le moteur : `routage-des-flux.ts` (`total`) additionne les types par listes, appelé par `simulation-au-reel.ts`, `simulation-micro.ts` et `impot-du-foyer.ts` (`total(ctx, id, "salary", "are", "other_taxable_income")`) ; ajouter le type là où il compte (revenu imposable, encaissé, chiffre d'affaires, charge…), avec un test unitaire et un cas de référence ;
 - la saisie : `flowTypesByEntityType` et `getFlowTypesForEntity` (`flow-constants.ts`) ; `expenseFlowTypes` / `outgoingFlowTypes` si c'est une sortie d'argent ;
 - les outils pour les IA : `TYPES_DE_FLUX`, `TYPES_PERMIS` et, s'il exige une relation, `RELATIONS_REQUISES` (`outils/commun.ts`) ;
 - le format de fichier : une version précédente du simulateur écarte un flux de type inconnu et le compte dans « Flux invalides supprimés ». Le numéro de format n'a pas à changer (§ 3.5) ; dites-le dans le CHANGELOG.
@@ -285,7 +291,7 @@ Le compilateur **ne réclame pas** le reste, et un oubli fait **ignorer le flux 
 |---|---|---|
 | `does not satisfy the expected type` sur `IMPOSITION_DES_STATUTS` (et deux erreurs qui en découlent dans `StatutSociete` et `estSocieteIS`) | `src/types.ts` | « IS » ou « IR » : décide de `StatutSociete`, donc du capital social, des flux de rémunération et de dividendes, du comparateur au meilleur net et de « Sur toutes les années » |
 | `Property 'SARL' is missing` dans `LIBELLES_DES_STATUTS`, `DIRIGEANT_DES_STATUTS`, `RELATIONS_PAR_STATUT`, `REGIME_DU_DIRIGEANT` | `src/backend/logic/statuts.ts` | Nom affiché, relation du dirigeant (« Gérant »), relations permises (saisie et outils pour les IA), régime social du dirigeant (« non salarié » : la profession lui est proposée) |
-| `Property 'SARL' is missing` dans `SIMULATION_PAR_STATUT` | `logic/simulation-engine.ts` | Comment le moteur simule une activité de ce statut (`simulerSocieteIS` ou un calcul propre) |
+| `Property 'SARL' is missing` dans `SIMULATION_PAR_STATUT` | `logic/simulation-au-reel.ts` | Comment le moteur simule une activité de ce statut (`simulerSocieteIS` ou un calcul propre) |
 | `Property 'SARL' is missing` dans `PROTECTION_PAR_STATUT` | `logic/protection-sociale.ts` | La protection sociale de la colonne du comparateur |
 | `Property 'SARL' is missing` dans `FRAIS_DES_COLONNES` | `logic/comparateur.ts` | Les frais de fonctionnement que reprend sa colonne : les siens (à ajouter à `STATUTS_FRAIS`, avec des frais par défaut dans `options-du-comparateur.ts`) ou ceux d'un autre statut |
 | `Property 'SARL' is missing` dans `TYPES_PERMIS` | `logic/outils/commun.ts` | Les flux qu'une IA peut lui proposer |
@@ -300,7 +306,7 @@ Si la SARL est déclarée « IS », une seconde passe réclame les tables typée
 
 | Erreur | Fichier | À écrire |
 |---|---|---|
-| `Property 'SARL' is missing` dans `CALCUL_DES_SOCIETES` | `logic/simulation-engine.ts` | Le calcul de la société (celui de l'EURL pour un gérant majoritaire non salarié, celui de la SASU pour un gérant minoritaire assimilé salarié, ou un `calculsSARL.ts` avec son test) |
+| `Property 'SARL' is missing` dans `CALCUL_DES_SOCIETES` | `logic/simulation-au-reel.ts` | Le calcul de la société (celui de l'EURL pour un gérant majoritaire non salarié, celui de la SASU pour un gérant minoritaire assimilé salarié, ou un `calculsSARL.ts` avec son test) |
 | `Property 'SARL' is missing` dans `REGIME_EN_SOCIETE_D_EXERCICE_LIBERAL` | `logic/professions.ts` | L'avertissement d'une profession de société d'exercice libéral |
 | `Property 'SARL' is missing` dans `AIDE_DU_CAPITAL` | `src/ui/components/ChampsDeLActeur.tsx` | Ce que le capital change pour ce statut |
 | `Property 'SARL' is missing` dans un `Record<StatutSociete, number>` | `src/ui/components/ReglagesDuComparateur.test.tsx` | Compléter le test |
@@ -387,8 +393,8 @@ Un cas de référence lance le moteur avec les règles **réelles** d'une année
 
    `npx vitest run src/lib/debogage.test.ts --reporter=verbose` (sans `--reporter=verbose`, les `console.log` d'un test qui réussit ne s'affichent pas). Écrire `annees[annees.length - 1]` et non `annees.at(-1)` : la cible de compilation de l'interface ne connaît pas `at` (erreur de `npx tsc -b`). Dans le rapport : `activities[].cotisationsTNS.cotisations` (lignes d'un indépendant), `cotisationsPresident`, `salaries`, `versementLiberatoire`, `acre`, `reserves`, `foyers[].impotSurLeRevenu`, `avertissements`.
 5. **Retrouver la règle** : `reglesDeLAnnee(annee)` (rapport : `anneeDesRegles`, et un avertissement si l'année reprend les dernières règles connues), le bloc du fichier `src/backend/regles/<année>.json`, sa `description` et sa `source`. Vérifier la valeur sur la source : l'erreur peut être dans les règles, pas dans le code.
-6. **Refaire le calcul à la main** et l'écrire comme un **cas de référence** (§ 3.6) qui échoue avec le code actuel. Identité du bilan fausse : un montant est perdu ou compté deux fois entre activités et foyers (routage des flux dans `simulation-engine.ts`).
-7. **Corriger**, dans les règles (avec une source) ou dans le calcul (avec un test unitaire sur `reglesDeTest`), jusqu'à ce que le cas passe ; vérifier qu'aucun autre cas de référence ne change sans raison. CHANGELOG (Corrigé), et réponse au ticket.
+6. **Refaire le calcul à la main** et l'écrire comme un **cas de référence** (§ 3.6) qui échoue avec le code actuel. Identité du bilan fausse : un montant est perdu ou compté deux fois entre activités et foyers (routage des flux dans `routage-des-flux.ts` ; impôt et revenus du foyer dans `impot-du-foyer.ts`).
+7. **Corriger**, dans les règles (avec une source) ou dans le calcul (avec un test unitaire sur `reglesDeTest`), jusqu'à ce que le cas passe ; vérifier qu'aucun autre cas de référence ne change sans raison. Dans le calcul, une ligne d'activité fausse se cherche dans `simulation-micro.ts` ou `simulation-au-reel.ts` (puis le `calculs*.ts` qu'ils appellent), un montant mal attribué à une personne dans `routage-des-flux.ts`, l'impôt ou la déduction pour frais dans `impot-du-foyer.ts`, le bilan dans `bilan-de-la-simulation.ts` (carte au § 2.3). CHANGELOG (Corrigé), et réponse au ticket.
 
 ### 3.8 Ajouter un scénario au bouton « Tests »
 
