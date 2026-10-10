@@ -13,9 +13,9 @@ import { vueDeLAnnee } from "@/backend/logic/annees"
 import { BoutonExportCsv } from "./BoutonExportCsv"
 import { Depliable } from "./Depliable"
 import { ZoneDefilante } from "./ZoneDefilante"
+import { euros } from "@/backend/logic/format"
 
 
-const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
 const trimestres = (n: number) => `${n} trimestre${n > 1 ? "s" : ""} de retraite`
 
 /** Largeur du graphique imprimé : une feuille A4 (210 mm) moins ses marges et le cadre de la section, en pixels CSS. */

@@ -22,6 +22,7 @@ import { useSectionOuverte } from "../hooks/useSectionOuverte"
 import { libelleDuCoutDesTrimestres, type ResumeDeLaComparaison } from "@/lib/resume"
 import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutSociete } from "@/types"
 import { COLONNE_FIXE } from "../colonne-fixe"
+import { ecartSigne, euros } from "@/backend/logic/format"
 
 /** Fond de l'en-tête du tableau, rendu opaque pour sa première cellule, fixe : le gris translucide sur le fond de la page. */
 const FOND_DE_L_EN_TETE = "bg-slate-100 dark:bg-[color-mix(in_oklab,var(--color-slate-800)_80%,var(--background))]"
@@ -39,14 +40,6 @@ interface ComparatorPanelProps {
 /** Sans activité, on compare tout de même les couples en union libre. */
 const NO_ACTIVITY: ComparaisonOptions = { activityId: "", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }
 
-function formatMoney(n: number): string {
-  return n.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €"
-}
-
-function formatSignedMoney(n: number): string {
-  return `${n > 0 ? "+" : n < 0 ? "−" : ""}${formatMoney(Math.abs(n))}`
-}
-
 /** Couleur d'un écart : vert s'il est favorable, rouge sinon. */
 function deltaClass(delta: number): string | undefined {
   if (delta > 0) return "text-emerald-700 dark:text-emerald-400"
@@ -61,14 +54,14 @@ function rate(scenario: ScenarioStatut): string {
 
 /** Lignes du tableau : libellé et valeur d'une colonne. Seule la dernière porte sur l'activité comparée. */
 const rows = (activityName: string): { label: string; value: (s: ScenarioStatut) => string; strong?: boolean }[] => [
-  { label: "Net dans la poche", value: s => formatMoney(s.netApresImpots), strong: true },
+  { label: "Net dans la poche", value: s => euros(s.netApresImpots), strong: true },
   { label: "Taux global de prélèvement", value: rate },
-  { label: "Frais de fonctionnement", value: s => formatMoney(s.fraisFonctionnement) },
-  { label: "Cotisations sociales", value: s => formatMoney(s.cotisationsSociales) },
-  { label: "Impôt sur les sociétés", value: s => formatMoney(s.impotSocietes) },
-  { label: "Impôt sur le revenu", value: s => formatMoney(s.impotSurLeRevenu) },
-  { label: "Prélèvements sociaux", value: s => formatMoney(s.prelevementsSociaux) },
-  { label: `Conservé dans « ${activityName} »`, value: s => formatMoney(s.resultatConserveActivite) }
+  { label: "Frais de fonctionnement", value: s => euros(s.fraisFonctionnement) },
+  { label: "Cotisations sociales", value: s => euros(s.cotisationsSociales) },
+  { label: "Impôt sur les sociétés", value: s => euros(s.impotSocietes) },
+  { label: "Impôt sur le revenu", value: s => euros(s.impotSurLeRevenu) },
+  { label: "Prélèvements sociaux", value: s => euros(s.prelevementsSociaux) },
+  { label: `Conservé dans « ${activityName} »`, value: s => euros(s.resultatConserveActivite) }
 ]
 
 /** Étoiles pleines et vides, sur 5. */
@@ -82,7 +75,7 @@ function RemunerationRetenue({ scenario }: { scenario: ScenarioStatut }) {
   if (!retenue) return null
   return (
     <span className="mt-1 block text-xs font-normal text-slate-700 dark:text-slate-200">
-      rémunération optimale : <span className="whitespace-nowrap font-medium">{formatMoney(retenue.remunerationNette)} nets</span>
+      rémunération optimale : <span className="whitespace-nowrap font-medium">{euros(retenue.remunerationNette)} nets</span>
       {retenue.avecRetraite ? <span className="block text-slate-600 dark:text-slate-400">avec 4 trimestres de retraite</span> : null}
       {retenue.retraiteHorsDAtteinte ? <span className="block text-amber-800 dark:text-amber-300">4 trimestres hors d'atteinte</span> : null}
       {/* Cochée ou non, ce que coûtent les 4 trimestres dans cette colonne : le choix se fait en connaissance de cause. */}
@@ -177,7 +170,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
       </th>
       {result.scenarios.map(s => (
         <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", deltaClass(s.netApresImpots - current.netApresImpots), best(s) && "bg-emerald-50 dark:bg-emerald-950/30")}>
-          {s.actuel ? "—" : formatSignedMoney(s.netApresImpots - current.netApresImpots)}
+          {s.actuel ? "—" : ecartSigne(s.netApresImpots - current.netApresImpots)}
         </td>
       ))}
     </tr>
@@ -281,7 +274,7 @@ function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[
         const delta = couple.netApresImpotsMaries - couple.netApresImpotsActuel
         return (
           <p key={couple.personIds.join("-")} className="text-sm text-slate-600 dark:text-slate-300">
-            {couple.personIds.map(personName).join(" et ")} : impôt sur le revenu de {formatMoney(couple.impotSurLeRevenuActuel)} en union libre, {formatMoney(couple.impotSurLeRevenuMaries)} avec une imposition commune, soit <span className={cn("font-semibold", deltaClass(delta))}>{formatSignedMoney(delta)}</span> sur le net après impôts.
+            {couple.personIds.map(personName).join(" et ")} : impôt sur le revenu de {euros(couple.impotSurLeRevenuActuel)} en union libre, {euros(couple.impotSurLeRevenuMaries)} avec une imposition commune, soit <span className={cn("font-semibold", deltaClass(delta))}>{ecartSigne(delta)}</span> sur le net après impôts.
           </p>
         )
       })}

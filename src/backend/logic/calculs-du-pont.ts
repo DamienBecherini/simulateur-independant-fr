@@ -1,5 +1,5 @@
 // src/backend/logic/calculs-du-pont.ts
-// Les calculs demandés par l'interface, communs aux deux ponts : le process principal d'Electron (main.ts) et la démo
+// Les calculs demandés par l'interface, communs aux deux ponts : le process principal d'Electron (canaux-de-calcul.ts) et la démo
 // web (src/web/api-navigateur.ts). Ce qui arrive de l'interface est vérifié de la même façon des deux côtés : la
 // session est revalidée par le schéma (invalide, elle est remplacée par la session par défaut), les réglages, l'année et
 // l'activité par les schémas des entrées IPC (invalides, l'appel échoue : `EntreeIpcInvalide`), et un statut à

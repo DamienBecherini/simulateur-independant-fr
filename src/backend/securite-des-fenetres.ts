@@ -2,7 +2,7 @@
 
 /*
  * Sécurité des fenêtres de l'application (voir l'ADR 003) : options de leur moteur de rendu, navigation permise, et
- * adresses qui s'ouvrent hors de l'application. Sans Electron, pour être testé seul ; main.ts les applique.
+ * adresses qui s'ouvrent hors de l'application. Sans Electron, pour être testé seul ; fenetres.ts les applique.
  */
 
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours.js"

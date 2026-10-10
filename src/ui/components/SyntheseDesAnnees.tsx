@@ -6,8 +6,8 @@ import { reservesDesSocietes } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
 import { ZoneDefilante } from "./ZoneDefilante"
 import { COLONNE_FIXE } from "../colonne-fixe"
+import { euros } from "@/backend/logic/format"
 
-const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
 
 /** Sur un écran étroit, le tableau défile en largeur et la colonne des années reste visible, sur une ligne. */
 const COLONNE_DES_ANNEES = cn(COLONNE_FIXE, "whitespace-nowrap")

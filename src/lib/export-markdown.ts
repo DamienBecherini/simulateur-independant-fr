@@ -8,6 +8,7 @@ import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfes
 import { numeroterNotes } from "./notes"
 import { libelleDeLaProfession, lignesDeLaCaisse, professionDeLaFiche, statutEtProfession } from "./professions"
 import { reglesDeLAnneeAffichee } from "./regles-affichees"
+import { eurosEnTexteBrut } from "@/backend/logic/format"
 
 /** Comparaison calculée à l'export pour l'activité choisie dans le comparateur, ou la raison de son absence. */
 export type ComparaisonDuRapport = { nomActivite: string; options: ComparaisonOptions; resultat: ComparaisonResult } | { nomActivite: string; erreur: string }
@@ -35,12 +36,6 @@ export const LIMITES = [
 
 // --- Mise en forme ---
 
-/** Montant arrondi à l'euro, à la française, avec des espaces ordinaires (« 12 345 € »). */
-export function euros(valeur: number): string {
-  const arrondi = Math.round(valeur) || 0
-  return `${arrondi.toLocaleString("fr-FR").replace(/\s/g, " ")} €`
-}
-
 const pourcentage = (ratio: number) => `${(Math.round(ratio * 1000) / 10).toLocaleString("fr-FR")} %`
 
 /** Texte saisi par l'utilisateur, protégé pour qu'il ne casse ni un tableau ni la mise en forme. */
@@ -65,7 +60,7 @@ const ouiNon = (valeur: boolean) => (valeur ? "oui" : "non")
 function detailDesFraisReels(person: Person): string {
   if (!person.fraisReels) return ""
   const { trajets, autresFrais } = person.fraisReels
-  return ` ; frais réels saisis : ${trajets.length} trajet${trajets.length > 1 ? "s" : ""} domicile-travail, autres frais ${euros(autresFrais)}`
+  return ` ; frais réels saisis : ${trajets.length} trajet${trajets.length > 1 ? "s" : ""} domicile-travail, autres frais ${eurosEnTexteBrut(autresFrais)}`
 }
 
 /** Déplacements professionnels d'une activité, saisis en kilomètres par an. */
@@ -78,8 +73,8 @@ function detailDeLActeur(entity: Entity, annee: number): string {
   const creation = dateDeCreationLisible(entity)
   const profession = professionDeLaFiche(entity, reglesDeLAnneeAffichee(annee))
   const creee = `${creation ? ` ; créée en ${creation}` : ""}${profession ? ` ; profession : ${profession}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}`
-  if (entity.type === "company") return `${estSocieteIS(entity.legalStatus) ? `Société à l'impôt sur les sociétés, capital social ${euros(entity.capitalSocial)}${entity.reservesInitiales ? `, réserves au début de la simulation ${euros(entity.reservesInitiales)}` : ""}` : "Entreprise individuelle au régime réel"}${creee}`
-  const rfr = entity.rfrN2 === undefined ? "non renseigné" : euros(entity.rfrN2)
+  if (entity.type === "company") return `${estSocieteIS(entity.legalStatus) ? `Société à l'impôt sur les sociétés, capital social ${eurosEnTexteBrut(entity.capitalSocial)}${entity.reservesInitiales ? `, réserves au début de la simulation ${eurosEnTexteBrut(entity.reservesInitiales)}` : ""}` : "Entreprise individuelle au régime réel"}${creee}`
+  const rfr = entity.rfrN2 === undefined ? "non renseigné" : eurosEnTexteBrut(entity.rfrN2)
   const horsPlafond = entity.horsPlafondAnneePrecedente ? " ; au-delà des plafonds l'année d'avant la simulation" : ""
   return `ACRE : ${entity.beneficieACRE ? "oui" : "non"} ; versement libératoire demandé : ${entity.opteVFL ? "oui" : "non"} ; revenu fiscal de référence N-2 : ${rfr}${creee}${horsPlafond}`
 }
@@ -122,12 +117,12 @@ function sectionRelations(session: SimulationAnnuelle): string {
 
 /** Répartition d'un flux sur l'année : « 12 × 3 000 € » s'il est constant, sinon les mois concernés. */
 export function repartition(mois: number[]): string {
-  if (mois.every(m => m === mois[0]) && mois[0] !== 0) return `12 × ${euros(mois[0])}`
+  if (mois.every(m => m === mois[0]) && mois[0] !== 0) return `12 × ${eurosEnTexteBrut(mois[0])}`
   const remplis = mois.map((m, i) => [MOIS[i].toLowerCase(), m] as const).filter(([, m]) => m !== 0)
-  return remplis.length === 0 ? "—" : remplis.map(([nom, m]) => `${nom} ${euros(m)}`).join(", ")
+  return remplis.length === 0 ? "—" : remplis.map(([nom, m]) => `${nom} ${eurosEnTexteBrut(m)}`).join(", ")
 }
 
-const ligneDeFlux = (l: LigneDeFlux) => [l.libelle, l.sortie ? "Sortie" : "Entrée", euros(l.total), repartition(l.mois)]
+const ligneDeFlux = (l: LigneDeFlux) => [l.libelle, l.sortie ? "Sortie" : "Entrée", eurosEnTexteBrut(l.total), repartition(l.mois)]
 
 function sectionFlux(session: SimulationAnnuelle): string {
   const acteurs = fluxParActeur(session)
@@ -143,27 +138,27 @@ function sousSectionBilan(report: SimulationReport): string {
   const base = bilan.revenusAvantPrelevements
   const taux = base > 0 ? pourcentage(bilan.totalPrelevements / base) : "—"
   const lignes = [
-    ["Chiffre d'affaires", euros(bilan.chiffreAffaires)],
-    ["Charges", euros(bilan.charges)],
-    ["Salaires et autres revenus des personnes", euros(bilan.revenusDirects + bilan.cotisationsSalariales)],
-    ["Revenus avant prélèvements", euros(base)],
-    ["Cotisations sociales des activités", euros(bilan.cotisationsSociales)],
-    ["Cotisations salariales", euros(bilan.cotisationsSalariales)],
-    ["Impôt sur les sociétés", euros(bilan.impotSocietes)],
-    ["Impôt sur le revenu", euros(bilan.impotSurLeRevenu)],
-    ["Prélèvements sociaux sur dividendes", euros(bilan.prelevementsSociaux)],
-    ["Total des prélèvements", euros(bilan.totalPrelevements)],
+    ["Chiffre d'affaires", eurosEnTexteBrut(bilan.chiffreAffaires)],
+    ["Charges", eurosEnTexteBrut(bilan.charges)],
+    ["Salaires et autres revenus des personnes", eurosEnTexteBrut(bilan.revenusDirects + bilan.cotisationsSalariales)],
+    ["Revenus avant prélèvements", eurosEnTexteBrut(base)],
+    ["Cotisations sociales des activités", eurosEnTexteBrut(bilan.cotisationsSociales)],
+    ["Cotisations salariales", eurosEnTexteBrut(bilan.cotisationsSalariales)],
+    ["Impôt sur les sociétés", eurosEnTexteBrut(bilan.impotSocietes)],
+    ["Impôt sur le revenu", eurosEnTexteBrut(bilan.impotSurLeRevenu)],
+    ["Prélèvements sociaux sur dividendes", eurosEnTexteBrut(bilan.prelevementsSociaux)],
+    ["Total des prélèvements", eurosEnTexteBrut(bilan.totalPrelevements)],
     ["Taux global de prélèvement", taux],
-    ["Conservé dans les sociétés", euros(bilan.resultatConserve)],
-    ["Non rattaché à une personne", euros(bilan.nonRattache)],
-    ["**Net dans la poche (tous les foyers)**", `**${euros(report.totalNetApresImpots)}**`]
+    ["Conservé dans les sociétés", eurosEnTexteBrut(bilan.resultatConserve)],
+    ["Non rattaché à une personne", eurosEnTexteBrut(bilan.nonRattache)],
+    ["**Net dans la poche (tous les foyers)**", `**${eurosEnTexteBrut(report.totalNetApresImpots)}**`]
   ]
   return `### Bilan\n\n${tableau(["Indicateur", "Montant"], lignes, [1])}`
 }
 
 function sousSectionActivites(session: SimulationAnnuelle, report: SimulationReport): string {
   if (report.activities.length === 0) return "### Par activité\n\nAucune activité."
-  const lignes = report.activities.map(a => [echapper(a.name), statutEtProfession(a), euros(a.chiffreAffaires), euros(a.charges), euros(a.cotisationsSociales), euros(a.impotSocietes), euros(a.revenuVerse), euros(a.resultatConserve), a.beneficiaireIds.map(id => echapper(nomDeLActeur(session, id))).join(", ") || "—"])
+  const lignes = report.activities.map(a => [echapper(a.name), statutEtProfession(a), eurosEnTexteBrut(a.chiffreAffaires), eurosEnTexteBrut(a.charges), eurosEnTexteBrut(a.cotisationsSociales), eurosEnTexteBrut(a.impotSocietes), eurosEnTexteBrut(a.revenuVerse), eurosEnTexteBrut(a.resultatConserve), a.beneficiaireIds.map(id => echapper(nomDeLActeur(session, id))).join(", ") || "—"])
   return `### Par activité\n\n${tableau(["Activité", "Statut", "Chiffre d'affaires", "Charges", "Cotisations sociales", "Impôt sur les sociétés", "Versé aux personnes", "Conservé", "Bénéficiaires"], lignes, colonnesNumeriques(2, 7))}`
 }
 
@@ -171,7 +166,7 @@ const imposition = { pfu: "prélèvement forfaitaire unique", bareme: "barème p
 
 function sousSectionFoyers(session: SimulationAnnuelle, report: SimulationReport): string {
   if (report.foyers.length === 0) return "### Par foyer fiscal\n\nAucun foyer fiscal."
-  const lignes = report.foyers.map(f => [echapper(nomDuFoyer(session, f)), f.totalParts.toLocaleString("fr-FR"), euros(f.revenusEncaisses), euros(f.revenuImposableGlobal), euros(f.revenuFiscalDeReference), euros(f.impotSurLeRevenu), euros(f.prelevementsSociaux), f.optionDividendes ? imposition[f.optionDividendes] : "—", `**${euros(f.netApresImpots)}**`])
+  const lignes = report.foyers.map(f => [echapper(nomDuFoyer(session, f)), f.totalParts.toLocaleString("fr-FR"), eurosEnTexteBrut(f.revenusEncaisses), eurosEnTexteBrut(f.revenuImposableGlobal), eurosEnTexteBrut(f.revenuFiscalDeReference), eurosEnTexteBrut(f.impotSurLeRevenu), eurosEnTexteBrut(f.prelevementsSociaux), f.optionDividendes ? imposition[f.optionDividendes] : "—", `**${eurosEnTexteBrut(f.netApresImpots)}**`])
   return `### Par foyer fiscal\n\n${tableau(["Foyer (membres)", "Parts", "Revenus encaissés", "Revenu imposable", "Revenu fiscal de référence", "Impôt sur le revenu", "Prélèvements sociaux", "Imposition des dividendes", "Net après impôts"], lignes, [1, 2, 3, 4, 5, 6, 8])}`
 }
 
@@ -193,14 +188,14 @@ function sectionResultats(session: SimulationAnnuelle, report: SimulationReport 
 
 /** Professions libérales réglementées au réel : les cotisations que leur caisse change, ligne à ligne ; rien sans elles. */
 function sousSectionCaisses(report: SimulationReport): string {
-  const lignes = report.activities.flatMap(({ name, profession, cotisationsTNS }) => (cotisationsTNS && profession ? lignesDeLaCaisse(cotisationsTNS, euros).map(l => [echapper(name), libelleDeLaProfession(profession), l.libelle.replace(/^dont /, ""), euros(l.montant), l.precision ?? "—"]) : []))
+  const lignes = report.activities.flatMap(({ name, profession, cotisationsTNS }) => (cotisationsTNS && profession ? lignesDeLaCaisse(cotisationsTNS, eurosEnTexteBrut).map(l => [echapper(name), libelleDeLaProfession(profession), l.libelle.replace(/^dont /, ""), eurosEnTexteBrut(l.montant), l.precision ?? "—"]) : []))
   if (lignes.length === 0) return ""
   return `### Cotisations par caisse\n\nProfessions libérales réglementées : les cotisations que leur caisse change, comprises dans les cotisations sociales de l'activité.\n\n${tableau(["Activité", "Profession", "Cotisation", "Montant", "Précision"], lignes, [3])}`
 }
 
 /** Réserves des sociétés à l'IS : ce qui s'y ajoute ou en sort dans l'année, et ce qu'il en reste ; rien sans réserves. */
 function sousSectionReserves(report: SimulationReport): string {
-  const lignes = reservesDeLAnnee(report).map(({ activite, lecture: l }) => [echapper(activite), euros(l.ajoutees), euros(l.reserveLegaleDotee), euros(l.prisesSurLesReserves), euros(l.deficit), euros(l.deficitImpute), `**${euros(l.aLaFin)}**`, euros(l.reserveLegale)])
+  const lignes = reservesDeLAnnee(report).map(({ activite, lecture: l }) => [echapper(activite), eurosEnTexteBrut(l.ajoutees), eurosEnTexteBrut(l.reserveLegaleDotee), eurosEnTexteBrut(l.prisesSurLesReserves), eurosEnTexteBrut(l.deficit), eurosEnTexteBrut(l.deficitImpute), `**${eurosEnTexteBrut(l.aLaFin)}**`, eurosEnTexteBrut(l.reserveLegale)])
   if (lignes.length === 0) return ""
   const entete = ["Société", "Ajouté aux réserves", "Dont réserve légale", "Dividendes pris sur les réserves", "Déficit de l'année", "Déficit antérieur déduit avant l'IS", "Réserves au 31 décembre", "Réserve légale"]
   return `### Réserves des sociétés\n\nBénéfices gardés dans la société d'une année sur l'autre : l'impôt sur les sociétés est payé, l'impôt du foyer le sera quand ils seront distribués.\n\n${tableau(entete, lignes, [1, 2, 3, 4, 5, 6, 7])}`
@@ -214,28 +209,28 @@ function sousSectionDispositifs(report: SimulationReport): string {
 
 /** Déplacements professionnels des activités au barème kilométrique, compris dans leurs charges ; rien sans déplacements. */
 function sousSectionDeplacements(report: SimulationReport): string {
-  const lignes = report.activities.flatMap(({ name, fraisDeDeplacement: d }) => (d ? [[echapper(name), kilometres(d.kilometres), euros(d.montant), d.deductible ? "déductible" : "non déductible (micro-entreprise)"]] : []))
+  const lignes = report.activities.flatMap(({ name, fraisDeDeplacement: d }) => (d ? [[echapper(name), kilometres(d.kilometres), eurosEnTexteBrut(d.montant), d.deductible ? "déductible" : "non déductible (micro-entreprise)"]] : []))
   if (lignes.length === 0) return ""
   return `### Déplacements professionnels\n\nAu barème kilométrique, compris dans les charges de l'activité.\n\n${tableau(["Activité", "Distance", "Montant", "Traitement"], lignes, [1, 2])}`
 }
 
 /** Micro-entreprises : le revenu fiscal de référence N-2 comparé au seuil du versement libératoire, et l'issue. */
 function sousSectionVersementLiberatoire(report: SimulationReport): string {
-  const lignes = report.activities.flatMap(({ name, versementLiberatoire: v }) => (v ? [[echapper(name), String(v.anneeRfr), v.rfrN2 === null ? "—" : euros(v.rfrN2), origineDuRfr(v), `${euros(v.plafondRfr)} (${v.partsFiscales.toLocaleString("fr-FR")} part${v.partsFiscales > 1 ? "s" : ""})`, issueDuVersementLiberatoire(v)]] : []))
+  const lignes = report.activities.flatMap(({ name, versementLiberatoire: v }) => (v ? [[echapper(name), String(v.anneeRfr), v.rfrN2 === null ? "—" : eurosEnTexteBrut(v.rfrN2), origineDuRfr(v), `${eurosEnTexteBrut(v.plafondRfr)} (${v.partsFiscales.toLocaleString("fr-FR")} part${v.partsFiscales > 1 ? "s" : ""})`, issueDuVersementLiberatoire(v)]] : []))
   if (lignes.length === 0) return ""
   return `### Versement libératoire\n\n${tableau(["Micro-entreprise", "Année du revenu fiscal de référence", "Revenu fiscal de référence", "Origine", "Seuil", "Issue"], lignes, [2, 4])}`
 }
 
 /** Trajets au barème kilométrique d'une personne, voiture par voiture : « 5 CV : 6 800 km, 3 720 € ». */
 function trajetsAuBareme(frais: FraisProfessionnelsResult): string {
-  return frais.voitures.map(v => `${libelleVoiture(v)} : ${kilometres(v.distance)}, ${euros(v.montant)}`).join(" ; ") || "—"
+  return frais.voitures.map(v => `${libelleVoiture(v)} : ${kilometres(v.distance)}, ${eurosEnTexteBrut(v.montant)}`).join(" ; ") || "—"
 }
 
 /** Frais réels des personnes qui en ont saisi, face à la déduction forfaitaire ; rien quand aucune n'en a. */
 function sousSectionFraisProfessionnels(report: SimulationReport): string {
   const personnes = fraisProfessionnelsDesPersonnes(report)
   if (personnes.length === 0) return ""
-  const lignes = personnes.map(({ name, frais: f }) => [echapper(name), euros(f.revenusSalariaux), euros(f.deductionForfaitaire), euros(f.fraisReels), `**${libelleRetenue(f)}** : ${euros(f.deduction)}`, String(f.nombreDeTrajets), kilometres(f.distanceRetenue), trajetsAuBareme(f), euros(f.autresFrais)])
+  const lignes = personnes.map(({ name, frais: f }) => [echapper(name), eurosEnTexteBrut(f.revenusSalariaux), eurosEnTexteBrut(f.deductionForfaitaire), eurosEnTexteBrut(f.fraisReels), `**${libelleRetenue(f)}** : ${eurosEnTexteBrut(f.deduction)}`, String(f.nombreDeTrajets), kilometres(f.distanceRetenue), trajetsAuBareme(f), eurosEnTexteBrut(f.autresFrais)])
   // Toutes les personnes d'un rapport ont les règles de la même année : la première donne le taux.
   const deduction = libelleDeduction(personnes[0].frais)
   const entete = ["Personne", "Revenus imposés comme des salaires", deduction, "Frais réels", "Retenue", "Trajets", "Distance retenue", "Trajets au barème, par voiture", "Autres frais"]
@@ -247,11 +242,11 @@ function sousSectionFraisProfessionnels(report: SimulationReport): string {
 /** Synthèse des années de la session, une ligne par année, puis le revenu fiscal de référence de chaque foyer et les dispositifs. */
 function sectionToutesLesAnnees(session: SimulationAnnuelle, pluriannuelle: SimulationPluriannuelle | null | undefined): string {
   if (!pluriannuelle || pluriannuelle.annees.length < 2) return ""
-  const lignes = pluriannuelle.annees.map(({ annee, report: r, erreur }) => (r ? [String(annee), String(r.anneeDesRegles), euros(r.totalNetApresImpots), euros(r.bilan.totalPrelevements), euros(r.bilan.revenusAvantPrelevements)] : [String(annee), "—", `non calculée : ${echapper(erreur ?? "erreur inconnue")}`, "—", "—"]))
+  const lignes = pluriannuelle.annees.map(({ annee, report: r, erreur }) => (r ? [String(annee), String(r.anneeDesRegles), eurosEnTexteBrut(r.totalNetApresImpots), eurosEnTexteBrut(r.bilan.totalPrelevements), eurosEnTexteBrut(r.bilan.revenusAvantPrelevements)] : [String(annee), "—", `non calculée : ${echapper(erreur ?? "erreur inconnue")}`, "—", "—"]))
   const synthese = tableau(["Année", "Règles fiscales", "Net après impôts", "Total des prélèvements", "Revenus avant prélèvements"], lignes, [2, 3, 4])
-  const rfr = rfrDesAnnees(session, pluriannuelle).map(({ annee, foyer, rfr }) => [String(annee), echapper(foyer), euros(rfr)])
+  const rfr = rfrDesAnnees(session, pluriannuelle).map(({ annee, foyer, rfr }) => [String(annee), echapper(foyer), eurosEnTexteBrut(rfr)])
   const blocRfr = rfr.length > 0 ? `\n\n### Revenu fiscal de référence, année par année\n\n${tableau(["Année", "Foyer (membres)", "Revenu fiscal de référence"], rfr, [2])}` : ""
-  const reserves = reservesDesAnnees(pluriannuelle).map(({ annee, activite, lecture }) => [String(annee), echapper(activite), euros(lecture.aLaFin), euros(lecture.reserveLegale)])
+  const reserves = reservesDesAnnees(pluriannuelle).map(({ annee, activite, lecture }) => [String(annee), echapper(activite), eurosEnTexteBrut(lecture.aLaFin), eurosEnTexteBrut(lecture.reserveLegale)])
   const blocReserves = reserves.length > 0 ? `\n\n### Réserves des sociétés, année par année\n\n${tableau(["Année", "Société", "Réserves au 31 décembre", "Réserve légale"], reserves, [2, 3])}` : ""
   const dispositifs = dispositifsDesAnnees(pluriannuelle).map(({ annee, activite, note }) => `- ${annee}, ${echapper(activite)} : ${echapper(note)}`)
   const blocDispositifs = dispositifs.length > 0 ? `\n\n### Dispositifs dans le temps, année par année\n\n${dispositifs.join("\n")}` : ""
@@ -264,13 +259,13 @@ function totalDesFrais(options: ComparaisonOptions): string {
   const frais = options.fraisFonctionnement ?? defaultFraisFonctionnement()
   const postes = Object.keys(posteFraisLabels) as (keyof typeof posteFraisLabels)[]
   const libelles = { SASU: "SASU", EURL: "EURL", EI: "EI au réel", micro: "micro-entreprise" }
-  return statutsFrais.map(statut => `${libelles[statut]} ${euros(postes.reduce((somme, poste) => somme + frais[statut][poste], 0))}`).join(", ")
+  return statutsFrais.map(statut => `${libelles[statut]} ${eurosEnTexteBrut(postes.reduce((somme, poste) => somme + frais[statut][poste], 0))}`).join(", ")
 }
 
 /** Ce qu'on précise après la rémunération retenue d'une colonne : 4 trimestres hors d'atteinte, ou ce qu'ils coûtent en net. */
 function precisionDeLaRemuneration({ retraiteHorsDAtteinte, coutDesQuatreTrimestres }: NonNullable<ScenarioStatut["remunerationOptimale"]>): string {
   if (retraiteHorsDAtteinte) return " (4 trimestres hors d'atteinte)"
-  return coutDesQuatreTrimestres ? ` (4 trimestres : −${euros(coutDesQuatreTrimestres)} de net)` : ""
+  return coutDesQuatreTrimestres ? ` (4 trimestres : −${eurosEnTexteBrut(coutDesQuatreTrimestres)} de net)` : ""
 }
 
 /**
@@ -278,14 +273,14 @@ function precisionDeLaRemuneration({ retraiteHorsDAtteinte, coutDesQuatreTrimest
  * retraite : « SASU 12 300 € (4 trimestres : −1 234 € de net), EURL 9 800 € ».
  */
 function remunerationsRetenues(scenarios: ScenarioStatut[]): string {
-  const retenues = scenarios.flatMap(s => (s.remunerationOptimale ? [`${s.libelle} ${euros(s.remunerationOptimale.remunerationNette)}${precisionDeLaRemuneration(s.remunerationOptimale)}`] : []))
+  const retenues = scenarios.flatMap(s => (s.remunerationOptimale ? [`${s.libelle} ${eurosEnTexteBrut(s.remunerationOptimale.remunerationNette)}${precisionDeLaRemuneration(s.remunerationOptimale)}`] : []))
   return retenues.length > 0 ? ` ; rémunération nette retenue : ${retenues.join(", ")}` : ""
 }
 
 /** La répartition choisie du bénéfice des sociétés, en une phrase. */
 function descriptionRepartition(options: ComparaisonOptions, scenarios: ScenarioStatut[]): string {
   const { mode, partDistribuee, avecRetraite } = options.repartition
-  const remuneration = euros(options.remunerationNette)
+  const remuneration = eurosEnTexteBrut(options.remunerationNette)
   const descriptions: Record<ModeRepartition, string> = {
     meilleurNet: `dans chaque statut, la rémunération nette au meilleur net du foyer${avecRetraite ? " parmi celles qui valident 4 trimestres de retraite" : ""}, tout le bénéfice restant versé en dividendes${remunerationsRetenues(scenarios)}`,
     dividendes: `rémunération nette de ${remuneration}, tout le bénéfice restant versé en dividendes`,
@@ -312,16 +307,16 @@ function tableauDeComparaison(resultat: ComparaisonResult, nomActivite: string):
     return mentions.length > 0 ? `${s.libelle} (${mentions.join(", ")})` : s.libelle
   }
   const indicateurs: [string, (s: ScenarioStatut) => string][] = [
-    ["**Net dans la poche**", s => `**${euros(s.netApresImpots)}**`],
+    ["**Net dans la poche**", s => `**${eurosEnTexteBrut(s.netApresImpots)}**`],
     ["Taux global de prélèvement", s => (s.revenusAvantPrelevements > 0 ? pourcentage(s.totalPrelevements / s.revenusAvantPrelevements) : "—")],
-    ["Frais de fonctionnement", s => euros(s.fraisFonctionnement)],
-    ["Cotisations sociales", s => euros(s.cotisationsSociales)],
-    ["Impôt sur les sociétés", s => euros(s.impotSocietes)],
-    ["Impôt sur le revenu", s => euros(s.impotSurLeRevenu)],
-    ["Prélèvements sociaux", s => euros(s.prelevementsSociaux)],
-    [`Conservé dans « ${echapper(nomActivite)} »`, s => euros(s.resultatConserveActivite)],
+    ["Frais de fonctionnement", s => eurosEnTexteBrut(s.fraisFonctionnement)],
+    ["Cotisations sociales", s => eurosEnTexteBrut(s.cotisationsSociales)],
+    ["Impôt sur les sociétés", s => eurosEnTexteBrut(s.impotSocietes)],
+    ["Impôt sur le revenu", s => eurosEnTexteBrut(s.impotSurLeRevenu)],
+    ["Prélèvements sociaux", s => eurosEnTexteBrut(s.prelevementsSociaux)],
+    [`Conservé dans « ${echapper(nomActivite)} »`, s => eurosEnTexteBrut(s.resultatConserveActivite)],
     ["Protection sociale", s => `${s.protectionSociale.etoiles}/5, ${s.protectionSociale.trimestres} trim. de retraite`],
-    ["Écart avec le statut actuel", s => (actuel && !s.actuel ? euros(s.netApresImpots - actuel.netApresImpots).replace(/^(?!-)/, "+") : "—")]
+    ["Écart avec le statut actuel", s => (actuel && !s.actuel ? eurosEnTexteBrut(s.netApresImpots - actuel.netApresImpots).replace(/^(?!-)/, "+") : "—")]
   ]
   const lignes = indicateurs.map(([libelle, valeur]) => [libelle, ...scenarios.map(valeur)])
   return tableau(["Indicateur", ...scenarios.map(entete)], lignes, colonnesNumeriques(1, scenarios.length))
@@ -335,7 +330,7 @@ function notesDeComparaison(resultat: ComparaisonResult): string {
 
 function couplesEnUnionLibre(session: SimulationAnnuelle, resultat: ComparaisonResult): string {
   if (resultat.couples.length === 0) return ""
-  const phrases = resultat.couples.map(c => `- ${c.personIds.map(id => echapper(nomDeLActeur(session, id))).join(" et ")} : impôt sur le revenu de ${euros(c.impotSurLeRevenuActuel)} en union libre, ${euros(c.impotSurLeRevenuMaries)} avec une imposition commune ; net après impôts de ${euros(c.netApresImpotsActuel)}, contre ${euros(c.netApresImpotsMaries)} mariés ou pacsés.`)
+  const phrases = resultat.couples.map(c => `- ${c.personIds.map(id => echapper(nomDeLActeur(session, id))).join(" et ")} : impôt sur le revenu de ${eurosEnTexteBrut(c.impotSurLeRevenuActuel)} en union libre, ${eurosEnTexteBrut(c.impotSurLeRevenuMaries)} avec une imposition commune ; net après impôts de ${eurosEnTexteBrut(c.netApresImpotsActuel)}, contre ${eurosEnTexteBrut(c.netApresImpotsMaries)} mariés ou pacsés.`)
   return `\n\n### Et si le couple était marié ou pacsé ?\n\n${phrases.join("\n")}`
 }
 

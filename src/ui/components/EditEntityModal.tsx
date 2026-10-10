@@ -39,10 +39,8 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
 
   useEffect(() => {
     if (isOpen && entity) {
-      setFormData({
-        entity: JSON.parse(JSON.stringify(entity)),
-        relationships: JSON.parse(JSON.stringify(relationships))
-      })
+      // Copies de travail : rien ne change dans la session avant « Enregistrer ».
+      setFormData({ entity: structuredClone(entity), relationships: structuredClone(relationships) })
     }
     setAddingRelation(false)
     setTargetId(undefined)

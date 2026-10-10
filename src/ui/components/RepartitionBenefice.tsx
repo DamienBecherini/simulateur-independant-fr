@@ -11,8 +11,8 @@ import type { ComparaisonOptions, OptimisationRemuneration, PartageDuBenefice, R
 import { clavierDuCurseur, gestesDuCurseur, montantAuPointeur, type Glissement as GlissementDuCurseur } from "../curseur"
 import { PoigneeDeCurseur } from "./Curseur"
 import { ChoixDuStatut } from "./RemunerationOptimizer"
+import { euros } from "@/backend/logic/format"
 
-const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
 const pourcentage = (part: number) => `${Math.round(part * 100)} %`
 
 /**
@@ -231,10 +231,6 @@ function Lecture({ partage, part, personnalisee }: { partage: PartageDuBenefice;
   )
 }
 
-/**
- * Partage du bénéfice de l'activité dans un statut de société. En répartition personnalisée, la barre se règle :
- * l'aperçu suit le pointeur, et le comparateur recalcule au relâchement.
- */
 /** Le partage simulé diffère-t-il des réglages demandés (le moteur n'a pas encore recalculé) ? */
 function differe(partage: PartageDuBenefice, remuneration: number, part: number): boolean {
   if (Math.abs(partage.remunerationNette - remuneration) >= 1) return true
@@ -253,6 +249,10 @@ function useApercu(partage: PartageDuBenefice | undefined, options: ComparaisonO
   return { glissement, setGlissement, remuneration, part, affiche: apercuDuPartage(partage, remunerationMaximale, remuneration, part), estimation: differe(partage, remuneration, part) }
 }
 
+/**
+ * Partage du bénéfice de l'activité dans un statut de société. En répartition personnalisée, la barre se règle :
+ * l'aperçu suit le pointeur, et le comparateur recalcule au relâchement.
+ */
 export function RepartitionDuBenefice({ activityName, statut, onStatut, scenario, optimisation, options, onChange }: RepartitionProps) {
   const personnalisee = options.repartition.mode === "personnalisee"
   const optimisationAJour = optimisation?.statut === statut ? optimisation : null

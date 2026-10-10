@@ -1,15 +1,10 @@
 // src/lib/session-service.ts
+// Sauvegardes nommées de la session : création, mise à jour, écrasement, ordre d'affichage, et le pont vers le
+// stockage (`window.api`, déclaré dans src/globals.d.ts). Les décisions sont des fonctions pures ; le panneau des
+// paramètres (SettingsSheet) les affiche et demande les confirmations.
 import type { SessionState, SaveSlot, ExportableState, SanitizationReport } from "@/types"
-import type { EventPayloadMapping } from "@/globals"
 import { createId } from "@/lib/id"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
-
-// TypeScript augmentation for window.api
-declare global {
-  interface Window {
-    api: EventPayloadMapping
-  }
-}
 
 /**
  * Crée un nouvel objet SaveSlot à partir de la session actuelle, marqué de la version de l'application qui l'enregistre.
@@ -76,4 +71,38 @@ export function modificationsNonEnregistrees(session: SessionState, sauvegardes:
   if (session.entities.length === 0) return false
   const chargee = sauvegardes.find(slot => slot.id === sauvegardeChargeeId)
   return chargee === undefined || contenuComparable(contenuDeLaSession(chargee)) !== contenuComparable(session)
+}
+
+/**
+ * Ce que fait « Sauvegarder » :
+ * - une sauvegarde est chargée et la session porte toujours son nom : elle est mise à jour, sans question ;
+ * - sinon (aucune sauvegarde chargée, ou la session a changé de nom : « sauvegarder sous »), une sauvegarde qui porte
+ *   déjà ce nom n'est écrasée qu'après confirmation (`ecraserLaSauvegarde`) ;
+ * - sinon une nouvelle sauvegarde est créée ; elle devient la sauvegarde chargée, que « Sauvegarder » mettra à jour.
+ * `sauvegardes` est la liste à écrire ; rien n'est écrit ici.
+ */
+export type EnregistrementDeLaSession =
+  | { action: "mettre-a-jour"; sauvegardes: SaveSlot[] }
+  | { action: "creer"; sauvegardes: SaveSlot[]; nouvelle: SaveSlot }
+  | { action: "confirmer-l-ecrasement"; aEcraser: SaveSlot }
+
+export function enregistrerLaSession(sauvegardes: SaveSlot[], session: SessionState, idChargee: string | null): EnregistrementDeLaSession {
+  const chargee = idChargee ? sauvegardes.find(slot => slot.id === idChargee) : undefined
+  if (chargee && chargee.name === session.name) return { action: "mettre-a-jour", sauvegardes: avecLaSession(sauvegardes, chargee, session) }
+  const homonyme = sauvegardes.find(slot => slot.name === session.name)
+  if (homonyme) return { action: "confirmer-l-ecrasement", aEcraser: homonyme }
+  const nouvelle = createNewSlotFromSession(session)
+  return { action: "creer", sauvegardes: [...sauvegardes, nouvelle], nouvelle }
+}
+
+/** Les sauvegardes, celle donnée remplacée par la session (même identifiant, même place dans la liste). */
+export function avecLaSession(sauvegardes: SaveSlot[], cible: SaveSlot, session: SessionState): SaveSlot[] {
+  const miseAJour = updateSlotWithSession(cible, session)
+  return sauvegardes.map(slot => (slot.id === cible.id ? miseAJour : slot))
+}
+
+/** Les sauvegardes dans l'ordre d'affichage choisi ; un identifiant de l'ordre sans sauvegarde est ignoré. */
+export function sauvegardesDansLOrdre(sauvegardes: SaveSlot[], ordre: string[]): SaveSlot[] {
+  const parId = new Map(sauvegardes.map(slot => [slot.id, slot]))
+  return ordre.map(id => parId.get(id)).filter((slot): slot is SaveSlot => slot !== undefined)
 }

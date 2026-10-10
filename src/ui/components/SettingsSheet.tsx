@@ -1,14 +1,8 @@
-/**
- * @file SettingsSheet.tsx
- * @description Composant de présentation ("dumb component") pour le panneau latéral des paramètres.
- *
- * Ce composant est responsable de l'affichage de l'interface de gestion de la session et des sauvegardes.
- * Il ne contient aucune logique métier complexe. Il reçoit toutes ses données et les fonctions
- * à exécuter via ses props, ce qui le rend entièrement contrôlé par son composant parent (`App.tsx`).
- *
- * Il gère un état interne minimal, uniquement pour la navigation entre les vues ("principal" et "charger").
- * Il reçoit maintenant le contexte du slot chargé pour prendre des décisions de sauvegarde intelligentes.
- */
+// src/ui/components/SettingsSheet.tsx
+// Panneau des paramètres : nom et enregistrement de la simulation, sauvegardes nommées (chargement, ordre,
+// suppression, export, import), montages types, thème et liens d'information. Ce que fait « Sauvegarder » (mise à
+// jour, « sauvegarder sous », écrasement confirmé) est décidé par `enregistrerLaSession` (src/lib/session-service.ts) ;
+// le panneau l'affiche, demande la confirmation et n'actualise la liste qu'une fois les sauvegardes écrites.
 
 import { useState, Dispatch, SetStateAction, useMemo, useEffect } from "react"
 import type { SessionState, SaveSlot, SanitizationReport } from "@/types"
@@ -33,9 +27,6 @@ import { BoutonDesMentionsLegales } from "./MentionsLegales"
 import { BoutonUtiliserAvecUneIA } from "./UtiliserAvecUneIA"
 import { usePlateforme } from "../plateforme"
 
-/**
- * Props pour le composant SettingsSheet.
- */
 interface SettingsSheetProps {
   // Gestion de l'ouverture/fermeture du panneau
   isOpen: boolean
@@ -106,7 +97,6 @@ function VersionDuFichier({ appVersion }: { appVersion: string | undefined }) {
   return <p className="mt-3 text-sm">Fichier écrit par la version {appVersion} du simulateur.</p>
 }
 
-// --- MODIFICATION : Réception des nouvelles props ---
 export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, onLoadMontage, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId }: SettingsSheetProps) {
   // Dans la démo web, le bouton d'aide à l'installation (fourni par la plateforme).
   const { BoutonInstaller } = usePlateforme()
@@ -123,48 +113,30 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
   // Les sauvegardes ne changent à l'écran qu'une fois écrites : si l'écriture échoue (l'échec est notifié par le pont),
   // la liste et le panneau restent tels quels, et l'utilisateur peut réessayer.
   const handleSave = async () => {
-    // La sauvegarde chargée, s'il y en a une.
-    const loadedSlot = loadedSlotId ? allSaveSlots.find(s => s.id === loadedSlotId) : null
-
-    // Mise à jour : une sauvegarde est chargée et la session porte toujours son nom ; elle est remplacée sans question.
-    if (loadedSlot && loadedSlot.name === currentSession.name) {
-      const updatedSlot = SessionService.updateSlotWithSession(loadedSlot, currentSession)
-      const updatedSlots = allSaveSlots.map(s => (s.id === loadedSlot.id ? updatedSlot : s))
-      if (!(await SessionService.saveAllSlots(updatedSlots))) return
-      setAllSaveSlots(updatedSlots)
-      onOpenChange(false)
+    const decision = SessionService.enregistrerLaSession(allSaveSlots, currentSession, loadedSlotId)
+    if (decision.action === "confirmer-l-ecrasement") {
+      setSlotToOverwrite(decision.aEcraser)
+      setOverwriteAlertOpen(true)
       return
     }
-
-    // Création, ou « sauvegarder sous » : aucune sauvegarde chargée, ou la session a changé de nom.
-    const existingSlotByName = allSaveSlots.find(slot => slot.name === currentSession.name)
-
-    if (existingSlotByName) {
-      // Une sauvegarde porte déjà ce nom : l'utilisateur confirme avant de l'écraser.
-      setSlotToOverwrite(existingSlotByName)
-      setOverwriteAlertOpen(true)
-    } else {
-      const newSlot = SessionService.createNewSlotFromSession(currentSession)
-      const updatedSlots = [...allSaveSlots, newSlot]
-      if (!(await SessionService.saveAllSlots(updatedSlots))) return
-      setAllSaveSlots(updatedSlots)
-      setSlotOrder(prevOrder => [newSlot.id, ...prevOrder]) // La nouvelle sauvegarde en haut de la liste.
-      // La nouvelle sauvegarde devient la sauvegarde chargée : « Sauvegarder » la mettra à jour.
-      setLoadedSlotId(newSlot.id)
-      onOpenChange(false)
+    if (!(await SessionService.saveAllSlots(decision.sauvegardes))) return
+    setAllSaveSlots(decision.sauvegardes)
+    if (decision.action === "creer") {
+      setSlotOrder(prevOrder => [decision.nouvelle.id, ...prevOrder]) // La nouvelle sauvegarde en haut de la liste.
+      setLoadedSlotId(decision.nouvelle.id)
     }
+    onOpenChange(false)
   }
 
   const performOverwrite = async () => {
     if (!slotToOverwrite) return
-    const updatedSlot = SessionService.updateSlotWithSession(slotToOverwrite, currentSession)
-    const updatedSlots = allSaveSlots.map(slot => (slot.id === slotToOverwrite.id ? updatedSlot : slot))
+    const updatedSlots = SessionService.avecLaSession(allSaveSlots, slotToOverwrite, currentSession)
     setOverwriteAlertOpen(false)
     setSlotToOverwrite(null)
     if (!(await SessionService.saveAllSlots(updatedSlots))) return
     setAllSaveSlots(updatedSlots)
     // La sauvegarde écrasée devient la sauvegarde chargée : « Sauvegarder » sans changer de nom la mettra à jour.
-    setLoadedSlotId(updatedSlot.id)
+    setLoadedSlotId(slotToOverwrite.id)
     onOpenChange(false)
   }
 
@@ -192,10 +164,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
 
   const tri = useTriAccessible(useMemo(() => allSaveSlots.map(slot => ({ id: slot.id, nom: slot.name })), [allSaveSlots]))
 
-  const sortedSlots = useMemo(() => {
-    const slotMap = new Map(allSaveSlots.map(s => [s.id, s]))
-    return slotOrder.map(id => slotMap.get(id)).filter((slot): slot is SaveSlot => slot !== undefined)
-  }, [allSaveSlots, slotOrder])
+  const sortedSlots = useMemo(() => SessionService.sauvegardesDansLOrdre(allSaveSlots, slotOrder), [allSaveSlots, slotOrder])
 
   return (
     <>

@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
-import { coutsDesQuatreTrimestres, ecartSigne, libelleDuCoutDesTrimestres, meilleurStatut, nombreDAlertes, phraseDuVerdict, tauxDePrelevement } from "./resume"
+import { coutsDesQuatreTrimestres, libelleDuCoutDesTrimestres, meilleurStatut, nombreDAlertes, phraseDuVerdict, tauxDePrelevement } from "./resume"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
 
@@ -36,12 +36,6 @@ describe("barre de résumé", () => {
     expect(meilleurStatut(comparaison("micro"))).toBe("Micro-entreprise (actuel)")
     expect(espaces(meilleurStatut({ ...comparaison("SASU"), scenarios: comparaison("SASU").scenarios.map(s => (s.statut === "SASU" ? { ...s, netApresImpots: 33500 } : s)) }))).toBe("SASU, +1 500 €")
     expect(meilleurStatut({ ...comparaison("SASU"), scenarios: [scenario("SASU", "SASU", 30000)] })).toBe("SASU")
-  })
-
-  it("signe les écarts", () => {
-    expect(espaces(ecartSigne(1234))).toBe("+1 234 €")
-    expect(espaces(ecartSigne(-850))).toBe("−850 €")
-    expect(ecartSigne(0)).toBe("0 €")
   })
 })
 

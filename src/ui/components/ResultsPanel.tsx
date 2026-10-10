@@ -10,16 +10,13 @@ import { useAffichageResume } from "../hooks/useAffichage"
 import { classeDuDetail, useDetailDesCartes } from "../hooks/useDetailsDesCartes"
 import { BoutonDuDetailDesCartes, FournisseurDesDetails } from "./DetailsDesCartes"
 import { ReplieEnResume } from "./ReplieEnResume"
+import { euros } from "@/backend/logic/format"
 
 type ResultsPanelProps = {
   report: SimulationReport | null
   error: string | null
   /** Affiché juste sous le bilan (affichage « Résumé » : la synthèse des années). */
   apresLeBilan?: ReactNode
-}
-
-function formatMoney(n: number): string {
-  return n.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €"
 }
 
 /** Part de ce que l'activité verse aux personnes par rapport à son chiffre d'affaires (ex. « 62 % du CA »). */
@@ -46,7 +43,7 @@ function BilanCard({ report }: { report: SimulationReport }) {
   const base = bilan.revenusAvantPrelevements
   const percent = (amount: number) => (base > 0 ? (amount / base).toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 }) : null)
   const amounts = { net: report.totalNetApresImpots, conserve: bilan.resultatConserve, prelevements: bilan.totalPrelevements, nonRattache: bilan.nonRattache }
-  const origin = [`chiffre d'affaires ${formatMoney(bilan.chiffreAffaires)}`, bilan.charges > 0 ? `charges ${formatMoney(bilan.charges)}` : null, bilan.revenusDirects > 0 ? `salaires et autres revenus ${formatMoney(bilan.revenusDirects + bilan.cotisationsSalariales)}` : null].filter(Boolean).join(" · ")
+  const origin = [`chiffre d'affaires ${euros(bilan.chiffreAffaires)}`, bilan.charges > 0 ? `charges ${euros(bilan.charges)}` : null, bilan.revenusDirects > 0 ? `salaires et autres revenus ${euros(bilan.revenusDirects + bilan.cotisationsSalariales)}` : null].filter(Boolean).join(" · ")
 
   return (
     <div id="bilan" className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
@@ -54,7 +51,7 @@ function BilanCard({ report }: { report: SimulationReport }) {
         <div>
           <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Net dans la poche</p>
           <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-50">
-            {formatMoney(amounts.net)}
+            {euros(amounts.net)}
             {percent(amounts.net) ? <span className="ml-2 text-base font-semibold text-emerald-700 dark:text-emerald-400">{percent(amounts.net)} des revenus</span> : null}
           </p>
         </div>
@@ -74,17 +71,17 @@ function BilanCard({ report }: { report: SimulationReport }) {
         {/* Deux listes de définitions côte à côte : un <dl> n'accepte qu'un niveau de <div> autour de ses paires. */}
         <div className="mt-3 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
           <dl className="space-y-1">
-            <Row label="Revenus avant prélèvements" value={formatMoney(base)} hint={origin} />
-            <Row label="Cotisations sociales des activités" value={`− ${formatMoney(bilan.cotisationsSociales)}`} />
-            {bilan.cotisationsSalariales > 0 ? <Row label="Cotisations salariales" value={`− ${formatMoney(bilan.cotisationsSalariales)}`} /> : null}
-            {bilan.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(bilan.impotSocietes)}`} /> : null}
-            <Row label="Impôt sur le revenu" value={`− ${formatMoney(bilan.impotSurLeRevenu)}`} />
-            {bilan.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(bilan.prelevementsSociaux)}`} /> : null}
+            <Row label="Revenus avant prélèvements" value={euros(base)} hint={origin} />
+            <Row label="Cotisations sociales des activités" value={`− ${euros(bilan.cotisationsSociales)}`} />
+            {bilan.cotisationsSalariales > 0 ? <Row label="Cotisations salariales" value={`− ${euros(bilan.cotisationsSalariales)}`} /> : null}
+            {bilan.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${euros(bilan.impotSocietes)}`} /> : null}
+            <Row label="Impôt sur le revenu" value={`− ${euros(bilan.impotSurLeRevenu)}`} />
+            {bilan.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${euros(bilan.prelevementsSociaux)}`} /> : null}
           </dl>
           <dl className="space-y-1">
             {bilanShares.map(share =>
               amounts[share.key] !== 0 || share.key === "net" || share.key === "prelevements" ? (
-                <Row key={share.key} label={share.key === "conserve" && amounts.conserve < 0 ? "Déficit des sociétés" : share.label} value={formatMoney(amounts[share.key])} hint={percent(amounts[share.key])} strong={share.key === "net"} pastille={share.color} />
+                <Row key={share.key} label={share.key === "conserve" && amounts.conserve < 0 ? "Déficit des sociétés" : share.label} value={euros(amounts[share.key])} hint={percent(amounts[share.key])} strong={share.key === "net"} pastille={share.color} />
               ) : null
             )}
           </dl>
@@ -160,7 +157,7 @@ function PersonIncome({ person, showName }: { person: PersonResult; showName: bo
       {showName ? <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{person.name}</p> : null}
       <dl className="space-y-1 text-sm">
         {lines.map(key => (
-          <Row key={key} label={incomeLabels[key]} value={formatMoney(person.detail[key])} />
+          <Row key={key} label={incomeLabels[key]} value={euros(person.detail[key])} />
         ))}
         {person.fraisProfessionnels ? <FraisProfessionnelsRow frais={person.fraisProfessionnels} /> : null}
       </dl>
@@ -176,10 +173,10 @@ function FraisProfessionnelsRow({ frais }: { frais: FraisProfessionnelsResult })
     <>
       <Row
         label={retenus ? "Frais réels retenus" : `${deduction} retenue`}
-        value={`− ${formatMoney(frais.deduction)}`}
-        hint={retenus ? `plutôt que ${formatMoney(frais.deductionForfaitaire)} de ${deduction.toLowerCase()}` : `plutôt que ${formatMoney(frais.fraisReels)} de frais réels`}
+        value={`− ${euros(frais.deduction)}`}
+        hint={retenus ? `plutôt que ${euros(frais.deductionForfaitaire)} de ${deduction.toLowerCase()}` : `plutôt que ${euros(frais.fraisReels)} de frais réels`}
       />
-      {frais.distanceRetenue > 0 ? <Row label={retenus ? "dont trajets domicile-travail" : "trajets domicile-travail"} value={formatMoney(frais.fraisDeTrajet)} hint={`${frais.distanceRetenue.toLocaleString("fr-FR")} km au barème`} /> : null}
+      {frais.distanceRetenue > 0 ? <Row label={retenus ? "dont trajets domicile-travail" : "trajets domicile-travail"} value={euros(frais.fraisDeTrajet)} hint={`${frais.distanceRetenue.toLocaleString("fr-FR")} km au barème`} /> : null}
     </>
   )
 }
@@ -192,10 +189,10 @@ function FoyerRates({ foyer }: { foyer: FoyerFiscalResult }) {
 
   return (
     <dl className="mt-3 space-y-1 border-t border-slate-100 pt-2 text-sm dark:border-slate-800">
-      <Row label="Revenus avant prélèvements" value={formatMoney(base)} />
-      <Row label="Prélèvements du foyer" value={formatMoney(foyer.totalPrelevements)} hint={percent(foyer.totalPrelevements)} />
-      {foyer.resultatConserve !== 0 ? <Row label="Sa part conservée en société" value={formatMoney(foyer.resultatConserve)} hint={percent(foyer.resultatConserve)} /> : null}
-      <Row label="Net dans la poche" value={formatMoney(foyer.netApresImpots)} hint={percent(foyer.netApresImpots)} strong />
+      <Row label="Revenus avant prélèvements" value={euros(base)} />
+      <Row label="Prélèvements du foyer" value={euros(foyer.totalPrelevements)} hint={percent(foyer.totalPrelevements)} />
+      {foyer.resultatConserve !== 0 ? <Row label="Sa part conservée en société" value={euros(foyer.resultatConserve)} hint={percent(foyer.resultatConserve)} /> : null}
+      <Row label="Net dans la poche" value={euros(foyer.netApresImpots)} hint={percent(foyer.netApresImpots)} strong />
     </dl>
   )
 }
@@ -215,11 +212,11 @@ function piecesDuFoyer(foyer: FoyerFiscalResult, members: PersonResult[], showRa
         ))}
       </div>
     ),
-    encaisse: <Row label="Total encaissé" value={formatMoney(foyer.revenusEncaisses)} className={cache} />,
-    impot: <Row label="Impôt sur le revenu" value={`− ${formatMoney(foyer.impotSurLeRevenu)}`} hint={`sur ${formatMoney(foyer.revenuImposableGlobal)} imposables au barème`} />,
-    prelevementsSociaux: foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${formatMoney(foyer.prelevementsSociaux)}`} className={cache} /> : null,
-    rfr: <Row label="Revenu fiscal de référence" value={formatMoney(foyer.revenuFiscalDeReference)} hint="pour le versement libératoire dans deux ans" />,
-    reste: foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={formatMoney(foyer.netApresImpots - foyer.depenses)} hint={`${formatMoney(foyer.depenses)} de dépenses`} className={cache} /> : null,
+    encaisse: <Row label="Total encaissé" value={euros(foyer.revenusEncaisses)} className={cache} />,
+    impot: <Row label="Impôt sur le revenu" value={`− ${euros(foyer.impotSurLeRevenu)}`} hint={`sur ${euros(foyer.revenuImposableGlobal)} imposables au barème`} />,
+    prelevementsSociaux: foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${euros(foyer.prelevementsSociaux)}`} className={cache} /> : null,
+    rfr: <Row label="Revenu fiscal de référence" value={euros(foyer.revenuFiscalDeReference)} hint="pour le versement libératoire dans deux ans" />,
+    reste: foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={euros(foyer.netApresImpots - foyer.depenses)} hint={`${euros(foyer.depenses)} de dépenses`} className={cache} /> : null,
     complements: (
       <>
         {showRates ? <FoyerRates foyer={foyer} /> : null}
@@ -276,7 +273,7 @@ function FoyerCard({ foyer, persons, showRates, nombre }: FoyerCardProps) {
               {p.encaisse}
               {p.impot}
               {p.prelevementsSociaux}
-              <Row label="Net après impôts" value={formatMoney(foyer.netApresImpots)} strong className={classeDuDetail(ouvert, "flex")} />
+              <Row label="Net après impôts" value={euros(foyer.netApresImpots)} strong className={classeDuDetail(ouvert, "flex")} />
               {p.rfr}
               {p.reste}
             </dl>
@@ -293,13 +290,13 @@ function FoyerCard({ foyer, persons, showRates, nombre }: FoyerCardProps) {
 function VersementLiberatoireNote({ info }: { info: VersementLiberatoireInfo }) {
   const parts = info.partsFiscales.toLocaleString("fr-FR")
   const origine = info.origineRfr === "calcule" ? "calculé par la simulation" : "saisi dans la fiche"
-  const rfr = `votre RFR ${info.anneeRfr} de ${formatMoney(info.rfrN2 ?? 0)}, ${origine},`
+  const rfr = `votre RFR ${info.anneeRfr} de ${euros(info.rfrN2 ?? 0)}, ${origine},`
   const status = info.eligible === null ? `RFR ${info.anneeRfr} inconnu : ajoutez l'année ${info.anneeRfr} à la simulation ou renseignez-le dans la fiche de la micro-entreprise` : `${rfr} ${info.eligible ? "y donne accès" : "le dépasse"}`
 
   return (
     <div className="mt-3 border-t border-slate-100 pt-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
       <p>
-        <span className="font-medium text-slate-700 dark:text-slate-200">Versement libératoire</span> {info.applique ? "(appliqué)" : "(non appliqué)"} : seuil de {formatMoney(info.plafondRfr)} de revenu fiscal de référence {info.anneeRfr} pour {parts} {info.partsFiscales > 1 ? "parts" : "part"} ;{" "}
+        <span className="font-medium text-slate-700 dark:text-slate-200">Versement libératoire</span> {info.applique ? "(appliqué)" : "(non appliqué)"} : seuil de {euros(info.plafondRfr)} de revenu fiscal de référence {info.anneeRfr} pour {parts} {info.partsFiscales > 1 ? "parts" : "part"} ;{" "}
         <span className={info.eligible === false ? "text-rose-700 dark:text-rose-400" : info.eligible ? "text-emerald-700 dark:text-emerald-400" : undefined}>{status}</span>.
       </p>
     </div>
@@ -309,14 +306,14 @@ function VersementLiberatoireNote({ info }: { info: VersementLiberatoireInfo }) 
 /** Coût employeur des salariés d'une activité : salaires bruts, plus cotisations patronales, moins la réduction générale. */
 function EmployerCost({ salaries, className }: { salaries: SalarieDeLActivite[]; className?: string }) {
   const sum = (value: (salarie: SalarieDeLActivite) => number) => salaries.reduce((total, salarie) => total + value(salarie), 0)
-  const hint = `${formatMoney(sum(s => s.brut))} bruts + ${formatMoney(sum(s => s.totalPatronal))} de cotisations patronales − ${formatMoney(sum(s => s.reductionGenerale))} de réduction générale`
-  return <Row label={salaries.length > 1 ? `Coût employeur des ${salaries.length} salariés` : "Coût employeur du salarié"} value={formatMoney(sum(s => s.coutEmployeur))} hint={hint} className={className} />
+  const hint = `${euros(sum(s => s.brut))} bruts + ${euros(sum(s => s.totalPatronal))} de cotisations patronales − ${euros(sum(s => s.reductionGenerale))} de réduction générale`
+  return <Row label={salaries.length > 1 ? `Coût employeur des ${salaries.length} salariés` : "Coût employeur du salarié"} value={euros(sum(s => s.coutEmployeur))} hint={hint} className={className} />
 }
 
 /** Déplacements professionnels convertis au barème kilométrique, déjà compris dans les charges ou les dépenses. */
 function DeplacementsRow({ deplacements, className }: { deplacements: NonNullable<ActivityResult["fraisDeDeplacement"]>; className?: string }) {
   const kilometres = `${deplacements.kilometres.toLocaleString("fr-FR")} km au barème kilométrique`
-  return <Row label="dont déplacements professionnels" value={formatMoney(deplacements.montant)} hint={deplacements.deductible ? `${kilometres}, déductibles` : `${kilometres}, non déductibles`} className={className} />
+  return <Row label="dont déplacements professionnels" value={euros(deplacements.montant)} hint={deplacements.deductible ? `${kilometres}, déductibles` : `${kilometres}, non déductibles`} className={className} />
 }
 
 /**
@@ -347,8 +344,8 @@ function statutAffiche(activity: ActivityResult): string {
 function LignesDeLaCaisse({ tns, className }: { tns: NonNullable<ActivityResult["cotisationsTNS"]>; className?: string }) {
   return (
     <>
-      {lignesDeLaCaisse(tns, formatMoney).map(ligne => (
-        <Row key={ligne.libelle} label={ligne.libelle} value={formatMoney(ligne.montant)} hint={ligne.precision} className={className} />
+      {lignesDeLaCaisse(tns, euros).map(ligne => (
+        <Row key={ligne.libelle} label={ligne.libelle} value={euros(ligne.montant)} hint={ligne.precision} className={className} />
       ))}
     </>
   )
@@ -358,7 +355,7 @@ function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: 
   const resume = useAffichageResume()
   const { ouvert } = useDetailDesCartes()
   const idDuDetail = useId()
-  const verse = <Row label="Versé avant impôt sur le revenu" value={formatMoney(activity.revenuVerse)} hint={shareOfRevenue(activity)} strong />
+  const verse = <Row label="Versé avant impôt sur le revenu" value={euros(activity.revenuVerse)} hint={shareOfRevenue(activity)} strong />
   const versementLiberatoire = activity.versementLiberatoire ? <VersementLiberatoireNote info={activity.versementLiberatoire} /> : null
   const bouton = <BoutonDuDetailDesCartes nombre={nombre} controle={idDuDetail} className="mt-2" />
 
@@ -403,15 +400,15 @@ function LignesDeLActivite({ activity, className }: { activity: ActivityResult; 
   const isMicro = activity.type === "micro-entreprise"
   return (
     <>
-      <Row label="Chiffre d'affaires" value={formatMoney(activity.chiffreAffaires)} className={className} />
-      {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${formatMoney(activity.charges)}`} className={className} /> : null}
+      <Row label="Chiffre d'affaires" value={euros(activity.chiffreAffaires)} className={className} />
+      {activity.charges > 0 ? <Row label={isMicro ? "Dépenses (non déductibles)" : "Charges déductibles"} value={`− ${euros(activity.charges)}`} className={className} /> : null}
       {activity.fraisDeDeplacement ? <DeplacementsRow deplacements={activity.fraisDeDeplacement} className={className} /> : null}
-      <Row label="Cotisations sociales" value={`− ${formatMoney(activity.cotisationsSociales)}`} className={className} />
+      <Row label="Cotisations sociales" value={`− ${euros(activity.cotisationsSociales)}`} className={className} />
       {activity.cotisationsTNS ? <LignesDeLaCaisse tns={activity.cotisationsTNS} className={className} /> : null}
-      {activity.formationProfessionnelle ? <Row label="dont formation professionnelle" value={formatMoney(activity.formationProfessionnelle)} hint="contribution sur le chiffre d'affaires, non réduite par l'ACRE" className={className} /> : null}
-      {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={formatMoney(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${formatMoney(activity.cotisationsPresident.brut)} bruts`} className={className} /> : null}
+      {activity.formationProfessionnelle ? <Row label="dont formation professionnelle" value={euros(activity.formationProfessionnelle)} hint="contribution sur le chiffre d'affaires, non réduite par l'ACRE" className={className} /> : null}
+      {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={euros(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${euros(activity.cotisationsPresident.brut)} bruts`} className={className} /> : null}
       {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} className={className} /> : null}
-      {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${formatMoney(activity.impotSocietes)}`} className={className} /> : null}
+      {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${euros(activity.impotSocietes)}`} className={className} /> : null}
       {activity.reserves ? <MouvementsDesReserves activity={activity} className={className} /> : null}
     </>
   )
@@ -427,10 +424,10 @@ function MouvementsDesReserves({ activity, className }: { activity: ActivityResu
   const { ajoutees, reserveLegaleDotee, prisesSurLesReserves, deficit, deficitImpute } = lecture
   return (
     <>
-      {deficitImpute >= 0.5 ? <Row label="Déficit des années précédentes déduit" value={formatMoney(deficitImpute)} hint="avant l'impôt sur les sociétés" className={className} /> : null}
-      {deficit >= 0.5 ? <Row label="Déficit de la société" value={`− ${formatMoney(deficit)}`} hint="pris sur les réserves, déduit des bénéfices suivants" className={className} /> : null}
-      {ajoutees >= 0.5 ? <Row label="Ajouté aux réserves" value={formatMoney(ajoutees)} hint={reserveLegaleDotee >= 0.5 ? `dont ${formatMoney(reserveLegaleDotee)} de réserve légale` : null} className={className} /> : null}
-      {prisesSurLesReserves >= 0.5 ? <Row label="Dividendes pris sur les réserves" value={`− ${formatMoney(prisesSurLesReserves)}`} className={className} /> : null}
+      {deficitImpute >= 0.5 ? <Row label="Déficit des années précédentes déduit" value={euros(deficitImpute)} hint="avant l'impôt sur les sociétés" className={className} /> : null}
+      {deficit >= 0.5 ? <Row label="Déficit de la société" value={`− ${euros(deficit)}`} hint="pris sur les réserves, déduit des bénéfices suivants" className={className} /> : null}
+      {ajoutees >= 0.5 ? <Row label="Ajouté aux réserves" value={euros(ajoutees)} hint={reserveLegaleDotee >= 0.5 ? `dont ${euros(reserveLegaleDotee)} de réserve légale` : null} className={className} /> : null}
+      {prisesSurLesReserves >= 0.5 ? <Row label="Dividendes pris sur les réserves" value={`− ${euros(prisesSurLesReserves)}`} className={className} /> : null}
     </>
   )
 }
@@ -440,7 +437,7 @@ function ReservesALaFin({ activity }: { activity: ActivityResult }) {
   const lecture = lectureDesReserves(activity)
   if (!lecture?.aSignaler) return null
   const label = lecture.aLaFin < 0 ? "Pertes à combler au 31 décembre" : "Réserves au 31 décembre"
-  return <Row label={label} value={formatMoney(Math.abs(lecture.aLaFin))} hint={lecture.reserveLegale >= 0.5 ? `plus ${formatMoney(lecture.reserveLegale)} de réserve légale` : null} />
+  return <Row label={label} value={euros(Math.abs(lecture.aLaFin))} hint={lecture.reserveLegale >= 0.5 ? `plus ${euros(lecture.reserveLegale)} de réserve légale` : null} />
 }
 
 /** Titre des résultats, année et règles appliquées, et avertissements propres à l'année (règles reprises d'une autre année). */

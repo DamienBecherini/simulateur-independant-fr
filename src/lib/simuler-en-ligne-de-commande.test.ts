@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import { lireLaSession, contenuDuFichier } from "@/backend/logic/fichiers-de-donnees"
 import { simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
-import { euros } from "@/lib/export-markdown"
+import { eurosEnTexteBrut as euros } from "@/backend/logic/format"
 import { MONTAGES_TYPES, sessionDUnMontage } from "@/lib/montages/montages"
 import { AIDE, executerSimuler, lireLesArguments, messageDErreurDuFichier } from "@/lib/simuler-en-ligne-de-commande"
 import { sessionMaximale } from "@/lib/testing/session-maximale"

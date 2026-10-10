@@ -3,16 +3,11 @@
 import { cn } from "@/lib/utils"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { ArrowUp, ArrowDown } from "lucide-react"
-
-export interface FlowSegment {
-  amount: number
-  color: string
-  number: number
-}
+import type { SegmentDeFlux } from "@/lib/grille-mensuelle"
 
 interface CellChartDisplayProps {
-  gains: FlowSegment[]
-  expenses: FlowSegment[]
+  gains: SegmentDeFlux[]
+  expenses: SegmentDeFlux[]
   totalGains: number
   totalExpenses: number
   absoluteMaxValue: number
@@ -37,7 +32,7 @@ export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, a
     )
   }
 
-  const renderBarGroup = (segments: FlowSegment[], alignment: "left" | "right" = "right") => (
+  const renderBarGroup = (segments: SegmentDeFlux[], alignment: "left" | "right" = "right") => (
     // On ajoute un alignement pour les barres aussi
     <div className={cn("h-14 w-full flex items-end gap-px print:h-8 print:empty:hidden", alignment === "right" ? "justify-end" : "justify-start")}>
       {segments.map((segment, index) => {

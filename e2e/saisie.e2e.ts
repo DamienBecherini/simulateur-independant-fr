@@ -75,3 +75,29 @@ test("Ctrl+Z annule la dernière modification et Ctrl+Y la rétablit", async ({ 
   await page.keyboard.press("Control+y")
   await expect(nom).toHaveValue("Alice Durand")
 })
+
+test("Ctrl+Z dans un champ texte annule la frappe du champ, pas la dernière modification de la simulation", async ({ dossierDonnees, lancer }) => {
+  await deposerSession(dossierDonnees, sessionAliceSeule())
+  const { page } = await lancer()
+  const annuler = page.getByRole("button", { name: "Annuler" })
+
+  const nom = page.getByRole("textbox", { name: "Nom" })
+  await nom.fill("Alice Durand")
+  await nom.press("Enter")
+  await expect(annuler).toBeEnabled()
+
+  // De retour dans le champ, une lettre tapée puis Ctrl+Z : le navigateur retire la lettre, le nom validé reste.
+  await nom.click()
+  await nom.press("End")
+  await nom.pressSequentially("!")
+  await expect(nom).toHaveValue("Alice Durand!")
+  await page.keyboard.press("Control+z")
+  await expect(nom).toHaveValue("Alice Durand")
+  await nom.blur()
+  await expect(nom).toHaveValue("Alice Durand")
+
+  // L'historique de la simulation est intact : sa seule étape annule le renommage.
+  await annuler.click()
+  await expect(nom).toHaveValue("Alice Martin")
+  await expect(annuler).toBeDisabled()
+})

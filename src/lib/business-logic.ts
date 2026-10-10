@@ -37,7 +37,7 @@ export function sanitizeFlowsAfterRelationshipChange(sessionState: Pick<DonneesD
       // Il faut donc trouver la personne liée à cette entreprise.
       const companyId = flow.entityId
 
-      // On cherche une relation qui part de l'entreprise et qui a un des types requis.
+      // On cherche une relation de l'entreprise, dans un sens ou dans l'autre, qui a un des types requis.
       const fulfillingRelationship = relationships.find(rel => (rel.fromId === companyId || rel.toId === companyId) && requiredRelations.includes(rel.type))
 
       // Si on trouve au moins une relation qui justifie ce flux, on le garde.

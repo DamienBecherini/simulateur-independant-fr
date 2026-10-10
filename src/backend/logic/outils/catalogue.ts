@@ -1,6 +1,6 @@
 // src/backend/logic/outils/catalogue.ts
-// Le catalogue des outils pour les clients d'IA (voir l'ADR 010) : une seule source pour le serveur MCP local et
-// l'assistant intégré. Aucun transport ici : des fonctions pures, qui reçoivent la session et rendent du JSON.
+// Le catalogue des outils pour les clients d'IA (voir l'ADR 010), servi par le serveur MCP local. Aucun transport ici :
+// des fonctions pures, qui reçoivent la session et rendent du JSON.
 //
 //   catalogueDesOutils()                → { nom, titre, description, inputSchema, lecture }[] (MCP tools/list)
 //   executerOutil(nom, session, args)   → { ok: true, resultat, nouvelleSession? } | { ok: false, erreur }

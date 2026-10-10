@@ -1,20 +1,16 @@
 // src/ui/hooks/useSessionManager.ts
 
 import { useState, useEffect, useCallback, useRef, type Dispatch, type SetStateAction } from "react"
-import { ANNEE_PAR_DEFAUT, grilleVide, type Comparateur, type SessionState, type SaveSlot, type SanitizationReport, type UserPreferences } from "@/types"
+import { SessionStateSchema, UserPreferencesSchema, type Comparateur, type SessionState, type SaveSlot, type SanitizationReport, type UserPreferences } from "@/types"
 import * as SessionService from "@/lib/session-service"
 import { avecSauvegardeChargee, preferencesSynchronisees } from "@/lib/preferences"
 import { rapportAvecCorrections } from "@/backend/logic/data-sanitizer"
 import { useDebouncedSave } from "./useDebouncedSave"
 
-// Session vierge : une seule année, la dernière dont les règles sont connues.
+// Session vierge, celle du schéma (comme dans le process principal) : une seule année, la dernière dont les règles
+// sont connues.
 function getInitialSessionState(): SessionState {
-  return {
-    name: "Nouvelle Simulation",
-    entities: [],
-    relationships: [],
-    annees: [{ annee: ANNEE_PAR_DEFAUT, monthlyData: grilleVide() }]
-  }
+  return SessionStateSchema.parse({})
 }
 
 /**
@@ -42,7 +38,7 @@ export function useSessionManager() {
   })
   const [allSaveSlots, setAllSaveSlots] = useState<SaveSlot[]>([])
   const [importConfirmation, setImportConfirmation] = useState<{ session: SessionState; report: SanitizationReport } | null>(null)
-  const [userPreferences, setUserPreferences] = useState<UserPreferences>({ slotOrder: [] })
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>(() => UserPreferencesSchema.parse({}))
   // La sauvegarde chargée est retenue dans les préférences : « Sauvegarder » la met à jour même après un redémarrage.
   const loadedSlotId = userPreferences.loadedSlotId ?? null
   const setLoadedSlotId: Dispatch<SetStateAction<string | null>> = useCallback(valeur => {
@@ -229,7 +225,6 @@ export function useSessionManager() {
     setAllSaveSlots,
     userPreferences,
     setUserPreferences,
-    slotOrder: userPreferences.slotOrder,
     setSlotOrder: updateSlotOrder,
     loadedSlotId,
     setLoadedSlotId,

@@ -3,7 +3,8 @@
 /*
  * Contenu des fichiers de données de l'application de bureau (session en cours, sauvegardes, export d'une
  * simulation) : écriture avec le numéro de format, lecture avec conversion et nettoyage. Sans Electron ni accès au
- * disque, pour être testé seul ; le process principal (main.ts) lit et écrit les fichiers.
+ * disque, pour être testé seul ; le process principal (donnees-de-l-application.ts, canaux-des-fichiers.ts) lit et écrit
+ * les fichiers.
  */
 
 import { UserPreferencesSchema, type ExportableState, type SanitizationReport, type SaveSlot, type SessionState, type UserPreferences } from "../../types.js"
