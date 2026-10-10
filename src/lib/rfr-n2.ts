@@ -15,17 +15,17 @@ export function anneesDuRfrSaisi(annees: number[]): number[] {
   return [...annees].sort((a, b) => a - b).filter(annee => !annees.includes(annee - 2))
 }
 
-/** Le libellé (« RFR 2024 ») et l'aide du champ, d'après les années de la simulation. */
+/** Le libellé (« Revenu fiscal de référence 2024 ») et l'aide du champ, d'après les années de la simulation. */
 export function texteDuRfrN2(annees: number[]): TexteDuRfrN2 {
   const saisies = anneesDuRfrSaisi(annees)
-  if (saisies.length === 0) return { libelle: "RFR N-2", aide: "Revenu fiscal de référence du foyer d'il y a deux ans (avis d'imposition) : il décide de l'accès au versement libératoire." }
+  if (saisies.length === 0) return { libelle: "Revenu fiscal de référence d'il y a deux ans", aide: "Revenu fiscal de référence du foyer d'il y a deux ans (avis d'imposition) : il décide de l'accès au versement libératoire." }
   const rfr = saisies.map(annee => annee - 2)
   const avis = saisies.map(annee => annee - 1)
   const calculees = [...annees].sort((a, b) => a - b).filter(annee => annees.includes(annee - 2))
   const uneValeurPourPlusieurs = saisies.length > 1 ? ` La même valeur sert pour ${liste(saisies)}.` : ""
   const ensuite = calculees.length > 0 ? ` Pour ${liste(calculees)}, la simulation utilise le revenu fiscal de référence qu'elle calcule elle-même.` : ""
   return {
-    libelle: `RFR ${liste(rfr)}`,
+    libelle: `Revenu fiscal de référence ${liste(rfr)}`,
     aide: `Revenu fiscal de référence ${liste(rfr)} du foyer, sur ${saisies.length > 1 ? "les avis" : "l'avis"} d'imposition reçu${saisies.length > 1 ? "s" : ""} en ${liste(avis)} : il décide de l'accès au versement libératoire en ${liste(saisies)}.${uneValeurPourPlusieurs}${ensuite}`
   }
 }

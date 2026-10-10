@@ -104,7 +104,7 @@ async function auditerLesFenetres(page: Page, theme: string) {
   await auditer(page, `réglages d'une activité, ${theme}`, "[role=dialog]")
   await fermer()
 
-  await page.getByRole("button", { name: "+ Ajouter une Activité" }).click()
+  await page.getByRole("button", { name: "+ Ajouter une activité" }).click()
   await expect(fenetre).toBeVisible()
   await auditer(page, `choix du type d'activité, ${theme}`, "[role=dialog]")
   await fermer()

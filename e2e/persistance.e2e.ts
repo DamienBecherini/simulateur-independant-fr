@@ -12,7 +12,7 @@ type FichierSession = SessionState & { formatVersion?: number }
 
 test("la session est sauvegardée automatiquement et retrouvée au lancement suivant", async ({ dossierDonnees, lancer }) => {
   const premier = await lancer()
-  await premier.page.getByRole("button", { name: "+ Ajouter une Personne" }).click()
+  await premier.page.getByRole("button", { name: "+ Ajouter une personne" }).click()
   const nom = premier.page.getByRole("textbox", { name: "Nom" })
   await nom.fill("Bernard Petit")
   await nom.press("Enter")
@@ -32,7 +32,7 @@ test("la session est sauvegardée automatiquement et retrouvée au lancement sui
 
 test("une modification faite juste avant la fermeture n'est pas perdue", async ({ lancer }) => {
   const premier = await lancer()
-  await premier.page.getByRole("button", { name: "+ Ajouter une Personne" }).click()
+  await premier.page.getByRole("button", { name: "+ Ajouter une personne" }).click()
   const nom = premier.page.getByRole("textbox", { name: "Nom" })
   await nom.fill("Claire Moreau")
   await nom.press("Enter")

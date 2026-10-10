@@ -56,7 +56,7 @@ test("Tab parcourt toute la page dans l'ordre, avec un focus visible sur chaque 
 
   // Ordre de la page : barre d'outils, entités, grille, légende, résultats, comparateur, courbe.
   const position = (motif: RegExp) => arrets.findIndex(a => motif.test(a.nom))
-  const reperes = [/« Paramètres »/, /« \+ Ajouter une Personne »/, /« Déplacer « /, /« Flux de janvier/, /« Gérer les couleurs »/, /^<button> « Atelier de Camille »$/, /« Frais de fonctionnement/, /« Net du foyer selon la rémunération nette/, /« Valeurs de la courbe/]
+  const reperes = [/« Paramètres »/, /« \+ Ajouter une personne »/, /« Déplacer « /, /« Flux de janvier/, /« Gérer les couleurs »/, /^<button> « Atelier de Camille »$/, /« Frais de fonctionnement/, /« Net du foyer selon la rémunération nette/, /« Valeurs de la courbe/]
   const positions = reperes.map(position)
   expect(positions.every(p => p >= 0), `Repères introuvables : ${reperes.filter((_, i) => positions[i] < 0).join(", ")}`).toBe(true)
   expect(positions).toEqual([...positions].sort((a, b) => a - b))
@@ -68,7 +68,7 @@ test("le lien d'évitement mène au contenu", async ({ page }) => {
   await page.keyboard.press("Enter")
   await expect(page.locator("main")).toBeFocused()
   await page.keyboard.press("Tab")
-  await expect(page.getByRole("button", { name: "+ Ajouter une Personne" })).toBeFocused()
+  await expect(page.getByRole("button", { name: "+ Ajouter une personne" })).toBeFocused()
 })
 
 test("une entité se déplace au clavier avec sa poignée : Espace, flèche, Espace", async ({ page }) => {

@@ -21,7 +21,7 @@ async function afficher(page: Page, annee: string) {
   await expect(page.getByText(new RegExp(`année ${annee} avec les règles fiscales`))).toBeVisible()
 }
 
-/** Total annuel des dépenses de la société, lu dans la colonne « Total Annuel » de la grille ; 0 si elle n'a aucun flux. */
+/** Total annuel des dépenses de la société, lu dans la colonne « Total annuel » de la grille ; 0 si elle n'a aucun flux. */
 async function depensesAnnuelles(page: Page): Promise<number> {
   const montants = page.getByRole("group", { name: "Total annuel : Conseil SASU" }).locator(".font-mono")
   if ((await montants.count()) === 0) return 0

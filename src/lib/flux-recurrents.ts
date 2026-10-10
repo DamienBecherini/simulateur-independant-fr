@@ -41,6 +41,26 @@ export function recopierFlux(grille: MonthlyGridData, flux: FinancialFlow, depui
   return ajouterAuxMois(grille, flux, moisCibles(depuis, portee), nouvelId)
 }
 
+/**
+ * Un montant annuel réparti sur les douze mois, au centime : onze douzièmes arrondis au centime inférieur, et le reste
+ * en décembre, pour que l'année totalise exactement le montant saisi (55 000 € : 4 583,33 € de janvier à novembre,
+ * 4 583,37 € en décembre).
+ */
+export function montantsMensuels(annuel: number): number[] {
+  const centimes = Math.round(annuel * 100)
+  const douzieme = Math.floor(centimes / 12)
+  return Array.from({ length: 12 }, (_, mois) => (mois === 11 ? centimes - 11 * douzieme : douzieme) / 100)
+}
+
+/**
+ * Ajoute le flux, dont le montant est annuel, à chacun des douze mois de la grille, avec les montants de
+ * `montantsMensuels` : une série (même type, même libellé) que « Appliquer à » modifie ou supprime ensuite d'un coup.
+ */
+export function repartirSurLAnnee(grille: MonthlyGridData, flux: FinancialFlow, nouvelId: () => string): { grille: MonthlyGridData; touches: number } {
+  const montants = montantsMensuels(flux.amount)
+  return { grille: grille.map((m, index) => ({ ...m, flows: [...m.flows, { ...flux, id: nouvelId(), amount: montants[index] }] })), touches: grille.length }
+}
+
 /** Même série : même acteur, même type et même libellé ; le montant peut varier d'un mois à l'autre (loyer augmenté). */
 export const memeSerie = (a: FinancialFlow, b: FinancialFlow) => a.entityId === b.entityId && a.type === b.type && a.label === b.label
 
@@ -147,6 +167,12 @@ export function ajouterDansLesAnnees(annees: AnneeSimulee[], flux: FinancialFlow
     grille => versAjouts(recopierFlux(grille.map((mois, index) => (index === depuis ? { ...mois, flows: [...mois.flows, flux] } : mois)), flux, depuis, portee, nouvelId)),
     grille => versAjouts(ajouterAuxMois(grille, flux, moisDesAutresAnnees(depuis, portee), nouvelId))
   )
+}
+
+/** Répartit le montant annuel du flux sur les douze mois de l'année affichée et de chaque autre année cochée. */
+export function repartirDansLesAnnees(annees: AnneeSimulee[], flux: FinancialFlow, cible: CibleDansLesAnnees, nouvelId: () => string): { annees: AnneeSimulee[]; touches: MoisTouches[] } {
+  const repartir = (grille: MonthlyGridData) => repartirSurLAnnee(grille, flux, nouvelId)
+  return dansLesAnnees(annees, cible, repartir, repartir)
 }
 
 /** Modifie le flux et sa série selon la portée dans l'année affichée, puis la série sur les mêmes mois des autres années cochées. */

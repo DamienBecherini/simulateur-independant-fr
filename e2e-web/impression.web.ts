@@ -28,7 +28,7 @@ function commandesDeLEcran(page: Page) {
   return [
     page.getByRole("navigation", { name: "Barre d'outils" }),
     page.getByRole("complementary", { name: "Démo web" }),
-    page.getByRole("button", { name: "+ Ajouter une Personne" }),
+    page.getByRole("button", { name: "+ Ajouter une personne" }),
     page.getByRole("button", { name: "Supprimer", exact: true }).first(),
     page.getByRole("button", { name: /^Supprimer la relation avec/ }).first(),
     page.getByRole("button", { name: /^Déplacer « / }).first(),

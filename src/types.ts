@@ -696,6 +696,11 @@ export interface FoyerFiscalResult {
   revenuFiscalDeReference: number
   /** Impôt au barème, impôt forfaitaire sur les dividendes et versement libératoire. */
   impotSurLeRevenu: number
+  /**
+   * Part de l'impôt sur le revenu payée avec les cotisations des micro-entreprises au versement libératoire, comprise
+   * dans `impotSurLeRevenu` ; absente quand il n'y en a pas.
+   */
+  versementLiberatoire?: number
   /** Prélèvements sociaux sur les dividendes. */
   prelevementsSociaux: number
   /** Imposition des dividendes la plus favorable au foyer ; `null` s'il n'en reçoit pas. */

@@ -132,8 +132,8 @@ describe("ResultsPanel", () => {
   })
 
   it.each([
-    ["calcule", true, "votre RFR 2024 de 29 040 €, calculé par la simulation, y donne accès"],
-    ["saisi", false, "votre RFR 2024 de 29 040 €, saisi dans la fiche, le dépasse"]
+    ["calcule", true, "le vôtre, de 29 040 €, calculé par la simulation, y donne accès"],
+    ["saisi", false, "le vôtre, de 29 040 €, saisi dans la fiche, le dépasse"]
   ] as const)("dit d'où vient le revenu fiscal de référence du versement libératoire (%s)", (origineRfr, eligible, attendu) => {
     const report = makeReport()
     report.activities = [{ ...report.activities[0], type: "micro-entreprise", statut: "Micro-entreprise", versementLiberatoire: { plafondRfr: 29315, partsFiscales: 1, rfrN2: 29040, anneeRfr: 2024, origineRfr, eligible, applique: eligible } }]
@@ -147,7 +147,7 @@ describe("ResultsPanel", () => {
     report.activities = [{ ...report.activities[0], versementLiberatoire: { plafondRfr: 29315, partsFiscales: 1, rfrN2: null, anneeRfr: 2024, origineRfr: null, eligible: null, applique: false } }]
     render(<ResultsPanel report={report} error={null} />)
 
-    expect(screen.getByText(/RFR 2024 inconnu : ajoutez l'année 2024 à la simulation/)).toBeInTheDocument()
+    expect(screen.getByText(/revenu fiscal de référence 2024 inconnu : ajoutez l'année 2024 à la simulation/)).toBeInTheDocument()
   })
 
   it("affiche l'erreur de simulation", () => {

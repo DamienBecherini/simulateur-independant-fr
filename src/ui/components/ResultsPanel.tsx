@@ -197,6 +197,23 @@ function FoyerRates({ foyer }: { foyer: FoyerFiscalResult }) {
   )
 }
 
+/**
+ * L'impôt sur le revenu du foyer. Le versement libératoire, payé avec les cotisations, a sa propre ligne : « 792 € sur
+ * 0 € imposables au barème » laissait croire à une erreur. La ligne du barème ne reste que s'il y a un impôt ou une base.
+ */
+function LignesDeLImpot({ foyer }: { foyer: FoyerFiscalResult }) {
+  const versementLiberatoire = foyer.versementLiberatoire ?? 0
+  const auBareme = foyer.impotSurLeRevenu - versementLiberatoire
+  const ligneDuBareme = <Row label="Impôt sur le revenu" value={`− ${euros(auBareme)}`} hint={`sur ${euros(foyer.revenuImposableGlobal)} imposables au barème`} />
+  if (versementLiberatoire === 0) return ligneDuBareme
+  return (
+    <>
+      <Row label="Impôt payé avec les cotisations (versement libératoire)" value={`− ${euros(versementLiberatoire)}`} />
+      {auBareme !== 0 || foyer.revenuImposableGlobal > 0 ? ligneDuBareme : null}
+    </>
+  )
+}
+
 /** Membres d'un foyer, dans l'ordre du foyer. */
 function membresDuFoyer(foyer: FoyerFiscalResult, persons: PersonResult[]): PersonResult[] {
   return foyer.personIds.map(id => persons.find(p => p.entityId === id)).filter((p): p is PersonResult => p !== undefined)
@@ -213,7 +230,7 @@ function piecesDuFoyer(foyer: FoyerFiscalResult, members: PersonResult[], showRa
       </div>
     ),
     encaisse: <Row label="Total encaissé" value={euros(foyer.revenusEncaisses)} className={cache} />,
-    impot: <Row label="Impôt sur le revenu" value={`− ${euros(foyer.impotSurLeRevenu)}`} hint={`sur ${euros(foyer.revenuImposableGlobal)} imposables au barème`} />,
+    impot: <LignesDeLImpot foyer={foyer} />,
     prelevementsSociaux: foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${euros(foyer.prelevementsSociaux)}`} className={cache} /> : null,
     rfr: <Row label="Revenu fiscal de référence" value={euros(foyer.revenuFiscalDeReference)} hint="pour le versement libératoire dans deux ans" />,
     reste: foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={euros(foyer.netApresImpots - foyer.depenses)} hint={`${euros(foyer.depenses)} de dépenses`} className={cache} /> : null,
@@ -290,8 +307,8 @@ function FoyerCard({ foyer, persons, showRates, nombre }: FoyerCardProps) {
 function VersementLiberatoireNote({ info }: { info: VersementLiberatoireInfo }) {
   const parts = info.partsFiscales.toLocaleString("fr-FR")
   const origine = info.origineRfr === "calcule" ? "calculé par la simulation" : "saisi dans la fiche"
-  const rfr = `votre RFR ${info.anneeRfr} de ${euros(info.rfrN2 ?? 0)}, ${origine},`
-  const status = info.eligible === null ? `RFR ${info.anneeRfr} inconnu : ajoutez l'année ${info.anneeRfr} à la simulation ou renseignez-le dans la fiche de la micro-entreprise` : `${rfr} ${info.eligible ? "y donne accès" : "le dépasse"}`
+  const rfr = `le vôtre, de ${euros(info.rfrN2 ?? 0)}, ${origine},`
+  const status = info.eligible === null ? `revenu fiscal de référence ${info.anneeRfr} inconnu : ajoutez l'année ${info.anneeRfr} à la simulation ou renseignez-le dans la fiche de la micro-entreprise` : `${rfr} ${info.eligible ? "y donne accès" : "le dépasse"}`
 
   return (
     <div className="mt-3 border-t border-slate-100 pt-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">

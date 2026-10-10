@@ -35,7 +35,7 @@ test("les modifications sont conservées dans le navigateur, jusqu'à ce qu'on r
   const noms = page.getByRole("textbox", { name: "Nom" })
   const avant = await noms.count()
 
-  await page.getByRole("button", { name: "+ Ajouter une Personne" }).click()
+  await page.getByRole("button", { name: "+ Ajouter une personne" }).click()
   await noms.last().fill("Bernard Petit")
   await noms.last().press("Enter")
   await expect(noms).toHaveCount(avant + 1)

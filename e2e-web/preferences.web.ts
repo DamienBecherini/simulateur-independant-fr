@@ -90,7 +90,7 @@ test("la légende des flux dépliée dans l'affichage « Résumé » l'est encor
   await expect(legende).not.toHaveAttribute("open")
   await expect.poll(async () => (await preferences(page)).sectionsOuvertes).toEqual({ "legende-des-flux": false })
   await page.emulateMedia({ media: "print" })
-  await expect(page.getByRole("heading", { name: "Légende des Flux" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Légende des flux" })).toBeVisible()
   await page.emulateMedia({ media: "screen" })
   await recharger(page)
   await expect(legende).not.toHaveAttribute("open")

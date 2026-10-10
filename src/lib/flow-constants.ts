@@ -22,10 +22,10 @@ export const flowTypeLabels: Record<FlowType, string> = {
   deductible_expense: "Charge déductible",
   director_remuneration: "Rémunération de dirigeant",
   dividends_payment: "Versement de dividendes",
-  // Micro-entreprise
-  ca_micro_services_bic: "CA Micro - Services (BIC)",
-  ca_micro_services_bnc: "CA Micro - Services (BNC)",
-  ca_micro_vente: "CA Micro - Vente",
+  // Micro-entreprise : la nature de l'activité, qui fixe les taux (voir src/lib/nature-de-l-activite.ts)
+  ca_micro_services_bic: "Prestations artisanales ou commerciales (BIC)",
+  ca_micro_services_bnc: "Prestations libérales (BNC)",
+  ca_micro_vente: "Vente de marchandises (BIC)",
   // Types de test (conservés pour la compatibilité des sauvegardes)
   income: "Revenu (Test)",
   expense: "Dépense (non déductible)"
@@ -42,9 +42,19 @@ export function libelleDuType(type: FlowType, typeActeur?: Entity["type"]): stri
   return flowTypeLabels[type]
 }
 
-/** Libellé laissé par défaut : celui du type pour cet acteur, ou l'ancien libellé générique (sauvegardes antérieures). */
+/**
+ * Anciens libellés par défaut, que portent les flux des sauvegardes antérieures : un flux qui en garde un a toujours
+ * son libellé par défaut (champ vide à l'affichage, libellé qui suit le type quand on change celui-ci).
+ */
+const ANCIENS_LIBELLES: Partial<Record<FlowType, string>> = {
+  ca_micro_services_bic: "CA Micro - Services (BIC)",
+  ca_micro_services_bnc: "CA Micro - Services (BNC)",
+  ca_micro_vente: "CA Micro - Vente"
+}
+
+/** Libellé laissé par défaut : celui du type pour cet acteur, l'ancien libellé générique ou un ancien libellé du type (sauvegardes antérieures). */
 export function estLibelleParDefaut(flow: Pick<FinancialFlow, "type" | "label">, typeActeur?: Entity["type"]): boolean {
-  return flow.label === libelleDuType(flow.type, typeActeur) || flow.label === flowTypeLabels[flow.type]
+  return flow.label === libelleDuType(flow.type, typeActeur) || flow.label === flowTypeLabels[flow.type] || flow.label === ANCIENS_LIBELLES[flow.type]
 }
 
 /** Libellés courts, utilisés là où la place est comptée (légende, réglage des couleurs). */
@@ -85,12 +95,14 @@ export const isOutgoingFlowType = (type: FlowType): boolean => outgoingFlowTypes
  * - Personne : revenus classiques et dépenses non déductibles.
  * - Société (SASU/EURL) : les dépenses sont des charges déductibles.
  * - Entreprise individuelle au réel : comme une société, sans rémunération de dirigeant ni dividendes.
- * - Micro-entreprise (régime forfaitaire) : les dépenses ne sont pas déductibles.
+ * - Micro-entreprise (régime forfaitaire) : les dépenses ne sont pas déductibles. Les prestations libérales viennent en
+ *   tête : c'est la nature proposée d'office tant que l'activité n'a pas de chiffre d'affaires dans l'année (voir
+ *   typeProposeDOffice, src/lib/nature-de-l-activite.ts).
  */
 export const flowTypesByEntityType: Record<Entity["type"], ReadonlyArray<FlowType>> = {
   person: ["are", "salary", "other_taxable_income", "expense"],
   company: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
-  "micro-entreprise": ["ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "expense"]
+  "micro-entreprise": ["ca_micro_services_bnc", "ca_micro_services_bic", "ca_micro_vente", "expense"]
 }
 
 const individualBusinessFlowTypes: ReadonlyArray<FlowType> = ["ca_services", "ca_vente", "deductible_expense"]

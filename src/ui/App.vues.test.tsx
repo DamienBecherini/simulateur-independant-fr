@@ -50,7 +50,7 @@ describe("App : affichage « Trois vues »", () => {
     // Les autres vues restent dans la page, masquées à l'écran, imprimées à la suite.
     expect(vue("resultats")).toHaveClass("hidden", "print:block")
     expect(vue("comparer")).toHaveClass("hidden", "print:block")
-    expect(within(vue("situation")).getByRole("heading", { name: "Acteurs de la Simulation" })).toBeInTheDocument()
+    expect(within(vue("situation")).getByRole("heading", { name: "Personnes et activités" })).toBeInTheDocument()
     expect(within(vue("resultats")).getByRole("heading", { name: "Résultats de simulation" })).toBeInTheDocument()
     expect(document.title).toBe("Ma situation — Simulation de test")
   })

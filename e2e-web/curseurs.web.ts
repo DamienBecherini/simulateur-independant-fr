@@ -11,7 +11,7 @@ test("les éléments cliquables affichent le curseur main", async ({ page }) => 
   await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
 
   const cliquables: [string, Locator][] = [
-    ["bouton", page.getByRole("button", { name: "+ Ajouter une Personne" })],
+    ["bouton", page.getByRole("button", { name: "+ Ajouter une personne" })],
     ["bouton icône", page.getByRole("button", { name: "Paramètres" })],
     ["interrupteur", page.getByRole("switch", { name: "Changer de thème" })],
     ["liste déroulante", page.getByRole("combobox", { name: "Activité comparée" })],
