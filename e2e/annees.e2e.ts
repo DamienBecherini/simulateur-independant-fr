@@ -3,6 +3,7 @@
 // avant et après, annulation et rétablissement, puis conservation sur le disque d'un lancement à l'autre.
 
 import type { Page } from "@playwright/test"
+import { ANNEE_COURANTE } from "../src/backend/regles/index"
 import type { SessionState } from "../src/types"
 import { test, expect, deposerSession, lireFichier } from "./support/fixtures"
 import { ATELIER, grilleMensuelle, sessionMicroBnc } from "./support/sessions"
@@ -34,9 +35,10 @@ test("années modifiées à la main, ajoutées, annulées puis rétablies : tout
   expect(messages).toHaveLength(1)
   expect(messages[0].message).toContain("Flux invalides ou orphelins supprimés : 1")
 
-  // 2027, recopiée de 2026 et simulée avec les dernières règles connues, ce que l'application signale.
+  // 2027, recopiée de 2026, simulée avec ses règles ou, tant qu'elles ne sont pas connues, avec celles de l'année en
+  // cours (l'avertissement qui le signale est vérifié dans la démo web, annees.web.ts).
   await ajouterUneAnnee(page, 2027, "après")
-  await expect(page.getByText(/^Les règles de 2027 ne sont pas encore connues/)).toBeVisible()
+  await expect(page.getByText(new RegExp(`année 2027 avec les règles fiscales ${Math.min(2027, ANNEE_COURANTE)}`))).toBeVisible()
   await expect(page.getByRole("button", { name: "Flux de janvier : Atelier Martin" })).toContainText(/2\s500/)
 
   // Ctrl+Z retire 2027 et revient sur une année existante ; Ctrl+Y la rétablit.

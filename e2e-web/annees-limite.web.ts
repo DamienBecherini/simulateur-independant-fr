@@ -6,6 +6,7 @@
 import { writeFile } from "node:fs/promises"
 import { test, expect, type Page, type TestInfo } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { ligneDeLAnnee } from "./support/annees"
 import { choisirLaPolice, POLICES } from "./support/police"
 
 const DIX_ANNEES = Array.from({ length: 10 }, (_, i) => 2024 + i)
@@ -49,7 +50,7 @@ async function ouvrirDixAnnees(page: Page, testInfo: TestInfo) {
   await page.keyboard.press("Escape")
   await expect(page.getByRole("dialog")).toBeHidden()
   await expect(page.getByRole("group", { name: "Année affichée" }).getByRole("button")).toHaveText(DIX_ANNEES.map(String))
-  await expect(page.getByText(/année 2033 avec les règles fiscales 2026/)).toBeVisible()
+  await expect(page.getByText(ligneDeLAnnee(2033))).toBeVisible()
 }
 
 /** Ouvre la fenêtre des flux de janvier et renvoie le groupe des autres années. */

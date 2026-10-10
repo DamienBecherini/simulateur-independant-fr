@@ -5,6 +5,7 @@
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 import { choisirAvantLeChargement, deplierLeTableauDuComparateur } from "./support/affichage"
+import { ajouterLesAnneesJusqua, ANNEE_DE_L_EXEMPLE, PREMIERE_ANNEE_FUTURE } from "./support/annees"
 
 /** Ouvre la démo (affichage « Résumé », par défaut) et attend la simulation d'exemple, le comparateur et la courbe. */
 async function ouvrir(page: Page) {
@@ -145,18 +146,20 @@ test("plusieurs années (sélecteur, synthèse, fenêtres d'ajout et de suppress
   await page.getByRole("button", { name: "Ajouter une année" }).click()
   await expect(page.getByRole("dialog", { name: "Ajouter une année" })).toBeVisible()
   await auditer(page, "ajout d'une année")
-  await page.getByRole("button", { name: "Ajouter 2027" }).click()
-  await expect(page.getByText(/année 2027 avec les règles fiscales 2026/)).toBeVisible()
+  await page.getByRole("button", { name: "Annuler" }).click()
+  // Jusqu'à l'année qui suit l'année en cours, pour que l'avertissement des règles pas encore connues s'affiche.
+  await ajouterLesAnneesJusqua(page, PREMIERE_ANNEE_FUTURE)
+  await expect(page.getByText(new RegExp(`^Les règles de ${PREMIERE_ANNEE_FUTURE} ne sont pas encore connues`))).toBeVisible()
   await expect(page.getByRole("table", { name: /chaque année de la session/ })).toBeVisible()
-  await auditer(page, "deux années, avertissement et synthèse")
-  // La fenêtre des flux propose alors l'autre année ; cochée, elle est mise en évidence et annoncée.
+  await auditer(page, "plusieurs années, avertissement et synthèse")
+  // La fenêtre des flux propose alors les autres années ; cochée, l'une d'elles est mise en évidence et annoncée.
   await page.getByRole("button", { name: /^Flux de janvier/ }).last().click()
-  await page.getByRole("dialog").getByRole("checkbox", { name: "2026" }).check()
-  await expect(page.getByRole("dialog").getByText(/au même mois en 2026/)).toBeVisible()
+  await page.getByRole("dialog").getByRole("checkbox", { name: String(ANNEE_DE_L_EXEMPLE) }).check()
+  await expect(page.getByRole("dialog").getByText(new RegExp(`au même mois en ${ANNEE_DE_L_EXEMPLE}`))).toBeVisible()
   await auditer(page, "fenêtre des flux, autre année cochée", "[role=dialog]")
   await page.keyboard.press("Escape")
   await expect(page.getByRole("dialog")).toBeHidden()
-  await page.getByRole("button", { name: "Supprimer 2027" }).click()
-  await expect(page.getByRole("dialog", { name: "Supprimer l'année 2027 ?" })).toBeVisible()
+  await page.getByRole("button", { name: `Supprimer ${PREMIERE_ANNEE_FUTURE}` }).click()
+  await expect(page.getByRole("dialog", { name: `Supprimer l'année ${PREMIERE_ANNEE_FUTURE} ?` })).toBeVisible()
   await auditer(page, "suppression d'une année")
 })

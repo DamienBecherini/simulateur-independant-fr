@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { AnneesRefuseesError, nettoyerLaSession, nettoyerLesSlots, rapportAvecCorrections, sanitizeSlots, sanitizeStateAndFillDefaults, SessionIrrecuperableError, texteAnneesEcartees, texteProfessionsEcartees } from "./data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL } from "./migrations.js"
+import { ANNEE_PAR_DEFAUT } from "../../types.js"
 
 const avatar = { type: "initials", value: "AB", color: "#3b82f6" }
 
@@ -30,7 +31,7 @@ describe("sanitizeStateAndFillDefaults", () => {
       expect(safeState.name).toBe("Nouvelle Simulation")
       expect(safeState.entities).toEqual([])
       expect(safeState.relationships).toEqual([])
-      expect(safeState.annees).toEqual([{ annee: 2026, monthlyData: grille() }])
+      expect(safeState.annees).toEqual([{ annee: ANNEE_PAR_DEFAUT, monthlyData: grille() }])
       expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
     })
 
@@ -332,7 +333,7 @@ describe("sanitizeStateAndFillDefaults", () => {
       const { safeState } = sanitizeStateAndFillDefaults(sessionDesAnnees([]))
 
       expect(safeState.entities).toEqual([alice])
-      expect(safeState.annees).toEqual([{ annee: 2026, monthlyData: grille() }])
+      expect(safeState.annees).toEqual([{ annee: ANNEE_PAR_DEFAUT, monthlyData: grille() }])
     })
 
     it.each([
@@ -363,7 +364,7 @@ describe("sanitizeStateAndFillDefaults", () => {
 
       const { safeState, report } = sanitizeStateAndFillDefaults(donnees)
 
-      expect(safeState).toEqual({ name: "Nouvelle Simulation", entities: [], relationships: [], annees: [{ annee: 2026, monthlyData: grille() }] })
+      expect(safeState).toEqual({ name: "Nouvelle Simulation", entities: [], relationships: [], annees: [{ annee: ANNEE_PAR_DEFAUT, monthlyData: grille() }] })
       expect(report).toMatchObject({ entitiesRemoved: 0, relationshipsRemoved: 0, flowsRemoved: 0 })
       expect(consoleError).toHaveBeenCalledOnce()
     })
@@ -419,7 +420,7 @@ describe("sanitizeSlots", () => {
   it("applique les valeurs par défaut à chaque slot", () => {
     const [resultat] = sanitizeSlots([{ id: "slot-1", lastModified: 42 }])
 
-    expect(resultat).toEqual({ id: "slot-1", lastModified: 42, name: "Nouvelle Simulation", entities: [], relationships: [], annees: [{ annee: 2026, monthlyData: grille() }] })
+    expect(resultat).toEqual({ id: "slot-1", lastModified: 42, name: "Nouvelle Simulation", entities: [], relationships: [], annees: [{ annee: ANNEE_PAR_DEFAUT, monthlyData: grille() }] })
   })
 
   it("nettoie les relations et flux orphelins de chaque slot", () => {

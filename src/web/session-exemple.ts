@@ -2,7 +2,6 @@
 // Simulation fictive, chargée à la première visite de la démo web et utilisée pour les captures d'écran du README :
 // une indépendante en micro-entreprise mixte, pacsée avec le président d'une SASU, avec un enfant.
 
-import { ANNEE_COURANTE } from "../backend/regles/index.js"
 import type { Company, FinancialFlow, MicroEntreprise, Person, Relationship, SessionState } from "../types.js"
 
 const personne = (id: string, name: string, initiales: string, color: string): Person => ({ id, type: "person", name, fiscalParts: 1, avatar: { type: "initials", value: initiales, color }, locked: false })
@@ -25,6 +24,13 @@ function flux(entityId: string, type: FinancialFlow["type"], amount: number, lab
   return { id: `${entityId}-${type}-${mois}`, label, amount, entityId, type }
 }
 
+/**
+ * Année de la simulation d'exemple : celle dont les règles ont servi à vérifier ses montants (tests de la démo web, captures
+ * du README). Comme `ANNEE_DES_MONTAGES`, elle ne suit pas l'année en cours : ajouter les règles d'une année plus récente ne
+ * change ni l'exemple ni ses chiffres. Une nouvelle session, elle, s'ouvre sur l'année en cours (`ANNEE_PAR_DEFAUT`).
+ */
+export const ANNEE_DE_L_EXEMPLE = 2026
+
 export function sessionExemple(): SessionState {
   const monthlyData = Array.from({ length: 12 }, (_, mois) => ({
     month: mois,
@@ -38,10 +44,9 @@ export function sessionExemple(): SessionState {
   monthlyData[11].flows.push(flux(conseil.id, "dividends_payment", 12000, "Dividendes", 11))
 
   return {
-    name: `Famille Martin, simulation ${ANNEE_COURANTE}`,
+    name: `Famille Martin, simulation ${ANNEE_DE_L_EXEMPLE}`,
     entities: [camille, julien, lea, atelier, conseil],
     relationships: relations,
-    // L'exemple suit l'année en cours, contrairement aux montages types : c'est la première simulation qu'on voit.
-    annees: [{ annee: ANNEE_COURANTE, monthlyData }]
+    annees: [{ annee: ANNEE_DE_L_EXEMPLE, monthlyData }]
   }
 }

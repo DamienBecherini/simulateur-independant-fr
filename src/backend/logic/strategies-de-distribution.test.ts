@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import { grilleVide, type Company, type FraisFonctionnement, type SessionState } from "../../types.js"
+import { ANNEE_COURANTE } from "./regles.js"
 import { comparerStrategiesDeDistribution } from "./strategies-de-distribution.js"
 import { micro, personne, relation, societe } from "./testing/session-de-test.js"
 
@@ -99,9 +100,10 @@ describe("comparerStrategiesDeDistribution", () => {
   })
 
   it("signale les années non simulées et celles qui reprennent les dernières règles connues", () => {
-    const resultat = comparerStrategiesDeDistribution(sessionSASU({ 2023: 60000, 2026: 60000, 2027: 60000 }), "s1", undefined)
+    const future = ANNEE_COURANTE + 1
+    const resultat = comparerStrategiesDeDistribution(sessionSASU({ 2023: 60000, [ANNEE_COURANTE]: 60000, [future]: 60000 }), "s1", undefined)
 
-    expect(resultat.annees).toEqual([2026, 2027])
-    expect(resultat.notes).toEqual([expect.stringMatching(/^2023 n'est pas comptée : /), "À partir de 2027, les années reprennent les règles de 2026, les dernières connues : le résultat n'est qu'une projection."])
+    expect(resultat.annees).toEqual([ANNEE_COURANTE, future])
+    expect(resultat.notes).toEqual([expect.stringMatching(/^2023 n'est pas comptée : /), `À partir de ${future}, les années reprennent les règles de ${ANNEE_COURANTE}, les dernières connues : le résultat n'est qu'une projection.`])
   })
 })

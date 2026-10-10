@@ -2,7 +2,7 @@
 // src/web/api-navigateur.test.ts
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { SaveSlot } from "@/types"
+import { ANNEE_PAR_DEFAUT, type SaveSlot } from "@/types"
 import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { ADRESSE_E_MAIL_DES_RETOURS, ADRESSE_NOUVEAU_TICKET } from "@/lib/adresses-des-retours"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
@@ -207,7 +207,7 @@ describe("pont de la démo web", () => {
     const session = await creerApiNavigateur().getCurrentSession()
 
     expect(session.entities).toEqual([])
-    expect(session.annees.map(a => a.annee)).toEqual([2026])
+    expect(session.annees.map(a => a.annee)).toEqual([ANNEE_PAR_DEFAUT])
   })
 
   it("n'importe rien si l'utilisateur ferme le sélecteur de fichiers", async () => {

@@ -7,8 +7,9 @@ import fichier2026 from "../regles/2026.json" with { type: "json" }
 import { ANNEE_COURANTE, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, reglesPubliees } from "./regles.js"
 
 describe("reglesDeLAnnee", () => {
-  it("connaît les règles de 2024 à 2026", () => {
-    expect([PREMIERE_ANNEE_DES_REGLES, ANNEE_COURANTE]).toEqual([2024, 2026])
+  it("connaît les règles de 2024 à l'année en cours, 2026 au moins", () => {
+    expect(PREMIERE_ANNEE_DES_REGLES).toBe(2024)
+    expect(ANNEE_COURANTE).toBeGreaterThanOrEqual(2026)
   })
 
   it.each([
@@ -23,10 +24,11 @@ describe("reglesDeLAnnee", () => {
   })
 
   it("reprend les dernières règles connues pour une année plus récente, avec un avertissement", () => {
-    const resultat = reglesDeLAnnee(2028)
+    const future = ANNEE_COURANTE + 2
+    const resultat = reglesDeLAnnee(future)
 
-    expect(resultat.regles).toBe(fichier2026)
-    expect("avertissement" in resultat && resultat.avertissement).toMatch(/^Les règles de 2028 ne sont pas encore connues : 2028 est simulée avec celles de 2026/)
+    expect(resultat.regles).toBe(reglesPubliees(ANNEE_COURANTE))
+    expect("avertissement" in resultat && resultat.avertissement).toMatch(new RegExp(`^Les règles de ${future} ne sont pas encore connues : ${future} est simulée avec celles de ${ANNEE_COURANTE}`))
   })
 
   it.each([2024, 2025, 2026])("%i : formation professionnelle des micro-entrepreneurs de 0,1 %, 0,3 % et 0,2 % du chiffre d'affaires (article L6331-48 du code du travail)", annee => {
@@ -44,6 +46,8 @@ describe("reglesPubliees", () => {
   })
 
   it("refuse une année sans fichier, au lieu de reprendre les dernières règles connues", () => {
-    expect(() => reglesPubliees(2028)).toThrow("Aucun fichier de règles pour l'année 2028.")
+    const future = ANNEE_COURANTE + 2
+
+    expect(() => reglesPubliees(future)).toThrow(`Aucun fichier de règles pour l'année ${future}.`)
   })
 })

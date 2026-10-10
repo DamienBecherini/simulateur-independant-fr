@@ -3,6 +3,7 @@
 
 import { writeFile } from "node:fs/promises"
 import { test, expect, type Page } from "@playwright/test"
+import { ajouterLesAnneesJusqua, ANNEE_DE_L_EXEMPLE, ligneDeLAnnee, PREMIERE_ANNEE_FUTURE } from "./support/annees"
 
 async function ouvrir(page: Page) {
   await page.goto("./")
@@ -101,18 +102,18 @@ test("un fichier de plusieurs années modifié à la main : année en double éc
   await expect(page.getByRole("button", { name: /^Supprimer 20/ })).toHaveCount(0)
 })
 
-test("une année ajoutée après la dernière connue est simulée avec les règles de 2026, et le dit", async ({ page }) => {
+test("une année ajoutée après la dernière connue est simulée avec les règles de l'année en cours, et le dit", async ({ page }) => {
   await ouvrir(page)
 
-  await page.getByRole("button", { name: "Ajouter une année" }).click()
-  await page.getByRole("button", { name: "Ajouter 2027" }).click()
+  // La simulation d'exemple est menée jusqu'à l'année qui suit l'année en cours, flux recopiés d'une année à l'autre.
+  await ajouterLesAnneesJusqua(page, PREMIERE_ANNEE_FUTURE)
 
-  await expect(page.getByText(/année 2027 avec les règles fiscales 2026/)).toBeVisible()
-  await expect(page.getByText(/^Les règles de 2027 ne sont pas encore connues/)).toBeVisible()
-  // Les flux de 2026 ont été recopiés : la grille de 2027 n'est pas vide.
+  await expect(page.getByText(ligneDeLAnnee(PREMIERE_ANNEE_FUTURE))).toBeVisible()
+  await expect(page.getByText(new RegExp(`^Les règles de ${PREMIERE_ANNEE_FUTURE} ne sont pas encore connues`))).toBeVisible()
+  // Les flux de l'année précédente ont été recopiés : la grille de l'année ajoutée n'est pas vide.
   await expect(page.getByRole("button", { name: /^Flux de janvier : Atelier de Camille/ })).toContainText(/\d/)
-  // Mêmes flux, mêmes règles : 2026 et 2027 ont le même net, comme le montre la synthèse.
+  // Mêmes flux, mêmes règles : l'année en cours et la suivante ont le même net, comme le montre la synthèse.
   const nets = await page.getByRole("table", { name: /chaque année de la session/ }).getByRole("row").evaluateAll(lignes => lignes.slice(1).map(ligne => ligne.querySelectorAll("td")[0]?.textContent))
-  expect(nets).toHaveLength(2)
-  expect(nets[0]).toBe(nets[1])
+  expect(nets).toHaveLength(PREMIERE_ANNEE_FUTURE - ANNEE_DE_L_EXEMPLE + 1)
+  expect(nets.at(-2)).toBe(nets.at(-1))
 })
