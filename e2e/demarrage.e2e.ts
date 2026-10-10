@@ -6,7 +6,7 @@ test("au démarrage, la fenêtre principale s'ouvre avec le preload chargé et s
   const { electronApp, page, erreursConsole } = await lancer()
 
   await expect(page).toHaveTitle(/.+/)
-  await expect(page.getByRole("heading", { name: "Acteurs de la Simulation" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Personnes et activités" })).toBeVisible()
   await expect(page.getByText("Aucune entité. Commencez par en ajouter une !")).toBeVisible()
 
   // Le preload expose l'API du process principal à l'interface.

@@ -52,7 +52,7 @@ test("la session et les sauvegardes portent la version de l'application qui les 
   await page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: "Sauvegarder" }).click()
 
   await expect.poll(async () => (await lireFichier<SaveSlot[]>(dossierDonnees, "simulationSlots.json"))?.map(s => s.appVersion)).toEqual([version])
-  await page.getByRole("button", { name: "+ Ajouter une Personne" }).click()
+  await page.getByRole("button", { name: "+ Ajouter une personne" }).click()
   await expect.poll(async () => (await lireFichier<SessionState>(dossierDonnees, "sessionState.json"))?.appVersion).toBe(version)
 })
 

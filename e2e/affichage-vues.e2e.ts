@@ -15,13 +15,13 @@ test("les trois vues se parcourent, la simulation suit, et l'affichage est retro
   await expect(onglets.getByRole("tab", { name: "Ma situation" })).toHaveAttribute("aria-selected", "true")
   await onglets.getByRole("tab", { name: "Mes résultats" }).click()
   await expect(page.getByRole("heading", { name: "Résultats de simulation" })).toBeVisible()
-  await expect(page.getByRole("heading", { name: "Acteurs de la Simulation" })).toBeHidden()
+  await expect(page.getByRole("heading", { name: "Personnes et activités" })).toBeHidden()
   expect(page.url()).toMatch(/index\.html#resultats$/)
   await expect(page).toHaveTitle(/^Mes résultats — /)
 
   // Une modification faite dans « Ma situation » est encore calculée par le processus principal, l'adresse ayant changé.
   await onglets.getByRole("tab", { name: "Ma situation" }).click()
-  await page.getByRole("button", { name: "+ Ajouter une Personne" }).click()
+  await page.getByRole("button", { name: "+ Ajouter une personne" }).click()
   const nom = page.getByRole("textbox", { name: "Nom" })
   await nom.fill("Bernard Petit")
   await nom.press("Enter")

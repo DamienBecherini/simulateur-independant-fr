@@ -30,9 +30,11 @@ interface NewFlowItemProps {
   typeActeur?: Entity["type"]
   /** Règles de l'année affichée : leurs cotisations salariales donnent le brut ou le net d'un salaire sans pourcentage. */
   regles: ReglesFiscales
+  /** Le montant saisi est annuel (réparti ensuite sur les douze mois) : le champ le dit. */
+  montantAnnuel?: boolean
 }
 
-export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelInputRef, typeActeur, regles }: NewFlowItemProps) {
+export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelInputRef, typeActeur, regles, montantAnnuel = false }: NewFlowItemProps) {
   const [label, setLabel] = useState("")
   const [amount, setAmount] = useState("")
   const [isAmountInvalid, setAmountInvalid] = useState(false)
@@ -42,6 +44,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
   // Pour un salaire, le brut et le pourcentage sont facultatifs. Tant que le net n'a pas été saisi à la main,
   // il est calculé à partir du brut : avec le pourcentage saisi, sinon avec les cotisations salariales de l'année.
   const isSalary = type === "salary"
+  const indicationDuMontant = montantAnnuel ? "Par an" : "Montant"
   const [gross, setGross] = useState("")
   const [ratio, setRatio] = useState("")
   const [isNetComputed, setNetComputed] = useState(false)
@@ -161,7 +164,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
         aria-invalid={isAmountInvalid}
         aria-describedby={isAmountInvalid ? idErreurDuMontant : undefined}
         inputMode="decimal"
-        placeholder={isSalary ? "Net" : "Montant"}
+        placeholder={isSalary ? "Net" : indicationDuMontant}
         value={amount}
         data-editing={amount !== ""}
         onChange={e => {

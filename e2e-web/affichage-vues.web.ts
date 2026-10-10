@@ -26,7 +26,7 @@ async function ouvrirEnVues(page: Page, adresse = "") {
 const barre = (page: Page) => page.getByRole("region", { name: "Résumé de l'année" })
 const onglets = (page: Page) => page.getByRole("tablist", { name: "Vues de la page" })
 const onglet = (page: Page, nom: RegExp) => onglets(page).getByRole("tab", { name: nom })
-const acteurs = (page: Page) => page.getByRole("heading", { name: "Acteurs de la Simulation" })
+const acteurs = (page: Page) => page.getByRole("heading", { name: "Personnes et activités" })
 const resultats = (page: Page) => page.getByRole("heading", { name: "Résultats de simulation" })
 const comparateur = (page: Page) => page.getByRole("heading", { name: "Comparateur de statuts" })
 const espaces = (texte: string | null) => (texte ?? "").replace(/\s+/g, " ").trim()
@@ -213,14 +213,14 @@ test("à l'impression, les trois vues s'impriment dans l'ordre, quelle que soit 
 
   await expect(barre(page)).toBeHidden()
   await expect(onglets(page)).toBeHidden()
-  const titres = [acteurs(page), page.getByRole("heading", { name: "Grille de Saisie Annuelle" }), resultats(page), comparateur(page), page.getByRole("heading", { name: "Rémunération ou dividendes ?" })]
+  const titres = [acteurs(page), page.getByRole("heading", { name: "Grille de saisie annuelle" }), resultats(page), comparateur(page), page.getByRole("heading", { name: "Rémunération ou dividendes ?" })]
   for (const titre of titres) await expect(titre).toBeVisible()
   // Dans l'ordre de la page : la situation, les résultats, puis le comparateur.
   const hauts = await Promise.all(titres.map(titre => titre.evaluate(e => e.getBoundingClientRect().top + window.scrollY)))
   expect(hauts).toEqual([...hauts].sort((a, b) => a - b))
   // Le détail replié est déplié, comme dans l'affichage « Résumé ».
   await expect(page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("rowheader", { name: "Impôt sur le revenu" })).toBeVisible()
-  await expect(page.getByRole("heading", { name: "Légende des Flux" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Légende des flux" })).toBeVisible()
 
   const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString("latin1")
   expect(pdf.match(/\/Type\s*\/Page\b/g)?.length ?? 0).toBeGreaterThanOrEqual(4)

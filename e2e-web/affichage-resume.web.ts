@@ -162,7 +162,7 @@ test("au clavier : choisir l'affichage, puis parcourir le résumé avec un focus
   }
   expect(arrets.filter(a => !a.indicateur).map(a => a.nom), "Éléments sans indicateur de focus visible").toEqual([])
   const position = (motif: RegExp) => arrets.findIndex(a => motif.test(a.nom))
-  const reperes = [/« Net du foyer/, /« Alertes/, /« \+ Ajouter une Personne »/, /« Flux de janvier/, /« Détail du calcul/, /« Voir le détail/, /« Valeurs de la courbe/]
+  const reperes = [/« Net du foyer/, /« Alertes/, /« \+ Ajouter une personne »/, /« Flux de janvier/, /« Détail du calcul/, /« Voir le détail/, /« Valeurs de la courbe/]
   const positions = reperes.map(position)
   expect(positions.every(p => p >= 0), `Repères introuvables : ${reperes.filter((_, i) => positions[i] < 0).join(", ")}`).toBe(true)
   expect(positions).toEqual([...positions].sort((a, b) => a - b))
@@ -179,7 +179,7 @@ test("à l'impression, l'affichage « Résumé » déplie tout et masque la barr
   await page.setViewportSize({ width: 794, height: 1123 })
   await ouvrir(page)
   const tableau = page.getByRole("table", { name: "Comparaison des statuts" })
-  const replies = [tableau.getByRole("rowheader", { name: "Impôt sur le revenu" }), page.getByText("Cotisations sociales des activités"), page.getByRole("table", { name: "Frais de fonctionnement annuels" }), page.getByRole("heading", { name: "Légende des Flux" }), page.locator("#repartition-titre")]
+  const replies = [tableau.getByRole("rowheader", { name: "Impôt sur le revenu" }), page.getByText("Cotisations sociales des activités"), page.getByRole("table", { name: "Frais de fonctionnement annuels" }), page.getByRole("heading", { name: "Légende des flux" }), page.locator("#repartition-titre")]
   for (const contenu of replies) await expect(contenu.first()).toBeHidden()
   await expect(barre(page)).toBeVisible()
 

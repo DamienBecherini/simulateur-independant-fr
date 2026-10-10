@@ -147,6 +147,7 @@ export function calculerFoyer(ctx: Contexte, foyer: Foyer): FoyerFiscalResult {
     revenuImposableGlobal: Math.round(revenuImposableGlobal),
     revenuFiscalDeReference: Math.round(revenuFiscalDeReference),
     impotSurLeRevenu: Math.round(impotSurLeRevenu),
+    ...(revenus.versementLiberatoire > 0 ? { versementLiberatoire: Math.round(revenus.versementLiberatoire) } : {}),
     prelevementsSociaux: Math.round(prelevementsSociaux),
     optionDividendes: revenus.dividendes > 0 ? optionDividendes : null,
     netApresImpots: Math.round(revenus.encaisse - impotSurLeRevenu - prelevementsSociaux),

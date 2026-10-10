@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
 import type { AnneeSimulee, MonthlyGridData } from "@/types"
+import { euros } from "@/backend/logic/format"
 import { makePerson } from "@/ui/testing/fixtures"
 import MonthlyGrid from "./MonthlyGrid"
 
@@ -40,6 +41,20 @@ describe("MonthlyGrid, flux qui reviennent chaque mois", () => {
     expect(montantsParMois(etat.grille)).toEqual(Array.from({ length: 12 }, () => [800]))
     expect(new Set(etat.grille.map(mois => mois.flows[0].id)).size).toBe(12)
     expect(etat.grille[0].flows[0]).toMatchObject({ label: "Loyer", entityId: "person-alice" })
+  })
+
+  it("répartit un montant annuel sur les douze mois, au centime, le reste en décembre", async () => {
+    const { user, etat } = afficherLaGrille()
+    await user.click(screen.getByRole("button", { name: "Flux de mars : Alice Martin" }))
+    const fenetre = screen.getByRole("dialog")
+
+    await user.click(within(fenetre).getByRole("checkbox", { name: "Montant annuel, réparti sur les 12 mois" }))
+    await user.type(within(fenetre).getByLabelText("Libellé du nouveau flux"), "Prime")
+    await user.type(within(fenetre).getByLabelText("Montant du nouveau flux"), "55000{Enter}")
+
+    expect(montantsParMois(etat.grille)).toEqual([...Array.from({ length: 11 }, () => [4583.33]), [4583.37]])
+    expect(etat.grille.every(mois => mois.flows[0].label === "Prime")).toBe(true)
+    expect(toast.success).toHaveBeenCalledWith(`Montant annuel de ${euros(55000)} réparti sur les 12 mois.`)
   })
 
   it("par défaut, n'ajoute le flux qu'au mois ouvert", async () => {

@@ -68,7 +68,7 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
     <>
       <div data-impression="bloc" className="page-paysage p-4 mt-4 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md print:mt-2 print:p-3">
         <div className="flex justify-between items-center mb-3 print:mb-1">
-          <h3 className="text-lg font-semibold">Légende des Flux</h3>
+          <h3 className="text-lg font-semibold">Légende des flux</h3>
           <Button variant="ghost" size="sm" className="print:hidden" onClick={() => setModalOpen(true)}>
             <Settings className="mr-2 h-4 w-4" />
             Gérer les couleurs

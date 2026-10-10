@@ -77,7 +77,7 @@ test.describe("avec le service worker", () => {
     // Les calculs se refont hors ligne : une personne ajoutée apparaît aussitôt.
     const noms = page.getByRole("textbox", { name: "Nom" })
     const avant = await noms.count()
-    await page.getByRole("button", { name: "+ Ajouter une Personne" }).click()
+    await page.getByRole("button", { name: "+ Ajouter une personne" }).click()
     await expect(noms).toHaveCount(avant + 1)
 
     expect(erreurs).toEqual([])

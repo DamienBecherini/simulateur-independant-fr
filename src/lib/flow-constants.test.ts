@@ -93,4 +93,21 @@ describe("libellés qui dépendent de l'acteur", () => {
     expect(estLibelleParDefaut({ type: "expense", label: "Dépense (non déductible)" }, "micro-entreprise")).toBe(true)
     expect(estLibelleParDefaut({ type: "expense", label: "Loyer" }, "person")).toBe(false)
   })
+
+  it("nomme en entier la nature du chiffre d'affaires d'une micro-entreprise", () => {
+    expect(libelleDuType("ca_micro_services_bnc", "micro-entreprise")).toBe("Prestations libérales (BNC)")
+    expect(libelleDuType("ca_micro_services_bic", "micro-entreprise")).toBe("Prestations artisanales ou commerciales (BIC)")
+    expect(libelleDuType("ca_micro_vente", "micro-entreprise")).toBe("Vente de marchandises (BIC)")
+  })
+
+  it("reconnaît encore les anciens libellés par défaut de la micro-entreprise (sauvegardes antérieures), pas ceux d'un autre type", () => {
+    expect(estLibelleParDefaut({ type: "ca_micro_services_bic", label: "CA Micro - Services (BIC)" }, "micro-entreprise")).toBe(true)
+    expect(estLibelleParDefaut({ type: "ca_micro_services_bnc", label: "CA Micro - Services (BNC)" }, "micro-entreprise")).toBe(true)
+    expect(estLibelleParDefaut({ type: "ca_micro_vente", label: "CA Micro - Vente" }, "micro-entreprise")).toBe(true)
+    expect(estLibelleParDefaut({ type: "ca_micro_vente", label: "CA Micro - Services (BNC)" }, "micro-entreprise")).toBe(false)
+  })
+
+  it("propose les prestations libérales en tête des types d'une micro-entreprise", () => {
+    expect(flowTypesByEntityType["micro-entreprise"][0]).toBe("ca_micro_services_bnc")
+  })
 })

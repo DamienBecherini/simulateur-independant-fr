@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import type { AnneeSimulee, FinancialFlow, MonthlyGridData } from "@/types"
-import { ajouterDansLesAnnees, anneesDuRaccourci, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, modifierDansLesAnnees, modifierSerie, moisCibles, moisDesAutresAnnees, recopierFlux, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type PorteeRecurrence } from "./flux-recurrents"
+import { ajouterDansLesAnnees, anneesDuRaccourci, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, modifierDansLesAnnees, modifierSerie, moisCibles, moisDesAutresAnnees, montantsMensuels, recopierFlux, repartirDansLesAnnees, repartirSurLAnnee, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type PorteeRecurrence } from "./flux-recurrents"
 
 const grilleVide = (): MonthlyGridData => Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
 const loyer: FinancialFlow = { id: "flux-mars", entityId: "personne-alice", type: "expense", label: "Loyer", amount: 800 }
@@ -24,6 +24,39 @@ describe("moisCibles", () => {
 
   it("vise tous les autres mois de l'année", () => {
     expect(moisCibles(2, "annee")).toEqual([0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+  })
+})
+
+describe("montant annuel réparti sur les douze mois", () => {
+  const centimes = (montants: number[]) => montants.reduce((total, m) => total + Math.round(m * 100), 0)
+
+  it("onze douzièmes au centime inférieur et le reste en décembre : l'année totalise le montant saisi", () => {
+    const montants = montantsMensuels(55000)
+    expect(montants.slice(0, 11)).toEqual(Array(11).fill(4583.33))
+    expect(montants[11]).toBe(4583.37)
+    expect(centimes(montants)).toBe(5_500_000)
+  })
+
+  it("un montant divisible par douze donne douze mois égaux", () => {
+    expect(montantsMensuels(1200)).toEqual(Array(12).fill(100))
+  })
+
+  it("ajoute une série de douze flux, un par mois, de nouveaux identifiants", () => {
+    const flux: FinancialFlow = { id: "f", entityId: "m", type: "ca_micro_services_bnc", label: "Prestations", amount: 55000 }
+    const { grille, touches } = repartirSurLAnnee(grilleVide(), flux, compteur())
+    expect(touches).toBe(12)
+    expect(grille.map(m => m.flows.length)).toEqual(Array(12).fill(1))
+    expect(grille[0].flows[0]).toEqual({ ...flux, id: "copie-1", amount: 4583.33 })
+    expect(grille[11].flows[0]).toEqual({ ...flux, id: "copie-12", amount: 4583.37 })
+  })
+
+  it("répartit aussi sur les années cochées", () => {
+    const annees: AnneeSimulee[] = [2026, 2027, 2028].map(annee => ({ annee, monthlyData: grilleVide() }))
+    const flux: FinancialFlow = { id: "f", entityId: "m", type: "ca_micro_vente", label: "Ventes", amount: 1200 }
+    const resultat = repartirDansLesAnnees(annees, flux, { annee: 2026, depuis: 3, portee: "mois", autresAnnees: [2028] }, compteur())
+    expect(resultat.touches).toEqual([{ annee: 2026, mois: 12 }, { annee: 2028, mois: 12 }])
+    expect(resultat.annees[1]).toBe(annees[1])
+    expect(resultat.annees[2].monthlyData.every(m => m.flows[0]?.amount === 100)).toBe(true)
   })
 })
 

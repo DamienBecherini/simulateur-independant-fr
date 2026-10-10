@@ -77,14 +77,14 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
   return (
     <div className={cn("bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md", style.cadre)}>
       <h2 className={cn("text-2xl font-semibold", style.titre)}>
-        Acteurs de la Simulation
+        Personnes et activités
       </h2>
       <div className={cn("flex flex-wrap print:hidden", style.boutons)}>
         <Button size={style.taille} onClick={() => addEntity(createPerson())}>
-          + Ajouter une Personne
+          + Ajouter une personne
         </Button>
         <Button size={style.taille} onClick={() => setSelectModalOpen(true)} variant="secondary">
-          + Ajouter une Activité
+          + Ajouter une activité
         </Button>
       </div>
       <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

@@ -9,7 +9,8 @@ import { CellChartDisplay } from "./CellChartDisplay"
 import { deMois, donneesDeLaGrille, MOIS_ABREGES, nombreDeFluxParMois, type LigneDeLaGrille } from "@/lib/grille-mensuelle"
 import { MOIS } from "@/lib/export-commun"
 import { createId } from "@/lib/id"
-import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlux, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type MoisTouches, type PorteeRecurrence } from "@/lib/flux-recurrents"
+import { euros } from "@/backend/logic/format"
+import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlux, repartirDansLesAnnees, repartirSurLAnnee, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type MoisTouches, type PorteeRecurrence } from "@/lib/flux-recurrents"
 import { toast } from "sonner"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { cn } from "@/lib/utils"
@@ -62,7 +63,7 @@ function LigneDeLActeur({ ligne, onOuvrir }: { ligne: LigneDeLaGrille; onOuvrir:
         </div>
       </div>
 
-      {/* Colonne 2 : Total Annuel */}
+      {/* Colonne 2 : Total annuel */}
       <div role="group" aria-label={`Total annuel : ${entity.name}`} className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start print:p-1">
         <CellChartDisplay
           gains={annualCellData.gains}
@@ -143,10 +144,20 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
     if (touches.length > 0) toast.success(`${annonce} ${resumerMoisTouches(touches)}.`)
     return true
   }
-  const handleCreateFlow = (values: NewFlowValues, portee: PorteeRecurrence = "mois", aussiEn: number[] = []) => {
+  /** Répartit un montant annuel sur les douze mois de l'année affichée et des autres années cochées, en une seule étape d'annulation. */
+  const repartirLeMontantAnnuel = (flux: FinancialFlow, aussiEn: number[]) => {
+    if (dansLesAnnees(aussiEn, "annee", (a, cible) => repartirDansLesAnnees(a, flux, cible, () => createId("flow")), "Montant annuel réparti sur")) return
+    setMonthlyData(repartirSurLAnnee(monthlyData, flux, () => createId("flow")).grille)
+    toast.success(`Montant annuel de ${euros(flux.amount)} réparti sur les 12 mois.`)
+  }
+  const handleCreateFlow = (values: NewFlowValues, portee: PorteeRecurrence = "mois", aussiEn: number[] = [], annuel = false) => {
     if (!openCell) return
     // L'identifiant est généré hors de la fonction de mise à jour, qui doit rester pure.
     const newFlow: FinancialFlow = { id: createId("flow"), entityId: openCell.entityId, ...values }
+    if (annuel) {
+      repartirLeMontantAnnuel(newFlow, aussiEn)
+      return
+    }
     if (dansLesAnnees(aussiEn, portee, (a, cible) => ajouterDansLesAnnees(a, newFlow, cible, () => createId("flow")), "Flux ajouté à ce mois et recopié sur")) return
     if (portee === "mois") {
       updateOpenMonthFlows(flows => [...flows, newFlow])
@@ -224,7 +235,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       <div className="page-paysage p-6 bg-slate-50 dark:bg-gray-950 rounded-lg shadow-md mt-8 print:mt-0 print:p-3">
         <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
           <h2 className="text-2xl font-semibold">
-            Grille de Saisie Annuelle
+            Grille de saisie annuelle
             {/* Sur papier, le sélecteur disparaît : le titre dit de quelle année il s'agit. */}
             {annee !== undefined ? <span className="hidden print:inline"> {annee}</span> : null}
           </h2>
@@ -261,8 +272,8 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                     Sur papier, elle tient dans la largeur de la feuille : les douze mois se partagent la place, en petits caractères, et chaque case empile gains et dépenses. */}
                 <div className="grid w-max min-w-full gap-px [grid-template-columns:minmax(5rem,6rem)_repeat(13,auto)] sm:[grid-template-columns:minmax(8rem,11rem)_repeat(13,auto)] print:w-full print:text-[9pt] print:[grid-template-columns:6.5rem_auto_repeat(12,minmax(0,1fr))]">
                   {/* En-tête de la grille */}
-                  <div data-colonne-fixe className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2 text-sm sm:text-base sm:whitespace-nowrap print:static print:p-1 print:text-[9pt]">Entités / Flux</div>
-                  <div className="font-bold text-center p-2 print:p-1">Total Annuel</div>
+                  <div data-colonne-fixe className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2 text-sm sm:text-base print:static print:p-1 print:text-[9pt]">Personnes et activités / Montants</div>
+                  <div className="font-bold text-center p-2 print:p-1">Total annuel</div>
                   {MOIS_ABREGES.map(month => (
                     <div key={month} data-mois className="font-bold text-center p-2 print:p-1">
                       {month}
@@ -292,6 +303,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           monthName={MOIS[openCell.monthIndex]}
           annee={annee ?? ANNEE_PAR_DEFAUT}
           autresAnnees={autresAnnees}
+          fluxDeLAnnee={monthlyData.flatMap(mois => mois.flows.filter(f => f.entityId === openCell.entityId))}
           onCreate={handleCreateFlow}
           onRecopier={openCell.monthIndex < 11 ? handleRecopierFlux : undefined}
           onUpdate={handleUpdateFlow}

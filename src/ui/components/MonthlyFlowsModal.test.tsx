@@ -5,10 +5,11 @@ import { render, screen } from "@testing-library/react"
 import userEvent, { type UserEvent } from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { Entity, FinancialFlow } from "@/types"
-import { reglesPubliees } from "@/backend/logic/regles"
+import { pourcent } from "@/backend/logic/format"
+import { ANNEE_COURANTE, reglesPubliees } from "@/backend/logic/regles"
 import { formatAmount } from "@/lib/amount-utils"
 import { brutCalcule, netCalcule } from "@/lib/salary-utils"
-import { makeFlow, makePerson } from "@/ui/testing/fixtures"
+import { makeFlow, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import type { FlowChanges } from "./FlowItem"
 import type { NewFlowValues } from "./NewFlowItem"
@@ -17,8 +18,10 @@ import type { NewFlowValues } from "./NewFlowItem"
  * Rend la fenêtre des flux avec un état local, comme le fait `MonthlyGrid` : les créations, modifications
  * et suppressions sont appliquées à la liste affichée, et chaque appel est espionné.
  */
-function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as Entity, annee = 2026 } = {}) {
+function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as Entity, annee = 2026, fluxDeLAnnee = [] as FinancialFlow[] } = {}) {
   const onCreate = vi.fn<(values: NewFlowValues) => void>()
+  // Le montant de chaque création est-il annuel (à répartir sur les douze mois) ?
+  const annuels = vi.fn<(annuel: boolean) => void>()
   const onUpdate = vi.fn<(flowId: string, changes: FlowChanges) => void>()
   const onDelete = vi.fn<(flowId: string) => void>()
   const onClose = vi.fn()
@@ -31,9 +34,11 @@ function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as E
         entity={entity}
         monthName="Mars"
         annee={annee}
+        fluxDeLAnnee={fluxDeLAnnee}
         onClose={onClose}
-        onCreate={values => {
+        onCreate={(values, _portee, _aussiEn, annuel) => {
           onCreate(values)
+          annuels(annuel)
           setFlows(previous => [...previous, { id: `flow-${previous.length + 1}`, entityId: entity.id, ...values }])
         }}
         onUpdate={(flowId, changes) => {
@@ -51,7 +56,7 @@ function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as E
 
   const user = userEvent.setup({ delay: null })
   render(<Harness />)
-  return { user, onCreate, onUpdate, onDelete, onClose }
+  return { user, onCreate, annuels, onUpdate, onDelete, onClose }
 }
 
 /** Choisit un type dans un sélecteur de type de flux ; par défaut celui de la ligne d'ajout, toujours le dernier. */
@@ -367,5 +372,68 @@ describe("MonthlyFlowsModal : salaires", () => {
       expect(onUpdate).not.toHaveBeenCalled()
       expect(gross).toHaveValue(formatAmount(3000))
     })
+  })
+})
+
+describe("MonthlyFlowsModal : nature du chiffre d'affaires d'une micro-entreprise", () => {
+  const { cotisations, abattement } = reglesPubliees(ANNEE_COURANTE).microEntreprise
+  const micro = () => makeMicro({ id: "m" })
+
+  it("propose d'office les prestations libérales, cochées, avec les taux de l'année affichée et des exemples", () => {
+    renderModal({ entity: micro(), annee: ANNEE_COURANTE })
+
+    const types = screen.getAllByRole("combobox", { name: "Type de flux" })
+    expect(types[types.length - 1]).toHaveTextContent("Prestations libérales (BNC)")
+    const bnc = screen.getByRole("radio", { name: "Prestations libérales (BNC)" })
+    expect(bnc).toBeChecked()
+    expect(bnc).toHaveAccessibleDescription(`: cotisations de ${pourcent(cotisations.servicesBnc)} du chiffre d'affaires, abattement de ${pourcent(abattement.servicesBnc)} pour l'impôt. Par exemple : développeur, consultant, traducteur, ostéopathe.`)
+    expect(screen.getByRole("radio", { name: "Prestations artisanales ou commerciales (BIC)" })).toHaveAccessibleDescription(new RegExp(`cotisations de ${pourcent(cotisations.servicesBic)}.*plombier`))
+    expect(screen.getByRole("radio", { name: "Vente de marchandises (BIC)" })).toHaveAccessibleDescription(new RegExp(`cotisations de ${pourcent(cotisations.venteBic)}.*revente`))
+    expect(screen.getByText(new RegExp(`^La nature fixe les taux de ${ANNEE_COURANTE}\\.`))).toBeInTheDocument()
+  })
+
+  it("propose d'office la nature déjà saisie pour l'activité dans l'année", () => {
+    renderModal({ entity: micro(), annee: ANNEE_COURANTE, fluxDeLAnnee: [makeFlow({ entityId: "m", type: "ca_micro_services_bic" })] })
+
+    expect(screen.getByRole("radio", { name: "Prestations artisanales ou commerciales (BIC)" })).toBeChecked()
+  })
+
+  it("cocher une nature change le type de la ligne d'ajout ; la vente fait paraître la note sur les achats", async () => {
+    const { user, onCreate } = renderModal({ entity: micro(), annee: ANNEE_COURANTE })
+    expect(screen.queryByText(/Vos achats/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("radio", { name: "Vente de marchandises (BIC)" }))
+    expect(screen.getByText(/^Vos achats \(marchandises, matériaux, outils\) ne se déduisent pas en micro-entreprise/)).toHaveTextContent(`l'abattement de ${pourcent(abattement.venteBic)} est censé les couvrir`)
+    await user.type(textbox("Montant du nouveau flux"), "1000{Enter}")
+
+    expect(onCreate).toHaveBeenCalledWith({ type: "ca_micro_vente", label: "Vente de marchandises (BIC)", amount: 1000 })
+  })
+
+  it("n'apparaît pas pour un autre acteur", () => {
+    renderModal()
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument()
+  })
+})
+
+describe("MonthlyFlowsModal : montant annuel", () => {
+  const caseAnnuelle = () => screen.queryByRole("checkbox", { name: "Montant annuel, réparti sur les 12 mois" })
+
+  it("la case fait du montant de la ligne d'ajout un montant annuel, à répartir sur les douze mois", async () => {
+    const { user, annuels } = renderModal({ entity: makeMicro(), annee: ANNEE_COURANTE })
+
+    await user.click(caseAnnuelle()!)
+    expect(textbox("Montant du nouveau flux")).toHaveAttribute("placeholder", "Par an")
+    expect(screen.getByText(new RegExp(`réparti sur les 12 mois de ${ANNEE_COURANTE}, au centime près`))).toBeInTheDocument()
+    await user.type(textbox("Montant du nouveau flux"), "55000{Enter}")
+
+    expect(annuels).toHaveBeenCalledWith(true)
+  })
+
+  it("n'est pas proposée pour un salaire, qui se saisit par mois", async () => {
+    const { user } = renderModal({ annee: ANNEE_COURANTE })
+    expect(caseAnnuelle()).toBeInTheDocument()
+
+    await chooseType(user, "Salaire (emploi tiers)")
+    expect(caseAnnuelle()).not.toBeInTheDocument()
   })
 })

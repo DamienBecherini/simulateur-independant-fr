@@ -11,8 +11,8 @@ test("créer une personne et sa micro-entreprise, saisir un chiffre d'affaires, 
   const { page } = await lancer()
 
   // Une personne, puis une micro-entreprise.
-  await page.getByRole("button", { name: "+ Ajouter une Personne" }).click()
-  await page.getByRole("button", { name: "+ Ajouter une Activité" }).click()
+  await page.getByRole("button", { name: "+ Ajouter une personne" }).click()
+  await page.getByRole("button", { name: "+ Ajouter une activité" }).click()
   await page.getByRole("dialog", { name: "Ajouter une activité" }).getByRole("button", { name: /Micro-Entreprise/ }).click()
   await expect(page.getByRole("textbox", { name: "Nom" })).toHaveCount(2)
 
@@ -24,8 +24,11 @@ test("créer une personne et sa micro-entreprise, saisir un chiffre d'affaires, 
 
   // 30 000 € de chiffre d'affaires en janvier, saisis au clavier dans la fenêtre des flux.
   await page.getByRole("button", { name: "Flux de janvier : Ma Micro-Entreprise" }).click()
-  const fenetreFlux = page.getByRole("dialog", { name: /Opérations de Janvier/ })
+  const fenetreFlux = page.getByRole("dialog", { name: /Opérations de janvier/ })
   await expect(fenetreFlux).toBeVisible()
+  // La nature du chiffre d'affaires est proposée d'office, expliquée et visible : les prestations libérales.
+  await expect(fenetreFlux.getByRole("radio", { name: "Prestations libérales (BNC)" })).toBeChecked()
+  await expect(fenetreFlux.getByRole("combobox", { name: "Type de flux" })).toHaveText("Prestations libérales (BNC)")
   await fenetreFlux.getByRole("textbox", { name: "Montant du nouveau flux" }).click()
   await page.keyboard.type("30000")
   await page.keyboard.press("Enter")

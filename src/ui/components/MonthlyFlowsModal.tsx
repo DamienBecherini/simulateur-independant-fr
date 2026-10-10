@@ -5,13 +5,17 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import type { Entity, FinancialFlow } from "@/types"
 import { flowTypeLabels, getFlowTypesForEntity, type FlowType } from "@/lib/flow-constants"
+import { typeProposeDOffice } from "@/lib/nature-de-l-activite"
+import { deMois } from "@/lib/grille-mensuelle"
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { FlowItem, type FlowChanges } from "./FlowItem"
 import { NewFlowItem, type NewFlowValues } from "./NewFlowItem"
+import { NatureDuChiffreDAffaires } from "./NatureDuChiffreDAffaires"
 import { useTriAccessible } from "../hooks/useTriAccessible"
 import { anneesDuRaccourci, LIBELLES_PORTEE, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, type PorteeRecurrence, type RaccourciAnnees } from "@/lib/flux-recurrents"
 import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
+import type { ReglesFiscales } from "@/backend/logic/regles"
 import { cn } from "@/lib/utils"
 
 /**
@@ -32,8 +36,16 @@ interface MonthlyFlowsModalProps {
   annee: number
   /** Autres années de la session, proposées en cases à cocher ; aucune case sans autre année. */
   autresAnnees?: number[]
-  /** Crée le flux dans ce mois et, selon la portée choisie, le recopie sur d'autres mois et dans les années cochées. */
-  onCreate: (values: NewFlowValues, portee: PorteeRecurrence, aussiEn: number[]) => void
+  /**
+   * Flux de l'acteur dans toute l'année affichée : une micro-entreprise reçoit d'office, sur la ligne d'ajout, la
+   * nature de chiffre d'affaires qu'elle a déjà (voir typeProposeDOffice).
+   */
+  fluxDeLAnnee?: FinancialFlow[]
+  /**
+   * Crée le flux dans ce mois et, selon la portée choisie, le recopie sur d'autres mois et dans les années cochées ;
+   * `annuel` : son montant est annuel, à répartir sur les douze mois (de chaque année cochée aussi), quelle que soit la portée.
+   */
+  onCreate: (values: NewFlowValues, portee: PorteeRecurrence, aussiEn: number[], annuel: boolean) => void
   /** Recopie un flux sur les mois suivants de l'année affichée ; absent en décembre, où il n'y a pas de mois suivant. */
   onRecopier?: (flowId: string) => void
   /** Modifie le flux et, selon la portée choisie, sa série dans les autres mois et les années cochées. */
@@ -49,6 +61,37 @@ function avertissement(portee: PorteeRecurrence, aussiEn: number[]): string | nu
   if (aussiEn.length === 0) return portee === "mois" ? null : `${debut} aux autres mois choisis.`
   const annees = listerAnnees(aussiEn)
   return portee === "mois" ? `${debut} au même mois en ${annees}.` : `${debut} aux autres mois choisis, et aux mêmes mois en ${annees}.`
+}
+
+/** Ce que devient le montant de la ligne d'ajout quand il est annuel. */
+function texteDuMontantAnnuel(annee: number, aussiEn: number[]): string {
+  const annees = aussiEn.length > 0 ? `de ${listerAnnees([annee, ...aussiEn])}` : `de ${annee}`
+  return `Le montant saisi sur la ligne d'ajout est annuel : il est réparti sur les 12 mois ${annees}, au centime près (l'arrondi va en décembre). « Appliquer à » ne vaut plus que pour les modifications et les suppressions.`
+}
+
+/** Case qui fait du montant de la ligne d'ajout un montant annuel, réparti sur les douze mois. */
+function CaseMontantAnnuel({ coche, onChange }: { coche: boolean; onChange: (coche: boolean) => void }) {
+  return (
+    <label className="flex min-h-9 cursor-pointer items-center gap-2 pointer-coarse:min-h-11">
+      <input type="checkbox" className="size-4 cursor-pointer" checked={coche} onChange={e => onChange(e.target.checked)} />
+      Montant annuel, réparti sur les 12 mois
+    </label>
+  )
+}
+
+interface NatureSiMicroEntrepriseProps {
+  entity: Entity
+  regles: ReglesFiscales
+  type: FlowType
+  onChange: (type: FlowType) => void
+  flows: FinancialFlow[]
+}
+
+/** Le choix expliqué de la nature du chiffre d'affaires, pour une micro-entreprise seulement ; la note sur les achats dès qu'une vente est en jeu. */
+function NatureSiMicroEntreprise({ entity, regles, type, onChange, flows }: NatureSiMicroEntrepriseProps) {
+  if (entity.type !== "micro-entreprise") return null
+  const avecLaVente = type === "ca_micro_vente" || flows.some(f => f.type === "ca_micro_vente")
+  return <NatureDuChiffreDAffaires activite={entity} regles={regles} valeur={type} onChange={onChange} avecLaVente={avecLaVente} />
 }
 
 /** Mise en évidence d'un réglage qui étend les opérations au-delà du mois ouvert. */
@@ -112,18 +155,22 @@ function CasesDesAnnees({ annee, autresAnnees, aussiEn, setAussiEn }: CasesDesAn
   )
 }
 
-export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], onCreate, onRecopier, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
+export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], fluxDeLAnnee = [], onCreate, onRecopier, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
   const flowIds = useMemo(() => flows.map(f => f.id), [flows])
   const tri = useTriAccessible(useMemo(() => flows.map(f => ({ id: f.id, nom: f.label || flowTypeLabels[f.type] })), [flows]))
   const allowedTypes = getFlowTypesForEntity(entity)
   const regles = reglesDeLAnneeAffichee(annee)
 
-  // Type prérempli de la ligne d'ajout : le dernier type utilisé dans cette fenêtre, sinon le premier autorisé.
-  const [newFlowType, setNewFlowType] = useState<FlowType>(allowedTypes[0])
+  // Type prérempli de la ligne d'ajout : le dernier type utilisé dans cette fenêtre, sinon celui proposé d'office
+  // (pour une micro-entreprise, la nature de chiffre d'affaires qu'elle a déjà dans l'année).
+  const [newFlowType, setNewFlowType] = useState<FlowType>(() => typeProposeDOffice(entity, [...flows, ...fluxDeLAnnee]))
   // Portée des ajouts, modifications et suppressions : gardée tant que la fenêtre est ouverte.
   const [portee, setPortee] = useState<PorteeRecurrence>("mois")
   // Autres années où appliquer aussi ces opérations : aucune cochée à chaque ouverture.
   const [aussiEn, setAussiEn] = useState<number[]>([])
+  // Montant de la ligne d'ajout saisi pour l'année, réparti sur les douze mois ; jamais pour un salaire.
+  const [annuel, setAnnuel] = useState(false)
+  const repartirSurLAnnee = annuel && newFlowType !== "salary"
   const texteAvertissement = avertissement(portee, aussiEn)
 
   const listRef = useRef<HTMLDivElement>(null)
@@ -171,7 +218,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
       >
         <DialogHeader>
           <DialogTitle className="flex items-baseline gap-2">
-            <span>Opérations de {monthName}</span>
+            <span>Opérations {deMois(monthName)}</span>
             <span className="text-base font-normal text-slate-600 dark:text-slate-400">/ {entity.name}</span>
           </DialogTitle>
           <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant. Pour une charge ou un revenu qui revient chaque mois, choisissez « Appliquer à » en dessous : l'ajout, la modification ou la suppression vaut alors aussi pour les autres mois (même type et même libellé).{autresAnnees.length > 0 ? " Cochez d'autres années sous « Aussi en » : les mêmes mois y sont visés (en juillet, « ce mois et les suivants » vise juillet à décembre de chaque année cochée)." : ""} Le bouton de recopie d'un flux le recopie jusqu'en décembre de l'année affichée. Pour un salaire, le brut est calculé avec les cotisations salariales de {regles.annee} si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.</DialogDescription>
@@ -190,7 +237,8 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
             </DndContext>
           )}
 
-          <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee, aussiEn)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} regles={regles} />
+          <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee, aussiEn, repartirSurLAnnee)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} regles={regles} montantAnnuel={repartirSurLAnnee} />
+          <NatureSiMicroEntreprise entity={entity} regles={regles} type={newFlowType} onChange={setNewFlowType} flows={flows} />
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-sm text-slate-700 dark:text-slate-300">
             {/* `min-w-0 max-w-full` : avec une police large, la liste se resserre à la largeur de la fenêtre au lieu de la déborder. */}
             <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
@@ -204,9 +252,12 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
                 ))}
               </select>
             </label>
+            {/* Un salaire se saisit par mois, comme son bulletin : ses cotisations dépendent du plafond mensuel. */}
+            {newFlowType === "salary" ? null : <CaseMontantAnnuel coche={annuel} onChange={setAnnuel} />}
             {/* Les autres années de la session, seulement s'il y en a ; mises en évidence dès qu'une est cochée. */}
             {autresAnnees.length > 0 ? <CasesDesAnnees annee={annee} autresAnnees={autresAnnees} aussiEn={aussiEn} setAussiEn={setAussiEn} /> : null}
           </div>
+          {repartirSurLAnnee ? <p className="px-1 text-sm text-slate-700 dark:text-slate-300">{texteDuMontantAnnuel(annee, aussiEn)}</p> : null}
           {texteAvertissement ? <p className="px-1 text-sm text-amber-900 dark:text-amber-100">{texteAvertissement}</p> : null}
         </div>
 

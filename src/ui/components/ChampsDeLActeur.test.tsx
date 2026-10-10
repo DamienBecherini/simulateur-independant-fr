@@ -59,7 +59,7 @@ describe("revenu fiscal de référence d'une micro-entreprise", () => {
   it("le champ nomme les années de RFR qu'il couvre, d'après les années de la simulation", () => {
     const micro = makeMicro()
     render(<EditEntityModal entity={micro} isOpen onClose={() => {}} onSave={vi.fn()} allEntities={[micro]} relationships={[]} annee={2026} anneesSimulees={[2024, 2025, 2026]} />)
-    const champ = screen.getByLabelText("RFR 2022 et 2023")
+    const champ = screen.getByLabelText("Revenu fiscal de référence 2022 et 2023")
     expect(champ).toHaveAccessibleDescription(/avis d'imposition reçus en 2023 et 2024 : il décide de l'accès au versement libératoire en 2024 et 2025. .* Pour 2026, la simulation utilise le revenu fiscal de référence qu'elle calcule elle-même./)
   })
 })

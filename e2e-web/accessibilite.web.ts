@@ -104,7 +104,7 @@ async function auditerLesFenetres(page: Page, theme: string) {
   await auditer(page, `réglages d'une activité, ${theme}`, "[role=dialog]")
   await fermer()
 
-  await page.getByRole("button", { name: "+ Ajouter une Activité" }).click()
+  await page.getByRole("button", { name: "+ Ajouter une activité" }).click()
   await expect(fenetre).toBeVisible()
   await auditer(page, `choix du type d'activité, ${theme}`, "[role=dialog]")
   await fermer()
@@ -112,6 +112,13 @@ async function auditerLesFenetres(page: Page, theme: string) {
   await page.getByRole("button", { name: /^Flux de janvier/ }).last().click()
   await expect(fenetre).toBeVisible()
   await auditer(page, `flux d'un mois, ${theme}`, "[role=dialog]")
+  await fermer()
+
+  // Micro-entreprise : le choix de la nature du chiffre d'affaires, avec la note sur les achats de la vente.
+  await page.getByRole("button", { name: /^Flux de janvier : Atelier de Camille/ }).click()
+  await fenetre.getByRole("radio", { name: "Vente de marchandises (BIC)" }).check()
+  await expect(fenetre.getByText(/^Vos achats/)).toBeVisible()
+  await auditer(page, `flux d'un mois d'une micro-entreprise, ${theme}`, "[role=dialog]")
   await fermer()
 
   // Affichage « Résumé » : la légende des flux, repliée, est d'abord dépliée.
