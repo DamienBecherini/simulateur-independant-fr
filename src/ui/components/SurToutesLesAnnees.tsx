@@ -137,7 +137,7 @@ export function SurToutesLesAnnees({ session, activityId, activityName, partMise
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Label htmlFor={idPart}>Part gardée chaque année (%)</Label>
-        <ChampNumerique id={idPart} className="w-28" min="0" max="100" step="5" quoi="la part gardée chaque année" value={Math.round(partMiseEnReserve * 100)} onChange={e => onPartMiseEnReserve(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) / 100)} />
+        <ChampNumerique id={idPart} className="w-28" min="0" max="100" step="5" quoi="la part gardée chaque année" value={Math.round(partMiseEnReserve * 100)} onChange={e => onPartMiseEnReserve(Math.min(100, Math.max(0, Number.parseFloat(e.target.value) || 0)) / 100)} />
       </div>
       {erreur ? <p className="text-sm text-red-800 dark:text-red-200">{erreur}</p> : null}
       {resultat ? resultat.statuts.map(statut => <TableauDuStatut key={statut.statut} statut={statut} />) : <p className="text-sm text-slate-600 dark:text-slate-300">Calcul en cours…</p>}

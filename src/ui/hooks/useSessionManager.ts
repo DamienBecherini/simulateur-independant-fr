@@ -168,7 +168,7 @@ export function useSessionManager() {
   // Fonctions pour gérer le flux d'importation de fichier.
   const handleImport = async () => {
     const result = await SessionService.importState()
-    if (result && result.data) {
+    if (result?.data) {
       // Le nom du fichier est gardé (sauvegarde exportée) ; un export qui n'en porte pas reçoit « Simulation importée ».
       // La version de l'application qui a écrit le fichier est gardée telle quelle, jusqu'au prochain enregistrement.
       const { appVersion, name, entities, relationships, annees, comparateur } = result.data

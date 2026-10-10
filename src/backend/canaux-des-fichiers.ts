@@ -8,7 +8,7 @@
  */
 
 import { app, dialog, shell, type BrowserWindow } from "electron"
-import fs from "fs/promises"
+import fs from "node:fs/promises"
 import type { ExportableState, FormatFichierTexte } from "../types.js"
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours.js"
 import { contenuDuFichier, lireUneSimulationImportee } from "./logic/fichiers-de-donnees.js"

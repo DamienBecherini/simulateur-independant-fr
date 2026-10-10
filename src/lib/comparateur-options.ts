@@ -2,10 +2,11 @@
 
 import { STATUTS_FRAIS } from "@/types"
 import type { ComparaisonOptions, Comparateur, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle, StatutFrais, StatutSociete } from "@/types"
-import { avecLaRetraiteParDefaut, defaultComparisonOptions, defaultFraisFonctionnement, optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
+import { avecLaRetraiteParDefaut, optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
 
 // Réglages proposés par défaut : ils vivent avec le moteur, pour servir aussi aux outils des clients d'IA (ADR 010).
-export { avecLaRetraiteParDefaut, defaultComparisonOptions, defaultFraisFonctionnement, optionsDuComparateur }
+export { defaultComparisonOptions, defaultFraisFonctionnement } from "@/backend/logic/options-du-comparateur"
+export { avecLaRetraiteParDefaut, optionsDuComparateur }
 
 /** Libellés des postes de frais, dans l'ordre d'affichage. */
 export const posteFraisLabels: Record<PosteFrais, string> = {

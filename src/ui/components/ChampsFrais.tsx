@@ -26,7 +26,7 @@ const interrupteur = "flex items-center gap-2 text-sm pointer-coarse:min-h-11"
 
 /** Nombre positif saisi dans un champ, 0 s'il est vide ou invalide, plafonné si besoin. */
 function positif(valeur: string, maximum = Infinity): number {
-  const nombre = parseFloat(valeur)
+  const nombre = Number.parseFloat(valeur)
   return Number.isFinite(nombre) ? Math.min(maximum, Math.max(0, nombre)) : 0
 }
 

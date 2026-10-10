@@ -45,7 +45,8 @@ export function netRatio(net: number, gross: number | undefined): number | null 
  */
 export function parsePercent(input: string): number | null {
   const normalized = input.replace(/[\s%]/g, "").replace(",", ".")
-  if (!/^(\d+\.?\d*|\.\d+)$/.test(normalized)) return null
+  // Des chiffres, avec au plus un point suivi de chiffres : une seule lecture possible de la saisie (pas de retour arrière).
+  if (!/^(\d+(\.\d*)?|\.\d+)$/.test(normalized)) return null
   const ratio = Number(normalized) / 100
   return ratio > 0 && ratio <= 1 ? ratio : null
 }

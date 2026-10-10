@@ -11,7 +11,7 @@ function composantes(couleur: string): [number, number, number] | null {
   const hex = couleur.trim().replace(/^#/, "")
   const complet = hex.length === 3 ? [...hex].map(c => c + c).join("") : hex
   if (!/^[0-9a-f]{6}$/i.test(complet)) return null
-  return [0, 2, 4].map(i => parseInt(complet.slice(i, i + 2), 16)) as [number, number, number]
+  return [0, 2, 4].map(i => Number.parseInt(complet.slice(i, i + 2), 16)) as [number, number, number]
 }
 
 /** Luminance relative d'une couleur, de 0 (noir) à 1 (blanc). */

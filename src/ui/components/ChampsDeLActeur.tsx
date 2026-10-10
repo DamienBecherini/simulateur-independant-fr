@@ -62,7 +62,7 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee }
             Parts propres
           </Label>
           <div className="col-span-3">
-            <ChampNumerique id="fiscalParts" name="fiscalParts" step="0.5" quoi="les parts propres" value={entity.fiscalParts || 1} onChange={e => onChange({ ...entity, fiscalParts: parseFloat(e.target.value) || 0 })} />
+            <ChampNumerique id="fiscalParts" name="fiscalParts" step="0.5" quoi="les parts propres" value={entity.fiscalParts || 1} onChange={e => onChange({ ...entity, fiscalParts: Number.parseFloat(e.target.value) || 0 })} />
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Hors enfants reliés : leurs parts s'ajoutent automatiquement. À modifier pour un cas particulier (parent isolé, invalidité…).</p>
           </div>
         </div>
@@ -138,7 +138,7 @@ function StatusSpecificFields({ entity, onChange, anneesSimulees = [], annee }: 
               aria-describedby="rfrN2-aide"
               value={entity.rfrN2 ?? ""}
               onChange={e => {
-                const value = parseFloat(e.target.value)
+                const value = Number.parseFloat(e.target.value)
                 onChange({ ...entity, rfrN2: Number.isFinite(value) && value >= 0 ? value : undefined })
               }}
             />
@@ -179,7 +179,7 @@ function ChampsDeLaSociete({ societe, onChange, regles }: { societe: Company; on
           Capital social
         </Label>
         <div className="col-span-3">
-          <ChampNumerique id="capitalSocial" name="capitalSocial" min="0" step="100" quoi="le capital social" value={societe.capitalSocial} onChange={e => onChange({ ...societe, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })} />
+          <ChampNumerique id="capitalSocial" name="capitalSocial" min="0" step="100" quoi="le capital social" value={societe.capitalSocial} onChange={e => onChange({ ...societe, capitalSocial: Math.max(0, Number.parseFloat(e.target.value) || 0) })} />
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{aideCapital}{reserveLegale}</p>
         </div>
       </div>
@@ -197,7 +197,7 @@ function ChampsDeLaSociete({ societe, onChange, regles }: { societe: Company; on
             placeholder="Aucune"
             value={societe.reservesInitiales ?? ""}
             onChange={e => {
-              const value = parseFloat(e.target.value)
+              const value = Number.parseFloat(e.target.value)
               onChange({ ...societe, reservesInitiales: Number.isFinite(value) && value > 0 ? value : undefined })
             }}
           />
