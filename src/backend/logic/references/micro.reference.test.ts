@@ -136,6 +136,7 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
 
     expect(activite(report, "m1")).toMatchObject({ cotisationsSociales: 5200, formationProfessionnelle: 80 })
     expect(foyerDe(report, "alice")).toMatchObject({ impotSurLeRevenu: 1468, netApresImpots: 33332 })
+    expect(foyerDe(report, "alice").versementLiberatoire).toBeUndefined()
     verifierIdentiteDuBilan(report)
   })
 
@@ -150,7 +151,8 @@ casDeReference("Cas de référence 2026 : micro-entreprise", () => {
       versementLiberatoire: { plafondRfr: 29315, partsFiscales: 1, rfrN2: 25000, eligible: true, applique: true },
       warnings: [tvaAnneeSuivante]
     })
-    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 0, impotSurLeRevenu: 880, netApresImpots: 28800 })
+    // L'impôt du foyer dit quelle part en est payée avec les cotisations : ici, tout.
+    expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 0, impotSurLeRevenu: 880, versementLiberatoire: 880, netApresImpots: 28800 })
     verifierIdentiteDuBilan(report)
   })
 

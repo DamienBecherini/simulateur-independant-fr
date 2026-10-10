@@ -114,6 +114,13 @@ async function auditerLesFenetres(page: Page, theme: string) {
   await auditer(page, `flux d'un mois, ${theme}`, "[role=dialog]")
   await fermer()
 
+  // Micro-entreprise : le choix de la nature du chiffre d'affaires, avec la note sur les achats de la vente.
+  await page.getByRole("button", { name: /^Flux de janvier : Atelier de Camille/ }).click()
+  await fenetre.getByRole("radio", { name: "Vente de marchandises (BIC)" }).check()
+  await expect(fenetre.getByText(/^Vos achats/)).toBeVisible()
+  await auditer(page, `flux d'un mois d'une micro-entreprise, ${theme}`, "[role=dialog]")
+  await fermer()
+
   // Affichage « Résumé » : la légende des flux, repliée, est d'abord dépliée.
   await page.locator("summary", { hasText: "Légende des flux" }).click()
   await page.getByRole("button", { name: "Gérer les couleurs" }).click()

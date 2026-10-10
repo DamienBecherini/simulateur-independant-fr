@@ -124,6 +124,25 @@ describe("ResultsPanel", () => {
     expect(screen.getByRole("listitem")).toHaveTextContent(avertissement)
   })
 
+  it("donne au versement libératoire sa propre ligne, sans ligne du barème quand celui-ci est vide", () => {
+    const report = makeReport()
+    report.foyers = [makeFoyer("person-bob", { impotSurLeRevenu: 792, versementLiberatoire: 792, revenuImposableGlobal: 0 })]
+    render(<ResultsPanel report={report} error={null} />)
+
+    const carte = screen.getAllByRole("article").find(a => a.textContent?.includes("Bob Durand"))!
+    expect(rowValue(carte, "Impôt payé avec les cotisations (versement libératoire)")).toHaveTextContent(`− ${money(792)}`)
+    expect(within(carte).queryByText("Impôt sur le revenu", { selector: "dt" })).not.toBeInTheDocument()
+  })
+
+  it("garde la ligne du barème à côté du versement libératoire quand il y a un impôt au barème", () => {
+    const report = makeReport()
+    report.foyers = [makeFoyer("person-bob", { impotSurLeRevenu: 2792, versementLiberatoire: 792 })]
+    render(<ResultsPanel report={report} error={null} />)
+
+    const carte = screen.getAllByRole("article").find(a => a.textContent?.includes("Bob Durand"))!
+    expect(rowValue(carte, "Impôt sur le revenu")).toHaveTextContent(`− ${money(2000)}sur ${money(27000)} imposables au barème`)
+  })
+
   it("donne le revenu fiscal de référence de chaque foyer", () => {
     render(<ResultsPanel report={makeReport()} error={null} />)
 
