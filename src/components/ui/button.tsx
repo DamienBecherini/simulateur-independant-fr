@@ -54,4 +54,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = "Button"
 
+// buttonVariants sert aussi aux boutons de alert-dialog.tsx (modèle shadcn/ui) ;
+// eslint-plugin-react-refresh 0.4.26 signale désormais les listes d'export.
+// eslint-disable-next-line react-refresh/only-export-components
 export { Button, buttonVariants }
