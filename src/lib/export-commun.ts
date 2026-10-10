@@ -4,6 +4,7 @@
 import type { Entity, FinancialFlow, FoyerFiscalResult, FraisProfessionnelsResult, PuissanceFiscale, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { flowTypeLabels, libelleDuType, isOutgoingFlowType, type FlowType } from "./flow-constants"
 import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
+import { pourcent } from "@/backend/logic/format"
 import { LIBELLES_DES_STATUTS } from "@/backend/logic/statuts"
 import { lectureDesReserves, type LectureDesReserves } from "./reserves"
 
@@ -109,7 +110,10 @@ export function fraisProfessionnelsDesPersonnes(report: SimulationReport): Frais
   return report.persons.flatMap(p => (p.fraisProfessionnels ? [{ name: p.name, frais: p.fraisProfessionnels }] : []))
 }
 
-export const libelleRetenue = (frais: FraisProfessionnelsResult) => (frais.retenue === "reels" ? "Frais réels" : "Déduction de 10 %")
+/** « Déduction de 10 % », au taux de l'année du résultat. */
+export const libelleDeduction = (frais: Pick<FraisProfessionnelsResult, "tauxDeductionForfaitaire">) => `Déduction de ${pourcent(frais.tauxDeductionForfaitaire)}`
+
+export const libelleRetenue = (frais: FraisProfessionnelsResult) => (frais.retenue === "reels" ? "Frais réels" : libelleDeduction(frais))
 
 // --- Versement libératoire ---
 

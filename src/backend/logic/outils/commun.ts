@@ -79,7 +79,7 @@ export const SENS_DES_TYPES: Record<FinancialFlow["type"], string> = {
   ca_micro_vente: "chiffre d'affaires de ventes de marchandises, restauration, hébergement",
   salary: "salaire net avant impôt, brut facultatif",
   are: "allocation chômage",
-  other_taxable_income: "autre revenu net imposable, ajouté tel quel au barème, sans l'abattement de 10 %",
+  other_taxable_income: "autre revenu net imposable, ajouté tel quel au barème, sans l'abattement",
   expense: "dépense non déductible, TVA comprise : personnelle, ou charge d'une micro-entreprise comme un loyer ; réduit le net encaissé, pas les cotisations ni l'impôt",
   income: "type réservé aux tests"
 }

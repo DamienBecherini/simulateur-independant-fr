@@ -3,7 +3,8 @@
 // d'EURL), et la part conventionnée de ses recettes quand elle peut être conventionnée (voir l'ADR 015).
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { avecLaProfession, estConventionnable, groupesDeProfessions, informationSurLaProfession, LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE, reglesDesProfessions } from "@/lib/professions"
+import { avecLaProfession, estConventionnable, groupesDeProfessions, informationSurLaProfession, LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE } from "@/lib/professions"
+import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
 import type { Company, MicroEntreprise } from "@/types"
 import { ChampNumerique } from "./ChampNumerique"
 
@@ -20,7 +21,7 @@ interface PropsDuChamp<T extends Company | MicroEntreprise> extends Props<T> {
 }
 
 export function ChampProfession<T extends Company | MicroEntreprise>({ activite, onChange, annee }: PropsDuChamp<T>) {
-  const regles = reglesDesProfessions(annee)
+  const regles = reglesDeLAnneeAffichee(annee)
   const { groupes, autres } = groupesDeProfessions(regles)
   return (
     <>

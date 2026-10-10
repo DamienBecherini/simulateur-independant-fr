@@ -5,7 +5,8 @@ import type { Entity, FinancialFlow } from "@/types"
 import { Input } from "@/components/ui/input"
 import { formatAmount, parseAmount } from "@/lib/amount-utils"
 import { libelleDuType, type FlowType } from "@/lib/flow-constants"
-import { DEFAULT_NET_RATIO, formatPercent, grossFromNet, netFromGross, parsePercent } from "@/lib/salary-utils"
+import { brutCalcule, grossFromNet, netCalcule, netFromGross, parsePercent } from "@/lib/salary-utils"
+import type { ReglesFiscales } from "@/backend/logic/regles"
 import { Plus } from "lucide-react"
 import { FlowTypeSelect, RetourALaLigneSurTelephone } from "./FlowTypeSelect"
 
@@ -25,16 +26,18 @@ interface NewFlowItemProps {
   labelInputRef: RefObject<HTMLInputElement | null>
   /** Acteur qui porte le flux, pour les libellés qui en dépendent. */
   typeActeur?: Entity["type"]
+  /** Règles de l'année affichée : leurs cotisations salariales donnent le brut ou le net d'un salaire sans pourcentage. */
+  regles: ReglesFiscales
 }
 
-export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelInputRef, typeActeur }: NewFlowItemProps) {
+export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelInputRef, typeActeur, regles }: NewFlowItemProps) {
   const [label, setLabel] = useState("")
   const [amount, setAmount] = useState("")
   const [isAmountInvalid, setAmountInvalid] = useState(false)
   const amountInputRef = useRef<HTMLInputElement>(null)
 
   // Pour un salaire, le brut et le pourcentage sont facultatifs. Tant que le net n'a pas été saisi à la main,
-  // il est calculé à partir du brut et du pourcentage (78 % par défaut).
+  // il est calculé à partir du brut : avec le pourcentage saisi, sinon avec les cotisations salariales de l'année.
   const isSalary = type === "salary"
   const [gross, setGross] = useState("")
   const [ratio, setRatio] = useState("")
@@ -43,18 +46,21 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
   const computeNet = (grossText: string, ratioText: string) => {
     const grossAmount = parseAmount(grossText)
     if (grossAmount === null || (amount.trim() !== "" && !isNetComputed)) return
-    setAmount(formatAmount(netFromGross(grossAmount, parsePercent(ratioText) ?? DEFAULT_NET_RATIO)))
+    const saisi = parsePercent(ratioText)
+    setAmount(formatAmount(saisi === null ? netCalcule(grossAmount, regles) : netFromGross(grossAmount, saisi)))
     setNetComputed(true)
     setAmountInvalid(false)
   }
 
   /**
-   * Brut à enregistrer avec le net : celui saisi, sinon celui déduit du pourcentage (78 % par défaut),
-   * pour que les cotisations d'un salaire soient toujours comptées. Un brut inférieur au net est ignoré.
+   * Brut à enregistrer avec le net : celui saisi, sinon celui déduit du pourcentage saisi, sinon celui calculé avec les
+   * cotisations salariales de l'année, pour que les cotisations d'un salaire soient toujours comptées. Un brut
+   * inférieur au net est ignoré.
    */
   const resolveGross = (net: number): number | undefined => {
     if (!isSalary) return undefined
-    const grossAmount = parseAmount(gross) ?? grossFromNet(net, parsePercent(ratio) ?? DEFAULT_NET_RATIO)
+    const saisi = parsePercent(ratio)
+    const grossAmount = parseAmount(gross) ?? (saisi === null ? brutCalcule(net, regles) : grossFromNet(net, saisi))
     return grossAmount >= net ? grossAmount : undefined
   }
 
@@ -117,7 +123,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
           <Input
             className="w-24 shrink-0 bg-background text-right font-mono"
             aria-label="Salaire brut du nouveau flux"
-            title="Salaire brut : laissé vide, il est calculé à partir du net et du pourcentage."
+            title="Salaire brut : laissé vide, il est calculé à partir du net, avec le pourcentage s'il est saisi."
             placeholder="Brut"
             inputMode="decimal"
             value={gross}
@@ -131,8 +137,8 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
           <Input
             className="w-16 shrink-0 bg-background text-right font-mono"
             aria-label="Part du net dans le brut du nouveau flux, en pourcentage"
-            title="Part du net dans le brut : 78 % si vous ne la précisez pas."
-            placeholder={`${formatPercent(DEFAULT_NET_RATIO)} %`}
+            title={`Part du net dans le brut : si vous ne la précisez pas, le brut est calculé avec les cotisations salariales de ${regles.annee}.`}
+            placeholder="auto"
             inputMode="decimal"
             value={ratio}
             data-editing={ratio !== ""}

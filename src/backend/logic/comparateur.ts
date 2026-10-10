@@ -1,6 +1,6 @@
 // src/backend/logic/comparateur.ts
 
-import { estSocieteIS, STATUTS_COMPARES, type StatutFrais, type FraisFonctionnement, type Company, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type FinancialFlow, type MicroEntreprise, type OptimisationRemuneration, type Relationship, type RemunerationOptimale, type ScenarioStatut, type DonneesDeLAnnee, type SimulationReport, type StatutCompare, type StatutSociete } from "../../types.js"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, estSocieteIS, STATUTS_COMPARES, type StatutFrais, type FraisFonctionnement, type Company, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type FinancialFlow, type MicroEntreprise, type OptimisationRemuneration, type Relationship, type RemunerationOptimale, type ScenarioStatut, type DonneesDeLAnnee, type SimulationReport, type StatutCompare, type StatutSociete } from "../../types.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import type { ReglesFiscales } from "./regles.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
@@ -105,8 +105,8 @@ function entiteCible(source: Activite, statut: StatutCompare): Activite {
     const micro = source.type === "micro-entreprise" ? source : undefined
     return { ...commun, type: "micro-entreprise", beneficieACRE: micro?.beneficieACRE ?? false, opteVFL: statut === "micro-vfl", ...(micro?.rfrN2 !== undefined ? { rfrN2: micro.rfrN2 } : {}) }
   }
-  // Le capital d'une société à l'IS la suit dans l'autre statut de société (1 000 € sinon) ; l'EI n'en a pas.
-  const capitalSource = source.type === "company" && estSocieteIS(source.legalStatus) ? source.capitalSocial : 1000
+  // Le capital d'une société à l'IS la suit dans l'autre statut de société (capital par défaut sinon) ; l'EI n'en a pas.
+  const capitalSource = source.type === "company" && estSocieteIS(source.legalStatus) ? source.capitalSocial : CAPITAL_SOCIAL_PAR_DEFAUT
   return { ...commun, type: "company", legalStatus: statut, capitalSocial: estSocieteIS(statut) ? capitalSource : 0, ...reservesQuiSuivent(source, statut) }
 }
 

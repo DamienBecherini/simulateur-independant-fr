@@ -112,6 +112,14 @@ describe("csvResultats avec des frais au barème kilométrique et le versement l
     expect(csv).toContain("Alice;20000,00;2000,00;4880,00;Déduction de 10 %;2000,00;2;7300;4380,00;500,00")
   })
 
+  it("nomme la déduction au taux du résultat, tiré des règles de son année", () => {
+    const rapport = rapportAvecFrais()
+    rapport.persons = rapport.persons.map(p => (p.fraisProfessionnels ? { ...p, fraisProfessionnels: { ...p.fraisProfessionnels, tauxDeductionForfaitaire: 0.12, retenue: "forfait", deduction: 2000 } } : p))
+    const csv = lignes(csvResultats(sessionAvecFrais(), rapport))
+    expect(csv).toContain("Frais professionnels;Revenus imposés comme des salaires;Déduction de 12 %;Frais réels;Retenue;Montant déduit;Trajets domicile-travail;Distance retenue (km);Frais de trajet;Autres frais")
+    expect(csv).toContain("Alice;20000,00;2000,00;4880,00;Déduction de 12 %;2000,00;2;7300;4380,00;500,00")
+  })
+
   it("omet ces tableaux quand la simulation n'a ni frais réels, ni déplacements, ni versement libératoire", () => {
     const csv = csvResultats(sessionExemple(), rapportExemple())
     for (const entete of ["Versement libératoire;", "Déplacements professionnels;", "Frais professionnels;", "Voiture des trajets;"]) expect(csv).not.toContain(entete)

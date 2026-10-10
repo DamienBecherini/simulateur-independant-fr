@@ -1,6 +1,6 @@
 // src/lib/entity-factory.ts
 
-import type { Person, Company, MicroEntreprise } from "@/types"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, type Person, type Company, type MicroEntreprise } from "@/types"
 import { createId } from "@/lib/id"
 
 // Couleurs par défaut des pastilles, prises dans la palette des réglages d'un acteur (ChampsDeLActeur) :
@@ -29,8 +29,8 @@ export function createPerson(): Person {
 
 // Valeurs par défaut propres à chaque statut. Une entreprise individuelle n'a pas de capital social.
 const companyDefaults: Record<Company["legalStatus"], { name: string; icon: string; color: string; capitalSocial: number }> = {
-  SASU: { name: "Ma SASU", icon: "Briefcase", color: defaultColors.sasu, capitalSocial: 1000 },
-  EURL: { name: "Mon EURL", icon: "Building", color: defaultColors.eurl, capitalSocial: 1000 },
+  SASU: { name: "Ma SASU", icon: "Briefcase", color: defaultColors.sasu, capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT },
+  EURL: { name: "Mon EURL", icon: "Building", color: defaultColors.eurl, capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT },
   EI: { name: "Mon entreprise individuelle", icon: "User", color: defaultColors.ei, capitalSocial: 0 }
 }
 

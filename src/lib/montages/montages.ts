@@ -2,9 +2,17 @@
 // Bibliothèque des montages types : des simulations d'un an, préremplies, pour partir d'une situation courante plutôt
 // que d'une page vide. Chiffres ronds et fictifs, prénoms génériques. Les explications restent prudentes : elles
 // renvoient aux sources officielles, et les chiffres de chaque montage sont figés par montages.reference.test.ts.
+// Les taux et seuils que citent les textes viennent des règles de l'année des montages, jamais recopiés à la main.
 
+import { euros, pourcent } from "@/backend/logic/format"
+import { reglesPubliees } from "@/backend/logic/regles"
 import type { SessionState } from "@/types"
 import { ANNEE_DES_MONTAGES, comparateurAuMeilleurNet, microEntreprise, personne, relation, sessionDuMontage, societe, type ContenuDuMontage } from "./construction"
+
+/** Les règles de l'année des montages, d'où viennent les taux et seuils cités. */
+const REGLES = reglesPubliees(ANNEE_DES_MONTAGES)
+const MICRO = REGLES.microEntreprise
+const { IS, dividendes: DIVIDENDES } = REGLES
 
 /** Un lien vers une page officielle qui fonde une explication. */
 export interface SourceOfficielle {
@@ -45,7 +53,7 @@ const SOURCES = {
   plafondsMicro: { libelle: "Seuils de chiffre d'affaires de la micro-entreprise (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F32353" },
   versementLiberatoire: { libelle: "Conditions du versement libératoire (impots.gouv.fr)", url: "https://www.impots.gouv.fr/professionnel/questions/en-tant-que-micro-entrepreneur-sous-quelles-conditions-puis-je-opter-pour-l" },
   franchiseTva: { libelle: "Franchise en base de TVA (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F21746" },
-  impotSocietes: { libelle: "Impôt sur les sociétés, taux réduit de 15 % (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F23575" },
+  impotSocietes: { libelle: `Impôt sur les sociétés, taux réduit de ${pourcent(IS.tauxReduit)} (service-public.fr)`, url: "https://entreprendre.service-public.gouv.fr/vosdroits/F23575" },
   dividendes: { libelle: "Imposition des dividendes (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F32963" },
   cotisationsSas: { libelle: "Cotisations sociales d'une SAS (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F36007" },
   protectionDirigeant: { libelle: "Protection sociale du dirigeant (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F38152" },
@@ -58,8 +66,15 @@ const SOURCES = {
 
 // Phrases reprises d'un montage à l'autre.
 const RESERVE_LEGALE = "La réserve légale, les frais de fonctionnement et la prévoyance ne sont pas déduits : les montants sont des ordres de grandeur."
-const PLAFOND_MICRO = `Chiffre d'affaires sous le plafond des prestations de services (83\u202f600\u00a0€ pour ${ANNEE_DES_MONTAGES}) ; dépassé deux années de suite, il fait sortir du régime.`
-const TAUX_REDUIT_IS = "Taux réduit d'impôt sur les sociétés (15 % jusqu'à 42 500 € de bénéfice) : chiffre d'affaires d'au plus 10 millions d'euros, capital entièrement libéré et détenu à 75 % au moins par des personnes physiques."
+const PLAFOND_MICRO = `Chiffre d'affaires sous le plafond des prestations de services (${euros(MICRO.plafonds.services)} pour ${ANNEE_DES_MONTAGES}) ; dépassé deux années de suite, il fait sortir du régime.`
+// Les conditions d'accès au taux réduit (10 millions d'euros, 75 % du capital) ne sont pas dans les règles : le simulateur ne les vérifie pas.
+const TAUX_REDUIT_IS = `Taux réduit d'impôt sur les sociétés (${pourcent(IS.tauxReduit)} jusqu'à ${euros(IS.plafondTauxReduit)} de bénéfice) : chiffre d'affaires d'au plus 10 millions d'euros, capital entièrement libéré et détenu à 75 % au moins par des personnes physiques.`
+/** Condition de revenu du versement libératoire, suivie d'une précision propre au montage (« ici 24 000 € saisis »). */
+const plafondDuVersementLiberatoire = (precision = "") => `Versement libératoire : revenu fiscal de référence ${ANNEE_DES_MONTAGES - 2} du foyer d'au plus ${euros(MICRO.versementLiberatoire.plafondRfrParPart)} par part pour ${ANNEE_DES_MONTAGES}${precision}.`
+/** Premier taux non nul du barème de l'impôt sur le revenu. */
+const PREMIER_TAUX_DU_BAREME = REGLES.IR.bareme.find(tranche => tranche.taux > 0)?.taux ?? 0
+/** Capital social de l'EURL du montage : il fixe la part des dividendes qui échappe aux cotisations. */
+const CAPITAL_DE_L_EURL = 5000
 const COMPARATEUR_MICRO = "Le comparateur place la micro-entreprise avec et sans versement libératoire côte à côte, face à l'entreprise individuelle au réel, l'EURL et la SASU."
 
 // --- Les montages ---
@@ -71,19 +86,19 @@ const microSeule: MontageType = {
   etiquettes: ["Micro", "BNC", "Versement libératoire"],
   questions: ["Combien me reste-t-il après cotisations et impôt ?", "Le versement libératoire est-il avantageux pour moi ?", "À partir de quel chiffre d'affaires une société devient-elle intéressante ?"],
   illustre: [
-    `Les cotisations calculées en pourcentage du chiffre d'affaires (25,6\u00a0% pour une activité libérale non réglementée en ${ANNEE_DES_MONTAGES}, plus 0,2\u00a0% de contribution à la formation professionnelle), sans charges déductibles.`,
-    "L'impôt payé avec les cotisations au versement libératoire (2,2 % du chiffre d'affaires en BNC), au lieu du barème après l'abattement forfaitaire de 34 %.",
+    `Les cotisations calculées en pourcentage du chiffre d'affaires (${pourcent(MICRO.cotisations.servicesBnc)} pour une activité libérale non réglementée en ${ANNEE_DES_MONTAGES}, plus ${pourcent(MICRO.formationProfessionnelle.servicesBnc)} de contribution à la formation professionnelle), sans charges déductibles.`,
+    `L'impôt payé avec les cotisations au versement libératoire (${pourcent(MICRO.versementLiberatoire.taux.servicesBnc)} du chiffre d'affaires en BNC), au lieu du barème après l'abattement forfaitaire de ${pourcent(MICRO.abattement.servicesBnc)}.`,
     COMPARATEUR_MICRO
   ],
   conditions: [
-    `Versement libératoire : revenu fiscal de référence ${ANNEE_DES_MONTAGES - 2} du foyer d'au plus 29\u202f315\u00a0€ par part pour ${ANNEE_DES_MONTAGES} (ici 24\u202f000\u00a0€ saisis, pour une part).`,
+    plafondDuVersementLiberatoire(` (ici ${euros(24000)} saisis, pour une part)`),
     "Option à demander avant le 30 septembre pour l'année suivante, ou jusqu'au dernier jour du 3e mois après la création.",
     PLAFOND_MICRO
   ],
   pointsDAttention: [
     "À 36 000 € de chiffre d'affaires, l'activité reste sous le seuil de franchise en base de TVA des services : au-delà, la TVA peut devenir due (le simulateur ne la calcule pas, les montants sont hors taxe).",
     "Les dépenses professionnelles ne se déduisent pas : avec beaucoup de frais, le régime réel peut devenir plus intéressant.",
-    "Le versement libératoire n'est pas toujours gagnant : il l'est surtout quand le foyer serait imposé à 11 % ou plus au barème."
+    `Le versement libératoire n'est pas toujours gagnant : il l'est surtout quand le foyer serait imposé à ${pourcent(PREMIER_TAUX_DU_BAREME)} ou plus au barème.`
   ],
   sources: [SOURCES.cotisationsMicro, SOURCES.abattementMicro, SOURCES.versementLiberatoire, SOURCES.plafondsMicro, SOURCES.franchiseTva],
   contenu: () => ({
@@ -115,10 +130,10 @@ const sasuSansSalaire: MontageType = {
   etiquettes: ["SASU", "Dividendes", "Retraite"],
   questions: ["Que reste-t-il si je ne me paie qu'en dividendes ?", "Combien coûte la validation de 4 trimestres de retraite ?", "Les dividendes sont-ils mieux imposés au prélèvement forfaitaire ou au barème ?"],
   illustre: [
-    "Sans rémunération, le président ne paie pas de cotisations sociales : le bénéfice supporte l'impôt sur les sociétés, puis les dividendes le prélèvement forfaitaire de 31,4 % (12,8 % d'impôt et 18,6 % de prélèvements sociaux) ou, sur option, le barème après un abattement de 40 %.",
+    `Sans rémunération, le président ne paie pas de cotisations sociales : le bénéfice supporte l'impôt sur les sociétés, puis les dividendes le prélèvement forfaitaire de ${pourcent(DIVIDENDES.tauxIrForfaitaire + DIVIDENDES.prelevementsSociaux)} (${pourcent(DIVIDENDES.tauxIrForfaitaire)} d'impôt et ${pourcent(DIVIDENDES.prelevementsSociaux)} de prélèvements sociaux) ou, sur option, le barème après un abattement de ${pourcent(DIVIDENDES.abattementBareme)}.`,
     "Le comparateur est réglé au meilleur net parmi les rémunérations qui valident 4 trimestres de retraite : il montre ce que coûte cette exigence, à comparer avec le montage « SASU avec un salaire qui valide 4 trimestres ».",
     "« Rémunération ou dividendes ? » trace le net du foyer pour chaque rémunération possible.",
-    "84 000 € de chiffre d'affaires dépassent de peu le plafond de la micro-entreprise (83 600 €) : le comparateur la signale hors plafond et ne la désigne pas comme meilleur choix."
+    `${euros(84000)} de chiffre d'affaires dépassent de peu le plafond de la micro-entreprise (${euros(MICRO.plafonds.services)}) : le comparateur la signale hors plafond et ne la désigne pas comme meilleur choix.`
   ],
   conditions: [TAUX_REDUIT_IS, "Les dividendes ne se versent qu'après l'approbation des comptes, sur un bénéfice distribuable."],
   pointsDAttention: [
@@ -137,7 +152,7 @@ const sasuAvecSalaire: MontageType = {
   etiquettes: ["SASU", "Rémunération", "Dividendes", "Retraite"],
   questions: ["Combien faut-il se verser pour valider 4 trimestres de retraite ?", "Que coûte ce salaire par rapport aux dividendes seuls ?", "Où se situe le meilleur partage entre rémunération et dividendes ?"],
   illustre: [
-    "Une rémunération modeste, assez haute pour valider 4 trimestres (150 heures au SMIC par trimestre, 4 au plus par an), et le reste du bénéfice en dividendes.",
+    `Une rémunération modeste, assez haute pour valider 4 trimestres (150 heures au SMIC par trimestre, soit ${euros(REGLES.protectionSociale.revenuParTrimestre)} soumis à cotisations en ${ANNEE_DES_MONTAGES}, 4 au plus par an), et le reste du bénéfice en dividendes.`,
     "Les cotisations du président, assimilé salarié : parts salariale et patronale, sans assurance chômage.",
     "La rémunération est une charge de la société : elle réduit l'impôt sur les sociétés. Le comparateur, au meilleur net sans condition, montre si un autre partage rapporterait plus."
   ],
@@ -159,7 +174,7 @@ const eurlIS: MontageType = {
   questions: ["Combien coûtent les cotisations d'un gérant non salarié ?", "Pourquoi les dividendes d'EURL sont-ils peu distribués ?", "EURL ou SASU pour la même activité ?"],
   illustre: [
     "Les cotisations du travailleur non salarié, calculées sur sa rémunération : en général moins lourdes que celles d'un président de SASU pour le même net.",
-    "Les dividendes du gérant majoritaire supportent les cotisations sociales pour leur part au-delà de 10 % du capital social : avec 5 000 € de capital, seuls 500 € de dividendes y échappent.",
+    `Les dividendes du gérant majoritaire supportent les cotisations sociales pour leur part au-delà de ${pourcent(REGLES.EURL.seuilDividendesPartDuCapital)} du capital social : avec ${euros(CAPITAL_DE_L_EURL)} de capital, seuls ${euros(CAPITAL_DE_L_EURL * REGLES.EURL.seuilDividendesPartDuCapital)} de dividendes y échappent.`,
     "Le bénéfice non distribué reste dans la société, après l'impôt sur les sociétés. Le comparateur, réglé au meilleur net avec 4 trimestres de retraite, distribue tout le bénéfice dans chaque statut : il ne compare donc pas exactement la situation saisie."
   ],
   conditions: [TAUX_REDUIT_IS, "Gérant associé unique : il relève du régime des travailleurs non salariés."],
@@ -170,7 +185,7 @@ const eurlIS: MontageType = {
   ],
   sources: [SOURCES.protectionDirigeant, SOURCES.impotSocietes, SOURCES.dividendes],
   contenu: () => ({
-    entities: [personne("p-nicolas", "Nicolas"), societe("e-nicolas", "EURL de Nicolas", "EURL", 5000)],
+    entities: [personne("p-nicolas", "Nicolas"), societe("e-nicolas", "EURL de Nicolas", "EURL", CAPITAL_DE_L_EURL)],
     relationships: [relation("p-nicolas", "e-nicolas", "Gérant")],
     flux: [
       { entityId: "e-nicolas", type: "ca_services", amount: 7000, label: "Facturation" },
@@ -195,7 +210,7 @@ const microEtSasuDuConjoint: MontageType = {
   ],
   conditions: [
     "Mariés ou pacsés : une déclaration commune pour le foyer.",
-    `Versement libératoire : revenu fiscal de référence ${ANNEE_DES_MONTAGES - 2} du foyer d'au plus 29\u202f315\u00a0€ par part pour ${ANNEE_DES_MONTAGES}.`,
+    plafondDuVersementLiberatoire(),
     PLAFOND_MICRO
   ],
   pointsDAttention: [
@@ -294,7 +309,7 @@ const salariePlusMicro: MontageType = {
   ],
   conditions: [
     "Le contrat de travail ne comporte pas de clause d'exclusivité, l'activité ne concurrence pas l'employeur et s'exerce hors du temps de travail.",
-    `Versement libératoire : revenu fiscal de référence ${ANNEE_DES_MONTAGES - 2} du foyer d'au plus 29\u202f315\u00a0€ par part pour ${ANNEE_DES_MONTAGES} (ici 25\u202f000\u00a0€ saisis).`
+    plafondDuVersementLiberatoire(` (ici ${euros(25000)} saisis)`)
   ],
   pointsDAttention: [
     "Même sans clause, le salarié reste tenu à une obligation de loyauté envers son employeur.",

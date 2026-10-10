@@ -4,7 +4,7 @@ import type { CotisationTNS, DetailCotisationsTNS } from "../../types.js"
 import { euros } from "./format.js"
 import { parTranches, progressive } from "./baremes.js"
 import { cotisationsDeLaCaisse, type CotisationsDeLaCaisse, type ParametresDeLaCaisse } from "./cotisations-liberales.js"
-import type { ReglesTNS, TrancheCotisation } from "./regles.js"
+import type { ReglesFiscales, ReglesTNS, TrancheCotisation } from "./regles.js"
 
 export { parTranches } from "./baremes.js"
 
@@ -112,10 +112,15 @@ export function revenuAvantCotisationsPourUnNet(net: number, regles: ReglesTNS, 
   return haut
 }
 
-/** Avertissement quand l'assiette minimale de la retraite de base s'applique, avec le supplément qu'elles coûtent. */
-export function avertissementCotisationsMinimales(cotisations: CotisationsTNS, qui: string): string[] {
+/**
+ * Avertissement quand l'assiette minimale de la retraite de base s'applique, avec le supplément qu'elles coûtent et les
+ * trimestres qu'elle valide (assiette minimale de l'année, celle des libéraux pour une caisse de libéraux).
+ */
+export function avertissementCotisationsMinimales(cotisations: CotisationsTNS, qui: string, regles: ReglesFiscales, caisse?: ParametresDeLaCaisse): string[] {
   if (!cotisations.minimumRetraiteApplique) return []
+  const assietteMinimale = (caisse ? caisse.regles.commun : regles.TNS).cotisationsMinimales.retraiteDeBase
+  const trimestres = Math.min(4, Math.floor(assietteMinimale / regles.protectionSociale.revenuParTrimestre))
   return [
-    `Cotisations minimales ${qui} appliquées : le revenu est trop faible, une partie des cotisations (retraite de base, indemnités journalières, invalidité-décès) est due sur une assiette minimale, soit ${euros(cotisations.supplementMinimum)} de plus. Elles sont dues même sans revenu, et valident 3 trimestres de retraite.`
+    `Cotisations minimales ${qui} appliquées : le revenu est trop faible, une partie des cotisations (retraite de base, indemnités journalières, invalidité-décès) est due sur une assiette minimale, soit ${euros(cotisations.supplementMinimum)} de plus. Elles sont dues même sans revenu, et valident ${trimestres} trimestre${trimestres > 1 ? "s" : ""} de retraite.`
   ]
 }

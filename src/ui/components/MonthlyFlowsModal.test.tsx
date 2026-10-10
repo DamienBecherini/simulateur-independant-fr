@@ -5,7 +5,9 @@ import { render, screen } from "@testing-library/react"
 import userEvent, { type UserEvent } from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { Entity, FinancialFlow } from "@/types"
+import { reglesPubliees } from "@/backend/logic/regles"
 import { formatAmount } from "@/lib/amount-utils"
+import { brutCalcule, netCalcule } from "@/lib/salary-utils"
 import { makeFlow, makePerson } from "@/ui/testing/fixtures"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import type { FlowChanges } from "./FlowItem"
@@ -15,7 +17,7 @@ import type { NewFlowValues } from "./NewFlowItem"
  * Rend la fenêtre des flux avec un état local, comme le fait `MonthlyGrid` : les créations, modifications
  * et suppressions sont appliquées à la liste affichée, et chaque appel est espionné.
  */
-function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as Entity } = {}) {
+function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as Entity, annee = 2026 } = {}) {
   const onCreate = vi.fn<(values: NewFlowValues) => void>()
   const onUpdate = vi.fn<(flowId: string, changes: FlowChanges) => void>()
   const onDelete = vi.fn<(flowId: string) => void>()
@@ -28,6 +30,7 @@ function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as E
         flows={currentFlows}
         entity={entity}
         monthName="Mars"
+        annee={annee}
         onClose={onClose}
         onCreate={values => {
           onCreate(values)
@@ -242,29 +245,30 @@ describe("MonthlyFlowsModal : salaires", () => {
     }
   }
 
-  it("calcule le brut à 78 % quand seul le net est saisi", async () => {
-    const { user, onCreate } = renderModal()
+  it.each([2026, 2024])("calcule le brut avec les cotisations salariales de %i quand seul le net est saisi", async annee => {
+    const { user, onCreate } = renderModal({ annee })
     const { net } = await chooseSalary(user)
 
     await user.type(net, "2000{Enter}")
 
-    // 2 000 / 0,78 = 2 564,10 €
-    expect(onCreate).toHaveBeenCalledWith({ type: "salary", label: "Salaire (emploi tiers)", amount: 2000, grossAmount: 2564.1 })
+    expect(onCreate).toHaveBeenCalledWith({ type: "salary", label: "Salaire (emploi tiers)", amount: 2000, grossAmount: brutCalcule(2000, reglesPubliees(annee)) })
+    expect(screen.getByRole("dialog")).toHaveTextContent(`le brut est calculé avec les cotisations salariales de ${annee}`)
   })
 
-  it("calcule le net quand seul le brut est saisi", async () => {
+  it("calcule le net avec les cotisations de l'année quand seul le brut est saisi", async () => {
     const { user, onCreate } = renderModal()
     const { gross, net } = await chooseSalary(user)
+    const attendu = netCalcule(3000, reglesPubliees(2026))
 
     await user.type(gross, "3000")
-    expect(net).toHaveValue(formatAmount(2340))
+    expect(net).toHaveValue(formatAmount(attendu))
 
     // Entrée sur le brut passe au net, Entrée sur le net crée le flux.
     await user.keyboard("{Enter}")
     expect(net).toHaveFocus()
     await user.keyboard("{Enter}")
 
-    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ amount: 2340, grossAmount: 3000 }))
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ amount: attendu, grossAmount: 3000 }))
   })
 
   it("calcule le brut à partir du net et du pourcentage saisi", async () => {

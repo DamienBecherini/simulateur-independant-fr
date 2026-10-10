@@ -11,7 +11,10 @@ import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 import { ChampNumerique } from "./ChampNumerique"
 import { ChampDateDeCreation, ChampHorsPlafondAnneePrecedente } from "./ChampDateDeCreation"
 import { ChampProfession } from "./ChampProfession"
+import { pourcent } from "@/backend/logic/format"
+import type { ReglesFiscales } from "@/backend/logic/regles"
 import { proposeLaProfession } from "@/lib/professions"
+import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
 import { texteDuRfrN2 } from "@/lib/rfr-n2"
 
 // Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
@@ -38,7 +41,7 @@ interface ChampsDeLActeurProps {
   onChange: (entity: Entity) => void
   /** Années de la simulation : le champ du RFR N-2 nomme celles qu'il couvre. */
   anneesSimulees?: number[]
-  /** L'année affichée, dont les règles décrivent la profession. */
+  /** L'année affichée : ses règles donnent les taux cités par les aides (profession, capital, frais). */
   annee: number
 }
 
@@ -108,7 +111,7 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee }
           </div>
         </div>
       )}
-      {entity.type === "person" ? <ChampsFraisReels personne={entity} onChange={onChange} /> : <ChampsDeplacements activite={entity} onChange={onChange} />}
+      {entity.type === "person" ? <ChampsFraisReels personne={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} /> : <ChampsDeplacements activite={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
     </>
   )
 }
@@ -147,23 +150,28 @@ function StatusSpecificFields({ entity, onChange, anneesSimulees = [], annee }: 
       )}
       {entity.type !== "person" && <ChampDateDeCreation activite={entity} onChange={onChange} />}
       {entity.type === "micro-entreprise" && <ChampHorsPlafondAnneePrecedente activite={entity} onChange={onChange} />}
-      {entity.type === "company" && estSocieteIS(entity.legalStatus) && <ChampsDeLaSociete societe={entity} onChange={onChange} />}
+      {entity.type === "company" && estSocieteIS(entity.legalStatus) && <ChampsDeLaSociete societe={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
     </>
   )
 }
 
 /**
  * Ce que le capital social change pour chaque société à l'IS, en plus de la réserve légale : rien de plus en SASU ; en
- * EURL, les dividendes au-delà de 10 % du capital supportent les cotisations du gérant (voir calculsEURL.ts).
+ * EURL, les dividendes au-delà d'une part du capital (règles de l'année) supportent les cotisations du gérant (voir
+ * calculsEURL.ts).
  */
-const AIDE_DU_CAPITAL: Record<StatutSociete, string> = {
-  SASU: "",
-  EURL: "Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant. "
+const AIDE_DU_CAPITAL: Record<StatutSociete, (regles: ReglesFiscales) => string> = {
+  SASU: () => "",
+  EURL: regles => `Les dividendes au-delà de ${pourcent(regles.EURL.seuilDividendesPartDuCapital)} du capital supportent les cotisations sociales du gérant. `
 }
 
-/** Société à l'IS : son capital (réserve légale, dividendes d'EURL soumis à cotisations) et ses réserves de départ. */
-function ChampsDeLaSociete({ societe, onChange }: { societe: Company; onChange: (entity: Entity) => void }) {
-  const aideCapital = estSocieteIS(societe.legalStatus) ? AIDE_DU_CAPITAL[societe.legalStatus] : ""
+/**
+ * Société à l'IS : son capital (réserve légale, dividendes d'EURL soumis à cotisations) et ses réserves de départ.
+ * L'aide cite les parts de l'année affichée.
+ */
+function ChampsDeLaSociete({ societe, onChange, regles }: { societe: Company; onChange: (entity: Entity) => void; regles: ReglesFiscales }) {
+  const aideCapital = estSocieteIS(societe.legalStatus) ? AIDE_DU_CAPITAL[societe.legalStatus](regles) : ""
+  const reserveLegale = `${pourcent(regles.reserveLegale.partDuBenefice)} du bénéfice vont à la réserve légale, non distribuable, jusqu'à ce qu'elle atteigne ${pourcent(regles.reserveLegale.plafondPartDuCapital)} du capital.`
   return (
     <>
       <div className="grid grid-cols-4 items-center gap-4">
@@ -172,7 +180,7 @@ function ChampsDeLaSociete({ societe, onChange }: { societe: Company; onChange: 
         </Label>
         <div className="col-span-3">
           <ChampNumerique id="capitalSocial" name="capitalSocial" min="0" step="100" quoi="le capital social" value={societe.capitalSocial} onChange={e => onChange({ ...societe, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })} />
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{aideCapital}5 % du bénéfice vont à la réserve légale, non distribuable, jusqu'à ce qu'elle atteigne 10 % du capital.</p>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{aideCapital}{reserveLegale}</p>
         </div>
       </div>
       <div className="grid grid-cols-4 items-center gap-4">

@@ -603,6 +603,7 @@ function fraisProfessionnels(ctx: Contexte, personId: string): FraisProfessionne
   const retenue = salaires > 0 && reels.total > deductionForfaitaire ? "reels" : "forfait"
   return {
     revenusSalariaux: salaires,
+    tauxDeductionForfaitaire: ctx.regles.IR.abattementSalaires.taux,
     deductionForfaitaire,
     fraisReels: reels.total,
     fraisDeTrajet: reels.fraisDeTrajet,

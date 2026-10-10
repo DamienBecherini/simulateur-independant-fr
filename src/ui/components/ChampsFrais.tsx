@@ -8,16 +8,20 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { estSocieteIS, PUISSANCES_FISCALES, type Company, type DeplacementsProfessionnels, type FraisReels, type MicroEntreprise, type Person, type PuissanceFiscale, type Trajet } from "@/types"
+import { pourcent } from "@/backend/logic/format"
+import type { ReglesFiscales } from "@/backend/logic/regles"
 import { ChampNumerique } from "./ChampNumerique"
 
 /*
  * Champs de la fenêtre de réglages d'un acteur pour les frais au barème kilométrique : frais réels d'une personne sur
- * ses salaires, déplacements professionnels d'une activité. Communs à toutes les années de la session, comme les acteurs.
+ * ses salaires, déplacements professionnels d'une activité. Communs à toutes les années de la session, comme les acteurs ;
+ * les taux et distances cités dans les textes sont ceux des règles de l'année affichée.
  */
 
 const LIBELLES_PUISSANCE: Record<PuissanceFiscale, string> = { "3": "3 CV et moins", "4": "4 CV", "5": "5 CV", "6": "6 CV", "7": "7 CV et plus" }
 
 const aide = "text-sm text-slate-600 dark:text-slate-400"
+const kilometres = (km: number) => `${km.toLocaleString("fr-FR")} km`
 const interrupteur = "flex items-center gap-2 text-sm pointer-coarse:min-h-11"
 
 /** Nombre positif saisi dans un champ, 0 s'il est vide ou invalide, plafonné si besoin. */
@@ -36,8 +40,8 @@ function ChampNombre({ id, label, value, onChange, max }: { id: string; label: s
   )
 }
 
-/** Puissance fiscale et motorisation électrique d'une voiture. */
-function ChampsVehicule<T extends { puissanceFiscale: PuissanceFiscale; electrique: boolean }>({ prefixe, valeur, onChange }: { prefixe: string; valeur: T; onChange: (valeur: T) => void }) {
+/** Puissance fiscale et motorisation électrique d'une voiture, avec la majoration du barème pour une électrique. */
+function ChampsVehicule<T extends { puissanceFiscale: PuissanceFiscale; electrique: boolean }>({ prefixe, valeur, onChange, majorationElectrique }: { prefixe: string; valeur: T; onChange: (valeur: T) => void; majorationElectrique: number }) {
   return (
     <>
       <div className="space-y-1">
@@ -57,7 +61,7 @@ function ChampsVehicule<T extends { puissanceFiscale: PuissanceFiscale; electriq
       </div>
       <label className={`${interrupteur} sm:col-span-2`}>
         <Switch checked={valeur.electrique} onCheckedChange={electrique => onChange({ ...valeur, electrique })} />
-        Voiture électrique (+ 20 %)
+        Voiture électrique (+ {pourcent(majorationElectrique)})
       </label>
     </>
   )
@@ -67,7 +71,7 @@ const TRAJET_PAR_DEFAUT: Trajet = { libelle: "", kmParTrajet: 0, joursTravailles
 const FRAIS_REELS_PAR_DEFAUT: FraisReels = { trajets: [TRAJET_PAR_DEFAUT], autresFrais: 0 }
 
 /** Un trajet domicile-travail, vers l'un des lieux de travail de la personne, avec son bouton pour le retirer. */
-function ChampsTrajet({ numero, trajet, onChange, onRetirer }: { numero: number; trajet: Trajet; onChange: (trajet: Trajet) => void; onRetirer: () => void }) {
+function ChampsTrajet({ numero, trajet, onChange, onRetirer, regles }: { numero: number; trajet: Trajet; onChange: (trajet: Trajet) => void; onRetirer: () => void; regles: ReglesFiscales }) {
   const prefixe = `fraisReels-${numero}`
   const modifier = (changement: Partial<Trajet>) => onChange({ ...trajet, ...changement })
 
@@ -83,10 +87,10 @@ function ChampsTrajet({ numero, trajet, onChange, onRetirer }: { numero: number;
       </div>
       <ChampNombre id={`${prefixe}-km`} label="Trajet (km, aller simple)" value={trajet.kmParTrajet} onChange={kmParTrajet => modifier({ kmParTrajet })} />
       <ChampNombre id={`${prefixe}-jours`} label="Jours travaillés par an" value={trajet.joursTravailles} max={366} onChange={joursTravailles => modifier({ joursTravailles })} />
-      <ChampsVehicule prefixe={prefixe} valeur={trajet} onChange={modifier} />
+      <ChampsVehicule prefixe={prefixe} valeur={trajet} onChange={modifier} majorationElectrique={regles.baremeKilometrique.majorationElectrique} />
       <label className={`${interrupteur} sm:col-span-2`}>
         <Switch checked={trajet.distanceJustifiee} onCheckedChange={distanceJustifiee => modifier({ distanceJustifiee })} />
-        Distance justifiée au-delà de 40 km
+        Distance justifiée au-delà de {kilometres(regles.baremeKilometrique.domicileTravail.distanceMaxParTrajet)}
       </label>
       <Button type="button" variant="outline" size="sm" className="justify-self-start sm:col-span-2" aria-label={`Retirer le trajet ${numero}`} onClick={onRetirer}>
         <Trash2 aria-hidden="true" />
@@ -96,8 +100,10 @@ function ChampsTrajet({ numero, trajet, onChange, onRetirer }: { numero: number;
   )
 }
 
-/** Frais réels d'une personne : trajets domicile-travail et autres frais, comparés à la déduction de 10 %. */
-export function ChampsFraisReels({ personne, onChange }: { personne: Person; onChange: (personne: Person) => void }) {
+/** Frais réels d'une personne : trajets domicile-travail et autres frais, comparés à la déduction forfaitaire. */
+export function ChampsFraisReels({ personne, onChange, regles }: { personne: Person; onChange: (personne: Person) => void; regles: ReglesFiscales }) {
+  const deduction = pourcent(regles.IR.abattementSalaires.taux)
+  const distanceMax = kilometres(regles.baremeKilometrique.domicileTravail.distanceMaxParTrajet)
   const frais = personne.fraisReels
   const modifier = (changement: Partial<FraisReels>) => onChange({ ...personne, fraisReels: { ...(frais ?? FRAIS_REELS_PAR_DEFAUT), ...changement } })
   const trajets = frais?.trajets ?? []
@@ -126,16 +132,16 @@ export function ChampsFraisReels({ personne, onChange }: { personne: Person; onC
       <h3 className="text-base font-semibold">Frais réels sur les salaires</h3>
       <label className={interrupteur}>
         <Switch checked={frais !== undefined} onCheckedChange={actif => onChange({ ...personne, fraisReels: actif ? FRAIS_REELS_PAR_DEFAUT : undefined })} />
-        Comparer mes frais réels à la déduction de 10 %
+        Comparer mes frais réels à la déduction de {deduction}
       </label>
-      <p className={aide}>Sur les salaires, allocations chômage et rémunérations de dirigeant, le simulateur retient le plus favorable : la déduction forfaitaire de 10 % ou vos frais réels, pour tous ces revenus à la fois. Réglage commun à toutes les années.</p>
+      <p className={aide}>Sur les salaires, allocations chômage et rémunérations de dirigeant, le simulateur retient le plus favorable : la déduction forfaitaire de {deduction} ou vos frais réels, pour tous ces revenus à la fois. Réglage commun à toutes les années.</p>
       {frais ? (
         <>
           <p className={aide}>
-            Un trajet par lieu de travail, un aller-retour par jour, au barème kilométrique de l'année. Au-delà de 40 km par trajet, seuls 40 km comptent, sauf circonstances particulières justifiées (emploi précaire, emploi du conjoint, santé…). Les kilomètres faits avec la même voiture (même puissance, même motorisation) s'additionnent : le barème s'applique une fois par voiture.
+            Un trajet par lieu de travail, un aller-retour par jour, au barème kilométrique de l'année. Au-delà de {distanceMax} par trajet, seuls {distanceMax} comptent, sauf circonstances particulières justifiées (emploi précaire, emploi du conjoint, santé…). Les kilomètres faits avec la même voiture (même puissance, même motorisation) s'additionnent : le barème s'applique une fois par voiture.
           </p>
           {trajets.map((trajet, index) => (
-            <ChampsTrajet key={index} numero={index + 1} trajet={trajet} onChange={modifie => modifier({ trajets: trajets.map((t, i) => (i === index ? modifie : t)) })} onRetirer={() => retirer(index)} />
+            <ChampsTrajet key={index} numero={index + 1} trajet={trajet} onChange={modifie => modifier({ trajets: trajets.map((t, i) => (i === index ? modifie : t)) })} onRetirer={() => retirer(index)} regles={regles} />
           ))}
           <Button ref={boutonAjouter} type="button" variant="outline" size="sm" onClick={ajouter}>
             <Plus aria-hidden="true" />
@@ -160,7 +166,7 @@ function aideDeplacements(activite: Company | MicroEntreprise): string {
 }
 
 /** Déplacements professionnels d'une activité avec une voiture personnelle, convertis au barème kilométrique. */
-export function ChampsDeplacements<T extends Company | MicroEntreprise>({ activite, onChange }: { activite: T; onChange: (activite: T) => void }) {
+export function ChampsDeplacements<T extends Company | MicroEntreprise>({ activite, onChange, regles }: { activite: T; onChange: (activite: T) => void; regles: ReglesFiscales }) {
   const deplacements = activite.deplacementsProfessionnels
   const modifier = (changement: Partial<DeplacementsProfessionnels>) => onChange({ ...activite, deplacementsProfessionnels: { ...(deplacements ?? DEPLACEMENTS_PAR_DEFAUT), ...changement } })
 
@@ -175,7 +181,7 @@ export function ChampsDeplacements<T extends Company | MicroEntreprise>({ activi
       {deplacements ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <ChampNombre id="deplacements-km" label="Kilomètres professionnels par an" value={deplacements.kmParAn} onChange={kmParAn => modifier({ kmParAn })} />
-          <ChampsVehicule prefixe="deplacements" valeur={deplacements} onChange={vehicule => modifier(vehicule)} />
+          <ChampsVehicule prefixe="deplacements" valeur={deplacements} onChange={vehicule => modifier(vehicule)} majorationElectrique={regles.baremeKilometrique.majorationElectrique} />
         </div>
       ) : null}
     </div>

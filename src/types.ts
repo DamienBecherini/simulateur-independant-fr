@@ -153,13 +153,22 @@ export const PersonSchema = z.object({
   locked: z.boolean().default(false)
 })
 
+/**
+ * Capital social d'une SASU ou d'une EURL quand l'utilisateur ne l'a pas saisi : société créée dans l'interface ou par
+ * une IA, fichier d'avant le champ, activité convertie depuis une micro-entreprise ou une EI dans le comparateur. Ce
+ * n'est pas une règle fiscale (la loi n'impose aucun minimum, 1 € suffit) mais un choix de modélisation : un montant
+ * courant pour une petite société, qui fixe la part des dividendes d'EURL échappant aux cotisations (10 % du capital
+ * en 2026) et le plafond de la réserve légale. L'utilisateur le remplace par le sien dans la fiche de la société.
+ */
+export const CAPITAL_SOCIAL_PAR_DEFAUT = 1000
+
 export const CompanySchema = z.object({
   id: z.string(),
   type: z.literal("company"),
   name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle Société"),
   legalStatus: z.enum(STATUTS_JURIDIQUES),
   // Sert au calcul des dividendes d'EURL soumis aux cotisations sociales (part dépassant 10 % du capital).
-  capitalSocial: z.number().min(0).default(1000),
+  capitalSocial: z.number().min(0).default(CAPITAL_SOCIAL_PAR_DEFAUT),
   /**
    * Société à l'IS : réserves distribuables au 1er janvier de la première année de la session (bénéfices des années
    * d'avant gardés dans la société, réserve légale non comprise). Les années suivantes, le moteur les reporte lui-même
@@ -652,6 +661,8 @@ export interface PersonResult {
 export interface FraisProfessionnelsResult {
   /** Salaires, allocations chômage et rémunérations de dirigeant imposables. */
   revenusSalariaux: number
+  /** Taux de la déduction forfaitaire de l'année (0,1 pour 10 %), pour les textes qui la nomment. */
+  tauxDeductionForfaitaire: number
   deductionForfaitaire: number
   fraisReels: number
   /** Part des frais réels qui vient des trajets domicile-travail, au barème kilométrique. */
