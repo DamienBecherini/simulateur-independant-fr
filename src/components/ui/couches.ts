@@ -12,7 +12,7 @@
 // couche qui reçoit de Radix une touche qui en vise une autre reste ouverte, et transmet la touche à la couche visée,
 // qui la traite comme Radix le ferait : son gestionnaire onEscapeKeyDown, puis la fermeture.
 
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState, type Ref, type RefCallback } from "react"
+import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState, type Ref } from "react"
 
 /** Contenus des couches de Radix, repérés par l'attribut data-slot de nos composants. */
 const COUCHES = ["dialog-content", "alert-dialog-content", "sheet-content", "select-content"].map(nom => `[data-slot="${nom}"]`).join(",")
@@ -44,22 +44,16 @@ export function useOuverture(open: boolean | undefined, defaultOpen: boolean | u
   return { ouvert: controle ? open : interne, changer, fermer }
 }
 
-/** Assemble deux refs en une, avec le nettoyage des refs de React 19. */
-function assembler<T>(ref: Ref<T> | undefined, rappel: RefCallback<T>): RefCallback<T> {
-  return noeud => {
-    const nettoyerLeRappel = rappel(noeud)
-    let nettoyerLaRef = () => {}
-    if (typeof ref === "function") {
-      const nettoyage = ref(noeud)
-      nettoyerLaRef = typeof nettoyage === "function" ? nettoyage : () => ref(null)
-    } else if (ref) {
-      ref.current = noeud
-      nettoyerLaRef = () => (ref.current = null)
-    }
-    return () => {
-      nettoyerLaRef()
-      nettoyerLeRappel?.()
-    }
+/** Donne l'élément à la ref reçue par le composant, et rend de quoi la vider (nettoyage des refs de React 19). */
+function attacher<T>(ref: Ref<T> | undefined, element: T): () => void {
+  if (typeof ref === "function") {
+    const nettoyage = ref(element)
+    return typeof nettoyage === "function" ? nettoyage : () => ref(null)
+  }
+  if (!ref) return () => {}
+  ref.current = element
+  return () => {
+    ref.current = null
   }
 }
 
@@ -85,18 +79,24 @@ export function useEchapDeLaCouche<T extends HTMLElement>({ ref, onEscapeKeyDown
     }
   })
 
-  const enregistrer = useCallback((element: T | null) => {
-    noeud.current = element
-    if (!element) return
-    gestionnaires.set(element, evenement => traiter.current(evenement))
-    return () => {
-      gestionnaires.delete(element)
-      noeud.current = null
-    }
-  }, [])
+  // La ref du contenu : celle reçue par le composant, et l'inscription de la couche tant qu'elle est affichée.
+  const refDuContenu = useCallback(
+    (element: T | null) => {
+      if (!element) return
+      noeud.current = element
+      gestionnaires.set(element, evenement => traiter.current(evenement))
+      const vider = attacher(ref, element)
+      return () => {
+        vider()
+        gestionnaires.delete(element)
+        noeud.current = null
+      }
+    },
+    [ref]
+  )
 
   return {
-    ref: useMemo(() => assembler(ref, enregistrer), [ref, enregistrer]),
+    ref: refDuContenu,
     // Appelé par Radix sur la couche qu'il croit la plus haute, avant de la fermer si l'événement n'est pas annulé.
     onEscapeKeyDown(evenement: KeyboardEvent) {
       const visee = coucheVisee(evenement.target)
