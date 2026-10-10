@@ -2,7 +2,7 @@
 // Arbitrage rémunération / dividendes : courbe du net du foyer selon la rémunération du dirigeant, en SASU ou en EURL,
 // avec la meilleure rémunération et la meilleure parmi celles qui valident 4 trimestres de retraite.
 
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
+import { useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
 import { flushSync } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { echelle, graduations, indiceLePlusProche, montantCourt, positionInfoBulle } from "@/lib/graphique"
