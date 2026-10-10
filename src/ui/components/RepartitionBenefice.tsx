@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { avecRemuneration, libellesRepartition } from "@/lib/comparateur-options"
-import { apercuDuPartage, auPas, coutRemuneration, dividendesVerses, libellesPostes, PAS_PART, PAS_REMUNERATION, partDistribueeDe, POSTES, postesArrondis, remunerationPourUnCout, type PosteDuPartage } from "@/lib/repartition-benefice"
+import { apercuDuPartage, auPas, coutRemuneration, dividendesVerses, libellesPostes, PAS_PART, PAS_REMUNERATION, partDistribueeDe, POSTES, postesArrondis, remunerationPourUnCout, type PosteDuPartage, reglageDeLaBarre } from "@/lib/repartition-benefice"
 import { cn } from "@/lib/utils"
 import type { ComparaisonOptions, OptimisationRemuneration, PartageDuBenefice, ReservesDeLaSociete, ScenarioStatut, StatutSociete } from "@/types"
 import { clavierDuCurseur, gestesDuCurseur, montantAuPointeur, type Glissement as GlissementDuCurseur } from "../curseur"
@@ -254,9 +254,7 @@ function useApercu(partage: PartageDuBenefice | undefined, options: ComparaisonO
  * l'aperçu suit le pointeur, et le comparateur recalcule au relâchement.
  */
 export function RepartitionDuBenefice({ activityName, statut, onStatut, scenario, optimisation, options, onChange }: RepartitionProps) {
-  const personnalisee = options.repartition.mode === "personnalisee"
-  const optimisationAJour = optimisation?.statut === statut ? optimisation : null
-  const remunerationMaximale = personnalisee && optimisationAJour ? optimisationAJour.remunerationMaximale : null
+  const { personnalisee, optimisationReglable, remunerationMaximale } = reglageDeLaBarre(options, optimisation, statut)
   const { glissement, setGlissement, remuneration, part, affiche, estimation } = useApercu(scenario?.partage, options, remunerationMaximale)
 
   const valider = ({ poignee, valeur }: Glissement) => onChange(poignee === "remuneration" ? { ...options, remunerationNette: valeur } : { ...options, repartition: { mode: "personnalisee", partDistribuee: valeur } })
@@ -282,7 +280,7 @@ export function RepartitionDuBenefice({ activityName, statut, onStatut, scenario
           <Barre partage={affiche} remunerationMaximale={remunerationMaximale} remuneration={remuneration} part={part} glissement={glissement} onGlisser={setGlissement} onValider={valider} />
           <Deficit partage={affiche} />
           <Reserves reserves={scenario?.reserves} estimation={estimation} />
-          {personnalisee && optimisationAJour ? <Raccourcis optimisation={optimisationAJour} options={options} onChange={onChange} /> : null}
+          {optimisationReglable ? <Raccourcis optimisation={optimisationReglable} options={options} onChange={onChange} /> : null}
           <Legende partage={affiche} statut={statut} estimation={estimation} />
         </>
       ) : (

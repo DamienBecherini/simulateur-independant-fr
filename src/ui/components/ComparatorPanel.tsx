@@ -331,6 +331,12 @@ function useComparison(session: SessionState, options: ComparaisonOptions, annee
   return { result, error }
 }
 
+/** Message d'échec de la comparaison ; rien quand elle a réussi. */
+function ErreurDuCalcul({ erreur }: { erreur: string | null }) {
+  if (!erreur) return null
+  return <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{erreur}</p>
+}
+
 /**
  * Statut de société étudié pour l'activité comparée (son statut s'il en est un, la SASU sinon) et son arbitrage
  * rémunération / dividendes : partagés entre la barre de partage du bénéfice et la section « Rémunération ou dividendes ? ».
@@ -399,6 +405,41 @@ function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onCompara
   }, [onComparaison, activite, result])
 }
 
+interface ReglagesEtPartageProps {
+  vue: SimulationAnnuelle
+  activities: (Company | MicroEntreprise)[]
+  selected: Company | MicroEntreprise
+  options: ComparaisonOptions
+  result: ComparaisonResult | null
+  arbitrage: ReturnType<typeof useArbitrage>
+  onSelect: (activityId: string) => void
+  onChange: (options: ComparaisonOptions) => void
+}
+
+/** Réglages de l'activité comparée, avertissements du calcul, et partage du bénéfice dans le statut étudié. */
+function ReglagesEtPartage({ vue, activities, selected, options, result, arbitrage, onSelect, onChange }: ReglagesEtPartageProps) {
+  return (
+    <>
+      <ReglagesDuComparateur
+        activities={activities}
+        selected={selected}
+        options={options}
+        result={result}
+        statut={arbitrage.statut}
+        plafond={plafondDeRemuneration(arbitrage.resultat, arbitrage.statut)}
+        bncUtile={partBncUtile(vue, selected)}
+        onSelect={onSelect}
+        onChange={changes => onChange({ ...options, ...changes })}
+      />
+      <WarningList warnings={result?.warnings ?? []} />
+      {/* Affichage « Résumé » : le partage du bénéfice n'est déplié d'office qu'en répartition personnalisée, où il sert à régler. */}
+      <ReplieEnResume titre={`Partage du bénéfice en ${arbitrage.statut} (barre réglable)`} id="comparateur-partage" className="text-sm" replie={options.repartition.mode !== "personnalisee"}>
+        <RepartitionDuBenefice activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} scenario={scenarioDuStatut(result, arbitrage.statut)} optimisation={arbitrage.resultat} options={options} onChange={onChange} />
+      </ReplieEnResume>
+    </>
+  )
+}
+
 /**
  * Comparateur de statuts : l'activité choisie est simulée en SASU, EURL, EI au réel et micro-entreprise
  * (avec et sans versement libératoire), le reste de la simulation restant identique. Les couples en union
@@ -417,6 +458,8 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
   if (!selected && couples.length === 0) return null
 
   const personName = (id: string) => session.entities.find(e => e.id === id)?.name ?? id
+  // Nom de l'activité comparée dans le tableau et son export ; vide quand seuls des couples sont comparés.
+  const nomDeLActivite = selected?.name ?? ""
 
   return (
     <section className="mt-12 space-y-4" aria-labelledby="comparateur-titre">
@@ -431,30 +474,11 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
       </div>
       <VerdictDuComparateur result={result} activite={selected?.name} />
 
-      {selected ? (
-        <>
-          <ReglagesDuComparateur
-            activities={activities}
-            selected={selected}
-            options={effectiveOptions}
-            result={result}
-            statut={arbitrage.statut}
-            plafond={plafondDeRemuneration(arbitrage.resultat, arbitrage.statut)}
-            bncUtile={partBncUtile(vue, selected)}
-            onSelect={selectActivity}
-            onChange={changes => setOptions({ ...effectiveOptions, ...changes })}
-          />
-          <WarningList warnings={result?.warnings ?? []} />
-          {/* Affichage « Résumé » : le partage du bénéfice n'est déplié d'office qu'en répartition personnalisée, où il sert à régler. */}
-          <ReplieEnResume titre={`Partage du bénéfice en ${arbitrage.statut} (barre réglable)`} id="comparateur-partage" className="text-sm" replie={effectiveOptions.repartition.mode !== "personnalisee"}>
-            <RepartitionDuBenefice activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} scenario={scenarioDuStatut(result, arbitrage.statut)} optimisation={arbitrage.resultat} options={effectiveOptions} onChange={setOptions} />
-          </ReplieEnResume>
-        </>
-      ) : null}
+      {selected ? <ReglagesEtPartage vue={vue} activities={activities} selected={selected} options={effectiveOptions} result={result} arbitrage={arbitrage} onSelect={selectActivity} onChange={setOptions} /> : null}
 
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</p> : null}
+      <ErreurDuCalcul erreur={error} />
 
-      {result ? <ComparisonResults result={result} activityName={selected?.name ?? ""} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, selected?.name ?? "")} /> : null}
+      {result ? <ComparisonResults result={result} activityName={nomDeLActivite} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, nomDeLActivite)} /> : null}
       {selected ? <SurToutesLesAnnees session={session} activityId={selected.id} activityName={selected.name} partMiseEnReserve={partMiseEnReserve} onPartMiseEnReserve={setPartMiseEnReserve} /> : null}
       <OptimiseurDeLActivite session={session} annee={vue.annee} selected={selected} options={effectiveOptions} arbitrage={arbitrage} result={result} onChange={setOptions} />
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}

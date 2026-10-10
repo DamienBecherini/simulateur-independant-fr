@@ -49,6 +49,24 @@ function noterValeurs(releve: Releve, chemin: string, possibles: unknown[], vale
   releve.vues.set(chemin, vues)
 }
 
+/** Chaque champ d'un objet : absent de toutes les valeurs, il est relevé ; sinon on parcourt ses valeurs. */
+function parcourirLesChamps(shape: Record<string, z.ZodType>, valeurs: unknown[], chemin: string, releve: Releve): void {
+  for (const [cle, champ] of Object.entries(shape)) {
+    const sous = valeurs.filter(estObjet).map(v => v[cle]).filter(v => v !== undefined)
+    if (sous.length === 0) releve.manques.push(`${chemin}.${cle}`)
+    else parcourir(champ, sous, `${chemin}.${cle}`, releve)
+  }
+}
+
+/** Chaque variante d'une union : sans exemple parmi les valeurs, elle est relevée ; sinon on parcourt ses exemples. */
+function parcourirLesVariantes(options: z.ZodType[], valeurs: unknown[], chemin: string, releve: Releve): void {
+  options.forEach((option, i) => {
+    const exemples = valeurs.filter(v => option.safeParse(v).success)
+    if (exemples.length === 0) releve.manques.push(`${chemin}|variante ${i}`)
+    else parcourir(option, exemples, chemin, releve)
+  })
+}
+
 function parcourir(schema: z.ZodType, valeurs: unknown[], chemin: string, releve: Releve): void {
   const def = definition(schema)
   switch (def.type) {
@@ -59,23 +77,13 @@ function parcourir(schema: z.ZodType, valeurs: unknown[], chemin: string, releve
     case "pipe":
       return parcourir(def.out!, valeurs, chemin, releve)
     case "object":
-      for (const [cle, champ] of Object.entries(def.shape!)) {
-        const sous = valeurs.filter(estObjet).map(v => v[cle]).filter(v => v !== undefined)
-        if (sous.length === 0) releve.manques.push(`${chemin}.${cle}`)
-        else parcourir(champ, sous, `${chemin}.${cle}`, releve)
-      }
-      return
+      return parcourirLesChamps(def.shape!, valeurs, chemin, releve)
     case "array":
       return parcourir(def.element!, valeurs.flat(), `${chemin}[]`, releve)
     case "record":
       return parcourir(def.valueType!, valeurs.filter(estObjet).flatMap(v => Object.values(v)), `${chemin}{}`, releve)
     case "union":
-      def.options!.forEach((option, i) => {
-        const exemples = valeurs.filter(v => option.safeParse(v).success)
-        if (exemples.length === 0) releve.manques.push(`${chemin}|variante ${i}`)
-        else parcourir(option, exemples, chemin, releve)
-      })
-      return
+      return parcourirLesVariantes(def.options!, valeurs, chemin, releve)
     case "enum":
       return noterValeurs(releve, chemin, Object.values(def.entries!), valeurs)
     case "boolean":
