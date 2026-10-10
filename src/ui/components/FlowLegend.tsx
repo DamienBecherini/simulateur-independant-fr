@@ -36,7 +36,7 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
   // Détermine les types de flux actuellement utilisés en extrayant les clés de la map passée en props.
   const usedFlowTypes = Array.from(flowTypeToNumberMap.keys()) as FinancialFlow["type"][]
 
-  // MODIFICATION 2 : On filtre les types de flux en deux listes distinctes : gains et dépenses.
+  // Gains et dépenses sont présentés dans deux colonnes.
   const gainTypes = useMemo(() => usedFlowTypes.filter(type => !isExpenseFlowType(type)), [usedFlowTypes])
   const expenseTypesFiltered = useMemo(() => usedFlowTypes.filter(isExpenseFlowType), [usedFlowTypes])
 
@@ -74,7 +74,6 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
             Gérer les couleurs
           </Button>
         </div>
-        {/* MODIFICATION 3 : La structure d'affichage est maintenant une grille à deux colonnes. */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 print:gap-y-1">
           {/* Section pour les Gains */}
           <div>

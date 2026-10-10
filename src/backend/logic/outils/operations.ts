@@ -142,8 +142,14 @@ function sansValeursAbsentes<T extends object>(objet: T): Partial<T> {
   return Object.fromEntries(Object.entries(objet).filter(([, valeur]) => valeur !== undefined)) as Partial<T>
 }
 
-/** Les réglages proposés, sous les noms des champs de la session. */
-function champsDeLActeur(reglages: ReglagesActeur): Partial<Record<string, unknown>> {
+/** Les réglages d'un acteur sous les noms des champs de la session (`partsFiscales` y devient `fiscalParts`). */
+type ChampsReglables = Omit<ReglagesActeur, "partsFiscales"> & { fiscalParts?: number }
+
+/**
+ * Les réglages proposés, sous les noms des champs de la session. Typés champ par champ : un acteur construit avec eux
+ * est vérifié par le compilateur, sans conversion forcée ; `verifierReglages` garantit qu'ils conviennent à son genre.
+ */
+function champsDeLActeur(reglages: ReglagesActeur): ChampsReglables {
   const { partsFiscales, ...reste } = reglages
   return sansValeursAbsentes({ fiscalParts: partsFiscales, ...reste })
 }
@@ -153,11 +159,11 @@ function ajouterActeur(c: Chantier, op: OperationDe<"ajouter_acteur">): void {
   verifierReglages(op.genre, op.reglages)
   const commun = { id: op.id, name: op.nom, avatar: avatarDuGenre(op.genre, op.nom), locked: false, ...champsDeLActeur(op.reglages) }
   const acteurs: Record<GenreDActeur, () => Entity> = {
-    personne: () => ({ type: "person", fiscalParts: 1, ...commun }) as Entity,
-    "micro-entreprise": () => ({ type: "micro-entreprise", beneficieACRE: false, opteVFL: false, ...commun }) as Entity,
-    SASU: () => ({ type: "company", legalStatus: "SASU", capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT, ...commun }) as Entity,
-    EURL: () => ({ type: "company", legalStatus: "EURL", capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT, ...commun }) as Entity,
-    EI: () => ({ type: "company", legalStatus: "EI", capitalSocial: 0, ...commun }) as Entity
+    personne: () => ({ type: "person", fiscalParts: 1, ...commun }),
+    "micro-entreprise": () => ({ type: "micro-entreprise", beneficieACRE: false, opteVFL: false, ...commun }),
+    SASU: () => ({ type: "company", legalStatus: "SASU", capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT, ...commun }),
+    EURL: () => ({ type: "company", legalStatus: "EURL", capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT, ...commun }),
+    EI: () => ({ type: "company", legalStatus: "EI", capitalSocial: 0, ...commun })
   }
   const nouvel = acteurs[op.genre]()
   verifierProfession(nouvel)
@@ -169,7 +175,7 @@ function modifierActeur(c: Chantier, op: OperationDe<"modifier_acteur">): void {
   if (acteur.locked) throw new ErreurOutil(`« ${acteur.name} » est verrouillé par l'utilisateur : il ne peut pas être modifié par une proposition.`)
   if (op.nom === undefined && Object.keys(sansValeursAbsentes(op.reglages)).length === 0) throw new ErreurOutil("Rien à modifier : indiquez un nom ou des réglages.")
   verifierReglages(genreDe(acteur), op.reglages)
-  const modifie = { ...acteur, ...(op.nom ? { name: op.nom } : {}), ...champsDeLActeur(op.reglages) } as Entity
+  const modifie: Entity = { ...acteur, ...(op.nom ? { name: op.nom } : {}), ...champsDeLActeur(op.reglages) }
   verifierProfession(modifie)
   c.session = { ...c.session, entities: c.session.entities.map(e => (e.id === acteur.id ? modifie : e)) }
 }

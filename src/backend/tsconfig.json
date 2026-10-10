@@ -1,4 +1,4 @@
-// src/electron/tsconfig.json
+// src/backend/tsconfig.json
 
 {
   "compilerOptions": {
@@ -15,7 +15,7 @@
       "@/*": ["src/*"]
     }
   },
-  // On inclut les fichiers du backend, notre nouveau fichier de types, et le fichier de déclarations globales.
+  // Le process principal, les types communs et les canaux entre l'interface et le process principal.
   "include": ["./**/*", "../types.ts", "../globals.d.ts"],
   // Les tests ne sont pas embarqués dans l'application : ils sont vérifiés à part (tsconfig.test.json).
   "exclude": ["./**/*.test.ts", "./logic/testing/**"]

@@ -3,7 +3,8 @@ import type { SessionState, SaveSlot, UserPreferences, ExportableState, Sanitiza
 import type { PropositionRecue } from "./backend/mcp/proposition-en-attente.js"
 import type { InfosDuServeurMcp } from "./lib/configuration-mcp.js"
 
-// On importe les types depuis notre nouveau module `types.ts` pour les utiliser ici.
+// Les canaux entre l'interface et le process principal (Electron) ou le pont de la démo web : leur nom, leurs
+// paramètres et leur réponse. `window.api` est déclaré ici, une seule fois.
 export type EventPayloadMapping = {
   getCurrentSession: () => Promise<SessionState>
   saveCurrentSession: (session: SessionState) => Promise<void>
@@ -49,7 +50,7 @@ export type EventPayloadMapping = {
   onPropositionsEnAttente: (callback: (propositions: PropositionRecue[]) => void) => () => void
 }
 
-// Ce fichier étend les types globaux, notamment l'objet `window` pour le preload.
+// `window.api` : exposé par le preload (Electron) ou installé par la démo web.
 declare global {
   interface Window {
     api: EventPayloadMapping
