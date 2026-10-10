@@ -13,12 +13,14 @@ import fs from "fs/promises"
 import { copyFileSync, existsSync, mkdirSync } from "fs"
 import { ipcMain } from "electron"
 import { AnneesRefuseesError, rapportAvecCorrections } from "./logic/data-sanitizer.js"
-import { contenuDuFichier, lireUneSimulationImportee } from "./logic/fichiers-de-donnees.js"
+import { contenuDuFichier, lireUneSimulationImportee, sessionAEcrire } from "./logic/fichiers-de-donnees.js"
 import { donneesDeLApplication } from "./donnees-de-l-application.js"
 import { adresseExterneAutorisee } from "@/lib/adresses-des-retours.js"
 import { infosDeLInstallation, type InfosDuServeurMcp } from "@/lib/configuration-mcp.js"
 import { ouvrirLaBoiteAuxPropositions } from "./boite-aux-propositions.js"
 import { copierLeServeurMcp } from "./copie-du-serveur-mcp.js"
+import { ADRESSE_DU_SERVEUR_DE_DEVELOPPEMENT, PREFERENCES_SURES, adresseAOuvrirHorsDeLApplication, navigationAutorisee } from "./securite-des-fenetres.js"
+import { AnneeSchema, ComparaisonOptionsSchema, FichierTexteAEnregistrerSchema, FichierTexteAOuvrirSchema, IdentifiantSchema, NomDeFichierSchema, OptionsDesSauvegardesSchema, SauvegardesRecuesSchema, SimulationRecueSchema, entreeValide } from "./logic/entrees-ipc.js"
 
 /** Filtres des fenêtres d'enregistrement et d'ouverture, par format de fichier texte. */
 const FILTRES_FICHIERS: Record<FormatFichierTexte, Electron.FileFilter> = {
@@ -105,7 +107,9 @@ function createSplashWindow() {
     frame: false,
     alwaysOnTop: true,
     resizable: false,
-    center: true
+    center: true,
+    // Page locale sans script ni preload : les mêmes options de sécurité que la fenêtre principale.
+    webPreferences: { ...PREFERENCES_SURES }
   })
   splashWindow.loadFile(path.join(app.getAppPath(), "splash.html")).catch(error => console.error("Écran de démarrage introuvable :", error))
 }
@@ -120,6 +124,9 @@ function createMainWindow() {
     show: false,
     backgroundColor: "#111827",
     webPreferences: {
+      // Options de sécurité, chacune avec sa raison, dans securite-des-fenetres.ts (voir l'ADR 003).
+      ...PREFERENCES_SURES,
+      // Seul pont entre la page et le process principal : il expose `window.api` par contextBridge.
       preload: getPreloadPath(),
       // Une fenêtre masquée ralentit ses minuteries ; la sauvegarde et le recalcul différés doivent rester ponctuels.
       backgroundThrottling: !hiddenWindows
@@ -127,17 +134,10 @@ function createMainWindow() {
   })
 
   if (isDev()) {
-    mainWindow.loadURL("http://localhost:3524").catch(error => console.error("Serveur de développement injoignable :", error))
+    mainWindow.loadURL(ADRESSE_DU_SERVEUR_DE_DEVELOPPEMENT).catch(error => console.error("Serveur de développement injoignable :", error))
   } else {
     mainWindow.loadFile(getUIPath()).catch(error => console.error("Interface introuvable :", error))
   }
-
-  // Liens vers une page externe (sources officielles des montages types) : ouverts dans le navigateur du système,
-  // jamais dans une fenêtre de l'application.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("https://")) shell.openExternal(url).catch(error => console.error("Lien externe impossible à ouvrir :", error))
-    return { action: "deny" }
-  })
 
   // Boutons « précédent » et « suivant » de la souris (Windows, Linux) : retour à la vue précédente de l'affichage
   // « Trois vues », comme dans un navigateur. L'historique ne contient que des vues de la même page.
@@ -163,35 +163,86 @@ function createMainWindow() {
   })
 }
 
+/** Ouvre une adresse dans le navigateur ou la messagerie du système, si elle fait partie de celles qui le peuvent. */
+function ouvrirHorsDeLApplication(adresse: string) {
+  if (!adresseAOuvrirHorsDeLApplication(adresse)) {
+    console.warn("Adresse externe refusée.")
+    return
+  }
+  shell.openExternal(adresse).catch(error => console.error("Lien externe impossible à ouvrir :", error))
+}
+
+// Chaque fenêtre de l'application, dès sa création (voir l'ADR 003) :
+// - aucune nouvelle fenêtre : un lien vers une page externe (sources officielles des montages types, liens des
+//   mentions légales) s'ouvre dans le navigateur du système ; toute autre adresse est refusée ;
+// - la fenêtre ne quitte jamais l'interface : une navigation vers une autre page est annulée, et une page externe
+//   permise s'ouvre dans le navigateur à la place ;
+// - aucune balise <webview> attachée, en plus de l'option `webviewTag: false`.
+app.on("web-contents-created", (_event, contents) => {
+  contents.setWindowOpenHandler(({ url }) => {
+    ouvrirHorsDeLApplication(url)
+    return { action: "deny" }
+  })
+  contents.on("will-navigate", event => {
+    if (navigationAutorisee(event.url, contents.getURL(), isDev())) return
+    event.preventDefault()
+    ouvrirHorsDeLApplication(event.url)
+  })
+  contents.on("will-attach-webview", event => event.preventDefault())
+})
+
 app.on("ready", () => {
   createSplashWindow()
   createMainWindow()
 
   ipcMainHandle("getCurrentSession", async () => await donnees.lireLaSession())
+  // La session reçue est nettoyée comme à la lecture ; ce qui n'est pas une session n'est pas écrit.
   ipcMainHandle("saveCurrentSession", async (session: SessionState) => {
-    await donnees.ecrireLaSession(session)
+    const valide = sessionAEcrire(session)
+    if (valide === null) console.warn("saveCurrentSession : session refusée, rien n'est écrit.")
+    else await donnees.ecrireLaSession(valide)
   })
 
   // Enregistrement synchrone, appelé par l'interface quand la fenêtre se ferme : la sauvegarde automatique
   // est différée d'une seconde, et une modification faite juste avant la fermeture serait sinon perdue.
+  // Comme pour les autres canaux : émetteur vérifié, session nettoyée. Un refus répond `false` sans bloquer la page.
   ipcMain.on("saveCurrentSessionSync", (event, session: SessionState) => {
-    if (event.senderFrame) validateEventFrame(event.senderFrame)
-    event.returnValue = donnees.ecrireLaSessionSync(session)
+    try {
+      validateEventFrame(event.senderFrame)
+    } catch (error) {
+      console.error("saveCurrentSessionSync refusé :", error)
+      event.returnValue = false
+      return
+    }
+    const valide = sessionAEcrire(session)
+    if (valide === null) console.warn("saveCurrentSessionSync : session refusée, rien n'est écrit.")
+    event.returnValue = valide !== null && donnees.ecrireLaSessionSync(valide)
   })
 
   ipcMainHandle("simulerLesAnnees", async (session: SessionState) => simulerLesAnnees(validatedSession(session, "simulerLesAnnees")))
 
-  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions, annee: number) => comparerStatutsDeLAnnee(validatedSession(session, "compareStatuts"), options, annee))
-  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) => optimiserRemunerationDeLAnnee(validatedSession(session, "optimiserRemuneration"), options, estSocieteIS(statut) ? statut : "SASU", annee))
+  // Réglages, année et activité vérifiés (src/backend/logic/entrees-ipc.ts) : un paramètre invalide fait échouer l'appel.
+  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions, annee: number) =>
+    comparerStatutsDeLAnnee(validatedSession(session, "compareStatuts"), entreeValide(ComparaisonOptionsSchema, options, "compareStatuts"), entreeValide(AnneeSchema, annee, "compareStatuts"))
+  )
+  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) =>
+    optimiserRemunerationDeLAnnee(validatedSession(session, "optimiserRemuneration"), entreeValide(ComparaisonOptionsSchema, options, "optimiserRemuneration"), estSocieteIS(statut) ? statut : "SASU", entreeValide(AnneeSchema, annee, "optimiserRemuneration"))
+  )
   ipcMainHandle("comparerStrategies", async (session: SessionState, activityId: string) => {
     const validee = validatedSession(session, "comparerStrategies")
-    return comparerStrategiesDeDistribution(validee, String(activityId), validee.comparateur?.reglagesParActivite[String(activityId)])
+    const activite = entreeValide(IdentifiantSchema, activityId, "comparerStrategies")
+    return comparerStrategiesDeDistribution(validee, activite, validee.comparateur?.reglagesParActivite[activite])
   })
 
   ipcMainHandle("getSaveSlots", async () => await donnees.lireLesSauvegardes())
-  ipcMainHandle("saveSlots", async (slots: SaveSlot[], options?: { silencieux?: boolean }) => await donnees.ecrireLesSauvegardes(slots, options))
+  // Une liste est exigée ; chaque sauvegarde est ensuite validée seule, comme à la lecture.
+  ipcMainHandle("saveSlots", async (slots: SaveSlot[], options?: { silencieux?: boolean }) =>
+    await donnees.ecrireLesSauvegardes(entreeValide(SauvegardesRecuesSchema, slots, "saveSlots") as SaveSlot[], entreeValide(OptionsDesSauvegardesSchema, options, "saveSlots"))
+  )
 
+  // L'export est écrit tel que l'interface l'envoie, s'il a la forme d'une simulation : il est nettoyé à son import.
   ipcMainHandle("exportState", async (state: ExportableState) => {
+    entreeValide(SimulationRecueSchema, state, "exportState")
     if (!mainWindow) return
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
       title: "Exporter la simulation",
@@ -209,7 +260,8 @@ app.on("ready", () => {
   })
 
   // --- FICHIERS TEXTE (exports CSV et Markdown, sauvegardes groupées) ET PDF ---
-  ipcMainHandle("saveTextFile", async ({ defaultName, content, format }: { defaultName: string; content: string; format: FormatFichierTexte }) => {
+  ipcMainHandle("saveTextFile", async (fichier: { defaultName: string; content: string; format: FormatFichierTexte }) => {
+    const { defaultName, content, format } = entreeValide(FichierTexteAEnregistrerSchema, fichier, "saveTextFile")
     if (!mainWindow) return false
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, { title: "Exporter", defaultPath: defaultName, filters: [FILTRES_FICHIERS[format]] })
     if (canceled || !filePath) return false
@@ -223,7 +275,8 @@ app.on("ready", () => {
     }
   })
 
-  ipcMainHandle("openTextFile", async ({ title, format }: { title: string; format: FormatFichierTexte }) => {
+  ipcMainHandle("openTextFile", async (demande: { title: string; format: FormatFichierTexte }) => {
+    const { title, format } = entreeValide(FichierTexteAOuvrirSchema, demande, "openTextFile")
     if (!mainWindow) return null
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { title, properties: ["openFile"], filters: [FILTRES_FICHIERS[format]] })
     if (canceled || filePaths.length === 0) return null
@@ -236,7 +289,8 @@ app.on("ready", () => {
     }
   })
 
-  ipcMainHandle("printToPdf", async (defaultName: string) => {
+  ipcMainHandle("printToPdf", async (nom: string) => {
+    const defaultName = entreeValide(NomDeFichierSchema, nom, "printToPdf")
     if (!mainWindow) return false
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, { title: "Exporter en PDF", defaultPath: defaultName, filters: [{ name: "Documents PDF", extensions: ["pdf"] }] })
     if (canceled || !filePath) return false

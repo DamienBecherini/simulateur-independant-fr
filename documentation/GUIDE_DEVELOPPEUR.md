@@ -74,7 +74,7 @@ npx eslint . && npx tsc -b && npm run transpile:electron && npm run typecheck:te
 | `src/backend/logic/testing/` | Outils de test du moteur : règles fictives aux chiffres ronds (`regles-de-test.ts`), sessions de test, `casDeReference`. |
 | `src/backend/logic/outils/` | Les outils pour les clients d'IA (ADR 010) : catalogue, lecture, propositions. Purs eux aussi. |
 | `src/backend/mcp/` | Le serveur MCP local (ADR 011), processus à part lancé par le client d'IA. |
-| `src/backend/*.ts` | Le process principal d'Electron : `main.ts` (fenêtre, canaux IPC), `preload.cts` (pont `window.api`), `util.ts` (canaux typés), `donnees-de-l-application.ts` (lecture et écriture des trois fichiers de données), `fichiers-surs.ts` (écriture atomique, copies), `boite-aux-propositions.ts`. |
+| `src/backend/*.ts` | Le process principal d'Electron : `main.ts` (fenêtre, canaux IPC), `preload.cts` (pont `window.api`), `util.ts` (canaux typés, vérification de l'émetteur), `securite-des-fenetres.ts` (options de sécurité des fenêtres, navigation et adresses externes permises ; les paramètres des canaux se vérifient dans `logic/entrees-ipc.ts`), `donnees-de-l-application.ts` (lecture et écriture des trois fichiers de données), `fichiers-surs.ts` (écriture atomique, copies), `boite-aux-propositions.ts`. |
 | `src/lib/` | Logique côté interface, pure et testée : exports CSV et Markdown, montages types, scénarios de test, professions affichées, avis des utilisateurs… |
 | `src/ui/` | Application React : `App.tsx`, `components/`, `hooks/` (`useSessionManager` : état, annuler et rétablir, sauvegarde différée). |
 | `src/components/ui/` | Composants shadcn/ui, copiés tels quels (exclus de SonarQube). |
@@ -143,7 +143,7 @@ Règles de dépendance :
 
 - `src/backend/logic` n'importe que `src/types.ts`, `src/backend/regles` et Zod. Un test (`outils/isolement.test.ts`) le vérifie pour les outils pour les IA ; pour le reste, vérifiez les imports d'un module ajouté.
 - `src/lib` et `src/ui` peuvent importer le moteur ; le moteur ne les importe jamais.
-- L'interface ne parle au disque que par `window.api` (contrat `EventPayloadMapping`, `src/globals.d.ts`), fourni par Electron (`preload.cts` → canaux de `main.ts`) ou par la démo (`creerApiNavigateur`).
+- L'interface ne parle au disque que par `window.api` (contrat `EventPayloadMapping`, `src/globals.d.ts`), fourni par Electron (`preload.cts` → canaux de `main.ts`) ou par la démo (`creerApiNavigateur`). Un canal Electron se déclare par `ipcMainHandle` (émetteur vérifié) et vérifie lui-même ses paramètres avec un schéma de `logic/entrees-ipc.ts` : le process principal ne fait pas confiance à la page (ADR 003).
 - Écarts connus, assumés en attendant les branches prévues par la relecture : cycle `comparateur.ts` ⇄ `optimisation-remuneration.ts` (commenté dans le code), `simulation-pluriannuelle.ts` → `comparateur.ts` (conversion d'une micro sortie du régime), cycle `src/ui` ⇄ `src/web` (bandeau de la démo).
 
 ### 2.2 Flux de données

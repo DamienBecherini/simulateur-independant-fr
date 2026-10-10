@@ -1,4 +1,7 @@
-// src/electron/preload.cts
+// src/backend/preload.cts
+// Pont entre l'interface et le process principal (voir l'ADR 003). Il tourne dans le bac à sable de la fenêtre
+// (`sandbox: true`, securite-des-fenetres.ts) : il ne peut charger que le module `electron`, et la page ne voit que
+// `window.api`. Le process principal revérifie l'émetteur et les paramètres de chaque appel.
 
 const { contextBridge, ipcRenderer } = require("electron");
 

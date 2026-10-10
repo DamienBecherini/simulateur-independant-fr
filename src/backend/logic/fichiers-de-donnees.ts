@@ -9,6 +9,7 @@
 import { UserPreferencesSchema, type ExportableState, type SanitizationReport, type SaveSlot, type SessionState, type UserPreferences } from "../../types.js"
 import { nettoyerLaSession, nettoyerLesSlots, sanitizeSlots, type SlotsNettoyes } from "./data-sanitizer.js"
 import { FORMAT_VERSION_ACTUEL, versionDuFormat } from "./migrations.js"
+import { SimulationRecueSchema } from "./entrees-ipc.js"
 
 /** Ajoute à un fichier le numéro du format dans lequel il est écrit. */
 export function withFormatVersion<T extends object>(data: T): T & { formatVersion: number } {
@@ -53,6 +54,20 @@ export function lireLesSauvegardes(contenu: string): SlotsNettoyes & { brutes: u
  */
 export function sauvegardesAEcrire(slots: SaveSlot[]): SaveSlot[] {
   return sanitizeSlots(slots.map(withFormatVersion))
+}
+
+/**
+ * Session reçue de l'interface, nettoyée avant écriture comme elle le sera à la lecture : un élément invalide est
+ * écarté, le reste est gardé. `null` si elle n'a rien d'une session (ni acteurs, ni relations, ni années) ou si elle
+ * serait refusée à la lecture : elle n'est pas écrite, et le fichier précédent reste tel quel.
+ */
+export function sessionAEcrire(session: unknown): SessionState | null {
+  if (!SimulationRecueSchema.safeParse(session).success) return null
+  try {
+    return nettoyerLaSession(withFormatVersion(session as object)).safeState
+  } catch {
+    return null
+  }
 }
 
 /**
