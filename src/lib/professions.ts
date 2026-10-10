@@ -3,12 +3,13 @@
 // l'accompagne (voir l'ADR 015). Les professions, leur caisse et leurs taux viennent des règles de l'année.
 
 import { euros, pourcent } from "@/backend/logic/format"
-import { caisseDe, LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE, professionDe } from "@/backend/logic/professions"
+import { caisseDe, PROFESSION_NON_REGLEMENTEE, professionDe } from "@/backend/logic/professions"
 import type { ReglesFiscales } from "@/backend/logic/regles"
 import { REGIME_DU_DIRIGEANT } from "@/backend/logic/statuts"
 import type { ActivityResult, CaisseLiberale, Company, DetailCotisationsTNS, MicroEntreprise, ProfessionDeLActivite } from "@/types"
 
-export { LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE }
+export { LIBELLE_NON_REGLEMENTEE } from "@/backend/logic/professions"
+export { PROFESSION_NON_REGLEMENTEE }
 
 /** Un groupe de la liste : son titre et ses professions, dans l'ordre des règles. */
 export interface GroupeDeProfessions {

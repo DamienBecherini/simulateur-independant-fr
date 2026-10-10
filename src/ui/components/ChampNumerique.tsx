@@ -35,7 +35,7 @@ export function ChampNumerique({ className, classNameChamp, pas = 1, quoi, step,
   const pousser = (sens: 1 | -1, bouton: HTMLButtonElement) => {
     const champ = bouton.closest("[data-champ-nombre]")?.querySelector("input")
     if (!champ || champ.disabled || champ.readOnly) return
-    saisir(champ, valeurApresUnPas(parseFloat(champ.value), pasEffectif, sens, min === undefined ? undefined : Number(min), max === undefined ? undefined : Number(max)))
+    saisir(champ, valeurApresUnPas(Number.parseFloat(champ.value), pasEffectif, sens, min === undefined ? undefined : Number(min), max === undefined ? undefined : Number(max)))
   }
   const bouton = "flex size-6 items-center justify-center rounded text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 pointer-coarse:hidden print:hidden"
   return (

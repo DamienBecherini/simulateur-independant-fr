@@ -128,7 +128,7 @@ export async function appelerOutil(dossier: string, nom: string, argumentsDeLApp
 export function creerServeurMcp({ dossier, version, maintenant }: OptionsDuServeur): Server {
   const serveur = new Server({ name: "simulateur-independant-fr", title: "Simulateur Indépendant FR", version }, { capabilities: { tools: {} }, instructions: INSTRUCTIONS })
   const outils = outilsPublies()
-  serveur.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: outils }))
+  serveur.setRequestHandler(ListToolsRequestSchema, () => ({ tools: outils }))
   serveur.setRequestHandler(CallToolRequestSchema, async requete => appelerOutil(dossier, requete.params.name, requete.params.arguments, maintenant))
   return serveur
 }

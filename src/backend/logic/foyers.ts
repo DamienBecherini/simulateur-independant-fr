@@ -17,7 +17,7 @@ export interface Foyer {
 
 /** Structure union-find : regroupe les personnes reliées, de proche en proche, par une relation de couple. */
 class UnionFind {
-  private parent = new Map<string, string>()
+  private readonly parent = new Map<string, string>()
 
   constructor(ids: string[]) {
     for (const id of ids) this.parent.set(id, id)

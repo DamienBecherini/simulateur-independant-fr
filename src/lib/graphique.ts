@@ -1,15 +1,31 @@
 // src/lib/graphique.ts
 // Petits outils des graphiques en SVG : graduations lisibles et passage des valeurs aux pixels.
 
-/** Graduations « rondes » (1, 2 ou 5 fois une puissance de 10) qui couvrent l'intervalle, environ `nombre` d'entre elles. */
+/**
+ * Garde-fou : au-delà, la liste s'arrête. Avec un intervalle normal il y a environ `nombre` graduations ; ce plafond ne
+ * sert que si le pas ne fait plus avancer les valeurs (pas trop petit devant les bornes, à la limite de la précision).
+ */
+export const MAXIMUM_DE_GRADUATIONS = 1000
+
+/**
+ * Graduations « rondes » (1, 2 ou 5 fois une puissance de 10) qui couvrent l'intervalle, environ `nombre` d'entre elles.
+ * Un intervalle vide, inversé ou non fini (`NaN`, `Infinity`) ne donne que `min`.
+ */
 export function graduations(min: number, max: number, nombre = 5): number[] {
-  if (!(max > min)) return [min]
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return [min]
   const brut = (max - min) / Math.max(1, nombre)
   const puissance = 10 ** Math.floor(Math.log10(brut))
   const pas = [1, 2, 5, 10].map(m => m * puissance).find(p => p >= brut) ?? 10 * puissance
-  const premier = Math.floor(min / pas) * pas
-  const valeurs: number[] = []
-  for (let v = premier; valeurs.length === 0 || valeurs[valeurs.length - 1] < max; v += pas) valeurs.push(Math.round(v * 1e6) / 1e6)
+  if (!Number.isFinite(pas) || pas <= 0) return [min]
+  const arrondie = (v: number) => Math.round(v * 1e6) / 1e6
+  let v = Math.floor(min / pas) * pas
+  let derniere = arrondie(v)
+  const valeurs = [derniere]
+  while (derniere < max && valeurs.length < MAXIMUM_DE_GRADUATIONS) {
+    v += pas
+    derniere = arrondie(v)
+    valeurs.push(derniere)
+  }
   return valeurs
 }
 

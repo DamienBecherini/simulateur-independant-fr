@@ -84,7 +84,7 @@ function ChampPartConventionnee<T extends Company | MicroEntreprise>({ activite,
           placeholder="100"
           value={activite.partConventionnee === undefined ? "" : Math.round(activite.partConventionnee * 100)}
           onChange={e => {
-            const valeur = parseFloat(e.target.value)
+            const valeur = Number.parseFloat(e.target.value)
             onChange({ ...activite, partConventionnee: Number.isFinite(valeur) ? Math.min(100, Math.max(0, valeur)) / 100 : undefined })
           }}
         />

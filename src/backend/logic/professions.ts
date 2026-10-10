@@ -29,7 +29,7 @@ export function professionDe(activite: Pick<Company | MicroEntreprise, "professi
 
 /** La caisse lue dans un fichier de règles est une de celles que le simulateur calcule. */
 function estUneCaisseCalculee(caisse: string | null | undefined): caisse is CaisseLiberale {
-  return CAISSES_LIBERALES.some(connue => connue === caisse)
+  return typeof caisse === "string" && (CAISSES_LIBERALES as readonly string[]).includes(caisse)
 }
 
 /** La caisse d'une profession, si le simulateur la calcule ; `null` pour « autre profession réglementée ». */

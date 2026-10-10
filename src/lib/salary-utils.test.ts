@@ -65,9 +65,14 @@ describe("parsePercent", () => {
   })
 
   it("refuse une saisie vide, non numérique ou hors de ]0 ; 100]", () => {
-    for (const saisie of ["", "abc", "0", "-5", "101", "7 8 a"]) {
+    for (const saisie of ["", "abc", "0", "-5", "101", "7 8 a", ".", "7..8"]) {
       expect(parsePercent(saisie)).toBeNull()
     }
+  })
+
+  it("lit en temps linéaire une saisie très longue (expression sans retour arrière)", () => {
+    expect(parsePercent(`${"7".repeat(50_000)}x`)).toBeNull()
+    expect(parsePercent(`${"0".repeat(50_000)}78`)).toBeCloseTo(0.78)
   })
 })
 

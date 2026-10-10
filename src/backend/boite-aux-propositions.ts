@@ -84,8 +84,9 @@ export async function ouvrirLaBoiteAuxPropositions(dossierDeDonnees: string, { s
 
   const examiner = async () => {
     const noms = new Set(await readdir(boite).catch(() => [] as string[]))
-    for (const id of [...propositions.keys()]) if (!noms.has(id)) propositions.delete(id)
-    for (const id of [...ecartees]) if (!noms.has(id)) ecartees.delete(id)
+    // Retirer l'élément courant pendant le parcours d'une Map ou d'un Set est sûr : pas de copie nécessaire.
+    for (const id of propositions.keys()) if (!noms.has(id)) propositions.delete(id)
+    for (const id of ecartees) if (!noms.has(id)) ecartees.delete(id)
     for (const id of noms) if (!propositions.has(id) && !ecartees.has(id) && NOM_DE_PROPOSITION.test(id)) await examinerUnFichier(id)
     publier()
   }

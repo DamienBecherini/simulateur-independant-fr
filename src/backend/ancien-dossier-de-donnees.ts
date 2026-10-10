@@ -6,8 +6,8 @@
  */
 
 import { app } from "electron"
-import path from "path"
-import { copyFileSync, existsSync, mkdirSync } from "fs"
+import path from "node:path"
+import { copyFileSync, existsSync, mkdirSync } from "node:fs"
 
 /** Fichiers de données conservés d'une version à l'autre. */
 const DATA_FILES = ["sessionState.json", "simulationSlots.json", "userPreferences.json"]

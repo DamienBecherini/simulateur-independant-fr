@@ -68,7 +68,11 @@ export function mettreDeCote(cle: Cle, brut: string, maintenant = new Date()): s
   try {
     const base = `${cle}.illisible-${horodatage(maintenant)}`
     let copie = base
-    for (let rang = 2; window.localStorage.getItem(copie) !== null; rang += 1) copie = `${base}-${rang}`
+    let rang = 2
+    while (window.localStorage.getItem(copie) !== null) {
+      copie = `${base}-${rang}`
+      rang += 1
+    }
     window.localStorage.setItem(copie, brut)
     window.localStorage.removeItem(cle)
     return copie

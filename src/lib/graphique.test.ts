@@ -1,7 +1,7 @@
 // src/lib/graphique.test.ts
 
 import { describe, expect, it } from "vitest"
-import { echelle, graduations, indiceLePlusProche, montantCourt, positionInfoBulle } from "./graphique"
+import { echelle, graduations, indiceLePlusProche, MAXIMUM_DE_GRADUATIONS, montantCourt, positionInfoBulle } from "./graphique"
 
 describe("graduations", () => {
   it("choisit un pas rond qui couvre tout l'intervalle", () => {
@@ -16,6 +16,21 @@ describe("graduations", () => {
 
   it("renvoie la seule valeur d'un intervalle vide", () => {
     expect(graduations(5, 5)).toEqual([5])
+  })
+
+  it("s'arrête sur un intervalle inversé ou non fini, au lieu de boucler sans fin", () => {
+    expect(graduations(10, 0)).toEqual([10])
+    expect(graduations(0, Infinity)).toEqual([0])
+    expect(graduations(-Infinity, 0)).toEqual([-Infinity])
+    expect(graduations(0, Number.NaN)).toEqual([0])
+    expect(graduations(Number.NaN, 10)).toEqual([Number.NaN])
+  })
+
+  it("plafonne le nombre de graduations quand le pas ne fait plus avancer les valeurs", () => {
+    // À 10^17, deux nombres représentables sont espacés de 16 : un pas de 0,2 ne change plus la valeur.
+    const valeurs = graduations(1e17, 1e17 + 16, 100)
+    expect(valeurs.length).toBeGreaterThan(0)
+    expect(valeurs.length).toBeLessThanOrEqual(MAXIMUM_DE_GRADUATIONS)
   })
 })
 

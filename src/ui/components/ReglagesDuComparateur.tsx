@@ -92,7 +92,7 @@ function RemunerationSaisie({ remunerationNette, statut, plafond, onChange }: Re
       <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
       {/* Le champ, et le curseur avec son plafond dessous ; sur téléphone, le curseur passe sous le champ. */}
       <div className="flex flex-wrap items-start gap-x-4 gap-y-1">
-        <ChampNumerique id="comparateur-remuneration" className="mt-1 w-40" classNameChamp="bg-background text-right" min="0" step="1000" quoi="la rémunération" aria-describedby={note} value={apercu ?? remunerationNette} onChange={e => onChange(Math.max(0, parseFloat(e.target.value) || 0))} />
+        <ChampNumerique id="comparateur-remuneration" className="mt-1 w-40" classNameChamp="bg-background text-right" min="0" step="1000" quoi="la rémunération" aria-describedby={note} value={apercu ?? remunerationNette} onChange={e => onChange(Math.max(0, Number.parseFloat(e.target.value) || 0))} />
         {plafond !== null && plafond > 0 ? (
           <div className="w-full max-w-xs sm:w-72">
             <CurseurDeRemuneration valeur={remunerationNette} max={plafond} libelle="Régler la rémunération nette annuelle" decritPar={note} onApercu={setApercu} onValider={onChange} />
@@ -118,7 +118,7 @@ function RemunerationSaisie({ remunerationNette, statut, plafond, onChange }: Re
 function FraisFonctionnementTable({ frais, cfe, onChange }: { frais: FraisFonctionnement; cfe?: CFEDeLAnnee; onChange: (frais: FraisFonctionnement) => void }) {
   const postes = Object.keys(posteFraisLabels) as PosteFrais[]
   const total = (statut: StatutFrais) => postes.reduce((somme, poste) => somme + frais[statut][poste], 0)
-  const update = (statut: StatutFrais, poste: PosteFrais, value: string) => onChange({ ...frais, [statut]: { ...frais[statut], [poste]: Math.max(0, parseFloat(value) || 0) } })
+  const update = (statut: StatutFrais, poste: PosteFrais, value: string) => onChange({ ...frais, [statut]: { ...frais[statut], [poste]: Math.max(0, Number.parseFloat(value) || 0) } })
 
   return (
     <div className="text-slate-700 dark:text-slate-200">

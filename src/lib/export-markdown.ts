@@ -40,7 +40,9 @@ const pourcentage = (ratio: number) => `${(Math.round(ratio * 1000) / 10).toLoca
 
 /** Texte saisi par l'utilisateur, protégé pour qu'il ne casse ni un tableau ni la mise en forme. */
 export function echapper(texte: string): string {
-  return texte.replace(/\s*[\r\n]+\s*/g, " ").replace(/([\\`*_[\]<>|#])/g, "\\$1")
+  // Chaque suite d'espaces qui contient un retour à la ligne devient une espace (une seule expression `\s+`, sans retour
+  // arrière sur un texte très long), puis les caractères de Markdown sont protégés.
+  return texte.replace(/\s+/g, espaces => (/[\r\n]/.test(espaces) ? " " : espaces)).replace(/([\\`*_[\]<>|#])/g, String.raw`\$1`)
 }
 
 function tableau(entete: string[], lignes: string[][], alignesADroite: number[] = []): string {

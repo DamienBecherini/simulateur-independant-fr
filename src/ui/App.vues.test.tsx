@@ -131,7 +131,7 @@ describe("App : affichage « Trois vues »", () => {
     await renderApp()
     const longueur = window.history.length
     fireEvent.click(onglet(/situation/))
-    expect(window.history.length).toBe(longueur)
+    expect(window.history).toHaveLength(longueur)
     expect(window.location.hash).toBe("")
   })
 

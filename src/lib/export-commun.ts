@@ -22,10 +22,12 @@ export function slugifier(texte: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    // Chaque suite d'autres caractères devient un seul tiret : jamais deux tirets de suite, il suffit donc d'en retirer
+    // un au début ou à la fin (expressions sans quantificateur, linéaires sur un nom très long).
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/^-|-$/g, "")
     .slice(0, 60)
-    .replace(/-+$/, "")
+    .replace(/-$/, "")
 }
 
 /**

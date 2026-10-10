@@ -40,7 +40,7 @@ export function EntityItem({ entity, allEntities, relationships, onUpdate, onDel
   const nom = useNomSurPlace(entity, onUpdate)
   const parts = useChampSurPlace(entity.type === "person" ? entity.fiscalParts.toLocaleString("fr-FR") : "", saisie => {
     if (entity.type !== "person") return
-    const fiscalParts = parseFloat(saisie.replace(",", "."))
+    const fiscalParts = Number.parseFloat(saisie.replace(",", "."))
     if (fiscalParts > 0 && fiscalParts !== entity.fiscalParts) onUpdate({ ...entity, fiscalParts })
   })
 

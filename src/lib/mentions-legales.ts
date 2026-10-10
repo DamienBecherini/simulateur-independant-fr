@@ -68,7 +68,7 @@ export const RUBRIQUES: readonly Rubrique[] = [
       {
         liste: [
           ["dans la démo web, dans le stockage local de votre navigateur (localStorage) : la simulation en cours, vos sauvegardes, vos préférences et le thème choisi ;"],
-          ["dans l'application de bureau, dans un dossier de votre ordinateur : ", { code: "%APPDATA%\\simulateur-independant-fr" }, " sous Windows (la version du Microsoft Store range aussi des fichiers dans ", { code: "%LOCALAPPDATA%\\Packages" }, ", dans le dossier de l'application, que Windows supprime quand vous la désinstallez), ", { code: "~/Library/Application Support/simulateur-independant-fr" }, " sous macOS, ", { code: "~/.config/simulateur-independant-fr" }, " sous Linux."]
+          ["dans l'application de bureau, dans un dossier de votre ordinateur : ", { code: String.raw`%APPDATA%\simulateur-independant-fr` }, " sous Windows (la version du Microsoft Store range aussi des fichiers dans ", { code: String.raw`%LOCALAPPDATA%\Packages` }, ", dans le dossier de l'application, que Windows supprime quand vous la désinstallez), ", { code: "~/Library/Application Support/simulateur-independant-fr" }, " sous macOS, ", { code: "~/.config/simulateur-independant-fr" }, " sous Linux."]
         ]
       },
       { paragraphe: ["Le projet n'a pas de serveur : rien ne lui est envoyé automatiquement. Des données ne quittent votre appareil que si vous le décidez, en donnant votre avis :"] },

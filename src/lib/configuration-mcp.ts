@@ -49,7 +49,7 @@ export function infosDeLInstallation({ executable, serveurLivre, donnees, platef
 
 /** Où la version du Microsoft Store copie le serveur MCP : dans son dossier de données, sous Windows. */
 export function copieDuServeur(donnees: string): string {
-  return `${donnees}\\mcp\\serveur-mcp.mjs`
+  return String.raw`${donnees}\mcp\serveur-mcp.mjs`
 }
 
 /** Nom du serveur dans la configuration du client. */
@@ -67,7 +67,7 @@ export function configurationDuClient(infos: InfosDuServeurMcp): string {
 
 /** Où se trouve le fichier de configuration de Claude Desktop sur ce système ; `null` s'il n'y existe pas officiellement. */
 export function configurationDeClaudeDesktop(plateforme: string): string | null {
-  if (plateforme === "win32") return "%APPDATA%\\Claude\\claude_desktop_config.json"
+  if (plateforme === "win32") return String.raw`%APPDATA%\Claude\claude_desktop_config.json`
   if (plateforme === "darwin") return "~/Library/Application Support/Claude/claude_desktop_config.json"
   return null
 }

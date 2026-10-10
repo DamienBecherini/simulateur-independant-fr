@@ -95,11 +95,18 @@ export function libelleDesMois(mois: number[] | undefined): string {
   return enumerer([...mois].sort((a, b) => a - b).map(m => NOMS_DES_MOIS[m - 1]))
 }
 
+/** Une valeur changée, en texte : « oui », « non », « nouvelles valeurs » pour un objet (ou `null`), sinon la valeur. */
+function valeurChangee(valeur: unknown): string {
+  if (typeof valeur === "boolean") return valeur ? "oui" : "non"
+  if (typeof valeur === "object") return "nouvelles valeurs"
+  return String(valeur as string | number | bigint | symbol | undefined)
+}
+
 /** « mode → meilleurNet, opteVFL → oui ». */
 const changements = (valeurs: Record<string, unknown>) =>
   Object.entries(valeurs)
     .filter(([, v]) => v !== undefined)
-    .map(([cle, v]) => `${cle} → ${typeof v === "boolean" ? (v ? "oui" : "non") : typeof v === "object" ? "nouvelles valeurs" : String(v)}`)
+    .map(([cle, v]) => `${cle} → ${valeurChangee(v)}`)
     .join(", ")
 
 const eurosOuAbsent = (montant: number | undefined) => (montant === undefined ? undefined : euros(montant))

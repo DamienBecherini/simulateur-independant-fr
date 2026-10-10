@@ -193,13 +193,22 @@ export function systemeEtNavigateur(userAgent: string): { systeme: string; navig
     [/Edg\/(\d+)/, "Edge"],
     [/OPR\/(\d+)/, "Opera"],
     [/Firefox\/(\d+)/, "Firefox"],
-    [/Chrome\/(\d+)/, "Chrome"],
-    [/Version\/(\d+).*Safari/, "Safari"]
+    [/Chrome\/(\d+)/, "Chrome"]
   ]
   const systeme = systemes.find(([motif]) => motif.test(userAgent))?.[1] ?? "système inconnu"
   for (const [motif, nom] of navigateurs) {
     const trouve = motif.exec(userAgent)
     if (trouve) return { systeme, navigateur: `${nom} ${trouve[1]}` }
   }
-  return { systeme, navigateur: "navigateur inconnu" }
+  const safari = versionDeSafari(userAgent)
+  return { systeme, navigateur: safari === null ? "navigateur inconnu" : `Safari ${safari}` }
+}
+
+/**
+ * Version de Safari : « Version/17 », suivi plus loin de « Safari ». Sans `.*` dans l'expression, la lecture reste
+ * linéaire sur une identification très longue (pas de retour arrière).
+ */
+function versionDeSafari(userAgent: string): string | null {
+  const trouve = /Version\/(\d+)/.exec(userAgent)
+  return trouve && userAgent.includes("Safari", trouve.index + trouve[0].length) ? trouve[1] : null
 }

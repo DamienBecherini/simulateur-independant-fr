@@ -42,7 +42,7 @@ export function exportState(state: Pick<ExportableState, "entities" | "relations
  */
 export async function importState(): Promise<{ data: ExportableState; report: SanitizationReport } | null> {
   const result = await window.api.importState()
-  if (result && result.data && result.report) {
+  if (result?.data && result.report) {
     // On retourne l'objet complet { data, report } que le backend nous a donné.
     return {
       data: result.data,
@@ -88,7 +88,7 @@ export type EnregistrementDeLaSession =
 
 export function enregistrerLaSession(sauvegardes: SaveSlot[], session: SessionState, idChargee: string | null): EnregistrementDeLaSession {
   const chargee = idChargee ? sauvegardes.find(slot => slot.id === idChargee) : undefined
-  if (chargee && chargee.name === session.name) return { action: "mettre-a-jour", sauvegardes: avecLaSession(sauvegardes, chargee, session) }
+  if (chargee?.name === session.name) return { action: "mettre-a-jour", sauvegardes: avecLaSession(sauvegardes, chargee, session) }
   const homonyme = sauvegardes.find(slot => slot.name === session.name)
   if (homonyme) return { action: "confirmer-l-ecrasement", aEcraser: homonyme }
   const nouvelle = createNewSlotFromSession(session)
