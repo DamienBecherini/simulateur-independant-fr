@@ -1,6 +1,6 @@
 // src/ui/components/ColorSettingsModal.tsx
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import type { UserPreferences, FinancialFlow } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
@@ -28,12 +28,14 @@ export function ColorSettingsModal({ isOpen, onClose, preferences, onSave }: Col
   // avant de cliquer sur "Enregistrer". L'utilisateur peut ainsi annuler ses changements.
   const [localColors, setLocalColors] = useState<Record<string, string>>({})
 
-  // À l'ouverture, on initialise l'état local avec les couleurs actuelles (défaut + personnalisations).
-  useEffect(() => {
-    if (isOpen) {
-      setLocalColors({ ...DEFAULT_FLOW_COLORS, ...preferences.flowTypeColors })
-    }
-  }, [isOpen, preferences])
+  // À l'ouverture, on initialise l'état local avec les couleurs actuelles (défaut + personnalisations), pendant le rendu
+  // plutôt que dans un effet : `depart` retient les préférences d'où viennent les couleurs locales, `null` fenêtre fermée.
+  const [depart, setDepart] = useState<UserPreferences | null>(null)
+  const attendu = isOpen ? preferences : null
+  if (depart !== attendu) {
+    setDepart(attendu)
+    if (attendu) setLocalColors({ ...DEFAULT_FLOW_COLORS, ...attendu.flowTypeColors })
+  }
 
   // Met à jour une couleur dans l'état local lorsqu'elle est modifiée par l'utilisateur.
   const handleColorChange = (flowType: string, color: string) => {

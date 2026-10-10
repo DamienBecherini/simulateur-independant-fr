@@ -3,7 +3,7 @@
 // (deux poignées) et le curseur de la rémunération saisie (une poignée) partagent leur poignée, ici, ainsi que leur
 // réglage au clavier et leur glissement au pointeur (src/ui/curseur.ts).
 
-import { useRef, useState, type KeyboardEvent } from "react"
+import { useState, type KeyboardEvent } from "react"
 import { auPas, PAS_REMUNERATION } from "@/lib/repartition-benefice"
 import { cn } from "@/lib/utils"
 import { clavierDuCurseur, gestesDuCurseur, montantAuPointeur, type Glissement } from "../curseur"
@@ -66,7 +66,6 @@ interface CurseurDeRemunerationProps {
  * partage du bénéfice, sur une piste simple.
  */
 export function CurseurDeRemuneration({ valeur, max, libelle, decritPar, onApercu, onValider }: CurseurDeRemunerationProps) {
-  const piste = useRef<HTMLDivElement>(null)
   const [glissement, setGlissement] = useState<Glissement<"remuneration"> | null>(null)
   const montre = Math.min(max, glissement?.valeur ?? valeur)
   const glisser = (nouveau: Glissement<"remuneration"> | null) => {
@@ -79,12 +78,12 @@ export function CurseurDeRemuneration({ valeur, max, libelle, decritPar, onAperc
     onGlisser: glisser,
     onValider: ({ valeur: validee }) => onValider(validee),
     poigneeVisee: () => "remuneration",
-    valeurAuPointeur: (_, clientX) => auPas(montantAuPointeur(piste.current!, clientX, max), PAS_REMUNERATION, 0, max)
+    valeurAuPointeur: (_, e) => auPas(montantAuPointeur(e.currentTarget, e.clientX, max), PAS_REMUNERATION, 0, max)
   })
   const position = max > 0 ? montre / max : 0
   const auDela = glissement === null && valeur > max
   return (
-    <div ref={piste} className="relative h-11 cursor-pointer touch-none" {...gestes}>
+    <div className="relative h-11 cursor-pointer touch-none" {...gestes}>
       <div aria-hidden="true" className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-slate-300 dark:bg-slate-600" />
       <div aria-hidden="true" className="absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-slate-700 dark:bg-slate-300" style={{ width: `${position * 100}%` }} />
       <PoigneeDeCurseur

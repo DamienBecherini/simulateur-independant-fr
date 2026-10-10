@@ -78,6 +78,9 @@ export function useDefilementDeLaGrille(zone: RefObject<HTMLElement | null>, pre
 
   /** Fait défiler la zone jusqu'à la position calculée sur sa géométrie actuelle. */
   const defiler = useCallback(
+    // Le compilateur React (absent de la compilation) ne reconnaît pas `zone`, reçue en paramètre, comme une ref et lui
+    // demande `zone.current` en dépendance ; [zone] est juste : la ref est stable, son contenu est lu à l'appel.
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- faux positif, voir ci-dessus
     (calcul: (g: GeometrieDeLaGrille) => number, immediat = false) => {
       const element = zone.current
       const g = element && mesurerLaGrille(element)

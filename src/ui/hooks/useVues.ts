@@ -94,6 +94,9 @@ export function useVues(actif: boolean, nomDeLaSimulation: string): Vues | null 
     const restauration = window.history.scrollRestoration
     window.history.scrollRestoration = "manual"
     const initiale = destinationActuelle()
+    // L'adresse est un système extérieur, lu à l'arrivée dans l'affichage (actif) en même temps que l'abonnement à ses
+    // changements ; l'arrivée retenue déclenche ensuite, avant l'affichage, le placement dans la page (useLayoutEffect).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronisation voulue avec l'adresse, voir ci-dessus
     if (initiale) afficher(initiale.vue, { detail: initiale.detail, enHaut: false, focus: false })
 
     const suivre = () => {

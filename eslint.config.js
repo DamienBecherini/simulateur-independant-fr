@@ -1,6 +1,7 @@
 // eslint.config.js
 
 import js from "@eslint/js"
+import { defineConfig } from "eslint/config"
 import globals from "globals"
 import reactHooks from "eslint-plugin-react-hooks"
 import reactRefresh from "eslint-plugin-react-refresh"
@@ -12,21 +13,21 @@ import tseslint from "typescript-eslint"
  */
 const interdire = (dossiers, message) => ({ regex: `^(@/|(\\.\\./)+)(${dossiers.join("|")})(/|$)`, message })
 
-export default tseslint.config(
+export default defineConfig(
   { ignores: ["dist", "dist-react", "dist-web", "dist-electron", "coverage", "reports", ".stryker-tmp", "**/*.d.ts"] },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    // Préréglage de react-hooks 7 : règles des hooks et règles du compilateur React (purity, refs, set-state-in-effect,
+    // immutability…), toutes gardées ; les exceptions sont locales et commentées.
+    extends: [js.configs.recommended, tseslint.configs.recommended, reactHooks.configs.flat.recommended],
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser
     },
     plugins: {
-      "react-hooks": reactHooks,
       "react-refresh": reactRefresh
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }]
     },
     settings: {

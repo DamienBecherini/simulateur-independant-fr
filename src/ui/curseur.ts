@@ -44,7 +44,8 @@ interface GestesProps<P extends string> {
   onValider: (glissement: Glissement<P>) => void
   /** La poignée saisie, ou la plus proche du point où l'on appuie sur la piste. */
   poigneeVisee: (e: PointerEvent<HTMLDivElement>) => P
-  valeurAuPointeur: (poignee: P, clientX: number) => number
+  /** Valeur au point du pointeur ; la piste est `e.currentTarget`, l'élément où les gestes sont étalés. */
+  valeurAuPointeur: (poignee: P, e: PointerEvent<HTMLDivElement>) => number
 }
 
 /**
@@ -60,10 +61,10 @@ export function gestesDuCurseur<P extends string>({ actif, glissement, onGlisser
       e.currentTarget.setPointerCapture?.(e.pointerId)
       const poignee = poigneeVisee(e)
       ;(e.currentTarget.querySelector<HTMLElement>(`[data-poignee="${poignee}"]`) ?? e.currentTarget).focus()
-      onGlisser({ poignee, valeur: valeurAuPointeur(poignee, e.clientX) })
+      onGlisser({ poignee, valeur: valeurAuPointeur(poignee, e) })
     },
     onPointerMove: (e: PointerEvent<HTMLDivElement>) => {
-      if (glissement) onGlisser({ poignee: glissement.poignee, valeur: valeurAuPointeur(glissement.poignee, e.clientX) })
+      if (glissement) onGlisser({ poignee: glissement.poignee, valeur: valeurAuPointeur(glissement.poignee, e) })
     },
     onPointerUp: () => {
       if (glissement) onValider(glissement)
