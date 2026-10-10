@@ -123,6 +123,27 @@ describe("RemunerationOptimizer", () => {
     expect(dessin()).toHaveAttribute("width", largeurEcran)
   })
 
+  it("suit une impression annoncée dès l'apparition de la courbe", async () => {
+    vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
+    const { container } = render(<Section onAppliquer={vi.fn()} />)
+    // L'impression est annoncée au moment même où la courbe entre dans le document, avant que React n'ait exécuté les
+    // effets différés (useEffect) : la courbe doit déjà l'écouter.
+    const largeur = await new Promise<string | null>(resolve => {
+      const observateur = new MutationObserver(() => {
+        const dessin = container.querySelector("[role=group][aria-label^='Net du foyer'] svg")
+        if (!dessin) return
+        observateur.disconnect()
+        window.dispatchEvent(new Event("beforeprint"))
+        resolve(dessin.getAttribute("width"))
+      })
+      observateur.observe(container, { childList: true, subtree: true })
+    })
+    act(() => {
+      window.dispatchEvent(new Event("afterprint"))
+    })
+    expect(largeur).toBe("660")
+  })
+
   it("donne les valeurs de la courbe dans un tableau", async () => {
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
     afficher()

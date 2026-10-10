@@ -2,7 +2,7 @@
 // Arbitrage rémunération / dividendes : courbe du net du foyer selon la rémunération du dirigeant, en SASU ou en EURL,
 // avec la meilleure rémunération et la meilleure parmi celles qui valident 4 trimestres de retraite.
 
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
 import { flushSync } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { echelle, graduations, indiceLePlusProche, montantCourt, positionInfoBulle } from "@/lib/graphique"
@@ -38,7 +38,9 @@ function useLargeur(defaut: number) {
     observateur.observe(element)
     return () => observateur.disconnect()
   }, [])
-  useEffect(() => {
+  // Branché pendant l'affichage même (et non après, comme un useEffect) : une impression ou un export demandé dès
+  // l'apparition de la courbe la trouve déjà prête à se redessiner.
+  useLayoutEffect(() => {
     const avant = () => flushSync(() => setImpression(true))
     const apres = () => setImpression(false)
     window.addEventListener("beforeprint", avant)
