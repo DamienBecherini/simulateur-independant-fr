@@ -1,7 +1,7 @@
 // src/lib/salary-utils.ts
 
-/** Part du brut qui reste en net, proposée par défaut (salarié non cadre du secteur privé, ordre de grandeur). */
-export const DEFAULT_NET_RATIO = 0.78
+import { brutPourUnNet, calculerCotisationsSalarie } from "@/backend/logic/cotisationsSalarie"
+import type { ReglesFiscales } from "@/backend/logic/regles"
 
 const roundToCents = (amount: number) => Math.round(amount * 100) / 100
 
@@ -11,6 +11,26 @@ export function netFromGross(gross: number, ratio: number): number {
 
 export function grossFromNet(net: number, ratio: number): number {
   return roundToCents(net / ratio)
+}
+
+/*
+ * Brut et net d'un salaire mensuel saisi sans pourcentage : calculés avec les cotisations salariales du régime général
+ * de l'année (cotisationsSalarie.ts), comme le moteur le fait pour un salarié d'une activité de la simulation.
+ * Approximation : le salaire du mois est supposé le même les douze mois de l'année (les tranches des cotisations et de
+ * la CSG sont annuelles, en part du plafond de la sécurité sociale), et la personne est un salarié non cadre du secteur
+ * privé, sans mutuelle, prévoyance ni épargne salariale d'entreprise. Un bulletin de paie réel peut donc s'en écarter
+ * de quelques pour cent ; l'utilisateur saisit alors son brut ou son pourcentage.
+ */
+
+/** Brut mensuel d'un salarié pour un net mensuel (avant impôt sur le revenu), avec les cotisations de l'année. */
+export function brutCalcule(netMensuel: number, regles: ReglesFiscales): number {
+  return roundToCents(brutPourUnNet(netMensuel * 12, "salarie", regles.regimeGeneral) / 12)
+}
+
+/** Net mensuel d'un salarié (avant impôt sur le revenu) pour un brut mensuel, avec les cotisations de l'année. */
+export function netCalcule(brutMensuel: number, regles: ReglesFiscales): number {
+  if (brutMensuel <= 0) return 0
+  return roundToCents(calculerCotisationsSalarie(brutMensuel * 12, "salarie", regles.regimeGeneral).net / 12)
 }
 
 /** Ratio net / brut d'un salaire, ou `null` si le brut n'est pas renseigné. */

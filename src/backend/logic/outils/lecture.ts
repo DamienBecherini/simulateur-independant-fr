@@ -162,7 +162,7 @@ function reglesCles(r: ReglesFiscales): z.infer<typeof RegleSchema>[] {
   const micro = r.microEntreprise
   return [
     { sujet: "Impôt sur le revenu : barème par part (revenu imposable par part, taux marginal)", valeurs: { tranches: r.IR.bareme.map(t => ({ jusqua: t.trancheJusqua, taux: t.taux })) }, source: source(r.IR) },
-    { sujet: "Impôt sur le revenu : déduction forfaitaire de 10 % sur les salaires", valeurs: valeurs(r.IR.abattementSalaires), source: source(r.IR.abattementSalaires) },
+    { sujet: "Impôt sur le revenu : déduction forfaitaire sur les salaires (taux, minimum et maximum)", valeurs: valeurs(r.IR.abattementSalaires), source: source(r.IR.abattementSalaires) },
     { sujet: "Impôt sur le revenu : parts par enfant et plafonnement du quotient familial", valeurs: { ...valeurs(r.IR.partsParEnfant), avantageMaxParDemiPart: r.IR.plafonnementQuotientFamilial.avantageMaxParDemiPart }, source: source(r.IR.partsParEnfant) },
     { sujet: "Plafond annuel de la sécurité sociale (PASS)", valeurs: { montant: r.regimeGeneral.plafondSecuriteSociale }, source: source(r.regimeGeneral) },
     { sujet: "Retraite : revenu soumis à cotisations qui valide un trimestre", valeurs: { montant: r.protectionSociale.revenuParTrimestre }, source: null },

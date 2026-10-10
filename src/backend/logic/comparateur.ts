@@ -1,5 +1,6 @@
 // src/backend/logic/comparateur.ts
 
+import { CAPITAL_SOCIAL_PAR_DEFAUT } from "../../types.js"
 import type { StatutFrais, FraisFonctionnement, Company, ComparaisonCouple, ComparaisonOptions, ComparaisonResult, FinancialFlow, MicroEntreprise, OptimisationRemuneration, Relationship, RemunerationOptimale, ScenarioStatut, DonneesDeLAnnee, SimulationReport, StatutCompare, StatutSociete } from "../../types.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import type { ReglesFiscales } from "./regles.js"
@@ -106,7 +107,7 @@ function entiteCible(source: Activite, statut: StatutCompare): Activite {
     const micro = source.type === "micro-entreprise" ? source : undefined
     return { ...commun, type: "micro-entreprise", beneficieACRE: micro?.beneficieACRE ?? false, opteVFL: statut === "micro-vfl", ...(micro?.rfrN2 !== undefined ? { rfrN2: micro.rfrN2 } : {}) }
   }
-  const capitalSource = source.type === "company" && source.legalStatus !== "EI" ? source.capitalSocial : 1000
+  const capitalSource = source.type === "company" && source.legalStatus !== "EI" ? source.capitalSocial : CAPITAL_SOCIAL_PAR_DEFAUT
   return { ...commun, type: "company", legalStatus: statut, capitalSocial: statut === "EI" ? 0 : capitalSource, ...reservesQuiSuivent(source, statut) }
 }
 

@@ -41,10 +41,16 @@ function personDe(report: SimulationReport, id: string) {
 const foyerDe = (report: SimulationReport, id: string) => report.foyers.find(f => f.personIds.includes(id))!
 
 describe("frais réels sur les salaires", () => {
+  it("donne avec le résultat le taux de la déduction forfaitaire des règles de l'année, pour les textes qui la nomment", () => {
+    const regles = { ...reglesDeTest, IR: { ...reglesDeTest.IR, abattementSalaires: { ...reglesDeTest.IR.abattementSalaires, taux: 0.12 } } }
+    const report = runMetaSimulation(session([avecFrais("alice", trajets20km)], [], [["alice", "salary", 30000]]), regles)
+    expect(personDe(report, "alice").fraisProfessionnels).toMatchObject({ tauxDeductionForfaitaire: 0.12, deductionForfaitaire: 3600 })
+  })
+
   it("retient les frais réels quand ils dépassent la déduction de 10 %", () => {
     const report = simuler([avecFrais("alice", trajets20km)], [], [["alice", "salary", 30000]])
 
-    expect(personDe(report, "alice").fraisProfessionnels).toEqual({ revenusSalariaux: 30000, deductionForfaitaire: 3000, fraisReels: 4200, fraisDeTrajet: 4200, distanceRetenue: 8000, nombreDeTrajets: 1, voitures: [{ puissanceFiscale: "5", electrique: false, distance: 8000, montant: 4200 }], autresFrais: 0, retenue: "reels", deduction: 4200 })
+    expect(personDe(report, "alice").fraisProfessionnels).toEqual({ revenusSalariaux: 30000, tauxDeductionForfaitaire: 0.1, deductionForfaitaire: 3000, fraisReels: 4200, fraisDeTrajet: 4200, distanceRetenue: 8000, nombreDeTrajets: 1, voitures: [{ puissanceFiscale: "5", electrique: false, distance: 8000, montant: 4200 }], autresFrais: 0, retenue: "reels", deduction: 4200 })
     // Imposable : 30 000 - 4 200 = 25 800 € ; impôt 1 580 €, décote 800 - 790 = 10 €, soit 1 570 €.
     expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 25800, impotSurLeRevenu: 1570 })
   })
@@ -165,7 +171,7 @@ describe("frais réels sur les salaires", () => {
       // 6 800 km en 5 CV : 6 800 x 0,4 + 1 000 = 3 720 €, et non 4 800 x 0,6 + 2 000 x 0,6 = 4 080 €.
       const report = simuler([avecTrajets("alice", [a, b])], [], salaires)
 
-      expect(personDe(report, "alice").fraisProfessionnels).toEqual({ revenusSalariaux: 30000, deductionForfaitaire: 3000, fraisReels: 3720, fraisDeTrajet: 3720, distanceRetenue: 6800, nombreDeTrajets: 2, voitures: [{ puissanceFiscale: "5", electrique: false, distance: 6800, montant: 3720 }], autresFrais: 0, retenue: "reels", deduction: 3720 })
+      expect(personDe(report, "alice").fraisProfessionnels).toEqual({ revenusSalariaux: 30000, tauxDeductionForfaitaire: 0.1, deductionForfaitaire: 3000, fraisReels: 3720, fraisDeTrajet: 3720, distanceRetenue: 6800, nombreDeTrajets: 2, voitures: [{ puissanceFiscale: "5", electrique: false, distance: 6800, montant: 3720 }], autresFrais: 0, retenue: "reels", deduction: 3720 })
     })
 
     it("applique le barème à chaque voiture, reconnue à sa puissance et à sa motorisation", () => {

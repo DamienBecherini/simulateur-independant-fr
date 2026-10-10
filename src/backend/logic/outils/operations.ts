@@ -4,7 +4,7 @@
 // proposition, avec un message qui dit quelle opération et pourquoi.
 
 import { z } from "zod"
-import { grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
 import { NOMBRE_MAX_ANNEES } from "../annees.js"
 import { professionDe, professionsConnues } from "../professions.js"
 import { ANNEE_COURANTE, reglesDesAnneesConnues } from "../regles.js"
@@ -150,8 +150,8 @@ function ajouterActeur(c: Chantier, op: OperationDe<"ajouter_acteur">): void {
   const acteurs: Record<GenreDActeur, () => Entity> = {
     personne: () => ({ type: "person", fiscalParts: 1, ...commun }) as Entity,
     "micro-entreprise": () => ({ type: "micro-entreprise", beneficieACRE: false, opteVFL: false, ...commun }) as Entity,
-    SASU: () => ({ type: "company", legalStatus: "SASU", capitalSocial: 1000, ...commun }) as Entity,
-    EURL: () => ({ type: "company", legalStatus: "EURL", capitalSocial: 1000, ...commun }) as Entity,
+    SASU: () => ({ type: "company", legalStatus: "SASU", capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT, ...commun }) as Entity,
+    EURL: () => ({ type: "company", legalStatus: "EURL", capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT, ...commun }) as Entity,
     EI: () => ({ type: "company", legalStatus: "EI", capitalSocial: 0, ...commun }) as Entity
   }
   const nouvel = acteurs[op.genre]()

@@ -43,6 +43,6 @@ export function calculerEURL(entrees: EntreesEURL, regles: ReglesFiscales, caiss
     cotisationsSurDividendes,
     cotisationsSociales: cotisationsTNS.total,
     cotisationsTNS,
-    warnings: [...resultat.warnings, ...avertissementCotisationsMinimales(cotisationsTNS, "du gérant")]
+    warnings: [...resultat.warnings, ...avertissementCotisationsMinimales(cotisationsTNS, "du gérant", regles, caisse)]
   }
 }

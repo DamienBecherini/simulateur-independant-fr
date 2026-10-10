@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { formatAmount, parseAmount } from "@/lib/amount-utils"
 import { estLibelleParDefaut, libelleDuType, isOutgoingFlowType, type FlowType } from "@/lib/flow-constants"
-import { DEFAULT_NET_RATIO, formatPercent, grossFromNet, netFromGross, netRatio, parsePercent } from "@/lib/salary-utils"
+import { formatPercent, grossFromNet, netCalcule, netFromGross, netRatio, parsePercent } from "@/lib/salary-utils"
+import type { ReglesFiscales } from "@/backend/logic/regles"
 import { cn } from "@/lib/utils"
 import { CopyPlus, GripVertical, Trash2 } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
@@ -31,9 +32,11 @@ interface FlowItemProps {
   onTypeUsed: (type: FlowType) => void
   /** Acteur qui porte le flux, pour les libellés qui en dépendent. */
   typeActeur?: Entity["type"]
+  /** Règles de l'année affichée : leurs cotisations salariales donnent le net d'un brut saisi seul. */
+  regles: ReglesFiscales
 }
 
-export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, onTypeUsed, typeActeur }: FlowItemProps) {
+export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, onTypeUsed, typeActeur, regles }: FlowItemProps) {
   // Hook de la bibliothèque dnd-kit pour rendre l'élément "triable" (sortable).
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: flow.id })
 
@@ -84,7 +87,8 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
     onUpdate(flow.id, flow.grossAmount !== undefined && amount > flow.grossAmount ? { amount, grossAmount: undefined } : { amount })
   }
 
-  // Brut saisi : avec un net déjà renseigné, le pourcentage en découle ; sans net, celui-ci est calculé au ratio par défaut.
+  // Brut saisi : avec un net déjà renseigné, le pourcentage en découle ; sans net, celui-ci est calculé avec les
+  // cotisations salariales de l'année.
   const commitGross = () => {
     if (grossDraft === null) return
     setGrossDraft(null)
@@ -94,7 +98,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
     }
     const gross = parseAmount(grossDraft)
     if (gross === null || gross === flow.grossAmount) return
-    if (flow.amount === 0) onUpdate(flow.id, { grossAmount: gross, amount: netFromGross(gross, DEFAULT_NET_RATIO) })
+    if (flow.amount === 0) onUpdate(flow.id, { grossAmount: gross, amount: netCalcule(gross, regles) })
     else if (gross >= flow.amount) onUpdate(flow.id, { grossAmount: gross })
   }
 
@@ -158,7 +162,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
             className="w-16 shrink-0 bg-background text-right font-mono"
             aria-label="Part du net dans le brut, en pourcentage"
             title="Part du net dans le brut. Saisir un pourcentage calcule le montant manquant."
-            placeholder={`${formatPercent(DEFAULT_NET_RATIO)} %`}
+            placeholder="%"
             inputMode="decimal"
             value={ratioDraft ?? (ratio !== null ? `${formatPercent(ratio)} %` : "")}
             data-editing={ratioDraft !== null}

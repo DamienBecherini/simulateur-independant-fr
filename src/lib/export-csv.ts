@@ -4,7 +4,7 @@
 
 import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { documentCsv, montant, type CelluleCsv } from "./csv"
-import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
+import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
 import { libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
 import { libelleDeLaProfession, lignesDeLaCaisse, statutEtProfession } from "./professions"
@@ -98,7 +98,9 @@ function lignesDesDeplacements(report: SimulationReport): Ligne[] {
 /** Frais professionnels des personnes qui ont saisi des frais réels, puis leurs trajets au barème, voiture par voiture. */
 function lignesDesFraisProfessionnels(report: SimulationReport): Ligne[] {
   const personnes = fraisProfessionnelsDesPersonnes(report)
-  const entete: Ligne = ["Frais professionnels", "Revenus imposés comme des salaires", "Déduction de 10 %", "Frais réels", "Retenue", "Montant déduit", "Trajets domicile-travail", "Distance retenue (km)", "Frais de trajet", "Autres frais"]
+  if (personnes.length === 0) return []
+  // Toutes les personnes d'un rapport ont les règles de la même année : la première donne le taux de l'en-tête.
+  const entete: Ligne = ["Frais professionnels", "Revenus imposés comme des salaires", libelleDeduction(personnes[0].frais), "Frais réels", "Retenue", "Montant déduit", "Trajets domicile-travail", "Distance retenue (km)", "Frais de trajet", "Autres frais"]
   const lignes = personnes.map(({ name, frais: f }): Ligne => [name, montant(f.revenusSalariaux), montant(f.deductionForfaitaire), montant(f.fraisReels), libelleRetenue(f), montant(f.deduction), f.nombreDeTrajets, f.distanceRetenue, montant(f.fraisDeTrajet), montant(f.autresFrais)])
   const voitures = personnes.flatMap(({ name, frais }) => frais.voitures.map((v): Ligne => [name, libelleVoiture(v), v.distance, montant(v.montant)]))
   return [...tableauFacultatif(entete, lignes), ...tableauFacultatif(["Voiture des trajets", "Puissance", "Distance retenue (km)", "Montant au barème"], voitures)]

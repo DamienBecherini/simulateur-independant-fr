@@ -1,7 +1,9 @@
 // src/backend/logic/migrations.test.ts
 
 import { describe, expect, it } from "vitest"
+import { CAPITAL_SOCIAL_PAR_DEFAUT } from "../../types.js"
 import { sanitizeSlots, sanitizeStateAndFillDefaults } from "./data-sanitizer.js"
+import { euros } from "./format.js"
 import { ANNEE_DES_SESSIONS_D_UNE_ANNEE, FORMAT_VERSION_ACTUEL, migrerVersFormatActuel, versionDuFormat } from "./migrations.js"
 
 const avatar = { type: "initials", value: "AB", color: "#3b82f6" }
@@ -104,7 +106,7 @@ describe("migrerVersFormatActuel", () => {
       const notes = notesV1V2(ancienneSession({ entities: [eurl] }))
 
       expect(notes).toHaveLength(2)
-      expect(notes[1]).toContain("capital social des EURL")
+      expect(notes[1]).toContain(`capital social des EURL est désormais pris en compte (${euros(CAPITAL_SOCIAL_PAR_DEFAUT)} par défaut)`)
     })
 
     it("reste défensive face à des listes absentes ou malformées", () => {

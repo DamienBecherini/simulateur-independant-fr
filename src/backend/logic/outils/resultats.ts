@@ -4,6 +4,7 @@
 
 import { z } from "zod"
 import type { ActivityResult, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, FoyerFiscalResult, PersonResult, ReservesDeLaSociete, SessionState, SimulationReport } from "../../../types.js"
+import { pourcent } from "../format.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
 import { anneeDeLaSession, arrondir, ErreurOutil, genreDe, nomDe, trouverActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema } from "./limites.js"
@@ -221,7 +222,7 @@ function expliquerPersonne(session: SessionState, rapport: SimulationReport, p: 
   const d = p.detail
   const revenus = ligne("Revenus de l'année, nets de cotisations", p.revenusDirects + p.revenusActivites, [composante("Salaires", d.salaires), composante("Allocations chômage", d.allocationsChomage), composante("Autres revenus", d.autresRevenus), composante("Rémunérations de dirigeant", d.remunerationsDirigeant), composante("Dividendes", d.dividendes), composante("Bénéfices", d.benefices)])
   const f = p.fraisProfessionnels
-  const frais = f ? [ligne(`Frais professionnels retenus (${f.retenue === "reels" ? "frais réels" : "déduction forfaitaire de 10 %"})`, f.deduction, [composante("Déduction forfaitaire", f.deductionForfaitaire), composante("Frais réels", f.fraisReels), composante("dont trajets domicile-travail", f.fraisDeTrajet)])] : []
+  const frais = f ? [ligne(`Frais professionnels retenus (${f.retenue === "reels" ? "frais réels" : `déduction forfaitaire de ${pourcent(f.tauxDeductionForfaitaire)}`})`, f.deduction, [composante("Déduction forfaitaire", f.deductionForfaitaire), composante("Frais réels", f.fraisReels), composante("dont trajets domicile-travail", f.fraisDeTrajet)])] : []
   const foyer = rapport.foyers.find(fo => fo.personIds.includes(p.entityId))
   const lignesFoyer = foyer ? [ligne(`Foyer fiscal (${foyer.personIds.map(id => nomDe(session, id)).join(", ")}, ${foyer.totalParts} ${foyer.totalParts > 1 ? "parts" : "part"}) : revenu imposable`, foyer.revenuImposableGlobal), ligne("Foyer : impôt sur le revenu", foyer.impotSurLeRevenu), ligne("Foyer : prélèvements sociaux", foyer.prelevementsSociaux), ligne("Foyer : net après impôts", foyer.netApresImpots)] : []
   return {

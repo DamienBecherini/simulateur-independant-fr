@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest"
 import type { Company, MicroEntreprise, Person, SessionState } from "@/types"
 import { executerOutil } from "@/backend/logic/outils/catalogue"
 import { texteSansControle } from "@/backend/logic/outils/limites"
-import { PREMIERE_ANNEE_DES_REGLES } from "@/backend/logic/regles"
+import { pourcent } from "@/backend/logic/format"
+import { ANNEE_COURANTE, PREMIERE_ANNEE_DES_REGLES, reglesPubliees } from "@/backend/logic/regles"
 import { MONTAGES_TYPES, sessionDUnMontage } from "@/lib/montages/montages"
 import { appeler, erreurDe, geler, TOUTE_L_ANNEE, type ResultatProposition } from "./outils-ia.testing"
 import { sessionExemple } from "./session-exemple"
@@ -48,7 +49,8 @@ describe("expliquer_resultat, cas particuliers", () => {
     const session = exempleParticulier()
     expect(appeler<Explication>("expliquer_resultat", session, { acteurId: "company-conseil" }).informations.join("\n")).toMatch(/8000 km, .* déductibles\./)
     const julien = appeler<Explication>("expliquer_resultat", session, { acteurId: "person-julien" })
-    expect(julien.lignes.map(l => l.libelle).join("\n")).toMatch(/Frais professionnels retenus \((frais réels|déduction forfaitaire de 10 %)\)/)
+    const taux = pourcent(reglesPubliees(ANNEE_COURANTE).IR.abattementSalaires.taux)
+    expect(julien.lignes.map(l => l.libelle).join("\n")).toMatch(new RegExp(`Frais professionnels retenus \\((frais réels|déduction forfaitaire de ${taux})\\)`))
     expect(julien.lignes.some(l => l.libelle.startsWith("Foyer fiscal"))).toBe(true)
   })
 

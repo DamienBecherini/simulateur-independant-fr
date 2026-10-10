@@ -8,6 +8,8 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ### Modifié
 
+- **Brut d'un salaire calculé avec les cotisations de l'année.** Saisi sans brut ni pourcentage, un salaire reçoit le brut que donnent les cotisations salariales du régime général de l'année affichée (salarié non cadre, même salaire chaque mois), et non plus 78 % du net ; un brut saisi seul donne le net de la même façon. Le pourcentage saisi garde la priorité.
+- Les taux et seuils cités par les textes (aides de la fiche d'un acteur, frais réels, montages types, exports CSV et Markdown, avertissement des cotisations minimales) viennent des règles de l'année concernée au lieu d'être recopiés : ils suivront les années à venir. Le capital social par défaut d'une société (1 000 €) n'est plus écrit qu'à un endroit.
 - Maintenance : les cas de référence et les montages types sont liés explicitement aux règles de 2026, et non plus à l'année en cours ; l'ajout des règles de 2027 ne les désactivera plus (un test le vérifie avec une année fictive).
 - Maintenance : les règles de 2026 passent de `src/backend/config.json` à `src/backend/regles/2026.json`, comme les autres années ; l'année en cours du simulateur (nouvelle session, démo) est la plus récente des fichiers de règles et n'est plus écrite en dur (ADR 007 mise à jour).
 - Maintenance : les fonctions du moteur reçoivent toujours les règles de l'année calculée ; il n'y a plus de « règles de l'année en cours » par défaut, qu'un appel pouvait utiliser sans le dire.
