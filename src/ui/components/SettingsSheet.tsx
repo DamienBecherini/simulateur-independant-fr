@@ -31,7 +31,7 @@ import type { MontageType } from "@/lib/montages/montages"
 import { ThemeToggle } from "./ThemeToggle"
 import { BoutonDesMentionsLegales } from "./MentionsLegales"
 import { BoutonUtiliserAvecUneIA } from "./UtiliserAvecUneIA"
-import { BoutonInstaller } from "@/web/AideALInstallation"
+import { usePlateforme } from "../plateforme"
 
 /**
  * Props pour le composant SettingsSheet.
@@ -108,6 +108,8 @@ function VersionDuFichier({ appVersion }: { appVersion: string | undefined }) {
 
 // --- MODIFICATION : Réception des nouvelles props ---
 export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, onLoadMontage, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId }: SettingsSheetProps) {
+  // Dans la démo web, le bouton d'aide à l'installation (fourni par la plateforme).
+  const { BoutonInstaller } = usePlateforme()
   const [view, setView] = useState<"main" | "load">("main")
   const [isOverwriteAlertOpen, setOverwriteAlertOpen] = useState(false)
   const [slotToOverwrite, setSlotToOverwrite] = useState<SaveSlot | null>(null)
@@ -226,7 +228,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                   <ThemeToggle id="theme-parametres" />
                 </div>
                 <BoutonUtiliserAvecUneIA variant="outline" className="h-auto min-h-9 w-full whitespace-normal" />
-                {import.meta.env.VITE_CIBLE === "web" && <BoutonInstaller variant="outline" className="h-auto min-h-9 w-full whitespace-normal" />}
+                {BoutonInstaller && <BoutonInstaller variant="outline" className="h-auto min-h-9 w-full whitespace-normal" />}
                 <BoutonDesMentionsLegales variant="outline" className="h-auto min-h-9 w-full whitespace-normal" icone />
               </div>
             </>

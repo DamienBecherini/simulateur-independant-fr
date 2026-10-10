@@ -54,3 +54,7 @@ Contraintes : la CI installe les dépendances sans scripts d'installation (`npm 
   - Le cache contient toute la publication (environ 1,5 Mo), téléchargée en une fois à la première visite, y compris quand on ne l'installe pas.
   - Une mise à jour n'est vue qu'à l'ouverture suivante, ou après « Recharger ». Pas de vérification périodique : le navigateur cherche une nouvelle version de `sw.js` à chaque ouverture de la démo.
   - Le service worker n'est pas couvert par les tests unitaires : sa logique est extraite en fonctions pures, le reste est vérifié dans Chromium.
+
+## État au 2026-10-10
+
+La démo a désormais sa propre racine de composition, `src/web/main.tsx` : en mode `web`, `vite.config.ts` (plugin `entreeDeLaDemo`) fait charger ce fichier par `index.html` à la place de `src/ui/main.tsx`, en développement comme à la compilation. C'est lui qui suit l'installation, installe `window.api` (`creerApiNavigateur`), enregistre le service worker et fournit à l'interface la plateforme de la démo (`src/web/plateforme-web.ts` : bandeau, bouton « Installer le simulateur », renvoi vers l'application de bureau dans la fenêtre « Utiliser avec une IA (MCP) »), par le contexte de `src/ui/plateforme.ts`. L'interface n'importe plus rien de `src/web` (règle ESLint), la variable `VITE_CIBLE` et le fichier `.env.web` disparaissent, et le plugin qui retirait de l'application de bureau les captures de l'aide à l'installation n'a plus lieu d'être : rien de la démo n'y entre, sans dépendre de l'élimination du code mort.

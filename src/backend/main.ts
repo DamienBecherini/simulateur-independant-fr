@@ -2,9 +2,7 @@
 
 import { app, BrowserWindow, dialog, shell } from "electron"
 import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions, StatutSociete, FormatFichierTexte } from "@/types.js"
-import { estSocieteIS, SessionStateSchema } from "@/types.js"
-import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./logic/simulation-pluriannuelle.js"
-import { comparerStrategiesDeDistribution } from "./logic/strategies-de-distribution.js"
+import { calculsDuPont } from "./logic/calculs-du-pont.js"
 import { ipcMainHandle, validateEventFrame } from "./util.js"
 import { isDev } from "./isDev.js"
 import { getPreloadPath, getUIPath } from "./pathResolver.js"
@@ -20,7 +18,7 @@ import { infosDeLInstallation, type InfosDuServeurMcp } from "@/lib/configuratio
 import { ouvrirLaBoiteAuxPropositions } from "./boite-aux-propositions.js"
 import { copierLeServeurMcp } from "./copie-du-serveur-mcp.js"
 import { ADRESSE_DU_SERVEUR_DE_DEVELOPPEMENT, PREFERENCES_SURES, adresseAOuvrirHorsDeLApplication, navigationAutorisee } from "./securite-des-fenetres.js"
-import { AnneeSchema, ComparaisonOptionsSchema, FichierTexteAEnregistrerSchema, FichierTexteAOuvrirSchema, IdentifiantSchema, NomDeFichierSchema, OptionsDesSauvegardesSchema, SauvegardesRecuesSchema, SimulationRecueSchema, entreeValide } from "./logic/entrees-ipc.js"
+import { FichierTexteAEnregistrerSchema, FichierTexteAOuvrirSchema, NomDeFichierSchema, OptionsDesSauvegardesSchema, SauvegardesRecuesSchema, SimulationRecueSchema, entreeValide } from "./logic/entrees-ipc.js"
 
 /** Filtres des fenêtres d'enregistrement et d'ouverture, par format de fichier texte. */
 const FILTRES_FICHIERS: Record<FormatFichierTexte, Electron.FileFilter> = {
@@ -63,14 +61,6 @@ const donnees = donneesDeLApplication({
   avertir: showInfoDialog,
   notifier: notification => mainWindow?.webContents.send("show-notification", notification)
 })
-
-/** Session reçue de l'interface, revalidée avant calcul ; une session invalide est remplacée par la session par défaut. */
-function validatedSession(session: unknown, caller: string): SessionState {
-  const parsed = SessionStateSchema.safeParse(session)
-  if (parsed.success) return parsed.data
-  console.warn(`${caller} : session invalide, utilisation des valeurs par défaut du schéma`, parsed.error.flatten())
-  return SessionStateSchema.parse({})
-}
 
 /** Le serveur MCP livré avec l'application : hors de l'archive asar une fois packagé. */
 const serveurMcpLivre = () => (app.isPackaged ? path.join(process.resourcesPath, "mcp", "serveur-mcp.mjs") : path.join(app.getAppPath(), "dist-electron", "mcp", "serveur-mcp.mjs"))
@@ -219,20 +209,13 @@ app.on("ready", () => {
     event.returnValue = valide !== null && donnees.ecrireLaSessionSync(valide)
   })
 
-  ipcMainHandle("simulerLesAnnees", async (session: SessionState) => simulerLesAnnees(validatedSession(session, "simulerLesAnnees")))
+  // Calculs communs avec la démo web (logic/calculs-du-pont.ts) : la session y est revalidée, et les réglages, l'année
+  // et l'activité vérifiés par les schémas de logic/entrees-ipc.ts (un paramètre invalide fait échouer l'appel).
+  ipcMainHandle("simulerLesAnnees", async (session: SessionState) => calculsDuPont.simulerLesAnnees(session))
 
-  // Réglages, année et activité vérifiés (src/backend/logic/entrees-ipc.ts) : un paramètre invalide fait échouer l'appel.
-  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions, annee: number) =>
-    comparerStatutsDeLAnnee(validatedSession(session, "compareStatuts"), entreeValide(ComparaisonOptionsSchema, options, "compareStatuts"), entreeValide(AnneeSchema, annee, "compareStatuts"))
-  )
-  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) =>
-    optimiserRemunerationDeLAnnee(validatedSession(session, "optimiserRemuneration"), entreeValide(ComparaisonOptionsSchema, options, "optimiserRemuneration"), estSocieteIS(statut) ? statut : "SASU", entreeValide(AnneeSchema, annee, "optimiserRemuneration"))
-  )
-  ipcMainHandle("comparerStrategies", async (session: SessionState, activityId: string) => {
-    const validee = validatedSession(session, "comparerStrategies")
-    const activite = entreeValide(IdentifiantSchema, activityId, "comparerStrategies")
-    return comparerStrategiesDeDistribution(validee, activite, validee.comparateur?.reglagesParActivite[activite])
-  })
+  ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions, annee: number) => calculsDuPont.compareStatuts(session, options, annee))
+  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) => calculsDuPont.optimiserRemuneration(session, options, statut, annee))
+  ipcMainHandle("comparerStrategies", async (session: SessionState, activityId: string) => calculsDuPont.comparerStrategies(session, activityId))
 
   ipcMainHandle("getSaveSlots", async () => await donnees.lireLesSauvegardes())
   // Une liste est exigée ; chaque sauvegarde est ensuite validée seule, comme à la lecture.

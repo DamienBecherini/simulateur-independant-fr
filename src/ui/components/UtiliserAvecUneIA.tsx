@@ -1,14 +1,15 @@
 // src/ui/components/UtiliserAvecUneIA.tsx
 // Section « Utiliser avec une IA (MCP) » des paramètres. Dans l'application de bureau : ce que fait le serveur MCP
 // local, l'avertissement de confidentialité, et la configuration à copier dans un client d'IA de bureau, avec les
-// chemins réels de cette installation (voir documentation/utiliser-avec-une-ia.md et l'ADR 011). Dans la démo web :
-// ce que cela permet, et les liens vers l'application de bureau, seule à le faire.
+// chemins réels de cette installation (voir documentation/utiliser-avec-une-ia.md et l'ADR 011). Dans la démo web, la
+// plateforme fournit le contenu de la fenêtre : ce que cela permet, et les liens vers l'application de bureau, seule à le
+// faire (src/web/FenetreIADeLaDemo.tsx).
 
 import { useEffect, useState, type ReactNode } from "react"
 import { Bot, Copy } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { LiensVersLApplicationDeBureau } from "@/web/ApplicationDeBureau"
+import { usePlateforme } from "../plateforme"
 import { ALIAS_D_EXECUTION, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, type InfosDuServeurMcp } from "@/lib/configuration-mcp"
 
 export const TITRE_IA = "Utiliser avec une IA (MCP)"
@@ -20,19 +21,6 @@ const TITRE_DE_PARTIE = "text-sm font-semibold text-slate-800 dark:text-slate-10
 
 /** Ce que permet le serveur MCP, en deux phrases : dans l'application de bureau et dans la démo web. */
 export const CE_QUE_PERMET_L_IA = "Un client d'IA de bureau (Claude Desktop, LM Studio…) peut se servir du simulateur comme d'un outil : lire votre simulation, la calculer, comparer les statuts, et proposer des ajouts tirés de vos factures ou relevés. Les chiffres viennent toujours du simulateur."
-
-/** Dans la démo web : ce que permet le serveur MCP, et pourquoi il faut l'application de bureau. */
-function SeulementDansLApplicationDeBureau() {
-  return (
-    <div className="space-y-4 text-sm">
-      <p>{CE_QUE_PERMET_L_IA}</p>
-      <p role="note" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-        <strong>Seulement dans l'application de bureau :</strong> le client d'IA y lance un petit programme du simulateur, sur votre ordinateur, et un navigateur ne peut pas démarrer de programme.
-      </p>
-      <LiensVersLApplicationDeBureau />
-    </div>
-  )
-}
 
 /** Le contenu de la fenêtre, une fois les chemins de l'installation connus. */
 export function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
@@ -107,7 +95,7 @@ export function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
 }
 
 /** La fenêtre, ouverte par le bouton `declencheur` ; le focus y revient à sa fermeture. */
-function FenetreIA({ declencheur, children }: { declencheur: ReactNode; children: ReactNode }) {
+export function FenetreIA({ declencheur, children }: { declencheur: ReactNode; children: ReactNode }) {
   const [ouverte, setOuverte] = useState(false)
   return (
     <Dialog open={ouverte} onOpenChange={setOuverte}>
@@ -123,25 +111,16 @@ function FenetreIA({ declencheur, children }: { declencheur: ReactNode; children
   )
 }
 
-/** La fenêtre de la démo web (renvoi vers l'application de bureau), ouverte par un autre bouton que celui des paramètres. */
-export function FenetreIADeLaDemo({ declencheur }: { declencheur: ReactNode }) {
-  return (
-    <FenetreIA declencheur={declencheur}>
-      <SeulementDansLApplicationDeBureau />
-    </FenetreIA>
-  )
-}
-
 /**
  * Le bouton des paramètres qui ouvre la fenêtre. Dans l'application de bureau, il attend les chemins de
  * l'installation ; dans la démo web, où il n'y a pas de serveur local, la fenêtre renvoie vers l'application de bureau.
  */
 export function BoutonUtiliserAvecUneIA(bouton: Pick<ButtonProps, "variant" | "className">) {
-  const web = import.meta.env.VITE_CIBLE === "web"
+  const { RenvoiVersLApplicationDeBureau } = usePlateforme()
   const [infos, setInfos] = useState<InfosDuServeurMcp | null>(null)
 
   useEffect(() => {
-    if (import.meta.env.VITE_CIBLE === "web") return
+    if (RenvoiVersLApplicationDeBureau) return
     let actif = true
     window.api
       .infosDuServeurMcp()
@@ -152,9 +131,9 @@ export function BoutonUtiliserAvecUneIA(bouton: Pick<ButtonProps, "variant" | "c
     return () => {
       actif = false
     }
-  }, [])
+  }, [RenvoiVersLApplicationDeBureau])
 
-  if (!web && !infos) return null
+  if (!RenvoiVersLApplicationDeBureau && !infos) return null
   return (
     <FenetreIA
       declencheur={
@@ -163,7 +142,7 @@ export function BoutonUtiliserAvecUneIA(bouton: Pick<ButtonProps, "variant" | "c
         </Button>
       }
     >
-      {web ? <SeulementDansLApplicationDeBureau /> : infos && <GuideDuServeurMcp infos={infos} />}
+      {RenvoiVersLApplicationDeBureau ? <RenvoiVersLApplicationDeBureau /> : infos && <GuideDuServeurMcp infos={infos} />}
     </FenetreIA>
   )
 }
