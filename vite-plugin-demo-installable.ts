@@ -10,7 +10,7 @@ import { copyFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises"
 import { join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { Plugin } from "vite"
-import { balisesDeLaDemo, DOSSIER_DES_ICONES, FICHIER_DU_MANIFESTE, FICHIER_DU_SERVICE_WORKER, fichiersAMettreEnCache, ICONE_APPLE, ICONES, manifesteDeLaDemo } from "./src/web/pwa/manifeste"
+import { balisesDeLaDemo, DOSSIER_DES_ICONES, FICHIER_DU_MANIFESTE, FICHIER_DU_SERVICE_WORKER, fichiersAMettreEnCache, ICONE_APPLE, ICONES, manifesteDeLaDemo } from "./src/web/pwa/manifeste.ts"
 
 const SOURCES = fileURLToPath(new URL("./src/web/pwa/", import.meta.url))
 

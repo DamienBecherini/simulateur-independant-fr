@@ -5,6 +5,7 @@
  * Une passe sémantique supprime ensuite les relations et les flux orphelins.
  * Les fichiers d'un format précédent sont d'abord convertis (voir migrations.ts).
  */
+import { z } from "zod"
 import { EntitySchema, FinancialFlowSchema, RelationshipSchema, SessionStateSchema, SaveSlotSchema } from "../../types.js"
 import type { SessionState, SaveSlot, SanitizationReport } from "../../types.js"
 import { erreurDesAnnees, nombreDeFlux, ordonnerLesAnnees } from "./annees.js"
@@ -157,7 +158,7 @@ function sanitizeSession(rawInput: unknown): SanitizationResult | SessionRefusee
   })
 
   if (!parseResult.success) {
-    console.error("Données de session invalides. Erreurs Zod:", parseResult.error.flatten())
+    console.error("Données de session invalides. Erreurs Zod:", z.flattenError(parseResult.error))
     return null
   }
 

@@ -72,3 +72,19 @@ Chaque réponse du serveur rendait le résultat deux fois : en JSON dans le text
 
 - **Positives :** moins de texte par échange et par réponse, quel que soit le client ; une proposition périmée se reconstruit sans tout reproposer.
 - **Négatives ou Compromis :** un client qui exploiterait le contenu structuré (affichage, validation) doit lire le JSON à la dernière ligne du texte.
+
+## Addendum (2026-10-10) : `McpServer` au lieu de `Server`
+
+### Contexte
+
+Le SDK MCP (1.32) déclare dépréciée la classe bas niveau `Server`, avec laquelle le serveur était construit, au profit de `McpServer`. La voie ordinaire de `McpServer`, `registerTool`, attend un schéma Zod par outil : il en tire lui-même le schéma JSON publié et valide les arguments avant d'appeler l'outil. Essayée avec les schémas Zod du catalogue, elle change ce que voit le client d'IA : chaque schéma d'entrée reçoit `$schema` (brouillon 7 : 52 caractères de plus par outil, le reste du schéma étant identique), chaque outil un champ `execution`, les capacités annoncent `listChanged`, et des arguments invalides sont refusés par le SDK avec un message en anglais au lieu de l'explication en français de l'outil.
+
+### Décision
+
+- Le serveur est un `McpServer` (nom, titre, version, consignes inchangés). Les deux requêtes des outils, `tools/list` et `tools/call`, restent traitées par le serveur sous-jacent (`serveur.server.setRequestHandler`), comme le SDK le prévoit pour un usage avancé : la liste publiée reste `outilsPublies()`, tirée du catalogue, et `appelerOutil` ne change pas.
+- `registerTool` n'est pas utilisé : il dupliquerait la conversion des schémas déjà faite par le catalogue (ADR 010) et en changerait le résultat.
+
+### Conséquences
+
+- **Positives :** plus d'API dépréciée ; `initialize` et `tools/list` rendent exactement les mêmes réponses qu'avant (vérifié sur le serveur empaqueté) ; le catalogue reste la seule source des schémas.
+- **Négatives ou Compromis :** le serveur se passe des aides de haut niveau de `McpServer` (outils enregistrés un par un, notification de liste modifiée). Ne pas mélanger les deux voies : un `registerTool` ajouté échouerait, le SDK refusant de traiter `tools/list` et `tools/call` deux fois.
