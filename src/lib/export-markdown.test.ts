@@ -3,7 +3,8 @@
 import { describe, expect, it } from "vitest"
 import { reglesPubliees } from "@/backend/logic/regles"
 import type { ComparaisonOptions, SimulationAnnuelle } from "@/types"
-import { echapper, euros, LIMITES, rapportMarkdown, repartition, type DonneesDuRapport } from "./export-markdown"
+import { eurosEnTexteBrut as euros } from "@/backend/logic/format"
+import { echapper, LIMITES, rapportMarkdown, repartition, type DonneesDuRapport } from "./export-markdown"
 import { comparaisonExemple, optionsExemple, pluriannuelleExemple, rapportAvecFrais, rapportAvecReserves, rapportExemple, sessionAvecFrais, sessionExemple } from "./testing/exports-fixtures"
 
 const DATE = new Date(2026, 9, 4)

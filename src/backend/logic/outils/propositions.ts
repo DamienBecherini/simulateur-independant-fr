@@ -7,7 +7,7 @@
 import { z } from "zod"
 import { SessionStateSchema, type FinancialFlow, type SessionState, type SimulationReport } from "../../../types.js"
 import { rapportAvecCorrections, sanitizeStateAndFillDefaults } from "../data-sanitizer.js"
-import { euros as eurosDuMoteur } from "../format.js"
+import { eurosEnTexteBrut } from "../format.js"
 import { FORMAT_VERSION_ACTUEL } from "../migrations.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
 import { arrondir, empreinte, empreinteDeLaSession, enumerer, ErreurOutil, nomDe, phraseDeLaRelation } from "./commun.js"
@@ -86,7 +86,7 @@ export function sessionApresLaProposition(session: SessionState, proposition: Pr
 // ===================================================================================
 
 /** « 9 600 € », avec des espaces ordinaires : le texte part chez un modèle, qui recopie mal les espaces insécables. */
-const euros = (montant: number) => eurosDuMoteur(montant).replace(/\s/g, " ")
+const euros = eurosEnTexteBrut
 
 const NOMS_DES_MOIS =["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
 

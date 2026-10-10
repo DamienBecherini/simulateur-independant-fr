@@ -8,17 +8,14 @@ import { useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { avecLeMode, avecRemunerationSaisie, defaultFraisFonctionnement, descriptionDuMode, libellesCourtsRepartition, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
-import { coutsDesQuatreTrimestres, ecartSigne } from "@/lib/resume"
+import { coutsDesQuatreTrimestres } from "@/lib/resume"
+import { ecartSigne, euros } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
 import type { ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, PosteFrais, StatutFrais, StatutSociete } from "@/types"
 import { CurseurDeRemuneration } from "./Curseur"
 import { Depliable } from "./Depliable"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
 import { ChampNumerique } from "./ChampNumerique"
-
-function formatMoney(n: number): string {
-  return n.toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €"
-}
 
 const statutFraisLabels: Record<StatutFrais, string> = { SASU: "SASU", EURL: "EURL", EI: "EI au réel", micro: "Micro-entreprise" }
 
@@ -100,7 +97,7 @@ function RemunerationSaisie({ remunerationNette, statut, plafond, onChange }: Re
           <div className="w-full max-w-xs sm:w-72">
             <CurseurDeRemuneration valeur={remunerationNette} max={plafond} libelle="Régler la rémunération nette annuelle" decritPar={note} onApercu={setApercu} onValider={onChange} />
             <p id={note} className={cn(classeDeLaNote, "-mt-1")}>
-              jusqu'à {formatMoney(plafond)} en {statut} sans déficit
+              jusqu'à {euros(plafond)} en {statut} sans déficit
             </p>
           </div>
         ) : null}
@@ -166,7 +163,7 @@ function FraisFonctionnementTable({ frais, cfe, onChange }: { frais: FraisFoncti
               </th>
               {statutsFrais.map(statut => (
                 <td key={statut} className="px-2 py-1 text-right tabular-nums">
-                  {formatMoney(total(statut))}
+                  {euros(total(statut))}
                 </td>
               ))}
             </tr>

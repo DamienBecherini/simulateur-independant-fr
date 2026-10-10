@@ -7,8 +7,8 @@ import { useRef, useState, type KeyboardEvent } from "react"
 import { auPas, PAS_REMUNERATION } from "@/lib/repartition-benefice"
 import { cn } from "@/lib/utils"
 import { clavierDuCurseur, gestesDuCurseur, montantAuPointeur, type Glissement } from "../curseur"
+import { euros } from "@/backend/logic/format"
 
-const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
 
 interface PoigneeProps {
   nom: string

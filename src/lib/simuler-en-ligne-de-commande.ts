@@ -7,7 +7,7 @@
 import { AnneesRefuseesError, SessionIrrecuperableError } from "@/backend/logic/data-sanitizer"
 import { lireLaSession } from "@/backend/logic/fichiers-de-donnees"
 import { simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
-import { euros } from "@/lib/export-markdown"
+import { eurosEnTexteBrut } from "@/backend/logic/format"
 import type { ActivityResult, Entity, FoyerFiscalResult, ResultatAnnee, SanitizationReport, SessionState, SimulationReport } from "@/types"
 
 export const AIDE = `Usage : npm run simuler -- <fichier.json> [--annee AAAA] [--acteur NOM] [--json]
@@ -70,7 +70,7 @@ const LARGEUR_DU_LIBELLE = 30
 
 /** Une ligne « libellé ……… montant », montants alignés à droite. */
 const ligne = (libelle: string, valeur: number | string) =>
-  `    ${libelle.padEnd(LARGEUR_DU_LIBELLE)}${(typeof valeur === "number" ? euros(valeur) : valeur).padStart(14)}`
+  `    ${libelle.padEnd(LARGEUR_DU_LIBELLE)}${(typeof valeur === "number" ? eurosEnTexteBrut(valeur) : valeur).padStart(14)}`
 
 const avertissements = (liste: string[], retrait: string) => liste.map(a => `${retrait}! ${a}`)
 

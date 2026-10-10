@@ -1,8 +1,24 @@
 // src/backend/logic/format.ts
+// Le seul module de mise en forme des montants et des taux, pour les messages du moteur, l'interface, les exports et
+// les outils pour les clients d'IA : un montant s'écrit partout de la même façon.
 
-/** Formate un montant pour un message : arrondi à l'euro, séparateur de milliers français. */
+/** Montant arrondi à l'euro, séparateur de milliers français : « 12 345 € ». Jamais « -0 € ». */
 export function euros(montant: number): string {
-  return `${Math.round(montant).toLocaleString("fr-FR")} €`
+  return `${(Math.round(montant) || 0).toLocaleString("fr-FR")} €`
+}
+
+/**
+ * Le même montant, avec des espaces ordinaires au lieu des espaces insécables du séparateur de milliers : pour un
+ * texte brut (Markdown, terminal) ou destiné à un modèle, qui recopie mal les espaces insécables.
+ */
+export function eurosEnTexteBrut(montant: number): string {
+  return euros(montant).replace(/\s/g, " ")
+}
+
+/** Écart signé : « +1 234 € », « −850 € » (vrai signe moins), « 0 € ». */
+export function ecartSigne(ecart: number): string {
+  const signe = ecart > 0 ? "+" : ecart < 0 ? "−" : ""
+  return `${signe}${euros(Math.abs(ecart))}`
 }
 
 /**

@@ -2,6 +2,7 @@
 // Chiffres clés de la barre de résumé (affichage « Résumé ») : tirés des résultats de l'année et du comparateur.
 
 import type { ComparaisonResult, ScenarioStatut, SimulationReport } from "@/types"
+import { ecartSigne, euros } from "@/backend/logic/format"
 
 /** Ce que la barre retient du comparateur : l'activité comparée et le résultat de la comparaison. */
 export interface ResumeDeLaComparaison {
@@ -9,11 +10,6 @@ export interface ResumeDeLaComparaison {
   result: ComparaisonResult | null
 }
 
-/** Montant arrondi à l'euro : « 69 575 € ». */
-export const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
-
-/** Écart signé : « +1 234 € », « −850 € ». */
-export const ecartSigne = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${euros(Math.abs(n))}`
 
 /** Ce que coûte l'exigence de 4 trimestres de retraite dans une colonne : « 4 trimestres : −1 234 € de net ». */
 export const libelleDuCoutDesTrimestres = (cout: number) => `4 trimestres : ${ecartSigne(-cout)} de net`

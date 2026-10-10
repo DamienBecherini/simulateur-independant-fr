@@ -3,7 +3,8 @@
 // (affichage « Résumé ») ; la mention des frais de fonctionnement supposés (tous les affichages).
 
 import { ChevronRight } from "lucide-react"
-import { ecartSigne, euros, phraseDuVerdict } from "@/lib/resume"
+import { phraseDuVerdict } from "@/lib/resume"
+import { ecartSigne, euros } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
 import type { ComparaisonResult, ScenarioStatut } from "@/types"
 import { useAffichageResume } from "../hooks/useAffichage"

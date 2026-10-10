@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils"
 import type { ResultatDUneStrategie, SessionState, StrategiesDeDistribution, StrategiesDUnStatut } from "@/types"
 import { ChampNumerique } from "./ChampNumerique"
 import { ZoneDefilante } from "./ZoneDefilante"
+import { euros } from "@/backend/logic/format"
 
-const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
 
 /** Recalcule les stratégies peu après chaque modification de la session (grille, acteurs, réglages du comparateur). */
 function useStrategies(session: SessionState, activityId: string, actif: boolean) {
