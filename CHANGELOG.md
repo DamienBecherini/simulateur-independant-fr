@@ -12,6 +12,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 - Maintenance : les règles de 2026 passent de `src/backend/config.json` à `src/backend/regles/2026.json`, comme les autres années ; l'année en cours du simulateur (nouvelle session, démo) est la plus récente des fichiers de règles et n'est plus écrite en dur (ADR 007 mise à jour).
 - Maintenance : les fonctions du moteur reçoivent toujours les règles de l'année calculée ; il n'y a plus de « règles de l'année en cours » par défaut, qu'un appel pouvait utiliser sans le dire.
 - Maintenance : chaque caisse de libéraux (CIPAV, CARPIMKO) a son calcul, ses particularités et ses textes dans des tables typées par caisse ; une caisse ajoutée sans ses règles est refusée à la compilation au lieu d'être calculée comme la CARPIMKO.
+- Outils pour les IA : les descriptions du catalogue sont resserrées (redites retirées entre outils et avec les schémas des paramètres, types de flux groupés par acteur), sans changer les outils, leurs paramètres ni leurs résultats. Le catalogue envoyé au modèle à chaque échange passe de 30 953 à 27 501 caractères, et retrouve environ 11 % de marge sous son plafond.
 - Documentation : le guide du développeur est réécrit (architecture, carte du moteur, procédures pas à pas pour une nouvelle année de règles, un paramètre, une caisse, un statut ou un type de flux, le format de fichier, un cas de référence, le débogage d'un calcul, les scénarios de test et les outils pour les IA ; sources officielles, glossaire), et les ADR périmées sont complétées.
 
 ### Corrigé

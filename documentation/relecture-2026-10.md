@@ -417,7 +417,7 @@ Des branches courtes, chacune testée et fusionnée dans `integration` avant la 
 6. ADR 013 : à passer en « Accepté » ou « Remplacé » après l'essai sur un paquet installé.
 7. Tests liés à l'année en cours (constat de la branche 5) : les écrire avec `ANNEE_COURANTE` / `ANNEE_PAR_DEFAUT` (une branche `tests-annee-courante`), ou figer la simulation d'exemple de la démo sur 2026 comme les montages types, pour que l'ajout d'une année ne demande plus de revoir environ 80 tests.
 8. Statut juridique : remplacer les ternaires `legalStatus === "SASU" ? … : …` du moteur et de `graph-logic.ts` par des tables exhaustives (comme pour les caisses) avant tout nouveau statut.
-9. Catalogue des outils pour les IA : resserrer les descriptions pour retrouver de la marge sous le plafond de 31 000 caractères, ou relever ce plafond.
+9. Catalogue des outils pour les IA : resserrer les descriptions pour retrouver de la marge sous le plafond de 31 000 caractères, ou relever ce plafond. **Décidé : resserrer, plafonds inchangés. Appliqué** (branche `catalogue-resserre`) : catalogue de 30 953 à 27 501 caractères (marge d'environ 11 %), liste publiée par le serveur MCP de 32 708 à 29 274 sur 33 000 ; mêmes outils, mêmes paramètres, mêmes résultats (ADR 010, « État au 2026-10-10 »).
 
 ---
 

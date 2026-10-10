@@ -62,20 +62,24 @@ export function anneeDeLaSession(session: Pick<SessionState, "annees">, annee?: 
 export const TYPES_DE_FLUX = ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment", "ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "salary", "are", "other_taxable_income", "expense"] as const satisfies readonly FinancialFlow["type"][]
 export type TypeDeFlux = (typeof TYPES_DE_FLUX)[number]
 
-/** Chaque type de flux expliqué pour un modèle : qui le porte et ce qu'il représente. Montants mensuels, en euros. */
+/**
+ * Chaque type de flux expliqué pour un modèle : ce qu'il représente, hors taxe ou non. Montants mensuels, en euros.
+ * Qui le porte est dit à part, d'après `TYPES_PERMIS` (`typesExpliquesParGenre`). Ces textes entrent dans la
+ * description de proposer_flux, envoyée au modèle à chaque échange : ils restent courts.
+ */
 export const SENS_DES_TYPES: Record<FinancialFlow["type"], string> = {
-  ca_services: "chiffre d'affaires hors taxe de prestations de services d'une société ou d'une EI au réel",
-  ca_vente: "chiffre d'affaires hors taxe de ventes de marchandises d'une société ou d'une EI au réel",
-  deductible_expense: "charge déductible d'une société ou d'une EI au réel (loyer, matériel, sous-traitance…), hors TVA",
-  director_remuneration: "rémunération nette versée au dirigeant par une SASU ou une EURL (exige une relation Président ou Gérant)",
-  dividends_payment: "dividendes bruts versés par une SASU ou une EURL (exige une relation Président, Gérant ou Associé)",
-  ca_micro_services_bic: "chiffre d'affaires d'une micro-entreprise : prestations commerciales ou artisanales (BIC)",
-  ca_micro_services_bnc: "chiffre d'affaires d'une micro-entreprise : prestations libérales (BNC)",
-  ca_micro_vente: "chiffre d'affaires d'une micro-entreprise : ventes de marchandises, restauration, hébergement",
-  salary: "salaire net d'une personne (emploi salarié, avant impôt sur le revenu) ; le brut peut être précisé",
-  are: "allocation chômage (ARE) d'une personne",
-  other_taxable_income: "autre revenu imposable d'une personne : montant net imposable, ajouté tel quel au barème (sans l'abattement de 10 % des salaires)",
-  expense: "dépense non déductible : dépense personnelle d'une personne, ou charge d'une micro-entreprise (loyer, logiciel, assurance…), qui réduit le net encaissé mais ni les cotisations ni l'impôt, calculés sur le chiffre d'affaires",
+  ca_services: "chiffre d'affaires HT de prestations de services",
+  ca_vente: "chiffre d'affaires HT de ventes de marchandises",
+  deductible_expense: "charge déductible HT : loyer, matériel, sous-traitance…",
+  director_remuneration: "rémunération nette du dirigeant, exige une relation Président ou Gérant",
+  dividends_payment: "dividendes bruts, exigent une relation Président, Gérant ou Associé",
+  ca_micro_services_bic: "chiffre d'affaires de prestations commerciales ou artisanales, BIC",
+  ca_micro_services_bnc: "chiffre d'affaires de prestations libérales, BNC",
+  ca_micro_vente: "chiffre d'affaires de ventes de marchandises, restauration, hébergement",
+  salary: "salaire net avant impôt, brut facultatif",
+  are: "allocation chômage",
+  other_taxable_income: "autre revenu net imposable, ajouté tel quel au barème, sans l'abattement de 10 %",
+  expense: "dépense non déductible, TVA comprise : personnelle, ou charge d'une micro-entreprise comme un loyer ; réduit le net encaissé, pas les cotisations ni l'impôt",
   income: "type réservé aux tests"
 }
 
@@ -86,6 +90,21 @@ export const TYPES_PERMIS: Record<GenreDActeur, readonly TypeDeFlux[]> = {
   EURL: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
   EI: ["ca_services", "ca_vente", "deductible_expense"],
   "micro-entreprise": ["ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "expense"]
+}
+
+/**
+ * Les types de flux permis à chaque genre d'acteur, ceux qui ont les mêmes réunis, chaque type expliqué la première
+ * fois qu'il paraît : « personne : salary (salaire net…), … ; SASU, EURL : ca_services (…), … ; EI : ca_services, … ».
+ */
+export function typesExpliquesParGenre(): string {
+  const groupes = new Map<string, GenreDActeur[]>()
+  for (const genre of GENRES_D_ACTEUR) {
+    const cle = TYPES_PERMIS[genre].join()
+    groupes.set(cle, [...(groupes.get(cle) ?? []), genre])
+  }
+  const expliques = new Set<TypeDeFlux>()
+  const type = (t: TypeDeFlux) => (expliques.has(t) ? t : (expliques.add(t), `${t} (${SENS_DES_TYPES[t]})`))
+  return [...groupes.values()].map(genres => `${genres.join(", ")} : ${TYPES_PERMIS[genres[0]].map(type).join(", ")}`).join(". ")
 }
 
 /** Flux qu'une activité ne verse qu'à une personne reliée par l'une de ces relations. */

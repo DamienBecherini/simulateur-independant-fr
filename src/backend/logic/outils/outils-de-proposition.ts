@@ -5,7 +5,7 @@
 
 import { z } from "zod"
 import { RelationshipSchema, type SessionState } from "../../../types.js"
-import { empreinteDeLaSession, ErreurOutil, GENRES_D_ACTEUR, SENS_DES_TYPES, TYPES_DE_FLUX, type GenreDActeur } from "./commun.js"
+import { empreinteDeLaSession, ErreurOutil, GENRES_D_ACTEUR, TYPES_DE_FLUX, typesExpliquesParGenre, type GenreDActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, LIMITES, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
 import { designationDeLOperation, operationsApplicables, ReglagesActeurSchema, ReglagesComparateurProposesSchema, SerieSchema, type Operation } from "./operations.js"
 import { definirOutil, resultatSeul } from "./outil.js"
@@ -20,9 +20,12 @@ function proposer(session: SessionState, suiteDe: unknown, operations: (suite: P
   return resultatSeul(construireProposition(session, suite, operations(suite)))
 }
 
-const RAPPEL_VALIDATION = "Ne modifie rien : rend une proposition (résumé, avertissements, effet sur le net de chaque année) à faire valider par l'utilisateur ; pour des ajouts liés, passez-la dans « suiteDe » de l'appel suivant."
+/**
+ * Fin commune des descriptions des outils de proposition. Ce qu'est `suiteDe` est dit une fois, dans son schéma
+ * (`SuiteDeSchema`), que chacun de ces outils publie : la description n'a pas à le répéter.
+ */
+const RAPPEL_VALIDATION = "Ne modifie rien : rend une proposition (résumé, avertissements, effet sur le net) à faire valider par l'utilisateur."
 
-const TYPES_EXPLIQUES = TYPES_DE_FLUX.map(type => `${type} : ${SENS_DES_TYPES[type]}`).join(" ; ")
 
 /** Les années à ajouter avant des flux sur des années absentes, dans l'ordre qui les garde consécutives. */
 function anneesAAjouter(session: SessionState, suiteDe: Proposition | undefined, annees: number[]): Operation[] {
@@ -41,10 +44,11 @@ function anneesAAjouter(session: SessionState, suiteDe: Proposition | undefined,
 const FluxProposeSchema = z.strictObject({
   annee: AnneeSchema,
   acteurId: IdentifiantSchema.describe("Identifiant de l'acteur qui porte le flux (decrire_simulation, ou un acteur proposé dans suiteDe)."),
-  typeFlux: z.enum(TYPES_DE_FLUX).describe("Type du flux (voir la description de l'outil)."),
+  typeFlux: z.enum(TYPES_DE_FLUX).describe("Voir la description de l'outil."),
   libelle: LibelleSchema,
-  montant: MontantSchema.describe(`Montant de chaque mois, en euros, positif (le type dit si c'est un revenu ou une dépense) : hors taxe pour le chiffre d'affaires et les charges d'une société ou d'une EI ; montant payé, TVA comprise, pour une dépense (expense) qui ne récupère pas la TVA ; net pour un salaire ou une rémunération. Au plus ${LIMITES.montantMaximal.toLocaleString("fr-FR")} €.`),
-  montantBrut: MontantSchema.optional().describe("Salaire (salary) seulement : brut mensuel, au moins égal au net."),
+  // Le plafond est dans le schéma (maximum) ; hors taxe ou net, selon le type, est dit avec les types.
+  montant: MontantSchema.describe("Montant de chaque mois, en euros, toujours positif : le type dit si c'est un revenu ou une dépense."),
+  montantBrut: MontantSchema.optional().describe("salary seulement : brut mensuel, au moins égal au net."),
   mois: ListeDeMoisSchema
 })
 
@@ -52,12 +56,11 @@ export const proposerFlux = definirOutil({
   nom: "proposer_flux",
   titre: "Proposer des flux",
   description: [
-    "Propose d'ajouter des flux à la grille mensuelle (facture, charges, salaires, rémunération du dirigeant, dividendes…).",
-    "Chaque élément de « flux » est une série : un acteur, un type, un libellé et un montant mensuel répété sur les mois indiqués d'une année ([3] pour une facture de mars, [1,…,12] pour un loyer). Une année absente est ajoutée si elle suit ou précède celles de la simulation.",
-    `Types : ${TYPES_EXPLIQUES}.`,
+    "Propose d'ajouter des flux à la grille mensuelle. Chaque élément de « flux » est une série : un montant mensuel répété sur les mois indiqués d'une année ([3] pour une facture de mars). Une année absente est ajoutée si elle suit ou précède celles de la simulation.",
+    `Types de flux permis, par acteur (montants mensuels). ${typesExpliquesParGenre()}.`,
     "Indemnités kilométriques et frais réels ne sont pas des flux : l'utilisateur les règle dans l'application.",
-    "Si les flux remplacent une estimation déjà saisie (lister_flux), proposez aussi de la supprimer ou de la modifier dans la même proposition (suiteDe) : sinon ils s'y ajoutent (un avertissement le signale).",
-    `Au plus ${LIMITES.operationsParProposition} séries par proposition ; un flux identique à un flux du même mois est signalé comme doublon probable.`,
+    "Si les flux remplacent une estimation déjà saisie (lister_flux), proposez aussi de la supprimer ou de la modifier dans la même proposition (suiteDe), sinon ils s'y ajoutent.",
+    `Au plus ${LIMITES.operationsParProposition} séries par proposition ; un flux identique déjà saisi le même mois est signalé comme doublon probable.`,
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,
@@ -77,8 +80,8 @@ export const proposerActeur = definirOutil({
   nom: "proposer_acteur",
   titre: "Proposer un acteur",
   description: [
-    "Propose d'ajouter un acteur : une personne (membre du foyer) ou une activité (SASU, EURL, EI au réel, micro-entreprise), avec les réglages de son genre.",
-    "Son identifiant est dans « nouveauxIdentifiants » : utilisez-le, avec suiteDe, pour proposer ses relations (une activité est reliée à la personne qui la dirige ou en est titulaire) et ses flux.",
+    "Propose d'ajouter un acteur : une personne (membre du foyer) ou une activité, avec les réglages de son genre.",
+    "Son identifiant est dans « nouveauxIdentifiants » : utilisez-le pour proposer ses relations (une activité est reliée à la personne qui la dirige ou en est titulaire) et ses flux, en passant cette proposition dans suiteDe, sans quoi l'acteur est inconnu.",
     `Au plus ${LIMITES.acteursParProposition} acteurs par proposition. Aucun outil ne supprime un acteur.`,
     RAPPEL_VALIDATION
   ].join(" "),
@@ -99,7 +102,6 @@ export const proposerRelation = definirOutil({
     "Propose une relation entre deux acteurs, toujours depuis une personne (deId).",
     "Entre deux personnes, un seul lien : Marié(e), PACSé(e) (imposition commune), En couple (union libre, foyers distincts) ou Enfant (deId = le parent, versId = l'enfant à charge).",
     "D'une personne vers une activité : Président (SASU), Gérant (EURL), Titulaire (EI, micro-entreprise), Associé (SASU, EURL), Salarié (SASU, EURL, EI ; jamais avec une relation de direction).",
-    "Une rémunération de dirigeant exige un Président ou un Gérant ; des dividendes, un Président, un Gérant ou un Associé.",
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,
@@ -116,7 +118,7 @@ const ModificationSchema = z.discriminatedUnion("cible", [
   z.strictObject({
     cible: z.literal("serie"),
     annee: AnneeSchema,
-    serie: SerieSchema.describe("La série à modifier, telle que lister_flux la donne."),
+    serie: SerieSchema,
     mois: ListeDeMoisSchema.optional().describe("Mois à modifier ; tous les mois de la série si absent."),
     montant: MontantSchema.optional().describe("Nouveau montant mensuel, en euros."),
     montantBrut: MontantSchema.optional().describe("Salaire seulement : nouveau brut mensuel."),
@@ -131,7 +133,6 @@ export const proposerModification = definirOutil({
   description: [
     "Propose de modifier des séries de flux (montant, brut d'un salaire, libellé ; sur tous leurs mois ou certains, par exemple une hausse de loyer en juillet) ou le nom et les réglages d'acteurs.",
     "Une série se désigne par son année, son acteur, son type et son libellé exacts, tels que lister_flux les donne. Un acteur verrouillé par l'utilisateur n'est jamais modifié ; le statut juridique ne se change pas (voir comparer_statuts).",
-    "Au plus 50 modifications par appel.",
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,
@@ -150,7 +151,7 @@ export const proposerSuppression = definirOutil({
   titre: "Proposer une suppression",
   description: [
     "Propose de supprimer UNE série de flux d'une année (tous ses mois, ou ceux indiqués), ou UNE relation.",
-    `Une proposition contient au plus ${LIMITES.suppressionsParProposition} suppression : pas de suppression en masse, et aucun outil ne supprime un acteur ou une année (l'utilisateur le fait lui-même dans l'application).`,
+    `Au plus ${LIMITES.suppressionsParProposition} suppression par proposition, pas de suppression en masse ; aucun outil ne supprime un acteur ou une année (l'utilisateur le fait dans l'application).`,
     "Une relation dont dépendent une rémunération ou des dividendes ne peut être supprimée qu'avec ces flux.",
     RAPPEL_VALIDATION
   ].join(" "),
@@ -204,8 +205,8 @@ export const rafraichirProposition = definirOutil({
   nom: "rafraichir_proposition",
   titre: "Rafraîchir une proposition périmée",
   description: [
-    "Reconstruit, sur la simulation actuelle, une proposition refusée comme périmée (la simulation a changé depuis) : ses opérations sont revérifiées une à une, dans l'ordre.",
-    "Rend une nouvelle proposition (nouvelle empreinte, résumé, avertissements, effet sur le net), et dans « retirees » les opérations qui ne s'appliquent plus (série supprimée entre-temps, relation déjà là…) avec leur numéro et la raison ; un avertissement les signale aussi. Échoue si aucune ne s'applique.",
+    "Reconstruit, sur la simulation actuelle, une proposition refusée comme périmée : ses opérations sont revérifiées une à une, dans l'ordre.",
+    "Rend une nouvelle proposition, et dans « retirees » les opérations qui ne s'appliquent plus (série supprimée entre-temps, relation déjà là…), avec leur numéro et la raison. Échoue si aucune ne s'applique.",
     "Ne modifie et n'envoie rien : montrez le résumé et les opérations retirées à l'utilisateur, puis appliquer_proposition s'il est d'accord."
   ].join(" "),
   lecture: false,
@@ -232,8 +233,8 @@ export const appliquerProposition = definirOutil({
   titre: "Appliquer une proposition validée",
   description: [
     "Applique une proposition rendue par un outil proposer_…, telle quelle, APRÈS que l'utilisateur l'a acceptée. L'application peut encore lui demander confirmation ; tout s'annule ensuite en une étape.",
-    "Refusée si la simulation a changé depuis la proposition (empreinte différente) : rafraichir_proposition la reconstruit alors sur la simulation actuelle. Toutes les vérifications sont refaites : une proposition modifiée à la main est contrôlée comme une nouvelle.",
-    "Rend le récapitulatif de ce qui a été appliqué, l'effet sur le net de chaque année et la nouvelle empreinte de la simulation."
+    "Refusée si la simulation a changé depuis (empreinte différente) : rafraichir_proposition la reconstruit alors. Toutes les vérifications sont refaites.",
+    "Rend le récapitulatif appliqué, l'effet sur le net de chaque année et la nouvelle empreinte."
   ].join(" "),
   lecture: false,
   parametres: z.strictObject({ proposition: PropositionRenvoyeeSchema }),

@@ -17,20 +17,20 @@ import { AnneeSchema, IdentifiantSchema, LibelleSchema, ListeDeMoisSchema, Monta
 
 /** Une série de flux : même acteur, même type, même libellé dans une année (montants libres d'un mois à l'autre). */
 export const SerieSchema = z.strictObject({
-  acteurId: IdentifiantSchema.describe("Identifiant de l'acteur qui porte la série."),
-  typeFlux: z.enum(TYPES_DE_FLUX).describe("Type des flux de la série."),
+  acteurId: IdentifiantSchema.describe("Acteur qui porte la série."),
+  typeFlux: z.enum(TYPES_DE_FLUX),
   libelle: LibelleSchema
 })
 
 /** Réglages d'un acteur qu'une proposition peut fixer ; chacun ne vaut que pour certains genres d'acteur. */
 export const ReglagesActeurSchema = z.strictObject({
   partsFiscales: z.number().min(0.5).max(20).optional().describe("Personne : parts fiscales propres (1 par adulte ; enfants : relation Enfant)."),
-  capitalSocial: MontantSchema.optional().describe("SASU ou EURL : capital social, en euros."),
+  capitalSocial: MontantSchema.optional().describe("SASU, EURL : capital social, en euros."),
   dateDeCreation: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, `Date de création : « AAAA-MM », par exemple ${ANNEE_COURANTE}-03.`).optional().describe("Activité : mois de création, « AAAA-MM »."),
-  beneficieACRE: z.boolean().optional().describe("Micro-entreprise : bénéficie de l'ACRE."),
-  opteVFL: z.boolean().optional().describe("Micro-entreprise : versement libératoire de l'impôt sur le revenu."),
-  rfrN2: MontantSchema.optional().describe("Micro-entreprise : revenu fiscal de référence N-2 du foyer, en euros."),
-  horsPlafondAnneePrecedente: z.boolean().optional().describe("Micro-entreprise : au-delà des plafonds l'année d'avant la première de la simulation."),
+  beneficieACRE: z.boolean().optional().describe("Micro : bénéficie de l'ACRE."),
+  opteVFL: z.boolean().optional().describe("Micro : versement libératoire de l'impôt."),
+  rfrN2: MontantSchema.optional().describe("Micro : revenu fiscal de référence N-2 du foyer, en euros."),
+  horsPlafondAnneePrecedente: z.boolean().optional().describe("Micro : plafonds dépassés l'année précédant la simulation."),
   profession: z
     .string()
     .optional()
@@ -76,7 +76,7 @@ export const ReglagesComparateurProposesSchema = z.strictObject({
   avecRetraite: z.boolean().optional().describe("Mode meilleurNet : exiger 4 trimestres de retraite."),
   remunerationNette: MontantSchema.optional().describe("Rémunération nette annuelle saisie pour l'année indiquée, en euros."),
   partBncPrestations: z.number().min(0).max(1).optional().describe("Part BNC des prestations si l'activité devient une micro-entreprise, de 0 à 1."),
-  fraisFonctionnement: FraisProposesSchema.optional().describe("Frais de fonctionnement annuels par statut et par poste, en euros ; tous les statuts et postes sont requis."),
+  fraisFonctionnement: FraisProposesSchema.optional().describe("Frais de fonctionnement annuels par statut et par poste, en euros, tous requis."),
   statutEtudie: z.enum(["SASU", "EURL"]).optional().describe("Statut étudié dans « Rémunération ou dividendes ? ».")
 })
 

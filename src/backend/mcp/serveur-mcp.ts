@@ -40,9 +40,9 @@ const ResultatDeLEnvoiSchema = z.object({
 
 const DESCRIPTION_D_APPLIQUER = [
   "Envoie à l'application une proposition rendue par un outil proposer_…, telle quelle, une fois que l'utilisateur en a lu le résumé et qu'il est d'accord.",
-  "La proposition est d'abord revérifiée en entier sur la simulation enregistrée ; elle s'affiche ensuite dans l'application, où l'utilisateur choisit « Appliquer » ou « Refuser ». Rien n'est appliqué avant son clic : dites-lui de valider dans l'application, puis relisez la simulation pour voir le résultat.",
-  "Refusée si la simulation a changé depuis la proposition (empreinte différente) : rafraichir_proposition la reconstruit alors sur la simulation actuelle.",
-  "Une proposition identique qui attend déjà dans l'application n'est pas envoyée une deuxième fois (dejaEnAttente)."
+  "Elle est revérifiée en entier sur la simulation enregistrée, puis s'affiche dans l'application, où l'utilisateur choisit « Appliquer » ou « Refuser ». Rien n'est appliqué avant son clic : dites-lui de valider dans l'application, puis relisez la simulation.",
+  "Refusée si la simulation a changé depuis (empreinte différente) : rafraichir_proposition la reconstruit alors.",
+  "Une proposition identique qui attend déjà n'est pas renvoyée (dejaEnAttente)."
 ].join(" ")
 
 export interface OptionsDuServeur {

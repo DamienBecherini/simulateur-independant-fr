@@ -122,4 +122,11 @@ Le corps de cette ADR date d'avant son addendum ; quand ils divergent, l'addendu
 - dans l'application de bureau, `appliquer_proposition` **envoie** la proposition dans la boîte aux propositions au lieu de rendre une session à écrire (ADR 011) ;
 - l'assistant intégré (étape 3) n'existe pas encore.
 
-Les tests bornent le catalogue à 31 000 caractères (`outils/catalogue.test.ts`) et la liste publiée par le serveur MCP à 33 000 (`mcp/serveur-mcp.test.ts`). Mesuré le 2026-10-10, le catalogue est à une cinquantaine de caractères de sa borne : toute description allongée doit être compensée ailleurs (voir le [guide du développeur](../GUIDE_DEVELOPPEUR.md#39-ajouter-ou-modifier-un-outil-pour-les-ia)).
+Les tests bornent le catalogue à 31 000 caractères (`outils/catalogue.test.ts`) et la liste publiée par le serveur MCP à 33 000 (`mcp/serveur-mcp.test.ts`). Mesuré le 2026-10-10, le catalogue était à une cinquantaine de caractères de sa borne. Plutôt que de relever les bornes, ses descriptions ont été resserrées le même jour (décision 9 de la [relecture d'octobre 2026](../relecture-2026-10.md)), sans changer les outils, leurs paramètres ni leurs résultats :
+
+- le catalogue passe de 30 953 à **27 501 caractères**, soit environ 3 500 de marge (11 %) ; la liste publiée par le serveur MCP, de 32 708 à **29 274**, environ 3 700 de marge (11 %) ;
+- les redites sont retirées : entre une description et le schéma de ses paramètres (plafonds, nombre d'éléments, mois de 1 à 12, valeurs permises), et entre outils (ce qu'est `suiteDe` n'est plus dit que dans son schéma ; la relation exigée par une rémunération ou des dividendes, dans les types de flux de `proposer_flux`) ;
+- les types de flux de `proposer_flux` sont groupés par acteur, d'après la table des types permis (`typesExpliquesParGenre`, `outils/commun.ts`), chacun expliqué une seule fois ;
+- les avertissements restent : les chiffres viennent du moteur (`simuler`, `regles_de_l_annee`, `expliquer_resultat`), rien n'est modifié sans la validation de l'utilisateur, une seule suppression par proposition, pas de suppression d'acteur ni d'année, frais de fonctionnement du comparateur à ne pas comparer avec `simuler`.
+
+Toute description allongée doit encore être compensée ailleurs (voir le [guide du développeur](../GUIDE_DEVELOPPEUR.md#39-ajouter-ou-modifier-un-outil-pour-les-ia)).
