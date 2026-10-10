@@ -3,6 +3,8 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
+import { ANNEE_COURANTE, reglesPubliees } from "@/backend/logic/regles"
+import { euros, pourcent } from "@/backend/logic/format"
 import type { Entity, Relationship } from "@/types"
 import { makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { EntityItem } from "./EntityItem"
@@ -17,6 +19,7 @@ function renderItem(entity: Entity, { allEntities = [entity] as Entity[], relati
     entity,
     allEntities,
     relationships,
+    annee: ANNEE_COURANTE,
     onUpdate: vi.fn<(entity: Entity) => void>(),
     onDelete: vi.fn(),
     onToggleLock: vi.fn(),
@@ -117,6 +120,33 @@ describe("EntityItem : réglages rapides", () => {
     renderItem({ ...micro, beneficieACRE: true })
 
     expect(screen.getByText("(retraite réduite)")).toBeInTheDocument()
+  })
+
+  it("explique l'ACRE au clavier ou au toucher, avec les règles de l'année affichée et la page de ses conditions", async () => {
+    const { user, onUpdate } = renderItem(micro)
+    const regles = reglesPubliees(ANNEE_COURANTE)
+
+    await user.click(screen.getByRole("button", { name: "Qu'est-ce que l'ACRE ?" }))
+
+    const fenetre = screen.getByRole("dialog", { name: "ACRE (aide à la création ou à la reprise d'entreprise)" })
+    expect(fenetre).toHaveTextContent(`la réduction de ${pourcent(regles.microEntreprise.reductionACRE)} est appliquée à toute l'année`)
+    expect(fenetre).toHaveTextContent(`fin du ${regles.microEntreprise.ACRE.trimestresCivilsApresLeDebut}e trimestre civil`)
+    expect(screen.getByRole("link", { name: "Conditions de l'ACRE (service-public.fr)" })).toHaveAttribute("href", "https://entreprendre.service-public.gouv.fr/vosdroits/F11677")
+    // Ouvrir l'explication ne change pas l'option.
+    expect(onUpdate).not.toHaveBeenCalled()
+  })
+
+  it("explique le versement libératoire : taux de l'année et plafond de revenu fiscal de référence", async () => {
+    const { user } = renderItem(micro)
+    const { taux, plafondRfrParPart } = reglesPubliees(ANNEE_COURANTE).microEntreprise.versementLiberatoire
+
+    await user.click(screen.getByRole("button", { name: "Qu'est-ce que le versement libératoire ?" }))
+
+    const fenetre = screen.getByRole("dialog", { name: "Versement libératoire de l'impôt sur le revenu" })
+    expect(fenetre).toHaveTextContent(`${pourcent(taux.venteBic)} pour les ventes`.replace(/\s/g, " "))
+    expect(fenetre).toHaveTextContent(`${pourcent(taux.servicesBnc)} pour les BNC`.replace(/\s/g, " "))
+    expect(fenetre).toHaveTextContent(`revenu fiscal de référence ${ANNEE_COURANTE - 2} du foyer d'au plus ${euros(plafondRfrParPart)} par part`.replace(/\s/g, " "))
+    expect(screen.getByRole("link", { name: "Conditions du versement libératoire (impots.gouv.fr)" })).toBeInTheDocument()
   })
 })
 
