@@ -1,6 +1,6 @@
 // src/backend/logic/calculsAE.ts
 
-import { euros } from "./format.js"
+import { euros, pourcentDeNombre } from "./format.js"
 import type { ReglesFiscales, TauxMicro } from "./regles.js"
 
 export interface EntreesMicro {
@@ -138,7 +138,7 @@ export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales): Re
   // chiffre d'affaires des seuls mois couverts (voir dispositifs.ts) et le dit dans une note de l'activité.
   const reductionACRE = entrees.beneficieACRE ? appliquerTaux(entrees.caSousACRE ?? entrees, micro.cotisations) * (entrees.reductionACRE ?? micro.reductionACRE) : 0
   if (entrees.beneficieACRE && !entrees.caSousACRE) {
-    warnings.push(`ACRE : cotisations réduites de ${Math.round(micro.reductionACRE * 100)} %. Elles financent aussi vos droits : pendant l'aide, vous validez moins de trimestres de retraite et vos indemnités journalières sont plus faibles.`)
+    warnings.push(`ACRE : cotisations réduites de ${pourcentDeNombre(Math.round(micro.reductionACRE * 100))}. Elles financent aussi vos droits : pendant l'aide, vous validez moins de trimestres de retraite et vos indemnités journalières sont plus faibles.`)
   }
 
   return {

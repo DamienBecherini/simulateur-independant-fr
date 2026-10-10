@@ -11,9 +11,9 @@ import type { ComparaisonOptions, OptimisationRemuneration, PartageDuBenefice, R
 import { clavierDuCurseur, gestesDuCurseur, montantAuPointeur, type Glissement as GlissementDuCurseur } from "../curseur"
 import { PoigneeDeCurseur } from "./Curseur"
 import { ChoixDuStatut } from "./RemunerationOptimizer"
-import { euros } from "@/backend/logic/format"
+import { euros, pourcentDeNombre } from "@/backend/logic/format"
 
-const pourcentage = (part: number) => `${Math.round(part * 100)} %`
+const pourcentage = (part: number) => pourcentDeNombre(Math.round(part * 100))
 
 /**
  * Couleurs des postes : la palette catégorielle validée (daltonisme, contraste, clair et sombre), dans un ordre dont

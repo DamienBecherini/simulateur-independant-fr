@@ -79,6 +79,6 @@ describe("versement libératoire 2026 d'après le RFR 2024 calculé (règles ré
     const options = { activityId: "m1", remunerationNette: 0, repartition: { mode: "dividendes" as const, partDistribuee: 1 }, partBncPrestations: 1 }
     const colonne = comparerStatutsDeLAnnee(troisAnnees(45000), options, 2026).scenarios.find(s => s.statut === "micro-vfl")!
 
-    expect(colonne.warnings).toContainEqual(expect.stringMatching(/^Versement libératoire impossible : le revenu fiscal de référence 2024 \(29\s700 €, calculé par la simulation\)/))
+    expect(colonne.warnings).toContainEqual(expect.stringMatching(/^Versement libératoire impossible : le revenu fiscal de référence 2024 \(29\s700\s€, calculé par la simulation\)/))
   })
 })

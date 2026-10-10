@@ -22,7 +22,7 @@ const enTete = (page: Page, statut: string) => tableau(page).getByRole("columnhe
 /** La rémunération optimale affichée dans l'en-tête d'une colonne, en euros. */
 async function remunerationDe(page: Page, statut: string): Promise<number> {
   const texte = (await enTete(page, statut).textContent()) ?? ""
-  const trouvee = /rémunération optimale : ([\d\s]+) € nets/.exec(texte)
+  const trouvee = /rémunération optimale : ([\d\s]+)\s€ nets/.exec(texte)
   expect(trouvee, `rémunération optimale absente de l'en-tête ${statut} : ${texte}`).not.toBeNull()
   return Number(trouvee![1].replace(/\D/g, ""))
 }

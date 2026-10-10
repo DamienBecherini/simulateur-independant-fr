@@ -38,7 +38,7 @@ describe("comparerStrategiesDeDistribution", () => {
     const garder = strategieDe(resultat, "SASU", "garderPuisDistribuer")
     const tout = strategieDe(resultat, "SASU", "toutDistribuer")
 
-    expect(garder.libelle).toBe("Garder 30 % et distribuer la dernière année")
+    expect(garder.libelle).toBe("Garder 30\u00A0% et distribuer la dernière année")
     // Bénéfice distribuable de 49 250 € par an : 70 % distribués en 2025 et 2026, le reste avec 2027.
     expect(garder.annees.map(a => a.dividendes)).toEqual([34475, 34475, 49250 + 2 * 14775])
     expect(garder.reservesALaFin).toBe(0)

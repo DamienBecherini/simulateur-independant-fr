@@ -472,7 +472,7 @@ describe("runMetaSimulation", () => {
         const report = simuler([personne("bob"), avecVFL()], [relation("bob", "m1", "Titulaire")], flux)
 
         expect(activite(report, "m1").versementLiberatoire).toMatchObject({ eligible: null, applique: true })
-        expect(activite(report, "m1").warnings).toEqual([expect.stringMatching(/28\s000 € pour 1 part\(s\)/)])
+        expect(activite(report, "m1").warnings).toEqual([expect.stringMatching(/28\s000\s€ pour 1 part\(s\)/)])
       })
     })
 

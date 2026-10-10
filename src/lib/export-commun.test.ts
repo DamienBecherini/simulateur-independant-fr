@@ -105,10 +105,10 @@ describe("frais au barème kilométrique", () => {
     const personnes = fraisProfessionnelsDesPersonnes(rapportAvecFrais())
     expect(personnes.map(p => p.name)).toEqual(["Alice"])
     expect(libelleRetenue(personnes[0].frais)).toBe("Frais réels")
-    expect(libelleRetenue({ ...personnes[0].frais, retenue: "forfait" })).toBe("Déduction de 10 %")
+    expect(libelleRetenue({ ...personnes[0].frais, retenue: "forfait" })).toBe("Déduction de 10\u00A0%")
     // Le taux est celui du résultat, donc des règles de son année.
-    expect(libelleRetenue({ ...personnes[0].frais, retenue: "forfait", tauxDeductionForfaitaire: 0.12 })).toBe("Déduction de 12 %")
-    expect(libelleDeduction({ tauxDeductionForfaitaire: 0.125 })).toBe("Déduction de 12,5 %")
+    expect(libelleRetenue({ ...personnes[0].frais, retenue: "forfait", tauxDeductionForfaitaire: 0.12 })).toBe("Déduction de 12\u00A0%")
+    expect(libelleDeduction({ tauxDeductionForfaitaire: 0.125 })).toBe("Déduction de 12,5\u00A0%")
   })})
 
 describe("versement libératoire", () => {

@@ -74,7 +74,7 @@ function CaseMontantAnnuel({ coche, onChange }: { coche: boolean; onChange: (coc
   return (
     <label className="flex min-h-9 cursor-pointer items-center gap-2 pointer-coarse:min-h-11">
       <input type="checkbox" className="size-4 cursor-pointer" checked={coche} onChange={e => onChange(e.target.checked)} />
-      Montant annuel, réparti sur les 12 mois
+      <span>Montant annuel, réparti sur les 12 mois</span>
     </label>
   )
 }

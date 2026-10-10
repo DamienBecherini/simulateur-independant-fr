@@ -57,8 +57,8 @@ describe("curseur de la rémunération saisie", () => {
     const poignee = await curseur()
     expect(poignee).toHaveAttribute("aria-valuemin", "0")
     expect(poignee).toHaveAttribute("aria-valuemax", "41300")
-    expect(poignee).toHaveAccessibleDescription(/^jusqu'à 41\s300 € en SASU sans déficit$/)
-    expect(champ()).toHaveAccessibleDescription(/^jusqu'à 41\s300 € en SASU sans déficit$/)
+    expect(poignee).toHaveAccessibleDescription(/^jusqu'à 41\s300\s€ en SASU sans déficit$/)
+    expect(champ()).toHaveAccessibleDescription(/^jusqu'à 41\s300\s€ en SASU sans déficit$/)
 
     // Le statut étudié dans « Rémunération ou dividendes ? » change le plafond.
     await userEvent.click(screen.getAllByRole("button", { name: "EURL", pressed: false })[0])
@@ -73,7 +73,7 @@ describe("curseur de la rémunération saisie", () => {
     await userEvent.clear(champ())
     await userEvent.type(champ(), "20000")
     expect(poignee).toHaveAttribute("aria-valuenow", "20000")
-    expect(poignee.getAttribute("aria-valuetext")).toMatch(/^20\s000 € de rémunération nette$/)
+    expect(poignee.getAttribute("aria-valuetext")).toMatch(/^20\s000\s€ de rémunération nette$/)
 
     poignee.focus()
     await userEvent.keyboard("{ArrowRight}")
@@ -95,7 +95,7 @@ describe("curseur de la rémunération saisie", () => {
     await userEvent.type(champ(), "60000")
     expect(champ()).toHaveValue(60000)
     expect(poignee).toHaveAttribute("aria-valuenow", "41300")
-    expect(poignee.getAttribute("aria-valuetext")).toMatch(/^60\s000 € de rémunération nette, au-delà des 41\s300 € possibles sans déficit$/)
+    expect(poignee.getAttribute("aria-valuetext")).toMatch(/^60\s000\s€ de rémunération nette, au-delà des 41\s300\s€ possibles sans déficit$/)
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 60000 }), 2026))
   })
 

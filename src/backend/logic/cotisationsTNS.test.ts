@@ -128,7 +128,7 @@ describe("revenuAvantCotisationsPourUnNet", () => {
 
 describe("avertissementCotisationsMinimales", () => {
   it("prévient quand l'assiette minimale de la retraite de base s'applique, avec le supplément", () => {
-    expect(avertissementCotisationsMinimales(cotisations(2000), "des indépendants", reglesDeTest)).toEqual([expect.stringMatching(/^Cotisations minimales des indépendants appliquées.*1\s136 € de plus/)])
+    expect(avertissementCotisationsMinimales(cotisations(2000), "des indépendants", reglesDeTest)).toEqual([expect.stringMatching(/^Cotisations minimales des indépendants appliquées.*1\s136\s€ de plus/)])
   })
 
   it("ne dit rien au-delà", () => {

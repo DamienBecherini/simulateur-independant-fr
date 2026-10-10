@@ -149,7 +149,7 @@ describe("le plafond des dividendes : bénéfice distribuable de l'année et ré
 
     expect(activite.reserves).toMatchObject({ auDebut: { reserves: 10000 }, beneficeDistribuableDeLAnnee: 17000, distribuable: 27000, dividendesPrisSurLesReserves: 10000, aLaFin: { reserves: 0 } })
     expect(activite.revenuVerse).toBe(27000)
-    expect(activite.warnings).toContainEqual(expect.stringMatching(/^Dividendes saisis \(40\s000 €\) supérieurs au bénéfice distribuable de l'année augmenté des réserves \(27\s000 €\) : seul ce dernier est retenu\.$/))
+    expect(activite.warnings).toContainEqual(expect.stringMatching(/^Dividendes saisis \(40\s000\s€\) supérieurs au bénéfice distribuable de l'année augmenté des réserves \(27\s000\s€\) : seul ce dernier est retenu\.$/))
   })
 })
 

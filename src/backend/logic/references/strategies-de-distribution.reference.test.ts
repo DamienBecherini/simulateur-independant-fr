@@ -46,7 +46,7 @@ describe("stratégies de distribution d'une SASU sur 2025 et 2026 (règles réel
   })
 
   it("garder 50 % et distribuer la dernière année", () => {
-    expect(strategie("garderPuisDistribuer")).toMatchObject({ libelle: "Garder 50 % et distribuer la dernière année", netCumule: 40435, prelevementsCumules: 19566, reservesALaFin: 0, warnings: [] })
+    expect(strategie("garderPuisDistribuer")).toMatchObject({ libelle: "Garder 50\u00A0% et distribuer la dernière année", netCumule: 40435, prelevementsCumules: 19566, reservesALaFin: 0, warnings: [] })
     expect(strategie("garderPuisDistribuer").annees).toEqual([
       { annee: 2025, dividendes: 24625, netApresImpots: 20390, totalPrelevements: 14986, reservesALaFin: 24625 },
       { annee: 2026, dividendes: 24625, netApresImpots: 20045, totalPrelevements: 4580, reservesALaFin: 0 }

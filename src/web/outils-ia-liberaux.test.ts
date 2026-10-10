@@ -35,7 +35,7 @@ describe("outils pour les IA et professions libérales réglementées", () => {
     const tns = lignes.find(l => l.libelle.startsWith("Cotisations du travailleur non salarié, Masseur-kinésithérapeute (CARPIMKO)"))!
     expect(tns.composantes).toContainEqual({ libelle: "CURPS", montant: 44 })
     expect(informations[0]).toBe("Profession : Masseur-kinésithérapeute, caisse CARPIMKO.")
-    expect(informations).toContainEqual(expect.stringMatching(/^Pris en charge par l'Assurance maladie \(part conventionnée 90 %\)/))
+    expect(informations).toContainEqual(expect.stringMatching(/^Pris en charge par l'Assurance maladie \(part conventionnée 90\s%\)/))
     expect(informations).toContainEqual(expect.stringContaining("faute de l'année 2025 dans la simulation"))
   })
 

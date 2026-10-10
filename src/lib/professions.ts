@@ -2,7 +2,7 @@
 // Liste des professions libérales réglementées proposées sur une activité BNC, et la ligne d'information qui
 // l'accompagne (voir l'ADR 015). Les professions, leur caisse et leurs taux viennent des règles de l'année.
 
-import { euros, pourcent } from "@/backend/logic/format"
+import { euros, pourcent, pourcentDeNombre } from "@/backend/logic/format"
 import { caisseDe, PROFESSION_NON_REGLEMENTEE, professionDe } from "@/backend/logic/professions"
 import type { ReglesFiscales } from "@/backend/logic/regles"
 import { REGIME_DU_DIRIGEANT } from "@/backend/logic/statuts"
@@ -102,7 +102,7 @@ export function professionDeLaFiche(activite: Pick<Company | MicroEntreprise, "p
   const profession = professionDe(activite, regles)
   if (!profession) return null
   const libelle = libelleDeLaProfession({ id: profession.id, libelle: profession.libelle, caisse: caisseDe(profession) })
-  const part = profession.conventionnable ? `, part conventionnée ${Math.round((activite.partConventionnee ?? 1) * 100)} %` : ""
+  const part = profession.conventionnable ? `, part conventionnée ${pourcentDeNombre(Math.round((activite.partConventionnee ?? 1) * 100))}` : ""
   return `${libelle}${part}`
 }
 

@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { ANNEE_COURANTE, reglesPubliees } from "@/backend/logic/regles"
-import { euros, pourcent } from "@/backend/logic/format"
+import { enTexteBrut, euros, pourcent } from "@/backend/logic/format"
 import type { Entity, Relationship } from "@/types"
 import { makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { EntityItem } from "./EntityItem"
@@ -129,7 +129,7 @@ describe("EntityItem : réglages rapides", () => {
     await user.click(screen.getByRole("button", { name: "Qu'est-ce que l'ACRE ?" }))
 
     const fenetre = screen.getByRole("dialog", { name: "ACRE (aide à la création ou à la reprise d'entreprise)" })
-    expect(fenetre).toHaveTextContent(`la réduction de ${pourcent(regles.microEntreprise.reductionACRE)} est appliquée à toute l'année`)
+    expect(fenetre).toHaveTextContent(enTexteBrut(`la réduction de ${pourcent(regles.microEntreprise.reductionACRE)} est appliquée à toute l'année`))
     expect(fenetre).toHaveTextContent(`fin du ${regles.microEntreprise.ACRE.trimestresCivilsApresLeDebut}e trimestre civil`)
     expect(screen.getByRole("link", { name: "Conditions de l'ACRE (service-public.fr)" })).toHaveAttribute("href", "https://entreprendre.service-public.gouv.fr/vosdroits/F11677")
     // Ouvrir l'explication ne change pas l'option.

@@ -51,29 +51,29 @@ test("les réserves de 2025 sont distribuées en 2026, et « Sur toutes les ann�
   await ouvrir(page)
 
   // 2026 : les dividendes viennent des réserves gardées en 2025.
-  await expect(carteConseil(page)).toContainText(/Réserves au 31 décembre\s*0 €\s*plus 100 € de réserve légale/)
+  await expect(carteConseil(page)).toContainText(/Réserves au 31 décembre\s*0\s€\s*plus 100\s€ de réserve légale/)
   const synthese = page.getByRole("table", { name: /réserves des sociétés/ })
   await expect(synthese.getByRole("columnheader", { name: "Réserves des sociétés au 31 décembre" })).toBeVisible()
-  await expect(synthese.getByRole("row", { name: /^2025/ })).toContainText(/24\s625 €$/)
+  await expect(synthese.getByRole("row", { name: /^2025/ })).toContainText(/24\s625\s€$/)
 
   await annee(page, "2025").click()
   await expect(page.getByText(/année 2025 avec les règles fiscales 2025/)).toBeVisible()
-  await expect(carteConseil(page)).toContainText(/Réserves au 31 décembre\s*24\s625 €/)
+  await expect(carteConseil(page)).toContainText(/Réserves au 31 décembre\s*24\s625\s€/)
 
   // Garder la moitié en 2025 et la distribuer en 2026 rapporte 1 092 € de plus que de tout distribuer en 2025.
   const section = surToutesLesAnnees(page)
   await section.scrollIntoViewIfNeeded()
-  await expect(section.getByText(/^En SASU, la meilleure/)).toHaveText(/^En SASU, la meilleure : « Garder 50 % et distribuer la dernière année », 1\s092 € de plus que de tout distribuer chaque année\.$/)
+  await expect(section.getByText(/^En SASU, la meilleure/)).toHaveText(/^En SASU, la meilleure : « Garder 50\s% et distribuer la dernière année », 1\s092\s€ de plus que de tout distribuer chaque année\.$/)
   const sasu = section.getByRole("table", { name: /en SASU/ })
-  await expect(sasu.getByRole("row", { name: /Garder 50 %/ })).toContainText("Meilleur net")
-  await expect(sasu.getByRole("row", { name: /Garder 50 %/ })).toContainText(/40\s435 €/)
-  await expect(sasu.getByRole("row", { name: /Tout distribuer/ })).toContainText(/39\s343 €/)
+  await expect(sasu.getByRole("row", { name: /Garder 50\s%/ })).toContainText("Meilleur net")
+  await expect(sasu.getByRole("row", { name: /Garder 50\s%/ })).toContainText(/40\s435\s€/)
+  await expect(sasu.getByRole("row", { name: /Tout distribuer/ })).toContainText(/39\s343\s€/)
   await expect(sasu.getByText("Meilleur net")).toHaveCount(1)
   await auditer(page, "réserves et stratégies de distribution")
 
   // La part gardée se règle, et la stratégie suit.
   await section.getByLabel("Part gardée chaque année (%)").fill("30")
-  await expect(sasu.getByRole("row", { name: /^Garder 30 % et distribuer la dernière année/ })).toBeVisible()
+  await expect(sasu.getByRole("row", { name: /^Garder 30\s% et distribuer la dernière année/ })).toBeVisible()
 
   await page.getByRole("switch", { name: "Changer de thème" }).click()
   await expect(page.locator("html")).toHaveClass(/dark/)
