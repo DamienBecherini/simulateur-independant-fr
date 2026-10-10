@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
-import { CompanySchema, MicroEntrepriseSchema, PersonSchema } from "@/types"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, CompanySchema, MicroEntrepriseSchema, PersonSchema } from "@/types"
 
 const MAINTENANT = 1_700_000_000_000
 
@@ -75,6 +75,13 @@ describe("createCompany", () => {
       avatar: { type: "icon", value: "User", color: "#7e22ce" },
       locked: false
     })
+  })
+
+  it("donne aux SASU et EURL le même capital par défaut que le schéma d'un fichier sans capital", () => {
+    const sansCapital = { ...createCompany("EURL"), capitalSocial: undefined }
+    expect(CompanySchema.parse(sansCapital).capitalSocial).toBe(CAPITAL_SOCIAL_PAR_DEFAUT)
+    expect(createCompany("SASU").capitalSocial).toBe(CAPITAL_SOCIAL_PAR_DEFAUT)
+    expect(createCompany("EURL").capitalSocial).toBe(CAPITAL_SOCIAL_PAR_DEFAUT)
   })
 
   it.each(["SASU", "EURL", "EI"] as const)("produit une %s conforme au schéma", statut => {

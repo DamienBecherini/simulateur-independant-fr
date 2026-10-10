@@ -20,7 +20,7 @@ import { ReplieEnResume } from "./ReplieEnResume"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
 import { libelleDuCoutDesTrimestres, type ResumeDeLaComparaison } from "@/lib/resume"
-import type { ComparaisonCouple, ComparaisonOptions, ComparaisonResult, Comparateur, Company, MicroEntreprise, ReglagesComparateur, ScenarioStatut, SessionState, SimulationAnnuelle, StatutSociete } from "@/types"
+import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutSociete } from "@/types"
 import { COLONNE_FIXE } from "../colonne-fixe"
 
 /** Fond de l'en-tête du tableau, rendu opaque pour sa première cellule, fixe : le gris translucide sur le fond de la page. */
@@ -343,7 +343,7 @@ function useComparison(session: SessionState, options: ComparaisonOptions, annee
  * rémunération / dividendes : partagés entre la barre de partage du bénéfice et la section « Rémunération ou dividendes ? ».
  */
 function useArbitrage(session: SessionState, options: ComparaisonOptions, annee: number, selected: Company | MicroEntreprise | undefined, result: ComparaisonResult | null, choix: { statutEtudie: StatutSociete | undefined; setStatutEtudie: (statut: StatutSociete) => void }) {
-  const statutInitial: StatutSociete = selected?.type === "company" && selected.legalStatus === "EURL" ? "EURL" : "SASU"
+  const statutInitial: StatutSociete = selected?.type === "company" && estSocieteIS(selected.legalStatus) ? selected.legalStatus : "SASU"
   // Le statut choisi est enregistré avec les réglages de l'activité ; sans choix, c'est celui de l'activité.
   const statut = choix.statutEtudie ?? statutInitial
   // Au meilleur net, le comparateur a déjà calculé l'arbitrage de chaque statut : on le reprend au lieu de le refaire.

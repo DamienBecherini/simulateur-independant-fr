@@ -2,21 +2,13 @@
 // Liste des professions libérales réglementées proposées sur une activité BNC, et la ligne d'information qui
 // l'accompagne (voir l'ADR 015). Les professions, leur caisse et leurs taux viennent des règles de l'année.
 
+import { euros, pourcent } from "@/backend/logic/format"
 import { caisseDe, LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE, professionDe } from "@/backend/logic/professions"
-import { PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, reglesPubliees, type ReglesFiscales } from "@/backend/logic/regles"
+import type { ReglesFiscales } from "@/backend/logic/regles"
+import { REGIME_DU_DIRIGEANT } from "@/backend/logic/statuts"
 import type { ActivityResult, CaisseLiberale, Company, DetailCotisationsTNS, MicroEntreprise, ProfessionDeLActivite } from "@/types"
 
 export { LIBELLE_NON_REGLEMENTEE, PROFESSION_NON_REGLEMENTEE }
-
-/**
- * Les règles qui décrivent les professions de l'année affichée ou exportée : celles avec lesquelles l'année est
- * simulée (les dernières connues au-delà). Une année d'avant les premières règles n'est pas simulée, mais la fiche
- * d'une activité reste modifiable : la liste et la ligne d'information prennent alors les règles de la première année
- * connue, les plus proches.
- */
-export function reglesDesProfessions(annee: number): ReglesFiscales {
-  return reglesDeLAnnee(annee).regles ?? reglesPubliees(PREMIERE_ANNEE_DES_REGLES)
-}
 
 /** Un groupe de la liste : son titre et ses professions, dans l'ordre des règles. */
 export interface GroupeDeProfessions {
@@ -37,9 +29,6 @@ export function groupesDeProfessions(regles: ReglesFiscales): { groupes: GroupeD
   return { groupes, autres: liste.filter(p => p.caisse === null).map(({ id, libelle }) => ({ id, libelle })) }
 }
 
-/** « 8,7 % » : un taux en pourcentage, à la française. */
-const pourcent = (taux: number) => `${(taux * 100).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} %`
-const euros = (montant: number) => `${Math.round(montant).toLocaleString("fr-FR")} €`
 
 /** Retraite complémentaire de la CARPIMKO, en quelques mots : forfaitaire jusqu'en 2025, proportionnelle ensuite. */
 function complementaireCarpimko(rc: ReglesFiscales["liberauxReglementes"]["CARPIMKO"]["retraiteComplementaire"]): string {
@@ -146,7 +135,10 @@ export function lignesDeLaCaisse(tns: DetailCotisationsTNS, montant: (valeur: nu
   return lignes
 }
 
-/** La liste vaut pour une micro-entreprise, une entreprise individuelle au réel et un gérant d'EURL, pas une SASU. */
+/**
+ * La liste vaut pour une micro-entreprise et pour un statut au réel dont le dirigeant est non salarié (entreprise
+ * individuelle, gérant d'EURL), qui cotise à la caisse de sa profession ; pas pour une SASU (`REGIME_DU_DIRIGEANT`).
+ */
 export function proposeLaProfession(activite: Company | MicroEntreprise): boolean {
-  return activite.type === "micro-entreprise" || activite.legalStatus !== "SASU"
+  return activite.type === "micro-entreprise" || REGIME_DU_DIRIGEANT[activite.legalStatus] === "non salarié"
 }

@@ -3,7 +3,7 @@
 // l'outil compare ce que l'utilisateur voit à l'écran, sauf réglages passés en paramètres pour essayer une variante.
 
 import { z } from "zod"
-import { MODES_REPARTITION, type ComparaisonOptions, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
+import { MODES_REPARTITION, STATUTS_SOCIETE, type ComparaisonOptions, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
 import { vueDeLAnnee } from "../annees.js"
 import { optionsDuComparateur } from "../options-du-comparateur.js"
 import type { SituationActuelle } from "../comparateur.js"
@@ -77,19 +77,19 @@ export const comparerStatuts = definirOutil({
   titre: "Comparer les statuts d'une activité",
   description: [
     "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro-entreprise avec et sans versement libératoire), le reste de la simulation inchangé, et désigne le statut au meilleur net après impôts du foyer.",
-    "Utilise les réglages du comparateur enregistrés (partage du bénéfice, frais de fonctionnement par statut) ; les paramètres essaient une variante sans rien enregistrer (pour l'enregistrer : proposer_reglages_comparateur).",
-    "Les frais de fonctionnement (fraisFonctionnement : expert-comptable, banque, logiciel, assurance, CFE) s'ajoutent aux charges de la grille, statut actuel compris : comparez les scénarios entre eux, pas avec simuler.",
-    "Montants annuels en euros, arrondis, pour toute la simulation (tous les foyers) ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant en SASU et EURL.",
+    "Utilise les réglages enregistrés du comparateur ; les paramètres essaient une variante sans rien enregistrer (pour l'enregistrer : proposer_reglages_comparateur).",
+    "Les frais de fonctionnement de chaque statut (fraisFonctionnement : expert-comptable, banque, logiciel, assurance, CFE) s'ajoutent aux charges de la grille, statut actuel compris : comparez les scénarios entre eux, pas avec simuler.",
+    "Montants annuels en euros, arrondis, pour tous les foyers ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant.",
     "Pas de colonne micro pour un auxiliaire médical (CARPIMKO) : la raison est dans les avertissements."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({
     ...ParametresVariante,
     mode: z.enum(MODES_REPARTITION).optional().describe("Partage du bénéfice en SASU et EURL : meilleurNet (rémunération au meilleur net, reste en dividendes), dividendes (rémunération saisie, reste en dividendes), remuneration (tout), personnalisee (rémunération saisie et part distribuée), grille (montants saisis)."),
-    remunerationNette: MontantSchema.optional().describe("Rémunération nette annuelle du dirigeant en SASU et EURL, en euros (modes dividendes et personnalisee)."),
+    remunerationNette: MontantSchema.optional().describe("Rémunération nette annuelle du dirigeant, en euros (modes dividendes et personnalisee)."),
     partDistribuee: z.number().min(0).max(1).optional().describe("Mode personnalisee : part du bénéfice distribuable versée en dividendes, de 0 à 1."),
-    avecRetraite: z.boolean().optional().describe("Mode meilleurNet : ne retenir que les rémunérations qui valident 4 trimestres de retraite."),
-    partBncPrestations: z.number().min(0).max(1).optional().describe("Part des prestations de services classée en BNC si l'activité devient une micro-entreprise, de 0 à 1.")
+    avecRetraite: z.boolean().optional().describe("Mode meilleurNet : exiger 4 trimestres de retraite."),
+    partBncPrestations: z.number().min(0).max(1).optional().describe("Part BNC des prestations si l'activité devient une micro-entreprise, de 0 à 1.")
   }),
   resultat: z.object({ annee: z.number(), activiteId: z.string(), activite: z.string(), reglages: z.object({ mode: z.string(), remunerationNette: z.number(), partDistribuee: z.number(), avecRetraite: z.boolean(), partBncPrestations: z.number() }), meilleur: z.string().nullable(), scenarios: z.array(ScenarioSchema), couples: z.array(z.object({ personnes: z.array(z.string()), netActuel: z.number(), netMaries: z.number() })), notes: z.array(z.string()) }),
   executer: (session, { activiteId, annee, mode, remunerationNette, partDistribuee, avecRetraite, partBncPrestations }) => {
@@ -144,14 +144,14 @@ export const optimiserRemuneration = definirOutil({
   nom: "optimiser_remuneration",
   titre: "Arbitrer rémunération et dividendes",
   description: [
-    "Pour une activité en SASU ou en EURL (son statut actuel ou étudié), cherche la rémunération nette du dirigeant au meilleur net après impôts du foyer, le reste du bénéfice en dividendes, et la meilleure parmi celles qui valident 4 trimestres de retraite.",
-    `Rend la rémunération maximale, ces deux points, ${POINTS_DE_LA_COURBE} points de la courbe, et situationActuelle : l'activité telle que saisie (statut, rémunération et dividendes de la grille), avec ecartAuMeilleur et ecartAuMeilleurAvecRetraite, le net que le foyer gagnerait à chaque point (« vous êtes à X € du meilleur net »). Montants annuels en euros, arrondis ; calcul à 100 € près.`,
-    "Ces nets comptent les frais de fonctionnement du comparateur (fraisFonctionnement du statut étudié, situationActuelle.fraisFonctionnement de l'actuel ; noteCFE si la CFE est réduite après une création) : ils diffèrent de ceux de simuler ; comparez-les entre eux.",
-    "Les points ne distribuent que le bénéfice de l'année ; les dividendes de la grille peuvent puiser dans les réserves des années précédentes : un écart négatif peut venir de là.",
-    "Ne modifie rien : pour retenir une rémunération, proposez un flux director_remuneration mensuel (montant annuel / 12) et ajustez les dividendes saisis (dividends_payment) ; l'aperçu de la proposition donne le net obtenu."
+    "Pour une activité en SASU ou EURL (statut actuel ou étudié), cherche la rémunération nette du dirigeant au meilleur net après impôts du foyer (le reste du bénéfice en dividendes), et la meilleure qui valide 4 trimestres de retraite.",
+    `Rend la rémunération maximale, ces deux points, ${POINTS_DE_LA_COURBE} points de la courbe, et situationActuelle (l'activité telle que saisie), avec ecartAuMeilleur et ecartAuMeilleurAvecRetraite : le net que le foyer gagnerait à chaque point (« vous êtes à X € du meilleur net »). Montants annuels en euros, arrondis ; calcul à 100 € près.`,
+    "Ces nets comptent les frais de fonctionnement du comparateur (fraisFonctionnement, situationActuelle.fraisFonctionnement ; noteCFE si la CFE est réduite après une création) : comparez-les entre eux, pas avec simuler.",
+    "Les points ne distribuent que le bénéfice de l'année, alors que les dividendes saisis peuvent puiser dans les réserves : un écart négatif peut venir de là.",
+    "Ne modifie rien : pour retenir une rémunération, proposez un flux director_remuneration mensuel (montant annuel / 12) et ajustez les dividends_payment ; l'aperçu de la proposition donne le net obtenu."
   ].join(" "),
   lecture: true,
-  parametres: z.strictObject({ ...ParametresVariante, statut: z.enum(["SASU", "EURL"]).describe("Statut de société étudié.") }),
+  parametres: z.strictObject({ ...ParametresVariante, statut: z.enum(STATUTS_SOCIETE).describe("Statut de société étudié.") }),
   resultat: z.object({
     annee: z.number(),
     activiteId: z.string(),

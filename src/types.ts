@@ -19,6 +19,40 @@ export type PuissanceFiscale = (typeof PUISSANCES_FISCALES)[number]
 export const CAISSES_LIBERALES = ["CIPAV", "CARPIMKO"] as const
 export type CaisseLiberale = (typeof CAISSES_LIBERALES)[number]
 
+/**
+ * Les statuts juridiques d'une activité au réel (`Company.legalStatus`) : la seule liste, d'où se déduisent les types
+ * `StatutJuridique`, `StatutSociete` et `StatutCompare`. La micro-entreprise n'en fait pas partie : c'est un autre type
+ * d'acteur. Chaque particularité d'un statut vit dans une table typée par statut (calcul du moteur, protection sociale,
+ * relations permises, libellés…) : ajouter un statut ici sans ses entrées est une erreur de compilation à chaque endroit
+ * à compléter, jamais un calcul fait comme pour un autre statut (voir le guide du développeur, « Ajouter un statut »).
+ */
+export const STATUTS_JURIDIQUES = ["SASU", "EURL", "EI"] as const
+export type StatutJuridique = (typeof STATUTS_JURIDIQUES)[number]
+
+/**
+ * Imposition du bénéfice de chaque statut au réel. « IS » : une société à l'impôt sur les sociétés, qui verse une
+ * rémunération et des dividendes et garde des réserves ; « IR » : une entreprise individuelle, dont le bénéfice est le
+ * revenu du titulaire. Décide de `StatutSociete` et de `estSocieteIS` : partout où seule compte cette distinction (flux
+ * proposés, capital social, arbitrage rémunération / dividendes), un nouveau statut suit la ligne qu'on lui donne ici.
+ */
+export const IMPOSITION_DES_STATUTS = { SASU: "IS", EURL: "IS", EI: "IR" } as const satisfies Record<StatutJuridique, "IS" | "IR">
+
+/** Sociétés à l'impôt sur les sociétés, où l'on arbitre entre rémunération et dividendes : déduit d'`IMPOSITION_DES_STATUTS`. */
+export type StatutSociete = { [S in StatutJuridique]: (typeof IMPOSITION_DES_STATUTS)[S] extends "IS" ? S : never }[StatutJuridique]
+
+/** Vrai pour une société à l'impôt sur les sociétés (SASU, EURL), d'après `IMPOSITION_DES_STATUTS`. */
+export function estSocieteIS(statut: StatutCompare): statut is StatutSociete {
+  return estStatutJuridique(statut) && IMPOSITION_DES_STATUTS[statut] === "IS"
+}
+
+/** Vrai pour un statut au réel de `STATUTS_JURIDIQUES` (faux pour la micro-entreprise, avec ou sans versement libératoire). */
+export function estStatutJuridique(statut: string): statut is StatutJuridique {
+  return (STATUTS_JURIDIQUES as readonly string[]).includes(statut)
+}
+
+/** Les sociétés à l'IS, dans l'ordre de `STATUTS_JURIDIQUES` (SASU, puis EURL). */
+export const STATUTS_SOCIETE = STATUTS_JURIDIQUES.filter(estSocieteIS)
+
 export const AvatarSchema = z.object({
   type: z.enum(["initials", "icon"]),
   value: z.string(),
@@ -119,13 +153,22 @@ export const PersonSchema = z.object({
   locked: z.boolean().default(false)
 })
 
+/**
+ * Capital social d'une SASU ou d'une EURL quand l'utilisateur ne l'a pas saisi : société créée dans l'interface ou par
+ * une IA, fichier d'avant le champ, activité convertie depuis une micro-entreprise ou une EI dans le comparateur. Ce
+ * n'est pas une règle fiscale (la loi n'impose aucun minimum, 1 € suffit) mais un choix de modélisation : un montant
+ * courant pour une petite société, qui fixe la part des dividendes d'EURL échappant aux cotisations (10 % du capital
+ * en 2026) et le plafond de la réserve légale. L'utilisateur le remplace par le sien dans la fiche de la société.
+ */
+export const CAPITAL_SOCIAL_PAR_DEFAUT = 1000
+
 export const CompanySchema = z.object({
   id: z.string(),
   type: z.literal("company"),
   name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle Société"),
-  legalStatus: z.enum(["SASU", "EURL", "EI"]),
+  legalStatus: z.enum(STATUTS_JURIDIQUES),
   // Sert au calcul des dividendes d'EURL soumis aux cotisations sociales (part dépassant 10 % du capital).
-  capitalSocial: z.number().min(0).default(1000),
+  capitalSocial: z.number().min(0).default(CAPITAL_SOCIAL_PAR_DEFAUT),
   /**
    * Société à l'IS : réserves distribuables au 1er janvier de la première année de la session (bénéfices des années
    * d'avant gardés dans la société, réserve légale non comprise). Les années suivantes, le moteur les reporte lui-même
@@ -240,7 +283,12 @@ export const RepartitionBeneficeSchema = z.object({
 
 /** Postes de frais de fonctionnement d'une activité, hors cotisations et impôts. */
 export const POSTES_FRAIS = ["expertComptable", "banque", "logiciel", "assurance", "cfe"] as const
-/** Statuts pour lesquels on saisit des frais : la micro-entreprise a les mêmes, avec ou sans versement libératoire. */
+/**
+ * Statuts pour lesquels on saisit des frais : la micro-entreprise a les mêmes, avec ou sans versement libératoire.
+ * Liste écrite à part de `STATUTS_JURIDIQUES` : chaque statut y est une clé obligatoire des fichiers enregistrés. Un
+ * nouveau statut s'y ajoute (avec ses frais par défaut) ou reprend les frais d'un autre ; `FRAIS_DES_COLONNES`
+ * (comparateur.ts) oblige à choisir.
+ */
 export const STATUTS_FRAIS = ["SASU", "EURL", "EI", "micro"] as const
 
 const FraisDUnStatutSchema = z.object(Object.fromEntries(POSTES_FRAIS.map(poste => [poste, z.number().min(0)])) as Record<(typeof POSTES_FRAIS)[number], z.ZodNumber>)
@@ -260,7 +308,7 @@ export const ReglagesComparateurSchema = z.object({
   partBncPrestations: z.number().min(0).max(1).optional(),
   fraisFonctionnement: FraisFonctionnementSchema.optional(),
   /** Statut de société étudié dans « Rémunération ou dividendes ? » et la barre de partage du bénéfice. */
-  statutEtudie: z.enum(["SASU", "EURL"]).optional(),
+  statutEtudie: z.enum(STATUTS_SOCIETE).optional(),
   /** « Sur toutes les années » : part du bénéfice distribuable gardée chaque année, puis distribuée la dernière (0 à 1). */
   partMiseEnReserve: z.number().min(0).max(1).optional()
 })
@@ -613,6 +661,8 @@ export interface PersonResult {
 export interface FraisProfessionnelsResult {
   /** Salaires, allocations chômage et rémunérations de dirigeant imposables. */
   revenusSalariaux: number
+  /** Taux de la déduction forfaitaire de l'année (0,1 pour 10 %), pour les textes qui la nomment. */
+  tauxDeductionForfaitaire: number
   deductionForfaitaire: number
   fraisReels: number
   /** Part des frais réels qui vient des trajets domicile-travail, au barème kilométrique. */
@@ -719,8 +769,9 @@ export interface SimulationPluriannuelle {
   annees: ResultatAnnee[]
 }
 
-/** Statuts proposés par le comparateur ; la micro-entreprise est simulée avec et sans versement libératoire. */
-export type StatutCompare = "SASU" | "EURL" | "EI" | "micro" | "micro-vfl"
+/** Statuts proposés par le comparateur : chaque statut au réel, et la micro-entreprise avec et sans versement libératoire. */
+export const STATUTS_COMPARES = [...STATUTS_JURIDIQUES, "micro", "micro-vfl"] as const
+export type StatutCompare = (typeof STATUTS_COMPARES)[number]
 
 /**
  * Partage du bénéfice d'une société à l'IS dans le comparateur :
@@ -845,8 +896,6 @@ export interface ComparaisonResult {
 /** Formats de fichier texte que l'application sait enregistrer ou ouvrir (exports, sauvegardes groupées). */
 export type FormatFichierTexte = "csv" | "markdown" | "json"
 
-/** Sociétés à l'impôt sur les sociétés, où l'on arbitre entre rémunération et dividendes. */
-export type StatutSociete = "SASU" | "EURL"
 
 /** Résultat de toute la simulation pour une rémunération donnée, le reste du bénéfice étant versé en dividendes. */
 export interface PointRemuneration {

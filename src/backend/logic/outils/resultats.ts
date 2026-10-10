@@ -4,6 +4,7 @@
 
 import { z } from "zod"
 import type { ActivityResult, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, FoyerFiscalResult, PersonResult, ReservesDeLaSociete, SessionState, SimulationReport } from "../../../types.js"
+import { pourcent } from "../format.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
 import { anneeDeLaSession, arrondir, ErreurOutil, genreDe, nomDe, trouverActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema } from "./limites.js"
@@ -67,10 +68,9 @@ export const simuler = definirOutil({
   nom: "simuler",
   titre: "Simuler une année",
   description: [
-    "Calcule une année de la simulation avec le moteur du simulateur et en rend le résumé : bilan (chiffre d'affaires, charges, cotisations, impôt sur les sociétés, impôt sur le revenu, prélèvements sociaux, résultat conservé), chaque foyer fiscal (net après impôts, impôt sur le revenu, revenu fiscal de référence), chaque activité et chaque personne.",
-    "Société à l'IS : resultatConserve est ce que ses réserves gagnent dans l'année (négatif si elle distribue plus que son bénéfice de l'année, en puisant dans les réserves des années précédentes, ou si elle est déficitaire) ; reservesALaFin, ses réserves distribuables au 31 décembre, reportées d'une année à l'autre.",
-    "Montants annuels en euros, arrondis à l'euro. C'est la seule source des chiffres à donner à l'utilisateur : ne les recalculez pas.",
-    "Pour le détail d'une ligne (cotisations ligne à ligne, partage du bénéfice, versement libératoire), utilisez expliquer_resultat."
+    "Calcule une année avec le moteur du simulateur et en rend le résumé : bilan (chiffre d'affaires, charges, cotisations, impôt sur les sociétés, impôt sur le revenu, prélèvements sociaux, résultat conservé), chaque foyer fiscal (net après impôts, impôt, revenu fiscal de référence), chaque activité et chaque personne.",
+    "Société à l'IS : resultatConserve est ce que ses réserves gagnent dans l'année (négatif si elle est déficitaire, ou si elle distribue plus que son bénéfice de l'année en puisant dans ses réserves) ; reservesALaFin, ses réserves distribuables au 31 décembre, reportées d'une année à l'autre.",
+    "Montants annuels en euros, arrondis. C'est la seule source des chiffres à donner à l'utilisateur : ne les recalculez pas. Pour le détail d'une ligne : expliquer_resultat."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({ annee: AnneeSchema.optional().describe("Année à simuler ; par défaut, la plus récente de la simulation.") }),
@@ -100,7 +100,7 @@ export const syntheseDesAnnees = definirOutil({
   nom: "synthese_des_annees",
   titre: "Synthèse de toutes les années",
   description:
-    "Une ligne par année de la simulation, calculée par le moteur : net après impôts de tous les foyers, chiffre d'affaires, total des prélèvements, impôt sur le revenu, cotisations sociales et résultat conservé dans les sociétés. Montants annuels en euros, arrondis. Une année que le simulateur ne sait pas calculer (règles inconnues) porte son erreur et des montants nuls (null). Pour comparer des années ou voir une évolution ; pour le détail d'une année, utilisez simuler.",
+    "Une ligne par année de la simulation, calculée par le moteur : net après impôts de tous les foyers, chiffre d'affaires, total des prélèvements, impôt sur le revenu, cotisations sociales et résultat conservé des sociétés. Montants annuels en euros, arrondis. Une année incalculable (règles inconnues) porte son erreur et des montants null. Pour comparer des années ; le détail d'une année est dans simuler.",
   lecture: true,
   parametres: z.strictObject({}),
   resultat: z.object({ annees: z.array(LigneAnnuelleSchema) }),
@@ -221,7 +221,7 @@ function expliquerPersonne(session: SessionState, rapport: SimulationReport, p: 
   const d = p.detail
   const revenus = ligne("Revenus de l'année, nets de cotisations", p.revenusDirects + p.revenusActivites, [composante("Salaires", d.salaires), composante("Allocations chômage", d.allocationsChomage), composante("Autres revenus", d.autresRevenus), composante("Rémunérations de dirigeant", d.remunerationsDirigeant), composante("Dividendes", d.dividendes), composante("Bénéfices", d.benefices)])
   const f = p.fraisProfessionnels
-  const frais = f ? [ligne(`Frais professionnels retenus (${f.retenue === "reels" ? "frais réels" : "déduction forfaitaire de 10 %"})`, f.deduction, [composante("Déduction forfaitaire", f.deductionForfaitaire), composante("Frais réels", f.fraisReels), composante("dont trajets domicile-travail", f.fraisDeTrajet)])] : []
+  const frais = f ? [ligne(`Frais professionnels retenus (${f.retenue === "reels" ? "frais réels" : `déduction forfaitaire de ${pourcent(f.tauxDeductionForfaitaire)}`})`, f.deduction, [composante("Déduction forfaitaire", f.deductionForfaitaire), composante("Frais réels", f.fraisReels), composante("dont trajets domicile-travail", f.fraisDeTrajet)])] : []
   const foyer = rapport.foyers.find(fo => fo.personIds.includes(p.entityId))
   const lignesFoyer = foyer ? [ligne(`Foyer fiscal (${foyer.personIds.map(id => nomDe(session, id)).join(", ")}, ${foyer.totalParts} ${foyer.totalParts > 1 ? "parts" : "part"}) : revenu imposable`, foyer.revenuImposableGlobal), ligne("Foyer : impôt sur le revenu", foyer.impotSurLeRevenu), ligne("Foyer : prélèvements sociaux", foyer.prelevementsSociaux), ligne("Foyer : net après impôts", foyer.netApresImpots)] : []
   return {
@@ -235,10 +235,10 @@ export const expliquerResultat = definirOutil({
   nom: "expliquer_resultat",
   titre: "Expliquer le résultat d'un acteur",
   description: [
-    "Détaille, ligne à ligne, le résultat calculé par le moteur pour un acteur et une année.",
-    "Activité : chiffre d'affaires, charges, cotisations (ligne à ligne pour un travailleur non salarié, un président de SASU ou un salarié, caisse d'un libéral réglementé), impôt sur les sociétés, partage du bénéfice, versement libératoire, ACRE, avertissements.",
+    "Détaille le résultat calculé par le moteur pour un acteur et une année.",
+    "Activité : chiffre d'affaires, charges, cotisations ligne à ligne (caisse d'un libéral réglementé comprise), impôt sur les sociétés, partage du bénéfice, versement libératoire, ACRE, avertissements.",
     "Personne : revenus par nature, cotisations salariales, frais professionnels retenus, et l'impôt de son foyer fiscal.",
-    "Montants annuels en euros, arrondis à l'euro. Pour répondre à « pourquoi ce montant ? » sans refaire le calcul."
+    "Montants annuels en euros, arrondis. Pour répondre à « pourquoi ce montant ? » sans refaire le calcul."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({ acteurId: IdentifiantSchema.describe("Identifiant de l'acteur (voir decrire_simulation)."), annee: AnneeSchema.optional().describe("Année ; par défaut, la plus récente de la simulation.") }),

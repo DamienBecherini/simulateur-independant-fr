@@ -1,6 +1,7 @@
 // src/ui/components/ResultsPanel.tsx
 
 import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
+import { libelleDeduction } from "@/lib/export-commun"
 import { lignesDeLaCaisse, statutEtProfession } from "@/lib/professions"
 import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
@@ -170,12 +171,13 @@ function PersonIncome({ person, showName }: { person: PersonResult; showName: bo
 /** Déduction pour frais professionnels d'une personne qui a saisi des frais réels : celle retenue, et l'autre pour comparer. */
 function FraisProfessionnelsRow({ frais }: { frais: FraisProfessionnelsResult }) {
   const retenus = frais.retenue === "reels"
+  const deduction = libelleDeduction(frais)
   return (
     <>
       <Row
-        label={retenus ? "Frais réels retenus" : "Déduction de 10 % retenue"}
+        label={retenus ? "Frais réels retenus" : `${deduction} retenue`}
         value={`− ${formatMoney(frais.deduction)}`}
-        hint={retenus ? `plutôt que ${formatMoney(frais.deductionForfaitaire)} de déduction de 10 %` : `plutôt que ${formatMoney(frais.fraisReels)} de frais réels`}
+        hint={retenus ? `plutôt que ${formatMoney(frais.deductionForfaitaire)} de ${deduction.toLowerCase()}` : `plutôt que ${formatMoney(frais.fraisReels)} de frais réels`}
       />
       {frais.distanceRetenue > 0 ? <Row label={retenus ? "dont trajets domicile-travail" : "trajets domicile-travail"} value={formatMoney(frais.fraisDeTrajet)} hint={`${frais.distanceRetenue.toLocaleString("fr-FR")} km au barème`} /> : null}
     </>

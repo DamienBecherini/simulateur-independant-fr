@@ -7,14 +7,13 @@ import { flushSync } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { echelle, graduations, indiceLePlusProche, montantCourt, positionInfoBulle } from "@/lib/graphique"
 import { cn } from "@/lib/utils"
-import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, SessionState, StatutSociete } from "@/types"
+import { STATUTS_SOCIETE, type ComparaisonOptions, type OptimisationRemuneration, type PointRemuneration, type SessionState, type StatutSociete } from "@/types"
 import { exporterCourbeCsv } from "../exports-texte"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { BoutonExportCsv } from "./BoutonExportCsv"
 import { Depliable } from "./Depliable"
 import { ZoneDefilante } from "./ZoneDefilante"
 
-const STATUTS: StatutSociete[] = ["SASU", "EURL"]
 
 const euros = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`
 const trimestres = (n: number) => `${n} trimestre${n > 1 ? "s" : ""} de retraite`
@@ -55,7 +54,7 @@ function useLargeur(defaut: number) {
 export function ChoixDuStatut({ statut, onChange }: { statut: StatutSociete; onChange: (statut: StatutSociete) => void }) {
   return (
     <div className="inline-flex rounded-md border border-slate-300 p-0.5 dark:border-slate-600" role="group" aria-label="Statut de la société">
-      {STATUTS.map(s => (
+      {STATUTS_SOCIETE.map(s => (
         <button key={s} type="button" aria-pressed={s === statut} onClick={() => onChange(s)} className={cn("min-h-9 min-w-16 rounded px-3 text-sm font-medium pointer-coarse:min-h-11", s === statut ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 print:hidden")}>
           {s}
         </button>

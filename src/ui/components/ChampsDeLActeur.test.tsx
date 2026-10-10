@@ -4,6 +4,8 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
+import { pourcent } from "@/backend/logic/format"
+import { reglesPubliees } from "@/backend/logic/regles"
 import type { Entity } from "@/types"
 import { makeCompany, makeMicro } from "@/ui/testing/fixtures"
 import EditEntityModal from "./EditEntityModal"
@@ -37,6 +39,12 @@ describe("réglages d'une société à l'IS", () => {
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
 
     expect(onSave.mock.calls[0][0].reservesInitiales).toBeUndefined()
+  })
+
+  it("l'aide du capital cite la réserve légale et le seuil des dividendes d'EURL des règles de l'année", () => {
+    const r = reglesPubliees(2026)
+    ouvrir(makeCompany({ legalStatus: "EURL" }))
+    expect(screen.getByText(`Les dividendes au-delà de ${pourcent(r.EURL.seuilDividendesPartDuCapital)} du capital supportent les cotisations sociales du gérant. ${pourcent(r.reserveLegale.partDuBenefice)} du bénéfice vont à la réserve légale, non distribuable, jusqu'à ce qu'elle atteigne ${pourcent(r.reserveLegale.plafondPartDuCapital)} du capital.`)).toBeInTheDocument()
   })
 
   it("une entreprise individuelle n'a ni capital ni réserves", () => {

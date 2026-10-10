@@ -1,4 +1,5 @@
 // src/lib/graph-logic.ts
+import { RELATIONS_PAR_STATUT } from "@/backend/logic/statuts"
 import type { Entity, Relationship } from "@/types"
 
 type Activite = Exclude<Entity, { type: "person" }>
@@ -7,15 +8,13 @@ type Activite = Exclude<Entity, { type: "person" }>
 const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant", "Titulaire"]
 
 /**
- * Relations possibles entre une personne et une activité, selon le statut de celle-ci :
- * une SASU a un président, une EURL un gérant, et une entreprise individuelle
- * (micro-entreprise ou EI au réel) un titulaire. Une société ou une EI au réel peut aussi avoir des salariés
- * (la relation n'est pas proposée pour une micro-entreprise, où le coût d'un salarié ne réduit ni cotisations ni impôt).
+ * Relations possibles entre une personne et une activité : celles de son statut au réel (`RELATIONS_PAR_STATUT`), ou le
+ * seul titulaire d'une micro-entreprise. La relation « Salarié » n'y est pas proposée, le coût d'un salarié n'y
+ * réduisant ni cotisations ni impôt.
  */
 function getPersonToActivityRelationTypes(activite: Activite): Relationship["type"][] {
   if (activite.type === "micro-entreprise") return ["Titulaire"]
-  if (activite.legalStatus === "EI") return ["Titulaire", "Salarié"]
-  return activite.legalStatus === "SASU" ? ["Président", "Associé", "Salarié"] : ["Gérant", "Associé", "Salarié"]
+  return RELATIONS_PAR_STATUT[activite.legalStatus]
 }
 
 /**

@@ -39,14 +39,14 @@ export const decrireSimulation = definirOutil({
   nom: "decrire_simulation",
   titre: "Décrire la simulation",
   description: [
-    "Décrit la simulation ouverte : son nom, ses années, ses acteurs (personnes et activités, avec leurs identifiants et leurs réglages utiles au calcul), les relations entre eux, le nombre de flux par année et l'activité ouverte dans le comparateur.",
+    "Décrit la simulation ouverte : nom, années, acteurs (personnes et activités, avec identifiants et réglages utiles au calcul), relations, nombre de flux par année et activité ouverte dans le comparateur.",
     "À appeler en premier : les autres outils désignent les acteurs par leur identifiant (champ « id »).",
     "Ne contient aucun montant calculé : pour les résultats, utilisez simuler ; pour les flux saisis, lister_flux.",
-    "« empreinte » identifie l'état de la session : une proposition construite sur une autre empreinte sera refusée."
+    "« empreinte » identifie l'état de la session : une proposition construite sur une autre est refusée."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({
-    detaille: z.boolean().default(false).describe("Vrai pour ajouter le détail des trajets domicile-travail des personnes. Faux par défaut : le résumé suffit presque toujours.")
+    detaille: z.boolean().default(false).describe("Ajoute le détail des trajets domicile-travail des personnes, rarement utile.")
   }),
   resultat: z.object({
     nom: z.string(),
@@ -90,9 +90,9 @@ const LigneMoisSchema = z.object({ annee: z.number(), mois: z.number(), id: z.st
 const ParametresListe = z.strictObject({
   annee: AnneeSchema.optional().describe("Année à lister ; toutes les années si absente."),
   acteurId: IdentifiantSchema.optional().describe("Identifiant d'un acteur, pour ne lister que ses flux."),
-  typeFlux: z.enum(TYPES_DE_FLUX).optional().describe("Type de flux à lister."),
+  typeFlux: z.enum(TYPES_DE_FLUX).optional(),
   mois: ListeDeMoisSchema.optional(),
-  regroupement: z.enum(["series", "mois"]).default("series").describe("« series » (par défaut) : une ligne par série (même acteur, même type, même libellé dans une année), avec ses mois et ses montants. « mois » : une ligne par flux, avec son identifiant.")
+  regroupement: z.enum(["series", "mois"]).default("series").describe("« series » : une ligne par série, avec ses mois et ses montants ; « mois » : une ligne par flux, avec son identifiant.")
 })
 
 function lignesFiltrees(session: SessionState, filtres: z.output<typeof ParametresListe>): LigneDeFlux[] {
@@ -125,8 +125,8 @@ export const listerFlux = definirOutil({
   nom: "lister_flux",
   titre: "Lister les flux saisis",
   description: [
-    "Liste les flux saisis dans la grille mensuelle (chiffre d'affaires, charges, salaires, rémunérations, dividendes…), filtrés par année, acteur, type et mois.",
-    "Montants mensuels en euros, tels que saisis (hors taxe pour le chiffre d'affaires et les charges, net pour les salaires et les rémunérations). Mois de 1 (janvier) à 12 (décembre).",
+    "Liste les flux saisis dans la grille mensuelle, filtrés par année, acteur, type et mois.",
+    "Montants mensuels en euros, tels que saisis (hors taxe pour le chiffre d'affaires et les charges, net pour les salaires et les rémunérations).",
     "Par défaut, regroupe les flux en séries (même acteur, même type, même libellé dans une année) : c'est ainsi que proposer_modification et proposer_suppression désignent un flux.",
     `Au plus ${LIMITES.lignesListees} lignes : « tronque » signale une liste coupée, à resserrer avec les filtres.`
   ].join(" "),
@@ -162,7 +162,7 @@ function reglesCles(r: ReglesFiscales): z.infer<typeof RegleSchema>[] {
   const micro = r.microEntreprise
   return [
     { sujet: "Impôt sur le revenu : barème par part (revenu imposable par part, taux marginal)", valeurs: { tranches: r.IR.bareme.map(t => ({ jusqua: t.trancheJusqua, taux: t.taux })) }, source: source(r.IR) },
-    { sujet: "Impôt sur le revenu : déduction forfaitaire de 10 % sur les salaires", valeurs: valeurs(r.IR.abattementSalaires), source: source(r.IR.abattementSalaires) },
+    { sujet: "Impôt sur le revenu : déduction forfaitaire sur les salaires", valeurs: valeurs(r.IR.abattementSalaires), source: source(r.IR.abattementSalaires) },
     { sujet: "Impôt sur le revenu : parts par enfant et plafonnement du quotient familial", valeurs: { ...valeurs(r.IR.partsParEnfant), avantageMaxParDemiPart: r.IR.plafonnementQuotientFamilial.avantageMaxParDemiPart }, source: source(r.IR.partsParEnfant) },
     { sujet: "Plafond annuel de la sécurité sociale (PASS)", valeurs: { montant: r.regimeGeneral.plafondSecuriteSociale }, source: source(r.regimeGeneral) },
     { sujet: "Retraite : revenu soumis à cotisations qui valide un trimestre", valeurs: { montant: r.protectionSociale.revenuParTrimestre }, source: null },
@@ -200,9 +200,9 @@ export const reglesDeLAnneeOutil = definirOutil({
   nom: "regles_de_l_annee",
   titre: "Règles fiscales et sociales d'une année",
   description: [
-    "Donne les principaux seuils et taux que le simulateur applique pour une année (barème de l'impôt sur le revenu, plafond de la sécurité sociale, impôt sur les sociétés, dividendes, plafonds et taux de la micro-entreprise, TVA, caisses des libéraux réglementés), avec leur source officielle.",
+    "Donne les principaux seuils et taux que le simulateur applique pour une année (barème de l'impôt sur le revenu, plafond de la sécurité sociale, impôt sur les sociétés, dividendes, micro-entreprise, TVA, caisses des libéraux réglementés), avec leur source officielle.",
     "Pour expliquer un résultat ou vérifier une hypothèse, jamais pour refaire un calcul : les montants viennent de simuler, comparer_statuts et expliquer_resultat.",
-    "Taux en fraction (0,15 = 15 %), montants annuels en euros. Une année plus récente que les dernières règles connues reprend celles-ci, avec un avertissement ; une année plus ancienne que les premières est refusée."
+    "Taux en fraction (0,15 = 15 %), montants annuels en euros. Une année postérieure aux dernières règles connues les reprend, avec un avertissement ; une année antérieure aux premières est refusée."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({ annee: AnneeSchema.optional().describe("Année des revenus ; par défaut, la plus récente de la simulation.") }),

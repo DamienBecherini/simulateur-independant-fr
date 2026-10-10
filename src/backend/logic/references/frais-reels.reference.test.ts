@@ -36,7 +36,7 @@ casDeReference("Cas de référence 2026 : frais réels d'un salarié", () => {
     // Frais réels : imposable 30 000 - 4 508,04 = 25 491,96 € ; impôt (25 491,96 - 11 600) x 11 % = 1 528,12 € ;
     // décote 897 - 45,25 % x 1 528,12 = 205,53 € ; impôt 1 322,59 €, arrondi à 1 323 €.
     const report = simuler([salarie(trajets)], [], [["alice", "salary", 30000]])
-    expect(report.persons[0].fraisProfessionnels).toEqual({ revenusSalariaux: 30000, deductionForfaitaire: 3000, fraisReels: 4508, fraisDeTrajet: 4508, distanceRetenue: 8720, nombreDeTrajets: 1, voitures: [{ puissanceFiscale: "5", electrique: false, distance: 8720, montant: 4508 }], autresFrais: 0, retenue: "reels", deduction: 4508 })
+    expect(report.persons[0].fraisProfessionnels).toEqual({ revenusSalariaux: 30000, tauxDeductionForfaitaire: 0.1, deductionForfaitaire: 3000, fraisReels: 4508, fraisDeTrajet: 4508, distanceRetenue: 8720, nombreDeTrajets: 1, voitures: [{ puissanceFiscale: "5", electrique: false, distance: 8720, montant: 4508 }], autresFrais: 0, retenue: "reels", deduction: 4508 })
     expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 25492, impotSurLeRevenu: 1323, netApresImpots: 30000 - 1323 })
     verifierIdentiteDuBilan(report)
   })
@@ -65,7 +65,7 @@ casDeReference("Cas de référence 2026 : frais réels d'un salarié", () => {
       // décote 897 - 45,25 % x 1 562,67 = 189,89 € ; impôt 1 372,78 €, arrondi à 1 373 €.
       const report = simuler([salarie({ trajets: [employeurA, employeurB], autresFrais: 0 })], [], salaires)
 
-      expect(report.persons[0].fraisProfessionnels).toEqual({ revenusSalariaux: 30000, deductionForfaitaire: 3000, fraisReels: 4194, fraisDeTrajet: 4194, distanceRetenue: 7840, nombreDeTrajets: 2, voitures: [{ puissanceFiscale: "5", electrique: false, distance: 7840, montant: 4194 }], autresFrais: 0, retenue: "reels", deduction: 4194 })
+      expect(report.persons[0].fraisProfessionnels).toEqual({ revenusSalariaux: 30000, tauxDeductionForfaitaire: 0.1, deductionForfaitaire: 3000, fraisReels: 4194, fraisDeTrajet: 4194, distanceRetenue: 7840, nombreDeTrajets: 2, voitures: [{ puissanceFiscale: "5", electrique: false, distance: 7840, montant: 4194 }], autresFrais: 0, retenue: "reels", deduction: 4194 })
       expect(foyerDe(report, "alice")).toMatchObject({ revenuImposableGlobal: 25806, impotSurLeRevenu: 1373 })
       verifierIdentiteDuBilan(report)
     })

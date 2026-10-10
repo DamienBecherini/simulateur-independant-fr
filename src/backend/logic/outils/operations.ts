@@ -4,10 +4,11 @@
 // proposition, avec un message qui dit quelle opération et pourquoi.
 
 import { z } from "zod"
-import { grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, STATUTS_JURIDIQUES, STATUTS_SOCIETE, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
 import { NOMBRE_MAX_ANNEES } from "../annees.js"
 import { professionDe, professionsConnues } from "../professions.js"
 import { ANNEE_COURANTE, reglesDesAnneesConnues } from "../regles.js"
+import { STATUTS_A_PROFESSION } from "../statuts.js"
 import { anneeDeLaSession, enumerer, ErreurOutil, genreDe, GENRES_D_ACTEUR, RELATIONS_REQUISES, trouverActeur, TYPES_DE_FLUX, verifierNouvelleRelation, verifierTypePermis, type GenreDActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
 
@@ -17,20 +18,20 @@ import { AnneeSchema, IdentifiantSchema, LibelleSchema, ListeDeMoisSchema, Monta
 
 /** Une série de flux : même acteur, même type, même libellé dans une année (montants libres d'un mois à l'autre). */
 export const SerieSchema = z.strictObject({
-  acteurId: IdentifiantSchema.describe("Identifiant de l'acteur qui porte la série."),
-  typeFlux: z.enum(TYPES_DE_FLUX).describe("Type des flux de la série."),
+  acteurId: IdentifiantSchema.describe("Acteur qui porte la série."),
+  typeFlux: z.enum(TYPES_DE_FLUX),
   libelle: LibelleSchema
 })
 
 /** Réglages d'un acteur qu'une proposition peut fixer ; chacun ne vaut que pour certains genres d'acteur. */
 export const ReglagesActeurSchema = z.strictObject({
   partsFiscales: z.number().min(0.5).max(20).optional().describe("Personne : parts fiscales propres (1 par adulte ; enfants : relation Enfant)."),
-  capitalSocial: MontantSchema.optional().describe("SASU ou EURL : capital social, en euros."),
+  capitalSocial: MontantSchema.optional().describe("SASU, EURL : capital social, en euros."),
   dateDeCreation: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, `Date de création : « AAAA-MM », par exemple ${ANNEE_COURANTE}-03.`).optional().describe("Activité : mois de création, « AAAA-MM »."),
-  beneficieACRE: z.boolean().optional().describe("Micro-entreprise : bénéficie de l'ACRE."),
-  opteVFL: z.boolean().optional().describe("Micro-entreprise : versement libératoire de l'impôt sur le revenu."),
-  rfrN2: MontantSchema.optional().describe("Micro-entreprise : revenu fiscal de référence N-2 du foyer, en euros."),
-  horsPlafondAnneePrecedente: z.boolean().optional().describe("Micro-entreprise : au-delà des plafonds l'année d'avant la première de la simulation."),
+  beneficieACRE: z.boolean().optional().describe("Micro : bénéficie de l'ACRE."),
+  opteVFL: z.boolean().optional().describe("Micro : versement libératoire de l'impôt."),
+  rfrN2: MontantSchema.optional().describe("Micro : revenu fiscal de référence N-2 du foyer, en euros."),
+  horsPlafondAnneePrecedente: z.boolean().optional().describe("Micro : plafonds dépassés l'année précédant la simulation."),
   profession: z
     .string()
     .optional()
@@ -39,17 +40,21 @@ export const ReglagesActeurSchema = z.strictObject({
 })
 type ReglagesActeur = z.infer<typeof ReglagesActeurSchema>
 
-/** Genres d'acteur auxquels chaque réglage s'applique. */
+/**
+ * Genres d'acteur auxquels chaque réglage s'applique. Ceux des statuts au réel se déduisent des tables de statuts : le
+ * capital, des sociétés à l'IS (`IMPOSITION_DES_STATUTS`) ; la profession, des dirigeants non salariés, qui cotisent à
+ * sa caisse (`REGIME_DU_DIRIGEANT`).
+ */
 const REGLAGE_PAR_GENRE: Record<keyof ReglagesActeur, GenreDActeur[]> = {
   partsFiscales: ["personne"],
-  capitalSocial: ["SASU", "EURL"],
-  dateDeCreation: ["SASU", "EURL", "EI", "micro-entreprise"],
+  capitalSocial: [...STATUTS_SOCIETE],
+  dateDeCreation: [...STATUTS_JURIDIQUES, "micro-entreprise"],
   beneficieACRE: ["micro-entreprise"],
   opteVFL: ["micro-entreprise"],
   rfrN2: ["micro-entreprise"],
   horsPlafondAnneePrecedente: ["micro-entreprise"],
-  profession: ["EURL", "EI", "micro-entreprise"],
-  partConventionnee: ["EURL", "EI", "micro-entreprise"]
+  profession: [...STATUTS_A_PROFESSION, "micro-entreprise"],
+  partConventionnee: [...STATUTS_A_PROFESSION, "micro-entreprise"]
 }
 
 /**
@@ -76,8 +81,8 @@ export const ReglagesComparateurProposesSchema = z.strictObject({
   avecRetraite: z.boolean().optional().describe("Mode meilleurNet : exiger 4 trimestres de retraite."),
   remunerationNette: MontantSchema.optional().describe("Rémunération nette annuelle saisie pour l'année indiquée, en euros."),
   partBncPrestations: z.number().min(0).max(1).optional().describe("Part BNC des prestations si l'activité devient une micro-entreprise, de 0 à 1."),
-  fraisFonctionnement: FraisProposesSchema.optional().describe("Frais de fonctionnement annuels par statut et par poste, en euros ; tous les statuts et postes sont requis."),
-  statutEtudie: z.enum(["SASU", "EURL"]).optional().describe("Statut étudié dans « Rémunération ou dividendes ? ».")
+  fraisFonctionnement: FraisProposesSchema.optional().describe("Frais de fonctionnement annuels par statut et par poste, en euros, tous requis."),
+  statutEtudie: z.enum(STATUTS_SOCIETE).optional().describe("Statut étudié dans « Rémunération ou dividendes ? ».")
 })
 
 export const OperationSchema = z.discriminatedUnion("type", [
@@ -150,8 +155,8 @@ function ajouterActeur(c: Chantier, op: OperationDe<"ajouter_acteur">): void {
   const acteurs: Record<GenreDActeur, () => Entity> = {
     personne: () => ({ type: "person", fiscalParts: 1, ...commun }) as Entity,
     "micro-entreprise": () => ({ type: "micro-entreprise", beneficieACRE: false, opteVFL: false, ...commun }) as Entity,
-    SASU: () => ({ type: "company", legalStatus: "SASU", capitalSocial: 1000, ...commun }) as Entity,
-    EURL: () => ({ type: "company", legalStatus: "EURL", capitalSocial: 1000, ...commun }) as Entity,
+    SASU: () => ({ type: "company", legalStatus: "SASU", capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT, ...commun }) as Entity,
+    EURL: () => ({ type: "company", legalStatus: "EURL", capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT, ...commun }) as Entity,
     EI: () => ({ type: "company", legalStatus: "EI", capitalSocial: 0, ...commun }) as Entity
   }
   const nouvel = acteurs[op.genre]()

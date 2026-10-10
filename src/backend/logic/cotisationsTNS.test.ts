@@ -128,10 +128,28 @@ describe("revenuAvantCotisationsPourUnNet", () => {
 
 describe("avertissementCotisationsMinimales", () => {
   it("prévient quand l'assiette minimale de la retraite de base s'applique, avec le supplément", () => {
-    expect(avertissementCotisationsMinimales(cotisations(2000), "des indépendants")).toEqual([expect.stringMatching(/^Cotisations minimales des indépendants appliquées.*1\s136 € de plus/)])
+    expect(avertissementCotisationsMinimales(cotisations(2000), "des indépendants", reglesDeTest)).toEqual([expect.stringMatching(/^Cotisations minimales des indépendants appliquées.*1\s136 € de plus/)])
   })
 
   it("ne dit rien au-delà", () => {
-    expect(avertissementCotisationsMinimales(cotisations(40000), "du gérant")).toEqual([])
+    expect(avertissementCotisationsMinimales(cotisations(40000), "du gérant", reglesDeTest)).toEqual([])
+  })
+
+  it("compte les trimestres validés par l'assiette minimale avec les règles de l'année", () => {
+    // Règles de test : 6 000 € d'assiette minimale, 2 000 € par trimestre.
+    expect(avertissementCotisationsMinimales(cotisations(2000), "du gérant", reglesDeTest)[0]).toMatch(/valident 3 trimestres de retraite\.$/)
+    const unTrimestreMoinsCher = { ...reglesDeTest, protectionSociale: { ...reglesDeTest.protectionSociale, revenuParTrimestre: 1500 } }
+    expect(avertissementCotisationsMinimales(cotisations(2000), "du gérant", unTrimestreMoinsCher)[0]).toMatch(/valident 4 trimestres de retraite\.$/)
+
+    const regles2026 = reglesPubliees(2026)
+    const attendus = Math.floor(regles2026.TNS.cotisationsMinimales.retraiteDeBase / regles2026.protectionSociale.revenuParTrimestre)
+    expect(avertissementCotisationsMinimales(calculerCotisationsTNS(0, regles2026.TNS), "des indépendants", regles2026)[0]).toContain(`valident ${attendus} trimestres`)
+  })
+
+  it("prend l'assiette minimale des libéraux pour une caisse de libéraux", () => {
+    const liberaux = reglesDeTest.liberauxReglementes
+    const regles = { ...liberaux, commun: { ...liberaux.commun, cotisationsMinimales: { ...liberaux.commun.cotisationsMinimales, retraiteDeBase: 2000 } } }
+    const caisse = { caisse: "CIPAV" as const, profession: liberaux.professions.liste[0], regles, partConventionnee: 0, annee: 2026 }
+    expect(avertissementCotisationsMinimales(cotisations(2000), "du gérant", reglesDeTest, caisse)[0]).toMatch(/valident 1 trimestre de retraite\.$/)
   })
 })

@@ -1,7 +1,7 @@
 // src/ui/components/MonthlyGrid.tsx
 
 import React, { useState, useMemo, useRef, Dispatch, SetStateAction } from "react"
-import type { AnneeSimulee, Entity, MonthlyGridData, FinancialFlow, UserPreferences } from "@/types"
+import { ANNEE_PAR_DEFAUT, type AnneeSimulee, type Entity, type MonthlyGridData, type FinancialFlow, type UserPreferences } from "@/types"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import type { FlowChanges } from "./FlowItem"
 import type { NewFlowValues } from "./NewFlowItem"
@@ -373,7 +373,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           flows={monthlyData[openCell.monthIndex].flows.filter(f => f.entityId === openCell.entityId)}
           entity={openCellEntity}
           monthName={fullMonths[openCell.monthIndex]}
-          annee={annee}
+          annee={annee ?? ANNEE_PAR_DEFAUT}
           autresAnnees={autresAnnees}
           onCreate={handleCreateFlow}
           onRecopier={openCell.monthIndex < 11 ? handleRecopierFlux : undefined}

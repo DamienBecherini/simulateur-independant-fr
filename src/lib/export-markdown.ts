@@ -2,11 +2,12 @@
 // Rapport Markdown de la simulation, à lire tel quel ou à confier à une IA pour l'analyser : hypothèses et limites,
 // acteurs et relations, flux saisis, résultats, comparateur de statuts et avertissements.
 
-import type { ComparaisonOptions, ComparaisonResult, DeplacementsProfessionnels, Entity, FraisProfessionnelsResult, ModeRepartition, Person, Relationship, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
+import { estSocieteIS, type ComparaisonOptions, type ComparaisonResult, type DeplacementsProfessionnels, type Entity, type FraisProfessionnelsResult, type ModeRepartition, type Person, type Relationship, type ScenarioStatut, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport } from "@/types"
 import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
-import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libellePuissance, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
+import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { numeroterNotes } from "./notes"
-import { libelleDeLaProfession, lignesDeLaCaisse, professionDeLaFiche, reglesDesProfessions, statutEtProfession } from "./professions"
+import { libelleDeLaProfession, lignesDeLaCaisse, professionDeLaFiche, statutEtProfession } from "./professions"
+import { reglesDeLAnneeAffichee } from "./regles-affichees"
 
 /** Comparaison calculée à l'export pour l'activité choisie dans le comparateur, ou la raison de son absence. */
 export type ComparaisonDuRapport = { nomActivite: string; options: ComparaisonOptions; resultat: ComparaisonResult } | { nomActivite: string; erreur: string }
@@ -75,9 +76,9 @@ function detailDesDeplacements(deplacements: DeplacementsProfessionnels | undefi
 function detailDeLActeur(entity: Entity, annee: number): string {
   if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}${detailDesFraisReels(entity)}`
   const creation = dateDeCreationLisible(entity)
-  const profession = professionDeLaFiche(entity, reglesDesProfessions(annee))
+  const profession = professionDeLaFiche(entity, reglesDeLAnneeAffichee(annee))
   const creee = `${creation ? ` ; créée en ${creation}` : ""}${profession ? ` ; profession : ${profession}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}`
-  if (entity.type === "company") return `${entity.legalStatus === "EI" ? "Entreprise individuelle au régime réel" : `Société à l'impôt sur les sociétés, capital social ${euros(entity.capitalSocial)}${entity.reservesInitiales ? `, réserves au début de la simulation ${euros(entity.reservesInitiales)}` : ""}`}${creee}`
+  if (entity.type === "company") return `${estSocieteIS(entity.legalStatus) ? `Société à l'impôt sur les sociétés, capital social ${euros(entity.capitalSocial)}${entity.reservesInitiales ? `, réserves au début de la simulation ${euros(entity.reservesInitiales)}` : ""}` : "Entreprise individuelle au régime réel"}${creee}`
   const rfr = entity.rfrN2 === undefined ? "non renseigné" : euros(entity.rfrN2)
   const horsPlafond = entity.horsPlafondAnneePrecedente ? " ; au-delà des plafonds l'année d'avant la simulation" : ""
   return `ACRE : ${entity.beneficieACRE ? "oui" : "non"} ; versement libératoire demandé : ${entity.opteVFL ? "oui" : "non"} ; revenu fiscal de référence N-2 : ${rfr}${creee}${horsPlafond}`
@@ -87,7 +88,8 @@ function detailDeLActeur(entity: Entity, annee: number): string {
 function trajetsDesPersonnes(session: SimulationAnnuelle): string {
   const lignes = session.entities.flatMap(e => (e.type === "person" ? (e.fraisReels?.trajets ?? []).map((t, i) => [echapper(e.name), echapper(t.libelle) || `Trajet ${i + 1}`, kilometres(t.kmParTrajet), String(t.joursTravailles), libellePuissance(t.puissanceFiscale), ouiNon(t.electrique), ouiNon(t.distanceJustifiee)]) : []))
   if (lignes.length === 0) return ""
-  const entete = ["Personne", "Trajet", "Aller simple", "Jours travaillés", "Puissance fiscale", "Électrique", "Distance au-delà de 40 km justifiée"]
+  const distanceMax = reglesDeLAnneeAffichee(session.annee).baremeKilometrique.domicileTravail.distanceMaxParTrajet
+  const entete = ["Personne", "Trajet", "Aller simple", "Jours travaillés", "Puissance fiscale", "Électrique", `Distance au-delà de ${kilometres(distanceMax)} justifiée`]
   return `\n\n### Trajets domicile-travail\n\nUn aller-retour par jour travaillé, avec une voiture personnelle, pour les frais réels.\n\n${tableau(entete, lignes, [2, 3])}`
 }
 
@@ -229,13 +231,15 @@ function trajetsAuBareme(frais: FraisProfessionnelsResult): string {
   return frais.voitures.map(v => `${libelleVoiture(v)} : ${kilometres(v.distance)}, ${euros(v.montant)}`).join(" ; ") || "—"
 }
 
-/** Frais réels des personnes qui en ont saisi, face à la déduction de 10 % ; rien quand aucune n'en a. */
+/** Frais réels des personnes qui en ont saisi, face à la déduction forfaitaire ; rien quand aucune n'en a. */
 function sousSectionFraisProfessionnels(report: SimulationReport): string {
   const personnes = fraisProfessionnelsDesPersonnes(report)
   if (personnes.length === 0) return ""
   const lignes = personnes.map(({ name, frais: f }) => [echapper(name), euros(f.revenusSalariaux), euros(f.deductionForfaitaire), euros(f.fraisReels), `**${libelleRetenue(f)}** : ${euros(f.deduction)}`, String(f.nombreDeTrajets), kilometres(f.distanceRetenue), trajetsAuBareme(f), euros(f.autresFrais)])
-  const entete = ["Personne", "Revenus imposés comme des salaires", "Déduction de 10 %", "Frais réels", "Retenue", "Trajets", "Distance retenue", "Trajets au barème, par voiture", "Autres frais"]
-  return `### Frais professionnels\n\nSur les revenus imposés comme des salaires, la plus favorable de la déduction de 10 % et des frais réels.\n\n${tableau(entete, lignes, [1, 2, 3, 5, 6, 8])}`
+  // Toutes les personnes d'un rapport ont les règles de la même année : la première donne le taux.
+  const deduction = libelleDeduction(personnes[0].frais)
+  const entete = ["Personne", "Revenus imposés comme des salaires", deduction, "Frais réels", "Retenue", "Trajets", "Distance retenue", "Trajets au barème, par voiture", "Autres frais"]
+  return `### Frais professionnels\n\nSur les revenus imposés comme des salaires, la plus favorable de la ${deduction.toLowerCase()} et des frais réels.\n\n${tableau(entete, lignes, [1, 2, 3, 5, 6, 8])}`
 }
 
 // --- Toutes les années ---

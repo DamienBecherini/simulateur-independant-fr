@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import { catalogueDesOutils, OUTILS } from "./catalogue.js"
 import { echantillon } from "./comparaison.js"
-import { empreinte, enumerer } from "./commun.js"
+import { empreinte, enumerer, SENS_DES_TYPES, TYPES_DE_FLUX } from "./commun.js"
 import { texteSansControle } from "./limites.js"
 import { libelleDesMois } from "./propositions.js"
 
@@ -53,7 +53,8 @@ describe("catalogue des outils", () => {
       expect(JSON.parse(JSON.stringify(outil.inputSchema))).toEqual(outil.inputSchema)
     }
     // Le catalogue entier est envoyé au modèle à chaque échange : il doit rester léger (55 Ko avec les schémas de
-    // sortie, 31 Ko sans eux et avec des descriptions resserrées).
+    // sortie, 31 Ko sans eux, 27,5 Ko depuis le resserrement des descriptions d'octobre 2026, qui laisse une marge
+    // d'environ 11 % : voir l'ADR 010).
     expect(JSON.stringify(catalogue.map(({ nom, description, inputSchema }) => ({ nom, description, inputSchema }))).length).toBeLessThan(31_000)
   })
 
@@ -74,6 +75,14 @@ describe("catalogue des outils", () => {
     expect(schemaDe("proposer_flux")).toContain('"maxLength":80')
     expect(schemaDe("proposer_flux")).toContain('"maximum":10000000')
     expect(schemaDe("optimiser_remuneration")).toContain('"enum":["SASU","EURL"]')
+  })
+
+  it("explique chaque type de flux une seule fois dans proposer_flux, avec les acteurs qui le portent", () => {
+    const description = catalogueDesOutils().find(o => o.nom === "proposer_flux")!.description
+    for (const type of TYPES_DE_FLUX) expect(description.split(`${type} (${SENS_DES_TYPES[type]})`)).toHaveLength(2)
+    expect(description).toContain("SASU, EURL : ca_services (")
+    expect(description).toContain("EI : ca_services, ca_vente, deductible_expense.")
+    expect(description).toContain("micro-entreprise : ca_micro_services_bic (")
   })
 
   it("valide les paramètres avec les mêmes schémas que ceux publiés", () => {

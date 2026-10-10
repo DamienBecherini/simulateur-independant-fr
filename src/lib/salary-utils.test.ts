@@ -1,7 +1,10 @@
 // src/lib/salary-utils.test.ts
 
 import { describe, expect, it } from "vitest"
-import { DEFAULT_NET_RATIO, formatPercent, grossFromNet, netFromGross, netRatio, parsePercent } from "@/lib/salary-utils"
+import { brutPourUnNet, calculerCotisationsSalarie } from "@/backend/logic/cotisationsSalarie"
+import { reglesPubliees } from "@/backend/logic/regles"
+import { reglesDeTest } from "@/backend/logic/testing/regles-de-test"
+import { brutCalcule, formatPercent, grossFromNet, netCalcule, netFromGross, netRatio, parsePercent } from "@/lib/salary-utils"
 
 describe("conversion brut / net", () => {
   it("calcule le net à partir du brut et du ratio, au centime", () => {
@@ -13,10 +16,32 @@ describe("conversion brut / net", () => {
     expect(grossFromNet(2340, 0.78)).toBe(3000)
     expect(grossFromNet(2000, 0.78)).toBe(2564.1)
   })
+})
 
-  it("propose un ratio par défaut plausible", () => {
-    expect(DEFAULT_NET_RATIO).toBeGreaterThan(0.7)
-    expect(DEFAULT_NET_RATIO).toBeLessThan(0.85)
+describe("brut et net calculés avec les cotisations de l'année", () => {
+  it("passe par le bulletin annuel du régime général, douze mois identiques", () => {
+    // Règles de test : sous le plafond, 10 % de cotisations salariales et 9 % de CSG-CRDS, soit un net de 81 % du brut.
+    expect(brutCalcule(810, reglesDeTest)).toBe(1000)
+    expect(netCalcule(1000, reglesDeTest)).toBe(810)
+  })
+
+  it("prend les cotisations de l'année des règles", () => {
+    const regles2026 = reglesPubliees(2026)
+    expect(brutCalcule(2000, regles2026)).toBe(Math.round((brutPourUnNet(24000, "salarie", regles2026.regimeGeneral) / 12) * 100) / 100)
+    expect(netCalcule(3000, regles2026)).toBe(Math.round((calculerCotisationsSalarie(36000, "salarie", regles2026.regimeGeneral).net / 12) * 100) / 100)
+    // Ordre de grandeur d'un salarié non cadre : environ 78 % du brut en net.
+    expect(netCalcule(3000, regles2026) / 3000).toBeGreaterThan(0.75)
+    expect(netCalcule(3000, regles2026) / 3000).toBeLessThan(0.82)
+  })
+
+  it("relit le net d'un brut calculé, au centime près", () => {
+    const regles2026 = reglesPubliees(2026)
+    for (const net of [1500, 2200, 4000, 9000]) expect(Math.abs(netCalcule(brutCalcule(net, regles2026), regles2026) - net)).toBeLessThanOrEqual(0.01)
+  })
+
+  it("ne donne ni brut ni net pour un montant nul", () => {
+    expect(brutCalcule(0, reglesDeTest)).toBe(0)
+    expect(netCalcule(0, reglesDeTest)).toBe(0)
   })
 })
 

@@ -2,7 +2,7 @@
 
 import { app, BrowserWindow, dialog, shell } from "electron"
 import type { SessionState, SaveSlot, UserPreferences, ExportableState, ComparaisonOptions, StatutSociete, FormatFichierTexte } from "@/types.js"
-import { SessionStateSchema } from "@/types.js"
+import { estSocieteIS, SessionStateSchema } from "@/types.js"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./logic/simulation-pluriannuelle.js"
 import { comparerStrategiesDeDistribution } from "./logic/strategies-de-distribution.js"
 import { ipcMainHandle, validateEventFrame } from "./util.js"
@@ -182,7 +182,7 @@ app.on("ready", () => {
   ipcMainHandle("simulerLesAnnees", async (session: SessionState) => simulerLesAnnees(validatedSession(session, "simulerLesAnnees")))
 
   ipcMainHandle("compareStatuts", async (session: SessionState, options: ComparaisonOptions, annee: number) => comparerStatutsDeLAnnee(validatedSession(session, "compareStatuts"), options, annee))
-  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) => optimiserRemunerationDeLAnnee(validatedSession(session, "optimiserRemuneration"), options, statut === "EURL" ? "EURL" : "SASU", annee))
+  ipcMainHandle("optimiserRemuneration", async (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) => optimiserRemunerationDeLAnnee(validatedSession(session, "optimiserRemuneration"), options, estSocieteIS(statut) ? statut : "SASU", annee))
   ipcMainHandle("comparerStrategies", async (session: SessionState, activityId: string) => {
     const validee = validatedSession(session, "comparerStrategies")
     return comparerStrategiesDeDistribution(validee, String(activityId), validee.comparateur?.reglagesParActivite[String(activityId)])

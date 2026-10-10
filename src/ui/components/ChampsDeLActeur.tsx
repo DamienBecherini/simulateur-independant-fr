@@ -5,13 +5,16 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { Avatar, Company, Entity } from "@/types"
+import { estSocieteIS, STATUTS_JURIDIQUES, type Avatar, type Company, type Entity, type StatutJuridique, type StatutSociete } from "@/types"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 import { ChampNumerique } from "./ChampNumerique"
 import { ChampDateDeCreation, ChampHorsPlafondAnneePrecedente } from "./ChampDateDeCreation"
 import { ChampProfession } from "./ChampProfession"
+import { pourcent } from "@/backend/logic/format"
+import type { ReglesFiscales } from "@/backend/logic/regles"
 import { proposeLaProfession } from "@/lib/professions"
+import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
 import { texteDuRfrN2 } from "@/lib/rfr-n2"
 
 // Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
@@ -26,12 +29,19 @@ const COULEURS_DES_ACTEURS = [
 
 const iconNames: Record<string, string> = { Briefcase: "Mallette", Building: "Immeuble", Store: "Boutique", User: "Personne" }
 
+/** Nom de chaque statut au réel dans la liste « Statut » de la fiche d'une activité. */
+const CHOIX_DU_STATUT: Record<StatutJuridique, string> = {
+  SASU: "SASU",
+  EURL: "EURL",
+  EI: "Entreprise individuelle (au réel)"
+}
+
 interface ChampsDeLActeurProps {
   entity: Entity
   onChange: (entity: Entity) => void
   /** Années de la simulation : le champ du RFR N-2 nomme celles qu'il couvre. */
   anneesSimulees?: number[]
-  /** L'année affichée, dont les règles décrivent la profession. */
+  /** L'année affichée : ses règles donnent les taux cités par les aides (profession, capital, frais). */
   annee: number
 }
 
@@ -67,9 +77,11 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee }
               <SelectValue placeholder="Choisir un statut" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="SASU">SASU</SelectItem>
-              <SelectItem value="EURL">EURL</SelectItem>
-              <SelectItem value="EI">Entreprise individuelle (au réel)</SelectItem>
+              {STATUTS_JURIDIQUES.map(statut => (
+                <SelectItem key={statut} value={statut}>
+                  {CHOIX_DU_STATUT[statut]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -99,7 +111,7 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee }
           </div>
         </div>
       )}
-      {entity.type === "person" ? <ChampsFraisReels personne={entity} onChange={onChange} /> : <ChampsDeplacements activite={entity} onChange={onChange} />}
+      {entity.type === "person" ? <ChampsFraisReels personne={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} /> : <ChampsDeplacements activite={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
     </>
   )
 }
@@ -138,14 +150,28 @@ function StatusSpecificFields({ entity, onChange, anneesSimulees = [], annee }: 
       )}
       {entity.type !== "person" && <ChampDateDeCreation activite={entity} onChange={onChange} />}
       {entity.type === "micro-entreprise" && <ChampHorsPlafondAnneePrecedente activite={entity} onChange={onChange} />}
-      {entity.type === "company" && entity.legalStatus !== "EI" && <ChampsDeLaSociete societe={entity} onChange={onChange} />}
+      {entity.type === "company" && estSocieteIS(entity.legalStatus) && <ChampsDeLaSociete societe={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
     </>
   )
 }
 
-/** Société à l'IS : son capital (réserve légale, dividendes d'EURL soumis à cotisations) et ses réserves de départ. */
-function ChampsDeLaSociete({ societe, onChange }: { societe: Company; onChange: (entity: Entity) => void }) {
-  const aideCapital = societe.legalStatus === "EURL" ? "Les dividendes au-delà de 10 % du capital supportent les cotisations sociales du gérant. " : ""
+/**
+ * Ce que le capital social change pour chaque société à l'IS, en plus de la réserve légale : rien de plus en SASU ; en
+ * EURL, les dividendes au-delà d'une part du capital (règles de l'année) supportent les cotisations du gérant (voir
+ * calculsEURL.ts).
+ */
+const AIDE_DU_CAPITAL: Record<StatutSociete, (regles: ReglesFiscales) => string> = {
+  SASU: () => "",
+  EURL: regles => `Les dividendes au-delà de ${pourcent(regles.EURL.seuilDividendesPartDuCapital)} du capital supportent les cotisations sociales du gérant. `
+}
+
+/**
+ * Société à l'IS : son capital (réserve légale, dividendes d'EURL soumis à cotisations) et ses réserves de départ.
+ * L'aide cite les parts de l'année affichée.
+ */
+function ChampsDeLaSociete({ societe, onChange, regles }: { societe: Company; onChange: (entity: Entity) => void; regles: ReglesFiscales }) {
+  const aideCapital = estSocieteIS(societe.legalStatus) ? AIDE_DU_CAPITAL[societe.legalStatus](regles) : ""
+  const reserveLegale = `${pourcent(regles.reserveLegale.partDuBenefice)} du bénéfice vont à la réserve légale, non distribuable, jusqu'à ce qu'elle atteigne ${pourcent(regles.reserveLegale.plafondPartDuCapital)} du capital.`
   return (
     <>
       <div className="grid grid-cols-4 items-center gap-4">
@@ -154,7 +180,7 @@ function ChampsDeLaSociete({ societe, onChange }: { societe: Company; onChange: 
         </Label>
         <div className="col-span-3">
           <ChampNumerique id="capitalSocial" name="capitalSocial" min="0" step="100" quoi="le capital social" value={societe.capitalSocial} onChange={e => onChange({ ...societe, capitalSocial: Math.max(0, parseFloat(e.target.value) || 0) })} />
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{aideCapital}5 % du bénéfice vont à la réserve légale, non distribuable, jusqu'à ce qu'elle atteigne 10 % du capital.</p>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{aideCapital}{reserveLegale}</p>
         </div>
       </div>
       <div className="grid grid-cols-4 items-center gap-4">

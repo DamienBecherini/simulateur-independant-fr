@@ -93,8 +93,20 @@ function protectionMicro({ chiffreAffairesMicro: ca, beneficieACRE = false, acre
   }
 }
 
+/**
+ * Protection sociale de chaque colonne du comparateur : le président de SASU est assimilé salarié (droits du régime
+ * général sur sa rémunération brute) ; le gérant d'EURL et l'entrepreneur individuel au réel sont travailleurs non
+ * salariés (droits sur leur assiette, selon leur caisse) ; le micro-entrepreneur acquiert ses droits sur son chiffre
+ * d'affaires. Un nouveau statut doit y dire quel régime est le sien.
+ */
+const PROTECTION_PAR_STATUT: Record<StatutCompare, (donnees: DonneesProtection, regles: ReglesFiscales) => ProtectionSociale> = {
+  SASU: (donnees, regles) => protectionSASU(donnees.remunerationBrute, regles),
+  EURL: (donnees, regles) => protectionTNS(donnees.assietteTNS, regles, donnees.caisse),
+  EI: (donnees, regles) => protectionTNS(donnees.assietteTNS, regles, donnees.caisse),
+  micro: protectionMicro,
+  "micro-vfl": protectionMicro
+}
+
 export function evaluerProtectionSociale(statut: StatutCompare, donnees: DonneesProtection, regles: ReglesFiscales): ProtectionSociale {
-  if (statut === "SASU") return protectionSASU(donnees.remunerationBrute, regles)
-  if (statut === "EURL" || statut === "EI") return protectionTNS(donnees.assietteTNS, regles, donnees.caisse)
-  return protectionMicro(donnees, regles)
+  return PROTECTION_PAR_STATUT[statut](donnees, regles)
 }

@@ -11,6 +11,7 @@ import { FlowItem, type FlowChanges } from "./FlowItem"
 import { NewFlowItem, type NewFlowValues } from "./NewFlowItem"
 import { useTriAccessible } from "../hooks/useTriAccessible"
 import { anneesDuRaccourci, LIBELLES_PORTEE, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, type PorteeRecurrence, type RaccourciAnnees } from "@/lib/flux-recurrents"
+import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
 import { cn } from "@/lib/utils"
 
 /**
@@ -24,8 +25,11 @@ interface MonthlyFlowsModalProps {
   flows: FinancialFlow[]
   entity: Entity
   monthName: string
-  /** Année affichée, pour les raccourcis « Années précédentes » et « Années suivantes ». */
-  annee?: number
+  /**
+   * Année affichée, pour les raccourcis « Années précédentes » et « Années suivantes », et dont les cotisations
+   * salariales donnent le brut ou le net d'un salaire saisi sans pourcentage.
+   */
+  annee: number
   /** Autres années de la session, proposées en cases à cocher ; aucune case sans autre année. */
   autresAnnees?: number[]
   /** Crée le flux dans ce mois et, selon la portée choisie, le recopie sur d'autres mois et dans les années cochées. */
@@ -108,10 +112,11 @@ function CasesDesAnnees({ annee, autresAnnees, aussiEn, setAussiEn }: CasesDesAn
   )
 }
 
-export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee = 0, autresAnnees = [], onCreate, onRecopier, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
+export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], onCreate, onRecopier, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
   const flowIds = useMemo(() => flows.map(f => f.id), [flows])
   const tri = useTriAccessible(useMemo(() => flows.map(f => ({ id: f.id, nom: f.label || flowTypeLabels[f.type] })), [flows]))
   const allowedTypes = getFlowTypesForEntity(entity)
+  const regles = reglesDeLAnneeAffichee(annee)
 
   // Type prérempli de la ligne d'ajout : le dernier type utilisé dans cette fenêtre, sinon le premier autorisé.
   const [newFlowType, setNewFlowType] = useState<FlowType>(allowedTypes[0])
@@ -169,7 +174,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee = 0
             <span>Opérations de {monthName}</span>
             <span className="text-base font-normal text-slate-600 dark:text-slate-400">/ {entity.name}</span>
           </DialogTitle>
-          <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant. Pour une charge ou un revenu qui revient chaque mois, choisissez « Appliquer à » en dessous : l'ajout, la modification ou la suppression vaut alors aussi pour les autres mois (même type et même libellé).{autresAnnees.length > 0 ? " Cochez d'autres années sous « Aussi en » : les mêmes mois y sont visés (en juillet, « ce mois et les suivants » vise juillet à décembre de chaque année cochée)." : ""} Le bouton de recopie d'un flux le recopie jusqu'en décembre de l'année affichée. Pour un salaire, le brut est calculé à 78 % du net si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.</DialogDescription>
+          <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant. Pour une charge ou un revenu qui revient chaque mois, choisissez « Appliquer à » en dessous : l'ajout, la modification ou la suppression vaut alors aussi pour les autres mois (même type et même libellé).{autresAnnees.length > 0 ? " Cochez d'autres années sous « Aussi en » : les mêmes mois y sont visés (en juillet, « ce mois et les suivants » vise juillet à décembre de chaque année cochée)." : ""} Le bouton de recopie d'un flux le recopie jusqu'en décembre de l'année affichée. Pour un salaire, le brut est calculé avec les cotisations salariales de {regles.annee} si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2 py-2">
@@ -178,14 +183,14 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee = 0
               <div ref={listRef} className="max-h-[50vh] space-y-2 overflow-y-auto">
                 <SortableContext items={flowIds} strategy={verticalListSortingStrategy}>
                   {flows.map(flow => (
-                    <FlowItem key={flow.id} flow={flow} allowedTypes={allowedTypes} onUpdate={(flowId, changes) => onUpdate(flowId, changes, portee, aussiEn)} onDelete={flowId => onDelete(flowId, portee, aussiEn)} onRecopier={onRecopier} onTypeUsed={setNewFlowType} typeActeur={entity.type} />
+                    <FlowItem key={flow.id} flow={flow} allowedTypes={allowedTypes} onUpdate={(flowId, changes) => onUpdate(flowId, changes, portee, aussiEn)} onDelete={flowId => onDelete(flowId, portee, aussiEn)} onRecopier={onRecopier} onTypeUsed={setNewFlowType} typeActeur={entity.type} regles={regles} />
                   ))}
                 </SortableContext>
               </div>
             </DndContext>
           )}
 
-          <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee, aussiEn)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} />
+          <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee, aussiEn)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} regles={regles} />
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-sm text-slate-700 dark:text-slate-300">
             {/* `min-w-0 max-w-full` : avec une police large, la liste se resserre à la largeur de la fenêtre au lieu de la déborder. */}
             <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2">

@@ -4,8 +4,11 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
+import { pourcent } from "@/backend/logic/format"
+import { reglesPubliees } from "@/backend/logic/regles"
 import type { Entity, Trajet } from "@/types"
 import { makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
+import { ChampsFraisReels } from "./ChampsFrais"
 import EditEntityModal from "./EditEntityModal"
 
 function ouvrir(entity: Entity) {
@@ -94,6 +97,31 @@ describe("frais réels d'une personne", () => {
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
 
     expect(onSave.mock.calls[0][0].fraisReels).toEqual({ trajets: [], autresFrais: 1200 })
+  })
+})
+
+describe("taux et distances cités par les textes", () => {
+  it("sont ceux des règles de l'année affichée", () => {
+    const r = reglesPubliees(2026)
+    ouvrir(makePerson({ fraisReels: { trajets: [trajet20km], autresFrais: 0 } }))
+    expect(screen.getByRole("switch", { name: `Comparer mes frais réels à la déduction de ${pourcent(r.IR.abattementSalaires.taux)}` })).toBeChecked()
+    expect(screen.getByRole("switch", { name: `Voiture électrique (+ ${pourcent(r.baremeKilometrique.majorationElectrique)})` })).toBeInTheDocument()
+    expect(screen.getByRole("switch", { name: `Distance justifiée au-delà de ${r.baremeKilometrique.domicileTravail.distanceMaxParTrajet} km` })).toBeInTheDocument()
+  })
+
+  it("suivent les règles reçues, sans valeur écrite en dur", () => {
+    const r = reglesPubliees(2026)
+    const autres = {
+      ...r,
+      IR: { ...r.IR, abattementSalaires: { ...r.IR.abattementSalaires, taux: 0.12 } },
+      baremeKilometrique: { ...r.baremeKilometrique, majorationElectrique: 0.25, domicileTravail: { distanceMaxParTrajet: 50 } }
+    }
+    render(<ChampsFraisReels personne={makePerson({ fraisReels: { trajets: [trajet20km], autresFrais: 0 } })} onChange={vi.fn()} regles={autres} />)
+    expect(screen.getByRole("switch", { name: "Comparer mes frais réels à la déduction de 12 %" })).toBeInTheDocument()
+    expect(screen.getByText(/la déduction forfaitaire de 12 % ou vos frais réels/)).toBeInTheDocument()
+    expect(screen.getByText(/Au-delà de 50 km par trajet, seuls 50 km comptent/)).toBeInTheDocument()
+    expect(screen.getByRole("switch", { name: "Voiture électrique (+ 25 %)" })).toBeInTheDocument()
+    expect(screen.getByRole("switch", { name: "Distance justifiée au-delà de 50 km" })).toBeInTheDocument()
   })
 })
 

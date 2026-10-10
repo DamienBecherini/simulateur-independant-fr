@@ -280,7 +280,7 @@ describe("ResultsPanel", () => {
   it("indique la déduction retenue pour une personne qui a saisi des frais réels", () => {
     const report = makeReport()
     const bob = report.persons[1]
-    const frais = { revenusSalariaux: 28000, deductionForfaitaire: 2800, fraisReels: 4508, fraisDeTrajet: 4508, distanceRetenue: 8720, nombreDeTrajets: 1, voitures: [], autresFrais: 0, retenue: "reels" as const, deduction: 4508 }
+    const frais = { revenusSalariaux: 28000, tauxDeductionForfaitaire: 0.1, deductionForfaitaire: 2800, fraisReels: 4508, fraisDeTrajet: 4508, distanceRetenue: 8720, nombreDeTrajets: 1, voitures: [], autresFrais: 0, retenue: "reels" as const, deduction: 4508 }
     report.persons = [report.persons[0], { ...bob, fraisProfessionnels: frais }]
     const { rerender } = render(<ResultsPanel report={report} error={null} />)
 
@@ -296,6 +296,11 @@ describe("ResultsPanel", () => {
     report.persons = [report.persons[0], { ...bob, fraisProfessionnels: { ...frais, fraisReels: 500, fraisDeTrajet: 0, distanceRetenue: 0, retenue: "forfait", deduction: 2800 } }]
     rerender(<ResultsPanel report={{ ...report }} error={null} />)
     expect(within(card).queryByText("trajets domicile-travail")).not.toBeInTheDocument()
+
+    // Le taux nommé est celui des règles de l'année du résultat, pas un « 10 % » écrit en dur.
+    report.persons = [report.persons[0], { ...bob, fraisProfessionnels: { ...frais, tauxDeductionForfaitaire: 0.12 } }]
+    rerender(<ResultsPanel report={{ ...report }} error={null} />)
+    expect(rowValue(card, "Frais réels retenus")).toHaveTextContent(`plutôt que ${money(2800)} de déduction de 12 %`)
   })
 
   it("affiche les déplacements professionnels d'une activité, déductibles ou non", () => {

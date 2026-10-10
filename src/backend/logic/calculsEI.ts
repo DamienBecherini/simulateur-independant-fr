@@ -34,7 +34,7 @@ export function calculerEI({ chiffreAffaires, chargesDeductibles }: EntreesEI, r
   const cotisationsTNS = calculerCotisationsTNS(beneficeAvantCotisations, regles.TNS, caisse)
   const revenuNet = beneficeAvantCotisations - cotisationsTNS.total
 
-  const warnings = avertissementCotisationsMinimales(cotisationsTNS, "des indépendants")
+  const warnings = avertissementCotisationsMinimales(cotisationsTNS, "des indépendants", regles, caisse)
   if (revenuNet < 0) {
     warnings.push(`L'entreprise est déficitaire de ${euros(-revenuNet)}, cotisations comprises : le déficit est imputé sur les autres revenus du foyer ; son report sur les années suivantes n'est pas modélisé.`)
   }

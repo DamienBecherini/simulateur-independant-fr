@@ -118,7 +118,7 @@ export function rapportAvecFrais(): SimulationReport {
     { puissanceFiscale: "5" as const, electrique: false, distance: 4800, montant: 2880 },
     { puissanceFiscale: "3" as const, electrique: true, distance: 2500, montant: 1500 }
   ]
-  rapport.persons = [{ ...alice, fraisProfessionnels: { revenusSalariaux: 20000, deductionForfaitaire: 2000, fraisReels: 4880, fraisDeTrajet: 4380, distanceRetenue: 7300, nombreDeTrajets: 2, voitures, autresFrais: 500, retenue: "reels", deduction: 4880 } }, bob]
+  rapport.persons = [{ ...alice, fraisProfessionnels: { revenusSalariaux: 20000, tauxDeductionForfaitaire: 0.1, deductionForfaitaire: 2000, fraisReels: 4880, fraisDeTrajet: 4380, distanceRetenue: 7300, nombreDeTrajets: 2, voitures, autresFrais: 500, retenue: "reels", deduction: 4880 } }, bob]
   const atelier = {
     ...rapport.activities[0],
     entityId: "m1",

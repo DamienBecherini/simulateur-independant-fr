@@ -1,6 +1,7 @@
 // src/lib/export-markdown.test.ts
 
 import { describe, expect, it } from "vitest"
+import { reglesPubliees } from "@/backend/logic/regles"
 import type { ComparaisonOptions, SimulationAnnuelle } from "@/types"
 import { echapper, euros, LIMITES, rapportMarkdown, repartition, type DonneesDuRapport } from "./export-markdown"
 import { comparaisonExemple, optionsExemple, pluriannuelleExemple, rapportAvecFrais, rapportAvecReserves, rapportExemple, sessionAvecFrais, sessionExemple } from "./testing/exports-fixtures"
@@ -204,6 +205,17 @@ Sur les revenus imposés comme des salaires, la plus favorable de la déduction 
     expect(rapport).toContain("| Studio | 2024 | — | inconnu | 28 797 € (1 part) | revenu fiscal de référence inconnu |")
     expect(rapport).toContain("| Boutique | 2024 | 25 000 € | saisi dans la fiche | 28 797 € (1 part) | sous le seuil, versement libératoire non appliqué |")
     expect(rapport).toContain("| **Déduction de 10 %** : 2 000 € | 0 | 7 300 km | — | 500 € |")
+  })
+
+  it("nomme la déduction au taux du résultat et la distance des trajets selon les règles de l'année", () => {
+    const report = rapportAvecFrais()
+    report.persons = report.persons.map(p => (p.fraisProfessionnels ? { ...p, fraisProfessionnels: { ...p.fraisProfessionnels, tauxDeductionForfaitaire: 0.12, retenue: "forfait", deduction: 2000 } } : p))
+    const rapport = rapportComplet({ session: sessionAvecFrais(), report })
+    expect(rapport).toContain("la plus favorable de la déduction de 12 % et des frais réels")
+    expect(rapport).toContain("| Personne | Revenus imposés comme des salaires | Déduction de 12 % | Frais réels |")
+    expect(rapport).toContain("| **Déduction de 12 %** : 2 000 € |")
+    const distance = reglesPubliees(2026).baremeKilometrique.domicileTravail.distanceMaxParTrajet
+    expect(rapport).toContain(`| Électrique | Distance au-delà de ${distance} km justifiée |`)
   })
 
   it("omet les frais réels, les déplacements et le versement libératoire quand la simulation n'en a pas", () => {

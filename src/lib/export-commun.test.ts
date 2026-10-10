@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import type { Company, FinancialFlow, MicroEntreprise, Person, SimulationAnnuelle, VersementLiberatoireInfo } from "@/types"
-import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleRetenue, libelleVoiture, natureActeur, nomDeFichier, nomDeLActeur, origineDuRfr, rfrDesAnnees, slugifier } from "./export-commun"
+import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libelleRetenue, libelleVoiture, natureActeur, nomDeFichier, nomDeLActeur, origineDuRfr, rfrDesAnnees, slugifier } from "./export-commun"
 import { pluriannuelleExemple, rapportAvecFrais, sessionExemple } from "./testing/exports-fixtures"
 
 const avatar = { type: "initials" as const, value: "A", color: "#000000" }
@@ -100,8 +100,10 @@ describe("frais au barème kilométrique", () => {
     expect(personnes.map(p => p.name)).toEqual(["Alice"])
     expect(libelleRetenue(personnes[0].frais)).toBe("Frais réels")
     expect(libelleRetenue({ ...personnes[0].frais, retenue: "forfait" })).toBe("Déduction de 10 %")
-  })
-})
+    // Le taux est celui du résultat, donc des règles de son année.
+    expect(libelleRetenue({ ...personnes[0].frais, retenue: "forfait", tauxDeductionForfaitaire: 0.12 })).toBe("Déduction de 12 %")
+    expect(libelleDeduction({ tauxDeductionForfaitaire: 0.125 })).toBe("Déduction de 12,5 %")
+  })})
 
 describe("versement libératoire", () => {
   const info: VersementLiberatoireInfo = { plafondRfr: 28797, partsFiscales: 1, rfrN2: 25000, anneeRfr: 2024, origineRfr: "saisi", eligible: true, applique: true }

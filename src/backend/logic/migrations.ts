@@ -12,6 +12,9 @@
  * ajouter la migration correspondante dans `migrations`.
  */
 
+import { CAPITAL_SOCIAL_PAR_DEFAUT } from "../../types.js"
+import { euros } from "./format.js"
+
 export const FORMAT_VERSION_ACTUEL = 3
 
 /**
@@ -72,7 +75,7 @@ function migrerV1VersV2(donnees: DonneesBrutes): { donnees: DonneesBrutes; notes
   }
 
   if (entites.some(e => e.type === "company" && e.legalStatus === "EURL")) {
-    notes.push("Le capital social des EURL est désormais pris en compte (1 000 € par défaut) : renseignez le vôtre dans la fiche de la société.")
+    notes.push(`Le capital social des EURL est désormais pris en compte (${euros(CAPITAL_SOCIAL_PAR_DEFAUT)} par défaut) : renseignez le vôtre dans la fiche de la société.`)
   }
 
   return { donnees, notes }

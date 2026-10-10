@@ -1,9 +1,9 @@
 // src/lib/professions.test.ts
 
 import { describe, expect, it } from "vitest"
-import { ANNEE_COURANTE, reglesPubliees } from "@/backend/logic/regles"
+import { reglesPubliees } from "@/backend/logic/regles"
 import { makeCompany, makeMicro } from "@/ui/testing/fixtures"
-import { avecLaProfession, estConventionnable, groupesDeProfessions, informationSurLaProfession as informationBrute, proposeLaProfession, reglesDesProfessions } from "./professions"
+import { avecLaProfession, estConventionnable, groupesDeProfessions, informationSurLaProfession as informationBrute, proposeLaProfession } from "./professions"
 
 const regles2026 = reglesPubliees(2026)
 
@@ -50,13 +50,5 @@ describe("choix d'une profession", () => {
     expect(sans).not.toHaveProperty("partConventionnee")
     expect(estConventionnable({ profession: "infirmier" }, regles2026)).toBe(true)
     expect(estConventionnable({}, regles2026)).toBe(false)
-  })
-})
-
-describe("règles des professions d'une année affichée", () => {
-  it("celles de l'année, les dernières connues au-delà, les premières connues avant", () => {
-    expect(reglesDesProfessions(2025)).toBe(reglesPubliees(2025))
-    expect(reglesDesProfessions(ANNEE_COURANTE + 14)).toBe(reglesPubliees(ANNEE_COURANTE))
-    expect(reglesDesProfessions(2010)).toBe(reglesPubliees(2024))
   })
 })
