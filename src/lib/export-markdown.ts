@@ -26,11 +26,11 @@ export interface DonneesDuRapport {
 export const LIMITES = [
   "Montants annuels en euros, hors taxe ; la grille saisit des montants mensuels, additionnés sur l'année.",
   "Résultats indicatifs, non validés par un expert-comptable : ce n'est pas un conseil fiscal.",
-  "Cotisations des travailleurs non salariés (gérant d'EURL, entrepreneur individuel au réel) calculées selon le barème des artisans, commerçants et professions libérales non réglementées ; celles du président de SASU approchées par un ratio moyen entre coût total et net.",
+  "Cotisations des travailleurs non salariés (gérant d'EURL, entrepreneur individuel au réel) calculées selon le barème des artisans, commerçants et professions libérales non réglementées ; celles du président de SASU calculées ligne à ligne avec les taux du régime général de l'année, sans assurance chômage.",
   "Professions libérales réglementées : seules la CIPAV et la CARPIMKO sont calculées (au réel et en micro-entreprise) ; les autres caisses le sont comme une profession non réglementée, avec un avertissement. CARPIMKO : retraite complémentaire et ASV calculées sur le revenu de l'année précédente quand elle est dans la simulation, sinon sur celui de l'année. En SASU ou en EURL, la rémunération d'un associé de société d'exercice libéral (BNC, caisse de la profession) n'est pas modélisée : un avertissement le signale.",
   "Micro-entreprise : cotisations au taux de chaque nature d'activité, plus la contribution à la formation professionnelle, comptée au taux des artisans pour les prestations de services BIC (artisan et commerçant ne sont pas distingués).",
   "La note de protection sociale est indicative ; l'arbitrage rémunération / dividendes porte sur une seule année.",
-  "Non modélisés : réductions et crédits d'impôt, résidence alternée, report des déficits, TVA (seul le dépassement des seuils de franchise est signalé), répartition du capital entre associés (dividendes partagés à parts égales)."
+  "Non modélisés : réductions et crédits d'impôt, résidence alternée, report sur les années suivantes du déficit d'une entreprise individuelle supérieur aux autres revenus du foyer (celui d'une société à l'IS est reporté), TVA (seul le dépassement des seuils de franchise est signalé), répartition du capital entre associés (dividendes partagés à parts égales)."
 ]
 
 // --- Mise en forme ---
