@@ -6,7 +6,11 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { ANNEE_PAR_DEFAUT, type Entity } from "@/types"
 import { makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
+import { delaiDesTestsDIntegration } from "@/ui/testing/delais"
 import EditEntityModal from "./EditEntityModal"
+
+// Toute la fenêtre de réglages et ses listes Radix, pilotées comme par un utilisateur : voir testing/delais.ts.
+delaiDesTestsDIntegration()
 
 function ouvrir(entity: Entity) {
   const onSave = vi.fn()

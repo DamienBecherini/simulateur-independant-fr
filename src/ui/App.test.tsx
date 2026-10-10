@@ -4,10 +4,14 @@
 
 import { act, render, screen, within } from "@testing-library/react"
 import userEvent, { type UserEvent } from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { SessionState } from "@/types"
 import { emptySession, makeFlow, makePerson } from "@/ui/testing/fixtures"
+import { delaiDesTestsDIntegration } from "@/ui/testing/delais"
 import App from "./App"
+
+// L'application entière, pilotée comme par un utilisateur : un délai plus long, expliqué dans testing/delais.ts.
+delaiDesTestsDIntegration()
 
 /** Session de départ : Alice, avec un revenu de 1 000 € en janvier. */
 function initialSession(): SessionState {
@@ -161,11 +165,27 @@ describe("App : flux qui reviennent chaque mois", () => {
     return (session?.annees[0].monthlyData ?? []).map(mois => mois.flows.filter(f => f.label === "ARE").map(f => f.amount))
   }
 
+  /**
+   * Le recalcul suit chaque modification de 300 ms : plutôt que d'attendre ce délai pour de vrai à chaque étape, on
+   * avance l'horloge simulée jusqu'à lui, puis on lit la session qu'il a envoyée au moteur.
+   */
+  async function sessionRecalculee() {
+    await act(() => vi.advanceTimersByTimeAsync(300))
+    return montantsDeLARE()
+  }
+
   async function appliquerA(user: UserEvent, dialog: HTMLElement, portee: "suivants" | "annee") {
     await user.selectOptions(within(dialog).getByLabelText("Appliquer à :"), portee)
   }
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("ajouter sur l'année, modifier à partir de juillet, supprimer sur l'année : une étape d'annulation chacune", async () => {
+    // Horloge simulée dès l'ouverture, pour que le recalcul de la session initiale ne puisse pas arriver en retard, au
+    // milieu des étapes ; elle suit aussi le temps réel, dont l'attente de l'affichage de l'application a besoin.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true })
     const user = await renderApp()
 
     // 1 200 € d'ARE chaque mois, saisis en mars pour toute l'année.
@@ -174,7 +194,7 @@ describe("App : flux qui reviennent chaque mois", () => {
     await user.type(within(dialog).getByLabelText("Libellé du nouveau flux"), "ARE")
     await user.type(within(dialog).getByLabelText("Montant du nouveau flux"), "1200{Enter}")
     await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
-    await vi.waitFor(() => expect(montantsDeLARE()).toEqual(Array.from({ length: 12 }, () => [1200])))
+    expect(await sessionRecalculee()).toEqual(Array.from({ length: 12 }, () => [1200]))
 
     // 1 300 € à partir de juillet.
     dialog = await openMonth(user, "juillet")
@@ -184,19 +204,19 @@ describe("App : flux qui reviennent chaque mois", () => {
     await user.type(montant, "1300{Enter}")
     await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
     const avantSuppression = [...Array.from({ length: 6 }, () => [1200]), ...Array.from({ length: 6 }, () => [1300])]
-    await vi.waitFor(() => expect(montantsDeLARE()).toEqual(avantSuppression))
+    expect(await sessionRecalculee()).toEqual(avantSuppression)
 
     // Suppression depuis décembre, sur toute l'année : les deux montants disparaissent.
     dialog = await openMonth(user, "décembre")
     await appliquerA(user, dialog, "annee")
     await user.click(within(dialog).getByRole("button", { name: "Supprimer le flux" }))
     await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
-    await vi.waitFor(() => expect(montantsDeLARE()).toEqual(Array.from({ length: 12 }, () => [])))
+    expect(await sessionRecalculee()).toEqual(Array.from({ length: 12 }, () => []))
 
     expect(await countUndoSteps(user)).toBe(3)
     // Une seule annulation rend toute la série supprimée, avec ses deux montants.
     await user.keyboard("{Control>}z{/Control}")
-    await vi.waitFor(() => expect(montantsDeLARE()).toEqual(avantSuppression))
+    expect(await sessionRecalculee()).toEqual(avantSuppression)
   })
 })
 

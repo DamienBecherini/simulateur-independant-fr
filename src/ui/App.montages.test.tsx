@@ -7,7 +7,11 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { SessionState } from "@/types"
 import { emptySession, makePerson } from "@/ui/testing/fixtures"
+import { delaiDesTestsDIntegration } from "@/ui/testing/delais"
 import App from "./App"
+
+// L'application entière, pilotée comme par un utilisateur : un délai plus long, expliqué dans testing/delais.ts.
+delaiDesTestsDIntegration()
 
 async function renderApp(session: SessionState) {
   vi.mocked(window.api.getCurrentSession).mockResolvedValue(session)
@@ -51,7 +55,7 @@ describe("App : montages types", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Salarié avec une micro-entreprise à côté" })).toBeInTheDocument()
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     expect(undoButton()).toBeDisabled()
-  })
+  })
   it("depuis la barre d'outils, ouvre la même fenêtre et demande confirmation avant de remplacer une simulation non enregistrée", async () => {
     const user = await renderApp({ ...emptySession(), name: "Mon brouillon", entities: [makePerson()] })
     await user.clear(screen.getByRole("textbox", { name: "Nom" }))
