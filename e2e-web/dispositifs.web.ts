@@ -4,6 +4,7 @@
 // court de septembre 2026 à juin 2027. Résultats, synthèse des années, comparateur, fenêtre de réglages, accessibilité.
 
 import { test, expect, type Page } from "@playwright/test"
+import { ligneDeLAnnee } from "./support/annees"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 
 /** 7 500 € de prestations BIC chaque mois d'activité : 30 000 € en 2026 (plafond au prorata : 27 943 €), 90 000 € ensuite. */
@@ -31,7 +32,7 @@ const SESSION = {
 async function ouvrir(page: Page) {
   await page.addInitScript(session => window.localStorage.setItem("simulateur.session", JSON.stringify(session)), SESSION)
   await page.goto("./")
-  await expect(page.getByText(/année 2028 avec les règles fiscales 2026/)).toBeVisible()
+  await expect(page.getByText(ligneDeLAnnee(2028))).toBeVisible()
 }
 
 /** Ouvre la fenêtre de réglages de l'acteur dont la carte porte ce nom. */
@@ -75,7 +76,7 @@ test("2028 sous le régime réel, annoncé dans les résultats, la synthèse et 
 
   // 2026 : toujours au régime micro, avec l'ACRE des quatre premiers mois.
   await annee(page, "2026").click()
-  await expect(page.getByText(/année 2026 avec les règles fiscales 2026/)).toBeVisible()
+  await expect(page.getByText(ligneDeLAnnee(2026))).toBeVisible()
   await expect(carteAtelier(page)).toContainText("Micro-entreprise")
   await expect(carteAtelier(page).getByRole("list", { name: "Dispositifs de l'année" })).toContainText(/ACRE : cotisations réduites de 25 % sur le chiffre d'affaires de septembre à décembre 2026, soit 1\s590 € de moins ; l'aide court de septembre 2026 à fin juin 2027/)
   await auditer(page, "année de création, ACRE")

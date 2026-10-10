@@ -12,6 +12,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 - Maintenance : les règles de 2026 passent de `src/backend/config.json` à `src/backend/regles/2026.json`, comme les autres années ; l'année en cours du simulateur (nouvelle session, démo) est la plus récente des fichiers de règles et n'est plus écrite en dur (ADR 007 mise à jour).
 - Maintenance : les fonctions du moteur reçoivent toujours les règles de l'année calculée ; il n'y a plus de « règles de l'année en cours » par défaut, qu'un appel pouvait utiliser sans le dire.
 - Maintenance : chaque caisse de libéraux (CIPAV, CARPIMKO) a son calcul, ses particularités et ses textes dans des tables typées par caisse ; une caisse ajoutée sans ses règles est refusée à la compilation au lieu d'être calculée comme la CARPIMKO.
+- Maintenance : les tests qui portent sur l'année en cours (session vierge, « dernières règles connues », année future) la calculent au lieu d'attendre 2026 ; la simulation d'exemple de la démo web est figée sur 2026, comme les montages types. Ajouter les règles de 2027 ne fait plus échouer que les tests de ces règles (essai : 82 échecs avant, 1 après).
 - Documentation : le guide du développeur est réécrit (architecture, carte du moteur, procédures pas à pas pour une nouvelle année de règles, un paramètre, une caisse, un statut ou un type de flux, le format de fichier, un cas de référence, le débogage d'un calcul, les scénarios de test et les outils pour les IA ; sources officielles, glossaire), et les ADR périmées sont complétées.
 
 ### Corrigé

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest"
 import type { SessionState } from "@/types"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
+import { ANNEE_COURANTE } from "@/backend/logic/regles"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
 import { MONTAGES_TYPES, sessionDUnMontage } from "@/lib/montages/montages"
 import { appeler, erreurDe, geler } from "./outils-ia.testing"
@@ -236,7 +237,7 @@ describe("regles_de_l_annee", () => {
   })
 
   it("reprend les dernières règles connues pour une année future, et refuse une année trop ancienne", () => {
-    expect(appeler<{ anneeDesRegles: number; avertissement: string }>("regles_de_l_annee", exemple(), { annee: 2030 })).toMatchObject({ anneeDesRegles: 2026, avertissement: expect.stringContaining("2030") })
+    expect(appeler<{ anneeDesRegles: number; avertissement: string }>("regles_de_l_annee", exemple(), { annee: ANNEE_COURANTE + 4 })).toMatchObject({ anneeDesRegles: ANNEE_COURANTE, avertissement: expect.stringContaining(String(ANNEE_COURANTE + 4)) })
     expect(erreurDe("regles_de_l_annee", exemple(), { annee: 2020 })).toContain("d'avant 2024")
   })
 })

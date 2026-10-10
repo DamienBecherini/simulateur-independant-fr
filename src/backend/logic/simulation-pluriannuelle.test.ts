@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import { grilleVide, type SessionState } from "../../types.js"
+import { ANNEE_COURANTE } from "./regles.js"
 import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./simulation-pluriannuelle.js"
 import { micro, personne, relation, societe } from "./testing/session-de-test.js"
 
@@ -49,12 +50,13 @@ describe("simulerLesAnnees", () => {
 
   it("simule une année plus récente avec les dernières règles connues, et le dit", () => {
     const session = sessionMicro()
-    session.annees.push({ annee: 2027, monthlyData: session.annees[1].monthlyData })
+    const future = ANNEE_COURANTE + 1
+    session.annees = [ANNEE_COURANTE, future].map(annee => ({ annee, monthlyData: session.annees[1].monthlyData }))
 
-    const en2027 = simulerLesAnnees(session).annees[2]
+    const [enCours, plusRecente] = simulerLesAnnees(session).annees
 
-    expect(en2027.report).toMatchObject({ annee: 2027, anneeDesRegles: 2026, avertissements: [expect.stringContaining("Les règles de 2027 ne sont pas encore connues")] })
-    expect(en2027.report!.totalNetApresImpots).toBe(simulerLesAnnees(session).annees[1].report!.totalNetApresImpots)
+    expect(plusRecente.report).toMatchObject({ annee: future, anneeDesRegles: ANNEE_COURANTE, avertissements: [expect.stringContaining(`Les règles de ${future} ne sont pas encore connues`)] })
+    expect(plusRecente.report!.totalNetApresImpots).toBe(enCours.report!.totalNetApresImpots)
   })
 
   it("ne simule pas une année antérieure aux premières règles connues, et dit pourquoi", () => {

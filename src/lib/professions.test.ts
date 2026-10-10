@@ -1,7 +1,7 @@
 // src/lib/professions.test.ts
 
 import { describe, expect, it } from "vitest"
-import { reglesPubliees } from "@/backend/logic/regles"
+import { ANNEE_COURANTE, reglesPubliees } from "@/backend/logic/regles"
 import { makeCompany, makeMicro } from "@/ui/testing/fixtures"
 import { avecLaProfession, estConventionnable, groupesDeProfessions, informationSurLaProfession as informationBrute, proposeLaProfession, reglesDesProfessions } from "./professions"
 
@@ -56,7 +56,7 @@ describe("choix d'une profession", () => {
 describe("règles des professions d'une année affichée", () => {
   it("celles de l'année, les dernières connues au-delà, les premières connues avant", () => {
     expect(reglesDesProfessions(2025)).toBe(reglesPubliees(2025))
-    expect(reglesDesProfessions(2040)).toBe(reglesPubliees(2026))
+    expect(reglesDesProfessions(ANNEE_COURANTE + 14)).toBe(reglesPubliees(ANNEE_COURANTE))
     expect(reglesDesProfessions(2010)).toBe(reglesPubliees(2024))
   })
 })
