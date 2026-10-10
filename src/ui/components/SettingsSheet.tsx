@@ -4,7 +4,7 @@
 // jour, « sauvegarder sous », écrasement confirmé) est décidé par `enregistrerLaSession` (src/lib/session-service.ts) ;
 // le panneau l'affiche, demande la confirmation et n'actualise la liste qu'une fois les sauvegardes écrites.
 
-import { useState, Dispatch, SetStateAction, useMemo } from "react"
+import { useRef, useState, Dispatch, SetStateAction, useMemo } from "react"
 import type { SessionState, SaveSlot, SanitizationReport } from "@/types"
 import { texteAnneesEcartees, texteProfessionsEcartees } from "@/backend/logic/data-sanitizer"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils"
 import { POIGNEE_DE_TRI, useTriAccessible } from "../hooks/useTriAccessible"
 import { SauvegardesGroupees } from "./SauvegardesGroupees"
 import { BoutonDesMontages } from "./MontagesTypes"
+import { ConfirmationDeRemplacement } from "./ConfirmationDeRemplacement"
 import type { MontageType } from "@/lib/montages/montages"
 import { ThemeToggle } from "./ThemeToggle"
 import { BoutonDesMentionsLegales } from "./MentionsLegales"
@@ -103,6 +104,15 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
   const [view, setView] = useState<"main" | "load">("main")
   const [isOverwriteAlertOpen, setOverwriteAlertOpen] = useState(false)
   const [slotToOverwrite, setSlotToOverwrite] = useState<SaveSlot | null>(null)
+
+  // Réinitialiser perd la simulation en cours si elle n'est dans aucune sauvegarde : même confirmation que pour un montage type.
+  const [reinitialisationAConfirmer, setReinitialisationAConfirmer] = useState(false)
+  const declencheurDeLaReinitialisation = useRef<HTMLElement | null>(null)
+  const demanderLaReinitialisation = () => {
+    if (!SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)) return onReset()
+    declencheurDeLaReinitialisation.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setReinitialisationAConfirmer(true)
+  }
 
   // Le panneau s'ouvre toujours sur sa page principale (mise à jour pendant le rendu plutôt que dans un effet).
   const [ouvert, setOuvert] = useState(isOpen)
@@ -189,7 +199,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                   Charger une sauvegarde...
                 </Button>
                 <BoutonDesMontages variant="secondary" className="h-auto min-h-9 w-full whitespace-normal py-1.5" onCharger={onLoadMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name} />
-                <Button onClick={onReset} variant="destructive" className="h-auto min-h-9 w-full whitespace-normal py-1.5">
+                <Button onClick={demanderLaReinitialisation} variant="destructive" className="h-auto min-h-9 w-full whitespace-normal py-1.5">
                   <RefreshCcw className="mr-2 h-4 w-4" /> Nouvelle Simulation / Réinitialiser
                 </Button>
                 {/* Aussi dans la barre d'outils, sauf sur un écran très étroit où elle n'a pas la place. */}
@@ -243,6 +253,20 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmationDeRemplacement
+        open={reinitialisationAConfirmer}
+        onAnnuler={() => setReinitialisationAConfirmer(false)}
+        onConfirmer={() => {
+          setReinitialisationAConfirmer(false)
+          onReset()
+        }}
+        titre="Remplacer la simulation en cours ?"
+        libelleDeConfirmation="Remplacer"
+        declencheur={declencheurDeLaReinitialisation}
+      >
+        « {currentSession.name} » n'est pas enregistrée dans une sauvegarde. Une simulation vierge la remplacera ; le bouton « Annuler » de la barre d'outils la rétablira.
+      </ConfirmationDeRemplacement>
 
       <Dialog open={!!importConfirmation} onOpenChange={onCancelImport}>
         <DialogContent>
