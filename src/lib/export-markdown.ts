@@ -7,6 +7,7 @@ import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, stat
 import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { LIMITES, TITRE_DES_LIMITES } from "./limites-du-modele"
 import { numeroterNotes } from "./notes"
+import { ecartAvecLaSituationSaisie } from "./resume"
 import { professionDeLaFiche, statutEtProfession } from "./professions"
 import { reglesDeLAnneeAffichee } from "./regles-affichees"
 import { enTexteBrut, eurosEnTexteBrut, pourcentDeNombre } from "@/backend/logic/format"
@@ -305,28 +306,31 @@ function reglagesUtilises(options: ComparaisonOptions, scenarios: ScenarioStatut
   return [
     `- Bénéfice de la société en SASU et EURL : ${descriptionRepartition(options, scenarios)}`,
     `- En micro-entreprise, part des prestations de services en BNC : ${pourcentage(options.partBncPrestations)} (le reste en BIC)`,
-    `- Frais de fonctionnement annuels ajoutés aux charges : ${options.fraisFonctionnement ? totalDesFrais(options) : "aucun"}`
+    `- Frais de fonctionnement supposés : ${options.fraisFonctionnement ? totalDesFrais(options) : "aucun"} ; la grille contient déjà les frais réels du statut actuel, chaque autre statut ne reçoit que l'écart avec lui`
   ].join("\n")
 }
 
 function tableauDeComparaison(resultat: ComparaisonResult, nomActivite: string): string {
   const { scenarios } = resultat
-  const actuel = scenarios.find(s => s.actuel)
+  const signe = (montant: number) => eurosEnTexteBrut(montant).replace(/^(?!-)/, "+")
   const entete = (s: ScenarioStatut) => {
-    const mentions = [s.actuel ? "actuel" : null, s.statut === resultat.meilleur ? "meilleur net" : null, s.regimeMicroFerme ? "plus accessible" : null].filter(Boolean)
+    const mentions = [s.telleQueSaisie ? "actuel" : null, s.statut === resultat.meilleur ? "meilleur net" : null, s.horsPlafond ? "non retenue : plafond dépassé" : null, s.regimeMicroFerme ? "plus accessible" : null].filter(Boolean)
     return mentions.length > 0 ? `${s.libelle} (${mentions.join(", ")})` : s.libelle
   }
   const indicateurs: [string, (s: ScenarioStatut) => string][] = [
     ["**Net dans la poche**", s => `**${eurosEnTexteBrut(s.netApresImpots)}**`],
     ["Taux global de prélèvement", s => (s.revenusAvantPrelevements > 0 ? pourcentage(s.totalPrelevements / s.revenusAvantPrelevements) : "—")],
-    ["Frais de fonctionnement", s => eurosEnTexteBrut(s.fraisFonctionnement)],
+    ["Frais de gestion par rapport au statut actuel", s => (s.ecartDeFrais.total === 0 ? "—" : signe(s.ecartDeFrais.total))],
     ["Cotisations sociales", s => eurosEnTexteBrut(s.cotisationsSociales)],
     ["Impôt sur les sociétés", s => eurosEnTexteBrut(s.impotSocietes)],
     ["Impôt sur le revenu", s => eurosEnTexteBrut(s.impotSurLeRevenu)],
     ["Prélèvements sociaux", s => eurosEnTexteBrut(s.prelevementsSociaux)],
     [`Conservé dans « ${echapper(nomActivite)} »`, s => eurosEnTexteBrut(s.resultatConserveActivite)],
     ["Protection sociale", s => `${s.protectionSociale.etoiles}/5, ${s.protectionSociale.trimestres} trim. de retraite`],
-    ["Écart avec le statut actuel", s => (actuel && !s.actuel ? eurosEnTexteBrut(s.netApresImpots - actuel.netApresImpots).replace(/^(?!-)/, "+") : "—")]
+    ["Écart avec votre situation telle que saisie", s => {
+      const ecart = ecartAvecLaSituationSaisie(resultat, s)
+      return ecart === null ? "—" : signe(ecart)
+    }]
   ]
   const lignes = indicateurs.map(([libelle, valeur]) => [libelle, ...scenarios.map(valeur)])
   return tableau(["Indicateur", ...scenarios.map(entete)], lignes, colonnesNumeriques(1, scenarios.length))
@@ -352,7 +356,8 @@ function sectionComparateur(session: SimulationAnnuelle, comparaison: Comparaiso
   const intro = "L'activité est simulée dans chaque statut, le reste de la simulation restant identique. Les montants portent sur toute la simulation, sauf la ligne « Conservé », propre à l'activité. Comparaison calculée à l'export avec les réglages du comparateur :"
   const tableauOuAbsence = resultat.scenarios.length > 0 ? tableauDeComparaison(resultat, comparaison.nomActivite) + notesDeComparaison(resultat) : "Aucun statut comparé."
   const cfe = resultat.noteCFE ? `\n- ${echapper(resultat.noteCFE)}` : ""
-  return `${titre}\n\n${intro}\n\n${reglagesUtilises(options, resultat.scenarios)}${cfe}\n\n${tableauOuAbsence}${couplesEnUnionLibre(session, resultat)}`
+  const saisie = resultat.situationSaisie ? `\n- Votre situation telle que saisie (${resultat.situationSaisie.libelle}) : ${eurosEnTexteBrut(resultat.situationSaisie.netApresImpots)} de net, comme dans les résultats` : ""
+  return `${titre}\n\n${intro}\n\n${reglagesUtilises(options, resultat.scenarios)}${cfe}${saisie}\n\n${tableauOuAbsence}${couplesEnUnionLibre(session, resultat)}`
 }
 
 // --- Avertissements ---

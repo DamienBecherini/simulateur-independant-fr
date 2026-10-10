@@ -91,20 +91,21 @@ test("le tableau réduit montre le reste des lignes à la demande", async ({ pag
   await ouvrirEnResume(page)
   const tableau = page.getByRole("table", { name: "Comparaison des statuts" })
   await expect(tableau.getByRole("rowheader", { name: "Net dans la poche" })).toBeVisible()
-  await expect(tableau.getByRole("rowheader", { name: "Écart avec le statut actuel" })).toBeVisible()
+  await expect(tableau.getByRole("rowheader", { name: "Écart avec votre situation actuelle" })).toBeVisible()
   await expect(tableau.getByRole("rowheader", { name: "Impôt sur le revenu" })).toBeHidden()
 
   await page.getByRole("button", { name: /Voir le détail/ }).click()
   await expect(tableau.getByRole("rowheader", { name: "Impôt sur le revenu" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Masquer le détail" })).toHaveAttribute("aria-expanded", "true")
-  // Les deux nets du foyer : la colonne actuelle compte des frais supposés, et la page le dit.
-  await expect(tableau.getByRole("columnheader", { name: /actuel/ })).toContainText("frais supposés compris")
-  await expect(page.getByText(/^Les nets du comparateur comptent les frais de fonctionnement supposés/)).toBeVisible()
+  // Un seul net : la colonne actuelle est la situation saisie, sans frais supposés ; la page rappelle où sont les frais réels.
+  await expect(tableau.getByRole("columnheader", { name: /actuel/ })).not.toContainText("frais supposés")
+  await expect(page.getByText(/^Vos frais réels sont ceux que vous avez saisis dans la grille/)).toBeVisible()
 })
 
 /** Ouvre toutes les sections repliables et le détail du tableau. */
 async function toutDeplier(page: Page) {
-  const sommaires = page.locator("details:not([open]) > summary")
+  // Seules les sections visibles : le détail des frais d'une colonne est dans le tableau, masqué sur téléphone.
+  const sommaires = page.locator("details:not([open]) > summary:visible")
   while ((await sommaires.count()) > 0) await sommaires.first().click()
   await page.getByRole("button", { name: /Voir le détail/ }).click()
 }

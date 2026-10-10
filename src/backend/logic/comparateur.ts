@@ -1,10 +1,11 @@
 // src/backend/logic/comparateur.ts
 
 import { estSocieteIS, STATUTS_COMPARES, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type DonneesDeLAnnee, type FinancialFlow, type OptimisationRemuneration, type RemunerationOptimale, type ScenarioStatut, type SimulationReport, type StatutCompare, type StatutSociete } from "../../types.js"
-import type { ColonneEtudiee } from "./colonne-du-comparateur.js"
+import { estTelleQueSaisie, libelleDeLaColonne, libelleDuStatut, scenarioDeLaColonne, type ColonneEtudiee } from "./colonne-du-comparateur.js"
 import { activiteComparee, estMicro, personnesDeLActivite, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { avecLaCFEDeLAnnee } from "./frais-de-fonctionnement.js"
 import { optimiserLaColonne } from "./optimisation-remuneration.js"
+import { SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
 import { microInterdite, professionDe, raisonMicroInterdite } from "./professions.js"
 import type { ProfessionReglementee, ReglesFiscales } from "./regles.js"
 import { avecLesReglages, simulerScenario, toutEnDividendes } from "./simulation-d-un-statut.js"
@@ -15,6 +16,11 @@ import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js
  * individuelle au réel, micro-entreprise avec et sans versement libératoire), puis toute la simulation est
  * relancée. Le reste de la session (autres activités, salaires, foyers) ne change pas : l'écart entre deux
  * colonnes vient donc uniquement du statut de cette activité.
+ *
+ * La colonne du statut actuel est la situation saisie, telle quelle : son net est celui des résultats. Les autres
+ * reçoivent l'écart de frais de fonctionnement supposés entre leur statut et le statut actuel, dont les frais réels
+ * sont déjà dans la grille. Une société simulée avec un autre partage que la grille n'est plus la situation saisie :
+ * sa colonne le dit, et `situationSaisie` garde le net de référence.
  *
  * Ce module choisit les colonnes, désigne le meilleur net et compare les couples en union libre. Une colonne se
  * simule dans simulation-d-un-statut.ts (conversion de l'activité : conversion-de-statut.ts ; frais :
@@ -73,6 +79,38 @@ function meilleurStatut(scenarios: ScenarioStatut[], profession: ProfessionRegle
   return { meilleur: candidats.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), candidats[0]).statut, warnings }
 }
 
+const TYPES_DE_CHIFFRE_D_AFFAIRES = new Set<FinancialFlow["type"]>(["ca_services", "ca_vente", "ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente"])
+
+/** Chiffre d'affaires de l'année de l'activité, tous types confondus (société, entreprise individuelle, micro). */
+function chiffreDAffaires(donnees: DonneesDeLAnnee, activiteId: string): number {
+  return donnees.monthlyData.flatMap(mois => mois.flows).filter(f => f.entityId === activiteId && TYPES_DE_CHIFFRE_D_AFFAIRES.has(f.type)).reduce((somme, f) => somme + f.amount, 0)
+}
+
+/**
+ * La colonne de la situation telle que saisie : l'année simulée sans rien changer ni ajouter, donc le rapport des
+ * résultats de l'année lui-même. Son net est, par construction, le « Net du foyer » des résultats.
+ */
+function colonneTelleQueSaisie(colonne: ColonneEtudiee, report: SimulationReport): ScenarioStatut {
+  return scenarioDeLaColonne(colonne, statutActuel(colonne.source), { report, session: colonne.donnees, dividendes: null })
+}
+
+/**
+ * Les colonnes de la comparaison : la situation saisie pour le statut actuel quand le partage le permet, les sociétés
+ * au meilleur net avec leur arbitrage, les autres simulées avec les réglages de la colonne.
+ */
+function colonnesDeLaComparaison(colonne: ColonneEtudiee, statuts: StatutCompare[], reportActuel: SimulationReport) {
+  const auMeilleurNet = colonne.options.repartition.mode === "meilleurNet"
+  const optimisations: Partial<Record<StatutSociete, OptimisationRemuneration>> = {}
+  const scenarios = statuts.map(statut => {
+    if (estTelleQueSaisie(statut, colonne.source, colonne.options)) return colonneTelleQueSaisie(colonne, reportActuel)
+    if (!auMeilleurNet || !estSocieteIS(statut)) return simulerScenario(colonne, statut).scenario
+    const auMeilleur = colonneAuMeilleurNet(colonne, statut)
+    optimisations[statut] = auMeilleur.optimisation
+    return auMeilleur.scenario
+  })
+  return { scenarios, ...(auMeilleurNet ? { optimisations } : {}) }
+}
+
 export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): ComparaisonResult {
   const reportActuel = runMetaSimulation(session, regles, contexte)
   const couples = comparerCouples(session, regles, contexte, reportActuel)
@@ -84,21 +122,20 @@ export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: Compar
   const { options, ...cfe } = avecLaCFEDeLAnnee(optionsSaisies, source, contexte.annee ?? regles.annee, regles)
   const colonne: ColonneEtudiee = { donnees: session, source, options, regles, contexte }
   const profession = professionDe(source, regles)
+  const actuel = statutActuel(source)
+  const situationSaisie = { statut: actuel, libelle: libelleDuStatut(actuel), netApresImpots: reportActuel.totalNetApresImpots }
 
-  const auMeilleurNet = options.repartition.mode === "meilleurNet"
-  const optimisations: Partial<Record<StatutSociete, OptimisationRemuneration>> = {}
-  const scenarios = statutsDeLaComparaison(profession).map(statut => {
-    if (!auMeilleurNet || !estSocieteIS(statut)) return simulerScenario(colonne, statut).scenario
-    const auMeilleur = colonneAuMeilleurNet(colonne, statut)
-    optimisations[statut] = auMeilleur.optimisation
-    return auMeilleur.scenario
-  })
-  const { meilleur, warnings } = meilleurStatut(scenarios, profession)
-
-  return { scenarios, meilleur, couples, warnings: [...avertissementsDeLActivite(session, source, profession), ...warnings], ...(auMeilleurNet ? { optimisations } : {}), ...cfe }
+  const colonnes = colonnesDeLaComparaison(colonne, statutsDeLaComparaison(profession), reportActuel)
+  const avertissements = avertissementsDeLActivite(session, source, profession)
+  // Sans chiffre d'affaires, les colonnes ne diffèrent que par leurs frais et leurs minimums : aucun verdict (P-13).
+  if (chiffreDAffaires(session, source.id) <= 0) {
+    return { ...colonnes, meilleur: null, situationSaisie, sansChiffreDAffaires: true, couples, warnings: [SANS_CHIFFRE_D_AFFAIRES, ...avertissements], ...cfe }
+  }
+  const { meilleur, warnings } = meilleurStatut(colonnes.scenarios, profession)
+  return { ...colonnes, meilleur, situationSaisie, couples, warnings: [...avertissements, ...warnings], ...cfe }
 }
 
-/** La situation actuelle d'une activité, simulée comme une colonne du comparateur (voir `situationActuelle`). */
+/** La situation actuelle d'une activité, telle que la grille la décrit (voir `situationActuelle`). */
 export interface SituationActuelle {
   scenario: ScenarioStatut
   /** Rémunération nette annuelle et dividendes saisis dans la grille, en SASU et en EURL ; `null` dans les autres statuts. */
@@ -107,19 +144,18 @@ export interface SituationActuelle {
 }
 
 /**
- * L'activité telle que la grille la décrit, dans son statut actuel : rémunération et dividendes saisis, frais de
- * fonctionnement de ce statut compris, comme la colonne « actuel » du comparateur avec le partage « grille ». Sert de
- * point de départ à l'arbitrage rémunération / dividendes : ses nets se comparent à ceux de la courbe.
+ * L'activité telle que la grille la décrit, dans son statut actuel : rémunération et dividendes saisis, sans frais
+ * supposés, comme la colonne « actuel » du comparateur avec le partage « grille » ; son net est celui des résultats de
+ * l'année. Sert de point de départ à l'arbitrage rémunération / dividendes : ses nets se comparent à ceux de la courbe,
+ * qui ne comptent pour le statut actuel aucun frais supposé non plus.
  */
 export function situationActuelle(colonne: ColonneEtudiee): SituationActuelle {
-  const { donnees, source } = colonne
-  const statut = statutActuel(source)
+  const { donnees, source, regles, contexte } = colonne
   const flux = donnees.monthlyData.flatMap(mois => mois.flows).filter(f => f.entityId === source.id)
   const total = (type: FinancialFlow["type"]) => flux.filter(f => f.type === type).reduce((somme, f) => somme + f.amount, 0)
-  const societe = estSocieteIS(statut)
-  const remunerationNette = societe ? total("director_remuneration") : 0
-  const { scenario } = simulerScenario(avecLesReglages(colonne, { remunerationNette, repartition: { mode: "grille", partDistribuee: 1 } }), statut)
-  return { scenario, remunerationNette: societe ? remunerationNette : null, dividendes: societe ? total("dividends_payment") : null }
+  const societe = estSocieteIS(statutActuel(source))
+  const scenario = colonneTelleQueSaisie(colonne, runMetaSimulation(donnees, regles, contexte))
+  return { scenario, remunerationNette: societe ? total("director_remuneration") : null, dividendes: societe ? total("dividends_payment") : null }
 }
 
 /** Ce que coûtent les 4 trimestres de retraite en net du foyer, arrondi à l'euro ; 0 si le meilleur net les valide déjà. */
@@ -150,5 +186,5 @@ function colonneAuMeilleurNet(colonne: ColonneEtudiee, statut: StatutSociete): {
   const retenue = remunerationOptimale(optimisation, colonne.options.repartition.avecRetraite === true)
   const { scenario } = simulerScenario(avecLesReglages(colonne, toutEnDividendes(retenue.remunerationNette)), statut)
   const repli = retenue.retraiteHorsDAtteinte ? [`Aucune rémunération possible en ${statut} ne valide 4 trimestres de retraite : la colonne retient le meilleur net, sans cette condition.`] : []
-  return { scenario: { ...scenario, remunerationOptimale: retenue, warnings: [...scenario.warnings, ...repli] }, optimisation }
+  return { scenario: { ...scenario, libelle: libelleDeLaColonne(statut, colonne.source, colonne.options), remunerationOptimale: retenue, warnings: [...scenario.warnings, ...repli] }, optimisation }
 }

@@ -7,6 +7,7 @@ import { documentCsv, montant, type CelluleCsv } from "./csv"
 import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
 import { libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
+import { netDeLaSituationSaisie } from "./resume"
 import { statutEtProfession } from "./professions"
 
 type Ligne = CelluleCsv[]
@@ -138,16 +139,19 @@ function tauxDePrelevement(s: ScenarioStatut): number | null {
 }
 
 function lignesDesIndicateurs(result: ComparaisonResult, nomActivite: string): Ligne[] {
-  const actuel = result.scenarios.find(s => s.actuel)
+  const reference = netDeLaSituationSaisie(result)
   const indicateurs: [string, (s: ScenarioStatut) => CelluleCsv][] = [
     ["Statut actuel", s => ouiNon(s.actuel)],
+    ["Situation telle que saisie", s => ouiNon(s.telleQueSaisie)],
     ["Meilleur net", s => ouiNon(s.statut === result.meilleur)],
+    // Une micro au-delà des plafonds n'est jamais retenue comme meilleur statut.
+    ...(result.scenarios.some(s => s.horsPlafond) ? [["Non retenue : plafond dépassé", s => ouiNon(s.horsPlafond)] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
     // Seulement quand l'activité est sortie du régime micro : ses colonnes micro ne sont plus accessibles.
     ...(result.scenarios.some(s => s.regimeMicroFerme) ? [["Régime plus accessible", s => ouiNon(s.regimeMicroFerme !== undefined)] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
     ["Net dans la poche", s => montant(s.netApresImpots)],
     ["Taux global de prélèvement (%)", tauxDePrelevement],
     ["Revenus avant prélèvements", s => montant(s.revenusAvantPrelevements)],
-    ["Frais de fonctionnement", s => montant(s.fraisFonctionnement)],
+    ["Frais de gestion en plus (+) ou en moins (-) qu'au statut actuel", s => montant(s.ecartDeFrais.total)],
     ["Cotisations sociales", s => montant(s.cotisationsSociales)],
     ["Impôt sur les sociétés", s => montant(s.impotSocietes)],
     ["Impôt sur le revenu", s => montant(s.impotSurLeRevenu)],
@@ -156,7 +160,7 @@ function lignesDesIndicateurs(result: ComparaisonResult, nomActivite: string): L
     [`Conservé dans « ${nomActivite} »`, s => montant(s.resultatConserveActivite)],
     ["Protection sociale (étoiles sur 5)", s => s.protectionSociale.etoiles],
     ["Trimestres de retraite validés", s => s.protectionSociale.trimestres],
-    ["Écart avec le statut actuel", s => (actuel ? montant(s.netApresImpots - actuel.netApresImpots) : null)]
+    ["Écart avec la situation telle que saisie", s => (reference === null ? null : montant(s.netApresImpots - reference))]
   ]
   return [["Indicateur", ...result.scenarios.map(s => s.libelle)], ...indicateurs.map(([libelle, valeur]): Ligne => [libelle, ...result.scenarios.map(valeur)])]
 }
@@ -177,7 +181,7 @@ function lignesDeRemuneration(options: ComparaisonOptions, scenarios: ScenarioSt
 /** Réglages du comparateur, pour qu'on sache à quoi correspondent les chiffres ; au meilleur net, la rémunération retenue par statut. */
 export function reglagesDuComparateur(options: ComparaisonOptions, nomActivite: string, scenarios: ScenarioStatut[] = []): [string, CelluleCsv][] {
   const frais = options.fraisFonctionnement
-  const totalFrais = frais ? statutsFrais.map((statut): [string, CelluleCsv] => [`Frais de fonctionnement annuels, ${libellesFrais[statut]}`, montant((Object.keys(posteFraisLabels) as (keyof typeof posteFraisLabels)[]).reduce((somme, poste) => somme + frais[statut][poste], 0))]) : []
+  const totalFrais = frais ? statutsFrais.map((statut): [string, CelluleCsv] => [`Frais de fonctionnement supposés (pour l'écart entre statuts), ${libellesFrais[statut]}`, montant((Object.keys(posteFraisLabels) as (keyof typeof posteFraisLabels)[]).reduce((somme, poste) => somme + frais[statut][poste], 0))]) : []
   return [
     ["Activité comparée", nomActivite],
     ["Bénéfice de la société (SASU, EURL)", libellesRepartition[options.repartition.mode]],
@@ -197,7 +201,9 @@ function lignesDesAvertissements(result: ComparaisonResult): Ligne[] {
 
 /** Le tableau du comparateur (un statut par colonne), puis les réglages utilisés et les avertissements. */
 export function csvComparaison(result: ComparaisonResult, options: ComparaisonOptions, nomActivite: string): string {
-  return documentCsv([...lignesDesIndicateurs(result, nomActivite), [], ["Réglage", "Valeur"], ...reglagesDuComparateur(options, nomActivite, result.scenarios), ...lignesDesAvertissements(result)])
+  const reference = netDeLaSituationSaisie(result)
+  const situation: Ligne[] = reference === null ? [] : [["Net de votre situation telle que saisie", montant(reference)]]
+  return documentCsv([...lignesDesIndicateurs(result, nomActivite), ...situation, [], ["Réglage", "Valeur"], ...reglagesDuComparateur(options, nomActivite, result.scenarios), ...lignesDesAvertissements(result)])
 }
 
 // --- Courbe rémunération / dividendes ---

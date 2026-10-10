@@ -60,3 +60,23 @@ SessionState = {
   - Annuler ne défait pas un réglage du comparateur : il faut le remettre à la main.
   - Des réglages d'activités supprimées restent dans la session tant qu'elle n'est pas relue (ils sont retirés au chargement suivant) : quelques octets, sans effet sur les calculs.
   - Un réglage changé puis remis à sa valeur proposée reste enregistré : il ne suit plus la grille.
+
+## Addendum (2026-10-10) : les frais de fonctionnement ne servent plus qu'à l'écart entre statuts
+
+### Contexte
+
+Le comparateur ajoutait à chaque colonne, celle du statut actuel comprise, les frais de fonctionnement réglés pour son statut. Le net de la colonne actuelle différait donc de celui des résultats (39 597 € dans les résultats, 38 747 € dans le comparateur pour le même montage, constat P-04 du [parcours utilisateur d'octobre 2026](../parcours-utilisateur-2026-10.md)) : l'utilisateur ne savait plus quel était son vrai net. Et en SASU ou en EURL, hors partage « Selon la grille », la colonne « actuel » n'était pas la situation saisie.
+
+### Décision
+
+1. **Les frais réels sont ceux de la grille.** La colonne du statut actuel est la situation saisie, telle quelle : le rapport de l'année lui-même (`colonneTelleQueSaisie`, `comparateur.ts`), sans aucun frais supposé. Son net est, par construction, le « Net du foyer » des résultats (`ScenarioStatut.telleQueSaisie`).
+2. **Les autres colonnes reçoivent l'écart.** Frais supposés de leur statut moins ceux du statut actuel, poste par poste (`ecartDeFrais`, `frais-de-fonctionnement.ts`), positif ou négatif, en charge déductible au réel et en simple dépense en micro ; la CFE de l'année (création, année suivante) entre dans les deux termes. L'écart est rendu par colonne (`ScenarioStatut.ecartDeFrais` : total et postes) et écrit sous son net, le détail des postes à déplier.
+3. **Société hors partage « grille ».** La colonne du statut actuel suit le partage choisi : son titre le dit (« SASU, rémunération optimisée », « …, rémunération choisie », « …, tout en rémunération », « …, répartition sur mesure ») et elle n'est plus marquée « actuel ». `ComparaisonResult.situationSaisie` garde le net de la situation saisie : c'est la référence des écarts, du verdict et de la barre de résumé, rappelée au-dessus du tableau.
+4. **Sans chiffre d'affaires**, aucun statut n'est désigné (`meilleur: null`, `sansChiffreDAffaires`) ; un message invite à en saisir un (constat P-13).
+5. Les réglages enregistrés ne changent pas : mêmes postes, même schéma, même format de fichier. Seul leur usage change : ils estiment l'écart entre statuts.
+
+### Conséquences
+
+- Un seul net pour la situation saisie, partout : résultats, barre de résumé, comparateur, exports, outils pour les IA, arbitrage rémunération / dividendes.
+- Les nets des autres colonnes changent : chacune gagne à peu près les frais supposés du statut actuel (850 € pour une micro-entreprise avec les frais par défaut). Les frais communs à tous les statuts ne jouent plus.
+- Des frais supposés du statut actuel plus élevés que ceux réellement saisis dans la grille avantagent les autres statuts d'autant : la page rappelle de saisir ses frais réels (CFE, assurance, banque) dans la grille.

@@ -1,10 +1,10 @@
 // src/backend/logic/colonne-du-comparateur.ts
 
-import type { ComparaisonOptions, DonneesDeLAnnee, MicroEntreprise, ScenarioStatut, SimulationReport, StatutCompare } from "../../types.js"
+import { estSocieteIS, type ComparaisonOptions, type DonneesDeLAnnee, type MicroEntreprise, type ModeRepartition, type ScenarioStatut, type SimulationReport, type StatutCompare } from "../../types.js"
 import { depassePlafondMicro } from "./calculsAE.js"
 import { estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, prorataDesPlafonds } from "./dispositifs.js"
-import { fraisDuStatut } from "./frais-de-fonctionnement.js"
+import { ecartDeFrais } from "./frais-de-fonctionnement.js"
 import { professionDe, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import type { ReglesFiscales } from "./regles.js"
@@ -45,7 +45,42 @@ const LIBELLES: Record<StatutCompare, string> = {
   "micro-vfl": "Micro + versement libératoire"
 }
 
-type ActiviteDuRapport = SimulationReport["activities"][number] | undefined
+/**
+ * Colonne du statut actuel d'une société dont le partage du bénéfice ne suit pas la grille : ce n'est plus la situation
+ * saisie, son titre dit selon quel partage elle est simulée.
+ */
+const PARTAGE_DE_LA_COLONNE: Record<Exclude<ModeRepartition, "grille">, string> = {
+  meilleurNet: "rémunération optimisée",
+  dividendes: "rémunération choisie",
+  remuneration: "tout en rémunération",
+  personnalisee: "répartition sur mesure"
+}
+
+/** Libellé d'un statut dans le comparateur : « Micro + versement libératoire », « EI au réel »… */
+export function libelleDuStatut(statut: StatutCompare): string {
+  return LIBELLES[statut]
+}
+
+/**
+ * La colonne est-elle la situation telle que saisie ? Oui pour le statut actuel, sauf en société quand le partage du
+ * bénéfice ne suit pas la grille : la rémunération et les dividendes y sont alors ceux du partage choisi.
+ */
+export function estTelleQueSaisie(statut: StatutCompare, source: Activite, options: ComparaisonOptions): boolean {
+  return statut === statutActuel(source) && (!estSocieteIS(statut) || options.repartition.mode === "grille")
+}
+
+/**
+ * Titre de la colonne : le statut, et pour le statut actuel simulé avec un autre partage que la grille, ce partage. Au
+ * meilleur net, la colonne est simulée à la rémunération retenue (partage « dividendes ») : son titre se lit avec les
+ * réglages du comparateur.
+ */
+export function libelleDeLaColonne(statut: StatutCompare, source: Activite, options: ComparaisonOptions): string {
+  const { mode } = options.repartition
+  if (mode === "grille" || statut !== statutActuel(source) || !estSocieteIS(statut)) return LIBELLES[statut]
+  return `${LIBELLES[statut]}, ${PARTAGE_DE_LA_COLONNE[mode]}`
+}
+
+type ActiviteDuRapport =SimulationReport["activities"][number] | undefined
 
 /**
  * Ce que la micro-entreprise de la colonne donne à la protection sociale : son ACRE (mois couverts si la date de
@@ -117,9 +152,10 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
   const { resultatConserveActivite, ...details } = detailsDeLActivite(activite, notes)
   return {
     statut,
-    libelle: LIBELLES[statut],
+    libelle: libelleDeLaColonne(statut, source, options),
     actuel: statut === statutActuel(source),
-    fraisFonctionnement: fraisDuStatut(statut, options),
+    telleQueSaisie: estTelleQueSaisie(statut, source, options),
+    ecartDeFrais: ecartDeFrais(statut, statutActuel(source), options),
     protectionSociale: evaluerProtectionSociale(statut, { ...assiettesDeProtection(activite), chiffreAffairesMicro: caMicro, ...acre }, estMicro(statut) ? reglesMicro : regles),
     ...montantsDuBilan(simulation.report),
     resultatConserveActivite,

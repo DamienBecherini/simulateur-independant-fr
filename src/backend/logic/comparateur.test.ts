@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest"
 import { comparerStatuts, coutDesQuatreTrimestres, remunerationOptimale } from "./comparateur.js"
 import { statutActuel } from "./conversion-de-statut.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
+import { defaultFraisFonctionnement, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
+import { runMetaSimulation } from "./simulation-engine.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
 import type { ComparaisonOptions, ComparaisonResult, Entity, PartageDuBenefice, Relationship, RepartitionBenefice, StatutCompare } from "../../types.js"
@@ -107,10 +109,11 @@ describe("comparerStatuts", () => {
         ["s1", "dividends_payment", 20000]
       ]
 
-      const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { remunerationNette: 24300, repartition: { mode: "grille", partDistribuee: 1 } }))
+      // L'activité est une EURL : la colonne SASU n'est pas la situation saisie, elle prend la rémunération choisie.
+      const resultat = comparer([personne("alice"), societe("s1", "EURL")], [relation("alice", "s1", "Gérant")], flux, options("s1", { remunerationNette: 24300, repartition: { mode: "grille", partDistribuee: 1 } }))
 
       // Rémunération de 24 300 € (30 000 € bruts) et 15 900 € de cotisations : 59 800 € de bénéfice, 10 950 € d'IS ; 20 000 € de dividendes saisis, 28 850 € conservés.
-      expect(colonne(resultat, "SASU")).toMatchObject({ cotisationsSociales: 15900, impotSocietes: 10950, resultatConserve: 28850 })
+      expect(colonne(resultat, "SASU")).toMatchObject({ telleQueSaisie: false, cotisationsSociales: 15900, impotSocietes: 10950, resultatConserve: 28850 })
     })
   })
 
@@ -132,20 +135,101 @@ describe("comparerStatuts", () => {
     expect(colonne(resultat, "SASU").cotisationsSociales).toBe(5400 + 5700)
   })
 
-  describe("frais de fonctionnement", () => {
+  describe("frais de fonctionnement : seul l'écart avec le statut actuel", () => {
+    // Les frais réels du statut actuel sont dans la grille : une colonne ne reçoit que ses frais supposés moins ceux du
+    // statut actuel. Ici, micro 500 €, EI 1 500 €, SASU et EURL 2 500 € : écarts de +1 000 € et +2 000 € avec la micro.
     const frais = (montant: number) => ({ expertComptable: montant, banque: 0, logiciel: 0, assurance: 0, cfe: 0 })
-    const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]], options("m1", { fraisFonctionnement: { SASU: frais(2000), EURL: frais(2000), EI: frais(1000), micro: frais(1000) } }))
+    const fraisFonctionnement = { SASU: frais(2500), EURL: frais(2500), EI: frais(1500), micro: frais(500) }
+    const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]], options("m1", { fraisFonctionnement }))
 
-    it("retire de la poche les frais d'une micro, sans changer cotisations ni impôt", () => {
-      // Comme sans frais (28 120 €), moins 1 000 € de dépenses non déductibles.
-      expect(colonne(resultat, "micro")).toMatchObject({ fraisFonctionnement: 1000, netApresImpots: 27120, cotisationsSociales: 10080, impotSurLeRevenu: 1800 })
-      expect(colonne(resultat, "micro-vfl").fraisFonctionnement).toBe(1000)
+    it("n'ajoute rien à la colonne du statut actuel, ni à l'autre variante de la micro-entreprise", () => {
+      // Comme sans frais : 28 120 € et 29 120 € (voir « calcule le net de chaque statut »).
+      expect(colonne(resultat, "micro")).toMatchObject({ telleQueSaisie: true, ecartDeFrais: { total: 0, postes: {} }, netApresImpots: 28120, cotisationsSociales: 10080, impotSurLeRevenu: 1800 })
+      expect(colonne(resultat, "micro-vfl")).toMatchObject({ telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, netApresImpots: 29120 })
     })
 
-    it("déduit les frais du bénéfice d'une société", () => {
-      // 38 000 € de bénéfice, 5 700 € d'IS, 32 300 € de dividendes : barème 268 € (base 17 119 € après abattement
-      // et CSG déductible, décote comprise), 5 814 € de prélèvements sociaux.
-      expect(colonne(resultat, "SASU")).toMatchObject({ fraisFonctionnement: 2000, impotSocietes: 5700, impotSurLeRevenu: 268, prelevementsSociaux: 5814, netApresImpots: 26218 })
+    it("déduit l'écart, positif, du bénéfice d'une société", () => {
+      // 2 000 € d'écart : 38 000 € de bénéfice, 5 700 € d'IS, 32 300 € de dividendes : barème 268 € (base 17 119 € après
+      // abattement et CSG déductible, décote comprise), 5 814 € de prélèvements sociaux.
+      expect(colonne(resultat, "SASU")).toMatchObject({ ecartDeFrais: { total: 2000, postes: { expertComptable: 2000 } }, impotSocietes: 5700, impotSurLeRevenu: 268, prelevementsSociaux: 5814, netApresImpots: 26218 })
+      expect(colonne(resultat, "EI").ecartDeFrais).toEqual({ total: 1000, postes: { expertComptable: 1000 } })
+    })
+
+    it("rend à la poche l'écart négatif d'un statut qui coûte moins que le statut actuel", () => {
+      // SASU actuelle (2 500 €), colonne micro (500 €) : 2 000 € de frais en moins, qui ne changent ni cotisations ni
+      // impôt en micro. 40 000 € de prestations en BNC : 28 120 € sans frais, plus 2 000 €.
+      const depuisLaSasu = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 40000]], options("s1", { fraisFonctionnement }))
+
+      expect(colonne(depuisLaSasu, "micro")).toMatchObject({ ecartDeFrais: { total: -2000, postes: { expertComptable: -2000 } }, cotisationsSociales: 10080, impotSurLeRevenu: 1800, netApresImpots: 30120 })
+      expect(colonne(depuisLaSasu, "EURL").ecartDeFrais.total).toBe(0)
+    })
+
+    it("compte poste par poste, avec des écarts de signes contraires", () => {
+      const parPoste = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]], options("m1", { fraisFonctionnement: { ...fraisFonctionnement, EI: { expertComptable: 1200, banque: 150, logiciel: 150, assurance: 250, cfe: 300 }, micro: { expertComptable: 0, banque: 100, logiciel: 100, assurance: 350, cfe: 300 } } }))
+
+      expect(colonne(parPoste, "EI").ecartDeFrais).toEqual({ total: 1200, postes: { expertComptable: 1200, banque: 50, logiciel: 50, assurance: -100 } })
+    })
+  })
+
+  describe("la colonne du statut actuel est la situation saisie, au net des résultats", () => {
+    // Les frais supposés par défaut : une colonne du statut actuel qui les compterait s'écarterait des résultats.
+    const fraisSupposes = defaultFraisFonctionnement()
+    const cas: [string, Entity, Relationship["type"], Flux[], Partial<ComparaisonOptions>][] = [
+      ["micro-entreprise", micro("a"), "Titulaire", [["a", "ca_micro_services_bnc", 40000], ["a", "expense", 3000]], {}],
+      ["micro + versement libératoire", micro("a", { opteVFL: true }), "Titulaire", [["a", "ca_micro_vente", 60000]], {}],
+      ["EI au réel", societe("a", "EI"), "Titulaire", [["a", "ca_services", 50000], ["a", "deductible_expense", 4000]], {}],
+      ["EURL selon la grille", societe("a", "EURL"), "Gérant", [["a", "ca_services", 90000], ["a", "director_remuneration", 30000], ["a", "dividends_payment", 10000]], { remunerationNette: 12345, repartition: { mode: "grille", partDistribuee: 1 } }],
+      ["SASU selon la grille", societe("a", "SASU"), "Président", [["a", "ca_services", 90000], ["a", "director_remuneration", 24000], ["a", "dividends_payment", 15000]], { remunerationNette: 5000, repartition: { mode: "grille", partDistribuee: 1 } }]
+    ]
+
+    it.each(cas)("%s : même net que la simulation de l'année, sans frais supposés", (_, activite, lien, flux, reglages) => {
+      const donnees = session([personne("alice"), activite], [relation("alice", "a", lien)], flux)
+      const resultat = comparerStatuts(donnees, options("a", { fraisFonctionnement: fraisSupposes, ...reglages }), reglesDeTest)
+      const resultats = runMetaSimulation(donnees, reglesDeTest)
+      const actuelle = resultat.scenarios.filter(s => s.telleQueSaisie)
+
+      expect(actuelle).toHaveLength(1)
+      expect(actuelle[0]).toMatchObject({ actuel: true, ecartDeFrais: { total: 0, postes: {} }, netApresImpots: resultats.totalNetApresImpots })
+      expect(resultat.situationSaisie).toEqual({ statut: actuelle[0].statut, libelle: actuelle[0].libelle, netApresImpots: resultats.totalNetApresImpots })
+    })
+
+    it("en société au meilleur net, la colonne du statut actuel dit son partage, et la situation saisie reste la référence", () => {
+      const donnees = session([personne("alice"), societe("a", "SASU")], [relation("alice", "a", "Président")], [["a", "ca_services", 90000], ["a", "director_remuneration", 24000]])
+      const resultat = comparerStatuts(donnees, options("a", { repartition: { mode: "meilleurNet", partDistribuee: 1 } }), reglesDeTest)
+
+      expect(colonne(resultat, "SASU")).toMatchObject({ actuel: true, telleQueSaisie: false, libelle: "SASU, rémunération optimisée", ecartDeFrais: { total: 0 } })
+      expect(resultat.scenarios.some(s => s.telleQueSaisie)).toBe(false)
+      expect(resultat.situationSaisie).toEqual({ statut: "SASU", libelle: "SASU", netApresImpots: runMetaSimulation(donnees, reglesDeTest).totalNetApresImpots })
+    })
+
+    it.each([
+      ["dividendes", "SASU, rémunération choisie"],
+      ["remuneration", "SASU, tout en rémunération"],
+      ["personnalisee", "SASU, répartition sur mesure"]
+    ] as const)("partage « %s » : « %s »", (mode, libelle) => {
+      const donnees = session([personne("alice"), societe("a", "SASU")], [relation("alice", "a", "Président")], [["a", "ca_services", 90000]])
+      const resultat = comparerStatuts(donnees, options("a", { remunerationNette: 20000, repartition: { mode, partDistribuee: 0.5 } }), reglesDeTest)
+
+      expect(colonne(resultat, "SASU").libelle).toBe(libelle)
+      expect(colonne(resultat, "EURL").libelle).toBe("EURL")
+    })
+  })
+
+  describe("sans chiffre d'affaires", () => {
+    it("ne désigne aucun statut et invite à saisir un chiffre d'affaires (P-13)", () => {
+      const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "expense", 500]], options("m1", { fraisFonctionnement: defaultFraisFonctionnement() }))
+
+      expect(resultat.meilleur).toBeNull()
+      expect(resultat.sansChiffreDAffaires).toBe(true)
+      expect(resultat.warnings[0]).toBe(SANS_CHIFFRE_D_AFFAIRES)
+      expect(resultat.scenarios).toHaveLength(5)
+    })
+
+    it("compare dès le premier euro de chiffre d'affaires", () => {
+      const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_vente", 1]], options("m1"))
+
+      expect(resultat.sansChiffreDAffaires).toBeUndefined()
+      expect(resultat.meilleur).not.toBeNull()
     })
   })
 

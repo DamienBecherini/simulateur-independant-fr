@@ -112,8 +112,8 @@ function RemunerationSaisie({ remunerationNette, statut, plafond, onChange }: Re
 }
 
 /**
- * Détail des frais de fonctionnement annuels par statut, modifiables : ils sont ajoutés aux charges de l'activité
- * dans chaque colonne du comparateur, y compris celle du statut actuel.
+ * Détail des frais de fonctionnement annuels supposés par statut, modifiables : ils servent à estimer l'écart de frais
+ * entre chaque statut et le statut actuel, seul ajouté aux charges d'une colonne (rien pour le statut actuel).
  */
 function FraisFonctionnementTable({ frais, cfe, onChange }: { frais: FraisFonctionnement; cfe?: CFEDeLAnnee; onChange: (frais: FraisFonctionnement) => void }) {
   const postes = Object.keys(posteFraisLabels) as PosteFrais[]
@@ -123,7 +123,7 @@ function FraisFonctionnementTable({ frais, cfe, onChange }: { frais: FraisFoncti
   return (
     <div className="text-slate-700 dark:text-slate-200">
       <p className="text-sm text-slate-600 dark:text-slate-400">
-        Frais annuels par statut : des ordres de grandeur, à ajuster à votre situation. Ils s'ajoutent aux charges de l'activité dans chaque colonne, statut actuel compris : si vous les avez déjà saisis dans la grille, mettez-les à 0. Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune ; avec la date de création de l'activité, elle est exonérée l'année de création et réduite de moitié l'année suivante.
+        Frais annuels supposés par statut : des ordres de grandeur, à ajuster à votre situation. Ils servent à estimer l'écart de frais entre statuts : vos frais réels sont ceux saisis dans la grille, et chaque autre colonne n'ajoute que la différence entre ses frais et ceux de votre statut actuel (en moins, s'il en coûte moins). Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune ; avec la date de création de l'activité, elle est exonérée l'année de création et réduite de moitié l'année suivante.
       </p>
       <div className="relative mt-3 overflow-x-auto print:overflow-visible">
         <table className="w-full min-w-[40rem] text-sm" aria-label="Frais de fonctionnement annuels">

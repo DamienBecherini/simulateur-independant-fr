@@ -143,7 +143,7 @@ export function SurToutesLesAnnees({ session, activityId, activityName, partMise
       {resultat ? resultat.statuts.map(statut => <TableauDuStatut key={statut.statut} statut={statut} />) : <p className="text-sm text-slate-600 dark:text-slate-300">Calcul en cours…</p>}
       <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
         <p>
-          Hypothèses : l'avenir est celui que décrivent les années de la session, avec leurs grilles ; une année au-delà des dernières règles connues reprend celles-ci, sans revalorisation. Chaque année garde la rémunération saisie dans le comparateur pour elle (sinon celle de sa grille) et les frais de fonctionnement du comparateur. « Garder puis distribuer » et « Lisser » distribuent aussi les réserves du début de la simulation.
+          Hypothèses : l'avenir est celui que décrivent les années de la session, avec leurs grilles ; une année au-delà des dernières règles connues reprend celles-ci, sans revalorisation. Chaque année garde la rémunération saisie dans le comparateur pour elle (sinon celle de sa grille) et, hors du statut actuel, l'écart de frais de fonctionnement du comparateur avec lui. « Garder puis distribuer » et « Lisser » distribuent aussi les réserves du début de la simulation.
         </p>
         <p>Les réserves restantes ne comptent pas dans le net : l'impôt sur les sociétés est payé, mais l'impôt du foyer le sera quand elles seront distribuées.</p>
         {resultat?.notes.map(note => (

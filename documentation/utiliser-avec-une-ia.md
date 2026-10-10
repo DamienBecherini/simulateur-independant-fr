@@ -9,7 +9,7 @@ Ce n'est pas l'avis d'un expert-comptable. La démo web n'a pas ce serveur : il 
 Seize outils, décrits dans l'[ADR 010](./adr/010-outils-pour-les-clients-d-ia.md) :
 
 - **lire** : décrire la simulation (années, acteurs, relations), lister les flux saisis, les règles fiscales de l'année ;
-- **calculer** : simuler une année, la synthèse des années, le détail du résultat d'un acteur, le comparateur de statuts, l'arbitrage rémunération et dividendes (avec l'écart entre la rémunération et les dividendes saisis et le meilleur net, frais de fonctionnement compris) ;
+- **calculer** : simuler une année, la synthèse des années, le détail du résultat d'un acteur, le comparateur de statuts, l'arbitrage rémunération et dividendes (avec l'écart entre la rémunération et les dividendes saisis et le meilleur net ; dans un autre statut que l'actuel, l'écart de frais de fonctionnement supposés compris) ;
 - **proposer** : des flux, un acteur, une relation, des modifications, une suppression, des réglages du comparateur ; **rafraîchir** une proposition périmée ;
 - **envoyer une proposition à l'application** (`appliquer_proposition`).
 

@@ -125,10 +125,12 @@ casDeReference("Montages types : chiffres de référence", () => {
     expect(report.activities[0].versementLiberatoire).toMatchObject({ plafondRfr: 29315, rfrN2: 24000, eligible: true, applique: true })
   })
 
-  it("SASU sans salaire : valider 4 trimestres coûte 828 € de net au foyer, pour 5 800 € nets de rémunération", () => {
+  // 827 € depuis que la colonne du statut actuel ne compte plus de frais de fonctionnement supposés : les deux points
+  // comparés déduisaient 2 900 € de frais de leur bénéfice (828 €) ; sans eux, l'écart bouge d'un euro.
+  it("SASU sans salaire : valider 4 trimestres coûte 827 € de net au foyer, pour 5 800 € nets de rémunération", () => {
     const { comparaison } = simulerLeMontage(MONTAGES_TYPES.find(m => m.id === "sasu-sans-salaire")!)
     const sasu = comparaison.scenarios.find(s => s.statut === "SASU")
-    expect(sasu?.remunerationOptimale).toMatchObject({ remunerationNette: 5800, avecRetraite: true, coutDesQuatreTrimestres: 828 })
+    expect(sasu?.remunerationOptimale).toMatchObject({ remunerationNette: 5800, avecRetraite: true, coutDesQuatreTrimestres: 827 })
     expect(sasu?.protectionSociale.trimestres).toBe(4)
     // 84 000 € de chiffre d'affaires dépassent le plafond de la micro-entreprise : elle n'est jamais désignée meilleur choix.
     expect(comparaison.scenarios.find(s => s.statut === "micro-vfl")?.horsPlafond).toBe(true)

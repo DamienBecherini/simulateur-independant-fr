@@ -1,20 +1,34 @@
 // src/ui/components/SyntheseDuComparateur.tsx
 // Lecture rapide du comparateur de statuts : le verdict en une phrase et, sur téléphone, une carte par statut
-// (affichage « Résumé ») ; la mention des frais de fonctionnement supposés (tous les affichages).
+// (affichage « Résumé ») ; dans tous les affichages, l'invitation à saisir un chiffre d'affaires, la situation saisie
+// de référence, l'écart de frais de gestion de chaque colonne, les colonnes non retenues et le rappel des frais réels.
 
 import { ChevronRight } from "lucide-react"
-import { phraseDuVerdict } from "@/lib/resume"
+import { ecartAvecLaSituationSaisie, phraseDuVerdict, raisonDeNonRetenue } from "@/lib/resume"
+import { phraseDeLEcartDeFrais, posteFraisLabels } from "@/lib/comparateur-options"
+import { SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { ecartSigne, euros } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
-import type { ComparaisonResult, ScenarioStatut } from "@/types"
+import type { ComparaisonResult, PosteFrais, ScenarioStatut, StatutCompare } from "@/types"
 import { useAffichageResume } from "../hooks/useAffichage"
+import { Depliable } from "./Depliable"
 
 /** Couleur d'un écart avec le statut actuel : vert s'il est favorable, rouge sinon. */
 const couleurDeLEcart = (ecart: number) => (ecart > 0 ? "text-emerald-700 dark:text-emerald-400" : ecart < 0 ? "text-rose-700 dark:text-rose-400" : undefined)
 
-/** Affichage « Résumé » : le verdict en tête du comparateur, cible du lien « Meilleur statut » de la barre de résumé. */
+/**
+ * En tête du comparateur, cible du lien « Meilleur statut » de la barre de résumé : sans chiffre d'affaires, dans tous
+ * les affichages, l'invitation à en saisir un (aucun statut n'est désigné) ; sinon, en affichage « Résumé », le verdict.
+ */
 export function VerdictDuComparateur({ result, activite }: { result: ComparaisonResult | null; activite: string | undefined }) {
   const resume = useAffichageResume()
+  if (result?.sansChiffreDAffaires) {
+    return (
+      <p id="comparateur-verdict" role="status" className="rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 sm:text-base dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100">
+        {SANS_CHIFFRE_D_AFFAIRES}
+      </p>
+    )
+  }
   const phrase = result && activite ? phraseDuVerdict(result, activite) : null
   if (!resume || !phrase) return null
   return (
@@ -25,25 +39,57 @@ export function VerdictDuComparateur({ result, activite }: { result: Comparaison
 }
 
 /**
- * Le net du statut actuel, dans le comparateur, compte les frais de fonctionnement supposés : il diffère du « Net dans
- * la poche » des résultats du foyer, qui ne les connaît pas. La phrase le dit, avec le montant en cause.
+ * Sous le tableau : les frais réels sont ceux de la grille, le comparateur n'ajoute aux autres statuts que l'écart de
+ * frais de gestion supposés avec le statut actuel.
  */
-export function NoteDesFraisSupposes({ result }: { result: ComparaisonResult }) {
-  const actuel = result.scenarios.find(s => s.actuel)
-  if (!actuel || actuel.fraisFonctionnement <= 0) return null
+export function RappelDesFrais({ result }: { result: ComparaisonResult }) {
+  if (result.scenarios.length === 0) return null
   return (
     <p className="text-sm text-slate-600 dark:text-slate-400">
-      Les nets du comparateur comptent les frais de fonctionnement supposés de chaque statut. Pour le statut actuel, {actuel.libelle}, ces {euros(actuel.fraisFonctionnement)} de frais ne figurent pas dans les résultats du foyer : son net de {euros(actuel.netApresImpots)} peut donc différer du « Net dans la poche » affiché plus haut. Ces frais se règlent dans le tableau des frais de fonctionnement, plus haut.
+      Vos frais réels sont ceux que vous avez saisis dans la grille : pensez à la CFE, à l'assurance, à la banque. Le comparateur n'ajoute aux autres statuts que l'écart de frais de gestion estimé avec votre statut actuel (réglable dans « Frais de fonctionnement », plus haut) ; les frais communs à tous les statuts ne changent pas le classement.
     </p>
   )
 }
 
-function CarteDeStatut({ scenario, actuel, meilleur }: { scenario: ScenarioStatut; actuel: ScenarioStatut | undefined; meilleur: boolean }) {
-  const ecart = actuel && !scenario.actuel ? scenario.netApresImpots - actuel.netApresImpots : null
-  const plafond = scenario.regimeMicroFerme ? "plus accessible" : scenario.horsPlafond ? "hors plafond" : null
-  const mentions = [scenario.actuel ? "actuel" : null, meilleur ? "meilleur net" : null, plafond].filter(Boolean).join(" · ")
+/**
+ * Une société simulée avec un autre partage que la grille n'est plus la situation saisie : son net de référence, celui
+ * des résultats, est rappelé au-dessus du tableau. Rien quand une colonne est déjà cette situation.
+ */
+export function SituationTelleQueSaisie({ result }: { result: ComparaisonResult }) {
+  const saisie = result.situationSaisie
+  if (!saisie || result.scenarios.length === 0 || result.scenarios.some(s => s.telleQueSaisie)) return null
   return (
-    <li className={cn("flex items-center justify-between gap-3 rounded-lg border px-3 py-2", meilleur ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40" : "border-slate-200 dark:border-slate-700")}>
+    <p className="text-sm text-slate-700 dark:text-slate-200">
+      Votre situation telle que saisie ({saisie.libelle}) : <span className="font-semibold tabular-nums">{euros(saisie.netApresImpots)}</span> de net, comme dans les résultats. Les écarts du tableau se mesurent à partir de ce montant.
+    </p>
+  )
+}
+
+/** Sous le net d'une colonne, l'écart de frais de gestion avec le statut actuel, et le détail par poste à déplier. */
+export function EcartDeFraisDeLaColonne({ scenario, actuel }: { scenario: ScenarioStatut; actuel: StatutCompare | undefined }) {
+  const phrase = actuel ? phraseDeLEcartDeFrais(scenario.ecartDeFrais.total, actuel) : null
+  if (!phrase) return null
+  const postes = Object.entries(scenario.ecartDeFrais.postes) as [PosteFrais, number][]
+  return (
+    <Depliable titre={phrase} className="mt-1 text-left text-xs font-normal text-slate-600 dark:text-slate-400">
+      <ul className="mt-1 space-y-0.5">
+        {postes.map(([poste, montant]) => (
+          <li key={poste}>
+            {posteFraisLabels[poste]} : <span className="whitespace-nowrap tabular-nums">{ecartSigne(montant)}</span>
+          </li>
+        ))}
+      </ul>
+    </Depliable>
+  )
+}
+
+function CarteDeStatut({ scenario, result, meilleur }: { scenario: ScenarioStatut; result: ComparaisonResult; meilleur: boolean }) {
+  const ecart = ecartAvecLaSituationSaisie(result, scenario)
+  const nonRetenue = raisonDeNonRetenue(scenario)
+  const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null, nonRetenue].filter(Boolean).join(" · ")
+  const frais = result.situationSaisie ? phraseDeLEcartDeFrais(scenario.ecartDeFrais.total, result.situationSaisie.statut) : null
+  return (
+    <li className={cn("flex items-center justify-between gap-3 rounded-lg border px-3 py-2", meilleur ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40" : "border-slate-200 dark:border-slate-700", nonRetenue && "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400")}>
       <div className="min-w-0">
         <p className="font-medium text-slate-800 dark:text-slate-100">{scenario.libelle}</p>
         <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -53,10 +99,11 @@ function CarteDeStatut({ scenario, actuel, meilleur }: { scenario: ScenarioStatu
           </span>
           <span className="sr-only">protection sociale {scenario.protectionSociale.etoiles} sur 5</span>
         </p>
+        {frais ? <p className="text-xs text-slate-600 dark:text-slate-400">{frais}</p> : null}
       </div>
       <p className="shrink-0 text-right tabular-nums">
         <span className="block font-semibold">{euros(scenario.netApresImpots)}</span>
-        {ecart !== null ? <span className={cn("block text-xs", couleurDeLEcart(ecart))}>{ecartSigne(ecart)}</span> : null}
+        {ecart !== null ? <span className={cn("block text-xs", !nonRetenue && couleurDeLEcart(ecart))}>{ecartSigne(ecart)}</span> : null}
       </p>
     </li>
   )
@@ -74,12 +121,11 @@ export function BoutonDuDetail({ ouvert, onClick }: { ouvert: boolean; onClick: 
 
 /** Sur téléphone, une carte par statut, triées par net : le tableau n'a plus à défiler en largeur. */
 export function CartesDesStatuts({ result, className }: { result: ComparaisonResult; className?: string }) {
-  const actuel = result.scenarios.find(s => s.actuel)
   const tries = [...result.scenarios].sort((a, b) => b.netApresImpots - a.netApresImpots)
   return (
     <ul aria-label="Net dans la poche selon le statut" className={cn("space-y-2", className)}>
       {tries.map(s => (
-        <CarteDeStatut key={s.statut} scenario={s} actuel={actuel} meilleur={s.statut === result.meilleur} />
+        <CarteDeStatut key={s.statut} scenario={s} result={result} meilleur={s.statut === result.meilleur} />
       ))}
     </ul>
   )

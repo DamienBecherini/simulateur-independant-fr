@@ -10,9 +10,9 @@
 import type { ComparaisonOptions, EtatDeLaSociete, ComparaisonResult, DonneesDeLAnnee, OptimisationRemuneration, ResultatAnnee, SessionState, SimulationPluriannuelle, SimulationReport, StatutSociete } from "../../types.js"
 import { anneeExistante, donneesDeLAnnee } from "./annees.js"
 import { comparerStatuts, situationActuelle, type SituationActuelle } from "./comparateur.js"
-import { activiteComparee, convertirLActivite } from "./conversion-de-statut.js"
+import { activiteComparee, convertirLActivite, statutActuel } from "./conversion-de-statut.js"
 import { regimesMicroDesAnnees, type RegimeMicroDeLAnnee } from "./dispositifs.js"
-import { avecLaCFEDeLAnnee, fraisDuStatut } from "./frais-de-fonctionnement.js"
+import { avecLaCFEDeLAnnee, ecartDeFrais } from "./frais-de-fonctionnement.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { reglesDeLAnnee, type ReglesFiscales } from "./regles.js"
 import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js"
@@ -156,13 +156,16 @@ export function optimiserRemunerationDeLAnnee(session: SessionState, options: Co
   return optimiserRemuneration(donnees, avecCFE, statut, regles, contexte)
 }
 
-/** L'arbitrage d'une année, avec la situation actuelle de l'activité et les frais de fonctionnement retenus. */
+/** L'arbitrage d'une année, avec la situation actuelle de l'activité et l'écart de frais de fonctionnement retenu. */
 export interface ArbitrageDeLAnnee {
   optimisation: OptimisationRemuneration
-  /** L'activité telle que la grille la décrit, dans son statut actuel ; `null` sans activité à étudier. */
+  /** L'activité telle que la grille la décrit, dans son statut actuel, sans frais supposés ; `null` sans activité à étudier. */
   situationActuelle: SituationActuelle | null
-  /** Frais de fonctionnement annuels retenus pour le statut étudié, CFE de l'année comprise. */
-  fraisFonctionnement: number
+  /**
+   * Frais de fonctionnement supposés du statut étudié moins ceux du statut actuel, CFE de l'année comprise : ce que
+   * chaque point de la courbe ajoute aux charges saisies (0 quand le statut étudié est le statut actuel).
+   */
+  ecartDeFrais: number
   /** CFE exonérée ou réduite l'année de création ou la suivante : ce qui est retenu. */
   noteCFE?: string
 }
@@ -176,7 +179,7 @@ export function arbitrageDeLAnnee(session: SessionState, options: ComparaisonOpt
   return {
     optimisation: optimiserRemuneration(donnees, avecCFE, statut, regles, contexte),
     situationActuelle: source ? situationActuelle({ donnees, source, options: avecCFE, regles, contexte }) : null,
-    fraisFonctionnement: fraisDuStatut(statut, avecCFE),
+    ecartDeFrais: source ? ecartDeFrais(statut, statutActuel(source), avecCFE).total : 0,
     ...(noteCFE ? { noteCFE } : {})
   }
 }

@@ -1,7 +1,8 @@
 // src/lib/comparateur-options.ts
 
 import { STATUTS_FRAIS } from "@/types"
-import type { ComparaisonOptions, Comparateur, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle, StatutFrais, StatutSociete } from "@/types"
+import type { ComparaisonOptions, Comparateur, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle, StatutCompare, StatutFrais, StatutSociete } from "@/types"
+import { euros } from "@/backend/logic/format"
 import { avecLaRetraiteParDefaut, optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
 
 // Réglages proposés par défaut : ils vivent avec le moteur, pour servir aussi aux outils des clients d'IA (ADR 010).
@@ -18,6 +19,18 @@ export const posteFraisLabels: Record<PosteFrais, string> = {
 }
 
 export const statutsFrais: StatutFrais[] = [...STATUTS_FRAIS]
+
+/** « en micro-entreprise », « en SASU » : le statut actuel dans la phrase de l'écart de frais. */
+const EN_STATUT: Record<StatutCompare, string> = { SASU: "en SASU", EURL: "en EURL", EI: "en EI au réel", micro: "en micro-entreprise", "micro-vfl": "en micro-entreprise" }
+
+/**
+ * L'écart de frais de gestion d'une colonne avec le statut actuel, en une phrase sous son net : « dont environ 2 050 €
+ * de frais de gestion en plus qu'en micro-entreprise » ; `null` quand il n'y en a pas (statut actuel, mêmes frais).
+ */
+export function phraseDeLEcartDeFrais(ecart: number, actuel: StatutCompare): string | null {
+  if (Math.round(ecart) === 0) return null
+  return `dont environ ${euros(Math.abs(ecart))} de frais de gestion ${ecart > 0 ? "en plus" : "en moins"} qu'${EN_STATUT[actuel]}`
+}
 
 /**
  * Modes de partage du bénéfice en SASU et EURL, dans l'ordre d'affichage, avec leur libellé explicite : celui des

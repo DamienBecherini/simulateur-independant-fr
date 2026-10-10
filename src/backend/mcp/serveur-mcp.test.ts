@@ -108,15 +108,15 @@ describe("serveur MCP : lecture", () => {
     expect(texte(resultat).split("\n")).toHaveLength(2)
   })
 
-  it("situe la rémunération saisie par rapport au meilleur net, avec les frais de fonctionnement retenus", async () => {
+  it("situe la rémunération saisie par rapport au meilleur net, sans écart de frais dans le statut actuel", async () => {
     await ecrireLaSession(sessionExemple())
     await connecter()
     const resultat = await appeler("optimiser_remuneration", { activiteId: "company-conseil", statut: "SASU" })
     expect(resultat.isError).toBeFalsy()
-    const { situationActuelle, meilleur, ecartAuMeilleur, fraisFonctionnement } = donnees(resultat) as { situationActuelle: { statut: string; netApresImpots: number }; meilleur: { netApresImpots: number }; ecartAuMeilleur: number; fraisFonctionnement: number }
+    const { situationActuelle, meilleur, ecartAuMeilleur, ecartDeFrais } = donnees(resultat) as { situationActuelle: { statut: string; netApresImpots: number }; meilleur: { netApresImpots: number }; ecartAuMeilleur: number; ecartDeFrais: number }
     expect(situationActuelle.statut).toBe("SASU")
     expect(ecartAuMeilleur).toBe(meilleur.netApresImpots - situationActuelle.netApresImpots)
-    expect(fraisFonctionnement).toBeGreaterThan(0)
+    expect(ecartDeFrais).toBe(0)
   })
 
   it("relit le fichier à chaque appel : une modification enregistrée par l'application est vue tout de suite", async () => {
