@@ -1,8 +1,8 @@
 // src/lib/repartition-benefice.test.ts
 
 import { describe, expect, it } from "vitest"
-import type { PartageDuBenefice } from "@/types"
-import { apercuDuPartage, auPas, coutEstime, partDistribueeDe, POSTES, postesArrondis, remunerationPourUnCout, valeurAuClavier } from "./repartition-benefice"
+import type { ComparaisonOptions, OptimisationRemuneration, PartageDuBenefice } from "@/types"
+import { apercuDuPartage, auPas, coutEstime, partDistribueeDe, POSTES, postesArrondis, reglageDeLaBarre, remunerationPourUnCout, valeurAuClavier } from "./repartition-benefice"
 
 /** SASU qui dégage 90 000 € avant rémunération : 24 300 € nets coûtent 40 200 €, 8 450 € d'IS, 20 000 € versés. */
 const partage: PartageDuBenefice = { beneficeAvantRemuneration: 90000, remunerationNette: 24300, cotisationsRemuneration: 15900, impotSocietes: 8450, dividendesNets: 20000, cotisationsSurDividendes: 0, resultatConserve: 21350 }
@@ -63,6 +63,21 @@ describe("apercuDuPartage", () => {
     expect(apercu.impotSocietes).toBe(0)
     expect(apercu.cotisationsSurDividendes).toBe(0)
     expect(somme(apercu)).toBeCloseTo(90000, 6)
+  })
+})
+
+describe("reglageDeLaBarre", () => {
+  const optimisation = { statut: "SASU", remunerationMaximale: 50000 } as OptimisationRemuneration
+  const options = (mode: ComparaisonOptions["repartition"]["mode"]) => ({ repartition: { mode, partDistribuee: 0.5 } }) as ComparaisonOptions
+
+  it("rend la barre réglable en répartition personnalisée, avec l'arbitrage du statut affiché", () => {
+    expect(reglageDeLaBarre(options("personnalisee"), optimisation, "SASU")).toEqual({ personnalisee: true, optimisationReglable: optimisation, remunerationMaximale: 50000 })
+  })
+
+  it("ne donne pas de poignées sans arbitrage, avec celui d'un autre statut, ou hors répartition personnalisée", () => {
+    expect(reglageDeLaBarre(options("personnalisee"), null, "SASU")).toEqual({ personnalisee: true, optimisationReglable: null, remunerationMaximale: null })
+    expect(reglageDeLaBarre(options("personnalisee"), optimisation, "EURL")).toEqual({ personnalisee: true, optimisationReglable: null, remunerationMaximale: null })
+    expect(reglageDeLaBarre(options("meilleurNet"), optimisation, "SASU")).toEqual({ personnalisee: false, optimisationReglable: null, remunerationMaximale: null })
   })
 })
 

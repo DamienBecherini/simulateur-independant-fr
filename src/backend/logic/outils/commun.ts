@@ -156,12 +156,24 @@ export function verifierNouvelleRelation(session: Pick<SessionState, "entities" 
   if (existantes.includes(type)) throw new ErreurOutil(`La relation « ${type} » existe déjà entre « ${de.name} » et « ${vers.name} ».`)
 
   if (de.type === "person" && vers.type === "person") {
-    if (!TYPES_DE_RELATION_FAMILIALE.includes(type)) throw new ErreurOutil(`Entre deux personnes, seules ces relations existent : ${TYPES_DE_RELATION_FAMILIALE.join(", ")}.`)
-    if (existantes.length > 0) throw new ErreurOutil(`« ${de.name} » et « ${vers.name} » ont déjà un lien familial (${existantes.join(", ")}) : un seul est possible.`)
+    verifierLienFamilial(de, vers, type, existantes)
     return
   }
   if (de.type !== "person") throw new ErreurOutil("Une relation part d'une personne : « deId » est la personne (le parent pour « Enfant »), « versId » la personne ou l'activité.")
+  verifierRelationVersUneActivite(de, vers, type, existantes)
+}
 
+/** Entre deux personnes : un lien familial, un seul. `existantes` : les relations déjà présentes entre elles. */
+function verifierLienFamilial(de: Entity, vers: Entity, type: Relationship["type"], existantes: Relationship["type"][]): void {
+  if (!TYPES_DE_RELATION_FAMILIALE.includes(type)) throw new ErreurOutil(`Entre deux personnes, seules ces relations existent : ${TYPES_DE_RELATION_FAMILIALE.join(", ")}.`)
+  if (existantes.length > 0) throw new ErreurOutil(`« ${de.name} » et « ${vers.name} » ont déjà un lien familial (${existantes.join(", ")}) : un seul est possible.`)
+}
+
+/**
+ * D'une personne vers une activité : les relations du statut de l'activité, et jamais direction et salariat ensemble.
+ * `existantes` : les relations déjà présentes entre elles.
+ */
+function verifierRelationVersUneActivite(de: Entity, vers: Entity, type: Relationship["type"], existantes: Relationship["type"][]): void {
   const possibles = RELATIONS_VERS_UNE_ACTIVITE[genreDe(vers) as Exclude<GenreDActeur, "personne">]
   if (!possibles.includes(type)) throw new ErreurOutil(`Relations possibles d'une personne vers « ${vers.name} » (${genreDe(vers)}) : ${possibles.join(", ")}.`)
   if (type === "Salarié" && existantes.some(t => DIRECTION.includes(t))) throw new ErreurOutil(`« ${de.name} » dirige déjà « ${vers.name} » : pas de relation « Salarié » en plus.`)

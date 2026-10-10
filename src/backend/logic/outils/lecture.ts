@@ -3,7 +3,7 @@
 // Ils ne calculent rien : les résultats viennent des outils de resultats.ts, qui appellent le moteur.
 
 import { z } from "zod"
-import type { Entity, FinancialFlow, SessionState } from "../../../types.js"
+import type { Entity, FinancialFlow, Person, SessionState } from "../../../types.js"
 import { ANNEE_COURANTE, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, type ReglesFiscales } from "../regles.js"
 import { anneeDeLaSession, empreinteDeLaSession, ErreurOutil, genreDe, GENRES_D_ACTEUR, nomDe, phraseDeLaRelation, trouverActeur, TYPES_DE_FLUX } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LIMITES, ListeDeMoisSchema } from "./limites.js"
@@ -19,12 +19,21 @@ const auCentime = (montant: number) => Math.round(montant * 100) / 100
 const ValeurDeReglage = z.union([z.string(), z.number(), z.boolean(), z.null()])
 
 /** Réglages d'un acteur qui comptent pour les calculs, sans son apparence (avatar). */
-function reglagesDeLActeur(acteur: Entity, detaille: boolean): Record<string, z.infer<typeof ValeurDeReglage>> {
-  if (acteur.type === "person") {
-    const frais = acteur.fraisReels
-    const resume = { partsFiscales: acteur.fiscalParts, fraisReels: frais ? `${frais.trajets.length} trajet(s), ${auCentime(frais.autresFrais)} € d'autres frais` : null }
-    return detaille && frais ? { ...resume, trajets: JSON.stringify(frais.trajets) } : resume
-  }
+function reglagesDeLActeur(acteur: Entity, detaille: boolean): Reglages {
+  return acteur.type === "person" ? reglagesDUnePersonne(acteur, detaille) : reglagesDUneActivite(acteur)
+}
+
+type Reglages = Record<string, z.infer<typeof ValeurDeReglage>>
+
+/** Parts fiscales et frais réels ; le détail des trajets seulement si `detaille`. */
+function reglagesDUnePersonne(acteur: Person, detaille: boolean): Reglages {
+  const frais = acteur.fraisReels
+  const resume = { partsFiscales: acteur.fiscalParts, fraisReels: frais ? `${frais.trajets.length} trajet(s), ${auCentime(frais.autresFrais)} € d'autres frais` : null }
+  return detaille && frais ? { ...resume, trajets: JSON.stringify(frais.trajets) } : resume
+}
+
+/** Réglages communs aux activités, puis ceux d'une société ou d'une micro-entreprise. */
+function reglagesDUneActivite(acteur: Exclude<Entity, Person>): Reglages {
   // Profession libérale réglementée et part conventionnée : seulement quand elles sont saisies (voir l'ADR 015).
   const profession = { ...(acteur.profession === undefined ? {} : { profession: acteur.profession }), ...(acteur.partConventionnee === undefined ? {} : { partConventionnee: acteur.partConventionnee }) }
   const commun = { dateDeCreation: acteur.dateDeCreation ?? null, deplacementsKmParAn: acteur.deplacementsProfessionnels?.kmParAn ?? null, ...profession }

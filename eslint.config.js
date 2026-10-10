@@ -39,7 +39,7 @@ export default tseslint.config(
     // Garde-fou de complexité cyclomatique sur tout le code applicatif, tests compris.
     files: ["src/**/*.{ts,tsx}"],
     rules: {
-      complexity: ["error", { max: 15 }]
+      complexity: ["error", { max: 12 }]
     }
   },
   // Sens des dépendances entre les dossiers de src (voir documentation/GUIDE_DEVELOPPEUR.md, § 2.1), tests compris sauf
@@ -77,7 +77,7 @@ export default tseslint.config(
       globals: globals.node
     },
     rules: {
-      complexity: ["error", { max: 15 }]
+      complexity: ["error", { max: 12 }]
     }
   }
 )

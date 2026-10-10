@@ -1,8 +1,9 @@
 // src/lib/repartition-benefice.ts
 // Calculs de la barre de partage du bénéfice d'une société : postes arrondis dont la somme tombe juste, aperçu
-// pendant qu'on fait glisser une poignée (avant que le moteur ne recalcule), et pas des poignées au clavier.
+// pendant qu'on fait glisser une poignée (avant que le moteur ne recalcule), pas des poignées au clavier, et ce qui
+// rend la barre réglable.
 
-import type { PartageDuBenefice } from "@/types"
+import type { ComparaisonOptions, OptimisationRemuneration, PartageDuBenefice, StatutSociete } from "@/types"
 
 export type PosteDuPartage = "remunerationNette" | "cotisationsRemuneration" | "impotSocietes" | "dividendesNets" | "cotisationsSurDividendes" | "resultatConserve"
 
@@ -123,4 +124,15 @@ export function valeurAuClavier(touche: string, valeur: number, bornes: { min: n
   if (touche === "End") return max
   if (!(touche in deplacements)) return null
   return auPas(valeur + deplacements[touche], pas, min, max)
+}
+
+/**
+ * Ce qui rend la barre réglable : une répartition personnalisée et l'arbitrage rémunération / dividendes du statut
+ * affiché (celui d'un autre statut est périmé). `optimisationReglable` donne aussi les répartitions toutes faites ;
+ * sans elle, pas de poignées (`remunerationMaximale` vaut `null`).
+ */
+export function reglageDeLaBarre(options: ComparaisonOptions, optimisation: OptimisationRemuneration | null, statut: StatutSociete) {
+  const personnalisee = options.repartition.mode === "personnalisee"
+  const optimisationReglable = personnalisee && optimisation?.statut === statut ? optimisation : null
+  return { personnalisee, optimisationReglable, remunerationMaximale: optimisationReglable?.remunerationMaximale ?? null }
 }

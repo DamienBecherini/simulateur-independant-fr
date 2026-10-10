@@ -154,8 +154,14 @@ export function donneesDeLApplication({ dossier, versionDeLApplication, avertir,
       console.warn("Session impossible à nettoyer, mise de côté :", error)
       return illisible()
     }
-    const { safeState, report, versionOrigine } = lue
+    return terminerLeChargement(lue)
+  }
 
+  /**
+   * Session lue et nettoyée : copie de l'original avant une conversion ou si le nettoyage a retiré quelque chose,
+   * réécriture au format actuel, et message qui dit ce qui a changé.
+   */
+  async function terminerLeChargement({ safeState, report, versionOrigine }: ReturnType<typeof lireLaSession>): Promise<SessionState> {
     const sections = sectionDesPertes(report)
     const pertes = sections.length > 0
     let aReecrire = versionOrigine < FORMAT_VERSION_ACTUEL
@@ -223,33 +229,42 @@ export function donneesDeLApplication({ dossier, versionDeLApplication, avertir,
     // fichier est copié d'abord, puis réécrit avec celles qui ont été gardées.
     const { slots, refusees, brutes: rawSlots } = lireLesSauvegardes(lecture.contenu)
     const illisibles = rawSlots.length - slots.length - refusees.length
-    let aReecrire = false
-    if (refusees.length > 0 || illisibles > 0) {
-      const { copie, phrase } = await garderUneCopie(cheminDesSauvegardes, "refuse")
-      aReecrire = copie
-      const parties: string[] = []
-      if (refusees.length > 0) parties.push(`${pluriel(refusees.length, "Cette sauvegarde n'a pas été chargée", "Ces sauvegardes n'ont pas été chargées")} :\n\n${refusees.map(({ nom, raison }) => `- « ${nom} » : ${raison}`).join("\n\n")}`)
-      if (illisibles > 0) parties.push(`${illisibles} ${pluriel(illisibles, "sauvegarde illisible a été écartée", "sauvegardes illisibles ont été écartées")} (identifiant, date ou contenu invalides).`)
-      avertir({ type: "warning", title: refusees.length > 0 ? "Sauvegardes refusées" : "Sauvegardes illisibles", message: `${parties.join("\n\n")}\n\n${phrase}` })
-    }
+    const ecartees = await signalerLesSauvegardesEcartees(refusees, illisibles)
+    const converties = await convertirLesAnciennesSauvegardes(rawSlots, slots)
+    if (ecartees || converties) await ecrireLesSauvegardesValidees(slots).catch(error => console.error("Sauvegardes nettoyées impossibles à réécrire :", error))
+    return slots
+  }
 
-    // Des sauvegardes d'un format précédent sont converties une fois pour toutes, après copie de l'original. Seules
-    // comptent celles qui ont été gardées.
+  /**
+   * Sauvegardes refusées à cause de leurs années, ou illisibles : copie du fichier d'origine, puis message. `true` si
+   * le fichier doit être réécrit sans elles (la copie a réussi).
+   */
+  async function signalerLesSauvegardesEcartees(refusees: ReturnType<typeof lireLesSauvegardes>["refusees"], illisibles: number): Promise<boolean> {
+    if (refusees.length === 0 && illisibles === 0) return false
+    const { copie, phrase } = await garderUneCopie(cheminDesSauvegardes, "refuse")
+    const parties: string[] = []
+    if (refusees.length > 0) parties.push(`${pluriel(refusees.length, "Cette sauvegarde n'a pas été chargée", "Ces sauvegardes n'ont pas été chargées")} :\n\n${refusees.map(({ nom, raison }) => `- « ${nom} » : ${raison}`).join("\n\n")}`)
+    if (illisibles > 0) parties.push(`${illisibles} ${pluriel(illisibles, "sauvegarde illisible a été écartée", "sauvegardes illisibles ont été écartées")} (identifiant, date ou contenu invalides).`)
+    avertir({ type: "warning", title: refusees.length > 0 ? "Sauvegardes refusées" : "Sauvegardes illisibles", message: `${parties.join("\n\n")}\n\n${phrase}` })
+    return copie
+  }
+
+  /**
+   * Des sauvegardes d'un format précédent sont converties une fois pour toutes, après copie de l'original. Seules
+   * comptent celles qui ont été gardées. `true` si le fichier doit être réécrit au format actuel.
+   */
+  async function convertirLesAnciennesSauvegardes(rawSlots: ReturnType<typeof lireLesSauvegardes>["brutes"], slots: SaveSlot[]): Promise<boolean> {
     const gardees = new Set(slots.map(slot => slot.id))
     const oldSlots = rawSlots.filter(slot => versionDuFormat(slot) < FORMAT_VERSION_ACTUEL && gardees.has((slot as { id?: string }).id ?? ""))
-    if (oldSlots.length > 0) {
-      await copieAvantConversion(cheminDesSauvegardes, Math.min(...oldSlots.map(versionDuFormat)))
-      aReecrire = true
-      const notes = [...new Set(oldSlots.flatMap(slot => migrerVersFormatActuel(slot).notes))]
-      avertir({
-        type: "info",
-        title: "Sauvegardes converties",
-        message: `${oldSlots.length} sauvegarde${oldSlots.length > 1 ? "s ont été converties" : " a été convertie"} au nouveau format du simulateur.${notes.length > 0 ? `\n\nÀ l'ouverture de chacune, vérifiez :\n\n${formatMigrationNotes(notes)}` : ""}`
-      })
-    }
-
-    if (aReecrire) await ecrireLesSauvegardesValidees(slots).catch(error => console.error("Sauvegardes nettoyées impossibles à réécrire :", error))
-    return slots
+    if (oldSlots.length === 0) return false
+    await copieAvantConversion(cheminDesSauvegardes, Math.min(...oldSlots.map(versionDuFormat)))
+    const notes = [...new Set(oldSlots.flatMap(slot => migrerVersFormatActuel(slot).notes))]
+    avertir({
+      type: "info",
+      title: "Sauvegardes converties",
+      message: `${oldSlots.length} sauvegarde${oldSlots.length > 1 ? "s ont été converties" : " a été convertie"} au nouveau format du simulateur.${notes.length > 0 ? `\n\nÀ l'ouverture de chacune, vérifiez :\n\n${formatMigrationNotes(notes)}` : ""}`
+    })
+    return true
   }
 
   // --- Préférences ---
