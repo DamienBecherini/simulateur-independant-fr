@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod"
-import { FraisFonctionnementSchema, RepartitionBeneficeSchema, type ComparaisonOptions, type FormatFichierTexte } from "../../types.js"
+import { FraisFonctionnementSchema, RepartitionBeneficeSchema, SessionStateSchema, type ComparaisonOptions, type FormatFichierTexte, type SessionState } from "../../types.js"
 
 /** Paramètre refusé : l'appel IPC échoue avec ce message, sans rien faire. */
 export class EntreeIpcInvalide extends Error {
@@ -63,4 +63,15 @@ export function entreeValide<T>(schema: z.ZodType<T>, valeur: unknown, canal: st
   if (resultat.success) return resultat.data
   console.warn(`${canal} : paramètres refusés.`, z.flattenError(resultat.error))
   throw new EntreeIpcInvalide(canal)
+}
+
+/**
+ * Session reçue pour un calcul (simulation, comparateur, optimiseur, stratégies), revalidée : une session invalide est
+ * remplacée par la session par défaut du schéma, et le calcul porte sur elle.
+ */
+export function sessionACalculer(session: unknown, canal: string): SessionState {
+  const resultat = SessionStateSchema.safeParse(session)
+  if (resultat.success) return resultat.data
+  console.warn(`${canal} : session invalide, utilisation des valeurs par défaut du schéma`, z.flattenError(resultat.error))
+  return SessionStateSchema.parse({})
 }
