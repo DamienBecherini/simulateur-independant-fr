@@ -2,7 +2,7 @@
 // Historique d'annulation, vérifié sur l'application entière : la session initiale vient du faux `window.api`,
 // les saisies passent par les vrais composants, et Ctrl+Z / Ctrl+Y pilotent l'historique de `useSessionManager`.
 
-import { render, screen, within } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import userEvent, { type UserEvent } from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { SessionState } from "@/types"
@@ -107,13 +107,35 @@ describe("App : historique d'annulation", () => {
     // Revalider la même valeur ne crée rien de plus.
     await user.clear(amount)
     await user.type(amount, "1250{Enter}")
-    // Ctrl+Z fonctionne aussi fenêtre ouverte : le montant d'origine revient aussitôt.
+    // Ctrl+Z fonctionne aussi fenêtre ouverte, hors d'un champ : le montant d'origine revient aussitôt.
+    act(() => amount.blur())
     await user.keyboard("{Control>}z{/Control}")
     expect(amount).toHaveValue((1000).toLocaleString("fr-FR"))
     await user.keyboard("{Control>}y{/Control}")
     await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
 
     expect(await countUndoSteps(user)).toBe(1)
+  })
+
+  it("laisse Ctrl+Z et Ctrl+Y au champ texte qui a le focus : l'historique de la simulation n'est pas touché", async () => {
+    const user = await renderApp()
+
+    await user.clear(nameInput())
+    await user.type(nameInput(), "Bob{Enter}")
+    expect(undoButton()).toBeEnabled()
+
+    // De retour dans le champ, la frappe est annulée par le navigateur, pas la modification validée.
+    await user.click(nameInput())
+    const touches: KeyboardEvent[] = []
+    const garder = (event: KeyboardEvent) => touches.push(event)
+    window.addEventListener("keydown", garder)
+    await user.keyboard("{Control>}z{/Control}{Control>}y{/Control}")
+    window.removeEventListener("keydown", garder)
+
+    expect(touches.filter(event => event.ctrlKey && event.key !== "Control").map(event => event.defaultPrevented)).toEqual([false, false])
+    expect(nameInput()).toHaveValue("Bob")
+    expect(undoButton()).toBeEnabled()
+    expect(redoButton()).toBeDisabled()
   })
 
   it("enchaîne autant d'étapes que de modifications validées", async () => {

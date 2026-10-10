@@ -47,6 +47,8 @@ import type { Affichage } from "@/types"
 import { cn } from "@/lib/utils"
 import { RelectureDesPropositions } from "./components/RelectureDesPropositions"
 import { usePropositionsEnAttente } from "./hooks/usePropositionsEnAttente"
+import { useRaccourcisDAnnulation } from "./hooks/useRaccourcisDAnnulation"
+import { numerosDesTypesDeFlux } from "@/lib/grille-mensuelle"
 
 /** En-tête de la page : dans l'affichage « Résumé », un titre plus petit et sans sous-titre à l'écran. */
 const EN_TETE_CLASSIQUE = { header: "mb-10", titre: "text-4xl", sousTitre: "" }
@@ -61,9 +63,8 @@ function App() {
   const [simulation, setSimulation] = useState<SimulationPluriannuelle | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
 
-  // --- MODIFICATION : Récupération des nouveaux états et fonctions du hook ---
-  // On récupère tout ce dont on a besoin depuis le "cerveau" de l'application.
-  const { currentSession, setCurrentSession, setComparateur, allSaveSlots, setAllSaveSlots, slotOrder, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, handleLoadMontage, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot, sessionChargee } = useSessionManager()
+  // Session, historique d'annulation, sauvegardes et préférences (voir useSessionManager).
+  const { currentSession, setCurrentSession, setComparateur, allSaveSlots, setAllSaveSlots, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, handleLoadMontage, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot, sessionChargee } = useSessionManager()
 
   // Propositions d'un client d'IA déposées par le serveur MCP local (application de bureau seulement, voir l'ADR 011).
   const { propositions, retirer: retirerProposition } = usePropositionsEnAttente(sessionChargee)
@@ -125,32 +126,8 @@ function App() {
     await window.api.exportState(exportPayload)
   }, [currentSession, simulation, simulationError])
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
-      const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey
-
-      if (ctrlOrCmd && event.key.toLowerCase() === "z") {
-        event.preventDefault()
-        if (event.shiftKey) {
-          if (canRedo) redo()
-        } else {
-          if (canUndo) undo()
-        }
-      } else if (ctrlOrCmd && event.key.toLowerCase() === "y" && !isMac) {
-        event.preventDefault()
-        if (canRedo) redo()
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [undo, redo, canUndo, canRedo])
-
-  // --- SUPPRESSION : La logique de chargement est maintenant entièrement dans le hook useSessionManager ---
-  // L'ancienne fonction handleLoadSlot qui était ici est supprimée.
+  // Ctrl+Z / Ctrl+Y : l'historique de la simulation, sauf dans un champ où l'on écrit (il garde sa propre annulation).
+  useRaccourcisDAnnulation({ annuler: undo, retablir: redo, peutAnnuler: canUndo, peutRetablir: canRedo })
 
   const handleConfirmImportAndClose = () => {
     proceedWithImport()
@@ -162,8 +139,7 @@ function App() {
     setSettingsOpen(false)
   }
 
-  // --- MODIFICATION : On utilise la fonction de chargement du hook et on ferme le panneau. ---
-  // Cette fonction "wrapper" permet de coupler l'action de chargement avec la fermeture de l'UI.
+  // Une sauvegarde chargée depuis le panneau des paramètres le ferme.
   const handleLoadAndClose = (slotToLoad: SaveSlot) => {
     handleLoadSlot(slotToLoad)
     setSettingsOpen(false)
@@ -177,21 +153,8 @@ function App() {
   }
   const chargerUnMontage = (montage: MontageType) => chargerUneSession(sessionDUnMontage(montage))
 
-
-  const flowTypeToNumberMap = useMemo(() => {
-    const types = new Set<string>()
-    // La légende numérote les types de flux de la grille affichée, celle de l'année choisie.
-    vue.monthlyData.forEach(month => {
-      month.flows.forEach(flow => types.add(flow.type))
-    })
-    const sortedTypes = Array.from(types).sort((a, b) => a.localeCompare(b))
-
-    const map = new Map<string, number>()
-    sortedTypes.forEach((type, index) => {
-      map.set(type, index + 1)
-    })
-    return map
-  }, [vue.monthlyData])
+  // La légende et la grille numérotent les types de flux de la grille affichée, celle de l'année choisie.
+  const flowTypeToNumberMap = useMemo(() => numerosDesTypesDeFlux(vue.monthlyData), [vue.monthlyData])
 
   return (
     <AffichageContext.Provider value={affichage}>
@@ -324,9 +287,6 @@ function App() {
 
         {import.meta.env.DEV && <DevWindowSize />}
 
-        {/* --- MODIFICATION : Passage des nouvelles props à SettingsSheet --- */}
-        {/* On transmet l'ID du slot chargé et la fonction pour le modifier, afin que
-            le panneau de configuration ait tout le contexte nécessaire. */}
         {/* Appliquer une proposition remplace la session comme toute modification : une seule étape d'annulation. Rien
             n'est montré avant le chargement de la session : la proposition paraîtrait périmée. */}
         <RelectureDesPropositions session={currentSession} propositions={propositions} onAppliquer={setCurrentSession} onRetirer={retirerProposition} />
@@ -340,15 +300,15 @@ function App() {
           currentSession={currentSession}
           setCurrentSession={setCurrentSession}
           onReset={handleResetAndClose}
-          onLoadSlot={handleLoadAndClose} // On passe la nouvelle fonction wrapper
-          slotOrder={slotOrder}
+          onLoadSlot={handleLoadAndClose}
+          slotOrder={userPreferences.slotOrder}
           setSlotOrder={setSlotOrder}
           onImport={handleImport}
           onLoadMontage={chargerUnMontage}
           importConfirmation={importConfirmation}
           onConfirmImport={handleConfirmImportAndClose}
           onCancelImport={cancelImport}
-          // Ajout des props cruciales pour la nouvelle logique
+          // La sauvegarde chargée : « Sauvegarder » la met à jour au lieu d'en créer une autre.
           loadedSlotId={loadedSlotId}
           setLoadedSlotId={setLoadedSlotId}
         />

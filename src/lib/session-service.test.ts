@@ -1,7 +1,7 @@
 // src/lib/session-service.test.ts
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { createNewSlotFromSession, exportState, importState, modificationsNonEnregistrees, saveAllSlots, updateSlotWithSession } from "@/lib/session-service"
+import { avecLaSession, createNewSlotFromSession, enregistrerLaSession, exportState, importState, modificationsNonEnregistrees, saveAllSlots, sauvegardesDansLOrdre, updateSlotWithSession } from "@/lib/session-service"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import type { ExportableState, SanitizationReport, SaveSlot, SessionState } from "@/types"
 
@@ -140,5 +140,55 @@ describe("modificationsNonEnregistrees", () => {
 
   it("modifiée depuis le chargement, elle serait perdue", () => {
     expect(modificationsNonEnregistrees({ ...session, name: "Renommée" }, [slot], "slot-1")).toBe(true)
+  })
+})
+
+describe("enregistrerLaSession : ce que fait « Sauvegarder »", () => {
+  const chargee: SaveSlot = { ...session, name: "Scénario 2025", id: "slot-charge", lastModified: 1 }
+  const autre: SaveSlot = { ...session, name: "Autre", id: "slot-autre", lastModified: 2 }
+  const modifiee: SessionState = { ...session, entities: [] }
+
+  it("met à jour sans question la sauvegarde chargée qui porte toujours le nom de la session", () => {
+    const decision = enregistrerLaSession([autre, chargee], modifiee, "slot-charge")
+    expect(decision).toEqual({ action: "mettre-a-jour", sauvegardes: [autre, { ...modifiee, appVersion: VERSION_DE_L_APPLICATION, id: "slot-charge", lastModified: MAINTENANT }] })
+  })
+
+  it("demande confirmation avant d'écraser une autre sauvegarde du même nom (« sauvegarder sous »)", () => {
+    expect(enregistrerLaSession([chargee, autre], { ...session, name: "Autre" }, "slot-charge")).toEqual({ action: "confirmer-l-ecrasement", aEcraser: autre })
+    // Aucune sauvegarde chargée : un homonyme demande aussi confirmation.
+    expect(enregistrerLaSession([chargee], session, null)).toEqual({ action: "confirmer-l-ecrasement", aEcraser: chargee })
+  })
+
+  it("crée une nouvelle sauvegarde, ajoutée à la fin de la liste, quand le nom est libre", () => {
+    const decision = enregistrerLaSession([autre], session, "slot-disparu")
+    expect(decision.action).toBe("creer")
+    if (decision.action !== "creer") return
+    expect(decision.nouvelle).toMatchObject({ name: "Scénario 2025", lastModified: MAINTENANT, appVersion: VERSION_DE_L_APPLICATION })
+    expect(decision.sauvegardes).toEqual([autre, decision.nouvelle])
+  })
+
+  it("n'écrit rien lui-même", () => {
+    enregistrerLaSession([autre], session, null)
+    expect(api.saveSlots).not.toHaveBeenCalled()
+  })
+})
+
+describe("avecLaSession : écrasement confirmé", () => {
+  it("remplace la sauvegarde visée par la session, à sa place et avec son identifiant", () => {
+    const a: SaveSlot = { ...session, name: "A", id: "a", lastModified: 1 }
+    const b: SaveSlot = { ...session, name: "B", id: "b", lastModified: 1 }
+    const resultat = avecLaSession([a, b], a, { ...session, name: "A" })
+    expect(resultat.map(slot => slot.id)).toEqual(["a", "b"])
+    expect(resultat[0]).toMatchObject({ name: "A", lastModified: MAINTENANT })
+    expect(resultat[1]).toBe(b)
+  })
+})
+
+describe("sauvegardesDansLOrdre", () => {
+  it("suit l'ordre d'affichage et ignore un identifiant sans sauvegarde", () => {
+    const a: SaveSlot = { ...session, id: "a", lastModified: 1 }
+    const b: SaveSlot = { ...session, id: "b", lastModified: 1 }
+    expect(sauvegardesDansLOrdre([a, b], ["b", "inconnu", "a"])).toEqual([b, a])
+    expect(sauvegardesDansLOrdre([a, b], [])).toEqual([])
   })
 })
