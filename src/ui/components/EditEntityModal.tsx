@@ -95,7 +95,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
     }
   }
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     handleSaveAndClose()
   }
