@@ -29,8 +29,8 @@ export function Depliable({ id, ouverteParDefaut, ...props }: DepliableProps) {
 
 /** Section ouverte à son affichage (une aide utile tant qu'une valeur manque), sans mémoire d'une fois à l'autre. */
 function DepliableOuverteAuDepart(props: Omit<DepliableProps, "id" | "ouverteParDefaut">) {
-  const [ouverte, definir] = useState(true)
-  return <Section {...props} {...proprietesDeDetails(ouverte, definir)} />
+  const [ouverte, setOuverte] = useState(true)
+  return <Section {...props} {...proprietesDeDetails(ouverte, setOuverte)} />
 }
 
 function DepliableRetenu({ id, ouverteParDefaut, ...props }: DepliableProps & { id: string }) {

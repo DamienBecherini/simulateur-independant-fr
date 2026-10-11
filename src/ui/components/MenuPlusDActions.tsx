@@ -148,7 +148,7 @@ export function MenuPlusDActions({ affichage, onAffichage, onAvis, onMontages, c
         <EllipsisVertical className="text-slate-600 dark:text-slate-400" />
       </Button>
       {ouvert ? (
-        <div ref={menu} id={`${id}-menu`} role="menu" aria-label="Plus d'actions" onKeyDown={toucheDuMenu} className="absolute top-full right-0 z-50 mt-1 w-56 rounded-md border bg-popover p-1 text-popover-foreground shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
+        <div ref={menu} id={`${id}-menu`} role="menu" tabIndex={-1} aria-label="Plus d'actions" onKeyDown={toucheDuMenu} className="absolute top-full right-0 z-50 mt-1 w-56 rounded-md border bg-popover p-1 text-popover-foreground shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
           {actions.map(ligne)}
           <div role="separator" className="-mx-1 my-1 h-px bg-border" />
           <div role="group" aria-labelledby={`${id}-affichage`}>
