@@ -105,18 +105,22 @@ Dans [logos/](./logos/), générés depuis l'icône de l'application par `script
 
 ## Classification par âge (questionnaire IARC)
 
-Type de produit : **application, pas un jeu** (catégorie « Productivité, utilitaires, outils de référence » ou équivalent). Réponses à donner :
+Page **Age ratings** de Partner Center : *I'm ready to complete the International Age Rating Coalition (IARC) questionnaire*, puis *App Type* : **All Other App Types** (ni un jeu, ni une application de communication). Questions telles qu'elles s'affichent (relevées le 2026-10-11) :
 
-| Question (en substance) | Réponse | Pourquoi |
-|---|---|---|
-| Violence, peur, sexualité, nudité, langage grossier | Non | Aucun contenu de ce type |
-| Drogues, alcool, tabac | Non | |
-| Jeux d'argent, simulés ou réels | Non | Simulation fiscale, pas de jeu ni de mise |
-| Les utilisateurs peuvent-ils communiquer ou échanger du contenu entre eux ? | Non | Aucune messagerie ni contenu partagé dans l'application. « Donner mon avis » ouvre le navigateur ou la messagerie de l'utilisateur, hors de l'application |
-| L'application partage-t-elle la position de l'utilisateur ? | Non | |
-| Achats numériques dans l'application ? | Non | Gratuite, sans achat intégré |
-| Accès libre à Internet (navigateur, moteur de recherche) ? | Non | L'application ne charge aucune page web ; les liens s'ouvrent dans le navigateur par défaut |
-| Collecte ou partage d'informations personnelles ? | Non | Tout reste sur l'ordinateur (voir la politique de confidentialité) |
+| Section | Question | Réponse | Pourquoi |
+|---|---|---|---|
+| Downloaded App | Does the app contain any ratings-relevant content (e.g., sex, violence, language) downloaded as part of the app package? | No | Aucun contenu de ce type |
+| User Content Sharing | Does the app natively allow users to interact or exchange content with other users…? | No | Aucune messagerie ni contenu partagé dans l'application. « Donner mon avis » ouvre le navigateur ou la messagerie de l'utilisateur, hors de l'application |
+| Online Content | Does the app feature or promote content that isn't part of the initial app download, but can be accessed from the app? | No | L'application fonctionne hors ligne et ne charge aucun contenu ; les liens vers les sources officielles s'ouvrent dans le navigateur. Les propositions d'un assistant d'IA (serveur MCP) viennent d'un logiciel installé et choisi par l'utilisateur, et ne sont que des montants qu'il accepte ou refuse |
+| Promotion or Sale of Age-Restricted Products or Activities | Does the app focus on promoting or selling items or activities that are typically age-restricted…? | No | Simulation fiscale, ni jeu d'argent ni produit réservé aux adultes |
+| Miscellaneous | Does the app share the user's current and precise physical location with other users? | No | |
+| Miscellaneous | Does the app allow users to purchase digital goods? | No | Gratuite, sans achat intégré |
+| Miscellaneous | Does the app include cash rewards, gift cards, play-to-earn features, convertible cryptocurrency rewards…? | No | |
+| Miscellaneous | Is the app a web browser or search engine? | No | L'application ne charge aucune page web |
+| Miscellaneous | Is the app primarily a news or educational product? | No | Un outil de simulation, pas un média ni un produit éducatif |
+| — | Will this product use ratings obtained directly from a ratings board, and/or will it be distributed on physical media in any region? | No | |
+
+La question des informations personnelles est posée dans **Properties** (*Privacy policy*) : **No**, tout reste sur l'ordinateur (voir la politique de confidentialité).
 
 Classification attendue : **3+ (PEGI 3, ESRB Everyone)**.
 
