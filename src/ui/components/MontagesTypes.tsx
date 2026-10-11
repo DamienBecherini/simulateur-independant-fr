@@ -2,7 +2,7 @@
 // « Partir d'un montage type » : la bibliothèque des montages en cartes, le détail de chacun (ce qu'il illustre, ses
 // conditions, ses risques, ses sources), puis son chargement, confirmé quand la simulation en cours serait perdue.
 
-import { useRef, useState, type ReactNode } from "react"
+import { useRef, useState, type ReactNode, type RefObject } from "react"
 import { ChevronLeft, ExternalLink, LayoutTemplate } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -20,6 +20,8 @@ interface FenetreDesMontagesProps {
   nomDeLaSession: string
   /** Le bouton qui ouvre la fenêtre : le focus y revient à la fermeture. */
   boutonDOuverture?: ReactNode
+  /** Sans bouton d'ouverture (fenêtre ouverte depuis un menu) : l'élément où le focus revient à la fermeture. */
+  declencheur?: RefObject<HTMLElement | null>
 }
 
 function Etiquettes({ etiquettes }: { etiquettes: string[] }) {
@@ -127,7 +129,7 @@ function ListeDesMontages({ onDetails, onCharger, montageVu }: { onDetails: (mon
 }
 
 /** La fenêtre des montages types, et la confirmation avant de remplacer une simulation non enregistrée. */
-export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmationNecessaire, nomDeLaSession, boutonDOuverture }: FenetreDesMontagesProps) {
+export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmationNecessaire, nomDeLaSession, boutonDOuverture, declencheur: declencheurDeLaFenetre }: FenetreDesMontagesProps) {
   const [detail, setDetail] = useState<MontageType | null>(null)
   // Dernier montage dont on a vu le détail : de retour à la liste, le focus revient sur sa carte.
   const [montageVu, setMontageVu] = useState<string | null>(null)
@@ -161,7 +163,14 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
     <>
       <Dialog open={open} onOpenChange={changerOuverture}>
         {boutonDOuverture ? <DialogTrigger asChild>{boutonDOuverture}</DialogTrigger> : null}
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
+          onCloseAutoFocus={event => {
+            if (!declencheurDeLaFenetre?.current) return
+            event.preventDefault()
+            declencheurDeLaFenetre.current.focus()
+          }}
+        >
           {detail ? <DetailDuMontage montage={detail} onRetour={() => setDetail(null)} onCharger={() => demanderLeChargement(detail)} /> : <ListeDesMontages onDetails={voirLeDetail} onCharger={demanderLeChargement} montageVu={montageVu} />}
         </DialogContent>
       </Dialog>

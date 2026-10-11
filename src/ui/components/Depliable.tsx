@@ -1,18 +1,21 @@
 // src/ui/components/Depliable.tsx
 
-import type { ReactNode, SyntheticEvent } from "react"
+import { useState, type ReactNode, type SyntheticEvent } from "react"
 import { ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { proprietesDeDetails, useSectionOuverte } from "../hooks/useSectionOuverte"
 
 interface DepliableProps {
-  titre: string
+  titre: ReactNode
   /**
    * Identifiant stable de la section : son état ouvert ou fermé est alors retenu d'une ouverture à l'autre (voir
-   * useSectionOuverte). Sans lui, la section s'ouvre fermée à chaque fois.
+   * useSectionOuverte). Sans lui, la section s'ouvre fermée à chaque fois, sauf `ouverteParDefaut`.
    */
   id?: string
-  /** État de la section tant que l'utilisateur ne l'a ni ouverte ni fermée (avec `id` seulement). */
+  /**
+   * Avec `id` : état de la section tant que l'utilisateur ne l'a ni ouverte ni fermée. Sans `id` : état à chaque
+   * affichage.
+   */
   ouverteParDefaut?: boolean
   className?: string
   children: ReactNode
@@ -20,7 +23,14 @@ interface DepliableProps {
 
 /** Section repliable : un chevron et une indication « afficher / masquer » montrent qu'on peut cliquer. */
 export function Depliable({ id, ouverteParDefaut, ...props }: DepliableProps) {
-  return id ? <DepliableRetenu id={id} ouverteParDefaut={ouverteParDefaut} {...props} /> : <Section {...props} />
+  if (id) return <DepliableRetenu id={id} ouverteParDefaut={ouverteParDefaut} {...props} />
+  return ouverteParDefaut ? <DepliableOuverteAuDepart {...props} /> : <Section {...props} />
+}
+
+/** Section ouverte à son affichage (une aide utile tant qu'une valeur manque), sans mémoire d'une fois à l'autre. */
+function DepliableOuverteAuDepart(props: Omit<DepliableProps, "id" | "ouverteParDefaut">) {
+  const [ouverte, definir] = useState(true)
+  return <Section {...props} {...proprietesDeDetails(ouverte, definir)} />
 }
 
 function DepliableRetenu({ id, ouverteParDefaut, ...props }: DepliableProps & { id: string }) {

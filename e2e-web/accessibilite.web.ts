@@ -115,7 +115,10 @@ async function auditerLesFenetres(page: Page, theme: string) {
   await fermer()
 
   // Micro-entreprise : le choix de la nature du chiffre d'affaires, avec la note sur les achats de la vente.
+  // L'activité a déjà un chiffre d'affaires : l'aide sur la nature s'ouvre repliée ; on la déplie, avec l'aide à la saisie.
   await page.getByRole("button", { name: /^Flux de janvier : Atelier de Camille/ }).click()
+  await fenetre.locator("summary", { hasText: "Nature du chiffre d'affaires" }).click()
+  await fenetre.locator("summary", { hasText: "Aide à la saisie" }).click()
   await fenetre.getByRole("radio", { name: "Vente de marchandises (BIC)" }).check()
   await expect(fenetre.getByText(/^Vos achats/)).toBeVisible()
   await auditer(page, `flux d'un mois d'une micro-entreprise, ${theme}`, "[role=dialog]")

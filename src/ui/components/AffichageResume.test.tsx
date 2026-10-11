@@ -155,4 +155,18 @@ describe("acteurs dans l'affichage « Résumé »", () => {
     await userEvent.click(screen.getByRole("button", { name: "Supprimer « Mon atelier »" }))
     expect(setSession).toHaveBeenLastCalledWith(expect.objectContaining({ entities: [expect.objectContaining({ id: "person-alice" })] }))
   })
+
+  it("garde « + Relation » sur la ligne à toutes les largeurs : sur un téléphone, seules les pastilles passent dans la fiche", async () => {
+    const setSession = vi.fn()
+    render(dans("resume", <EntitiesManager session={session()} setSession={setSession} annee={2026} />))
+
+    const boutons = screen.getAllByRole("button", { name: "Relation" })
+    expect(boutons).toHaveLength(2)
+    for (const bouton of boutons) expect(bouton.closest(".max-sm\\:hidden")).toBeNull()
+
+    await userEvent.click(boutons[0])
+    await userEvent.click(screen.getByRole("combobox", { name: "Avec qui" }))
+    await userEvent.click(await screen.findByRole("option", { name: "Mon atelier" }))
+    expect(setSession).toHaveBeenCalled()
+  })
 })

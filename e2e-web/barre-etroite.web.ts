@@ -1,7 +1,8 @@
 // e2e-web/barre-etroite.web.ts
 // Selon la largeur, « Donner mon avis » et « Montages types » montrent leur nom dans la barre d'outils, ou leur icône seule.
-// Sur un téléphone de 320 px, la barre d'outils tient dans l'écran : l'interrupteur de thème et les montages types passent dans le panneau
-// des paramètres, où il change le thème de la page comme celui de la barre.
+// Sur un téléphone, la barre d'outils tient dans l'écran : l'interrupteur de thème et les montages types passent dans le menu
+// « Plus d'actions » (voir telephone-compact.web.ts) ; ils restent aussi dans le panneau des paramètres, où l'interrupteur change
+// le thème de la page comme celui de la barre.
 
 import { test, expect } from "@playwright/test"
 
@@ -36,11 +37,12 @@ test.describe("sur un téléphone tactile de 320 px", () => {
   })
 })
 
-// Le nom visible de chaque bouton, selon la largeur : les deux à partir de 1024 px, « Montages types » seul à partir de 768 px.
+// Le nom visible de chaque bouton, selon la largeur : les deux à partir de 1024 px, « Montages types » seul à partir de 768 px,
+// les icônes seules jusqu'à 640 px ; en dessous, ils passent dans le menu « Plus d'actions ».
 const LARGEURS = [
   { largeur: 1440, avis: true, montages: true },
   { largeur: 800, avis: false, montages: true },
-  { largeur: 375, avis: false, montages: false }
+  { largeur: 640, avis: false, montages: false }
 ]
 
 for (const { largeur, avis, montages } of LARGEURS) {

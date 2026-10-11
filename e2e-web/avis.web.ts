@@ -33,11 +33,16 @@ async function ouvrir(page: Page) {
 
 const fenetre = (page: Page) => page.getByRole("dialog", { name: "Donner mon avis" })
 const bouton = (page: Page) => page.getByRole("button", { name: "Donner mon avis" })
+// Sur un téléphone (moins de 640 px), « Donner mon avis » est dans le menu « Plus d'actions » de la barre d'outils.
+const plusDActions = (page: Page) => page.getByRole("button", { name: "Plus d'actions" })
 const envoyerSurGitHub = (page: Page) => fenetre(page).getByRole("button", { name: "Envoyer sur GitHub (compte requis, message public)" })
 const envoyerParEMail = (page: Page) => fenetre(page).getByRole("button", { name: "Envoyer par e-mail" })
 
 async function ouvrirLaFenetre(page: Page) {
-  await bouton(page).click()
+  if (await plusDActions(page).isVisible()) {
+    await plusDActions(page).click()
+    await page.getByRole("menuitem", { name: "Donner mon avis" }).click()
+  } else await bouton(page).click()
   await expect(fenetre(page)).toBeVisible()
 }
 
@@ -157,25 +162,24 @@ for (const largeur of [320, 375]) {
   test(`à ${largeur} px, avec une souris, tous les boutons de la barre d'outils tiennent dans la largeur`, async ({ page }) => {
     await page.setViewportSize({ width: largeur, height: 740 })
     await ouvrir(page)
-    for (const nom of ["Paramètres", "Donner mon avis"]) expect((await page.getByRole("button", { name: nom }).boundingBox())!.x).toBeGreaterThanOrEqual(0)
-    const interrupteur = page.getByRole("navigation", { name: "Barre d'outils" }).getByRole("switch", { name: "Changer de thème" })
-    // Sous 352 px, l'interrupteur de thème quitte la barre pour le panneau des paramètres (voir barre-etroite.web.ts).
-    if (largeur < 352) {
-      await expect(interrupteur).toBeHidden()
-      return
+    // Sous 640 px, l'avis et le thème passent dans le menu « Plus d'actions » (voir telephone-compact.web.ts).
+    await expect(bouton(page)).toBeHidden()
+    await expect(page.getByRole("navigation", { name: "Barre d'outils" }).getByRole("switch", { name: "Changer de thème" })).toBeHidden()
+    for (const nom of ["Paramètres", "Plus d'actions"]) {
+      const boite = (await page.getByRole("button", { name: nom }).boundingBox())!
+      expect(boite.x).toBeGreaterThanOrEqual(0)
+      expect(boite.x + boite.width).toBeLessThanOrEqual(largeur)
     }
-    const theme = (await interrupteur.boundingBox())!
-    expect(theme.x + theme.width).toBeLessThanOrEqual(largeur)
   })
 
   test.describe(`sur un téléphone de ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: 740 }, hasTouch: true, isMobile: true })
 
     for (const police of POLICES) {
-      test(`le bouton tient dans la barre d'outils, la fenêtre dans la largeur, et tout reste accessible, ${police}`, async ({ page, context }) => {
+      test(`le menu qui l'ouvre tient dans la barre d'outils, la fenêtre dans la largeur, et tout reste accessible, ${police}`, async ({ page, context }) => {
         await choisirLaPolice(context, police)
         await ouvrir(page)
-        const boite = await bouton(page).boundingBox()
+        const boite = await plusDActions(page).boundingBox()
         expect(boite!.x + boite!.width).toBeLessThanOrEqual(largeur)
         expect(Math.min(boite!.width, boite!.height)).toBeGreaterThanOrEqual(24)
         expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(largeur)

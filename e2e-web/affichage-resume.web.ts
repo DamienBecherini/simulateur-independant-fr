@@ -242,10 +242,11 @@ async function hauteur(page: Page, affichage: "classique" | "resume") {
 // Objectifs de l'étude (docs/conception/allegement-ecran.md) : environ 3 700 px sur ordinateur, 5 900 px sur
 // téléphone, au plus 3 800 et 6 000 px. Les plafonds vérifiés gardent une marge d'environ 5 % pour les polices
 // larges (DejaVu Sans sous Linux, Verdana : 3 776 et 6 209 px) ; l'écart avec l'affichage classique, lui, ne dépend
-// pas de la police.
+// pas de la police. Sur téléphone, « + Relation » sur chaque ligne d'acteur (parcours utilisateur, P-11) ajoute
+// environ 120 px : 6 573 px avec la police de Windows en octobre 2026, d'où un plafond de 6 800 px.
 for (const [largeur, hauteurEcran, plafond] of [
   [1440, 900, 4000],
-  [375, 812, 6500]
+  [375, 812, 6800]
 ] as const) {
   test.describe(`hauteur de la page à ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: hauteurEcran }, hasTouch: largeur < 500, isMobile: largeur < 500 })

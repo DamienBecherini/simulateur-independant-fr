@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest"
 import { pourcent } from "@/backend/logic/format"
 import { ANNEE_COURANTE, reglesPubliees } from "@/backend/logic/regles"
 import { makeFlow, makeMicro, makePerson } from "@/ui/testing/fixtures"
-import { descriptionsDesNatures, introductionDesNatures, NATURES_MICRO, noteSurLesAchats, typeProposeDOffice } from "./nature-de-l-activite"
+import { descriptionsDesNatures, introductionDesNatures, NATURES_MICRO, natureDejaSaisie, noteSurLesAchats, typeProposeDOffice } from "./nature-de-l-activite"
 
 const regles = reglesPubliees(ANNEE_COURANTE)
 const { cotisations, abattement } = regles.microEntreprise
@@ -81,5 +81,15 @@ describe("type proposé d'office sur la ligne d'ajout", () => {
 
   it("autre acteur : le premier type permis", () => {
     expect(typeProposeDOffice(makePerson(), [])).toBe("are")
+  })
+})
+
+describe("nature déjà saisie (aide repliée)", () => {
+  const micro = makeMicro({ id: "m" })
+
+  it("vraie dès que l'activité a un chiffre d'affaires d'une des trois natures, la sienne seulement", () => {
+    expect(natureDejaSaisie(micro, [])).toBe(false)
+    expect(natureDejaSaisie(micro, [makeFlow({ entityId: "m", type: "expense" }), makeFlow({ entityId: "autre", type: "ca_micro_vente" })])).toBe(false)
+    expect(natureDejaSaisie(micro, [makeFlow({ entityId: "m", type: "ca_micro_services_bic" })])).toBe(true)
   })
 })

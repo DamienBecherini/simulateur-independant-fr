@@ -29,14 +29,15 @@ export function LigneActeur({ entity, allEntities, relationships, annee, onUpdat
       <Input aria-label="Nom" className="h-8 w-40 border-transparent bg-transparent px-1 font-semibold shadow-none dark:bg-transparent hover:border-input focus-visible:border-input" {...nom} />
       <span className={PASTILLE}>{typeCourt(entity)}</span>
       {entity.type === "micro-entreprise" ? <OptionsDeLaMicro entity={entity} onUpdate={onUpdate} annee={annee} compactes /> : null}
-      {/* Sur téléphone, le nombre de relations seulement : elles se modifient dans la fenêtre « Modifier ». */}
+      {/* Sur téléphone, le nombre de relations seulement (elles se modifient dans la fenêtre « Modifier ») ; « + Relation »
+          reste sur la ligne, comme au bureau. */}
       {relations.length > 0 ? <span className={cn(PASTILLE, "sm:hidden")}>{relations.length > 1 ? `${relations.length} relations` : "1 relation"}</span> : null}
       <div className="contents max-sm:hidden">
         {relations.map(relation => (
           <PastilleDeRelation key={relation.id} relation={relation} entity={entity} allEntities={allEntities} onDelete={onDeleteRelationship} compacte />
         ))}
-        <NewRelationshipForm entity={entity} allEntities={allEntities} relationships={relationships} onAdd={onAddRelationship} />
       </div>
+      <NewRelationshipForm entity={entity} allEntities={allEntities} relationships={relationships} onAdd={onAddRelationship} />
       <div className="ml-auto flex items-center print:hidden">
         <BoutonsModifierVerrouiller entity={entity} onEdit={onEdit} onToggleLock={onToggleLock} titre="Parts, statut, couleur, icône…" />
         <Button variant="ghost" size="icon" aria-label={`Supprimer « ${entity.name} »`} title="Supprimer" disabled={entity.locked} className="text-rose-700 hover:text-rose-800 dark:text-rose-400" onClick={() => onDelete(entity.id)}>

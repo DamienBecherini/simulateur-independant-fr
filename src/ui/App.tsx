@@ -12,7 +12,8 @@ import { sessionDUnMontage, type MontageType } from "@/lib/montages/montages"
 import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
 import * as SessionService from "@/lib/session-service"
-import { BoutonDesMontages } from "./components/MontagesTypes"
+import { BoutonDesMontages, FenetreDesMontages } from "./components/MontagesTypes"
+import { MenuPlusDActions } from "./components/MenuPlusDActions"
 import { BoutonDesTests } from "./components/BoutonDesTests"
 import type { Affichage, SaveSlot, SessionState, SimulationPluriannuelle } from "@/types"
 import { ajouterAnnee, anneeAAjouter, anneeExistante, anneesDeLaSession, donneesDeLAnnee, remplacerGrille, supprimerAnnee, vueDeLAnnee } from "@/backend/logic/annees"
@@ -65,7 +66,15 @@ function App() {
   const [isExportOpen, setExportOpen] = useState(false)
   // La fenêtre d'avis s'ouvre par son bouton, ou par l'adresse #donner-mon-avis (lien de la page outil du site).
   const [isAvisOpen, setAvisOpen] = useFenetreParLAdresse(ADRESSE_DE_L_AVIS)
-  const boutonDAvis = useRef<HTMLButtonElement>(null)
+  // Le bouton qui a ouvert la fenêtre d'avis (celui de la barre, ou « Plus d'actions » sur un téléphone) : le focus y revient.
+  const declencheurDeLAvis = useRef<HTMLElement | null>(null)
+  const ouvrirLAvis = (declencheur: HTMLElement) => {
+    declencheurDeLAvis.current = declencheur
+    setAvisOpen(true)
+  }
+  // Les montages types ouverts depuis le menu « Plus d'actions » d'un téléphone ; le focus revient à ce menu.
+  const [montagesDuMenu, setMontagesDuMenu] = useState(false)
+  const declencheurDesMontages = useRef<HTMLElement | null>(null)
   const [simulation, setSimulation] = useState<SimulationPluriannuelle | null>(null)
   const [simulationError, setSimulationError] = useState<string | null>(null)
 
@@ -171,7 +180,9 @@ function App() {
           Aller au contenu
         </a>
         <nav aria-label="Barre d'outils" className="print:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
-          <div className="container mx-auto flex items-center justify-between px-0 py-2 sm:px-8">
+          {/* Sur un téléphone, la barre perd ses marges verticales (moins de hauteur collée en haut). Sous 1024 px, elle n'a
+              pas non plus de marges latérales : entre 640 et 900 px, ses boutons ne tiendraient pas avec. */}
+          <div className="container mx-auto flex items-center justify-between px-0 sm:py-2 lg:px-8">
             {/* Groupe de boutons de gauche */}
             <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-9 sm:w-10 [&_svg]:size-6" onClick={() => setSettingsOpen(true)}>
@@ -184,13 +195,13 @@ function App() {
                 <Redo2 className="dark:text-slate-300" />
               </Button>
               {/* Sur un écran large, les deux boutons les plus utiles à qui découvre le simulateur montrent leur nom ;
-                  en dessous, leur icône seule, pour que la barre tienne sur un téléphone. Sous 352 px, les montages ne
-                  restent que dans le panneau des paramètres. */}
-              <Button variant="ghost" size="icon" ref={boutonDAvis} aria-label="Donner mon avis" title="Donner mon avis" onClick={() => setAvisOpen(true)} className="h-10 w-9 sm:ml-2 sm:w-10 lg:w-auto lg:gap-2 lg:px-3 [&_svg]:size-6">
+                  en dessous, leur icône seule. Sur un téléphone (moins de 640 px), ils passent dans le menu « Plus
+                  d'actions », avec l'affichage et le thème : la barre garde les actions principales sans rien couper. */}
+              <Button variant="ghost" size="icon" aria-label="Donner mon avis" title="Donner mon avis" onClick={e => ouvrirLAvis(e.currentTarget)} className="h-10 w-9 max-sm:hidden sm:ml-2 sm:w-10 lg:w-auto lg:gap-2 lg:px-3 [&_svg]:size-6">
                 <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
                 <span className="hidden lg:inline">Donner mon avis</span>
               </Button>
-              <BoutonDesMontages variant="outline" size="sm" aria-label="Montages types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 max-[22rem]:hidden sm:ml-2" onCharger={chargerUnMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name}>
+              <BoutonDesMontages variant="outline" size="sm" aria-label="Montages types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 max-sm:hidden sm:ml-2" onCharger={chargerUnMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name}>
                 <span className="hidden md:inline">Montages types</span>
               </BoutonDesMontages>
               {/* En mode développement seulement : scénarios prêts à charger pour vérifier une fonctionnalité. */}
@@ -198,21 +209,27 @@ function App() {
             </div>
             {/* Groupe de boutons de droite */}
             <div className="flex items-center gap-1">
-              <SelecteurAffichage affichage={affichage} onChange={choisirAffichage} />
-              <Button variant="outline" size="sm" aria-label="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 sm:mr-2" onClick={() => setExportOpen(true)}>
+              <div className="max-sm:hidden">
+                <SelecteurAffichage affichage={affichage} onChange={choisirAffichage} />
+              </div>
+              {/* Son nom visible à partir de 1024 px ; en dessous, l'icône seule, pour que la barre tienne. */}
+              <Button variant="outline" size="sm" aria-label="Exporter" title="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 sm:mr-2" onClick={() => setExportOpen(true)}>
                 <Download className="size-4" />
-                <span className="hidden sm:inline">Exporter</span>
+                <span className="hidden lg:inline">Exporter</span>
               </Button>
-              {/* Sur un téléphone tactile, on zoome avec les doigts : les boutons de zoom y laissent la place aux autres. Dans
-                  une fenêtre très étroite (moins de 416 px), ils s'effacent aussi : le zoom du navigateur reste. */}
-              <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} disabled={!canZoomOut} className="h-10 w-9 pointer-coarse:max-sm:hidden max-[26rem]:hidden sm:w-10 [&_svg]:size-6">
+              {/* Sur un écran tactile de moins de 768 px, on zoome avec les doigts : les boutons de zoom y laissent la place
+                  aux autres. Dans une fenêtre très étroite (moins de 416 px), ils s'effacent aussi : le zoom du navigateur reste. */}
+              <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoomOut} disabled={!canZoomOut} className="h-10 w-9 pointer-coarse:max-md:hidden max-[26rem]:hidden sm:w-10 [&_svg]:size-6">
                 <ZoomOut className="text-slate-600 dark:text-slate-400" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} disabled={!canZoomIn} className="h-10 w-9 pointer-coarse:max-sm:hidden max-[26rem]:hidden sm:w-10 [&_svg]:size-6 sm:mr-4">
+              <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoomIn} disabled={!canZoomIn} className="h-10 w-9 pointer-coarse:max-md:hidden max-[26rem]:hidden sm:w-10 [&_svg]:size-6 sm:mr-4">
                 <ZoomIn className="text-slate-600 dark:text-slate-400" />
               </Button>
-              {/* Sur un écran de moins de 352 px, l'interrupteur de thème passe dans le panneau des paramètres. */}
-              <ThemeToggle className="max-[22rem]:hidden" />
+              <ThemeToggle className="max-sm:hidden" />
+              <MenuPlusDActions className="sm:hidden" affichage={affichage} onAffichage={choisirAffichage} onAvis={ouvrirLAvis} onMontages={declencheur => {
+                declencheurDesMontages.current = declencheur
+                setMontagesDuMenu(true)
+              }} />
             </div>
           </div>
         </nav>
@@ -294,7 +311,8 @@ function App() {
         {/* Appliquer une proposition remplace la session comme toute modification : une seule étape d'annulation. Rien
             n'est montré avant le chargement de la session : la proposition paraîtrait périmée. */}
         <RelectureDesPropositions session={currentSession} propositions={propositions} onAppliquer={setCurrentSession} onRetirer={retirerProposition} />
-        <DialogueDAvis isOpen={isAvisOpen} onClose={() => setAvisOpen(false)} diagnostic={diagnostic} declencheur={boutonDAvis} />
+        <DialogueDAvis isOpen={isAvisOpen} onClose={() => setAvisOpen(false)} diagnostic={diagnostic} declencheur={declencheurDeLAvis} />
+        <FenetreDesMontages open={montagesDuMenu} onOpenChange={setMontagesDuMenu} onCharger={chargerUnMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name} declencheur={declencheurDesMontages} />
         <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} simulation={simulation} onExportJson={handleExportAll} />
         <SettingsSheet
           isOpen={isSettingsOpen}
