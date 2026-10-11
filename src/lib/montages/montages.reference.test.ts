@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from "vitest"
 import { vueDeLAnnee } from "@/backend/logic/annees"
+import { AUCUNE_CHARGE } from "@/backend/logic/options-du-comparateur"
 import { casDeReference, verifierIdentiteDuBilan } from "@/backend/logic/testing/cas-de-reference"
 import { comparerStatutsDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
 import { reglagesDeLActiviteComparee } from "@/lib/comparateur-options"
@@ -35,8 +36,9 @@ const activite = (cotisationsSociales: number, impotSocietes: number, resultatCo
 const ATTENDUS: Record<string, ChiffresAttendus> = {
   "micro-bnc-seule": {
     // 36 000 € : cotisations 25,6 % = 9 216 €, plus 0,2 % de formation professionnelle = 72 € ; versement libératoire 2,2 % = 792 €.
-    totalNetApresImpots: 25920,
-    foyers: [foyer(["p-sophie"], 792, 0, 10080, 25920)],
+    // Charges non déductibles (CFE 300 €, assurance 360 €, banque 120 €) : 780 € de moins sur le net, rien sur les prélèvements.
+    totalNetApresImpots: 25140,
+    foyers: [foyer(["p-sophie"], 792, 0, 10080, 25140)],
     activites: { "m-sophie": activite(9288, 0) },
     comparateur: { activite: "m-sophie", meilleur: "micro-vfl" }
   },
@@ -60,14 +62,16 @@ const ATTENDUS: Record<string, ChiffresAttendus> = {
     comparateur: { activite: "e-nicolas", meilleur: "SASU" }
   },
   "salarie-et-micro": {
-    totalNetApresImpots: 31390,
-    foyers: [foyer(["p-lucas"], 2133, 0, 12050, 31390)],
+    // Charges non déductibles de la micro (CFE 150 €, assurance 240 €, banque 60 €) : 450 € de moins sur le net.
+    totalNetApresImpots: 30940,
+    foyers: [foyer(["p-lucas"], 2133, 0, 12050, 30940)],
     activites: { "m-lucas": activite(2477, 0) },
     comparateur: { activite: "m-lucas", meilleur: "micro-vfl" }
   },
   "micro-et-sasu-du-conjoint": {
-    totalNetApresImpots: 63059,
-    foyers: [foyer(["p-claire", "p-marc"], 3551, 4650, 38096, 63059)],
+    // Charges non déductibles de la micro (CFE 250 €, assurance 300 €, banque 120 €) : 670 € de moins sur le net.
+    totalNetApresImpots: 62389,
+    foyers: [foyer(["p-claire", "p-marc"], 3551, 4650, 38096, 62389)],
     activites: { "m-claire": activite(7740, 0), "s-marc": activite(17594, 4561, 845) },
     comparateur: { activite: "m-claire", meilleur: "micro-vfl" }
   },
@@ -78,8 +82,9 @@ const ATTENDUS: Record<string, ChiffresAttendus> = {
     comparateur: { activite: "s-paul", meilleur: "EI" }
   },
   "couple-union-libre": {
-    totalNetApresImpots: 46460,
-    foyers: [foyer(["p-hugo"], 4444, 0, 16444, 37556), foyer(["p-emma"], 0, 0, 3096, 8904)],
+    // Charges non déductibles de la micro d'Emma (CFE 200 €, assurance 240 €, banque 60 €) : 500 € de moins sur son net.
+    totalNetApresImpots: 45960,
+    foyers: [foyer(["p-hugo"], 4444, 0, 16444, 37556), foyer(["p-emma"], 0, 0, 3096, 8404)],
     activites: { "m-emma": activite(3096, 0) },
     comparateur: { activite: "m-emma", meilleur: "micro" }
   }
@@ -118,6 +123,10 @@ casDeReference("Montages types : chiffres de référence", () => {
       expect([...report.avertissements, ...report.activities.flatMap(a => a.warnings), ...report.foyers.flatMap(f => f.warnings)]).toEqual([])
       expect({ activite: activiteComparee, meilleur: comparaison.meilleur }).toEqual(attendus.comparateur)
     })
+
+    it("des charges saisies pour l'activité comparée : pas d'alerte « aucune charge » à l'ouverture du comparateur", () => {
+      expect(comparaison.warnings).not.toContain(AUCUNE_CHARGE)
+    })
   })
 
   it("micro-entreprise seule : le versement libératoire s'applique, avec 24 000 € de revenu fiscal de référence saisis", () => {
@@ -149,6 +158,6 @@ casDeReference("Montages types : chiffres de référence", () => {
 
   it("couple en union libre : marié ou pacsé, il paierait 2 115 € d'impôt au lieu de 4 444 €", () => {
     const { comparaison } = simulerLeMontage(MONTAGES_TYPES.find(m => m.id === "couple-union-libre")!)
-    expect(comparaison.couples).toEqual([{ personIds: ["p-hugo", "p-emma"], netApresImpotsActuel: 46460, impotSurLeRevenuActuel: 4444, netApresImpotsMaries: 48789, impotSurLeRevenuMaries: 2115 }])
+    expect(comparaison.couples).toEqual([{ personIds: ["p-hugo", "p-emma"], netApresImpotsActuel: 45960, impotSurLeRevenuActuel: 4444, netApresImpotsMaries: 48289, impotSurLeRevenuMaries: 2115 }])
   })
 })

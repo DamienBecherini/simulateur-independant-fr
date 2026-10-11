@@ -31,7 +31,7 @@ describe("decrire_simulation", () => {
     ])
     expect(description.acteurs[3].reglages).toMatchObject({ opteVFL: true, rfrN2: 38000 })
     expect(description.relations.map(r => r.phrase)).toContain("Léa Martin est l'enfant à charge de Camille Martin")
-    expect(description.flux).toEqual([{ annee: 2026, nombreDeFlux: 49, nombreDeSeries: 5 }])
+    expect(description.flux).toEqual([{ annee: 2026, nombreDeFlux: 63, nombreDeSeries: 8 }])
     expect(JSON.stringify(description)).not.toContain("#3b82f6")
   })
 

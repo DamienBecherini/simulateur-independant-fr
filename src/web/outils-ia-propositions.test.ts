@@ -28,7 +28,7 @@ describe("proposer puis appliquer des flux", () => {
 
     const apres = appliquer(session, resultat.proposition)
     const conserve = (s: SessionState) => Math.round(simulerLesAnnees(s).annees[0].report!.bilan.resultatConserve)
-    expect(resultat.apercu).toEqual([{ annee: 2026, netAvant: 69500, netApres: 69500, ecart: 0, resultatConserveAvant: conserve(session), resultatConserveApres: conserve(apres), erreur: null }])
+    expect(resultat.apercu).toEqual([{ annee: 2026, netAvant: 68600, netApres: 68600, ecart: 0, resultatConserveAvant: conserve(session), resultatConserveApres: conserve(apres), erreur: null }])
   })
 
   it("applique en une seule nouvelle session, l'ancienne restant intacte pour l'annulation", () => {
@@ -66,7 +66,7 @@ describe("proposer puis appliquer des flux", () => {
     const resultat = proposer("proposer_flux", session, { flux: [{ ...loyer, annee: 2027 }] })
     expect(resultat.proposition.operations.map(o => o.type)).toEqual(["ajouter_annee", "ajouter_flux"])
     expect(resultat.apercu.map(a => [a.annee, a.netAvant])).toEqual([
-      [2026, 69500],
+      [2026, 68600],
       [2027, null]
     ])
     expect(appliquer(session, resultat.proposition).annees.map(a => a.annee)).toEqual([2026, 2027])
@@ -127,7 +127,7 @@ describe("proposer un acteur, ses relations et ses flux, validés en une fois", 
     expect(apres.entities.find(e => e.id === id)).toMatchObject({ type: "company", legalStatus: "SASU", name: "Studio", capitalSocial: 500, dateDeCreation: "2026-03", avatar: { type: "icon", value: "Briefcase" } })
     const resultat = appeler<{ activites: { id: string; chiffreAffaires: number }[] }>("simuler", apres)
     expect(resultat.activites.find(a => a.id === id)!.chiffreAffaires).toBe(60000)
-    expect(flux.apercu[0].ecart).toBe(Math.round(simulerLesAnnees(apres).annees[0].report!.totalNetApresImpots) - 69500)
+    expect(flux.apercu[0].ecart).toBe(Math.round(simulerLesAnnees(apres).annees[0].report!.totalNetApresImpots) - 68600)
   })
 
   it("donne une pastille à chaque genre d'acteur et refuse un réglage qui ne le concerne pas", () => {
@@ -298,7 +298,7 @@ describe("limites", () => {
     expect(erreurDe("proposer_suppression", exemple(), { suppression: { cible: "acteur", acteurId: "person-lea" } })).toContain("suppression.cible : Entrée invalide : valeurs permises « serie », « relation ».")
     const serie = { acteurId: "micro-atelier", typeFlux: "ca_micro_services_bnc", libelle: "prestations" }
     expect(erreurDe("proposer_modification", exemple(), { modifications: [{ cible: "serie", annee: 2026, serie, montant: 1 }] })).toBe(
-      "Opération 1 (modifier_serie « prestations » 2026) : Aucun flux « prestations » (ca_micro_services_bnc) de « Atelier de Camille » en 2026. Séries de « Atelier de Camille » en 2026, libellé et type exacts : « Prestations » (ca_micro_services_bnc), « Ventes » (ca_micro_vente) (voir lister_flux)."
+      "Opération 1 (modifier_serie « prestations » 2026) : Aucun flux « prestations » (ca_micro_services_bnc) de « Atelier de Camille » en 2026. Séries de « Atelier de Camille » en 2026, libellé et type exacts : « Prestations » (ca_micro_services_bnc), « Ventes » (ca_micro_vente), « Banque » (expense), « Assurance RC Pro » (expense), « CFE » (expense) (voir lister_flux)."
     )
     expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, annee: 2028 }] })).toContain("Opération 1 (ajouter_annee 2028) : Les années d'une simulation se suivent : seules 2025 et 2027 peuvent être ajoutées (des flux sur une année absente l'ajoutent")
   })
