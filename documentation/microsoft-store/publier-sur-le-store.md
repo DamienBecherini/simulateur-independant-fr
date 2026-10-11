@@ -45,6 +45,7 @@ Il reste à faire, par le propriétaire du compte : créer le compte développeu
    | Package/Properties/PublisherDisplayName | `publisherDisplayName` | `Damien Becherini` |
 
    Rien de tout cela n'est secret : c'est écrit dans le manifeste de tout paquet publié.
+   Valeurs recopiées le 2026-10-11 : `DamienBECHERINI.SimulateurIndpendantFR` (Partner Center a retiré le « é » du nom réservé : c'est bien la valeur à garder), `CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825`, `Damien BECHERINI`. Nom de famille du paquet : `DamienBECHERINI.SimulateurIndpendantFR_r47q8w9e2mv8c` (dossier `%LOCALAPPDATA%Packages<nom de famille du paquet>` de l'étape 2).
 3. Noter aussi, pour plus tard, l'**ID Store** (12 caractères, par exemple `9N…`, qui donne le lien `https://apps.microsoft.com/detail/<ID Store>`) et le **nom de famille du paquet** (Package Family Name, `…_xxxxxxxxxxxxx`).
 4. Vérifier, puis valider sur une branche et fusionner comme tout autre changement (`integration`, puis `main`) :
 
@@ -68,7 +69,7 @@ Le serveur MCP sous MSIX n'a pas encore été essayé sur un paquet installé ([
    Copy-Item $paquet "$env:TEMP\paquet-store.zip"
    Expand-Archive "$env:TEMP\paquet-store.zip" $dossier -Force
    Add-AppxPackage -Register "$dossier\AppxManifest.xml"
-   Get-AppxPackage *SimulateurIndependantFR*   # nom de famille du paquet (PackageFamilyName)
+   Get-AppxPackage *SimulateurInd*   # nom de famille du paquet (PackageFamilyName)
    ```
 
    Si `Add-AppxPackage` refuse le dossier à cause de `AppxBlockMap.xml` ou de `[Content_Types].xml` (fichiers propres au paquet compressé), supprimer ces deux fichiers du dossier et relancer la dernière commande.
@@ -83,7 +84,7 @@ Le serveur MCP sous MSIX n'a pas encore été essayé sur un paquet installé ([
 6. **Désinstaller et nettoyer** :
 
    ```powershell
-   Get-AppxPackage *SimulateurIndependantFR* | Remove-AppxPackage
+   Get-AppxPackage *SimulateurInd* | Remove-AppxPackage
    Remove-Item -Recurse $dossier, "$env:TEMP\paquet-store.zip"
    ```
 
