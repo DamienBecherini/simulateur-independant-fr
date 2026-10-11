@@ -1,6 +1,7 @@
 // src/ui/hooks/useHautDesBarres.ts
 // Hauteur des barres collées en haut de la fenêtre : la barre d'outils (fixe) et, dans l'affichage « Résumé », la
-// barre de résumé (marquée `data-barre-collante`). Un élément collant plus bas s'arrête dessous, sans être caché.
+// barre de résumé, par sa partie peinte (`data-barre-visible` : réduite, elle garde sa hauteur pleine dans le flux,
+// transparente dessous). Un élément collant plus bas s'arrête dessous, sans être caché.
 
 import { useEffect, useState } from "react"
 import { useAffichage } from "./useAffichage"
@@ -12,7 +13,7 @@ export function useHautDesBarres(actif: boolean): number {
 
   useEffect(() => {
     if (!actif) return
-    const barres = [document.querySelector<HTMLElement>("nav[aria-label=\"Barre d'outils\"]"), document.querySelector<HTMLElement>("[data-barre-collante]")].filter(barre => barre !== null)
+    const barres = [document.querySelector<HTMLElement>("nav[aria-label=\"Barre d'outils\"]"), document.querySelector<HTMLElement>("[data-barre-visible]")].filter(barre => barre !== null)
     const mesurer = () => setHaut(barres.reduce((total, barre) => total + barre.offsetHeight, 0))
     mesurer()
     const observateur = new ResizeObserver(mesurer)
