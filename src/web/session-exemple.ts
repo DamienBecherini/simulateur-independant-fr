@@ -1,6 +1,6 @@
 // src/web/session-exemple.ts
 // Simulation fictive, chargée à la première visite de la démo web et utilisée pour les captures d'écran du README :
-// une indépendante en micro-entreprise mixte, pacsée avec le président d'une SASU, avec un enfant.
+// une indépendante en micro-entreprise mixte, avec ses charges courantes, pacsée avec le président d'une SASU, avec un enfant.
 
 import type { Company, FinancialFlow, MicroEntreprise, Person, Relationship, SessionState } from "../types.js"
 
@@ -20,8 +20,9 @@ const relations: Relationship[] = [
   { id: "rel-enfant", fromId: camille.id, toId: lea.id, type: "Enfant" }
 ]
 
-function flux(entityId: string, type: FinancialFlow["type"], amount: number, label: string, mois: number): FinancialFlow {
-  return { id: `${entityId}-${type}-${mois}`, label, amount, entityId, type }
+/** Un flux de la grille ; `cle` distingue deux flux du même type le même mois (plusieurs charges). */
+function flux(entityId: string, type: FinancialFlow["type"], amount: number, label: string, mois: number, cle = ""): FinancialFlow {
+  return { id: `${entityId}-${type}${cle ? `-${cle}` : ""}-${mois}`, label, amount, entityId, type }
 }
 
 /**
@@ -37,11 +38,17 @@ export function sessionExemple(): SessionState {
     flows: [
       flux(atelier.id, "ca_micro_services_bnc", 2600 + (mois % 3) * 300, "Prestations", mois),
       flux(atelier.id, "ca_micro_vente", mois % 4 === 0 ? 900 : 300, "Ventes", mois),
+      flux(atelier.id, "expense", 10, "Banque", mois, "banque"),
       flux(conseil.id, "ca_services", 6500, "Facturation", mois),
       flux(conseil.id, "director_remuneration", 2500, "Rémunération", mois)
     ]
   }))
   monthlyData[11].flows.push(flux(conseil.id, "dividends_payment", 12000, "Dividendes", 11))
+  // Charges courantes de l'atelier, non déductibles en micro-entreprise et proches des frais supposés de la micro dans le
+  // comparateur : assurance responsabilité civile professionnelle et produits en janvier, CFE de l'année en décembre
+  // (base minimale d'une petite commune pour environ 40 000 € de chiffre d'affaires).
+  monthlyData[0].flows.push(flux(atelier.id, "expense", 480, "Assurance RC Pro", 0, "assurance"))
+  monthlyData[11].flows.push(flux(atelier.id, "expense", 300, "CFE", 11, "cfe"))
 
   return {
     name: `Famille Martin, simulation ${ANNEE_DE_L_EXEMPLE}`,

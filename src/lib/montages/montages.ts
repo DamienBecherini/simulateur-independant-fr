@@ -7,7 +7,7 @@
 import { euros, pourcent } from "@/backend/logic/format"
 import { reglesPubliees } from "@/backend/logic/regles"
 import type { SessionState } from "@/types"
-import { ANNEE_DES_MONTAGES, comparateurAuMeilleurNet, microEntreprise, personne, relation, sessionDuMontage, societe, type ContenuDuMontage } from "./construction"
+import { ANNEE_DES_MONTAGES, comparateurAuMeilleurNet, microEntreprise, personne, relation, sessionDuMontage, societe, type ContenuDuMontage, type FluxDuMontage } from "./construction"
 
 /** Les règles de l'année des montages, d'où viennent les taux et seuils cités. */
 const REGLES = reglesPubliees(ANNEE_DES_MONTAGES)
@@ -77,6 +77,37 @@ const PREMIER_TAUX_DU_BAREME = REGLES.IR.bareme.find(tranche => tranche.taux > 0
 const CAPITAL_DE_L_EURL = 5000
 const COMPARATEUR_MICRO = "Le comparateur place la micro-entreprise avec et sans versement libératoire côte à côte, face à l'entreprise individuelle au réel, l'EURL et la SASU."
 
+/**
+ * Charges courantes d'une micro-entreprise, en euros : CFE de l'année pleine payée en décembre (base minimale d'une petite
+ * commune, selon la tranche de chiffre d'affaires), assurance responsabilité civile professionnelle payée en janvier et
+ * compte bancaire dédié, chaque mois. Leur total reste proche des frais supposés de la micro dans le comparateur.
+ */
+interface ChargesDeLaMicro {
+  cfe: number
+  assurance: number
+  banqueMensuelle: number
+}
+
+/** Les charges de la micro-entreprise dans la grille : non déductibles, elles réduisent seulement le net du foyer. */
+function fluxDesCharges(entityId: string, { cfe, assurance, banqueMensuelle }: ChargesDeLaMicro): FluxDuMontage[] {
+  return [
+    { entityId, type: "expense", amount: banqueMensuelle, label: "Banque", cle: "banque" },
+    { entityId, type: "expense", amount: assurance, label: "Assurance RC Pro", cle: "assurance", mois: 0 },
+    { entityId, type: "expense", amount: cfe, label: "CFE", cle: "cfe", mois: 11 }
+  ]
+}
+
+/** La phrase qui documente les charges supposées d'un montage. */
+const hypothesesDeCharges = (activite: string, { cfe, assurance, banqueMensuelle }: ChargesDeLaMicro) =>
+  `Charges supposées de ${activite}, non déductibles en micro-entreprise : CFE de ${euros(cfe)} en décembre (elle dépend de la commune et n'est pas due l'année de création), assurance responsabilité civile professionnelle de ${euros(assurance)} par an et compte bancaire dédié à ${euros(banqueMensuelle)} par mois.`
+
+const CHARGES = {
+  sophie: { cfe: 300, assurance: 360, banqueMensuelle: 10 },
+  lucas: { cfe: 150, assurance: 240, banqueMensuelle: 5 },
+  claire: { cfe: 250, assurance: 300, banqueMensuelle: 10 },
+  emma: { cfe: 200, assurance: 240, banqueMensuelle: 5 }
+} satisfies Record<string, ChargesDeLaMicro>
+
 // --- Les montages ---
 
 const microSeule: MontageType = {
@@ -98,13 +129,14 @@ const microSeule: MontageType = {
   pointsDAttention: [
     "À 36 000 € de chiffre d'affaires, l'activité reste sous le seuil de franchise en base de TVA des services : au-delà, la TVA peut devenir due (le simulateur ne la calcule pas, les montants sont hors taxe).",
     "Les dépenses professionnelles ne se déduisent pas : avec beaucoup de frais, le régime réel peut devenir plus intéressant.",
-    `Le versement libératoire n'est pas toujours gagnant : il l'est surtout quand le foyer serait imposé à ${pourcent(PREMIER_TAUX_DU_BAREME)} ou plus au barème.`
+    `Le versement libératoire n'est pas toujours gagnant : il l'est surtout quand le foyer serait imposé à ${pourcent(PREMIER_TAUX_DU_BAREME)} ou plus au barème.`,
+    hypothesesDeCharges("l'activité", CHARGES.sophie)
   ],
   sources: [SOURCES.cotisationsMicro, SOURCES.abattementMicro, SOURCES.versementLiberatoire, SOURCES.plafondsMicro, SOURCES.franchiseTva],
   contenu: () => ({
     entities: [personne("p-sophie", "Sophie"), microEntreprise("m-sophie", "Conseil de Sophie", { opteVFL: true, rfrN2: 24000 })],
     relationships: [relation("p-sophie", "m-sophie", "Titulaire")],
-    flux: [{ entityId: "m-sophie", type: "ca_micro_services_bnc", amount: 3000, label: "Prestations" }]
+    flux: [{ entityId: "m-sophie", type: "ca_micro_services_bnc", amount: 3000, label: "Prestations" }, ...fluxDesCharges("m-sophie", CHARGES.sophie)]
   })
 }
 
@@ -215,6 +247,7 @@ const microEtSasuDuConjoint: MontageType = {
   ],
   pointsDAttention: [
     "Si Claire travaille aussi pour la SASU de Marc, elle doit choisir un statut (associée ou salariée) : le statut de conjoint collaborateur n'existe pas en SAS.",
+    hypothesesDeCharges("la micro-entreprise de Claire", CHARGES.claire),
     RESERVE_LEGALE
   ],
   sources: [SOURCES.anneeDuMariage, SOURCES.versementLiberatoire, SOURCES.cotisationsMicro, SOURCES.dividendes, SOURCES.conjoint],
@@ -223,6 +256,7 @@ const microEtSasuDuConjoint: MontageType = {
     relationships: [relation("p-claire", "p-marc", "Marié(e)"), relation("p-claire", "m-claire", "Titulaire"), relation("p-marc", "s-marc", "Président")],
     flux: [
       { entityId: "m-claire", type: "ca_micro_services_bnc", amount: 2500, label: "Prestations" },
+      ...fluxDesCharges("m-claire", CHARGES.claire),
       { entityId: "s-marc", type: "ca_services", amount: 6000, label: "Facturation" },
       { entityId: "s-marc", type: "director_remuneration", amount: 2000, label: "Rémunération" },
       { entityId: "s-marc", type: "dividends_payment", amount: 25000, label: "Dividendes", mois: 11 }
@@ -283,7 +317,8 @@ const unionLibre: MontageType = {
   ],
   pointsDAttention: [
     "Se marier ou se pacser a d'autres effets que fiscaux (patrimoine, succession, protection du conjoint) : l'impôt n'est qu'un critère.",
-    "Le gain fiscal dépend de l'écart de revenus : il peut être nul quand les deux revenus sont proches."
+    "Le gain fiscal dépend de l'écart de revenus : il peut être nul quand les deux revenus sont proches.",
+    hypothesesDeCharges("la micro-entreprise d'Emma", CHARGES.emma)
   ],
   sources: [SOURCES.concubins, SOURCES.anneeDuMariage, SOURCES.versementLiberatoire, SOURCES.abattementMicro],
   contenu: () => ({
@@ -291,7 +326,8 @@ const unionLibre: MontageType = {
     relationships: [relation("p-hugo", "p-emma", "En couple"), relation("p-emma", "m-emma", "Titulaire")],
     flux: [
       { entityId: "p-hugo", type: "salary", amount: 3500, grossAmount: 4500, label: "Salaire" },
-      { entityId: "m-emma", type: "ca_micro_services_bnc", amount: 1000, label: "Prestations" }
+      { entityId: "m-emma", type: "ca_micro_services_bnc", amount: 1000, label: "Prestations" },
+      ...fluxDesCharges("m-emma", CHARGES.emma)
     ]
   })
 }
@@ -313,7 +349,8 @@ const salariePlusMicro: MontageType = {
   ],
   pointsDAttention: [
     "Même sans clause, le salarié reste tenu à une obligation de loyauté envers son employeur.",
-    "Le versement libératoire ne s'applique qu'à l'activité de la micro-entreprise ; le salaire reste imposé au barème."
+    "Le versement libératoire ne s'applique qu'à l'activité de la micro-entreprise ; le salaire reste imposé au barème.",
+    hypothesesDeCharges("l'activité à côté", CHARGES.lucas)
   ],
   sources: [SOURCES.cumulSalarie, SOURCES.cotisationsMicro, SOURCES.versementLiberatoire, SOURCES.abattementMicro],
   contenu: () => ({
@@ -321,7 +358,8 @@ const salariePlusMicro: MontageType = {
     relationships: [relation("p-lucas", "m-lucas", "Titulaire")],
     flux: [
       { entityId: "p-lucas", type: "salary", amount: 2200, grossAmount: 2820, label: "Salaire" },
-      { entityId: "m-lucas", type: "ca_micro_services_bnc", amount: 800, label: "Missions" }
+      { entityId: "m-lucas", type: "ca_micro_services_bnc", amount: 800, label: "Missions" },
+      ...fluxDesCharges("m-lucas", CHARGES.lucas)
     ]
   })
 }
