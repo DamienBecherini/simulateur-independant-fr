@@ -27,8 +27,9 @@ const depensesDeLAnnee = (page: Page) => page.getByRole("button", { name: `Flux 
 test("une charge mensuelle ajoutée sur l'année, augmentée en juillet puis supprimée se retrouve d'une seule annulation", async ({ page }) => {
   await page.goto("./")
   await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
-  // La société de l'exemple n'a aucune charge : ses cases de dépenses sont à zéro.
-  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*0$/)
+  // Les charges courantes de la société de l'exemple : 3 130 € sur l'année (expert-comptable 170 € et banque 20 € par mois,
+  // assurance 400 € en janvier, CFE 450 € en décembre).
+  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*3\s130$/)
 
   // Loyer du bureau de 400 € par mois, saisi en mars pour tous les mois de l'année.
   let fenetre = await ouvrirLeMois(page, "de mars")
@@ -40,8 +41,9 @@ test("une charge mensuelle ajoutée sur l'année, augmentée en juillet puis sup
   await fenetre.getByLabel("Montant du nouveau flux").press("Enter")
   await expect(page.getByText("Flux ajouté à ce mois et recopié sur 11 autres mois.")).toBeVisible()
   await terminer(fenetre)
-  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*4\s800$/)
-  await expect(depensesDuMois(page, "de janvier")).toHaveText(/^\s*400$/)
+  // 4 800 € de loyer de plus sur l'année ; janvier : 590 € de charges de l'exemple et 400 € de loyer.
+  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*7\s930$/)
+  await expect(depensesDuMois(page, "de janvier")).toHaveText(/^\s*990$/)
 
   // 450 € à partir de juillet : le premier semestre ne change pas.
   fenetre = await ouvrirLeMois(page, "de juillet")
@@ -51,9 +53,10 @@ test("une charge mensuelle ajoutée sur l'année, augmentée en juillet puis sup
   await montant.press("Enter")
   await expect(page.getByText("Modifié aussi sur 5 autres mois.")).toBeVisible()
   await terminer(fenetre)
-  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*5\s100$/)
-  await expect(depensesDuMois(page, "de juin")).toHaveText(/^\s*400$/)
-  await expect(depensesDuMois(page, "de décembre")).toHaveText(/^\s*450$/)
+  // 5 100 € de loyer sur l'année ; en juin et en décembre, 190 € et 640 € de charges de l'exemple.
+  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*8\s230$/)
+  await expect(depensesDuMois(page, "de juin")).toHaveText(/^\s*590$/)
+  await expect(depensesDuMois(page, "de décembre")).toHaveText(/^\s*1\s090$/)
 
   // Suppression depuis décembre, sur toute l'année : les deux montants disparaissent ensemble.
   fenetre = await ouvrirLeMois(page, "de décembre")
@@ -61,14 +64,14 @@ test("une charge mensuelle ajoutée sur l'année, augmentée en juillet puis sup
   await fenetre.getByRole("button", { name: "Supprimer le flux" }).last().click()
   await expect(page.getByText("Supprimé aussi sur 11 autres mois.")).toBeVisible()
   await terminer(fenetre)
-  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*0$/)
+  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*3\s130$/)
 
-  // Une seule annulation rend toute la série, avec ses deux montants.
+  // Une seule annulation rend toute la série, avec ses deux montants (en plus des 190 € de charges de mars et juillet).
   await page.getByRole("button", { name: "Annuler", exact: true }).click()
-  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*5\s100$/)
-  await expect(depensesDuMois(page, "de mars")).toHaveText(/^\s*400$/)
-  await expect(depensesDuMois(page, "de juillet")).toHaveText(/^\s*450$/)
-  // Juillet retrouve ses deux flux de l'exemple et le loyer rétabli, sans doublon.
+  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*8\s230$/)
+  await expect(depensesDuMois(page, "de mars")).toHaveText(/^\s*590$/)
+  await expect(depensesDuMois(page, "de juillet")).toHaveText(/^\s*640$/)
+  // Juillet retrouve ses quatre flux de l'exemple (facturation, expert-comptable, banque, rémunération) et le loyer rétabli, sans doublon.
   const fenetreDeJuillet = await ouvrirLeMois(page, "de juillet")
-  await expect(fenetreDeJuillet.getByRole("textbox", { name: "Libellé", exact: true })).toHaveCount(3)
+  await expect(fenetreDeJuillet.getByRole("textbox", { name: "Libellé", exact: true })).toHaveCount(5)
 })

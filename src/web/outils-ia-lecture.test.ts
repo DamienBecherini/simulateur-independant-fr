@@ -31,7 +31,7 @@ describe("decrire_simulation", () => {
     ])
     expect(description.acteurs[3].reglages).toMatchObject({ opteVFL: true, rfrN2: 38000 })
     expect(description.relations.map(r => r.phrase)).toContain("Léa Martin est l'enfant à charge de Camille Martin")
-    expect(description.flux).toEqual([{ annee: 2026, nombreDeFlux: 63, nombreDeSeries: 8 }])
+    expect(description.flux).toEqual([{ annee: 2026, nombreDeFlux: 101, nombreDeSeries: 13 }])
     expect(JSON.stringify(description)).not.toContain("#3b82f6")
   })
 
@@ -49,8 +49,12 @@ describe("lister_flux", () => {
     expect(liste.tronque).toBe(false)
     expect(liste.lignes.map(l => [l.typeFlux, l.mois.length, l.total])).toEqual([
       ["ca_services", 12, 78000],
+      ["deductible_expense", 12, 2040],
+      ["deductible_expense", 12, 240],
       ["director_remuneration", 12, 30000],
-      ["dividends_payment", 1, 12000]
+      ["deductible_expense", 1, 400],
+      ["dividends_payment", 1, 12000],
+      ["deductible_expense", 1, 450]
     ])
   })
 
@@ -63,7 +67,8 @@ describe("lister_flux", () => {
     const session = sessionExemple()
     session.annees[0].monthlyData[0].flows.push(...Array.from({ length: 600 }, (_, i) => ({ id: `f${i}`, label: `Achat ${i}`, amount: 1, entityId: "company-conseil", type: "deductible_expense" as const })))
     const liste = appeler<{ nombreDeLignes: number; tronque: boolean; lignes: unknown[] }>("lister_flux", geler(session), { typeFlux: "deductible_expense" })
-    expect([liste.nombreDeLignes, liste.tronque, liste.lignes.length]).toEqual([600, true, 500])
+    // Les 600 achats ajoutés et les 4 séries de charges déductibles de la SASU de l'exemple.
+    expect([liste.nombreDeLignes, liste.tronque, liste.lignes.length]).toEqual([604, true, 500])
   })
 
   it("dit quels acteurs et quelles années existent quand le filtre n'en désigne aucun", () => {

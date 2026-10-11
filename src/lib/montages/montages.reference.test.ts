@@ -9,6 +9,7 @@ import { AUCUNE_CHARGE } from "@/backend/logic/options-du-comparateur"
 import { casDeReference, verifierIdentiteDuBilan } from "@/backend/logic/testing/cas-de-reference"
 import { comparerStatutsDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
 import { reglagesDeLActiviteComparee } from "@/lib/comparateur-options"
+import { activitesSansCharge } from "@/lib/testing/activites-sans-charge"
 import type { StatutCompare } from "@/types"
 import { ANNEE_DES_MONTAGES } from "./construction"
 import { MONTAGES_TYPES, sessionDUnMontage, type MontageType } from "./montages"
@@ -70,9 +71,12 @@ const ATTENDUS: Record<string, ChiffresAttendus> = {
   },
   "micro-et-sasu-du-conjoint": {
     // Charges non déductibles de la micro (CFE 250 €, assurance 300 €, banque 120 €) : 670 € de moins sur le net.
-    totalNetApresImpots: 62389,
-    foyers: [foyer(["p-claire", "p-marc"], 3551, 4650, 38096, 62389)],
-    activites: { "m-claire": activite(7740, 0), "s-marc": activite(17594, 4561, 845) },
+    // Charges déductibles de la SASU (expert-comptable 2 040 €, CFE 400 €, assurance 360 €, banque 240 €) : 3 040 € de
+    // bénéfice et 456 € d'impôt sur les sociétés en moins ; les dividendes passent de 25 000 à 23 000 € pour rester sous
+    // le bénéfice distribuable (261 € conservés), d'où 118 € d'impôt et 372 € de prélèvements sociaux en moins.
+    totalNetApresImpots: 60879,
+    foyers: [foyer(["p-claire", "p-marc"], 3433, 4278, 37150, 60879)],
+    activites: { "m-claire": activite(7740, 0), "s-marc": activite(17594, 4105, 261) },
     comparateur: { activite: "m-claire", meilleur: "micro-vfl" }
   },
   "conjoint-salarie-sasu": {
@@ -126,6 +130,10 @@ casDeReference("Montages types : chiffres de référence", () => {
 
     it("des charges saisies pour l'activité comparée : pas d'alerte « aucune charge » à l'ouverture du comparateur", () => {
       expect(comparaison.warnings).not.toContain(AUCUNE_CHARGE)
+    })
+
+    it("des charges saisies pour chaque activité : pas d'alerte « aucune charge » quand on la choisit dans le comparateur", () => {
+      expect(activitesSansCharge(sessionDUnMontage(montage), ANNEE_DES_MONTAGES)).toEqual([])
     })
   })
 
