@@ -44,6 +44,11 @@ export function typeProposeDOffice(entity: Entity, flux: FinancialFlow[]): FlowT
   return flux.find(f => f.entityId === entity.id && estNatureMicro(f.type))?.type ?? premier
 }
 
+/** L'activité a-t-elle déjà un chiffre d'affaires d'une des trois natures dans ces flux ? L'aide s'ouvre alors repliée. */
+export function natureDejaSaisie(entity: Entity, flux: FinancialFlow[]): boolean {
+  return flux.some(f => f.entityId === entity.id && estNatureMicro(f.type))
+}
+
 /** Une nature, telle que la décrit l'aide de la fenêtre des flux. */
 export interface DescriptionDeLaNature {
   type: NatureMicro

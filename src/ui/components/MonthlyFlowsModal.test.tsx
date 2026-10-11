@@ -398,6 +398,25 @@ describe("MonthlyFlowsModal : nature du chiffre d'affaires d'une micro-entrepris
     expect(screen.getByRole("radio", { name: "Prestations artisanales ou commerciales (BIC)" })).toBeChecked()
   })
 
+  const aideDesNatures = () => screen.getByRole("group", { name: "Nature du chiffre d'affaires à ajouter" }).closest("details")
+
+  it("l'aide est dépliée tant qu'aucune nature n'est saisie pour l'activité, et le reste après une première saisie", async () => {
+    const { user } = renderModal({ entity: micro(), annee: ANNEE_COURANTE })
+    expect(aideDesNatures()).toHaveAttribute("open")
+    await user.type(textbox("Montant du nouveau flux"), "1000{Enter}")
+    expect(aideDesNatures()).toHaveAttribute("open")
+  })
+
+  it("l'aide est repliée quand l'activité a déjà une nature dans l'année ; son titre la rappelle, et elle se déplie", async () => {
+    const { user } = renderModal({ entity: micro(), annee: ANNEE_COURANTE, fluxDeLAnnee: [makeFlow({ entityId: "m", type: "ca_micro_services_bic" })] })
+    const aide = aideDesNatures()
+    expect(aide).not.toHaveAttribute("open")
+    const titre = aide!.querySelector("summary")!
+    expect(titre).toHaveTextContent("Nature du chiffre d'affaires : Prestations artisanales ou commerciales (BIC)")
+    await user.click(titre)
+    expect(aide).toHaveAttribute("open")
+  })
+
   it("cocher une nature change le type de la ligne d'ajout ; la vente fait paraître la note sur les achats", async () => {
     const { user, onCreate } = renderModal({ entity: micro(), annee: ANNEE_COURANTE })
     expect(screen.queryByText(/Vos achats/)).not.toBeInTheDocument()
@@ -435,5 +454,17 @@ describe("MonthlyFlowsModal : montant annuel", () => {
 
     await chooseType(user, "Salaire (emploi tiers)")
     expect(caseAnnuelle()).not.toBeInTheDocument()
+  })
+})
+
+describe("MonthlyFlowsModal : aide de la fenêtre", () => {
+  it("commence par une phrase ; le reste du mode d'emploi est replié sous « Aide à la saisie »", async () => {
+    const { user } = renderModal({ annee: ANNEE_COURANTE })
+    expect(screen.getByRole("dialog")).toHaveAccessibleDescription("Modifiez les flux dans la liste ; la dernière ligne en ajoute un (Entrée sur le montant valide et enchaîne).")
+    const aide = screen.getByText("Aide à la saisie").closest("details")
+    expect(aide).not.toHaveAttribute("open")
+    await user.click(screen.getByText("Aide à la saisie"))
+    expect(aide).toHaveAttribute("open")
+    expect(aide).toHaveTextContent(`cotisations salariales de ${ANNEE_COURANTE}`)
   })
 })

@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import type { Entity, FinancialFlow } from "@/types"
 import { flowTypeLabels, getFlowTypesForEntity, type FlowType } from "@/lib/flow-constants"
-import { typeProposeDOffice } from "@/lib/nature-de-l-activite"
+import { natureDejaSaisie, typeProposeDOffice } from "@/lib/nature-de-l-activite"
 import { deMois } from "@/lib/grille-mensuelle"
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { FlowItem, type FlowChanges } from "./FlowItem"
 import { NewFlowItem, type NewFlowValues } from "./NewFlowItem"
 import { NatureDuChiffreDAffaires } from "./NatureDuChiffreDAffaires"
+import { Depliable } from "./Depliable"
 import { useTriAccessible } from "../hooks/useTriAccessible"
 import { anneesDuRaccourci, LIBELLES_PORTEE, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, type PorteeRecurrence, type RaccourciAnnees } from "@/lib/flux-recurrents"
 import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
@@ -85,13 +86,17 @@ interface NatureSiMicroEntrepriseProps {
   type: FlowType
   onChange: (type: FlowType) => void
   flows: FinancialFlow[]
+  /** Les flux de l'activité dans le reste de l'année : une nature déjà saisie replie l'aide. */
+  fluxDeLAnnee: FinancialFlow[]
 }
 
 /** Le choix expliqué de la nature du chiffre d'affaires, pour une micro-entreprise seulement ; la note sur les achats dès qu'une vente est en jeu. */
-function NatureSiMicroEntreprise({ entity, regles, type, onChange, flows }: NatureSiMicroEntrepriseProps) {
+function NatureSiMicroEntreprise({ entity, regles, type, onChange, flows, fluxDeLAnnee }: NatureSiMicroEntrepriseProps) {
+  // Lue à l'ouverture de la fenêtre seulement : le premier chiffre d'affaires saisi ne replie pas l'aide sous les yeux.
+  const [dejaSaisie] = useState(() => natureDejaSaisie(entity, [...flows, ...fluxDeLAnnee]))
   if (entity.type !== "micro-entreprise") return null
   const avecLaVente = type === "ca_micro_vente" || flows.some(f => f.type === "ca_micro_vente")
-  return <NatureDuChiffreDAffaires activite={entity} regles={regles} valeur={type} onChange={onChange} avecLaVente={avecLaVente} />
+  return <NatureDuChiffreDAffaires activite={entity} regles={regles} valeur={type} onChange={onChange} avecLaVente={avecLaVente} natureDejaSaisie={dejaSaisie} />
 }
 
 /** Mise en évidence d'un réglage qui étend les opérations au-delà du mois ouvert. */
@@ -221,7 +226,13 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
             <span>Opérations {deMois(monthName)}</span>
             <span className="text-base font-normal text-slate-600 dark:text-slate-400">/ {entity.name}</span>
           </DialogTitle>
-          <DialogDescription>Modifiez les flux directement dans la liste, réorganisez-les par glisser-déposer. La dernière ligne sert à en ajouter un : Entrée sur le montant valide et enchaîne sur le suivant. Pour une charge ou un revenu qui revient chaque mois, choisissez « Appliquer à » en dessous : l'ajout, la modification ou la suppression vaut alors aussi pour les autres mois (même type et même libellé).{autresAnnees.length > 0 ? " Cochez d'autres années sous « Aussi en » : les mêmes mois y sont visés (en juillet, « ce mois et les suivants » vise juillet à décembre de chaque année cochée)." : ""} Le bouton de recopie d'un flux le recopie jusqu'en décembre de l'année affichée. Pour un salaire, le brut est calculé avec les cotisations salariales de {regles.annee} si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.</DialogDescription>
+          {/* Une phrase pour commencer ; le reste du mode d'emploi, replié, ne repousse pas les champs sous l'écran. */}
+          <DialogDescription>Modifiez les flux dans la liste ; la dernière ligne en ajoute un (Entrée sur le montant valide et enchaîne).</DialogDescription>
+          <Depliable titre="Aide à la saisie" className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="mt-1">
+              Réorganisez les flux par glisser-déposer. Pour une charge ou un revenu qui revient chaque mois, choisissez « Appliquer à » en dessous : l'ajout, la modification ou la suppression vaut alors aussi pour les autres mois (même type et même libellé).{autresAnnees.length > 0 ? " Cochez d'autres années sous « Aussi en » : les mêmes mois y sont visés (en juillet, « ce mois et les suivants » vise juillet à décembre de chaque année cochée)." : ""} Le bouton de recopie d'un flux le recopie jusqu'en décembre de l'année affichée. Pour un salaire, le brut est calculé avec les cotisations salariales de {regles.annee} si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.
+            </p>
+          </Depliable>
         </DialogHeader>
 
         <div className="space-y-2 py-2">
@@ -238,7 +249,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
           )}
 
           <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee, aussiEn, repartirSurLAnnee)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} regles={regles} montantAnnuel={repartirSurLAnnee} />
-          <NatureSiMicroEntreprise entity={entity} regles={regles} type={newFlowType} onChange={setNewFlowType} flows={flows} />
+          <NatureSiMicroEntreprise entity={entity} regles={regles} type={newFlowType} onChange={setNewFlowType} flows={flows} fluxDeLAnnee={fluxDeLAnnee} />
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-sm text-slate-700 dark:text-slate-300">
             {/* `min-w-0 max-w-full` : avec une police large, la liste se resserre à la largeur de la fenêtre au lieu de la déborder. */}
             <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
