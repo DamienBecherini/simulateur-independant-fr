@@ -149,6 +149,16 @@
     outline-offset: 2px;
   }
 
+  /* Les barres collées en haut (barre d'outils, barre de résumé) réservent leur hauteur par `scroll-padding-top` de la
+     page, pour que le contenu qui prend le focus ne passe pas dessous. Cette réserve vaudrait aussi pour leurs propres
+     éléments, qui sont dans la zone réservée : le navigateur ferait défiler la page pour les en sortir, d'environ
+     300 px à chaque tabulation. Une marge de défilement négative, de la hauteur réservée, les en exclut (variable posée
+     par BarreDeResume). */
+  nav[aria-label="Barre d'outils"] *,
+  [data-barre-collante] * {
+    scroll-margin-top: calc(-1 * var(--hauteur-collee, 0px));
+  }
+
   /* Curseur main sur tout ce qui se clique : la remise à zéro de Tailwind laisse le curseur par défaut sur les
      boutons. Les classes utilitaires (cursor-grab des poignées, par exemple) restent prioritaires sur ce calque. */
   :is(button, [role="button"], [role="switch"], [role="combobox"], [role="option"], [role="menuitem"], [role="tab"], select, summary, a[href], input:is([type="range"], [type="checkbox"], [type="radio"], [type="color"]), label:has(input:is([type="checkbox"], [type="radio"]), [role="switch"])) {

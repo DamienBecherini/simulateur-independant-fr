@@ -38,6 +38,8 @@ function useSousLaBarreDOutils(barre: RefObject<HTMLElement | null>): number {
       const hautCollant = hauteurOutils + (barre.current?.offsetHeight ?? 0) + 8
       setHaut(hauteurOutils)
       racine.style.scrollPaddingTop = `${hautCollant}px`
+      // Lue par la feuille de style : les éléments des barres elles-mêmes échappent à cette réserve (voir App.css).
+      racine.style.setProperty("--hauteur-collee", `${hautCollant}px`)
     }
     mesurer()
     const observateur = new ResizeObserver(mesurer)
@@ -46,6 +48,7 @@ function useSousLaBarreDOutils(barre: RefObject<HTMLElement | null>): number {
     return () => {
       observateur.disconnect()
       racine.style.scrollPaddingTop = ""
+      racine.style.removeProperty("--hauteur-collee")
     }
   }, [barre])
   return haut
