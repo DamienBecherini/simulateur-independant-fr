@@ -57,8 +57,9 @@ export function NewRelationshipForm({ entity, allEntities, relationships, onAdd 
   }
 
   return (
-    <div className="space-y-2 print:hidden">
-      <div className="flex items-center gap-2">
+    <div className="max-w-full space-y-2 print:hidden">
+      {/* Sur un téléphone, les deux listes passent l'une sous l'autre au lieu de déborder. */}
+      <div className="flex flex-wrap items-center gap-2">
         <Select value={targetId} onValueChange={handleTargetChange}>
           <SelectTrigger className="h-8 w-48" aria-label="Avec qui">
             <SelectValue placeholder="Avec…" />

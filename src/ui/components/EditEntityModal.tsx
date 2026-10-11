@@ -108,8 +108,10 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg">
         <form onSubmit={handleFormSubmit}>
-          <DialogHeader>
-            <DialogTitle>Modifier : {localEntity.name}</DialogTitle>
+          {/* Un filet sépare le titre de la zone qui défile : ce qui passe dessous (les pastilles de couleur) ne semble
+              plus le toucher. Sur un téléphone, le titre centré laisse la place du bouton de fermeture, de chaque côté. */}
+          <DialogHeader className="border-b pb-3 max-sm:px-8">
+            <DialogTitle className="leading-snug">Modifier : {localEntity.name}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
             <ChampsDeLActeur entity={localEntity} anneesSimulees={anneesSimulees} annee={annee} onChange={entity => setFormData(prev => ({ ...prev, entity }))} />
