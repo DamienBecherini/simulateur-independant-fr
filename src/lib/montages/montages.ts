@@ -65,7 +65,7 @@ const SOURCES = {
 } satisfies Record<string, SourceOfficielle>
 
 // Phrases reprises d'un montage à l'autre.
-const RESERVE_LEGALE = "La réserve légale, les frais de fonctionnement et la prévoyance ne sont pas déduits : les montants sont des ordres de grandeur."
+const RESERVE_LEGALE = "La réserve légale et la prévoyance ne sont pas déduites ; seuls les frais saisis dans la grille le sont : les montants sont des ordres de grandeur."
 const PLAFOND_MICRO = `Chiffre d'affaires sous le plafond des prestations de services (${euros(MICRO.plafonds.services)} pour ${ANNEE_DES_MONTAGES}) ; dépassé deux années de suite, il fait sortir du régime.`
 // Les conditions d'accès au taux réduit (10 millions d'euros, 75 % du capital) ne sont pas dans les règles : le simulateur ne les vérifie pas.
 const TAUX_REDUIT_IS = `Taux réduit d'impôt sur les sociétés (${pourcent(IS.tauxReduit)} jusqu'à ${euros(IS.plafondTauxReduit)} de bénéfice) : chiffre d'affaires d'au plus 10 millions d'euros, capital entièrement libéré et détenu à 75 % au moins par des personnes physiques.`
