@@ -9,6 +9,7 @@ import { libellesRepartition, posteFraisLabels, statutsFrais } from "./comparate
 import { numeroterNotes } from "./notes"
 import { netDeLaSituationSaisie } from "./resume"
 import { statutEtProfession } from "./professions"
+import { enTexteBrut } from "@/backend/logic/format"
 
 type Ligne = CelluleCsv[]
 
@@ -203,6 +204,8 @@ function lignesDesAvertissements(result: ComparaisonResult): Ligne[] {
 export function csvComparaison(result: ComparaisonResult, options: ComparaisonOptions, nomActivite: string): string {
   const reference = netDeLaSituationSaisie(result)
   const situation: Ligne[] = reference === null ? [] : [["Net de votre situation telle que saisie", montant(reference)]]
+  // Un meilleur statut sous la situation saisie : la raison de l'écart, comme dans le verdict de l'application.
+  if (result.sousLaSituationSaisie) situation.push(["Meilleur statut sous la situation telle que saisie", enTexteBrut(result.sousLaSituationSaisie.explication)])
   return documentCsv([...lignesDesIndicateurs(result, nomActivite), ...situation, [], ["Réglage", "Valeur"], ...reglagesDuComparateur(options, nomActivite, result.scenarios), ...lignesDesAvertissements(result)])
 }
 

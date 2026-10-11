@@ -357,7 +357,9 @@ function sectionComparateur(session: SimulationAnnuelle, comparaison: Comparaiso
   const tableauOuAbsence = resultat.scenarios.length > 0 ? tableauDeComparaison(resultat, comparaison.nomActivite) + notesDeComparaison(resultat) : "Aucun statut comparé."
   const cfe = resultat.noteCFE ? `\n- ${echapper(resultat.noteCFE)}` : ""
   const saisie = resultat.situationSaisie ? `\n- Votre situation telle que saisie (${resultat.situationSaisie.libelle}) : ${eurosEnTexteBrut(resultat.situationSaisie.netApresImpots)} de net, comme dans les résultats` : ""
-  return `${titre}\n\n${intro}\n\n${reglagesUtilises(options, resultat.scenarios)}${cfe}${saisie}\n\n${tableauOuAbsence}${couplesEnUnionLibre(session, resultat)}`
+  // Un meilleur statut sous la situation saisie : la raison de l'écart, comme dans le verdict de l'application.
+  const sous = resultat.sousLaSituationSaisie ? `\n- ${enTexteBrut(resultat.sousLaSituationSaisie.explication)}` : ""
+  return `${titre}\n\n${intro}\n\n${reglagesUtilises(options, resultat.scenarios)}${cfe}${saisie}${sous}\n\n${tableauOuAbsence}${couplesEnUnionLibre(session, resultat)}`
 }
 
 // --- Avertissements ---
