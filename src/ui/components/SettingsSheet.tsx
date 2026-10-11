@@ -202,7 +202,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                 <Button onClick={demanderLaReinitialisation} variant="destructive" className="h-auto min-h-9 w-full whitespace-normal py-1.5">
                   <RefreshCcw className="mr-2 h-4 w-4" /> Nouvelle Simulation / Réinitialiser
                 </Button>
-                {/* Aussi dans la barre d'outils, sauf sur un écran très étroit où elle n'a pas la place. */}
+                {/* Aussi dans la barre d'outils, ou dans son menu « Plus d'actions » sur un téléphone. */}
                 <div className="flex items-center justify-between gap-4 border-t pt-4">
                   <Label htmlFor="theme-parametres">Thème clair ou sombre</Label>
                   <ThemeToggle id="theme-parametres" />
