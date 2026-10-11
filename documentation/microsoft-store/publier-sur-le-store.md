@@ -24,18 +24,18 @@ Il reste à faire, par le propriétaire du compte : créer le compte développeu
    - le nom légal de l'entreprise individuelle et son adresse, tels qu'ils figurent au répertoire SIRENE ;
    - un justificatif : numéro **DUNS** s'il existe, sinon un document officiel récent, par exemple l'**avis de situation au répertoire SIRENE** (téléchargeable sur avis-situation-sirene.insee.fr) ou un extrait du RNE de moins de trois mois ;
    - la **vérification d'identité** demandée (pièce d'identité et photo).
-4. Attendre la vérification de l'entreprise : 2 à 5 jours ouvrés, revue manuelle. Partner Center l'affiche dans Paramètres du compte > Profil légal.
+4. Attendre la vérification de l'entreprise : 2 à 5 jours ouvrés, revue manuelle. Partner Center l'affiche dans Account settings > Legal info.
 
 **Mentions légales :** les [mentions légales](../mentions-legales.md) nomment l'éditeur comme l'entreprise individuelle qui détient le compte (SIREN, RCS et SIRET), puisque cette page sert de politique de confidentialité au Store. Si ces informations changent, modifier le texte dans `src/lib/mentions-legales.ts`, puis lancer `npm run mentions-legales`.
 
 ### Réserver le nom
 
-1. Dans Partner Center, **Applications et jeux** > **Nouveau produit** > **Application MSIX ou PWA**.
+1. Dans Partner Center, **Apps and games** > **New product** > **MSIX or PWA app**.
 2. Réserver le nom **Simulateur Indépendant FR** (le nom doit être unique dans le Store ; il est réservé trois mois sans soumission).
 
 ### Recopier l'identité du paquet
 
-1. Dans l'application créée : **Gestion des produits** > **Identité du produit** (Product identity).
+1. Dans l'application créée : **Product management** > **Product Identity**.
 2. Recopier les trois valeurs dans [`build/store/identite.json`](../../build/store/identite.json), à la place des `A_REMPLIR` :
 
    | Partner Center | `identite.json` | Exemple de forme |
@@ -94,17 +94,42 @@ Facultatif : le **Windows App Certification Kit** (dans le SDK Windows : `winget
 
 ## 3. Première soumission
 
+Partner Center est en anglais : les noms des pages et des options sont cités tels qu'ils s'affichent (relevés le 2026-10-11). Dans **Apps and games** > l'application, le menu de gauche liste, sous **Submission 1**, les pages à remplir dans l'ordre ci-dessous. Chaque page s'enregistre à part (**Save** ou **Save draft**) : rien ne part avant **Submit for certification**. Toutes peuvent se remplir avant le paquet, sauf **Store listings**, qui attend le paquet (voir plus bas).
+
 1. **Construire le paquet à publier** : l'identité remplie et fusionnée dans `main`, lancer le workflow « Paquet du Microsoft Store » sur `main` (sans « essai »), ou pousser l'étiquette de la version (`vX.Y.Z`, voir [publication.md](../publication.md)) : le workflow se lance aussi sur les étiquettes. Télécharger l'artefact `paquet-microsoft-store` et le décompresser : `Simulateur-Independant-FR-X.Y.Z-store-x64.appx`.
-2. Dans Partner Center, sur l'application : **Démarrer la soumission**, puis remplir chaque partie.
-   - **Tarification et disponibilité** : marchés **France** (recommandé : les règles simulées sont françaises ; d'autres marchés peuvent s'ajouter plus tard), visibilité **publique**, prix **gratuit**, pas de version d'évaluation. Date de publication : « Publier manuellement après la certification », pour garder la main sur la date.
-   - **Propriétés** : catégorie **Entreprise**, sous-catégorie **Comptabilité et finances** (voir la fiche). URL de la politique de confidentialité, site web et contact du support : [fiche-du-store.md](./fiche-du-store.md#identité-de-la-fiche). Configuration requise : clavier et souris ; Windows 10 version 1809 ou suivante, x64 (déjà dans le paquet).
-   - **Classifications par âge** : remplir le questionnaire IARC avec les réponses de la fiche (application, pas un jeu ; classification attendue 3+).
-   - **Packages** : déposer le `.appx`. Familles d'appareils : Windows 10/11 **Bureau** seulement. Partner Center lit l'identité dans le paquet et refuse un paquet dont l'identité ne correspond pas à la réservation (c'est le cas du paquet d'essai). Il demande la justification de la capacité restreinte **runFullTrust** : texte dans la fiche.
-   - **Fiche du Store** (français (France)) : description, description courte, nouveautés, fonctionnalités, mots-clés, captures (`captures/*.png`, avec leurs légendes), logo carré (`logos/icone-300x300.png`), copyright, conditions de licence supplémentaires : tout est dans [fiche-du-store.md](./fiche-du-store.md).
-   - **Options de soumission** : coller les **notes pour la certification** de la fiche.
-3. **Soumettre pour certification.** Compter quelques heures à trois jours ouvrés. En cas de refus, le rapport de certification dit quoi corriger ; corriger, reconstruire si besoin (même version : le Store accepte un nouveau paquet tant que la soumission n'est pas publiée), et resoumettre.
-4. Une fois certifiée : **Publier maintenant** (si la publication manuelle a été choisie). La fiche est en ligne sous `https://apps.microsoft.com/detail/<ID Store>`, en général dans l'heure.
-5. Ensuite, dans le dépôt : ajouter le lien du Store au README, à [installation.md](../installation.md) (le Store comme moyen recommandé sous Windows) et à la démo web : dans `src/web/ApplicationDeBureau.tsx`, remplacer « Bientôt sur le Microsoft Store » par un lien vers la fiche, en premier sous Windows (il sert à l'aide à l'installation, à la fenêtre « Utiliser avec une IA (MCP) » et à la ligne MCP de la version web installée, qui renvoient aujourd'hui vers l'exécutable GitHub, bloqué par Smart App Control) ; mentionner la version du Store dans [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md) si l'essai de l'étape 2 a demandé des ajustements.
+
+2. **Pricing and availability**
+   - **Markets** : *Restrict to specific markets*, puis *Show options* : **France** seulement (les règles simulées sont françaises ; d'autres marchés peuvent s'ajouter plus tard). Décocher *Make my product available in any future market…*, pour ne pas ouvrir l'application d'office à un nouveau marché.
+   - **Visibility** : *Public audience*, et *Make this product available and discoverable in the Microsoft Store*.
+   - **Schedule** : *Release* : *as soon as possible*, *Stop acquisition* : *never* (la date de publication se règle dans **Submission Options**, étape 8).
+   - **Pricing** : *Market groups*, *EUR – France*, *Retail price* : **0** (gratuit). *Free trial*, *Sale pricing* et *Organizational licensing* : laisser par défaut.
+
+3. **Properties**
+   - **Category and subcategory** : **Business**, sous-catégorie **Accounting & finance** (voir la [fiche](./fiche-du-store.md#catégorie)). Catégorie secondaire : aucune.
+   - **Privacy policy** : à la question *Does this product access, collect, or transmit personal information…?*, répondre **No** : tout reste sur l'ordinateur. Si Partner Center demande quand même une adresse, donner celle de la [fiche](./fiche-du-store.md#identité-de-la-fiche).
+   - **Support info** : *Use my account details* affiche sur la fiche publique l'adresse, l'e-mail, le site et le **téléphone** du compte (obligation du règlement européen sur les services numériques pour un professionnel). Pour afficher d'autres coordonnées sur cette application seulement, choisir *Use different details for this app*.
+   - **Display mode** : rien à cocher (réservé à la réalité mixte).
+   - **Product declarations** : garder *Customers can install this product to alternate drives or removable storage* et *Windows can include this product's data in automatic backups to OneDrive* ; **décocher** *Customers can use Windows 10/11 features to record and broadcast clips…* (réservé aux jeux, Partner Center l'avertit). Ne pas cocher les achats hors Store, le stylet, ni l'IA générative (l'application ne génère aucun contenu ; le serveur MCP sert un assistant installé par l'utilisateur). *This product has been tested to meet accessibility guidelines* : facultatif ; les tests automatiques WCAG (axe, thèmes clair et sombre) le justifient, mais aucun essai n'a été fait avec les outils d'accessibilité de Windows (Accessibility Insights, Narrateur).
+   - **System requirements** : cocher **Keyboard** et **Mouse** en *Minimum hardware* ; le reste *Not specified*.
+
+4. **Age ratings** : *I'm ready to complete the International Age Rating Coalition (IARC) questionnaire*. *App Type* : **All Other App Types**. *Will this product use ratings obtained directly from a ratings board…?* : **No**. Puis répondre aux questions avec les réponses de la [fiche](./fiche-du-store.md#classification-par-âge-questionnaire-iarc) (classification attendue 3+).
+
+5. **Packages**
+   - Déposer le `.appx` dans *Drag your packages here… or browse your files*. Partner Center lit l'identité dans le paquet et refuse un paquet dont l'identité ne correspond pas à la réservation (c'est le cas du paquet d'essai).
+   - **Device family availability** : cocher **Windows 10/11 Desktop** seulement, et décocher *Let Microsoft decide whether to make this app available to any future device families*.
+   - Partner Center demande la justification de la capacité restreinte **runFullTrust** (ici ou dans **Properties**) : texte anglais de la [fiche](./fiche-du-store.md#justification-de-la-capacité-runfulltrust).
+
+6. **Store listings** (*Manage Store listing languages*) : la langue de la fiche vient du paquet (`fr-FR`) et n'apparaît sous *Languages supported in packages* qu'**une fois le paquet déposé** (étape 5). Ouvrir alors **French (France)** et remplir description, description courte, nouveautés, fonctionnalités, mots-clés, captures (`captures/*.png`, avec leurs légendes), logo carré (`logos/icone-300x300.png`), copyright et conditions de licence supplémentaires : tout est dans [fiche-du-store.md](./fiche-du-store.md). Aucune langue supplémentaire (*Additional Store listing languages*).
+
+7. **Additional Testing Information** (menu de gauche, *Supplemental info*) : coller les [notes pour la certification](./fiche-du-store.md#notes-pour-la-certification). La page **Submission Options** y renvoie (*Notes for certification*).
+
+8. **Submission Options** > **Publishing hold options** : choisir **Don't publish this submission until I select Publish now**, pour garder la main sur la date de publication.
+
+9. **Submit for certification** (sur la page de la soumission, une fois toutes les pages complètes). Compter quelques heures à trois jours ouvrés. En cas de refus, le rapport de certification dit quoi corriger ; corriger, reconstruire si besoin (même version : le Store accepte un nouveau paquet tant que la soumission n'est pas publiée), et resoumettre.
+
+10. Une fois certifiée : **Publish now** sur la page d'état de la certification. La fiche est en ligne sous `https://apps.microsoft.com/detail/<ID Store>`, en général dans l'heure. L'**ID Store** (12 caractères, `9N…`) s'affiche dans **Product management** > **Product Identity**.
+
+11. Ensuite, dans le dépôt : ajouter le lien du Store au README, à [installation.md](../installation.md) (le Store comme moyen recommandé sous Windows) et à la démo web : dans `src/web/ApplicationDeBureau.tsx`, remplacer « Bientôt sur le Microsoft Store » par un lien vers la fiche, en premier sous Windows (il sert à l'aide à l'installation, à la fenêtre « Utiliser avec une IA (MCP) » et à la ligne MCP de la version web installée, qui renvoient aujourd'hui vers l'exécutable GitHub, bloqué par Smart App Control) ; mentionner la version du Store dans [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md) si l'essai de l'étape 2 a demandé des ajustements. Ajouter aussi le lien à la fiche du projet du site becherini-web.
 
 ## 4. Mises à jour
 
@@ -112,7 +137,7 @@ Le Store met l'application à jour tout seul chez les utilisateurs. Pour chaque 
 
 1. Suivre [publication.md](../publication.md) : numéro de version dans `package.json`, CHANGELOG, étiquette `vX.Y.Z`. Le Store exige un numéro **plus grand** que celui du paquet déjà publié ; le paquet porte `X.Y.Z.0` (le quatrième nombre est réservé au Store).
 2. L'étiquette lance les deux workflows : « Publication des exécutables » (brouillon de version GitHub) et « Paquet du Microsoft Store » (artefact `paquet-microsoft-store`, gardé 30 jours ; il n'est pas joint à la version GitHub, puisqu'il ne s'installe pas hors du Store).
-3. Partner Center > l'application > **Mettre à jour** (nouvelle soumission, qui reprend la précédente) > **Packages** : retirer l'ancien paquet, déposer le nouveau ; **Fiche du Store** : mettre à jour « Nouveautés » ; soumettre.
+3. Partner Center > l'application > **Update** (nouvelle soumission, qui reprend la précédente) > **Packages** : retirer l'ancien paquet, déposer le nouveau ; **Store listings** > French (France) : mettre à jour les nouveautés (*What's new in this version*) ; **Submit for certification**.
 
 ### Automatiser l'envoi (facultatif, après la première publication)
 
@@ -120,15 +145,15 @@ Microsoft fournit une action GitHub et un outil en ligne de commande (`msstore`)
 
 À préparer, par le propriétaire du compte :
 
-1. Partner Center > Paramètres du compte > **Gestion des utilisateurs** > **Applications Microsoft Entra** : créer (ou ajouter) une application Entra ID, lui donner le rôle **Gestionnaire** (Manager), puis lui créer une **clé** (secret client, à durée limitée : noter sa date d'expiration).
+1. Partner Center > Account settings > **User management** > **Microsoft Entra applications** : créer (ou ajouter) une application Entra ID, lui donner le rôle **Manager**, puis lui créer une **clé** (secret client, à durée limitée : noter sa date d'expiration).
 2. Déclarer dans le dépôt GitHub (Settings > Secrets and variables > Actions), **jamais dans les fichiers du dépôt** :
 
    | Secret | D'où vient la valeur |
    |---|---|
-   | `PARTNER_CENTER_TENANT_ID` | ID de locataire (tenant) de l'annuaire Entra ID : page de l'application Entra dans Partner Center, ou Paramètres du compte > Locataires |
+   | `PARTNER_CENTER_TENANT_ID` | ID de locataire (tenant) de l'annuaire Entra ID : page de l'application Entra dans Partner Center, ou Account settings > **Tenants** |
    | `PARTNER_CENTER_CLIENT_ID` | ID client (application) de l'application Entra créée à l'étape 1 |
    | `PARTNER_CENTER_CLIENT_SECRET` | la clé créée à l'étape 1 (visible une seule fois) |
-   | `PARTNER_CENTER_SELLER_ID` | Paramètres du compte > Informations légales > Développeur > **ID du vendeur** (Seller ID) |
+   | `PARTNER_CENTER_SELLER_ID` | Account settings > **Legal info** > **Developer** > **Seller ID** |
 
    L'**ID Store** de l'application n'est pas un secret : il peut aller dans une variable (`vars.STORE_PRODUCT_ID`).
 3. Ajouter au workflow `store.yml`, après « Conserver le paquet », des étapes sur le modèle de la documentation de Microsoft (en épinglant l'action par son empreinte de commit, comme les autres, et en vérifiant les options de `msstore` sur cette page au moment de le faire) :
