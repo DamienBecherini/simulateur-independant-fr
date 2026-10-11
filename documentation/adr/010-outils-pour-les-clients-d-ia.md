@@ -138,3 +138,11 @@ Avec l'addendum du même jour à l'ADR 009, le comparateur n'ajoute plus de frai
 - `comparer_statuts` rend, par colonne, `telleQueSaisie` (la colonne est la situation saisie, au net de `simuler`) et `ecartDeFrais` (frais supposés du statut moins ceux du statut actuel, négatif s'il en coûte moins) au lieu de `fraisFonctionnement`, et `situationNet`, le net de la situation saisie, référence des écarts. Sans chiffre d'affaires, `meilleur` vaut `null` et les notes le disent.
 - `optimiser_remuneration` rend `ecartDeFrais` (0 quand le statut étudié est le statut actuel) au lieu de `fraisFonctionnement` ; `situationActuelle` n'a plus de frais : son net est celui de `simuler`.
 - L'avertissement « frais de fonctionnement du comparateur à ne pas comparer avec `simuler` » de l'état ci-dessus n'a plus lieu d'être.
+
+## Addendum (2026-10-11) : meilleur statut sous la situation saisie, partage « grille »
+
+Avec l'addendum du même jour à l'ADR 009 :
+
+- `comparer_statuts` rend `sousLaSituationNet` (`null` le plus souvent) : quand le meilleur statut fait moins bien que la situation saisie, l'écart, sa raison (`trimestres`, `statutActuelNonRetenu`, `reglages`) et la phrase du verdict de l'application, en texte brut, que le modèle reprend au lieu de présenter le meilleur statut comme un gain ;
+- en partage `grille`, une `remunerationNette` passée en paramètre est ignorée : chaque société reprend la rémunération de la grille, comme dans l'application, et `reglages.remunerationNette` le montre ;
+- la note sur une activité sans charge saisie rejoint `notes`.
