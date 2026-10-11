@@ -122,7 +122,7 @@ Classification attendue : **3+ (PEGI 3, ESRB Everyone)**.
 
 ## Justification de la capacité `runFullTrust`
 
-À coller dans le champ « Pourquoi avez-vous besoin de la capacité runFullTrust ? » (Soumission > Packages, ou Propriétés) :
+À coller dans le champ « Pourquoi avez-vous besoin de la capacité runFullTrust ? » (page **Packages** de la soumission, ou **Properties**) :
 
 > Simulateur Indépendant FR est une application de bureau Win32 (Electron) empaquetée en MSIX (Desktop Bridge) : runFullTrust est la capacité requise pour toute application de ce type. L'application lit et écrit ses données dans son dossier de données utilisateur et dans les fichiers que l'utilisateur choisit (import, export CSV, PDF, Markdown). Elle déclare un alias d'exécution (simulateur-independant-fr.exe) pour qu'un assistant d'IA de bureau installé par l'utilisateur puisse lancer son serveur MCP local, sur l'entrée et la sortie standard, sans réseau. Elle n'installe aucun service ni pilote et ne demande pas de droits d'administrateur.
 
@@ -132,7 +132,7 @@ En anglais, si le formulaire le demande :
 
 ## Notes pour la certification
 
-À coller dans « Notes pour la certification » (Soumission > Options de soumission) :
+À coller dans la page **Additional Testing Information** de Partner Center (menu de gauche, *Supplemental info* ; la page **Submission Options** y renvoie) :
 
 > L'application fonctionne entièrement hors ligne : aucune connexion ni aucun compte n'est nécessaire. Au premier lancement, la simulation est vide ; pour voir un exemple complet, ouvrir les Paramètres (icône en haut à gauche), puis « Partir d'un montage type... », et charger un montage. Les résultats se recalculent à chaque modification.
 >
