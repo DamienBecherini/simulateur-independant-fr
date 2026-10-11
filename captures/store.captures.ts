@@ -30,14 +30,17 @@ test("captures de la fiche du Microsoft Store", async ({ dossierDonnees, lancer 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Famille Martin, simulation 2026")
   await capturer(page, "1-simulation.png")
 
+  await amenerSousLaBarre(page, "Grille de saisie annuelle")
+  await capturer(page, "2-grille.png")
+
   await amenerSousLaBarre(page, "Résultats de simulation")
-  await capturer(page, "2-resultats.png")
+  await capturer(page, "3-resultats.png")
 
   await expect(page.getByRole("region", { name: "Comparateur de statuts" }).getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
   await amenerSousLaBarre(page, "Comparateur de statuts")
-  await capturer(page, "3-comparateur.png")
+  await capturer(page, "4-comparateur.png")
 
   await expect(page.getByRole("region", { name: "Rémunération ou dividendes ?" }).getByRole("group", { name: /Net du foyer selon la rémunération/ })).toBeVisible()
   await amenerSousLaBarre(page, "Rémunération ou dividendes ?")
-  await capturer(page, "4-remuneration-ou-dividendes.png")
+  await capturer(page, "5-remuneration-ou-dividendes.png")
 })

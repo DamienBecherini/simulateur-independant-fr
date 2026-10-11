@@ -13,7 +13,12 @@ test("captures du README", async ({ dossierDonnees, lancer }) => {
   await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1440, 900))
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Famille Martin, simulation 2026")
+  // Fenêtre plus haute pour cette capture : les personnes et activités, puis plusieurs lignes de la grille de saisie.
+  await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1440, 1500))
+  await expect.poll(() => page.evaluate(() => window.innerHeight)).toBeGreaterThan(1300)
   await page.screenshot({ path: path.join(DOSSIER, "acteurs-et-grille.png") })
+  await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1440, 900))
+  await expect.poll(() => page.evaluate(() => window.innerHeight)).toBeLessThan(1000)
 
   // La barre du haut est fixe : on fait défiler pour que la section commence juste en dessous.
   await page.getByRole("heading", { name: "Résultats de simulation" }).evaluate(titre => window.scrollTo(0, titre.getBoundingClientRect().top + window.scrollY - 110))
