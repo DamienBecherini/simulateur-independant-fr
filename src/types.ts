@@ -854,6 +854,22 @@ export interface SituationSaisie {
   netApresImpots: number
 }
 
+/**
+ * Pourquoi le meilleur statut fait moins bien que la situation saisie : il valide des trimestres de retraite qu'elle ne
+ * valide pas, le statut actuel n'est pas retenu (micro hors plafond, régime fermé, société d'exercice libéral), ou
+ * les réglages du comparateur (partage du bénéfice) ne retrouvent pas la situation saisie.
+ */
+export type RaisonSousLaSituationSaisie = "trimestres" | "statutActuelNonRetenu" | "reglages"
+
+/** Le meilleur statut désigné fait moins bien que la situation saisie : de combien, pourquoi, et la phrase qui le dit. */
+export interface SousLaSituationSaisie {
+  /** Net en moins par rapport à la situation saisie, positif, arrondi à l'euro. */
+  ecart: number
+  raison: RaisonSousLaSituationSaisie
+  /** « Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie. » */
+  explication: string
+}
+
 export interface ScenarioStatut {
   statut: StatutCompare
   libelle: string
@@ -915,6 +931,11 @@ export interface ComparaisonResult {
   meilleur: StatutCompare | null
   /** L'activité comparée telle que saisie, référence des écarts : son net est celui des résultats de l'année. */
   situationSaisie?: SituationSaisie
+  /**
+   * Le meilleur statut fait moins bien que la situation saisie, qui n'est pas une colonne retenue : il reste désigné,
+   * et ceci explique l'écart.
+   */
+  sousLaSituationSaisie?: SousLaSituationSaisie
   /** L'activité comparée n'a aucun chiffre d'affaires cette année : aucun statut n'est désigné. */
   sansChiffreDAffaires?: true
   /** Une entrée par couple en union libre. */

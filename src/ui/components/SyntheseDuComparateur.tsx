@@ -6,7 +6,7 @@
 import { ChevronRight } from "lucide-react"
 import { ecartAvecLaSituationSaisie, phraseDuVerdict, raisonDeNonRetenue } from "@/lib/resume"
 import { phraseDeLEcartDeFrais, posteFraisLabels } from "@/lib/comparateur-options"
-import { SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
+import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { ecartSigne, euros } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
 import type { ComparaisonResult, PosteFrais, ScenarioStatut, StatutCompare } from "@/types"
@@ -40,10 +40,18 @@ export function VerdictDuComparateur({ result, activite }: { result: Comparaison
 
 /**
  * Sous le tableau : les frais réels sont ceux de la grille, le comparateur n'ajoute aux autres statuts que l'écart de
- * frais de gestion supposés avec le statut actuel.
+ * frais de gestion supposés avec le statut actuel. Sans aucune charge saisie pour l'activité, le rappel devient une
+ * alerte, à la même place.
  */
 export function RappelDesFrais({ result }: { result: ComparaisonResult }) {
   if (result.scenarios.length === 0) return null
+  if (result.warnings.includes(AUCUNE_CHARGE)) {
+    return (
+      <p role="note" className="text-sm text-amber-800 dark:text-amber-200/90">
+        {AUCUNE_CHARGE} Cette économie se règle dans « Frais de fonctionnement », plus haut.
+      </p>
+    )
+  }
   return (
     <p className="text-sm text-slate-600 dark:text-slate-400">
       Vos frais réels sont ceux que vous avez saisis dans la grille : pensez à la CFE, à l'assurance, à la banque. Le comparateur n'ajoute aux autres statuts que l'écart de frais de gestion estimé avec votre statut actuel (réglable dans « Frais de fonctionnement », plus haut) ; les frais communs à tous les statuts ne changent pas le classement.

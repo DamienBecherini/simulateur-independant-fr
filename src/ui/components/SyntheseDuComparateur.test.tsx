@@ -6,7 +6,9 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, StatutCompare } from "@/types"
-import { SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
+import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
+import { ESPACE_INSECABLE } from "@/backend/logic/format"
+import { AffichageContext } from "../hooks/useAffichage"
 import { CartesDesStatuts, EcartDeFraisDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? ""
@@ -74,6 +76,29 @@ describe("situation saisie et rappel des frais", () => {
   it("rappelle que les frais réels sont ceux de la grille", () => {
     render(<RappelDesFrais result={base} />)
     expect(screen.getByText(/Vos frais réels sont ceux que vous avez saisis dans la grille : pensez à la CFE, à l'assurance, à la banque/)).toHaveTextContent("les frais communs à tous les statuts ne changent pas le classement")
+  })
+
+  it("sans charge saisie pour l'activité, alerte à la place du rappel des frais", () => {
+    render(<RappelDesFrais result={{ ...base, warnings: [AUCUNE_CHARGE] }} />)
+    const note = screen.getByRole("note")
+    expect(note).toHaveTextContent("Aucune charge saisie pour cette activité : pensez à la CFE, à l'assurance, à la banque. Sans elles, un statut aux frais de gestion estimés plus bas que le vôtre paraît plus avantageux de toute l'économie de frais estimée.")
+    expect(note).toHaveTextContent("Cette économie se règle dans « Frais de fonctionnement », plus haut.")
+    expect(screen.queryByText(/^Vos frais réels/)).not.toBeInTheDocument()
+  })
+
+  it("meilleur statut sous la situation saisie : le verdict ne le présente pas comme un gain et explique l'écart", () => {
+    const explication = `Valider 4 trimestres de retraite vous coûterait environ 756${ESPACE_INSECABLE}€ par rapport à votre situation telle que saisie.`
+    const sous: ComparaisonResult = { ...base, scenarios: [{ ...optimisee, netApresImpots: 47204 }], situationSaisie: { statut: "SASU", libelle: "SASU", netApresImpots: 47960 }, sousLaSituationSaisie: { ecart: 756, raison: "trimestres", explication } }
+    render(
+      <AffichageContext.Provider value="resume">
+        <VerdictDuComparateur result={sous} activite="Conseil" />
+      </AffichageContext.Provider>
+    )
+
+    const verdict = screen.getByText(/^Pour « Conseil »/)
+    expect(verdict).toHaveAttribute("id", "comparateur-verdict")
+    expect(espaces(verdict.textContent)).toBe("Pour « Conseil », le meilleur des statuts comparés, SASU, rémunération optimisée, donnerait 47 204 €, contre 47 960 € pour votre situation telle que saisie (SASU). Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie.")
+    expect(verdict).not.toHaveTextContent("soit")
   })
 
   it("sans chiffre d'affaires, invite à en saisir un au lieu de donner un verdict", () => {

@@ -97,9 +97,11 @@ test("le tableau réduit montre le reste des lignes à la demande", async ({ pag
   await page.getByRole("button", { name: /Voir le détail/ }).click()
   await expect(tableau.getByRole("rowheader", { name: "Impôt sur le revenu" })).toBeVisible()
   await expect(page.getByRole("button", { name: "Masquer le détail" })).toHaveAttribute("aria-expanded", "true")
-  // Un seul net : la colonne actuelle est la situation saisie, sans frais supposés ; la page rappelle où sont les frais réels.
+  // Un seul net : la colonne actuelle est la situation saisie, sans frais supposés. L'atelier de l'exemple n'a aucune
+  // charge saisie : à la place du rappel des frais réels, une alerte le dit.
   await expect(tableau.getByRole("columnheader", { name: /actuel/ })).not.toContainText("frais supposés")
-  await expect(page.getByText(/^Vos frais réels sont ceux que vous avez saisis dans la grille/)).toBeVisible()
+  await expect(page.getByRole("note").filter({ hasText: /^Aucune charge saisie pour cette activité : pensez à la CFE, à l'assurance, à la banque\./ })).toBeVisible()
+  await expect(page.getByText(/^Vos frais réels sont ceux que vous avez saisis dans la grille/)).toHaveCount(0)
 })
 
 /** Ouvre toutes les sections repliables et le détail du tableau. */

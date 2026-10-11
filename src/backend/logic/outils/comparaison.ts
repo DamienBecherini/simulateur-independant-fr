@@ -3,9 +3,10 @@
 // l'outil compare ce que l'utilisateur voit à l'écran, sauf réglages passés en paramètres pour essayer une variante.
 
 import { z } from "zod"
-import { MODES_REPARTITION, STATUTS_SOCIETE, type ComparaisonOptions, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
+import { MODES_REPARTITION, STATUTS_SOCIETE, type ComparaisonOptions, type ComparaisonResult, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
 import { vueDeLAnnee } from "../annees.js"
-import { optionsDuComparateur } from "../options-du-comparateur.js"
+import { enTexteBrut } from "../format.js"
+import { avecLaRemunerationDeLaGrille, optionsDuComparateur } from "../options-du-comparateur.js"
 import type { SituationActuelle } from "../comparateur.js"
 import { arbitrageDeLAnnee, comparerStatutsDeLAnnee } from "../simulation-pluriannuelle.js"
 import { anneeDeLaSession, arrondir, ErreurOutil, nomDe, trouverActeur } from "./commun.js"
@@ -74,13 +75,20 @@ const resumeDuScenario = (s: ScenarioStatut): z.infer<typeof ScenarioSchema> => 
   avertissements: s.warnings
 })
 
+/** Meilleur statut sous la situation saisie : l'écart, sa raison et la phrase du verdict de l'application. */
+const SousLaSituationSchema = z.object({ ecart: z.number(), raison: z.enum(["trimestres", "statutActuelNonRetenu", "reglages"]), explication: z.string() })
+
+function sousLaSituationSaisie({ sousLaSituationSaisie: sous }: ComparaisonResult): z.infer<typeof SousLaSituationSchema> | null {
+  return sous ? { ecart: arrondir(sous.ecart), raison: sous.raison, explication: enTexteBrut(sous.explication) } : null
+}
+
 export const comparerStatuts = definirOutil({
   nom: "comparer_statuts",
   titre: "Comparer les statuts d'une activité",
   description: [
     "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro-entreprise avec et sans versement libératoire), le reste de la simulation inchangé, et désigne le statut au meilleur net après impôts du foyer.",
     "Utilise les réglages enregistrés du comparateur ; les paramètres essaient une variante sans rien enregistrer (pour l'enregistrer : proposer_reglages_comparateur).",
-    "La colonne telleQueSaisie est la situation saisie : son net est celui de simuler (situationNet). Les frais réels étant dans la grille, les autres colonnes n'ajoutent aux charges que l'écart de frais de fonctionnement supposés avec le statut actuel (ecartDeFrais, négatif si le statut en coûte moins). Une société hors partage grille n'est pas la situation saisie. Sans chiffre d'affaires, meilleur est null.",
+    "La colonne telleQueSaisie est la situation saisie : son net est celui de simuler (situationNet). Les frais réels étant dans la grille, les autres colonnes n'ajoutent aux charges que l'écart de frais de fonctionnement supposés avec le statut actuel (ecartDeFrais, négatif si le statut en coûte moins). Une société hors partage grille n'est pas la situation saisie ; si le meilleur statut fait moins bien qu'elle, sousLaSituationNet dit de combien et pourquoi (à reprendre dans la réponse). En partage grille, chaque société reprend la rémunération de la grille. Sans chiffre d'affaires, meilleur est null.",
     "Montants annuels en euros, arrondis, pour tous les foyers ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant.",
     "Pas de colonne micro pour un auxiliaire médical (CARPIMKO) : la raison est dans les avertissements."
   ].join(" "),
@@ -93,12 +101,13 @@ export const comparerStatuts = definirOutil({
     avecRetraite: z.boolean().optional().describe("Mode meilleurNet : exiger 4 trimestres de retraite."),
     partBncPrestations: z.number().min(0).max(1).optional().describe("Part BNC des prestations si l'activité devient une micro-entreprise, de 0 à 1.")
   }),
-  resultat: z.object({ annee: z.number(), activiteId: z.string(), activite: z.string(), reglages: z.object({ mode: z.string(), remunerationNette: z.number(), partDistribuee: z.number(), avecRetraite: z.boolean(), partBncPrestations: z.number() }), meilleur: z.string().nullable(), situationNet: z.number().nullable(), scenarios: z.array(ScenarioSchema), couples: z.array(z.object({ personnes: z.array(z.string()), netActuel: z.number(), netMaries: z.number() })), notes: z.array(z.string()) }),
+  resultat: z.object({ annee: z.number(), activiteId: z.string(), activite: z.string(), reglages: z.object({ mode: z.string(), remunerationNette: z.number(), partDistribuee: z.number(), avecRetraite: z.boolean(), partBncPrestations: z.number() }), meilleur: z.string().nullable(), situationNet: z.number().nullable(), sousLaSituationNet: SousLaSituationSchema.nullable(), scenarios: z.array(ScenarioSchema), couples: z.array(z.object({ personnes: z.array(z.string()), netActuel: z.number(), netMaries: z.number() })), notes: z.array(z.string()) }),
   executer: (session, { activiteId, annee, mode, remunerationNette, partDistribuee, avecRetraite, partBncPrestations }) => {
     const enregistrees = optionsEnregistrees(session, activiteId, annee)
     const base = enregistrees.options
     const repartition = { ...base.repartition, ...(mode ? { mode } : {}), ...(partDistribuee === undefined ? {} : { partDistribuee }), ...(avecRetraite === undefined ? {} : { avecRetraite }) }
-    const options: ComparaisonOptions = { ...base, repartition, remunerationNette: remunerationNette ?? base.remunerationNette, partBncPrestations: partBncPrestations ?? base.partBncPrestations }
+    // En mode grille, toutes les sociétés reprennent la rémunération de la grille, comme dans le comparateur.
+    const options = avecLaRemunerationDeLaGrille({ ...base, repartition, remunerationNette: remunerationNette ?? base.remunerationNette, partBncPrestations: partBncPrestations ?? base.partBncPrestations }, vueDeLAnnee(session, enregistrees.annee))
     const comparaison = comparerStatutsDeLAnnee(session, options, enregistrees.annee)
     return resultatSeul({
       annee: enregistrees.annee,
@@ -107,6 +116,7 @@ export const comparerStatuts = definirOutil({
       reglages: { mode: repartition.mode, remunerationNette: arrondir(options.remunerationNette), partDistribuee: repartition.partDistribuee, avecRetraite: repartition.avecRetraite ?? false, partBncPrestations: options.partBncPrestations },
       meilleur: comparaison.meilleur,
       situationNet: comparaison.situationSaisie ? arrondir(comparaison.situationSaisie.netApresImpots) : null,
+      sousLaSituationNet: sousLaSituationSaisie(comparaison),
       scenarios: comparaison.scenarios.map(resumeDuScenario),
       couples: comparaison.couples.map(c => ({ personnes: c.personIds.map(id => nomDe(session, id)), netActuel: arrondir(c.netApresImpotsActuel), netMaries: arrondir(c.netApresImpotsMaries) })),
       notes: [...comparaison.warnings, ...(comparaison.noteCFE ? [comparaison.noteCFE] : [])]

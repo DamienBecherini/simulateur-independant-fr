@@ -309,6 +309,14 @@ describe("csvComparaison", () => {
     expect(lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))).toContain("Non retenue : plafond dépassé;non;oui")
   })
 
+  it("explique un meilleur statut qui fait moins bien que la situation saisie, comme le verdict", () => {
+    const result = comparaisonExemple()
+    result.sousLaSituationSaisie = { ecart: 756, raison: "trimestres", explication: "Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie." }
+    const csv = lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))
+    const situation = csv.indexOf("Net de votre situation telle que saisie;20000,00")
+    expect(csv[situation + 1]).toBe("Meilleur statut sous la situation telle que saisie;Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie.")
+  })
+
   it("laisse vides le taux sans revenus et l'écart sans situation saisie, et omet les avertissements absents", () => {
     const result = comparaisonExemple()
     result.scenarios = result.scenarios.map(s => ({ ...s, actuel: false, telleQueSaisie: false, warnings: [], revenusAvantPrelevements: 0 }))

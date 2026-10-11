@@ -1,9 +1,9 @@
 // src/lib/resume.ts
 // Chiffres clés de la barre de résumé (affichage « Résumé ») : tirés des résultats de l'année et du comparateur.
 
-import type { ComparaisonResult, ScenarioStatut, SimulationReport } from "@/types"
+import type { ComparaisonResult, RaisonSousLaSituationSaisie, ScenarioStatut, SimulationReport } from "@/types"
 import { ecartSigne, euros } from "@/backend/logic/format"
-import { SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
+import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 
 /** Ce que la barre retient du comparateur : l'activité comparée et le résultat de la comparaison. */
 export interface ResumeDeLaComparaison {
@@ -55,12 +55,23 @@ export function raisonDeNonRetenue(scenario: ScenarioStatut): string | null {
   return scenario.horsPlafond ? "non retenue : plafond dépassé" : null
 }
 
-/** Les avertissements de la comparaison, sans l'invitation à saisir un chiffre d'affaires, déjà en tête du comparateur. */
-export const avertissementsSansLeVerdict = (warnings: string[]) => warnings.filter(w => w !== SANS_CHIFFRE_D_AFFAIRES)
+/**
+ * Les avertissements de la comparaison, sans l'invitation à saisir un chiffre d'affaires, déjà en tête du comparateur,
+ * ni la note sur une activité sans charge, écrite à la place du rappel des frais sous le tableau.
+ */
+export const avertissementsSansLeVerdict = (warnings: string[]) => warnings.filter(w => w !== SANS_CHIFFRE_D_AFFAIRES && w !== AUCUNE_CHARGE)
+
+/** Dans la barre de résumé, pourquoi le meilleur statut fait moins bien que la situation saisie, en quelques mots. */
+const POURQUOI_SOUS_LA_SAISIE: Record<RaisonSousLaSituationSaisie, string> = {
+  trimestres: "pour 4 trimestres de retraite",
+  statutActuelNonRetenu: "(statut actuel non retenu)",
+  reglages: "(aucun ne fait mieux que la saisie)"
+}
 
 /**
- * « Micro + VL (actuel) », ou « SASU, +1 234 € » quand le meilleur statut n'est pas la situation saisie ; sans chiffre
- * d'affaires, l'invitation à en saisir un.
+ * « Micro + VL (actuel) », ou « SASU, +1 234 € » quand le meilleur statut n'est pas la situation saisie, avec la raison
+ * quand il fait moins bien qu'elle (« SASU, rémunération optimisée, −756 € pour 4 trimestres de retraite ») ; sans
+ * chiffre d'affaires, l'invitation à en saisir un.
  */
 export function meilleurStatut(result: ComparaisonResult | null): string | null {
   if (result?.sansChiffreDAffaires) return "saisissez un chiffre d'affaires"
@@ -68,7 +79,9 @@ export function meilleurStatut(result: ComparaisonResult | null): string | null 
   if (!result || !meilleur) return null
   if (meilleur.telleQueSaisie) return `${meilleur.libelle} (actuel)`
   const ecart = ecartAvecLaSituationSaisie(result, meilleur)
-  return ecart === null ? meilleur.libelle : `${meilleur.libelle}, ${ecartSigne(ecart)}`
+  if (ecart === null) return meilleur.libelle
+  const sous = result.sousLaSituationSaisie
+  return `${meilleur.libelle}, ${ecartSigne(ecart)}${sous ? ` ${POURQUOI_SOUS_LA_SAISIE[sous.raison]}` : ""}`
 }
 
 /** Le verdict : quel statut donne le meilleur net, et de combien il devance la situation saisie ou le suivant. */
@@ -76,6 +89,9 @@ export function phraseDuVerdict(result: ComparaisonResult, activite: string): st
   const meilleur = result.scenarios.find(s => s.statut === result.meilleur)
   const saisie = result.situationSaisie
   if (!meilleur || !saisie) return null
+  // Meilleur statut sous la situation saisie : il n'est pas présenté comme un gain, l'écart est expliqué.
+  const sous = result.sousLaSituationSaisie
+  if (sous) return `Pour « ${activite} », le meilleur des statuts comparés, ${meilleur.libelle}, donnerait ${euros(meilleur.netApresImpots)}, contre ${euros(saisie.netApresImpots)} pour votre situation telle que saisie (${saisie.libelle}). ${sous.explication}`
   if (meilleur.telleQueSaisie) {
     const suivant = [...result.scenarios].filter(s => !s.telleQueSaisie && !estNonRetenue(s)).sort((a, b) => b.netApresImpots - a.netApresImpots)[0]
     const derriere = suivant ? ` Juste derrière : ${suivant.libelle}, ${ecartSigne(suivant.netApresImpots - saisie.netApresImpots)}.` : ""

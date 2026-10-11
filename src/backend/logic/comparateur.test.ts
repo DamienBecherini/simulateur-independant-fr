@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest"
 import { comparerStatuts, coutDesQuatreTrimestres, remunerationOptimale } from "./comparateur.js"
 import { statutActuel } from "./conversion-de-statut.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
-import { defaultFraisFonctionnement, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
+import { AUCUNE_CHARGE, defaultFraisFonctionnement, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
+import { euros } from "./format.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
@@ -65,7 +66,15 @@ describe("comparerStatuts", () => {
 
     it("désigne le statut au meilleur net", () => {
       expect(resultat.meilleur).toBe("micro-vfl")
-      expect(resultat.warnings).toEqual([])
+      // Aucune charge dans la grille : seule la note qui le rappelle.
+      expect(resultat.warnings).toEqual([AUCUNE_CHARGE])
+      expect(resultat.sousLaSituationSaisie).toBeUndefined()
+    })
+
+    it("avec une charge saisie dans la grille, pas de note sur les charges", () => {
+      const avecCharge = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000], ["m1", "expense", 300]], options("m1"))
+
+      expect(avecCharge.warnings).toEqual([])
     })
   })
 
@@ -102,18 +111,34 @@ describe("comparerStatuts", () => {
       expect(colonne(resultat, "micro").cotisationsSociales).toBe(10000 + 80)
     })
 
-    it("applique la rémunération choisie et conserve les dividendes saisis quand on ne distribue pas tout", () => {
+    it("selon la grille, l'autre société reprend la rémunération et les dividendes de la grille, pas une rémunération réglée ailleurs", () => {
       const flux: Flux[] = [
         ["s1", "ca_services", 100000],
-        ["s1", "director_remuneration", 1000],
+        ["s1", "director_remuneration", 24300],
         ["s1", "dividends_payment", 20000]
       ]
 
-      // L'activité est une EURL : la colonne SASU n'est pas la situation saisie, elle prend la rémunération choisie.
-      const resultat = comparer([personne("alice"), societe("s1", "EURL")], [relation("alice", "s1", "Gérant")], flux, options("s1", { remunerationNette: 24300, repartition: { mode: "grille", partDistribuee: 1 } }))
+      // L'activité est une EURL : la colonne SASU n'est pas la situation saisie ; la rémunération de 1 000 €, réglée dans
+      // un autre mode, ne compte pas.
+      const resultat = comparer([personne("alice"), societe("s1", "EURL")], [relation("alice", "s1", "Gérant")], flux, options("s1", { remunerationNette: 1000, repartition: { mode: "grille", partDistribuee: 1 } }))
 
       // Rémunération de 24 300 € (30 000 € bruts) et 15 900 € de cotisations : 59 800 € de bénéfice, 10 950 € d'IS ; 20 000 € de dividendes saisis, 28 850 € conservés.
       expect(colonne(resultat, "SASU")).toMatchObject({ telleQueSaisie: false, cotisationsSociales: 15900, impotSocietes: 10950, resultatConserve: 28850 })
+      expect(colonne(resultat, "SASU").partage).toMatchObject({ remunerationNette: 24300, dividendesNets: 20000 })
+    })
+
+    it("selon la grille, une SASU convertie en EURL garde la rémunération et les dividendes de la grille", () => {
+      const flux: Flux[] = [
+        ["s1", "ca_services", 100000],
+        ["s1", "director_remuneration", 24300],
+        ["s1", "dividends_payment", 20000]
+      ]
+      const grille = { repartition: { mode: "grille", partDistribuee: 1 } } as const
+      const reglee = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { ...grille, remunerationNette: 50000 }))
+      const deLaGrille = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { ...grille, remunerationNette: 24300 }))
+
+      expect(colonne(reglee, "EURL").partage?.remunerationNette).toBe(24300)
+      expect(colonne(reglee, "EURL").netApresImpots).toBe(colonne(deLaGrille, "EURL").netApresImpots)
     })
   })
 
@@ -225,6 +250,12 @@ describe("comparerStatuts", () => {
       expect(resultat.scenarios).toHaveLength(5)
     })
 
+    it("n'ajoute pas la note sur les charges : l'invitation à saisir un chiffre d'affaires suffit", () => {
+      const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [], options("m1"))
+
+      expect(resultat.warnings).not.toContain(AUCUNE_CHARGE)
+    })
+
     it("compare dès le premier euro de chiffre d'affaires", () => {
       const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_vente", 1]], options("m1"))
 
@@ -237,14 +268,14 @@ describe("comparerStatuts", () => {
     it("signale une activité reliée à personne", () => {
       const resultat = comparer([personne("alice"), micro("m1")], [], [["m1", "ca_micro_vente", 10000]], options("m1"))
 
-      expect(resultat.warnings).toEqual([expect.stringContaining("reliée à aucune personne")])
+      expect(resultat.warnings).toEqual([expect.stringContaining("reliée à aucune personne"), AUCUNE_CHARGE])
       expect(colonne(resultat, "micro").netApresImpots).toBe(0)
     })
 
     it("prévient que les associés ne suivent pas en entreprise individuelle", () => {
       const resultat = comparer([personne("alice"), personne("bob"), societe("s1")], [relation("alice", "s1", "Président"), relation("bob", "s1", "Associé")], [["s1", "ca_services", 50000]], options("s1"))
 
-      expect(resultat.warnings).toEqual([expect.stringContaining("autres associés")])
+      expect(resultat.warnings).toEqual([expect.stringContaining("autres associés"), AUCUNE_CHARGE])
     })
   })
 
@@ -358,6 +389,9 @@ describe("micro-entreprise au-delà des plafonds", () => {
     expect(["micro", "micro-vfl"]).not.toContain(resultat.meilleur)
     const meilleurTenable = Math.max(...resultat.scenarios.filter(s => !s.horsPlafond).map(s => s.netApresImpots))
     expect(colonne(resultat, resultat.meilleur!).netApresImpots).toBe(meilleurTenable)
+    // La situation saisie, hors plafond, fait mieux : le verdict dit que le statut actuel n'est pas retenu, et pourquoi.
+    expect(colonne(resultat, "micro").netApresImpots).toBeGreaterThan(meilleurTenable)
+    expect(resultat.sousLaSituationSaisie).toMatchObject({ ecart: Math.round(colonne(resultat, "micro").netApresImpots - meilleurTenable), raison: "statutActuelNonRetenu", explication: expect.stringContaining("(plafond de la micro-entreprise dépassé)") })
   })
 
   it("sous le plafond, aucune colonne n'est hors plafond", () => {
@@ -453,6 +487,19 @@ describe("au meilleur net", () => {
     expect(c.remunerationOptimale).toEqual({ remunerationNette: meilleur!.remunerationNette, avecRetraite: false, retraiteHorsDAtteinte: true })
     expect(c.warnings).toContain("Aucune rémunération possible en SASU ne valide 4 trimestres de retraite : la colonne retient le meilleur net, sans cette condition.")
     expect(colonne(comparerStatuts(petite, auMeilleurNet(false), reglesDeTest), "SASU").warnings).not.toContainEqual(expect.stringContaining("4 trimestres"))
+  })
+
+  it("situation saisie au meilleur net sans trimestre : la colonne avec 4 trimestres reste désignée, leur coût explique l'écart", () => {
+    const { meilleur } = optimiserRemuneration(s, options("s1"), "SASU", reglesDeTest)
+    const saisie = session([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 100000], ["s1", "director_remuneration", meilleur!.remunerationNette], ["s1", "dividends_payment", meilleur!.dividendes]])
+    const avec = comparerStatuts(saisie, auMeilleurNet(true), reglesDeTest)
+    const ecart = Math.round(avec.situationSaisie!.netApresImpots - colonne(avec, "SASU").netApresImpots)
+
+    expect(avec.meilleur).toBe("SASU")
+    expect(ecart).toBeGreaterThan(0)
+    expect(avec.sousLaSituationSaisie).toEqual({ ecart, raison: "trimestres", explication: `Valider 4 trimestres de retraite vous coûterait environ ${euros(ecart)} par rapport à votre situation telle que saisie.` })
+    // Sans exiger les trimestres, la colonne retrouve la situation saisie : rien à expliquer.
+    expect(comparerStatuts(saisie, auMeilleurNet(false), reglesDeTest).sousLaSituationSaisie).toBeUndefined()
   })
 
   it("donne ce que coûtent les 4 trimestres en net, que la case soit cochée ou non", () => {

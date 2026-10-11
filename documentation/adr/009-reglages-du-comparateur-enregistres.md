@@ -80,3 +80,30 @@ Le comparateur ajoutait à chaque colonne, celle du statut actuel comprise, les 
 - Un seul net pour la situation saisie, partout : résultats, barre de résumé, comparateur, exports, outils pour les IA, arbitrage rémunération / dividendes.
 - Les nets des autres colonnes changent : chacune gagne à peu près les frais supposés du statut actuel (850 € pour une micro-entreprise avec les frais par défaut). Les frais communs à tous les statuts ne jouent plus.
 - Des frais supposés du statut actuel plus élevés que ceux réellement saisis dans la grille avantagent les autres statuts d'autant : la page rappelle de saisir ses frais réels (CFE, assurance, banque) dans la grille.
+
+## Addendum (2026-10-11) : partage « grille » pour toutes les sociétés, meilleur statut sous la situation saisie, activité sans charge
+
+### Contexte
+
+Après l'addendum précédent, trois cas restaient trompeurs :
+
+- en partage « Selon la grille », seule la colonne du statut actuel reprenait la grille ; l'autre société (l'EURL d'une SASU, et inversement) prenait `remunerationNette`, qui pouvait avoir été réglée dans un autre mode et enregistrée pour l'année ;
+- au meilleur net avec 4 trimestres de retraite exigés, la colonne désignée peut faire moins bien que la situation saisie, qui n'est pas une colonne (montage « SASU sans salaire » : 47 204 € contre 47 960 € tout en dividendes) ; le verdict annonçait alors « soit −756 € » pour le meilleur statut, sans dire pourquoi ;
+- sans aucune charge dans la grille, les frais réels du statut actuel manquent, et chaque statut aux frais supposés plus bas en garde toute l'économie.
+
+### Décision
+
+1. **Selon la grille, chaque société suit la grille.** `avecLaRemunerationDeLaGrille` (`options-du-comparateur.ts`) remplace `remunerationNette` par la rémunération de la grille de l'année ; `optionsDuComparateur`, `comparerStatuts` et `comparer_statuts` l'appliquent. Les dividendes de la grille étaient déjà gardés à la conversion. La rémunération enregistrée par année n'est pas effacée : elle revient dans les autres modes.
+2. **Un meilleur statut sous la situation saisie reste désigné, et l'écart est expliqué.** Le meilleur net se choisit toujours parmi les colonnes ; la situation saisie n'est pas désignée à leur place. `ComparaisonResult.sousLaSituationSaisie` (`sous-la-situation-saisie.ts`) donne l'écart, sa raison et la phrase :
+   - `trimestres` : la colonne exige 4 trimestres que la situation saisie ne valide pas, et sans eux elle la rejoindrait (à 100 € près, la précision de l'optimiseur) : « Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie. » ;
+   - `statutActuelNonRetenu` : la colonne du statut actuel est écartée du meilleur net (micro hors plafond, régime fermé, société d'exercice libéral), avec sa raison ;
+   - `reglages` : sinon, aucun statut comparé ne fait mieux avec ces réglages (partage choisi, réserves distribuées dans la grille…).
+
+   Le verdict, la barre de résumé, les exports et `comparer_statuts` reprennent la même explication.
+3. **Activité sans charge.** Avec un chiffre d'affaires et aucune charge saisie, `AUCUNE_CHARGE` rejoint les avertissements de la comparaison (exports, outils pour les IA) ; à l'écran, elle remplace le rappel des frais réels sous le tableau, à la même place. Sans chiffre d'affaires, l'invitation à en saisir un suffit.
+
+### Conséquences
+
+- En partage « grille », le net de l'autre société change quand une rémunération différente de celle de la grille avait été réglée dans un autre mode ; les montages types ne changent pas.
+- Le meilleur statut n'est plus présenté comme un gain quand il fait moins bien que la situation saisie.
+- La note sur les charges apparaît aussi pour une micro-entreprise sans dépense saisie : la CFE et l'assurance y restent dues.
