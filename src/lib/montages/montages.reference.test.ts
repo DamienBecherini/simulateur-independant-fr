@@ -132,6 +132,11 @@ casDeReference("Montages types : chiffres de référence", () => {
     const sasu = comparaison.scenarios.find(s => s.statut === "SASU")
     expect(sasu?.remunerationOptimale).toMatchObject({ remunerationNette: 5800, avecRetraite: true, coutDesQuatreTrimestres: 827 })
     expect(sasu?.protectionSociale.trimestres).toBe(4)
+    // Désignée meilleure, la colonne fait moins bien que la situation saisie, tout en dividendes (47 960 €) : le verdict
+    // l'explique par les 4 trimestres, sans désigner la situation saisie.
+    expect(comparaison.meilleur).toBe("SASU")
+    expect(comparaison.sousLaSituationSaisie).toMatchObject({ ecart: 756, raison: "trimestres" })
+    expect(comparaison.sousLaSituationSaisie?.explication.replace(/\s/g, " ")).toBe("Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie.")
     // 84 000 € de chiffre d'affaires dépassent le plafond de la micro-entreprise : elle n'est jamais désignée meilleur choix.
     expect(comparaison.scenarios.find(s => s.statut === "micro-vfl")?.horsPlafond).toBe(true)
   })

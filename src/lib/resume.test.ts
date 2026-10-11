@@ -47,6 +47,17 @@ describe("barre de résumé", () => {
     expect(espaces(phraseDuVerdict(result, "Conseil"))).toBe("Pour « Conseil », SASU, rémunération optimisée donnerait le meilleur net : 41 000 €, soit +1 000 € par rapport à votre situation telle que saisie (SASU, 40 000 €).")
   })
 
+  it("meilleur statut sous la situation saisie : ni présenté comme un gain, ni remplacé par elle, l'écart est expliqué", () => {
+    const optimisee = { ...scenario("SASU", "SASU, rémunération optimisée", 47204), actuel: true }
+    const explication = "Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie."
+    const result: ComparaisonResult = { scenarios: [optimisee, scenario("EI", "EI au réel", 38000)], meilleur: "SASU", situationSaisie: { statut: "SASU", libelle: "SASU", netApresImpots: 47960 }, sousLaSituationSaisie: { ecart: 756, raison: "trimestres", explication }, couples: [], warnings: [] }
+
+    expect(espaces(phraseDuVerdict(result, "Conseil"))).toBe("Pour « Conseil », le meilleur des statuts comparés, SASU, rémunération optimisée, donnerait 47 204 €, contre 47 960 € pour votre situation telle que saisie (SASU). Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie.")
+    expect(espaces(meilleurStatut(result))).toBe("SASU, rémunération optimisée, −756 € pour 4 trimestres de retraite")
+    expect(espaces(meilleurStatut({ ...result, sousLaSituationSaisie: { ecart: 756, raison: "reglages", explication } }))).toBe("SASU, rémunération optimisée, −756 € (aucun ne fait mieux que la saisie)")
+    expect(espaces(meilleurStatut({ ...result, sousLaSituationSaisie: { ecart: 756, raison: "statutActuelNonRetenu", explication } }))).toBe("SASU, rémunération optimisée, −756 € (statut actuel non retenu)")
+  })
+
   it("sans chiffre d'affaires, invite à en saisir un au lieu de désigner un statut", () => {
     const result: ComparaisonResult = { ...comparaison("micro"), meilleur: null, sansChiffreDAffaires: true }
     expect(meilleurStatut(result)).toBe("saisissez un chiffre d'affaires")

@@ -382,6 +382,13 @@ Une ligne par année de la session, avec les mêmes acteurs et la grille de chaq
     expect(rapportComplet({ comparaison: { nomActivite: "Ma SASU", options, resultat } })).toContain("| Écart avec votre situation telle que saisie | — | — |")
   })
 
+  it("explique un meilleur statut qui fait moins bien que la situation saisie, comme le verdict", () => {
+    const resultat = comparaisonExemple()
+    resultat.sousLaSituationSaisie = { ecart: 756, raison: "trimestres", explication: `Valider 4 trimestres de retraite vous coûterait environ ${euros(756)} par rapport à votre situation telle que saisie.` }
+    const rapport = rapportComplet({ comparaison: { nomActivite: "Ma SASU", options: optionsExemple(), resultat } })
+    expect(rapport).toContain("comme dans les résultats\n- Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie.\n\n| Indicateur |")
+  })
+
   it("réunit les mentions d'un statut à la fois actuel et meilleur net", () => {
     const resultat = { ...comparaisonExemple(), meilleur: "SASU" as const }
     expect(rapportComplet({ comparaison: { nomActivite: "Ma SASU", options: optionsExemple(), resultat } })).toContain("| Indicateur | SASU (actuel, meilleur net) | Micro-entreprise |")

@@ -117,6 +117,13 @@ describe("réglages enregistrés du comparateur", () => {
     expect(reglagesDeLActiviteComparee(vue, { reglagesParActivite: { sasu: reglages } })?.options.partBncPrestations).toBe(0.2)
   })
 
+  it("selon la grille, reprend la rémunération de la grille, même si une autre a été réglée dans un autre mode", () => {
+    const reglages = { repartition: { mode: "grille" as const, partDistribuee: 1 }, remunerationParAnnee: { "2026": 9000 } }
+
+    expect(optionsDuComparateur(vue, "sasu", reglages).remunerationNette).toBe(20000)
+    expect(optionsDuComparateur(vue, "sasu", { ...reglages, repartition: { mode: "dividendes", partDistribuee: 1 } }).remunerationNette).toBe(9000)
+  })
+
   it("au meilleur net, exige 4 trimestres de retraite tant que la case n'a pas été décochée, y compris dans les réglages enregistrés sans elle", () => {
     const sansDividendes = { ...vue, monthlyData: session([]).monthlyData }
     expect(optionsDuComparateur(sansDividendes, "sasu", undefined).repartition).toEqual({ mode: "meilleurNet", partDistribuee: 1, avecRetraite: true })

@@ -168,6 +168,20 @@ describe("comparer_statuts et optimiser_remuneration", () => {
     expect(session.comparateur).toBeUndefined()
   })
 
+  it("en partage grille, reprennent la rémunération de la grille, même si une autre est passée", () => {
+    const session = exemple()
+    const grille = optionsDuComparateur(vueDeLAnnee(session, 2026), "company-conseil", undefined).remunerationNette
+    const variante = appeler<{ reglages: { mode: string; remunerationNette: number } }>("comparer_statuts", session, { activiteId: "company-conseil", mode: "grille", remunerationNette: grille + 10000 })
+    expect(variante.reglages).toEqual(expect.objectContaining({ mode: "grille", remunerationNette: Math.round(grille) }))
+  })
+
+  it("disent pourquoi le meilleur statut fait moins bien que la situation saisie, en texte brut", () => {
+    const comparaison = appeler<{ meilleur: string; situationNet: number; sousLaSituationNet: { ecart: number; raison: string; explication: string } | null }>("comparer_statuts", montage("sasu-sans-salaire"))
+    expect(comparaison).toMatchObject({ meilleur: "SASU", situationNet: 47960 })
+    expect(comparaison.sousLaSituationNet).toEqual({ ecart: 756, raison: "trimestres", explication: "Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie." })
+    expect(appeler<{ sousLaSituationNet: unknown }>("comparer_statuts", exemple(), { activiteId: "company-conseil" }).sousLaSituationNet).toBeNull()
+  })
+
   it("reprennent les réglages enregistrés d'un montage type", () => {
     const session = montage("sasu-salaire-4-trimestres")
     const comparaison = appeler<{ activiteId: string; reglages: { mode: string; avecRetraite: boolean }; scenarios: { remunerationRetenue: number | null }[] }>("comparer_statuts", session)

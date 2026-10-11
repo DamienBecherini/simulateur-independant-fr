@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest"
 import type { Affichage, ComparaisonResult, ScenarioStatut, SessionState, StatutCompare } from "@/types"
 import { emptySession, makeCompany, makeFlow, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { ComparateurDeTest } from "@/ui/testing/comparateur"
-import { SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
+import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { AffichageContext } from "../hooks/useAffichage"
 
 function scenario(statut: StatutCompare, libelle: string, net: number, overrides: Partial<ScenarioStatut> = {}): ScenarioStatut {
@@ -321,6 +321,16 @@ describe("ComparatorPanel", () => {
     expect(screen.getAllByText(SANS_CHIFFRE_D_AFFAIRES)).toHaveLength(1)
     const table = screen.getByRole("table", { name: "Comparaison des statuts" })
     expect(within(table).queryByText("meilleur net")).not.toBeInTheDocument()
+  })
+
+  it("sans charge saisie pour l'activité, l'alerte remplace le rappel des frais sous le tableau, une seule fois", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ warnings: [AUCUNE_CHARGE] }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const note = await screen.findByRole("note")
+    expect(note).toHaveTextContent(AUCUNE_CHARGE)
+    expect(screen.getAllByText(new RegExp(`^${AUCUNE_CHARGE.slice(0, 40)}`))).toHaveLength(1)
+    expect(screen.queryByText(/^Vos frais réels sont ceux que vous avez saisis/)).not.toBeInTheDocument()
   })
 
   it("en société hors partage « grille », nomme la colonne du statut actuel par son partage et rappelle la situation saisie (P-04)", async () => {
