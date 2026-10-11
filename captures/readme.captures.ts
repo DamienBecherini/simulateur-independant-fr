@@ -19,8 +19,11 @@ test("captures du README", async ({ dossierDonnees, lancer }) => {
   await page.getByRole("heading", { name: "Résultats de simulation" }).evaluate(titre => window.scrollTo(0, titre.getBoundingClientRect().top + window.scrollY - 110))
   await page.screenshot({ path: path.join(DOSSIER, "resultats.png") })
 
-  // Pour les captures d'une zone plus haute que la fenêtre, la barre du haut (fixe) est masquée : elle la recouvrirait.
-  const sansBarre = "nav { visibility: hidden !important; }"
+  // Pour les captures d'une zone, la barre du haut (fixe) et la barre de résumé (collante) sont masquées : elles la
+  // recouvriraient. La fenêtre s'agrandit pour que le comparateur y tienne entier : une zone plus haute que la fenêtre
+  // est capturée décalée (la page, recalculée sans barre de défilement, se recentre pendant la capture).
+  const sansBarre = "nav, [data-barre-collante] { visibility: hidden !important; }"
+  await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1440, 1150))
   const comparateur = page.getByRole("region", { name: "Comparateur de statuts" })
   const optimisation = page.getByRole("region", { name: "Rémunération ou dividendes ?" })
   await expect(comparateur.getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
