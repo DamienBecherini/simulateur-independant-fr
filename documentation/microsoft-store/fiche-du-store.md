@@ -42,7 +42,7 @@ Textes et réponses à recopier dans Partner Center pour la soumission de l'appl
 
 ## Nouveautés de cette version
 
-Pour la première soumission :
+Pour la première soumission (version 0.11.0) :
 
 > Première version publiée sur le Microsoft Store.
 

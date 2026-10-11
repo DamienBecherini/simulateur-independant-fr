@@ -11,7 +11,7 @@ Pour essayer sans rien installer, la [démo en ligne](https://damienbecherini.gi
 | Mac Intel | `Simulateur-Independant-FR-<version>-mac-x64.dmg` |
 | Linux (x64) | `Simulateur-Independant-FR-<version>-linux-x86_64.AppImage` (toutes distributions) ou `Simulateur-Independant-FR-<version>-linux-amd64.deb` (Debian, Ubuntu et dérivées) |
 
-Par exemple, pour la version 0.9.0 sous Windows : `Simulateur-Independant-FR-0.9.0-win-x64.exe`.
+Par exemple, pour la version 0.11.0 sous Windows : `Simulateur-Independant-FR-0.11.0-win-x64.exe`.
 
 Pour savoir si votre Mac est Apple Silicon ou Intel : menu Pomme > « À propos de ce Mac », ligne « Puce » (Apple Silicon) ou « Processeur » (Intel).
 
