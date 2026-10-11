@@ -91,10 +91,11 @@ Dans [captures/](./captures/) : 1366 × 768 pixels (la taille minimale demandée
 
 | Fichier | Écran | Légende proposée |
 |---|---|---|
-| `1-simulation.png` | Acteurs du foyer et début de la grille annuelle | Décrivez votre foyer et vos activités, et leurs liens |
-| `2-resultats.png` | Résultats de simulation | Le net dans la poche et le taux global de prélèvement, par foyer et par activité |
-| `3-comparateur.png` | Comparateur de statuts | Comparez SASU, EURL, EI et micro-entreprise sur votre situation |
-| `4-remuneration-ou-dividendes.png` | Rémunération ou dividendes | Trouvez la rémunération qui donne le meilleur net |
+| `1-simulation.png` | Personnes et activités du foyer, avec le résumé du net (66 710 €) | Décrivez votre foyer et vos activités, et leurs liens |
+| `2-grille.png` | Grille de saisie annuelle, avec revenus et charges mois par mois | Saisissez vos revenus et charges mois par mois |
+| `3-resultats.png` | Résultats de simulation | Le net dans la poche et le taux global de prélèvement, par foyer et par activité |
+| `4-comparateur.png` | Comparateur de statuts | Comparez SASU, EURL, EI et micro-entreprise sur votre situation |
+| `5-remuneration-ou-dividendes.png` | Rémunération ou dividendes | Trouvez la rémunération qui donne le meilleur net |
 
 Pistes pour compléter (jusqu'à dix captures) : la grille annuelle avec la fenêtre d'un flux ouverte, les montages types, le mode sombre, l'export PDF. Éviter la fenêtre « Utiliser avec une IA » : elle affiche les chemins réels du poste, donc le nom de l'utilisateur.
 
