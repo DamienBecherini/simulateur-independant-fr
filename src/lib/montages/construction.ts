@@ -41,11 +41,13 @@ export interface FluxDuMontage {
   grossAmount?: number
   /** Mois du flux ponctuel ; absent, le flux revient chaque mois. */
   mois?: number
+  /** Distingue dans son identifiant deux flux du même type le même mois (plusieurs charges, par exemple). */
+  cle?: string
 }
 
 export function fluxDuMois(flux: FluxDuMontage, mois: number): FinancialFlow {
-  const { entityId, type, amount, label, grossAmount } = flux
-  return { id: `${entityId}-${type}-${mois}`, label, amount, entityId, type, ...(grossAmount === undefined ? {} : { grossAmount }) }
+  const { entityId, type, amount, label, grossAmount, cle } = flux
+  return { id: `${entityId}-${type}${cle ? `-${cle}` : ""}-${mois}`, label, amount, entityId, type, ...(grossAmount === undefined ? {} : { grossAmount }) }
 }
 
 /** Ce qui décrit la session d'un montage : ses acteurs, leurs relations, les flux de l'année et, si besoin, le comparateur. */
