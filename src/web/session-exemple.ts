@@ -38,17 +38,26 @@ export function sessionExemple(): SessionState {
     flows: [
       flux(atelier.id, "ca_micro_services_bnc", 2600 + (mois % 3) * 300, "Prestations", mois),
       flux(atelier.id, "ca_micro_vente", mois % 4 === 0 ? 900 : 300, "Ventes", mois),
+      // Matières premières et fournitures des objets vendus, 35 % des ventes du mois : non déductibles en micro-entreprise,
+      // l'abattement forfaitaire des ventes est censé les couvrir pour l'impôt.
+      flux(atelier.id, "expense", mois % 4 === 0 ? 315 : 105, "Matières et fournitures", mois, "achats"),
       flux(atelier.id, "expense", 10, "Banque", mois, "banque"),
       flux(conseil.id, "ca_services", 6500, "Facturation", mois),
+      // Charges courantes de la société, déductibles de son bénéfice et proches des frais supposés d'une SASU dans le comparateur.
+      flux(conseil.id, "deductible_expense", 170, "Expert-comptable", mois, "expert-comptable"),
+      flux(conseil.id, "deductible_expense", 20, "Banque", mois, "banque"),
       flux(conseil.id, "director_remuneration", 2500, "Rémunération", mois)
     ]
   }))
   monthlyData[11].flows.push(flux(conseil.id, "dividends_payment", 12000, "Dividendes", 11))
   // Charges courantes de l'atelier, non déductibles en micro-entreprise et proches des frais supposés de la micro dans le
   // comparateur : assurance responsabilité civile professionnelle et produits en janvier, CFE de l'année en décembre
-  // (base minimale d'une petite commune pour environ 40 000 € de chiffre d'affaires).
+  // (base minimale d'une petite commune pour environ 40 000 € de chiffre d'affaires). De même pour la SASU, avec environ
+  // 78 000 € de chiffre d'affaires.
   monthlyData[0].flows.push(flux(atelier.id, "expense", 480, "Assurance RC Pro", 0, "assurance"))
   monthlyData[11].flows.push(flux(atelier.id, "expense", 300, "CFE", 11, "cfe"))
+  monthlyData[0].flows.push(flux(conseil.id, "deductible_expense", 400, "Assurance RC Pro", 0, "assurance"))
+  monthlyData[11].flows.push(flux(conseil.id, "deductible_expense", 450, "CFE", 11, "cfe"))
 
   return {
     name: `Famille Martin, simulation ${ANNEE_DE_L_EXEMPLE}`,

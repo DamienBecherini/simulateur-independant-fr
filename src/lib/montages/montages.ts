@@ -108,6 +108,28 @@ const CHARGES = {
   emma: { cfe: 200, assurance: 240, banqueMensuelle: 5 }
 } satisfies Record<string, ChargesDeLaMicro>
 
+/**
+ * Charges courantes d'une société, en euros : celles d'une micro-entreprise, plus l'expert-comptable payé chaque mois.
+ * Leur total reste proche des frais supposés d'une SASU dans le comparateur.
+ */
+interface ChargesDeLaSociete extends ChargesDeLaMicro {
+  expertComptableMensuel: number
+}
+
+/** Les charges de la société dans la grille : déductibles, elles réduisent son bénéfice et son impôt sur les sociétés. */
+function fluxDesChargesDeLaSociete(entityId: string, { expertComptableMensuel, ...charges }: ChargesDeLaSociete): FluxDuMontage[] {
+  return [
+    { entityId, type: "deductible_expense", amount: expertComptableMensuel, label: "Expert-comptable", cle: "expert-comptable" },
+    ...fluxDesCharges(entityId, charges).map(flux => ({ ...flux, type: "deductible_expense" as const }))
+  ]
+}
+
+/** La phrase qui documente les charges supposées d'une société. */
+const hypothesesDeChargesDeLaSociete = (activite: string, { expertComptableMensuel, cfe, assurance, banqueMensuelle }: ChargesDeLaSociete) =>
+  `Charges supposées de ${activite}, déductibles de son bénéfice : expert-comptable à ${euros(expertComptableMensuel)} par mois, CFE de ${euros(cfe)} en décembre (elle dépend de la commune et n'est pas due l'année de création), assurance responsabilité civile professionnelle de ${euros(assurance)} par an et compte bancaire professionnel à ${euros(banqueMensuelle)} par mois.`
+
+const CHARGES_DE_MARC: ChargesDeLaSociete = { expertComptableMensuel: 170, cfe: 400, assurance: 360, banqueMensuelle: 20 }
+
 // --- Les montages ---
 
 const microSeule: MontageType = {
@@ -248,6 +270,7 @@ const microEtSasuDuConjoint: MontageType = {
   pointsDAttention: [
     "Si Claire travaille aussi pour la SASU de Marc, elle doit choisir un statut (associée ou salariée) : le statut de conjoint collaborateur n'existe pas en SAS.",
     hypothesesDeCharges("la micro-entreprise de Claire", CHARGES.claire),
+    hypothesesDeChargesDeLaSociete("la SASU de Marc", CHARGES_DE_MARC),
     RESERVE_LEGALE
   ],
   sources: [SOURCES.anneeDuMariage, SOURCES.versementLiberatoire, SOURCES.cotisationsMicro, SOURCES.dividendes, SOURCES.conjoint],
@@ -258,8 +281,9 @@ const microEtSasuDuConjoint: MontageType = {
       { entityId: "m-claire", type: "ca_micro_services_bnc", amount: 2500, label: "Prestations" },
       ...fluxDesCharges("m-claire", CHARGES.claire),
       { entityId: "s-marc", type: "ca_services", amount: 6000, label: "Facturation" },
+      ...fluxDesChargesDeLaSociete("s-marc", CHARGES_DE_MARC),
       { entityId: "s-marc", type: "director_remuneration", amount: 2000, label: "Rémunération" },
-      { entityId: "s-marc", type: "dividends_payment", amount: 25000, label: "Dividendes", mois: 11 }
+      { entityId: "s-marc", type: "dividends_payment", amount: 23000, label: "Dividendes", mois: 11 }
     ],
     comparateur: { activiteComparee: "m-claire", reglagesParActivite: {} }
   })
