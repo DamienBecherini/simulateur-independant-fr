@@ -37,7 +37,7 @@ function EtapesDeClaudeDesktop({ plateforme }: { plateforme: string }) {
   return (
     <>
       <ol className="list-decimal space-y-1 pl-5">
-        <li>Dans Claude Desktop, ouvrez Paramètres, puis Développeur, puis « Modifier la configuration » (en anglais : Settings, Developer, « Edit Config ») : il montre le fichier claude_desktop_config.json. Ouvrez-le avec un éditeur de texte.</li>
+        <li>Dans Claude Desktop, ouvrez Paramètres, puis Développeur, puis « Modifier la configuration » (en anglais : Settings, Developer, « Edit Config ») : il affiche le fichier claude_desktop_config.json dans l'explorateur de fichiers, sans l'ouvrir. Ouvrez-le avec un éditeur de texte, par exemple le Bloc-notes sous Windows (clic droit, puis « Ouvrir avec »).</li>
         <li>Quittez complètement Claude Desktop ({quitter}) : fermer sa fenêtre ne suffit pas, il pourrait réécrire le fichier en se fermant et votre ajout serait perdu.</li>
         <li>Le fichier contient déjà des réglages (« preferences »…) : copiez le bloc à insérer et collez-le juste après la toute première accolade {"« { »"} du fichier, sans rien toucher d'autre. S'il contient déjà une rubrique « mcpServers », ajoutez-y seulement l'entrée « simulateur-independant-fr » de la configuration ci-dessous, suivie d'une virgule si une autre entrée vient après. Si le fichier est vide, collez la configuration complète.</li>
         <li>Enregistrez le fichier et relancez Claude Desktop. Les outils du simulateur s'utilisent dans l'onglet Chat (pas dans l'onglet Code) : ils apparaissent dans le menu « + » sous la zone de saisie, et dans Paramètres, Développeur, avec leur état.</li>
@@ -47,7 +47,7 @@ function EtapesDeClaudeDesktop({ plateforme }: { plateforme: string }) {
         {fichier.enPaquet && (
           <>
             {" "}
-            Si Claude Desktop est installé en paquet, comme ses versions récentes pour Windows, il est dans <code className={CHEMIN}>{fichier.enPaquet}</code>.
+            Si Claude Desktop est installé en paquet, il est dans <code className={CHEMIN}>{fichier.enPaquet}</code>.
           </>
         )}
       </p>
