@@ -10,7 +10,7 @@ import { empreinteDeLaSession } from "@/backend/logic/outils/commun"
 import { lireUnePropositionEnAttente, nomDUnePropositionEnAttente, NOM_DE_PROPOSITION } from "@/backend/mcp/proposition-en-attente"
 import { MONTAGES_TYPES, sessionDUnMontage } from "@/lib/montages/montages"
 import { sessionExemple } from "@/web/session-exemple"
-import { ALIAS_D_EXECUTION, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, infosDeLInstallation, type InfosDuServeurMcp } from "./configuration-mcp"
+import { ALIAS_D_EXECUTION, blocAInserer, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, infosDeLInstallation, type InfosDuServeurMcp } from "./configuration-mcp"
 
 const windows: InfosDuServeurMcp = { executable: "C:\\Programmes\\Simulateur.exe", script: "C:\\Programmes\\resources\\mcp\\serveur-mcp.mjs", donnees: "C:\\Users\\a\\AppData\\Roaming\\Simulateur", plateforme: "win32" }
 
@@ -21,9 +21,23 @@ describe("configuration d'un client d'IA", () => {
     })
   })
 
-  it("indique le fichier de configuration de Claude Desktop selon le système", () => {
-    expect(configurationDeClaudeDesktop("win32")).toBe("%APPDATA%\\Claude\\claude_desktop_config.json")
-    expect(configurationDeClaudeDesktop("darwin")).toBe("~/Library/Application Support/Claude/claude_desktop_config.json")
+  it("donne le bloc à insérer après la première accolade d'un fichier qui a déjà des réglages", () => {
+    const bloc = blocAInserer(windows)
+    // Même indentation que la configuration complète, virgule finale : les réglages existants suivent.
+    expect(bloc.split("\n")[0]).toBe('  "mcpServers": {')
+    expect(bloc.endsWith("\n  },")).toBe(true)
+    // Le fichier de Claude Desktop, jamais vide : le bloc collé juste après « { », rien d'autre ne change.
+    const existant = JSON.stringify({ preferences: { quickEntryShortcut: "off" }, isUsingBuiltInNodeForMcp: true }, null, 2)
+    const complete = `{\n${bloc}${existant.slice(1)}`
+    expect(JSON.parse(complete)).toEqual({ ...JSON.parse(configurationDuClient(windows)), ...JSON.parse(existant) })
+  })
+
+  it("indique le fichier de configuration de Claude Desktop selon le système, et son installation en paquet sous Windows", () => {
+    expect(configurationDeClaudeDesktop("win32")).toEqual({
+      habituel: "%APPDATA%\\Claude\\claude_desktop_config.json",
+      enPaquet: "%LOCALAPPDATA%\\Packages\\Claude_<identifiant>\\LocalCache\\Roaming\\Claude\\claude_desktop_config.json"
+    })
+    expect(configurationDeClaudeDesktop("darwin")).toEqual({ habituel: "~/Library/Application Support/Claude/claude_desktop_config.json" })
     expect(configurationDeClaudeDesktop("linux")).toBeNull()
   })
 

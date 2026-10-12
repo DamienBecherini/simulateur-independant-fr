@@ -60,15 +60,44 @@ export function entreeDuServeur({ executable, script, donnees }: InfosDuServeurM
   return { command: executable, args: [script, "--donnees", donnees], env: { ELECTRON_RUN_AS_NODE: "1" } }
 }
 
-/** Le fichier de configuration complet, à coller dans un fichier vide (ou à fusionner dans `mcpServers`). */
+/** Le fichier de configuration complet, à coller dans un fichier vide. */
 export function configurationDuClient(infos: InfosDuServeurMcp): string {
   return JSON.stringify({ mcpServers: { [NOM_DU_SERVEUR_MCP]: entreeDuServeur(infos) } }, null, 2)
 }
 
-/** Où se trouve le fichier de configuration de Claude Desktop sur ce système ; `null` s'il n'y existe pas officiellement. */
-export function configurationDeClaudeDesktop(plateforme: string): string | null {
-  if (plateforme === "win32") return String.raw`%APPDATA%\Claude\claude_desktop_config.json`
-  if (plateforme === "darwin") return "~/Library/Application Support/Claude/claude_desktop_config.json"
+/**
+ * Le bloc à insérer juste après la toute première accolade d'un fichier qui contient déjà des réglages, sans rubrique
+ * `mcpServers` : le cas du fichier de Claude Desktop, jamais vide (`"preferences": {…}`…). C'est la configuration
+ * complète sans ses accolades extérieures, avec la même indentation, et une virgule finale puisque les réglages suivent.
+ */
+export function blocAInserer(infos: InfosDuServeurMcp): string {
+  return `${configurationDuClient(infos).split("\n").slice(1, -1).join("\n")},`
+}
+
+/** Le fichier de configuration de Claude Desktop sur un système. */
+export interface FichierDeClaudeDesktop {
+  /** Le chemin d'une installation classique de Claude Desktop. */
+  habituel: string
+  /**
+   * Sous Windows, le chemin quand Claude Desktop est lui-même installé en paquet (MSIX) : Windows range alors son
+   * dossier `%APPDATA%\Claude` dans le dossier du paquet, dont le nom finit par un identifiant de l'éditeur.
+   */
+  enPaquet?: string
+}
+
+/**
+ * Où se trouve le fichier de configuration de Claude Desktop ; `null` s'il n'existe pas officiellement sur ce système.
+ * Information secondaire : le moyen sûr, quel que soit le mode d'installation, est d'ouvrir le fichier depuis Claude
+ * Desktop (Paramètres > Développeur > Modifier la configuration).
+ */
+export function configurationDeClaudeDesktop(plateforme: string): FichierDeClaudeDesktop | null {
+  if (plateforme === "win32") {
+    return {
+      habituel: String.raw`%APPDATA%\Claude\claude_desktop_config.json`,
+      enPaquet: String.raw`%LOCALAPPDATA%\Packages\Claude_<identifiant>\LocalCache\Roaming\Claude\claude_desktop_config.json`
+    }
+  }
+  if (plateforme === "darwin") return { habituel: "~/Library/Application Support/Claude/claude_desktop_config.json" }
   return null
 }
 
