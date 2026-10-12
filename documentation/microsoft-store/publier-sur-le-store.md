@@ -57,77 +57,119 @@ Il reste à faire, par le propriétaire du compte : créer le compte développeu
 
 ## 2. Essayer le paquet avant la première soumission
 
-Le serveur MCP sous MSIX n'a pas encore été essayé sur un paquet installé ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md#à-vérifier)). L'essai demande d'installer le paquet non signé, donc le **mode développeur** de Windows (à désactiver ensuite).
+Le serveur MCP sous MSIX doit être essayé sur un paquet installé ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md#à-vérifier)). Le paquet n'est pas signé (c'est le Store qui le signe) ; pour l'essayer, on en signe une **copie** avec un certificat d'essai, au nom de l'éditeur du paquet, et on l'installe comme le Store le ferait. Marche à suivre vérifiée le 2026-10-12.
 
-1. **Construire le paquet** : GitHub > Actions > « Paquet du Microsoft Store » > **Run workflow** sur `main` (cocher « essai » si l'identité n'est pas encore remplie). Télécharger l'artefact `paquet-microsoft-store` (un zip qui contient le `.appx`). En local, sous Windows : `npm run dist:store` (ou `npm run dist:store -- --essai`), paquet dans `dist/`.
-2. **Activer le mode développeur** : Paramètres > Système > Espace développeurs (Pour les développeurs) > Mode développeur : activé.
-3. **Installer le paquet** depuis son contenu décompressé (PowerShell) :
+**Pourquoi pas le mode développeur ?** La méthode qui consiste à décompresser le `.appx` (`Expand-Archive`) puis à l'enregistrer avec `Add-AppxPackage -Register` ne convient pas :
+
+- dans un `.appx`, les noms de fichiers sont encodés comme des adresses web : `Expand-Archive` garde `app\Simulateur%20Ind%C3%A9pendant%20FR.exe`, alors que le manifeste attend `app\Simulateur Indépendant FR.exe`, et l'application ne démarre pas sans renommage ;
+- surtout, Electron ne met `process.windowsStore` à vrai que si l'exécutable se trouve sous `C:\Program Files\WindowsApps`. Un paquet enregistré depuis un autre dossier s'affiche comme la version classique : la fenêtre « Utiliser avec une IA (MCP) » n'a pas le paragraphe « Version du Microsoft Store », et la configuration pointe vers le dossier décompressé. L'essai ne vérifierait pas ce que verront les utilisateurs.
+
+Avec un paquet signé par un certificat approuvé, le mode développeur de Windows n'est pas nécessaire.
+
+1. **Construire le paquet** : GitHub > Actions > « Paquet du Microsoft Store » > **Run workflow** sur `main` (cocher « essai » si l'identité n'est pas encore remplie). Télécharger l'artefact `paquet-microsoft-store` (un zip qui contient le `.appx`), depuis la page de l'exécution ou en ligne de commande : `gh run download <id de l'exécution> -n paquet-microsoft-store -D "$HOME\Downloads\paquet-store"`. En local, sous Windows : `npm run dist:store` (ou `npm run dist:store -- --essai`), paquet dans `dist/`. Le paquet d'origine part tel quel dans Partner Center : n'essayer qu'une copie.
+2. **Préparer l'essai.**
+   - La démo web installée comme application avec Edge porte le même nom dans le menu Démarrer : la désinstaller (`edge://apps`) ou savoir la distinguer (son éditeur est « Microsoft Edge ») avant de commencer.
+   - Pour simuler un **nouvel utilisateur**, mettre de côté le dossier de données de la version classique, application et client d'IA fermés. Sur un poste qui a eu la version classique, les fichiers déjà présents dans `%APPDATA%\simulateur-independant-fr` sont modifiés sur place par le paquet, sans redirection ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md), décision) : l'essai ne testerait pas la redirection.
+
+     ```powershell
+     Rename-Item "$env:APPDATA\simulateur-independant-fr" "simulateur-independant-fr.classique"
+     ```
+
+     Si `%APPDATA%\electron-vite-template` existe (données d'avant la version 0.10), l'application y reprend la session au premier lancement (`src/backend/ancien-dossier-de-donnees.ts`) et affiche la fenêtre « Sauvegardes converties » : c'est normal.
+3. **Signer une copie du paquet** (PowerShell **administrateur**). Le sujet du certificat est le champ `publisher` de [`build/store/identite.json`](../../build/store/identite.json) (ici `CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825` ; à adapter si l'identité change) :
 
    ```powershell
-   $paquet = "$HOME\Downloads\Simulateur-Independant-FR-0.9.0-store-x64.appx"   # adapter le nom
-   $dossier = "$HOME\Downloads\essai-store"
-   Copy-Item $paquet "$env:TEMP\paquet-store.zip"
-   Expand-Archive "$env:TEMP\paquet-store.zip" $dossier -Force
-   Add-AppxPackage -Register "$dossier\AppxManifest.xml"
-   Get-AppxPackage *SimulateurInd*   # nom de famille du paquet (PackageFamilyName)
+   $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825" -KeyUsage DigitalSignature -FriendlyName "Essai paquet Simulateur" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+   $mdp = ConvertTo-SecureString "essai" -Force -AsPlainText
+   Export-PfxCertificate -Cert $cert -FilePath "$env:TEMP\essai-store.pfx" -Password $mdp
+   Export-Certificate -Cert $cert -FilePath "$env:TEMP\essai-store.cer"
+   Import-Certificate -FilePath "$env:TEMP\essai-store.cer" -CertStoreLocation Cert:\LocalMachine\TrustedPeople
    ```
 
-   Si `Add-AppxPackage` refuse le dossier à cause de `AppxBlockMap.xml` ou de `[Content_Types].xml` (fichiers propres au paquet compressé), supprimer ces deux fichiers du dossier et relancer la dernière commande.
+   Puis signer une copie (le nom du fichier est à adapter) :
 
-4. **Essayer l'application** : la lancer depuis le menu Démarrer (« Simulateur Indépendant FR »). La fenêtre s'ouvre, les résultats s'affichent, une simulation modifiée est retrouvée au lancement suivant, les exports (CSV, PDF) s'enregistrent là où on le demande.
-5. **Essayer le serveur MCP** :
-   - dans l'application : Paramètres > « Utiliser avec une IA (MCP) ». La configuration doit commencer par `…\AppData\Local\Microsoft\WindowsApps\simulateur-independant-fr.exe`, et la fenêtre doit afficher le paragraphe « Version du Microsoft Store » ;
-   - la commande de vérification (même fenêtre), dans PowerShell, doit écrire « Serveur MCP du simulateur … prêt » (Ctrl+C pour l'arrêter) ;
-   - la copie du serveur doit exister dans le dossier redirigé : `dir "$env:LOCALAPPDATA\Packages\<nom de famille du paquet>\LocalCache\Roaming\simulateur-independant-fr\mcp"` ;
-   - dans Claude Desktop : coller la configuration (voir [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md)), quitter complètement Claude Desktop et le relancer. Les outils du simulateur apparaissent ; demander « Décris ma simulation » (le serveur lit la session de l'application), puis une proposition d'ajout : la fenêtre « Proposition de votre IA » doit s'ouvrir dans l'application.
-   - En cas d'échec : journal de Claude Desktop `%APPDATA%\Claude\logs\mcp-server-simulateur-independant-fr.log`. Les solutions de repli sont décrites dans l'ADR 013.
-6. **Désinstaller et nettoyer** :
+   ```powershell
+   $paquet = "$HOME\Downloads\paquet-store\Simulateur-Independant-FR-0.11.0-store-x64.appx"
+   $copie = "$HOME\Downloads\paquet-store\essai-signe.appx"
+   Copy-Item $paquet $copie
+   signtool sign /fd SHA256 /f "$env:TEMP\essai-store.pfx" /p essai $copie
+   ```
+
+   Il faut un `signtool` **récent**. Celui du cache d'electron-builder (`%LOCALAPPDATA%\electron-builder\Cache\winCodeSign-2.6.0\…\windows-10\x64\signtool.exe`) est trop ancien : il répond « SignTool Error: A required function is not present ». Deux sources :
+   - le SDK Windows : `winget install Microsoft.WindowsSDK.10.0.26100` (déjà cité pour le Windows App Certification Kit, plus bas) ;
+   - ou le paquet NuGet officiel `Microsoft.Windows.SDK.BuildTools` (un zip d'environ 22 Mo) : télécharger `https://www.nuget.org/api/v2/package/Microsoft.Windows.SDK.BuildTools/10.0.26100.4188`, le renommer en `.zip` et le décompresser ; `signtool.exe` est dans `bin\10.0.26100.0\x64\`. Vérifier sa signature avec `Get-AuthenticodeSignature <chemin>\signtool.exe` : le signataire doit être Microsoft.
+4. **Installer la copie signée**, sans droits d'administrateur :
+
+   ```powershell
+   Add-AppxPackage $copie
+   Get-AppxPackage *SimulateurInd* | Select-Object InstallLocation, SignatureKind
+   ```
+
+   `InstallLocation` doit être sous `C:\Program Files\WindowsApps\` et `SignatureKind` valoir `Developer`.
+5. **Essayer l'application.** La lancer en tapant son nom (« Simulateur Indépendant FR ») dans la recherche du menu Démarrer : un raccourci épinglé à la barre des tâches ou une entrée récente peut continuer à lancer une ancienne copie d'essai. La fenêtre s'ouvre, les résultats s'affichent, une simulation modifiée est retrouvée au lancement suivant, les exports (CSV, PDF) s'enregistrent là où on le demande.
+
+   Avec le dossier de données mis de côté, les données du paquet sont dans `%LOCALAPPDATA%\Packages\<nom de famille du paquet>\LocalCache\Roaming\simulateur-independant-fr`, avec la copie du serveur dans `mcp\serveur-mcp.mjs`. Le vrai `%APPDATA%\simulateur-independant-fr` n'existe plus : si l'IA décrit une simulation, elle lit forcément le dossier redirigé, ce qui prouve que l'alias fonctionne.
+6. **Essayer le serveur MCP.**
+   - Dans l'application : Paramètres > « Utiliser avec une IA (MCP) ». La configuration doit commencer par `…\AppData\Local\Microsoft\WindowsApps\simulateur-independant-fr.exe`, et la fenêtre doit afficher le paragraphe « Version du Microsoft Store ».
+   - La commande de vérification (même fenêtre) doit écrire « Serveur MCP du simulateur 0.11.0 prêt ; données lues dans … » (Ctrl+C pour l'arrêter). La lancer dans une **nouvelle** fenêtre PowerShell, et fermer cette fenêtre ensuite : la variable `ELECTRON_RUN_AS_NODE` y reste active.
+   - **Claude Desktop** s'installe depuis https://claude.com/download. Il est lui-même un paquet MSIX : son fichier de configuration n'est **pas** dans `%APPDATA%\Claude` mais dans `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json` (de même, ses journaux sont dans le dossier `logs` voisin). Toujours l'ouvrir par Claude Desktop : Paramètres > Développeur > Modifier la configuration.
+   - Le fichier n'est jamais vide (il contient une rubrique `preferences`) : ajouter la rubrique `"mcpServers": { … },` (voir [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md)) juste après la première accolade, sans toucher au reste. Claude Desktop doit être **complètement quitté** pendant l'édition (clic droit sur son icône près de l'horloge > Quitter), sinon il peut réécrire le fichier en se fermant et l'ajout est perdu. Le relancer ensuite.
+   - Les serveurs MCP ne sont disponibles que dans l'onglet **Chat** de Claude Desktop, pas dans l'onglet Code. Vérifier leur présence dans le menu « + » sous la zone de saisie, ou dans Paramètres > Développeur.
+   - Demander « Décris ma simulation » (le serveur lit la session de l'application), modifier un montant dans l'application (il est vu à la question suivante), puis demander l'ajout d'une activité : la fenêtre « Proposition de votre IA » doit s'ouvrir dans l'application. Ces essais ont été concluants le 2026-10-12.
+   - En cas d'échec : journal `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\logs\mcp-server-simulateur-independant-fr.log`. Les solutions de repli sont décrites dans l'ADR 013.
+7. **Désinstaller et nettoyer** (PowerShell administrateur) :
 
    ```powershell
    Get-AppxPackage *SimulateurInd* | Remove-AppxPackage
-   Remove-Item -Recurse $dossier, "$env:TEMP\paquet-store.zip"
+   Rename-Item "$env:APPDATA\simulateur-independant-fr.classique" "simulateur-independant-fr"
+   Get-ChildItem Cert:\LocalMachine\TrustedPeople, Cert:\CurrentUser\My | Where-Object Subject -eq "CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825" | Remove-Item
+   Remove-Item "$env:TEMP\essai-store.pfx", "$env:TEMP\essai-store.cer", $copie -ErrorAction SilentlyContinue
    ```
 
-   puis désactiver le mode développeur. Retirer aussi l'entrée `simulateur-independant-fr` de la configuration de Claude Desktop si elle ne sert plus.
+   L'entrée du serveur dans Claude Desktop peut rester : la configuration est la même après l'installation depuis le Store.
 
 Facultatif : le **Windows App Certification Kit** (dans le SDK Windows : `winget install Microsoft.WindowsSDK.10.0.26100`, puis « Windows App Cert Kit ») fait en local les contrôles automatiques de la certification.
 
 ## 3. Première soumission
 
-Partner Center est en anglais : les noms des pages et des options sont cités tels qu'ils s'affichent (relevés le 2026-10-11). Dans **Apps and games** > l'application, le menu de gauche liste, sous **Submission 1**, les pages à remplir dans l'ordre ci-dessous. Chaque page s'enregistre à part (**Save** ou **Save draft**) : rien ne part avant **Submit for certification**. Toutes peuvent se remplir avant le paquet, sauf **Store listings**, qui attend le paquet (voir plus bas).
+Partner Center s'affiche en français ou en anglais, selon le compte et la page : les noms des options sont cités tels qu'ils s'affichent en anglais (relevés le 2026-10-11), et les pages du menu de gauche portent leur libellé français entre parenthèses. Dans **Apps and games** > l'application, le menu de gauche liste, sous **Submission 1**, les pages à remplir dans l'ordre ci-dessous. Chaque page s'enregistre à part (**Save** ou **Save draft**) : rien ne part avant **Submit for certification**. Toutes peuvent se remplir avant le paquet, sauf **Store listings**, qui attend le paquet (voir plus bas).
 
 1. **Construire le paquet à publier** : l'identité remplie et fusionnée dans `main`, lancer le workflow « Paquet du Microsoft Store » sur `main` (sans « essai »), ou pousser l'étiquette de la version (`vX.Y.Z`, voir [publication.md](../publication.md)) : le workflow se lance aussi sur les étiquettes. Télécharger l'artefact `paquet-microsoft-store` et le décompresser : `Simulateur-Independant-FR-X.Y.Z-store-x64.appx`.
 
-2. **Pricing and availability**
+2. **Pricing and availability** (Tarification et disponibilité)
    - **Markets** : *Restrict to specific markets*, puis *Show options* : **France** seulement (les règles simulées sont françaises ; d'autres marchés peuvent s'ajouter plus tard). Décocher *Make my product available in any future market…*, pour ne pas ouvrir l'application d'office à un nouveau marché.
    - **Visibility** : *Public audience*, et *Make this product available and discoverable in the Microsoft Store*.
    - **Schedule** : *Release* : *as soon as possible*, *Stop acquisition* : *never* (la date de publication se règle dans **Submission Options**, étape 8).
    - **Pricing** : *Market groups*, *EUR – France*, *Retail price* : **0** (gratuit). *Free trial*, *Sale pricing* et *Organizational licensing* : laisser par défaut.
 
-3. **Properties**
+3. **Properties** (Propriétés)
    - **Category and subcategory** : **Business**, sous-catégorie **Accounting & finance** (voir la [fiche](./fiche-du-store.md#catégorie)). Catégorie secondaire : aucune.
-   - **Privacy policy** : à la question *Does this product access, collect, or transmit personal information…?*, répondre **No** : tout reste sur l'ordinateur. Si Partner Center demande quand même une adresse, donner celle de la [fiche](./fiche-du-store.md#identité-de-la-fiche).
+   - **Privacy policy** : à la question *Does this product access, collect, or transmit personal information…?*, répondre **No** : tout reste sur l'ordinateur. Partner Center demande **quand même l'adresse de la politique de confidentialité** (application de bureau avec la capacité `runFullTrust`) : donner celle de la [fiche](./fiche-du-store.md#identité-de-la-fiche).
    - **Support info** : *Use my account details* affiche sur la fiche publique l'adresse, l'e-mail, le site et le **téléphone** du compte (obligation du règlement européen sur les services numériques pour un professionnel). Pour afficher d'autres coordonnées sur cette application seulement, choisir *Use different details for this app*.
    - **Display mode** : rien à cocher (réservé à la réalité mixte).
    - **Product declarations** : garder *Customers can install this product to alternate drives or removable storage* et *Windows can include this product's data in automatic backups to OneDrive* ; **décocher** *Customers can use Windows 10/11 features to record and broadcast clips…* (réservé aux jeux, Partner Center l'avertit). Ne pas cocher les achats hors Store, le stylet, ni l'IA générative (l'application ne génère aucun contenu ; le serveur MCP sert un assistant installé par l'utilisateur). *This product has been tested to meet accessibility guidelines* : facultatif ; les tests automatiques WCAG (axe, thèmes clair et sombre) le justifient, mais aucun essai n'a été fait avec les outils d'accessibilité de Windows (Accessibility Insights, Narrateur).
    - **System requirements** : cocher **Keyboard** et **Mouse** en *Minimum hardware* ; le reste *Not specified*.
 
-4. **Age ratings** : *I'm ready to complete the International Age Rating Coalition (IARC) questionnaire*. *App Type* : **All Other App Types**. *Will this product use ratings obtained directly from a ratings board…?* : **No**. Puis répondre aux questions (toutes **No**) avec les réponses de la [fiche](./fiche-du-store.md#classification-par-âge-questionnaire-iarc) (classification attendue 3+).
+4. **Age ratings** (Évaluation de l'âge) : *I'm ready to complete the International Age Rating Coalition (IARC) questionnaire*. *App Type* : **All Other App Types**. *Will this product use ratings obtained directly from a ratings board…?* : **No**. Puis répondre aux questions (toutes **No**) avec les réponses de la [fiche](./fiche-du-store.md#classification-par-âge-questionnaire-iarc) (classification attendue 3+).
 
 5. **Packages**
    - Déposer le `.appx` dans *Drag your packages here… or browse your files*. Partner Center lit l'identité dans le paquet et refuse un paquet dont l'identité ne correspond pas à la réservation (c'est le cas du paquet d'essai).
    - **Device family availability** : cocher **Windows 10/11 Desktop** seulement, et décocher *Let Microsoft decide whether to make this app available to any future device families*.
-   - Une fois le paquet déposé, la page avertit que la capacité restreinte **runFullTrust** demande une approbation : la justification se donne dans **Submission Options** (Options de soumission), avec le texte de la [fiche](./fiche-du-store.md#justification-de-la-capacité-runfulltrust).
+   - Après le dépôt, la page avertit : « The following restricted capabilities require approval before you can use them in your app: runFullTrust ». La justification ne se donne pas ici mais dans **Submission Options** (étape 8), rubrique *Restricted capabilities*, champ « Why do you need the runFullTrust capability, and how will it be used in your product? », limité à **500 caractères** : texte anglais court de la [fiche](./fiche-du-store.md#justification-de-la-capacité-runfulltrust).
 
-6. **Store listings** (*Manage Store listing languages*) : la langue de la fiche vient du paquet (`fr-FR`) et n'apparaît sous *Languages supported in packages* qu'**une fois le paquet déposé** (étape 5). Ouvrir alors **French (France)** et remplir description, description courte, nouveautés, fonctionnalités, mots-clés, captures (`captures/*.png`, avec leurs légendes), logo carré (`logos/icone-300x300.png`), copyright et conditions de licence supplémentaires : tout est dans [fiche-du-store.md](./fiche-du-store.md). Aucune langue supplémentaire (*Additional Store listing languages*).
+6. **Store listings** (Descriptions dans le Store ; *Manage Store listing languages*) : la langue de la fiche vient du paquet (`fr-FR`) et n'apparaît sous *Languages supported in packages* qu'**une fois le paquet déposé** (étape 5). Ouvrir alors **French (France)** et remplir description, description courte, fonctionnalités, mots-clés (voir la [fiche](./fiche-du-store.md#mots-clés)), captures (`captures/*.png`, avec leurs légendes), copyright et conditions de licence supplémentaires : tout est dans [fiche-du-store.md](./fiche-du-store.md). Aucune langue supplémentaire (*Additional Store listing languages*).
+   - Le champ « Nouveautés de cette version » reste **vide** pour la première soumission : Partner Center le précise lui-même.
+   - Les cases de logo 9:16 et 1:1 du haut de la page ne servent qu'à la Xbox : les laisser vides. Seule l'« Icône de vignette d'application 1:1 300 × 300 » sert : `logos/icone-300x300.png`. Les icônes 150 × 150 et 71 × 71 restent vides (ce sont les images du paquet).
 
-7. **Additional Testing Information** (Informations supplémentaires sur les tests, dernière entrée du menu de gauche) : coller tout le bloc des [notes pour la certification](./fiche-du-store.md#notes-pour-la-certification). La page **Submission Options** y renvoie (*Notes for certification*).
+7. **Additional Testing Information** (Informations supplémentaires sur les tests ; menu de gauche, *Supplemental info*) : un seul champ de texte libre, *Notes for Certification* : y coller tout le bloc des [notes pour la certification](./fiche-du-store.md#notes-pour-la-certification). Rien dans *Credentials* (l'application n'a pas de compte). La page **Submission Options** y renvoie.
 
-8. **Submission Options** > **Publishing hold options** : choisir **Don't publish this submission until I select Publish now**, pour garder la main sur la date de publication.
+8. **Submission Options** (Options de soumission) :
+   - **Publishing hold options** : choisir **Don't publish this submission until I select Publish now**, pour garder la main sur la date de publication.
+   - **Restricted capabilities** : coller la justification de `runFullTrust` (texte anglais court de la [fiche](./fiche-du-store.md#justification-de-la-capacité-runfulltrust), 500 caractères au plus).
 
-9. **Submit for certification** (sur la page de la soumission, une fois toutes les pages complètes). Compter quelques heures à trois jours ouvrés. En cas de refus, le rapport de certification dit quoi corriger ; corriger, reconstruire si besoin (même version : le Store accepte un nouveau paquet tant que la soumission n'est pas publiée), et resoumettre.
+9. **Submit for certification** (sur la page de la soumission, une fois toutes les pages complètes). Compter quelques heures à trois jours ouvrés. La page de l'application montre alors l'avancement : Submission, Pre-processing, Certification, Publishing. Ne pas cliquer sur **Cancel certification**. En cas de refus, le rapport de certification dit quoi corriger ; corriger, reconstruire si besoin (même version : le Store accepte un nouveau paquet tant que la soumission n'est pas publiée), et resoumettre.
 
-10. Une fois certifiée : **Publish now** sur la page d'état de la certification. La fiche est en ligne sous `https://apps.microsoft.com/detail/<ID Store>`, en général dans l'heure. L'**ID Store** (12 caractères, `9N…`) s'affiche dans **Product management** > **Product Identity**.
+10. Une fois certifiée (le publishing hold est pris en compte : la page indique « Your product will start publishing when you click on Publish now »), cliquer sur **Publish now** sur la page d'état de la certification. La fiche est en ligne sous `https://apps.microsoft.com/detail/<ID Store>`, en général dans l'heure. L'**ID Store** (12 caractères, `9N…`) s'affiche dans **Product management** > **Product Identity** (Identité du produit).
 
 11. Ensuite, dans le dépôt : ajouter le lien du Store au README, à [installation.md](../installation.md) (le Store comme moyen recommandé sous Windows) et à la démo web : dans `src/web/ApplicationDeBureau.tsx`, remplacer « Bientôt sur le Microsoft Store » par un lien vers la fiche, en premier sous Windows (il sert à l'aide à l'installation, à la fenêtre « Utiliser avec une IA (MCP) » et à la ligne MCP de la version web installée, qui renvoient aujourd'hui vers l'exécutable GitHub, bloqué par Smart App Control) ; mentionner la version du Store dans [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md) si l'essai de l'étape 2 a demandé des ajustements. Ajouter aussi le lien à la fiche du projet du site becherini-web.
 
