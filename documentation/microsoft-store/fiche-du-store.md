@@ -16,7 +16,7 @@ Textes et réponses à recopier dans Partner Center pour la soumission de l'appl
 | Contact du support | simulateur-independant@damien.becherini.fr |
 | URL de la politique de confidentialité | https://github.com/DamienBecherini/simulateur-independant-fr/blob/main/documentation/mentions-legales.md |
 
-**Politique de confidentialité.** Obligatoire pour une application de bureau empaquetée (politique 10.5.1 du Store). L'URL retenue est celle des mentions légales du dépôt, sur la branche `main` : publique, lisible sans JavaScript, et tenue à jour avec le texte de l'application (`npm run mentions-legales`). La page des mentions légales de la démo web (`…/simulateur-independant-fr/#mentions-legales`) dit la même chose, mais dépend de l'adresse interne de la démo. Si le fichier change de nom un jour, mettre à jour l'URL dans Partner Center (cela ne demande pas de nouveau paquet).
+**Politique de confidentialité.** Obligatoire pour une application de bureau empaquetée (politique 10.5.1 du Store). L'URL retenue est celle des mentions légales du dépôt, sur la branche `main` : publique, lisible sans JavaScript, et tenue à jour avec le texte de l'application (`npm run mentions-legales`). La page des mentions légales de la démo web (`…/simulateur-independant-fr/#mentions-legales`) dit la même chose, mais dépend de l'adresse interne de la démo. Partner Center la demande même quand la réponse à la question sur les informations personnelles est « No » (application de bureau avec la capacité `runFullTrust`, relevé le 2026-10-12). Si le fichier change de nom un jour, mettre à jour l'URL dans Partner Center (cela ne demande pas de nouveau paquet).
 
 ## Description courte
 
@@ -126,13 +126,13 @@ Classification attendue : **3+ (PEGI 3, ESRB Everyone)**.
 
 ## Justification de la capacité `runFullTrust`
 
-À coller dans le champ « Pourquoi avez-vous besoin de la capacité runFullTrust ? » (page **Packages** de la soumission, ou **Properties**) :
+Après le dépôt du paquet, la page **Packages** avertit que la capacité restreinte `runFullTrust` doit être approuvée. La justification se donne dans **Submission Options** (Options de soumission), rubrique « Restricted capabilities », champ « Why do you need the runFullTrust capability, and how will it be used in your product? ». Ce champ est limité à **500 caractères** (relevé le 2026-10-12) : la version longue précédente était coupée. **À coller : la version anglaise courte ci-dessous** (395 caractères) :
+
+> Win32 desktop app (Electron) packaged as MSIX (Desktop Bridge): runFullTrust is required for this kind of app. It only reads and writes its own data folder and files the user picks (import, exports). An execution alias lets a desktop AI assistant installed by the user start its local MCP server over standard input/output, with no network access. No service, no driver, no administrator rights.
+
+Version française, pour mémoire (ne pas la coller : elle dépasse 500 caractères) :
 
 > Simulateur Indépendant FR est une application de bureau Win32 (Electron) empaquetée en MSIX (Desktop Bridge) : runFullTrust est la capacité requise pour toute application de ce type. L'application lit et écrit ses données dans son dossier de données utilisateur et dans les fichiers que l'utilisateur choisit (import, export CSV, PDF, Markdown). Elle déclare un alias d'exécution (simulateur-independant-fr.exe) pour qu'un assistant d'IA de bureau installé par l'utilisateur puisse lancer son serveur MCP local, sur l'entrée et la sortie standard, sans réseau. Elle n'installe aucun service ni pilote et ne demande pas de droits d'administrateur.
-
-En anglais, si le formulaire le demande :
-
-> Simulateur Indépendant FR is a Win32 desktop application (Electron) packaged as MSIX (Desktop Bridge); runFullTrust is required for this kind of application. It reads and writes its data in the user's data folder and in files the user picks (import, CSV/PDF/Markdown exports). It declares an execution alias (simulateur-independant-fr.exe) so that a desktop AI assistant installed by the user can start its local MCP server over standard input/output, without any network access. It installs no service or driver and does not require administrator rights.
 
 ## Notes pour la certification
 
