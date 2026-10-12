@@ -54,7 +54,7 @@ Windows range les fichiers que crée cette version dans `%LOCALAPPDATA%\Packages
 
 ### Avec Claude Desktop (Windows, macOS)
 
-1. **Ouvrez le fichier depuis Claude Desktop** : **Paramètres** > **Développeur** > **Modifier la configuration** (en anglais : *Settings* > *Developer* > *Edit Config*). Claude Desktop montre le fichier `claude_desktop_config.json` ; ouvrez-le avec un éditeur de texte. C'est le moyen sûr, quel que soit le mode d'installation de Claude Desktop (voir [Où est le fichier](#où-est-le-fichier-de-claude-desktop)).
+1. **Ouvrez le fichier depuis Claude Desktop** : **Paramètres** > **Développeur** > **Modifier la configuration** (en anglais : *Settings* > *Developer* > *Edit Config*). Claude Desktop affiche le fichier `claude_desktop_config.json` dans l'explorateur de fichiers, sans l'ouvrir : ouvrez-le avec un éditeur de texte, par exemple le Bloc-notes sous Windows (clic droit > **Ouvrir avec**). C'est le moyen sûr, quel que soit le mode d'installation de Claude Desktop (voir [Où est le fichier](#où-est-le-fichier-de-claude-desktop)).
 2. **Quittez complètement Claude Desktop** avant d'enregistrer : sous Windows, clic droit sur son icône près de l'horloge (zone de notification) > **Quitter** ; sous macOS, **Quitter** dans le menu Claude. Fermer la fenêtre ne suffit pas : Claude Desktop peut réécrire le fichier en se fermant, et votre ajout serait perdu.
 3. **Ajoutez le serveur au fichier.** Il n'est presque jamais vide : Claude Desktop y range déjà ses réglages (`"preferences": {…}`…), le plus souvent sans rubrique `mcpServers`.
    - **Le fichier n'a pas de rubrique `mcpServers`** (cas le plus courant) : copiez le bloc avec **Copier le bloc à insérer (fichier existant)** et collez-le **juste après la toute première accolade `{`** du fichier, sans toucher au reste. Le bloc se termine par une virgule, puisque les réglages existants le suivent :
@@ -80,7 +80,7 @@ Claude Desktop n'existe pas officiellement sous Linux.
 Le menu **Modifier la configuration** l'ouvre toujours au bon endroit. Pour information :
 
 - Windows, installation classique : `%APPDATA%\Claude\claude_desktop_config.json` ;
-- Windows, Claude Desktop installé en **paquet** (MSIX), comme ses versions récentes : Windows range son dossier dans celui du paquet, `%LOCALAPPDATA%\Packages\Claude_<identifiant>\LocalCache\Roaming\Claude\claude_desktop_config.json`, et le chemin précédent n'existe pas ou n'est pas lu ;
+- Windows, Claude Desktop installé en **paquet** (MSIX) : Windows range son dossier dans celui du paquet, `%LOCALAPPDATA%\Packages\Claude_<identifiant>\LocalCache\Roaming\Claude\claude_desktop_config.json`, et le chemin précédent n'existe pas ou n'est pas lu ;
 - macOS : `~/Library/Application Support/Claude/claude_desktop_config.json`.
 
 Source : [Connect to local MCP servers](https://modelcontextprotocol.io/docs/develop/connect-local-servers) (documentation officielle de MCP).
