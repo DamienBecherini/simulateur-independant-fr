@@ -88,7 +88,7 @@ test("l'aide « Utiliser avec une IA » tient dans la largeur de la fenêtre, sa
   await page.getByRole("button", { name: "Paramètres" }).click()
   await page.getByRole("button", { name: /Utiliser avec une IA/ }).click()
   const fenetre = page.getByRole("dialog", { name: /Utiliser avec une IA/ })
-  await expect(fenetre.getByRole("button", { name: "Copier la configuration" })).toBeVisible()
+  await expect(fenetre.getByRole("button", { name: "Copier le bloc à insérer (fichier existant)" })).toBeVisible()
   // Les chemins de la configuration, très longs, passent à la ligne : ni la fenêtre ni ses blocs ne défilent en largeur.
   const debordements = await fenetre.evaluate(dialogue => [dialogue, ...Array.from(dialogue.querySelectorAll("pre"))].filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.tagName))
   expect(debordements).toEqual([])

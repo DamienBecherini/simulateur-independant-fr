@@ -33,14 +33,32 @@ describe("Utiliser avec une IA (MCP)", () => {
     await user.click(await screen.findByRole("button", { name: "Utiliser avec une IA (MCP)" }))
     const fenetre = screen.getByRole("dialog", { name: "Utiliser avec une IA (MCP)" })
     expect(within(fenetre).getByRole("note")).toHaveTextContent(/part chez le fournisseur de l'IA choisie.*IA locale/)
-    expect(within(fenetre).getByText("%APPDATA%\\Claude\\claude_desktop_config.json")).toBeInTheDocument()
-
     const configuration = JSON.parse(within(fenetre).getByLabelText("Configuration à copier").textContent!)
     expect(configuration).toEqual({ mcpServers: { "simulateur-independant-fr": { command: infos.executable, args: [infos.script, "--donnees", infos.donnees], env: { ELECTRON_RUN_AS_NODE: "1" } } } })
 
-    await user.click(within(fenetre).getByRole("button", { name: "Copier la configuration" }))
-    expect(ecrire).toHaveBeenCalledWith(JSON.stringify(configuration, null, 2))
+    // Le cas courant : le fichier a déjà des réglages, le bloc se colle après sa première accolade.
+    await user.click(within(fenetre).getByRole("button", { name: "Copier le bloc à insérer (fichier existant)" }))
+    expect(ecrire).toHaveBeenLastCalledWith(`${JSON.stringify(configuration, null, 2).split("\n").slice(1, -1).join("\n")},`)
+    expect(within(fenetre).getByRole("status")).toHaveTextContent("Bloc copié : collez-le juste après la première accolade")
+
+    await user.click(within(fenetre).getByRole("button", { name: "Copier la configuration complète (fichier vide)" }))
+    expect(ecrire).toHaveBeenLastCalledWith(JSON.stringify(configuration, null, 2))
     expect(within(fenetre).getByRole("status")).toHaveTextContent("Configuration copiée")
+  })
+
+  it("fait ouvrir le fichier de Claude Desktop par son menu, quitter Claude Desktop avant d'enregistrer, et utiliser l'onglet Chat", async () => {
+    vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue(infos)
+    const user = userEvent.setup({ delay: null })
+    render(<BoutonUtiliserAvecUneIA />)
+    await user.click(await screen.findByRole("button", { name: "Utiliser avec une IA (MCP)" }))
+    const fenetre = screen.getByRole("dialog")
+    expect(within(fenetre).getByText(/« Modifier la configuration »/)).toHaveTextContent("Edit Config")
+    expect(within(fenetre).getByText(/Quittez complètement Claude Desktop/)).toHaveTextContent("clic droit sur son icône près de l'horloge")
+    expect(within(fenetre).getByText(/juste après la toute première accolade/)).toHaveTextContent("rubrique « mcpServers »")
+    expect(within(fenetre).getByText(/onglet Chat/)).toHaveTextContent("menu « + »")
+    // Les chemins, en information secondaire : l'installation classique et celle en paquet.
+    expect(within(fenetre).getByText("%APPDATA%\\Claude\\claude_desktop_config.json")).toBeInTheDocument()
+    expect(within(fenetre).getByText("%LOCALAPPDATA%\\Packages\\Claude_<identifiant>\\LocalCache\\Roaming\\Claude\\claude_desktop_config.json")).toBeInTheDocument()
   })
 
   it("explique l'alias d'exécution de la version du Microsoft Store, et seulement pour elle", async () => {
@@ -69,7 +87,8 @@ describe("Utiliser avec une IA (MCP)", () => {
     const fenetre = screen.getByRole("dialog")
     expect(within(fenetre).getByText(/Claude Desktop n'existe pas officiellement sur ce système/)).toBeInTheDocument()
     expect(within(fenetre).getByLabelText("Commande de vérification")).toHaveTextContent('ELECTRON_RUN_AS_NODE=1 "/opt/Simulateur/simulateur" "/opt/Simulateur/resources/mcp/serveur-mcp.mjs" --donnees "/home/camille/.config/Simulateur"')
-    await user.click(within(fenetre).getByRole("button", { name: "Copier la configuration" }))
+    expect(within(fenetre).queryByText(/Quittez complètement Claude Desktop/)).not.toBeInTheDocument()
+    await user.click(within(fenetre).getByRole("button", { name: "Copier la configuration complète (fichier vide)" }))
     expect(within(fenetre).getByRole("status")).toHaveTextContent("La copie a échoué")
   })
 

@@ -10,7 +10,7 @@ import { Bot, Copy } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { usePlateforme } from "../plateforme"
-import { ALIAS_D_EXECUTION, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, type InfosDuServeurMcp } from "@/lib/configuration-mcp"
+import { ALIAS_D_EXECUTION, blocAInserer, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, type InfosDuServeurMcp } from "@/lib/configuration-mcp"
 
 export const TITRE_IA = "Utiliser avec une IA (MCP)"
 
@@ -22,16 +22,48 @@ const TITRE_DE_PARTIE = "text-sm font-semibold text-slate-800 dark:text-slate-10
 /** Ce que permet le serveur MCP, en deux phrases : dans l'application de bureau et dans la démo web. */
 export const CE_QUE_PERMET_L_IA = "Un client d'IA de bureau (Claude Desktop, LM Studio…) peut se servir du simulateur comme d'un outil : lire votre simulation, la calculer, comparer les statuts, et proposer des ajouts tirés de vos factures ou relevés. Les chiffres viennent toujours du simulateur."
 
+const CHEMIN = "[overflow-wrap:anywhere]"
+
+/**
+ * Les étapes de Claude Desktop. Son fichier de configuration n'est jamais vide (`"preferences"`…) : le cas courant est
+ * d'y insérer un bloc après la première accolade. Le fichier s'ouvre par son menu, car son chemin dépend du mode
+ * d'installation (paquet MSIX sous Windows) ; il faut quitter Claude Desktop avant d'enregistrer, sinon il peut
+ * réécrire le fichier en se fermant ; ses serveurs MCP ne servent que dans l'onglet Chat.
+ */
+function EtapesDeClaudeDesktop({ plateforme }: { plateforme: string }) {
+  const fichier = configurationDeClaudeDesktop(plateforme)
+  if (!fichier) return <p>Claude Desktop n'existe pas officiellement sur ce système : utilisez un autre client d'IA.</p>
+  const quitter = plateforme === "darwin" ? "menu Claude, puis « Quitter »" : "clic droit sur son icône près de l'horloge, puis « Quitter »"
+  return (
+    <>
+      <ol className="list-decimal space-y-1 pl-5">
+        <li>Dans Claude Desktop, ouvrez Paramètres, puis Développeur, puis « Modifier la configuration » (en anglais : Settings, Developer, « Edit Config ») : il montre le fichier claude_desktop_config.json. Ouvrez-le avec un éditeur de texte.</li>
+        <li>Quittez complètement Claude Desktop ({quitter}) : fermer sa fenêtre ne suffit pas, il pourrait réécrire le fichier en se fermant et votre ajout serait perdu.</li>
+        <li>Le fichier contient déjà des réglages (« preferences »…) : copiez le bloc à insérer et collez-le juste après la toute première accolade {"« { »"} du fichier, sans rien toucher d'autre. S'il contient déjà une rubrique « mcpServers », ajoutez-y seulement l'entrée « simulateur-independant-fr » de la configuration ci-dessous, suivie d'une virgule si une autre entrée vient après. Si le fichier est vide, collez la configuration complète.</li>
+        <li>Enregistrez le fichier et relancez Claude Desktop. Les outils du simulateur s'utilisent dans l'onglet Chat (pas dans l'onglet Code) : ils apparaissent dans le menu « + » sous la zone de saisie, et dans Paramètres, Développeur, avec leur état.</li>
+      </ol>
+      <p className={PETIT_TEXTE}>
+        Chemin habituel du fichier : <code className={CHEMIN}>{fichier.habituel}</code>.
+        {fichier.enPaquet && (
+          <>
+            {" "}
+            Si Claude Desktop est installé en paquet, comme ses versions récentes pour Windows, il est dans <code className={CHEMIN}>{fichier.enPaquet}</code>.
+          </>
+        )}
+      </p>
+    </>
+  )
+}
+
 /** Le contenu de la fenêtre, une fois les chemins de l'installation connus. */
 export function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
   const [etat, setEtat] = useState("")
   const configuration = configurationDuClient(infos)
-  const fichierDeClaude = configurationDeClaudeDesktop(infos.plateforme)
 
-  const copier = async () => {
+  const copier = async (texte: string, copie: string) => {
     try {
-      await navigator.clipboard.writeText(configuration)
-      setEtat("Configuration copiée : collez-la dans le fichier de configuration de votre client d'IA.")
+      await navigator.clipboard.writeText(texte)
+      setEtat(copie)
     } catch {
       setEtat("La copie a échoué : sélectionnez le texte de la configuration pour le copier.")
     }
@@ -50,11 +82,7 @@ export function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
         <h3 id="ia-claude" className={TITRE_DE_PARTIE}>
           Avec Claude Desktop
         </h3>
-        <ol className="list-decimal space-y-1 pl-5">
-          <li>Dans Claude Desktop, ouvrez Paramètres, puis Développeur, puis « Modifier la configuration ».{fichierDeClaude ? <> Le fichier est <code className="[overflow-wrap:anywhere]">{fichierDeClaude}</code>.</> : " Claude Desktop n'existe pas officiellement sur ce système : utilisez un autre client d'IA."}</li>
-          <li>Collez-y la configuration ci-dessous. S'il contient déjà une rubrique « mcpServers », ajoutez-y seulement l'entrée « simulateur-independant-fr ».</li>
-          <li>Quittez complètement Claude Desktop et relancez-le : les outils du simulateur apparaissent dans ses connecteurs.</li>
-        </ol>
+        <EtapesDeClaudeDesktop plateforme={infos.plateforme} />
       </section>
 
       <section aria-labelledby="ia-configuration" className="space-y-2">
@@ -64,9 +92,14 @@ export function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
         <pre className={CODE} tabIndex={0} aria-label="Configuration à copier">
           {configuration}
         </pre>
-        <Button type="button" variant="outline" size="sm" className="min-h-9" onClick={copier}>
-          <Copy className="mr-2 size-4" aria-hidden="true" /> Copier la configuration
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" className="h-auto min-h-9 whitespace-normal" onClick={() => copier(blocAInserer(infos), "Bloc copié : collez-le juste après la première accolade « { » du fichier, sans rien toucher d'autre.")}>
+            <Copy className="mr-2 size-4" aria-hidden="true" /> Copier le bloc à insérer (fichier existant)
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="h-auto min-h-9 whitespace-normal" onClick={() => copier(configuration, "Configuration copiée : collez-la dans le fichier vide.")}>
+            <Copy className="mr-2 size-4" aria-hidden="true" /> Copier la configuration complète (fichier vide)
+          </Button>
+        </div>
         <p role="status" className={PETIT_TEXTE}>
           {etat}
         </p>
@@ -83,7 +116,7 @@ export function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
           Avec un autre client d'IA
         </h3>
         <p>
-          La même configuration convient aux clients qui lisent la notation « mcpServers » : dans LM Studio (version 0.3.17 ou plus récente), onglet Program, puis Install, puis « Edit mcp.json ». Sinon, indiquez au client la commande, ses arguments et la variable d'environnement de la configuration.
+          La même configuration convient aux clients qui lisent la notation « mcpServers » : dans LM Studio (version 0.3.17 ou plus récente), onglet Program, puis Install, puis « Edit mcp.json » ; comme pour Claude Desktop, ajoutez l'entrée « simulateur-independant-fr » si le fichier a déjà une rubrique « mcpServers ». Sinon, indiquez au client la commande, ses arguments et la variable d'environnement de la configuration.
         </p>
         <p className={PETIT_TEXTE}>Pour vérifier que le serveur démarre, dans un terminal (il attend ensuite les messages du client ; Ctrl+C pour l'arrêter) :</p>
         <pre className={CODE} tabIndex={0} aria-label="Commande de vérification">

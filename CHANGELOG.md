@@ -6,6 +6,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Modifié
+
+- **Connexion à Claude Desktop guidée pas à pas.** Le fichier de configuration de Claude Desktop contient déjà des réglages : la fenêtre « Utiliser avec une IA (MCP) » donne à copier le bloc à coller juste après sa première accolade (« Copier le bloc à insérer (fichier existant) »), à côté de la configuration complète pour un fichier vide, et dit quoi faire si une rubrique « mcpServers » existe déjà. Elle fait ouvrir le fichier par le menu de Claude Desktop (Paramètres > Développeur > Modifier la configuration), car son chemin change quand Claude Desktop est installé en paquet sous Windows, demande de quitter complètement Claude Desktop avant d'enregistrer, sans quoi il peut effacer l'ajout en se fermant, et rappelle que les outils du simulateur s'utilisent dans l'onglet Chat, pas dans l'onglet Code. Le guide d'utilisation avec une IA reprend ces consignes, avec les chemins du fichier et des journaux selon l'installation de Claude Desktop.
+
 ## [0.11.0] — 2026-10-11
 
 ### Ajouté
