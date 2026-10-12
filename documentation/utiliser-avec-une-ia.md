@@ -19,7 +19,7 @@ Les chiffres viennent toujours du moteur du simulateur, jamais de l'IA. Aucun ou
 
 Le serveur se lance avec l'exécutable de l'application, en mode Node (variable d'environnement `ELECTRON_RUN_AS_NODE=1`) : **rien d'autre à installer**, pas même Node.js.
 
-La configuration se copie depuis l'application : **Paramètres** (icône en haut à gauche) > **Utiliser avec une IA (MCP)** > **Copier la configuration**. Elle contient les chemins réels de votre installation. Elle a cette forme (exemple sous Windows ; les chemins dépendent du dossier d'installation choisi) :
+La configuration se copie depuis l'application : **Paramètres** (icône en haut à gauche) > **Utiliser avec une IA (MCP)**, avec l'un des deux boutons : **Copier le bloc à insérer (fichier existant)**, le cas courant, ou **Copier la configuration complète (fichier vide)**. Elle contient les chemins réels de votre installation. La configuration complète a cette forme (exemple sous Windows ; les chemins dépendent du dossier d'installation choisi) :
 
 ```json
 {
@@ -54,19 +54,40 @@ Windows range les fichiers que crée cette version dans `%LOCALAPPDATA%\Packages
 
 ### Avec Claude Desktop (Windows, macOS)
 
-1. Dans Claude Desktop, ouvrez **Paramètres**, onglet **Développeur**, puis **Modifier la configuration**. Le fichier est :
-   - Windows : `%APPDATA%\Claude\claude_desktop_config.json`
-   - macOS : `~/Library/Application Support/Claude/claude_desktop_config.json`
-2. Collez la configuration copiée. Si le fichier contient déjà une rubrique `mcpServers`, ajoutez-y seulement l'entrée `simulateur-independant-fr`.
-3. Quittez complètement Claude Desktop (icône de la zone de notification ou menu), puis relancez-le. Les outils du simulateur apparaissent dans les connecteurs, sous le champ de saisie.
+1. **Ouvrez le fichier depuis Claude Desktop** : **Paramètres** > **Développeur** > **Modifier la configuration** (en anglais : *Settings* > *Developer* > *Edit Config*). Claude Desktop montre le fichier `claude_desktop_config.json` ; ouvrez-le avec un éditeur de texte. C'est le moyen sûr, quel que soit le mode d'installation de Claude Desktop (voir [Où est le fichier](#où-est-le-fichier-de-claude-desktop)).
+2. **Quittez complètement Claude Desktop** avant d'enregistrer : sous Windows, clic droit sur son icône près de l'horloge (zone de notification) > **Quitter** ; sous macOS, **Quitter** dans le menu Claude. Fermer la fenêtre ne suffit pas : Claude Desktop peut réécrire le fichier en se fermant, et votre ajout serait perdu.
+3. **Ajoutez le serveur au fichier.** Il n'est presque jamais vide : Claude Desktop y range déjà ses réglages (`"preferences": {…}`…), le plus souvent sans rubrique `mcpServers`.
+   - **Le fichier n'a pas de rubrique `mcpServers`** (cas le plus courant) : copiez le bloc avec **Copier le bloc à insérer (fichier existant)** et collez-le **juste après la toute première accolade `{`** du fichier, sans toucher au reste. Le bloc se termine par une virgule, puisque les réglages existants le suivent :
+
+     ```text
+     {
+       "mcpServers": {
+         "simulateur-independant-fr": { …l'entrée copiée… }
+       },
+       "preferences": { …réglages existants, inchangés… }
+     }
+     ```
+
+   - **Le fichier a déjà une rubrique `mcpServers`** (un autre serveur MCP) : ajoutez-y seulement l'entrée `"simulateur-independant-fr": {…}`, telle qu'elle figure dans la configuration affichée par l'application, juste après `"mcpServers": {`, suivie d'une virgule puisqu'une autre entrée vient après.
+   - **Le fichier est vide** : collez la configuration complète (**Copier la configuration complète (fichier vide)**).
+4. **Enregistrez le fichier, puis relancez Claude Desktop.**
+5. **Utilisez l'onglet Chat.** Les serveurs MCP de ce fichier ne servent que dans l'onglet **Chat** de Claude Desktop, pas dans l'onglet **Code** (Claude Code). Les outils du simulateur apparaissent dans le menu **+** sous la zone de saisie, et dans **Paramètres** > **Développeur**, avec leur état.
 
 Claude Desktop n'existe pas officiellement sous Linux.
+
+#### Où est le fichier de Claude Desktop
+
+Le menu **Modifier la configuration** l'ouvre toujours au bon endroit. Pour information :
+
+- Windows, installation classique : `%APPDATA%\Claude\claude_desktop_config.json` ;
+- Windows, Claude Desktop installé en **paquet** (MSIX), comme ses versions récentes : Windows range son dossier dans celui du paquet, `%LOCALAPPDATA%\Packages\Claude_<identifiant>\LocalCache\Roaming\Claude\claude_desktop_config.json`, et le chemin précédent n'existe pas ou n'est pas lu ;
+- macOS : `~/Library/Application Support/Claude/claude_desktop_config.json`.
 
 Source : [Connect to local MCP servers](https://modelcontextprotocol.io/docs/develop/connect-local-servers) (documentation officielle de MCP).
 
 ### Avec LM Studio (IA locale)
 
-Depuis la version 0.3.17, LM Studio est un client MCP. Dans l'onglet **Program**, choisissez **Install** > **Edit mcp.json**, et collez la même configuration (LM Studio suit la notation `mcpServers` de Cursor : `command`, `args`, `env`). Choisissez ensuite un modèle qui sait appeler des outils.
+Depuis la version 0.3.17, LM Studio est un client MCP. Dans l'onglet **Program**, choisissez **Install** > **Edit mcp.json**, et collez la configuration complète, ou, si le fichier a déjà une rubrique `mcpServers`, ajoutez-y seulement l'entrée `simulateur-independant-fr` (LM Studio suit la notation `mcpServers` de Cursor : `command`, `args`, `env`). Choisissez ensuite un modèle qui sait appeler des outils.
 
 Source : [LM Studio, MCP](https://lmstudio.ai/docs/app/mcp). La documentation de LM Studio ne montre qu'un exemple de serveur distant ; la notation d'un serveur local (`command`, `args`, `env`) est celle de Cursor, qu'elle cite.
 
@@ -108,7 +129,11 @@ L'application enregistre la simulation **environ une seconde après chaque modif
 
 ## Dépannage
 
-- **Les outils n'apparaissent pas** : vérifiez que le fichier de configuration est du JSON valide, que les chemins sont absolus et existent, puis quittez complètement le client d'IA et relancez-le. Claude Desktop écrit les messages du serveur dans `mcp-server-simulateur-independant-fr.log` (Windows : `%APPDATA%\Claude\logs`, macOS : `~/Library/Logs/Claude`).
+- **Les outils n'apparaissent pas** : vérifiez que vous êtes dans l'onglet **Chat** de Claude Desktop (pas l'onglet Code), que le fichier de configuration est du JSON valide (une virgule oubliée ou en trop après le bloc inséré suffit à le rendre illisible), que votre ajout y est toujours (s'il a disparu, Claude Desktop tournait encore à l'enregistrement : quittez-le complètement et recommencez), et que les chemins sont absolus et existent ; puis quittez complètement le client d'IA et relancez-le. **Paramètres** > **Développeur** montre l'état du serveur dans Claude Desktop.
+- **Journaux de Claude Desktop** : il écrit les messages du serveur dans `mcp-server-simulateur-independant-fr.log`, dans son dossier `logs` :
+  - Windows, installation classique : `%APPDATA%\Claude\logs` ;
+  - Windows, Claude Desktop installé en paquet : `%LOCALAPPDATA%\Packages\Claude_<identifiant>\LocalCache\Roaming\Claude\logs` ;
+  - macOS : `~/Library/Logs/Claude`.
 - **Lancer le serveur à la main** (la commande exacte est dans la fenêtre « Utiliser avec une IA (MCP) ») : il écrit « Serveur MCP du simulateur … prêt » sur la sortie d'erreur, puis attend les messages du client (Ctrl+C pour l'arrêter).
 
   ```powershell
