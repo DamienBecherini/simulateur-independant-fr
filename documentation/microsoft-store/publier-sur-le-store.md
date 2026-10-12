@@ -117,11 +117,11 @@ Partner Center est en anglais : les noms des pages et des options sont cités te
 5. **Packages**
    - Déposer le `.appx` dans *Drag your packages here… or browse your files*. Partner Center lit l'identité dans le paquet et refuse un paquet dont l'identité ne correspond pas à la réservation (c'est le cas du paquet d'essai).
    - **Device family availability** : cocher **Windows 10/11 Desktop** seulement, et décocher *Let Microsoft decide whether to make this app available to any future device families*.
-   - Partner Center demande la justification de la capacité restreinte **runFullTrust** (ici ou dans **Properties**) : texte anglais de la [fiche](./fiche-du-store.md#justification-de-la-capacité-runfulltrust).
+   - Une fois le paquet déposé, la page avertit que la capacité restreinte **runFullTrust** demande une approbation : la justification se donne dans **Submission Options** (Options de soumission), avec le texte de la [fiche](./fiche-du-store.md#justification-de-la-capacité-runfulltrust).
 
 6. **Store listings** (*Manage Store listing languages*) : la langue de la fiche vient du paquet (`fr-FR`) et n'apparaît sous *Languages supported in packages* qu'**une fois le paquet déposé** (étape 5). Ouvrir alors **French (France)** et remplir description, description courte, nouveautés, fonctionnalités, mots-clés, captures (`captures/*.png`, avec leurs légendes), logo carré (`logos/icone-300x300.png`), copyright et conditions de licence supplémentaires : tout est dans [fiche-du-store.md](./fiche-du-store.md). Aucune langue supplémentaire (*Additional Store listing languages*).
 
-7. **Additional Testing Information** (menu de gauche, *Supplemental info*) : coller les [notes pour la certification](./fiche-du-store.md#notes-pour-la-certification). La page **Submission Options** y renvoie (*Notes for certification*).
+7. **Additional Testing Information** (Informations supplémentaires sur les tests, dernière entrée du menu de gauche) : coller tout le bloc des [notes pour la certification](./fiche-du-store.md#notes-pour-la-certification). La page **Submission Options** y renvoie (*Notes for certification*).
 
 8. **Submission Options** > **Publishing hold options** : choisir **Don't publish this submission until I select Publish now**, pour garder la main sur la date de publication.
 
