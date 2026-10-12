@@ -1,7 +1,7 @@
 # ADR-013: Serveur MCP dans la version du Microsoft Store
 
 - **Date :** 2026-10-06
-- **Statut :** Proposé (à confirmer par l'essai sur un paquet installé, voir « À vérifier »)
+- **Statut :** Accepté (essai sur un paquet installé le 2026-10-12, voir « Vérifications »)
 
 ## Contexte
 
@@ -48,13 +48,15 @@ Le serveur MCP local ([ADR 011](./011-serveur-mcp-local-et-boite-aux-proposition
   - Les données de la version du Store ne sont pas visibles, pour leur partie redirigée, depuis l'explorateur au chemin `%APPDATA%` ; Windows supprime `LocalCache` à la désinstallation (signalé dans les mentions légales).
   - Un utilisateur peut désactiver l'alias dans les paramètres de Windows : le serveur ne démarre plus, la fenêtre l'explique.
 
-## À vérifier
+## Vérifications
 
-Rien de ce qui précède n'a encore été essayé sur un paquet installé : l'installer en local demande le mode développeur de Windows (marche à suivre dans [publier-sur-le-store.md](../microsoft-store/publier-sur-le-store.md#2-essayer-le-paquet-avant-la-première-soumission)). Points à confirmer avant la première soumission :
+Essai du 2026-10-12 sur le paquet de la version 0.11.0, signé avec un certificat d'essai et installé comme le Store l'installe, sous `C:\Program Files\WindowsApps` (marche à suivre dans [publier-sur-le-store.md](../microsoft-store/publier-sur-le-store.md#2-essayer-le-paquet-avant-la-première-soumission)), avec Claude Desktop installé lui aussi en paquet :
 
-1. Claude Desktop lance le serveur par l'alias : les outils apparaissent, `ELECTRON_RUN_AS_NODE` est bien transmis, l'entrée et la sortie standard passent par l'alias.
-2. Le serveur lit la session enregistrée par l'application (redirection commune).
-3. Une proposition envoyée par l'IA s'affiche dans l'application ouverte (`fs.watch` sur le dossier redirigé) ; à défaut, au lancement suivant.
-4. Après une mise à jour du paquet, la configuration copiée fonctionne toujours.
+1. **Confirmé.** Claude Desktop lance le serveur par l'alias : les outils apparaissent, `ELECTRON_RUN_AS_NODE` est transmis, l'entrée et la sortie standard passent par l'alias. La commande de vérification écrit « Serveur MCP du simulateur 0.11.0 prêt ».
+2. **Confirmé.** Le serveur lit la session enregistrée par l'application, y compris quand elle n'existe que dans le dossier redirigé (`LocalCache`, sans dossier `%APPDATA%\simulateur-independant-fr` réel), et voit à la question suivante une modification faite dans l'application. Les fichiers d'une installation classique déjà présents dans `%APPDATA%` sont, eux, modifiés sur place, comme prévu.
+3. **Confirmé.** Une proposition envoyée par l'IA ouvre la fenêtre « Proposition de votre IA » dans l'application ouverte.
+4. **À vérifier** à la première mise à jour publiée sur le Store : la configuration copiée fonctionne toujours.
 
-Si le point 1 ou 2 échoue : essayer la solution de repli (redirection désactivée), sinon retirer la section « Utiliser avec une IA » de la version du Store (`infosDuServeurMcp` renvoie `null` quand `process.windowsStore`) et le dire dans la fiche du Store, en gardant le serveur MCP pour l'installation classique.
+Constat de l'essai : `process.windowsStore` n'est vrai que si l'exécutable est sous `WindowsApps`. Un paquet enregistré depuis un autre dossier (`Add-AppxPackage -Register`, en mode développeur) se comporte comme la version classique et ne permet pas cet essai.
+
+Si le point 4 échoue : essayer la solution de repli (redirection désactivée), sinon retirer la section « Utiliser avec une IA » de la version du Store (`infosDuServeurMcp` renvoie `null` quand `process.windowsStore`) et le dire dans la fiche du Store, en gardant le serveur MCP pour l'installation classique.

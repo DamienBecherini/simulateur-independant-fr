@@ -57,7 +57,7 @@ Il reste à faire, par le propriétaire du compte : créer le compte développeu
 
 ## 2. Essayer le paquet avant la première soumission
 
-Le serveur MCP sous MSIX doit être essayé sur un paquet installé ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md#à-vérifier)). Le paquet n'est pas signé (c'est le Store qui le signe) ; pour l'essayer, on en signe une **copie** avec un certificat d'essai, au nom de l'éditeur du paquet, et on l'installe comme le Store le ferait. Marche à suivre vérifiée le 2026-10-12.
+Le serveur MCP sous MSIX doit être essayé sur un paquet installé ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md#vérifications)). Le paquet n'est pas signé (c'est le Store qui le signe) ; pour l'essayer, on en signe une **copie** avec un certificat d'essai, au nom de l'éditeur du paquet, et on l'installe comme le Store le ferait. Marche à suivre vérifiée le 2026-10-12.
 
 **Pourquoi pas le mode développeur ?** La méthode qui consiste à décompresser le `.appx` (`Expand-Archive`) puis à l'enregistrer avec `Add-AppxPackage -Register` ne convient pas :
 
