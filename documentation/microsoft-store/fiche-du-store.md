@@ -42,11 +42,9 @@ Textes et réponses à recopier dans Partner Center pour la soumission de l'appl
 
 ## Nouveautés de cette version
 
-Pour la première soumission (version 0.11.0) :
+Pour la première soumission (version 0.11.0) : **laisser le champ vide**, comme le demande Partner Center.
 
-> Première version publiée sur le Microsoft Store.
-
-Ensuite, reprendre la section de la version dans [CHANGELOG.md](../../CHANGELOG.md), en quelques lignes, du point de vue de l'utilisateur.
+Pour les suivantes, reprendre la section de la version dans [CHANGELOG.md](../../CHANGELOG.md), en quelques lignes, du point de vue de l'utilisateur.
 
 ## Fonctionnalités du produit
 
@@ -70,15 +68,15 @@ Une par ligne dans Partner Center (vingt au plus) :
 
 ## Mots-clés
 
-Sept au plus :
+Sept au plus, 40 caractères chacun et 21 mots en tout. Les mots du titre (« simulateur », « indépendant ») comptent déjà pour la recherche : les mots-clés servent aux termes que les gens tapent et qui n'y sont pas. Taper chacun puis Entrée, sans reprendre les suggestions de l'IA de Partner Center (« simulateur EURL »…), qui répètent le titre.
 
-1. simulateur
+1. auto-entrepreneur
 2. micro-entreprise
 3. SASU
 4. EURL
-5. cotisations
+5. cotisations sociales
 6. impôt sur le revenu
-7. indépendant
+7. statut juridique
 
 ## Catégorie
 
@@ -126,7 +124,7 @@ Classification attendue : **3+ (PEGI 3, ESRB Everyone)**.
 
 ## Justification de la capacité `runFullTrust`
 
-À coller dans le champ « Pourquoi avez-vous besoin de la capacité runFullTrust ? » (page **Packages** de la soumission, ou **Properties**) :
+À coller dans le champ « Pourquoi avez-vous besoin de la capacité runFullTrust ? » (page **Options de soumission**, *Submission Options*, rubrique des capacités restreintes ; la page **Packages** signale seulement, après le dépôt du paquet, que runFullTrust demande une approbation) :
 
 > Simulateur Indépendant FR est une application de bureau Win32 (Electron) empaquetée en MSIX (Desktop Bridge) : runFullTrust est la capacité requise pour toute application de ce type. L'application lit et écrit ses données dans son dossier de données utilisateur et dans les fichiers que l'utilisateur choisit (import, export CSV, PDF, Markdown). Elle déclare un alias d'exécution (simulateur-independant-fr.exe) pour qu'un assistant d'IA de bureau installé par l'utilisateur puisse lancer son serveur MCP local, sur l'entrée et la sortie standard, sans réseau. Elle n'installe aucun service ni pilote et ne demande pas de droits d'administrateur.
 
@@ -136,14 +134,24 @@ En anglais, si le formulaire le demande :
 
 ## Notes pour la certification
 
-À coller dans la page **Additional Testing Information** de Partner Center (menu de gauche, *Supplemental info* ; la page **Submission Options** y renvoie) :
+**Où :** page **Informations supplémentaires sur les tests** (*Additional Testing Information*), dernière entrée du menu de gauche de Partner Center, sous *Infos supplémentaires*. Elle n'a qu'un champ de texte libre, lu par les testeurs de Microsoft qui certifient l'application : y coller **tout le bloc ci-dessous**, d'un seul tenant (l'anglais d'abord, pour les testeurs, puis le français), et enregistrer. La page **Options de soumission** y renvoie.
 
-> L'application fonctionne entièrement hors ligne : aucune connexion ni aucun compte n'est nécessaire. Au premier lancement, la simulation est vide ; pour voir un exemple complet, ouvrir les Paramètres (icône en haut à gauche), puis « Partir d'un montage type... », et charger un montage. Les résultats se recalculent à chaque modification.
->
-> Avertissement : les résultats sont des estimations simplifiées, à titre indicatif, pas un conseil d'expert-comptable ; l'application le dit dans ses résultats et dans ses mentions légales (Paramètres, ou pied de page : « Mentions légales et confidentialité »).
->
-> Le bouton « Donner mon avis » ouvre le navigateur (GitHub) ou la messagerie de l'utilisateur ; rien n'est envoyé sans son action. La fonction « Utiliser avec une IA (MCP) » demande un client d'IA de bureau installé séparément (Claude Desktop, LM Studio) ; elle n'est pas nécessaire pour tester l'application.
->
-> The app works fully offline; no account or connection is needed. Results are simplified estimates, not professional accounting advice.
+**Pourquoi :** les testeurs ouvrent l'application sans rien savoir d'elle. Les notes leur disent qu'elle n'a besoin ni de compte ni de connexion, comment voir un exemple complet (la version de bureau démarre sur une simulation vide), et que les fonctions qui ouvrent le navigateur, la messagerie ou un client d'IA sont normales et facultatives : sans ces notes, une simulation vide ou un lien externe peut passer pour un défaut.
 
-Avant de coller : vérifier dans l'application le chemin exact vers les montages types et les mentions légales (libellés des menus), et l'adapter si l'interface a changé.
+```text
+The app works fully offline: no account and no connection are needed. On first launch the simulation is empty. To see a complete example, click "Montages types" in the toolbar at the top of the window (or open Settings, the gear icon at the top left, then "Partir d'un montage type..."), and load one of the examples. Results are recalculated on every change.
+
+Results are simplified estimates for information only, not professional accounting advice; the app says so in its results and in its legal notice (Settings, or the footer link "Mentions légales et confidentialité").
+
+The "Donner mon avis" (feedback) button opens the browser (GitHub) or the user's mail client; nothing is sent without the user's action. The "Utiliser avec une IA (MCP)" feature requires a desktop AI client installed separately (Claude Desktop, LM Studio); it is not needed to test the app.
+
+---
+
+L'application fonctionne entièrement hors ligne : aucune connexion ni aucun compte n'est nécessaire. Au premier lancement, la simulation est vide. Pour voir un exemple complet, cliquer sur « Montages types » dans la barre d'outils en haut de la fenêtre (ou ouvrir les Paramètres, icône en haut à gauche, puis « Partir d'un montage type... »), et charger un montage. Les résultats se recalculent à chaque modification.
+
+Les résultats sont des estimations simplifiées, à titre indicatif, pas un conseil d'expert-comptable ; l'application le dit dans ses résultats et dans ses mentions légales (Paramètres, ou pied de page : « Mentions légales et confidentialité »).
+
+Le bouton « Donner mon avis » ouvre le navigateur (GitHub) ou la messagerie de l'utilisateur ; rien n'est envoyé sans son action. La fonction « Utiliser avec une IA (MCP) » demande un client d'IA de bureau installé séparément (Claude Desktop, LM Studio) ; elle n'est pas nécessaire pour tester l'application.
+```
+
+Avant de coller : vérifier dans l'application les libellés cités (« Montages types », « Partir d'un montage type... », « Mentions légales et confidentialité »), et les adapter si l'interface a changé.
