@@ -488,7 +488,8 @@ async function commandeInstaller(options) {
   const decision = decisionDuGardeFou(manifeste)
   if (options.claudeDesktop) exigerClaudeDesktopFerme()
   if (options.nouvelUtilisateur) mettreDeCoteLesDonnees()
-  if (decision.action === "remplacer") exigerApplicationFermee("de remplacer la copie d'essai")
+  // Add-AppxPackage échoue sur une application ouverte, et la remplacer la fermerait sans prévenir.
+  exigerApplicationFermee("d'installer la copie d'essai")
   const signtool = await trouverSigntool()
   const empreinte = certificatDEssai(manifeste.editeur)
   approuverLeCertificat(empreinte)
