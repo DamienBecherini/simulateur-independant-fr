@@ -34,13 +34,14 @@ describe("encart « Que voulez-vous savoir ? »", () => {
     for (const nom of ["Société ou micro-entreprise ?", "Mariage ou Pacs ?", "Rémunération ou dividendes ?", "Partir de zéro"]) expect(screen.getByRole("button", { name: nom })).toBeInTheDocument()
   })
 
-  it("chaque question à situation type désigne un montage qui y répond", () => {
+  it("chaque question désigne la situation type qui y répond", () => {
     const situations = QUESTIONS_DE_DEPART.flatMap(q => ("montage" in q ? [[q.question, q.montage.id]] : []))
     expect(situations).toEqual([
       ["Combien me restera-t-il ?", "micro-bnc-seule"],
       ["Société ou micro-entreprise ?", "micro-bnc-seule"],
       ["Mariage ou Pacs ?", "couple-union-libre"],
-      ["Rémunération ou dividendes ?", "sasu-salaire-4-trimestres"]
+      ["Rémunération ou dividendes ?", "sasu-salaire-4-trimestres"],
+      ["Mes cotisations sont-elles justes ?", "kinesitherapeute-ei"]
     ])
     for (const [, id] of situations) expect(montage(id)).toBeDefined()
   })
@@ -57,7 +58,7 @@ describe("encart « Que voulez-vous savoir ? »", () => {
     const question = screen.getByRole("button", { name: "Rémunération ou dividendes ?" })
     await user.click(question)
     const confirmation = screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
-    expect(confirmation).toHaveTextContent("« Famille Martin » n'est pas enregistrée dans une sauvegarde. Le montage « SASU avec un salaire qui valide 4 trimestres » la remplacera")
+    expect(confirmation).toHaveTextContent("« Famille Martin » n'est pas enregistrée dans une sauvegarde. La situation « SASU avec un salaire qui valide 4 trimestres » la remplacera")
 
     await user.click(within(confirmation).getByRole("button", { name: "Annuler" }))
     expect(onCharger).not.toHaveBeenCalled()
@@ -68,11 +69,12 @@ describe("encart « Que voulez-vous savoir ? »", () => {
     expect(onCharger).toHaveBeenCalledWith(montage("sasu-salaire-4-trimestres"))
   })
 
-  it("mène « Mes cotisations sont-elles justes ? » au détail des résultats, faute de situation type", () => {
-    afficher()
-    const lien = screen.getByRole("link", { name: "Mes cotisations sont-elles justes ?" })
-    expect(lien).toHaveAttribute("href", "#resultats-titre")
-    expect(lien).toHaveAccessibleDescription("Décrivez votre activité, puis lisez le détail des cotisations dans les résultats.")
+  it("charge le kinésithérapeute au réel pour « Mes cotisations sont-elles justes ? », décrit par le détail de ses cotisations", async () => {
+    const { user, onCharger } = afficher()
+    const question = screen.getByRole("button", { name: "Mes cotisations sont-elles justes ?" })
+    expect(question).toHaveAccessibleDescription("Un kinésithérapeute au réel : chaque cotisation, avec son assiette et son taux.")
+    await user.click(question)
+    expect(onCharger).toHaveBeenCalledWith(montage("kinesitherapeute-ei"))
   })
 
   it("« Partir de zéro » sur une simulation vide : rien à confirmer, le focus va à l'ajout d'une personne", async () => {

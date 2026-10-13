@@ -11,7 +11,7 @@ export type QuestionDeDepart = { question: string; precision: string } & ({ mont
 /** Le montage type d'identifiant donné ; une question qui en désignerait un disparu échoue dès le chargement. */
 function situation(id: string): MontageType {
   const montage = MONTAGES_TYPES.find(m => m.id === id)
-  if (!montage) throw new Error(`Montage type inconnu : ${id}`)
+  if (!montage) throw new Error(`Situation type inconnue : ${id}`)
   return montage
 }
 
@@ -20,8 +20,7 @@ export const QUESTIONS_DE_DEPART: readonly QuestionDeDepart[] = [
   { question: "Société ou micro-entreprise ?", montage: situation("micro-bnc-seule"), precision: "La même micro-entreprise, comparée à l'EI, l'EURL et la SASU." },
   { question: "Mariage ou Pacs ?", montage: situation("couple-union-libre"), precision: "Un couple en union libre : son impôt s'il était marié ou pacsé." },
   { question: "Rémunération ou dividendes ?", montage: situation("sasu-salaire-4-trimestres"), precision: "Une SASU : le meilleur partage, et le coût de 4 trimestres de retraite." },
-  // Aucune situation type de profession libérale réglementée : la question mène au détail des cotisations.
-  { question: "Mes cotisations sont-elles justes ?", ancre: "resultats-titre", precision: "Décrivez votre activité, puis lisez le détail des cotisations dans les résultats." }
+  { question: "Mes cotisations sont-elles justes ?", montage: situation("kinesitherapeute-ei"), precision: "Un kinésithérapeute au réel : chaque cotisation, avec son assiette et son taux." }
 ]
 
 /** Identifiant du bouton « + Ajouter une personne » : « Partir de zéro » y porte le focus. */
