@@ -22,7 +22,7 @@ Il se lance avec **l'exécutable de l'application en mode Node** : `ELECTRON_RUN
 
 ### Lire la session enregistrée, ne jamais l'écrire
 
-Le serveur lit, à chaque appel, `sessionState.json` dans le dossier passé par `--donnees` (aucune recherche de dossier : sans ce paramètre, il refuse de démarrer), avec la lecture de l'application (conversion de format, nettoyage), sans rien réécrire. Chaque réponse dit quand le fichier a été enregistré ; la session étant enregistrée une seconde après chaque modification (sauvegarde différée existante) et à la fermeture, cela suffit, sans nouveau canal entre l'application et le serveur. Un test vérifie que la session affichée et la session relue dans le fichier ont la même empreinte (simulation d'exemple et montages types) : sinon toute proposition paraîtrait périmée.
+Le serveur lit, à chaque appel, `sessionState.json` dans le dossier passé par `--donnees` (aucune recherche de dossier : sans ce paramètre, il refuse de démarrer), avec la lecture de l'application (conversion de format, nettoyage), sans rien réécrire. Chaque réponse dit quand le fichier a été enregistré ; la session étant enregistrée dès le premier lancement (ADR 005, règle 7), une seconde après chaque modification (sauvegarde différée existante) et à la fermeture, cela suffit, sans nouveau canal entre l'application et le serveur. Un test vérifie que la session affichée et la session relue dans le fichier ont la même empreinte (simulation d'exemple et montages types) : sinon toute proposition paraîtrait périmée.
 
 ### La boîte aux propositions
 

@@ -146,7 +146,7 @@ L'application enregistre la simulation **environ une seconde après chaque modif
   ELECTRON_RUN_AS_NODE=1 "/Applications/Simulateur Indépendant FR.app/Contents/MacOS/Simulateur Indépendant FR" "/Applications/Simulateur Indépendant FR.app/Contents/Resources/mcp/serveur-mcp.mjs" --donnees "$HOME/Library/Application Support/simulateur-independant-fr"
   ```
 
-- **« Aucune simulation enregistrée »** : ouvrez une fois l'application, et vérifiez que `--donnees` désigne bien son dossier de données.
+- **« Aucune simulation enregistrée »** : l'application n'a encore rien enregistré dans le dossier donné. Ouvrez-la une fois (elle enregistre la simulation dès son ouverture) ; si elle est déjà ouverte, attendez quelques secondes ou modifiez la simulation. Vérifiez aussi que `--donnees` désigne bien le dossier indiqué dans Paramètres, « Utiliser avec une IA (MCP) ».
 - **« Proposition périmée »** : la simulation a changé depuis la proposition ; demandez à l'IA de la rafraîchir (`rafraichir_proposition`), puis relisez-la.
 - **Aucune fenêtre ne s'ouvre dans l'application** après un envoi : l'application doit être ouverte ; sinon, la proposition s'affichera à son prochain démarrage.
 

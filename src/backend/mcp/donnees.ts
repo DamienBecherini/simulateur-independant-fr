@@ -39,7 +39,9 @@ async function lireLeFichier(dossier: string, fichier: string): Promise<{ conten
     return { contenu, enregistreeLe: infos.mtime }
   } catch (erreur) {
     if ((erreur as NodeJS.ErrnoException).code === "ENOENT") {
-      throw new ErreurDeDonnees(`Aucune simulation enregistrée dans « ${dossier} ». Ouvrez une fois l'application Simulateur Indépendant FR, puis réessayez. ${CONSEIL}`)
+      // L'application enregistre la session dès son premier lancement : sans fichier, elle n'a jamais été ouverte sur ce
+      // dossier, vient tout juste de démarrer, ou le dossier n'est pas le sien.
+      throw new ErreurDeDonnees(`Aucune simulation enregistrée dans « ${dossier} » : l'application Simulateur Indépendant FR n'y a encore rien enregistré. Ouvrez-la (si elle est déjà ouverte, attendez quelques secondes ou modifiez la simulation), puis réessayez. ${CONSEIL}`)
     }
     throw new ErreurDeDonnees(`Simulation illisible (${fichier}) : ${message(erreur)}. ${CONSEIL}`)
   }

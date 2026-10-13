@@ -131,9 +131,19 @@ describe("écriture des sauvegardes", () => {
 })
 
 describe("session en cours", () => {
-  it("absente : session vierge, sans message", async () => {
+  it("absente (premier lancement) : session vierge, sans message, enregistrée tout de suite", async () => {
     expect(await donnees().lireLaSession()).toEqual(SessionStateSchema.parse({}))
     expect(avertissements).toEqual([])
+    expect(notifications).toEqual([])
+    // Le serveur MCP trouve ainsi une simulation dès le premier lancement, avant toute modification.
+    expect(await readdir(dossier)).toEqual(["sessionState.json"])
+    expect(await json<SessionState & { formatVersion: number; appVersion: string }>("sessionState.json")).toMatchObject({ ...SessionStateSchema.parse({}), formatVersion: FORMAT_VERSION_ACTUEL, appVersion: "1.2.3" })
+  })
+
+  it("absente, dossier impossible à écrire : session vierge, l'échec est signalé comme celui de la sauvegarde automatique", async () => {
+    expect(await donnees(path.join(dossier, "inexistant")).lireLaSession()).toEqual(SessionStateSchema.parse({}))
+    expect(avertissements).toEqual([])
+    expect(notifications).toEqual([{ message: MESSAGES.echecDeLaSession, type: "error" }])
   })
 
   it("lue telle quelle, sans message ni réécriture", async () => {
