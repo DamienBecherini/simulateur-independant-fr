@@ -22,7 +22,7 @@ export const NOM_DE_PROPOSITION = /^[A-Za-z0-9_-]{1,100}\.json$/
 const FORMAT = "simulateur-independant-fr/proposition"
 
 /** Le contenu d'un fichier de proposition. Toute autre clé le fait refuser. */
-export const PropositionEnAttenteSchema = z.strictObject({
+const PropositionEnAttenteSchema = z.strictObject({
   format: z.literal(FORMAT),
   version: z.literal(1),
   creeeLe: z.iso.datetime(),

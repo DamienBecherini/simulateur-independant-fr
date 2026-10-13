@@ -96,7 +96,7 @@ export interface BaremeInvaliditeDecesLiberal {
 }
 
 /** Répartition du taux global de la micro-entreprise entre les risques, en part du taux (la somme vaut 1). */
-export interface RepartitionMicroLiberale {
+interface RepartitionMicroLiberale {
   csgCrds: number
   maladie: number
   indemnitesJournalieres: number
@@ -145,7 +145,7 @@ export interface ReglesLiberauxReglementes extends Record<CaisseLiberale, object
 }
 
 /** Les cotisations du régime général qui ont un barème propre : toutes sauf la CSG et la CRDS. */
-export type LigneRegimeGeneral = Exclude<CotisationSalarie, "csgDeductible" | "csgNonDeductibleEtCrds">
+type LigneRegimeGeneral = Exclude<CotisationSalarie, "csgDeductible" | "csgNonDeductibleEtCrds">
 
 /** Une cotisation du régime général : parts salariale et patronale, chacune par tranches en part du plafond. */
 export interface CotisationRegimeGeneral {
@@ -172,7 +172,7 @@ export interface ReglesRegimeGeneral {
  * Une tranche du barème kilométrique : pour une distance annuelle `d` jusqu'à `jusquA` kilomètres (`null` : sans limite),
  * le montant est `d x taux + forfait`.
  */
-export interface TrancheKilometrique {
+interface TrancheKilometrique {
   jusquA: number | null
   taux: number
   forfait: number

@@ -25,8 +25,6 @@ export const ICONES = [
 /** Icône de l'écran d'accueil d'iOS, qui ne lit pas les icônes du manifeste. */
 export const ICONE_APPLE = "apple-touch-icon.png"
 
-export type ManifesteDApplication = ReturnType<typeof manifesteDeLaDemo>
-
 /** Le manifeste de la démo publiée sous `base` (« /simulateur-independant-fr/ »). */
 export function manifesteDeLaDemo(base: string) {
   return {

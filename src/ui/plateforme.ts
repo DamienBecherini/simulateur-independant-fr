@@ -8,7 +8,7 @@ import type { ButtonProps } from "@/components/ui/button"
 import type { SessionState } from "@/types"
 
 /** Les réglages d'un bouton du panneau des paramètres. */
-export type BoutonDesParametres = Pick<ButtonProps, "variant" | "className">
+type BoutonDesParametres = Pick<ButtonProps, "variant" | "className">
 
 export interface Plateforme {
   /** Démo web (navigateur) ou application de bureau : écrit dans le diagnostic d'un avis. */

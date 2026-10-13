@@ -340,7 +340,7 @@ function DeplacementsRow({ deplacements, className }: { deplacements: NonNullabl
  * Dispositifs limités dans le temps qui jouent cette année (sortie du régime micro, ACRE, plafonds au prorata) : une
  * information sur le calcul, toujours visible, distincte des avertissements.
  */
-export function NotesDesDispositifs({ notes, className }: { notes: string[] | undefined; className?: string }) {
+function NotesDesDispositifs({ notes, className }: { notes: string[] | undefined; className?: string }) {
   if (!notes?.length) return null
   return (
     <ul aria-label="Dispositifs de l'année" className={cn("mb-2 space-y-1 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100", className)}>

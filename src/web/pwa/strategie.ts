@@ -2,7 +2,7 @@
 // Les choix du service worker (service-worker.ts), en fonctions pures : le nom de son cache, les anciens caches à
 // effacer, et la réponse à donner à chaque requête.
 
-export const PREFIXE_DU_CACHE = "simulateur-demo-"
+const PREFIXE_DU_CACHE = "simulateur-demo-"
 
 /** Le cache d'une version publiée de la démo : une nouvelle publication remplit un nouveau cache. */
 export const nomDuCache = (version: string) => `${PREFIXE_DU_CACHE}${version}`

@@ -69,8 +69,8 @@ export function demoInstallable(): Plugin {
 }
 
 /** Racines de composition de l'application de bureau et de la démo web (voir src/ui/plateforme.ts). */
-export const ENTREE_DU_BUREAU = "/src/ui/main.tsx"
-export const ENTREE_DE_LA_DEMO = "/src/web/main.tsx"
+const ENTREE_DU_BUREAU = "/src/ui/main.tsx"
+const ENTREE_DE_LA_DEMO = "/src/web/main.tsx"
 
 /**
  * Pour la démo web, en développement (vite --mode web) comme à la compilation : index.html charge la racine de

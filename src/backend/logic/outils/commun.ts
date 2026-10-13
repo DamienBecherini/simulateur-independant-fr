@@ -85,7 +85,7 @@ export const SENS_DES_TYPES: Record<FinancialFlow["type"], string> = {
 }
 
 /** Types de flux que porte chaque genre d'acteur. */
-export const TYPES_PERMIS: Record<GenreDActeur, readonly TypeDeFlux[]> = {
+const TYPES_PERMIS: Record<GenreDActeur, readonly TypeDeFlux[]> = {
   personne: ["salary", "are", "other_taxable_income", "expense"],
   SASU: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
   EURL: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
@@ -125,7 +125,7 @@ export function verifierTypePermis(acteur: Entity, typeFlux: TypeDeFlux): void {
 // == RELATIONS
 // ===================================================================================
 
-export const TYPES_DE_RELATION_FAMILIALE: Relationship["type"][] = ["Marié(e)", "PACSé(e)", "En couple", "Enfant"]
+const TYPES_DE_RELATION_FAMILIALE: Relationship["type"][] = ["Marié(e)", "PACSé(e)", "En couple", "Enfant"]
 const DIRECTION = new Set<Relationship["type"]>(["Président", "Gérant", "Titulaire"])
 
 /** Relations possibles d'une personne vers une activité, selon le statut de l'activité (voir `RELATIONS_PAR_STATUT`). */

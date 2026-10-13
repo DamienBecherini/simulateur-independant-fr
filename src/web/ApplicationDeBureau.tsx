@@ -7,8 +7,8 @@ import { BookOpen, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DEPOT_GITHUB } from "@/lib/adresses-des-retours"
 
-export const ADRESSE_DU_TELECHARGEMENT = `${DEPOT_GITHUB}/releases/latest`
-export const ADRESSE_DU_GUIDE_D_INSTALLATION = `${DEPOT_GITHUB}/blob/main/documentation/installation.md`
+const ADRESSE_DU_TELECHARGEMENT = `${DEPOT_GITHUB}/releases/latest`
+const ADRESSE_DU_GUIDE_D_INSTALLATION = `${DEPOT_GITHUB}/blob/main/documentation/installation.md`
 
 const NOUVEL_ONGLET = <span className="sr-only"> (nouvel onglet)</span>
 

@@ -38,7 +38,7 @@ function appliquer(theme: Theme): Theme {
   return theme
 }
 
-export function definirLeTheme(theme: Theme) {
+function definirLeTheme(theme: Theme) {
   themeCourant = appliquer(theme)
   for (const ecouteur of ecouteurs) ecouteur()
 }

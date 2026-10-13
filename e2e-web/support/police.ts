@@ -10,7 +10,7 @@ export const POLICES = ["police du système", "police large"] as const
 export type Police = (typeof POLICES)[number]
 
 /** Impose une police large (Verdana sous Windows, DejaVu Sans sous Linux) à toutes les pages du contexte. */
-export async function imposerUnePoliceLarge(contexte: BrowserContext) {
+async function imposerUnePoliceLarge(contexte: BrowserContext) {
   await contexte.addInitScript(() => {
     const style = document.createElement("style")
     style.textContent = `html, body, button, input, select, textarea { font-family: Verdana, "DejaVu Sans", sans-serif !important; }`

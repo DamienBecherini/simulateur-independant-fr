@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { SCENARIOS_DE_TEST } from "@/lib/scenarios-de-test"
 import type { SessionState } from "@/types"
 
-export const TITRE_DES_TESTS = "Scénarios de test"
+const TITRE_DES_TESTS = "Scénarios de test"
 
 export interface ScenariosDeTestProps {
   /** Remplace la session par celle du scénario (nouvel historique). */

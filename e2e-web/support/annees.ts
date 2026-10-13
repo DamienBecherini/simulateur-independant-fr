@@ -6,7 +6,7 @@ import { expect, type Page } from "@playwright/test"
 import { ANNEE_COURANTE } from "../../src/backend/regles/index"
 import { ANNEE_DE_L_EXEMPLE } from "../../src/web/session-exemple"
 
-export { ANNEE_COURANTE, ANNEE_DE_L_EXEMPLE }
+export { ANNEE_DE_L_EXEMPLE }
 
 /** La première année dont les règles ne sont pas connues : elle est simulée avec celles de l'année en cours. */
 export const PREMIERE_ANNEE_FUTURE = ANNEE_COURANTE + 1

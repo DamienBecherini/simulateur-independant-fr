@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { usePlateforme } from "../plateforme"
 import { ALIAS_D_EXECUTION, blocAInserer, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, type InfosDuServeurMcp } from "@/lib/configuration-mcp"
 
-export const TITRE_IA = "Utiliser avec une IA (MCP)"
+const TITRE_IA = "Utiliser avec une IA (MCP)"
 
 const PETIT_TEXTE = "text-sm text-slate-600 dark:text-slate-400"
 // Les chemins de la configuration sont longs : ils passent à la ligne, sans défilement horizontal (le bouton copie le texte exact).
@@ -56,7 +56,7 @@ function EtapesDeClaudeDesktop({ plateforme }: { plateforme: string }) {
 }
 
 /** Le contenu de la fenêtre, une fois les chemins de l'installation connus. */
-export function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
+function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
   const [etat, setEtat] = useState("")
   const configuration = configurationDuClient(infos)
 

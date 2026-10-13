@@ -13,7 +13,6 @@ import { simulerMicroEntreprise } from "./simulation-micro.js"
 import { calculerFoyer, resultatPersonne } from "./impot-du-foyer.js"
 import { calculerBilan } from "./bilan-de-la-simulation.js"
 
-export { etatAuDebutDeLaSimulation } from "./simulation-au-reel.js"
 export type { ContexteDeLAnnee } from "./routage-des-flux.js"
 
 /*

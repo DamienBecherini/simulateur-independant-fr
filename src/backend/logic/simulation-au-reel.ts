@@ -81,7 +81,7 @@ function caisseDeLActivite(ctx: Contexte, activite: Company | MicroEntreprise): 
  * fiche, aucun déficit reportable, et une réserve légale déjà constituée, sauf si la société est créée cette année-là
  * ou plus tard (date de création connue) : sa réserve légale part alors de zéro.
  */
-export function etatAuDebutDeLaSimulation(societe: Company, premiereAnnee: number, regles: ReglesFiscales): EtatDeLaSociete {
+function etatAuDebutDeLaSimulation(societe: Company, premiereAnnee: number, regles: ReglesFiscales): EtatDeLaSociete {
   const creation = lireMois(societe.dateDeCreation)
   const nouvelle = creation !== null && creation.annee >= premiereAnnee
   return { ...etatSansReserves(nouvelle ? 0 : societe.capitalSocial, regles.reserveLegale), reserves: societe.reservesInitiales ?? 0 }

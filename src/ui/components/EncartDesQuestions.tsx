@@ -14,7 +14,7 @@ import { ID_DE_L_AJOUT_D_UNE_PERSONNE, QUESTIONS_DE_DEPART, type QuestionDeDepar
 import { ConfirmationDeRemplacement } from "./ConfirmationDeRemplacement"
 import { ConfirmationDuMontage } from "./MontagesTypes"
 
-export const TITRE_DE_L_ENCART = "Que voulez-vous savoir ?"
+const TITRE_DE_L_ENCART = "Que voulez-vous savoir ?"
 
 interface EncartDesQuestionsProps {
   /** Charge une situation type (la confirmation a déjà eu lieu si elle était nécessaire). */
