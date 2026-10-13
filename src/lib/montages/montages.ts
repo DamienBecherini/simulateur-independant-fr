@@ -13,6 +13,7 @@ import { ANNEE_DES_MONTAGES, comparateurAuMeilleurNet, microEntreprise, personne
 const REGLES = reglesPubliees(ANNEE_DES_MONTAGES)
 const MICRO = REGLES.microEntreprise
 const { IS, dividendes: DIVIDENDES } = REGLES
+const { CIPAV, CARPIMKO, commun: LIBERAUX } = REGLES.liberauxReglementes
 
 /** Un lien vers une page officielle qui fonde une explication. */
 export interface SourceOfficielle {
@@ -61,7 +62,16 @@ const SOURCES = {
   conjoint: { libelle: "Statuts du conjoint du chef d'entreprise (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F32266" },
   concubins: { libelle: "Déclaration de revenus d'un couple en union libre (service-public.fr)", url: "https://www.service-public.gouv.fr/particuliers/vosdroits/F362" },
   anneeDuMariage: { libelle: "Déclarer ses revenus l'année du mariage ou du Pacs (impots.gouv.fr)", url: "https://www.impots.gouv.fr/particulier/questions/comment-declarer-nos-revenus-lannee-du-mariage-ou-pacs" },
-  cumulSalarie: { libelle: "Cumuler un emploi salarié et une micro-entreprise (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F23264" }
+  cumulSalarie: { libelle: "Cumuler un emploi salarié et une micro-entreprise (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F23264" },
+  affiliesCipav: { libelle: "Professions affiliées à la CIPAV, dont les ostéopathes (lacipav.fr)", url: "https://www.lacipav.fr/qui-est-assure-a-la-cipav" },
+  tauxMicroCipav: { libelle: "Taux des cotisations des micro-entrepreneurs, dont les affiliés de la CIPAV : article D613-4 du code de la sécurité sociale (legifrance.gouv.fr)", url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000046714712" },
+  exonerationTvaSoins: { libelle: "Soins exonérés de TVA, dont ceux des ostéopathes et des professions paramédicales réglementées : article 261, 4, 1° du code général des impôts (legifrance.gouv.fr)", url: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051764761" },
+  exonerationTvaBofip: { libelle: "Exonération de TVA des professions médicales et paramédicales, et ses limites (bofip.impots.gouv.fr)", url: "https://bofip.impots.gouv.fr/bofip/1139-PGP.html/identifiant=BOI-TVA-CHAMP-30-10-20-10-20250409" },
+  devenirPam: { libelle: "S'installer comme praticien ou auxiliaire médical : micro-entreprise impossible (urssaf.fr)", url: "https://www.urssaf.fr/accueil/independant/creer-activite-independant/devenir-PAM.html" },
+  cotisationsAuxiliaire: { libelle: "Cotisations de l'auxiliaire médical conventionné et leur prise en charge par l'Assurance maladie (urssaf.fr)", url: "https://www.urssaf.fr/accueil/independant/praticien-auxiliaire-medical/cotisations-auxiliaire-medical.html" },
+  cotisationsCarpimko: { libelle: "Cotisations de la CARPIMKO selon les revenus, dont l'ASV (carpimko.com)", url: "https://www.carpimko.com/je-suis-en-activite/cotisations/selon-mes-revenus" },
+  invaliditeCarpimko: { libelle: "Cotisation invalidité-décès de la CARPIMKO (carpimko.com)", url: "https://www.carpimko.com/je-suis-en-activite/ma-prevoyance/cotisation-invalidite-deces" },
+  societesExerciceLiberal: { libelle: "Réforme des sociétés d'exercice libéral, ordonnance n° 2023-77 (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/actualites/A16510" }
 } satisfies Record<string, SourceOfficielle>
 
 // Phrases reprises d'un montage à l'autre.
@@ -105,8 +115,12 @@ const CHARGES = {
   sophie: { cfe: 300, assurance: 360, banqueMensuelle: 10 },
   lucas: { cfe: 150, assurance: 240, banqueMensuelle: 5 },
   claire: { cfe: 250, assurance: 300, banqueMensuelle: 10 },
-  emma: { cfe: 200, assurance: 240, banqueMensuelle: 5 }
+  emma: { cfe: 200, assurance: 240, banqueMensuelle: 5 },
+  lea: { cfe: 350, assurance: 250, banqueMensuelle: 10 }
 } satisfies Record<string, ChargesDeLaMicro>
+
+/** Loyer mensuel du cabinet partagé de l'ostéopathe, en euros : une charge non déductible en micro-entreprise. */
+const LOYER_DU_CABINET_DE_LEA = 400
 
 /**
  * Charges courantes d'une société, en euros : celles d'une micro-entreprise, plus l'expert-comptable payé chaque mois.
@@ -129,6 +143,18 @@ const hypothesesDeChargesDeLaSociete = (activite: string, { expertComptableMensu
   `Charges supposées de ${activite}, déductibles de son bénéfice : expert-comptable à ${euros(expertComptableMensuel)} par mois, CFE de ${euros(cfe)} en décembre (elle dépend de la commune et n'est pas due l'année de création), assurance responsabilité civile professionnelle de ${euros(assurance)} par an et compte bancaire professionnel à ${euros(banqueMensuelle)} par mois.`
 
 const CHARGES_DE_MARC: ChargesDeLaSociete = { expertComptableMensuel: 170, cfe: 400, assurance: 360, banqueMensuelle: 20 }
+
+/**
+ * Charges du cabinet de kinésithérapie, en euros, déductibles au réel : celles d'une société (comptable, CFE, assurance,
+ * banque), plus le loyer et le petit matériel chaque mois, et les visites à domicile en voiture personnelle (5 CV),
+ * converties au barème kilométrique.
+ */
+const CHARGES_DE_JULIEN = {
+  courantes: { expertComptableMensuel: 120, cfe: 500, assurance: 300, banqueMensuelle: 15 } satisfies ChargesDeLaSociete,
+  loyerMensuel: 900,
+  materielMensuel: 150,
+  kmParAn: 4000
+}
 
 // --- Les montages ---
 
@@ -388,5 +414,82 @@ const salariePlusMicro: MontageType = {
   })
 }
 
+/** Phrase commune aux deux professions de santé : leurs soins sont exonérés de TVA. */
+const SOINS_EXONERES_DE_TVA = "exonérés de TVA (article 261 du code général des impôts), quel que soit le chiffre d'affaires ; les recettes sans lien avec des soins (vente de produits, par exemple) ne le sont pas. Le simulateur ne calcule pas la TVA."
+
+const osteopatheMicro: MontageType = {
+  id: "osteopathe-micro",
+  titre: "Ostéopathe en micro-entreprise",
+  resume: "Léa, ostéopathe célibataire, encaisse 3 100 € d'honoraires par mois en micro-entreprise, sans versement libératoire, et loue un cabinet partagé 400 € par mois.",
+  etiquettes: ["Micro", "BNC", "Profession libérale", "CIPAV"],
+  questions: ["Combien me reste-t-il après cotisations et impôt comme ostéopathe ?", "Pourquoi mes cotisations ne sont-elles pas celles des autres libéraux en micro-entreprise ?", "Le versement libératoire, ou le régime réel avec mon loyer, serait-il plus intéressant ?"],
+  illustre: [
+    `L'ostéopathe relève de la CIPAV : la profession choisie sur la fiche de l'activité fixe ses cotisations à ${pourcent(CIPAV.microEntreprise.cotisations)} du chiffre d'affaires en ${ANNEE_DES_MONTAGES}, au lieu de ${pourcent(MICRO.cotisations.servicesBnc)} pour une activité libérale non réglementée, plus ${pourcent(MICRO.formationProfessionnelle.servicesBnc)} de contribution à la formation professionnelle.`,
+    `Sans versement libératoire, le bénéfice imposé au barème est le chiffre d'affaires après l'abattement forfaitaire de ${pourcent(MICRO.abattement.servicesBnc)} : le loyer et les autres charges réelles ne se déduisent pas.`,
+    "Le comparateur place la micro-entreprise, avec et sans versement libératoire, face à l'entreprise individuelle au réel, où le loyer se déduit. Ses colonnes EURL et SASU portent un avertissement : l'ostéopathe exerce en principe en société d'exercice libéral, que le simulateur ne modélise pas."
+  ],
+  conditions: [
+    "Usage légal du titre d'ostéopathe, profession affiliée à la CIPAV : c'est aussi lui qui exonère les soins de TVA.",
+    PLAFOND_MICRO,
+    plafondDuVersementLiberatoire(` (ici ${euros(22000)} saisis, pour une part)`)
+  ],
+  pointsDAttention: [
+    `Les soins d'ostéopathie sont ${SOINS_EXONERES_DE_TVA} Il ne connaît pas encore cette exonération : au-delà de ${euros(REGLES.TVA.services.franchiseBase)} de prestations dans l'année (seuil de la franchise en base pour ${ANNEE_DES_MONTAGES}), la micro-entreprise recevrait à tort l'avertissement d'une TVA due.`,
+    "L'ostéopathe n'est pas conventionné avec l'Assurance maladie : aucune part de ses cotisations n'est prise en charge, contrairement à un auxiliaire médical conventionné.",
+    `Loyer du cabinet partagé supposé de ${euros(LOYER_DU_CABINET_DE_LEA)} par mois, non déductible en micro-entreprise. ${hypothesesDeCharges("l'activité", CHARGES.lea)}`,
+    "Choisir une autre profession, ou « Non réglementée », sur la fiche de l'activité change les cotisations : la profession compte autant que le statut."
+  ],
+  sources: [SOURCES.affiliesCipav, SOURCES.tauxMicroCipav, SOURCES.abattementMicro, SOURCES.versementLiberatoire, SOURCES.plafondsMicro, SOURCES.exonerationTvaSoins, SOURCES.exonerationTvaBofip, SOURCES.societesExerciceLiberal],
+  contenu: () => ({
+    entities: [personne("p-lea", "Léa"), { ...microEntreprise("m-lea", "Cabinet d'ostéopathie de Léa", { opteVFL: false, rfrN2: 22000 }), profession: "osteopathe" }],
+    relationships: [relation("p-lea", "m-lea", "Titulaire")],
+    flux: [
+      { entityId: "m-lea", type: "ca_micro_services_bnc", amount: 3100, label: "Honoraires" },
+      { entityId: "m-lea", type: "expense", amount: LOYER_DU_CABINET_DE_LEA, label: "Loyer du cabinet", cle: "loyer" },
+      ...fluxDesCharges("m-lea", CHARGES.lea)
+    ]
+  })
+}
+
+const kinesitherapeuteEI: MontageType = {
+  id: "kinesitherapeute-ei",
+  titre: "Kinésithérapeute conventionné en entreprise individuelle",
+  resume: "Julien, masseur-kinésithérapeute conventionné, célibataire, encaisse 6 500 € d'honoraires par mois en entreprise individuelle au réel et déduit le loyer, le matériel et les déplacements de son cabinet.",
+  etiquettes: ["EI", "Réel", "Profession libérale", "CARPIMKO", "Santé"],
+  questions: ["Combien me reste-t-il après les cotisations de la CARPIMKO et l'impôt ?", "Que prend en charge l'Assurance maladie sur mes cotisations ?", "Pourquoi pas la micro-entreprise, et une société serait-elle plus intéressante ?"],
+  illustre: [
+    "La micro-entreprise est fermée aux praticiens et auxiliaires médicaux : l'entreprise individuelle au réel est le statut le plus simple du kinésithérapeute, et ses charges réelles (loyer, matériel, comptable, déplacements au barème kilométrique) se déduisent de son bénéfice.",
+    `Les cotisations, ligne par ligne sur la carte de l'activité : maladie, allocations familiales et CSG-CRDS à l'Urssaf, retraite de base des professions libérales, complémentaire de la CARPIMKO (${pourcent(CARPIMKO.retraiteComplementaire.taux)} du revenu), invalidité-décès forfaitaire de ${euros(CARPIMKO.invaliditeDeces.forfait)}, avantage social vieillesse (ASV) et contribution aux unions régionales des professionnels de santé (${pourcent(LIBERAUX.curps.taux)}).`,
+    `Conventionné sur toutes ses recettes (part réglable sur la fiche de l'activité), il voit l'Assurance maladie prendre en charge sa cotisation maladie, sauf ${pourcent(CARPIMKO.priseEnChargeMaladie.resteALaChargeDuPraticien)} du revenu, et la plus grande part de l'ASV (${euros(CARPIMKO.asv.forfaitAssuranceMaladie)} de forfait sur ${euros(CARPIMKO.asv.forfaitAssuranceMaladie + CARPIMKO.asv.forfaitPraticien)}).`,
+    "Le comparateur ne propose pas de micro-entreprise, en disant pourquoi, et ne désigne ni l'EURL ni la SASU classiques : le kinésithérapeute exerce en principe en société d'exercice libéral (SELARL, SELAS), dont la rémunération n'est pas encore modélisée. Leurs colonnes restent indicatives."
+  ],
+  conditions: [
+    "Conventionnement avec l'Assurance maladie et respect des tarifs de la convention : la prise en charge ne porte que sur les recettes conventionnées, hors dépassements.",
+    "Bénéfice non commercial au régime réel (déclaration contrôlée) : une comptabilité des recettes et des dépenses, et une déclaration de résultat chaque année.",
+    "Exercice en nom propre : l'entreprise individuelle ne demande ni capital ni statuts."
+  ],
+  pointsDAttention: [
+    `La CARPIMKO calcule la complémentaire et l'ASV sur le revenu de l'année précédente : ce montage ne porte que sur ${ANNEE_DES_MONTAGES}, elles y sont calculées sur le revenu ${ANNEE_DES_MONTAGES}, ce que la carte de l'activité signale. Ajoutez l'année ${ANNEE_DES_MONTAGES - 1} pour un calcul exact.`,
+    "Les deux premières années d'activité, les cotisations se calculent sur une assiette forfaitaire que le simulateur ne modélise pas : le montage décrit un cabinet installé.",
+    `Les soins des masseurs-kinésithérapeutes sont ${SOINS_EXONERES_DE_TVA}`,
+    `${hypothesesDeChargesDeLaSociete("l'entreprise individuelle de Julien", CHARGES_DE_JULIEN.courantes)} S'y ajoutent un loyer de ${euros(CHARGES_DE_JULIEN.loyerMensuel)} et ${euros(CHARGES_DE_JULIEN.materielMensuel)} de petit matériel par mois, et ${CHARGES_DE_JULIEN.kmParAn.toLocaleString("fr-FR")} km de visites à domicile par an avec une voiture de 5 CV (barème kilométrique des revenus de ${ANNEE_DES_MONTAGES - 1}, repris tant que celui de ${ANNEE_DES_MONTAGES} n'est pas publié).`
+  ],
+  sources: [SOURCES.devenirPam, SOURCES.cotisationsAuxiliaire, SOURCES.cotisationsCarpimko, SOURCES.invaliditeCarpimko, SOURCES.societesExerciceLiberal, SOURCES.exonerationTvaSoins],
+  contenu: () => ({
+    entities: [
+      personne("p-julien", "Julien"),
+      { ...societe("ei-julien", "Cabinet de kinésithérapie de Julien", "EI", 0), profession: "masseur-kinesitherapeute", deplacementsProfessionnels: { kmParAn: CHARGES_DE_JULIEN.kmParAn, puissanceFiscale: "5", electrique: false } }
+    ],
+    relationships: [relation("p-julien", "ei-julien", "Titulaire")],
+    flux: [
+      { entityId: "ei-julien", type: "ca_services", amount: 6500, label: "Honoraires" },
+      { entityId: "ei-julien", type: "deductible_expense", amount: CHARGES_DE_JULIEN.loyerMensuel, label: "Loyer du cabinet", cle: "loyer" },
+      { entityId: "ei-julien", type: "deductible_expense", amount: CHARGES_DE_JULIEN.materielMensuel, label: "Petit matériel", cle: "materiel" },
+      ...fluxDesChargesDeLaSociete("ei-julien", CHARGES_DE_JULIEN.courantes)
+    ],
+    comparateur: comparateurAuMeilleurNet("ei-julien", true)
+  })
+}
+
 /** Les montages types, dans l'ordre de la bibliothèque : du plus simple au plus composé. */
-export const MONTAGES_TYPES: MontageType[] = [microSeule, sasuSansSalaire, sasuAvecSalaire, eurlIS, salariePlusMicro, microEtSasuDuConjoint, conjointSalarie, unionLibre]
+export const MONTAGES_TYPES: MontageType[] = [microSeule, osteopatheMicro, kinesitherapeuteEI, sasuSansSalaire, sasuAvecSalaire, eurlIS, salariePlusMicro, microEtSasuDuConjoint, conjointSalarie, unionLibre]
