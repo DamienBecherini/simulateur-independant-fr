@@ -48,7 +48,7 @@ const ATTENDUS: Record<string, ChiffresAttendus> = {
     // (25,6 % pour un libéral non réglementé : 9 523,20 €). Barème : 37 200 x 66 % = 24 552 € imposables ;
     // (24 552 - 11 600) x 11 % = 1 424,72 €, moins la décote (897 - 45,25 % x 1 424,72 = 252,31 €) : 1 172 €.
     // Charges non déductibles (loyer 4 800 €, CFE 350 €, assurance 250 €, banque 120 €) : 5 520 € de moins sur le net.
-    // 37 200 - 8 705 - 5 520 - 1 172 = 21 803 €. Sous le seuil de franchise en base de TVA des services (37 500 €).
+    // 37 200 - 8 705 - 5 520 - 1 172 = 21 803 €. Soins exonérés de TVA (article 261, 4, 1° du CGI) : pas de franchise en base.
     totalNetApresImpots: 21803,
     foyers: [foyer(["p-lea"], 1172, 0, 9877, 21803)],
     activites: { "m-lea": activite(8705, 0) },

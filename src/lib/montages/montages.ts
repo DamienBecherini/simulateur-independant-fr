@@ -415,7 +415,7 @@ const salariePlusMicro: MontageType = {
 }
 
 /** Phrase commune aux deux professions de santé : leurs soins sont exonérés de TVA. */
-const SOINS_EXONERES_DE_TVA = "exonérés de TVA (article 261 du code général des impôts), quel que soit le chiffre d'affaires ; les recettes sans lien avec des soins (vente de produits, par exemple) ne le sont pas. Le simulateur ne calcule pas la TVA."
+const SOINS_EXONERES_DE_TVA = "exonérés de TVA (article 261, 4, 1° du code général des impôts), quel que soit le chiffre d'affaires ; les recettes sans lien avec des soins (vente de produits, par exemple) ne le sont pas. Le simulateur ne calcule pas la TVA."
 
 const osteopatheMicro: MontageType = {
   id: "osteopathe-micro",
@@ -434,7 +434,7 @@ const osteopatheMicro: MontageType = {
     plafondDuVersementLiberatoire(` (ici ${euros(22000)} saisis, pour une part)`)
   ],
   pointsDAttention: [
-    `Les soins d'ostéopathie sont ${SOINS_EXONERES_DE_TVA} Il ne connaît pas encore cette exonération : au-delà de ${euros(REGLES.TVA.services.franchiseBase)} de prestations dans l'année (seuil de la franchise en base pour ${ANNEE_DES_MONTAGES}), la micro-entreprise recevrait à tort l'avertissement d'une TVA due.`,
+    `Les soins d'ostéopathie sont ${SOINS_EXONERES_DE_TVA} La franchise en base ne les concerne pas : au-delà de ${euros(REGLES.TVA.services.franchiseBase)} d'honoraires dans l'année (seuil de la franchise pour les prestations de services en ${ANNEE_DES_MONTAGES}), la micro-entreprise n'a toujours pas de TVA à facturer sur ses soins, et le simulateur ne signale aucun dépassement.`,
     "L'ostéopathe n'est pas conventionné avec l'Assurance maladie : aucune part de ses cotisations n'est prise en charge, contrairement à un auxiliaire médical conventionné.",
     `Loyer du cabinet partagé supposé de ${euros(LOYER_DU_CABINET_DE_LEA)} par mois, non déductible en micro-entreprise. ${hypothesesDeCharges("l'activité", CHARGES.lea)}`,
     "Choisir une autre profession, ou « Non réglementée », sur la fiche de l'activité change les cotisations : la profession compte autant que le statut."
