@@ -98,8 +98,8 @@ Les autres commandes :
 
 ```powershell
 npm run essai:store -- verifier     # refait seulement l'étape 8, par exemple après une mise à jour
-npm run essai:store -- etat         # paquet installé, certificat présent et approuvé, données mises de côté, entrée de Claude Desktop : rien n'est modifié
-npm run essai:store -- nettoyer     # à la fin de l'essai
+npm run essai:store -- etat         # paquet installé, certificat présent et approuvé, données mises de côté, serveurs MCP en cours et leur client, entrée de Claude Desktop : rien n'est modifié
+npm run essai:store -- nettoyer     # à la fin de l'essai ; --arreter-les-serveurs-mcp arrête avant les serveurs MCP restés lancés par un client d'IA
 ```
 
 ### Essayer l'application
@@ -120,6 +120,7 @@ Avec le dossier de données mis de côté, les données du paquet sont dans `%LO
 
 Application fermée, le script :
 
+- vérifie d'abord que rien de l'application ne tourne, et distingue deux cas. Si la **fenêtre** est ouverte : « L'application « Simulateur Indépendant FR » est ouverte : fermez-la… ». Si elle est fermée mais que des **serveurs MCP** de la version du Store tournent encore (des process du même exécutable sous `WindowsApps`, à la ligne de commande contenant `serveur-mcp.mjs`, lancés par Claude Code ou Claude Desktop par l'alias d'exécution), il dit combien et par quel client (« 3 lancés par Claude Code »), et propose de quitter ce client, ou de relancer avec `--arreter-les-serveurs-mcp`, qui arrête ces seuls process (annoncés un à un) ; le client les relance à sa prochaine session. Les serveurs d'une installation classique ne sont pas concernés. L'option existe aussi pour `installer`, et `etat` liste les serveurs en cours ;
 - désinstalle la copie d'essai (jamais une version `Store`, qu'il signale et laisse) ; Windows supprime avec elle ses données redirigées (`LocalCache`) ;
 - retire le certificat d'essai de `Cert:\LocalMachine\TrustedPeople` (**une fenêtre de contrôle de compte d'utilisateur**, pour la seule commande `Remove-Item` affichée) et de `Cert:\CurrentUser\My` ;
 - supprime les copies signées et le certificat exporté (`%LOCALAPPDATA%\simulateur-independant-fr-outils\essai`) ; le signtool téléchargé reste en cache ;

@@ -13,18 +13,18 @@ export const COMMANDES = ["installer", "verifier", "etat", "nettoyer"]
 
 /** Les options admises par chaque commande. */
 const OPTIONS_PERMISES = {
-  installer: ["--paquet", "--nouvel-utilisateur", "--claude-desktop"],
+  installer: ["--paquet", "--nouvel-utilisateur", "--claude-desktop", "--arreter-les-serveurs-mcp"],
   verifier: [],
   etat: [],
-  nettoyer: ["--claude-desktop"]
+  nettoyer: ["--claude-desktop", "--arreter-les-serveurs-mcp"]
 }
 
 /**
  * Les arguments de `npm run essai:store -- <commande> [options]`. Renvoie `{ commande, paquet, nouvelUtilisateur,
- * claudeDesktop }`, ou `{ erreur }` si une commande ou une option est inconnue ou mal placée.
+ * claudeDesktop, arreterLesServeursMcp }`, ou `{ erreur }` si une commande ou une option est inconnue ou mal placée.
  */
 export function lireLesArguments(argv) {
-  const resultat = { commande: "installer", paquet: null, nouvelUtilisateur: false, claudeDesktop: false }
+  const resultat = { commande: "installer", paquet: null, nouvelUtilisateur: false, claudeDesktop: false, arreterLesServeursMcp: false }
   const options = []
   for (let i = 0; i < argv.length; i++) {
     const argument = argv[i]
@@ -39,6 +39,7 @@ export function lireLesArguments(argv) {
       if (!resultat.paquet) return { erreur: "--paquet attend le chemin d'un fichier .appx." }
     } else if (argument === "--nouvel-utilisateur") resultat.nouvelUtilisateur = true
     else if (argument === "--claude-desktop") resultat.claudeDesktop = true
+    else if (argument === "--arreter-les-serveurs-mcp") resultat.arreterLesServeursMcp = true
     else return { erreur: `Option inconnue : « ${argument} ».` }
   }
   const refusee = options.find(option => !OPTIONS_PERMISES[resultat.commande].includes(option))
@@ -174,6 +175,74 @@ export function versionDuServeurPret(sortie) {
 /** Vrai si l'un de ces exécutables est Claude Desktop (en paquet ou installé classiquement) et non Claude Code. */
 export function claudeDesktopEstOuvert(chemins) {
   return chemins.some(chemin => /\\WindowsApps\\Claude_[^\\]+\\|\\AnthropicClaude\\/i.test(chemin ?? ""))
+}
+
+// --- Application ouverte : fenêtre ou serveurs MCP ----------------------------------------------------------------
+
+const FICHIER_DU_SERVEUR_MCP = "serveur-mcp.mjs"
+const nomDuFichier = chemin => (chemin ?? "").split(/[\\/]/).pop().toLowerCase()
+const estDansWindowsApps = chemin => /\\WindowsApps\\/i.test(chemin ?? "")
+
+/** Le client d'IA d'après le chemin de `claude.exe` : Claude Desktop (paquet ou classique), Claude Code, ou les deux si le chemin est caché. */
+function clientDeClaude(executable) {
+  if (!executable) return "Claude Code ou Claude Desktop"
+  return claudeDesktopEstOuvert([executable]) ? "Claude Desktop" : "Claude Code"
+}
+
+/**
+ * Le client d'IA qui a lancé le process `id` : on remonte ses parents jusqu'à un `claude.exe` (Claude Code, Claude
+ * Desktop, ou les deux si son chemin est caché) ; `null` si aucun n'est trouvé. Le parcours s'arrête sur un cycle (un
+ * identifiant de process réutilisé).
+ */
+export function clientQuiALance(tous, id) {
+  const parIdentifiant = new Map(tous.map(processus => [processus.id, processus]))
+  const vus = new Set()
+  for (let courant = parIdentifiant.get(parIdentifiant.get(id)?.parent); courant && !vus.has(courant.id); courant = parIdentifiant.get(courant.parent)) {
+    vus.add(courant.id)
+    if ((nomDuFichier(courant.executable) || nomDuFichier(courant.nom)) === "claude.exe") return clientDeClaude(courant.executable)
+  }
+  return null
+}
+
+/**
+ * Classe les process en cours (`{ id, parent, executable, ligne, nom? }`, ligne de commande comprise) pour l'exécutable
+ * `executable` de l'application (« Simulateur Indépendant FR.exe ») : `fenetre` (les identifiants des process de
+ * l'application autres que le serveur MCP : fenêtre et process fils) et `serveursMcp` (ceux dont la ligne de commande
+ * contient serveur-mcp.mjs et dont l'exécutable est celui du paquet, sous WindowsApps : `{ id, client }`, `client`
+ * étant `null` si aucun `claude.exe` n'est parmi leurs parents). Les serveurs d'une installation classique ne sont pas
+ * comptés.
+ */
+export function classerLesProcessDeLApplication(tous, executable) {
+  const nomAttendu = executable.toLowerCase()
+  const fenetre = []
+  const serveursMcp = []
+  for (const processus of tous) {
+    if ((nomDuFichier(processus.executable) || nomDuFichier(processus.nom)) !== nomAttendu) continue
+    if (!(processus.ligne ?? "").includes(FICHIER_DU_SERVEUR_MCP)) fenetre.push(processus.id)
+    else if (estDansWindowsApps(processus.executable)) serveursMcp.push({ id: processus.id, client: clientQuiALance(tous, processus.id) })
+  }
+  return { fenetre, serveursMcp }
+}
+
+const INCONNU = "un client inconnu"
+
+/** Les serveurs MCP par client, en phrase : « 2 lancés par Claude Code, 1 lancé par Claude Desktop ». */
+export function serveursParClient(serveursMcp) {
+  const nombres = new Map()
+  for (const { client } of serveursMcp) nombres.set(client ?? INCONNU, (nombres.get(client ?? INCONNU) ?? 0) + 1)
+  return [...nombres].map(([client, nombre]) => `${nombre} ${nombre > 1 ? "lancés" : "lancé"} par ${client}`).join(", ")
+}
+
+/**
+ * Ce que l'application ouverte empêche : `null` si rien ne gêne l'opération `pourquoi` (« d'installer la copie
+ * d'essai »), sinon le message à montrer. La fenêtre passe avant les serveurs MCP ; ceux-ci ne gênent pas quand
+ * `arreter` est vrai (le script les arrête lui-même).
+ */
+export function messageDApplicationOuverte({ fenetre, serveursMcp }, nom, pourquoi, arreter) {
+  if (fenetre.length > 0) return `L'application « ${nom} » est ouverte : fermez-la avant ${pourquoi}, puis relancez la commande.`
+  if (serveursMcp.length === 0 || arreter) return null
+  const plusieurs = serveursMcp.length > 1
+  return `La fenêtre de l'application « ${nom} » est fermée, mais ${serveursMcp.length} ${plusieurs ? "serveurs MCP tournent" : "serveur MCP tourne"} encore (${serveursParClient(serveursMcp)}) : ${plusieurs ? "ils empêchent" : "il empêche"} ${pourquoi}. Quittez ${plusieurs ? "les clients d'IA qui les ont lancés" : "le client d'IA qui l'a lancé"} (Claude Desktop : clic droit sur son icône près de l'horloge > Quitter ; Claude Code : fermez la session), ou relancez la commande avec --arreter-les-serveurs-mcp pour arrêter ${plusieurs ? "ces serveurs" : "ce serveur"} (le client les relancera à sa prochaine session).`
 }
 
 // --- Serveur MCP et Claude Desktop --------------------------------------------------------------------------------

@@ -4,12 +4,12 @@
 // publier-sur-le-store.md, étape 2, et l'ADR 013). Windows seulement. La partie pure est dans
 // scripts/essai-paquet-store-logique.mjs ; les cmdlets Appx et les certificats passent par PowerShell.
 //
-//   installer [--paquet <fichier.appx>] [--nouvel-utilisateur] [--claude-desktop]   (commande par défaut)
+//   installer [--paquet <fichier.appx>] [--nouvel-utilisateur] [--claude-desktop] [--arreter-les-serveurs-mcp]   (par défaut)
 //       construit le paquet (sauf --paquet), en signe une copie avec un certificat d'essai approuvé sur ce PC,
 //       l'installe et vérifie que le serveur MCP démarre par l'alias d'exécution.
 //   verifier                       relance seulement la vérification du serveur MCP.
-//   etat                           ce qui est installé, sans rien modifier.
-//   nettoyer [--claude-desktop]    désinstalle la copie d'essai, retire le certificat, remet les données en place.
+//   etat                           ce qui est installé et les serveurs MCP en cours, sans rien modifier.
+//   nettoyer [--claude-desktop] [--arreter-les-serveurs-mcp]   désinstalle la copie d'essai, retire le certificat, remet les données en place.
 
 import { spawn, spawnSync } from "node:child_process"
 import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs"
@@ -19,6 +19,7 @@ import {
   ajouterLEntree,
   cheminDeSauvegarde,
   choisirLeSigntool,
+  classerLesProcessDeLApplication,
   claudeDesktopEstOuvert,
   decisionAvantInstallation,
   ecartsDeLInstallation,
@@ -28,9 +29,11 @@ import {
   identiteDuManifeste,
   lireLesArguments,
   nomDeFamilleDuPaquet,
+  messageDApplicationOuverte,
   nomDuPaquetConstruit,
   OUTILS_NUGET,
   retirerLEntree,
+  serveursParClient,
   signatureDeMicrosoft,
   versionDuPaquet,
   versionDuServeurPret
@@ -146,9 +149,34 @@ function processEnCours(noms) {
 
 const nomDeLExecutable = () => lireJson("electron-builder.json").productName
 
-/** Refuse si l'application (version classique ou paquet) est ouverte. */
+/** Tous les process (Win32_Process) : identifiant, parent, exécutable (vide s'il est caché), nom et ligne de commande. */
+function tousLesProcess() {
+  const resultat = powershell(
+    `@(Get-CimInstance Win32_Process | ForEach-Object { [pscustomobject]@{ id = [int]$_.ProcessId; parent = [int]$_.ParentProcessId; executable = [string]$_.ExecutablePath; nom = [string]$_.Name; ligne = [string]$_.CommandLine } }) | ConvertTo-Json -Compress`,
+    { json: true }
+  )
+  return enListe(resultat)
+}
+
+/** La fenêtre de l'application (version classique ou paquet) et les serveurs MCP de la version du paquet qui tournent. */
+const processDeLApplication = () => classerLesProcessDeLApplication(tousLesProcess(), `${nomDeLExecutable()}.exe`)
+
+/** Mis à vrai par --arreter-les-serveurs-mcp. */
+let arreterLesServeursMcp = false
+
+/**
+ * Refuse si l'application est ouverte : sa fenêtre (à fermer) ou des serveurs MCP lancés par un client d'IA par
+ * l'alias d'exécution (à quitter avec le client, ou à arrêter avec --arreter-les-serveurs-mcp, qui n'arrête que ces
+ * process-là).
+ */
 function exigerApplicationFermee(pourquoi) {
-  if (processEnCours([nomDeLExecutable()]).length > 0) throw new Refus(`L'application « ${nomDeLExecutable()} » est ouverte : fermez-la avant ${pourquoi}, puis relancez la commande.`)
+  const ouverts = processDeLApplication()
+  const message = messageDApplicationOuverte(ouverts, nomDeLExecutable(), pourquoi, arreterLesServeursMcp)
+  if (message) throw new Refus(message)
+  if (ouverts.serveursMcp.length === 0) return
+  info(`Arrêt de ${ouverts.serveursMcp.length} serveur(s) MCP de la version du Store (${serveursParClient(ouverts.serveursMcp)}) : process ${ouverts.serveursMcp.map(({ id }) => id).join(", ")}.`)
+  powershell(`Stop-Process -Id ($env:ESSAI_IDENTIFIANTS -split ';' | ForEach-Object { [int]$_ }) -Force -ErrorAction SilentlyContinue`, { valeurs: { IDENTIFIANTS: ouverts.serveursMcp.map(({ id }) => id).join(";") } })
+  if (processDeLApplication().serveursMcp.length > 0) throw new Refus("Des serveurs MCP tournent encore après leur arrêt : quittez le client d'IA qui les relance, puis relancez la commande.")
 }
 
 // --- 1. Paquet ---------------------------------------------------------------------------------------------------------
@@ -538,8 +566,16 @@ function commandeEtat() {
   const nomDeFamille = installes[0]?.PackageFamilyName ?? nomDeFamilleDuPaquet(identite)
   info(`Copie du serveur MCP : ${copieDuServeurVisible(nomDeFamille) ?? "absente"}`)
   info(`Copies signées et fichiers temporaires : ${existsSync(dossierDeTravail) ? dossierDeTravail : "aucun"}`)
+  etatDesProcess()
   etape("Claude Desktop")
   info(etatDeClaudeDesktop())
+}
+
+function etatDesProcess() {
+  etape("Application et serveurs MCP en cours")
+  const { fenetre, serveursMcp } = processDeLApplication()
+  info(fenetre.length > 0 ? `La fenêtre de l'application est ouverte (${fenetre.length} process).` : "Fenêtre de l'application : fermée.")
+  info(serveursMcp.length > 0 ? `Serveurs MCP de la version du Store : ${serveursMcp.length} (${serveursParClient(serveursMcp)}), process ${serveursMcp.map(({ id }) => id).join(", ")}.` : "Serveurs MCP de la version du Store : aucun.")
 }
 
 function desinstallerLesCopiesDEssai() {
@@ -596,7 +632,8 @@ function commandeNettoyer(options) {
 async function principal() {
   if (process.platform !== "win32") throw new Refus("npm run essai:store ne fonctionne que sous Windows (paquets MSIX, certificats, alias d'exécution).")
   const options = lireLesArguments(process.argv.slice(2))
-  if (options.erreur) throw new Refus(`${options.erreur}\nUsage : npm run essai:store -- [installer|verifier|etat|nettoyer] [--paquet <fichier.appx>] [--nouvel-utilisateur] [--claude-desktop]`)
+  if (options.erreur) throw new Refus(`${options.erreur}\nUsage : npm run essai:store -- [installer|verifier|etat|nettoyer] [--paquet <fichier.appx>] [--nouvel-utilisateur] [--claude-desktop] [--arreter-les-serveurs-mcp]`)
+  arreterLesServeursMcp = options.arreterLesServeursMcp
   const erreurs = complete ? erreursDeLIdentite(identite) : []
   if (erreurs.length > 0) throw new Refus(`Identité du paquet invalide (build/store/identite.json) :\n- ${erreurs.join("\n- ")}`)
   const commandes = {
