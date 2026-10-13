@@ -262,7 +262,7 @@ describe("serveur MCP : erreurs", () => {
     await connecter()
     const absente = await appeler("decrire_simulation")
     expect(absente.isError).toBe(true)
-    expect(texte(absente)).toMatch(/^Aucune simulation enregistrée dans « .+ »\. Ouvrez une fois l'application/)
+    expect(texte(absente)).toMatch(/^Aucune simulation enregistrée dans « .+ » : l'application Simulateur Indépendant FR n'y a encore rien enregistré\. Ouvrez-la \(si elle est déjà ouverte, attendez quelques secondes ou modifiez la simulation\), puis réessayez\./)
     expect(texte(absente)).toMatch(/--donnees/)
 
     await writeFile(path.join(dossier, FICHIER_DE_LA_SESSION), "{ pas du JSON")
