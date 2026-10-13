@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
-import { coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, phraseDuVerdict, tauxDePrelevement } from "./resume"
+import { coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, phraseDuVerdict, remunerationOptimale, tauxDePrelevement } from "./resume"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
 
@@ -95,5 +95,21 @@ describe("coût des 4 trimestres de retraite", () => {
     const colonne = (libelle: string, coutDesQuatreTrimestres?: number) => ({ libelle, remunerationOptimale: { remunerationNette: 0, avecRetraite: true, retraiteHorsDAtteinte: false, ...(coutDesQuatreTrimestres ? { coutDesQuatreTrimestres } : {}) } }) as ScenarioStatut
     expect(coutsDesQuatreTrimestres([colonne("SASU", 1234), colonne("EURL"), { libelle: "EI au réel" } as ScenarioStatut])).toEqual([{ libelle: "SASU", cout: 1234 }])
     expect(libelleDuCoutDesTrimestres(1234).replace(/\s/g, " ")).toBe("4 trimestres : −1 234 € de net")
+  })
+
+  it("donne le gain d'un mariage ou d'un Pacs du premier couple en union libre, rien sans couple", () => {
+    const couple = { personIds: ["hugo", "emma"] as [string, string], netApresImpotsActuel: 46460, impotSurLeRevenuActuel: 4444, netApresImpotsMaries: 48789, impotSurLeRevenuMaries: 2115 }
+    expect(gainDuMariageOuDuPacs(null)).toBeNull()
+    expect(gainDuMariageOuDuPacs(comparaison("micro"))).toBeNull()
+    expect(gainDuMariageOuDuPacs({ ...comparaison("micro"), couples: [couple] })).toBe(2329)
+  })
+
+  it("donne la rémunération au meilleur net de l'arbitrage, rien tant qu'il n'a pas de résultat", () => {
+    const point = { remunerationNette: 5800, dividendes: 40000, netApresImpots: 45780, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, trimestres: 4 }
+    const optimisation = { statut: "SASU" as const, remunerationMaximale: 60000, points: [point], meilleur: point, meilleurAvecRetraite: point, warnings: [] }
+    expect(remunerationOptimale(undefined)).toBeNull()
+    expect(remunerationOptimale(null)).toBeNull()
+    expect(remunerationOptimale({ ...optimisation, meilleur: null })).toBeNull()
+    expect(remunerationOptimale(optimisation)).toBe(5800)
   })
 })
