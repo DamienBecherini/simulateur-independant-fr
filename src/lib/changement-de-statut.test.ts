@@ -1,11 +1,14 @@
 // src/lib/changement-de-statut.test.ts
 
 import { describe, expect, it } from "vitest"
+import { plafondsAuProrata } from "@/backend/logic/calculsAE"
+import { prorataDesPlafonds } from "@/backend/logic/dispositifs"
 import { euros } from "@/backend/logic/format"
 import { reglesDeTest } from "@/backend/logic/testing/regles-de-test"
 import { micro, personne, relation, session as donneesDeLAnnee, societe, type Flux } from "@/backend/logic/testing/session-de-test"
 import { CAPITAL_SOCIAL_PAR_DEFAUT, type Company, type Entity, type MicroEntreprise, type Relationship, type SessionState } from "@/types"
 import { appliquerLeChangement, examinerLeChangement, natureProposee, nomDuStatut } from "./changement-de-statut"
+import { reglesDeLAnneeAffichee } from "./regles-affichees"
 
 function sessionDe(entities: Entity[], relationships: Relationship[], flux: Flux[], libelles: Record<number, string> = {}): SessionState {
   const { monthlyData } = donneesDeLAnnee(entities, relationships, flux)
@@ -79,6 +82,49 @@ describe("examinerLeChangement", () => {
     const ei = societe("e1", "EI", 0)
     const s = sessionDe([personne("alice"), personne("bob"), ei], [relation("alice", "e1", "Titulaire"), relation("bob", "e1", "Salarié")], [])
     expect(examinerLeChangement(s, ei, "micro", reglesDeTest, "bnc").consequences).toContain("Les salariés restent : en micro-entreprise, leur coût réduit le net encaissé, mais plus les cotisations ni l'impôt.")
+  })
+
+  describe("plafonds de la micro-entreprise", () => {
+    const { plafonds } = reglesDeLAnneeAffichee(2026).microEntreprise
+    const suite = "le régime est conservé cette année-là, mais deux années de dépassement de suite font passer l'activité au réel le 1er janvier suivant."
+    const avertissements = (consequences: string[]) => consequences.filter(phrase => phrase.includes("plafond de la micro-entreprise"))
+
+    it("une SASU dont les prestations dépassent le plafond des services : averti, selon la nature choisie, sans refus", () => {
+      const sasu = societe("s1", "SASU", 5000)
+      const s = sessionDe([personne("alice"), sasu], [relation("alice", "s1", "Président")], [["s1", "ca_services", 90000], ["s1", "director_remuneration", 30000]])
+      const bnc = examinerLeChangement(s, sasu, "micro", reglesDeTest, "bnc")
+      expect(bnc.refus).toBeNull()
+      expect(avertissements(bnc.consequences)).toEqual([`En 2026, les prestations libérales (BNC) (${euros(90000)}) dépassent le plafond de la micro-entreprise pour cette activité (${euros(plafonds.services)}) : ${suite}`])
+      expect(bnc.consequences[1]).toBe(avertissements(bnc.consequences)[0])
+      expect(avertissements(examinerLeChangement(s, sasu, "micro", reglesDeTest, "bic").consequences)).toEqual([
+        `En 2026, les prestations artisanales ou commerciales (BIC) (${euros(90000)}) dépassent le plafond de la micro-entreprise pour cette activité (${euros(plafonds.services)}) : ${suite}`
+      ])
+    })
+
+    it("une EI au réel dont le chiffre d'affaires total dépasse le plafond de la vente, ses prestations restant sous celui des services", () => {
+      const ei = societe("e1", "EI", 0)
+      const s = sessionDe([personne("alice"), ei], [relation("alice", "e1", "Titulaire")], [["e1", "ca_vente", 180000], ["e1", "ca_services", 30000]])
+      expect(avertissements(examinerLeChangement(s, ei, "micro", reglesDeTest, "bnc").consequences)).toEqual([
+        `En 2026, le chiffre d'affaires (${euros(210000)}) dépasse le plafond de la micro-entreprise pour cette activité (${euros(plafonds.vente)}) : ${suite}`
+      ])
+    })
+
+    it("l'année de la création, le plafond est réduit au prorata des jours d'activité", () => {
+      const ei: Company = { ...societe("e1", "EI", 0), dateDeCreation: "2026-07" }
+      const s = sessionDe([personne("alice"), ei], [relation("alice", "e1", "Titulaire")], [["e1", "ca_services", 50000]])
+      const plafond = plafondsAuProrata(plafonds, prorataDesPlafonds({ annee: 2026, mois: 7 }, 2026)).services
+      expect(avertissements(examinerLeChangement(s, ei, "micro", reglesDeTest, "bnc").consequences)).toEqual([
+        `En 2026, les prestations libérales (BNC) (${euros(50000)}) dépassent le plafond de la micro-entreprise pour cette activité (${euros(plafond)}, au prorata de l'année de création) : ${suite}`
+      ])
+    })
+
+    it("rien sous les plafonds, ni vers un autre statut que la micro-entreprise", () => {
+      const sasu = societe("s1", "SASU", 5000)
+      const s = sessionDe([personne("alice"), sasu], [relation("alice", "s1", "Président")], [["s1", "ca_services", 90000]])
+      expect(avertissements(examinerLeChangement(s, sasu, "EI", reglesDeTest, "bnc").consequences)).toEqual([])
+      const sous = sessionDe([personne("alice"), sasu], [relation("alice", "s1", "Président")], [["s1", "ca_services", 30000]])
+      expect(avertissements(examinerLeChangement(sous, sasu, "micro", reglesDeTest, "bnc").consequences)).toEqual([])
+    })
   })
 
   it("refuse la micro-entreprise à un masseur-kinésithérapeute, sans rien convertir", () => {
