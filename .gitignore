@@ -43,3 +43,6 @@ playwright-report
 *.njsproj
 *.sln
 *.sw?
+
+# Espaces de travail VS Code
+*.code-workspace
