@@ -46,6 +46,7 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run typecheck:tests` | Types des tests de `src/backend` et de `src/backend/logic/testing` (exclus des deux commandes précédentes). | Avant de commiter. |
 | `npx eslint .` (ou `npm run lint`) | ESLint, dont la complexité cyclomatique ≤ 12 sur `src/`. | Avant de commiter. |
 | `npm run duplication` | Code dupliqué (jscpd, 70 jetons ; tests, règles JSON et `testing/` exclus). Attendu : 0 clone. | Avant de commiter. |
+| `npm run code-mort` | Code mort (knip) : fichiers, dépendances et exports que rien n'utilise. Configuration et points d'entrée dans `knip.jsonc` ; attendu : aucune ligne. Un export qui ne sert qu'à son fichier perd son `export` ; un export voulu malgré tout (API du format de fichier, par exemple) se garde avec une raison écrite dans `knip.jsonc`. | Avant de commiter. |
 | `npm run test:web` | Compile la démo web et la teste dans Chromium (`e2e-web/`). Port 4173 ; s'il est pris : `PORT_E2E_WEB=4391 npm run test:web`. | Avant de fusionner. |
 | `npm run test:e2e` | Compile l'application et la teste avec Playwright + Electron (`e2e/`), fenêtres masquées (`test:e2e:visible` pour les voir). | Avant de fusionner. |
 | `npm run test:all` | Couverture, puis les deux suites de bout en bout. | Avant de fusionner. |
@@ -54,12 +55,12 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run dist:win`, `dist:mac`, `dist:linux`, `dist:store` | Exécutables (electron-builder). | Voir [publication.md](./publication.md). |
 | `npm run captures` | Captures d'écran du README. | Après un changement visible. |
 
-La CI (`.github/workflows/ci.yml`) lance lint, `typecheck`, `transpile:electron`, `typecheck:tests`, `test:coverage`, `build` et la duplication à chaque push ; `e2e.yml` les tests de bout en bout sur `integration` et `main` ; `demo-web.yml` teste et publie la démo à chaque push sur `main`.
+La CI (`.github/workflows/ci.yml`) lance lint, `code-mort`, `typecheck`, `transpile:electron`, `typecheck:tests`, `test:coverage`, `build` et la duplication à chaque push ; `e2e.yml` les tests de bout en bout sur `integration` et `main` ; `demo-web.yml` teste et publie la démo à chaque push sur `main`.
 
 **Vérification complète**, à lancer avant de proposer une fusion :
 
 ```sh
-npx eslint . && npx tsc -b && npm run transpile:electron && npm run typecheck:tests \
+npx eslint . && npm run code-mort && npx tsc -b && npm run transpile:electron && npm run typecheck:tests \
   && npm run test:coverage && npm run duplication && npm run test:web && npm run test:e2e
 ```
 
@@ -74,8 +75,8 @@ npx eslint . && npx tsc -b && npm run transpile:electron && npm run typecheck:te
 | `src/backend/logic/testing/` | Outils de test du moteur : règles fictives aux chiffres ronds (`regles-de-test.ts`), sessions de test, `casDeReference`. |
 | `src/backend/logic/outils/` | Les outils pour les clients d'IA (ADR 010) : catalogue, lecture, propositions. Purs eux aussi. |
 | `src/backend/mcp/` | Le serveur MCP local (ADR 011), processus à part lancé par le client d'IA. |
-| `src/backend/*.ts` | Le process principal d'Electron (rôle de chaque fichier au § 2.4) : `main.ts` (point d'entrée, assemblage), `fenetres.ts` (écran de démarrage, fenêtre principale, protections), `canaux-*.ts` (canaux IPC par domaine), `preload.cts` (pont `window.api`), `util.ts` (canaux typés, vérification de l'émetteur), `securite-des-fenetres.ts` (options de sécurité des fenêtres, navigation et adresses externes permises ; les paramètres des canaux se vérifient dans `logic/entrees-ipc.ts`), `donnees-de-l-application.ts` (lecture et écriture des trois fichiers de données), `fichiers-surs.ts` (écriture atomique, copies), `boite-aux-propositions.ts`. |
-| `src/lib/` | Logique côté interface, pure et testée : exports CSV et Markdown, situations types, scénarios de test, professions affichées, avis des utilisateurs, sauvegardes nommées (`session-service.ts`), barres de la grille (`grille-mensuelle.ts`), raccourcis d'annulation (`raccourcis-clavier.ts`)… Les composants affichent ; une décision ou un calcul va ici, avec son test. |
+| `src/backend/*.ts` | Le process principal d'Electron (rôle de chaque fichier au § 2.4 ; il importe le moteur et `src/lib`, jamais `src/ui` ni `src/web`) : `main.ts` (point d'entrée, assemblage), `fenetres.ts` (écran de démarrage, fenêtre principale, protections), `canaux-*.ts` (canaux IPC par domaine), `preload.cts` (pont `window.api`), `util.ts` (canaux typés, vérification de l'émetteur), `securite-des-fenetres.ts` (options de sécurité des fenêtres, navigation et adresses externes permises ; les paramètres des canaux se vérifient dans `logic/entrees-ipc.ts`), `donnees-de-l-application.ts` (lecture et écriture des trois fichiers de données), `fichiers-surs.ts` (écriture atomique, copies), `boite-aux-propositions.ts`. |
+| `src/lib/` | Logique pure hors moteur, partagée par l'interface et par le process principal (`configuration-mcp.ts`, `adresses-des-retours.ts`, `horodatage.ts`), testée : exports CSV et Markdown, situations types, scénarios de test, professions affichées, avis des utilisateurs, sauvegardes nommées (`session-service.ts`), barres de la grille (`grille-mensuelle.ts`), raccourcis d'annulation (`raccourcis-clavier.ts`)… Les composants affichent ; une décision ou un calcul va ici, avec son test. |
 | `src/ui/` | Application React : `App.tsx`, `components/`, `hooks/` (`useSessionManager` : état, annuler et rétablir, sauvegarde différée). |
 | `src/components/ui/` | Composants shadcn/ui, copiés tels quels (exclus de SonarQube). |
 | `src/web/` | La démo web : `api-navigateur.ts` remplace le process principal (même `window.api`), `stockage-navigateur.ts` le disque ; `main.tsx` est sa racine de composition (plateforme de la démo : `plateforme-web.ts`) ; `pwa/` la rend installable (ADR 012). |
@@ -134,6 +135,7 @@ flowchart TD
   WEB --> PERS
   WEB --> PLURI
   LIB --> Moteur
+  MAIN --> LIB
   UI --> LIB
   UI -->|window.api| MAIN
   UI -->|window.api| WEB
@@ -143,7 +145,8 @@ flowchart TD
 Règles de dépendance :
 
 - `src/backend/logic` n'importe que `src/types.ts`, `src/backend/regles` et Zod : ni `src/lib`, ni `src/ui`, ni `src/web`. Un test (`outils/isolement.test.ts`) vérifie en plus que les outils pour les IA n'atteignent que Zod, les types et le moteur.
-- `src/lib` et `src/ui` peuvent importer le moteur ; le moteur ne les importe jamais. `src/lib` n'importe ni `src/ui` ni `src/web` (ses tests, eux, empruntent `src/ui/testing` et la simulation d'exemple).
+- `src/lib` et `src/ui` peuvent importer le moteur ; le moteur ne les importe jamais. `src/lib` est la logique pure hors moteur, partagée par l'interface et par le process principal : elle n'importe ni `src/ui` ni `src/web` (ses tests, eux, empruntent `src/ui/testing` et la simulation d'exemple).
+- Le process principal (`src/backend/*.ts`) importe le moteur et `src/lib` (`configuration-mcp.ts`, `adresses-des-retours.ts`, `horodatage.ts`), jamais `src/ui` ni `src/web` ; ses tests peuvent emprunter la simulation d'exemple de la démo.
 - `src/web` peut importer `src/ui` ; `src/ui` n'importe jamais `src/web`. Ce qui est propre à la démo (bandeau, bouton d'installation, renvoi vers l'application de bureau, diagnostic d'un avis) arrive à l'interface par le contexte `Plateforme` (`src/ui/plateforme.ts`), fourni par la racine de composition de chaque cible : `src/ui/main.tsx` pour le bureau (`PLATEFORME_DE_BUREAU`), `src/web/main.tsx` pour la démo (`PLATEFORME_WEB`, `src/web/plateforme-web.ts`), que `index.html` charge à la place de la première en mode `web` (plugin `entreeDeLaDemo`, `vite-plugin-demo-installable.ts`). L'application de bureau ne contient ainsi rien de la démo, sans dépendre de l'élimination du code mort. Pour un nouvel élément propre à la démo : un champ de `Plateforme`, rempli dans `plateforme-web.ts`.
 - L'interface ne parle au disque que par `window.api` (contrat `EventPayloadMapping`, `src/globals.d.ts`), fourni par Electron (`preload.cts` → canaux déclarés par `canaux-*.ts`, § 2.4) ou par la démo (`creerApiNavigateur`). Un canal Electron se déclare par `ipcMainHandle` (émetteur vérifié) et vérifie lui-même ses paramètres avec un schéma de `logic/entrees-ipc.ts` : le process principal ne fait pas confiance à la page (ADR 003). Les calculs sont communs aux deux ponts (`logic/calculs-du-pont.ts`), avec la vérification de leurs paramètres : session revalidée, réglages, année et activité par les schémas de `entrees-ipc.ts`.
 - **Ces règles entre dossiers sont vérifiées par ESLint** (`no-restricted-imports`, `eslint.config.js`) : un import interdit, par l'alias `@/` ou par un chemin relatif, fait échouer `npm run lint`. La règle lit les `import` et `export … from` statiques, pas les `import()` ni les chaînes de `vi.mock`. Il n'y a plus d'écart connu.
@@ -189,6 +192,7 @@ flowchart TD
 | `details-des-activites.ts` | Commun à toutes les activités : masse salariale, déplacements professionnels, profession réglementée, et leurs champs dans le résultat. | `simulation-au-reel.ts`, `simulation-micro.ts` |
 | `impot-du-foyer.ts` | Résultat de chaque personne, déduction pour frais professionnels (10 % ou frais réels), revenus et impôt de chaque foyer (`calculerFoyer` : barème, dividendes, RFR). | `simulation-engine.ts` |
 | `bilan-de-la-simulation.ts` | Bilan de l'année (`calculerBilan`), additionné sur les résultats arrondis. | `simulation-engine.ts` |
+| `libelles-des-cotisations.ts` | Le nom de chaque cotisation d'un travailleur non salarié, en une table : l'écran et les exports en font leurs lignes « dont … » (`src/lib/detail-des-cotisations.ts`), les outils pour les IA leurs composantes. | `src/lib`, `outils/resultats.ts` |
 | `statuts.ts` | Ce qu'est chaque statut au réel, en tables typées par statut : libellé, dirigeant, relations permises, régime social du dirigeant (§ 3.4). | moteur, outils, `src/lib`, interface |
 | `calculsAE.ts` | Micro-entreprise : cotisations, abattement, versement libératoire, plafonds. | moteur |
 | `calculsEI.ts`, `calculsEURL.ts`, `calculsSASU.ts`, `calculsSociete.ts` | Entreprise individuelle au réel ; sociétés à l'IS (IS, réserve légale, déficits). | moteur |
@@ -314,7 +318,7 @@ Le compilateur **ne réclame pas** le reste, et un oubli fait **ignorer le flux 
 
 **Un statut juridique** (essai : `"SARL"`). C'est une évolution de plusieurs jours, à découper ; avant le code, une ADR (régime du gérant, majoritaire ou non, imposition) et un dossier de recherche avec des cas calculés à la main.
 
-**Le compilateur guide l'ajout.** Les statuts au réel n'ont qu'une liste, `STATUTS_JURIDIQUES` (`src/types.ts`), d'où se déduisent `legalStatus`, `StatutJuridique`, `StatutCompare` (et `STATUTS_COMPARES`), `GENRES_D_ACTEUR` des outils, et, par la table `IMPOSITION_DES_STATUTS`, `StatutSociete`, `STATUTS_SOCIETE` et `estSocieteIS`. Chaque particularité d'un statut vit dans une table typée par statut : il n'y a plus de `legalStatus === …` dans `src/` hors des migrations. Ajoutez `"SARL"` à `STATUTS_JURIDIQUES` et lancez `npx tsc -b`, `npm run transpile:electron` et `npm run typecheck:tests`. L'essai donne exactement ces erreurs, une par endroit à compléter :
+**Le compilateur guide l'ajout.** Les statuts au réel n'ont qu'une liste, `STATUTS_JURIDIQUES` (`src/types.ts`), d'où se déduisent `legalStatus`, `StatutJuridique`, `StatutCompare` (et `STATUTS_COMPARES`), `GENRES_D_ACTEUR` des outils, et, par la table `IMPOSITION_DES_STATUTS`, `StatutSociete`, `STATUTS_SOCIETE` et `estSocieteIS`. Chaque particularité d'un statut vit dans une table typée par statut : il n'y a plus de `legalStatus === …` dans `src/` hors des migrations. Ajoutez `"SARL"` à `STATUTS_JURIDIQUES` et lancez `npx tsc -b`, `npm run transpile:electron` et `npm run typecheck:tests`. L'essai, refait le 13 octobre 2026, donne exactement ces erreurs (23, dans 15 fichiers de code et 2 de tests), une par endroit à compléter :
 
 | Erreur | Fichier | À écrire |
 |---|---|---|
@@ -328,6 +332,8 @@ Le compilateur **ne réclame pas** le reste, et un oubli fait **ignorer le flux 
 | `Property 'SARL' is missing` | `logic/outils/outils-de-proposition.ts` | Le libellé du genre d'acteur |
 | `Property 'SARL' is missing` dans `companyDefaults` | `src/lib/entity-factory.ts` | Nom, icône, couleur, capital d'une nouvelle activité |
 | `Element implicitly has an 'any' type` (deux fois) | `src/lib/montages/construction.ts` | Icône et couleur des situations types |
+| `Property 'SARL' is missing` dans `EN_STATUT` | `src/lib/comparateur-options.ts` | Le statut actuel dans la phrase de l'écart de frais (« en SASU », « en EI au réel »), si la SARL est un `StatutCompare` |
+| `Unused '@ts-expect-error'` (deux fois) | `logic/statuts.test.ts` | Ce test simule l'ajout d'une caisse de statut avec « SARL » : remplacez ce nom par un statut encore absent (« SELARL ») |
 | `Property 'SARL' is missing` dans `CHOIX_DU_STATUT` | `src/ui/components/ChampsDeLActeur.tsx` | Son nom dans la liste « Statut » de la fiche |
 | `Property 'SARL' is missing` dans `OPTIONS_PAR_TYPE` | `src/ui/components/SelectEntityTypeModal.tsx` | Le choix « Ajouter une activité » |
 
@@ -440,7 +446,7 @@ Les scénarios (`src/lib/scenarios-de-test.ts`, `SCENARIOS_DE_TEST`) sont des se
 Lire d'abord les ADR 010 et 011 (« les chiffres viennent du moteur », « l'IA propose, l'utilisateur valide »).
 
 1. **Un outil** se déclare avec `definirOutil({ nom, titre, description, lecture, parametres, resultat, executer })` (`outils/outil.ts`) dans le fichier de sa famille (`lecture.ts`, `resultats.ts`, `comparaison.ts`, `outils-de-proposition.ts`), puis s'ajoute à `OUTILS` (`catalogue.ts`). `nom` en minuscules et tirets bas ; `parametres` en `z.strictObject` ; `executer` pur, qui lève `ErreurOutil` avec un message en français disant quoi corriger. Une modification de la session ne passe que par une proposition (`operations.ts`) appliquée par `appliquer_proposition`.
-2. **Plafonds de taille** : le catalogue (noms, descriptions, schémas des paramètres) est envoyé au modèle à chaque échange. `outils/catalogue.test.ts` le borne à 31 000 caractères et `mcp/serveur-mcp.test.ts` la liste publiée par le serveur à 33 000. **Mesuré en octobre 2026, après le resserrement des descriptions : 27 501 et 29 274 caractères, soit environ 3 500 et 3 700 de marge (11 %) sous chaque plafond.** La marge se consomme vite : toute description allongée doit être compensée (resserrer une autre description, factoriser un rappel commun, décrire un paramètre en une phrase), et ce qu'un schéma dit déjà (plafond, nombre d'éléments, valeurs permises) n'a pas à être répété dans la description. Relever un plafond est une décision (il coûte à chaque échange) : l'écrire dans le test avec la raison, et dans l'ADR 010.
+2. **Plafonds de taille** : le catalogue (noms, descriptions, schémas des paramètres) est envoyé au modèle à chaque échange. `outils/catalogue.test.ts` le borne à 31 000 caractères et `mcp/serveur-mcp.test.ts` la liste publiée par le serveur à 33 000. **Mesuré le 13 octobre 2026 : 27 939 et 29 712 caractères, soit environ 3 060 et 3 290 de marge (10 %) sous chaque plafond** (27 501 et 29 274 après le resserrement des descriptions du 10 octobre). Pour les relire : remplacez temporairement le plafond du test par `0`, l'échec affiche la taille ; la dernière relecture de suivi (`relecture-2026-10.md`, § 9.2) consigne la mesure. La marge se consomme vite : toute description allongée doit être compensée (resserrer une autre description, factoriser un rappel commun, décrire un paramètre en une phrase), et ce qu'un schéma dit déjà (plafond, nombre d'éléments, valeurs permises) n'a pas à être répété dans la description. Relever un plafond est une décision (il coûte à chaque échange) : l'écrire dans le test avec la raison, et dans l'ADR 010.
 3. **Tests** : le test de l'outil compare son résultat au moteur sur la simulation d'exemple ou un montage (`src/web/outils-ia-*.test.ts`, aides de `outils-ia.testing.ts`) ; `outils/isolement.test.ts` refuse tout import hors du moteur, de Zod et des types ; `serveur-mcp.test.ts` vérifie la publication par le serveur.
 4. **Serveur MCP** : rien à câbler, il publie `catalogueDesOutils()` ; les consignes données au modèle sont dans `src/backend/mcp/serveur-mcp.ts`. Ne pas y passer par `registerTool` de `McpServer`, qui publierait son propre schéma JSON et validerait les arguments en anglais (ADR 011, addendum du 2026-10-10). Après modification, `npm run transpile:electron` réempaquette le serveur.
 
@@ -449,6 +455,56 @@ Lire d'abord les ADR 010 et 011 (« les chiffres viennent du moteur », « l'IA 
 ### 3.10 Publier une version
 
 Suivre [publication.md](./publication.md) : numéro dans `package.json` seulement, CHANGELOG daté, étiquette `vX.Y.Z` poussée par le propriétaire, brouillon relu avant publication, Microsoft Store à part.
+
+### 3.11 Ajouter une situation type
+
+Une situation type est une simulation d'un an, préremplie, que l'utilisateur charge depuis la fenêtre « Situations types » (ou depuis une question de l'encart, § 3.12). Essai fait le 13 octobre 2026 avec la copie d'une situation sous un nouvel identifiant.
+
+1. **La situation** : dans `src/lib/montages/montages.ts`, une constante `MontageType` (`id` unique en minuscules et tirets, `titre`, `resume`, `etiquettes`, `questions`, `illustre`, `conditions`, `pointsDAttention`, `sources`, `contenu()`). `contenu()` assemble acteurs, relations et flux avec les fabriques de `construction.ts` (`personne`, `microEntreprise`, `societe`, `relation`, `comparateurAuMeilleurNet`) et les charges d'exemple de `montages.ts` (`fluxDesCharges`, `CHARGES`) : une activité sans charge ferait apparaître l'alerte « aucune charge » à l'ouverture du comparateur, et un test le refuse. Chiffres ronds et fictifs, prénoms génériques.
+2. **Les sources** : des entrées de `SOURCES`, avec l'adresse de la page officielle consultée (§ 4.3 : jamais d'adresse inventée).
+3. **Les textes** : les taux, plafonds et seuils cités se lisent dans `REGLES` (`reglesPubliees(ANNEE_DES_MONTAGES)`) avec `pourcent` et `euros`, jamais recopiés. Un texte qui cite une valeur a son test dans « textes tirés des règles de l'année des montages » (`montages.test.ts`), qui attend la valeur lue dans les règles.
+4. **Dans la liste** : l'ajouter à `MONTAGES_TYPES`, à la fin (`MontagesTypes.test.tsx` attend `MONTAGES_TYPES[0]` sur la première carte).
+5. **Les chiffres de référence** : une entrée dans `ATTENDUS` de `montages.reference.test.ts` (net du foyer, impôt, prélèvements, cotisations par activité, meilleur statut du comparateur), dérivée à la main en commentaire comme pour un cas de référence (§ 3.6). Sans elle, l'essai fait échouer « chaque montage a ses chiffres de référence » et les trois tests de la situation, dans `montages.reference.test.ts` et dans `montages-annee-suivante.test.ts` (qui rejoue les mêmes chiffres avec une année de règles de plus).
+6. **L'année** : `ANNEE_DES_MONTAGES` (2026) ne suit pas l'année en cours ; ne mettez pas `ANNEE_COURANTE` (§ 3.1, étape 5).
+7. **Les textes du dépôt** : `CHANGELOG.md` (Ajouté).
+
+**Vérification :** `npx vitest run src/lib/montages src/ui/components/MontagesTypes.test.tsx src/ui/components/EncartDesQuestions.test.tsx`, puis la vérification complète.
+
+### 3.12 Ajouter une question de départ
+
+L'encart « Que voulez-vous savoir ? » (`EncartDesQuestions.tsx`) liste les questions de `QUESTIONS_DE_DEPART` (`src/lib/questions-de-depart.ts`), puis « Partir de zéro ». Chaque question mène à une situation type, chargée avec la même confirmation que la fenêtre des situations types, ou, faute de situation adaptée, à une section de la page.
+
+1. **La situation visée** : une situation existante, ou la créer d'abord (§ 3.11).
+2. **L'entrée** : `{ question, precision, montage: situation("identifiant") }`. `situation()` échoue au chargement si l'identifiant n'existe pas. `precision` est la phrase qui décrit la situation sous la question (lue par les lecteurs d'écran comme description du bouton). Pour mener à une section plutôt qu'à une situation : `ancre: "identifiant-de-l-element"`, l'identifiant d'un élément de la page (aujourd'hui une chaîne ; voir l'avertissement de la procédure 3.13).
+3. **Le test** : `EncartDesQuestions.test.tsx` (« chaque question désigne la situation type qui y répond ») liste les couples question et situation attendus ; l'essai fait échouer ce seul test tant que la liste n'est pas complétée. Ajoutez, pour une question qui compte, un test de son parcours (charge la situation, demande la confirmation).
+4. **Le texte** : `CHANGELOG.md`.
+
+**Vérification :** `npx vitest run src/lib/questions-de-depart src/ui/components/EncartDesQuestions.test.tsx`.
+
+### 3.13 Ajouter une entrée à la barre de résumé
+
+La barre de résumé (`BarreDeResume.tsx`, affichage « Résumé ») montre des chiffres clés ; chacun est un lien vers la réponse détaillée. **État actuel : l'ancre de chaque lien est une chaîne écrite à la main à plusieurs endroits, sans aide du compilateur. Un registre typé des ancres est prévu (branche `ancres-nommees`) : il remplacera les étapes 2 et 3 par une seule entrée ; relisez cette procédure après sa fusion.**
+
+1. **La valeur** : une fonction pure de `src/lib/resume.ts` (sur le rapport de l'année ou sur le résultat du comparateur), testée dans `resume.test.ts` (modèles : `tauxDePrelevement`, `gainDuMariageOuDuPacs`).
+2. **L'ancre** : l'élément qui porte la réponse a un `id` (et `tabIndex={-1}`, pour recevoir le focus quand on suit le lien), dans le composant de la réponse (modèle : `ComparatorPanel.tsx`, `ANCRE_DU_COUPLE`). Une ancre partagée par la barre et le composant est une constante exportée de `resume.ts`.
+3. **La vue de l'ancre** : `DETAILS` de `src/lib/vues.ts` associe l'ancre à sa vue (« resultats » ou « comparer »). Sans cette ligne, le lien marche tant que la page est affichée, mais l'affichage « Trois vues » perd sa vue au rechargement. Ajoutez aussi l'ancre aux cas de `vues.test.ts` (l. 32 à 36), qui ne couvrent que les ancres déjà connues.
+4. **Le chiffre** : un `<Chiffre vers={ancre} libelle=… valeur=… />` dans `ChiffresClesDeLAnnee` ou, pour une réponse du comparateur, dans `ReponsesDuComparateur` (même fichier). Sur un téléphone, la barre est réduite : `libelleCourt` pour un libellé court, `masqueSiReduite` pour ce qui attend la barre dépliée. `ChiffresClesDeLAnnee` est à la limite de complexité (12) : un nouveau cas va dans un sous-composant, sur le modèle de `ReponsesDuComparateur`.
+5. **Si la valeur vient du comparateur** : ajoutez-la à `ResumeDeLaComparaison` (`resume.ts`) et à ce que `useSignalerLaComparaison` (`ComparatorPanel.tsx`) remonte à `App` par `onComparaison`. Si une troisième réponse du comparateur rejoint la barre, la relecture de suivi conseille de calculer la comparaison au niveau d'`App`, partagée par le panneau et la barre (§ 9.4, K10).
+6. **Les tests** : `resume.test.ts`, `BarreDeResume.test.tsx` (le chiffre s'affiche, son lien mène à l'ancre), `vues.test.ts` (l'ancre retrouve sa vue).
+
+**Vérification :** `npx vitest run src/lib/resume.test.ts src/lib/vues.test.ts src/ui/components/BarreDeResume.test.tsx`, puis `npm run test:web` (`e2e-web/affichage-resume.web.ts` suit les liens de la barre jusqu'à leur cible).
+
+### 3.14 Ajouter une profession à une caisse existante
+
+Pour une profession de la CARPIMKO ou de la CIPAV (une nouvelle caisse : § 3.3). Essai fait le 13 octobre 2026 avec une profession de plus de la CIPAV, exonérée de TVA, dans les trois fichiers.
+
+1. **Les trois fichiers de règles** : une entrée dans `liberauxReglementes.professions.liste` de `2024.json`, `2025.json` et `2026.json`, **avec le même `id` les trois années** (un test le vérifie : le fichier de la session enregistre la profession, la caisse s'en déduit). Tous les champs de `ProfessionReglementee` (`regles.ts`) sont obligatoires, `soinsExoneresDeTVA` compris : le compilateur refuse un champ manquant. L'ordre est celui de l'ADR 015 : la CARPIMKO, puis la CIPAV, puis « Autre profession réglementée », seule sans caisse.
+2. **`soinsExoneresDeTVA`** : `true` seulement si les soins sont exonérés (article 261, 4, 1° du CGI : professions médicales et paramédicales réglementées par le code de la santé publique, ostéopathes, chiropracteurs, psychologues, psychothérapeutes). C'est une donnée de la profession, jamais un test sur son identifiant dans le code : le moteur écarte alors le chiffre d'affaires BNC de la comparaison à la franchise en base (`simulation-micro.ts`, `calculsAE.ts`), la ligne d'information sous la profession le dit (`informationSurLaProfession`, `src/lib/professions.ts`, texte unique `SOINS_EXONERES_DE_TVA`) et les situations types de santé le reprennent. La source (Légifrance, BOFiP) se cite dans la `description` du bloc `professions`, dans chaque fichier ; une profession douteuse reste à `false` et la `description` le dit.
+3. **Les particularités** : `microEntreprise` (ouverte aux affiliés de la CIPAV, pas aux praticiens et auxiliaires médicaux), `conventionnable`, `curps`, `societeExerciceLiberal` (l'avertissement en SASU ou en EURL), `source` en adresse directe (§ 4.3).
+4. **Les tests** : l'essai fait échouer 5 tests, tous attendus. Dans `regles/regles.test.ts` : « a une liste de professions réglementées dans l'ordre de l'ADR 015 » (effectifs de chaque caisse : 5 pour la CARPIMKO et 21 pour la CIPAV, une fois par année) ; « soins exonérés de TVA » (la liste `attendus`, pour une profession exonérée). Dans `src/lib/professions.test.ts` : « santé (CARPIMKO), puis CIPAV, et "Autre profession réglementée" à part » (l'ordre de la liste affichée). Ni `tsc` ni `transpile:electron` ne signalent rien d'autre.
+5. **Ce que le compilateur ne voit pas** : un cas de référence si la profession a des montants propres (`references/liberaux.reference.test.ts`, § 3.6) ; la liste exposée aux IA (`regles_de_l_annee`, `outils/lecture.ts`) se lit dans les règles, sans rien à écrire ; `README.md` et `CHANGELOG.md`.
+
+**Vérification :** `npx vitest run src/backend/regles src/lib/professions.test.ts src/backend/logic/references`, puis la vérification complète.
 
 ---
 
