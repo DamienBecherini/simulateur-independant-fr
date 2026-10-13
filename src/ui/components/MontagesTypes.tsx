@@ -50,10 +50,10 @@ function CarteDuMontage({ montage, onDetails, onCharger, focus }: { montage: Mon
       <p className="text-sm text-slate-700 dark:text-slate-300">{montage.resume}</p>
       <Etiquettes etiquettes={montage.etiquettes} />
       <div className="mt-auto flex flex-wrap gap-2 pt-1">
-        <Button variant="outline" size="sm" onClick={onDetails} autoFocus={focus} aria-label={`Détails du montage « ${montage.titre} »`}>
+        <Button variant="outline" size="sm" onClick={onDetails} autoFocus={focus} aria-label={`Détails de la situation « ${montage.titre} »`}>
           Détails
         </Button>
-        <Button size="sm" onClick={onCharger} aria-label={`Charger le montage « ${montage.titre} »`}>
+        <Button size="sm" onClick={onCharger} aria-label={`Charger la situation « ${montage.titre} »`}>
           Charger
         </Button>
       </div>
@@ -80,7 +80,7 @@ function DetailDuMontage({ montage, onRetour, onCharger }: { montage: MontageTyp
       <DialogHeader>
         {/* Le détail remplace la liste : le focus passe sur le retour, et y reviendra sur la carte du montage. */}
         <Button variant="ghost" size="sm" onClick={onRetour} autoFocus className="-ml-2 self-start">
-          <ChevronLeft /> Tous les montages
+          <ChevronLeft /> Toutes les situations
         </Button>
         <DialogTitle>{montage.titre}</DialogTitle>
         <DialogDescription>{montage.resume}</DialogDescription>
@@ -88,7 +88,7 @@ function DetailDuMontage({ montage, onRetour, onCharger }: { montage: MontageTyp
       <Etiquettes etiquettes={montage.etiquettes} />
       <div className="space-y-4">
         <Rubrique titre="Questions auxquelles il répond" elements={montage.questions} />
-        <Rubrique titre="Ce que ce montage illustre" elements={montage.illustre} />
+        <Rubrique titre="Ce que cette situation illustre" elements={montage.illustre} />
         <Rubrique titre="Conditions" elements={montage.conditions} />
         <Rubrique titre="Points d'attention et risques" elements={montage.pointsDAttention} />
         <section>
@@ -111,7 +111,7 @@ function DetailDuMontage({ montage, onRetour, onCharger }: { montage: MontageTyp
         <Button variant="outline" onClick={onRetour}>
           Retour
         </Button>
-        <Button onClick={onCharger}>Charger ce montage</Button>
+        <Button onClick={onCharger}>Charger cette situation</Button>
       </DialogFooter>
     </>
   )
@@ -199,7 +199,7 @@ interface ConfirmationDuMontageProps {
 export function ConfirmationDuMontage({ montage, nomDeLaSession, onAnnuler, onConfirmer, declencheur }: ConfirmationDuMontageProps) {
   return (
     <ConfirmationDeRemplacement open={montage !== null} onAnnuler={onAnnuler} onConfirmer={() => montage && onConfirmer(montage)} titre="Remplacer la simulation en cours ?" libelleDeConfirmation="Remplacer" declencheur={declencheur}>
-      « {nomDeLaSession} » n'est pas enregistrée dans une sauvegarde. Le montage « {montage?.titre} » la remplacera ; le bouton « Annuler » de la barre d'outils la rétablira.
+      « {nomDeLaSession} » n'est pas enregistrée dans une sauvegarde. La situation « {montage?.titre} » la remplacera ; le bouton « Annuler » de la barre d'outils la rétablira.
     </ConfirmationDeRemplacement>
   )
 }

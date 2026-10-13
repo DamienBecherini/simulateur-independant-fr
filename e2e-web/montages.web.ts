@@ -1,5 +1,5 @@
 // e2e-web/montages.web.ts
-// Montages types dans la démo web : la fenêtre s'ouvre depuis les paramètres, montre le détail d'un montage et le
+// Montages types dans la démo web : la fenêtre s'ouvre depuis les paramètres, montre le détail d'une situation et le
 // charge à la place de la simulation d'exemple, après confirmation. Accessibilité en clair, en sombre et à 375 px.
 
 import { test, expect, type Page } from "@playwright/test"
@@ -28,11 +28,11 @@ async function sansDefilementHorizontal(page: Page) {
 test("charger « SASU sans salaire » depuis les paramètres, après confirmation : la session prend son nom et ses chiffres", async ({ page }) => {
   const montages = await ouvrirLesMontages(page)
 
-  await montages.getByRole("button", { name: `Détails du montage « ${SASU_SANS_SALAIRE} »` }).click()
+  await montages.getByRole("button", { name: `Détails de la situation « ${SASU_SANS_SALAIRE} »` }).click()
   const detail = page.getByRole("dialog", { name: SASU_SANS_SALAIRE })
   await expect(detail.getByRole("heading", { name: "Points d'attention et risques" })).toBeVisible()
   await expect(detail.getByRole("link", { name: /Imposition des dividendes/ })).toHaveAttribute("href", "https://entreprendre.service-public.gouv.fr/vosdroits/F32963")
-  await detail.getByRole("button", { name: "Charger ce montage" }).click()
+  await detail.getByRole("button", { name: "Charger cette situation" }).click()
 
   // La simulation d'exemple n'est enregistrée dans aucune sauvegarde : son remplacement est confirmé.
   const confirmation = page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
@@ -54,12 +54,12 @@ test("charger « SASU sans salaire » depuis les paramètres, après confirmatio
 
 test("« Annuler » dans la confirmation garde la simulation d'exemple", async ({ page }) => {
   const montages = await ouvrirLesMontages(page)
-  await montages.getByRole("button", { name: "Charger le montage « Micro-entreprise seule (BNC) »" }).click()
+  await montages.getByRole("button", { name: "Charger la situation « Micro-entreprise seule (BNC) »" }).click()
   const confirmation = page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
   await confirmation.getByRole("button", { name: "Annuler" }).click()
   await expect(confirmation).toBeHidden()
   // Le focus revient sur le bouton du montage ; Échap referme la fenêtre des montages, puis les paramètres.
-  await expect(montages.getByRole("button", { name: "Charger le montage « Micro-entreprise seule (BNC) »" })).toBeFocused()
+  await expect(montages.getByRole("button", { name: "Charger la situation « Micro-entreprise seule (BNC) »" })).toBeFocused()
   await page.keyboard.press("Escape")
   await expect(montages).toBeHidden()
   await page.keyboard.press("Escape")
@@ -68,7 +68,7 @@ test("« Annuler » dans la confirmation garde la simulation d'exemple", async (
 })
 
 for (const theme of ["clair", "sombre"] as const) {
-  test(`la fenêtre des montages et le détail d'un montage ne présentent aucune violation WCAG, thème ${theme}`, async ({ page }) => {
+  test(`la fenêtre des montages et le détail d'une situation ne présentent aucune violation WCAG, thème ${theme}`, async ({ page }) => {
     await page.goto("./")
     if (theme === "sombre") {
       await page.getByRole("switch", { name: "Changer de thème" }).click()
@@ -76,9 +76,9 @@ for (const theme of ["clair", "sombre"] as const) {
     }
     const montages = await ouvrirLesMontages(page)
     await auditer(page, `montages types, ${theme}`, "[role=dialog]")
-    await montages.getByRole("button", { name: "Détails du montage « Conjoint salarié de la SASU »" }).click()
+    await montages.getByRole("button", { name: "Détails de la situation « Conjoint salarié de la SASU »" }).click()
     await expect(page.getByRole("dialog", { name: "Conjoint salarié de la SASU" })).toBeVisible()
-    await auditer(page, `détail d'un montage, ${theme}`, "[role=dialog]")
+    await auditer(page, `détail d'une situation, ${theme}`, "[role=dialog]")
   })
 }
 
@@ -91,10 +91,10 @@ test.describe("sur un téléphone", () => {
       const montages = await ouvrirLesMontages(page)
       await sansDefilementHorizontal(page)
       await auditer(page, "montages types, 375 px", "[role=dialog]")
-      await montages.getByRole("button", { name: "Détails du montage « Couple en union libre, puis marié ou pacsé »" }).click()
-      await expect(page.getByRole("button", { name: "Charger ce montage" })).toBeVisible()
+      await montages.getByRole("button", { name: "Détails de la situation « Couple en union libre, puis marié ou pacsé »" }).click()
+      await expect(page.getByRole("button", { name: "Charger cette situation" })).toBeVisible()
       await sansDefilementHorizontal(page)
-      await auditer(page, "détail d'un montage, 375 px", "[role=dialog]")
+      await auditer(page, "détail d'une situation, 375 px", "[role=dialog]")
     })
   }
 })

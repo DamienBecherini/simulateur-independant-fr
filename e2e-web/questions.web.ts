@@ -22,7 +22,7 @@ async function ouvrir(page: Page) {
 async function choisir(page: Page, question: string, situation: string) {
   await encart(page).getByRole("button", { name: question }).click()
   const confirmation = page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
-  await expect(confirmation).toContainText(`Le montage « ${situation} » la remplacera`)
+  await expect(confirmation).toContainText(`La situation « ${situation} » la remplacera`)
   await confirmation.getByRole("button", { name: "Remplacer" }).click()
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(situation)
 }
@@ -61,12 +61,15 @@ test("dans l'affichage « Trois vues », la rémunération optimale ouvre « Com
   await expect(page.getByRole("heading", { name: "Rémunération ou dividendes ?" })).toBeInViewport()
 })
 
-test("« Mes cotisations sont-elles justes ? » mène aux résultats ; l'encart fermé ne revient pas au rechargement", async ({ page }) => {
+test("« Mes cotisations sont-elles justes ? » charge le kinésithérapeute au réel, dont la carte détaille les cotisations", async ({ page }) => {
   await ouvrir(page)
-  await encart(page).getByRole("link", { name: "Mes cotisations sont-elles justes ?" }).click()
-  await expect(page).toHaveURL(/#resultats-titre$/)
-  await expect(page.getByRole("heading", { name: "Résultats de simulation" })).toBeInViewport()
+  await choisir(page, "Mes cotisations sont-elles justes ?", "Kinésithérapeute conventionné en entreprise individuelle")
+  await page.getByRole("button", { name: /^Afficher le détail/ }).first().click()
+  await expect(page.getByText("dont retraite complémentaire (CARPIMKO)")).toBeVisible()
+})
 
+test("l'encart fermé ne revient pas au rechargement", async ({ page }) => {
+  await ouvrir(page)
   await encart(page).getByRole("button", { name: "Fermer « Que voulez-vous savoir ? »" }).click()
   await expect(encart(page)).toHaveCount(0)
   // Les préférences sont enregistrées peu après chaque changement.

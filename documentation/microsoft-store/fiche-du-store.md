@@ -30,7 +30,7 @@ Textes et réponses à recopier dans Partner Center pour la soumission de l'appl
 >
 > Comparez les statuts : pour une activité, le net, les prélèvements, les frais de fonctionnement et les trimestres de retraite validés en SASU, EURL, EI au réel et micro-entreprise, avec ou sans versement libératoire. En société, trouvez le partage entre rémunération et dividendes qui donne le meilleur net, avec ou sans l'exigence de valider quatre trimestres de retraite.
 >
-> Plusieurs années, chacune avec ses règles fiscales (2024 à 2026), des montages types à adapter, des sauvegardes nommées, et des exports CSV, PDF et Markdown.
+> Plusieurs années, chacune avec ses règles fiscales (2024 à 2026), des situations types à adapter, des sauvegardes nommées, et des exports CSV, PDF et Markdown.
 >
 > Vos données restent sur votre ordinateur : pas de compte, pas de serveur, pas de publicité ni de mesure d'audience. L'application fonctionne entièrement hors ligne.
 >
@@ -95,7 +95,7 @@ Dans [captures/](./captures/) : 1366 × 768 pixels (la taille minimale demandée
 | `4-comparateur.png` | Comparateur de statuts | Comparez SASU, EURL, EI et micro-entreprise sur votre situation |
 | `5-remuneration-ou-dividendes.png` | Rémunération ou dividendes | Trouvez la rémunération qui donne le meilleur net |
 
-Pistes pour compléter (jusqu'à dix captures) : la grille annuelle avec la fenêtre d'un flux ouverte, les montages types, le mode sombre, l'export PDF. Éviter la fenêtre « Utiliser avec une IA » : elle affiche les chemins réels du poste, donc le nom de l'utilisateur.
+Pistes pour compléter (jusqu'à dix captures) : la grille annuelle avec la fenêtre d'un flux ouverte, les situations types, le mode sombre, l'export PDF. Éviter la fenêtre « Utiliser avec une IA » : elle affiche les chemins réels du poste, donc le nom de l'utilisateur.
 
 ## Logos de la fiche
 

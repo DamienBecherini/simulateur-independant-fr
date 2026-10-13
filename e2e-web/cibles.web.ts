@@ -93,10 +93,10 @@ async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]>
       }
     ],
     [
-      "détail d'un montage",
+      "détail d'une situation",
       async () => {
         await ouvrirLesMontages()
-        await page.getByRole("button", { name: "Détails du montage « Conjoint salarié de la SASU »" }).click()
+        await page.getByRole("button", { name: "Détails de la situation « Conjoint salarié de la SASU »" }).click()
       }
     ]
   ]
