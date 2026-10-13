@@ -88,14 +88,14 @@ test.describe("sur un téléphone de 375 px", () => {
 
   test("le menu « Plus d'actions » se parcourt au clavier, se ferme par Échap et change le thème", async ({ page }) => {
     await ouvrir(page)
-    for (const nom of ["Donner mon avis", "Montages types"]) await expect(barreDOutils(page).getByRole("button", { name: nom })).toBeHidden()
+    for (const nom of ["Donner mon avis", "Situations types"]) await expect(barreDOutils(page).getByRole("button", { name: nom })).toBeHidden()
     await expect(barreDOutils(page).getByRole("switch", { name: "Changer de thème" })).toBeHidden()
 
     await plusDActions(page).focus()
     await page.keyboard.press("Enter")
     await expect(menu(page)).toBeVisible()
     await expect(plusDActions(page)).toHaveAttribute("aria-expanded", "true")
-    await expect(menu(page).getByRole("menuitem", { name: "Montages types" })).toBeFocused()
+    await expect(menu(page).getByRole("menuitem", { name: "Partir d'une situation type" })).toBeFocused()
     await page.keyboard.press("ArrowDown")
     await expect(menu(page).getByRole("menuitem", { name: "Donner mon avis" })).toBeFocused()
     // Le menu tient dans l'écran.
@@ -114,7 +114,7 @@ test.describe("sur un téléphone de 375 px", () => {
     await expect(plusDActions(page)).toBeFocused()
   })
 
-  test("l'avis, les montages types et l'affichage s'ouvrent depuis le menu ; le focus revient au menu", async ({ page }) => {
+  test("l'avis, les situations types et l'affichage s'ouvrent depuis le menu ; le focus revient au menu", async ({ page }) => {
     await ouvrir(page)
     await plusDActions(page).click()
     await menu(page).getByRole("menuitem", { name: "Donner mon avis" }).click()
@@ -123,8 +123,8 @@ test.describe("sur un téléphone de 375 px", () => {
     await expect(plusDActions(page)).toBeFocused()
 
     await plusDActions(page).click()
-    await menu(page).getByRole("menuitem", { name: "Montages types" }).click()
-    await expect(page.getByRole("dialog", { name: "Partir d'un montage type" })).toBeVisible()
+    await menu(page).getByRole("menuitem", { name: "Partir d'une situation type" }).click()
+    await expect(page.getByRole("dialog", { name: "Partir d'une situation type" })).toBeVisible()
     await page.keyboard.press("Escape")
     await expect(plusDActions(page)).toBeFocused()
 
@@ -224,7 +224,7 @@ for (const doigt of [false, true]) {
 test("sur un ordinateur, la barre d'outils garde ses boutons et n'a pas de menu « Plus d'actions »", async ({ page }) => {
   await ouvrir(page)
   await expect(plusDActions(page)).toBeHidden()
-  for (const nom of ["Donner mon avis", "Montages types"]) await expect(barreDOutils(page).getByRole("button", { name: nom })).toBeVisible()
+  for (const nom of ["Donner mon avis", "Situations types"]) await expect(barreDOutils(page).getByRole("button", { name: nom })).toBeVisible()
   await expect(barreDOutils(page).getByRole("switch", { name: "Changer de thème" })).toBeVisible()
   await expect(barreDOutils(page).getByRole("combobox", { name: "Affichage : Résumé" })).toBeVisible()
 })

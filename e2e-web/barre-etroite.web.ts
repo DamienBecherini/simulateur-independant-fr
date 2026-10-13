@@ -1,6 +1,6 @@
 // e2e-web/barre-etroite.web.ts
-// Selon la largeur, « Donner mon avis » et « Montages types » montrent leur nom dans la barre d'outils, ou leur icône seule.
-// Sur un téléphone, la barre d'outils tient dans l'écran : l'interrupteur de thème et les montages types passent dans le menu
+// Selon la largeur, « Donner mon avis » et « Situations types » montrent leur nom dans la barre d'outils, ou leur icône seule.
+// Sur un téléphone, la barre d'outils tient dans l'écran : l'interrupteur de thème et les situations types passent dans le menu
 // « Plus d'actions » (voir telephone-compact.web.ts) ; ils restent aussi dans le panneau des paramètres, où l'interrupteur change
 // le thème de la page comme celui de la barre.
 
@@ -22,8 +22,8 @@ test.describe("sur un téléphone tactile de 320 px", () => {
     )
     expect(debordements).toEqual([])
     await expect(barre.getByRole("switch", { name: "Changer de thème" })).toBeHidden()
-    // Les montages types aussi : ils restent dans le panneau des paramètres.
-    await expect(barre.getByRole("button", { name: "Montages types" })).toBeHidden()
+    // Les situations types aussi : elles restent dans le panneau des paramètres.
+    await expect(barre.getByRole("button", { name: "Situations types" })).toBeHidden()
 
     await page.getByRole("button", { name: "Paramètres" }).click()
     const panneau = page.getByRole("dialog", { name: "Configuration" })
@@ -37,7 +37,7 @@ test.describe("sur un téléphone tactile de 320 px", () => {
   })
 })
 
-// Le nom visible de chaque bouton, selon la largeur : les deux à partir de 1024 px, « Montages types » seul à partir de 768 px,
+// Le nom visible de chaque bouton, selon la largeur : les deux à partir de 1024 px, « Situations types » seul à partir de 768 px,
 // les icônes seules jusqu'à 640 px ; en dessous, ils passent dans le menu « Plus d'actions ».
 const LARGEURS = [
   { largeur: 1440, avis: true, montages: true },
@@ -46,21 +46,21 @@ const LARGEURS = [
 ]
 
 for (const { largeur, avis, montages } of LARGEURS) {
-  test(`à ${largeur} px, la barre d'outils montre ${avis ? "les noms des deux boutons" : montages ? "le nom de « Montages types » seulement" : "les icônes seules"}, et tient dans l'écran`, async ({ page }) => {
+  test(`à ${largeur} px, la barre d'outils montre ${avis ? "les noms des deux boutons" : montages ? "le nom de « Situations types » seulement" : "les icônes seules"}, et tient dans l'écran`, async ({ page }) => {
     await page.setViewportSize({ width: largeur, height: 800 })
     await page.goto("./")
     const barre = page.getByRole("navigation", { name: "Barre d'outils" })
     const boutonDAvis = barre.getByRole("button", { name: "Donner mon avis" })
-    const boutonDesMontages = barre.getByRole("button", { name: "Montages types" })
+    const boutonDesMontages = barre.getByRole("button", { name: "Situations types" })
     await expect(boutonDAvis.getByText("Donner mon avis")).toBeVisible({ visible: avis })
-    await expect(boutonDesMontages.getByText("Montages types")).toBeVisible({ visible: montages })
+    await expect(boutonDesMontages.getByText("Situations types")).toBeVisible({ visible: montages })
     // Le bouton « Tests » n'existe qu'en mode développement : jamais dans la démo publiée.
     await expect(barre.getByRole("button", { name: "Scénarios de test" })).toHaveCount(0)
     const debordements = await barre.evaluate(nav => Array.from(nav.querySelectorAll("button")).filter(el => el.getBoundingClientRect().right > window.innerWidth).length)
     expect(debordements).toBe(0)
 
     await boutonDesMontages.click()
-    await expect(page.getByRole("dialog", { name: "Partir d'un montage type" })).toBeVisible()
+    await expect(page.getByRole("dialog", { name: "Partir d'une situation type" })).toBeVisible()
     await page.keyboard.press("Escape")
     await expect(boutonDesMontages).toBeFocused()
   })

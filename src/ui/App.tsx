@@ -201,8 +201,8 @@ function App() {
                 <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
                 <span className="hidden lg:inline">Donner mon avis</span>
               </Button>
-              <BoutonDesMontages variant="outline" size="sm" aria-label="Montages types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 max-sm:hidden sm:ml-2" onCharger={chargerUnMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name}>
-                <span className="hidden md:inline">Montages types</span>
+              <BoutonDesMontages variant="outline" size="sm" aria-label="Situations types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 max-sm:hidden sm:ml-2" onCharger={chargerUnMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name}>
+                <span className="hidden md:inline">Situations types</span>
               </BoutonDesMontages>
               {/* En mode développement seulement : scénarios prêts à charger pour vérifier une fonctionnalité. */}
               <BoutonDesTests onCharger={chargerUneSession} />

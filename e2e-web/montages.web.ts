@@ -13,8 +13,8 @@ async function ouvrirLesMontages(page: Page) {
   await page.goto("./")
   await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
   await page.getByRole("button", { name: "Paramètres" }).click()
-  await page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: "Partir d'un montage type..." }).click()
-  const montages = page.getByRole("dialog", { name: "Partir d'un montage type" })
+  await page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: "Partir d'une situation type..." }).click()
+  const montages = page.getByRole("dialog", { name: "Partir d'une situation type" })
   await expect(montages).toBeVisible()
   return montages
 }

@@ -54,7 +54,7 @@ function tropPetites(cibles: Cible[], minimum: number): string[] {
 async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]> {
   const ouvrirLesMontages = async () => {
     await page.getByRole("button", { name: "Paramètres" }).click()
-    await page.getByRole("button", { name: "Partir d'un montage type..." }).click()
+    await page.getByRole("button", { name: "Partir d'une situation type..." }).click()
   }
   const fenetres: [string, () => Promise<void>][] = [
     ["paramètres", () => page.getByRole("button", { name: "Paramètres" }).click()],
