@@ -232,6 +232,11 @@ ADR à lire selon le sujet : persistance 002 et 005 ; IPC 003 ; état de l'inter
 
 Un nouveau canal : sa signature dans `EventPayloadMapping` (`src/globals.d.ts`), son entrée dans `preload.cts` et dans `creerApiNavigateur` (démo web), puis sa déclaration dans le fichier `canaux-*.ts` de son domaine, toujours par `ipcMainHandle`, avec un schéma de `logic/entrees-ipc.ts` pour chaque paramètre.
 
+### 2.5 Interface : ancres de la page et calculs différés
+
+- **Ancres** : tout élément vers lequel mène un lien interne ou une adresse (`#bilan`, `#comparateur-verdict`, `#contenu`…) a son identifiant dans le registre `ANCRES` (`src/lib/ancres.ts`), jamais écrit à la main : l'élément prend `id={ANCRES.bilan}`, le lien `href={lienVers(ANCRES.bilan)}`, une question de départ `ancre: ANCRES.…`. Une ancre ajoutée au registre doit dire sa vue dans `VUE_DE_L_ANCRE` (`src/lib/vues.ts`, table exhaustive) ; `App.ancres.test.tsx` vérifie que chacune est rendue, dans sa vue. Les valeurs sont des adresses publiées : ne les renommez pas.
+- **Calcul différé** : un calcul du moteur relancé après chaque modification passe par `useCalculDiffere` (`src/ui/hooks/useCalculDiffere.ts`) : l'appelant mémorise le calcul avec `useCallback` (ses dépendances sont vérifiées par ESLint chez lui), le hook attend 300 ms, ignore un résultat dépassé et garde le dernier résultat en cas d'échec, sauf `effacerEnCasDEchec` (la simulation des années, `useSimulationDesAnnees`).
+
 ---
 
 ## 3. Procédures pas à pas
