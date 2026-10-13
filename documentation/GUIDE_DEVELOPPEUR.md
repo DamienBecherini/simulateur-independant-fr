@@ -52,6 +52,7 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run test:mutation` | Tests de mutation (Stryker) de `src/backend/logic` ; long. | De temps en temps. |
 | `npm run build` / `npm run build:web` | Compile l'interface (`dist-react/`) ou la démo (`dist-web/`). | Rarement à la main. |
 | `npm run dist:win`, `dist:mac`, `dist:linux`, `dist:store` | Exécutables (electron-builder). | Voir [publication.md](./publication.md). |
+| `npm run essai:store` | Sous Windows : installe une copie signée du paquet du Microsoft Store comme le Store l'installe et vérifie le serveur MCP ; `verifier`, `etat`, `nettoyer`. | Avant une soumission : [publier-sur-le-store.md](./microsoft-store/publier-sur-le-store.md#2-essayer-le-paquet-avant-la-première-soumission). |
 | `npm run captures` | Captures d'écran du README. | Après un changement visible. |
 
 La CI (`.github/workflows/ci.yml`) lance lint, `typecheck`, `transpile:electron`, `typecheck:tests`, `test:coverage`, `build` et la duplication à chaque push ; `e2e.yml` les tests de bout en bout sur `integration` et `main` ; `demo-web.yml` teste et publie la démo à chaque push sur `main`.
@@ -82,7 +83,7 @@ npx eslint . && npx tsc -b && npm run transpile:electron && npm run typecheck:te
 | `src/globals.d.ts` | `EventPayloadMapping` : le contrat de `window.api`, commun à Electron et à la démo. |
 | `e2e/`, `e2e-web/` | Tests de bout en bout (application de bureau, démo web). |
 | `documentation/` | Ce guide, les ADR, la publication, les dossiers de recherche (`recherche/`), la relecture d'octobre 2026. |
-| `scripts/` | Empaquetage du serveur MCP, paquet du Microsoft Store, commande `npm run simuler` (`simuler.mjs`, logique dans `src/lib/simuler-en-ligne-de-commande.ts`), scripts des retours des utilisateurs (`scripts/retours/`). |
+| `scripts/` | Empaquetage du serveur MCP, paquet du Microsoft Store et son essai (`essai-paquet-store.mjs`, logique dans `essai-paquet-store-logique.mjs`), commande `npm run simuler` (`simuler.mjs`, logique dans `src/lib/simuler-en-ligne-de-commande.ts`), scripts des retours des utilisateurs (`scripts/retours/`). |
 
 ### 1.4 Conventions
 
