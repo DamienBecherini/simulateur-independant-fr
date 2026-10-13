@@ -6,6 +6,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Ajouté
+
+- **Deux montages types pour les professions de santé libérales.** « Ostéopathe en micro-entreprise » (CIPAV : 23,2 % du chiffre d'affaires au lieu de 25,6 %, loyer du cabinet non déductible, soins exonérés de TVA) et « Kinésithérapeute conventionné en entreprise individuelle » (CARPIMKO au réel : prise en charge de la maladie et de l'ASV par l'Assurance maladie, déplacements au barème kilométrique ; micro-entreprise fermée et société d'exercice libéral non modélisée, ce que le montage dit) : chacun avec ses questions, ses conditions, ses risques et ses sources officielles, et ses chiffres 2026 figés par le test de référence.
+
 ### Modifié
 
 - **Connexion à Claude Desktop guidée pas à pas.** Le fichier de configuration de Claude Desktop contient déjà des réglages : la fenêtre « Utiliser avec une IA (MCP) » donne à copier le bloc à coller juste après sa première accolade (« Copier le bloc à insérer (fichier existant) »), à côté de la configuration complète pour un fichier vide, et dit quoi faire si une rubrique « mcpServers » existe déjà. Elle fait ouvrir le fichier par le menu de Claude Desktop (Paramètres > Développeur > Modifier la configuration), car son chemin change quand Claude Desktop est installé en paquet sous Windows, demande de quitter complètement Claude Desktop avant d'enregistrer, sans quoi il peut effacer l'ajout en se fermant, et rappelle que les outils du simulateur s'utilisent dans l'onglet Chat, pas dans l'onglet Code. Le guide d'utilisation avec une IA reprend ces consignes, avec les chemins du fichier et des journaux selon l'installation de Claude Desktop.
