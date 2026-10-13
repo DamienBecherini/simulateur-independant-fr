@@ -23,6 +23,8 @@
   ],
   // Pièces du kit shadcn/ui : on garde le kit complet, comme son modèle, plutôt que de retirer une pièce à la fois.
   "ignoreIssues": { "src/components/ui/**": ["exports"] },
+  // Programme de Windows lancé par scripts/essai-paquet-store.mjs (ouvrir l'application installée par shell:AppsFolder), pas un paquet npm.
+  "ignoreBinaries": ["explorer.exe"],
   "ignoreDependencies": [
     // Police chargée par des url() de src/ui/App.css, un fichier CSS que knip ne suit pas.
     "@fontsource-variable/inter"

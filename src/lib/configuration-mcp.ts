@@ -53,10 +53,10 @@ function copieDuServeur(donnees: string): string {
 }
 
 /** Nom du serveur dans la configuration du client. */
-const NOM_DU_SERVEUR_MCP = "simulateur-independant-fr"
+export const NOM_DU_SERVEUR_MCP = "simulateur-independant-fr"
 
 /** L'entrée du serveur dans `mcpServers` : la notation commune à Claude Desktop, LM Studio, Cursor et la plupart des clients. */
-function entreeDuServeur({ executable, script, donnees }: InfosDuServeurMcp) {
+export function entreeDuServeur({ executable, script, donnees }: InfosDuServeurMcp) {
   return { command: executable, args: [script, "--donnees", donnees], env: { ELECTRON_RUN_AS_NODE: "1" } }
 }
 
