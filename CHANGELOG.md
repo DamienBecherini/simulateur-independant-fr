@@ -6,6 +6,8 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+## [0.12.0] — 2026-10-13
+
 ### Ajouté
 
 - **Publication sur le Microsoft Store.** L'application de bureau est publiée sur le [Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72) (v0.11.0), recommandée sous Windows : le paquet est signé par Microsoft, donc sans avertissement du Contrôle intelligent des applications ni de SmartScreen. Le lien figure dans le README, le guide d'installation et la démo web, qui remplace « Bientôt sur le Microsoft Store » par ce lien.
@@ -21,7 +23,6 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 - **« Montages types » devient « Situations types ».** Le bouton de la barre d'outils s'appelle « Situations types » ; le menu « Plus d'actions » du téléphone, le bouton des paramètres et le titre de la fenêtre disent « Partir d'une situation type ». La fenêtre suit : ses cartes se chargent par « Charger la situation », le détail revient par « Toutes les situations », et la confirmation annonce que « la situation » remplacera la simulation en cours.
 - **Mariage ou Pacs : la réponse passe avant la courbe.** La comparaison du couple en union libre suit directement le tableau du comparateur, avant la synthèse des années et la courbe « Rémunération ou dividendes ? » de l'activité, et précise que mariage et Pacs ont le même effet sur l'impôt sur le revenu.
-
 - **Connexion à Claude Desktop guidée pas à pas.** Le fichier de configuration de Claude Desktop contient déjà des réglages : la fenêtre « Utiliser avec une IA (MCP) » donne à copier le bloc à coller juste après sa première accolade (« Copier le bloc à insérer (fichier existant) »), à côté de la configuration complète pour un fichier vide, et dit quoi faire si une rubrique « mcpServers » existe déjà. Elle fait ouvrir le fichier par le menu de Claude Desktop (Paramètres > Développeur > Modifier la configuration), car son chemin change quand Claude Desktop est installé en paquet sous Windows, demande de quitter complètement Claude Desktop avant d'enregistrer, sans quoi il peut effacer l'ajout en se fermant, et rappelle que les outils du simulateur s'utilisent dans l'onglet Chat, pas dans l'onglet Code. Le guide d'utilisation avec une IA reprend ces consignes, avec les chemins du fichier et des journaux selon l'installation de Claude Desktop.
 
 ### Corrigé
@@ -171,7 +172,8 @@ Première version publiée : ces notes décrivent ce que contient l'application.
 - Calculs : abattement minimum de la micro-entreprise appliqué séparément à chaque nature d'activité, réduction générale éteinte à exactement 3 SMIC, micro-entreprise au-delà des plafonds jamais désignée meilleur net.
 - Sauvegardes : validation avant écriture, rien de perdu à la fermeture, copie importée numérotée au lieu d'empiler « (importée) ».
 
-[Non publié]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.11.0...HEAD
+[Non publié]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.9.0...v0.9.1
