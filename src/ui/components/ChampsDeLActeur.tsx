@@ -5,7 +5,8 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { estSocieteIS, STATUTS_JURIDIQUES, type Avatar, type Company, type Entity, type StatutJuridique, type StatutSociete } from "@/types"
+import { estSocieteIS, type Avatar, type Company, type Entity, type MicroEntreprise, type StatutSociete } from "@/types"
+import { statutDeLActivite, type StatutDUneActivite } from "@/backend/logic/changement-de-statut"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 import { ChampNumerique } from "./ChampNumerique"
@@ -16,6 +17,7 @@ import type { ReglesFiscales } from "@/backend/logic/regles"
 import { proposeLaProfession } from "@/lib/professions"
 import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
 import { texteDuRfrN2 } from "@/lib/rfr-n2"
+import { ID_DU_CHAMP_STATUT } from "./ConfirmationDuChangementDeStatut"
 
 // Chaque pastille porte un nom : c'est lui que lit un lecteur d'écran.
 const COULEURS_DES_ACTEURS = [
@@ -29,11 +31,12 @@ const COULEURS_DES_ACTEURS = [
 
 const iconNames: Record<string, string> = { Briefcase: "Mallette", Building: "Immeuble", Store: "Boutique", User: "Personne" }
 
-/** Nom de chaque statut au réel dans la liste « Statut » de la fiche d'une activité. */
-const CHOIX_DU_STATUT: Record<StatutJuridique, string> = {
+/** Nom de chaque statut dans la liste « Statut » de la fiche d'une activité, dans l'ordre de « Ajouter une activité ». */
+const CHOIX_DU_STATUT: Record<StatutDUneActivite, string> = {
+  micro: "Micro-entreprise",
+  EI: "Entreprise individuelle (au réel)",
   SASU: "SASU",
-  EURL: "EURL",
-  EI: "Entreprise individuelle (au réel)"
+  EURL: "EURL"
 }
 
 interface ChampsDeLActeurProps {
@@ -43,9 +46,14 @@ interface ChampsDeLActeurProps {
   anneesSimulees?: number[]
   /** L'année affichée : ses règles donnent les taux cités par les aides (profession, capital, frais). */
   annee: number
+  /**
+   * Un autre statut est choisi pour l'activité : il ne s'applique qu'après une confirmation qui dit ce que la conversion
+   * change (ConfirmationDuChangementDeStatut), jamais comme un simple champ du brouillon.
+   */
+  onChangerDeStatut?: (cible: StatutDUneActivite) => void
 }
 
-export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee }: ChampsDeLActeurProps) {
+export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee, onChangerDeStatut }: ChampsDeLActeurProps) {
   const changerAvatar = (avatar: Partial<Avatar>) => onChange({ ...entity, avatar: { ...entity.avatar, ...avatar } })
 
   return (
@@ -67,25 +75,7 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee }
           </div>
         </div>
       )}
-      {entity.type === "company" && (
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="legalStatus" className="text-right">
-            Statut
-          </Label>
-          <Select value={entity.legalStatus} onValueChange={(legalStatus: Company["legalStatus"]) => onChange({ ...entity, legalStatus })}>
-            <SelectTrigger id="legalStatus" className="col-span-3">
-              <SelectValue placeholder="Choisir un statut" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUTS_JURIDIQUES.map(statut => (
-                <SelectItem key={statut} value={statut}>
-                  {CHOIX_DU_STATUT[statut]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      {entity.type !== "person" && <ChampDuStatut activite={entity} onChangerDeStatut={onChangerDeStatut} />}
       <StatusSpecificFields entity={entity} onChange={onChange} anneesSimulees={anneesSimulees} annee={annee} />
       <div className="grid grid-cols-4 items-center gap-4">
         <span id="avatar-couleur" className="text-right text-sm font-medium">
@@ -113,6 +103,38 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee }
       )}
       {entity.type === "person" ? <ChampsFraisReels personne={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} /> : <ChampsDeplacements activite={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
     </>
+  )
+}
+
+/**
+ * La liste « Statut » d'une activité : micro-entreprise ou statut au réel. Elle montre le statut enregistré ; en choisir
+ * un autre demande la conversion de l'activité, de ses flux et de ses relations.
+ */
+function ChampDuStatut({ activite, onChangerDeStatut }: { activite: Company | MicroEntreprise; onChangerDeStatut?: (cible: StatutDUneActivite) => void }) {
+  const actuel = statutDeLActivite(activite)
+  return (
+    <div className="grid grid-cols-4 items-center gap-4">
+      <Label htmlFor={ID_DU_CHAMP_STATUT} className="text-right">
+        Statut
+      </Label>
+      <div className="col-span-3">
+        <Select value={actuel} onValueChange={(cible: StatutDUneActivite) => cible !== actuel && onChangerDeStatut?.(cible)}>
+          <SelectTrigger id={ID_DU_CHAMP_STATUT} aria-describedby={`${ID_DU_CHAMP_STATUT}-aide`}>
+            <SelectValue placeholder="Choisir un statut" />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(CHOIX_DU_STATUT) as StatutDUneActivite[]).map(statut => (
+              <SelectItem key={statut} value={statut}>
+                {CHOIX_DU_STATUT[statut]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p id={`${ID_DU_CHAMP_STATUT}-aide`} className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          Un autre statut convertit l'activité, ses flux et ses relations ; ce qui change est dit avant de confirmer.
+        </p>
+      </div>
+    </div>
   )
 }
 

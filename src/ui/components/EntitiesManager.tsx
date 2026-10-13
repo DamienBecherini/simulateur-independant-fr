@@ -1,6 +1,7 @@
 // src/ui/components/EntitiesManager.tsx
 
 import { createPerson, createCompany, createMicroEntreprise } from "@/lib/entity-factory"
+import { appliquerLeChangement, type NatureDesPrestations, type StatutDUneActivite } from "@/lib/changement-de-statut"
 import type { Entity, Relationship, Company, MicroEntreprise, SessionState } from "@/types"
 import { Button } from "@/components/ui/button"
 import { useState, useMemo } from "react"
@@ -9,6 +10,7 @@ import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { EntityItem } from "./EntityItem"
 import { SelectEntityTypeModal, BusinessEntityType } from "./SelectEntityTypeModal"
+import { ConfirmationDuChangementDeStatut, type DemandeDeChangement } from "./ConfirmationDuChangementDeStatut"
 import { useTriAccessible } from "../hooks/useTriAccessible"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useActionsSurLesActeurs } from "../hooks/useActionsSurLesActeurs"
@@ -47,6 +49,21 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
   const handleAddBusiness = (type: BusinessEntityType) => {
     const newEntity: Company | MicroEntreprise = type === "MicroEntreprise" ? createMicroEntreprise() : createCompany(type)
     addEntity(newEntity)
+  }
+
+  // Changement de statut demandé par la fiche : confirmé à part, puis appliqué à la session telle que la fiche la
+  // modifie, en une seule étape d'historique ; la fiche reste ouverte sur l'activité convertie.
+  const [changement, setChangement] = useState<DemandeDeChangement | null>(null)
+  const demanderLeChangement = (brouillon: Entity, relationsDuBrouillon: Relationship[], cible: StatutDUneActivite) => {
+    if (brouillon.type === "person") return
+    setChangement({ session: { ...session, entities: entities.map(e => (e.id === brouillon.id ? brouillon : e)), relationships: relationsDuBrouillon }, activite: brouillon, cible })
+  }
+  const convertir = (nature: NatureDesPrestations) => {
+    if (!changement) return
+    const { session: convertie, activite } = appliquerLeChangement(changement.session, changement.activite, changement.cible, nature)
+    applyChange({ entities: convertie.entities, relationships: convertie.relationships, annees: convertie.annees })
+    setChangement(null)
+    setEditingEntity(activite)
   }
 
   const handleSaveFromModal = (updatedEntity: Entity, updatedRelationships: Relationship[]) => {
@@ -96,7 +113,8 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
         </SortableContext>
       </DndContext>
 
-      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleSaveFromModal} allEntities={entities} relationships={relationships} anneesSimulees={session.annees.map(a => a.annee)} annee={annee} />
+      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleSaveFromModal} allEntities={entities} relationships={relationships} anneesSimulees={session.annees.map(a => a.annee)} annee={annee} onChangerDeStatut={demanderLeChangement} />
+      <ConfirmationDuChangementDeStatut demande={changement} annee={annee} onAnnuler={() => setChangement(null)} onConfirmer={convertir} />
 
       <SelectEntityTypeModal isOpen={isSelectModalOpen} onClose={() => setSelectModalOpen(false)} onSelect={handleAddBusiness} />
     </div>
