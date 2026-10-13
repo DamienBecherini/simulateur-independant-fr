@@ -1,5 +1,5 @@
 // src/lib/configuration-mcp.ts
-// La configuration à copier dans un client d'IA de bureau (Claude Desktop, LM Studio…) pour qu'il lance le serveur MCP
+// La configuration à copier dans un client d'IA (Claude Desktop, LM Studio…), ou la commande de Claude Code, pour qu'il lance le serveur MCP
 // local du simulateur (voir documentation/utiliser-avec-une-ia.md et l'ADR 011). Le serveur se lance avec l'exécutable
 // de l'application en mode Node (ELECTRON_RUN_AS_NODE=1) : rien d'autre à installer.
 
@@ -72,6 +72,31 @@ export function configurationDuClient(infos: InfosDuServeurMcp): string {
  */
 export function blocAInserer(infos: InfosDuServeurMcp): string {
   return `${configurationDuClient(infos).split("\n").slice(1, -1).join("\n")},`
+}
+
+/** Où Claude Code enregistre le serveur : `user` (tous les projets de l'utilisateur) ou `local` (le dossier courant seulement). */
+export type PorteeDeClaudeCode = "user" | "local"
+
+/**
+ * Un argument entre guillemets pour le terminal de ce système : doubles guillemets sous Windows (PowerShell comme
+ * l'invite de commandes, un chemin Windows n'en contient pas), guillemets simples ailleurs (aucune expansion de `$`
+ * ni de `` ` ``, un guillemet simple du chemin devenant `'\''`).
+ */
+function entreGuillemets(valeur: string, plateforme: string): string {
+  if (plateforme === "win32") return `"${valeur}"`
+  return `'${valeur.split("'").join(String.raw`'\''`)}'`
+}
+
+/**
+ * La commande à taper dans un terminal pour que Claude Code (la ligne de commande) connaisse le serveur : les trois
+ * valeurs sont celles de la configuration de Claude Desktop (exécutable, script, dossier de données). Le serveur se
+ * charge au démarrage d'une session de Claude Code. Portée `user` par défaut : on interroge sa simulation depuis
+ * n'importe quel projet ; `local` pour un essai limité au dossier courant. Le même texte se colle dans PowerShell et
+ * dans l'invite de commandes sous Windows.
+ */
+export function commandeDeClaudeCode({ executable, script, donnees, plateforme }: InfosDuServeurMcp, portee: PorteeDeClaudeCode = "user"): string {
+  const [commande, fichier, dossier] = [executable, script, donnees].map(valeur => entreGuillemets(valeur, plateforme))
+  return `claude mcp add ${NOM_DU_SERVEUR_MCP} --scope ${portee} --env ELECTRON_RUN_AS_NODE=1 -- ${commande} ${fichier} --donnees ${dossier}`
 }
 
 /** Le fichier de configuration de Claude Desktop sur un système. */

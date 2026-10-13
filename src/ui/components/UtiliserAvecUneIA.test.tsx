@@ -46,6 +46,45 @@ describe("Utiliser avec une IA (MCP)", () => {
     expect(within(fenetre).getByRole("status")).toHaveTextContent("Configuration copiée")
   })
 
+  it("donne la commande de Claude Code, prête à copier, avec les mêmes chemins que la configuration", async () => {
+    vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue(infos)
+    const ecrire = vi.fn(async () => undefined)
+    const user = userEvent.setup({ delay: null })
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: ecrire }, configurable: true })
+    render(<BoutonUtiliserAvecUneIA />)
+    await user.click(await screen.findByRole("button", { name: "Utiliser avec une IA (MCP)" }))
+    const fenetre = screen.getByRole("dialog")
+
+    const commande = `claude mcp add simulateur-independant-fr --scope user --env ELECTRON_RUN_AS_NODE=1 -- "${infos.executable}" "${infos.script}" --donnees "${infos.donnees}"`
+    expect(within(fenetre).getByLabelText("Commande pour Claude Code")).toHaveTextContent(commande)
+    await user.click(within(fenetre).getByRole("button", { name: "Copier la commande pour Claude Code" }))
+    expect(ecrire).toHaveBeenLastCalledWith(commande)
+    expect(within(fenetre).getByText(/Commande copiée/)).toBeInTheDocument()
+    // Relancer Claude Code, voir l'état, retirer le serveur.
+    expect(within(fenetre).getByText(/relancez-le/)).toHaveTextContent("/mcp")
+    expect(within(fenetre).getByText(/relancez-le/)).toHaveTextContent("claude mcp remove simulateur-independant-fr --scope user")
+  })
+
+  it("dit quand la copie de la commande de Claude Code échoue", async () => {
+    vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue(infos)
+    const user = userEvent.setup({ delay: null })
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: vi.fn(async () => Promise.reject(new Error("refus"))) }, configurable: true })
+    render(<BoutonUtiliserAvecUneIA />)
+    await user.click(await screen.findByRole("button", { name: "Utiliser avec une IA (MCP)" }))
+    const fenetre = screen.getByRole("dialog")
+    await user.click(within(fenetre).getByRole("button", { name: "Copier la commande pour Claude Code" }))
+    expect(within(fenetre).getByText(/La copie a échoué/)).toBeInTheDocument()
+  })
+
+  it("donne la commande de Claude Code de la version du Microsoft Store avec l'alias d'exécution", async () => {
+    const store = { ...infos, executable: "C:\\Users\\Camille\\AppData\\Local\\Microsoft\\WindowsApps\\simulateur-independant-fr.exe", microsoftStore: true }
+    vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue(store)
+    const user = userEvent.setup({ delay: null })
+    render(<BoutonUtiliserAvecUneIA />)
+    await user.click(await screen.findByRole("button", { name: "Utiliser avec une IA (MCP)" }))
+    expect(within(screen.getByRole("dialog")).getByLabelText("Commande pour Claude Code")).toHaveTextContent(`-- "${store.executable}" "${infos.script}"`)
+  })
+
   it("fait ouvrir le fichier de Claude Desktop par son menu, quitter Claude Desktop avant d'enregistrer, et utiliser l'onglet Chat", async () => {
     vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue(infos)
     const user = userEvent.setup({ delay: null })

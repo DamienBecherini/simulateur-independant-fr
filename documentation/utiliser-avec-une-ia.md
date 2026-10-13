@@ -1,6 +1,6 @@
 # Utiliser le simulateur avec une IA (MCP)
 
-L'application de bureau comprend un **serveur MCP local**. MCP (Model Context Protocol) est un protocole ouvert qui permet à un client d'IA (Claude Desktop, LM Studio, et bien d'autres) de se servir d'outils fournis par un programme installé sur l'ordinateur. Ici, l'IA peut lire votre simulation, la faire calculer par le simulateur, comparer les statuts, et proposer des ajouts tirés de vos factures ou relevés ; c'est vous qui les appliquez.
+L'application de bureau comprend un **serveur MCP local**. MCP (Model Context Protocol) est un protocole ouvert qui permet à un client d'IA (Claude Desktop, Claude Code, LM Studio, et bien d'autres) de se servir d'outils fournis par un programme installé sur l'ordinateur. Ici, l'IA peut lire votre simulation, la faire calculer par le simulateur, comparer les statuts, et proposer des ajouts tirés de vos factures ou relevés ; c'est vous qui les appliquez.
 
 Ce n'est pas l'avis d'un expert-comptable. La démo web n'a pas ce serveur : il n'existe que dans l'application de bureau (dans la démo, « Utiliser avec une IA (MCP) » renvoie vers son téléchargement).
 
@@ -84,6 +84,18 @@ Le menu **Modifier la configuration** l'ouvre toujours au bon endroit. Pour info
 - macOS : `~/Library/Application Support/Claude/claude_desktop_config.json`.
 
 Source : [Connect to local MCP servers](https://modelcontextprotocol.io/docs/develop/connect-local-servers) (documentation officielle de MCP).
+
+### Avec Claude Code (ligne de commande)
+
+Claude Code n'utilise pas ce fichier : il enregistre le serveur par une commande, à taper dans un terminal (PowerShell ou invite de commandes sous Windows). **Paramètres** > **Utiliser avec une IA (MCP)** > **Copier la commande pour Claude Code** la donne toute prête, avec les chemins réels de votre installation (classique ou Microsoft Store) ; ce sont les trois valeurs de la configuration ci-dessus :
+
+```text
+claude mcp add simulateur-independant-fr --scope user --env ELECTRON_RUN_AS_NODE=1 -- "<command>" "<premier argument>" --donnees "<dossier de données>"
+```
+
+- `--scope user` rend le simulateur disponible dans tous vos projets : c'est le choix normal, puisqu'on interroge sa simulation d'où l'on veut. `--scope local` le limite au dossier courant, pour un essai ;
+- Claude Code charge ses serveurs MCP **au démarrage d'une session** : relancez-le (`claude --continue` reprend la conversation en cours), puis tapez `/mcp` pour voir l'état du serveur ;
+- pour le retirer : `claude mcp remove simulateur-independant-fr --scope user` (la même portée que l'ajout).
 
 ### Avec LM Studio (IA locale)
 

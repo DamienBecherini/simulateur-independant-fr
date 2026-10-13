@@ -9,7 +9,9 @@ import {
   ajouterLEntree,
   cheminDeSauvegarde,
   choisirLeSigntool,
+  classerLesProcessDeLApplication,
   claudeDesktopEstOuvert,
+  clientQuiALance,
   comparerLesVersions,
   decisionAvantInstallation,
   ecartsDeLInstallation,
@@ -18,9 +20,11 @@ import {
   fichierDeClaudeDesktop,
   identiteDuManifeste,
   lireLesArguments,
+  messageDApplicationOuverte,
   nomDeFamilleDuPaquet,
   nomDuPaquetConstruit,
   retirerLEntree,
+  serveursParClient,
   signatureDeMicrosoft,
   versionDuPaquet,
   versionDuServeurPret
@@ -35,9 +39,17 @@ const entree = entreeDeLaVersionDuStore({ appData: APPDATA, localAppData: LOCALA
 
 describe("arguments de npm run essai:store", () => {
   it("installe par défaut, avec les options de chaque commande", () => {
-    expect(lireLesArguments([])).toEqual({ commande: "installer", paquet: null, nouvelUtilisateur: false, claudeDesktop: false })
-    expect(lireLesArguments(["--paquet", "a.appx", "--nouvel-utilisateur", "--claude-desktop"])).toEqual({ commande: "installer", paquet: "a.appx", nouvelUtilisateur: true, claudeDesktop: true })
+    expect(lireLesArguments([])).toEqual({ commande: "installer", paquet: null, nouvelUtilisateur: false, claudeDesktop: false, arreterLesServeursMcp: false })
+    expect(lireLesArguments(["--paquet", "a.appx", "--nouvel-utilisateur", "--claude-desktop"])).toEqual({
+      commande: "installer",
+      paquet: "a.appx",
+      nouvelUtilisateur: true,
+      claudeDesktop: true,
+      arreterLesServeursMcp: false
+    })
     expect(lireLesArguments(["nettoyer", "--claude-desktop"])).toMatchObject({ commande: "nettoyer", claudeDesktop: true })
+    expect(lireLesArguments(["nettoyer", "--arreter-les-serveurs-mcp"])).toMatchObject({ commande: "nettoyer", arreterLesServeursMcp: true })
+    expect(lireLesArguments(["installer", "--arreter-les-serveurs-mcp"])).toMatchObject({ arreterLesServeursMcp: true })
     expect(lireLesArguments(["etat"])).toMatchObject({ commande: "etat" })
   })
 
@@ -48,6 +60,7 @@ describe("arguments de npm run essai:store", () => {
     expect(lireLesArguments(["--paquet"]).erreur).toMatch(/--paquet attend/)
     expect(lireLesArguments(["verifier", "--claude-desktop"]).erreur).toMatch(/--claude-desktop ne s'emploie pas avec « verifier »/)
     expect(lireLesArguments(["nettoyer", "--nouvel-utilisateur"]).erreur).toMatch(/--nouvel-utilisateur/)
+    expect(lireLesArguments(["etat", "--arreter-les-serveurs-mcp"]).erreur).toMatch(/--arreter-les-serveurs-mcp ne s'emploie pas avec « etat »/)
   })
 })
 
@@ -233,6 +246,90 @@ describe("serveur MCP et Claude Desktop", () => {
 
     it("se sauvegarde avant modification sous un nom horodaté", () => {
       expect(cheminDeSauvegarde(String.raw`C:\x\claude_desktop_config.json`, new Date("2026-10-13T08:05:09.123Z"))).toBe(String.raw`C:\x\claude_desktop_config.json.avant-essai-store-2026-10-13T08-05-09`)
+    })
+  })
+})
+
+describe("application ouverte : fenêtre ou serveurs MCP", () => {
+  const EXE = "Simulateur Indépendant FR.exe"
+  const DANS_WINDOWSAPPS = String.raw`C:\Program Files\WindowsApps\DamienBECHERINI.SimulateurIndpendantFR_0.11.0.0_x64__r47q8w9e2mv8c\Simulateur Indépendant FR.exe`
+  const CLASSIQUE = String.raw`C:\Users\Camille\AppData\Local\Programs\simulateur-independant-fr\Simulateur Indépendant FR.exe`
+  const CLAUDE_CODE = String.raw`C:\Users\Camille\.local\bin\claude.exe`
+  const CLAUDE_DESKTOP_PAQUET = String.raw`C:\Program Files\WindowsApps\Claude_1.2.3.0_x64__pzs8sxrjxfjjc\app\claude.exe`
+  const CLAUDE_DESKTOP_CLASSIQUE = String.raw`C:\Users\Camille\AppData\Local\AnthropicClaude\app-1.2.3\claude.exe`
+  const serveur = (id, parent, executable = DANS_WINDOWSAPPS) => ({ id, parent, executable, nom: EXE, ligne: `"${executable}" "C:\\x\\mcp\\serveur-mcp.mjs" --donnees "C:\\x"` })
+  const cmd = (id, parent) => ({ id, parent, executable: String.raw`C:\Windows\System32\cmd.exe`, nom: "cmd.exe", ligne: "cmd.exe /c ..." })
+  const claude = (id, parent, executable) => ({ id, parent, executable, nom: "claude.exe", ligne: "claude" })
+  const fenetre = (id, parent = 1) => ({ id, parent, executable: DANS_WINDOWSAPPS, nom: EXE, ligne: `"${DANS_WINDOWSAPPS}"` })
+
+  it("ne voit rien quand l'application n'est pas lancée", () => {
+    expect(classerLesProcessDeLApplication([cmd(10, 1), claude(11, 10, CLAUDE_CODE)], EXE)).toEqual({ fenetre: [], serveursMcp: [] })
+  })
+
+  it("distingue la fenêtre (et ses process fils) des serveurs MCP", () => {
+    const tous = [fenetre(20), { ...fenetre(21, 20), ligne: `"${DANS_WINDOWSAPPS}" --type=renderer` }, claude(30, 1, CLAUDE_CODE), cmd(31, 30), serveur(32, 31)]
+    expect(classerLesProcessDeLApplication(tous, EXE)).toEqual({ fenetre: [20, 21], serveursMcp: [{ id: 32, client: "Claude Code" }] })
+  })
+
+  it("retrouve le client en remontant les parents, Claude Code ou Claude Desktop", () => {
+    const tous = [
+      claude(30, 1, CLAUDE_CODE),
+      cmd(31, 30),
+      serveur(32, 31),
+      claude(40, 1, CLAUDE_DESKTOP_PAQUET),
+      serveur(41, 40),
+      claude(50, 1, CLAUDE_DESKTOP_CLASSIQUE),
+      cmd(51, 50),
+      serveur(52, 51),
+      claude(60, 1, ""),
+      serveur(61, 60),
+      cmd(70, 1),
+      serveur(71, 70)
+    ]
+    const { serveursMcp } = classerLesProcessDeLApplication(tous, EXE)
+    expect(serveursMcp.map(({ client }) => client)).toEqual(["Claude Code", "Claude Desktop", "Claude Desktop", "Claude Code ou Claude Desktop", null])
+  })
+
+  it("ne compte pas les serveurs d'une installation classique (hors WindowsApps)", () => {
+    expect(classerLesProcessDeLApplication([claude(30, 1, CLAUDE_CODE), serveur(32, 30, CLASSIQUE)], EXE)).toEqual({ fenetre: [], serveursMcp: [] })
+  })
+
+  it("s'arrête sur un cycle de parents", () => {
+    expect(clientQuiALance([cmd(1, 2), cmd(2, 1), serveur(3, 1)], 3)).toBeNull()
+    expect(clientQuiALance([], 3)).toBeNull()
+  })
+
+  it("compte les serveurs par client", () => {
+    expect(serveursParClient([{ id: 1, client: "Claude Code" }, { id: 2, client: "Claude Code" }, { id: 3, client: null }])).toBe("2 lancés par Claude Code, 1 lancé par un client inconnu")
+  })
+
+  describe("message", () => {
+    const nom = "Simulateur Indépendant FR"
+    const pourquoi = "de désinstaller la copie d'essai"
+
+    it("ne dit rien si rien ne tourne", () => {
+      expect(messageDApplicationOuverte({ fenetre: [], serveursMcp: [] }, nom, pourquoi, false)).toBeNull()
+    })
+
+    it("demande de fermer la fenêtre, même si des serveurs tournent aussi", () => {
+      const message = messageDApplicationOuverte({ fenetre: [1], serveursMcp: [{ id: 2, client: null }] }, nom, pourquoi, true)
+      expect(message).toBe(`L'application « ${nom} » est ouverte : fermez-la avant ${pourquoi}, puis relancez la commande.`)
+    })
+
+    it("nomme les serveurs MCP, leur client et l'option qui les arrête", () => {
+      const message = messageDApplicationOuverte({ fenetre: [], serveursMcp: [{ id: 2, client: "Claude Code" }, { id: 3, client: "Claude Code" }] }, nom, pourquoi, false)
+      expect(message).toContain("fenêtre de l'application « Simulateur Indépendant FR » est fermée")
+      expect(message).toContain("2 serveurs MCP tournent encore (2 lancés par Claude Code)")
+      expect(message).toContain("--arreter-les-serveurs-mcp")
+      expect(message).not.toContain("fermez-la")
+    })
+
+    it("accorde au singulier", () => {
+      expect(messageDApplicationOuverte({ fenetre: [], serveursMcp: [{ id: 2, client: "Claude Desktop" }] }, nom, pourquoi, false)).toContain("1 serveur MCP tourne encore (1 lancé par Claude Desktop) : il empêche")
+    })
+
+    it("laisse passer les serveurs MCP quand le script doit les arrêter", () => {
+      expect(messageDApplicationOuverte({ fenetre: [], serveursMcp: [{ id: 2, client: null }] }, nom, pourquoi, true)).toBeNull()
     })
   })
 })
