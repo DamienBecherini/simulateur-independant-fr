@@ -88,14 +88,18 @@ export function nomDuPaquetConstruit(modele, version) {
   return modele.replace("${version}", version).replace("${arch}", "x64").replace("${ext}", "appx")
 }
 
-const attribut = (balise, nom) => new RegExp(`\\s${nom}="([^"]*)"`).exec(balise)?.[1] ?? null
+// Guillemets doubles ou simples : electron-builder écrit l'éditeur entre guillemets simples (Publisher='CN=…').
+const attribut = (balise, nom) => {
+  const trouve = new RegExp(`\\s${nom}=(?:"([^"]*)"|'([^']*)')`).exec(balise)
+  return trouve ? (trouve[1] ?? trouve[2]) : null
+}
 
 /** Nom, éditeur et version déclarés par l'élément `<Identity>` d'un AppxManifest.xml ; `null` s'il manque. */
 export function identiteDuManifeste(xml) {
   const balise = /<Identity\b[^>]*>/.exec(xml)?.[0]
   if (!balise) return null
   const identite = { nom: attribut(balise, "Name"), editeur: attribut(balise, "Publisher"), version: attribut(balise, "Version") }
-  return Object.values(identite).every(Boolean) ? { ...identite, editeur: identite.editeur.replaceAll("&quot;", '"').replaceAll("&amp;", "&") } : null
+  return Object.values(identite).every(Boolean) ? { ...identite, editeur: identite.editeur.replaceAll("&quot;", '"').replaceAll("&apos;", "'").replaceAll("&amp;", "&") } : null
 }
 
 // --- signtool ----------------------------------------------------------------------------------------------------

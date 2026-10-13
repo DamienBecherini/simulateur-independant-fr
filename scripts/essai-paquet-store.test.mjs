@@ -78,6 +78,9 @@ describe("identité et version du paquet", () => {
   it("lit l'identité dans le manifeste du paquet", () => {
     const xml = `<?xml version="1.0"?><Package><Identity Name="Essai.SimulateurIndependantFR" ProcessorArchitecture="x64" Publisher="CN=Essai, O=&quot;A &amp; B&quot;" Version="0.11.0.0" /></Package>`
     expect(identiteDuManifeste(xml)).toEqual({ nom: "Essai.SimulateurIndependantFR", editeur: 'CN=Essai, O="A & B"', version: "0.11.0.0" })
+    // Comme dans le manifeste écrit par electron-builder : l'éditeur entre guillemets simples, sur plusieurs lignes.
+    const manifesteDElectronBuilder = `<Package>\n  <Identity Name="DamienBECHERINI.SimulateurIndpendantFR"\n    ProcessorArchitecture="x64"\n    Publisher='CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825'\n    Version="0.11.0.0" />\n</Package>`
+    expect(identiteDuManifeste(manifesteDElectronBuilder)).toEqual({ nom: "DamienBECHERINI.SimulateurIndpendantFR", editeur: "CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825", version: "0.11.0.0" })
     expect(identiteDuManifeste("<Package><Identity Name='x' /></Package>")).toBeNull()
     expect(identiteDuManifeste("<Package />")).toBeNull()
   })

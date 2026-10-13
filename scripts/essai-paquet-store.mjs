@@ -156,7 +156,7 @@ function exigerApplicationFermee(pourquoi) {
 function construireLePaquet() {
   const essai = !complete
   etape(`Construction du paquet (npm run dist:store${essai ? " -- --essai" : ""})`)
-  const { status } = spawnSync("npm", ["run", "dist:store", ...(essai ? ["--", "--essai"] : [])], { cwd: racine, stdio: "inherit", shell: true })
+  const { status } = spawnSync(`npm run dist:store${essai ? " -- --essai" : ""}`, { cwd: racine, stdio: "inherit", shell: true })
   if (status !== 0) throw new Refus("La construction du paquet a échoué (voir ci-dessus).")
   const modele = lireJson("electron-builder.json").appx.artifactName
   const nom = nomDuPaquetConstruit(essai ? modele.replace("-store-", "-store-essai-") : modele, paquetNpm.version)
