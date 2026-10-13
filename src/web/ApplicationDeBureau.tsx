@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { DEPOT_GITHUB } from "@/lib/adresses-des-retours"
 
 const ADRESSE_DU_TELECHARGEMENT = `${DEPOT_GITHUB}/releases/latest`
+const ADRESSE_DU_STORE = "https://apps.microsoft.com/detail/9PJBJWX5WS72"
 const ADRESSE_DU_GUIDE_D_INSTALLATION = `${DEPOT_GITHUB}/blob/main/documentation/installation.md`
 
 const NOUVEL_ONGLET = <span className="sr-only"> (nouvel onglet)</span>
@@ -27,7 +28,12 @@ export function LiensVersLApplicationDeBureau() {
           </a>
         </Button>
       </div>
-      <p className="text-sm text-slate-600 dark:text-slate-400">Pour Windows, macOS et Linux, gratuite et open source. Bientôt sur le Microsoft Store.</p>
+      <p className="text-sm text-slate-600 dark:text-slate-400">Pour Windows, macOS et Linux, gratuite et open source. Sous Windows, installez-la plutôt depuis le{" "}
+        <a className="underline" href={ADRESSE_DU_STORE} target="_blank" rel="noopener noreferrer">
+          Microsoft Store{NOUVEL_ONGLET}
+        </a>
+        , signée par Microsoft.
+      </p>
     </div>
   )
 }

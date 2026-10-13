@@ -1,6 +1,6 @@
 # Installer l'application de bureau
 
-L'application se télécharge depuis la page des versions du dépôt : **[dernière version](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)**. Elle fonctionne entièrement hors ligne : aucune donnée ne quitte votre ordinateur.
+**Sous Windows, installez-la depuis le [Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72)** ([ouvrir directement dans le Store](ms-windows-store://pdp/?productid=9PJBJWX5WS72)) : le paquet est signé par Microsoft, donc il passe le Contrôle intelligent des applications et SmartScreen sans avertissement, et le Store le met à jour. Les autres systèmes, et Windows sans le Store, utilisent la page des versions du dépôt : **[dernière version](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)**. L'application fonctionne entièrement hors ligne : aucune donnée ne quitte votre ordinateur.
 
 Pour essayer sans rien installer, la [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/) propose la même interface dans le navigateur ; elle s'installe aussi comme une application et fonctionne hors ligne (voir [Si Windows bloque l'application](#si-windows-bloque-lapplication)).
 
@@ -29,6 +29,10 @@ Le code source de chaque version est public, et les exécutables sont construits
 
 ## Windows
 
+**Microsoft Store (recommandé)**
+
+Ouvrez la [fiche du Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72) et cliquez sur **Installer**. Aucun avertissement ne s'affiche, et les mises à jour se font par le Store. Pour désinstaller : Paramètres > Applications > Applications installées.
+
 **Installateur (`.exe`)**
 
 1. Lancez le fichier téléchargé.
@@ -41,9 +45,11 @@ Pour désinstaller : Paramètres > Applications > Applications installées > « 
 
 Extrayez l'archive dans un dossier (clic droit > « Extraire tout »), puis lancez `Simulateur Indépendant FR.exe`. Le même avertissement SmartScreen peut s'afficher.
 
-**Contrôle intelligent des applications.** Si ce réglage de Windows 11 est activé (Sécurité Windows > Contrôle des applications et du navigateur), il peut bloquer l'application sans proposer de la lancer quand même, car elle n'est pas signée. Il n'existe alors pas d'autre solution que de désactiver ce contrôle, ce que nous ne vous recommandons pas de faire pour cette seule application : installez plutôt la démo web, comme expliqué ci-dessous.
+**Contrôle intelligent des applications.** Si ce réglage de Windows 11 est activé (Sécurité Windows > Contrôle des applications et du navigateur), il peut bloquer l'installateur et l'archive sans proposer de les lancer quand même, car ils ne sont pas signés. Installez alors l'application depuis le [Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72), signée par Microsoft, ou la démo web, comme expliqué ci-dessous : désactiver ce contrôle pour cette seule application n'est pas recommandé.
 
 ## Si Windows bloque l'application
+
+Le plus simple est le [Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72), dont le paquet est signé par Microsoft. Sinon, la démo web ci-dessous :
 
 La [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/) s'installe comme une application depuis Microsoft Edge (ou Google Chrome) : elle a alors sa propre fenêtre, son icône dans le menu Démarrer et la barre des tâches, et fonctionne hors ligne. Ce n'est pas un programme téléchargé : le navigateur l'exécute, donc le Contrôle intelligent des applications et SmartScreen ne la bloquent pas.
 
