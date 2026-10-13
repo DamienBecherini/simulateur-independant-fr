@@ -14,6 +14,7 @@ Objectif vérifiable rappelé : un développeur TypeScript qui découvre le proj
 6. [Plan de correction](#6-plan-de-correction)
 7. [Grille de relecture d'une phase](#7-grille-de-relecture-dune-phase)
 8. [Méthode et commandes](#8-méthode-et-commandes)
+9. [Relecture de suivi — 13 octobre 2026 (v0.11.0 et suivantes)](#9-relecture-de-suivi--13-octobre-2026-v0110-et-suivantes)
 
 ---
 
@@ -469,3 +470,191 @@ Des branches courtes, chacune testée et fusionnée dans `integration` avant la 
 - Mesures : `npx eslint .` (configuration du projet) ; ESLint par son API avec, en plus, `complexity: 10`, `max-lines-per-function: 80`, `max-depth: 3`, `max-lines: 400`, `max-params: 4`, `no-non-null-assertion`, `no-explicit-any` (sans modifier la configuration) ; `npm run duplication` ; `npm run test:coverage` ; `npx tsc -b` ; `npm outdated` ; `npm audit --omit=dev` et `npm audit` ; API publique de SonarQube Cloud (`api/issues/search`, `api/measures/component`).
 - Lecture : moteur (`simulation-engine.ts`, `simulation-pluriannuelle.ts`, `comparateur.ts`, `cotisationsTNS.ts`, `cotisations-liberales.ts`, `professions.ts`, `regles.ts`, `migrations.ts`, `data-sanitizer.ts`, `annees.ts`), tests de règles et cas de référence, puis interface, outils pour les IA, serveur MCP et persistance Electron.
 - Procédures du § 5 suivies sur papier, à partir de la seule documentation, puis vérifiées dans le code.
+
+---
+
+## 9. Relecture de suivi — 13 octobre 2026 (v0.11.0 et suivantes)
+
+Point 9 des « Travaux transverses » de la [roadmap](../Roadmap.md). Relecture faite sur `integration` (commit `f92a0cb`, après la v0.11.0), **constat seulement** : rien n'a été corrigé.
+
+**Périmètre.** `v0.10.0..integration` compte 196 commits et 61 fusions. Jusqu'à `sonar-dernieres-remarques` (`f3c1247`, 10 octobre), c'est le plan du § 6 ; viennent ensuite 22 branches de fonctions (de `parcours-utilisateur` à `exoneration-tva-des-soins` : réinitialisation sûre, cotisations détaillées et limites du modèle, nature de l'activité d'une micro-entreprise, exports alignés, un seul net, téléphone compact, charges des exemples, version du Microsoft Store, configuration MCP guidée, montages de l'ostéopathe et du kinésithérapeute, encart « Que voulez-vous savoir ? », barre de résumé qui mène aux réponses, exonération de TVA des soins). Ces 22 branches touchent 143 fichiers de `src` (+4 839 / −830 lignes, 22 fichiers créés) : c'est sur elles que porte la relecture. Les mesures sont prises à trois moments pour séparer l'effet du plan de correction de celui des fonctions.
+
+### 9.1 Résumé
+
+**État général : sain, sans dérive vers du code spaghetti.** Les garde-fous posés par le plan tiennent : aucune fonction au-delà de 12 de complexité, aucun cycle d'import, aucun import interdit entre les couches, aucune duplication détectée, aucun `any`, les trois `eslint-disable` sont ceux du 10 octobre. Les nouvelles fonctions ont mis leur logique au bon endroit : le moteur pour ce qui se calcule (`sous-la-situation-saisie.ts`, franchise de TVA dans `calculsAE.ts`), `src/lib` pour ce qui se présente, testé (`detail-des-cotisations.ts`, `nature-de-l-activite.ts`, `aides-de-la-micro.ts`, `resume.ts`, `questions-de-depart.ts`, `limites-du-modele.ts`, `flux-recurrents.ts`), les règles pour ce qui est une donnée (l'exonération de TVA est un attribut `soinsExoneresDeTVA` de chaque profession, sourcé, et non un test sur l'identifiant « ostéopathe »). Les tables exhaustives sont respectées et prolongées par les nouvelles tables.
+
+La croissance se concentre dans quelques fichiers « carrefour » ; c'est là, et non dans le moteur, que se trouve le risque.
+
+**Les 4 risques principaux :**
+
+1. **`App.tsx` et les deux grands panneaux grossissent à chaque fonction.** La fonction `App` est revenue à 245 lignes (252 avant le plan, 217 après) et importe 47 modules : chaque fonction y ajoute un état de fenêtre, un déclencheur de focus ou une prop. `ResultsPanel.tsx` (485 lignes utiles) et `ComparatorPanel.tsx` (422) dépassent le seuil de 400 lignes. Ils restent lisibles (petits sous-composants nommés), mais la tendance est nette.
+2. **Des contrats écrits en chaînes de caractères.** Les ancres vers lesquelles mènent la barre de résumé, l'encart des questions et les vues (`"bilan"`, `"resultats-titre"`, `"comparateur-verdict"`…) sont écrites à deux, trois ou quatre endroits ; une faute de frappe casse un lien sans erreur de compilation.
+3. **Le guide du développeur ne dit pas comment étendre les nouveautés.** Rien sur l'ajout d'une situation type, d'une question de départ, d'une entrée de la barre de résumé ou d'une profession ; la liste de l'essai « SARL » (§ 3.4) a perdu un fichier.
+4. **Code mort et petits doublons qui s'accumulent.** P21 n'a jamais été traité (40 exports et 49 types exportés inutilisés, dont 2 et 4 nouveaux) ; `alert-dialog.tsx` et sa dépendance ne servent à rien depuis la première version ; deux tables de libellés des cotisations ; le même calcul différé recopié quatre fois.
+
+### 9.2 Mesures
+
+Même méthode qu'au § 8 : ESLint par son API avec les seuils stricts (complexité 10, 80 lignes par fonction, imbrication 3, 400 lignes utiles par fichier, 4 paramètres, `!` et `any` signalés) sur tous les `.ts` et `.tsx` de `src` (hors `.d.ts`), lus dans chaque commit par `git show` ; graphe des imports et composantes fortement connexes calculés par un script temporaire hors du dépôt ; le script refait exactement les chiffres du § 3 sur `v0.10.0`. « Lignes utiles » : sans lignes vides ni commentaires. Colonnes : **9 oct.** = `v0.10.0` (§ 3) ; **10 oct.** = `f3c1247`, fin du plan de correction ; **13 oct.** = `f92a0cb`.
+
+| Mesure | 9 oct. | 10 oct. | 13 oct. | Commentaire |
+|---|---|---|---|---|
+| Fichiers `.ts` et `.tsx` de `src` | 337 | 395 | 417 | |
+| Lignes utiles hors tests | 16 624 | 17 795 | 19 165 | +1 370 en trois jours de fonctions |
+| Fichiers de plus de 400 lignes utiles (hors tests) | 4 | 3 | 4 | 13 oct. : `types.ts` 582, `ResultsPanel.tsx` 485, `ComparatorPanel.tsx` 422, `montages.ts` 419 (nouveau) |
+| `src/types.ts` (lignes) | 949 | 1 008 | 1 066 | résultats du comparateur surtout (§ 9.5) |
+| `ResultsPanel.tsx` | 557 | 556 | 592 | détail des cotisations, limites, en-tête |
+| `ComparatorPanel.tsx` | 471 | 491 | 535 | un seul net, couples avant la courbe |
+| `src/lib/montages/montages.ts` | 316 | 331 | 496 | deux situations et les charges des exemples |
+| `App.tsx` (fichier ; fonction `App`) | 363 ; 252 | 327 ; 217 | 375 ; 245 | barre d'outils du téléphone, encart des questions |
+| ESLint, configuration du projet | 0 erreur, 1 avertissement | 0 | 0 | limite de complexité à 12 depuis le 10 oct. |
+| Complexité > 10 (hors tests) | 24 (23) | 18 (17) | 18 (17) | au-delà de 12 : 13, 0, 0 ; entrée : `ChiffresClesDeLAnnee` (12) ; sorties : `FlowItem`, `LignesDeLActivite` |
+| Fonctions de plus de 80 lignes (hors tests) | 43 (9) | 48 (10) | 52 (11) | `App` +28, `SettingsSheet` 154 → 174, `MonthlyFlowsModal` 89 → 101, `NewFlowItem` 121 → 125, `MenuPlusDActions` 81 (nouveau) |
+| Imbrication > 3 niveaux | 0 | 0 | 0 | |
+| Fonctions à plus de 4 paramètres (hors tests) | 24 (22) | 15 (13) | 16 (13) | inchangé hors tests |
+| Assertions non nulles `!` (hors tests) | 216 (12) | 214 (8) | 240 (8) | les 26 nouvelles sont dans des tests |
+| `any`, `@ts-ignore` ; `eslint-disable` | 0 ; 0 | 0 ; 3 | 0 ; 3 | les trois mêmes, chacun avec sa raison |
+| Composants à plus de 8 props (sur 203, 207, 228) | 9 | 9 | 9 | `SettingsSheet` 17 ; `MonthlyFlowsModal` 11 → 12, `EntityItem` et `LigneActeur` 9 → 10 |
+| Cycles d'import (imports de valeur) | 1 | 0 | 0 | reste un cycle par des imports de type seulement (§ 9.4, K9) |
+| Imports interdits entre couches (ESLint) | règle absente | 0 | 0 | |
+| Imports internes de `App.tsx` ; fichiers qui importent `types.ts` | 45 ; 105 | 45 ; 124 | 47 ; 130 | |
+| Duplication (jscpd, 70 jetons) | 0 clone | 0 | 0 | |
+| Exports inutilisés (knip 5, sans configuration) | — | 39 valeurs, 47 types | 40 valeurs, 49 types | P21 jamais traité |
+| Tests unitaires | 142 fichiers, 1 953 | — | 172 fichiers, 2 623 | 21 s |
+| Couverture (instructions, branches, fonctions, lignes) | 99,02 / 95,46 / 98,8 / 99,67 % | 98,94 / 95,12 / 98,8 / 99,6 % | 98,95 / 95,17 / 98,88 / 99,65 % | seuils à 90 % |
+| Catalogue des outils pour les IA (caractères) | 30 953 | 27 501 | 27 939 | plafond 31 000 : marge de 10 % |
+| `npm audit --omit=dev` ; `npm audit` | 2 ; 19 | 0 ; 18 | 0 ; 16 | 10 modérées, 6 hautes, outils de développement seulement |
+| `npm outdated` | 34 | — | 13 | correctifs (Radix ×6, Vitest, Zod…) ; TypeScript 7 toujours bloqué (§ 9.6) |
+
+**Écarts de méthode :** `npm run duplication` échoue sur ce poste (le binaire Windows de jscpd 5 est bloqué par Smart App Control) : même commande lancée avec jscpd 4.0.5 par `npx`, dont jscpd 5 donne le même résultat (`ce2e5f2`). knip est lancé par `npx knip@5` sans configuration : les 15 « fichiers inutilisés » qu'il cite sont les points d'entrée (Electron, serveur MCP, service worker), des faux positifs ; les exports cités ont été vérifiés un par un pour les nouveaux. Le nombre de lignes du § 3 venait de SonarQube (`ncloc`), non relu ici. **Non mesuré :** SonarQube Cloud, tests de bout en bout (application et démo, laissés à la CI), tests de mutation.
+
+### 9.3 Grille du § 7 sur les 22 branches
+
+| Point de la grille | Tenu ? | Constat |
+|---|---|---|
+| Aucune valeur des règles dans le code ou un texte | oui | Les textes des montages et de l'aide de la micro lisent les règles (`montages.ts:13-16`, `aides-de-la-micro.ts`) ; les montants restants sont des exemples en commentaire ou les montants fictifs des situations. « 4 trimestres » (`resume.ts:37`) est le maximum légal, accepté au § 6. |
+| Chaque valeur nouvelle a `description` et `source`, dans chaque année | oui | `soinsExoneresDeTVA` : description du bloc `professions` complétée dans les trois fichiers, avec Légifrance et le BOFiP. |
+| Règles passées en paramètre | oui | Aucune valeur par défaut nouvelle. |
+| Table exhaustive plutôt que « sinon » | oui | Nouvelles tables : `EN_STATUT` (`comparateur-options.ts:24`), `LIBELLES_TNS` et `GROUPE_DU_REGIME_GENERAL` (`detail-des-cotisations.ts:19, 64`), `POURQUOI_SOUS_LA_SAISIE` (`resume.ts:86`). Seul aiguillage par cas : `activite.type === "micro-entreprise"` (`detail-des-cotisations.ts`), le discriminant d'une union de trois genres d'acteur, normal en TypeScript. |
+| Cas de référence pour chaque nouveau montant | oui | Montages de l'ostéopathe et du kinésithérapeute (`montages.reference.test.ts`, `liberaux.reference.test.ts`) ; la franchise de TVA ne produit qu'un avertissement. |
+| Le moteur n'importe ni `src/ui`, ni `src/lib`, ni Electron, ni Node | oui | Vérifié par ESLint et par le graphe. |
+| Pas de nouveau cycle d'import | oui | 0. |
+| Format de fichier | oui | Seul ajout : `questionsFermees` dans les préférences, `.optional().catch(undefined)`, sans nouveau numéro. La session ne change pas. |
+| Lint ; pas de nouvelle fonction au-delà de 80 lignes ou 10 de complexité sans raison | **non** | `MenuPlusDActions` (`MenuPlusDActions.tsx:72`, 81 lignes), `ChiffresClesDeLAnnee` (`BarreDeResume.tsx:224`, complexité 12) ; ont grossi sans raison écrite : `App` (`App.tsx:72`, 245 lignes), `SettingsSheet` (`SettingsSheet.tsx:101`, 174), `MonthlyFlowsModal` (`MonthlyFlowsModal.tsx:163`, 101). Écarts faibles, voir S1. |
+| Noms en français, même nom pour la même notion | oui | Nouveaux fichiers en français ; l'anglais restant vient des champs existants (`avertissementsSansLeVerdict(warnings)`, `resume.ts:83`, en attente de C15). |
+| Commentaires qui disent pourquoi | oui | Ni « MODIFICATION », ni historique. |
+| Pas de code mort ni d'export inutilisé | **en partie** | Nouveaux exports inutilisés hors de leur fichier : `SOINS_EXONERES_DE_TVA` (`src/lib/professions.ts:57`), `TITRE_DE_L_ENCART` (`EncartDesQuestions.tsx:17`) ; types `LigneDuDetail`, `LigneDesCotisationsExportee`, `FichierDeClaudeDesktop`, `DescriptionDeLaNature`. Voir S6. |
+| Tests, types, duplication au vert ; couverture tenue | oui | Voir § 9.2. |
+| Tests de bout en bout | non vérifié ici | Laissés à la CI d'`integration`. |
+| Remarques SonarQube | non vérifié ici | |
+| Tests qui se lisent comme la règle | oui, une réserve | `regles/regles.test.ts:440` parcourt `[regles2024, regles2025, regles2026]` au lieu de la liste `annees` (ligne 30) : une année 2027 échapperait à ce test (S8). |
+| Guide du développeur à jour | **en partie** | Carte du moteur (`sous-la-situation-saisie.ts`) et glossaire (« situation type ») complétés ; procédures absentes et table du § 3.4 incomplète (D-S1 à D-S4). |
+| ADR | oui | ADR 009 et 010 complétées (un seul net, meilleur statut sous la situation saisie) ; ADR 013 acceptée après l'essai du paquet, ce qui règle la décision 6 du § 6. |
+| README et CHANGELOG | oui | Une branche `docs:` après chaque fonction. |
+
+### 9.4 Constats
+
+Mêmes classes, gravités et efforts qu'au § 4.
+
+**À corriger**
+
+| # | Où | Constat | Grav. | Effort | Proposition |
+|---|---|---|---|---|---|
+| S1 | `src/ui/App.tsx:207-263` (barre d'outils), `:121-139` (calcul des années), `:67-70` (`avecLesQuestions`) | `App` sert à la fois de racine de composition, de barre d'outils (55 lignes de mise en page selon la largeur) et de lieu des règles d'affichage. Chaque fonction de l'interface l'a touchée (trois commits depuis le 10 octobre), avec un état et une ref de plus. | moyenne | M | Extraire `BarreDOutils.tsx` (boutons, menu « Plus d'actions », avis, situations types : des rappels en props) ; `avecLesQuestions` dans `questions-de-depart.ts`, testée ; le calcul des années dans `useSimulationDesAnnees` (S3). Objectif : `App` sous 150 lignes, composition seule. Pas de magasin d'état global (K8). |
+| S2 | `ComparatorPanel.tsx` (535 lignes), `ResultsPanel.tsx` (592) | Plusieurs responsabilités par fichier : le tableau du comparateur et sa mise en forme (l. 50-246), quatre hooks de réglages et de calcul (l. 349-452), la composition ; dans les résultats, la carte du foyer (l. 144-310) et celle de l'activité (l. 310-465). | basse | S | Déplacement pur : `TableauDuComparateur.tsx`, `hooks/useComparateur.ts`, `CarteDuFoyer.tsx`, `CarteDeLActivite.tsx`. Bénéfice réel mais modeste : à faire à la prochaine fonction qui touche ces fichiers (décision 4). |
+| S3 | `App.tsx:121`, `ComparatorPanel.tsx:349`, `SurToutesLesAnnees.tsx:20`, `hooks/useOptimisation.ts:18` | Le même calcul différé (minuterie de 300 ms, drapeau d'annulation, message d'erreur) écrit quatre fois, avec des écarts : en cas d'erreur, le comparateur garde l'ancien résultat, l'application l'efface. Trop court pour jscpd. | basse | S | Un hook `useCalculDiffere(calcul, dependances)` testé une fois, avec un comportement d'erreur choisi. |
+| S4 | Ancres : `vues.ts:33-41`, `BarreDeResume.tsx:233-239`, `ResultsPanel.tsx:52, 483`, `SyntheseDuComparateur.tsx:27, 35`, `ComparatorPanel.tsx:511, 514`, `questions-de-depart.ts:24` ; seules deux sont des constantes (`resume.ts:20-21`) | `"bilan"`, `"resultats-titre"`, `"comparateur-verdict"`, `"comparateur-titre"` sont écrits à la main à chaque endroit. Une faute de frappe casse un lien en silence ; une ancre oubliée dans `DETAILS` fait perdre sa vue au rechargement, dans l'affichage « Trois vues ». | basse | S | Un registre `ANCRES` (`src/lib/ancres.ts`, `as const`), `DETAILS: Record<Ancre, Vue>` exhaustif, `ancre: Ancre` dans `QuestionDeDepart`. |
+| S5 | `src/components/ui/alert-dialog.tsx`, `@radix-ui/react-alert-dialog` (`package.json`), `couches.ts:18`, `impression.css:78` | Composant jamais importé (depuis `0917ea3`), pourtant monté de version (`radix-a-jour`) et pris en compte par le contournement d'Échap. | basse | S | Décision 1 : le retirer avec sa dépendance, ou s'en servir dans `ConfirmationDeRemplacement` (rôle `alertdialog`, plus juste pour une confirmation qui remplace la simulation). |
+| S6 | Exports inutilisés (P21) ; `@dnd-kit/utilities` | 40 exports et 49 types exportés que rien n'importe hors de leur fichier. `@dnd-kit/utilities` est importé (`EntityItem.tsx:8`, `FlowItem.tsx:14`, `LigneActeur.tsx:4`, `SettingsSheet.tsx:18`) sans être déclaré dans `package.json` : il n'arrive que par `@dnd-kit/sortable`. | basse | S | Retirer les `export` ; déclarer la dépendance ; décision 2 sur knip. |
+| S7 | `src/lib/detail-des-cotisations.ts:19` et `outils/resultats.ts:121` ; `src/lib/professions.ts:57` et `montages.ts:418` | Deux tables `LIBELLES_TNS` (l'écran et les exports disent « dont maladie-maternité », les IA « Maladie-maternité ») ; deux textes de l'exonération de TVA des soins. Les tables sont exhaustives : aucun oubli possible, seulement des divergences. Le moteur ne peut pas importer `src/lib`, d'où le doublon. | basse | S | Libellés des lignes de cotisations dans le moteur (`logic/libelles-des-cotisations.ts`, comme `LIBELLES_DES_STATUTS` dans `statuts.ts`), repris par `src/lib` et les outils ; un seul texte d'exonération. |
+| S8 | `src/backend/regles/regles.test.ts:440` | Liste des années recopiée dans le test des soins exonérés. | basse | S | Parcourir `annees`. |
+| S9 | `MonthlyFlowsModal.tsx:163` (12 props), `flux-recurrents.ts:40, 96` (5 paramètres) | La portée d'une opération (`portee`, `aussiEn`, montant annuel) passe en paramètres séparés de la fenêtre aux rappels, puis aux fonctions de `flux-recurrents.ts` : le même motif que C12 pour le comparateur. | basse | S | Un objet `PorteeDeLOperation`, à la prochaine modification de la saisie des flux seulement. |
+
+**À documenter**
+
+| # | Où | Constat | Grav. | Effort | Proposition |
+|---|---|---|---|---|---|
+| D-S1 | `GUIDE_DEVELOPPEUR.md`, § 3 | Aucune procédure pour les points d'extension apparus : situation type (`MONTAGES_TYPES`, sources, `montages.reference.test.ts`, année figée), question de départ, entrée de la barre de résumé (fonction de `resume.ts`, `Chiffre`, ancre, `DETAILS` de `vues.ts`, et `ResumeDeLaComparaison` avec `useSignalerLaComparaison` si la valeur vient du comparateur), profession dans une caisse existante (trois fichiers de règles, `soinsExoneresDeTVA`, tests d'ordre). | moyenne | S | Quatre procédures courtes, suivies puis annulées comme à la branche 5. |
+| D-S2 | Guide, § 3.4 | L'essai « SARL » refait le 13 octobre donne 23 erreurs dans 15 fichiers de code et 2 de tests : la table ne cite pas `src/lib/comparateur-options.ts:24` (`EN_STATUT`, apparu avec `un-seul-net`) ni les deux `@ts-expect-error` devenus inutiles de `statuts.test.ts:31, 33`. Le compilateur les signale : rien ne se perd, la table est seulement incomplète. | basse | S | Compléter la table. |
+| D-S3 | Guide, § 2.1 ; `eslint.config.js` | Le process principal (`src/backend/*.ts`) importe `src/lib` (`configuration-mcp.ts`, `adresses-des-retours.ts`, `horodatage.ts`), ce que le schéma ne montre pas ; `src/lib` est en fait « la logique pure hors moteur, partagée par l'interface et le process principal ». Aucune règle ESLint pour `src/backend/*.ts`. | basse | S | Le dire au § 1.3 et au § 2.1 ; ajouter la règle : le process principal n'importe ni `src/ui` ni `src/web`. |
+| D-S4 | Guide, § 3.9 | Tailles du catalogue citées (27 501 et 29 274) : 27 939 pour le catalogue au 13 octobre. | basse | S | Mettre à jour, ou renvoyer à la mesure de la dernière relecture de suivi. |
+
+**À garder tel quel**
+
+| # | Quoi | Raison |
+|---|---|---|
+| K1 | Questions de départ, situations types, limites du modèle et vues en tables de données (`QUESTIONS_DE_DEPART`, `MONTAGES_TYPES`, `LIMITES`, `VUES`) | Ajouter une question ou une situation, c'est une entrée et son test ; un registre plus élaboré n'apporterait rien. |
+| K2 | `soinsExoneresDeTVA` dans les règles, par profession | Datée, sourcée, vérifiée par le type et par un test ; aucune liste d'identifiants dans le code. |
+| K3 | `detail-des-cotisations.ts` dans `src/lib`, partagé par l'écran et les exports | Une seule mise en forme, somme exacte, test d'alignement (`export-aligne-ecran.test.ts`). |
+| K4 | `sous-la-situation-saisie.ts` dans le moteur | La phrase est reprise par le verdict, la barre, les exports et `comparer_statuts` : une seule source. |
+| K5 | `ConfirmationDeRemplacement` | Composant de confirmation réutilisé par les situations types, l'encart et la réinitialisation : la bonne composition. |
+| K6 | Hooks locaux de `BarreDeResume.tsx` (`useSousLaBarreDOutils`, `useCollee`, `useHauteurReservee`) | Nommés, commentés, propres à un composant : les sortir n'aurait d'intérêt qu'avec un second utilisateur. |
+| K7 | `montages.ts` (496 lignes) | Un catalogue qui croît d'environ 40 lignes par situation, sans logique ; le découper par famille (micro, sociétés, libéraux, couples) au-delà d'une douzaine de situations. |
+| K8 | Pas de magasin d'état global (Redux, Zustand…) | L'état tient dans `useSessionManager` et les préférences ; le poids d'`App` vient de la mise en page et des fenêtres, pas de l'état. |
+| K9 | Cycle de types `types.ts` → `regles/index.ts` → `logic/regles.ts` (import de type) → `types.ts` | Né à la branche 2 (`ANNEE_COURANTE`) ; sans effet à l'exécution, les imports de type disparaissent à la compilation. |
+| K10 | Comparaison remontée à `App` par `useSignalerLaComparaison` (`ComparatorPanel.tsx:445`) | Simple pour trois valeurs (meilleur statut, couple, rémunération). À revoir (décision 5) si une troisième réponse du comparateur rejoint la barre : calcul de la comparaison dans un hook au niveau d'`App`, partagé par le panneau et la barre. |
+| K11 | Les mesures du § 9.2 hors interface | Moteur, outils pour les IA, persistance et process principal n'ont pas bougé de façon notable ; aucune fonction du moteur au-delà de 12, le catalogue garde 10 % de marge. |
+
+### 9.5 Architecture et évolutivité
+
+**Les couches.** Où chaque fonction a mis sa logique :
+
+| Fonction | Moteur | `src/lib` | Composants | Verdict |
+|---|---|---|---|---|
+| Un seul net, meilleur statut sous la saisie | `comparateur.ts`, `sous-la-situation-saisie.ts`, `frais-de-fonctionnement.ts` (écart de frais) | `resume.ts` (phrases), `comparateur-options.ts` | `SyntheseDuComparateur`, `ComparatorPanel` | conforme |
+| Cotisations détaillées, limites | — | `detail-des-cotisations.ts`, `limites-du-modele.ts` | `ResultsPanel` | conforme |
+| Nature de l'activité micro, montant annuel | — | `nature-de-l-activite.ts`, `flux-recurrents.ts`, `aides-de-la-micro.ts` | `NatureDuChiffreDAffaires`, `MonthlyFlowsModal`, `ElementsDActeur` | conforme (S9) |
+| Réinitialisation sûre | — | `session-service.ts` (`modificationsNonEnregistrees`) | `ConfirmationDeRemplacement` | conforme |
+| Téléphone compact | — | — | `MenuPlusDActions`, `BarreDeResume` | mise en page seule |
+| Encart des questions | — | `questions-de-depart.ts` | `EncartDesQuestions`, `App` (`avecLesQuestions`) | presque (S1) |
+| Barre de résumé qui mène aux réponses | — | `resume.ts`, `vues.ts` | `BarreDeResume`, `ComparatorPanel` | conforme (S4, K10) |
+| Montages de l'ostéopathe et du kinésithérapeute | — | `montages.ts` | — | conforme |
+| Exonération de TVA des soins | `calculsAE.ts`, `simulation-micro.ts`, règles | `professions.ts` (texte) | — | conforme (S7) |
+| Store, MCP guidé | — | `configuration-mcp.ts` (pur, importé par le process principal) | `UtiliserAvecUneIA` | conforme (D-S3) ; le choix du texte selon le système (`UtiliserAvecUneIA.tsx:36`) pourrait rejoindre `configurationDeClaudeDesktop` |
+
+**`types.ts` : faut-il le découper ?** Le fichier a trois parties : les schémas Zod du format enregistré et leurs types déduits (l. 1-397), les résultats du moteur (l. 404-778), le comparateur, l'optimiseur et les stratégies (l. 780-1 030). Il ne contient presque pas de logique ; 130 fichiers l'importent.
+
+- **Pour un découpage par domaine** (`src/types/format.ts`, `resultats.ts`, `comparateur.ts`, `src/types.ts` devenant un point d'entrée qui les réexporte, sans changer aucun import) : le format de fichier, dont tout changement exige de suivre le § 3.5 du guide, serait isolé dans un fichier dont chaque diff se remarque à la relecture ; les types du comparateur, qui changent à chaque fonction du comparateur (la quasi-totalité des +58 lignes depuis le 10 octobre), n'encombreraient plus la lecture du format.
+- **Contre** : un niveau de fichiers de plus ; les réexports doivent porter l'extension `.js` (`NodeNext` côté Electron) ; un sous-fichier qui importerait le point d'entrée créerait un cycle (à interdire par ESLint) ; l'éditeur mène déjà au bon type par « Aller à la définition », le gain de navigation est faible.
+- **Recommandation** : le faire, mais à la première évolution du format de fichier (phase 15 ou 17, qui annoncent un format suivant avec migration), dans la branche qui la prépare, pas comme une branche isolée (décision 3).
+
+**Test d'évolutivité.** Fichiers de code à toucher, comptés le 13 octobre (l'essai « SARL » a été refait sur le dépôt puis annulé) :
+
+| Évolution | Fichiers à toucher | Qui guide | Guide | Écart |
+|---|---|---|---|---|
+| (a) Statut juridique (SARL à l'IS) | `types.ts` puis 15 fichiers de code et 2 de tests réclamés par le compilateur (23 erreurs) ; à la main : textes de 3 fichiers d'outils, `ChampsFrais.tsx`, export Markdown, `session-maximale.ts`, le calcul et ses tests | compilateur, puis une quarantaine de tests | § 3.4 | +1 fichier non listé (D-S2) |
+| (b) Profession d'une caisse existante | les 3 fichiers de règles (`soinsExoneresDeTVA` exigé par le type), 1 à 2 tests (ordre, liste des soins exonérés) | type des règles, tests | aucune procédure (§ 3.3 en passant) | D-S1 |
+| (c) Année de règles | `2027.json`, `regles/index.ts`, `regles/regles.test.ts`, un fichier de cas de référence ; README, CHANGELOG | type, test « chaque fichier est chargé » | § 3.1 | `regles.test.ts:440` (S8) |
+| (d) Question de départ | `questions-de-depart.ts` (une entrée) et son test (`EncartDesQuestions.test.tsx:38`) ; `montages.ts` si elle demande une situation nouvelle | test | aucune | D-S1 |
+| (e) Entrée de la barre de résumé | `resume.ts`, `BarreDeResume.tsx`, le composant qui porte l'ancre, `vues.ts` ; si la valeur vient du comparateur, `ComparatorPanel.tsx` et `ResumeDeLaComparaison` : 4 à 5 fichiers et leurs tests | rien (chaînes) | aucune | S4, D-S1 |
+| (f) Outil pour les IA | le fichier de sa famille, `catalogue.ts`, son test | tests (plafond, isolement, publication) | § 3.9 | chiffres de taille (D-S4) |
+
+Les ajouts du moteur (a, b, c) restent guidés par le compilateur ; l'interface (d, e) s'étend par des données pour les questions, et par des chaînes pour la barre de résumé, le seul point d'extension sans filet.
+
+**Patterns.** Proposés seulement là où ils retirent une difficulté constatée : un registre typé des ancres (S4), un hook de calcul différé (S3), des composants extraits d'`App` et des panneaux (S1, S2), un objet de portée pour les opérations sur les flux (S9), une table de libellés partagée par le moteur (S7). **Non proposés**, parce que le code actuel est simple et suffit : magasin d'état global (K8), injection de dépendances (la plateforme passe déjà par un contexte), registre ou greffons de statuts (les tables `Record<StatutJuridique, …>` font ce travail avec l'aide du compilateur), visiteur ou modèle de rendu pour les résultats, découpage de `montages.ts` (K7).
+
+**Guide du développeur et ADR.** Le guide reste exact sur tout ce qu'il décrit (procédures 3.1, 3.4, 3.9 vérifiées) ; il est incomplet sur les extensions nouvelles (D-S1 à D-S4). Les ADR sont à jour : 009 et 010 complétées pour le net unique, 013 acceptée.
+
+### 9.6 Plan de correction
+
+Même principe qu'au § 6 : des branches courtes, testées et fusionnées dans `integration` l'une après l'autre.
+
+| Ordre | Branche | Contenu | Effort | Risque | Tests à ajouter ou adapter |
+|---|---|---|---|---|---|
+| 1 | `guide-suivi-octobre` | D-S1 à D-S4 : quatre procédures (situation type, question de départ, entrée de la barre de résumé, profession), table du § 3.4, dépendances du process principal (avec la règle ESLint), tailles du catalogue. | S | nul | — (procédures suivies puis annulées) |
+| 2 | `ancres-nommees` | S4 : registre `ANCRES`, `DETAILS` exhaustif, `ancre: Ancre` dans les questions. | S | faible | Chaque ancre de `DETAILS` existe dans la page rendue, en « Résumé » et en « Trois vues ». |
+| 3 | `calcul-differe` | S3 : `useCalculDiffere`, utilisé par l'application, le comparateur, « Sur toutes les années » et l'optimiseur. | S | faible (minutage) | Hook testé avec une horloge simulée ; tests existants inchangés. |
+| 4 | `app-allegee` | S1 : `BarreDOutils`, `avecLesQuestions` dans `src/lib`, `useSimulationDesAnnees`. | M | moyen (focus, téléphone) | `App.*.test.tsx` ; tests de bout en bout de la barre et du téléphone. |
+| 5 | `panneaux-decoupes` | S2 : déplacement pur, à la prochaine fonction qui touche ces fichiers. | S | faible | Aucun. |
+| 6 | `menage-de-suivi` | S5 (selon la décision 1), S6, S7, S8. | S | faible | `regles.test.ts` parcourt `annees`. |
+| — | au fil de l'eau | S9 ; découpage de `types.ts` avec la prochaine évolution du format (décision 3). | S / M | faible | — |
+| 11 | `noms-en-francais` (§ 6) | Toujours ouverte (décision 5 du § 6). | M | faible | Aucun. |
+| 12 | `typescript-7` (§ 6) | Toujours bloquée : typescript-eslint 8.71.2, dernière version au 13 octobre, demande `typescript >=4.8.4 <6.1.0`. | — | — | — |
+
+**Points qui demandent une décision du propriétaire :**
+
+1. `alert-dialog.tsx` : le retirer avec sa dépendance, ou l'employer pour les confirmations (S5).
+2. knip : l'ajouter à la CI avec une configuration (points d'entrée d'Electron, du serveur MCP et du service worker), ou le lancer à chaque relecture de suivi seulement (S6).
+3. `types.ts` : le découper avec la prochaine évolution du format de fichier (recommandé), maintenant, ou jamais (§ 9.5).
+4. `ComparatorPanel` et `ResultsPanel` : les découper à la prochaine fonction qui les touche (recommandé) ou dès maintenant (S2).
+5. Barre de résumé : remonter le calcul de la comparaison au niveau d'`App` si une troisième réponse du comparateur la rejoint (K10).
+6. Rappel : les renommages en français (C15, décision 5 du § 6) attendent toujours une décision.
