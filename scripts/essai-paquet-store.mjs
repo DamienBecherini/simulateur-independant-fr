@@ -402,12 +402,12 @@ async function verifierLeServeurMcp(installe) {
   info("Serveur prêt, puis arrêté.")
 }
 
-/** Le paquet d'essai installé, pour `verifier`. */
+/** Le paquet à vérifier : la copie d'essai, sinon la version installée (celle du Store, après une mise à jour). */
 function paquetDEssaiInstalle() {
   const installes = paquetsInstalles(nomsDesPaquets())
   const installe = installes.find(paquet => paquet.SignatureKind === "Developer") ?? installes[0]
-  if (!installe) throw new Refus("Aucune copie d'essai installée : npm run essai:store")
-  if (installe.SignatureKind !== "Developer") info(`Attention : le paquet installé est signé « ${installe.SignatureKind} », ce n'est pas une copie d'essai.`)
+  if (!installe) throw new Refus("Le simulateur n'est pas installé en paquet : npm run essai:store")
+  if (installe.SignatureKind !== "Developer") info(`Le paquet installé est signé « ${installe.SignatureKind} » (${installe.SignatureKind === "Store" ? "la version du Microsoft Store" : "pas une copie d'essai"}) : c'est lui qui est vérifié.`)
   return installe
 }
 
