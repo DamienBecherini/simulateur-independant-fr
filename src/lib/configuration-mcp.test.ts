@@ -10,7 +10,7 @@ import { empreinteDeLaSession } from "@/backend/logic/outils/commun"
 import { lireUnePropositionEnAttente, nomDUnePropositionEnAttente, NOM_DE_PROPOSITION } from "@/backend/mcp/proposition-en-attente"
 import { MONTAGES_TYPES, sessionDUnMontage } from "@/lib/montages/montages"
 import { sessionExemple } from "@/web/session-exemple"
-import { ALIAS_D_EXECUTION, blocAInserer, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, infosDeLInstallation, type InfosDuServeurMcp } from "./configuration-mcp"
+import { ALIAS_D_EXECUTION, blocAInserer, commandeDeClaudeCode, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, infosDeLInstallation, type InfosDuServeurMcp } from "./configuration-mcp"
 
 const windows: InfosDuServeurMcp = { executable: "C:\\Programmes\\Simulateur.exe", script: "C:\\Programmes\\resources\\mcp\\serveur-mcp.mjs", donnees: "C:\\Users\\a\\AppData\\Roaming\\Simulateur", plateforme: "win32" }
 
@@ -44,6 +44,49 @@ describe("configuration d'un client d'IA", () => {
   it("donne la commande de vérification pour PowerShell, et pour les autres terminaux", () => {
     expect(commandeDeVerification(windows)).toBe('$env:ELECTRON_RUN_AS_NODE=1; & "C:\\Programmes\\Simulateur.exe" "C:\\Programmes\\resources\\mcp\\serveur-mcp.mjs" --donnees "C:\\Users\\a\\AppData\\Roaming\\Simulateur"')
     expect(commandeDeVerification({ ...windows, plateforme: "darwin" })).toMatch(/^ELECTRON_RUN_AS_NODE=1 "/)
+  })
+})
+
+describe("commande de Claude Code", () => {
+  it("ajoute le serveur avec les trois valeurs de la configuration, en portée utilisateur par défaut", () => {
+    expect(commandeDeClaudeCode(windows)).toBe(
+      'claude mcp add simulateur-independant-fr --scope user --env ELECTRON_RUN_AS_NODE=1 -- "C:\\Programmes\\Simulateur.exe" "C:\\Programmes\\resources\\mcp\\serveur-mcp.mjs" --donnees "C:\\Users\\a\\AppData\\Roaming\\Simulateur"'
+    )
+  })
+
+  it("choisit la portée locale pour un essai", () => {
+    expect(commandeDeClaudeCode(windows, "local")).toContain("--scope local --env")
+  })
+
+  it("garde les espaces et les accents des chemins entre guillemets doubles sous Windows (PowerShell et invite de commandes)", () => {
+    const accents: InfosDuServeurMcp = {
+      executable: "C:\\Users\\Éloïse Dupré\\AppData\\Local\\Microsoft\\WindowsApps\\simulateur-independant-fr.exe",
+      script: "C:\\Users\\Éloïse Dupré\\AppData\\Roaming\\simulateur-independant-fr\\mcp\\serveur-mcp.mjs",
+      donnees: "C:\\Users\\Éloïse Dupré\\AppData\\Roaming\\simulateur-independant-fr",
+      plateforme: "win32"
+    }
+    expect(commandeDeClaudeCode(accents)).toBe(
+      'claude mcp add simulateur-independant-fr --scope user --env ELECTRON_RUN_AS_NODE=1 -- "C:\\Users\\Éloïse Dupré\\AppData\\Local\\Microsoft\\WindowsApps\\simulateur-independant-fr.exe" "C:\\Users\\Éloïse Dupré\\AppData\\Roaming\\simulateur-independant-fr\\mcp\\serveur-mcp.mjs" --donnees "C:\\Users\\Éloïse Dupré\\AppData\\Roaming\\simulateur-independant-fr"'
+    )
+  })
+
+  it("donne les mêmes valeurs pour la version du Microsoft Store (alias d'exécution, copie du serveur)", () => {
+    const store = infosDeLInstallation({ executable: "C:\\Program Files\\WindowsApps\\P\\S.exe", serveurLivre: "x", donnees: windows.donnees, plateforme: "win32", dossierLocalAppData: "C:\\Users\\a\\AppData\\Local" })
+    expect(commandeDeClaudeCode(store)).toBe(
+      `claude mcp add simulateur-independant-fr --scope user --env ELECTRON_RUN_AS_NODE=1 -- "C:\\Users\\a\\AppData\\Local\\Microsoft\\WindowsApps\\${ALIAS_D_EXECUTION}" "C:\\Users\\a\\AppData\\Roaming\\Simulateur\\mcp\\serveur-mcp.mjs" --donnees "C:\\Users\\a\\AppData\\Roaming\\Simulateur"`
+    )
+  })
+
+  it("protège les chemins par des guillemets simples sous macOS et Linux (ni $ ni guillemet simple interprétés)", () => {
+    const mac: InfosDuServeurMcp = {
+      executable: "/Applications/Simulateur Indépendant FR.app/Contents/MacOS/Simulateur Indépendant FR",
+      script: "/Applications/Simulateur Indépendant FR.app/Contents/Resources/mcp/serveur-mcp.mjs",
+      donnees: "/Users/l'ami/$HOME/Library/Application Support/simulateur-independant-fr",
+      plateforme: "darwin"
+    }
+    expect(commandeDeClaudeCode(mac)).toBe(
+      "claude mcp add simulateur-independant-fr --scope user --env ELECTRON_RUN_AS_NODE=1 -- '/Applications/Simulateur Indépendant FR.app/Contents/MacOS/Simulateur Indépendant FR' '/Applications/Simulateur Indépendant FR.app/Contents/Resources/mcp/serveur-mcp.mjs' --donnees '/Users/l'\\''ami/$HOME/Library/Application Support/simulateur-independant-fr'"
+    )
   })
 })
 

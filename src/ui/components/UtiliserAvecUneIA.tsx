@@ -10,7 +10,7 @@ import { Bot, Copy } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { usePlateforme } from "../plateforme"
-import { ALIAS_D_EXECUTION, blocAInserer, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, type InfosDuServeurMcp } from "@/lib/configuration-mcp"
+import { ALIAS_D_EXECUTION, blocAInserer, commandeDeClaudeCode, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, NOM_DU_SERVEUR_MCP, type InfosDuServeurMcp } from "@/lib/configuration-mcp"
 
 const TITRE_IA = "Utiliser avec une IA (MCP)"
 
@@ -20,7 +20,7 @@ const CODE = "max-h-64 overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhe
 const TITRE_DE_PARTIE = "text-sm font-semibold text-slate-800 dark:text-slate-100"
 
 /** Ce que permet le serveur MCP, en deux phrases : dans l'application de bureau et dans la démo web. */
-export const CE_QUE_PERMET_L_IA = "Un client d'IA de bureau (Claude Desktop, LM Studio…) peut se servir du simulateur comme d'un outil : lire votre simulation, la calculer, comparer les statuts, et proposer des ajouts tirés de vos factures ou relevés. Les chiffres viennent toujours du simulateur."
+export const CE_QUE_PERMET_L_IA = "Un client d'IA (Claude Desktop, Claude Code, LM Studio…) peut se servir du simulateur comme d'un outil : lire votre simulation, la calculer, comparer les statuts, et proposer des ajouts tirés de vos factures ou relevés. Les chiffres viennent toujours du simulateur."
 
 const CHEMIN = "[overflow-wrap:anywhere]"
 
@@ -58,14 +58,15 @@ function EtapesDeClaudeDesktop({ plateforme }: { plateforme: string }) {
 /** Le contenu de la fenêtre, une fois les chemins de l'installation connus. */
 function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
   const [etat, setEtat] = useState("")
+  const [etatClaudeCode, setEtatClaudeCode] = useState("")
   const configuration = configurationDuClient(infos)
 
-  const copier = async (texte: string, copie: string) => {
+  const copier = async (texte: string, copie: string, afficher = setEtat) => {
     try {
       await navigator.clipboard.writeText(texte)
-      setEtat(copie)
+      afficher(copie)
     } catch {
-      setEtat("La copie a échoué : sélectionnez le texte de la configuration pour le copier.")
+      afficher("La copie a échoué : sélectionnez le texte pour le copier.")
     }
   }
 
@@ -83,6 +84,27 @@ function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
           Avec Claude Desktop
         </h3>
         <EtapesDeClaudeDesktop plateforme={infos.plateforme} />
+      </section>
+
+      <section aria-labelledby="ia-claude-code" className="space-y-2">
+        <h3 id="ia-claude-code" className={TITRE_DE_PARTIE}>
+          Avec Claude Code
+        </h3>
+        <p>Dans un terminal, cette commande ajoute le simulateur à Claude Code, pour tous vos projets (portée « user » ; « local » le limite au dossier courant, pour un essai) :</p>
+        <pre className={CODE} tabIndex={0} aria-label="Commande pour Claude Code">
+          {commandeDeClaudeCode(infos)}
+        </pre>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" className="h-auto min-h-9 whitespace-normal" onClick={() => copier(commandeDeClaudeCode(infos), "Commande copiée : collez-la dans un terminal, puis relancez Claude Code.", setEtatClaudeCode)}>
+            <Copy className="mr-2 size-4" aria-hidden="true" /> Copier la commande pour Claude Code
+          </Button>
+        </div>
+        <p aria-live="polite" className={PETIT_TEXTE}>
+          {etatClaudeCode}
+        </p>
+        <p className={PETIT_TEXTE}>
+          Claude Code charge ses serveurs au démarrage d'une session : relancez-le (« claude --continue » reprend la conversation en cours), puis tapez « /mcp » pour voir l'état du serveur « {NOM_DU_SERVEUR_MCP} ». Pour le retirer : « claude mcp remove {NOM_DU_SERVEUR_MCP} --scope user ».
+        </p>
       </section>
 
       <section aria-labelledby="ia-configuration" className="space-y-2">
