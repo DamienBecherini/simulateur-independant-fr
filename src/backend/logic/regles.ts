@@ -75,6 +75,12 @@ export interface ProfessionReglementee {
   curps: boolean
   /** Avertissement en SASU ou en EURL : elle exerce en principe en société d'exercice libéral. */
   societeExerciceLiberal: boolean
+  /**
+   * Ses soins sont exonérés de TVA (article 261, 4, 1° du code général des impôts ; BOI-TVA-CHAMP-30-10-20-10) :
+   * professions médicales et paramédicales réglementées, ostéopathes, chiropracteurs, psychologues, psychothérapeutes.
+   * Ils ne comptent pas pour la franchise en base (BOI-TVA-DECLA-40-10-10, § 230).
+   */
+  soinsExoneresDeTVA: boolean
   source: string
 }
 

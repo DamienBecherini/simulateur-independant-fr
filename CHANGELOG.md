@@ -19,6 +19,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 - **Connexion à Claude Desktop guidée pas à pas.** Le fichier de configuration de Claude Desktop contient déjà des réglages : la fenêtre « Utiliser avec une IA (MCP) » donne à copier le bloc à coller juste après sa première accolade (« Copier le bloc à insérer (fichier existant) »), à côté de la configuration complète pour un fichier vide, et dit quoi faire si une rubrique « mcpServers » existe déjà. Elle fait ouvrir le fichier par le menu de Claude Desktop (Paramètres > Développeur > Modifier la configuration), car son chemin change quand Claude Desktop est installé en paquet sous Windows, demande de quitter complètement Claude Desktop avant d'enregistrer, sans quoi il peut effacer l'ajout en se fermant, et rappelle que les outils du simulateur s'utilisent dans l'onglet Chat, pas dans l'onglet Code. Le guide d'utilisation avec une IA reprend ces consignes, avec les chemins du fichier et des journaux selon l'installation de Claude Desktop.
 
+### Corrigé
+
+- **Plus de faux dépassement de la franchise en base de TVA pour les professions de santé.** Les soins des professions médicales et paramédicales réglementées, des ostéopathes, des chiropracteurs, des psychologues et des psychothérapeutes sont exonérés de TVA (article 261, 4, 1° du code général des impôts) et ne comptent pas pour la franchise en base (BOFiP, BOI-TVA-DECLA-40-10-10, § 230) : une micro-entreprise d'ostéopathe au-delà de 37 500 € d'honoraires ne reçoit plus l'avertissement d'une TVA due. Ses ventes et prestations BIC restent comparées aux seuils. La ligne d'information de la profession le dit, et le montage de l'ostéopathe ne signale plus cette limite.
+
 ## [0.11.0] — 2026-10-11
 
 ### Ajouté

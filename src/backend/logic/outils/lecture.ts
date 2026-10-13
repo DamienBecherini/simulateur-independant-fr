@@ -195,8 +195,8 @@ function reglesDesLiberaux(l: ReglesFiscales["liberauxReglementes"]): z.infer<ty
   const { commun, CIPAV: cipav, CARPIMKO: carpimko } = l
   return [
     {
-      sujet: "Professions libérales réglementées : profession (identifiant à donner au réglage profession), caisse (null : pas encore prise en compte, calcul d'une profession non réglementée), micro-entreprise permise, conventionnable, CURPS, avertissement sur les sociétés d'exercice libéral",
-      valeurs: { professions: l.professions.liste.map(({ id, libelle, caisse, microEntreprise, conventionnable, curps, societeExerciceLiberal }) => ({ id, libelle, caisse, microEntreprise, conventionnable, curps, societeExerciceLiberal })) },
+      sujet: "Professions libérales réglementées : profession (identifiant à donner au réglage profession), caisse (null : pas encore prise en compte, calcul d'une profession non réglementée), micro-entreprise permise, conventionnable, CURPS, avertissement sur les sociétés d'exercice libéral, soins exonérés de TVA (hors de la franchise en base)",
+      valeurs: { professions: l.professions.liste.map(({ id, libelle, caisse, microEntreprise, conventionnable, curps, societeExerciceLiberal, soinsExoneresDeTVA }) => ({ id, libelle, caisse, microEntreprise, conventionnable, curps, societeExerciceLiberal, soinsExoneresDeTVA })) },
       source: source(l.professions)
     },
     { sujet: "Libéraux réglementés (CNAVPL) : retraite de base et indemnités journalières, par tranches en part du PASS ; assiettes minimales en euros ; CURPS des auxiliaires médicaux", valeurs: { retraiteDeBase: commun.retraiteDeBase.tranches, indemnitesJournalieres: commun.indemnitesJournalieres.tranches, ...valeurs(commun.cotisationsMinimales), curps: valeurs(commun.curps) }, source: source(commun.retraiteDeBase) },

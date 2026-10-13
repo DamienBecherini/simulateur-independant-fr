@@ -53,6 +53,20 @@ casDeReference("Cas de référence : professions libérales réglementées (doss
       const comparaison = comparerStatuts(session(entites, liens, flux), defaultComparisonOptions(session(entites, liens, flux), "m1"), REGLES_DES_CAS)
       expect(comparaison.scenarios.find(s => s.statut === "micro")?.protectionSociale.trimestres).toBe(4)
     })
+
+    it("soins exonérés de TVA (article 261, 4, 1° du CGI) : pas d'avertissement de franchise au-delà du seuil majoré de 41 250 €, ni dans le comparateur", () => {
+      const auDela: Flux[] = [["m1", "ca_micro_services_bnc", 45000]]
+      const tva = (warnings: string[]) => warnings.filter(w => w.includes("franchise en base de TVA") || w.includes("Franchise en base de TVA"))
+      expect(tva(activite(simuler(entites, liens, auDela), "m1").warnings)).toEqual([])
+      const donnees = session(entites, liens, auDela)
+      const colonneMicro = comparerStatuts(donnees, defaultComparisonOptions(donnees, "m1"), REGLES_DES_CAS).scenarios.find(s => s.statut === "micro")
+      expect(colonneMicro).toBeDefined()
+      expect(tva(colonneMicro?.warnings ?? [])).toEqual([])
+      // Sans profession réglementée, le même chiffre d'affaires fait perdre la franchise : l'avertissement reste.
+      expect(tva(activite(simuler([alice, micro("m1")], liens, auDela), "m1").warnings)).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue \(prestations de services 45\s000\s€ pour un seuil de 41\s250\s€\)/)])
+      // Un architecte (CIPAV) n'est pas une profession de santé : l'avertissement reste aussi.
+      expect(tva(activite(simuler([alice, enMicro("m1", "architecte")], liens, auDela), "m1").warnings)).toHaveLength(1)
+    })
   })
 
   it("cas 2 : ostéopathe en micro-entreprise, 9 000 € de CA en 2026 : 2 088 € de cotisations, 3 trimestres (seuil 2 792 €)", () => {
