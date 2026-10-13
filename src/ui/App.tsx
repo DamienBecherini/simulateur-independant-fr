@@ -13,9 +13,10 @@ import MonthlyGrid from "./components/MonthlyGrid"
 import { useSessionManager } from "./hooks/useSessionManager"
 import * as SessionService from "@/lib/session-service"
 import { BoutonDesMontages, FenetreDesMontages } from "./components/MontagesTypes"
+import { EncartDesQuestions } from "./components/EncartDesQuestions"
 import { MenuPlusDActions } from "./components/MenuPlusDActions"
 import { BoutonDesTests } from "./components/BoutonDesTests"
-import type { Affichage, SaveSlot, SessionState, SimulationPluriannuelle } from "@/types"
+import type { Affichage, SaveSlot, SessionState, SimulationPluriannuelle, UserPreferences } from "@/types"
 import { ajouterAnnee, anneeAAjouter, anneeExistante, anneesDeLaSession, donneesDeLAnnee, remplacerGrille, supprimerAnnee, vueDeLAnnee } from "@/backend/logic/annees"
 import { PREMIERE_ANNEE_DES_REGLES } from "@/backend/logic/regles"
 import { createId } from "@/lib/id"
@@ -57,6 +58,15 @@ const EN_TETE_RESUME = { header: "mb-4", titre: "text-2xl sm:text-3xl print:text
 function resultatsDeLAnnee(simulation: SimulationPluriannuelle | null, erreurDeLaSimulation: string | null, annee: number) {
   const resultat = simulation?.annees.find(a => a.annee === annee)
   return { report: resultat?.report ?? null, erreur: erreurDeLaSimulation ?? resultat?.erreur ?? null }
+}
+
+/**
+ * L'encart « Que voulez-vous savoir ? » s'affiche sur une simulation vide ou sur l'exemple du premier lancement (démo
+ * web), tant que l'utilisateur ne l'a pas fermé ; jamais avant le chargement de la session et des préférences.
+ */
+function avecLesQuestions(session: SessionState, fermees: UserPreferences["questionsFermees"], sessionChargee: boolean, estLaSessionDExemple?: (session: SessionState) => boolean): boolean {
+  if (!sessionChargee || fermees) return false
+  return session.entities.length === 0 || (estLaSessionDExemple?.(session) ?? false)
 }
 
 function App() {
@@ -165,6 +175,24 @@ function App() {
     window.scrollTo(0, 0)
   }
   const chargerUnMontage = (montage: MontageType) => chargerUneSession(sessionDUnMontage(montage))
+  // Remplacer la session (montage type, simulation vierge) perdrait des modifications : une confirmation d'abord.
+  const confirmationNecessaire = SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)
+
+  // L'encart des questions de départ, sur une simulation vide ou sur l'exemple ; comparer l'exemple coûte une
+  // sérialisation de la session, faite à chaque modification seulement.
+  const { estLaSessionDExemple } = plateforme
+  const questionsFermees = userPreferences.questionsFermees
+  const questionsAffichees = useMemo(() => avecLesQuestions(currentSession, questionsFermees, sessionChargee, estLaSessionDExemple), [currentSession, questionsFermees, sessionChargee, estLaSessionDExemple])
+  // « Partir de zéro » : une simulation vierge (annulable), et la saisie affichée, dans sa vue s'il y en a.
+  const partirDeZero = () => {
+    if (currentSession.entities.length > 0) handleResetSession()
+    vues?.choisir("situation", true)
+  }
+  // L'encart fermé ne revient plus ; le focus passe au contenu, qui le suivait.
+  const fermerLesQuestions = () => {
+    setUserPreferences(prefs => ({ ...prefs, questionsFermees: true }))
+    document.getElementById("contenu")?.focus({ preventScroll: true })
+  }
 
   // La légende et la grille numérotent les types de flux de la grille affichée, celle de l'année choisie.
   const flowTypeToNumberMap = useMemo(() => numerosDesTypesDeFlux(vue.monthlyData), [vue.monthlyData])
@@ -201,7 +229,7 @@ function App() {
                 <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
                 <span className="hidden lg:inline">Donner mon avis</span>
               </Button>
-              <BoutonDesMontages variant="outline" size="sm" aria-label="Situations types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 max-sm:hidden sm:ml-2" onCharger={chargerUnMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name}>
+              <BoutonDesMontages variant="outline" size="sm" aria-label="Situations types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 max-sm:hidden sm:ml-2" onCharger={chargerUnMontage} confirmationNecessaire={confirmationNecessaire} nomDeLaSession={currentSession.name}>
                 <span className="hidden md:inline">Situations types</span>
               </BoutonDesMontages>
               {/* En mode développement seulement : scénarios prêts à charger pour vérifier une fonctionnalité. */}
@@ -242,6 +270,8 @@ function App() {
           <style>{styleDesPages(currentSession.name, dateDuDocument())}</style>
           {plateforme.Bandeau && <plateforme.Bandeau />}
         </header>
+
+        {questionsAffichees ? <EncartDesQuestions onCharger={chargerUnMontage} onPartirDeZero={partirDeZero} onFermer={fermerLesQuestions} confirmationNecessaire={confirmationNecessaire} nomDeLaSession={currentSession.name} /> : null}
 
         {resume ? <BarreDeResume report={simulationReport} annees={anneesDeLaSession(currentSession)} annee={annee} onAnnee={setAnneeChoisie} comparaison={comparaison} /> : null}
 
@@ -312,7 +342,7 @@ function App() {
             n'est montré avant le chargement de la session : la proposition paraîtrait périmée. */}
         <RelectureDesPropositions session={currentSession} propositions={propositions} onAppliquer={setCurrentSession} onRetirer={retirerProposition} />
         <DialogueDAvis isOpen={isAvisOpen} onClose={() => setAvisOpen(false)} diagnostic={diagnostic} declencheur={declencheurDeLAvis} />
-        <FenetreDesMontages open={montagesDuMenu} onOpenChange={setMontagesDuMenu} onCharger={chargerUnMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name} declencheur={declencheurDesMontages} />
+        <FenetreDesMontages open={montagesDuMenu} onOpenChange={setMontagesDuMenu} onCharger={chargerUnMontage} confirmationNecessaire={confirmationNecessaire} nomDeLaSession={currentSession.name} declencheur={declencheurDesMontages} />
         <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} simulation={simulation} onExportJson={handleExportAll} />
         <SettingsSheet
           isOpen={isSettingsOpen}

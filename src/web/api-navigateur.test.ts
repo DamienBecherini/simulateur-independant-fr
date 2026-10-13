@@ -7,7 +7,7 @@ import { FORMAT_VERSION_ACTUEL } from "@/backend/logic/migrations"
 import { ADRESSE_E_MAIL_DES_RETOURS, ADRESSE_NOUVEAU_TICKET } from "@/lib/adresses-des-retours"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { creerApiNavigateur } from "./api-navigateur"
-import { sessionExemple } from "./session-exemple"
+import { estLaSessionDExemple, sessionExemple } from "./session-exemple"
 import { CLES } from "./stockage-navigateur"
 
 const stocke = (cle: string) => JSON.parse(window.localStorage.getItem(cle)!)
@@ -33,6 +33,15 @@ describe("pont de la démo web", () => {
     // La session enregistrée porte la version de l'application qui l'a écrite.
     expect(stocke(CLES.session)).toMatchObject({ name: "Ma simulation", formatVersion: FORMAT_VERSION_ACTUEL, appVersion: VERSION_DE_L_APPLICATION })
     expect(await api.getCurrentSession()).toEqual({ ...session, appVersion: VERSION_DE_L_APPLICATION })
+  })
+
+  it("reconnaît la simulation d'exemple relue du stockage, et plus après une modification", async () => {
+    const api = creerApiNavigateur()
+    await api.saveCurrentSession({ ...(await api.getCurrentSession()), comparateur: { activiteComparee: "company-conseil", reglagesParActivite: {} } })
+    const relue = await api.getCurrentSession()
+    expect(estLaSessionDExemple(relue)).toBe(true)
+    expect(estLaSessionDExemple({ ...relue, name: "Ma simulation" })).toBe(false)
+    expect(estLaSessionDExemple({ ...relue, entities: relue.entities.slice(1) })).toBe(false)
   })
 
   it("enregistre aussi la session de façon synchrone, à la fermeture de la page", () => {

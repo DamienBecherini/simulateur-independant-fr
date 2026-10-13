@@ -5,6 +5,7 @@
 
 import { createContext, useContext, type ComponentType } from "react"
 import type { ButtonProps } from "@/components/ui/button"
+import type { SessionState } from "@/types"
 
 /** Les réglages d'un bouton du panneau des paramètres. */
 export type BoutonDesParametres = Pick<ButtonProps, "variant" | "className">
@@ -23,6 +24,11 @@ export interface Plateforme {
    * et les liens vers l'application de bureau. Absent, la fenêtre donne la configuration du serveur de l'installation.
    */
   RenvoiVersLApplicationDeBureau?: ComponentType
+  /**
+   * Vrai si la session est la simulation d'exemple du premier lancement (la démo) : l'encart « Que voulez-vous
+   * savoir ? » y reste affiché, comme sur une simulation vide. Absent : il n'y a pas d'exemple (application de bureau).
+   */
+  estLaSessionDExemple?: (session: SessionState) => boolean
 }
 
 /** L'application de bureau : ni bandeau, ni installation, et le serveur MCP local. */
