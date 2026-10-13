@@ -50,12 +50,12 @@ Le serveur MCP local ([ADR 011](./011-serveur-mcp-local-et-boite-aux-proposition
 
 ## Vérifications
 
-Essai du 2026-10-12 sur le paquet de la version 0.11.0, signé avec un certificat d'essai et installé comme le Store l'installe, sous `C:\Program Files\WindowsApps` (marche à suivre dans [publier-sur-le-store.md](../microsoft-store/publier-sur-le-store.md#2-essayer-le-paquet-avant-la-première-soumission)), avec Claude Desktop installé lui aussi en paquet :
+Essai du 2026-10-12 sur le paquet de la version 0.11.0, signé avec un certificat d'essai et installé comme le Store l'installe, sous `C:\Program Files\WindowsApps` (marche à suivre dans [publier-sur-le-store.md](../microsoft-store/publier-sur-le-store.md#2-essayer-le-paquet-avant-la-première-soumission), automatisée depuis par `npm run essai:store`), avec Claude Desktop installé lui aussi en paquet :
 
 1. **Confirmé.** Claude Desktop lance le serveur par l'alias : les outils apparaissent, `ELECTRON_RUN_AS_NODE` est transmis, l'entrée et la sortie standard passent par l'alias. La commande de vérification écrit « Serveur MCP du simulateur 0.11.0 prêt ».
 2. **Confirmé.** Le serveur lit la session enregistrée par l'application, y compris quand elle n'existe que dans le dossier redirigé (`LocalCache`, sans dossier `%APPDATA%\simulateur-independant-fr` réel), et voit à la question suivante une modification faite dans l'application. Les fichiers d'une installation classique déjà présents dans `%APPDATA%` sont, eux, modifiés sur place, comme prévu.
 3. **Confirmé.** Une proposition envoyée par l'IA ouvre la fenêtre « Proposition de votre IA » dans l'application ouverte.
-4. **À vérifier** à la première mise à jour publiée sur le Store : la configuration copiée fonctionne toujours.
+4. **À vérifier** à la première mise à jour publiée sur le Store : la configuration copiée fonctionne toujours. `npm run essai:store -- verifier` servira à le refaire, sur la version du Store comme sur une copie d'essai : il lance le serveur par l'alias, avec la configuration de la version du Store, et vérifie qu'il annonce la version installée (au besoin après un lancement de l'application, qui met sa copie du serveur à jour).
 
 Constat de l'essai : `process.windowsStore` n'est vrai que si l'exécutable est sous `WindowsApps`. Un paquet enregistré depuis un autre dossier (`Add-AppxPackage -Register`, en mode développeur) se comporte comme la version classique et ne permet pas cet essai.
 

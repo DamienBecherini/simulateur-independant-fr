@@ -23,6 +23,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 - **Plus de faux dépassement de la franchise en base de TVA pour les professions de santé.** Les soins des professions médicales et paramédicales réglementées, des ostéopathes, des chiropracteurs, des psychologues et des psychothérapeutes sont exonérés de TVA (article 261, 4, 1° du code général des impôts) et ne comptent pas pour la franchise en base (BOFiP, BOI-TVA-DECLA-40-10-10, § 230) : une micro-entreprise d'ostéopathe au-delà de 37 500 € d'honoraires ne reçoit plus l'avertissement d'une TVA due. Ses ventes et prestations BIC restent comparées aux seuils. La ligne d'information de la profession le dit, et le montage de l'ostéopathe ne signale plus cette limite.
 
+### Maintenance
+
+- Outils pour les développeurs : commande `npm run essai:store` pour essayer le paquet du Microsoft Store installé comme le Store l'installe (copie signée avec un certificat d'essai, vérification du serveur MCP par l'alias d'exécution, configuration de Claude Desktop en option), puis tout nettoyer.
+
 ## [0.11.0] — 2026-10-11
 
 ### Ajouté

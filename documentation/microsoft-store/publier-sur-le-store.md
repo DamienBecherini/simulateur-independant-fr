@@ -9,7 +9,7 @@ Ce qui est déjà prêt dans le dépôt :
 - la construction : `npm run dist:store` en local, et le workflow [« Paquet du Microsoft Store »](../../.github/workflows/store.yml) dans GitHub Actions ;
 - les textes de la fiche, les réponses au questionnaire d'âge, la justification de `runFullTrust` et les notes pour la certification : [fiche-du-store.md](./fiche-du-store.md) ;
 - les captures d'écran : [captures/](./captures/) ;
-- le serveur MCP adapté au paquet ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md)), **à essayer avant la première soumission** (étape 2).
+- le serveur MCP adapté au paquet ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md)), **à essayer avant la première soumission** (étape 2, `npm run essai:store`).
 
 Il reste à faire, par le propriétaire du compte : créer le compte développeur, réserver le nom, recopier l'identité du paquet, essayer le paquet, et faire la première soumission. Les étapes ci-dessous suivent cet ordre.
 
@@ -57,7 +57,7 @@ Il reste à faire, par le propriétaire du compte : créer le compte développeu
 
 ## 2. Essayer le paquet avant la première soumission
 
-Le serveur MCP sous MSIX doit être essayé sur un paquet installé ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md#vérifications)). Le paquet n'est pas signé (c'est le Store qui le signe) ; pour l'essayer, on en signe une **copie** avec un certificat d'essai, au nom de l'éditeur du paquet, et on l'installe comme le Store le ferait. Marche à suivre vérifiée le 2026-10-12.
+Le serveur MCP sous MSIX doit être essayé sur un paquet installé ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md#vérifications)). Le paquet n'est pas signé (c'est le Store qui le signe) ; pour l'essayer, on en signe une **copie** avec un certificat d'essai, au nom de l'éditeur du paquet, et on l'installe comme le Store le ferait. `npm run essai:store` fait tout cela, sous Windows ; la marche à suivre à la main, vérifiée le 2026-10-12, est en annexe ([Sans le script](#annexe--essayer-le-paquet-sans-le-script)).
 
 **Pourquoi pas le mode développeur ?** La méthode qui consiste à décompresser le `.appx` (`Expand-Archive`) puis à l'enregistrer avec `Add-AppxPackage -Register` ne convient pas :
 
@@ -66,67 +66,65 @@ Le serveur MCP sous MSIX doit être essayé sur un paquet installé ([ADR 013](.
 
 Avec un paquet signé par un certificat approuvé, le mode développeur de Windows n'est pas nécessaire.
 
-1. **Construire le paquet** : GitHub > Actions > « Paquet du Microsoft Store » > **Run workflow** sur `main` (cocher « essai » si l'identité n'est pas encore remplie). Télécharger l'artefact `paquet-microsoft-store` (un zip qui contient le `.appx`), depuis la page de l'exécution ou en ligne de commande : `gh run download <id de l'exécution> -n paquet-microsoft-store -D "$HOME\Downloads\paquet-store"`. En local, sous Windows : `npm run dist:store` (ou `npm run dist:store -- --essai`), paquet dans `dist/`. Le paquet d'origine part tel quel dans Partner Center : n'essayer qu'une copie.
-2. **Préparer l'essai.**
-   - La démo web installée comme application avec Edge porte le même nom dans le menu Démarrer : la désinstaller (`edge://apps`) ou savoir la distinguer (son éditeur est « Microsoft Edge ») avant de commencer.
-   - Pour simuler un **nouvel utilisateur**, mettre de côté le dossier de données de la version classique, application et client d'IA fermés. Sur un poste qui a eu la version classique, les fichiers déjà présents dans `%APPDATA%\simulateur-independant-fr` sont modifiés sur place par le paquet, sans redirection ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md), décision) : l'essai ne testerait pas la redirection.
+> **Sécurité.** Tant que le certificat d'essai est approuvé par le PC (`Cert:\LocalMachine\TrustedPeople`), Windows fait confiance à **tout** ce que ce certificat signe, pas seulement au paquet du simulateur : sa clé privée reste dans le magasin de l'utilisateur, sans fichier `.pfx` ni mot de passe, mais un programme lancé sous ce compte pourrait s'en servir. Finir chaque essai par `npm run essai:store -- nettoyer`.
 
-     ```powershell
-     Rename-Item "$env:APPDATA\simulateur-independant-fr" "simulateur-independant-fr.classique"
-     ```
+### Installer : `npm run essai:store`
 
-     Si `%APPDATA%\electron-vite-template` existe (données d'avant la version 0.10), l'application y reprend la session au premier lancement (`src/backend/ancien-dossier-de-donnees.ts`) et affiche la fenêtre « Sauvegardes converties » : c'est normal.
-3. **Signer une copie du paquet** (PowerShell **administrateur**). Le sujet du certificat est le champ `publisher` de [`build/store/identite.json`](../../build/store/identite.json) (ici `CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825` ; à adapter si l'identité change) :
+Avant de commencer : la démo web installée comme application avec Edge porte le même nom dans le menu Démarrer ; la désinstaller (`edge://apps`) ou savoir la distinguer (son éditeur est « Microsoft Edge »). Si la version du Store elle-même est installée, la désinstaller : le script refuse d'y toucher.
 
-   ```powershell
-   $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825" -KeyUsage DigitalSignature -FriendlyName "Essai paquet Simulateur" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
-   $mdp = ConvertTo-SecureString "essai" -Force -AsPlainText
-   Export-PfxCertificate -Cert $cert -FilePath "$env:TEMP\essai-store.pfx" -Password $mdp
-   Export-Certificate -Cert $cert -FilePath "$env:TEMP\essai-store.cer"
-   Import-Certificate -FilePath "$env:TEMP\essai-store.cer" -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-   ```
+```powershell
+npm run essai:store                                    # construit le paquet, puis l'installe
+npm run essai:store -- --paquet "$HOME\Downloads\paquet-store\Simulateur-Independant-FR-0.11.0-store-x64.appx"
+npm run essai:store -- --nouvel-utilisateur --claude-desktop
+```
 
-   Puis signer une copie (le nom du fichier est à adapter) :
+Le script, sans droits d'administrateur sauf à l'étape 4 :
 
-   ```powershell
-   $paquet = "$HOME\Downloads\paquet-store\Simulateur-Independant-FR-0.11.0-store-x64.appx"
-   $copie = "$HOME\Downloads\paquet-store\essai-signe.appx"
-   Copy-Item $paquet $copie
-   signtool sign /fd SHA256 /f "$env:TEMP\essai-store.pfx" /p essai $copie
-   ```
+1. **Paquet** : avec `--paquet`, un `.appx` déjà construit, par exemple l'artefact `paquet-microsoft-store` du workflow [« Paquet du Microsoft Store »](../../.github/workflows/store.yml) (`gh run download <id de l'exécution> -n paquet-microsoft-store -D "$HOME\Downloads\paquet-store"`) ; sinon, il le construit (`npm run dist:store`, ou `-- --essai` si l'identité n'est pas remplie) et prend dans `dist/` le paquet de la version de `package.json`. Il lit l'identité du manifeste du paquet (nom, éditeur, version).
+2. **signtool récent** : celui du cache d'electron-builder est trop ancien (« SignTool Error: A required function is not present »). Le script prend celui du SDK Windows le plus récent (`Windows Kits\10\bin\<version>\x64`, 10.0.22621 au moins) ; sans SDK, il télécharge le paquet NuGet officiel `Microsoft.Windows.SDK.BuildTools` **10.0.26100.4188** (environ 22 Mo) dans `%LOCALAPPDATA%\simulateur-independant-fr-outils`. Dans les deux cas, il refuse un `signtool.exe` dont la signature Authenticode n'est pas valide et faite par Microsoft.
+3. **Certificat d'essai** : sujet = éditeur du paquet (`CN=82BAFE86-…`, le champ `publisher` de [`identite.json`](../../build/store/identite.json)), nom « Essai du paquet Simulateur Indépendant FR (npm run essai:store) », dans `Cert:\CurrentUser\My`. Créé la première fois, réutilisé ensuite.
+4. **Approbation par le PC** : la partie publique du certificat (`.cer`, sans clé privée) est importée dans `Cert:\LocalMachine\TrustedPeople`. **Windows affiche une fenêtre de contrôle de compte d'utilisateur** : c'est la seule étape administrateur, avec la seule commande `Import-Certificate`, affichée avant. Rien à faire si le certificat est déjà approuvé.
+5. **Signature d'une copie** dans `%LOCALAPPDATA%\simulateur-independant-fr-outils\essai` (`signtool sign /fd SHA256 /sha1 <empreinte> /s My`) : le paquet d'origine, celui qui part dans Partner Center, n'est jamais modifié.
+6. **Garde-fou** : si la version du Store est installée (`SignatureKind` `Store`), le script s'arrête. Une copie d'essai de même version ou plus récente est désinstallée puis remplacée, ce que le script annonce ; une plus ancienne est mise à jour.
+7. **Installation** (`Add-AppxPackage`) et vérification : `InstallLocation` sous `C:\Program Files\WindowsApps\`, `SignatureKind` `Developer`, version attendue.
+8. **Serveur MCP** : le script lance le serveur exactement comme un client d'IA configuré pour la version du Store (alias `%LOCALAPPDATA%\Microsoft\WindowsApps\simulateur-independant-fr.exe`, `ELECTRON_RUN_AS_NODE=1`, copie du serveur dans le dossier de données, `--donnees`), attend « Serveur MCP du simulateur 0.11.0 prêt ; données lues dans … », puis l'arrête. La copie du serveur n'existe qu'après un lancement de l'application : s'il n'y en a pas encore, ou si elle est d'une autre version, **le script ouvre l'application** (par `shell:AppsFolder`, comme le menu Démarrer) et attend qu'elle l'écrive ; l'application reste ouverte pour la suite. Si elle n'y parvient pas en 90 secondes : la lancer depuis le menu Démarrer, puis `npm run essai:store -- verifier`.
 
-   Il faut un `signtool` **récent**. Celui du cache d'electron-builder (`%LOCALAPPDATA%\electron-builder\Cache\winCodeSign-2.6.0\…\windows-10\x64\signtool.exe`) est trop ancien : il répond « SignTool Error: A required function is not present ». Deux sources :
-   - le SDK Windows : `winget install Microsoft.WindowsSDK.10.0.26100` (déjà cité pour le Windows App Certification Kit, plus bas) ;
-   - ou le paquet NuGet officiel `Microsoft.Windows.SDK.BuildTools` (un zip d'environ 22 Mo) : télécharger `https://www.nuget.org/api/v2/package/Microsoft.Windows.SDK.BuildTools/10.0.26100.4188`, le renommer en `.zip` et le décompresser ; `signtool.exe` est dans `bin\10.0.26100.0\x64\`. Vérifier sa signature avec `Get-AuthenticodeSignature <chemin>\signtool.exe` : le signataire doit être Microsoft.
-4. **Installer la copie signée**, sans droits d'administrateur :
+Options :
 
-   ```powershell
-   Add-AppxPackage $copie
-   Get-AppxPackage *SimulateurInd* | Select-Object InstallLocation, SignatureKind
-   ```
+- `--nouvel-utilisateur` : simule un nouvel utilisateur en renommant `%APPDATA%\simulateur-independant-fr` en `simulateur-independant-fr.classique` (application fermée ; refusé si `.classique` existe déjà). Sur un poste qui a eu la version classique, les fichiers déjà présents dans ce dossier sont modifiés sur place par le paquet, sans redirection ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md), décision) : l'essai ne testerait pas la redirection. Si `%APPDATA%\electron-vite-template` existe (données d'avant la version 0.10), l'application y reprend la session au premier lancement (`src/backend/ancien-dossier-de-donnees.ts`) et affiche la fenêtre « Sauvegardes converties » : c'est normal.
+- `--claude-desktop` : ajoute l'entrée `simulateur-independant-fr` de la version du Store dans la configuration de Claude Desktop, en paquet MSIX (`%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json`) ou installé classiquement (`%APPDATA%\Claude\`), détecté. Claude Desktop doit être **complètement quitté** (clic droit sur son icône près de l'horloge > Quitter), sinon il peut réécrire le fichier en se fermant : le script refuse s'il tourne. Une copie de sauvegarde horodatée (`claude_desktop_config.json.avant-essai-store-<date>`) précède toute modification ; le reste du fichier (`preferences`…) est gardé. Rien ne change si l'entrée est déjà là, identique ; si elle diffère (version classique), le script le signale sans la remplacer. Un fichier qui n'est pas du JSON valide n'est pas touché.
 
-   `InstallLocation` doit être sous `C:\Program Files\WindowsApps\` et `SignatureKind` valoir `Developer`.
-5. **Essayer l'application.** La lancer en tapant son nom (« Simulateur Indépendant FR ») dans la recherche du menu Démarrer : un raccourci épinglé à la barre des tâches ou une entrée récente peut continuer à lancer une ancienne copie d'essai. La fenêtre s'ouvre, les résultats s'affichent, une simulation modifiée est retrouvée au lancement suivant, les exports (CSV, PDF) s'enregistrent là où on le demande.
+Les autres commandes :
 
-   Avec le dossier de données mis de côté, les données du paquet sont dans `%LOCALAPPDATA%\Packages\<nom de famille du paquet>\LocalCache\Roaming\simulateur-independant-fr`, avec la copie du serveur dans `mcp\serveur-mcp.mjs`. Le vrai `%APPDATA%\simulateur-independant-fr` n'existe plus : si l'IA décrit une simulation, elle lit forcément le dossier redirigé, ce qui prouve que l'alias fonctionne.
-6. **Essayer le serveur MCP.**
-   - Dans l'application : Paramètres > « Utiliser avec une IA (MCP) ». La configuration doit commencer par `…\AppData\Local\Microsoft\WindowsApps\simulateur-independant-fr.exe`, et la fenêtre doit afficher le paragraphe « Version du Microsoft Store ».
-   - La commande de vérification (même fenêtre) doit écrire « Serveur MCP du simulateur 0.11.0 prêt ; données lues dans … » (Ctrl+C pour l'arrêter). La lancer dans une **nouvelle** fenêtre PowerShell, et fermer cette fenêtre ensuite : la variable `ELECTRON_RUN_AS_NODE` y reste active.
-   - **Claude Desktop** s'installe depuis https://claude.com/download. Il est lui-même un paquet MSIX : son fichier de configuration n'est **pas** dans `%APPDATA%\Claude` mais dans `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json` (de même, ses journaux sont dans le dossier `logs` voisin). Toujours l'ouvrir par Claude Desktop : Paramètres > Développeur > Modifier la configuration.
-   - Le fichier n'est jamais vide (il contient une rubrique `preferences`) : ajouter la rubrique `"mcpServers": { … },` (voir [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md)) juste après la première accolade, sans toucher au reste. Claude Desktop doit être **complètement quitté** pendant l'édition (clic droit sur son icône près de l'horloge > Quitter), sinon il peut réécrire le fichier en se fermant et l'ajout est perdu. Le relancer ensuite.
-   - Les serveurs MCP ne sont disponibles que dans l'onglet **Chat** de Claude Desktop, pas dans l'onglet Code. Vérifier leur présence dans le menu « + » sous la zone de saisie, ou dans Paramètres > Développeur.
-   - Demander « Décris ma simulation » (le serveur lit la session de l'application), modifier un montant dans l'application (il est vu à la question suivante), puis demander l'ajout d'une activité : la fenêtre « Proposition de votre IA » doit s'ouvrir dans l'application. Ces essais ont été concluants le 2026-10-12.
-   - En cas d'échec : journal `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\logs\mcp-server-simulateur-independant-fr.log`. Les solutions de repli sont décrites dans l'ADR 013.
-7. **Désinstaller et nettoyer** (PowerShell administrateur) :
+```powershell
+npm run essai:store -- verifier     # refait seulement l'étape 8, par exemple après une mise à jour
+npm run essai:store -- etat         # paquet installé, certificat présent et approuvé, données mises de côté, entrée de Claude Desktop : rien n'est modifié
+npm run essai:store -- nettoyer     # à la fin de l'essai
+```
 
-   ```powershell
-   Get-AppxPackage *SimulateurInd* | Remove-AppxPackage
-   Rename-Item "$env:APPDATA\simulateur-independant-fr.classique" "simulateur-independant-fr"
-   Get-ChildItem Cert:\LocalMachine\TrustedPeople, Cert:\CurrentUser\My | Where-Object Subject -eq "CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825" | Remove-Item
-   Remove-Item "$env:TEMP\essai-store.pfx", "$env:TEMP\essai-store.cer", $copie -ErrorAction SilentlyContinue
-   ```
+### Essayer l'application
 
-   L'entrée du serveur dans Claude Desktop peut rester : la configuration est la même après l'installation depuis le Store.
+La lancer en tapant son nom (« Simulateur Indépendant FR ») dans la recherche du menu Démarrer : un raccourci épinglé à la barre des tâches ou une entrée récente peut continuer à lancer une ancienne copie d'essai. La fenêtre s'ouvre, les résultats s'affichent, une simulation modifiée est retrouvée au lancement suivant, les exports (CSV, PDF) s'enregistrent là où on le demande.
+
+Avec le dossier de données mis de côté, les données du paquet sont dans `%LOCALAPPDATA%\Packages\<nom de famille du paquet>\LocalCache\Roaming\simulateur-independant-fr`, avec la copie du serveur dans `mcp\serveur-mcp.mjs`. Le vrai `%APPDATA%\simulateur-independant-fr` n'existe plus : si l'IA décrit une simulation, elle lit forcément le dossier redirigé, ce qui prouve que l'alias fonctionne.
+
+### Essayer le serveur MCP avec Claude Desktop
+
+- Dans l'application : Paramètres > « Utiliser avec une IA (MCP) ». La configuration doit commencer par `…\AppData\Local\Microsoft\WindowsApps\simulateur-independant-fr.exe`, et la fenêtre doit afficher le paragraphe « Version du Microsoft Store ». C'est la même entrée que celle qu'ajoute `--claude-desktop`.
+- **Claude Desktop** s'installe depuis https://claude.com/download. Il est lui-même un paquet MSIX : son fichier de configuration n'est **pas** dans `%APPDATA%\Claude` mais dans `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json` (de même, ses journaux sont dans le dossier `logs` voisin). Sans `--claude-desktop`, l'ouvrir par Claude Desktop (Paramètres > Développeur > Modifier la configuration) et ajouter la rubrique `"mcpServers": { … },` juste après la première accolade, Claude Desktop quitté (voir [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md)).
+- Les serveurs MCP ne sont disponibles que dans l'onglet **Chat** de Claude Desktop, pas dans l'onglet Code. Vérifier leur présence dans le menu « + » sous la zone de saisie, ou dans Paramètres > Développeur.
+- Demander « Décris ma simulation » (le serveur lit la session de l'application), modifier un montant dans l'application (il est vu à la question suivante), puis demander l'ajout d'une activité : la fenêtre « Proposition de votre IA » doit s'ouvrir dans l'application. Ces essais ont été concluants le 2026-10-12.
+- En cas d'échec : journal `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\logs\mcp-server-simulateur-independant-fr.log`. Les solutions de repli sont décrites dans l'ADR 013.
+
+### Nettoyer : `npm run essai:store -- nettoyer`
+
+Application fermée, le script :
+
+- désinstalle la copie d'essai (jamais une version `Store`, qu'il signale et laisse) ; Windows supprime avec elle ses données redirigées (`LocalCache`) ;
+- retire le certificat d'essai de `Cert:\LocalMachine\TrustedPeople` (**une fenêtre de contrôle de compte d'utilisateur**, pour la seule commande `Remove-Item` affichée) et de `Cert:\CurrentUser\My` ;
+- supprime les copies signées et le certificat exporté (`%LOCALAPPDATA%\simulateur-independant-fr-outils\essai`) ; le signtool téléchargé reste en cache ;
+- remet `%APPDATA%\simulateur-independant-fr.classique` à sa place. Si un dossier `%APPDATA%\simulateur-independant-fr` existe aussi (la version classique a été lancée entre-temps), il ne déplace rien et dit quoi faire : supprimer ce dossier s'il n'a rien à garder, ou comparer les deux, puis relancer `nettoyer` ;
+- laisse l'entrée du serveur dans Claude Desktop, qui reste valable pour la version installée depuis le Store, et le dit. `npm run essai:store -- nettoyer --claude-desktop` la retire (Claude Desktop quitté, après une copie de sauvegarde), si c'est bien celle de la version du Store ; le reste du fichier est gardé.
 
 Facultatif : le **Windows App Certification Kit** (dans le SDK Windows : `winget install Microsoft.WindowsSDK.10.0.26100`, puis « Windows App Cert Kit ») fait en local les contrôles automatiques de la certification.
 
@@ -226,6 +224,64 @@ npm run dist:store -- --essai   # paquet d'essai, identité fictive, refusé par
 
 Le paquet est écrit dans `dist/` : `Simulateur-Independant-FR-<version>-store-x64.appx` (ou `…-store-essai-x64.appx`). Il n'est pas signé : seul le Store le signe. L'identité peut aussi venir des variables d'environnement `STORE_IDENTITY_NAME`, `STORE_PUBLISHER` et `STORE_PUBLISHER_DISPLAY_NAME`.
 
+Pour l'installer comme le Store l'installerait et l'essayer avant une soumission : `npm run essai:store` ([étape 2](#2-essayer-le-paquet-avant-la-première-soumission)).
+
 Sur un poste sans mode développeur ni droits d'administrateur, electron-builder signale en décompressant ses outils qu'il ne peut pas créer deux liens symboliques (« Cannot create symbolic link », fichiers macOS inutiles ici) : l'avertissement est sans effet, le paquet est construit.
 
 Les images de `build/appx/` et de `logos/` se régénèrent depuis l'icône de l'application si elle change : `powershell -ExecutionPolicy Bypass -File scripts/generer-images-store.ps1`. Les captures d'écran : `npm run captures`.
+
+## Annexe : essayer le paquet sans le script
+
+La marche à suivre manuelle de l'[étape 2](#2-essayer-le-paquet-avant-la-première-soumission), vérifiée le 2026-10-12, que `npm run essai:store` automatise. Elle se distingue du script sur deux points : le certificat passe par un fichier `.pfx` protégé par un mot de passe, et tout se fait dans une fenêtre PowerShell administrateur.
+
+1. **Construire le paquet** : GitHub > Actions > « Paquet du Microsoft Store » > **Run workflow** sur `main` (cocher « essai » si l'identité n'est pas encore remplie). Télécharger l'artefact `paquet-microsoft-store` (un zip qui contient le `.appx`), depuis la page de l'exécution ou en ligne de commande : `gh run download <id de l'exécution> -n paquet-microsoft-store -D "$HOME\Downloads\paquet-store"`. En local, sous Windows : `npm run dist:store` (ou `npm run dist:store -- --essai`), paquet dans `dist/`. Le paquet d'origine part tel quel dans Partner Center : n'essayer qu'une copie.
+2. **Préparer l'essai.**
+   - La démo web installée comme application avec Edge porte le même nom dans le menu Démarrer : la désinstaller (`edge://apps`) ou savoir la distinguer (son éditeur est « Microsoft Edge ») avant de commencer.
+   - Pour simuler un **nouvel utilisateur**, mettre de côté le dossier de données de la version classique, application et client d'IA fermés. Sur un poste qui a eu la version classique, les fichiers déjà présents dans `%APPDATA%\simulateur-independant-fr` sont modifiés sur place par le paquet, sans redirection ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md), décision) : l'essai ne testerait pas la redirection.
+
+     ```powershell
+     Rename-Item "$env:APPDATA\simulateur-independant-fr" "simulateur-independant-fr.classique"
+     ```
+
+     Si `%APPDATA%\electron-vite-template` existe (données d'avant la version 0.10), l'application y reprend la session au premier lancement (`src/backend/ancien-dossier-de-donnees.ts`) et affiche la fenêtre « Sauvegardes converties » : c'est normal.
+3. **Signer une copie du paquet** (PowerShell **administrateur**). Le sujet du certificat est le champ `publisher` de [`build/store/identite.json`](../../build/store/identite.json) (ici `CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825` ; à adapter si l'identité change) :
+
+   ```powershell
+   $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825" -KeyUsage DigitalSignature -FriendlyName "Essai paquet Simulateur" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+   $mdp = ConvertTo-SecureString "essai" -Force -AsPlainText
+   Export-PfxCertificate -Cert $cert -FilePath "$env:TEMP\essai-store.pfx" -Password $mdp
+   Export-Certificate -Cert $cert -FilePath "$env:TEMP\essai-store.cer"
+   Import-Certificate -FilePath "$env:TEMP\essai-store.cer" -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+   ```
+
+   Puis signer une copie (le nom du fichier est à adapter) :
+
+   ```powershell
+   $paquet = "$HOME\Downloads\paquet-store\Simulateur-Independant-FR-0.11.0-store-x64.appx"
+   $copie = "$HOME\Downloads\paquet-store\essai-signe.appx"
+   Copy-Item $paquet $copie
+   signtool sign /fd SHA256 /f "$env:TEMP\essai-store.pfx" /p essai $copie
+   ```
+
+   Il faut un `signtool` **récent**. Celui du cache d'electron-builder (`%LOCALAPPDATA%\electron-builder\Cache\winCodeSign-2.6.0\…\windows-10\x64\signtool.exe`) est trop ancien : il répond « SignTool Error: A required function is not present ». Deux sources :
+   - le SDK Windows : `winget install Microsoft.WindowsSDK.10.0.26100` (déjà cité pour le Windows App Certification Kit, plus bas) ;
+   - ou le paquet NuGet officiel `Microsoft.Windows.SDK.BuildTools` (un zip d'environ 22 Mo) : télécharger `https://www.nuget.org/api/v2/package/Microsoft.Windows.SDK.BuildTools/10.0.26100.4188`, le renommer en `.zip` et le décompresser ; `signtool.exe` est dans `bin\10.0.26100.0\x64\`. Vérifier sa signature avec `Get-AuthenticodeSignature <chemin>\signtool.exe` : le signataire doit être Microsoft.
+4. **Installer la copie signée**, sans droits d'administrateur :
+
+   ```powershell
+   Add-AppxPackage $copie
+   Get-AppxPackage *SimulateurInd* | Select-Object InstallLocation, SignatureKind
+   ```
+
+   `InstallLocation` doit être sous `C:\Program Files\WindowsApps\` et `SignatureKind` valoir `Developer`.
+5. **Essayer l'application et le serveur MCP** comme à l'étape 2 ([Essayer l'application](#essayer-lapplication), [Essayer le serveur MCP avec Claude Desktop](#essayer-le-serveur-mcp-avec-claude-desktop)). Sans le script, le serveur se vérifie par la commande de la fenêtre « Utiliser avec une IA (MCP) » de l'application, qui doit écrire « Serveur MCP du simulateur 0.11.0 prêt ; données lues dans … » (Ctrl+C pour l'arrêter) : la lancer dans une **nouvelle** fenêtre PowerShell, et fermer cette fenêtre ensuite, car la variable `ELECTRON_RUN_AS_NODE` y reste active.
+6. **Désinstaller et nettoyer** (PowerShell administrateur) :
+
+   ```powershell
+   Get-AppxPackage *SimulateurInd* | Remove-AppxPackage
+   Rename-Item "$env:APPDATA\simulateur-independant-fr.classique" "simulateur-independant-fr"
+   Get-ChildItem Cert:\LocalMachine\TrustedPeople, Cert:\CurrentUser\My | Where-Object Subject -eq "CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825" | Remove-Item
+   Remove-Item "$env:TEMP\essai-store.pfx", "$env:TEMP\essai-store.cer", $copie -ErrorAction SilentlyContinue
+   ```
+
+   L'entrée du serveur dans Claude Desktop peut rester : la configuration est la même après l'installation depuis le Store.
