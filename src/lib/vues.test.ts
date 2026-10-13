@@ -1,6 +1,7 @@
 // src/lib/vues.test.ts
 
 import { describe, expect, it } from "vitest"
+import { ANCRES, lienVers } from "./ancres"
 import { VUES, VUE_PAR_DEFAUT, destinationDeLAdresse, libelleDeLaVue, titreDeLaFenetre, vueVoisine } from "./vues"
 
 const aucunElement = () => null
@@ -35,6 +36,18 @@ describe("vues de l'affichage « Trois vues »", () => {
     // Les réponses de « Comparer et optimiser » : mariage ou Pacs, rémunération optimale.
     expect(destinationDeLAdresse("#comparaison-du-couple", aucunElement)).toEqual({ vue: "comparer", detail: "comparaison-du-couple" })
     expect(destinationDeLAdresse("#optimisation-titre", aucunElement)).toEqual({ vue: "comparer", detail: "optimisation-titre" })
+  })
+
+  it("donne sa vue à chaque ancre du registre, sauf au contenu, qui contient les trois vues", () => {
+    for (const ancre of Object.values(ANCRES)) {
+      const destination = destinationDeLAdresse(lienVers(ancre), aucunElement)
+      if (ancre === ANCRES.contenu) expect(destination).toBeNull()
+      else expect(destination, ancre).toEqual({ vue: expect.any(String), detail: ancre })
+    }
+    // La table des ancres ne consulte pas la page : le contenu reste hors des vues, quoi qu'en dise son conteneur.
+    expect(destinationDeLAdresse("#contenu", () => "resultats")).toBeNull()
+    // Un nom hérité d'un objet n'est pas une ancre.
+    expect(destinationDeLAdresse("#toString", aucunElement)).toBeNull()
   })
 
   it("trouve la vue de tout autre élément de la page, et ignore ce qui n'est dans aucune vue", () => {
