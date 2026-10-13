@@ -53,6 +53,15 @@ export default defineConfig(
     }
   },
   {
+    // Le process principal d'Electron (src/backend/*.ts) peut importer src/lib (logique pure partagée), jamais le code qui
+    // s'affiche : ni l'interface, ni la démo (ses tests, eux, empruntent la simulation d'exemple de la démo).
+    files: ["src/backend/*.ts"],
+    ignores: ["**/*.test.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [interdire(["ui", "web"], "Le process principal (src/backend/*.ts) n'importe ni l'interface (src/ui) ni la démo web (src/web).")] }]
+    }
+  },
+  {
     // L'interface reçoit ce qui est propre à la démo de sa racine de composition (src/ui/plateforme.ts).
     files: ["src/ui/**/*.{ts,tsx}"],
     rules: {
