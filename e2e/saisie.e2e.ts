@@ -10,16 +10,14 @@ test("créer une personne et sa micro-entreprise, saisir un chiffre d'affaires, 
   await deposerAffichage(dossierDonnees, "classique")
   const { page } = await lancer()
 
-  // Une personne, puis une micro-entreprise.
+  // Une personne, puis une micro-entreprise : seule personne de la simulation, elle en est proposée titulaire d'office.
   await page.getByRole("button", { name: "+ Ajouter une personne" }).click()
   await page.getByRole("button", { name: "+ Ajouter une activité" }).click()
-  await page.getByRole("dialog", { name: "Ajouter une activité" }).getByRole("button", { name: /Micro-Entreprise/ }).click()
+  const ajout = page.getByRole("dialog", { name: "Ajouter une activité" })
+  await ajout.getByRole("button", { name: /Micro-Entreprise/ }).click()
+  await expect(ajout.getByRole("radio", { name: "Nouvelle Personne", exact: true })).toBeChecked()
+  await ajout.getByRole("button", { name: "Ajouter l'activité" }).click()
   await expect(page.getByRole("textbox", { name: "Nom" })).toHaveCount(2)
-
-  // La personne devient titulaire de la micro-entreprise : seul lien possible, il est retenu d'office.
-  await page.getByRole("button", { name: "Relation", exact: true }).first().click()
-  await page.getByRole("combobox", { name: "Avec qui" }).click()
-  await page.getByRole("option", { name: "Ma Micro-Entreprise" }).click()
   await expect(page.getByText("Titulaire", { exact: true })).toHaveCount(2)
 
   // 30 000 € de chiffre d'affaires en janvier, saisis au clavier dans la fenêtre des flux.

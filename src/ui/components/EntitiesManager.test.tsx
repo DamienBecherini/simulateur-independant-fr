@@ -1,6 +1,6 @@
 // src/ui/components/EntitiesManager.test.tsx
-// Changer le statut d'une activité depuis sa fiche : une seule modification de la session (une seule étape d'historique
-// d'annulation).
+// Ajouter une activité reliée à la personne qui l'exerce, et changer le statut d'une activité depuis sa fiche : chaque
+// action est une seule modification de la session (une seule étape d'historique d'annulation).
 
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -9,6 +9,8 @@ import { describe, expect, it, vi } from "vitest"
 import type { Entity, FinancialFlow, Relationship, SessionState } from "@/types"
 import { emptySession, makeCompany, makeFlow, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import EntitiesManager from "./EntitiesManager"
+
+const bob = makePerson({ id: "person-bob", name: "Bob Martin", avatar: { type: "initials", value: "BM", color: "#3b82f6" } })
 
 /** La liste des acteurs sur une session tenue en état, comme dans l'application ; chaque modification est comptée. */
 function afficher(entities: Entity[], relationships: Relationship[] = [], flows: FinancialFlow[] = []) {
@@ -32,6 +34,76 @@ function afficher(entities: Entity[], relationships: Relationship[] = [], flows:
 }
 
 const derniere = (modifications: SessionState[]) => modifications[modifications.length - 1]
+
+describe("ajouter une activité : qui l'exerce ?", () => {
+  it("avec une seule personne, elle est proposée d'office : l'activité et sa relation « Titulaire » en une seule modification", async () => {
+    const { modifications, user } = afficher([makePerson()])
+    await user.click(screen.getByRole("button", { name: "+ Ajouter une activité" }))
+    await user.click(screen.getByRole("button", { name: /Micro-Entreprise/ }))
+
+    const fenetre = screen.getByRole("dialog", { name: "Ajouter une activité" })
+    const alice = within(fenetre).getByRole("radio", { name: "Alice Martin" })
+    expect(alice).toBeChecked()
+    expect(alice).toHaveFocus()
+    expect(within(fenetre).getByRole("group", { name: "Qui exerce cette activité ?" })).toHaveAccessibleDescription(/reliée à l'activité comme « Titulaire »/)
+    await user.click(within(fenetre).getByRole("button", { name: "Ajouter l'activité" }))
+
+    expect(modifications).toHaveLength(1)
+    const { entities, relationships } = modifications[0]
+    const micro = entities.find(e => e.type === "micro-entreprise")
+    expect(relationships).toEqual([{ id: expect.any(String), fromId: "person-alice", toId: micro?.id, type: "Titulaire" }])
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("avec plusieurs personnes, rien n'est choisi d'office ; le président d'une SASU", async () => {
+    const { modifications, user } = afficher([makePerson(), bob])
+    await user.click(screen.getByRole("button", { name: "+ Ajouter une activité" }))
+    await user.click(screen.getByRole("button", { name: /SASU/ }))
+
+    const ajouter = screen.getByRole("button", { name: "Ajouter l'activité" })
+    expect(ajouter).toBeDisabled()
+    await user.click(screen.getByRole("radio", { name: "Bob Martin" }))
+    await user.click(ajouter)
+
+    expect(modifications).toHaveLength(1)
+    expect(modifications[0].relationships).toEqual([expect.objectContaining({ fromId: "person-bob", type: "Président" })])
+  })
+
+  it("sans personne, la création d'une personne est proposée : personne, EURL et relation « Gérant » en une modification", async () => {
+    const { modifications, user } = afficher([])
+    await user.click(screen.getByRole("button", { name: "+ Ajouter une activité" }))
+    await user.click(screen.getByRole("button", { name: /EURL/ }))
+    expect(screen.getByRole("radio", { name: "Créer une personne" })).toBeChecked()
+    await user.click(screen.getByRole("button", { name: "Ajouter l'activité" }))
+
+    expect(modifications).toHaveLength(1)
+    const [personne, eurl] = modifications[0].entities
+    expect(personne.type).toBe("person")
+    expect(eurl).toMatchObject({ type: "company", legalStatus: "EURL" })
+    expect(modifications[0].relationships).toEqual([expect.objectContaining({ fromId: personne.id, toId: eurl.id, type: "Gérant" })])
+  })
+
+  it("« Personne pour l'instant » ajoute l'activité sans relation", async () => {
+    const { modifications, user } = afficher([makePerson()])
+    await user.click(screen.getByRole("button", { name: "+ Ajouter une activité" }))
+    await user.click(screen.getByRole("button", { name: /^Entreprise individuelle \(au réel\)/ }))
+    await user.click(screen.getByRole("radio", { name: "Personne pour l'instant" }))
+    await user.click(screen.getByRole("button", { name: "Ajouter l'activité" }))
+
+    expect(modifications[0].entities).toHaveLength(2)
+    expect(modifications[0].relationships).toEqual([])
+  })
+
+  it("« Retour » revient au choix du statut, le focus sur le statut choisi", async () => {
+    const { modifications, user } = afficher([makePerson()])
+    await user.click(screen.getByRole("button", { name: "+ Ajouter une activité" }))
+    await user.click(screen.getByRole("button", { name: /EURL/ }))
+    await user.click(screen.getByRole("button", { name: "Retour" }))
+
+    expect(screen.getByRole("button", { name: /EURL/ })).toHaveFocus()
+    expect(modifications).toHaveLength(0)
+  })
+})
 
 describe("changer le statut d'une activité depuis sa fiche", () => {
   const atelier = makeMicro({ beneficieACRE: true })
