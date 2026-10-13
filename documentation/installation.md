@@ -1,6 +1,6 @@
 # Installer l'application de bureau
 
-**Sous Windows, installez-la depuis le [Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72)** ([ouvrir directement dans le Store](ms-windows-store://pdp/?productid=9PJBJWX5WS72)) : le paquet est signé par Microsoft, donc il passe le Contrôle intelligent des applications et SmartScreen sans avertissement, et le Store le met à jour. Les autres systèmes, et Windows sans le Store, utilisent la page des versions du dépôt : **[dernière version](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)**. L'application fonctionne entièrement hors ligne : aucune donnée ne quitte votre ordinateur.
+**Sous Windows, installez-la depuis le [Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72)** : le paquet est signé par Microsoft, donc il passe le Contrôle intelligent des applications et SmartScreen sans avertissement, et le Store le met à jour. Les autres systèmes, et Windows sans le Store, utilisent la page des versions du dépôt : **[dernière version](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)**. L'application fonctionne entièrement hors ligne : aucune donnée ne quitte votre ordinateur.
 
 Pour essayer sans rien installer, la [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/) propose la même interface dans le navigateur ; elle s'installe aussi comme une application et fonctionne hors ligne (voir [Si Windows bloque l'application](#si-windows-bloque-lapplication)).
 
