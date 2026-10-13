@@ -7,7 +7,8 @@ import { DIRIGEANT_DES_STATUTS } from "./statuts.js"
  * Conversion d'une activité dans un autre statut : l'entité change de type, ses relations prennent le titre du
  * dirigeant de ce statut et ses flux leur équivalent (chiffre d'affaires, charges), sans rien ajouter. Le reste des
  * données de l'année ne change pas. Sert au comparateur (une colonne par statut) et à la simulation des années, qui
- * simule au réel une micro-entreprise sortie du régime micro (simulation-pluriannuelle.ts).
+ * simule au réel une micro-entreprise sortie du régime micro (simulation-pluriannuelle.ts). Le changement de statut
+ * demandé depuis la fiche d'une activité reprend les mêmes conversions d'entité et de flux (changement-de-statut.ts).
  */
 
 /** Une activité : société ou entreprise individuelle au réel, ou micro-entreprise. */
@@ -43,6 +44,14 @@ export function activiteComparee(session: DonneesDeLAnnee, activityId: string): 
   return session.entities.find((e): e is Activite => e.id === activityId && e.type !== "person")
 }
 
+/**
+ * Relation qui fait diriger une activité de ce statut, ou en être titulaire : le titulaire d'une micro-entreprise, le
+ * dirigeant de `DIRIGEANT_DES_STATUTS` au réel.
+ */
+export function relationDuDirigeant(statut: StatutCompare): Relationship["type"] {
+  return estMicro(statut) ? "Titulaire" : DIRIGEANT_DES_STATUTS[statut]
+}
+
 /** Type d'un flux de l'activité dans le statut cible ; `null` si le flux n'y a pas d'équivalent. */
 function typeCible(nature: Nature, statut: StatutCompare): FinancialFlow["type"] | null {
   if (estMicro(statut)) {
@@ -57,7 +66,7 @@ function typeCible(nature: Nature, statut: StatutCompare): FinancialFlow["type"]
  * Convertit un flux de l'activité vers le statut cible. Les prestations d'une société deviennent, en micro,
  * du BNC ou du BIC selon la part choisie ; la rémunération et les dividendes sont recalculés à part.
  */
-function convertirFlux(flux: FinancialFlow, statut: StatutCompare, partBnc: number): FinancialFlow[] {
+export function convertirFlux(flux: FinancialFlow, statut: StatutCompare, partBnc: number): FinancialFlow[] {
   const nature = NATURE_DES_FLUX[flux.type] ?? "autre"
   if (nature === "autre") return [flux]
   if (nature === "remuneration" || nature === "dividendes") return []
@@ -117,7 +126,7 @@ function reelCible(source: Activite, statut: Company["legalStatus"]): Company {
 }
 
 /** L'activité dans le statut de la colonne. */
-function entiteCible(source: Activite, statut: StatutCompare): Activite {
+export function entiteCible(source: Activite, statut: StatutCompare): Activite {
   return estMicro(statut) ? microCible(source, statut) : reelCible(source, statut)
 }
 
@@ -133,9 +142,8 @@ function relationsCibles(session: DonneesDeLAnnee, source: Activite, statut: Sta
   if (!principale) return autres
 
   const lien = (personId: string, type: Relationship["type"]): Relationship => ({ id: `comparateur-${source.id}-${personId}-${type}`, fromId: personId, toId: source.id, type })
-  // Une micro-entreprise a un titulaire, chaque statut au réel le dirigeant de `DIRIGEANT_DES_STATUTS` ; seule une
-  // société garde ses associés.
-  const dirigeant = lien(principale, estMicro(statut) ? "Titulaire" : DIRIGEANT_DES_STATUTS[statut])
+  // Seule une société garde ses associés.
+  const dirigeant = lien(principale, relationDuDirigeant(statut))
   return estSocieteIS(statut) ? [...autres, dirigeant, ...associes.map(id => lien(id, "Associé"))] : [...autres, dirigeant]
 }
 
