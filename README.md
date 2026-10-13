@@ -17,7 +17,7 @@ Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un 
 
 ## 📥 Télécharger
 
-**Sous Windows, le plus simple : [installer depuis le Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72)** ([ouvrir directement dans le Store](ms-windows-store://pdp/?productid=9PJBJWX5WS72)). Le paquet est signé par Microsoft : il passe le Contrôle intelligent des applications et SmartScreen sans avertissement, et le Store le met à jour.
+**Sous Windows, le plus simple : [installer depuis le Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72)**. Le paquet est signé par Microsoft : il passe le Contrôle intelligent des applications et SmartScreen sans avertissement, et le Store le met à jour.
 
 L'application de bureau pour Windows, macOS (Apple Silicon et Intel) et Linux se télécharge aussi depuis la **[dernière version publiée](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)**. Ces exécutables ne sont pas signés par un certificat d'éditeur : Windows et macOS affichent un avertissement au premier lancement. Le [guide d'installation](./documentation/installation.md) explique comment le passer, système par système. Si le Contrôle intelligent des applications de Windows 11 la bloque, installez plutôt la démo web depuis Edge ou Chrome : voir [Si Windows bloque l'application](./documentation/installation.md#si-windows-bloque-lapplication). Les changements de chaque version sont dans le [journal des modifications](./CHANGELOG.md).
 
