@@ -48,7 +48,7 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run duplication` | Code dupliqué (jscpd, 70 jetons ; tests, règles JSON et `testing/` exclus). Attendu : 0 clone. | Avant de commiter. |
 | `npm run code-mort` | Code mort (knip) : fichiers, dépendances et exports que rien n'utilise. Configuration et points d'entrée dans `knip.jsonc` ; attendu : aucune ligne. Un export qui ne sert qu'à son fichier perd son `export` ; un export voulu malgré tout (API du format de fichier, par exemple) se garde avec une raison écrite dans `knip.jsonc`. | Avant de commiter. |
 | `npm run test:web` | Compile la démo web et la teste dans Chromium (`e2e-web/`). Port 4173 ; s'il est pris : `PORT_E2E_WEB=4391 npm run test:web`. | Avant de fusionner. |
-| `npm run test:e2e` | Compile l'application et la teste avec Playwright + Electron (`e2e/`), fenêtres masquées (`test:e2e:visible` pour les voir). | Avant de fusionner. |
+| `npm run test:e2e` | Compile l'application et la teste avec Playwright + Electron (`e2e/`), fenêtres masquées (`test:e2e:visible` pour les voir). Le paquet `electron` télécharge son exécutable au premier usage, sans script d'installation : `e2e/support/installer-electron.ts` (`globalSetup`) l'installe une fois avant les workers, qui sinon le décompressaient tous en même temps après un `npm ci` et faisaient échouer leur premier test. | Avant de fusionner. |
 | `npm run test:all` | Couverture, puis les deux suites de bout en bout. | Avant de fusionner. |
 | `npm run test:mutation` | Tests de mutation (Stryker) de `src/backend/logic` ; long. | De temps en temps. |
 | `npm run build` / `npm run build:web` | Compile l'interface (`dist-react/`) ou la démo (`dist-web/`). | Rarement à la main. |

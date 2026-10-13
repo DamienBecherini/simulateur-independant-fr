@@ -28,6 +28,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 ### Maintenance
 
 - Outils pour les développeurs : commande `npm run essai:store` pour essayer le paquet du Microsoft Store installé comme le Store l'installe (copie signée avec un certificat d'essai, vérification du serveur MCP par l'alias d'exécution, configuration de Claude Desktop en option), puis tout nettoyer.
+- Tests de bout en bout de l'application de bureau stables dès le premier lancement après une installation des dépendances : l'exécutable d'Electron, téléchargé au premier usage, est installé une seule fois avant les tests au lieu de l'être en même temps par chaque worker.
 
 ## [0.11.0] — 2026-10-11
 
