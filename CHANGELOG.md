@@ -22,6 +22,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 ### Corrigé
 
 - **Plus de faux dépassement de la franchise en base de TVA pour les professions de santé.** Les soins des professions médicales et paramédicales réglementées, des ostéopathes, des chiropracteurs, des psychologues et des psychothérapeutes sont exonérés de TVA (article 261, 4, 1° du code général des impôts) et ne comptent pas pour la franchise en base (BOFiP, BOI-TVA-DECLA-40-10-10, § 230) : une micro-entreprise d'ostéopathe au-delà de 37 500 € d'honoraires ne reçoit plus l'avertissement d'une TVA due. Ses ventes et prestations BIC restent comparées aux seuils. La ligne d'information de la profession le dit, et le montage de l'ostéopathe ne signale plus cette limite.
+- **Le serveur MCP trouve la simulation dès le premier lancement.** L'application de bureau n'enregistrait la session qu'à la première modification : un nouvel utilisateur qui l'ouvrait puis demandait à son IA de décrire sa simulation recevait « Aucune simulation enregistrée », application ouverte. Quand aucun fichier de session n'existe encore, la simulation vierge est désormais enregistrée dès l'ouverture ; une session déjà présente, abîmée ou illisible n'est jamais remplacée au démarrage. Le message du serveur, quand le fichier manque, dit pourquoi et quoi faire, application ouverte ou non.
 
 ### Maintenance
 
