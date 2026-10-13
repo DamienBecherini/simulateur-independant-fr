@@ -237,6 +237,11 @@ ADR à lire selon le sujet : persistance 002 et 005 ; IPC 003 ; état de l'inter
 
 Un nouveau canal : sa signature dans `EventPayloadMapping` (`src/globals.d.ts`), son entrée dans `preload.cts` et dans `creerApiNavigateur` (démo web), puis sa déclaration dans le fichier `canaux-*.ts` de son domaine, toujours par `ipcMainHandle`, avec un schéma de `logic/entrees-ipc.ts` pour chaque paramètre.
 
+### 2.5 Interface : ancres de la page et calculs différés
+
+- **Ancres** : tout élément vers lequel mène un lien interne ou une adresse (`#bilan`, `#comparateur-verdict`, `#contenu`…) a son identifiant dans le registre `ANCRES` (`src/lib/ancres.ts`), jamais écrit à la main : l'élément prend `id={ANCRES.bilan}`, le lien `href={lienVers(ANCRES.bilan)}`, une question de départ `ancre: ANCRES.…`. Une ancre ajoutée au registre doit dire sa vue dans `VUE_DE_L_ANCRE` (`src/lib/vues.ts`, table exhaustive) ; `App.ancres.test.tsx` vérifie que chacune est rendue, dans sa vue. Les valeurs sont des adresses publiées : ne les renommez pas.
+- **Calcul différé** : un calcul du moteur relancé après chaque modification passe par `useCalculDiffere` (`src/ui/hooks/useCalculDiffere.ts`) : l'appelant mémorise le calcul avec `useCallback` (ses dépendances sont vérifiées par ESLint chez lui), le hook attend 300 ms, ignore un résultat dépassé et garde le dernier résultat en cas d'échec, sauf `effacerEnCasDEchec` (la simulation des années, `useSimulationDesAnnees`).
+
 ---
 
 ## 3. Procédures pas à pas
@@ -476,7 +481,7 @@ Une situation type est une simulation d'un an, préremplie, que l'utilisateur ch
 L'encart « Que voulez-vous savoir ? » (`EncartDesQuestions.tsx`) liste les questions de `QUESTIONS_DE_DEPART` (`src/lib/questions-de-depart.ts`), puis « Partir de zéro ». Chaque question mène à une situation type, chargée avec la même confirmation que la fenêtre des situations types, ou, faute de situation adaptée, à une section de la page.
 
 1. **La situation visée** : une situation existante, ou la créer d'abord (§ 3.11).
-2. **L'entrée** : `{ question, precision, montage: situation("identifiant") }`. `situation()` échoue au chargement si l'identifiant n'existe pas. `precision` est la phrase qui décrit la situation sous la question (lue par les lecteurs d'écran comme description du bouton). Pour mener à une section plutôt qu'à une situation : `ancre: "identifiant-de-l-element"`, l'identifiant d'un élément de la page (aujourd'hui une chaîne ; voir l'avertissement de la procédure 3.13).
+2. **L'entrée** : `{ question, precision, montage: situation("identifiant") }`. `situation()` échoue au chargement si l'identifiant n'existe pas. `precision` est la phrase qui décrit la situation sous la question (lue par les lecteurs d'écran comme description du bouton). Pour mener à une section plutôt qu'à une situation : `ancre: ANCRES.…`, une ancre du registre (§ 2.5).
 3. **Le test** : `EncartDesQuestions.test.tsx` (« chaque question désigne la situation type qui y répond ») liste les couples question et situation attendus ; l'essai fait échouer ce seul test tant que la liste n'est pas complétée. Ajoutez, pour une question qui compte, un test de son parcours (charge la situation, demande la confirmation).
 4. **Le texte** : `CHANGELOG.md`.
 
@@ -484,16 +489,16 @@ L'encart « Que voulez-vous savoir ? » (`EncartDesQuestions.tsx`) liste les que
 
 ### 3.13 Ajouter une entrée à la barre de résumé
 
-La barre de résumé (`BarreDeResume.tsx`, affichage « Résumé ») montre des chiffres clés ; chacun est un lien vers la réponse détaillée. **État actuel : l'ancre de chaque lien est une chaîne écrite à la main à plusieurs endroits, sans aide du compilateur. Un registre typé des ancres est prévu (branche `ancres-nommees`) : il remplacera les étapes 2 et 3 par une seule entrée ; relisez cette procédure après sa fusion.**
+La barre de résumé (`BarreDeResume.tsx`, affichage « Résumé ») montre des chiffres clés ; chacun est un lien vers la réponse détaillée, par une ancre du registre `ANCRES` (§ 2.5) : une faute de frappe est une erreur de compilation.
 
 1. **La valeur** : une fonction pure de `src/lib/resume.ts` (sur le rapport de l'année ou sur le résultat du comparateur), testée dans `resume.test.ts` (modèles : `tauxDePrelevement`, `gainDuMariageOuDuPacs`).
-2. **L'ancre** : l'élément qui porte la réponse a un `id` (et `tabIndex={-1}`, pour recevoir le focus quand on suit le lien), dans le composant de la réponse (modèle : `ComparatorPanel.tsx`, `ANCRE_DU_COUPLE`). Une ancre partagée par la barre et le composant est une constante exportée de `resume.ts`.
-3. **La vue de l'ancre** : `DETAILS` de `src/lib/vues.ts` associe l'ancre à sa vue (« resultats » ou « comparer »). Sans cette ligne, le lien marche tant que la page est affichée, mais l'affichage « Trois vues » perd sa vue au rechargement. Ajoutez aussi l'ancre aux cas de `vues.test.ts` (l. 32 à 36), qui ne couvrent que les ancres déjà connues.
+2. **L'ancre** : une entrée de plus dans `ANCRES` (`src/lib/ancres.ts`) ; l'élément qui porte la réponse prend `id={ANCRES.…}` (et `tabIndex={-1}`, pour recevoir le focus quand on suit le lien), dans le composant de la réponse (modèle : `ComparatorPanel.tsx`, `ANCRES.comparaisonDuCouple`).
+3. **La vue de l'ancre** : `VUE_DE_L_ANCRE` de `src/lib/vues.ts` associe chaque ancre à sa vue (« resultats » ou « comparer »). La table est exhaustive : le compilateur réclame la ligne de la nouvelle ancre, et `App.ancres.test.tsx` vérifie qu'elle est rendue dans cette vue.
 4. **Le chiffre** : un `<Chiffre vers={ancre} libelle=… valeur=… />` dans `ChiffresClesDeLAnnee` ou, pour une réponse du comparateur, dans `ReponsesDuComparateur` (même fichier). Sur un téléphone, la barre est réduite : `libelleCourt` pour un libellé court, `masqueSiReduite` pour ce qui attend la barre dépliée. `ChiffresClesDeLAnnee` est à la limite de complexité (12) : un nouveau cas va dans un sous-composant, sur le modèle de `ReponsesDuComparateur`.
 5. **Si la valeur vient du comparateur** : ajoutez-la à `ResumeDeLaComparaison` (`resume.ts`) et à ce que `useSignalerLaComparaison` (`ComparatorPanel.tsx`) remonte à `App` par `onComparaison`. Si une troisième réponse du comparateur rejoint la barre, la relecture de suivi conseille de calculer la comparaison au niveau d'`App`, partagée par le panneau et la barre (§ 9.4, K10).
-6. **Les tests** : `resume.test.ts`, `BarreDeResume.test.tsx` (le chiffre s'affiche, son lien mène à l'ancre), `vues.test.ts` (l'ancre retrouve sa vue).
+6. **Les tests** : `resume.test.ts`, `BarreDeResume.test.tsx` (le chiffre s'affiche, son lien mène à l'ancre) ; `App.ancres.test.tsx` couvre la nouvelle ancre sans modification si une situation type la fait apparaître, sinon ajoutez-en une à ses cas.
 
-**Vérification :** `npx vitest run src/lib/resume.test.ts src/lib/vues.test.ts src/ui/components/BarreDeResume.test.tsx`, puis `npm run test:web` (`e2e-web/affichage-resume.web.ts` suit les liens de la barre jusqu'à leur cible).
+**Vérification :** `npx vitest run src/lib/resume.test.ts src/lib/vues.test.ts src/ui/components/BarreDeResume.test.tsx src/ui/App.ancres.test.tsx`, puis `npm run test:web` (`e2e-web/affichage-resume.web.ts` suit les liens de la barre jusqu'à leur cible).
 
 ### 3.14 Ajouter une profession à une caisse existante
 

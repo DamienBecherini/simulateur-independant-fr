@@ -14,7 +14,7 @@ import { BoutonExportCsv } from "./BoutonExportCsv"
 import { Depliable } from "./Depliable"
 import { ZoneDefilante } from "./ZoneDefilante"
 import { euros } from "@/backend/logic/format"
-import { ANCRE_DE_LA_REMUNERATION } from "@/lib/resume"
+import { ANCRES } from "@/lib/ancres"
 
 
 const trimestres = (n: number) => `${n} trimestre${n > 1 ? "s" : ""} de retraite`
@@ -291,11 +291,11 @@ export function RemunerationOptimizer({ session, annee, options, remunerationApp
   const aJour = resultat?.statut === statut
 
   return (
-    <section className="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-700" aria-labelledby={ANCRE_DE_LA_REMUNERATION}>
+    <section className="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-700" aria-labelledby={ANCRES.titreDeLOptimisation}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           {/* La barre de résumé mène à ce titre (« Rémunération optimale ») : il peut recevoir le focus. */}
-          <h3 id={ANCRE_DE_LA_REMUNERATION} tabIndex={-1} className="text-lg font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
+          <h3 id={ANCRES.titreDeLOptimisation} tabIndex={-1} className="text-lg font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
             Rémunération ou dividendes ?
           </h3>
           <p className="text-sm text-slate-600 dark:text-slate-300">« {activityName} » en société, en {annee} : chaque rémunération nette, le reste du bénéfice étant versé en dividendes. Le trait vertical marque la rémunération du comparateur.</p>

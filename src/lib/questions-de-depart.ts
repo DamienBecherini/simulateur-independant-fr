@@ -3,10 +3,12 @@
 // y répond (chargée comme depuis la fenêtre des situations types) ou, faute de situation adaptée, à la section de la
 // page qui y répond. L'encart y ajoute « Partir de zéro ».
 
+import type { SessionState, UserPreferences } from "@/types"
+import type { Ancre } from "./ancres"
 import { MONTAGES_TYPES, type MontageType } from "./montages/montages"
 
 /** Une question de départ : sa situation type, ou l'identifiant de la section de la page qui y répond. */
-export type QuestionDeDepart = { question: string; precision: string } & ({ montage: MontageType } | { ancre: string })
+export type QuestionDeDepart = { question: string; precision: string } & ({ montage: MontageType } | { ancre: Ancre })
 
 /** Le montage type d'identifiant donné ; une question qui en désignerait un disparu échoue dès le chargement. */
 function situation(id: string): MontageType {
@@ -25,3 +27,12 @@ export const QUESTIONS_DE_DEPART: readonly QuestionDeDepart[] = [
 
 /** Identifiant du bouton « + Ajouter une personne » : « Partir de zéro » y porte le focus. */
 export const ID_DE_L_AJOUT_D_UNE_PERSONNE = "ajouter-une-personne"
+
+/**
+ * L'encart « Que voulez-vous savoir ? » s'affiche sur une simulation vide ou sur l'exemple du premier lancement (démo
+ * web), tant que l'utilisateur ne l'a pas fermé ; jamais avant le chargement de la session et des préférences.
+ */
+export function avecLesQuestions(session: SessionState, fermees: UserPreferences["questionsFermees"], sessionChargee: boolean, estLaSessionDExemple?: (session: SessionState) => boolean): boolean {
+  if (!sessionChargee || fermees) return false
+  return session.entities.length === 0 || (estLaSessionDExemple?.(session) ?? false)
+}

@@ -1,6 +1,7 @@
 // src/ui/components/ResultsPanel.tsx
 
 import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
+import { ANCRES } from "@/lib/ancres"
 import { libelleDeduction } from "@/lib/export-commun"
 import { detailDesCotisations, precisionDesCotisations } from "@/lib/detail-des-cotisations"
 import { LIMITES, TITRE_DES_LIMITES } from "@/lib/limites-du-modele"
@@ -49,7 +50,7 @@ function BilanCard({ report }: { report: SimulationReport }) {
   const origin = [`chiffre d'affaires ${euros(bilan.chiffreAffaires)}`, bilan.charges > 0 ? `charges ${euros(bilan.charges)}` : null, bilan.revenusDirects > 0 ? `salaires et autres revenus ${euros(bilan.revenusDirects + bilan.cotisationsSalariales)}` : null].filter(Boolean).join(" · ")
 
   return (
-    <div id="bilan" className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+    <div id={ANCRES.bilan} className="rounded-lg border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
         <div>
           <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Net dans la poche</p>
@@ -480,7 +481,7 @@ function EnTeteDesResultats({ report }: { report: SimulationReport | null }) {
   return (
     <>
       <div>
-        <h2 id="resultats-titre" className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
+        <h2 id={ANCRES.titreDesResultats} className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
           Résultats de simulation
         </h2>
         <p className="text-sm text-slate-600 dark:text-slate-400">

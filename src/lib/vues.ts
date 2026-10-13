@@ -5,7 +5,7 @@
 
 import { ADRESSE_DES_MENTIONS_LEGALES } from "./mentions-legales"
 import { ADRESSE_DE_L_AVIS } from "./retours"
-import { ANCRE_DE_LA_REMUNERATION, ANCRE_DU_COUPLE } from "./resume"
+import { ANCRES, estUneAncre, type Ancre } from "./ancres"
 
 export type Vue = "situation" | "resultats" | "comparer"
 
@@ -27,17 +27,20 @@ export const VUES: readonly DescriptionDeVue[] = [
 export const VUE_PAR_DEFAUT: Vue = "situation"
 
 /**
- * Détails vers lesquels mènent les liens de la barre de résumé, avec leur vue : connus d'avance, ils retrouvent leur
- * vue au rechargement de la page, avant même que le détail soit affiché (les résultats arrivent après le calcul).
+ * Vue de chaque ancre de la page (`ancres.ts`), vers laquelle mènent les liens de la barre de résumé et de l'encart des
+ * questions : connue d'avance, elle est retrouvée au rechargement de la page, avant même que le détail soit affiché
+ * (les résultats arrivent après le calcul). La table est exhaustive : une ancre ajoutée au registre doit y dire sa vue.
+ * `null` pour le contenu, qui contient les trois vues : la vue affichée ne change pas.
  */
-const DETAILS: Readonly<Record<string, Vue>> = {
-  bilan: "resultats",
-  "resultats-titre": "resultats",
-  "comparateur-verdict": "comparer",
-  "comparateur-titre": "comparer",
+const VUE_DE_L_ANCRE: Readonly<Record<Ancre, Vue | null>> = {
+  [ANCRES.contenu]: null,
+  [ANCRES.bilan]: "resultats",
+  [ANCRES.titreDesResultats]: "resultats",
+  [ANCRES.verdictDuComparateur]: "comparer",
+  [ANCRES.titreDuComparateur]: "comparer",
   // Les réponses de « Comparer et optimiser » : mariage ou Pacs, rémunération ou dividendes.
-  [ANCRE_DU_COUPLE]: "comparer",
-  [ANCRE_DE_LA_REMUNERATION]: "comparer"
+  [ANCRES.comparaisonDuCouple]: "comparer",
+  [ANCRES.titreDeLOptimisation]: "comparer"
 }
 
 const estUneVue = (nom: string): nom is Vue => VUES.some(v => v.valeur === nom)
@@ -50,8 +53,8 @@ export interface Destination {
 }
 
 /**
- * Destination d'une adresse (`location.hash`) : une vue (« #resultats »), un détail connu (« #bilan »), ou n'importe
- * quel élément de la page, dont la vue est donnée par `vueDeLElement`. `null` si l'adresse ne mène à aucune vue
+ * Destination d'une adresse (`location.hash`) : une vue (« #resultats »), une ancre du registre (« #bilan »), ou
+ * n'importe quel autre élément de la page, dont la vue est donnée par `vueDeLElement`. `null` si l'adresse ne mène à aucune vue
  * (adresse vide, élément introuvable ou hors des vues) : la vue affichée ne change pas.
  */
 export function destinationDeLAdresse(adresse: string, vueDeLElement: (id: string) => Vue | null): Destination | null {
@@ -64,7 +67,7 @@ export function destinationDeLAdresse(adresse: string, vueDeLElement: (id: strin
   // Les mentions légales et la fenêtre d'avis s'ouvrent par-dessus la vue affichée, sans la changer.
   if (!nom || nom === ADRESSE_DES_MENTIONS_LEGALES || nom === ADRESSE_DE_L_AVIS) return null
   if (estUneVue(nom)) return { vue: nom }
-  const vue = DETAILS[nom] ?? vueDeLElement(nom)
+  const vue = estUneAncre(nom) ? VUE_DE_L_ANCRE[nom] : vueDeLElement(nom)
   return vue ? { vue, detail: nom } : null
 }
 

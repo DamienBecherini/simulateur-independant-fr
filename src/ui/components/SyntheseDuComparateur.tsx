@@ -4,6 +4,7 @@
 // de référence, l'écart de frais de gestion de chaque colonne, les colonnes non retenues et le rappel des frais réels.
 
 import { ChevronRight } from "lucide-react"
+import { ANCRES } from "@/lib/ancres"
 import { ecartAvecLaSituationSaisie, phraseDuVerdict, raisonDeNonRetenue } from "@/lib/resume"
 import { phraseDeLEcartDeFrais, posteFraisLabels } from "@/lib/comparateur-options"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
@@ -24,7 +25,7 @@ export function VerdictDuComparateur({ result, activite }: { result: Comparaison
   const resume = useAffichageResume()
   if (result?.sansChiffreDAffaires) {
     return (
-      <p id="comparateur-verdict" role="status" className="rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 sm:text-base dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100">
+      <p id={ANCRES.verdictDuComparateur} role="status" className="rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 sm:text-base dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100">
         {SANS_CHIFFRE_D_AFFAIRES}
       </p>
     )
@@ -32,7 +33,7 @@ export function VerdictDuComparateur({ result, activite }: { result: Comparaison
   const phrase = result && activite ? phraseDuVerdict(result, activite) : null
   if (!resume || !phrase) return null
   return (
-    <p id="comparateur-verdict" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-950 sm:text-base dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-50">
+    <p id={ANCRES.verdictDuComparateur} className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-950 sm:text-base dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-50">
       {phrase}
     </p>
   )

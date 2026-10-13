@@ -9,6 +9,7 @@
 import { useId, useRef, useState, type ReactNode } from "react"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { lienVers, type Ancre } from "@/lib/ancres"
 import type { MontageType } from "@/lib/montages/montages"
 import { ID_DE_L_AJOUT_D_UNE_PERSONNE, QUESTIONS_DE_DEPART, type QuestionDeDepart } from "@/lib/questions-de-depart"
 import { ConfirmationDeRemplacement } from "./ConfirmationDeRemplacement"
@@ -45,13 +46,13 @@ function TexteDuChoix({ id, question, precision }: { id: string; question: strin
 }
 
 /** Un choix de l'encart : un bouton qui agit, ou un lien vers la section qui répond. */
-function Choix({ question, precision, action }: { question: string; precision: string; action: ((declencheur: HTMLElement) => void) | string }) {
+function Choix({ question, precision, action }: { question: string; precision: string; action: ((declencheur: HTMLElement) => void) | Ancre }) {
   const id = useId()
   const texte: ReactNode = <TexteDuChoix id={id} question={question} precision={precision} />
   const noms = { "aria-labelledby": `${id}-question`, "aria-describedby": `${id}-precision` }
   if (typeof action === "string") {
     return (
-      <a href={`#${action}`} className={CHOIX} {...noms}>
+      <a href={lienVers(action)} className={CHOIX} {...noms}>
         {texte}
       </a>
     )

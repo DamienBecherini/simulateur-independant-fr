@@ -2,10 +2,11 @@
 // « Sur toutes les années » : stratégies de distribution du bénéfice de l'activité comparée, en SASU et en EURL,
 // comparées sur le net cumulé de toutes les années de la session (voir l'ADR 014).
 
-import { useEffect, useId, useState } from "react"
+import { useCallback, useId } from "react"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
-import type { ResultatDUneStrategie, SessionState, StrategiesDeDistribution, StrategiesDUnStatut } from "@/types"
+import type { ResultatDUneStrategie, SessionState, StrategiesDUnStatut } from "@/types"
+import { useCalculDiffere } from "../hooks/useCalculDiffere"
 import { ChampNumerique } from "./ChampNumerique"
 import { ZoneDefilante } from "./ZoneDefilante"
 import { euros } from "@/backend/logic/format"
@@ -13,27 +14,8 @@ import { euros } from "@/backend/logic/format"
 
 /** Recalcule les stratégies peu après chaque modification de la session (grille, acteurs, réglages du comparateur). */
 function useStrategies(session: SessionState, activityId: string, actif: boolean) {
-  const [resultat, setResultat] = useState<StrategiesDeDistribution | null>(null)
-  const [erreur, setErreur] = useState<string | null>(null)
-  useEffect(() => {
-    if (!actif) return
-    let annule = false
-    const minuterie = setTimeout(async () => {
-      try {
-        const strategies = await window.api.comparerStrategies(session, activityId)
-        if (annule) return
-        setResultat(strategies)
-        setErreur(null)
-      } catch (e) {
-        if (!annule) setErreur(e instanceof Error ? e.message : "La comparaison sur toutes les années a échoué.")
-      }
-    }, 300)
-    return () => {
-      annule = true
-      clearTimeout(minuterie)
-    }
-  }, [session, activityId, actif])
-  return { resultat, erreur }
+  const comparer = useCallback(() => window.api.comparerStrategies(session, activityId), [session, activityId])
+  return useCalculDiffere(comparer, { echec: "La comparaison sur toutes les années a échoué.", actif })
 }
 
 /** Dividendes de chaque année d'une stratégie : « 2025 : 24 625 € ; 2026 : 24 625 € ». */
