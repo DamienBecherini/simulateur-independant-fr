@@ -211,7 +211,7 @@ const sasuSansSalaire: MontageType = {
   questions: ["Que reste-t-il si je ne me paie qu'en dividendes ?", "Combien coûte la validation de 4 trimestres de retraite ?", "Les dividendes sont-ils mieux imposés au prélèvement forfaitaire ou au barème ?"],
   illustre: [
     `Sans rémunération, le président ne paie pas de cotisations sociales : le bénéfice supporte l'impôt sur les sociétés, puis les dividendes le prélèvement forfaitaire de ${pourcent(DIVIDENDES.tauxIrForfaitaire + DIVIDENDES.prelevementsSociaux)} (${pourcent(DIVIDENDES.tauxIrForfaitaire)} d'impôt et ${pourcent(DIVIDENDES.prelevementsSociaux)} de prélèvements sociaux) ou, sur option, le barème après un abattement de ${pourcent(DIVIDENDES.abattementBareme)}.`,
-    "Le comparateur est réglé au meilleur net parmi les rémunérations qui valident 4 trimestres de retraite : il montre ce que coûte cette exigence, à comparer avec le montage « SASU avec un salaire qui valide 4 trimestres ».",
+    "Le comparateur est réglé au meilleur net parmi les rémunérations qui valident 4 trimestres de retraite : il montre ce que coûte cette exigence, à comparer avec la situation « SASU avec un salaire qui valide 4 trimestres ».",
     "« Rémunération ou dividendes ? » trace le net du foyer pour chaque rémunération possible.",
     `${euros(84000)} de chiffre d'affaires dépassent de peu le plafond de la micro-entreprise (${euros(MICRO.plafonds.services)}) : le comparateur la signale hors plafond et ne la désigne pas comme meilleur choix.`
   ],
@@ -469,8 +469,8 @@ const kinesitherapeuteEI: MontageType = {
     "Exercice en nom propre : l'entreprise individuelle ne demande ni capital ni statuts."
   ],
   pointsDAttention: [
-    `La CARPIMKO calcule la complémentaire et l'ASV sur le revenu de l'année précédente : ce montage ne porte que sur ${ANNEE_DES_MONTAGES}, elles y sont calculées sur le revenu ${ANNEE_DES_MONTAGES}, ce que la carte de l'activité signale. Ajoutez l'année ${ANNEE_DES_MONTAGES - 1} pour un calcul exact.`,
-    "Les deux premières années d'activité, les cotisations se calculent sur une assiette forfaitaire que le simulateur ne modélise pas : le montage décrit un cabinet installé.",
+    `La CARPIMKO calcule la complémentaire et l'ASV sur le revenu de l'année précédente : cette situation ne porte que sur ${ANNEE_DES_MONTAGES}, elles y sont calculées sur le revenu ${ANNEE_DES_MONTAGES}, ce que la carte de l'activité signale. Ajoutez l'année ${ANNEE_DES_MONTAGES - 1} pour un calcul exact.`,
+    "Les deux premières années d'activité, les cotisations se calculent sur une assiette forfaitaire que le simulateur ne modélise pas : la situation décrit un cabinet installé.",
     `Les soins des masseurs-kinésithérapeutes sont ${SOINS_EXONERES_DE_TVA}`,
     `${hypothesesDeChargesDeLaSociete("l'entreprise individuelle de Julien", CHARGES_DE_JULIEN.courantes)} S'y ajoutent un loyer de ${euros(CHARGES_DE_JULIEN.loyerMensuel)} et ${euros(CHARGES_DE_JULIEN.materielMensuel)} de petit matériel par mois, et ${CHARGES_DE_JULIEN.kmParAn.toLocaleString("fr-FR")} km de visites à domicile par an avec une voiture de 5 CV (barème kilométrique des revenus de ${ANNEE_DES_MONTAGES - 1}, repris tant que celui de ${ANNEE_DES_MONTAGES} n'est pas publié).`
   ],

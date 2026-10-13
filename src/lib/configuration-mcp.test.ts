@@ -84,7 +84,7 @@ describe("fichiers de la boîte aux propositions", () => {
 })
 
 describe("même session pour l'application et le serveur", () => {
-  const sessions: [string, SessionState][] = [["la simulation d'exemple", sessionExemple()], ...MONTAGES_TYPES.map((m): [string, SessionState] => [`le montage « ${m.titre} »`, sessionDUnMontage(m)])]
+  const sessions: [string, SessionState][] = [["la simulation d'exemple", sessionExemple()], ...MONTAGES_TYPES.map((m): [string, SessionState] => [`la situation « ${m.titre} »`, sessionDUnMontage(m)])]
   it.each(sessions)("garde l'empreinte de %s après enregistrement et relecture", (_nom, session) => {
     const relue = lireLaSession(contenuDuFichier(session, "0.9.0")).safeState
     expect(empreinteDeLaSession(relue)).toBe(empreinteDeLaSession(session))

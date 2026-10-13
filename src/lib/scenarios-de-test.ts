@@ -106,7 +106,7 @@ export const SCENARIOS_DE_TEST: ScenarioDeTest[] = [
       "Comparateur, section « Sur toutes les années » : la meilleure stratégie est désignée.",
       "Faire varier la part du bénéfice mise en réserve : le net cumulé et la stratégie désignée changent.",
       "Recharger la page (ou fermer et rouvrir l'application) : la part mise en réserve est retrouvée.",
-      "Barre d'outils : « Montages types » et « Donner mon avis » sont toujours là."
+      "Barre d'outils : « Situations types » et « Donner mon avis » sont toujours là."
     ],
     session: () => {
       const { entities, relationships } = presidentEtSasu(1000)

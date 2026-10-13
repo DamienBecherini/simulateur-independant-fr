@@ -29,7 +29,7 @@ describe("App : montages types", () => {
     const user = await renderApp(emptySession())
 
     await user.click(screen.getByRole("button", { name: "Partir d'une situation type..." }))
-    await user.click(screen.getByRole("button", { name: "Charger le montage « SASU sans salaire, tout en dividendes »" }))
+    await user.click(screen.getByRole("button", { name: "Charger la situation « SASU sans salaire, tout en dividendes »" }))
 
     expect(await screen.findByRole("heading", { level: 1, name: "SASU sans salaire, tout en dividendes" })).toBeInTheDocument()
     expect(screen.getAllByText("SASU de Thomas").length).toBeGreaterThan(0)
@@ -46,8 +46,8 @@ describe("App : montages types", () => {
 
     await user.click(screen.getByRole("button", { name: "Paramètres" }))
     await user.click(screen.getByRole("button", { name: "Partir d'une situation type..." }))
-    await user.click(screen.getByRole("button", { name: "Détails du montage « Salarié avec une micro-entreprise à côté »" }))
-    await user.click(screen.getByRole("button", { name: "Charger ce montage" }))
+    await user.click(screen.getByRole("button", { name: "Détails de la situation « Salarié avec une micro-entreprise à côté »" }))
+    await user.click(screen.getByRole("button", { name: "Charger cette situation" }))
     const confirmation = screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
     expect(confirmation).toHaveTextContent("« Mon brouillon »")
     await user.click(within(confirmation).getByRole("button", { name: "Remplacer" }))
@@ -62,7 +62,7 @@ describe("App : montages types", () => {
     await user.type(screen.getByRole("textbox", { name: "Nom" }), "Bob{Enter}")
 
     await user.click(within(screen.getByRole("navigation", { name: "Barre d'outils" })).getByRole("button", { name: "Situations types" }))
-    await user.click(screen.getByRole("button", { name: "Charger le montage « SASU sans salaire, tout en dividendes »" }))
+    await user.click(screen.getByRole("button", { name: "Charger la situation « SASU sans salaire, tout en dividendes »" }))
     await user.click(within(screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).getByRole("button", { name: "Remplacer" }))
 
     expect(await screen.findByRole("heading", { level: 1, name: "SASU sans salaire, tout en dividendes" })).toBeInTheDocument()
