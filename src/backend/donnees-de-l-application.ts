@@ -130,8 +130,14 @@ export function donneesDeLApplication({ dossier, versionDeLApplication, avertir,
 
   async function lireLaSessionEnregistree(): Promise<SessionState> {
     const lecture = await lireLeFichier(cheminDeLaSession)
-    // Premier lancement : il n'y a simplement pas encore de session, ce n'est pas une erreur.
-    if (lecture.etat === "absent") return SessionStateSchema.parse({})
+    // Premier lancement : il n'y a simplement pas encore de session, ce n'est pas une erreur. La session vierge est
+    // enregistrée tout de suite, pour que le serveur MCP trouve une simulation avant la première modification ; aucun
+    // fichier n'existe, rien ne peut être remplacé. Un échec est signalé comme celui de la sauvegarde automatique.
+    if (lecture.etat === "absent") {
+      const vierge = SessionStateSchema.parse({})
+      await ecrireLaSession(vierge)
+      return vierge
+    }
     if (lecture.etat === "inaccessible") {
       avertir({ type: "warning", title: "Chargement échoué", message: `Votre session précédente n'a pas pu être lue (erreur ${lecture.code}). Le fichier ne sera pas modifié tant que l'application reste ouverte, et la sauvegarde automatique est suspendue :\n${cheminDeLaSession}\n\nL'application a démarré avec une nouvelle simulation vierge.` })
       return SessionStateSchema.parse({})
