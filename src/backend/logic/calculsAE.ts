@@ -61,7 +61,8 @@ export function depassePlafondMicro(ca: ChiffreAffairesMicro, regles: ReglesFisc
   return services > plafonds.services || ca.caVente + services > plafonds.vente
 }
 
-function plafondsAuProrata(plafonds: ReglesMicro["plafonds"], prorata: number): ReglesMicro["plafonds"] {
+/** Les plafonds du régime, réduits au prorata des jours d'activité l'année de la création (`prorata`, voir dispositifs.ts). */
+export function plafondsAuProrata(plafonds: ReglesMicro["plafonds"], prorata: number): ReglesMicro["plafonds"] {
   return { services: plafonds.services * prorata, vente: plafonds.vente * prorata }
 }
 

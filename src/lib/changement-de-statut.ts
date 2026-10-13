@@ -7,6 +7,8 @@ import { changerLeStatut, refusDuChangement, statutDeLActivite, type ChangementD
 import { libelleDuStatut } from "@/backend/logic/colonne-du-comparateur"
 import { REGIME_DU_DIRIGEANT } from "@/backend/logic/statuts"
 import type { Activite } from "@/backend/logic/conversion-de-statut"
+import { plafondsAuProrata } from "@/backend/logic/calculsAE"
+import { chiffreAffairesDeLaMicro, lireMois, prorataDesPlafonds } from "@/backend/logic/dispositifs"
 import { euros } from "@/backend/logic/format"
 import { professionDe } from "@/backend/logic/professions"
 import type { ReglesFiscales } from "@/backend/logic/regles"
@@ -15,6 +17,7 @@ import { CAPITAL_SOCIAL_PAR_DEFAUT, estSocieteIS, type Entity, type SessionState
 import { estLibelleParDefaut, flowTypeLabels, libelleDuType, type FlowType } from "@/lib/flow-constants"
 import { getRelationshipLabel } from "@/lib/graph-logic"
 import { proposeLaProfession } from "@/lib/professions"
+import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
 
 export type { StatutDUneActivite }
 
@@ -72,6 +75,33 @@ function phrasesDesFluxConvertis(changement: ChangementDeStatut): string[] {
     const charge = PHRASE_DE_LA_CHARGE[vers]
     if (charge) return charge(euros(montant))
     return `« ${flowTypeLabels[de]} » (${euros(montant)}) devient « ${libelleDuType(vers, changement.activite.type)} ».`
+  })
+}
+
+/** Les prestations de services, dans une phrase, selon leur nature. */
+const PRESTATIONS: Record<NatureDesPrestations, string> = { bnc: "libérales (BNC)", bic: "artisanales ou commerciales (BIC)" }
+
+/**
+ * Les années où la micro-entreprise que devient l'activité dépasserait les plafonds du régime (règles de chaque année,
+ * au prorata l'année de la création, comme le moteur) : prestations de services au-delà du plafond des services, sinon
+ * chiffre d'affaires total au-delà de celui de la vente. Un avertissement, pas un refus : le régime tient tant que le
+ * dépassement ne se répète pas deux années de suite.
+ */
+function phrasesDesPlafonds(changement: ChangementDeStatut, nature: NatureDesPrestations): string[] {
+  const { activite, session } = changement
+  if (activite.type !== "micro-entreprise") return []
+  const creation = lireMois(activite.dateDeCreation)
+  const suite = "le régime n'est conservé que si le dépassement ne se répète pas l'année suivante : deux années de suite, l'activité passe au réel au 1er janvier qui suit."
+  return session.annees.flatMap(({ annee, monthlyData }) => {
+    const prorata = prorataDesPlafonds(creation, annee)
+    const plafonds = plafondsAuProrata(reglesDeLAnneeAffichee(annee).microEntreprise.plafonds, prorata)
+    const auProrata = prorata < 1 ? ", au prorata de l'année de création" : ""
+    const ca = chiffreAffairesDeLaMicro(monthlyData, activite.id)
+    const services = ca.caServicesBic + ca.caServicesBnc
+    const total = ca.caVente + services
+    if (services > plafonds.services) return [`En ${annee}, les prestations ${PRESTATIONS[nature]} (${euros(services)}) dépassent le plafond de la micro-entreprise pour cette activité (${euros(plafonds.services)}${auProrata}) : ${suite}`]
+    if (total > plafonds.vente) return [`En ${annee}, le chiffre d'affaires (${euros(total)}) dépasse le plafond de la micro-entreprise pour cette activité (${euros(plafonds.vente)}${auProrata}) : ${suite}`]
+    return []
   })
 }
 
@@ -138,6 +168,7 @@ export function examinerLeChangement(session: SessionState, source: Activite, ci
   const changement = changerLeStatut(session, source, cible, PART_BNC[nature])
   const consequences = [
     ...phrasesDesFluxConvertis(changement),
+    ...phrasesDesPlafonds(changement, nature),
     ...phrasesDuPartage(changement, source, montants),
     ...phrasesDesReglages(source, changement.activite, regles),
     ...phrasesDesRelations(changement, session.entities),
