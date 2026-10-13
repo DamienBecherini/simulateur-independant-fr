@@ -9,6 +9,8 @@ const enIntegrationContinue = !!process.env.CI
 export default defineConfig({
   testDir: "e2e",
   testMatch: "**/*.e2e.ts",
+  // Installe l'exécutable d'Electron une seule fois, avant les workers (voir e2e/support/installer-electron.ts).
+  globalSetup: "./e2e/support/installer-electron.ts",
   // Chaque test lance sa propre application sur son propre dossier de données : ils peuvent tourner en parallèle.
   fullyParallel: true,
   workers: enIntegrationContinue ? 1 : 3,
