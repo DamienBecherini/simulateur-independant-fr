@@ -1,7 +1,7 @@
 // src/lib/entity-factory.test.ts
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
+import { ajoutDUneActivite, createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
 import { CAPITAL_SOCIAL_PAR_DEFAUT, CompanySchema, MicroEntrepriseSchema, PersonSchema } from "@/types"
 
 const MAINTENANT = 1_700_000_000_000
@@ -120,5 +120,34 @@ describe("identifiants", () => {
     const ids = Array.from({ length: 100 }, () => creer().id)
 
     expect(new Set(ids).size).toBe(100)
+  })
+})
+
+describe("ajoutDUneActivite", () => {
+  const alice = createPerson()
+  const avant = { entities: [alice], relationships: [] }
+
+  it.each([
+    ["micro", "Titulaire"],
+    ["EI", "Titulaire"],
+    ["SASU", "Président"],
+    ["EURL", "Gérant"]
+  ] as const)("relie la personne qui exerce une activité « %s » par la relation « %s »", (statut, type) => {
+    const { entities, relationships } = ajoutDUneActivite(avant, statut, { personneId: alice.id })
+    const activite = entities[1]
+    expect(entities).toHaveLength(2)
+    expect(relationships).toEqual([{ id: idAvecPrefixe("rel"), fromId: alice.id, toId: activite.id, type }])
+  })
+
+  it("crée la personne avec l'activité quand on le demande", () => {
+    const { entities, relationships } = ajoutDUneActivite({ entities: [], relationships: [] }, "EURL", "nouvelle personne")
+    const [personne, eurl] = entities
+    expect(personne).toMatchObject({ type: "person", name: "Nouvelle Personne" })
+    expect(eurl).toMatchObject({ type: "company", legalStatus: "EURL" })
+    expect(relationships).toEqual([expect.objectContaining({ fromId: personne.id, toId: eurl.id, type: "Gérant" })])
+  })
+
+  it("sans personne pour l'instant, n'ajoute que l'activité", () => {
+    expect(ajoutDUneActivite(avant, "SASU", null)).toEqual({ entities: [alice, expect.objectContaining({ legalStatus: "SASU" })], relationships: [] })
   })
 })

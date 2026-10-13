@@ -1,14 +1,16 @@
 // src/ui/components/EntitiesManager.tsx
 
-import { createPerson, createCompany, createMicroEntreprise } from "@/lib/entity-factory"
-import type { Entity, Relationship, Company, MicroEntreprise, SessionState } from "@/types"
+import { ajoutDUneActivite, createPerson, type Exercant } from "@/lib/entity-factory"
+import { appliquerLeChangement, type NatureDesPrestations, type StatutDUneActivite } from "@/lib/changement-de-statut"
+import type { Entity, Person, Relationship, SessionState } from "@/types"
 import { Button } from "@/components/ui/button"
 import { useState, useMemo } from "react"
 import EditEntityModal from "./EditEntityModal"
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { EntityItem } from "./EntityItem"
-import { SelectEntityTypeModal, BusinessEntityType } from "./SelectEntityTypeModal"
+import { SelectEntityTypeModal } from "./SelectEntityTypeModal"
+import { ConfirmationDuChangementDeStatut, type DemandeDeChangement } from "./ConfirmationDuChangementDeStatut"
 import { useTriAccessible } from "../hooks/useTriAccessible"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useActionsSurLesActeurs } from "../hooks/useActionsSurLesActeurs"
@@ -38,15 +40,29 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
   const [editingEntity, setEditingEntity] = useState<Entity | null>(null)
   const [isSelectModalOpen, setSelectModalOpen] = useState(false)
   const entityIds = useMemo(() => entities.map(e => e.id), [entities])
+  const personnes = useMemo(() => entities.filter((e): e is Person => e.type === "person"), [entities])
   // Affichage « Résumé » : un acteur par ligne, des commandes d'ajout plus discrètes.
   const resume = useAffichageResume()
   const Acteur = resume ? LigneActeur : EntityItem
   const tri = useTriAccessible(useMemo(() => entities.map(e => ({ id: e.id, nom: e.name })), [entities]))
   const { applyChange, addEntity, deleteEntity, updateEntity, toggleLock, addRelationship, deleteRelationship } = useActionsSurLesActeurs(session, setSession)
 
-  const handleAddBusiness = (type: BusinessEntityType) => {
-    const newEntity: Company | MicroEntreprise = type === "MicroEntreprise" ? createMicroEntreprise() : createCompany(type)
-    addEntity(newEntity)
+  // L'activité, la personne créée avec elle s'il y a lieu et leur relation : une seule modification, annulable en une étape.
+  const ajouterUneActivite = (statut: StatutDUneActivite, exercant: Exercant) => applyChange(ajoutDUneActivite(session, statut, exercant))
+
+  // Changement de statut demandé par la fiche : confirmé à part, puis appliqué à la session telle que la fiche la
+  // modifie, en une seule étape d'historique ; la fiche reste ouverte sur l'activité convertie.
+  const [changement, setChangement] = useState<DemandeDeChangement | null>(null)
+  const demanderLeChangement = (brouillon: Entity, relationsDuBrouillon: Relationship[], cible: StatutDUneActivite) => {
+    if (brouillon.type === "person") return
+    setChangement({ session: { ...session, entities: entities.map(e => (e.id === brouillon.id ? brouillon : e)), relationships: relationsDuBrouillon }, activite: brouillon, cible })
+  }
+  const convertir = (nature: NatureDesPrestations) => {
+    if (!changement) return
+    const { session: convertie, activite } = appliquerLeChangement(changement.session, changement.activite, changement.cible, nature)
+    applyChange({ entities: convertie.entities, relationships: convertie.relationships, annees: convertie.annees })
+    setChangement(null)
+    setEditingEntity(activite)
   }
 
   const handleSaveFromModal = (updatedEntity: Entity, updatedRelationships: Relationship[]) => {
@@ -96,9 +112,10 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
         </SortableContext>
       </DndContext>
 
-      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleSaveFromModal} allEntities={entities} relationships={relationships} anneesSimulees={session.annees.map(a => a.annee)} annee={annee} />
+      <EditEntityModal isOpen={!!editingEntity} entity={editingEntity} onClose={() => setEditingEntity(null)} onSave={handleSaveFromModal} allEntities={entities} relationships={relationships} anneesSimulees={session.annees.map(a => a.annee)} annee={annee} onChangerDeStatut={demanderLeChangement} />
+      <ConfirmationDuChangementDeStatut demande={changement} annee={annee} onAnnuler={() => setChangement(null)} onConfirmer={convertir} />
 
-      <SelectEntityTypeModal isOpen={isSelectModalOpen} onClose={() => setSelectModalOpen(false)} onSelect={handleAddBusiness} />
+      <SelectEntityTypeModal isOpen={isSelectModalOpen} onClose={() => setSelectModalOpen(false)} personnes={personnes} onSelect={ajouterUneActivite} />
     </div>
   )
 }

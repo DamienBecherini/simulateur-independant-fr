@@ -81,6 +81,13 @@ async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]>
       }
     ],
     ["choix du type d'activité", () => page.getByRole("button", { name: "+ Ajouter une activité" }).click()],
+    [
+      "qui exerce une nouvelle activité",
+      async () => {
+        await page.getByRole("button", { name: "+ Ajouter une activité" }).click()
+        await page.getByRole("button", { name: /Micro-Entreprise/ }).click()
+      }
+    ],
     ["flux d'un mois", () => page.getByRole("button", { name: /^Flux de janvier/ }).last().click()],
     ["couleurs des flux", () => page.getByRole("button", { name: "Gérer les couleurs" }).click()],
     ["montages types", ouvrirLesMontages],

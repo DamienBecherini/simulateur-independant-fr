@@ -11,6 +11,7 @@ import { AvatarDisplay } from "./AvatarDisplay"
 import { ChampsDeLActeur } from "./ChampsDeLActeur"
 import { updatePersonAvatar } from "@/lib/avatar-utils"
 import { createId } from "@/lib/id"
+import type { StatutDUneActivite } from "@/lib/changement-de-statut"
 
 interface EditEntityModalProps {
   entity: Entity | null
@@ -23,6 +24,11 @@ interface EditEntityModalProps {
   anneesSimulees?: number[]
   /** L'année affichée : les champs qui décrivent des règles (profession) prennent les siennes. */
   annee: number
+  /**
+   * Un autre statut est choisi pour l'activité : la fiche transmet son brouillon (l'activité et les relations telles
+   * qu'elle les modifie), que la conversion reprend après confirmation.
+   */
+  onChangerDeStatut?: (brouillon: Entity, relationsDuBrouillon: Relationship[], cible: StatutDUneActivite) => void
 }
 
 interface LocalState {
@@ -39,7 +45,7 @@ interface SourceDuFormulaire {
 
 const memeSource = (a: SourceDuFormulaire | null, b: SourceDuFormulaire) => a !== null && a.entity === b.entity && a.relationships === b.relationships && a.isOpen === b.isOpen
 
-function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relationships, anneesSimulees, annee }: EditEntityModalProps) {
+function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relationships, anneesSimulees, annee, onChangerDeStatut }: EditEntityModalProps) {
   const [formData, setFormData] = useState<LocalState>({ entity: null, relationships: [] })
 
   const [addingRelation, setAddingRelation] = useState(false)
@@ -114,7 +120,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
             <DialogTitle className="leading-snug">Modifier : {localEntity.name}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
-            <ChampsDeLActeur entity={localEntity} anneesSimulees={anneesSimulees} annee={annee} onChange={entity => setFormData(prev => ({ ...prev, entity }))} />
+            <ChampsDeLActeur entity={localEntity} anneesSimulees={anneesSimulees} annee={annee} onChange={entity => setFormData(prev => ({ ...prev, entity }))} onChangerDeStatut={cible => onChangerDeStatut?.(localEntity, localRelationships, cible)} />
             <div className="space-y-4 pt-6 border-t">
               <h3 className="font-semibold text-base">Relations</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
