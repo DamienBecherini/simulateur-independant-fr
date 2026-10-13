@@ -138,7 +138,10 @@ test("« Utiliser avec une IA (MCP) » renvoie vers l'application de bureau, ave
   await expect(ia.getByRole("link", { name: /Télécharger l'application/ })).toHaveAttribute("href", TELECHARGEMENT)
   await expect(ia.getByRole("link", { name: /Guide d'installation/ })).toHaveAttribute("href", GUIDE)
   await expect(ia.getByRole("link", { name: /Télécharger l'application/ })).toHaveAttribute("target", "_blank")
-  await expect(ia).toContainText("Bientôt sur le Microsoft Store.")
+  const store = ia.getByRole("link", { name: /Microsoft Store/ })
+  await expect(store).toHaveAttribute("href", "https://apps.microsoft.com/detail/9PJBJWX5WS72")
+  await expect(store).toHaveAttribute("target", "_blank")
+  await expect(store).toHaveAttribute("rel", "noopener noreferrer")
   await expect(ia.getByLabel("Configuration à copier")).toHaveCount(0)
   // Le focus revient sur le bouton des paramètres à la fermeture.
   await page.keyboard.press("Escape")

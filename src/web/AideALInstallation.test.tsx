@@ -109,7 +109,10 @@ describe("aide à l'installation de la démo", () => {
     expect(within(fenetre).queryByRole("button", { name: "Installer maintenant" })).not.toBeInTheDocument()
     expect(within(fenetre).getByRole("link", { name: /Télécharger l'application/ })).toHaveAttribute("href", "https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest")
     expect(within(fenetre).getByRole("link", { name: /Guide d'installation/ })).toHaveAttribute("href", "https://github.com/DamienBecherini/simulateur-independant-fr/blob/main/documentation/installation.md")
-    expect(fenetre).toHaveTextContent("Bientôt sur le Microsoft Store.")
+    const store = within(fenetre).getByRole("link", { name: /Microsoft Store/ })
+    expect(store).toHaveAttribute("href", "https://apps.microsoft.com/detail/9PJBJWX5WS72")
+    expect(store).toHaveAttribute("target", "_blank")
+    expect(store).toHaveAttribute("rel", "noopener noreferrer")
   })
 
   it("un navigateur qui envoie l'invitation est traité comme Edge ou Chrome, quel que soit son nom", async () => {
