@@ -57,7 +57,7 @@ Une par ligne dans Partner Center (vingt au plus) :
 5. Rémunération ou dividendes : la répartition qui donne le meilleur net
 6. Grille annuelle des revenus et charges, mois par mois
 7. Plusieurs années de simulation, chacune avec ses règles fiscales
-8. Montages types préremplis et expliqués, avec leurs sources
+8. Situations types préremplies et expliquées, avec leurs sources
 9. Frais réels et barème kilométrique
 10. Sauvegardes nommées, import et export JSON
 11. Exports CSV pour Excel, PDF mis en page et rapport Markdown
@@ -139,7 +139,7 @@ Version française, pour mémoire (ne pas la coller : elle dépasse 500 caractè
 **Pourquoi :** les testeurs ouvrent l'application sans rien savoir d'elle. Les notes leur disent qu'elle n'a besoin ni de compte ni de connexion, comment voir un exemple complet (la version de bureau démarre sur une simulation vide), et que les fonctions qui ouvrent le navigateur, la messagerie ou un client d'IA sont normales et facultatives : sans ces notes, une simulation vide ou un lien externe peut passer pour un défaut.
 
 ```text
-The app works fully offline: no account and no connection are needed. On first launch the simulation is empty. To see a complete example, click "Montages types" in the toolbar at the top of the window (or open Settings, the gear icon at the top left, then "Partir d'un montage type..."), and load one of the examples. Results are recalculated on every change.
+The app works fully offline: no account and no connection are needed. On first launch the simulation is empty, under a "Que voulez-vous savoir ?" panel of common questions. To see a complete example, click one of these questions, or "Situations types" in the toolbar at the top of the window (or open Settings, the gear icon at the top left, then "Partir d'une situation type..."), and load one of the examples. Results are recalculated on every change.
 
 Results are simplified estimates for information only, not professional accounting advice; the app says so in its results and in its legal notice (Settings, or the footer link "Mentions légales et confidentialité").
 
@@ -147,11 +147,11 @@ The "Donner mon avis" (feedback) button opens the browser (GitHub) or the user's
 
 ---
 
-L'application fonctionne entièrement hors ligne : aucune connexion ni aucun compte n'est nécessaire. Au premier lancement, la simulation est vide. Pour voir un exemple complet, cliquer sur « Montages types » dans la barre d'outils en haut de la fenêtre (ou ouvrir les Paramètres, icône en haut à gauche, puis « Partir d'un montage type... »), et charger un montage. Les résultats se recalculent à chaque modification.
+L'application fonctionne entièrement hors ligne : aucune connexion ni aucun compte n'est nécessaire. Au premier lancement, la simulation est vide, sous un encart « Que voulez-vous savoir ? » qui propose des questions courantes. Pour voir un exemple complet, cliquer sur l'une de ces questions, ou sur « Situations types » dans la barre d'outils en haut de la fenêtre (ou ouvrir les Paramètres, icône en haut à gauche, puis « Partir d'une situation type... »), et charger l'un des exemples. Les résultats se recalculent à chaque modification.
 
 Les résultats sont des estimations simplifiées, à titre indicatif, pas un conseil d'expert-comptable ; l'application le dit dans ses résultats et dans ses mentions légales (Paramètres, ou pied de page : « Mentions légales et confidentialité »).
 
 Le bouton « Donner mon avis » ouvre le navigateur (GitHub) ou la messagerie de l'utilisateur ; rien n'est envoyé sans son action. La fonction « Utiliser avec une IA (MCP) » demande un client d'IA de bureau installé séparément (Claude Desktop, LM Studio) ; elle n'est pas nécessaire pour tester l'application.
 ```
 
-Avant de coller : vérifier dans l'application les libellés cités (« Montages types », « Partir d'un montage type... », « Mentions légales et confidentialité »), et les adapter si l'interface a changé.
+Avant de coller : vérifier dans l'application les libellés cités (« Que voulez-vous savoir ? », « Situations types », « Partir d'une situation type... », « Mentions légales et confidentialité »), et les adapter si l'interface a changé.

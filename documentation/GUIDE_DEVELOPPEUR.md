@@ -523,7 +523,7 @@ Une valeur qu'aucune source ne donne n'est **pas** estimée en silence : on repr
 | Frais réels | Option de l'IR : déduire ses frais réels (trajets au barème kilométrique) au lieu des 10 %. | `fraisReels`, `frais-kilometriques.ts` |
 | Comparateur | Une activité recalculée dans chaque statut, avec le même chiffre d'affaires. | `comparateur.ts`, `ComparaisonResult` |
 | Optimiseur | Rémunération ou dividendes : la meilleure rémunération d'un dirigeant de société à l'IS. | `optimisation-remuneration.ts` |
-| Montage type | Situation courante préremplie et sourcée, chargée par l'utilisateur. | `src/lib/montages/` |
+| Montage type | Situation courante préremplie et sourcée, chargée par l'utilisateur ; « situation type » dans l'interface, et proposée par l'encart « Que voulez-vous savoir ? » (`questions-de-depart.ts`). | `src/lib/montages/` |
 | Scénario de test | Session de vérification manuelle, bouton « Tests » en développement. | `src/lib/scenarios-de-test.ts` |
 | Cas de référence | Test du moteur avec les règles réelles et des montants dérivés à la main. | `src/backend/logic/references/` |
 | Proposition | Modification de la session préparée par un client d'IA, appliquée seulement si l'utilisateur l'accepte. | `PropositionSchema` (`outils/propositions.ts`) ; `PropositionRecue` (`mcp/proposition-en-attente.ts`, contrat avec l'interface) |
