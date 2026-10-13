@@ -93,6 +93,18 @@ describe("calculerMicro", () => {
       expect(tva({ caServicesBic: 46000 })).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue \(prestations de services .* pour un seuil de 45\s000\s€\) : la TVA est due dès le jour du dépassement/)])
     })
 
+    it("des soins exonérés (article 261, 4, 1° du CGI) ne comptent pas : rien au-delà du seuil majoré", () => {
+      expect(tva({ caServicesBnc: 120000, soinsExoneresDeTVA: true })).toEqual([])
+      // Sans l'exonération, le même chiffre d'affaires fait perdre la franchise.
+      expect(tva({ caServicesBnc: 120000 })).toEqual([expect.stringMatching(/^Franchise en base de TVA perdue/)])
+    })
+
+    it("avec des soins exonérés, les ventes et les prestations BIC restent comparées aux seuils, sans les soins", () => {
+      expect(tva({ caServicesBic: 39000, caServicesBnc: 50000, soinsExoneresDeTVA: true })).toEqual([])
+      expect(tva({ caServicesBic: 42000, caServicesBnc: 50000, soinsExoneresDeTVA: true })).toEqual([expect.stringMatching(/^Seuil de franchise en base de TVA dépassé \(prestations de services 42\s000\s€ pour un seuil de 40\s000\s€\)/)])
+      expect(tva({ caVente: 99000, caServicesBnc: 50000, soinsExoneresDeTVA: true })).toEqual([])
+    })
+
     it("une activité mixte est aussi comparée au seuil du chiffre d'affaires total", () => {
       const [avertissement] = tva({ caVente: 80000, caServicesBic: 25000 })
       expect(avertissement).toMatch(/^Seuil de franchise .*chiffre d'affaires total .* pour un seuil de 100\s000\s€/)

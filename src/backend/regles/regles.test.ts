@@ -434,6 +434,15 @@ describe("règles par année", () => {
       expect(ids(regles2025)).toEqual(ids(regles2026))
     })
 
+    it("soins exonérés de TVA (article 261, 4, 1° du CGI) : auxiliaires médicaux, ostéopathes, chiropracteurs, psychologues et psychothérapeutes, chaque année", () => {
+      const exoneres = (r: ReglesFiscales) => r.liberauxReglementes.professions.liste.filter(p => p.soinsExoneresDeTVA).map(p => p.id)
+      const attendus = ["infirmier", "masseur-kinesitherapeute", "orthophoniste", "orthoptiste", "pedicure-podologue", "osteopathe", "psychologue", "psychotherapeute", "ergotherapeute", "dieteticien", "chiropracteur", "psychomotricien"]
+      for (const r of [regles2024, regles2025, regles2026]) expect(exoneres(r)).toEqual(attendus)
+      // Toute la santé de la CARPIMKO en est ; « autre profession réglementée » n'en est pas, elle peut n'être pas de santé.
+      expect(regles2026.liberauxReglementes.professions.liste.filter(p => p.caisse === "CARPIMKO").every(p => p.soinsExoneresDeTVA)).toBe(true)
+      expect(fichier2026.liberauxReglementes.professions.description).toContain("BOI-TVA-DECLA-40-10-10, § 230")
+    })
+
     it("complémentaire de la CIPAV : 9 % puis 22 % jusqu'à 3,5 PASS en 2024 ; 11 % puis 21 % jusqu'à 4 PASS en 2025 (décret) et 2026 (Urssaf)", () => {
       expect(regles2024.liberauxReglementes.CIPAV.retraiteComplementaire.tranches).toEqual([{ jusquA: 1, taux: 0.09 }, { jusquA: 3.5, taux: 0.22 }])
       for (const r of [regles2025, regles2026]) expect(r.liberauxReglementes.CIPAV.retraiteComplementaire.tranches).toEqual([{ jusquA: 1, taux: 0.11 }, { jusquA: 4, taux: 0.21 }])
