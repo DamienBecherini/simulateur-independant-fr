@@ -437,7 +437,7 @@ describe("règles par année", () => {
     it("soins exonérés de TVA (article 261, 4, 1° du CGI) : auxiliaires médicaux, ostéopathes, chiropracteurs, psychologues et psychothérapeutes, chaque année", () => {
       const exoneres = (r: ReglesFiscales) => r.liberauxReglementes.professions.liste.filter(p => p.soinsExoneresDeTVA).map(p => p.id)
       const attendus = ["infirmier", "masseur-kinesitherapeute", "orthophoniste", "orthoptiste", "pedicure-podologue", "osteopathe", "psychologue", "psychotherapeute", "ergotherapeute", "dieteticien", "chiropracteur", "psychomotricien"]
-      for (const r of [regles2024, regles2025, regles2026]) expect(exoneres(r)).toEqual(attendus)
+      for (const { regles } of annees) expect(exoneres(regles)).toEqual(attendus)
       // Toute la santé de la CARPIMKO en est ; « autre profession réglementée » n'en est pas, elle peut n'être pas de santé.
       expect(regles2026.liberauxReglementes.professions.liste.filter(p => p.caisse === "CARPIMKO").every(p => p.soinsExoneresDeTVA)).toBe(true)
       expect(fichier2026.liberauxReglementes.professions.description).toContain("BOI-TVA-DECLA-40-10-10, § 230")

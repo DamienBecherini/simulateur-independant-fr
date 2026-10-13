@@ -4,6 +4,7 @@
 
 import { euros, pourcent } from "@/backend/logic/format"
 import type { ActivityResult, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS } from "@/types"
+import { LIBELLES_DES_COTISATIONS_TNS } from "@/backend/logic/libelles-des-cotisations"
 import { lignesDeLaCaisse } from "./professions"
 
 /** Une ligne du détail : « dont … », son montant et ce qui le précise (taux, assiette, prise en charge…). */
@@ -15,18 +16,8 @@ export interface LigneDuDetail {
 
 // --- Travailleur non salarié (entreprise individuelle au réel, gérant d'EURL) ---
 
-/** Les lignes du bloc des travailleurs non salariés, dans l'ordre d'un appel de cotisations. */
-const LIBELLES_TNS: Record<CotisationTNS, string> = {
-  maladieMaternite: "dont maladie-maternité",
-  indemnitesJournalieres: "dont indemnités journalières",
-  retraiteDeBase: "dont retraite de base",
-  retraiteComplementaire: "dont retraite complémentaire",
-  invaliditeDeces: "dont invalidité-décès",
-  allocationsFamiliales: "dont allocations familiales",
-  csgDeductible: "dont CSG déductible",
-  csgNonDeductibleEtCrds: "dont CSG non déductible et CRDS",
-  formationProfessionnelle: "dont formation professionnelle"
-}
+/** « dont … » : le nom de la cotisation passe en minuscule, sauf un sigle (CSG, CRDS). */
+const dont = (nom: string) => `dont ${/^[A-Z]{2,}/.test(nom) ? nom : nom.charAt(0).toLowerCase() + nom.slice(1)}`
 
 /** La formation professionnelle est un forfait sur le plafond de la sécurité sociale, pas un taux de l'assiette. */
 const PRECISION_DE_LA_FORMATION = "forfait annuel, dû même sans revenu"
@@ -47,8 +38,8 @@ function surLAssietteDeLAnnee(tns: DetailCotisationsTNS, cle: CotisationTNS): bo
  */
 function lignesDuTravailleurNonSalarie(tns: DetailCotisationsTNS): LigneDuDetail[] {
   const deLaCaisse = lignesDeLaCaisse(tns, euros)
-  const communes = (Object.keys(LIBELLES_TNS) as CotisationTNS[]).map(cle => {
-    const ligne = deLaCaisse.find(l => l.cle === cle) ?? { libelle: LIBELLES_TNS[cle], montant: tns.cotisations[cle], precision: null }
+  const communes = (Object.keys(LIBELLES_DES_COTISATIONS_TNS) as CotisationTNS[]).map(cle => {
+    const ligne = deLaCaisse.find(l => l.cle === cle) ?? { libelle: dont(LIBELLES_DES_COTISATIONS_TNS[cle]), montant: tns.cotisations[cle], precision: null }
     const taux = cle === "formationProfessionnelle" ? PRECISION_DE_LA_FORMATION : surLAssietteDeLAnnee(tns, cle) ? tauxSurLAssiette(ligne.montant, tns.assiette) : null
     return { libelle: ligne.libelle, montant: ligne.montant, precision: [taux, ligne.precision].filter(Boolean).join(" ; ") || null }
   })

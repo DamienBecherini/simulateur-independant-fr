@@ -5,13 +5,14 @@
 import { z } from "zod"
 import type { ActivityResult, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, FoyerFiscalResult, PersonResult, ReservesDeLaSociete, SessionState, SimulationReport } from "../../../types.js"
 import { pourcent, pourcentDeNombre } from "../format.js"
+import { LIBELLES_DES_COTISATIONS_TNS } from "../libelles-des-cotisations.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
 import { anneeDeLaSession, arrondir, ErreurOutil, genreDe, nomDe, trouverActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema } from "./limites.js"
 import { definirOutil, resultatSeul } from "./outil.js"
 
 /** Le rapport du moteur pour une année de la session (la plus récente sans année demandée). */
-export function rapportDeLAnnee(session: SessionState, annee?: number): SimulationReport {
+function rapportDeLAnnee(session: SessionState, annee?: number): SimulationReport {
   const anneeRetenue = anneeDeLaSession(session, annee)
   const resultat = simulerLesAnnees(session).annees.find(a => a.annee === anneeRetenue)
   if (!resultat?.report) throw new ErreurOutil(`L'année ${anneeRetenue} ne peut pas être simulée : ${resultat?.erreur ?? "erreur inconnue"}`)
@@ -118,18 +119,6 @@ export const syntheseDesAnnees = definirOutil({
 // == expliquer_resultat
 // ===================================================================================
 
-const LIBELLES_TNS: Record<CotisationTNS, string> = {
-  maladieMaternite: "Maladie-maternité",
-  indemnitesJournalieres: "Indemnités journalières",
-  retraiteDeBase: "Retraite de base",
-  retraiteComplementaire: "Retraite complémentaire",
-  invaliditeDeces: "Invalidité-décès",
-  allocationsFamiliales: "Allocations familiales",
-  csgDeductible: "CSG déductible",
-  csgNonDeductibleEtCrds: "CSG non déductible et CRDS",
-  formationProfessionnelle: "Formation professionnelle"
-}
-
 const LIBELLES_REGIME_GENERAL: Record<CotisationSalarie, string> = {
   maladie: "Maladie",
   vieillessePlafonnee: "Vieillesse plafonnée",
@@ -158,7 +147,7 @@ const ligne = (libelle: string, montant: number, composantes?: Ligne["composante
 const composante = (libelle: string, montant: number) => ({ libelle, montant: arrondir(montant) })
 
 function lignesTNS(detail: DetailCotisationsTNS): Ligne {
-  const composantes = (Object.keys(LIBELLES_TNS) as CotisationTNS[]).map(cle => composante(LIBELLES_TNS[cle], detail.cotisations[cle]))
+  const composantes = (Object.keys(LIBELLES_DES_COTISATIONS_TNS) as CotisationTNS[]).map(cle => composante(LIBELLES_DES_COTISATIONS_TNS[cle], detail.cotisations[cle]))
   // Profession libérale réglementée : l'ASV et la CURPS s'ajoutent aux lignes, comprises dans le total.
   const caisse = detail.caisse ? [composante("Avantage social vieillesse (ASV)", detail.caisse.asv), composante("CURPS", detail.caisse.curps)] : []
   const titre = detail.caisse ? `Cotisations du travailleur non salarié, ${detail.caisse.libelleProfession} (${detail.caisse.caisse})` : "Cotisations du travailleur non salarié"

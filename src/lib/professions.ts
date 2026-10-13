@@ -53,8 +53,8 @@ const INFORMATION_PAR_CAISSE: Record<CaisseLiberale, (regles: ReglesFiscales, re
   }
 }
 
-/** Ce que la ligne d'information ajoute pour une profession dont les soins sont exonérés de TVA (voir regles.ts). */
-export const SOINS_EXONERES_DE_TVA = "Soins exonérés de TVA (article 261, 4, 1° du CGI) : la franchise en base ne s'applique pas ; les recettes sans lien avec des soins (vente de produits, formations…) restent soumises."
+/** Ce que disent les textes d'une profession dont les soins sont exonérés de TVA (voir regles.ts) : la ligne d'information ci-dessous et les situations types de santé. */
+export const SOINS_EXONERES_DE_TVA = "exonérés de TVA (article 261, 4, 1° du code général des impôts), quel que soit le chiffre d'affaires ; les recettes sans lien avec des soins (vente de produits, par exemple) ne le sont pas. Le simulateur ne calcule pas la TVA."
 
 /**
  * La ligne d'information sous la liste : la caisse, la micro-entreprise possible ou non, les principaux taux de
@@ -67,7 +67,7 @@ export function informationSurLaProfession(activite: Pick<Company | MicroEntrepr
   if (!caisse) return "Caisse pas encore prise en compte par le simulateur : cotisations calculées comme pour une profession libérale non réglementée, avec un avertissement."
   const retraiteDeBase = `retraite de base des libéraux (${pourcent(regles.liberauxReglementes.commun.retraiteDeBase.tranches[0].taux)} jusqu'au plafond de la sécurité sociale)`
   const information = INFORMATION_PAR_CAISSE[caisse](regles, retraiteDeBase)
-  return profession.soinsExoneresDeTVA ? `${information} ${SOINS_EXONERES_DE_TVA}` : information
+  return profession.soinsExoneresDeTVA ? `${information} Soins ${SOINS_EXONERES_DE_TVA}` : information
 }
 
 /** La profession peut être conventionnée : le champ « part conventionnée » a un sens. */
