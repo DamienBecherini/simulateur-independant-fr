@@ -53,9 +53,12 @@ const INFORMATION_PAR_CAISSE: Record<CaisseLiberale, (regles: ReglesFiscales, re
   }
 }
 
+/** Ce que la ligne d'information ajoute pour une profession dont les soins sont exonérés de TVA (voir regles.ts). */
+export const SOINS_EXONERES_DE_TVA = "Soins exonérés de TVA (article 261, 4, 1° du CGI) : la franchise en base ne s'applique pas ; les recettes sans lien avec des soins (vente de produits, formations…) restent soumises."
+
 /**
- * La ligne d'information sous la liste : la caisse, la micro-entreprise possible ou non, et les principaux taux de
- * l'année des règles.
+ * La ligne d'information sous la liste : la caisse, la micro-entreprise possible ou non, les principaux taux de
+ * l'année des règles et, s'il y a lieu, l'exonération de TVA des soins.
  */
 export function informationSurLaProfession(activite: Pick<Company | MicroEntreprise, "profession">, regles: ReglesFiscales): string {
   const profession = professionDe(activite, regles)
@@ -63,7 +66,8 @@ export function informationSurLaProfession(activite: Pick<Company | MicroEntrepr
   const caisse = caisseDe(profession)
   if (!caisse) return "Caisse pas encore prise en compte par le simulateur : cotisations calculées comme pour une profession libérale non réglementée, avec un avertissement."
   const retraiteDeBase = `retraite de base des libéraux (${pourcent(regles.liberauxReglementes.commun.retraiteDeBase.tranches[0].taux)} jusqu'au plafond de la sécurité sociale)`
-  return INFORMATION_PAR_CAISSE[caisse](regles, retraiteDeBase)
+  const information = INFORMATION_PAR_CAISSE[caisse](regles, retraiteDeBase)
+  return profession.soinsExoneresDeTVA ? `${information} ${SOINS_EXONERES_DE_TVA}` : information
 }
 
 /** La profession peut être conventionnée : le champ « part conventionnée » a un sens. */

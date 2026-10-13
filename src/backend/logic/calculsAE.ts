@@ -17,6 +17,11 @@ export interface EntreesMicro {
   /** Part des plafonds du régime qui s'applique : moins de 1 l'année de création (prorata des jours d'activité). */
   prorataPlafonds?: number
   opteVFL: boolean
+  /**
+   * Les prestations BNC sont des soins exonérés de TVA (article 261, 4, 1° du CGI ; voir `soinsExoneresDeTVA` dans
+   * les professions) : elles ne comptent pas pour la franchise en base.
+   */
+  soinsExoneresDeTVA?: boolean
 }
 
 /** Chiffre d'affaires d'une micro-entreprise, par nature d'activité. */
@@ -78,9 +83,11 @@ function verifierPlafonds(entrees: EntreesMicro, plafonds: ReglesMicro["plafonds
  * Franchise en base de TVA : comme pour les plafonds, les prestations de services sont comparées au seuil des services
  * et le chiffre d'affaires total à celui de la vente. Le seuil majoré fait perdre la franchise immédiatement,
  * le seuil de base seulement l'année suivante. La TVA n'est pas calculée : les montants saisis sont hors taxe.
+ * Les soins exonérés ne comptent pas (BOI-TVA-DECLA-40-10-10, § 230) : pour une profession dont les soins le sont, les
+ * prestations BNC sont tenues pour des soins, et seules les ventes et les prestations BIC sont comparées aux seuils.
  */
 function verifierFranchiseTVA(entrees: EntreesMicro, seuils: ReglesFiscales["TVA"]): string[] {
-  const caServices = entrees.caServicesBic + entrees.caServicesBnc
+  const caServices = entrees.caServicesBic + (entrees.soinsExoneresDeTVA ? 0 : entrees.caServicesBnc)
   const caTotal = entrees.caVente + caServices
   const depasse = (seuil: "franchiseBase" | "seuilMajore") => {
     const depassements: string[] = []

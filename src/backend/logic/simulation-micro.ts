@@ -87,7 +87,8 @@ export function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): A
       beneficieACRE: micro.beneficieACRE,
       ...(acre ? { caSousACRE: acre.chiffreAffaires, reductionACRE: acre.reduction } : {}),
       prorataPlafonds: prorata,
-      opteVFL: vfl.applique
+      opteVFL: vfl.applique,
+      soinsExoneresDeTVA: profession?.soinsExoneresDeTVA ?? false
     },
     reglesMicro
   )
