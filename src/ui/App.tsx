@@ -1,6 +1,6 @@
 // src/ui/App.tsx
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useState, useCallback, useMemo, useRef } from "react"
 import EntitiesManager from "./components/EntitiesManager"
 import { ThemeToggle } from "./components/ThemeToggle"
 import Footer from "./components/Footer"
@@ -49,6 +49,7 @@ import { ANCRES, lienVers } from "@/lib/ancres"
 import { RelectureDesPropositions } from "./components/RelectureDesPropositions"
 import { usePropositionsEnAttente } from "./hooks/usePropositionsEnAttente"
 import { useRaccourcisDAnnulation } from "./hooks/useRaccourcisDAnnulation"
+import { useCalculDiffere } from "./hooks/useCalculDiffere"
 import { numerosDesTypesDeFlux } from "@/lib/grille-mensuelle"
 
 /** En-tête de la page : dans l'affichage « Résumé », un titre plus petit et sans sous-titre à l'écran. */
@@ -86,14 +87,17 @@ function App() {
   // Les montages types ouverts depuis le menu « Plus d'actions » d'un téléphone ; le focus revient à ce menu.
   const [montagesDuMenu, setMontagesDuMenu] = useState(false)
   const declencheurDesMontages = useRef<HTMLElement | null>(null)
-  const [simulation, setSimulation] = useState<SimulationPluriannuelle | null>(null)
-  const [simulationError, setSimulationError] = useState<string | null>(null)
 
   // Session, historique d'annulation, sauvegardes et préférences (voir useSessionManager).
   const { currentSession, setCurrentSession, setComparateur, allSaveSlots, setAllSaveSlots, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, handleLoadMontage, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot, sessionChargee } = useSessionManager()
 
   // Propositions d'un client d'IA déposées par le serveur MCP local (application de bureau seulement, voir l'ADR 011).
   const { propositions, retirer: retirerProposition } = usePropositionsEnAttente(sessionChargee)
+
+  // La simulation de toutes les années est recalculée automatiquement, peu après chaque modification de la session ;
+  // en cas d'échec, les résultats précédents, périmés, ne restent pas affichés.
+  const simuler = useCallback(() => window.api.simulerLesAnnees(currentSession), [currentSession])
+  const { resultat: simulation, erreur: simulationError } = useCalculDiffere(simuler, { echec: "La simulation a échoué.", effacerEnCasDEchec: true })
 
   // L'année affichée : celle de la grille, des résultats, du comparateur et des exports. Elle n'est pas enregistrée
   // dans la session (voir l'ADR 008) ; par défaut, ou si elle disparaît, c'est la plus récente.
@@ -117,27 +121,6 @@ function App() {
   const enTete = resume ? EN_TETE_RESUME : EN_TETE_CLASSIQUE
   // Diagnostic proposé avec un avis : aucune donnée de la simulation, seulement des nombres d'années et d'acteurs.
   const diagnostic: Diagnostic = { version: VERSION_DE_L_APPLICATION, web: plateforme.web, installee: plateforme.installee(), ...systemeEtNavigateur(navigator.userAgent), affichageEnCours: affichage, nombreDAnnees: currentSession.annees.length, nombreDActeurs: currentSession.entities.length }
-
-  // La simulation de toutes les années est recalculée automatiquement, peu après chaque modification de la session.
-  useEffect(() => {
-    let cancelled = false
-    const timer = setTimeout(async () => {
-      try {
-        const resultat = await window.api.simulerLesAnnees(currentSession)
-        if (cancelled) return
-        setSimulation(resultat)
-        setSimulationError(null)
-      } catch (e) {
-        if (cancelled) return
-        setSimulationError(e instanceof Error ? e.message : "La simulation a échoué.")
-        setSimulation(null)
-      }
-    }, 300)
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [currentSession])
 
   const handleExportAll = useCallback(async () => {
     const exportPayload = {

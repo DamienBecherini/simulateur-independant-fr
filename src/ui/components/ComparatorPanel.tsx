@@ -1,6 +1,6 @@
 // src/ui/components/ComparatorPanel.tsx
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, type ReactNode } from "react"
 import { useOptimisation } from "../hooks/useOptimisation"
 import { appliquerRemuneration, avecActiviteComparee, avecReglagesDeLActivite, comparableActivities, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
@@ -18,6 +18,7 @@ import { ZoneDefilante } from "./ZoneDefilante"
 import { BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { useAffichageResume } from "../hooks/useAffichage"
+import { useCalculDiffere } from "../hooks/useCalculDiffere"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
 import { ANCRES } from "@/lib/ancres"
 import { avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
@@ -348,27 +349,8 @@ function ComparisonResults({ result, activityName, onExporter }: { result: Compa
 
 /** Recalcule la comparaison peu après chaque modification de la session ou des réglages. */
 function useComparison(session: SessionState, options: ComparaisonOptions, annee: number) {
-  const [result, setResult] = useState<ComparaisonResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    const timer = setTimeout(async () => {
-      try {
-        const comparison = await window.api.compareStatuts(session, options, annee)
-        if (cancelled) return
-        setResult(comparison)
-        setError(null)
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "La comparaison a échoué.")
-      }
-    }, 300)
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [session, options, annee])
-
+  const comparer = useCallback(() => window.api.compareStatuts(session, options, annee), [session, options, annee])
+  const { resultat: result, erreur: error } = useCalculDiffere(comparer, { echec: "La comparaison a échoué." })
   return { result, error }
 }
 
