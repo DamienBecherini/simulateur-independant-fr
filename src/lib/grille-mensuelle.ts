@@ -26,7 +26,7 @@ export interface SegmentDeFlux {
 }
 
 /** Une case de la grille : ses segments de gains et de dépenses, leurs totaux et le nombre de flux saisis. */
-export interface CaseDeLaGrille {
+interface CaseDeLaGrille {
   gains: SegmentDeFlux[]
   expenses: SegmentDeFlux[]
   totalGains: number

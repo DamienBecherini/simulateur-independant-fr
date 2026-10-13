@@ -4,7 +4,7 @@
 // comptées depuis le bord gauche du contenu qui défile (comme `offsetLeft` et `scrollLeft`).
 
 /** Une colonne de mois de la grille. */
-export interface ColonneDuMois {
+interface ColonneDuMois {
   gauche: number
   largeur: number
 }

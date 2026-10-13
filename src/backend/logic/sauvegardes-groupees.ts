@@ -45,7 +45,7 @@ export interface RapportLecture {
 
 export type ResultatLecture = { ok: true; slots: SaveSlot[]; rapport: RapportLecture } | { ok: false; erreur: string }
 
-export interface Renommage {
+interface Renommage {
   ancienNom: string
   nouveauNom: string
 }

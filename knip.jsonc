@@ -1,0 +1,30 @@
+{
+  // Code mort : fichiers, dépendances et exports que rien n'utilise. Lancé par « npm run code-mort » et par la CI.
+  // Les plugins de knip (Vite, Vitest, Playwright, ESLint, Stryker…) déclarent déjà leurs fichiers de configuration
+  // et de tests ; ne sont listés ici que les points d'entrée qu'aucun outil ne désigne.
+  "$schema": "https://unpkg.com/knip@6.38.0/schema.json",
+  "entry": [
+    // Process principal d'Electron (« main » de package.json) et son script de préchargement.
+    "src/backend/main.ts",
+    "src/backend/preload.cts",
+    // Serveur MCP : empaqueté par scripts/empaqueter-serveur-mcp.mjs, jamais importé par le reste du code.
+    "src/backend/mcp/serveur.ts",
+    // Racine de composition de la démo en ligne (index.html charge src/ui/main.tsx pour le bureau).
+    "src/web/main.tsx",
+    // Service worker de la démo : compilé par esbuild dans vite-plugin-demo-installable.ts.
+    "src/web/pwa/service-worker.ts",
+    // Scripts lancés à la main ou par la CI.
+    "scripts/*.mjs",
+    "scripts/retours/*.mjs",
+    // Outil manuel de concaténation du code compilé (comme concat_code.cjs, lancé par « npm run concat »).
+    "concat_dist_electron.cjs",
+    // Chargé dans Electron par les tests de bout en bout (option --require), son chemin est construit dans fixtures.ts.
+    "e2e/support/neutraliser-dialogues.cjs"
+  ],
+  // Pièces du kit shadcn/ui : on garde le kit complet, comme son modèle, plutôt que de retirer une pièce à la fois.
+  "ignoreIssues": { "src/components/ui/**": ["exports"] },
+  "ignoreDependencies": [
+    // Police chargée par des url() de src/ui/App.css, un fichier CSS que knip ne suit pas.
+    "@fontsource-variable/inter"
+  ]
+}

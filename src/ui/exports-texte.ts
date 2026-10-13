@@ -13,7 +13,7 @@ import { rapportMarkdown, type ComparaisonDuRapport } from "@/lib/export-markdow
 import type { ComparaisonOptions, ComparaisonResult, FormatFichierTexte, OptimisationRemuneration, SessionState, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 
 /** Enregistre un fichier texte et dit si c'est fait ; rien n'est signalé si l'utilisateur annule. */
-export async function enregistrerExport(defaultName: string, content: string, format: FormatFichierTexte): Promise<void> {
+async function enregistrerExport(defaultName: string, content: string, format: FormatFichierTexte): Promise<void> {
   try {
     const enregistre = await window.api.saveTextFile({ defaultName, content, format })
     if (enregistre) toast.success(`Export enregistré : ${defaultName}`)

@@ -15,7 +15,7 @@
 import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState, type Ref } from "react"
 
 /** Contenus des couches de Radix, repérés par l'attribut data-slot de nos composants. */
-const COUCHES = ["dialog-content", "alert-dialog-content", "sheet-content", "select-content"].map(nom => `[data-slot="${nom}"]`).join(",")
+const COUCHES = ["dialog-content", "sheet-content", "select-content"].map(nom => `[data-slot="${nom}"]`).join(",")
 
 /** La couche qui contient la cible de l'événement (le focus, pour une touche), ou null. */
 const coucheVisee = (cible: EventTarget | null): Element | null => (cible instanceof Element ? cible.closest(COUCHES) : null)

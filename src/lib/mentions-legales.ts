@@ -12,7 +12,7 @@ export interface Lien {
 }
 
 /** Un nom de dossier ou de fichier, à lire tel quel. */
-export interface Code {
+interface Code {
   code: string
 }
 

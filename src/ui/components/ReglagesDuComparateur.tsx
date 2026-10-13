@@ -27,7 +27,7 @@ const MODES = Object.keys(libellesCourtsRepartition) as ModeRepartition[]
  * boutons, puis deux) dont les libellés vont à la ligne au besoin : elle tient aussi avec une police large. La phrase de chaque mode le décrit (aria-describedby) et
  * s'affiche au survol ; celle du mode choisi est écrite sous les boutons.
  */
-export function ChoixDeLaRepartition({ mode, avecRetraite, onChange }: { mode: ModeRepartition; avecRetraite: boolean; onChange: (mode: ModeRepartition) => void }) {
+function ChoixDeLaRepartition({ mode, avecRetraite, onChange }: { mode: ModeRepartition; avecRetraite: boolean; onChange: (mode: ModeRepartition) => void }) {
   return (
     <fieldset className="min-w-0 max-w-full space-y-1">
       <legend className="mb-1 text-sm font-medium leading-none">Bénéfice de la société (SASU, EURL)</legend>

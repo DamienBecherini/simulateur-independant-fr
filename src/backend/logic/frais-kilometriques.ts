@@ -61,7 +61,7 @@ export function distancesParVoiture(trajets: (TrajetDomicileTravail & Vehicule)[
 }
 
 /** Une voiture des trajets domicile-travail : la distance retenue avec elle dans l'année et son montant au barème. */
-export interface VoitureDesTrajets extends Vehicule {
+interface VoitureDesTrajets extends Vehicule {
   distance: number
   montant: number
 }

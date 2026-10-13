@@ -58,7 +58,7 @@ export interface OptionsDuServeur {
  * propositions. Sans schéma de sortie (voir `reponse`) : la liste, envoyée au modèle à chaque échange, en est presque
  * deux fois plus légère.
  */
-export function outilsPublies(): Tool[] {
+function outilsPublies(): Tool[] {
   return catalogueDesOutils().map(outil => {
     const appliquer = outil.nom === APPLIQUER
     // Seul appliquer_proposition écrit quelque chose : un fichier dans la boîte aux propositions, jamais deux fois le
@@ -109,7 +109,7 @@ async function envoyer(dossier: string, argumentsDeLAppel: unknown, resultat: Re
 }
 
 /** Exécute un outil sur la session enregistrée. Ne lève jamais : une erreur devient un résultat `isError`, en français. */
-export async function appelerOutil(dossier: string, nom: string, argumentsDeLAppel: unknown, maintenant: () => Date = () => new Date()): Promise<CallToolResult> {
+async function appelerOutil(dossier: string, nom: string, argumentsDeLAppel: unknown, maintenant: () => Date = () => new Date()): Promise<CallToolResult> {
   try {
     const { session, enregistreeLe } = await lireLaSessionEnregistree(dossier)
     const execution = executerOutil(nom, session, argumentsDeLAppel ?? {})

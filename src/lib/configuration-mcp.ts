@@ -48,15 +48,15 @@ export function infosDeLInstallation({ executable, serveurLivre, donnees, platef
 }
 
 /** Où la version du Microsoft Store copie le serveur MCP : dans son dossier de données, sous Windows. */
-export function copieDuServeur(donnees: string): string {
+function copieDuServeur(donnees: string): string {
   return String.raw`${donnees}\mcp\serveur-mcp.mjs`
 }
 
 /** Nom du serveur dans la configuration du client. */
-export const NOM_DU_SERVEUR_MCP = "simulateur-independant-fr"
+const NOM_DU_SERVEUR_MCP = "simulateur-independant-fr"
 
 /** L'entrée du serveur dans `mcpServers` : la notation commune à Claude Desktop, LM Studio, Cursor et la plupart des clients. */
-export function entreeDuServeur({ executable, script, donnees }: InfosDuServeurMcp) {
+function entreeDuServeur({ executable, script, donnees }: InfosDuServeurMcp) {
   return { command: executable, args: [script, "--donnees", donnees], env: { ELECTRON_RUN_AS_NODE: "1" } }
 }
 

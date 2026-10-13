@@ -24,7 +24,7 @@ interface ExportDialogProps {
 }
 
 /** Un format d'export : son nom, ce qu'il contient, et l'action qui le produit. */
-export function OptionExport({ titre, description, onClick }: { titre: string; description: string; onClick: () => void }) {
+function OptionExport({ titre, description, onClick }: { titre: string; description: string; onClick: () => void }) {
   return (
     <li>
       <button type="button" onClick={onClick} className="w-full rounded-md border border-slate-200 px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 dark:border-slate-700 dark:hover:bg-slate-800">

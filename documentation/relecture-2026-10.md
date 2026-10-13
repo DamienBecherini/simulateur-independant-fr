@@ -640,21 +640,21 @@ Même principe qu'au § 6 : des branches courtes, testées et fusionnées dans `
 
 | Ordre | Branche | Contenu | Effort | Risque | Tests à ajouter ou adapter |
 |---|---|---|---|---|---|
-| 1 | `guide-suivi-octobre` | D-S1 à D-S4 : quatre procédures (situation type, question de départ, entrée de la barre de résumé, profession), table du § 3.4, dépendances du process principal (avec la règle ESLint), tailles du catalogue. | S | nul | — (procédures suivies puis annulées) |
+| 1 | `guide-suivi-octobre` | D-S1 à D-S4 : quatre procédures (situation type, question de départ, entrée de la barre de résumé, profession), table du § 3.4, dépendances du process principal (avec la règle ESLint), tailles du catalogue. **Faite le 13/10/2026** (procédures 3.11 à 3.14 du guide ; la règle ESLint du process principal est posée ; la procédure de la barre de résumé renvoie à `ancres-nommees`, à relire après elle). | S | nul | — (procédures suivies puis annulées) |
 | 2 | `ancres-nommees` | S4 : registre `ANCRES`, `DETAILS` exhaustif, `ancre: Ancre` dans les questions. | S | faible | Chaque ancre de `DETAILS` existe dans la page rendue, en « Résumé » et en « Trois vues ». |
 | 3 | `calcul-differe` | S3 : `useCalculDiffere`, utilisé par l'application, le comparateur, « Sur toutes les années » et l'optimiseur. | S | faible (minutage) | Hook testé avec une horloge simulée ; tests existants inchangés. |
 | 4 | `app-allegee` | S1 : `BarreDOutils`, `avecLesQuestions` dans `src/lib`, `useSimulationDesAnnees`. | M | moyen (focus, téléphone) | `App.*.test.tsx` ; tests de bout en bout de la barre et du téléphone. |
-| 5 | `panneaux-decoupes` | S2 : déplacement pur, à la prochaine fonction qui touche ces fichiers. | S | faible | Aucun. |
-| 6 | `menage-de-suivi` | S5 (selon la décision 1), S6, S7, S8. | S | faible | `regles.test.ts` parcourt `annees`. |
-| — | au fil de l'eau | S9 ; découpage de `types.ts` avec la prochaine évolution du format (décision 3). | S / M | faible | — |
-| 11 | `noms-en-francais` (§ 6) | Toujours ouverte (décision 5 du § 6). | M | faible | Aucun. |
+| 5 | `panneaux-decoupes` | S2 : déplacement pur, à la prochaine fonction qui touche ces fichiers (décision du 13/10/2026 : pas de branche isolée). | S | faible | Aucun. |
+| 6 | `menage-de-suivi` | S5 (selon la décision 1), S6, S7, S8. **Faite le 13/10/2026** : `alert-dialog.tsx` et `@radix-ui/react-alert-dialog` retirés (S5) ; exports et types exportés inutilisés ramenés à zéro avec knip 6.38.0, `@dnd-kit/utilities` déclaré, `@types/os-utils` retiré (S6) ; libellés des cotisations non salariées dans `logic/libelles-des-cotisations.ts` et texte de l'exonération des soins en un seul endroit (S7) ; `regles.test.ts` parcourt `annees` (S8) ; knip dans la CI (`npm run code-mort`, `knip.jsonc`). | S | faible | `regles.test.ts` parcourt `annees`. |
+| — | au fil de l'eau | S9 ; découpage de `types.ts` avec la prochaine évolution du format (décision 3, confirmée le 13/10/2026). | S / M | faible | — |
+| 11 | `noms-en-francais` (§ 6) | Décision du 13/10/2026 : au fil des branches, sans branche dédiée ; un nom anglais se renomme quand une branche touche déjà son fichier. | M | faible | Aucun. |
 | 12 | `typescript-7` (§ 6) | Toujours bloquée : typescript-eslint 8.71.2, dernière version au 13 octobre, demande `typescript >=4.8.4 <6.1.0`. | — | — | — |
 
-**Points qui demandent une décision du propriétaire :**
+**Points qui demandaient une décision du propriétaire.** Décisions prises le 13/10/2026 :
 
-1. `alert-dialog.tsx` : le retirer avec sa dépendance, ou l'employer pour les confirmations (S5).
-2. knip : l'ajouter à la CI avec une configuration (points d'entrée d'Electron, du serveur MCP et du service worker), ou le lancer à chaque relecture de suivi seulement (S6).
-3. `types.ts` : le découper avec la prochaine évolution du format de fichier (recommandé), maintenant, ou jamais (§ 9.5).
-4. `ComparatorPanel` et `ResultsPanel` : les découper à la prochaine fonction qui les touche (recommandé) ou dès maintenant (S2).
-5. Barre de résumé : remonter le calcul de la comparaison au niveau d'`App` si une troisième réponse du comparateur la rejoint (K10).
-6. Rappel : les renommages en français (C15, décision 5 du § 6) attendent toujours une décision.
+1. `alert-dialog.tsx` : **retiré** avec sa dépendance (S5). Fait par `menage-de-suivi`.
+2. knip : **ajouté à la CI**, avec une configuration (`knip.jsonc` : points d'entrée du process principal d'Electron, de son préchargement, du serveur MCP, de la racine de la démo et du service worker) et le script `npm run code-mort` (S6). Fait par `menage-de-suivi`. Gardé malgré knip, dans `knip.jsonc`, avec sa raison : les pièces du kit shadcn/ui (`src/components/ui/`, exports non utilisés) et `@fontsource-variable/inter`, que seul un fichier CSS charge.
+3. `types.ts` : **découpé avec la prochaine évolution du format de fichier**, dans la branche qui la prépare, pas avant (§ 9.5).
+4. `ComparatorPanel` et `ResultsPanel` : **découpés à la prochaine fonction qui les touche**, pas avant (S2).
+5. Barre de résumé : toujours à décider si une troisième réponse du comparateur la rejoint (K10) ; le guide (§ 3.13) le dit.
+6. Les renommages en français (C15, décision 5 du § 6) : **au fil des branches**, sans branche dédiée (ligne 11 du plan).

@@ -82,7 +82,7 @@ export function environnementDuRetour(retour: Retour, diagnostic: Diagnostic): s
 }
 
 /** Lignes du diagnostic joint : affichage en cours, nombres d'années et d'acteurs. Jamais de montant ni de nom. */
-export function lignesDuDiagnostic(diagnostic: Diagnostic): string[] {
+function lignesDuDiagnostic(diagnostic: Diagnostic): string[] {
   return [`Affichage en cours : ${libelleDeLAffichage(diagnostic.affichageEnCours)}`, `Années simulées : ${diagnostic.nombreDAnnees}`, `Acteurs : ${diagnostic.nombreDActeurs}`]
 }
 

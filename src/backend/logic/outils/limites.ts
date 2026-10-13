@@ -45,7 +45,7 @@ export function texteSansControle(texte: string): boolean {
 }
 
 /** Un texte court, une seule ligne, sans caractère de contrôle, espaces de début et de fin retirés. */
-export function texteCourt(quoi: string, longueurMax: number) {
+function texteCourt(quoi: string, longueurMax: number) {
   return z
     .string()
     .trim()
@@ -67,7 +67,7 @@ export const MontantSchema = z
 export const AnneeSchema = z.number().int().min(1900).max(2200).describe(`Année civile, par exemple ${ANNEE_COURANTE}.`)
 
 /** Mois du calendrier, de 1 (janvier) à 12 (décembre) ; la grille de la session les range de 0 à 11. */
-export const MoisSchema = z.number().int().min(1, "Mois : de 1 (janvier) à 12 (décembre).").max(12, "Mois : de 1 (janvier) à 12 (décembre).")
+const MoisSchema = z.number().int().min(1, "Mois : de 1 (janvier) à 12 (décembre).").max(12, "Mois : de 1 (janvier) à 12 (décembre).")
 
 export const ListeDeMoisSchema = z
   .array(MoisSchema)

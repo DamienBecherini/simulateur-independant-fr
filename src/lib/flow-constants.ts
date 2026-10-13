@@ -77,14 +77,14 @@ export const flowTypeShortLabels: Record<FlowType, string> = {
 /**
  * Types de dépenses : flux comptés côté « dépenses » dans la grille annuelle et la légende.
  */
-export const expenseFlowTypes: ReadonlyArray<FlowType> = ["deductible_expense", "expense"]
+const expenseFlowTypes: ReadonlyArray<FlowType> = ["deductible_expense", "expense"]
 
 /**
  * Sorties d'argent du point de vue de l'entité : les dépenses, plus la rémunération
  * du dirigeant et les dividendes versés par une société. Détermine l'icône gain/dépense
  * affichée à la saisie.
  */
-export const outgoingFlowTypes: ReadonlyArray<FlowType> = [...expenseFlowTypes, "director_remuneration", "dividends_payment"]
+const outgoingFlowTypes: ReadonlyArray<FlowType> = [...expenseFlowTypes, "director_remuneration", "dividends_payment"]
 
 export const isExpenseFlowType = (type: FlowType): boolean => expenseFlowTypes.includes(type)
 

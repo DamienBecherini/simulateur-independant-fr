@@ -18,7 +18,7 @@ import type { Entity, Relationship, SimulationReport } from "../../../types.js"
  */
 
 /** Année des règles avec lesquelles tous les montants attendus ont été dérivés à la main ; ne change jamais. */
-export const ANNEE_DES_CAS = 2026
+const ANNEE_DES_CAS = 2026
 
 /** Les règles de 2026, lues dans leur fichier : jamais les dernières connues, qui changeront avec les années. */
 export const REGLES_DES_CAS = reglesPubliees(ANNEE_DES_CAS)

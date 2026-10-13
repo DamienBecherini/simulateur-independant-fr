@@ -40,6 +40,10 @@ jobs:
       - name: Lint (ESLint, complexité comprise)
         run: npm run lint
 
+      # Fichiers, dépendances et exports que rien n'utilise (configuration : knip.jsonc).
+      - name: Code mort (knip)
+        run: npm run code-mort
+
       - name: Vérifier les types de l'interface
         run: npm run typecheck
 

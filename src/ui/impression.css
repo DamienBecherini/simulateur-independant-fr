@@ -75,7 +75,6 @@
   [role="alertdialog"],
   [data-slot="dialog-overlay"],
   [data-slot="sheet-overlay"],
-  [data-slot="alert-dialog-overlay"],
   [data-radix-popper-content-wrapper],
   [data-sonner-toaster] {
     display: none !important;

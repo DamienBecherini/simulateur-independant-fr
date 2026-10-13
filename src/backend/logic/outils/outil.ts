@@ -67,7 +67,7 @@ export function problemes(erreur: z.ZodError): string {
 }
 
 /** Valide une valeur avec un schéma, messages en français ; lève `ParametresInvalides` si elle est refusée. */
-export function valider<S extends z.ZodType>(schema: S, valeur: unknown, quoi: string): z.output<S> {
+function valider<S extends z.ZodType>(schema: S, valeur: unknown, quoi: string): z.output<S> {
   const verdict = schema.safeParse(valeur, { error: messagesEnFrancais })
   if (verdict.success) return verdict.data
   throw new ParametresInvalides(`${quoi} invalides :\n${problemes(verdict.error)}`)

@@ -17,7 +17,7 @@ export interface EtatDuDefilement {
 const ETAT_INITIAL: EtatDuDefilement = { deborde: false, visibles: [], auDebut: true, aLaFin: true, colonneFixe: 0 }
 
 /** Mesure la zone qui défile ; `null` tant que la grille n'a pas ses douze mois. */
-export function mesurerLaGrille(zone: HTMLElement): GeometrieDeLaGrille | null {
+function mesurerLaGrille(zone: HTMLElement): GeometrieDeLaGrille | null {
   const mois = Array.from(zone.querySelectorAll<HTMLElement>("[data-mois]"), cellule => ({ gauche: cellule.offsetLeft, largeur: cellule.offsetWidth }))
   if (mois.length !== 12) return null
   const colonneFixe = zone.querySelector<HTMLElement>("[data-colonne-fixe]")?.offsetWidth ?? 0

@@ -37,14 +37,14 @@ export const OUTILS: readonly Outil[] = [
   appliquerProposition
 ]
 
-export type JsonSchema = Record<string, unknown>
+type JsonSchema = Record<string, unknown>
 
 /**
  * Schéma JSON des paramètres d'un outil, tel qu'un client d'IA l'attend. Le schéma du résultat n'est pas publié : il
  * pesait autant que celui des paramètres, et le modèle lit les champs dans le JSON rendu (les descriptions expliquent
  * ceux qui le demandent) ; son schéma Zod sert aux tests.
  */
-export function schemaJson(schema: z.ZodType): JsonSchema {
+function schemaJson(schema: z.ZodType): JsonSchema {
   // La version du format (« $schema ») est retirée : MCP et les fournisseurs attendent l'objet seul.
   const json = z.toJSONSchema(schema, { io: "input", unrepresentable: "any" }) as JsonSchema
   delete json.$schema

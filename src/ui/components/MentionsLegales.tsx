@@ -71,7 +71,7 @@ interface FenetreDesMentionsLegalesProps {
 }
 
 /** La fenêtre des mentions légales ; à l'ouverture, le focus va au titre, pour que la lecture parte du début. */
-export function FenetreDesMentionsLegales({ open, onOpenChange, declencheur }: FenetreDesMentionsLegalesProps) {
+function FenetreDesMentionsLegales({ open, onOpenChange, declencheur }: FenetreDesMentionsLegalesProps) {
   const titre = useRef<HTMLHeadingElement>(null)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

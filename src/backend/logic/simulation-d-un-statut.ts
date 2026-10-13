@@ -85,7 +85,7 @@ export function beneficeAvantDividendes(colonne: ColonneEtudiee, statut: StatutS
 }
 
 /** Bénéfice distribuable de l'année de l'activité dans un rapport : après IS et réserve légale, pertes antérieures déduites. */
-export function beneficeDistribuableDeLAnnee(report: SimulationReport, activiteId: string): number {
+function beneficeDistribuableDeLAnnee(report: SimulationReport, activiteId: string): number {
   return report.activities.find(a => a.entityId === activiteId)?.reserves?.beneficeDistribuableDeLAnnee ?? 0
 }
 

@@ -10,13 +10,13 @@
 // textes et zones cliquables gardent leur taille.
 
 /** Largeur de fenêtre à partir de laquelle la mise en page large s'applique (point de rupture `sm` de Tailwind). */
-export const POINT_DE_RUPTURE = 640
+const POINT_DE_RUPTURE = 640
 /** Largeur effective minimale, en pixels CSS, de la mise en page compacte. */
 export const LARGEUR_MINIMALE = 320
 /** Largeur effective minimale, en pixels CSS, de la mise en page large. */
 export const LARGEUR_MINIMALE_LARGE = 460
 export const ZOOM_MINIMAL = 0.5
-export const ZOOM_MAXIMAL = 2
+const ZOOM_MAXIMAL = 2
 export const PAS_DE_ZOOM = 0.1
 
 const arrondi = (zoom: number) => Math.round(zoom * 100) / 100

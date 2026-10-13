@@ -9,13 +9,13 @@ import { useAffichageResume } from "./useAffichage"
 import { useSectionOuverte } from "./useSectionOuverte"
 
 /** Identifiant sous lequel l'état du détail des cartes est retenu. */
-export const ID_DU_DETAIL_DES_CARTES = "details-des-cartes"
+const ID_DU_DETAIL_DES_CARTES = "details-des-cartes"
 
 /**
  * Détail des cartes, retenu dans les préférences : ouvert d'office dans l'affichage classique (la page d'origine, tout
  * affiché), fermé dans les affichages qui replient le détail, tant que l'utilisateur n'a pas choisi.
  */
-export function useEtatDuDetail(): [boolean, (ouvert: boolean) => void] {
+function useEtatDuDetail(): [boolean, (ouvert: boolean) => void] {
   return useSectionOuverte(ID_DU_DETAIL_DES_CARTES, !useAffichageResume())
 }
 

@@ -7,6 +7,7 @@
 import { euros, pourcent } from "@/backend/logic/format"
 import { reglesPubliees } from "@/backend/logic/regles"
 import type { SessionState } from "@/types"
+import { SOINS_EXONERES_DE_TVA } from "../professions"
 import { ANNEE_DES_MONTAGES, comparateurAuMeilleurNet, microEntreprise, personne, relation, sessionDuMontage, societe, type ContenuDuMontage, type FluxDuMontage } from "./construction"
 
 /** Les règles de l'année des montages, d'où viennent les taux et seuils cités. */
@@ -16,7 +17,7 @@ const { IS, dividendes: DIVIDENDES } = REGLES
 const { CIPAV, CARPIMKO, commun: LIBERAUX } = REGLES.liberauxReglementes
 
 /** Un lien vers une page officielle qui fonde une explication. */
-export interface SourceOfficielle {
+interface SourceOfficielle {
   libelle: string
   url: string
 }
@@ -413,9 +414,6 @@ const salariePlusMicro: MontageType = {
     ]
   })
 }
-
-/** Phrase commune aux deux professions de santé : leurs soins sont exonérés de TVA. */
-const SOINS_EXONERES_DE_TVA = "exonérés de TVA (article 261, 4, 1° du code général des impôts), quel que soit le chiffre d'affaires ; les recettes sans lien avec des soins (vente de produits, par exemple) ne le sont pas. Le simulateur ne calcule pas la TVA."
 
 const osteopatheMicro: MontageType = {
   id: "osteopathe-micro",

@@ -62,7 +62,7 @@ export function repartirSurLAnnee(grille: MonthlyGridData, flux: FinancialFlow, 
 }
 
 /** Même série : même acteur, même type et même libellé ; le montant peut varier d'un mois à l'autre (loyer augmenté). */
-export const memeSerie = (a: FinancialFlow, b: FinancialFlow) => a.entityId === b.entityId && a.type === b.type && a.label === b.label
+const memeSerie = (a: FinancialFlow, b: FinancialFlow) => a.entityId === b.entityId && a.type === b.type && a.label === b.label
 
 /** Changements que l'on peut reporter sur les autres flux d'une série. */
 export type ChangementsDeFlux = Partial<Pick<FinancialFlow, "type" | "label" | "amount" | "grossAmount">>

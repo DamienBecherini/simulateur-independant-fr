@@ -17,7 +17,7 @@ const RACINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..
 const NEUTRALISER_DIALOGUES = path.join(RACINE, "e2e/support/neutraliser-dialogues.cjs")
 
 /** Boîte de dialogue native interceptée pendant le test (voir `neutraliser-dialogues.cjs`). */
-export interface DialogueIntercepte {
+interface DialogueIntercepte {
   type: "message" | "erreur"
   title: string
   message: string

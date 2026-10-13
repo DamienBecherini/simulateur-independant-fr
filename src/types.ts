@@ -53,7 +53,7 @@ export function estStatutJuridique(statut: string): statut is StatutJuridique {
 /** Les sociétés à l'IS, dans l'ordre de `STATUTS_JURIDIQUES` (SASU, puis EURL). */
 export const STATUTS_SOCIETE = STATUTS_JURIDIQUES.filter(estSocieteIS)
 
-export const AvatarSchema = z.object({
+const AvatarSchema = z.object({
   type: z.enum(["initials", "icon"]),
   value: z.string(),
   color: z.string().startsWith("#").length(7)
@@ -69,7 +69,7 @@ const champsVehicule = {
  * Un trajet domicile-travail d'une personne vers l'un de ses lieux de travail (plusieurs employeurs, un salaire et une
  * rémunération de dirigeant…) : un aller-retour par jour travaillé sur ce lieu, avec une voiture personnelle.
  */
-export const TrajetSchema = z.object({
+const TrajetSchema = z.object({
   /** Nom libre du lieu de travail ou de l'employeur, pour distinguer les trajets entre eux. */
   libelle: z.string().default(""),
   /** Distance d'un aller simple entre le domicile et le lieu de travail, en kilomètres. */
@@ -99,7 +99,7 @@ function versListeDeTrajets(valeur: unknown): unknown {
  * seule la déduction forfaitaire de 10 % s'applique. L'option vaut pour tous ces revenus à la fois, quel que soit le
  * nombre d'employeurs : un trajet par lieu de travail. Communs à toutes les années de la session, comme les acteurs.
  */
-export const FraisReelsSchema = z.preprocess(
+const FraisReelsSchema = z.preprocess(
   versListeDeTrajets,
   z.object({
     trajets: z.array(TrajetSchema).default([]),
@@ -112,7 +112,7 @@ export const FraisReelsSchema = z.preprocess(
  * Déplacements professionnels d'une activité avec une voiture personnelle, convertis au barème kilométrique : une charge
  * réelle de l'activité, déductible au réel, jamais en micro-entreprise. Facultatifs, communs à toutes les années.
  */
-export const DeplacementsProfessionnelsSchema = z.object({
+const DeplacementsProfessionnelsSchema = z.object({
   kmParAn: z.number().min(0).default(0),
   ...champsVehicule
 })
@@ -265,7 +265,7 @@ export function grilleVide(): z.infer<typeof MonthlyGridDataSchema> {
 }
 
 /** Une année simulée : son numéro et sa grille mensuelle. Les acteurs et les relations sont ceux de la session. */
-export const AnneeSimuleeSchema = z.object({
+const AnneeSimuleeSchema = z.object({
   annee: z.number().int().min(1900).max(2200),
   monthlyData: MonthlyGridDataSchema
 })
@@ -314,7 +314,7 @@ export const ReglagesComparateurSchema = z.object({
 })
 
 /** Comparateur de statuts : l'activité comparée et les réglages choisis pour chaque activité, par identifiant. */
-export const ComparateurSchema = z.object({
+const ComparateurSchema = z.object({
   activiteComparee: z.string().optional(),
   reglagesParActivite: z.record(z.string(), ReglagesComparateurSchema).default({})
 })
@@ -341,7 +341,7 @@ export const SaveSlotSchema = SessionStateSchema.extend({
 })
 
 /** Affichage de la page choisi par l'utilisateur pendant la bêta : « Résumé » (par défaut), l'affichage d'origine ou « Trois vues ». */
-export const AffichageSchema = z.enum(["resume", "classique", "vues"])
+const AffichageSchema = z.enum(["resume", "classique", "vues"])
 
 /** Longueur maximale de l'identifiant d'une section repliable mémorisée. */
 export const LONGUEUR_MAXIMALE_ID_SECTION = 200
@@ -496,7 +496,7 @@ export interface SortieDuRegimeMicro {
 }
 
 /** ACRE d'une micro-entreprise sur une année : la réduction, sa période (« AAAA-MM ») et les mois de l'année couverts. */
-export interface ACREDeLAnnee {
+interface ACREDeLAnnee {
   /** Part des cotisations retirée : 0,5 ou 0,25 selon la date de création. */
   reduction: number
   debut: string
@@ -850,7 +850,7 @@ export interface EcartDeFrais {
 }
 
 /** La situation telle que la grille la décrit, simulée sans rien y ajouter : son net est celui des résultats de l'année. */
-export interface SituationSaisie {
+interface SituationSaisie {
   statut: StatutCompare
   libelle: string
   netApresImpots: number
@@ -982,8 +982,7 @@ export interface OptimisationRemuneration {
 }
 
 /** Stratégies de distribution comparées sur toutes les années de la session (voir l'ADR 014). */
-export const STRATEGIES_DE_DISTRIBUTION = ["toutDistribuer", "garderPuisDistribuer", "lisser"] as const
-export type StrategieDeDistribution = (typeof STRATEGIES_DE_DISTRIBUTION)[number]
+export type StrategieDeDistribution = "toutDistribuer" | "garderPuisDistribuer" | "lisser"
 
 /** Une année d'une stratégie de distribution, montants arrondis. */
 export interface AnneeDUneStrategie {

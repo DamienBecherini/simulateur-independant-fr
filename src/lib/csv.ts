@@ -10,8 +10,8 @@ export interface MontantCsv {
 /** Une cellule : du texte, un nombre (au plus deux décimales), un montant, ou rien. */
 export type CelluleCsv = string | number | MontantCsv | null | undefined
 
-export const SEPARATEUR_CSV = ";"
-export const FIN_DE_LIGNE_CSV = "\r\n"
+const SEPARATEUR_CSV = ";"
+const FIN_DE_LIGNE_CSV = "\r\n"
 /** Marque d'ordre des octets : sans elle, Excel ouvre l'UTF-8 comme du Windows-1252 et abîme les accents. */
 export const BOM = "\uFEFF"
 

@@ -14,7 +14,7 @@ const ESSAIS_DE_RENOMMAGE = 5
 const PAUSE_ENTRE_ESSAIS_MS = 40
 
 /** Code d'une erreur du système de fichiers (`ENOENT`, `EACCES`…), ou `undefined`. */
-export function codeDErreur(error: unknown): string | undefined {
+function codeDErreur(error: unknown): string | undefined {
   return (error as NodeJS.ErrnoException | null)?.code
 }
 
@@ -29,7 +29,7 @@ export class FichierProtegeError extends Error {
 const fichiersProteges = new Set<string>()
 
 /** Interdit, jusqu'à la fermeture de l'application, toute écriture sur un fichier qu'on n'a pu ni lire ni copier. */
-export function proteger(chemin: string) {
+function proteger(chemin: string) {
   fichiersProteges.add(path.resolve(chemin))
 }
 
