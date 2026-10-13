@@ -11,7 +11,8 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefO
 import { ChevronDown, Trophy } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { ANCRE_DE_LA_REMUNERATION, ANCRE_DU_COUPLE, gainDuMariageOuDuPacs, meilleurStatut, nombreDAlertes, remunerationOptimale, tauxDePrelevement, type ResumeDeLaComparaison } from "@/lib/resume"
+import { ANCRES, lienVers, type Ancre } from "@/lib/ancres"
+import { gainDuMariageOuDuPacs, meilleurStatut, nombreDAlertes, remunerationOptimale, tauxDePrelevement, type ResumeDeLaComparaison } from "@/lib/resume"
 import { ecartSigne, euros } from "@/backend/logic/format"
 import type { SimulationReport } from "@/types"
 import { useVuesDeLaPage } from "../hooks/useVues"
@@ -117,7 +118,7 @@ function useHauteurReservee(barre: RefObject<HTMLElement | null>, reduite: boole
 }
 
 interface ChiffreProps {
-  vers: string
+  vers: Ancre
   libelle: string
   libelleCourt?: string
   valeur: ReactNode
@@ -129,7 +130,7 @@ interface ChiffreProps {
 /** Un chiffre clé : un lien vers son détail, au libellé complet pour les lecteurs d'écran. */
 function Chiffre({ vers, libelle, libelleCourt, valeur, className, icone }: ChiffreProps) {
   return (
-    <a href={`#${vers}`} className={cn("inline-flex min-h-6 items-baseline gap-1.5 rounded-sm underline-offset-2 hover:underline pointer-coarse:min-h-11 pointer-coarse:items-center", icone && "max-sm:min-w-0 max-sm:items-center", className)}>
+    <a href={lienVers(vers)} className={cn("inline-flex min-h-6 items-baseline gap-1.5 rounded-sm underline-offset-2 hover:underline pointer-coarse:min-h-11 pointer-coarse:items-center", icone && "max-sm:min-w-0 max-sm:items-center", className)}>
       {icone ? <span aria-hidden className="shrink-0 text-slate-600 sm:hidden dark:text-slate-300 [&_svg]:size-4">{icone}</span> : null}
       <span className={cn("text-slate-600 dark:text-slate-300", libelleCourt && "max-sm:hidden")}>{libelle}</span>
       {libelleCourt ? <span className={cn("text-slate-600 sm:hidden dark:text-slate-300", icone && "sr-only")}>{libelleCourt}</span> : null}
@@ -214,8 +215,8 @@ function ReponsesDuComparateur({ comparaison, className }: { comparaison: Resume
   const remuneration = remunerationOptimale(comparaison?.optimisation)
   return (
     <>
-      {gain === null ? null : <Chiffre vers={ANCRE_DU_COUPLE} libelle="Mariage ou Pacs" valeur={ecartSigne(gain)} className={className} />}
-      {remuneration === null ? null : <Chiffre vers={ANCRE_DE_LA_REMUNERATION} libelle="Rémunération optimale" valeur={euros(remuneration)} className={className} />}
+      {gain === null ? null : <Chiffre vers={ANCRES.comparaisonDuCouple} libelle="Mariage ou Pacs" valeur={ecartSigne(gain)} className={className} />}
+      {remuneration === null ? null : <Chiffre vers={ANCRES.titreDeLOptimisation} libelle="Rémunération optimale" valeur={euros(remuneration)} className={className} />}
     </>
   )
 }
@@ -230,13 +231,13 @@ function ChiffresClesDeLAnnee({ report, annees, annee, onAnnee, comparaison, red
       <ChoixDeLAnnee annees={annees} annee={annee} onAnnee={onAnnee} />
       {report ? (
         <>
-          <Chiffre vers="bilan" libelle="Net du foyer" libelleCourt="Net" valeur={euros(report.totalNetApresImpots)} className="shrink-0" />
-          <Chiffre vers="bilan" libelle="Prélèvements" libelleCourt="Taux" valeur={tauxDePrelevement(report) ?? "—"} className={masqueSiReduite} />
+          <Chiffre vers={ANCRES.bilan} libelle="Net du foyer" libelleCourt="Net" valeur={euros(report.totalNetApresImpots)} className="shrink-0" />
+          <Chiffre vers={ANCRES.bilan} libelle="Prélèvements" libelleCourt="Taux" valeur={tauxDePrelevement(report) ?? "—"} className={masqueSiReduite} />
         </>
       ) : null}
-      {meilleur && comparaison?.activite ? <Chiffre vers="comparateur-verdict" libelle={`Meilleur statut pour « ${comparaison.activite} »`} libelleCourt="Meilleur" valeur={meilleur} icone={reduite ? <Trophy /> : undefined} /> : null}
+      {meilleur && comparaison?.activite ? <Chiffre vers={ANCRES.verdictDuComparateur} libelle={`Meilleur statut pour « ${comparaison.activite} »`} libelleCourt="Meilleur" valeur={meilleur} icone={reduite ? <Trophy /> : undefined} /> : null}
       <ReponsesDuComparateur comparaison={comparaison} className={masqueSiReduite} />
-      <Chiffre vers="resultats-titre" libelle="Alertes" valeur={alertes} className={cn(alertes > 0 && "text-amber-900 dark:text-amber-200", masqueSiReduite)} />
+      <Chiffre vers={ANCRES.titreDesResultats} libelle="Alertes" valeur={alertes} className={cn(alertes > 0 && "text-amber-900 dark:text-amber-200", masqueSiReduite)} />
       {detail}
     </div>
   )

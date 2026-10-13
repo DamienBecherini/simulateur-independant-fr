@@ -3,10 +3,11 @@
 // y répond (chargée comme depuis la fenêtre des situations types) ou, faute de situation adaptée, à la section de la
 // page qui y répond. L'encart y ajoute « Partir de zéro ».
 
+import type { Ancre } from "./ancres"
 import { MONTAGES_TYPES, type MontageType } from "./montages/montages"
 
 /** Une question de départ : sa situation type, ou l'identifiant de la section de la page qui y répond. */
-export type QuestionDeDepart = { question: string; precision: string } & ({ montage: MontageType } | { ancre: string })
+export type QuestionDeDepart = { question: string; precision: string } & ({ montage: MontageType } | { ancre: Ancre })
 
 /** Le montage type d'identifiant donné ; une question qui en désignerait un disparu échoue dès le chargement. */
 function situation(id: string): MontageType {

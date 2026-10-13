@@ -45,6 +45,7 @@ import { useFenetreParLAdresse } from "./hooks/useFenetreParLAdresse"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import type { ResumeDeLaComparaison } from "@/lib/resume"
 import { cn } from "@/lib/utils"
+import { ANCRES, lienVers } from "@/lib/ancres"
 import { RelectureDesPropositions } from "./components/RelectureDesPropositions"
 import { usePropositionsEnAttente } from "./hooks/usePropositionsEnAttente"
 import { useRaccourcisDAnnulation } from "./hooks/useRaccourcisDAnnulation"
@@ -191,7 +192,7 @@ function App() {
   // L'encart fermé ne revient plus ; le focus passe au contenu, qui le suivait.
   const fermerLesQuestions = () => {
     setUserPreferences(prefs => ({ ...prefs, questionsFermees: true }))
-    document.getElementById("contenu")?.focus({ preventScroll: true })
+    document.getElementById(ANCRES.contenu)?.focus({ preventScroll: true })
   }
 
   // La légende et la grille numérotent les types de flux de la grille affichée, celle de l'année choisie.
@@ -204,7 +205,7 @@ function App() {
       <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col print:min-h-0 print:max-w-none print:p-0">
         {/* Barre de menu sticky */}
         {/* Lien d'évitement : invisible tant qu'il n'a pas le focus, il mène au contenu sans traverser la barre d'outils. */}
-        <a href="#contenu" className="print:hidden sr-only z-[60] rounded-md bg-background px-4 py-2 font-medium shadow-md focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
+        <a href={lienVers(ANCRES.contenu)} className="print:hidden sr-only z-[60] rounded-md bg-background px-4 py-2 font-medium shadow-md focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
           Aller au contenu
         </a>
         <nav aria-label="Barre d'outils" className="print:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
@@ -277,7 +278,7 @@ function App() {
 
         {/* Le détail des cartes de résultats s'ouvre par groupe. */}
         <FournisseurDesDetails>
-        <main id="contenu" tabIndex={-1} className="min-w-0 flex-grow scroll-mt-20 focus:outline-none">
+        <main id={ANCRES.contenu} tabIndex={-1} className="min-w-0 flex-grow scroll-mt-20 focus:outline-none">
           {/* Affichage « Trois vues » : les acteurs et la grille, puis les résultats, puis le comparateur, chacun dans sa vue. */}
           <VueDeLaPage vue="situation">
             <EntitiesManager session={currentSession} setSession={setCurrentSession} annee={annee} onChargerMontage={chargerUnMontage} />

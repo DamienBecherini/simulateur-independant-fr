@@ -19,7 +19,8 @@ import { BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, RappelDesFra
 import { ReplieEnResume } from "./ReplieEnResume"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
-import { ANCRE_DU_COUPLE, avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
+import { ANCRES } from "@/lib/ancres"
+import { avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
 import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type OptimisationRemuneration, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutCompare, type StatutSociete } from "@/types"
 import { COLONNE_FIXE } from "../colonne-fixe"
 import { ecartSigne, euros } from "@/backend/logic/format"
@@ -304,8 +305,8 @@ function NotesDuTableau({ notes, activityName }: { notes: Note[]; activityName: 
  */
 function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[]; personName: (id: string) => string }) {
   return (
-    <section aria-labelledby={ANCRE_DU_COUPLE} className="space-y-2 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-      <h3 id={ANCRE_DU_COUPLE} tabIndex={-1} className="text-lg font-medium text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
+    <section aria-labelledby={ANCRES.comparaisonDuCouple} className="space-y-2 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+      <h3 id={ANCRES.comparaisonDuCouple} tabIndex={-1} className="text-lg font-medium text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
         Et si vous étiez mariés ou pacsés ?
       </h3>
       <p className="text-sm text-slate-600 dark:text-slate-300">Mariage et Pacs ont le même effet sur l'impôt sur le revenu : le couple forme un seul foyer fiscal, imposé en commun.</p>
@@ -508,10 +509,10 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
   const nomDeLActivite = selected?.name ?? ""
 
   return (
-    <section className="mt-12 space-y-4" aria-labelledby="comparateur-titre">
+    <section className="mt-12 space-y-4" aria-labelledby={ANCRES.titreDuComparateur}>
       <div>
         {/* Le titre peut recevoir le focus quand un lien mène au comparateur. */}
-        <h2 id="comparateur-titre" tabIndex={-1} className="text-2xl font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
+        <h2 id={ANCRES.titreDuComparateur} tabIndex={-1} className="text-2xl font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
           Comparateur de statuts
         </h2>
         <ReplieEnResume titre={`Année ${vue.annee} : ce que compare le tableau`} id="comparateur-explication" className="text-sm text-slate-600 dark:text-slate-400">

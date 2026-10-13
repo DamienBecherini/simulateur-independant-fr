@@ -16,10 +16,6 @@ export interface ResumeDeLaComparaison {
   optimisation?: OptimisationRemuneration | null
 }
 
-/** Ancres des réponses vers lesquelles mène la barre de résumé, dans la section du comparateur. */
-export const ANCRE_DU_COUPLE = "comparaison-du-couple"
-export const ANCRE_DE_LA_REMUNERATION = "optimisation-titre"
-
 /**
  * Ce que gagnerait (ou perdrait) le couple en union libre à se marier ou à se pacser, en net après impôts ; le premier
  * couple comparé, presque toujours le seul. `null` sans couple en union libre.
