@@ -43,6 +43,31 @@ const ATTENDUS: Record<string, ChiffresAttendus> = {
     activites: { "m-sophie": activite(9288, 0) },
     comparateur: { activite: "m-sophie", meilleur: "micro-vfl" }
   },
+  "osteopathe-micro": {
+    // 37 200 € : cotisations au taux de la CIPAV, 23,2 % = 8 630,40 €, plus 0,2 % de formation professionnelle = 74,40 €
+    // (25,6 % pour un libéral non réglementé : 9 523,20 €). Barème : 37 200 x 66 % = 24 552 € imposables ;
+    // (24 552 - 11 600) x 11 % = 1 424,72 €, moins la décote (897 - 45,25 % x 1 424,72 = 252,31 €) : 1 172 €.
+    // Charges non déductibles (loyer 4 800 €, CFE 350 €, assurance 250 €, banque 120 €) : 5 520 € de moins sur le net.
+    // 37 200 - 8 705 - 5 520 - 1 172 = 21 803 €. Sous le seuil de franchise en base de TVA des services (37 500 €).
+    totalNetApresImpots: 21803,
+    foyers: [foyer(["p-lea"], 1172, 0, 9877, 21803)],
+    activites: { "m-lea": activite(8705, 0) },
+    comparateur: { activite: "m-lea", meilleur: "micro-vfl" }
+  },
+  "kinesitherapeute-ei": {
+    // Charges déductibles : loyer 10 800 €, matériel 1 800 €, comptable 1 440 €, banque 180 €, CFE 500 €, assurance 300 €,
+    // et 4 000 km au barème des 5 CV (4 000 x 0,636 = 2 544 €) : 17 564 €. Bénéfice 78 000 - 17 564 = 60 436 €.
+    // Assiette sociale 60 436 x 74 % = 44 722,64 € : retraite de base 10,60 % = 4 741 €, complémentaire 8,70 % = 3 891 €,
+    // invalidité-décès 1 022 €, indemnités journalières 0,30 % = 134 €, maladie 0,10 % restée à la charge du praticien
+    // = 45 €, CSG-CRDS 9,70 % = 4 338 €, formation 0,25 % du PASS = 120 €, CURPS 0,10 % = 45 €, ASV 224 € + 0,16 %
+    // = 296 € ; pas d'allocations familiales sous 110 % du PASS : 14 631 €.
+    // Imposable : 60 436 - (14 631 - 1 297 de CSG non déductible et CRDS) = 47 102 € ; (29 579 - 11 600) x 11 %
+    // + (47 102 - 29 579) x 30 % = 7 235 €. Net : 60 436 - 14 631 - 7 235 = 38 570 €.
+    totalNetApresImpots: 38570,
+    foyers: [foyer(["p-julien"], 7235, 0, 21866, 38570)],
+    activites: { "ei-julien": activite(14631, 0) },
+    comparateur: { activite: "ei-julien", meilleur: "EI" }
+  },
   "sasu-sans-salaire": {
     // Bénéfice 78 000 € ; IS 42 500 x 15 % + 35 500 x 25 % = 15 250 € ; 62 750 € de dividendes, imposés au barème.
     totalNetApresImpots: 47960,
@@ -156,6 +181,33 @@ casDeReference("Montages types : chiffres de référence", () => {
     expect(comparaison.sousLaSituationSaisie?.explication.replace(/\s/g, " ")).toBe("Valider 4 trimestres de retraite vous coûterait environ 756 € par rapport à votre situation telle que saisie.")
     // 84 000 € de chiffre d'affaires dépassent le plafond de la micro-entreprise : elle n'est jamais désignée meilleur choix.
     expect(comparaison.scenarios.find(s => s.statut === "micro-vfl")?.horsPlafond).toBe(true)
+  })
+
+  it("ostéopathe : taux de la CIPAV, 4 trimestres, versement libératoire possible, et SASU ou EURL jamais désignées", () => {
+    const { report, comparaison } = simulerLeMontage(MONTAGES_TYPES.find(m => m.id === "osteopathe-micro")!)
+    const [cabinet] = report.activities
+    expect(cabinet.profession).toEqual({ id: "osteopathe", libelle: "Ostéopathe", caisse: "CIPAV", tauxMicro: 0.232 })
+    expect(cabinet.versementLiberatoire).toMatchObject({ rfrN2: 22000, eligible: true, applique: false })
+    expect(comparaison.scenarios.find(s => s.statut === "micro")?.protectionSociale.trimestres).toBe(4)
+    // Le versement libératoire (2,2 % de 37 200 € = 818 € au lieu de 1 172 €) fait gagner 354 € ; l'EI au réel, qui
+    // déduit le loyer mais supporte les cotisations du réel et des frais de gestion estimés, fait moins bien.
+    expect(comparaison.scenarios.map(s => [s.statut, s.netApresImpots])).toEqual([["SASU", 19346], ["EURL", 21487], ["EI", 21623], ["micro", 21803], ["micro-vfl", 22157]])
+    expect(comparaison.warnings).toContainEqual(expect.stringContaining("Ostéopathe : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut"))
+  })
+
+  it("kinésithérapeute : lignes de la CARPIMKO, prise en charge de l'Assurance maladie, déplacements, et pas de micro-entreprise", () => {
+    const { report, comparaison } = simulerLeMontage(MONTAGES_TYPES.find(m => m.id === "kinesitherapeute-ei")!)
+    const [cabinet] = report.activities
+    const tns = cabinet.cotisationsTNS!
+    const c = tns.cotisations
+    expect([c.maladieMaternite, c.retraiteDeBase, c.retraiteComplementaire, c.invaliditeDeces, tns.caisse!.asv, tns.caisse!.curps, tns.caisse!.priseEnCharge.maladie, tns.caisse!.priseEnCharge.asv].map(Math.round)).toEqual([45, 4741, 3891, 1022, 296, 45, 2483, 554])
+    // Une seule année : la complémentaire et l'ASV se calculent sur le revenu de 2026, ce que la carte signale.
+    expect(tns.caisse!.baseDesCotisationsDeLAnneePrecedente).toMatchObject({ annee: 2026, anneePrecedenteConnue: false })
+    expect(cabinet.fraisDeDeplacement).toEqual({ kilometres: 4000, montant: 2544, deductible: true })
+    expect(comparaison.scenarios.map(s => [s.statut, s.netApresImpots])).toEqual([["SASU", 37867], ["EURL", 39506], ["EI", 38570]])
+    // L'EURL fait mieux, mais n'est pas désignée : le kinésithérapeute exerce en principe en société d'exercice libéral.
+    expect(comparaison.warnings).toContainEqual(expect.stringContaining("Micro-entreprise non proposée"))
+    expect(comparaison.warnings).toContainEqual(expect.stringContaining("Masseur-kinésithérapeute : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut"))
   })
 
   it("SASU avec salaire : 12 000 € nets valident 4 trimestres", () => {

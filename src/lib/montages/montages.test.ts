@@ -14,11 +14,11 @@ import { MONTAGES_TYPES, sessionDUnMontage } from "./montages"
 const doublons = (valeurs: string[]) => valeurs.filter((valeur, i) => valeurs.indexOf(valeur) !== i)
 
 /** Domaines des sources officielles acceptées dans les explications. */
-const DOMAINES_OFFICIELS = ["entreprendre.service-public.gouv.fr", "www.service-public.gouv.fr", "www.impots.gouv.fr", "www.urssaf.fr", "www.lassuranceretraite.fr"]
+const DOMAINES_OFFICIELS = ["entreprendre.service-public.gouv.fr", "www.service-public.gouv.fr", "www.impots.gouv.fr", "bofip.impots.gouv.fr", "www.legifrance.gouv.fr", "www.urssaf.fr", "www.lassuranceretraite.fr", "www.lacipav.fr", "www.carpimko.com"]
 
 describe("Bibliothèque des montages types", () => {
-  it("au moins huit montages, aux identifiants et aux titres uniques", () => {
-    expect(MONTAGES_TYPES.length).toBeGreaterThanOrEqual(8)
+  it("au moins dix montages, aux identifiants et aux titres uniques", () => {
+    expect(MONTAGES_TYPES.length).toBeGreaterThanOrEqual(10)
     expect(doublons(MONTAGES_TYPES.map(m => m.id))).toEqual([])
     expect(doublons(MONTAGES_TYPES.map(m => m.titre))).toEqual([])
   })
@@ -118,8 +118,25 @@ describe("Bibliothèque des montages types", () => {
       expect(texte("eurl-is-remuneration-gerant")).toContain(`au-delà de ${pourcent(seuil)} du capital social : avec ${euros(5000)} de capital, seuls ${euros(5000 * seuil)}`)
     })
 
+    it("ostéopathe : taux micro de la CIPAV face à celui des libéraux non réglementés, abattement et seuil de la franchise en base", () => {
+      const t = texte("osteopathe-micro")
+      for (const valeur of [pourcent(regles.liberauxReglementes.CIPAV.microEntreprise.cotisations), pourcent(micro.cotisations.servicesBnc), pourcent(micro.formationProfessionnelle.servicesBnc), pourcent(micro.abattement.servicesBnc), euros(regles.TVA.services.franchiseBase), euros(micro.plafonds.services)]) {
+        expect(t).toContain(valeur)
+      }
+      expect(t.replace(/\s/g, " ")).toContain("à 23,2 % du chiffre d'affaires en 2026, au lieu de 25,6 % pour une activité libérale non réglementée")
+    })
+
+    it("kinésithérapeute : complémentaire et invalidité-décès de la CARPIMKO, CURPS, prise en charge de la maladie et de l'ASV", () => {
+      const t = texte("kinesitherapeute-ei")
+      const { CARPIMKO, commun } = regles.liberauxReglementes
+      for (const valeur of [pourcent(CARPIMKO.retraiteComplementaire.taux), euros(CARPIMKO.invaliditeDeces.forfait), pourcent(commun.curps.taux), pourcent(CARPIMKO.priseEnChargeMaladie.resteALaChargeDuPraticien), euros(CARPIMKO.asv.forfaitAssuranceMaladie)]) {
+        expect(t).toContain(valeur)
+      }
+      expect(t.replace(/\s/g, " ")).toContain("complémentaire de la CARPIMKO (8,7 % du revenu), invalidité-décès forfaitaire de 1 022 €")
+    })
+
     it("versement libératoire des autres montages : plafond de revenu fiscal de référence par part", () => {
-      for (const id of ["micro-et-sasu-du-conjoint", "salarie-et-micro"]) expect(texte(id)).toContain(`d'au plus ${euros(micro.versementLiberatoire.plafondRfrParPart)} par part pour ${ANNEE_DES_MONTAGES}`)
+      for (const id of ["osteopathe-micro", "micro-et-sasu-du-conjoint", "salarie-et-micro"]) expect(texte(id)).toContain(`d'au plus ${euros(micro.versementLiberatoire.plafondRfrParPart)} par part pour ${ANNEE_DES_MONTAGES}`)
     })
   })
 
