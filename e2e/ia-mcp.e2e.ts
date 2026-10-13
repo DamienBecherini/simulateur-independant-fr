@@ -18,6 +18,14 @@ const mission = { annee: 2026, acteurId: ATELIER.id, typeFlux: "ca_micro_service
 /** Le contenu d'un fichier de la boîte aux propositions, tel que le dépose le serveur MCP. */
 const fichierDeProposition = (proposition: unknown) => JSON.stringify({ format: "simulateur-independant-fr/proposition", version: 1, creeeLe: "2026-10-06T08:30:00.000Z", proposition })
 
+/** Un client d'IA relié au serveur MCP comme le ferait Claude Desktop, avec la configuration donnée par l'application. */
+async function connecterUnClient(infos: { executable: string; script: string; donnees: string }): Promise<Client> {
+  const env = Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => e[1] !== undefined))
+  const client = new Client({ name: "client-e2e", version: "1.0.0" })
+  await client.connect(new StdioClientTransport({ command: infos.executable, args: [infos.script, "--donnees", infos.donnees], env: { ...env, ELECTRON_RUN_AS_NODE: "1" }, stderr: "ignore" }))
+  return client
+}
+
 test("une proposition envoyée par le serveur MCP s'applique dans l'application en une étape, et s'annule", async ({ dossierDonnees, lancer }) => {
   await deposerSession(dossierDonnees, sessionMicroBnc())
   await deposerAffichage(dossierDonnees, "classique")
@@ -28,9 +36,7 @@ test("une proposition envoyée par le serveur MCP s'applique dans l'application 
   // La configuration que l'application donne à copier, et rien d'autre.
   const infos = (await page.evaluate(() => window.api.infosDuServeurMcp()))!
   expect(infos.donnees).toBe(dossierDonnees)
-  const env = Object.fromEntries(Object.entries(process.env).filter((e): e is [string, string] => e[1] !== undefined))
-  const client = new Client({ name: "client-e2e", version: "1.0.0" })
-  await client.connect(new StdioClientTransport({ command: infos.executable, args: [infos.script, "--donnees", infos.donnees], env: { ...env, ELECTRON_RUN_AS_NODE: "1" }, stderr: "ignore" }))
+  const client = await connecterUnClient(infos)
   try {
     expect((await client.listTools()).tools).toHaveLength(16)
     const proposee = (await client.callTool({ name: "proposer_flux", arguments: { flux: [mission] } })) as CallToolResult
@@ -60,6 +66,24 @@ test("une proposition envoyée par le serveur MCP s'applique dans l'application 
   await expect(chiffreDAffaires).toHaveText(/^30\s000\s€$/)
   await expect(page.getByRole("button", { name: "Annuler" })).toBeDisabled()
   expect(erreursConsole).toEqual([])
+})
+
+// Constat du 13 octobre 2026 : un nouvel utilisateur ouvre l'application sans rien modifier, et le serveur MCP ne
+// trouvait aucune simulation. La session vierge est désormais enregistrée dès le premier lancement.
+test("au tout premier lancement, sans aucune modification, le serveur MCP trouve la simulation", async ({ dossierDonnees, lancer }) => {
+  const { page } = await lancer()
+  await expect.poll(async () => (await lireFichier<SessionState>(dossierDonnees, "sessionState.json"))?.entities).toEqual([])
+
+  const infos = (await page.evaluate(() => window.api.infosDuServeurMcp()))!
+  const client = await connecterUnClient(infos)
+  try {
+    const decrite = (await client.callTool({ name: "decrire_simulation", arguments: {} })) as CallToolResult
+    expect(decrite.isError).toBeFalsy()
+  } finally {
+    await client.close()
+  }
+  // Rien n'a été modifié : il n'y a rien à annuler.
+  await expect(page.getByRole("button", { name: "Annuler" })).toBeDisabled()
 })
 
 test("une proposition déposée dans la boîte sur une autre version de la simulation est montrée périmée, puis retirée", async ({ dossierDonnees, lancer }) => {
