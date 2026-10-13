@@ -1,6 +1,8 @@
 // src/ui/components/MontagesTypes.tsx
-// « Partir d'un montage type » : la bibliothèque des montages en cartes, le détail de chacun (ce qu'il illustre, ses
-// conditions, ses risques, ses sources), puis son chargement, confirmé quand la simulation en cours serait perdue.
+// « Partir d'une situation type » : la bibliothèque des montages types en cartes, le détail de chacun (ce qu'il
+// illustre, ses conditions, ses risques, ses sources), puis son chargement, confirmé quand la simulation en cours
+// serait perdue. Les boutons qui ouvrent la fenêtre parlent de « situation type », ce que l'on vient y chercher ;
+// dans la fenêtre, chacune reste un « montage ».
 
 import { useRef, useState, type ReactNode, type RefObject } from "react"
 import { ChevronLeft, ExternalLink, LayoutTemplate } from "lucide-react"
@@ -9,6 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ConfirmationDeRemplacement } from "./ConfirmationDeRemplacement"
 import { ANNEE_DES_MONTAGES } from "@/lib/montages/construction"
 import { MONTAGES_TYPES, type MontageType } from "@/lib/montages/montages"
+
+/** Titre de la fenêtre, repris par le bouton qui l'ouvre dans les paramètres et dans une simulation vide. */
+const TITRE_DE_LA_FENETRE = "Partir d'une situation type"
 
 interface FenetreDesMontagesProps {
   open: boolean
@@ -116,10 +121,10 @@ function ListeDesMontages({ onDetails, onCharger, montageVu }: { onDetails: (mon
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Partir d'un montage type</DialogTitle>
+        <DialogTitle>{TITRE_DE_LA_FENETRE}</DialogTitle>
         <DialogDescription>Des simulations d'une année, préremplies avec des chiffres fictifs, à charger puis à adapter. Chacune explique ce qu'elle illustre, ses conditions et ses risques.</DialogDescription>
       </DialogHeader>
-      <ul aria-label="Montages types" className="grid gap-3 sm:grid-cols-2">
+      <ul aria-label="Situations types" className="grid gap-3 sm:grid-cols-2">
         {MONTAGES_TYPES.map(montage => (
           <CarteDuMontage key={montage.id} montage={montage} onDetails={() => onDetails(montage)} onCharger={() => onCharger(montage)} focus={montage.id === montageVu} />
         ))}
@@ -175,14 +180,31 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
         </DialogContent>
       </Dialog>
 
-      <ConfirmationDeRemplacement open={aConfirmer !== null} onAnnuler={() => setAConfirmer(null)} onConfirmer={() => aConfirmer && charger(aConfirmer)} titre="Remplacer la simulation en cours ?" libelleDeConfirmation="Remplacer" declencheur={declencheur}>
-        « {nomDeLaSession} » n'est pas enregistrée dans une sauvegarde. Le montage « {aConfirmer?.titre} » la remplacera ; le bouton « Annuler » de la barre d'outils la rétablira.
-      </ConfirmationDeRemplacement>
+      <ConfirmationDuMontage montage={aConfirmer} nomDeLaSession={nomDeLaSession} onAnnuler={() => setAConfirmer(null)} onConfirmer={charger} declencheur={declencheur} />
     </>
   )
 }
 
-/** Le bouton « Partir d'un montage type », qui ouvre la fenêtre des montages. */
+interface ConfirmationDuMontageProps {
+  /** Le montage à charger ; `null` : pas de confirmation en cours. */
+  montage: MontageType | null
+  nomDeLaSession: string
+  onAnnuler: () => void
+  onConfirmer: (montage: MontageType) => void
+  /** Bouton qui a demandé la confirmation : le focus y revient à la fermeture. */
+  declencheur: RefObject<HTMLElement | null>
+}
+
+/** La confirmation avant qu'un montage ne remplace une simulation non enregistrée (fenêtre des montages, questions). */
+export function ConfirmationDuMontage({ montage, nomDeLaSession, onAnnuler, onConfirmer, declencheur }: ConfirmationDuMontageProps) {
+  return (
+    <ConfirmationDeRemplacement open={montage !== null} onAnnuler={onAnnuler} onConfirmer={() => montage && onConfirmer(montage)} titre="Remplacer la simulation en cours ?" libelleDeConfirmation="Remplacer" declencheur={declencheur}>
+      « {nomDeLaSession} » n'est pas enregistrée dans une sauvegarde. Le montage « {montage?.titre} » la remplacera ; le bouton « Annuler » de la barre d'outils la rétablira.
+    </ConfirmationDeRemplacement>
+  )
+}
+
+/** Le bouton « Partir d'une situation type », qui ouvre la fenêtre des montages. */
 export function BoutonDesMontages({ children, ...props }: Omit<FenetreDesMontagesProps, "open" | "onOpenChange"> & Pick<ButtonProps, "variant" | "size" | "className" | "aria-label"> & { children?: ReactNode }) {
   const [ouverte, setOuverte] = useState(false)
   const { onCharger, confirmationNecessaire, nomDeLaSession, ...bouton } = props
@@ -195,7 +217,7 @@ export function BoutonDesMontages({ children, ...props }: Omit<FenetreDesMontage
       nomDeLaSession={nomDeLaSession}
       boutonDOuverture={
         <Button {...bouton}>
-          <LayoutTemplate /> {children ?? "Partir d'un montage type..."}
+          <LayoutTemplate /> {children ?? `${TITRE_DE_LA_FENETRE}...`}
         </Button>
       }
     />

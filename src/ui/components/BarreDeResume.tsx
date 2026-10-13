@@ -1,17 +1,18 @@
 // src/ui/components/BarreDeResume.tsx
 // Affichage « Résumé » (proposition A de l'étude d'allègement de l'écran) : les chiffres clés de l'année, toujours
-// visibles sous la barre d'outils et recalculés à chaque modification. Chacun mène à son détail.
+// visibles sous la barre d'outils et recalculés à chaque modification. Chacun mène à son détail, comme les réponses du
+// comparateur quand elles existent (mariage ou Pacs, rémunération optimale).
 //
 // Sur un téléphone, une fois la page défilée, la barre se réduit à une ligne (année, net, meilleur statut) pour laisser
-// l'écran au contenu ; un bouton la déplie (taux, alertes, libellés entiers). Le reste de la page ne bouge pas :
+// l'écran au contenu ; un bouton la déplie (taux, réponses, alertes, libellés entiers). Le reste de la page ne bouge pas :
 // la barre garde sa hauteur pleine dans le flux, la place libérée restant transparente.
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 import { ChevronDown, Trophy } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { meilleurStatut, nombreDAlertes, tauxDePrelevement, type ResumeDeLaComparaison } from "@/lib/resume"
-import { euros } from "@/backend/logic/format"
+import { ANCRE_DE_LA_REMUNERATION, ANCRE_DU_COUPLE, gainDuMariageOuDuPacs, meilleurStatut, nombreDAlertes, remunerationOptimale, tauxDePrelevement, type ResumeDeLaComparaison } from "@/lib/resume"
+import { ecartSigne, euros } from "@/backend/logic/format"
 import type { SimulationReport } from "@/types"
 import { useVuesDeLaPage } from "../hooks/useVues"
 import { OngletsDesVues } from "./VuesDeLaPage"
@@ -204,7 +205,22 @@ export function BarreDeResume({ report, annees, annee, onAnnee, comparaison }: B
   )
 }
 
-/** La ligne des chiffres clés ; réduite, sur un téléphone, le taux et les alertes attendent le bouton qui la déplie. */
+/**
+ * Les réponses du comparateur, quand elles existent : l'effet d'un mariage ou d'un Pacs, la rémunération optimale
+ * d'une société. Chacune mène à sa section ; sur un téléphone, seulement dans la barre dépliée.
+ */
+function ReponsesDuComparateur({ comparaison, className }: { comparaison: ResumeDeLaComparaison | null; className?: string }) {
+  const gain = gainDuMariageOuDuPacs(comparaison?.result ?? null)
+  const remuneration = remunerationOptimale(comparaison?.optimisation)
+  return (
+    <>
+      {gain === null ? null : <Chiffre vers={ANCRE_DU_COUPLE} libelle="Mariage ou Pacs" valeur={ecartSigne(gain)} className={className} />}
+      {remuneration === null ? null : <Chiffre vers={ANCRE_DE_LA_REMUNERATION} libelle="Rémunération optimale" valeur={euros(remuneration)} className={className} />}
+    </>
+  )
+}
+
+/** La ligne des chiffres clés ; réduite, sur un téléphone, le taux, les réponses et les alertes attendent le bouton qui la déplie. */
 function ChiffresClesDeLAnnee({ report, annees, annee, onAnnee, comparaison, reduite, detail }: BarreDeResumeProps & { reduite: boolean; detail: ReactNode }) {
   const meilleur = meilleurStatut(comparaison?.result ?? null)
   const alertes = nombreDAlertes(report)
@@ -218,7 +234,8 @@ function ChiffresClesDeLAnnee({ report, annees, annee, onAnnee, comparaison, red
           <Chiffre vers="bilan" libelle="Prélèvements" libelleCourt="Taux" valeur={tauxDePrelevement(report) ?? "—"} className={masqueSiReduite} />
         </>
       ) : null}
-      {meilleur && comparaison ? <Chiffre vers="comparateur-verdict" libelle={`Meilleur statut pour « ${comparaison.activite} »`} libelleCourt="Meilleur" valeur={meilleur} icone={reduite ? <Trophy /> : undefined} /> : null}
+      {meilleur && comparaison?.activite ? <Chiffre vers="comparateur-verdict" libelle={`Meilleur statut pour « ${comparaison.activite} »`} libelleCourt="Meilleur" valeur={meilleur} icone={reduite ? <Trophy /> : undefined} /> : null}
+      <ReponsesDuComparateur comparaison={comparaison} className={masqueSiReduite} />
       <Chiffre vers="resultats-titre" libelle="Alertes" valeur={alertes} className={cn(alertes > 0 && "text-amber-900 dark:text-amber-200", masqueSiReduite)} />
       {detail}
     </div>

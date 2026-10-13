@@ -78,6 +78,43 @@ describe("barre de résumé réduite au défilement", () => {
     expect(await screen.findByRole("button", { name: "Taux et alertes (2 alertes)" })).toBeInTheDocument()
   })
 
+  it("mène aux réponses du comparateur quand elles existent : mariage ou Pacs, rémunération optimale", () => {
+    const couple = { personIds: ["hugo", "emma"] as [string, string], netApresImpotsActuel: 46460, impotSurLeRevenuActuel: 4444, netApresImpotsMaries: 48789, impotSurLeRevenuMaries: 2115 }
+    const point = { remunerationNette: 5800, dividendes: 40000, netApresImpots: 45780, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, trimestres: 4 }
+    const optimisation = { statut: "SASU" as const, remunerationMaximale: 60000, points: [point], meilleur: point, meilleurAvecRetraite: point, warnings: [] }
+    render(<BarreDeResume report={report()} annees={[2026]} annee={2026} onAnnee={() => {}} comparaison={{ activite: "Conseil", result: { ...comparaison(), couples: [couple] }, optimisation }} />)
+
+    const mariage = screen.getByRole("link", { name: /^Mariage ou Pacs/ })
+    expect(mariage).toHaveAttribute("href", "#comparaison-du-couple")
+    expect(mariage.textContent?.replace(/\s/g, " ")).toBe("Mariage ou Pacs+2 329 €, voir le détail")
+    const remuneration = screen.getByRole("link", { name: /^Rémunération optimale/ })
+    expect(remuneration).toHaveAttribute("href", "#optimisation-titre")
+    expect(remuneration.textContent?.replace(/\s/g, " ")).toBe("Rémunération optimale5 800 €, voir le détail")
+  })
+
+  it("sans couple en union libre ni arbitrage d'une société, aucune entrée de réponse", () => {
+    render(<BarreDeResume report={report()} annees={[2026]} annee={2026} onAnnee={() => {}} comparaison={{ activite: "Conseil", result: comparaison(), optimisation: null }} />)
+    expect(screen.queryByRole("link", { name: /Mariage ou Pacs/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /Rémunération optimale/ })).not.toBeInTheDocument()
+  })
+
+  it("seuls des couples comparés, sans activité : l'entrée du mariage, sans meilleur statut", () => {
+    const couple = { personIds: ["a", "b"] as [string, string], netApresImpotsActuel: 50000, impotSurLeRevenuActuel: 3000, netApresImpotsMaries: 49500, impotSurLeRevenuMaries: 3500 }
+    render(<BarreDeResume report={report()} annees={[2026]} annee={2026} onAnnee={() => {}} comparaison={{ activite: null, result: { ...comparaison(), couples: [couple] } }} />)
+    expect(screen.getByRole("link", { name: /^Mariage ou Pacs/ })).toHaveTextContent("−500")
+    expect(screen.queryByRole("link", { name: /Meilleur statut/ })).not.toBeInTheDocument()
+  })
+
+  it("réduite sur un téléphone, les réponses attendent le bouton qui déplie la barre", async () => {
+    const couple = { personIds: ["a", "b"] as [string, string], netApresImpotsActuel: 50000, impotSurLeRevenuActuel: 3000, netApresImpotsMaries: 51000, impotSurLeRevenuMaries: 2000 }
+    render(<BarreDeResume report={report()} annees={[2026]} annee={2026} onAnnee={() => {}} comparaison={{ activite: "Conseil", result: { ...comparaison(), couples: [couple] } }} />)
+    expect(screen.getByRole("link", { name: /^Mariage ou Pacs/ })).not.toHaveClass("max-sm:hidden")
+    await defiler(-200)
+    await waitFor(() => expect(screen.getByRole("link", { name: /^Mariage ou Pacs/ })).toHaveClass("max-sm:hidden"))
+    await userEvent.click(screen.getByRole("button", { name: "Taux et alertes" }))
+    expect(screen.getByRole("link", { name: /^Mariage ou Pacs/ })).not.toHaveClass("max-sm:hidden")
+  })
+
   it("le meilleur statut, coupé à l'écran, reste lu en entier et s'affiche en entier au survol", async () => {
     render(<BarreDeResume report={report()} annees={[2026]} annee={2026} onAnnee={() => {}} comparaison={{ activite: "Conseil", result: comparaison() }} />)
     await defiler(-200)

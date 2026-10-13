@@ -8,6 +8,7 @@ import { emptySession, makeCompany, makeFlow, makeMicro, makePerson } from "@/ui
 import { ComparateurDeTest } from "@/ui/testing/comparateur"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { AffichageContext } from "../hooks/useAffichage"
+import { ComparatorPanel } from "./ComparatorPanel"
 
 function scenario(statut: StatutCompare, libelle: string, net: number, overrides: Partial<ScenarioStatut> = {}): ScenarioStatut {
   return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
@@ -257,6 +258,36 @@ describe("ComparatorPanel", () => {
     expect(phrase).toHaveTextContent(`+${money(3550)}`)
     expect(screen.queryByText("Choisissez une activité à comparer.")).not.toBeInTheDocument()
     expect(screen.queryByLabelText("Activité comparée")).not.toBeInTheDocument()
+    // Mariage et Pacs ne sont pas distingués : la section dit pourquoi.
+    const section = screen.getByRole("region", { name: "Et si vous étiez mariés ou pacsés ?" })
+    expect(section).toHaveTextContent("Mariage et Pacs ont le même effet sur l'impôt sur le revenu : le couple forme un seul foyer fiscal, imposé en commun.")
+    expect(within(section).getByRole("heading", { level: 3 })).toHaveAttribute("id", "comparaison-du-couple")
+  })
+
+  it("place la comparaison du couple avant la courbe « Rémunération ou dividendes ? » de l'activité comparée", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ couples: [{ personIds: ["person-alice", "person-bob"], netApresImpotsActuel: 48500, impotSurLeRevenuActuel: 6500, netApresImpotsMaries: 52050, impotSurLeRevenuMaries: 2950 }] }))
+    const session = { ...withActivity(), entities: [...withActivity().entities, makePerson({ id: "person-bob", name: "Bob Durand" })] }
+    render(<ComparateurDeTest annee={2026} session={session} />)
+
+    const couple = await screen.findByRole("region", { name: "Et si vous étiez mariés ou pacsés ?" })
+    const courbe = screen.getByRole("region", { name: "Rémunération ou dividendes ?" })
+    expect(couple.compareDocumentPosition(courbe) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it("transmet à la barre de résumé l'arbitrage d'une société à l'IS, pas celui d'une micro-entreprise passée en société", async () => {
+    const point = { remunerationNette: 5800, dividendes: 40000, netApresImpots: 45780, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, trimestres: 4 }
+    const optimisation = { statut: "SASU" as const, remunerationMaximale: 60000, points: [point], meilleur: point, meilleurAvecRetraite: point, warnings: [] }
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ optimisations: { SASU: optimisation } }))
+    vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation)
+    const onComparaison = vi.fn()
+
+    const { unmount } = render(<ComparatorPanel session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} annee={2026} onComparateurChange={() => {}} onComparaison={onComparaison} />)
+    await vi.waitFor(() => expect(onComparaison).toHaveBeenLastCalledWith(expect.objectContaining({ activite: "Ma SASU", optimisation })))
+    unmount()
+
+    onComparaison.mockClear()
+    render(<ComparatorPanel session={withActivity()} annee={2026} onComparateurChange={() => {}} onComparaison={onComparaison} />)
+    await vi.waitFor(() => expect(onComparaison).toHaveBeenLastCalledWith(expect.objectContaining({ activite: "Mon atelier", result: expect.anything(), optimisation: null })))
   })
 
   it("propose la part BNC pour une société qui facture des prestations, dans la section des frais", async () => {

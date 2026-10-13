@@ -28,7 +28,7 @@ describe("App : montages types", () => {
     const remonter = vi.spyOn(window, "scrollTo")
     const user = await renderApp(emptySession())
 
-    await user.click(screen.getByRole("button", { name: "Partir d'un montage type..." }))
+    await user.click(screen.getByRole("button", { name: "Partir d'une situation type..." }))
     await user.click(screen.getByRole("button", { name: "Charger le montage « SASU sans salaire, tout en dividendes »" }))
 
     expect(await screen.findByRole("heading", { level: 1, name: "SASU sans salaire, tout en dividendes" })).toBeInTheDocument()
@@ -45,7 +45,7 @@ describe("App : montages types", () => {
     expect(undoButton()).toBeEnabled()
 
     await user.click(screen.getByRole("button", { name: "Paramètres" }))
-    await user.click(screen.getByRole("button", { name: "Partir d'un montage type..." }))
+    await user.click(screen.getByRole("button", { name: "Partir d'une situation type..." }))
     await user.click(screen.getByRole("button", { name: "Détails du montage « Salarié avec une micro-entreprise à côté »" }))
     await user.click(screen.getByRole("button", { name: "Charger ce montage" }))
     const confirmation = screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
@@ -61,7 +61,7 @@ describe("App : montages types", () => {
     await user.clear(screen.getByRole("textbox", { name: "Nom" }))
     await user.type(screen.getByRole("textbox", { name: "Nom" }), "Bob{Enter}")
 
-    await user.click(within(screen.getByRole("navigation", { name: "Barre d'outils" })).getByRole("button", { name: "Montages types" }))
+    await user.click(within(screen.getByRole("navigation", { name: "Barre d'outils" })).getByRole("button", { name: "Situations types" }))
     await user.click(screen.getByRole("button", { name: "Charger le montage « SASU sans salaire, tout en dividendes »" }))
     await user.click(within(screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).getByRole("button", { name: "Remplacer" }))
 

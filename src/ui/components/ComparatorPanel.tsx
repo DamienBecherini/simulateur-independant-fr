@@ -19,8 +19,8 @@ import { BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, RappelDesFra
 import { ReplieEnResume } from "./ReplieEnResume"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
-import { avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
-import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutCompare, type StatutSociete } from "@/types"
+import { ANCRE_DU_COUPLE, avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
+import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type OptimisationRemuneration, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutCompare, type StatutSociete } from "@/types"
 import { COLONNE_FIXE } from "../colonne-fixe"
 import { ecartSigne, euros } from "@/backend/logic/format"
 
@@ -298,10 +298,17 @@ function NotesDuTableau({ notes, activityName }: { notes: Note[]; activityName: 
   )
 }
 
+/**
+ * Les couples en union libre, imposés ensemble comme s'ils étaient mariés ou pacsés. Le titre, où mène la barre de
+ * résumé, peut recevoir le focus.
+ */
 function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[]; personName: (id: string) => string }) {
   return (
-    <div className="space-y-2 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-      <h3 className="text-lg font-medium text-slate-800 dark:text-slate-100">Et si vous étiez mariés ou pacsés ?</h3>
+    <section aria-labelledby={ANCRE_DU_COUPLE} className="space-y-2 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+      <h3 id={ANCRE_DU_COUPLE} tabIndex={-1} className="text-lg font-medium text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
+        Et si vous étiez mariés ou pacsés ?
+      </h3>
+      <p className="text-sm text-slate-600 dark:text-slate-300">Mariage et Pacs ont le même effet sur l'impôt sur le revenu : le couple forme un seul foyer fiscal, imposé en commun.</p>
       {couples.map(couple => {
         const delta = couple.netApresImpotsMaries - couple.netApresImpotsActuel
         return (
@@ -310,7 +317,7 @@ function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[
           </p>
         )
       })}
-    </div>
+    </section>
   )
 }
 
@@ -430,12 +437,18 @@ function useReglages(vue: SimulationAnnuelle, comparateur: Comparateur | undefin
   return { selected, effectiveOptions, statutEtudie: reglages?.statutEtudie, setOptions, setStatutEtudie, selectActivity, partMiseEnReserve, setPartMiseEnReserve }
 }
 
-/** Transmet l'activité comparée et le résultat à qui le demande ; rien quand il n'y a pas d'activité à comparer. */
-function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onComparaison"], selected: ActiviteComparable | undefined, result: ComparaisonResult | null) {
+/**
+ * Transmet l'activité comparée, le résultat et, pour une société à l'IS, son arbitrage rémunération / dividendes à qui
+ * le demande ; rien quand il n'y a ni activité ni couple en union libre à comparer. L'arbitrage d'une micro-entreprise
+ * ou d'une entreprise individuelle porte sur une société qu'elle n'est pas : la barre de résumé ne le reprend pas.
+ */
+function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onComparaison"], selected: ActiviteComparable | undefined, result: ComparaisonResult | null, arbitrage: OptimisationRemuneration | null) {
   const activite = selected?.name ?? null
+  const avecCouples = (result?.couples.length ?? 0) > 0
+  const optimisation = selected?.type === "company" && estSocieteIS(selected.legalStatus) ? arbitrage : null
   useEffect(() => {
-    onComparaison?.(activite === null ? null : { activite, result })
-  }, [onComparaison, activite, result])
+    onComparaison?.(activite === null && !avecCouples ? null : { activite, result, optimisation })
+  }, [onComparaison, activite, avecCouples, result, optimisation])
 }
 
 interface ReglagesEtPartageProps {
@@ -487,7 +500,7 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
   const { result, error } = useComparison(session, effectiveOptions, vue.annee)
   const arbitrage = useArbitrage(session, effectiveOptions, vue.annee, selected, result, { statutEtudie, setStatutEtudie })
   const couples = result?.couples ?? []
-  useSignalerLaComparaison(onComparaison, selected, result)
+  useSignalerLaComparaison(onComparaison, selected, result, arbitrage.resultat)
   if (!selected && couples.length === 0) return null
 
   const personName = (id: string) => session.entities.find(e => e.id === id)?.name ?? id
@@ -512,9 +525,10 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
       <ErreurDuCalcul erreur={error} />
 
       {result ? <ComparisonResults result={result} activityName={nomDeLActivite} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, nomDeLActivite)} /> : null}
+      {/* La réponse à « mariage ou Pacs ? » passe avant les années et la courbe, qui ne portent que sur l'activité comparée. */}
+      {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
       {selected ? <SurToutesLesAnnees session={session} activityId={selected.id} activityName={selected.name} partMiseEnReserve={partMiseEnReserve} onPartMiseEnReserve={setPartMiseEnReserve} /> : null}
       <OptimiseurDeLActivite session={session} annee={vue.annee} selected={selected} options={effectiveOptions} arbitrage={arbitrage} result={result} onChange={setOptions} />
-      {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
     </section>
   )
 }

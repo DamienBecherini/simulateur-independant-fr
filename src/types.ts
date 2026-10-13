@@ -364,7 +364,9 @@ export const UserPreferencesSchema = z.object({
   /** Zoom de l'interface demandé (1 = 100 %), entre le zoom minimal et le zoom maximal de src/lib/zoom.ts. */
   zoom: z.number().min(0.5).max(2).optional().catch(undefined),
   /** Sections repliables ouvertes (vrai) ou fermées (faux) par l'utilisateur, par identifiant de section. */
-  sectionsOuvertes: z.record(z.string().max(LONGUEUR_MAXIMALE_ID_SECTION), z.boolean()).optional().catch(undefined)
+  sectionsOuvertes: z.record(z.string().max(LONGUEUR_MAXIMALE_ID_SECTION), z.boolean()).optional().catch(undefined),
+  /** Encart « Que voulez-vous savoir ? » fermé par l'utilisateur : il ne revient plus, même sur une simulation vide. */
+  questionsFermees: z.boolean().optional().catch(undefined)
 })
 
 // ===================================================================================

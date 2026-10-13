@@ -11,17 +11,17 @@ function ouvrir(confirmationNecessaire = false) {
   const onCharger = vi.fn()
   const user = userEvent.setup({ delay: null })
   render(<BoutonDesMontages onCharger={onCharger} confirmationNecessaire={confirmationNecessaire} nomDeLaSession="Ma simulation" />)
-  return { user, onCharger, ouvrirLaFenetre: () => user.click(screen.getByRole("button", { name: "Partir d'un montage type..." })) }
+  return { user, onCharger, ouvrirLaFenetre: () => user.click(screen.getByRole("button", { name: "Partir d'une situation type..." })) }
 }
 
-const fenetre = () => screen.getByRole("dialog", { name: "Partir d'un montage type" })
+const fenetre = () => screen.getByRole("dialog", { name: "Partir d'une situation type" })
 
 describe("Fenêtre des montages types", () => {
   it("liste chaque montage en carte : titre, résumé et mots-clés", async () => {
     const { ouvrirLaFenetre } = ouvrir()
     await ouvrirLaFenetre()
 
-    const cartes = within(within(fenetre()).getByRole("list", { name: "Montages types" })).getAllByRole("listitem").filter(item => item.querySelector("h3"))
+    const cartes = within(within(fenetre()).getByRole("list", { name: "Situations types" })).getAllByRole("listitem").filter(item => item.querySelector("h3"))
     expect(cartes).toHaveLength(MONTAGES_TYPES.length)
     const sasu = within(fenetre()).getByRole("heading", { name: "SASU sans salaire, tout en dividendes" }).closest("li")!
     expect(sasu).toHaveTextContent("Thomas préside seul une SASU")

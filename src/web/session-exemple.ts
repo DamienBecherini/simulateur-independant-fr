@@ -66,3 +66,17 @@ export function sessionExemple(): SessionState {
     annees: [{ annee: ANNEE_DE_L_EXEMPLE, monthlyData }]
   }
 }
+
+/** Ce qui fait une simulation : son nom, ses acteurs, ses relations et ses grilles ; ni les réglages du comparateur, ni la version. */
+const contenuComparable = ({ name, entities, relationships, annees }: SessionState) => JSON.stringify({ name, entities, relationships, annees })
+
+let exempleComparable: string | null = null
+
+/**
+ * Vrai tant que la session est la simulation d'exemple, telle que la démo l'a ouverte : dès la première modification
+ * (un nom, un montant), elle devient celle de l'utilisateur. Les réglages du comparateur n'y changent rien.
+ */
+export function estLaSessionDExemple(session: SessionState): boolean {
+  exempleComparable ??= contenuComparable(sessionExemple())
+  return contenuComparable(session) === exempleComparable
+}

@@ -1,5 +1,5 @@
 // src/ui/components/MenuPlusDActions.tsx
-// « Plus d'actions » : sur un téléphone, les actions secondaires de la barre d'outils (montages types, avis,
+// « Plus d'actions » : sur un téléphone, les actions secondaires de la barre d'outils (situations types, avis,
 // affichage, thème) dans un menu, pour que la barre tienne dans l'écran sans rien couper. Sur un écran plus large,
 // elles restent dans la barre et ce bouton n'est pas affiché.
 //
@@ -106,7 +106,7 @@ export function MenuPlusDActions({ affichage, onAffichage, onAvis, onMontages, c
   }, [ouvert])
 
   const actions: Entree[] = [
-    { cle: "montages", libelle: "Montages types", role: "menuitem", icone: <LayoutTemplate />, choisir: onMontages },
+    { cle: "montages", libelle: "Partir d'une situation type", role: "menuitem", icone: <LayoutTemplate />, choisir: onMontages },
     { cle: "avis", libelle: "Donner mon avis", role: "menuitem", icone: <MessageSquareHeart />, choisir: onAvis }
   ]
   const affichages: Entree[] = AFFICHAGES.map(a => ({ cle: a.valeur, libelle: a.libelle, role: "menuitemradio", coche: a.valeur === affichage, description: a.description, choisir: () => onAffichage(a.valeur) }))

@@ -8,8 +8,8 @@ test("depuis une simulation vide, charger un montage type le calcule et l'enregi
   const { page, erreursConsole } = await lancer()
   await expect(page.getByText("Aucune entité. Commencez par en ajouter une !")).toBeVisible()
 
-  await page.getByRole("button", { name: "Partir d'un montage type..." }).click()
-  const montages = page.getByRole("dialog", { name: "Partir d'un montage type" })
+  await page.getByRole("button", { name: "Partir d'une situation type..." }).click()
+  const montages = page.getByRole("dialog", { name: "Partir d'une situation type" })
   await montages.getByRole("button", { name: "Charger le montage « Micro-entreprise seule (BNC) »" }).click()
 
   // Rien n'était à perdre : pas de confirmation, la session prend le nom du montage.

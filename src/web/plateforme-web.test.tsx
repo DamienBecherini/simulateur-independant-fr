@@ -11,6 +11,7 @@ import { PLATEFORME_DE_BUREAU, PlateformeContext } from "@/ui/plateforme"
 import { BoutonInstaller } from "./AideALInstallation"
 import { BandeauDemo } from "./BandeauDemo"
 import { PLATEFORME_WEB } from "./plateforme-web"
+import { estLaSessionDExemple } from "./session-exemple"
 
 const matchMediaDOrigine = window.matchMedia
 afterEach(() => {
@@ -18,8 +19,8 @@ afterEach(() => {
 })
 
 describe("plateforme de la démo web", () => {
-  it("fournit le bandeau et le bouton d'installation, que l'application de bureau n'a pas", () => {
-    expect(PLATEFORME_WEB).toMatchObject({ web: true, Bandeau: BandeauDemo, BoutonInstaller })
+  it("fournit le bandeau, le bouton d'installation et la simulation d'exemple, que l'application de bureau n'a pas", () => {
+    expect(PLATEFORME_WEB).toMatchObject({ web: true, Bandeau: BandeauDemo, BoutonInstaller, estLaSessionDExemple })
     expect(PLATEFORME_DE_BUREAU).toEqual({ web: false, installee: expect.any(Function) })
     expect(PLATEFORME_DE_BUREAU.installee()).toBe(false)
   })

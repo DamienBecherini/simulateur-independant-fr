@@ -16,6 +16,7 @@ import { LigneActeur } from "./LigneActeur"
 import { cn } from "@/lib/utils"
 import type { MontageType } from "@/lib/montages/montages"
 import { BoutonDesMontages } from "./MontagesTypes"
+import { ID_DE_L_AJOUT_D_UNE_PERSONNE } from "@/lib/questions-de-depart"
 
 interface EntitiesManagerProps {
   session: SessionState
@@ -80,7 +81,7 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
         Personnes et activités
       </h2>
       <div className={cn("flex flex-wrap print:hidden", style.boutons)}>
-        <Button size={style.taille} onClick={() => addEntity(createPerson())}>
+        <Button id={ID_DE_L_AJOUT_D_UNE_PERSONNE} size={style.taille} onClick={() => addEntity(createPerson())}>
           + Ajouter une personne
         </Button>
         <Button size={style.taille} onClick={() => setSelectModalOpen(true)} variant="secondary">

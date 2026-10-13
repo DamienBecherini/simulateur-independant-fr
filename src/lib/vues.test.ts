@@ -32,6 +32,9 @@ describe("vues de l'affichage « Trois vues »", () => {
     expect(destinationDeLAdresse("#bilan", aucunElement)).toEqual({ vue: "resultats", detail: "bilan" })
     expect(destinationDeLAdresse("#resultats-titre", aucunElement)).toEqual({ vue: "resultats", detail: "resultats-titre" })
     expect(destinationDeLAdresse("#comparateur-verdict", aucunElement)).toEqual({ vue: "comparer", detail: "comparateur-verdict" })
+    // Les réponses de « Comparer et optimiser » : mariage ou Pacs, rémunération optimale.
+    expect(destinationDeLAdresse("#comparaison-du-couple", aucunElement)).toEqual({ vue: "comparer", detail: "comparaison-du-couple" })
+    expect(destinationDeLAdresse("#optimisation-titre", aucunElement)).toEqual({ vue: "comparer", detail: "optimisation-titre" })
   })
 
   it("trouve la vue de tout autre élément de la page, et ignore ce qui n'est dans aucune vue", () => {

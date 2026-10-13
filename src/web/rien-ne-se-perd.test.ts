@@ -109,7 +109,9 @@ describe("la session maximale", () => {
     expect(champsNonRemplis(SaveSlotSchema, [sauvegardeMaximale()], "sauvegarde")).toEqual([])
     // Un affichage n'est choisi qu'à la fois : les autres sont pris par des préférences qui ne diffèrent que par lui.
     const autresAffichages = AFFICHAGES.map(({ valeur }) => ({ ...preferencesMaximales(), affichage: valeur }))
-    expect(champsNonRemplis(UserPreferencesSchema, [preferencesMaximales(), ...autresAffichages], "préférences")).toEqual([])
+    // De même, l'encart des questions de départ fermé, puis ouvert.
+    const questionsOuvertes = { ...preferencesMaximales(), questionsFermees: false }
+    expect(champsNonRemplis(UserPreferencesSchema, [preferencesMaximales(), ...autresAffichages, questionsOuvertes], "préférences")).toEqual([])
   })
 
   it("le garde-fou parcourt aussi les champs qui écartent seuls une valeur invalide (préférences)", () => {

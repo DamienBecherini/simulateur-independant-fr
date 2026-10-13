@@ -226,13 +226,17 @@ test.describe("sur un téléphone", () => {
 })
 
 /**
- * Hauteur de la page au chargement, sections repliées. La page est fermée après la mesure : les pages d'un même
- * contexte partagent leur stockage, et une page restée ouverte pourrait réécrire l'affichage choisi pour la suivante.
+ * Hauteur de la page au chargement, sections repliées, une fois fermé l'encart « Que voulez-vous savoir ? » du
+ * premier lancement : c'est la page de la simulation qui est mesurée. La page est fermée après la mesure : les pages
+ * d'un même contexte partagent leur stockage, et une page restée ouverte pourrait réécrire l'affichage choisi pour la
+ * suivante.
  */
 async function hauteur(page: Page, affichage: "classique" | "resume") {
   try {
     await choisirAvantLeChargement(page, affichage)
     await ouvrir(page)
+    await page.getByRole("button", { name: "Fermer « Que voulez-vous savoir ? »" }).click()
+    await expect(page.getByRole("region", { name: "Que voulez-vous savoir ?" })).toHaveCount(0)
     return await page.evaluate(() => document.documentElement.scrollHeight)
   } finally {
     await page.close()

@@ -5,6 +5,7 @@
 
 import { ADRESSE_DES_MENTIONS_LEGALES } from "./mentions-legales"
 import { ADRESSE_DE_L_AVIS } from "./retours"
+import { ANCRE_DE_LA_REMUNERATION, ANCRE_DU_COUPLE } from "./resume"
 
 export type Vue = "situation" | "resultats" | "comparer"
 
@@ -33,7 +34,10 @@ const DETAILS: Readonly<Record<string, Vue>> = {
   bilan: "resultats",
   "resultats-titre": "resultats",
   "comparateur-verdict": "comparer",
-  "comparateur-titre": "comparer"
+  "comparateur-titre": "comparer",
+  // Les réponses de « Comparer et optimiser » : mariage ou Pacs, rémunération ou dividendes.
+  [ANCRE_DU_COUPLE]: "comparer",
+  [ANCRE_DE_LA_REMUNERATION]: "comparer"
 }
 
 const estUneVue = (nom: string): nom is Vue => VUES.some(v => v.valeur === nom)

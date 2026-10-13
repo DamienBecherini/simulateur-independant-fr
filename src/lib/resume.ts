@@ -1,15 +1,36 @@
 // src/lib/resume.ts
 // Chiffres clés de la barre de résumé (affichage « Résumé ») : tirés des résultats de l'année et du comparateur.
 
-import type { ComparaisonResult, RaisonSousLaSituationSaisie, ScenarioStatut, SimulationReport } from "@/types"
+import type { ComparaisonResult, OptimisationRemuneration, RaisonSousLaSituationSaisie, ScenarioStatut, SimulationReport } from "@/types"
 import { ecartSigne, euros } from "@/backend/logic/format"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 
-/** Ce que la barre retient du comparateur : l'activité comparée et le résultat de la comparaison. */
+/**
+ * Ce que la barre retient du comparateur : l'activité comparée (`null` quand seuls des couples sont comparés), le
+ * résultat de la comparaison, et l'arbitrage rémunération / dividendes d'une société comparée.
+ */
 export interface ResumeDeLaComparaison {
-  activite: string
+  activite: string | null
   result: ComparaisonResult | null
+  /** « Rémunération ou dividendes ? » de l'activité comparée, quand c'est une société à l'IS ; absent sinon. */
+  optimisation?: OptimisationRemuneration | null
 }
+
+/** Ancres des réponses vers lesquelles mène la barre de résumé, dans la section du comparateur. */
+export const ANCRE_DU_COUPLE = "comparaison-du-couple"
+export const ANCRE_DE_LA_REMUNERATION = "optimisation-titre"
+
+/**
+ * Ce que gagnerait (ou perdrait) le couple en union libre à se marier ou à se pacser, en net après impôts ; le premier
+ * couple comparé, presque toujours le seul. `null` sans couple en union libre.
+ */
+export function gainDuMariageOuDuPacs(result: ComparaisonResult | null): number | null {
+  const couple = result?.couples[0]
+  return couple ? couple.netApresImpotsMaries - couple.netApresImpotsActuel : null
+}
+
+/** La rémunération nette au meilleur net du foyer ; `null` tant que l'arbitrage n'a pas de résultat. */
+export const remunerationOptimale = (optimisation: OptimisationRemuneration | null | undefined): number | null => optimisation?.meilleur?.remunerationNette ?? null
 
 
 /** Ce que coûte l'exigence de 4 trimestres de retraite dans une colonne : « 4 trimestres : −1 234 € de net ». */
