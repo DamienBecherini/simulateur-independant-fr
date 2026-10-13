@@ -10,6 +10,7 @@ Textes et réponses à recopier dans Partner Center pour la soumission de l'appl
 | Titre court | Simulateur Indépendant |
 | Titre de tri | Simulateur Indépendant FR |
 | Développé par | Damien Becherini |
+| ID Store et adresse publique | `9PJBJWX5WS72`, <https://apps.microsoft.com/detail/9PJBJWX5WS72> (publiée le 13 octobre 2026) |
 | Copyright | © Damien Becherini — licence MIT |
 | Conditions de licence supplémentaires | Logiciel libre sous licence MIT : https://github.com/DamienBecherini/simulateur-independant-fr/blob/main/LICENSE |
 | Site web | https://damienbecherini.github.io/simulateur-independant-fr/ |

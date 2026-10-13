@@ -11,7 +11,7 @@ Ce qui est déjà prêt dans le dépôt :
 - les captures d'écran : [captures/](./captures/) ;
 - le serveur MCP adapté au paquet ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md)), **à essayer avant la première soumission** (étape 2, `npm run essai:store`).
 
-Il reste à faire, par le propriétaire du compte : créer le compte développeur, réserver le nom, recopier l'identité du paquet, essayer le paquet, et faire la première soumission. Les étapes ci-dessous suivent cet ordre.
+L'application est publiée sur le Store (v0.11.0, le 13 octobre 2026) : **ID Store `9PJBJWX5WS72`**, fiche publique <https://apps.microsoft.com/detail/9PJBJWX5WS72>, lien direct `ms-windows-store://pdp/?productid=9PJBJWX5WS72`. Les étapes ci-dessous gardent l'ordre suivi pour la première soumission : créer le compte développeur, réserver le nom, recopier l'identité du paquet, essayer le paquet, soumettre.
 
 ## 1. Compte développeur et identité du paquet
 

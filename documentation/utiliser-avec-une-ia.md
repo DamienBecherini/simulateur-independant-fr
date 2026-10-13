@@ -45,7 +45,7 @@ Si vous déplacez ou réinstallez l'application ailleurs, copiez à nouveau la c
 
 ### Version du Microsoft Store
 
-Installée par le Microsoft Store, l'application vit dans un dossier protégé dont le nom change à chaque mise à jour. La configuration copiée depuis l'application en tient compte ([ADR 013](./adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md)) :
+Installée par le [Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72) (la méthode recommandée sous Windows, voir [installation.md](./installation.md)), l'application vit dans un dossier protégé dont le nom change à chaque mise à jour. La configuration copiée depuis l'application en tient compte ([ADR 013](./adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md)) :
 
 - `command` est l'**alias d'exécution** de l'application, `%LOCALAPPDATA%\Microsoft\WindowsApps\simulateur-independant-fr.exe` (en chemin complet), qui reste valable après chaque mise à jour ;
 - le serveur est une **copie** que l'application tient à jour dans son dossier de données à chaque démarrage : `…\AppData\Roaming\simulateur-independant-fr\mcp\serveur-mcp.mjs`.
