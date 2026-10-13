@@ -61,7 +61,7 @@ describe("examinerLeChangement", () => {
     const sasu = societe("s1", "SASU")
     const s = sessionDe([personne("alice"), sasu], [relation("alice", "s1", "Président")], [["s1", "director_remuneration", 30000]])
     const { consequences } = examinerLeChangement(s, sasu, "EURL", reglesDeTest, "bnc")
-    expect(consequences).toContain("La rémunération du dirigeant et les dividendes saisis sont gardés ; leurs cotisations suivent le régime du dirigeant d'EURL (non salarié).")
+    expect(consequences).toContain("La rémunération du dirigeant et les dividendes saisis sont gardés ; leurs cotisations suivent le régime du dirigeant en EURL (non salarié).")
     expect(consequences).toContain("alice : « Président » devient « Gérant ».")
   })
 
@@ -71,7 +71,7 @@ describe("examinerLeChangement", () => {
     const { consequences } = examinerLeChangement(s, osteo, "SASU", reglesDeTest, "bnc")
     expect(consequences).toContain("Aucune rémunération du dirigeant n'est saisie : sans elle, le bénéfice reste dans la société, soumis à l'impôt sur les sociétés. Saisissez-la dans la grille ; « Rémunération ou dividendes ? » aide à la choisir.")
     expect(consequences).toContain(`Capital social : ${euros(CAPITAL_SOCIAL_PAR_DEFAUT)} par défaut, à remplacer par le vôtre dans cette fiche.`)
-    expect(consequences).toContain("La profession (Ostéopathe) est gardée, sans effet sur les cotisations : le président de SASU cotise au régime général. Elle sert aux avertissements et à un retour au statut d'indépendant.")
+    expect(consequences).toContain("La profession (Ostéopathe) est gardée, sans effet sur les cotisations : le dirigeant, assimilé salarié en SASU, cotise au régime général. Elle sert aux avertissements et à un retour au statut d'indépendant.")
     expect(consequences).toContain("Aucune personne n'en est titulaire ou dirigeante : reliez-en une pour que son revenu rejoigne un foyer.")
   })
 

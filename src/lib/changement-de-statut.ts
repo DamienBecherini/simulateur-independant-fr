@@ -5,6 +5,7 @@
 
 import { changerLeStatut, refusDuChangement, statutDeLActivite, type ChangementDeStatut, type StatutDUneActivite } from "@/backend/logic/changement-de-statut"
 import { libelleDuStatut } from "@/backend/logic/colonne-du-comparateur"
+import { REGIME_DU_DIRIGEANT } from "@/backend/logic/statuts"
 import type { Activite } from "@/backend/logic/conversion-de-statut"
 import { euros } from "@/backend/logic/format"
 import { professionDe } from "@/backend/logic/professions"
@@ -83,7 +84,7 @@ function phrasesDuPartage(changement: ChangementDeStatut, source: Activite, mont
   if (fluxRetires.dividends_payment) phrases.push(`Les dividendes (${euros(fluxRetires.dividends_payment)}) sont retirés : une entreprise individuelle n'en distribue pas.`)
   const depuisUneSociete = source.type === "company" && estSocieteIS(source.legalStatus)
   if (estSocieteIS(cible) && !depuisUneSociete) phrases.push("Aucune rémunération du dirigeant n'est saisie : sans elle, le bénéfice reste dans la société, soumis à l'impôt sur les sociétés. Saisissez-la dans la grille ; « Rémunération ou dividendes ? » aide à la choisir.")
-  if (estSocieteIS(cible) && depuisUneSociete && (montants.director_remuneration || montants.dividends_payment)) phrases.push(`La rémunération du dirigeant et les dividendes saisis sont gardés ; leurs cotisations suivent le régime du dirigeant ${cible === "SASU" ? "de SASU (assimilé salarié)" : "d'EURL (non salarié)"}.`)
+  if (estSocieteIS(cible) && depuisUneSociete && (montants.director_remuneration || montants.dividends_payment)) phrases.push(`La rémunération du dirigeant et les dividendes saisis sont gardés ; leurs cotisations suivent le régime du dirigeant en ${libelleDuStatut(cible)} (${REGIME_DU_DIRIGEANT[cible]}).`)
   return phrases
 }
 
@@ -107,7 +108,7 @@ function phrasesDesReglages(source: Activite, apres: Activite, regles: ReglesFis
   if (versUneSociete && !depuisUneSociete) phrases.push(`Capital social : ${euros(CAPITAL_SOCIAL_PAR_DEFAUT)} par défaut, à remplacer par le vôtre dans cette fiche.`)
   if (source.type === "company" && source.reservesInitiales && !versUneSociete) phrases.push(`Les réserves au début (${euros(source.reservesInitiales)}) sont retirées : une entreprise individuelle n'en a pas, son bénéfice est imposé chaque année chez son titulaire.`)
   const profession = professionDe(source, regles)
-  if (profession && !proposeLaProfession(apres)) phrases.push(`La profession (${profession.libelle}) est gardée, sans effet sur les cotisations : le président de SASU cotise au régime général. Elle sert aux avertissements et à un retour au statut d'indépendant.`)
+  if (profession && !proposeLaProfession(apres)) phrases.push(`La profession (${profession.libelle}) est gardée, sans effet sur les cotisations : le dirigeant, assimilé salarié en ${libelleDuStatut(statutDeLActivite(apres))}, cotise au régime général. Elle sert aux avertissements et à un retour au statut d'indépendant.`)
   return phrases
 }
 
