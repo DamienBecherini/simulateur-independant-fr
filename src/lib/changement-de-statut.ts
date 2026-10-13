@@ -91,7 +91,7 @@ function phrasesDesPlafonds(changement: ChangementDeStatut, nature: NatureDesPre
   const { activite, session } = changement
   if (activite.type !== "micro-entreprise") return []
   const creation = lireMois(activite.dateDeCreation)
-  const suite = "le régime n'est conservé que si le dépassement ne se répète pas l'année suivante : deux années de suite, l'activité passe au réel au 1er janvier qui suit."
+  const suite = "le régime est conservé cette année-là, mais deux années de dépassement de suite font passer l'activité au réel le 1er janvier suivant."
   return session.annees.flatMap(({ annee, monthlyData }) => {
     const prorata = prorataDesPlafonds(creation, annee)
     const plafonds = plafondsAuProrata(reglesDeLAnneeAffichee(annee).microEntreprise.plafonds, prorata)

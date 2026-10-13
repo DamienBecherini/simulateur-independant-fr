@@ -86,7 +86,7 @@ describe("examinerLeChangement", () => {
 
   describe("plafonds de la micro-entreprise", () => {
     const { plafonds } = reglesDeLAnneeAffichee(2026).microEntreprise
-    const suite = "le régime n'est conservé que si le dépassement ne se répète pas l'année suivante : deux années de suite, l'activité passe au réel au 1er janvier qui suit."
+    const suite = "le régime est conservé cette année-là, mais deux années de dépassement de suite font passer l'activité au réel le 1er janvier suivant."
     const avertissements = (consequences: string[]) => consequences.filter(phrase => phrase.includes("plafond de la micro-entreprise"))
 
     it("une SASU dont les prestations dépassent le plafond des services : averti, selon la nature choisie, sans refus", () => {
