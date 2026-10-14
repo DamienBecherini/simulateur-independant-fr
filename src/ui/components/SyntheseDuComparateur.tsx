@@ -76,7 +76,7 @@ export function SituationTelleQueSaisie({ result }: { result: ComparaisonResult 
 
 /** Sous le net d'une colonne, l'écart de frais de gestion avec le statut actuel, et le détail par poste à déplier. */
 export function EcartDeFraisDeLaColonne({ scenario, actuel }: { scenario: ScenarioStatut; actuel: StatutCompare | undefined }) {
-  const phrase = actuel ? phraseDeLEcartDeFrais(scenario.ecartDeFrais.total, actuel) : null
+  const phrase = actuel ? phraseDeLEcartDeFrais(scenario.ecartDeFrais.total, actuel, scenario.statut) : null
   if (!phrase) return null
   const postes = Object.entries(scenario.ecartDeFrais.postes) as [PosteFrais, number][]
   return (
@@ -96,7 +96,7 @@ function CarteDeStatut({ scenario, result, meilleur }: { scenario: ScenarioStatu
   const ecart = ecartAvecLaSituationSaisie(result, scenario)
   const nonRetenue = raisonDeNonRetenue(scenario)
   const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null, nonRetenue].filter(Boolean).join(" · ")
-  const frais = result.situationSaisie ? phraseDeLEcartDeFrais(scenario.ecartDeFrais.total, result.situationSaisie.statut) : null
+  const frais = result.situationSaisie ? phraseDeLEcartDeFrais(scenario.ecartDeFrais.total, result.situationSaisie.statut, scenario.statut) : null
   return (
     <li className={cn("flex items-center justify-between gap-3 rounded-lg border px-3 py-2", meilleur ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40" : "border-slate-200 dark:border-slate-700", nonRetenue && "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400")}>
       <div className="min-w-0">

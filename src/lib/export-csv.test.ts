@@ -287,6 +287,7 @@ describe("csvComparaison", () => {
       "Frais de fonctionnement supposés (pour l'écart entre statuts), EURL;2900,00",
       "Frais de fonctionnement supposés (pour l'écart entre statuts), EI au réel;2050,00",
       "Frais de fonctionnement supposés (pour l'écart entre statuts), Micro-entreprise;850,00",
+      "Portage salarial : conditions de la société de portage;frais de gestion de 7 % du chiffre d'affaires HT, CDI, société de 50 salariés et plus, réduction générale gardée par la société, sans mutuelle (valeurs typiques)",
       "",
       "Avertissement;Statuts concernés",
       "Comparaison indicative.;Tous",
@@ -326,7 +327,8 @@ describe("csvComparaison", () => {
     expect(csv).toContain("Taux global de prélèvement (%);;")
     expect(csv).toContain("Écart avec la situation telle que saisie;;")
     expect(csv).toContain("Bénéfice de la société (SASU, EURL);Dividendes saisis dans la grille")
-    expect(csv[csv.length - 1]).toBe("Part des prestations en BNC en micro (%);50")
+    expect(csv[csv.length - 2]).toBe("Part des prestations en BNC en micro (%);50")
+    expect(csv[csv.length - 1]).toMatch(/^Portage salarial : conditions de la société de portage;frais de gestion de 7 %/)
   })
 })
 
@@ -365,7 +367,7 @@ describe("reglagesDuComparateur", () => {
   })
 
   it("omet les frais quand le comparateur n'en ajoute pas", () => {
-    expect(reglagesDuComparateur({ ...optionsExemple(), fraisFonctionnement: undefined }, "X")).toHaveLength(4)
+    expect(reglagesDuComparateur({ ...optionsExemple(), fraisFonctionnement: undefined }, "X")).toHaveLength(5)
   })
 })
 

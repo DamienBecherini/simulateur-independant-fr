@@ -310,7 +310,8 @@ Une ligne par année de la session, avec les mêmes acteurs et la grille de chaq
     const rapport = rapportComplet()
     expect(rapport).toContain(`- Bénéfice de la société en SASU et EURL : Rémunération saisie, le reste en dividendes (rémunération nette de 20 000 €, tout le bénéfice restant versé en dividendes)
 - En micro-entreprise, part des prestations de services en BNC : 50 % (le reste en BIC)
-- Frais de fonctionnement supposés : SASU 2 900 €, EURL 2 900 €, EI au réel 2 050 €, micro-entreprise 850 € ; la grille contient déjà les frais réels du statut actuel, chaque autre statut ne reçoit que l'écart avec lui
+- Frais de fonctionnement supposés : SASU 2 900 €, EURL 2 900 €, EI au réel 2 050 €, micro-entreprise 850 € ; la grille contient déjà les frais réels du statut actuel, chaque autre statut ne reçoit que l'écart avec lui (aucun frais supposé en portage salarial, la société de portage s'en chargeant)
+- Portage salarial, conditions de la société de portage : frais de gestion de 7 % du chiffre d'affaires HT, CDI, société de 50 salariés et plus, réduction générale gardée par la société, sans mutuelle (valeurs typiques)
 - Votre situation telle que saisie (SASU) : 20 000 € de net, comme dans les résultats
 
 | Indicateur | SASU (actuel) | Micro-entreprise (meilleur net) |

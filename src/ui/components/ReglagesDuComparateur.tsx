@@ -16,6 +16,7 @@ import { CurseurDeRemuneration } from "./Curseur"
 import { Depliable } from "./Depliable"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
 import { ChampNumerique } from "./ChampNumerique"
+import { ConditionsDuPortage } from "./ConditionsDuPortage"
 
 const statutFraisLabels: Record<StatutFrais, string> = { SASU: "SASU", EURL: "EURL", EI: "EI au réel", micro: "Micro-entreprise" }
 
@@ -261,6 +262,7 @@ export function ReglagesDuComparateur({ activities, selected, options, result, s
       {avecRemunerationSaisie(mode) ? <RemunerationSaisie remunerationNette={options.remunerationNette} statut={statut} plafond={plafond} onChange={remunerationNette => onChange({ remunerationNette })} /> : null}
 
       <FraisEtPartBnc options={options} bncUtile={bncUtile} cfe={cfeDeLaComparaison(result)} onChange={onChange} />
+      <ConditionsDuPortage conditions={options.portage} onChange={portage => onChange({ portage })} />
     </div>
   )
 }

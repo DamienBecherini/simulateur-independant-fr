@@ -5,9 +5,9 @@
 import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { documentCsv, montant, type CelluleCsv } from "./csv"
 import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
-import { libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
+import { conditionsDuPortageEnPhrase, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
-import { netDeLaSituationSaisie } from "./resume"
+import { netDeLaSituationSaisie, raisonDeNonRetenue } from "./resume"
 import { statutEtProfession } from "./professions"
 import { enTexteBrut } from "@/backend/logic/format"
 
@@ -149,6 +149,8 @@ function lignesDesIndicateurs(result: ComparaisonResult, nomActivite: string): L
     ...(result.scenarios.some(s => s.horsPlafond) ? [["Non retenue : plafond dépassé", s => ouiNon(s.horsPlafond)] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
     // Seulement quand l'activité est sortie du régime micro : ses colonnes micro ne sont plus accessibles.
     ...(result.scenarios.some(s => s.regimeMicroFerme) ? [["Régime plus accessible", s => ouiNon(s.regimeMicroFerme !== undefined)] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
+    // Une colonne du portage salarial sans prestations à facturer, ou avec des salariés, n'est jamais retenue.
+    ...(result.scenarios.some(s => s.portageNonRetenu) ? [["Portage salarial non retenu", s => (s.portageNonRetenu ? raisonDeNonRetenue(s) : null)] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
     ["Net dans la poche", s => montant(s.netApresImpots)],
     ["Taux global de prélèvement (%)", tauxDePrelevement],
     ["Revenus avant prélèvements", s => montant(s.revenusAvantPrelevements)],
@@ -189,7 +191,8 @@ export function reglagesDuComparateur(options: ComparaisonOptions, nomActivite: 
     ...lignesDeRemuneration(options, scenarios),
     ...(options.repartition.mode === "personnalisee" ? [["Part du bénéfice distribuable versée en dividendes (%)", Math.round(options.repartition.partDistribuee * 100)] as [string, CelluleCsv]] : []),
     ["Part des prestations en BNC en micro (%)", options.partBncPrestations * 100],
-    ...totalFrais
+    ...totalFrais,
+    ["Portage salarial : conditions de la société de portage", enTexteBrut(conditionsDuPortageEnPhrase(options.portage))]
   ]
 }
 
