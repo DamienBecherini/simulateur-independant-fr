@@ -34,6 +34,19 @@ const GRISE = "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-
 /** Fond de l'en-tête du tableau, rendu opaque pour sa première cellule, fixe : le gris translucide sur le fond de la page. */
 const FOND_DE_L_EN_TETE = "bg-slate-100 dark:bg-[color-mix(in_oklab,var(--color-slate-800)_80%,var(--background))]"
 
+/**
+ * Largeurs minimales des colonnes, données à leur case d'en-tête : sans elles, le tableau serre ses colonnes jusqu'à la
+ * largeur d'un mot avant de défiler, et une note d'écart de frais s'écrit sur neuf lignes. Le tableau défile donc plus
+ * tôt, chaque colonne restant lisible. Sur un téléphone étroit (moins de 480 px), un minimum plus petit pour les statuts,
+ * et aucun pour les libellés (la largeur de leur plus long mot), laissent voir le libellé et un peu plus d'une colonne de
+ * statut : on comprend que le tableau défile.
+ */
+const LARGEUR_DES_LIBELLES = "min-w-36 max-[30rem]:min-w-0"
+const LARGEUR_D_UN_STATUT = "min-w-40 max-[30rem]:min-w-34"
+
+/** Libellé d'une ligne, dans la colonne fixe. */
+const LIBELLE_DE_LIGNE = cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")
+
 /** Activité que le comparateur peut étudier : une société ou une micro-entreprise. */
 type ActiviteComparable = Company | MicroEntreprise
 
@@ -119,7 +132,7 @@ const pastilleNote ="inline-flex h-6 min-w-6 items-center justify-center rounded
 function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioStatut; meilleur: boolean; renvois: number[] }) {
   const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null].filter(Boolean).join(" · ")
   return (
-    <th scope="col" className={cn("px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "bg-emerald-100 dark:bg-emerald-900/40", estNonRetenue(scenario) && GRISE)}>
+    <th scope="col" className={cn(LARGEUR_D_UN_STATUT, "px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "bg-emerald-100 dark:bg-emerald-900/40", estNonRetenue(scenario) && GRISE)}>
       {scenario.libelle}
       <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{mentions || " "}</span>
       <RemunerationRetenue scenario={scenario} />
@@ -151,7 +164,7 @@ function LigneDeLEcart({ result, rang }: { result: ComparaisonResult; rang: numb
   if (netDeLaSituationSaisie(result) === null) return null
   return (
     <tr className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
-      <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
+      <th scope="row" className={LIBELLE_DE_LIGNE}>
         Écart avec votre situation actuelle
       </th>
       {result.scenarios.map(s => {
@@ -188,7 +201,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
   const avecEcart = netDeLaSituationSaisie(result) !== null
   const ligne = (row: ReturnType<typeof rows>[number], rang: number) => (
     <tr key={row.label} className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
-      <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
+      <th scope="row" className={LIBELLE_DE_LIGNE}>
         {row.label}
       </th>
       {result.scenarios.map(s => (
@@ -202,7 +215,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
   const lignes = rows(activityName, result.situationSaisie?.statut)
   const protection = (rang: number) => (
     <tr className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
-      <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
+      <th scope="row" className={LIBELLE_DE_LIGNE}>
         Protection sociale
       </th>
       {result.scenarios.map(s => (
@@ -223,7 +236,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
       <table className="w-full min-w-[48rem] text-sm print:min-w-0 print:text-[8pt]" aria-label="Comparaison des statuts">
         <thead className="bg-slate-100 dark:bg-slate-800/80">
           <tr>
-            <th scope="col" className={cn(COLONNE_FIXE, FOND_DE_L_EN_TETE, "px-3 py-2 text-left")}>
+            <th scope="col" className={cn(COLONNE_FIXE, FOND_DE_L_EN_TETE, LARGEUR_DES_LIBELLES, "px-3 py-2 text-left")}>
               <span className="sr-only">Indicateur</span>
             </th>
             {result.scenarios.map(s => (
