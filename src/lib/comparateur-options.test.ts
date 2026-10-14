@@ -198,7 +198,7 @@ describe("portage salarial dans les phrases du comparateur", () => {
   })
 
   it("l'écart de frais du portage dit que la société de portage s'en charge", () => {
-    expect(enTexteBrut(phraseDeLEcartDeFrais(-850, "micro", "portage") ?? "")).toBe("dont environ 850 € de frais de fonctionnement en moins qu'en micro-entreprise, dont la société de portage se charge contre ses frais de gestion")
+    expect(enTexteBrut(phraseDeLEcartDeFrais(-850, "micro", "portage") ?? "")).toBe("dont environ 850 € de frais de fonctionnement en moins qu'en micro-entreprise, assurés par la société de portage")
     expect(enTexteBrut(phraseDeLEcartDeFrais(-850, "micro", "EI") ?? "")).toBe("dont environ 850 € de frais de gestion en moins qu'en micro-entreprise")
   })
 })

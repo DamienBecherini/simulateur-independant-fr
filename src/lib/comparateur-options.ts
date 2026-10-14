@@ -26,12 +26,13 @@ const EN_STATUT: Record<StatutCompare, string> = { SASU: "en SASU", EURL: "en EU
 /**
  * L'écart de frais de gestion d'une colonne avec le statut actuel, en une phrase sous son net : « dont environ 2 050 €
  * de frais de gestion en plus qu'en micro-entreprise » ; `null` quand il n'y en a pas (statut actuel, mêmes frais). En
- * portage salarial, ces frais sont ceux dont la société de portage se charge, à ne pas confondre avec ses frais de
+ * portage salarial, ces frais sont ceux qu'assure la société de portage, à ne pas confondre avec ses frais de
  * gestion, comptés dans les charges de la colonne.
  */
 export function phraseDeLEcartDeFrais(ecart: number, actuel: StatutCompare, colonne?: StatutCompare): string | null {
   if (Math.round(ecart) === 0) return null
-  if (colonne === "portage") return `dont environ ${euros(Math.abs(ecart))} de frais de fonctionnement ${ecart > 0 ? "en plus" : "en moins"} qu'${EN_STATUT[actuel]}, dont la société de portage se charge contre ses frais de gestion`
+  // Le portage n'a aucun frais de fonctionnement supposé : l'écart est toujours en moins.
+  if (colonne === "portage") return `dont environ ${euros(Math.abs(ecart))} de frais de fonctionnement en moins qu'${EN_STATUT[actuel]}, assurés par la société de portage`
   return `dont environ ${euros(Math.abs(ecart))} de frais de gestion ${ecart > 0 ? "en plus" : "en moins"} qu'${EN_STATUT[actuel]}`
 }
 
