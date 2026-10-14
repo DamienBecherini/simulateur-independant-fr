@@ -132,7 +132,7 @@ describe("propositions, cas particuliers", () => {
     const relation = appeler<ResultatProposition>("proposer_relation", session, { deId: "person-camille", versId: "company-conseil", typeRelation: "Associé" })
     const serie = { acteurId: "micro-atelier", typeFlux: "ca_micro_services_bnc", libelle: appeler<{ lignes: { libelle: string; typeFlux: string }[] }>("lister_flux", session, { acteurId: "micro-atelier" }).lignes[0].libelle }
     const modification = executerOutil("proposer_modification", session, { modifications: [{ cible: "serie", annee: 2026, serie, mois: [1], montant: 1 }], suiteDe: relation.proposition })
-    const suppression = executerOutil("proposer_suppression", session, { suppression: { cible: "relation", relationId: "rel-enfant" } })
+    const suppression = executerOutil("proposer_suppression", session, { suppressions: [{ cible: "relation", relationId: "rel-enfant" }] })
     const reglages = executerOutil("proposer_reglages_comparateur", session, { activiteId: "company-conseil", reglages: { mode: "meilleurNet" } })
     for (const reponse of [modification, suppression, reglages]) {
       // Chaque outil répond : une proposition, ou un refus expliqué en français.

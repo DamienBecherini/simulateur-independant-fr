@@ -9,8 +9,11 @@ import { ANNEE_COURANTE } from "../regles.js"
 export const LIMITES = {
   /** Opérations d'une proposition : 200 séries de flux couvrent une année de relevés détaillés. */
   operationsParProposition: 200,
-  /** Suppressions d'une proposition : une série de flux d'une année, ou une relation. Jamais d'acteur. */
-  suppressionsParProposition: 1,
+  /**
+   * Suppressions d'une proposition : séries de flux, relations, acteurs (avec leurs relations et leurs flux), années, ou
+   * toute la simulation. Chacune est détaillée dans le récapitulatif que l'utilisateur valide (voir l'ADR 010).
+   */
+  suppressionsParProposition: 50,
   /** Acteurs ajoutés par une proposition. */
   acteursParProposition: 10,
   /** Montant mensuel d'un flux, en euros. */

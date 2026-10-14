@@ -80,9 +80,9 @@ describe("boîte aux propositions", () => {
     await writeFile(dansLaBoite("gros.json"), " ".repeat(TAILLE_MAX_D_UNE_PROPOSITION + 1))
     await writeFile(dansLaBoite("casse.json"), "{ pas du JSON")
     await writeFile(dansLaBoite("autre.json"), JSON.stringify({ format: "autre chose" }))
-    // Une proposition au-delà des limites de la couche d'outils (deux suppressions) est refusée par son schéma.
-    const deuxSuppressions = { ...JSON.parse(valide()), proposition: { ...proposition, operations: [{ type: "supprimer_relation", relationId: "a" }, { type: "supprimer_relation", relationId: "b" }] } }
-    await writeFile(dansLaBoite("limites.json"), JSON.stringify(deuxSuppressions))
+    // Une proposition au-delà des limites de la couche d'outils (51 suppressions) est refusée par son schéma.
+    const tropDeSuppressions = { ...JSON.parse(valide()), proposition: { ...proposition, operations: Array.from({ length: 51 }, (_, i) => ({ type: "supprimer_relation", relationId: `r${i}` })) } }
+    await writeFile(dansLaBoite("limites.json"), JSON.stringify(tropDeSuppressions))
     await writeFile(dansLaBoite("cle-en-trop.json"), JSON.stringify({ ...JSON.parse(valide()), executer: "rm -rf" }))
     const ouverte = await ouvrir()
     expect(ouverte.enAttente()).toEqual([])

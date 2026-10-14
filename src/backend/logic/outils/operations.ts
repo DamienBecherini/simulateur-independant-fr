@@ -4,8 +4,8 @@
 // proposition, avec un message qui dit quelle opération et pourquoi.
 
 import { z } from "zod"
-import { CAPITAL_SOCIAL_PAR_DEFAUT, estEntrepriseOuMicro, grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, STATUTS_JURIDIQUES, STATUTS_SOCIETE, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
-import { NOMBRE_MAX_ANNEES } from "../annees.js"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, estEntrepriseOuMicro, grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, SessionStateSchema, STATUTS_FRAIS, STATUTS_JURIDIQUES, STATUTS_SOCIETE, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
+import { anneesDeLaSession, NOMBRE_MAX_ANNEES, peutSupprimerAnnee, supprimerAnnee, transformerLesGrilles } from "../annees.js"
 import { professionDe, professionsConnues } from "../professions.js"
 import { ANNEE_COURANTE, reglesDesAnneesConnues } from "../regles.js"
 import { STATUTS_A_PROFESSION } from "../statuts.js"
@@ -94,14 +94,18 @@ export const OperationSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("ajouter_flux"), annee: AnneeSchema, acteurId: IdentifiantSchema, typeFlux: z.enum(TYPES_DE_FLUX), libelle: LibelleSchema, montant: MontantSchema, montantBrut: MontantSchema.optional(), mois: ListeDeMoisSchema }),
   z.strictObject({ type: z.literal("modifier_serie"), annee: AnneeSchema, serie: SerieSchema, mois: ListeDeMoisSchema.optional(), montant: MontantSchema.optional(), montantBrut: MontantSchema.optional(), libelle: LibelleSchema.optional() }),
   z.strictObject({ type: z.literal("supprimer_serie"), annee: AnneeSchema, serie: SerieSchema, mois: ListeDeMoisSchema.optional() }),
-  z.strictObject({ type: z.literal("regler_comparateur"), activiteId: IdentifiantSchema, annee: AnneeSchema.optional(), comparer: z.boolean().default(true), reglages: ReglagesComparateurProposesSchema })
+  z.strictObject({ type: z.literal("regler_comparateur"), activiteId: IdentifiantSchema, annee: AnneeSchema.optional(), comparer: z.boolean().default(true), reglages: ReglagesComparateurProposesSchema }),
+  z.strictObject({ type: z.literal("supprimer_acteur"), acteurId: IdentifiantSchema }),
+  z.strictObject({ type: z.literal("supprimer_annee"), annee: AnneeSchema }),
+  z.strictObject({ type: z.literal("vider_simulation") })
 ])
 
 export type Operation = z.infer<typeof OperationSchema>
 type OperationDe<T extends Operation["type"]> = Extract<Operation, { type: T }>
 
 /** Opérations qui retirent quelque chose de la session : elles sont comptées à part (voir LIMITES). */
-export const estUneSuppression = (operation: Operation) => operation.type === "supprimer_relation" || operation.type === "supprimer_serie"
+const TYPES_DE_SUPPRESSION = ["supprimer_serie", "supprimer_relation", "supprimer_acteur", "supprimer_annee", "vider_simulation"] as const satisfies readonly Operation["type"][]
+export const estUneSuppression = (operation: Operation) => (TYPES_DE_SUPPRESSION as readonly string[]).includes(operation.type)
 
 // ===================================================================================
 // == APPLICATION
@@ -273,6 +277,36 @@ function supprimerSerie(c: Chantier, op: OperationDe<"supprimer_serie">): void {
   surLaSerie(c, op, flux => flux.filter(f => !estDansLaSerie(f)))
 }
 
+/**
+ * Supprime un acteur, et avec lui ses relations et ses flux de toutes les années, comme la liste des acteurs de
+ * l'application. Un acteur verrouillé par l'utilisateur ne l'est jamais (seulement en repartant de zéro). Les activités
+ * qui perdent une relation sont revérifiées : une rémunération ou des dividendes sans dirigeant ni associé refusent la
+ * proposition, comme pour une relation supprimée seule.
+ */
+function supprimerActeur(c: Chantier, op: OperationDe<"supprimer_acteur">): void {
+  const acteur = trouverActeur(c.session, op.acteurId)
+  if (acteur.locked) throw new ErreurOutil(`« ${acteur.name} » est verrouillé par l'utilisateur : il ne peut pas être supprimé par une proposition (seulement en repartant de zéro).`)
+  const relations = c.session.relationships.filter(r => r.fromId === acteur.id || r.toId === acteur.id)
+  for (const r of relations) c.activitesAVerifier.add(r.fromId === acteur.id ? r.toId : r.fromId)
+  const sansSesFlux = transformerLesGrilles(c.session, grille => grille.map(m => ({ ...m, flows: m.flows.filter(f => f.entityId !== acteur.id) })))
+  c.session = { ...sansSesFlux, entities: c.session.entities.filter(e => e.id !== acteur.id), relationships: c.session.relationships.filter(r => !relations.includes(r)) }
+}
+
+/** Supprime une année et sa grille, avec la règle de l'application : une extrémité, jamais la dernière qui reste. */
+function supprimerUneAnnee(c: Chantier, op: OperationDe<"supprimer_annee">): void {
+  anneeDeLaSession(c.session, op.annee)
+  const annees = anneesDeLaSession(c.session)
+  if (annees.length === 1) throw new ErreurOutil(`${op.annee} est la seule année de la simulation, qui en garde toujours une : pour tout effacer, proposez de repartir de zéro (cible « simulation »).`)
+  if (!peutSupprimerAnnee(c.session, op.annee)) throw new ErreurOutil(`Seules la plus ancienne (${annees[0]}) et la plus récente (${annees[annees.length - 1]}) se suppriment, pour que les années restent consécutives : supprimez d'abord celles d'avant ou d'après.`)
+  c.session = supprimerAnnee(c.session, op.annee)
+}
+
+/** Repart de zéro : la simulation vierge de l'application (« Nouvelle simulation »), sans acteur ni réglage, une année vide. */
+function viderSimulation(c: Chantier): void {
+  c.session = SessionStateSchema.parse({})
+  c.activitesAVerifier.clear()
+}
+
 function reglerComparateur(c: Chantier, op: OperationDe<"regler_comparateur">): void {
   const activite = trouverActeur(c.session, op.activiteId)
   if (activite.type === "person") throw new ErreurOutil(`« ${activite.name} » est une personne : les réglages du comparateur portent sur une activité.`)
@@ -296,7 +330,10 @@ const APPLICATIONS: { [T in Operation["type"]]: (c: Chantier, op: OperationDe<T>
   ajouter_flux: ajouterFlux,
   modifier_serie: modifierSerie,
   supprimer_serie: supprimerSerie,
-  regler_comparateur: reglerComparateur
+  regler_comparateur: reglerComparateur,
+  supprimer_acteur: supprimerActeur,
+  supprimer_annee: supprimerUneAnnee,
+  vider_simulation: viderSimulation
 }
 
 /** Une rémunération ou des dividendes sans dirigeant ni associé relié : le moteur ne saurait à qui les verser. */
@@ -316,7 +353,8 @@ function verifierRelationsRequises(c: Chantier): void {
 function libelleDeLOperation(operation: Operation): string {
   if (operation.type === "ajouter_flux") return ` « ${operation.libelle} » ${operation.annee}`
   if (operation.type === "modifier_serie" || operation.type === "supprimer_serie") return ` « ${operation.serie.libelle} » ${operation.annee}`
-  if (operation.type === "ajouter_annee") return ` ${operation.annee}`
+  if (operation.type === "ajouter_annee" || operation.type === "supprimer_annee") return ` ${operation.annee}`
+  if (operation.type === "supprimer_acteur") return ` « ${operation.acteurId} »`
   if (operation.type === "ajouter_acteur") return ` « ${operation.nom} »`
   return ""
 }
@@ -346,6 +384,21 @@ export function appliquerOperations(session: SessionState, operations: Operation
   })
   verifierRelationsRequises(chantier)
   return chantier.session
+}
+
+/**
+ * La session telle que chaque opération la trouve, dans l'ordre : de quoi résumer une suppression (ce qu'elle emporte
+ * avec elle) sans compter deux fois ce qu'une opération précédente a déjà retiré. Les opérations doivent s'appliquer
+ * (proposition déjà validée) ; ne modifie pas `session`.
+ */
+export function sessionsAvantChaqueOperation(session: SessionState, operations: Operation[]): SessionState[] {
+  let compteur = 0
+  const chantier: Chantier = { session, nouvelIdDeFlux: () => `etape-${++compteur}`, activitesAVerifier: new Set() }
+  return operations.map(operation => {
+    const avant = chantier.session
+    ;(APPLICATIONS[operation.type] as (c: Chantier, op: Operation) => void)(chantier, operation)
+    return avant
+  })
 }
 
 /** « ajouter_flux « Loyer » 2026 » : une opération désignée pour un modèle. */
