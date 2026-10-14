@@ -64,9 +64,12 @@ async function renderApp(propositions: PropositionRecue[], preferences: Partial<
 const noms = () => screen.queryAllByRole("textbox", { name: "Nom", hidden: true }).map(champ => (champ as HTMLInputElement).value)
 const undoButton = () => screen.getByRole("button", { name: "Annuler" })
 const pastille = () => screen.queryByRole("region", { name: "Modification directe de la simulation par l'IA" })
-const derniereNotification = () => vi.mocked(toast.success).mock.calls.at(-1)!
+const dernier = <T,>(liste: T[]): T | undefined => liste[liste.length - 1]
+const derniereNotification = () => dernier(vi.mocked(toast.success).mock.calls)!
+/** Le bouton « Annuler » d'une notification de sonner. */
+const actionDe = (options: unknown) => (options as { action: { label: string; onClick: () => void } }).action
 /** Les préférences enregistrées en dernier (sauvegarde différée d'une seconde). */
-const preferencesEnregistrees = () => vi.mocked(window.api.saveUserPreferences).mock.calls.at(-1)?.[0]
+const preferencesEnregistrees = () => dernier(vi.mocked(window.api.saveUserPreferences).mock.calls)?.[0]
 
 describe("App : l'IA modifie directement la simulation", () => {
   it("case cochée puis « Appliquer » : la proposition s'applique, le choix est enregistré, la suivante s'applique dès son arrivée", async () => {
@@ -94,7 +97,7 @@ describe("App : l'IA modifie directement la simulation", () => {
     expect(window.api.retirerProposition).toHaveBeenCalledWith(chloe.id)
     const [message, options] = derniereNotification()
     expect(message).toBe("Modifié par l'IA : Ajouter 1 acteur")
-    const action = (options as { action: { label: string; onClick: () => void } }).action
+    const action = actionDe(options)
     expect(action.label).toBe("Annuler")
 
     // « Annuler » de la notification défait cette modification seule, en une étape.
@@ -169,7 +172,7 @@ describe("App : l'IA modifie directement la simulation", () => {
     await renderApp([bruno, chloe], { iaModifieDirectement: true })
     await waitFor(() => expect(noms()).toEqual(["Alice Martin", "Bruno Durand", "Chloé Petit"]))
     // La notification de Bruno : Chloé l'a suivie, son « Annuler » ne touche à rien et renvoie à la barre d'outils.
-    const action = (vi.mocked(toast.success).mock.calls[0][1] as { action: { onClick: () => void } }).action
+    const action = actionDe(vi.mocked(toast.success).mock.calls[0][1])
     act(() => action.onClick())
     expect(noms()).toEqual(["Alice Martin", "Bruno Durand", "Chloé Petit"])
     expect(toast.info).toHaveBeenCalledWith(expect.stringMatching(/utilisez « Annuler » dans la barre d'outils/))

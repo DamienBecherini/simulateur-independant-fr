@@ -161,12 +161,36 @@ describe("serveur MCP : propositions", () => {
     const fichiers = await boite()
     expect(fichiers).toHaveLength(1)
     expect(fichiers[0]).toMatch(/^2026-10-06T08-30-00-000Z-[0-9a-f]{12}\.json$/)
-    expect(donnees(envoyee)).toMatchObject({ envoyee: true, fichier: fichiers[0], empreinteSession: empreinteDeLaSession(session), recapitulatif: "Ajouter 3 flux ?" })
+    expect(donnees(envoyee)).toMatchObject({ envoyee: true, modificationDirecte: false, fichier: fichiers[0], empreinteSession: empreinteDeLaSession(session), recapitulatif: "Ajouter 3 flux ?" })
 
     const deposee = lireUnePropositionEnAttente(await readFile(path.join(dossier, DOSSIER_DES_PROPOSITIONS, fichiers[0]), "utf-8"))
     expect(deposee).toMatchObject({ creeeLe: "2026-10-06T08:30:00.000Z", proposition })
     expect(await readFile(fichierDeLaSession, "utf-8")).toBe(avant.contenu)
     expect((await stat(fichierDeLaSession)).mtimeMs).toBe(avant.date)
+  })
+
+  it("dit au modèle que la proposition s'applique aussitôt quand l'utilisateur le laisse modifier directement la simulation, sans écrire les préférences", async () => {
+    await ecrireLaSession(sessionExemple())
+    const fichierDesPreferences = path.join(dossier, "userPreferences.json")
+    const preferences = JSON.stringify({ slotOrder: [], iaModifieDirectement: true })
+    await writeFile(fichierDesPreferences, preferences)
+    await connecter()
+    const { proposition } = donnees(await appeler("proposer_flux", { flux: [loyer] })) as { proposition: unknown }
+
+    const envoyee = await appeler("appliquer_proposition", { proposition })
+    expect(envoyee.isError).toBeFalsy()
+    expect(texte(envoyee)).toMatch(/^Proposition envoyée à l'application, qui l'applique aussitôt, sans relecture : l'utilisateur vous laisse modifier directement la simulation\. Ajouter 3 flux \?/)
+    expect(donnees(envoyee)).toMatchObject({ envoyee: true, modificationDirecte: true })
+    // Toujours un simple dépôt dans la boîte : c'est l'application qui applique, après l'avoir relue.
+    expect(await boite()).toHaveLength(1)
+    expect(await readFile(fichierDesPreferences, "utf-8")).toBe(preferences)
+
+    // Des préférences illisibles valent « non » : la proposition attend la relecture de l'utilisateur.
+    await writeFile(fichierDesPreferences, "{ pas du json")
+    await rm(path.join(dossier, DOSSIER_DES_PROPOSITIONS), { recursive: true })
+    const relue = await appeler("appliquer_proposition", { proposition })
+    expect(donnees(relue)).toMatchObject({ modificationDirecte: false })
+    expect(texte(relue)).toMatch(/^Proposition envoyée à l'application, pas encore appliquée/)
   })
 
   it("ne dépose pas deux fois une proposition identique qui attend encore, mais la redépose une fois retirée", async () => {

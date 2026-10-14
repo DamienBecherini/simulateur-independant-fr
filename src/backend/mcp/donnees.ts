@@ -1,6 +1,7 @@
 // src/backend/mcp/donnees.ts
-// Ce que le serveur MCP lit et écrit sur le disque, et rien d'autre : la session enregistrée par l'application (en
-// lecture seule) et un fichier par proposition à appliquer, dans le dossier `propositions` (voir l'ADR 011).
+// Ce que le serveur MCP lit et écrit sur le disque, et rien d'autre : la session enregistrée par l'application et un
+// seul de ses réglages (en lecture seule), et un fichier par proposition à appliquer, dans le dossier `propositions`
+// (voir l'ADR 011).
 
 import { randomBytes } from "node:crypto"
 import { lstat, mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises"
@@ -75,6 +76,26 @@ export async function propositionDejaEnAttente(dossier: string, proposition: Pro
     if (lue && empreinte(lue.proposition) === cherchee) return nom
   }
   return null
+}
+
+/** Taille au-delà de laquelle le fichier des préférences n'est pas lu : il en fait quelques kilo-octets. */
+const TAILLE_MAX_DES_PREFERENCES = 256 * 1024
+
+/**
+ * Vrai si l'utilisateur laisse l'IA modifier directement la simulation (préférence `iaModifieDirectement` de
+ * l'application, voir l'addendum du 2026-10-14 à l'ADR 011) : une proposition déposée sera appliquée dès que
+ * l'application la recevra. Lu en lecture seule ; un fichier absent, trop grand ou illisible vaut « non ».
+ */
+export async function iaModifieDirectement(dossier: string): Promise<boolean> {
+  try {
+    const fichier = path.join(dossier, "userPreferences.json")
+    const infos = await lstat(fichier)
+    if (!infos.isFile() || infos.size > TAILLE_MAX_DES_PREFERENCES) return false
+    const preferences: unknown = JSON.parse(await readFile(fichier, "utf-8"))
+    return typeof preferences === "object" && preferences !== null && (preferences as { iaModifieDirectement?: unknown }).iaModifieDirectement === true
+  } catch {
+    return false
+  }
 }
 
 /**
