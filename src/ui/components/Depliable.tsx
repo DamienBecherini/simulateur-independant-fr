@@ -48,11 +48,14 @@ function Section({ titre, className, children, open, onToggle }: SectionProps) {
     <details className={cn("group", className)} open={open} onToggle={onToggle}>
       <summary className="flex min-h-6 w-fit cursor-pointer list-none items-center gap-1.5 rounded-md pointer-coarse:min-h-11 font-medium hover:text-slate-950 dark:hover:text-white [&::-webkit-details-marker]:hidden">
         <ChevronRight aria-hidden className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90 print:hidden" />
-        {titre}
-        {/* Sur papier, la section est toujours dépliée (voir impression.css) : l'invitation à cliquer n'a plus lieu d'être. */}
-        <span className="font-normal text-blue-600 underline-offset-2 group-hover:underline dark:text-blue-400 print:hidden">
-          <span className="group-open:hidden">(afficher)</span>
-          <span className="hidden group-open:inline">(masquer)</span>
+        {/* Un titre trop long pour la largeur (cellule étroite du comparateur) garde toute la ligne : « (afficher) » passe dessous. */}
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
+          {titre}
+          {/* Sur papier, la section est toujours dépliée (voir impression.css) : l'invitation à cliquer n'a plus lieu d'être. */}
+          <span className="font-normal text-blue-600 underline-offset-2 group-hover:underline dark:text-blue-400 print:hidden">
+            <span className="group-open:hidden">(afficher)</span>
+            <span className="hidden group-open:inline">(masquer)</span>
+          </span>
         </span>
       </summary>
       {children}
