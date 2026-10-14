@@ -12,6 +12,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 - **Outil `chiffre_affaires_pour_net_vise` pour les clients d'IA.** Le même calcul à l'envers, en lecture seule, dans le serveur MCP de l'application de bureau (dix-sept outils).
 - **Un lien vers chaque situation type dans la démo web.** L'adresse `…/simulateur-independant-fr/#situation=<identifiant>` (par exemple `#situation=couple-union-libre`) ouvre la situation type : un article peut proposer « Ouvrir cet exemple dans le simulateur ». Sur une première visite ou une simulation vide, la situation se charge directement ; sur une simulation non enregistrée, la confirmation de la fenêtre des situations types la précède, et « Annuler » ne change rien. Le chargement s'annule en une étape, et le lien quitte l'adresse une fois lu : un rechargement ne remet pas la situation par-dessus le travail fait depuis. Un identifiant inconnu ne change rien ; un message discret le dit, avec un lien vers les situations types. Dans la fenêtre « Partir d'une situation type », « Copier le lien » donne l'adresse de chaque situation. Les identifiants sont publics et ne changeront plus ([liste](./documentation/liens-vers-les-situations-types.md)). L'application de bureau, sans adresse, n'est pas concernée.
 
+### Maintenance
+
+- Portage salarial, première étape ([ADR 016](./documentation/adr/016-portage-salarial.md), acceptée) : le moteur calcule une activité en portage salarial (frais de gestion mois par mois, enveloppe, bulletin d'un cadre selon l'effectif de la société de portage, indemnité d'apport d'affaires, réserve d'un CDI gardée sur le compte d'activité, mutuelle, impôt du foyer), avec les règles de la convention de branche pour 2024 à 2026 et des cas de référence vérifiés à la main ; les outils pour les IA la décrivent. Rien ne change encore à l'écran : la colonne du comparateur et la saisie dans la grille viendront ensuite. Le format de fichier reste le 3 : une version précédente écarte une activité en portage en le signalant.
+
 ## [0.12.0] — 2026-10-13
 
 ### Ajouté
