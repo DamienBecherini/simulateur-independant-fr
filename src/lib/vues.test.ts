@@ -29,6 +29,11 @@ describe("vues de l'affichage « Trois vues »", () => {
     expect(destinationDeLAdresse("#donner-mon-avis", () => "resultats")).toBeNull()
   })
 
+  it("ne confond pas l'adresse d'une situation type (#situation=…) avec la vue « situation »", () => {
+    expect(destinationDeLAdresse("#situation=couple-union-libre", () => "resultats")).toBeNull()
+    expect(destinationDeLAdresse("#situation=inconnue", () => "resultats")).toBeNull()
+  })
+
   it("mène les liens de la barre de résumé à leur vue, même avant que le détail soit affiché", () => {
     expect(destinationDeLAdresse("#bilan", aucunElement)).toEqual({ vue: "resultats", detail: "bilan" })
     expect(destinationDeLAdresse("#resultats-titre", aucunElement)).toEqual({ vue: "resultats", detail: "resultats-titre" })
