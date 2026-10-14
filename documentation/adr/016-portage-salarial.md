@@ -59,6 +59,9 @@ Cette ADR fixe le modèle de calcul, la place du portage dans l'application, les
 - **Mutuelle (part du salarié).** La cotisation salariale à une complémentaire santé collective et obligatoire, sous contrat « responsable », est déductible du revenu imposable ([CGI, art. 83, 1° quater](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053545390)). La limite est de 5 % du plafond plus 2 % de la rémunération, sans dépasser 2 % de 8 plafonds, prévoyance comprise.
   Elle ne réduit pas l'assiette de la CSG : l'art. L136-1-1, III, 2° du code de la sécurité sociale n'exclut que la part salariale prise en charge par l'employeur.
   La part patronale de la mutuelle s'ajoute au salaire imposable et à l'assiette de la CSG. La part patronale de prévoyance est soumise à la CSG-CRDS et, à partir de 11 salariés, au forfait social de 8 % (art. L137-15 et L137-16).
+- **Prélèvements sur la prévoyance patronale des cadres** (code de la sécurité sociale, sur Légifrance, consulté le 2026-10-14 ; modélisés depuis le 14 octobre 2026, décision du propriétaire) :
+  - **CSG et CRDS, à la charge du salarié.** La CSG est due « sur toutes les sommes, ainsi que les avantages » versés à l'occasion du travail ([art. L136-1-1, I](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053282440), en vigueur depuis le 31 décembre 2025). Les contributions des employeurs à la protection sociale complémentaire, exclues de l'assiette des cotisations ([art. L242-1, II, 4°](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000038836902)), ne figurent pas parmi les exclusions de l'art. L136-1-1, III. La réduction de 1,75 % pour frais professionnels ne s'y applique pas : l'[art. L136-2, I, 1°](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006173055) la réserve aux revenus d'activité « à l'exception de ceux mentionnés au II de l'article L. 242-1 ». Le moteur prélève donc 9,70 % (6,80 déductibles, 2,40 non déductibles et 0,50 de CRDS) sur toute la contribution de 1,50 % ; la part non déductible rejoint le salaire imposable.
+  - **Forfait social, à la charge de l'employeur** : 8 % « pour les contributions des employeurs destinées au financement des prestations » complémentaires de prévoyance ([art. L137-16](https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006073189/LEGISCTA000019946240/), en vigueur depuis le 1er janvier 2022) ; « ne sont pas assujettis à cette contribution les employeurs de moins de onze salariés » (art. L137-15, en vigueur depuis le 1er septembre 2023). Il est pris sur l'enveloppe, comme les cotisations patronales, pour les effectifs « de 11 à 49 » et « 50 et plus ».
 - **Versement mobilité** : dû à partir de 11 salariés ([CGCT, art. L2333-64 et suivants](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000039802388)). Ses taux maximaux :
   - hors Île-de-France : de 0,55 % à 1,75 % selon la population et les transports (art. L2333-67) ;
   - Paris, Hauts-de-Seine, Seine-Saint-Denis et Val-de-Marne : 3,20 % au plus ([art. L2531-4](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000048837031)).
@@ -129,6 +132,7 @@ Il part du bulletin `"salarie"` (règles `regimeGeneral` de l'année) et en chan
 | Catégorie | non cadre | cadre |
 | APEC | non | 0,024 % salarié, 0,036 % employeur, jusqu'à 4 PASS |
 | Prévoyance des cadres | non | 1,50 % employeur sur la tranche 1 (minimum de l'ANI du 17/11/2017) |
+| Prélèvements sur cette prévoyance | non | CSG et CRDS du salarié, 9,70 % de la contribution, sans abattement ; forfait social de 8 % pour l'employeur à partir de 11 salariés |
 | FNAL | 0,10 % jusqu'au PASS (moins de 50 salariés) | selon l'effectif réglé : 0,50 % sur tout le brut à partir de 50 |
 | Formation professionnelle | 0,55 % (moins de 11) | selon l'effectif : 0,55 % ou 1 %, plus la contribution conventionnelle (1,05 % ou 0,60 %) |
 | Participation à l'effort de construction | non | 0,45 % à partir de 50 salariés |
@@ -146,30 +150,29 @@ Une personne seule, sans autre revenu, 60 000 € HT facturés en 2026, réparti
 | Chiffre d'affaires HT | | 60 000 € |
 | Frais de gestion | 7 % × 60 000 | − 4 200 € |
 | Enveloppe disponible | | 55 800 € |
-| Taux patronal (brut sous le PASS) | 13 + 8,55 + 2,11 + 5,25 + 0,64 + 0,30 + 0,50 (FNAL) + 4,72 + 1,29 + 4,00 + 0,25 + 0,016 + 1,00 + 0,60 (formation) + 0,68 + 0,036 (APEC) + 1,50 (prévoyance) + 0,45 (construction) | 44,892 % |
-| Masse salariale brute `M` | 55 800 / 1,44892 | 38 511 € |
-| dont salaire de base, apport d'affaires, précarité | `M` / 1,15 ; × 5 % ; × 10 % | 33 488 € ; 1 674 € ; 3 349 € |
-| Cotisations patronales | 38 511 × 44,892 % | 17 289 € |
-| Taux salarial | 6,90 + 0,40 + 3,15 + 0,86 + 0,024 (APEC) + 9,70 × 0,9825 (CSG-CRDS) | 20,864 % |
-| **Salaire net** | 38 511 × (1 − 20,864 %) | **30 476 €**, soit 50,8 % du chiffre d'affaires |
-| Net imposable | 30 476 + 38 511 × 0,9825 × 2,9 % | 31 574 € |
-| Déduction de 10 % | | − 3 157 € |
-| Revenu net imposable | | 28 416 € |
-| Impôt (1 part) | 11 % × (28 416 − 11 600) = 1 850, décote 897 − 45,25 % × 1 850 = 60 ; 1 789,82 arrondi à l'euro | 1 790 € |
-| **Net après impôt** | 30 476,32 − 1 790 | **28 686 €** |
+| Taux patronal (brut sous le PASS) | 13 + 8,55 + 2,11 + 5,25 + 0,64 + 0,30 + 0,50 (FNAL) + 4,72 + 1,29 + 4,00 + 0,25 + 0,016 + 1,00 + 0,60 (formation) + 0,68 + 0,036 (APEC) + 1,50 (prévoyance) + 0,12 (forfait social de 8 % sur la prévoyance) + 0,45 (construction) | 45,012 % |
+| Masse salariale brute `M` | 55 800 / 1,45012 | 38 480 € |
+| dont salaire de base, apport d'affaires, précarité | `M` / 1,15 ; × 5 % ; × 10 % | 33 461 € ; 1 673 € ; 3 346 € |
+| Cotisations patronales | 38 479,57 × 45,012 % | 17 320 € |
+| Taux salarial | 6,90 + 0,40 + 3,15 + 0,86 + 0,024 (APEC) + 9,70 × 0,9825 (CSG-CRDS) + 9,70 × 1,50 (CSG-CRDS sur la prévoyance) | 21,00975 % |
+| **Salaire net** | 38 479,57 × (1 − 21,00975 %) | **30 395 €**, soit 50,7 % du chiffre d'affaires |
+| Net imposable | 30 395,11 + 38 479,57 × (0,9825 + 0,015) × 2,9 % | 31 508 € |
+| Déduction de 10 % | | − 3 151 € |
+| Revenu net imposable | | 28 357 € |
+| Impôt (1 part) | 11 % × (28 357,41 − 11 600) = 1 843,31, décote 897 − 45,25 % × 1 843,31 = 62,90 ; 1 780,41 arrondi à l'euro | 1 780 € |
+| **Net après impôt** | 30 395,11 − 1 780 | **28 615 €** |
 
-La version proposée donnait 28 687 € : elle retranchait l'impôt non arrondi (1 789,82 €). Le moteur, qui arrondit l'impôt à l'euro comme l'administration, donne 28 686 € ; la ligne est corrigée.
+La version proposée donnait 28 687 € : elle retranchait l'impôt non arrondi (1 789,82 €) et ne comptait pas les prélèvements sur la prévoyance. Sans eux, le moteur, qui arrondit l'impôt à l'euro comme l'administration, donnait 28 686 € ; avec eux (complément du 14 octobre 2026), 28 615 €. L'écart de 71 € dépasse les 56 € qu'annonçait la version précédente : la CSG-CRDS sur la prévoyance retire bien 56 €, mais le forfait social (46 €), pris sur l'enveloppe, réduit aussi la masse salariale de 32 €, donc le net de 25 € ; l'impôt baisse de 10 €.
 
 Variantes, mêmes hypothèses :
 
-- **CDI, réserve conservée** (contrat par défaut) : 35 163 € bruts versés, 27 826 € nets dans l'année, et 2 650 € nets (3 349 € bruts) sur le compte d'activité, montrés comme conservés. Impôt 1 395 €, net après impôt 26 431 €.
-- **Réduction générale reversée** : la masse salariale `M` vérifie `M × (1,44892 − C(M)) = 55 800`. À 50 salariés et plus, Tdelta vaut 0,3821, d'où un coefficient de 0,0695 ; `M` = 40 452 €, réduction 2 811 €, net 32 012 € (+ 1 536 €), impôt 2 058 €, net après impôt 29 954 €. La version proposée calculait avec le Tdelta des moins de 50 salariés (0,3781) : `M` = 40 440 €, net 32 003 €. L'écart d'une dizaine d'euros était annoncé ; le moteur prend le bon paramètre. Non reversée, la réduction que garde la société vaut 0,0815 × 38 511 = 3 139 €. C'est l'écart le plus fort entre deux conditions plausibles : il justifie un réglage explicite.
+- **CDI, réserve conservée** (contrat par défaut) : 35 134 € bruts versés, 27 752 € nets dans l'année, et 2 643 € nets (3 346 € bruts) sur le compte d'activité, montrés comme conservés. Impôt 1 386 €, net après impôt 26 366 € (26 431 € sans les prélèvements sur la prévoyance).
+- **Réduction générale reversée** : la masse salariale `M` vérifie `M × (1,45012 − C(M)) = 55 800`. À 50 salariés et plus, Tdelta vaut 0,3821, d'où un coefficient de 0,0697 ; `M` = 40 422 €, réduction 2 817 €, net 31 930 € (+ 1 535 €), impôt 2 041 €, net après impôt 29 889 €. La version proposée calculait avec le Tdelta des moins de 50 salariés (0,3781) : l'écart d'une dizaine d'euros était annoncé ; le moteur prend le bon paramètre. Non reversée, la réduction que garde la société vaut 0,0817 × 38 480 = 3 144 €. C'est l'écart le plus fort entre deux conditions plausibles : il justifie un réglage explicite.
 
 Approximations de cet exemple, toutes dites dans l'interface ou ici :
 - cotisations annuelles au lieu de douze bulletins (identiques pour un salaire régulier, la régularisation progressive des plafonds le garantit à peu près) ;
 - taux d'accidents du travail de 0,64 % (celui des règles actuelles) ;
-- ni mutuelle, ni prévoyance au-delà du minimum des cadres ;
-- ni la CSG-CRDS ni le forfait social de 8 % sur la prévoyance patronale. Ils réduiraient le net d'environ 56 € et coûteraient environ 46 € de plus à l'enveloppe (art. L136-1-1, L137-15 et L137-16 du code de la sécurité sociale).
+- ni mutuelle, ni prévoyance au-delà du minimum des cadres.
 
 Ces montants sont figés par les cas de référence (`references/portage.reference.test.ts`), dérivés à la main ligne à ligne : le moteur les retrouve au centime.
 
@@ -260,7 +263,7 @@ La personne colle les conditions de sa société de portage (page de tarifs, con
 
 | Point | Raison |
 | --- | --- |
-| Part patronale de la mutuelle, forfait social et CSG sur la prévoyance patronale | Garanties et prix propres à chaque contrat ; quelques dizaines à quelques centaines d'euros par an. La part salariale de la mutuelle est un réglage (décision 5) |
+| Part patronale de la mutuelle | Garanties et prix propres à chaque contrat ; quelques dizaines à quelques centaines d'euros par an. La part salariale de la mutuelle est un réglage (décision 5) |
 | Prévoyance au-delà du minimum des cadres | Idem ; le minimum de 1,50 % est modélisé |
 | Limite de déduction de l'art. 83, 1° quater du CGI | Une mutuelle ordinaire et la prévoyance minimale restent en dessous |
 | Indemnités kilométriques et frais de déplacement détaillés | Les frais professionnels sont un montant saisi ; le barème kilométrique existant (`frais-kilometriques.ts`) sert aux frais réels de la personne, pas aux remboursements de la société |
@@ -321,7 +324,7 @@ Soit environ deux semaines, en petites branches (règles et moteur ; comparateur
 1. L'exemple ci-dessus (60 000 €, 7 %, CDD, 50 salariés et plus, sans réduction générale) : enveloppe, masse salariale, net, impôt, à l'euro. **Fait.**
 2. Le même en CDI : bruts versés, réserve conservée. **Fait.**
 3. Le même avec la réduction générale reversée. **Fait.**
-4. Un chiffre d'affaires de 150 000 € : masse salariale au-delà du PASS (tranche 2, contribution d'équilibre technique, sans réduction générale). **Fait** (M = 96 638 €, net 76 918 €, net après impôt 62 303 €).
+4. Un chiffre d'affaires de 150 000 € : masse salariale au-delà du PASS (tranche 2, contribution d'équilibre technique, sans réduction générale). **Fait** (M = 96 598 €, net 76 816 €, net après impôt 62 223 €).
 5. Un plancher mensuel qui joue (petit chiffre d'affaires sur trois mois, avec l'avertissement du minimum conventionnel) et un plafond qui joue (gros chiffre d'affaires, frais fixes en plus). **Fait.**
 6. Des frais professionnels : l'enveloppe baisse exactement de leur montant (les frais de gestion portent sur le chiffre d'affaires), et ils n'entrent ni dans le brut ni dans l'imposable. **Fait.** (La version proposée parlait de « même enveloppe qu'un chiffre d'affaires diminué d'autant » : c'est faux, ce chiffre d'affaires diminué aurait aussi des frais de gestion plus bas.)
 7. Une mutuelle de 60 € par mois : retirée du net et de l'imposable. **Fait.**

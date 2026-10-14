@@ -145,7 +145,9 @@ const LIBELLES_DU_PORTAGE: Record<CotisationPortage, string> = {
   prevoyanceCadres: "Prévoyance des cadres",
   formationConventionnelle: "Formation professionnelle conventionnelle",
   effortConstruction: "Participation à l'effort de construction",
-  versementMobilite: "Versement mobilité"
+  versementMobilite: "Versement mobilité",
+  csgCrdsPrevoyance: "CSG et CRDS sur la prévoyance patronale",
+  forfaitSocialPrevoyance: "Forfait social sur la prévoyance patronale"
 }
 
 const ComposanteSchema = z.object({ libelle: z.string(), montant: z.number() })

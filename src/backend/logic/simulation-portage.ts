@@ -33,7 +33,7 @@ export function fraisDeGestionDuMois(chiffreAffaires: number, conditions: Condit
  */
 export function parametresDuBulletinDuPorte(regles: ReglesFiscales, conditions: ConditionsPortageRetenues): BulletinDuPorte {
   const { regimeGeneral } = regles
-  const { cotisationsDuCadre, selonLEffectif } = regles.portageSalarial
+  const { cotisationsDuCadre, prelevementsSurLaPrevoyance, selonLEffectif } = regles.portageSalarial
   const effectif = selonLEffectif[conditions.effectif]
   const tauxVersementMobilite = effectif.versementMobiliteDu ? conditions.tauxVersementMobilite : 0
   return {
@@ -49,6 +49,7 @@ export function parametresDuBulletinDuPorte(regles: ReglesFiscales, conditions: 
       effortConstruction: effectif.effortConstruction,
       versementMobilite: { salariale: [], patronale: tauxVersementMobilite > 0 ? [{ jusquA: null, taux: tauxVersementMobilite }] : [] }
     },
+    forfaitSocialSurLaPrevoyance: effectif.forfaitSocialSurLaPrevoyanceDu ? prelevementsSurLaPrevoyance.forfaitSocial : 0,
     reductionGeneraleReversee: conditions.reductionGeneraleReversee
   }
 }

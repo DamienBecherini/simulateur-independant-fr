@@ -599,9 +599,13 @@ export type CotisationSalarie =
 /**
  * Les cotisations d'un salarié porté qui s'ajoutent à celles d'un salarié (voir l'ADR 016) : celles du cadre (APEC,
  * prévoyance), celles qui dépendent de l'effectif de la société de portage (participation à l'effort de construction,
- * versement mobilité) et la contribution conventionnelle à la formation professionnelle.
+ * versement mobilité), la contribution conventionnelle à la formation professionnelle, et les prélèvements sur la
+ * prévoyance patronale : CSG et CRDS du salarié, forfait social de l'employeur à partir de 11 salariés.
  */
-export type CotisationPortage = "apec" | "prevoyanceCadres" | "formationConventionnelle" | "effortConstruction" | "versementMobilite"
+export type CotisationPortage = CotisationPortageAuBareme | "csgCrdsPrevoyance" | "forfaitSocialPrevoyance"
+
+/** Les cotisations propres au salarié porté qui ont leur barème par tranches (les autres se calculent sur la prévoyance). */
+export type CotisationPortageAuBareme = "apec" | "prevoyanceCadres" | "formationConventionnelle" | "effortConstruction" | "versementMobilite"
 
 /** Bulletin de paie annuel simplifié d'un président de SASU (assimilé salarié), d'un salarié ou d'un salarié porté. */
 export interface DetailCotisationsSalarie {
@@ -622,7 +626,7 @@ export interface DetailCotisationsSalarie {
   reductionGenerale: number
   /** Brut, plus les cotisations patronales, moins la réduction générale : ce que paie l'employeur. */
   coutEmployeur: number
-  /** CSG non déductible et CRDS : elles s'ajoutent au net pour le revenu imposable. */
+  /** CSG non déductible et CRDS (celles sur la prévoyance patronale du salarié porté comprises) : elles s'ajoutent au net pour le revenu imposable. */
   partNonDeductible: number
   /** Salarié porté : ses cotisations propres, comprises dans les totaux (voir `CotisationPortage`). */
   cotisationsDuPortage?: Record<CotisationPortage, { salariale: number; patronale: number }>

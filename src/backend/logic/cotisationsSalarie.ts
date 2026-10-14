@@ -1,6 +1,6 @@
 // src/backend/logic/cotisationsSalarie.ts
 
-import type { CotisationPortage, CotisationSalarie, DetailCotisationsSalarie } from "../../types.js"
+import type { CotisationPortage, CotisationPortageAuBareme, CotisationSalarie, DetailCotisationsSalarie } from "../../types.js"
 import { parTranches } from "./cotisationsTNS.js"
 import type { CotisationRegimeGeneral, ReglesRegimeGeneral } from "./regles.js"
 
@@ -57,7 +57,9 @@ function lignes<Nom extends string>(brut: number, bareme: Record<Nom, Cotisation
  */
 export interface BulletinDuPorte {
   regimeGeneral: ReglesRegimeGeneral
-  cotisationsDuPortage: Record<CotisationPortage, CotisationRegimeGeneral>
+  cotisationsDuPortage: Record<CotisationPortageAuBareme, CotisationRegimeGeneral>
+  /** Taux du forfait social sur la prévoyance patronale : 0 sous 11 salariés. */
+  forfaitSocialSurLaPrevoyance: number
   reductionGeneraleReversee: boolean
 }
 
@@ -73,10 +75,33 @@ export function calculerCotisationsSalarie(brut: number, statut: Exclude<StatutS
  * salarié porté est celui d'avant la réduction.
  */
 export function calculerBulletinDuPorte(brut: number, porte: BulletinDuPorte): DetailCotisationsSalarie {
-  return bulletinDePaie(brut, "porte", porte.regimeGeneral, porte.reductionGeneraleReversee, porte.cotisationsDuPortage)
+  return bulletinDePaie(brut, "porte", porte.regimeGeneral, porte.reductionGeneraleReversee, porte)
 }
 
-function bulletinDePaie(brut: number, statut: StatutSalarie, regles: ReglesRegimeGeneral, avecReduction: boolean, duPortage?: Record<CotisationPortage, CotisationRegimeGeneral>): DetailCotisationsSalarie {
+/**
+ * Les cotisations propres au salarié porté : celles de leur barème, puis les prélèvements sur la prévoyance patronale.
+ * La CSG et la CRDS y portent sur toute la contribution, sans la réduction pour frais professionnels (code de la sécurité
+ * sociale, art. L136-1-1 et L136-2) ; le forfait social, là où il est dû (art. L137-15 et L137-16).
+ */
+function cotisationsPropresAuPorte(brut: number, porte: BulletinDuPorte, pass: number): Record<CotisationPortage, Montants> {
+  const { csgDeductible, csgNonDeductible, crds } = porte.regimeGeneral.csgCrds
+  const auBareme = lignes(brut, porte.cotisationsDuPortage, "porte", pass)
+  const prevoyance = auBareme.prevoyanceCadres.patronale
+  return {
+    ...auBareme,
+    csgCrdsPrevoyance: { salariale: prevoyance * (csgDeductible + csgNonDeductible + crds), patronale: 0 },
+    forfaitSocialPrevoyance: { salariale: 0, patronale: prevoyance * porte.forfaitSocialSurLaPrevoyance }
+  }
+}
+
+/** CSG non déductible et CRDS sur la prévoyance patronale du salarié porté : elles rejoignent son salaire imposable. */
+function partNonDeductibleSurLaPrevoyance(cotisationsDuPortage: Record<CotisationPortage, Montants> | undefined, regles: ReglesRegimeGeneral): number {
+  if (!cotisationsDuPortage) return 0
+  const { csgNonDeductible, crds } = regles.csgCrds
+  return cotisationsDuPortage.prevoyanceCadres.patronale * (csgNonDeductible + crds)
+}
+
+function bulletinDePaie(brut: number, statut: StatutSalarie, regles: ReglesRegimeGeneral, avecReduction: boolean, porte?: BulletinDuPorte): DetailCotisationsSalarie {
   const pass = regles.plafondSecuriteSociale
   const { csgDeductible, csgNonDeductible, crds } = regles.csgCrds
   const assietteCsg = parTranches(brut, regles.csgCrds.assiette, pass)
@@ -86,7 +111,7 @@ function bulletinDePaie(brut: number, statut: StatutSalarie, regles: ReglesRegim
     csgDeductible: { salariale: assietteCsg * csgDeductible, patronale: 0 },
     csgNonDeductibleEtCrds: { salariale: assietteCsg * (csgNonDeductible + crds), patronale: 0 }
   }
-  const cotisationsDuPortage = duPortage ? lignes(brut, duPortage, statut, pass) : undefined
+  const cotisationsDuPortage = porte ? cotisationsPropresAuPorte(brut, porte, pass) : undefined
   const montants = [...Object.values(cotisations), ...Object.values(cotisationsDuPortage ?? {})]
   const totalSalarial = montants.reduce((somme, { salariale }) => somme + salariale, 0)
   const totalPatronal = montants.reduce((somme, { patronale }) => somme + patronale, 0)
@@ -101,7 +126,7 @@ function bulletinDePaie(brut: number, statut: StatutSalarie, regles: ReglesRegim
     totalPatronal,
     reductionGenerale: reduction,
     coutEmployeur: brut + totalPatronal - reduction,
-    partNonDeductible: cotisations.csgNonDeductibleEtCrds.salariale,
+    partNonDeductible: cotisations.csgNonDeductibleEtCrds.salariale + partNonDeductibleSurLaPrevoyance(cotisationsDuPortage, regles),
     ...(cotisationsDuPortage ? { cotisationsDuPortage } : {})
   }
 }

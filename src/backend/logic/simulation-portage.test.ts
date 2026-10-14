@@ -11,8 +11,10 @@ import { chaqueMois, personne, portage, relation, session } from "./testing/sess
 
 /*
  * Règles de test (voir regles-de-test.ts) : plafond de 40 000 €. Salarié porté d'une société de 50 salariés et plus,
- * sous le plafond : cotisations patronales de 42,7 %, salariales de 19,1 % (net = 80,9 % du brut). CSG non déductible et
- * CRDS : 3 % sur 90 % du brut, soit 2,7 %. Réduction générale : 2 % + 38,5 % x (60 000 / brut - 1) / 2.
+ * sous le plafond : cotisations patronales de 42,7 %, plus le forfait social de 10 % sur la prévoyance de 1 % (0,1 %),
+ * soit 42,8 % ; salariales de 19,1 %, plus la CSG et la CRDS de 10 % sur cette prévoyance (0,1 %), soit 19,2 % (net =
+ * 80,8 % du brut). CSG non déductible et CRDS : 3 % sur 90 % du brut et sur la prévoyance, soit 2,73 %. Réduction
+ * générale : 2 % + 38,5 % x (60 000 / brut - 1) / 2.
  */
 
 /** Camille, salariée portée, facture `parMois` chaque mois indiqué. */
@@ -48,9 +50,9 @@ describe("masseSalarialePourUneEnveloppe", () => {
   const porte = parametresDuBulletinDuPorte(reglesDeTest, conditionsPortageParDefaut())
 
   it("la masse salariale dont le coût employeur épuise l'enveloppe", () => {
-    // Sous le plafond : 55 800 / 1,427 = 39 103,01 €.
+    // Sous le plafond : 55 800 / 1,428 = 39 075,63 €.
     const masse = masseSalarialePourUneEnveloppe(55800, porte)
-    expect(masse).toBeCloseTo(39103.01, 2)
+    expect(masse).toBeCloseTo(39075.63, 2)
     expect(calculerBulletinDuPorte(masse, porte).coutEmployeur).toBeCloseTo(55800, 6)
   })
 
@@ -61,7 +63,7 @@ describe("masseSalarialePourUneEnveloppe", () => {
 
   it("une enveloppe dans le saut du plafond n'est pas payée à l'euro près : jamais au-delà", () => {
     // Au plafond de 40 000 €, la contribution d'équilibre technique (1 % employeur sur tout le brut) fait sauter le coût de
-    // 400 € : 40 000 x 1,427 = 57 080 €, et juste au-delà 57 480 €. Une enveloppe de 57 200 € paie au plus 40 000 €.
+    // 400 € : 40 000 x 1,428 = 57 120 €, et juste au-delà 57 520 €. Une enveloppe de 57 200 € paie au plus 40 000 €.
     const masse = masseSalarialePourUneEnveloppe(57200, porte)
     expect(masse).toBeCloseTo(40000, 4)
     expect(calculerBulletinDuPorte(masse, porte).coutEmployeur).toBeLessThanOrEqual(57200)
@@ -75,8 +77,12 @@ describe("bulletin du salarié porté", () => {
     expect(bulletin.cotisations.fnal.patronale).toBeCloseTo(50)
     expect(bulletin.cotisations.formationProfessionnelle.patronale).toBeCloseTo(100)
     expect(bulletin.cotisationsDuPortage).toMatchObject({ apec: { salariale: expect.closeTo(10, 6), patronale: expect.closeTo(20, 6) }, prevoyanceCadres: { salariale: 0, patronale: expect.closeTo(100, 6) }, formationConventionnelle: { patronale: expect.closeTo(50, 6) }, effortConstruction: { patronale: expect.closeTo(50, 6) }, versementMobilite: { salariale: 0, patronale: 0 } })
-    expect(bulletin.totalPatronal).toBeCloseTo(4270)
-    expect(bulletin.totalSalarial).toBeCloseTo(1910)
+    // Sur les 100 € de prévoyance patronale : CSG et CRDS de 10 € pour le salarié, forfait social de 10 € pour l'employeur ;
+    // la CSG non déductible et la CRDS (3 €) rejoignent l'imposable.
+    expect(bulletin.cotisationsDuPortage).toMatchObject({ csgCrdsPrevoyance: { salariale: expect.closeTo(10, 6), patronale: 0 }, forfaitSocialPrevoyance: { salariale: 0, patronale: expect.closeTo(10, 6) } })
+    expect(bulletin.partNonDeductible).toBeCloseTo(0.03 * 9000 + 3, 6)
+    expect(bulletin.totalPatronal).toBeCloseTo(4280)
+    expect(bulletin.totalSalarial).toBeCloseTo(1920)
     expect(bulletin.reductionGenerale).toBe(0)
   })
 
@@ -85,7 +91,13 @@ describe("bulletin du salarié porté", () => {
     const bulletin = calculerBulletinDuPorte(30000, parametresDuBulletinDuPorte(reglesDeTest, conditions))
     // C = 0,02 + 0,385 x (60 000 / 30 000 - 1) / 2 = 0,2125 : 6 375 €.
     expect(bulletin.reductionGenerale).toBeCloseTo(6375)
-    expect(bulletin.coutEmployeur).toBeCloseTo(30000 * 1.427 - 6375)
+    expect(bulletin.coutEmployeur).toBeCloseTo(30000 * 1.428 - 6375)
+  })
+
+  it("le forfait social sur la prévoyance, à partir de 11 salariés seulement ; la CSG et la CRDS partout", () => {
+    const moinsDe11 = calculerBulletinDuPorte(10000, parametresDuBulletinDuPorte(reglesDeTest, { ...conditionsPortageParDefaut(), effectif: "moinsDe11" }))
+    expect(moinsDe11.cotisationsDuPortage?.forfaitSocialPrevoyance.patronale).toBe(0)
+    expect(moinsDe11.cotisationsDuPortage?.csgCrdsPrevoyance.salariale).toBeCloseTo(10, 6)
   })
 
   it("le versement mobilité, à partir de 11 salariés seulement", () => {
@@ -98,39 +110,39 @@ describe("bulletin du salarié porté", () => {
 
 describe("activité en portage salarial", () => {
   it("60 000 € facturés en CDI, conditions typiques : la réserve, nette, reste sur le compte d'activité", () => {
-    // Frais de gestion 7 % = 4 200 € ; enveloppe 55 800 € ; masse salariale 39 103,01 € ; net 80,9 % = 31 634,34 €.
-    // Salaire de base 39 103,01 / 1,15 = 34 002,62 € ; réserve 10 % = 3 400,26 € ; part versée 1,05 / 1,15.
-    // Net versé 31 634,34 x 1,05 / 1,15 = 28 883,53 € ; réserve nette 2 750,81 € ; imposable + 2,7 % x 35 702,75 = 963,97 €.
+    // Frais de gestion 7 % = 4 200 € ; enveloppe 55 800 € ; masse salariale 39 075,63 € ; net 80,8 % = 31 573,11 €.
+    // Salaire de base 39 075,63 / 1,15 = 33 978,81 € ; réserve 10 % = 3 397,88 € ; part versée 1,05 / 1,15.
+    // Net versé 31 573,11 x 1,05 / 1,15 = 28 827,62 € ; réserve nette 2 745,49 € ; imposable + 2,73 % x 35 677,75 = 974,00 €.
     const report = simulerPortage(5000)
     const { resultat, detail } = activiteDe(report)
     expect(detail).toMatchObject({ moisAvecChiffreDAffaires: 12, chiffreAffaires: 60000, fraisDeGestion: expect.closeTo(4200, 6), enveloppe: expect.closeTo(55800, 6) })
-    expect(detail.masseSalariale).toBeCloseTo(39103.01, 2)
-    expect(detail.salaireDeBase).toBeCloseTo(34002.62, 2)
-    expect(detail.indemniteApportDAffaires).toBeCloseTo(1700.13, 2)
-    expect(detail.reserve).toBeCloseTo(3400.26, 2)
-    expect(detail.netVerse).toBeCloseTo(28883.53, 2)
-    expect(detail.netImposable).toBeCloseTo(29847.5, 1)
-    expect(detail.reserveConservee).toBeCloseTo(2750.81, 2)
+    expect(detail.masseSalariale).toBeCloseTo(39075.63, 2)
+    expect(detail.salaireDeBase).toBeCloseTo(33978.81, 2)
+    expect(detail.indemniteApportDAffaires).toBeCloseTo(1698.94, 2)
+    expect(detail.reserve).toBeCloseTo(3397.88, 2)
+    expect(detail.netVerse).toBeCloseTo(28827.62, 2)
+    expect(detail.netImposable).toBeCloseTo(29801.62, 1)
+    expect(detail.reserveConservee).toBeCloseTo(2745.49, 2)
     expect(detail.reliquat).toBeCloseTo(0, 6)
     expect(detail.valeursTypiques).toEqual(Object.keys(conditionsPortageParDefaut()))
-    expect(resultat).toMatchObject({ type: "portage", statut: "Portage salarial", chiffreAffaires: 60000, charges: 4200, cotisationsSociales: 24166, impotSocietes: 0, revenuVerse: 28884, resultatConserve: 2751, beneficiaireIds: ["camille"], warnings: [] })
+    expect(resultat).toMatchObject({ type: "portage", statut: "Portage salarial", chiffreAffaires: 60000, charges: 4200, cotisationsSociales: 24227, impotSocietes: 0, revenuVerse: 28828, resultatConserve: 2745, beneficiaireIds: ["camille"], warnings: [] })
   })
 
   it("le salaire rejoint le foyer de la titulaire, avec la déduction de 10 %", () => {
     const report = simulerPortage(5000)
     const camille = report.persons.find(p => p.entityId === "camille")
-    expect(camille?.detail.salairesPortage).toBe(28884)
-    expect(camille?.revenusActivites).toBe(28884)
-    // Imposable 29 847,50 €, moins 10 % : 26 862,75 €.
-    expect(report.foyers[0].revenuImposableGlobal).toBe(26863)
-    expect(report.foyers[0].resultatConserve).toBe(2751)
+    expect(camille?.detail.salairesPortage).toBe(28828)
+    expect(camille?.revenusActivites).toBe(28828)
+    // Imposable 29 801,62 €, moins 10 % : 26 821,46 €.
+    expect(report.foyers[0].revenuImposableGlobal).toBe(26821)
+    expect(report.foyers[0].resultatConserve).toBe(2745)
     expect(report.bilan.revenusAvantPrelevements).toBe(55800)
   })
 
   it("en CDD, l'indemnité de précarité est versée : rien n'est conservé", () => {
     const { detail, resultat } = activiteDe(simulerPortage(5000, { contrat: "CDD" }))
     expect(detail.brutVerse).toBeCloseTo(detail.masseSalariale, 6)
-    expect(detail.netVerse).toBeCloseTo(31634.34, 2)
+    expect(detail.netVerse).toBeCloseTo(31573.11, 2)
     expect(resultat.resultatConserve).toBe(0)
   })
 
@@ -184,7 +196,7 @@ describe("activité en portage salarial", () => {
     const { resultat } = activiteDe(report)
     expect(resultat.beneficiaireIds).toEqual([])
     expect(resultat.warnings).toContainEqual(expect.stringContaining("Aucune relation « Titulaire »"))
-    expect(report.bilan.nonRattache).toBe(28884)
+    expect(report.bilan.nonRattache).toBe(28828)
   })
 })
 
