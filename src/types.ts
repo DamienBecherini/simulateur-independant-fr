@@ -429,7 +429,13 @@ export const UserPreferencesSchema = z.object({
   /** Encart « Que voulez-vous savoir ? » fermé par l'utilisateur : il ne revient plus, même sur une simulation vide. */
   questionsFermees: z.boolean().optional().catch(undefined),
   /** Une case de la grille touchée sur un écran tactile : l'aide « Touchez une case pour saisir un montant. » ne revient plus. */
-  grilleTouchee: z.boolean().optional().catch(undefined)
+  grilleTouchee: z.boolean().optional().catch(undefined),
+  /**
+   * L'utilisateur laisse l'IA modifier directement la simulation : ses propositions valides et à jour s'appliquent dès
+   * leur arrivée, sans relecture (voir l'ADR 011, addendum du 2026-10-14). Désactivé par défaut ; seule la case de la
+   * fenêtre de relecture l'active. Le serveur MCP le lit, sans jamais l'écrire, pour le dire au modèle.
+   */
+  iaModifieDirectement: z.boolean().optional().catch(undefined)
 })
 
 // ===================================================================================

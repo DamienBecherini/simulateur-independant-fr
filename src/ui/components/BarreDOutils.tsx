@@ -4,7 +4,7 @@
 // porte aussi les deux fenêtres qu'elle ouvre (avis, situations types depuis le menu), pour y rendre le focus au bouton
 // qui les a ouvertes.
 
-import { useRef, useState } from "react"
+import { useRef, useState, type ReactNode } from "react"
 import { Download, MessageSquareHeart, Redo2, Settings, Undo2, ZoomIn, ZoomOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { MontageType } from "@/lib/montages/montages"
@@ -47,6 +47,8 @@ interface BarreDOutilsProps {
   zoom: ReturnType<typeof useZoom>
   onParametres: () => void
   onExporter: () => void
+  /** La pastille « IA en direct », près d'« Annuler », tant que l'IA modifie directement la simulation. */
+  indicateurIA?: ReactNode
 }
 
 /** La fenêtre d'avis : ouverte par son bouton, par « Plus d'actions », ou par l'adresse #donner-mon-avis (lien de la page outil du site). */
@@ -65,7 +67,7 @@ function useAvis() {
   }
 }
 
-export function BarreDOutils({ session, historique, chargement, affichage, onAffichage, zoom, onParametres, onExporter }: BarreDOutilsProps) {
+export function BarreDOutils({ session, historique, chargement, affichage, onAffichage, zoom, onParametres, onExporter, indicateurIA }: BarreDOutilsProps) {
   const plateforme = usePlateforme()
   const avis = useAvis()
   // Les situations types ouvertes depuis le menu « Plus d'actions » d'un téléphone ; le focus revient à ce menu.
@@ -91,6 +93,7 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
             <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y)" onClick={historique.retablir} disabled={!historique.peutRetablir} className="h-10 w-9 sm:w-10 [&_svg]:size-6">
               <Redo2 className="dark:text-slate-300" />
             </Button>
+            {indicateurIA}
             {/* Sur un écran large, les deux boutons les plus utiles à qui découvre le simulateur montrent leur nom ;
                 en dessous, leur icône seule. Sur un téléphone (moins de 640 px), ils passent dans le menu « Plus
                 d'actions », avec l'affichage et le thème : la barre garde les actions principales sans rien couper. */}

@@ -109,8 +109,9 @@ describe("la session maximale", () => {
     expect(champsNonRemplis(SaveSlotSchema, [sauvegardeMaximale()], "sauvegarde")).toEqual([])
     // Un affichage n'est choisi qu'à la fois : les autres sont pris par des préférences qui ne diffèrent que par lui.
     const autresAffichages = AFFICHAGES.map(({ valeur }) => ({ ...preferencesMaximales(), affichage: valeur }))
-    // De même, l'encart des questions de départ fermé, puis ouvert, et l'aide de la grille tactile déjà lue, puis pas encore.
-    const questionsOuvertes = { ...preferencesMaximales(), questionsFermees: false, grilleTouchee: false }
+    // De même, l'encart des questions de départ fermé, puis ouvert, l'aide de la grille tactile déjà lue, puis pas encore,
+    // et l'IA qui modifie directement la simulation, puis plus.
+    const questionsOuvertes = { ...preferencesMaximales(), questionsFermees: false, grilleTouchee: false, iaModifieDirectement: false }
     expect(champsNonRemplis(UserPreferencesSchema, [preferencesMaximales(), ...autresAffichages, questionsOuvertes], "préférences")).toEqual([])
   })
 

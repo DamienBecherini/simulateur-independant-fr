@@ -88,3 +88,28 @@ Le SDK MCP (1.32) déclare dépréciée la classe bas niveau `Server`, avec laqu
 
 - **Positives :** plus d'API dépréciée ; `initialize` et `tools/list` rendent exactement les mêmes réponses qu'avant (vérifié sur le serveur empaqueté) ; le catalogue reste la seule source des schémas.
 - **Négatives ou Compromis :** le serveur se passe des aides de haut niveau de `McpServer` (outils enregistrés un par un, notification de liste modifiée). Ne pas mélanger les deux voies : un `registerTool` ajouté échouerait, le SDK refusant de traiter `tools/list` et `tools/call` deux fois.
+
+## Addendum (2026-10-14) : laisser l'IA modifier directement la simulation
+
+### Contexte
+
+Saisir des factures avec une IA demande deux validations par proposition : l'accord donné dans la conversation, puis « Appliquer » dans l'application. Sur une longue séance (un relevé par mois, des corrections successives), la seconde n'apporte plus grand-chose à qui suit ce que fait l'IA, et la fenêtre s'ouvre à chaque envoi. L'utilisateur veut pouvoir laisser l'IA agir directement sur la simulation, sans perdre la possibilité de revenir en arrière ni de reprendre la main.
+
+### Décision
+
+- **Une préférence, `iaModifieDirectement`**, enregistrée avec les autres (`userPreferences.json`, propre au poste, jamais dans la session ni dans un fichier exporté). **Désactivée par défaut**, elle ne s'active que par un geste explicite : la case « Laisser l'IA modifier directement la simulation » de la fenêtre de relecture, cochée avant « Appliquer » (cochée puis « Refuser » ou « Plus tard », elle n'active rien). Son texte dit ce que cela implique : plus de propositions à relire, des modifications appliquées aussitôt (celles qui attendent déjà comprises), chacune annulable, un choix retenu d'une ouverture à l'autre et réversible à tout moment.
+- **Une pastille permanente** « IA en direct », courte, dans la barre d'outils près d'« Annuler », tant que la préférence est active : une case cochée qui, décochée, revient aux propositions. L'explication complète est dans son info-bulle et sa description accessible ; contraste AA en clair et en sombre, cible de 44 px au toucher, audit axe dans le test de bout en bout.
+- **L'application applique, toujours après relecture.** Chaque proposition reçue est relue comme avant (`relireLaProposition` : empreinte, validation complète, application à une copie). Valide et à jour, elle est appliquée par `setCurrentSession` (une étape d'annulation par proposition), retirée de la boîte, et annoncée par une notification « Modifié par l'IA : <récapitulatif> » avec « Annuler » ; ce bouton ne défait la modification que si rien ne l'a suivie dans l'historique, sinon il renvoie à « Annuler » de la barre d'outils. Périmée ou refusée, elle n'est pas appliquée et s'affiche dans la fenêtre habituelle ; les suivantes attendent qu'elle soit traitée, pour garder l'ordre d'arrivée. Plusieurs propositions arrivées ensemble s'appliquent une à une, chacune relue sur la session obtenue par la précédente.
+- **Le serveur n'écrit toujours que dans la boîte.** Il lit la préférence, en lecture seule comme `sessionState.json` (fichier ordinaire de 256 Ko au plus ; absent ou illisible, elle vaut « non »), pour que la réponse de `appliquer_proposition` dise au modèle que la proposition s'applique aussitôt (`modificationDirecte`), et qu'il relise la simulation au lieu de demander un clic. Une phrase de la description de l'outil et des consignes le prévoit.
+- **Bureau seulement** : la démo web n'a pas de boîte aux propositions.
+
+### Alternatives écartées
+
+- **Le serveur écrit la session lui-même** quand la préférence est active : il retrouverait les défauts écartés plus haut (écriture concurrente avec l'application ouverte, annulation gérée à deux endroits), et la relecture sur la session affichée, qui refuse une proposition périmée, serait perdue.
+- **Un mode en mémoire seulement**, coupé à la fermeture : envisagé d'abord, il obligeait à réactiver le choix à chaque ouverture ; la pastille permanente et l'annulation par étape suffisent à garder la main.
+- **Un bandeau pleine largeur** pour signaler le mode : trop lourd sur un écran déjà chargé ; la pastille tient dans la barre d'outils existante, même à la largeur d'un téléphone.
+
+### Conséquences
+
+- **Positives :** une séance de saisie avec l'IA ne demande plus un clic par proposition ; rien ne change pour qui ne coche pas la case ; la sécurité repose toujours sur la relecture de l'application, l'annulation par étape et un serveur qui n'écrit pas la simulation.
+- **Négatives ou Compromis :** une instruction piégée dans un document, que le modèle suivrait, modifierait la simulation sans clic : la modification reste visible (notification, pastille) et annulable en une étape, même une suppression d'acteurs ou d'années, ou « repartir de zéro » (ADR 010), mais l'utilisateur doit la repérer. Le consentement dans la conversation dépend du client d'IA et du modèle. Le bouton « Annuler » d'une notification n'agit plus dès qu'une autre modification a suivi.

@@ -39,6 +39,7 @@ import type { ResumeDeLaComparaison } from "@/lib/resume"
 import { cn } from "@/lib/utils"
 import { ANCRES, lienVers } from "@/lib/ancres"
 import { RelectureDesPropositions } from "./components/RelectureDesPropositions"
+import { IndicateurDeModificationDirecte } from "./components/IndicateurDeModificationDirecte"
 import { usePropositionsEnAttente } from "./hooks/usePropositionsEnAttente"
 import { useRaccourcisDAnnulation } from "./hooks/useRaccourcisDAnnulation"
 import { useSimulationDesAnnees } from "./hooks/useSimulationDesAnnees"
@@ -60,6 +61,10 @@ function App() {
 
   // Propositions d'un client d'IA déposées par le serveur MCP local (application de bureau seulement, voir l'ADR 011).
   const { propositions, retirer: retirerProposition } = usePropositionsEnAttente(sessionChargee)
+  // L'utilisateur peut laisser l'IA modifier directement la simulation : une préférence enregistrée, désactivée par
+  // défaut, signalée par une pastille tant qu'elle est active (voir l'ADR 011, addendum du 2026-10-14).
+  const iaModifieDirectement = userPreferences.iaModifieDirectement === true
+  const laisserLIAModifier = useCallback((oui: boolean) => setUserPreferences(prefs => ({ ...prefs, iaModifieDirectement: oui || undefined })), [setUserPreferences])
 
   // L'année affichée : celle de la grille, des résultats, du comparateur et des exports. Elle n'est pas enregistrée
   // dans la session (voir l'ADR 008) ; par défaut, ou si elle disparaît, c'est la plus récente.
@@ -150,6 +155,8 @@ function App() {
           zoom={zoom}
           onParametres={() => setSettingsOpen(true)}
           onExporter={() => setExportOpen(true)}
+          // Tant que l'IA modifie directement la simulation, une pastille le signale et permet d'y mettre fin.
+          indicateurIA={iaModifieDirectement ? <IndicateurDeModificationDirecte onCouper={() => laisserLIAModifier(false)} /> : null}
         />
 
         <header className={cn("text-center pt-16 print:mb-6 print:pt-0", enTete.header)}>
@@ -202,7 +209,15 @@ function App() {
 
         {/* Appliquer une proposition remplace la session comme toute modification : une seule étape d'annulation. Rien
             n'est montré avant le chargement de la session : la proposition paraîtrait périmée. */}
-        <RelectureDesPropositions session={currentSession} propositions={propositions} onAppliquer={setCurrentSession} onRetirer={retirerProposition} />
+        <RelectureDesPropositions
+          session={currentSession}
+          propositions={propositions}
+          onAppliquer={setCurrentSession}
+          onRetirer={retirerProposition}
+          iaModifieDirectement={iaModifieDirectement}
+          onLaisserLIAModifier={() => laisserLIAModifier(true)}
+          onAnnuler={undo}
+        />
         <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} simulation={simulation} onExportJson={handleExportAll} />
         <SettingsSheet
           isOpen={isSettingsOpen}
