@@ -29,6 +29,12 @@ export interface Plateforme {
    * savoir ? » y reste affiché, comme sur une simulation vide. Absent : il n'y a pas d'exemple (application de bureau).
    */
   estLaSessionDExemple?: (session: SessionState) => boolean
+  /**
+   * Le lien à partager vers une situation type : l'adresse de la démo suivie de `#situation=<identifiant>`. Présent,
+   * l'adresse de la page ouvre aussi une situation type (SituationParLAdresse) et la fenêtre des situations types
+   * propose « Copier le lien » ; absent (application de bureau, sans adresse à partager), ni l'un ni l'autre.
+   */
+  lienVersUneSituation?: (identifiant: string) => string
 }
 
 /** L'application de bureau : ni bandeau, ni installation, et le serveur MCP local. */

@@ -6,6 +6,7 @@
 import { ADRESSE_DES_MENTIONS_LEGALES } from "./mentions-legales"
 import { ADRESSE_DE_L_AVIS } from "./retours"
 import { ANCRES, estUneAncre, type Ancre } from "./ancres"
+import { identifiantDeLAdresse } from "./montages/adresse"
 
 export type Vue = "situation" | "resultats" | "comparer"
 
@@ -64,8 +65,9 @@ export function destinationDeLAdresse(adresse: string, vueDeLElement: (id: strin
   } catch {
     // Adresse mal encodée : lue telle quelle.
   }
-  // Les mentions légales et la fenêtre d'avis s'ouvrent par-dessus la vue affichée, sans la changer.
-  if (!nom || nom === ADRESSE_DES_MENTIONS_LEGALES || nom === ADRESSE_DE_L_AVIS) return null
+  // Les mentions légales et la fenêtre d'avis s'ouvrent par-dessus la vue affichée, sans la changer ; une adresse de
+  // situation type (#situation=…, démo web) charge une situation, sans changer de vue non plus.
+  if (!nom || nom === ADRESSE_DES_MENTIONS_LEGALES || nom === ADRESSE_DE_L_AVIS || identifiantDeLAdresse(nom) !== null) return null
   if (estUneVue(nom)) return { vue: nom }
   const vue = estUneAncre(nom) ? VUE_DE_L_ANCRE[nom] : vueDeLElement(nom)
   return vue ? { vue, detail: nom } : null

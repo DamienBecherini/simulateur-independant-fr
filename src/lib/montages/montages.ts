@@ -23,6 +23,10 @@ interface SourceOfficielle {
 }
 
 export interface MontageType {
+  /**
+   * Identifiant public : il figure dans l'adresse de la situation dans la démo web (`#situation=<id>`) et dans les liens
+   * publiés vers elle. Il ne change plus (liste figée par adresse.test.ts, reprise dans le README).
+   */
   id: string
   titre: string
   /** Une phrase qui résume la situation. */
