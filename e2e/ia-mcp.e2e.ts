@@ -38,7 +38,7 @@ test("une proposition envoyée par le serveur MCP s'applique dans l'application 
   expect(infos.donnees).toBe(dossierDonnees)
   const client = await connecterUnClient(infos)
   try {
-    expect((await client.listTools()).tools).toHaveLength(16)
+    expect((await client.listTools()).tools).toHaveLength(17)
     const proposee = (await client.callTool({ name: "proposer_flux", arguments: { flux: [mission] } })) as CallToolResult
     expect(proposee.isError).toBeFalsy()
     // Le résultat suit le résumé, en JSON, à la dernière ligne du texte.
