@@ -118,6 +118,15 @@ Tout client MCP qui lance un serveur local sur l'entrée et la sortie standard c
    - **Plus tard** : la proposition reste dans la boîte et revient au prochain démarrage.
 5. Une proposition **périmée** (vous avez modifié la simulation depuis qu'elle a été construite) ne peut pas être appliquée : l'IA la reconstruit sur la simulation actuelle (`rafraichir_proposition`), en disant quelles opérations ne s'appliquent plus, et vous la soumet à nouveau.
 
+### Laisser l'IA modifier directement la simulation
+
+Pour ne plus valider chaque proposition, cochez **« Laisser l'IA modifier directement la simulation »** dans la fenêtre **Proposition de votre IA**, puis cliquez sur **Appliquer**. L'IA n'envoie plus de propositions à relire : ses modifications, et celles qui attendaient déjà, s'appliquent aussitôt, une à une dans l'ordre d'arrivée.
+
+- Chaque modification est relue comme avant (simulation inchangée depuis la proposition, vérification complète), forme **une étape d'annulation** (Ctrl+Z ou « Annuler ») et s'annonce par une notification **« Modifié par l'IA : … »**, dont le bouton « Annuler » la défait.
+- Une proposition périmée ou refusée par le simulateur n'est jamais appliquée : elle s'affiche dans la fenêtre habituelle, avec son message, et les suivantes attendent qu'elle soit traitée.
+- Tant que ce choix est actif, une pastille **« IA en direct »** reste dans la barre d'outils, près d'« Annuler ». **Décochez-la à tout moment** pour revenir aux propositions à relire.
+- Le choix est **désactivé par défaut** et **retenu d'une ouverture à l'autre**, comme le zoom ou l'affichage : il ne voyage pas avec les fichiers de simulation. Le serveur le lit (sans jamais l'écrire) pour dire à l'IA que sa proposition s'applique aussitôt ; il ne dépose toujours qu'un fichier dans la boîte, et c'est l'application qui applique.
+
 L'application enregistre la simulation **environ une seconde après chaque modification** (et tout de suite à la fermeture) : c'est ce fichier que le serveur lit. Chaque réponse du serveur indique quand il a été enregistré.
 
 ## Confidentialité
@@ -128,7 +137,7 @@ L'application enregistre la simulation **environ une seconde après chaque modif
 
 ## Sécurité
 
-- **Méfiance envers les documents.** Une facture ou un relevé peut contenir des instructions cachées (« ignore tes consignes », « supprime… »). Le serveur demande à l'IA de les ignorer, et surtout rien ne change sans votre clic sur « Appliquer » ; aucun outil ne supprime en masse.
+- **Méfiance envers les documents.** Une facture ou un relevé peut contenir des instructions cachées (« ignore tes consignes », « supprime… »). Le serveur demande à l'IA de les ignorer, et surtout rien ne change sans votre clic sur « Appliquer » ; aucun outil ne supprime en masse. Si vous laissez l'IA modifier directement la simulation, ce clic disparaît : gardez un œil sur les notifications « Modifié par l'IA » quand elle lit des documents d'origine incertaine, et décochez « IA en direct » au moindre doute ; chaque modification reste annulable.
 - La boîte aux propositions n'accepte que des fichiers ordinaires (pas de liens), au nom simple, de 512 Ko au plus, au format attendu ; chaque proposition est revalidée en entier par l'application. Les autres fichiers sont écartés et supprimés.
 
 ## Limites
