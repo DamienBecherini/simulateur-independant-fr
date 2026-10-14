@@ -242,6 +242,7 @@ Un nouveau canal : sa signature dans `EventPayloadMapping` (`src/globals.d.ts`),
 ### 2.5 Interface : ancres de la page et calculs différés
 
 - **Ancres** : tout élément vers lequel mène un lien interne ou une adresse (`#bilan`, `#comparateur-verdict`, `#contenu`…) a son identifiant dans le registre `ANCRES` (`src/lib/ancres.ts`), jamais écrit à la main : l'élément prend `id={ANCRES.bilan}`, le lien `href={lienVers(ANCRES.bilan)}`, une question de départ `ancre: ANCRES.…`. Une ancre ajoutée au registre doit dire sa vue dans `VUE_DE_L_ANCRE` (`src/lib/vues.ts`, table exhaustive) ; `App.ancres.test.tsx` vérifie que chacune est rendue, dans sa vue. Les valeurs sont des adresses publiées : ne les renommez pas.
+- **Adresse d'une situation type** (démo web) : `#situation=<identifiant>` charge une situation type, avec la confirmation de la fenêtre sur une simulation non enregistrée, puis le fragment est retiré (`history.replaceState`). Lecture et liens dans `src/lib/montages/adresse.ts`, comportement dans `SituationParLAdresse.tsx`, actif seulement si la plateforme fournit `lienVersUneSituation` (`plateforme-web.ts`) : l'application de bureau ne lit pas cette adresse. `destinationDeLAdresse` (`vues.ts`) l'écarte, pour qu'elle ne soit pas prise pour la vue « situation ». Les identifiants (`MontageType.id`) sont publics : liste figée par `adresse.test.ts` et publiée dans [liens-vers-les-situations-types.md](./liens-vers-les-situations-types.md).
 - **Calcul différé** : un calcul du moteur relancé après chaque modification passe par `useCalculDiffere` (`src/ui/hooks/useCalculDiffere.ts`) : l'appelant mémorise le calcul avec `useCallback` (ses dépendances sont vérifiées par ESLint chez lui), le hook attend 300 ms, ignore un résultat dépassé et garde le dernier résultat en cas d'échec, sauf `effacerEnCasDEchec` (la simulation des années, `useSimulationDesAnnees`).
 
 ---
@@ -474,7 +475,8 @@ Une situation type est une simulation d'un an, préremplie, que l'utilisateur ch
 4. **Dans la liste** : l'ajouter à `MONTAGES_TYPES`, à la fin (`MontagesTypes.test.tsx` attend `MONTAGES_TYPES[0]` sur la première carte).
 5. **Les chiffres de référence** : une entrée dans `ATTENDUS` de `montages.reference.test.ts` (net du foyer, impôt, prélèvements, cotisations par activité, meilleur statut du comparateur), dérivée à la main en commentaire comme pour un cas de référence (§ 3.6). Sans elle, l'essai fait échouer « chaque montage a ses chiffres de référence » et les trois tests de la situation, dans `montages.reference.test.ts` et dans `montages-annee-suivante.test.ts` (qui rejoue les mêmes chiffres avec une année de règles de plus).
 6. **L'année** : `ANNEE_DES_MONTAGES` (2026) ne suit pas l'année en cours ; ne mettez pas `ANNEE_COURANTE` (§ 3.1, étape 5).
-7. **Les textes du dépôt** : `CHANGELOG.md` (Ajouté).
+7. **L'identifiant public** : l'`id` devient l'adresse de la situation dans la démo web (`#situation=<id>`, § 2.5). Ajoutez-le à `IDENTIFIANTS_PUBLICS` (`src/lib/montages/adresse.test.ts`, qui échoue sinon) et à la table de [liens-vers-les-situations-types.md](./liens-vers-les-situations-types.md). Une fois publié, il ne change plus.
+8. **Les textes du dépôt** : `CHANGELOG.md` (Ajouté).
 
 **Vérification :** `npx vitest run src/lib/montages src/ui/components/MontagesTypes.test.tsx src/ui/components/EncartDesQuestions.test.tsx`, puis la vérification complète.
 
