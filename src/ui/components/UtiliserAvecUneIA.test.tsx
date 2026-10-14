@@ -131,6 +131,26 @@ describe("Utiliser avec une IA (MCP)", () => {
     expect(within(fenetre).getByRole("status")).toHaveTextContent("La copie a échoué")
   })
 
+  it("propose de laisser l'IA modifier directement la simulation, avec la préférence de l'application, et seulement si elle est fournie", async () => {
+    vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue(infos)
+    const user = userEvent.setup({ delay: null })
+    const onChange = vi.fn()
+    const { rerender } = render(<BoutonUtiliserAvecUneIA modificationDirecte={{ active: false, onChange }} />)
+    await user.click(await screen.findByRole("button", { name: "Utiliser avec une IA (MCP)" }))
+    const fenetre = screen.getByRole("dialog")
+    expect(within(fenetre).getByText(/^Un client d'IA/)).toHaveTextContent("Par défaut, l'IA ne modifie rien elle-même")
+    const caseACocher = within(fenetre).getByRole("checkbox", { name: "Laisser l'IA modifier directement la simulation" })
+    expect(caseACocher).not.toBeChecked()
+    expect(caseACocher).toHaveAccessibleDescription(/Ses suppressions, et les propositions qui attendent déjà, restent à valider\.$/)
+    await user.click(caseACocher)
+    expect(onChange).toHaveBeenLastCalledWith(true)
+
+    rerender(<BoutonUtiliserAvecUneIA modificationDirecte={{ active: true, onChange }} />)
+    expect(within(screen.getByRole("dialog")).getByRole("checkbox", { name: "Laisser l'IA modifier directement la simulation" })).toBeChecked()
+    rerender(<BoutonUtiliserAvecUneIA />)
+    expect(within(screen.getByRole("dialog")).queryByRole("checkbox")).not.toBeInTheDocument()
+  })
+
   it("rend le focus au bouton à la fermeture de la fenêtre", async () => {
     vi.mocked(window.api.infosDuServeurMcp).mockResolvedValue(infos)
     const user = userEvent.setup({ delay: null })
