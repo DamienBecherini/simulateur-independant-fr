@@ -5,6 +5,7 @@
 import { useCallback, useId } from "react"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { ligneAlternee } from "../lignes-alternees"
 import type { ResultatDUneStrategie, SessionState, StrategiesDUnStatut } from "@/types"
 import { useCalculDiffere } from "../hooks/useCalculDiffere"
 import { ChampNumerique } from "./ChampNumerique"
@@ -62,10 +63,10 @@ function TableauDuStatut({ statut }: { statut: StrategiesDUnStatut }) {
             </tr>
           </thead>
           <tbody>
-            {statut.strategies.map(s => {
+            {statut.strategies.map((s, rang) => {
               const meilleure = s.strategie === statut.meilleure
               return (
-                <tr key={s.strategie} className={cn("border-b border-slate-100 align-top dark:border-slate-800", meilleure && "bg-emerald-50 dark:bg-emerald-950/40")}>
+                <tr key={s.strategie} className={cn("border-b border-slate-100 align-top dark:border-slate-800", meilleure ? "bg-emerald-50 dark:bg-emerald-950/40" : ligneAlternee(rang))}>
                   <th scope="row" className="py-2 pr-4 text-left font-medium">
                     {s.libelle}
                     {meilleure ? <span className="ml-2 inline-block rounded bg-emerald-700 px-1.5 py-0.5 text-xs font-semibold text-white dark:bg-emerald-300 dark:text-emerald-950">Meilleur net</span> : null}

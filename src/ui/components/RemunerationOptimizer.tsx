@@ -7,6 +7,7 @@ import { flushSync } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { echelle, graduations, indiceLePlusProche, montantCourt, positionInfoBulle } from "@/lib/graphique"
 import { cn } from "@/lib/utils"
+import { ligneAlternee } from "../lignes-alternees"
 import { STATUTS_SOCIETE, type ComparaisonOptions, type OptimisationRemuneration, type PointRemuneration, type SessionState, type StatutSociete } from "@/types"
 import { exporterCourbeCsv } from "../exports-texte"
 import { vueDeLAnnee } from "@/backend/logic/annees"
@@ -254,8 +255,8 @@ function TableDesValeurs({ resultat, onExporter }: { resultat: OptimisationRemun
             </tr>
           </thead>
           <tbody>
-            {lignes.map(p => (
-              <tr key={p.remunerationNette} className={cn("border-t border-slate-200 text-right dark:border-slate-700", p === meilleur && "font-semibold")}>
+            {lignes.map((p, rang) => (
+              <tr key={p.remunerationNette} className={cn("border-t border-slate-200 text-right dark:border-slate-700", p === meilleur && "font-semibold", ligneAlternee(rang))}>
                 <td className="py-1 pr-3">{euros(p.remunerationNette)}</td>
                 <td className="py-1 pr-3">{euros(p.dividendes)}</td>
                 <td className="py-1 pr-3">{euros(p.netApresImpots)}</td>

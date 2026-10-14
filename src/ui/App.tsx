@@ -74,6 +74,7 @@ function App() {
   const resume = avecResume(affichage)
   // Affichage « Trois vues » : la vue affichée, suivie dans l'adresse de la page.
   const vues = useVues(avecVues(affichage), currentSession.name)
+  const marquerLaGrilleTouchee = useCallback(() => setUserPreferences(prefs => ({ ...prefs, grilleTouchee: true })), [setUserPreferences])
   const choisirAffichage = useCallback((choix: Affichage) => setUserPreferences(prefs => ({ ...prefs, affichage: choix })), [setUserPreferences])
   // Le zoom choisi est retenu dans les préférences, d'une ouverture à l'autre.
   const zoom = useZoom(userPreferences.zoom ?? 1, nouveau => setUserPreferences(prefs => ({ ...prefs, zoom: nouveau })))
@@ -174,7 +175,7 @@ function App() {
           <VueDeLaPage vue="situation">
             <EntitiesManager session={currentSession} setSession={setCurrentSession} annee={annee} onChargerMontage={chargerUnMontage} />
 
-            <GrilleDeLAnnee session={currentSession} setSession={setCurrentSession} annee={annee} onAnnee={setAnneeChoisie} monthlyData={vue.monthlyData} preferences={userPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />
+            <GrilleDeLAnnee session={currentSession} setSession={setCurrentSession} annee={annee} onAnnee={setAnneeChoisie} monthlyData={vue.monthlyData} preferences={userPreferences} flowTypeToNumberMap={flowTypeToNumberMap} onGrilleTouchee={marquerLaGrilleTouchee} />
 
             <ReplieEnResume titre="Légende des flux" id="legende-des-flux" className="mt-3 print:mt-2">
               <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />

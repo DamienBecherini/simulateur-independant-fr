@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
 import type { AnneeSimulee, MonthlyGridData } from "@/types"
 import { euros } from "@/backend/logic/format"
@@ -296,5 +296,47 @@ describe("MonthlyGrid, sur plusieurs années", () => {
     await user.click(screen.getByRole("button", { name: "Terminé" }))
     await user.click(screen.getByRole("button", { name: "Flux d’avril : Alice Martin" }))
     expect(within(screen.getByRole("dialog")).getByRole("checkbox", { name: "2025" })).not.toBeChecked()
+  })
+})
+
+describe("MonthlyGrid, sur un écran tactile", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  /** Grille d'Alice avec une dépense en mars, sur un écran au pointeur grossier ; l'enregistrement de la « grille touchée » exposé. */
+  function afficherSurEcranTactile(grilleTouchee?: boolean) {
+    vi.spyOn(window, "matchMedia").mockImplementation(query => ({ matches: query === "(pointer: coarse)", media: query }) as MediaQueryList)
+    const depart = grilleVide()
+    depart[2] = { month: 2, flows: [{ id: "loyer", entityId: "person-alice", type: "expense", label: "Loyer", amount: 800 }] }
+    const onGrilleTouchee = vi.fn()
+    render(<MonthlyGrid entities={[makePerson()]} monthlyData={depart} setMonthlyData={() => {}} preferences={{ slotOrder: [], grilleTouchee }} flowTypeToNumberMap={new Map()} onGrilleTouchee={onGrilleTouchee} />)
+    return { user: userEvent.setup(), onGrilleTouchee }
+  }
+  const caseDe = (mois: string) => screen.getByRole("button", { name: `Flux ${mois} : Alice Martin` })
+
+  it("invite à toucher une case vide, sans que rien ne la cache au doigt, et laisse son montant à une case remplie", () => {
+    afficherSurEcranTactile()
+    const invitation = within(caseDe("de janvier")).getByText("+ Ajouter")
+    // Cachée jusqu'au survol pour une souris seulement (et remplacée à l'impression) : au doigt, rien ne la masque.
+    const masquages = invitation.className.split(" ").filter(classe => classe.includes("opacity-0") || classe.endsWith("hidden"))
+    expect(masquages.length).toBeGreaterThan(0)
+    expect(masquages.every(classe => classe.startsWith("pointer-fine:") || classe.startsWith("print:"))).toBe(true)
+    expect(within(caseDe("de mars")).queryByText("+ Ajouter")).toBeNull()
+    expect(caseDe("de mars")).toHaveTextContent("800")
+    // Le nom accessible des cases ne change pas.
+    expect(caseDe("de janvier")).toHaveAccessibleName("Flux de janvier : Alice Martin")
+  })
+
+  it("dit qu'une case se touche, sur écran tactile seulement, jusqu'à la première case touchée", async () => {
+    const { user, onGrilleTouchee } = afficherSurEcranTactile()
+    expect(screen.getByText("Touchez une case pour saisir un montant.")).toHaveClass("hidden", "pointer-coarse:block")
+    await user.click(caseDe("de janvier"))
+    expect(onGrilleTouchee).toHaveBeenCalledTimes(1)
+  })
+
+  it("ne redit plus rien une fois une case touchée", () => {
+    afficherSurEcranTactile(true)
+    expect(screen.queryByText("Touchez une case pour saisir un montant.")).toBeNull()
   })
 })

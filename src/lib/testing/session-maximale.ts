@@ -116,7 +116,7 @@ export function sauvegardeMaximale(id = "slot-maximal"): SaveSlot {
 
 /**
  * Préférences remplies : ordre des sauvegardes, couleurs des types de flux, affichage choisi, sauvegarde chargée,
- * zoom, sections repliables ouvertes comme fermées, et encart des questions fermé.
+ * zoom, sections repliables ouvertes comme fermées, encart des questions fermé et aide de la grille déjà lue.
  */
 export function preferencesMaximales(): UserPreferences {
   return {
@@ -126,6 +126,7 @@ export function preferencesMaximales(): UserPreferences {
     loadedSlotId: "slot-2",
     zoom: 1.3,
     sectionsOuvertes: { "legende-des-flux": true, "detail-du-calcul": false },
-    questionsFermees: true
+    questionsFermees: true,
+    grilleTouchee: true
   }
 }

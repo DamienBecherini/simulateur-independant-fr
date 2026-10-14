@@ -14,6 +14,7 @@ import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlu
 import { toast } from "sonner"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { cn } from "@/lib/utils"
+import { caseAlternee } from "../lignes-alternees"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useDefilementDeLaGrille } from "../hooks/useDefilementDeLaGrille"
 import { useHautDesBarres } from "../hooks/useHautDesBarres"
@@ -39,6 +40,27 @@ interface MonthlyGridProps {
   annees?: AnneeSimulee[]
   /** Remplace les années de la session en une seule modification (une seule étape d'annulation). */
   setAnnees?: (annees: AnneeSimulee[]) => void
+  /** Une case vient d'être touchée sur un écran tactile : l'aide au-dessus de la grille ne reviendra plus. */
+  onGrilleTouchee?: () => void
+}
+
+/**
+ * Bord de chaque case, plus marqué que l'espace d'un pixel qui les sépare (presque invisible en thème clair) : une ombre
+ * d'un pixel, qui remplit cet espace sans changer la taille des cases. Le thème sombre garde son espace, déjà lisible ;
+ * l'impression retire les ombres.
+ */
+const BORD_DE_CASE = "shadow-[0_0_0_1px_var(--color-slate-300)] dark:shadow-none"
+
+/** Écran tactile : pointeur principal grossier (un doigt), sans survol pour inviter à toucher une case. */
+const estTactile = () => window.matchMedia?.("(pointer: coarse)").matches === true
+
+/**
+ * Sur un écran tactile, rien ne s'éclaire au survol : une phrase dit qu'une case se touche, jusqu'à la première touchée
+ * (préférence `grilleTouchee`). Ni à la souris, ni sur papier.
+ */
+function AideTactile({ grilleTouchee }: { grilleTouchee: boolean | undefined }) {
+  if (grilleTouchee) return null
+  return <p className="mb-3 hidden text-sm text-slate-700 pointer-coarse:block dark:text-slate-300 print:hidden">Touchez une case pour saisir un montant.</p>
 }
 
 /** Les années de la session autres que celle de la grille ; aucune si la grille ne les connaît pas. */
@@ -47,15 +69,19 @@ function autresAnneesQue(annees: AnneeSimulee[] | undefined, annee: number | und
   return annees.map(a => a.annee).filter(a => a !== annee)
 }
 
-/** La ligne d'un acteur : son nom, son total annuel et ses douze mois, chaque mois ouvrant la fenêtre de ses flux. */
-function LigneDeLActeur({ ligne, onOuvrir }: { ligne: LigneDeLaGrille; onOuvrir: (monthIndex: number) => void }) {
+/**
+ * La ligne d'un acteur : son nom, son total annuel et ses douze mois, chaque mois ouvrant la fenêtre de ses flux. Son
+ * rang donne les lignes alternées : chaque case, nom compris, reçoit la teinte de la bande.
+ */
+function LigneDeLActeur({ ligne, rang, onOuvrir }: { ligne: LigneDeLaGrille; rang: number; onOuvrir: (monthIndex: number) => void }) {
   const { entity, monthlyScale, monthlyCellData, annualCellData, annualScale } = ligne
+  const bande = caseAlternee(rang)
   // Affichage « Résumé » : lignes plus basses, avatar en petit à côté du nom.
   const resume = useAffichageResume()
   return (
     <>
       {/* Colonne 1 : Nom de l'entité + Avatar */}
-      <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center print:static print:p-1">
+      <div className={cn("font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center print:static print:p-1", BORD_DE_CASE, bande)}>
         <div className={cn("flex items-center gap-2 py-1 mx-0 text-sm sm:mx-3 sm:text-base print:mx-0 print:gap-1 print:text-[9pt]", resume ? "max-sm:flex-col" : "flex-col")}>
           <AvatarDisplay avatar={entity.avatar} size={resume ? "sm" : "md"} />
           {/* Un nom long passe à la ligne ; un mot plus large que la colonne est coupé. */}
@@ -64,7 +90,7 @@ function LigneDeLActeur({ ligne, onOuvrir }: { ligne: LigneDeLaGrille; onOuvrir:
       </div>
 
       {/* Colonne 2 : Total annuel */}
-      <div role="group" aria-label={`Total annuel : ${entity.name}`} className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start print:p-1">
+      <div role="group" aria-label={`Total annuel : ${entity.name}`} className={cn("bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start print:p-1", BORD_DE_CASE, bande)}>
         <CellChartDisplay
           gains={annualCellData.gains}
           expenses={annualCellData.expenses}
@@ -80,7 +106,7 @@ function LigneDeLActeur({ ligne, onOuvrir }: { ligne: LigneDeLaGrille; onOuvrir:
       {monthlyCellData.map((cellData, monthIndex) => (
         <div
           key={monthIndex}
-          className={cn("bg-slate-100 dark:bg-gray-800 p-2 group transition-colors cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start print:min-h-0 print:p-1", resume ? "min-h-12" : "min-h-[80px]")}
+          className={cn("bg-slate-100 dark:bg-gray-800 p-2 group transition-colors cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 active:bg-slate-300 dark:active:bg-gray-600 flex flex-col justify-start print:min-h-0 print:p-1", resume ? "min-h-12" : "min-h-[80px]", BORD_DE_CASE, bande)}
           role="button"
           tabIndex={0}
           aria-label={`Flux ${deMois(MOIS[monthIndex])} : ${entity.name}`}
@@ -100,7 +126,7 @@ function LigneDeLActeur({ ligne, onOuvrir }: { ligne: LigneDeLaGrille; onOuvrir:
   )
 }
 
-function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees }: MonthlyGridProps) {
+function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees, onGrilleTouchee }: MonthlyGridProps) {
   // Bande des mois et fondus des bords : seulement quand la grille déborde de sa zone et doit défiler.
   const zone = useRef<HTMLDivElement>(null)
   const defilement = useDefilementDeLaGrille(zone, entities.length > 0, annee)
@@ -112,6 +138,11 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
   // Case (entité + mois) dont la fenêtre des flux est ouverte ; `null` quand elle est fermée.
   const [openCell, setOpenCell] = useState<{ entityId: string; monthIndex: number } | null>(null)
   const openCellEntity = entities.find(e => e.id === openCell?.entityId)
+  // Une case ouverte d'un doigt : l'aide au-dessus de la grille a servi, elle ne revient plus.
+  const ouvrirLaCase = (entityId: string, monthIndex: number) => {
+    if (!preferences.grilleTouchee && estTactile()) onGrilleTouchee?.()
+    setOpenCell({ entityId, monthIndex })
+  }
   // Autres années de la session, proposées dans la fenêtre des flux ; aucune si la grille ne les connaît pas.
   const autresAnnees = setAnnees ? autresAnneesQue(annees, annee) : []
 
@@ -246,6 +277,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
         ) : (
           // La bande des mois reste collée sous les barres du haut tant que la grille est en vue : elle s'arrête au bas de ce bloc.
           <div>
+            <AideTactile grilleTouchee={preferences.grilleTouchee} />
             {defilement.deborde ? (
               <BandeDesMois
                 libelles={MOIS_ABREGES}
@@ -280,10 +312,10 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                     </div>
                   ))}
                   {/* Corps de la grille */}
-                  {gridData.map(ligne => (
+                  {gridData.map((ligne, rang) => (
                     // Un fragment par acteur, sans élément englobant : `position: sticky` de la première colonne en dépend.
                     <React.Fragment key={ligne.entity.id}>
-                      <LigneDeLActeur ligne={ligne} onOuvrir={monthIndex => setOpenCell({ entityId: ligne.entity.id, monthIndex })} />
+                      <LigneDeLActeur ligne={ligne} rang={rang} onOuvrir={monthIndex => ouvrirLaCase(ligne.entity.id, monthIndex)} />
                     </React.Fragment>
                   ))}
                 </div>

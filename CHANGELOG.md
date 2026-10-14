@@ -16,6 +16,12 @@ La section « Non publié » recueille les changements en attente de la prochain
 ### Modifié
 
 - **Une même règle pour charger une situation type.** La fenêtre des situations types et l'encart « Que voulez-vous savoir ? » (« Partir de zéro » compris) chargent désormais directement par-dessus une simulation vide ou l'exemple de la démo non modifié, comme le lien `#situation=…`, et gardent la confirmation sur toute simulation non enregistrée ; le chargement reste annulable en une étape.
+- **Lignes alternées dans les tableaux.** Le tableau du comparateur, la grille mensuelle, « Toutes les années », « Sur toutes les années », « Combien facturer pour un net visé ? », les valeurs de la courbe et le partage du bénéfice teintent très légèrement une ligne sur deux, en clair comme en sombre, colonne fixe comprise ; les couleurs qui ont un sens (meilleur statut, colonne grisée, montants, survol de la grille) restent visibles dessous.
+- **La grille se touche plus facilement sur un écran tactile.** Ses cases ont un bord plus marqué en thème clair et se teintent brièvement à l'appui ; au-dessus de la grille, « Touchez une case pour saisir un montant. » s'affiche sur écran tactile jusqu'à la première case touchée, puis ne revient plus.
+
+### Corrigé
+
+- **Montants du comparateur alignés.** Dans le tableau des statuts, les cases sont alignées en haut : les montants d'une ligne restent à la même hauteur dans toutes les colonnes, et la note à déplier sous le net d'une colonne (écart de frais de gestion) ne décale plus son montant, repliée comme dépliée.
 
 ### Maintenance
 

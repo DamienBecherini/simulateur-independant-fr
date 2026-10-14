@@ -66,6 +66,8 @@
   --chart-4: hsl(43 74% 66%);
   --chart-5: hsl(27 87% 67%);
   --radius: 0.6rem;
+  /* Bande des lignes alternées (voir les utilitaires `ligne-de-bande` et `case-de-bande` plus bas). */
+  --fond-bande: --alpha(var(--color-slate-500) / 6%);
 }
 
 /* Couleurs du thème sombre, à l'écran seulement (voir la variante `dark` ci-dessus). */
@@ -95,7 +97,22 @@
     --chart-3: hsl(30 80% 55%);
     --chart-4: hsl(280 65% 60%);
     --chart-5: hsl(340 75% 55%);
+    --fond-bande: --alpha(var(--color-slate-400) / 8%);
   }
+}
+
+/* Lignes alternées des tableaux de données et de la grille mensuelle : une ligne sur deux reçoit une teinte grise
+   translucide, posée en image de fond par-dessus la couleur de chaque case. La couleur porteuse de sens (colonne du
+   meilleur statut, colonne grisée, survol d'une case de la grille) reste donc visible dessous, et une cellule fixe,
+   au fond opaque, prend la teinte de sa ligne : la bande ne se coupe pas au défilement. Les classes sont données par
+   src/ui/lignes-alternees.ts. À l'impression, la teinte claire reste, comme les autres fonds des tableaux. */
+@utility ligne-de-bande {
+  & > :is(th, td) {
+    background-image: linear-gradient(var(--fond-bande), var(--fond-bande));
+  }
+}
+@utility case-de-bande {
+  background-image: linear-gradient(var(--fond-bande), var(--fond-bande));
 }
 
 @theme inline {

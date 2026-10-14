@@ -10,6 +10,8 @@ import { toast } from "sonner"
 import type { SessionState } from "@/types"
 import type { PropositionRecue } from "@/backend/mcp/proposition-en-attente"
 import { euros } from "@/backend/logic/format"
+import { cn } from "@/lib/utils"
+import { ligneAlternee } from "../lignes-alternees"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { relireLaProposition, type ApercuDUneAnnee, type Relecture } from "@/lib/relecture-de-proposition"
@@ -41,8 +43,8 @@ function TableauDeLApercu({ apercu }: { apercu: ApercuDUneAnnee[] }) {
         </tr>
       </thead>
       <tbody>
-        {apercu.map(ligne => (
-          <tr key={ligne.annee} className="border-b last:border-0">
+        {apercu.map((ligne, rang) => (
+          <tr key={ligne.annee} className={cn("border-b last:border-0", ligneAlternee(rang))}>
             <th scope="row" className="py-1 pr-2 text-left font-normal">{ligne.annee}</th>
             <td className="py-1 pr-2 text-right tabular-nums">{montant(ligne.netAvant)}</td>
             <td className="py-1 pr-2 text-right tabular-nums">{montant(ligne.netApres)}</td>

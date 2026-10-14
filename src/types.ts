@@ -427,7 +427,9 @@ export const UserPreferencesSchema = z.object({
   /** Sections repliables ouvertes (vrai) ou fermées (faux) par l'utilisateur, par identifiant de section. */
   sectionsOuvertes: z.record(z.string().max(LONGUEUR_MAXIMALE_ID_SECTION), z.boolean()).optional().catch(undefined),
   /** Encart « Que voulez-vous savoir ? » fermé par l'utilisateur : il ne revient plus, même sur une simulation vide. */
-  questionsFermees: z.boolean().optional().catch(undefined)
+  questionsFermees: z.boolean().optional().catch(undefined),
+  /** Une case de la grille touchée sur un écran tactile : l'aide « Touchez une case pour saisir un montant. » ne revient plus. */
+  grilleTouchee: z.boolean().optional().catch(undefined)
 })
 
 // ===================================================================================
