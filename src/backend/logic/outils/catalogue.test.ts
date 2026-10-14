@@ -19,6 +19,7 @@ describe("catalogue des outils", () => {
       "synthese_des_annees",
       "expliquer_resultat",
       "comparer_statuts",
+      "chiffre_affaires_pour_net_vise",
       "optimiser_remuneration",
       "regles_de_l_annee",
       "proposer_flux",
@@ -40,7 +41,7 @@ describe("catalogue des outils", () => {
       expect(outil.description).toMatch(/[éèàêç]/)
       expect(outil.description).not.toMatch(/\b(the|returns|this tool)\b/i)
     }
-    expect(catalogueDesOutils().filter(o => o.lecture).map(o => o.nom)).toHaveLength(8)
+    expect(catalogueDesOutils().filter(o => o.lecture).map(o => o.nom)).toHaveLength(9)
     expect(catalogueDesOutils().filter(o => !o.lecture).every(o => o.nom.startsWith("proposer_") || o.nom === "rafraichir_proposition" || o.nom === "appliquer_proposition")).toBe(true)
   })
 

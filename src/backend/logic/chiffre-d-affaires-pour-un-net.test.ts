@@ -169,7 +169,7 @@ describe("chiffreDAffairesPourUnNet", () => {
   })
 
   it("dit la micro-entreprise hors de portée l'année où son régime est fermé", () => {
-    const contexte: ContexteDeLAnnee = { annee: 2026, regimeMicro: { sorties: { m1: { depuis: 2026, depassements: [2024, 2025] } } } } as ContexteDeLAnnee
+    const contexte: ContexteDeLAnnee = { annee: 2026, regimeMicro: { sorties: { m1: { depuis: 2026, depassements: [2024, 2025] } }, annonces: {}, retours: [] } }
     const resultat = chiffreDAffairesPourUnNet(aliceEnMicro(40000), options("m1"), 25000, reglesDeTest, contexte)
     expect(colonne(resultat, "micro").horsDePortee).toBe("regimeMicroFerme")
     expect(colonne(resultat, "micro-vfl").horsDePortee).toBe("regimeMicroFerme")

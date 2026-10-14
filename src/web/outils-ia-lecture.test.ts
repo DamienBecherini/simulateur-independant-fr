@@ -7,7 +7,7 @@ import type { SessionState } from "@/types"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
 import { ANNEE_COURANTE } from "@/backend/logic/regles"
-import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
+import { chiffreDAffairesPourUnNetDeLAnnee, comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
 import { MONTAGES_TYPES, sessionDUnMontage } from "@/lib/montages/montages"
 import { appeler, erreurDe, geler } from "./outils-ia.testing"
 import { sessionExemple } from "./session-exemple"
@@ -250,6 +250,39 @@ describe("comparer_statuts et optimiser_remuneration", () => {
     expect(erreurDe("comparer_statuts", exemple(), { activiteId: "person-lea" })).toContain("est une personne")
     const sansActivite = geler({ ...sessionExemple(), entities: sessionExemple().entities.filter(e => e.type === "person"), relationships: [], annees: [{ annee: 2026, monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: [] })) }] })
     expect(erreurDe("optimiser_remuneration", sansActivite, { statut: "EURL" })).toContain("aucune activité")
+  })
+})
+
+describe("chiffre_affaires_pour_net_vise", () => {
+  type CalculALEnvers = { activiteId: string; netVise: number; chiffreDAffairesSaisi: number; colonnes: { statut: string; chiffreDAffaires: number | null; chiffreDAffairesMensuel: number | null; netApresImpots: number | null; horsDePortee: string | null }[]; notes: string[] }
+
+  it("rend le calcul à l'envers du moteur, avec les réglages que l'application affiche", () => {
+    const session = exemple()
+    const options = optionsDuComparateur(vueDeLAnnee(session, 2026), "micro-atelier", undefined)
+    const attendu = chiffreDAffairesPourUnNetDeLAnnee(session, options, 90000, 2026)
+    const calcul = appeler<CalculALEnvers>("chiffre_affaires_pour_net_vise", session, { activiteId: "micro-atelier", netVise: 90000 })
+    expect(calcul).toMatchObject({ activiteId: "micro-atelier", netVise: 90000, chiffreDAffairesSaisi: attendu.chiffreDAffairesSaisi })
+    expect(calcul.colonnes.map(c => c.chiffreDAffaires)).toEqual(attendu.colonnes.map(c => c.chiffreDAffaires))
+    const ei = calcul.colonnes.find(c => c.statut === "EI")!
+    expect(ei.chiffreDAffairesMensuel).toBe(Math.round(ei.chiffreDAffaires! / 12))
+    expect(ei.netApresImpots).toBeGreaterThanOrEqual(90000)
+    expect(session.comparateur).toBeUndefined()
+  })
+
+  it("dit hors de portée la micro-entreprise au-delà de son plafond, et la société dont la grille fixe le partage", () => {
+    const session = exemple()
+    const micro = appeler<CalculALEnvers>("chiffre_affaires_pour_net_vise", session, { activiteId: "micro-atelier", netVise: 150000 })
+    expect(micro.colonnes.find(c => c.statut === "micro")).toMatchObject({ chiffreDAffaires: null, chiffreDAffairesMensuel: null, netApresImpots: null, horsDePortee: "plafondMicro" })
+    // Dividendes saisis : la SASU de l'exemple est comparée selon la grille, que le mode meilleurNet remplace.
+    const grille = appeler<CalculALEnvers>("chiffre_affaires_pour_net_vise", session, { activiteId: "company-conseil", netVise: 90000 })
+    expect(grille.colonnes.find(c => c.statut === "SASU")?.horsDePortee).toBe("partageSelonLaGrille")
+    const auMeilleurNet = appeler<CalculALEnvers>("chiffre_affaires_pour_net_vise", session, { activiteId: "company-conseil", netVise: 90000, mode: "meilleurNet" })
+    expect(auMeilleurNet.colonnes.find(c => c.statut === "SASU")?.chiffreDAffaires).toBeGreaterThan(0)
+  })
+
+  it("refuse un net visé nul ou une personne", () => {
+    expect(erreurDe("chiffre_affaires_pour_net_vise", exemple(), { netVise: 0 })).toContain("au moins 1 €")
+    expect(erreurDe("chiffre_affaires_pour_net_vise", exemple(), { netVise: 30000, activiteId: "person-lea" })).toContain("est une personne")
   })
 })
 

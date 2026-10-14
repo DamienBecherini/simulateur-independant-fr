@@ -11,7 +11,7 @@
 import { z } from "zod"
 import type { SessionState } from "../../../types.js"
 import { ErreurOutil } from "./commun.js"
-import { comparerStatuts, optimiserRemuneration } from "./comparaison.js"
+import { chiffreAffairesPourNetVise, comparerStatuts, optimiserRemuneration } from "./comparaison.js"
 import { decrireSimulation, listerFlux, reglesDeLAnneeOutil } from "./lecture.js"
 import { ParametresInvalides, type Outil } from "./outil.js"
 import { appliquerProposition, proposerActeur, proposerFlux, proposerModification, proposerReglagesComparateur, proposerRelation, proposerSuppression, rafraichirProposition } from "./outils-de-proposition.js"
@@ -25,6 +25,7 @@ export const OUTILS: readonly Outil[] = [
   syntheseDesAnnees,
   expliquerResultat,
   comparerStatuts,
+  chiffreAffairesPourNetVise,
   optimiserRemuneration,
   reglesDeLAnneeOutil,
   proposerFlux,

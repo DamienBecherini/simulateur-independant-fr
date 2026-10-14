@@ -119,6 +119,18 @@ describe("serveur MCP : lecture", () => {
     expect(ecartDeFrais).toBe(0)
   })
 
+  it("publie le calcul à l'envers en lecture seule : le chiffre d'affaires pour un net visé, statut par statut", async () => {
+    await ecrireLaSession(sessionExemple())
+    await connecter()
+    const { tools } = await client.listTools()
+    expect(tools.find(t => t.name === "chiffre_affaires_pour_net_vise")?.annotations?.readOnlyHint).toBe(true)
+    const resultat = await appeler("chiffre_affaires_pour_net_vise", { activiteId: "micro-atelier", netVise: 90000 })
+    expect(resultat.isError).toBeFalsy()
+    const { colonnes } = donnees(resultat) as { colonnes: { statut: string; chiffreDAffaires: number | null; netApresImpots: number | null }[] }
+    expect(colonnes.map(c => c.statut)).toEqual(["SASU", "EURL", "EI", "micro", "micro-vfl"])
+    for (const c of colonnes) expect(c.netApresImpots).toBeGreaterThanOrEqual(90000)
+  })
+
   it("relit le fichier à chaque appel : une modification enregistrée par l'application est vue tout de suite", async () => {
     await ecrireLaSession(sessionExemple())
     await connecter()
