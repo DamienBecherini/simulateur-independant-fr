@@ -21,6 +21,7 @@ import { ComparatorPanel } from "./components/ComparatorPanel"
 import { FlowLegend } from "./components/FlowLegend"
 import { GrilleDeLAnnee } from "./components/GrilleDeLAnnee"
 import { DevWindowSize } from "./components/DevWindowSize"
+import { confirmationDuMontageNecessaire } from "@/lib/montages/confirmation"
 import { usePlateforme } from "./plateforme"
 import { useZoom } from "./hooks/useZoom"
 import { ExportDialog } from "./components/ExportDialog"
@@ -120,8 +121,9 @@ function App() {
     window.scrollTo(0, 0)
   }
   const chargerUnMontage = (montage: MontageType) => chargerUneSession(sessionDUnMontage(montage))
-  // Remplacer la session (montage type, simulation vierge) perdrait des modifications : une confirmation d'abord.
-  const confirmationNecessaire = SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)
+  // Remplacer la session (montage type, simulation vierge) perdrait des modifications : une confirmation d'abord, sauf
+  // sur une simulation vide ou sur l'exemple du premier lancement (règle commune aux trois entrées).
+  const confirmationNecessaire = confirmationDuMontageNecessaire(currentSession, SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId), plateforme.estLaSessionDExemple)
 
   // L'encart des questions de départ, sur une simulation vide ou sur l'exemple du premier lancement.
   const questions = useEncartDesQuestions({ session: currentSession, sessionChargee, preferences: userPreferences, setPreferences: setUserPreferences, reinitialiser: handleResetSession, vues })

@@ -1,6 +1,6 @@
 // src/ui/App.questions.test.tsx
 // L'encart « Que voulez-vous savoir ? » dans l'application entière : affiché sur une simulation vide ou sur l'exemple
-// du premier lancement, absent ailleurs ; une question remplace l'exemple après confirmation ; « Partir de zéro »
+// du premier lancement, absent ailleurs ; une question remplace l'exemple directement (annulable) ; « Partir de zéro »
 // mène à la saisie, dans sa vue ; la fermeture est retenue dans les préférences.
 
 import { render, screen, within } from "@testing-library/react"
@@ -67,21 +67,30 @@ describe("App : encart « Que voulez-vous savoir ? »", () => {
     expect(enregistreesALaFermeture()).toMatchObject({ questionsFermees: true })
   })
 
-  it("sur l'exemple de la démo, une question le remplace par sa situation type après confirmation, et l'encart s'efface", async () => {
+  it("sur l'exemple de la démo, une question le remplace directement par sa situation type, annulable en une étape, et l'encart s'efface", async () => {
     const user = await renderApp(EXEMPLE, undefined, PLATEFORME_AVEC_EXEMPLE)
     await user.click(within(encart()!).getByRole("button", { name: "Mariage ou Pacs ?" }))
-    await user.click(within(screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).getByRole("button", { name: "Remplacer" }))
 
     expect(await screen.findByRole("heading", { level: 1, name: "Couple en union libre, puis marié ou pacsé" })).toBeInTheDocument()
+    expect(screen.queryByRole("dialog", { name: "Remplacer la simulation en cours ?" })).not.toBeInTheDocument()
     expect(encart()).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Annuler" })).toBeEnabled()
+    await user.click(screen.getByRole("button", { name: "Annuler" }))
+    expect(await screen.findByRole("heading", { level: 1, name: EXEMPLE.name })).toBeInTheDocument()
+    expect(encart()).toBeInTheDocument()
   })
 
-  it("« Partir de zéro » depuis l'exemple, dans l'affichage « Trois vues » : simulation vierge, vue de la saisie, focus sur l'ajout d'une personne", async () => {
+  it("sur une simulation vide, une question charge directement sa situation type", async () => {
+    const user = await renderApp(emptySession(), undefined, PLATEFORME_AVEC_EXEMPLE)
+    await user.click(within(encart()!).getByRole("button", { name: "Mariage ou Pacs ?" }))
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Couple en union libre, puis marié ou pacsé" })).toBeInTheDocument()
+    expect(screen.queryByRole("dialog", { name: "Remplacer la simulation en cours ?" })).not.toBeInTheDocument()
+  })
+
+  it("« Partir de zéro » depuis l'exemple, sans confirmation, dans l'affichage « Trois vues » : simulation vierge, vue de la saisie, focus sur l'ajout d'une personne", async () => {
     window.history.replaceState(null, "", "/#comparer")
     const user = await renderApp(EXEMPLE, { slotOrder: [], affichage: "vues" }, PLATEFORME_AVEC_EXEMPLE)
     await user.click(within(encart()!).getByRole("button", { name: "Partir de zéro" }))
-    await user.click(within(screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).getByRole("button", { name: "Remplacer" }))
 
     expect(await screen.findByRole("heading", { level: 1, name: "Nouvelle Simulation" })).toBeInTheDocument()
     expect(screen.getByRole("tab", { name: /situation/i })).toHaveAttribute("aria-selected", "true")
