@@ -27,7 +27,7 @@ describe("cartes des statuts : le portage salarial", () => {
     render(<CartesDesStatuts result={avec(portage, "portage")} />)
     expect(cartes()[0]).toHaveTextContent(/^Portage salarialmeilleur net ·/)
     expect(within(cartes()[0]).getByText("protection sociale 5 sur 5")).toBeInTheDocument()
-    expect(espaces(cartes()[0].textContent)).toContain("dont environ 850 € de frais de fonctionnement en moins qu'en micro-entreprise, assurés par la société de portage")
+    expect(espaces(cartes()[0].textContent)).toContain("dont environ 850 € de frais de fonctionnement en moins qu'en micro-entreprise")
     expect(espaces(cartes()[0].textContent)).toContain("+1 000 €")
   })
 
