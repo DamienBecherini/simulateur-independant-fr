@@ -359,7 +359,8 @@ describe("ComparatorPanel", () => {
     const session = withActivity()
     render(<ComparateurDeTest annee={2026} session={session} />)
 
-    await user.type(screen.getByLabelText("Net visé du foyer (€ par an)"), "30000")
+    // La section suit les résultats de la comparaison, sous le tableau dans l'affichage classique.
+    await user.type(await screen.findByLabelText("Net visé du foyer (€ par an)"), "30000")
     await vi.waitFor(() => expect(window.api.chiffreDAffairesPourUnNet).toHaveBeenLastCalledWith(expect.objectContaining({ entities: session.entities }), vi.mocked(window.api.compareStatuts).mock.lastCall?.[1], 30000, 2026))
   })
 
