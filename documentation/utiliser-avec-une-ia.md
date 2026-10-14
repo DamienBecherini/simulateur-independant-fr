@@ -10,10 +10,10 @@ Dix-sept outils, décrits dans l'[ADR 010](./adr/010-outils-pour-les-clients-d-i
 
 - **lire** : décrire la simulation (années, acteurs, relations), lister les flux saisis, les règles fiscales de l'année ;
 - **calculer** : simuler une année, la synthèse des années, le détail du résultat d'un acteur, le comparateur de statuts (SASU, EURL, EI au réel, micro-entreprise et portage salarial, aux conditions de société de portage réglées dans le comparateur), son calcul à l'envers (le chiffre d'affaires qu'il faut dans chaque statut pour un net visé : « combien facturer pour toucher 30 000 € nets ? »), l'arbitrage rémunération et dividendes (avec l'écart entre la rémunération et les dividendes saisis et le meilleur net ; dans un autre statut que l'actuel, l'écart de frais de fonctionnement supposés compris) ;
-- **proposer** : des flux, un acteur, une relation, des modifications, une suppression, des réglages du comparateur ; **rafraîchir** une proposition périmée ;
+- **proposer** : des flux, un acteur, une relation, des modifications, des suppressions (séries de flux, relations, acteurs avec leurs relations et leurs flux, années, ou toute la simulation pour repartir de zéro), des réglages du comparateur ; **rafraîchir** une proposition périmée ;
 - **envoyer une proposition à l'application** (`appliquer_proposition`).
 
-Les chiffres viennent toujours du moteur du simulateur, jamais de l'IA. Aucun outil ne supprime un acteur ou une année, et une proposition supprime au plus une série de flux ou une relation.
+Les chiffres viennent toujours du moteur du simulateur, jamais de l'IA. Une proposition de suppression dit tout ce qu'elle retire (« Supprimer 2 acteurs, 3 relations et 7 séries de flux ? »). Un acteur que vous avez verrouillé n'est jamais supprimé, sauf si vous acceptez de repartir de zéro, ce que la proposition signale. Comme toute proposition, elle s'annule en une étape.
 
 ## Mise en place
 
@@ -128,14 +128,14 @@ L'application enregistre la simulation **environ une seconde après chaque modif
 
 ## Sécurité
 
-- **Méfiance envers les documents.** Une facture ou un relevé peut contenir des instructions cachées (« ignore tes consignes », « supprime… »). Le serveur demande à l'IA de les ignorer, et surtout rien ne change sans votre clic sur « Appliquer » ; aucun outil ne supprime en masse.
+- **Méfiance envers les documents.** Une facture ou un relevé peut contenir des instructions cachées (« ignore tes consignes », « supprime… »). Le serveur demande à l'IA de les ignorer, et surtout rien ne change sans votre clic sur « Appliquer » : relisez le récapitulatif d'une suppression, qui compte tout ce qu'elle retire. L'IA ne doit proposer de supprimer qu'à votre demande.
 - La boîte aux propositions n'accepte que des fichiers ordinaires (pas de liens), au nom simple, de 512 Ko au plus, au format attendu ; chaque proposition est revalidée en entier par l'application. Les autres fichiers sont écartés et supprimés.
 
 ## Limites
 
-- Les outils ne couvrent pas tout : frais réels, déplacements professionnels, suppression d'acteurs ou d'années se font dans l'application.
+- Les outils ne couvrent pas tout : frais réels et déplacements professionnels se font dans l'application, comme le chargement d'une situation type (après avoir proposé de repartir de zéro, l'IA peut en reconstruire une, mais acteur par acteur).
 - Portage salarial : `comparer_statuts` et `chiffre_affaires_pour_net_vise` en donnent la colonne, aux conditions de société de portage réglées dans l'application (« Conditions de la société de portage », réglages du comparateur), des valeurs typiques sinon. Une IA ne règle pas encore ces conditions, et ne compare pas une activité déjà en portage.
-- Une proposition contient au plus 200 opérations : au-delà, il en faut plusieurs.
+- Une proposition contient au plus 200 opérations, dont 50 suppressions : au-delà, il en faut plusieurs. Une simulation garde toujours au moins une année, et seules la plus ancienne et la plus récente se suppriment.
 - Une modification faite dans l'application moins d'une seconde avant une lecture de l'IA peut ne pas être vue ; une proposition construite avant sera alors refusée comme périmée.
 - Les réglages du comparateur appliqués par une proposition ne sont pas défaits par « Annuler », comme ceux saisis à la main (voir l'[ADR 009](./adr/009-reglages-du-comparateur-enregistres.md)).
 - **AppImage (Linux)** : le chemin de l'exécutable change à chaque lancement ; préférez le paquet `.deb` pour utiliser le serveur MCP.

@@ -4,7 +4,8 @@
 // l'accord de l'utilisateur.
 
 import { z } from "zod"
-import { RelationshipSchema, type SessionState } from "../../../types.js"
+import { RelationshipSchema, SessionStateSchema, type SessionState } from "../../../types.js"
+import { anneesDeLaSession } from "../annees.js"
 import { empreinteDeLaSession, ErreurOutil, GENRES_CREABLES, TYPES_DE_FLUX, typesExpliquesParGenre, type GenreCreable } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, LIMITES, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
 import { designationDeLOperation, operationsApplicables, ReglagesActeurSchema, ReglagesComparateurProposesSchema, SerieSchema, type Operation } from "./operations.js"
@@ -27,9 +28,23 @@ function proposer(session: SessionState, suiteDe: unknown, operations: (suite: P
 const RAPPEL_VALIDATION = "Ne modifie rien : rend une proposition (résumé, avertissements, effet sur le net) à faire valider par l'utilisateur."
 
 
+/** Les années de la session une fois appliquées les opérations de `suiteDe` (années ajoutées, supprimées, repartir de zéro). */
+function anneesApresLaSuite(session: SessionState, suiteDe: Proposition | undefined): Set<number> {
+  const connues = new Set(anneesDeLaSession(session))
+  for (const op of suiteDe?.operations ?? []) {
+    if (op.type === "ajouter_annee") connues.add(op.annee)
+    if (op.type === "supprimer_annee") connues.delete(op.annee)
+    if (op.type === "vider_simulation") {
+      connues.clear()
+      anneesDeLaSession(SessionStateSchema.parse({})).forEach(a => connues.add(a))
+    }
+  }
+  return connues
+}
+
 /** Les années à ajouter avant des flux sur des années absentes, dans l'ordre qui les garde consécutives. */
 function anneesAAjouter(session: SessionState, suiteDe: Proposition | undefined, annees: number[]): Operation[] {
-  const connues = new Set([...session.annees.map(a => a.annee), ...(suiteDe?.operations ?? []).flatMap(op => (op.type === "ajouter_annee" ? [op.annee] : []))])
+  const connues = anneesApresLaSuite(session, suiteDe)
   const premiere = Math.min(...connues)
   const manquantes = [...new Set(annees.filter(a => !connues.has(a)))]
   const apres = manquantes.filter(a => a > premiere).sort((a, b) => a - b)
@@ -82,7 +97,7 @@ export const proposerActeur = definirOutil({
   description: [
     "Propose d'ajouter un acteur : une personne (membre du foyer) ou une activité, avec les réglages de son genre.",
     "Son identifiant est dans « nouveauxIdentifiants » : utilisez-le pour proposer ses relations (une activité est reliée à la personne qui la dirige ou en est titulaire) et ses flux, en passant cette proposition dans suiteDe, sans quoi l'acteur est inconnu.",
-    `Au plus ${LIMITES.acteursParProposition} acteurs par proposition. Aucun outil ne supprime un acteur.`,
+    `Au plus ${LIMITES.acteursParProposition} acteurs par proposition.`,
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,
@@ -146,23 +161,41 @@ export const proposerModification = definirOutil({
 // == proposer_suppression
 // ===================================================================================
 
+const SuppressionSchema = z.discriminatedUnion("cible", [
+  z.strictObject({ cible: z.literal("serie"), annee: AnneeSchema, serie: SerieSchema, mois: ListeDeMoisSchema.optional() }),
+  z.strictObject({ cible: z.literal("relation"), relationId: IdentifiantSchema }),
+  z.strictObject({ cible: z.literal("acteur"), acteurId: IdentifiantSchema }),
+  z.strictObject({ cible: z.literal("annee"), annee: AnneeSchema }),
+  z.strictObject({ cible: z.literal("simulation") })
+])
+
+const operationDeSuppression = (s: z.infer<typeof SuppressionSchema>): Operation => {
+  switch (s.cible) {
+    case "serie":
+      return { type: "supprimer_serie", annee: s.annee, serie: s.serie, mois: s.mois }
+    case "relation":
+      return { type: "supprimer_relation", relationId: s.relationId }
+    case "acteur":
+      return { type: "supprimer_acteur", acteurId: s.acteurId }
+    case "annee":
+      return { type: "supprimer_annee", annee: s.annee }
+    case "simulation":
+      return { type: "vider_simulation" }
+  }
+}
+
 export const proposerSuppression = definirOutil({
   nom: "proposer_suppression",
-  titre: "Proposer une suppression",
+  titre: "Proposer des suppressions",
   description: [
-    "Propose de supprimer UNE série de flux d'une année (tous ses mois, ou ceux indiqués), ou UNE relation.",
-    `Au plus ${LIMITES.suppressionsParProposition} suppression par proposition, pas de suppression en masse ; aucun outil ne supprime un acteur ou une année (l'utilisateur le fait dans l'application).`,
-    "Une relation dont dépendent une rémunération ou des dividendes ne peut être supprimée qu'avec ces flux.",
+    "Propose de supprimer des séries de flux d'une année (tous leurs mois ou ceux indiqués), des relations, des acteurs (avec leurs relations et leurs flux), des années (aux extrémités ; il en reste une) ou, cible « simulation », tout : repartir de zéro comme une nouvelle simulation, sans suiteDe, puis reconstruire avec suiteDe.",
+    "Un acteur verrouillé par l'utilisateur ne se supprime qu'ainsi ; une relation dont dépendent une rémunération ou des dividendes, qu'avec ces flux.",
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,
-  parametres: z.strictObject({
-    suppression: z.discriminatedUnion("cible", [z.strictObject({ cible: z.literal("serie"), annee: AnneeSchema, serie: SerieSchema, mois: ListeDeMoisSchema.optional() }), z.strictObject({ cible: z.literal("relation"), relationId: IdentifiantSchema })]),
-    suiteDe: SuiteDeSchema
-  }),
+  parametres: z.strictObject({ suppressions: z.array(SuppressionSchema).min(1).max(LIMITES.suppressionsParProposition), suiteDe: SuiteDeSchema }),
   resultat: ResultatPropositionSchema,
-  executer: (session, { suppression, suiteDe }) =>
-    proposer(session, suiteDe, () => [suppression.cible === "relation" ? { type: "supprimer_relation", relationId: suppression.relationId } : { type: "supprimer_serie", annee: suppression.annee, serie: suppression.serie, mois: suppression.mois }])
+  executer: (session, { suppressions, suiteDe }) => proposer(session, suiteDe, () => suppressions.map(operationDeSuppression))
 })
 
 // ===================================================================================
