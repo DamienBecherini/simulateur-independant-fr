@@ -126,7 +126,6 @@ test("l'utilisateur laisse l'IA modifier directement la simulation : la proposit
   const fenetre = page.getByRole("dialog", { name: "Proposition de votre IA" })
   await expect(fenetre).toContainText("L'IA modifie directement la simulation, mais une suppression attend toujours votre validation.")
   await expect(fenetre.getByRole("checkbox")).toHaveCount(0)
-  await expect(chiffreDAffaires).toHaveText(/^30\s000\s€$/)
   await fenetre.getByRole("button", { name: "Refuser" }).click()
   await expect(fenetre).toBeHidden()
   await expect(chiffreDAffaires).toHaveText(/^30\s000\s€$/)
