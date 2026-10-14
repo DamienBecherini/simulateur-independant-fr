@@ -141,6 +141,51 @@ describe("curseur de la rémunération saisie", () => {
   })
 })
 
+describe("conditions de la société de portage", () => {
+  /** Les conditions du portage enregistrées en dernier pour l'activité comparée. */
+  const conditionsEnregistrees = (enregistre: ReturnType<typeof vi.fn>) => {
+    const comparateur = enregistre.mock.lastCall?.[0] as { activiteComparee: string; reglagesParActivite: Record<string, { portage?: unknown }> }
+    return comparateur.reglagesParActivite[comparateur.activiteComparee].portage
+  }
+
+  it("sont repliées, annoncent des valeurs typiques et enregistrent seulement les conditions changées", async () => {
+    const enregistre = vi.fn()
+    render(<ComparateurDeTest annee={2026} session={session()} onComparateur={enregistre} />)
+    const titre = await screen.findByText("Conditions de la société de portage")
+    expect(titre.closest("details")).not.toHaveAttribute("open")
+    await userEvent.click(titre)
+    expect(screen.getByText(/Les valeurs par défaut sont typiques, sans source officielle/)).toBeInTheDocument()
+
+    const frais = screen.getByLabelText("Frais de gestion (% du chiffre d'affaires HT)")
+    expect(frais).toHaveValue(7)
+    expect(frais).toHaveAccessibleDescription("valeur typique")
+    fireEvent.change(frais, { target: { value: "5.5" } })
+    expect(conditionsEnregistrees(enregistre)).toEqual({ tauxFraisDeGestion: 0.055 })
+    expect(screen.getByLabelText("Frais de gestion (% du chiffre d'affaires HT)")).not.toHaveAccessibleDescription("valeur typique")
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "La société reverse la réduction générale des cotisations" }))
+    expect(conditionsEnregistrees(enregistre)).toEqual({ tauxFraisDeGestion: 0.055, reductionGeneraleReversee: true })
+
+    // Bornes du fichier : 30 % au plus ; un champ vidé reprend sa valeur typique.
+    fireEvent.change(screen.getByLabelText("Frais de gestion (% du chiffre d'affaires HT)"), { target: { value: "45" } })
+    expect(conditionsEnregistrees(enregistre)).toMatchObject({ tauxFraisDeGestion: 0.3 })
+    fireEvent.change(screen.getByLabelText("Frais de gestion (% du chiffre d'affaires HT)"), { target: { value: "" } })
+    expect(conditionsEnregistrees(enregistre)).toEqual({ reductionGeneraleReversee: true })
+
+    await userEvent.click(screen.getByRole("button", { name: "Revenir aux valeurs typiques" }))
+    expect(conditionsEnregistrees(enregistre)).toBeUndefined()
+  })
+
+  it("signalent un plancher au-dessus du plafond, qui fait écarter les deux", async () => {
+    render(<ComparateurDeTest annee={2026} session={session()} />)
+    await userEvent.click(await screen.findByText("Conditions de la société de portage"))
+    fireEvent.change(screen.getByLabelText("Plafond mensuel des frais de gestion (€)"), { target: { value: "300" } })
+    expect(screen.queryByText(/Le plancher dépasse le plafond/)).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText("Plancher mensuel des frais de gestion (€)"), { target: { value: "500" } })
+    expect(screen.getByText("Le plancher dépasse le plafond : ni l'un ni l'autre n'est retenu.")).toBeInTheDocument()
+  })
+})
+
 describe("section des frais de fonctionnement", () => {
   const avecMemoire = (sectionsOuvertes: Record<string, boolean>, retenir = vi.fn()) => (
     <MemoireDesSectionsContext.Provider value={{ sectionsOuvertes, retenir }}>
