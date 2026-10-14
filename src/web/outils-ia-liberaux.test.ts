@@ -41,7 +41,7 @@ describe("outils pour les IA et professions libérales réglementées", () => {
 
   it("comparer_statuts retire les colonnes micro d'un kinésithérapeute, avec la raison", () => {
     const resultat = appeler<{ scenarios: { statut: string }[]; notes: string[] }>("comparer_statuts", avecUnCabinet(), { activiteId: "e-cabinet" })
-    expect(resultat.scenarios.map(s => s.statut)).toEqual(["SASU", "EURL", "EI"])
+    expect(resultat.scenarios.map(s => s.statut)).toEqual(["SASU", "EURL", "EI", "portage"])
     expect(resultat.notes).toContainEqual(expect.stringContaining("Micro-entreprise non proposée"))
   })
 

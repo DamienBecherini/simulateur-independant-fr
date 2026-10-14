@@ -99,7 +99,7 @@ describe("chiffres « À vérifier » des scénarios des professions libérales 
     const session = scenario("infirmiere-statuts")
     expect(activite(session).cotisationsSociales).toBe(6572)
     const { scenarios, warnings } = comparer(session)
-    expect(scenarios.map(s => s.statut)).toEqual(["SASU", "EURL", "EI"])
+    expect(scenarios.map(s => s.statut)).toEqual(["SASU", "EURL", "EI", "portage"])
     expect(warnings).toContainEqual(expect.stringContaining("Micro-entreprise non proposée : elle est interdite aux praticiens et auxiliaires médicaux"))
     for (const statut of ["SASU", "EURL"]) expect(scenarios.find(s => s.statut === statut)?.warnings).toContainEqual(expect.stringContaining("société d'exercice libéral"))
   })

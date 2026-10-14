@@ -40,7 +40,7 @@ describe("comparerStatuts", () => {
     const resultat = comparer([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]], options("m1"))
 
     it("présente une colonne par statut, et repère le statut actuel", () => {
-      expect(resultat.scenarios.map(s => s.statut)).toEqual(["SASU", "EURL", "EI", "micro", "micro-vfl"])
+      expect(resultat.scenarios.map(s => s.statut)).toEqual(["SASU", "EURL", "EI", "micro", "micro-vfl", "portage"])
       expect(resultat.scenarios.filter(s => s.actuel).map(s => s.statut)).toEqual(["micro"])
     })
 
@@ -247,7 +247,7 @@ describe("comparerStatuts", () => {
       expect(resultat.meilleur).toBeNull()
       expect(resultat.sansChiffreDAffaires).toBe(true)
       expect(resultat.warnings[0]).toBe(SANS_CHIFFRE_D_AFFAIRES)
-      expect(resultat.scenarios).toHaveLength(5)
+      expect(resultat.scenarios).toHaveLength(6)
     })
 
     it("n'ajoute pas la note sur les charges : l'invitation à saisir un chiffre d'affaires suffit", () => {

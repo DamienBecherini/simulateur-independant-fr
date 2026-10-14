@@ -1,9 +1,9 @@
 // src/lib/comparateur-options.ts
 
 import { estEntrepriseOuMicro, STATUTS_FRAIS } from "@/types"
-import type { ComparaisonOptions, Comparateur, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle, StatutCompare, StatutFrais, StatutSociete } from "@/types"
-import { euros } from "@/backend/logic/format"
-import { avecLaRetraiteParDefaut, optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
+import type { ComparaisonOptions, Comparateur, Company, ConditionsPortage, ConditionsPortageRetenues, EffectifPortage, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle, StatutCompare, StatutFrais, StatutSociete } from "@/types"
+import { euros, pourcent } from "@/backend/logic/format"
+import { avecLaRetraiteParDefaut, conditionsPortageRetenues, LIBELLES_DES_CONDITIONS_PORTAGE, optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
 
 // Réglages proposés par défaut : ils vivent avec le moteur, pour servir aussi aux outils des clients d'IA (ADR 010).
 export { defaultComparisonOptions, defaultFraisFonctionnement } from "@/backend/logic/options-du-comparateur"
@@ -21,15 +21,50 @@ export const posteFraisLabels: Record<PosteFrais, string> = {
 export const statutsFrais: StatutFrais[] = [...STATUTS_FRAIS]
 
 /** « en micro-entreprise », « en SASU » : le statut actuel dans la phrase de l'écart de frais. */
-const EN_STATUT: Record<StatutCompare, string> = { SASU: "en SASU", EURL: "en EURL", EI: "en EI au réel", micro: "en micro-entreprise", "micro-vfl": "en micro-entreprise" }
+const EN_STATUT: Record<StatutCompare, string> = { SASU: "en SASU", EURL: "en EURL", EI: "en EI au réel", micro: "en micro-entreprise", "micro-vfl": "en micro-entreprise", portage: "en portage salarial" }
 
 /**
  * L'écart de frais de gestion d'une colonne avec le statut actuel, en une phrase sous son net : « dont environ 2 050 €
- * de frais de gestion en plus qu'en micro-entreprise » ; `null` quand il n'y en a pas (statut actuel, mêmes frais).
+ * de frais de gestion en plus qu'en micro-entreprise » ; `null` quand il n'y en a pas (statut actuel, mêmes frais). En
+ * portage salarial, ces frais sont ceux dont la société de portage se charge, à ne pas confondre avec ses frais de
+ * gestion, comptés dans les charges de la colonne.
  */
-export function phraseDeLEcartDeFrais(ecart: number, actuel: StatutCompare): string | null {
+export function phraseDeLEcartDeFrais(ecart: number, actuel: StatutCompare, colonne?: StatutCompare): string | null {
   if (Math.round(ecart) === 0) return null
+  if (colonne === "portage") return `dont environ ${euros(Math.abs(ecart))} de frais de fonctionnement ${ecart > 0 ? "en plus" : "en moins"} qu'${EN_STATUT[actuel]}, dont la société de portage se charge contre ses frais de gestion`
   return `dont environ ${euros(Math.abs(ecart))} de frais de gestion ${ecart > 0 ? "en plus" : "en moins"} qu'${EN_STATUT[actuel]}`
+}
+
+/** L'effectif de la société de portage, dans une phrase. */
+const EFFECTIF_EN_PHRASE: Record<EffectifPortage, string> = { moinsDe11: "société de moins de 11 salariés", de11a49: "société de 11 à 49 salariés", "50EtPlus": "société de 50 salariés et plus" }
+
+/** Les frais de gestion de la société de portage, dans une phrase : taux, plancher, plafond, frais fixes. */
+function fraisDeGestionEnPhrase(c: ConditionsPortageRetenues): string {
+  const bornes = [c.plancherMensuel === null ? null : `au moins ${euros(c.plancherMensuel)}`, c.plafondMensuel === null ? null : `au plus ${euros(c.plafondMensuel)}`].filter(Boolean)
+  const fixes = c.fraisFixesMensuels > 0 ? `, plus ${euros(c.fraisFixesMensuels)} de frais fixes par mois` : ""
+  const entreBornes = bornes.length > 0 ? ` (${bornes.join(", ")} par mois)` : ""
+  return `frais de gestion de ${pourcent(c.tauxFraisDeGestion)} du chiffre d'affaires HT${entreBornes}${fixes}`
+}
+
+/**
+ * Les conditions de la société de portage de la colonne « Portage salarial », en une phrase, en disant celles qui sont
+ * des valeurs typiques : « frais de gestion de 7 % du chiffre d'affaires HT, CDI, … (valeurs typiques) ». Pour les
+ * exports.
+ */
+export function conditionsDuPortageEnPhrase(saisies: ConditionsPortage | undefined): string {
+  const { conditions: c, valeursTypiques } = conditionsPortageRetenues(saisies)
+  const parties = [
+    fraisDeGestionEnPhrase(c),
+    c.contrat,
+    EFFECTIF_EN_PHRASE[c.effectif],
+    ...(c.tauxVersementMobilite > 0 ? [`versement mobilité de ${pourcent(c.tauxVersementMobilite)}`] : []),
+    c.reductionGeneraleReversee ? "réduction générale reversée" : "réduction générale gardée par la société",
+    c.mutuelleMensuelle > 0 ? `mutuelle de ${euros(c.mutuelleMensuelle)} par mois` : "sans mutuelle"
+  ]
+  const toutes = valeursTypiques.length === Object.keys(LIBELLES_DES_CONDITIONS_PORTAGE).length
+  const typiques = toutes ? "valeurs typiques" : `valeurs typiques : ${valeursTypiques.map(cle => LIBELLES_DES_CONDITIONS_PORTAGE[cle]).join(", ")}`
+  const mention = valeursTypiques.length > 0 ? ` (${typiques})` : ""
+  return parties.join(", ") + mention
 }
 
 /**
@@ -157,6 +192,7 @@ export function retenirLesReglages(reglages: ReglagesComparateur | undefined, av
   if (avant.remunerationNette !== apres.remunerationNette) retenus.remunerationParAnnee = { ...reglages?.remunerationParAnnee, [String(annee)]: apres.remunerationNette }
   if (avant.partBncPrestations !== apres.partBncPrestations) retenus.partBncPrestations = apres.partBncPrestations
   if (!memesFrais(avant.fraisFonctionnement, apres.fraisFonctionnement)) retenus.fraisFonctionnement = apres.fraisFonctionnement
+  if (JSON.stringify(avant.portage) !== JSON.stringify(apres.portage)) retenus.portage = apres.portage
   return retenus
 }
 

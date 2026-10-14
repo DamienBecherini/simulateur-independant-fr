@@ -11,7 +11,8 @@ const RAISONS_HORS_DE_PORTEE: Record<RaisonHorsDePortee, string> = {
   plafondMicro: "hors de portée : plafond dépassé",
   regimeMicroFerme: "hors de portée : régime micro fermé",
   partageSelonLaGrille: "hors de portée : rémunération et dividendes fixés par la grille",
-  auDelaDeLaBorne: `hors de portée : plus de ${euros(CHIFFRE_D_AFFAIRES_MAXIMAL)} de chiffre d'affaires`
+  auDelaDeLaBorne: `hors de portée : plus de ${euros(CHIFFRE_D_AFFAIRES_MAXIMAL)} de chiffre d'affaires`,
+  portageSansPrestations: "hors de portée : aucune prestation de services à facturer"
 }
 
 /** Pourquoi le statut n'a pas de chiffre d'affaires ; `null` s'il en a un. */

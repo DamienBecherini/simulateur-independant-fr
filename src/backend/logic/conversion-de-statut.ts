@@ -1,6 +1,6 @@
 // src/backend/logic/conversion-de-statut.ts
 
-import { CAPITAL_SOCIAL_PAR_DEFAUT, estEntrepriseOuMicro, estSocieteIS, type Company, type DonneesDeLAnnee, type FinancialFlow, type MicroEntreprise, type Relationship, type StatutCompare } from "../../types.js"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, estEntrepriseOuMicro, estSocieteIS, type Company, type ConditionsPortage, type DonneesDeLAnnee, type FinancialFlow, type MicroEntreprise, type Portage, type Relationship, type StatutCompare } from "../../types.js"
 import { DIRIGEANT_DES_STATUTS } from "./statuts.js"
 
 /*
@@ -9,6 +9,9 @@ import { DIRIGEANT_DES_STATUTS } from "./statuts.js"
  * données de l'année ne change pas. Sert au comparateur (une colonne par statut) et à la simulation des années, qui
  * simule au réel une micro-entreprise sortie du régime micro (simulation-pluriannuelle.ts). Le changement de statut
  * demandé depuis la fiche d'une activité reprend les mêmes conversions d'entité et de flux (changement-de-statut.ts).
+ * Dans la colonne « Portage salarial » (voir l'ADR 016), l'activité devient une activité en portage : ses prestations
+ * sont le chiffre d'affaires facturé par la société de portage, ses charges des frais professionnels remboursés ; sa
+ * vente de marchandises, gardée telle quelle, est écartée par le calcul du portage, qui le dit.
  */
 
 /** Une activité : société ou entreprise individuelle au réel, ou micro-entreprise. */
@@ -28,10 +31,13 @@ const NATURE_DES_FLUX: Partial<Record<FinancialFlow["type"], Nature>> = {
   dividends_payment: "dividendes"
 }
 
-/** Les deux colonnes de la micro-entreprise, avec et sans versement libératoire : tout autre statut est au réel. */
+/** Les deux colonnes de la micro-entreprise, avec et sans versement libératoire. */
 export function estMicro(statut: StatutCompare): statut is "micro" | "micro-vfl" {
   return statut === "micro" || statut === "micro-vfl"
 }
+
+/** Les statuts d'une activité qu'on exploite soi-même : tous ceux du comparateur, sauf le portage salarial. */
+export type StatutDeLActivite = Exclude<StatutCompare, "portage">
 
 /** Le statut d'une activité, tel que le comparateur le nomme. */
 export function statutActuel(activite: Activite): StatutCompare {
@@ -41,7 +47,8 @@ export function statutActuel(activite: Activite): StatutCompare {
 
 /**
  * L'activité à comparer, ou `undefined` si l'identifiant ne désigne aucune activité qu'on peut convertir : pas encore
- * une activité en portage salarial, qui n'a pas sa colonne (voir l'ADR 016).
+ * une activité en portage salarial, que le comparateur ne convertit pas encore dans les autres statuts : il compare en
+ * portage les activités qu'on exploite soi-même (colonne « Portage salarial », voir l'ADR 016).
  */
 export function activiteComparee(session: DonneesDeLAnnee, activityId: string): Activite | undefined {
   return session.entities.filter(estEntrepriseOuMicro).find(e => e.id === activityId)
@@ -52,7 +59,8 @@ export function activiteComparee(session: DonneesDeLAnnee, activityId: string): 
  * dirigeant de `DIRIGEANT_DES_STATUTS` au réel.
  */
 export function relationDuDirigeant(statut: StatutCompare): Relationship["type"] {
-  return estMicro(statut) ? "Titulaire" : DIRIGEANT_DES_STATUTS[statut]
+  // Le titulaire d'une activité en portage salarial en est le salarié porté (voir l'ADR 016).
+  return estMicro(statut) || statut === "portage" ? "Titulaire" : DIRIGEANT_DES_STATUTS[statut]
 }
 
 /** Type d'un flux de l'activité dans le statut cible ; `null` si le flux n'y a pas d'équivalent. */
@@ -61,6 +69,8 @@ function typeCible(nature: Nature, statut: StatutCompare): FinancialFlow["type"]
     const pourMicro: Partial<Record<Nature, FinancialFlow["type"]>> = { vente: "ca_micro_vente", bic: "ca_micro_services_bic", bnc: "ca_micro_services_bnc", charges: "expense" }
     return pourMicro[nature] ?? null
   }
+  // Au réel comme en portage : les prestations facturées, la vente (que le calcul du portage écarte), les charges
+  // déductibles ou remboursées.
   const pourReel: Partial<Record<Nature, FinancialFlow["type"]>> = { vente: "ca_vente", services: "ca_services", bic: "ca_services", bnc: "ca_services", charges: "deductible_expense" }
   return pourReel[nature] ?? null
 }
@@ -129,8 +139,17 @@ function reelCible(source: Activite, statut: Company["legalStatus"]): Company {
 }
 
 /** L'activité dans le statut de la colonne. */
-export function entiteCible(source: Activite, statut: StatutCompare): Activite {
+export function entiteCible(source: Activite, statut: StatutDeLActivite): Activite {
   return estMicro(statut) ? microCible(source, statut) : reelCible(source, statut)
+}
+
+/**
+ * L'activité en portage salarial de la colonne, avec les conditions de la société de portage réglées dans le
+ * comparateur. Elle ne garde que son identité : sans création, ni ACRE, ni CFE ; le salarié porté relève du régime
+ * général, sans caisse de profession libérale ; ses déplacements deviennent des frais remboursés (simulation-d-un-statut.ts).
+ */
+function portageCible(source: Activite, conditions: ConditionsPortage | undefined): Portage {
+  return { id: source.id, type: "portage", name: source.name, avatar: source.avatar, locked: source.locked, ...(conditions ? { conditions } : {}) }
 }
 
 /** Les réserves de départ d'une société à l'IS la suivent dans l'autre statut de société (voir l'ADR 014). */
@@ -152,9 +171,10 @@ function relationsCibles(session: DonneesDeLAnnee, source: Activite, statut: Sta
 
 /**
  * Données de l'année dans lesquelles l'activité a pris le statut demandé : entité, relations et flux convertis, sans
- * rien ajouter. Les dividendes saisis sont gardés tels quels si on le demande, quand le statut cible est une société.
+ * rien ajouter. Les dividendes saisis sont gardés tels quels si on le demande, quand le statut cible est une société ;
+ * en portage salarial, l'activité prend les conditions de société de portage données.
  */
-export function convertirLActivite(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, partBncPrestations = 1, garderLesDividendes = false): DonneesDeLAnnee {
+export function convertirLActivite(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare, partBncPrestations = 1, garderLesDividendes = false, conditionsPortage?: ConditionsPortage): DonneesDeLAnnee {
   const partBnc = Math.min(1, Math.max(0, partBncPrestations))
   const monthlyData = session.monthlyData.map(mois => ({
     ...mois,
@@ -166,7 +186,10 @@ export function convertirLActivite(session: DonneesDeLAnnee, source: Activite, s
   }))
   return {
     ...session,
-    entities: session.entities.map(e => (e.id === source.id ? entiteCible(source, statut) : e)),
+    entities: session.entities.map(e => {
+      if (e.id !== source.id) return e
+      return statut === "portage" ? portageCible(source, conditionsPortage) : entiteCible(source, statut)
+    }),
     relationships: relationsCibles(session, source, statut),
     monthlyData
   }

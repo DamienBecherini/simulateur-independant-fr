@@ -101,9 +101,9 @@ export function sessionMaximale(): SessionState {
       reglagesParActivite: {
         "c-sasu": { repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true }, partBncPrestations: 0.3, fraisFonctionnement: fraisModifies(50), statutEtudie: "EURL", partMiseEnReserve: 0.4 },
         "c-eurl": { repartition: { mode: "personnalisee", partDistribuee: 0.35 }, remunerationParAnnee: { "2024": 12000, "2026": 18500.5 }, fraisFonctionnement: fraisModifies(-20), statutEtudie: "SASU" },
-        "c-ei": { repartition: { mode: "dividendes", partDistribuee: 1, avecRetraite: false }, remunerationParAnnee: { "2025": 9000 }, partBncPrestations: 0 },
-        "m-bic": { repartition: { mode: "remuneration", partDistribuee: 0.8 }, fraisFonctionnement: fraisModifies(0) },
-        "m-bnc": { repartition: { mode: "grille", partDistribuee: 0 }, partBncPrestations: 1 }
+        "c-ei": { repartition: { mode: "dividendes", partDistribuee: 1, avecRetraite: false }, remunerationParAnnee: { "2025": 9000 }, partBncPrestations: 0, portage: { tauxFraisDeGestion: 0.06, plancherMensuel: 100, plafondMensuel: 1200, fraisFixesMensuels: 15, contrat: "CDI", effectif: "moinsDe11", tauxVersementMobilite: 0.0175, reductionGeneraleReversee: false, mutuelleMensuelle: 38.25 } },
+        "m-bic": { repartition: { mode: "remuneration", partDistribuee: 0.8 }, fraisFonctionnement: fraisModifies(0), portage: { contrat: "CDD", effectif: "50EtPlus", reductionGeneraleReversee: true } },
+        "m-bnc": { repartition: { mode: "grille", partDistribuee: 0 }, partBncPrestations: 1, portage: { effectif: "de11a49" } }
       }
     }
   }

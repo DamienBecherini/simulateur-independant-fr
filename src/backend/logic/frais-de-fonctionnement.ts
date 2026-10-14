@@ -15,19 +15,23 @@ import type { Activite } from "./conversion-de-statut.js"
 /**
  * Frais de fonctionnement saisis que reprend chaque colonne : ceux de son statut, et ceux de la micro-entreprise pour
  * ses deux variantes. Un nouveau statut doit y dire lesquels il reprend : les siens (ajoutés à `STATUTS_FRAIS`, avec des
- * frais par défaut) ou ceux d'un statut proche.
+ * frais par défaut) ou ceux d'un statut proche, ou qu'il n'en a aucun (`null`). Le portage salarial n'en a pas
+ * (voir l'ADR 016) : la société de portage tient la comptabilité, facture et assure le plus souvent la responsabilité
+ * civile ; ses frais de gestion en tiennent lieu. Sa colonne reçoit donc moins les frais supposés du statut actuel.
  */
-const FRAIS_DES_COLONNES: Record<StatutCompare, StatutFrais> = {
+const FRAIS_DES_COLONNES: Record<StatutCompare, StatutFrais | null> = {
   SASU: "SASU",
   EURL: "EURL",
   EI: "EI",
   micro: "micro",
-  "micro-vfl": "micro"
+  "micro-vfl": "micro",
+  portage: null
 }
 
-/** Montant annuel d'un poste de frais saisi pour un statut ; 0 sans frais saisis. */
+/** Montant annuel d'un poste de frais saisi pour un statut ; 0 sans frais saisis, ou pour un statut qui n'en a pas. */
 function posteDuStatut(statut: StatutCompare, poste: PosteFrais, options: ComparaisonOptions): number {
-  return Math.max(0, options.fraisFonctionnement?.[FRAIS_DES_COLONNES[statut]][poste] ?? 0)
+  const frais = FRAIS_DES_COLONNES[statut]
+  return frais === null ? 0 : Math.max(0, options.fraisFonctionnement?.[frais][poste] ?? 0)
 }
 
 /**

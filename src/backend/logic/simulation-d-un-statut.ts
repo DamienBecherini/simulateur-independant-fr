@@ -4,6 +4,8 @@ import { estSocieteIS, type ComparaisonOptions, type DonneesDeLAnnee, type Finan
 import { scenarioDeLaColonne, type ColonneEtudiee, type SimulationDeLaColonne } from "./colonne-du-comparateur.js"
 import { convertirLActivite, estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { ecartDeFrais } from "./frais-de-fonctionnement.js"
+import { montantBaremeKilometrique } from "./frais-kilometriques.js"
+import type { ReglesFiscales } from "./regles.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 
 /*
@@ -43,22 +45,36 @@ function fluxAjoutes(source: Activite, statut: StatutCompare, options: Comparais
   }
   const frais = ecartDeFrais(statut, statutActuel(source), options).total
   if (frais !== 0) {
-    // Déductibles en société et en EI ; en micro, une simple dépense qui ne réduit ni cotisations ni impôt. Négatif,
-    // l'écart diminue d'autant les charges saisies : le statut étudié coûte moins que le statut actuel.
+    // Déductibles en société et en EI ; en micro, une simple dépense qui ne réduit ni cotisations ni impôt ; en portage,
+    // des frais professionnels remboursés. Négatif, l'écart diminue d'autant les charges saisies : le statut étudié
+    // coûte moins que le statut actuel.
     ajouts.push({ id: `comparateur-${sourceId}-frais`, label: "Écart de frais de fonctionnement (comparateur)", amount: frais, entityId: sourceId, type: estMicro(statut) ? "expense" : "deductible_expense" })
   }
   return ajouts
 }
 
 /**
- * Données de l'année dans lesquelles l'activité a pris le statut demandé, avec ses flux convertis, sa rémunération, ses
- * dividendes et l'écart de frais avec son statut actuel ; `dividendes` à `null` garde ceux de la grille.
+ * En portage salarial, les déplacements professionnels de l'activité, que le moteur convertit ailleurs en charge au
+ * barème kilométrique, sont remboursés par la société de portage au même barème : des frais professionnels, pris sur
+ * l'enveloppe, ni cotisés ni imposés.
  */
-export function sessionConvertie({ donnees, source, options }: Pick<ColonneEtudiee, "donnees" | "source" | "options">, statut: StatutCompare, dividendes: number | null): DonneesDeLAnnee {
-  const convertie = convertirLActivite(donnees, source, statut, options.partBncPrestations, dividendes === null)
+function deplacementsRembourses(source: Activite, statut: StatutCompare, regles: ReglesFiscales): FinancialFlow[] {
+  const deplacements = source.deplacementsProfessionnels
+  if (statut !== "portage" || !deplacements) return []
+  const montant = montantBaremeKilometrique(deplacements.kmParAn, deplacements, regles.baremeKilometrique)
+  return montant > 0 ? [{ id: `comparateur-${source.id}-deplacements`, label: "Indemnités kilométriques remboursées (comparateur)", amount: montant, entityId: source.id, type: "deductible_expense" }] : []
+}
+
+/**
+ * Données de l'année dans lesquelles l'activité a pris le statut demandé, avec ses flux convertis, sa rémunération, ses
+ * dividendes et l'écart de frais avec son statut actuel ; `dividendes` à `null` garde ceux de la grille. En portage
+ * salarial, l'activité prend les conditions de société de portage des réglages.
+ */
+export function sessionConvertie({ donnees, source, options, regles }: Pick<ColonneEtudiee, "donnees" | "source" | "options" | "regles">, statut: StatutCompare, dividendes: number | null): DonneesDeLAnnee {
+  const convertie = convertirLActivite(donnees, source, statut, options.partBncPrestations, dividendes === null, options.portage)
   const monthlyData = [...convertie.monthlyData]
   // La rémunération et les dividendes calculés sont saisis sur janvier : seuls les totaux annuels comptent.
-  monthlyData[0] = { ...monthlyData[0], flows: [...monthlyData[0].flows, ...fluxAjoutes(source, statut, options, dividendes)] }
+  monthlyData[0] = { ...monthlyData[0], flows: [...monthlyData[0].flows, ...fluxAjoutes(source, statut, options, dividendes), ...deplacementsRembourses(source, statut, regles)] }
   return { ...convertie, monthlyData }
 }
 

@@ -1,10 +1,12 @@
 // src/backend/logic/references/portage.reference.test.ts
 
 import { describe, expect, it } from "vitest"
-import type { ConditionsPortage, FinancialFlow } from "../../../types.js"
+import type { ComparaisonOptions, ConditionsPortage, FinancialFlow } from "../../../types.js"
+import { comparerStatuts } from "../comparateur.js"
+import { defaultFraisFonctionnement } from "../options-du-comparateur.js"
 import { runMetaSimulation } from "../simulation-engine.js"
 import { activite, casDeReference, foyerDe, REGLES_DES_CAS, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
-import { chaqueMois, personne, portage, relation, session } from "../testing/session-de-test.js"
+import { chaqueMois, micro, personne, portage, relation, session } from "../testing/session-de-test.js"
 
 /*
  * Cas de référence 2026 : activité en portage salarial (voir l'ADR 016, « Exemple calculé à la main »).
@@ -193,6 +195,38 @@ casDeReference("Cas de référence 2026 : portage salarial", () => {
       expect(detail.netImposable).toBeCloseTo(28120.25, 2)
       expect(resultat.charges).toBe(10200)
       verifierIdentiteDuBilan(report)
+    })
+  })
+
+  describe("cas 8 : la colonne du comparateur d'une micro-entreprise BNC à 60 000 €, comme une activité en portage saisie", () => {
+    // Camille, micro-entrepreneuse en prestations BNC, 5 000 € par mois. Dans la colonne « Portage salarial », l'activité
+    // devient une activité en portage aux conditions réglées dans le comparateur : avec les mêmes conditions, son
+    // résultat est celui d'une activité en portage saisie directement. Conditions typiques (CDI) : c'est le cas « en
+    // CDI » ci-dessus, net après impôt 26 366 €, salaire versé 27 752 €, réserve nette 2 643 € conservée.
+    const enMicro = chaqueMois(session([personne("camille"), micro("p1")], [relation("camille", "p1", "Titulaire")]), "p1", "ca_micro_services_bnc", 5000)
+    const sansFrais: ComparaisonOptions = { activityId: "p1", remunerationNette: 0, repartition: { mode: "meilleurNet", partDistribuee: 1 }, partBncPrestations: 1 }
+    const colonneDuPortage = (options: ComparaisonOptions) => comparerStatuts(enMicro, options, REGLES_DES_CAS, { annee: 2026 }).scenarios.find(s => s.statut === "portage")
+
+    it("conditions typiques : le même résultat que l'activité en portage saisie", () => {
+      const saisie = simulerCamille(5000)
+      const colonne = colonneDuPortage(sansFrais)
+      expect(colonne?.netApresImpots).toBe(26366)
+      expect(colonne?.netApresImpots).toBe(saisie.report.totalNetApresImpots)
+      expect(colonne).toMatchObject({ cotisationsSociales: saisie.report.bilan.cotisationsSociales + saisie.report.bilan.cotisationsSalariales, impotSurLeRevenu: 1386, resultatConserveActivite: 2643, ecartDeFrais: { total: 0 } })
+      // Salarié cadre du régime général, assurance chômage comprise : la cinquième étoile, avec 4 trimestres.
+      expect(colonne?.protectionSociale).toMatchObject({ etoiles: 5, trimestres: 4 })
+    })
+
+    it("conditions réglées (CDD, frais de gestion de 8 %, réduction générale reversée) : le même net que l'activité saisie avec ces conditions", () => {
+      const conditions: ConditionsPortage = { contrat: "CDD", tauxFraisDeGestion: 0.08, reductionGeneraleReversee: true }
+      expect(colonneDuPortage({ ...sansFrais, portage: conditions })?.netApresImpots).toBe(simulerCamille(5000, conditions).report.totalNetApresImpots)
+    })
+
+    it("avec les frais de fonctionnement supposés : la colonne ne garde pas les 850 € de la micro-entreprise, qui deviennent des frais professionnels négatifs", () => {
+      // Micro-entreprise : banque 100, logiciel 100, assurance 350, CFE 300 = 850 € ; portage : aucun (ADR 016).
+      const avecFrais = colonneDuPortage({ ...sansFrais, fraisFonctionnement: defaultFraisFonctionnement() })
+      expect(avecFrais?.ecartDeFrais.total).toBe(-850)
+      expect(avecFrais?.netApresImpots).toBe(simulerCamille(5000, {}, undefined, [["deductible_expense", -850 / 12]]).report.totalNetApresImpots)
     })
   })
 
