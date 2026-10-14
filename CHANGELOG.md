@@ -12,6 +12,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 - **Outil `chiffre_affaires_pour_net_vise` pour les clients d'IA.** Le même calcul à l'envers, en lecture seule, dans le serveur MCP de l'application de bureau (dix-sept outils).
 - **Un lien vers chaque situation type dans la démo web.** L'adresse `…/simulateur-independant-fr/#situation=<identifiant>` (par exemple `#situation=couple-union-libre`) ouvre la situation type : un article peut proposer « Ouvrir cet exemple dans le simulateur ». Sur une première visite ou une simulation vide, la situation se charge directement ; sur une simulation non enregistrée, la confirmation de la fenêtre des situations types la précède, et « Annuler » ne change rien. Le chargement s'annule en une étape, et le lien quitte l'adresse une fois lu : un rechargement ne remet pas la situation par-dessus le travail fait depuis. Un identifiant inconnu ne change rien ; un message discret le dit, avec un lien vers les situations types. Dans la fenêtre « Partir d'une situation type », « Copier le lien » donne l'adresse de chaque situation. Les identifiants sont publics et ne changeront plus ([liste](./documentation/liens-vers-les-situations-types.md)). L'application de bureau, sans adresse, n'est pas concernée.
 
+### Modifié
+
+- **Une même règle pour charger une situation type.** La fenêtre des situations types et l'encart « Que voulez-vous savoir ? » (« Partir de zéro » compris) chargent désormais directement par-dessus une simulation vide ou l'exemple de la démo non modifié, comme le lien `#situation=…`, et gardent la confirmation sur toute simulation non enregistrée ; le chargement reste annulable en une étape.
+
 ## [0.12.0] — 2026-10-13
 
 ### Ajouté

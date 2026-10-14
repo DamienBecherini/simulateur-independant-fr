@@ -22,7 +22,7 @@ interface SituationParLAdresseProps {
   session: SessionState
   /** Vrai une fois la session enregistrée chargée : l'adresse n'est lue qu'ensuite, sinon ce chargement la recouvrirait. */
   sessionChargee: boolean
-  /** La simulation en cours serait perdue (même règle que la fenêtre des situations types). */
+  /** La simulation en cours serait perdue (`confirmationDuMontageNecessaire`, règle commune aux trois entrées). */
   confirmationNecessaire: boolean
   /** Charge la situation : un remplacement de la session, annulable en une étape. */
   onCharger: (montage: MontageType) => void
@@ -51,7 +51,7 @@ function MessageIntrouvable({ identifiant, onVoirLesSituations, onFermer, bouton
 }
 
 export function SituationParLAdresse({ session, sessionChargee, confirmationNecessaire, onCharger }: SituationParLAdresseProps) {
-  const { lienVersUneSituation, estLaSessionDExemple } = usePlateforme()
+  const { lienVersUneSituation } = usePlateforme()
   const actif = lienVersUneSituation !== undefined
   const [aConfirmer, setAConfirmer] = useState<MontageType | null>(null)
   const [introuvable, setIntrouvable] = useState<string | null>(null)
@@ -77,8 +77,7 @@ export function SituationParLAdresse({ session, sessionChargee, confirmationNece
       setIntrouvable(identifiant)
       return
     }
-    // L'exemple du premier lancement n'est le travail de personne : il se remplace sans question, comme une simulation vide.
-    if (confirmationNecessaire && !(estLaSessionDExemple?.(session) ?? false)) {
+    if (confirmationNecessaire) {
       setIntrouvable(null)
       setAConfirmer(situation)
     } else charger(situation)

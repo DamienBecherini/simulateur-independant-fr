@@ -26,6 +26,7 @@ import type { MontageType } from "@/lib/montages/montages"
 import { ThemeToggle } from "./ThemeToggle"
 import { BoutonDesMentionsLegales } from "./MentionsLegales"
 import { BoutonUtiliserAvecUneIA } from "./UtiliserAvecUneIA"
+import { confirmationDuMontageNecessaire } from "@/lib/montages/confirmation"
 import { usePlateforme } from "../plateforme"
 
 interface SettingsSheetProps {
@@ -100,7 +101,7 @@ function VersionDuFichier({ appVersion }: { appVersion: string | undefined }) {
 
 export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, onLoadMontage, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId }: SettingsSheetProps) {
   // Dans la démo web, le bouton d'aide à l'installation (fourni par la plateforme).
-  const { BoutonInstaller } = usePlateforme()
+  const { BoutonInstaller, estLaSessionDExemple } = usePlateforme()
   const [view, setView] = useState<"main" | "load">("main")
   const [isOverwriteAlertOpen, setOverwriteAlertOpen] = useState(false)
   const [slotToOverwrite, setSlotToOverwrite] = useState<SaveSlot | null>(null)
@@ -198,7 +199,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                 <Button onClick={() => setView("load")} variant="secondary" className="w-full">
                   Charger une sauvegarde...
                 </Button>
-                <BoutonDesMontages variant="secondary" className="h-auto min-h-9 w-full whitespace-normal py-1.5" onCharger={onLoadMontage} confirmationNecessaire={SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId)} nomDeLaSession={currentSession.name} />
+                <BoutonDesMontages variant="secondary" className="h-auto min-h-9 w-full whitespace-normal py-1.5" onCharger={onLoadMontage} confirmationNecessaire={confirmationDuMontageNecessaire(currentSession, SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId), estLaSessionDExemple)} nomDeLaSession={currentSession.name} />
                 <Button onClick={demanderLaReinitialisation} variant="destructive" className="h-auto min-h-9 w-full whitespace-normal py-1.5">
                   <RefreshCcw className="mr-2 h-4 w-4" /> Nouvelle Simulation / Réinitialiser
                 </Button>

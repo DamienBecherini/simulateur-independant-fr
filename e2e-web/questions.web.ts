@@ -18,12 +18,10 @@ async function ouvrir(page: Page) {
   await expect(encart(page)).toBeVisible()
 }
 
-/** Choisit une question de l'encart et confirme le remplacement de l'exemple. */
+/** Choisit une question de l'encart : l'exemple non modifié est remplacé sans confirmation. */
 async function choisir(page: Page, question: string, situation: string) {
   await encart(page).getByRole("button", { name: question }).click()
-  const confirmation = page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
-  await expect(confirmation).toContainText(`La situation « ${situation} » la remplacera`)
-  await confirmation.getByRole("button", { name: "Remplacer" }).click()
+  await expect(page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).toHaveCount(0)
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(situation)
 }
 
@@ -79,10 +77,10 @@ test("l'encart fermé ne revient pas au rechargement", async ({ page }) => {
   await expect(encart(page)).toHaveCount(0)
 })
 
-test("« Partir de zéro » remplace l'exemple après confirmation et porte le focus sur l'ajout d'une personne", async ({ page }) => {
+test("« Partir de zéro » remplace l'exemple sans confirmation et porte le focus sur l'ajout d'une personne", async ({ page }) => {
   await ouvrir(page)
   await encart(page).getByRole("button", { name: "Partir de zéro" }).click()
-  await page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" }).getByRole("button", { name: "Remplacer" }).click()
+  await expect(page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "+ Ajouter une personne" })).toBeFocused()
   // Simulation vide : l'encart reste proposé.
   await expect(encart(page)).toBeVisible()

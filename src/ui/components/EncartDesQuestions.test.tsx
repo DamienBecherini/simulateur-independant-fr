@@ -84,7 +84,7 @@ describe("encart « Que voulez-vous savoir ? »", () => {
     await vi.waitFor(() => expect(screen.getByRole("button", { name: "+ Ajouter une personne" })).toHaveFocus())
   })
 
-  it("« Partir de zéro » sur l'exemple : confirmation, puis simulation vierge et focus sur l'ajout d'une personne", async () => {
+  it("« Partir de zéro » sur une simulation non enregistrée : confirmation, puis simulation vierge et focus sur l'ajout d'une personne", async () => {
     const { user, onPartirDeZero } = afficher(true)
     await user.click(screen.getByRole("button", { name: "Partir de zéro" }))
     const confirmation = screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })

@@ -6,17 +6,26 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { SessionState } from "@/types"
-import { emptySession, makePerson } from "@/ui/testing/fixtures"
+import { emptySession, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { delaiDesTestsDIntegration } from "@/ui/testing/delais"
+import { PLATEFORME_DE_BUREAU, PlateformeContext } from "./plateforme"
 import App from "./App"
 
 // L'application entière, pilotée comme par un utilisateur : un délai plus long, expliqué dans testing/delais.ts.
 delaiDesTestsDIntegration()
 
-async function renderApp(session: SessionState) {
+/** Une simulation d'exemple, reconnue par la plateforme comme celle d'une démo à son premier lancement. */
+const EXEMPLE: SessionState = { ...emptySession(), name: "Exemple du premier lancement", entities: [makePerson({ name: "Camille" }), makeMicro()] }
+const DEMO = { ...PLATEFORME_DE_BUREAU, web: true, estLaSessionDExemple: (session: SessionState) => session.name === EXEMPLE.name && session.entities[0]?.name === "Camille" }
+
+async function renderApp(session: SessionState, plateforme = PLATEFORME_DE_BUREAU) {
   vi.mocked(window.api.getCurrentSession).mockResolvedValue(session)
   const user = userEvent.setup({ delay: null })
-  render(<App />)
+  render(
+    <PlateformeContext value={plateforme}>
+      <App />
+    </PlateformeContext>
+  )
   await screen.findByRole("heading", { level: 1, name: session.name })
   return user
 }
@@ -35,6 +44,28 @@ describe("App : montages types", () => {
     expect(screen.getAllByText("SASU de Thomas").length).toBeGreaterThan(0)
     expect(remonter).toHaveBeenCalledWith(0, 0)
     expect(undoButton()).toBeEnabled()
+  })
+
+  it("sur l'exemple de la démo non modifié, charge un montage directement, annulable en une étape", async () => {
+    const user = await renderApp(EXEMPLE, DEMO)
+
+    await user.click(within(screen.getByRole("navigation", { name: "Barre d'outils" })).getByRole("button", { name: "Situations types" }))
+    await user.click(screen.getByRole("button", { name: "Charger la situation « SASU sans salaire, tout en dividendes »" }))
+
+    expect(await screen.findByRole("heading", { level: 1, name: "SASU sans salaire, tout en dividendes" })).toBeInTheDocument()
+    expect(screen.queryByRole("dialog", { name: "Remplacer la simulation en cours ?" })).not.toBeInTheDocument()
+    await user.click(undoButton())
+    expect(await screen.findByRole("heading", { level: 1, name: EXEMPLE.name })).toBeInTheDocument()
+  })
+
+  it("sur l'exemple de la démo modifié, demande confirmation avant de le remplacer", async () => {
+    const user = await renderApp(EXEMPLE, DEMO)
+    await user.clear(screen.getAllByRole("textbox", { name: "Nom" })[0])
+    await user.type(screen.getAllByRole("textbox", { name: "Nom" })[0], "Bob{Enter}")
+
+    await user.click(within(screen.getByRole("navigation", { name: "Barre d'outils" })).getByRole("button", { name: "Situations types" }))
+    await user.click(screen.getByRole("button", { name: "Charger la situation « SASU sans salaire, tout en dividendes »" }))
+    expect(screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).toHaveTextContent(`« ${EXEMPLE.name} »`)
   })
 
   it("depuis les paramètres, demande confirmation avant de remplacer une simulation non enregistrée, puis reste annulable", async () => {
