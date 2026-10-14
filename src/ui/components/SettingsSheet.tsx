@@ -25,7 +25,7 @@ import { ConfirmationDeRemplacement } from "./ConfirmationDeRemplacement"
 import type { MontageType } from "@/lib/montages/montages"
 import { ThemeToggle } from "./ThemeToggle"
 import { BoutonDesMentionsLegales } from "./MentionsLegales"
-import { BoutonUtiliserAvecUneIA } from "./UtiliserAvecUneIA"
+import { BoutonUtiliserAvecUneIA, type ReglageDeModificationDirecte } from "./UtiliserAvecUneIA"
 import { confirmationDuMontageNecessaire } from "@/lib/montages/confirmation"
 import { usePlateforme } from "../plateforme"
 
@@ -56,6 +56,9 @@ interface SettingsSheetProps {
 
   loadedSlotId: string | null
   setLoadedSlotId: Dispatch<SetStateAction<string | null>>
+
+  /** La case « Laisser l'IA modifier directement la simulation » de la fenêtre « Utiliser avec une IA » (bureau seulement). */
+  modificationDirecte?: ReglageDeModificationDirecte
 }
 
 /**
@@ -99,7 +102,7 @@ function VersionDuFichier({ appVersion }: { appVersion: string | undefined }) {
   return <p className="mt-3 text-sm">Fichier écrit par la version {appVersion} du simulateur.</p>
 }
 
-export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, onLoadMontage, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId }: SettingsSheetProps) {
+export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, onLoadMontage, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId, modificationDirecte }: SettingsSheetProps) {
   // Dans la démo web, le bouton d'aide à l'installation (fourni par la plateforme).
   const { BoutonInstaller, estLaSessionDExemple } = usePlateforme()
   const [view, setView] = useState<"main" | "load">("main")
@@ -208,7 +211,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                   <Label htmlFor="theme-parametres">Thème clair ou sombre</Label>
                   <ThemeToggle id="theme-parametres" />
                 </div>
-                <BoutonUtiliserAvecUneIA variant="outline" className="h-auto min-h-9 w-full whitespace-normal" />
+                <BoutonUtiliserAvecUneIA variant="outline" className="h-auto min-h-9 w-full whitespace-normal" modificationDirecte={modificationDirecte} />
                 {BoutonInstaller && <BoutonInstaller variant="outline" className="h-auto min-h-9 w-full whitespace-normal" />}
                 <BoutonDesMentionsLegales variant="outline" className="h-auto min-h-9 w-full whitespace-normal" icone />
               </div>

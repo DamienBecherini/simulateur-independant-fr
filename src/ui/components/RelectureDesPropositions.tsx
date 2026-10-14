@@ -3,21 +3,24 @@
 // avec son récapitulatif, une ligne par opération, les doublons probables et l'effet sur le net de chaque année,
 // recalculés sur la simulation affichée. « Appliquer » la fait entrer en une seule étape d'annulation ; « Refuser » la
 // retire. Une proposition périmée (la simulation a changé depuis) ne peut que se retirer. « Plus tard » la garde.
-// Une case de la fenêtre laisse l'IA modifier directement la simulation (ADR 011, addendum du 2026-10-14) : ses
-// propositions suivantes, relues de la même façon, s'appliquent dès leur arrivée si elles sont valides et à jour, avec
-// une notification qui permet de les annuler ; les autres s'affichent ici comme avant.
+// Une case de la fenêtre (ou des paramètres) laisse l'IA modifier directement la simulation (ADR 011, addendum du
+// 2026-10-14) : ses propositions suivantes, relues de la même façon, s'appliquent dès leur arrivée si elles sont valides
+// et à jour, avec une notification qui permet de les annuler. Restent ici : celles qui suppriment quelque chose, celles
+// qui attendaient déjà, et celles qui ne s'appliquent pas (périmées, refusées), sans bloquer les suivantes.
 
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Bot } from "lucide-react"
 import { toast } from "sonner"
 import type { SessionState } from "@/types"
 import type { PropositionRecue } from "@/backend/mcp/proposition-en-attente"
+import { supprimeQuelqueChose } from "@/backend/logic/outils/propositions"
 import { euros } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
 import { ligneAlternee } from "../lignes-alternees"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { relireLaProposition, type ApercuDUneAnnee, type Relecture } from "@/lib/relecture-de-proposition"
+import { CaseDeModificationDirecte } from "./IndicateurDeModificationDirecte"
 
 interface RelectureDesPropositionsProps {
   session: SessionState
@@ -28,6 +31,10 @@ interface RelectureDesPropositionsProps {
   onRetirer: (id: string) => void
   /** Vrai si l'IA modifie directement la simulation : une proposition valide et à jour s'applique dès son arrivée. */
   iaModifieDirectement: boolean
+  /** Les propositions arrivées pendant que l'IA modifie directement la simulation : les seules qui peuvent s'appliquer seules. */
+  arriveesEnDirect: ReadonlySet<string>
+  /** Des propositions arrivées en direct qui ne s'appliquent pas : elles passent en relecture. */
+  onGarderEnRelecture: (ids: readonly string[]) => void
   /** Laisse l'IA modifier directement la simulation (case cochée, puis « Appliquer »). */
   onLaisserLIAModifier: () => void
   /** Défait la dernière étape de l'historique (« Annuler » de la notification d'une proposition appliquée seule). */
@@ -108,21 +115,15 @@ function DetailDeLaRelecture({ relecture, children }: { relecture: Relecture; ch
   )
 }
 
-/** La case qui laisse l'IA modifier directement la simulation, et ce qu'implique son activation. */
-function CaseDeModificationDirecte({ cochee, onChange }: { cochee: boolean; onChange: (cochee: boolean) => void }) {
-  const id = useId()
+/** Sous la case de la fenêtre : ce qu'implique son activation. */
+const AIDE_DE_LA_CASE = "Case cochée, « Appliquer » applique cette proposition, puis les suivantes de l'IA s'appliqueront aussitôt, chacune annulable (Ctrl+Z ou « Annuler »). Les suppressions, et les propositions qui attendent déjà, resteront à valider ici. Choix retenu d'une ouverture à l'autre : décochez la pastille « IA en direct » ou la case des paramètres pour y mettre fin."
+
+/** À la place de la case, quand l'IA modifie déjà directement la simulation : pourquoi cette proposition attend. */
+function NoteDeModificationDirecte({ suppression }: { suppression: boolean }) {
   return (
-    <div className="flex items-start gap-2 rounded-md border border-violet-300 bg-violet-50 p-3 dark:border-violet-700 dark:bg-violet-950">
-      <input id={id} type="checkbox" checked={cochee} onChange={event => onChange(event.target.checked)} aria-describedby={`${id}-aide`} className="mt-0.5 size-5 shrink-0 cursor-pointer accent-violet-700 pointer-coarse:size-6 dark:accent-violet-300" />
-      <div>
-        <label htmlFor={id} className="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-100">
-          Laisser l'IA modifier directement la simulation
-        </label>
-        <p id={`${id}-aide`} className={PETIT_TEXTE}>
-          Case cochée, « Appliquer » applique cette proposition, puis l'IA n'enverra plus de propositions à relire : ses modifications suivantes, et celles qui attendent déjà, s'appliqueront aussitôt. Chacune reste annulable (Ctrl+Z ou « Annuler »). Ce choix est retenu d'une ouverture à l'autre : décochez la pastille « IA en direct » de la barre d'outils, à tout moment, pour revenir aux propositions.
-        </p>
-      </div>
-    </div>
+    <p role="note" className="rounded-md border border-violet-300 bg-violet-50 p-3 text-sm text-slate-800 dark:border-violet-700 dark:bg-violet-950 dark:text-slate-100">
+      {suppression ? "L'IA modifie directement la simulation, mais une suppression attend toujours votre validation." : "L'IA modifie directement la simulation, mais cette proposition attendait déjà : elle reste à valider ici."}
+    </p>
   )
 }
 
@@ -135,18 +136,35 @@ function messageDApplication(recapitulatif: string, iaModifieraDirectement: bool
   return `Proposition appliquée : ${sansQuestion(recapitulatif)}. « Annuler » la défait.${suite}`
 }
 
+type Rappels = Pick<RelectureDesPropositionsProps, "onAppliquer" | "onRetirer" | "onAnnuler" | "onGarderEnRelecture">
+
 /**
- * Modification directe par l'IA : quand l'utilisateur l'a permise, une proposition valide et à jour n'ouvre pas la
- * fenêtre, elle est appliquée tout de suite. Une à la fois, dans l'ordre d'arrivée : la session obtenue devient la
- * session affichée, sur laquelle la suivante est relue au rendu d'après. Chaque proposition n'est appliquée qu'une
- * fois, même si l'effet est rejoué. Rend vrai si la proposition affichée est appliquée ainsi.
+ * Modification directe par l'IA : une proposition arrivée pendant que l'utilisateur la permet, et qui ne supprime rien,
+ * n'ouvre pas la fenêtre ; elle est appliquée si elle est valide et à jour. Une à la fois, dans l'ordre d'arrivée : la
+ * session obtenue devient la session affichée, sur laquelle la suivante est relue au rendu d'après. Celle qui ne
+ * s'applique pas (périmée, refusée) passe en relecture pour de bon, sans retenir les suivantes : un retour en arrière
+ * (Ctrl+Z) qui la rendrait applicable ne l'applique donc pas. Chaque proposition n'est appliquée qu'une fois, même si
+ * l'effet est rejoué. Rend les propositions à montrer dans la fenêtre, dans l'ordre d'arrivée.
  */
 function useModificationDirecte(
-  iaModifieDirectement: boolean,
-  { session, proposition, relecture }: { session: SessionState; proposition: PropositionRecue | null; relecture: Relecture | null },
-  { onAppliquer, onRetirer, onAnnuler }: Pick<RelectureDesPropositionsProps, "onAppliquer" | "onRetirer" | "onAnnuler">
-): boolean {
-  const directe = iaModifieDirectement && relecture?.etat === "applicable"
+  { session, propositions, iaModifieDirectement, arriveesEnDirect }: Pick<RelectureDesPropositionsProps, "session" | "propositions" | "iaModifieDirectement" | "arriveesEnDirect">,
+  { onAppliquer, onRetirer, onAnnuler, onGarderEnRelecture }: Rappels
+): PropositionRecue[] {
+  const { aAppliquer, inapplicables, aRelire } = useMemo(() => {
+    const directe = (p: PropositionRecue) => iaModifieDirectement && arriveesEnDirect.has(p.id) && !supprimeQuelqueChose(p.proposition)
+    const ecartees: string[] = []
+    let trouvee: { proposition: PropositionRecue; relecture: Extract<Relecture, { etat: "applicable" }> } | null = null
+    for (const proposition of propositions.filter(directe)) {
+      const relecture = relireLaProposition(session, proposition)
+      if (relecture.etat === "applicable") {
+        trouvee = { proposition, relecture }
+        break
+      }
+      ecartees.push(proposition.id)
+    }
+    return { aAppliquer: trouvee, inapplicables: ecartees, aRelire: propositions.filter(p => !directe(p) || ecartees.includes(p.id)) }
+  }, [session, propositions, iaModifieDirectement, arriveesEnDirect])
+
   // La session affichée, pour le bouton « Annuler » d'une notification : il ne défait la proposition que si rien ne
   // l'a suivie dans l'historique.
   const sessionAffichee = useRef(session)
@@ -156,7 +174,9 @@ function useModificationDirecte(
 
   const dejaAppliquees = useRef(new Set<string>())
   useEffect(() => {
-    if (!directe || !proposition || relecture?.etat !== "applicable" || dejaAppliquees.current.has(proposition.id)) return
+    if (inapplicables.length > 0) onGarderEnRelecture(inapplicables)
+    if (!aAppliquer || dejaAppliquees.current.has(aAppliquer.proposition.id)) return
+    const { proposition, relecture } = aAppliquer
     dejaAppliquees.current.add(proposition.id)
     const { nouvelleSession, recapitulatif } = relecture
     onAppliquer(nouvelleSession)
@@ -166,21 +186,21 @@ function useModificationDirecte(
       else toast.info("La simulation a changé depuis : utilisez « Annuler » dans la barre d'outils, étape par étape.")
     }
     toast.success(`Modifié par l'IA : ${sansQuestion(recapitulatif)}`, { action: { label: "Annuler", onClick: annuler }, duration: 10_000 })
-  }, [directe, proposition, relecture, onAppliquer, onRetirer, onAnnuler])
-  return directe
+  }, [aAppliquer, inapplicables, onAppliquer, onRetirer, onAnnuler, onGarderEnRelecture])
+  return aRelire
 }
 
-export function RelectureDesPropositions({ session, propositions, onAppliquer, onRetirer, iaModifieDirectement, onLaisserLIAModifier, onAnnuler }: RelectureDesPropositionsProps) {
+export function RelectureDesPropositions({ session, propositions, onAppliquer, onRetirer, iaModifieDirectement, arriveesEnDirect, onGarderEnRelecture, onLaisserLIAModifier, onAnnuler }: RelectureDesPropositionsProps) {
+  const aRelire = useModificationDirecte({ session, propositions, iaModifieDirectement, arriveesEnDirect }, { onAppliquer, onRetirer, onAnnuler, onGarderEnRelecture })
   // Propositions remises à plus tard : elles restent dans la boîte et reviendront au prochain démarrage.
   const [remises, setRemises] = useState<ReadonlySet<string>>(new Set())
-  const aMontrer = propositions.filter(p => !remises.has(p.id))
+  const aMontrer = aRelire.filter(p => !remises.has(p.id))
   const proposition = aMontrer[0] ?? null
   // Recalculée à chaque changement de la simulation : une modification faite pendant la relecture la rend périmée.
   const relecture = useMemo(() => (proposition ? relireLaProposition(session, proposition) : null), [session, proposition])
 
   // La case « Laisser l'IA modifier directement… », cochée pour une proposition donnée : décochée pour la suivante.
   const [cocheePour, setCocheePour] = useState<string | null>(null)
-  const directe = useModificationDirecte(iaModifieDirectement, { session, proposition, relecture }, { onAppliquer, onRetirer, onAnnuler })
 
   const remettre = () => proposition && setRemises(ids => new Set([...ids, proposition.id]))
   const appliquer = () => {
@@ -193,7 +213,7 @@ export function RelectureDesPropositions({ session, propositions, onAppliquer, o
   }
 
   return (
-    <Dialog open={proposition !== null && relecture !== null && !directe} onOpenChange={ouverte => (ouverte ? undefined : remettre())}>
+    <Dialog open={proposition !== null && relecture !== null} onOpenChange={ouverte => (ouverte ? undefined : remettre())}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         {proposition && relecture ? (
           <>
@@ -210,7 +230,7 @@ export function RelectureDesPropositions({ session, propositions, onAppliquer, o
               </DialogDescription>
             </DialogHeader>
             <DetailDeLaRelecture relecture={relecture}>
-              <CaseDeModificationDirecte cochee={cocheePour === proposition.id} onChange={cochee => setCocheePour(cochee ? proposition.id : null)} />
+              {iaModifieDirectement ? <NoteDeModificationDirecte suppression={supprimeQuelqueChose(proposition.proposition)} /> : <CaseDeModificationDirecte cochee={cocheePour === proposition.id} onChange={cochee => setCocheePour(cochee ? proposition.id : null)} aide={AIDE_DE_LA_CASE} />}
             </DetailDeLaRelecture>
             <DialogFooter className="gap-2">
               <Button variant="ghost" onClick={remettre}>

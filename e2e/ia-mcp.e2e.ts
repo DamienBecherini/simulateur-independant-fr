@@ -69,7 +69,7 @@ test("une proposition envoyée par le serveur MCP s'applique dans l'application 
   expect(erreursConsole).toEqual([])
 })
 
-test("l'utilisateur laisse l'IA modifier directement la simulation : la proposition s'applique dès son arrivée, et s'annule", async ({ dossierDonnees, lancer }) => {
+test("l'utilisateur laisse l'IA modifier directement la simulation : la proposition s'applique dès son arrivée, et s'annule ; une suppression attend son clic", async ({ dossierDonnees, lancer }) => {
   await deposerSession(dossierDonnees, sessionMicroBnc())
   // Choix fait lors d'une ouverture précédente (case de la fenêtre de relecture), retenu dans les préférences.
   await fs.writeFile(path.join(dossierDonnees, "userPreferences.json"), JSON.stringify({ slotOrder: [], affichage: "classique", iaModifieDirectement: true }))
@@ -108,6 +108,26 @@ test("l'utilisateur laisse l'IA modifier directement la simulation : la proposit
 
   // « Annuler » de la notification défait la modification, en une étape.
   await notification.getByRole("button", { name: "Annuler" }).click()
+  await expect(chiffreDAffaires).toHaveText(/^30\s000\s€$/)
+
+  // Une suppression, elle, attend toujours le clic de l'utilisateur, et le serveur le dit au modèle. Proposée une fois
+  // la session sans la mission enregistrée : sinon elle serait périmée.
+  await expect.poll(async () => (await lireFichier<SessionState>(dossierDonnees, "sessionState.json"))?.annees[0].monthlyData[5].flows.map(f => f.label)).toEqual(["Prestations"])
+  const autreClient = await connecterUnClient((await page.evaluate(() => window.api.infosDuServeurMcp()))!)
+  try {
+    const decembre = { cible: "serie", annee: 2026, serie: { acteurId: ATELIER.id, typeFlux: "ca_micro_services_bnc", libelle: "Prestations" }, mois: [12] }
+    const proposee = (await autreClient.callTool({ name: "proposer_suppression", arguments: { suppressions: [decembre] } })) as CallToolResult
+    const { proposition } = JSON.parse((proposee.content as { text: string }[])[0].text.split("\n").at(-1)!) as { proposition: unknown }
+    const envoyee = (await autreClient.callTool({ name: "appliquer_proposition", arguments: { proposition } })) as CallToolResult
+    expect((envoyee.content as { text: string }[])[0].text).toMatch(/^Proposition envoyée à l'application, en attente de validation/)
+  } finally {
+    await autreClient.close()
+  }
+  const fenetre = page.getByRole("dialog", { name: "Proposition de votre IA" })
+  await expect(fenetre).toContainText("L'IA modifie directement la simulation, mais une suppression attend toujours votre validation.")
+  await expect(fenetre.getByRole("checkbox")).toHaveCount(0)
+  await fenetre.getByRole("button", { name: "Refuser" }).click()
+  await expect(fenetre).toBeHidden()
   await expect(chiffreDAffaires).toHaveText(/^30\s000\s€$/)
 
   // Décocher la pastille y met fin, et l'enregistre.

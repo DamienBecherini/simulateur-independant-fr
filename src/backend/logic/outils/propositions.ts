@@ -35,6 +35,12 @@ export const PropositionSchema = z
 export type Proposition = z.infer<typeof PropositionSchema>
 
 /**
+ * Vrai si la proposition supprime quelque chose (série, relation, acteur, année, ou tout) : même quand l'utilisateur
+ * laisse l'IA modifier directement la simulation, elle attend son clic (ADR 011, addendum du 2026-10-14).
+ */
+export const supprimeQuelqueChose = (proposition: Pick<Proposition, "operations">) => proposition.operations.some(estUneSuppression)
+
+/**
  * Une proposition telle que le modèle la renvoie. Son schéma public reste sommaire, pour ne pas répéter le détail des
  * opérations dans la description de chaque outil : elle est validée en entier par `propositionValidee`.
  */

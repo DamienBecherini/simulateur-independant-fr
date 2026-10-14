@@ -1,7 +1,7 @@
 // src/ui/components/UtiliserAvecUneIA.tsx
 // Section « Utiliser avec une IA (MCP) » des paramètres. Dans l'application de bureau : ce que fait le serveur MCP
-// local, l'avertissement de confidentialité, et la configuration à copier dans un client d'IA de bureau, avec les
-// chemins réels de cette installation (voir documentation/utiliser-avec-une-ia.md et l'ADR 011). Dans la démo web, la
+// local, la case qui laisse l'IA modifier directement la simulation, l'avertissement de confidentialité, et la
+// configuration à copier dans un client d'IA de bureau, avec les chemins réels de cette installation (voir documentation/utiliser-avec-une-ia.md et l'ADR 011). Dans la démo web, la
 // plateforme fournit le contenu de la fenêtre : ce que cela permet, et les liens vers l'application de bureau, seule à le
 // faire (src/web/FenetreIADeLaDemo.tsx).
 
@@ -11,6 +11,16 @@ import { Button, type ButtonProps } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { usePlateforme } from "../plateforme"
 import { ALIAS_D_EXECUTION, blocAInserer, commandeDeClaudeCode, commandeDeVerification, configurationDeClaudeDesktop, configurationDuClient, NOM_DU_SERVEUR_MCP, type InfosDuServeurMcp } from "@/lib/configuration-mcp"
+import { CaseDeModificationDirecte } from "./IndicateurDeModificationDirecte"
+
+/** La préférence « l'IA modifie directement la simulation » (voir l'ADR 011, addendum du 2026-10-14), la même que la pastille « IA en direct ». */
+export interface ReglageDeModificationDirecte {
+  active: boolean
+  onChange: (active: boolean) => void
+}
+
+/** Sous la case des paramètres : ce qu'implique son activation. */
+const AIDE_DE_LA_MODIFICATION_DIRECTE = "Les modifications suivantes de l'IA s'appliquent aussitôt, sans relecture, chacune annulable (Ctrl+Z ou « Annuler ») ; la pastille « IA en direct » le rappelle. Ses suppressions, et les propositions qui attendent déjà, restent à valider."
 
 const TITRE_IA = "Utiliser avec une IA (MCP)"
 
@@ -56,7 +66,7 @@ function EtapesDeClaudeDesktop({ plateforme }: { plateforme: string }) {
 }
 
 /** Le contenu de la fenêtre, une fois les chemins de l'installation connus. */
-function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
+function GuideDuServeurMcp({ infos, modificationDirecte }: { infos: InfosDuServeurMcp; modificationDirecte?: ReglageDeModificationDirecte }) {
   const [etat, setEtat] = useState("")
   const [etatClaudeCode, setEtatClaudeCode] = useState("")
   const configuration = configurationDuClient(infos)
@@ -73,8 +83,9 @@ function GuideDuServeurMcp({ infos }: { infos: InfosDuServeurMcp }) {
   return (
     <div className="space-y-4 text-sm">
       <p>
-        {CE_QUE_PERMET_L_IA} L'IA ne modifie rien elle-même : chaque proposition s'affiche ici, et vous choisissez « Appliquer » ou « Refuser » ; « Annuler » la défait en une étape.
+        {CE_QUE_PERMET_L_IA} Par défaut, l'IA ne modifie rien elle-même : chaque proposition s'affiche ici, et vous choisissez « Appliquer » ou « Refuser » ; « Annuler » la défait en une étape.
       </p>
+      {modificationDirecte ? <CaseDeModificationDirecte cochee={modificationDirecte.active} onChange={modificationDirecte.onChange} aide={AIDE_DE_LA_MODIFICATION_DIRECTE} /> : null}
       <p role="note" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
         <strong>Confidentialité :</strong> ce que l'IA lit de votre simulation (et les documents que vous lui donnez) part chez le fournisseur de l'IA choisie. Pour des données sensibles, préférez une IA locale (LM Studio, par exemple), qui reste sur votre ordinateur ; un petit modèle enchaîne moins bien les outils et lit moins bien les factures scannées. Ce simulateur n'est pas l'avis d'un expert-comptable.
       </p>
@@ -170,7 +181,7 @@ export function FenetreIA({ declencheur, children }: { declencheur: ReactNode; c
  * Le bouton des paramètres qui ouvre la fenêtre. Dans l'application de bureau, il attend les chemins de
  * l'installation ; dans la démo web, où il n'y a pas de serveur local, la fenêtre renvoie vers l'application de bureau.
  */
-export function BoutonUtiliserAvecUneIA(bouton: Pick<ButtonProps, "variant" | "className">) {
+export function BoutonUtiliserAvecUneIA({ modificationDirecte, ...bouton }: Pick<ButtonProps, "variant" | "className"> & { modificationDirecte?: ReglageDeModificationDirecte }) {
   const { RenvoiVersLApplicationDeBureau } = usePlateforme()
   const [infos, setInfos] = useState<InfosDuServeurMcp | null>(null)
 
@@ -197,7 +208,7 @@ export function BoutonUtiliserAvecUneIA(bouton: Pick<ButtonProps, "variant" | "c
         </Button>
       }
     >
-      {RenvoiVersLApplicationDeBureau ? <RenvoiVersLApplicationDeBureau /> : infos && <GuideDuServeurMcp infos={infos} />}
+      {RenvoiVersLApplicationDeBureau ? <RenvoiVersLApplicationDeBureau /> : infos && <GuideDuServeurMcp infos={infos} modificationDirecte={modificationDirecte} />}
     </FenetreIA>
   )
 }
