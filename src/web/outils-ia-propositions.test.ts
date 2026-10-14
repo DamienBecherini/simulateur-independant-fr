@@ -89,7 +89,7 @@ describe("proposer puis appliquer des flux", () => {
       "Ces flux s'ajoutent à ceux déjà saisis sur « Atelier de Camille » en 2026 (ca_micro_services_bnc) : « Prestations » (34 800 €). S'ils les remplacent, proposez aussi de supprimer ou de modifier ces séries.",
       expect.stringContaining("2026 : « Atelier de Camille » : Seuil de franchise en base de TVA dépassé (prestations de services 41 200 € pour un seuil de 37 500 €)")
     ])
-    const remplacee = proposer("proposer_suppression", exemple(), { suppression: { cible: "serie", annee: 2026, serie: { acteurId: "micro-atelier", typeFlux: "ca_micro_services_bnc", libelle: "Prestations" } }, suiteDe: resultat.proposition })
+    const remplacee = proposer("proposer_suppression", exemple(), { suppressions: [{ cible: "serie", annee: 2026, serie: { acteurId: "micro-atelier", typeFlux: "ca_micro_services_bnc", libelle: "Prestations" } }], suiteDe: resultat.proposition })
     expect(remplacee.resume[remplacee.resume.length - 1]).toBe("Supprimer la série « Prestations » (ca_micro_services_bnc) de « Atelier de Camille », toute l'année 2026 (12 flux, 34 800 €).")
     expect(remplacee.avertissements).toEqual([])
   })
@@ -182,21 +182,20 @@ describe("modifier, supprimer, régler le comparateur", () => {
     expect(erreurDe("proposer_modification", exemple(), { modifications: [{ cible: "acteur", acteurId: "micro-atelier" }] })).toContain("Rien à modifier")
   })
 
-  it("supprime une série d'une année, et une seule chose à la fois", () => {
+  it("supprime une série d'une année", () => {
     const session = exemple()
     const suppression = { cible: "serie", annee: 2026, serie: { acteurId: "micro-atelier", typeFlux: "ca_micro_vente", libelle: "Ventes" } }
-    const resultat = proposer("proposer_suppression", session, { suppression })
-    expect(resultat.recapitulatif).toBe("Faire 1 suppression ?")
+    const resultat = proposer("proposer_suppression", session, { suppressions: [suppression] })
+    expect(resultat.recapitulatif).toBe("Supprimer 1 série de flux ?")
     expect(fluxDe(appliquer(session, resultat.proposition)).some(f => f.label === "Ventes")).toBe(false)
-    expect(erreurDe("proposer_suppression", session, { suppression: { ...suppression, serie: { ...suppression.serie, libelle: "Prestations", typeFlux: "ca_micro_services_bnc" } }, suiteDe: resultat.proposition })).toContain("pas de suppression en masse")
   })
 
   it("supprime une relation, sauf si une rémunération ou des dividendes en dépendent", () => {
-    const sansEnfant = proposer("proposer_suppression", exemple(), { suppression: { cible: "relation", relationId: "rel-enfant" } })
+    const sansEnfant = proposer("proposer_suppression", exemple(), { suppressions: [{ cible: "relation", relationId: "rel-enfant" }] })
     expect(sansEnfant.resume).toEqual(["Supprimer la relation Léa Martin est l'enfant à charge de Camille Martin."])
     expect(appliquer(exemple(), sansEnfant.proposition).relationships.map(r => r.id)).not.toContain("rel-enfant")
-    expect(erreurDe("proposer_suppression", exemple(), { suppression: { cible: "relation", relationId: "rel-president" } })).toContain("exigent une relation")
-    expect(erreurDe("proposer_suppression", exemple(), { suppression: { cible: "relation", relationId: "rel-x" } })).toContain("Aucune relation « rel-x »")
+    expect(erreurDe("proposer_suppression", exemple(), { suppressions: [{ cible: "relation", relationId: "rel-president" }] })).toContain("exigent une relation")
+    expect(erreurDe("proposer_suppression", exemple(), { suppressions: [{ cible: "relation", relationId: "rel-x" }] })).toContain("Aucune relation « rel-x »")
   })
 
   it("enregistre des réglages du comparateur, que comparer_statuts reprend ensuite", () => {
@@ -223,7 +222,7 @@ describe("rafraîchir une proposition périmée", () => {
   const ventesReelles = { annee: 2026, acteurId: "micro-atelier", typeFlux: "ca_micro_vente", libelle: "Ventes réelles", montant: 450, mois: [1, 2] }
   /** Remplacer l'estimation « Ventes » par les ventes réelles : une suppression, puis un ajout. */
   const remplacement = (session: SessionState) => {
-    const suppression = proposer("proposer_suppression", session, { suppression: { cible: "serie", annee: 2026, serie: ventes } })
+    const suppression = proposer("proposer_suppression", session, { suppressions: [{ cible: "serie", annee: 2026, serie: ventes }] })
     return proposer("proposer_flux", session, { flux: [ventesReelles], suiteDe: suppression.proposition }).proposition
   }
   /** La session après que l'utilisateur a, dans l'application, supprimé lui-même l'estimation « Ventes ». */
@@ -256,7 +255,7 @@ describe("rafraîchir une proposition périmée", () => {
     const aJour = appeler<Rafraichie>("rafraichir_proposition", session, { proposition })
     expect(aJour).toMatchObject({ dejaAJour: true, retirees: [], proposition })
 
-    const suppression = proposer("proposer_suppression", session, { suppression: { cible: "serie", annee: 2026, serie: ventes } }).proposition
+    const suppression = proposer("proposer_suppression", session, { suppressions: [{ cible: "serie", annee: 2026, serie: ventes }] }).proposition
     expect(erreurDe("rafraichir_proposition", sansLesVentes(), { proposition: suppression })).toMatch(/^Aucune opération de la proposition ne s'applique à la simulation actuelle : n° 1 \(supprimer_serie « Ventes » 2026\) : .*refaites la proposition/)
   })
 
@@ -296,7 +295,7 @@ describe("limites", () => {
 
   it("dit au modèle comment corriger son appel : nombres écrits en texte, valeurs permises, série introuvable", () => {
     expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, montant: "1 200,50 €" }] })).toContain("Écrivez un nombre JSON, sans guillemets")
-    expect(erreurDe("proposer_suppression", exemple(), { suppression: { cible: "acteur", acteurId: "person-lea" } })).toContain("suppression.cible : Entrée invalide : valeurs permises « serie », « relation ».")
+    expect(erreurDe("proposer_suppression", exemple(), { suppressions: [{ cible: "flux", id: "f1" }] })).toContain("suppressions.0.cible : Entrée invalide : valeurs permises « serie », « relation », « acteur », « annee », « simulation ».")
     const serie = { acteurId: "micro-atelier", typeFlux: "ca_micro_services_bnc", libelle: "prestations" }
     expect(erreurDe("proposer_modification", exemple(), { modifications: [{ cible: "serie", annee: 2026, serie, montant: 1 }] })).toBe(
       "Opération 1 (modifier_serie « prestations » 2026) : Aucun flux « prestations » (ca_micro_services_bnc) de « Atelier de Camille » en 2026. Séries de « Atelier de Camille » en 2026, libellé et type exacts : « Prestations » (ca_micro_services_bnc), « Ventes » (ca_micro_vente), « Matières et fournitures » (expense), « Banque » (expense), « Assurance RC Pro » (expense), « CFE » (expense) (voir lister_flux)."
@@ -319,8 +318,8 @@ describe("limites", () => {
     const { proposition } = proposer("proposer_flux", session, { flux: [loyer] })
     const trafiquee = { ...proposition, operations: [{ ...proposition.operations[0], montant: 1e12 }] }
     expect(erreurDe("appliquer_proposition", session, { proposition: trafiquee })).toMatch(/^Proposition refusée :\n- operations\.0\.montant/)
-    const suppressionDActeur = { ...proposition, operations: [{ type: "supprimer_acteur", acteurId: "person-lea" }] }
-    expect(erreurDe("appliquer_proposition", session, { proposition: suppressionDActeur })).toMatch(/^Proposition refusée/)
+    const toutEffaceEnDernier = { ...proposition, operations: [proposition.operations[0], { type: "vider_simulation" }] }
+    expect(erreurDe("appliquer_proposition", session, { proposition: toutEffaceEnDernier })).toMatch(/^Proposition refusée :\n- operations : Repartir de zéro ouvre une proposition/)
     expect(erreurDe("appliquer_proposition", session, { proposition: { ...proposition, empreinteSession: "pas une empreinte" } })).toContain("16 caractères hexadécimaux")
     const relationVolee = proposer("proposer_relation", session, { deId: "person-lea", versId: "micro-atelier", typeRelation: "Titulaire" }).proposition
     const collision = { ...relationVolee, operations: [{ ...relationVolee.operations[0], id: "rel-pacs" }] }
