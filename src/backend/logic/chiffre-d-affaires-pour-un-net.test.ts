@@ -6,6 +6,8 @@ import { CHIFFRE_D_AFFAIRES_MAXIMAL, CHIFFRE_D_AFFAIRES_REPARTI } from "./option
 import { chiffreDAffaires, comparerStatuts } from "./comparateur.js"
 import { activiteComparee } from "./conversion-de-statut.js"
 import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js"
+import { defaultComparisonOptions } from "./options-du-comparateur.js"
+import { reglesPubliees, type ReglesFiscales } from "./regles.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
 import type { ChiffreDAffairesPourUnNet, ComparaisonOptions, DonneesDeLAnnee, Entity, Relationship, StatutCompare } from "../../types.js"
@@ -24,9 +26,9 @@ const donnees = (entities: Entity[], relationships: Relationship[], flux: Flux[]
 const aliceEnMicro = (ca: number) => donnees([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], ca > 0 ? [["m1", "ca_micro_services_bnc", ca]] : [])
 
 /** Le net de la colonne d'un statut d'après le comparateur, avec ce chiffre d'affaires pour l'activité. */
-function netDuComparateur(d: DonneesDeLAnnee, opts: ComparaisonOptions, statut: StatutCompare, ca: number, contexte: ContexteDeLAnnee = {}): number {
+function netDuComparateur(d: DonneesDeLAnnee, opts: ComparaisonOptions, statut: StatutCompare, ca: number, regles: ReglesFiscales = reglesDeTest, contexte: ContexteDeLAnnee = {}): number {
   const source = activiteComparee(d, opts.activityId)!
-  const colonne = comparerStatuts(avecUnChiffreDAffaires(d, source, ca), opts, reglesDeTest, contexte).scenarios.find(s => s.statut === statut)
+  const colonne = comparerStatuts(avecUnChiffreDAffaires(d, source, ca), opts, regles, contexte).scenarios.find(s => s.statut === statut)
   if (!colonne) throw new Error(`Colonne ${statut} absente`)
   return colonne.netApresImpots
 }
@@ -38,16 +40,16 @@ function colonne(resultat: ChiffreDAffairesPourUnNet, statut: StatutCompare) {
 }
 
 /** L'aller-retour de chaque colonne trouvée : net visé atteint à l'euro près, et pas avec un euro de moins. */
-function verifierLAllerRetour(d: DonneesDeLAnnee, opts: ComparaisonOptions, resultat: ChiffreDAffairesPourUnNet) {
+function verifierLAllerRetour(d: DonneesDeLAnnee, opts: ComparaisonOptions, resultat: ChiffreDAffairesPourUnNet, regles: ReglesFiscales = reglesDeTest, contexte: ContexteDeLAnnee = {}) {
   const trouvees = resultat.colonnes.filter(c => c.chiffreDAffaires !== null)
   expect(trouvees.length).toBeGreaterThan(0)
   for (const c of trouvees) {
     const ca = c.chiffreDAffaires!
-    const net = netDuComparateur(d, opts, c.statut, ca)
+    const net = netDuComparateur(d, opts, c.statut, ca, regles, contexte)
     expect(net, c.statut).toBeGreaterThanOrEqual(resultat.netVise)
     expect(net - resultat.netVise, c.statut).toBeLessThanOrEqual(1)
     expect(c.netApresImpots, c.statut).toBe(net)
-    if (ca > 0) expect(netDuComparateur(d, opts, c.statut, ca - 1), c.statut).toBeLessThan(resultat.netVise)
+    if (ca > 0) expect(netDuComparateur(d, opts, c.statut, ca - 1, regles, contexte), c.statut).toBeLessThan(resultat.netVise)
   }
 }
 
@@ -178,6 +180,25 @@ describe("chiffreDAffairesPourUnNet", () => {
   it("s'arrête à la borne de la recherche quand aucun chiffre d'affaires ne suffit", () => {
     const resultat = chiffreDAffairesPourUnNet(aliceEnMicro(40000), options("m1"), CHIFFRE_D_AFFAIRES_MAXIMAL, reglesDeTest)
     expect(colonne(resultat, "EI")).toMatchObject({ chiffreDAffaires: null, horsDePortee: "auDelaDeLaBorne" })
+  })
+
+  it("règles de 2026 : une EI à 40 000 €, 30 000 € nets visés, chaque colonne en aller-retour", () => {
+    const regles = reglesPubliees(2026)
+    const contexte: ContexteDeLAnnee = { annee: 2026 }
+    const d = donnees([personne("alice"), societe("e1", "EI")], [relation("alice", "e1", "Titulaire")], [["e1", "ca_services", 40000]])
+    const opts = defaultComparisonOptions(d, "e1")
+    const resultat = chiffreDAffairesPourUnNet(d, opts, 30000, regles, contexte)
+    expect(resultat.colonnes.every(c => c.chiffreDAffaires !== null)).toBe(true)
+    verifierLAllerRetour(d, opts, resultat, regles, contexte)
+    // La colonne « Micro + versement libératoire » tombe pile sur le chiffre d'affaires saisi, par coïncidence et non
+    // parce qu'il serait renvoyé tel quel : 25,6 % de cotisations BNC, 0,2 % de formation et 2,2 % de versement
+    // libératoire laissent 72 % de 40 000 €, soit 28 800 € ; la micro coûte 1 200 € de frais supposés de moins que
+    // l'EI (850 € contre 2 050 €), d'où 30 000 €. À 39 999 €, le net est de 29 999 €.
+    expect(colonne(resultat, "micro-vfl").chiffreDAffaires).toBe(40000)
+    expect(netDuComparateur(d, opts, "micro-vfl", 40000, regles, contexte)).toBe(30000)
+    expect(netDuComparateur(d, opts, "micro-vfl", 39999, regles, contexte)).toBe(29999)
+    // Les autres colonnes ne retombent pas sur le chiffre d'affaires saisi : la recherche suit bien chaque statut.
+    expect(new Set(resultat.colonnes.map(c => c.chiffreDAffaires)).size).toBe(resultat.colonnes.length)
   })
 
   it("demande une activité à comparer", () => {
