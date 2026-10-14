@@ -18,10 +18,12 @@ La section « Non publié » recueille les changements en attente de la prochain
 - **Une même règle pour charger une situation type.** La fenêtre des situations types et l'encart « Que voulez-vous savoir ? » (« Partir de zéro » compris) chargent désormais directement par-dessus une simulation vide ou l'exemple de la démo non modifié, comme le lien `#situation=…`, et gardent la confirmation sur toute simulation non enregistrée ; le chargement reste annulable en une étape.
 - **Lignes alternées dans les tableaux.** Le tableau du comparateur, la grille mensuelle, « Toutes les années », « Sur toutes les années », « Combien facturer pour un net visé ? », les valeurs de la courbe et le partage du bénéfice teintent très légèrement une ligne sur deux, en clair comme en sombre, colonne fixe comprise ; les couleurs qui ont un sens (meilleur statut, colonne grisée, montants, survol de la grille) restent visibles dessous.
 - **La grille se touche plus facilement sur un écran tactile.** Ses cases ont un bord plus marqué en thème clair et se teintent brièvement à l'appui ; au-dessus de la grille, « Touchez une case pour saisir un montant. » s'affiche sur écran tactile jusqu'à la première case touchée, puis ne revient plus.
+- **Des colonnes lisibles dans le tableau du comparateur.** Chaque colonne de statut garde au moins 10rem de large (8,5rem sur un téléphone de moins de 480 px, où le libellé et un peu plus d'une colonne restent visibles) : le tableau défile en largeur plus tôt, au lieu de serrer ses colonnes jusqu'à écrire la note d'écart de frais sur neuf lignes d'un ou deux mots.
 
 ### Corrigé
 
 - **Montants du comparateur alignés.** Dans le tableau des statuts, les cases sont alignées en haut : les montants d'une ligne restent à la même hauteur dans toutes les colonnes, et la note à déplier sous le net d'une colonne (écart de frais de gestion) ne décale plus son montant, repliée comme dépliée.
+- **Contraste du total annuel de la grille en thème sombre.** Le « — » d'un acteur sans flux, les numéros au-dessus des barres, un total nul et le total des gains y sont éclaircis d'un cran : ils passaient sous le seuil AA de 4,5:1 sur le fond plus clair de cette colonne (3,9:1, et 3,5:1 sur une ligne zébrée, pour le « — ») et le dépassent désormais (6,9:1 et 6,1:1).
 
 ### Maintenance
 
