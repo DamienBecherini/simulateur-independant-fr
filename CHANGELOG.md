@@ -23,6 +23,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 ### Corrigé
 
 - **Montants du comparateur alignés.** Dans le tableau des statuts, les cases sont alignées en haut : les montants d'une ligne restent à la même hauteur dans toutes les colonnes, et la note à déplier sous le net d'une colonne (écart de frais de gestion) ne décale plus son montant, repliée comme dépliée.
+- **Contraste du total annuel de la grille en thème sombre.** Le « — » d'un acteur sans flux, les numéros au-dessus des barres, un total nul et le total des gains y sont éclaircis d'un cran : ils passaient sous le seuil AA de 4,5:1 sur le fond plus clair de cette colonne (3,9:1, et 3,5:1 sur une ligne zébrée, pour le « — ») et le dépassent désormais (6,9:1 et 6,1:1).
 
 ### Maintenance
 

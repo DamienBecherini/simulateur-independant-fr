@@ -18,13 +18,24 @@ interface CellChartDisplayProps {
 
 const MIN_HEIGHT_PX = 2
 
+/**
+ * Textes atténués (« — », numéros des barres, total nul) et total des gains. La case du total annuel a un fond plus
+ * clair en thème sombre (gris 700 au lieu de 800) : ces textes y sont éclaircis d'un cran pour dépasser le contraste
+ * de 4,5:1, ligne zébrée comprise.
+ */
+const ATTENUE = "text-slate-600 dark:text-slate-400"
+const ATTENUE_DU_TOTAL = "text-slate-600 dark:text-slate-300"
+const GAINS = "text-green-800 dark:text-green-400"
+const GAINS_DU_TOTAL = "text-green-800 dark:text-green-300"
+
 export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, absoluteMaxValue, flowCount, readOnly = false }: CellChartDisplayProps) {
   const resume = useAffichageResume()
+  const attenue = readOnly ? ATTENUE_DU_TOTAL : ATTENUE
   if (flowCount === 0) {
-    if (readOnly) return <div className="py-3 text-center text-slate-600 dark:text-slate-400">—</div>
+    if (readOnly) return <div className={cn("py-3 text-center", attenue)}>—</div>
     // Sur papier, une case vide n'invite plus à la saisie : elle se lit comme un total annuel vide.
     return (
-      <div className="py-3 text-slate-600 transition-colors group-hover:text-slate-900 dark:text-slate-400 dark:group-hover:text-slate-200 print:text-center">
+      <div className={cn("py-3 transition-colors group-hover:text-slate-900 dark:group-hover:text-slate-200 print:text-center", ATTENUE)}>
         {/* Affichage « Résumé » : l'invitation n'apparaît qu'au survol ou au focus de la case, toujours au toucher. */}
         <span className={cn("print:hidden", resume && "pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-visible:opacity-100")}>+ Ajouter</span>
         <span className="hidden print:inline">—</span>
@@ -40,7 +51,7 @@ export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, a
         const heightStyle = `max(min(${percentage}%, 100%), ${MIN_HEIGHT_PX}px)`
         return (
           <div key={index} className="relative w-5 rounded-t-[2px] print:w-auto print:min-w-[3px] print:max-w-5 print:flex-1" style={{ height: heightStyle, backgroundColor: segment.color }}>
-            <div className="absolute bottom-full mb-0.5 w-full text-center text-xs font-bold print:text-[6.5pt] text-slate-600 dark:text-slate-400">{segment.number}</div>
+            <div className={cn("absolute bottom-full mb-0.5 w-full text-center text-xs font-bold print:text-[6.5pt]", attenue)}>{segment.number}</div>
           </div>
         )
       })}
@@ -53,7 +64,7 @@ export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, a
       {/* --- GROUPE GAINS (aligné à gauche) --- */}
       <div className="flex flex-col min-w-[68px] flex-1 items-start print:min-w-0 print:pt-3">
         {renderBarGroup(gains, "left")}
-        <div className={cn("flex items-center gap-1 p-1 rounded whitespace-nowrap mt-1 text-sm font-mono print:mt-0.5 print:gap-0.5 print:px-0.5 print:py-0 print:font-sans print:text-[8.5pt] print:tabular-nums print:[&>svg]:size-2", totalGains > 0 ? "text-green-800 dark:text-green-400 bg-green-500/10" : "text-slate-600 dark:text-slate-400")}>
+        <div className={cn("flex items-center gap-1 p-1 rounded whitespace-nowrap mt-1 text-sm font-mono print:mt-0.5 print:gap-0.5 print:px-0.5 print:py-0 print:font-sans print:text-[8.5pt] print:tabular-nums print:[&>svg]:size-2", totalGains > 0 ? cn(readOnly ? GAINS_DU_TOTAL : GAINS, "bg-green-500/10") : attenue)}>
           <ArrowUp size={12} /> {totalGains.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
         </div>
       </div>
@@ -61,7 +72,7 @@ export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, a
       {/* --- GROUPE DÉPENSES (aligné à droite) --- ; sur papier, une case sans dépense ne l'affiche pas. */}
       <div className={cn("flex flex-col min-w-[68px] flex-1 items-start print:min-w-0 print:pt-3", totalExpenses === 0 && "print:hidden")}>
         {renderBarGroup(expenses, "left")}
-        <div className={cn("flex items-center gap-1 p-1 rounded whitespace-nowrap mt-1 text-sm font-mono print:mt-0.5 print:gap-0.5 print:px-0.5 print:py-0 print:font-sans print:text-[8.5pt] print:tabular-nums print:[&>svg]:size-2", totalExpenses > 0 ? "text-red-800 dark:text-red-300 bg-red-500/10" : "text-slate-600 dark:text-slate-400")}>
+        <div className={cn("flex items-center gap-1 p-1 rounded whitespace-nowrap mt-1 text-sm font-mono print:mt-0.5 print:gap-0.5 print:px-0.5 print:py-0 print:font-sans print:text-[8.5pt] print:tabular-nums print:[&>svg]:size-2", totalExpenses > 0 ? "text-red-800 dark:text-red-300 bg-red-500/10" : attenue)}>
           <ArrowDown size={12} /> {totalExpenses.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
         </div>
       </div>
