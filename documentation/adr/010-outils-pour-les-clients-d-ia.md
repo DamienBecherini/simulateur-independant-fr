@@ -34,6 +34,7 @@ executerOutil(nom, session, arguments)  // → { ok: true, resultat, nouvelleSes
 | `synthese_des_annees` | Une ligne par année : net, chiffre d'affaires, prélèvements, impôt, cotisations, résultat conservé. |
 | `expliquer_resultat` | Le détail d'un acteur : cotisations ligne à ligne, partage du bénéfice, versement libératoire, ACRE, impôt du foyer. |
 | `comparer_statuts` | Le comparateur, avec les réglages enregistrés, ou une variante passée en paramètres sans rien enregistrer. |
+| `chiffre_affaires_pour_net_vise` | Le calcul à l'envers du comparateur : pour un net visé, le chiffre d'affaires de l'activité qu'il faut dans chaque statut, ou pourquoi il est hors de portée (ajouté le 2026-10-14, voir l'addendum). |
 | `optimiser_remuneration` | Rémunération au meilleur net, et au meilleur net avec 4 trimestres de retraite ; onze points de la courbe. |
 | `regles_de_l_annee` | Les principaux seuils et taux de l'année, avec leur source officielle. |
 | `proposer_flux` | Ajouter des séries de flux (une année, des mois) ; ajoute l'année voisine si besoin. |
@@ -146,3 +147,11 @@ Avec l'addendum du même jour à l'ADR 009 :
 - `comparer_statuts` rend `sousLaSituationNet` (`null` le plus souvent) : quand le meilleur statut fait moins bien que la situation saisie, l'écart, sa raison (`trimestres`, `statutActuelNonRetenu`, `reglages`) et la phrase du verdict de l'application, en texte brut, que le modèle reprend au lieu de présenter le meilleur statut comme un gain ;
 - en partage `grille`, une `remunerationNette` passée en paramètre est ignorée : chaque société reprend la rémunération de la grille, comme dans l'application, et `reglages.remunerationNette` le montre ;
 - la note sur une activité sans charge saisie rejoint `notes`.
+
+## Addendum (2026-10-14) : calcul à l'envers, dix-septième outil
+
+La question la plus fréquente, « quel chiffre d'affaires faut-il pour toucher X € nets ? », obligeait le modèle à appeler `comparer_statuts` en tâtonnant sur le chiffre d'affaires, ce que la règle 1 (« les chiffres viennent du simulateur ») rend coûteux et fragile.
+
+- `chiffre_affaires_pour_net_vise` (lecture seule) appelle `chiffreDAffairesPourUnNetDeLAnnee` (`simulation-pluriannuelle.ts`), la fonction de l'écran « Combien facturer pour un net visé ? » : chaque colonne du comparateur est recalculée par le comparateur lui-même (`colonneDuStatut`) à chaque chiffre d'affaires essayé, celui de la grille mis à l'échelle (mêmes mois, mêmes natures), le reste de la simulation inchangé, jusqu'à l'euro (`chiffre-d-affaires-pour-un-net.ts`). Paramètres : `netVise`, l'activité, l'année, et un `mode` de partage à essayer sans rien enregistrer.
+- Par colonne : `chiffreDAffaires` et `chiffreDAffairesMensuel`, `netApresImpots` obtenu, ou `null` avec `horsDePortee` (`plafondMicro`, `regimeMicroFerme`, `partageSelonLaGrille`, `auDelaDeLaBorne`). 0 dit un net déjà atteint sans chiffre d'affaires de l'activité.
+- Taille, mesurée le 14 octobre 2026 : catalogue 29 297 caractères (plafond 31 000), liste publiée par le serveur 31 175 (plafond 33 000). La marge tombe à environ 1 700 et 1 800 caractères (5,5 %) : un outil de plus demandera de resserrer des descriptions ou de relever les plafonds, par décision écrite ici.
