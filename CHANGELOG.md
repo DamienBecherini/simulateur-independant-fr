@@ -6,6 +6,11 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Ajouté
+
+- **« Combien facturer pour un net visé ? »** Dans le comparateur (une ligne à déplier au-dessus du tableau dans l'affichage « Résumé », une section sous le tableau dans l'affichage classique), un champ « Net visé du foyer (€ par an) » fait le calcul à l'envers : pour chaque statut, le chiffre d'affaires annuel de l'activité comparée qui donne ce net, par mois, et l'écart avec le chiffre d'affaires saisi, avec les mêmes réglages du comparateur et le reste de la simulation inchangé. Le chiffre d'affaires saisi est mis à l'échelle (mêmes mois, même partage entre ventes et prestations) ; sans chiffre d'affaires saisi, il est réparti sur l'année. Chaque montant atteint le net visé à l'euro près, et un euro de moins ne l'atteint pas. Un statut sans réponse le dit au lieu de donner un chiffre faux : « hors de portée : plafond dépassé » pour une micro-entreprise qui devrait dépasser son plafond, régime micro fermé, société dont la grille fixe la rémunération et les dividendes ; un net déjà atteint grâce aux autres revenus du foyer donne 0 €. La réponse la plus basse est annoncée aux lecteurs d'écran ; sur un téléphone, une carte par statut.
+- **Outil `chiffre_affaires_pour_net_vise` pour les clients d'IA.** Le même calcul à l'envers, en lecture seule, dans le serveur MCP de l'application de bureau (dix-sept outils).
+
 ## [0.12.0] — 2026-10-13
 
 ### Ajouté

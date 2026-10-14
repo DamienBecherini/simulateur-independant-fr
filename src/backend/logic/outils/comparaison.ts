@@ -1,14 +1,15 @@
 // src/backend/logic/outils/comparaison.ts
-// Comparateur de statuts et arbitrage rémunération / dividendes, avec les réglages du comparateur de la session :
+// Comparateur de statuts, son calcul à l'envers (chiffre d'affaires pour un net visé) et arbitrage rémunération /
+// dividendes, avec les réglages du comparateur de la session :
 // l'outil compare ce que l'utilisateur voit à l'écran, sauf réglages passés en paramètres pour essayer une variante.
 
 import { z } from "zod"
-import { MODES_REPARTITION, STATUTS_SOCIETE, type ComparaisonOptions, type ComparaisonResult, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
+import { MODES_REPARTITION, STATUTS_SOCIETE, type ChiffreDAffairesDUnStatut, type ComparaisonOptions, type ComparaisonResult, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
 import { vueDeLAnnee } from "../annees.js"
 import { enTexteBrut } from "../format.js"
 import { avecLaRemunerationDeLaGrille, optionsDuComparateur } from "../options-du-comparateur.js"
 import type { SituationActuelle } from "../comparateur.js"
-import { arbitrageDeLAnnee, comparerStatutsDeLAnnee } from "../simulation-pluriannuelle.js"
+import { arbitrageDeLAnnee, chiffreDAffairesPourUnNetDeLAnnee, comparerStatutsDeLAnnee } from "../simulation-pluriannuelle.js"
 import { anneeDeLaSession, arrondir, ErreurOutil, nomDe, trouverActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, MontantSchema } from "./limites.js"
 import { definirOutil, resultatSeul } from "./outil.js"
@@ -120,6 +121,60 @@ export const comparerStatuts = definirOutil({
       scenarios: comparaison.scenarios.map(resumeDuScenario),
       couples: comparaison.couples.map(c => ({ personnes: c.personIds.map(id => nomDe(session, id)), netActuel: arrondir(c.netApresImpotsActuel), netMaries: arrondir(c.netApresImpotsMaries) })),
       notes: [...comparaison.warnings, ...(comparaison.noteCFE ? [comparaison.noteCFE] : [])]
+    })
+  }
+})
+
+// ===================================================================================
+// == chiffre_affaires_pour_net_vise
+// ===================================================================================
+
+const ColonneALEnversSchema = z.object({
+  statut: z.string(),
+  libelle: z.string(),
+  telleQueSaisie: z.boolean(),
+  chiffreDAffaires: z.number().nullable(),
+  chiffreDAffairesMensuel: z.number().nullable(),
+  netApresImpots: z.number().nullable(),
+  horsDePortee: z.enum(["plafondMicro", "regimeMicroFerme", "partageSelonLaGrille", "auDelaDeLaBorne"]).nullable()
+})
+
+const resumeDeLaColonne = (c: ChiffreDAffairesDUnStatut): z.infer<typeof ColonneALEnversSchema> => ({
+  statut: c.statut,
+  libelle: c.libelle,
+  telleQueSaisie: c.telleQueSaisie,
+  chiffreDAffaires: c.chiffreDAffaires,
+  chiffreDAffairesMensuel: c.chiffreDAffaires === null ? null : arrondir(c.chiffreDAffaires / 12),
+  netApresImpots: c.netApresImpots === null ? null : arrondir(c.netApresImpots),
+  horsDePortee: c.horsDePortee ?? null
+})
+
+export const chiffreAffairesPourNetVise = definirOutil({
+  nom: "chiffre_affaires_pour_net_vise",
+  titre: "Chiffre d'affaires pour un net visé",
+  description: [
+    "Calcul à l'envers de comparer_statuts : pour un net après impôts visé (tous les foyers, comme situationNet), le chiffre d'affaires annuel de l'activité qu'il faut dans chaque statut, avec les réglages enregistrés du comparateur, à l'euro près.",
+    "Le chiffre d'affaires saisi est mis à l'échelle (mêmes mois, mêmes natures), le reste de la simulation inchangé. 0 : net déjà atteint sans chiffre d'affaires. null : horsDePortee dit pourquoi (plafondMicro, regimeMicroFerme, partageSelonLaGrille où la grille fixe rémunération et dividendes : essayez mode meilleurNet, auDelaDeLaBorne)."
+  ].join(" "),
+  lecture: true,
+  parametres: z.strictObject({
+    netVise: MontantSchema.min(1, "Net visé : au moins 1 €.").describe("Net annuel visé du foyer, en euros."),
+    ...ParametresVariante,
+    mode: z.enum(MODES_REPARTITION).optional().describe("Partage du bénéfice en SASU et EURL, comme dans comparer_statuts ; par défaut, celui enregistré.")
+  }),
+  resultat: z.object({ annee: z.number(), activiteId: z.string(), activite: z.string(), netVise: z.number(), chiffreDAffairesSaisi: z.number(), colonnes: z.array(ColonneALEnversSchema), notes: z.array(z.string()) }),
+  executer: (session, { netVise, activiteId, annee, mode }) => {
+    const enregistrees = optionsEnregistrees(session, activiteId, annee)
+    const options = mode ? { ...enregistrees.options, repartition: { ...enregistrees.options.repartition, mode } } : enregistrees.options
+    const calcul = chiffreDAffairesPourUnNetDeLAnnee(session, options, netVise, enregistrees.annee)
+    return resultatSeul({
+      annee: enregistrees.annee,
+      activiteId: enregistrees.activite.id,
+      activite: enregistrees.activite.name,
+      netVise: calcul.netVise,
+      chiffreDAffairesSaisi: calcul.chiffreDAffairesSaisi,
+      colonnes: calcul.colonnes.map(resumeDeLaColonne),
+      notes: calcul.warnings
     })
   }
 })
