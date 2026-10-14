@@ -1,10 +1,12 @@
 // src/ui/components/MontagesTypes.test.tsx
-// Fenêtre des situations types : liste en cartes, détail, chargement direct ou après confirmation, retour du focus.
+// Fenêtre des situations types : liste en cartes, détail, chargement direct ou après confirmation, retour du focus ;
+// dans la démo web, la copie du lien de chaque situation.
 
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { MONTAGES_TYPES } from "@/lib/montages/montages"
+import { PLATEFORME_DE_BUREAU, PlateformeContext, type Plateforme } from "../plateforme"
 import { BoutonDesMontages } from "./MontagesTypes"
 
 function ouvrir(confirmationNecessaire = false) {
@@ -86,5 +88,55 @@ describe("Fenêtre des situations types", () => {
 
     await ouvrirLaFenetre()
     expect(fenetre()).toBeInTheDocument()
+  })
+
+  describe("« Copier le lien » d'une situation", () => {
+    /** La démo web : chaque situation a son lien à partager. */
+    const DEMO: Plateforme = { ...PLATEFORME_DE_BUREAU, web: true, lienVersUneSituation: identifiant => `https://exemple.fr/simulateur/#situation=${identifiant}` }
+
+    function ouvrirDansLaDemo() {
+      const user = userEvent.setup({ delay: null })
+      render(
+        <PlateformeContext value={DEMO}>
+          <BoutonDesMontages onCharger={vi.fn()} confirmationNecessaire={false} nomDeLaSession="Ma simulation" />
+        </PlateformeContext>
+      )
+      return { user, ouvrirLaFenetre: () => user.click(screen.getByRole("button", { name: "Partir d'une situation type..." })) }
+    }
+
+    it("n'existe pas dans l'application de bureau, qui n'a pas d'adresse à partager", async () => {
+      const { ouvrirLaFenetre } = ouvrir()
+      await ouvrirLaFenetre()
+      expect(within(fenetre()).queryByRole("button", { name: /^Copier le lien/ })).not.toBeInTheDocument()
+      expect(within(fenetre()).queryByRole("status")).not.toBeInTheDocument()
+    })
+
+    it("dans la démo, copie l'adresse de la situation et le confirme sur le bouton et à voix haute", async () => {
+      const { user, ouvrirLaFenetre } = ouvrirDansLaDemo()
+      await ouvrirLaFenetre()
+      expect(within(fenetre()).getAllByRole("button", { name: /^Copier le lien de la situation/ })).toHaveLength(MONTAGES_TYPES.length)
+      const ecrire = vi.spyOn(navigator.clipboard, "writeText")
+
+      const bouton = within(fenetre()).getByRole("button", { name: "Copier le lien de la situation « Couple en union libre, puis marié ou pacsé »" })
+      await user.click(bouton)
+
+      expect(ecrire).toHaveBeenCalledWith("https://exemple.fr/simulateur/#situation=couple-union-libre")
+      expect(await within(fenetre()).findByRole("status")).toHaveTextContent("Lien de « Couple en union libre, puis marié ou pacsé » copié : https://exemple.fr/simulateur/#situation=couple-union-libre")
+      expect(bouton).toHaveTextContent("Lien copié")
+      // Les autres cartes gardent leur bouton tel quel.
+      expect(within(fenetre()).getByRole("button", { name: "Copier le lien de la situation « Salarié avec une micro-entreprise à côté »" })).toHaveTextContent("Copier le lien")
+    })
+
+    it("dans la démo, dit quand la copie échoue et montre le lien à copier", async () => {
+      const { user, ouvrirLaFenetre } = ouvrirDansLaDemo()
+      await ouvrirLaFenetre()
+      vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(new Error("refusé"))
+
+      const bouton = within(fenetre()).getByRole("button", { name: "Copier le lien de la situation « Salarié avec une micro-entreprise à côté »" })
+      await user.click(bouton)
+
+      expect(await within(fenetre()).findByRole("status")).toHaveTextContent("La copie a échoué : sélectionnez le lien pour le copier, https://exemple.fr/simulateur/#situation=salarie-et-micro")
+      expect(bouton).toHaveTextContent("Copier le lien")
+    })
   })
 })

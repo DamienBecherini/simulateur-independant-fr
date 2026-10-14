@@ -12,6 +12,7 @@ import { sessionDUnMontage, type MontageType } from "@/lib/montages/montages"
 import { useSessionManager } from "./hooks/useSessionManager"
 import * as SessionService from "@/lib/session-service"
 import { EncartDesQuestions } from "./components/EncartDesQuestions"
+import { SituationParLAdresse } from "./components/SituationParLAdresse"
 import type { Affichage, SaveSlot, SessionState } from "@/types"
 import { anneeExistante, anneesDeLaSession, vueDeLAnnee } from "@/backend/logic/annees"
 import { SyntheseDesAnnees } from "./components/SyntheseDesAnnees"
@@ -156,6 +157,9 @@ function App() {
           <style>{styleDesPages(currentSession.name, dateDuDocument())}</style>
           {plateforme.Bandeau && <plateforme.Bandeau />}
         </header>
+
+        {/* Démo web : l'adresse #situation=… ouvre une situation type ; une fois chargée, l'encart des questions n'a plus lieu d'être. */}
+        <SituationParLAdresse session={currentSession} sessionChargee={sessionChargee} confirmationNecessaire={confirmationNecessaire} onCharger={chargerUnMontage} />
 
         {questions.affiche ? <EncartDesQuestions onCharger={chargerUnMontage} onPartirDeZero={questions.partirDeZero} onFermer={questions.fermer} confirmationNecessaire={confirmationNecessaire} nomDeLaSession={currentSession.name} /> : null}
 

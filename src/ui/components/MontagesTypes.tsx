@@ -2,11 +2,14 @@
 // « Partir d'une situation type » : la bibliothèque des montages types en cartes, le détail de chacun (ce qu'il
 // illustre, ses conditions, ses risques, ses sources), puis son chargement, confirmé quand la simulation en cours
 // serait perdue. Les boutons qui ouvrent la fenêtre parlent de « situation type », ce que l'on vient y chercher ;
-// dans la fenêtre, chacune reste un « montage ».
+// dans la fenêtre, chacune reste un « montage ». Dans la démo web, chaque carte donne aussi le lien qui ouvre la
+// situation (#situation=…), à copier pour le partager.
 
 import { useRef, useState, type ReactNode, type RefObject } from "react"
-import { ChevronLeft, ExternalLink, LayoutTemplate } from "lucide-react"
+import { Check, ChevronLeft, ExternalLink, LayoutTemplate, Link } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { usePlateforme } from "../plateforme"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ConfirmationDeRemplacement } from "./ConfirmationDeRemplacement"
 import { ANNEE_DES_MONTAGES } from "@/lib/montages/construction"
@@ -41,7 +44,18 @@ function Etiquettes({ etiquettes }: { etiquettes: string[] }) {
   )
 }
 
-function CarteDuMontage({ montage, onDetails, onCharger, focus }: { montage: MontageType; onDetails: () => void; onCharger: () => void; focus: boolean }) {
+interface CarteDuMontageProps {
+  montage: MontageType
+  onDetails: () => void
+  onCharger: () => void
+  focus: boolean
+  /** Copie le lien de la situation ; absent sans lien à partager (application de bureau). */
+  onCopierLeLien?: () => void
+  /** Le lien de cette situation vient d'être copié. */
+  lienCopie: boolean
+}
+
+function CarteDuMontage({ montage, onDetails, onCharger, focus, onCopierLeLien, lienCopie }: CarteDuMontageProps) {
   return (
     <li className="flex flex-col gap-3 rounded-lg border bg-slate-50 p-4 dark:bg-gray-900">
       <h3 className="font-semibold">
@@ -56,6 +70,12 @@ function CarteDuMontage({ montage, onDetails, onCharger, focus }: { montage: Mon
         <Button size="sm" onClick={onCharger} aria-label={`Charger la situation « ${montage.titre} »`}>
           Charger
         </Button>
+        {onCopierLeLien ? (
+          <Button variant="ghost" size="sm" onClick={onCopierLeLien} aria-label={`Copier le lien de la situation « ${montage.titre} »`}>
+            {lienCopie ? <Check aria-hidden /> : <Link aria-hidden />}
+            {lienCopie ? "Lien copié" : "Copier le lien"}
+          </Button>
+        ) : null}
       </div>
     </li>
   )
@@ -117,7 +137,27 @@ function DetailDuMontage({ montage, onRetour, onCharger }: { montage: MontageTyp
   )
 }
 
+/** Résultat de la dernière copie d'un lien, lu par les lecteurs d'écran. */
+type EtatDeLaCopie = { identifiant: string; message: string; erreur: boolean } | null
+
+/** La copie du lien d'une situation ; `copier` est absent sans lien à partager (application de bureau). */
+function useCopieDuLien() {
+  const { lienVersUneSituation } = usePlateforme()
+  const [etat, setEtat] = useState<EtatDeLaCopie>(null)
+  const copierLeLien = async (montage: MontageType, lien: string) => {
+    try {
+      await navigator.clipboard.writeText(lien)
+      setEtat({ identifiant: montage.id, message: `Lien de « ${montage.titre} » copié : ${lien}`, erreur: false })
+    } catch {
+      setEtat({ identifiant: montage.id, message: `La copie a échoué : sélectionnez le lien pour le copier, ${lien}`, erreur: true })
+    }
+  }
+  const copier = lienVersUneSituation ? (montage: MontageType) => void copierLeLien(montage, lienVersUneSituation(montage.id)) : undefined
+  return { etat, copier }
+}
+
 function ListeDesMontages({ onDetails, onCharger, montageVu }: { onDetails: (montage: MontageType) => void; onCharger: (montage: MontageType) => void; montageVu: string | null }) {
+  const { etat, copier } = useCopieDuLien()
   return (
     <>
       <DialogHeader>
@@ -126,9 +166,22 @@ function ListeDesMontages({ onDetails, onCharger, montageVu }: { onDetails: (mon
       </DialogHeader>
       <ul aria-label="Situations types" className="grid gap-3 sm:grid-cols-2">
         {MONTAGES_TYPES.map(montage => (
-          <CarteDuMontage key={montage.id} montage={montage} onDetails={() => onDetails(montage)} onCharger={() => onCharger(montage)} focus={montage.id === montageVu} />
+          <CarteDuMontage
+            key={montage.id}
+            montage={montage}
+            onDetails={() => onDetails(montage)}
+            onCharger={() => onCharger(montage)}
+            focus={montage.id === montageVu}
+            onCopierLeLien={copier && (() => copier(montage))}
+            lienCopie={etat?.identifiant === montage.id && !etat.erreur}
+          />
         ))}
       </ul>
+      {copier ? (
+        <p role="status" className={cn("min-h-5 text-sm break-all", etat?.erreur ? "text-red-700 dark:text-red-400" : "text-emerald-800 dark:text-emerald-300")}>
+          {etat?.message}
+        </p>
+      ) : null}
     </>
   )
 }
