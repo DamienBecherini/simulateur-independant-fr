@@ -76,7 +76,8 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
     })
 
     it("toutes les colonnes partent des mêmes 40 000 €, et le versement libératoire l'emporte", () => {
-      expect(resultat.scenarios.map(s => s.revenusAvantPrelevements)).toEqual([40000, 40000, 40000, 40000, 40000])
+      // En portage salarial, les frais de gestion de la société de portage (7 % de 40 000 €, 2 800 €) sont une charge.
+      expect(resultat.scenarios.map(s => s.revenusAvantPrelevements)).toEqual([40000, 40000, 40000, 40000, 40000, 37200])
       expect(resultat.meilleur).toBe("micro-vfl")
     })
   })

@@ -203,7 +203,7 @@ casDeReference("Cas de référence : professions libérales réglementées (doss
 
     it("le comparateur ne propose pas de colonne micro, et dit pourquoi", () => {
       const comparaison = comparerStatuts(session(entites, liens, flux), defaultComparisonOptions(session(entites, liens, flux), "m1"), REGLES_DES_CAS)
-      expect(comparaison.scenarios.map(s => s.statut)).toEqual(["SASU", "EURL", "EI"])
+      expect(comparaison.scenarios.map(s => s.statut)).toEqual(["SASU", "EURL", "EI", "portage"])
       expect(comparaison.warnings).toContainEqual(expect.stringContaining("Micro-entreprise non proposée"))
       expect(comparaison.meilleur).not.toBe("micro")
     })

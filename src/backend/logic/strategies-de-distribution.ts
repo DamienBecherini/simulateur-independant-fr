@@ -35,7 +35,7 @@ function simulerAvec(session: SessionState, activityId: string, reglages: Reglag
     const annee = contexte.annee ?? regles.annee
     // Les réglages de l'année : la rémunération saisie pour elle (sinon celle de sa grille), les frais avec sa CFE.
     const options = avecLaCFEDeLAnnee(optionsDuComparateur(vueDeLAnnee(session, annee), activityId, reglages), source, annee, regles).options
-    return sessionConvertie({ donnees, source, options }, statut, plan?.get(annee) ?? 0)
+    return sessionConvertie({ donnees, source, options, regles }, statut, plan?.get(annee) ?? 0)
   }).annees
 }
 

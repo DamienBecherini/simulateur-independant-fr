@@ -176,6 +176,23 @@ describe("ComparatorPanel", () => {
     expect(ecart).toHaveTextContent(`−${money(2000)}`)
   })
 
+  it("a une colonne « Portage salarial », désignable meilleur net, grisée quand elle n'est pas retenue, et envoie ses conditions au calcul", async () => {
+    const portage = scenario("portage", "Portage salarial", 36000, { protectionSociale: { etoiles: 5, trimestres: 4, resume: "Salarié cadre du régime général." } })
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: [...comparison().scenarios, portage], meilleur: "portage" }))
+    const { unmount } = render(<ComparateurDeTest annee={2026} session={{ ...withActivity(), comparateur: { activiteComparee: "micro-atelier", reglagesParActivite: { "micro-atelier": { portage: { tauxFraisDeGestion: 0.06 } } } } }} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ portage: { tauxFraisDeGestion: 0.06 } }), 2026)
+    expect(within(table).getByRole("columnheader", { name: /^Portage salarial\s*meilleur net/ })).toBeInTheDocument()
+    expect(within(table).getByRole("row", { name: /Protection sociale/ })).toHaveTextContent("★★★★★")
+    unmount()
+
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: [...comparison().scenarios, { ...portage, netApresImpots: 20000, portageNonRetenu: "salaries" }] }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+    const ecart = within(await screen.findByRole("table", { name: "Comparaison des statuts" })).getByRole("row", { name: /Écart avec votre situation actuelle/ })
+    expect(ecart).toHaveTextContent("non retenue : salariés de l'activité")
+  })
+
   it("au meilleur net, chaque colonne de société affiche sa propre rémunération, et les 4 trimestres quand ils sont demandés", async () => {
     const optimale = (remunerationNette: number, avecRetraite = false, retraiteHorsDAtteinte = false) => ({ remunerationOptimale: { remunerationNette, avecRetraite, retraiteHorsDAtteinte } })
     const horsDAtteinte = "Aucune rémunération possible en EURL ne valide 4 trimestres de retraite."

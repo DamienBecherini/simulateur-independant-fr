@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod"
-import { FraisFonctionnementSchema, RepartitionBeneficeSchema, type ComparaisonOptions, type FormatFichierTexte } from "../../types.js"
+import { ConditionsPortageSchema, FraisFonctionnementSchema, RepartitionBeneficeSchema, type ComparaisonOptions, type FormatFichierTexte } from "../../types.js"
 import { CHIFFRE_D_AFFAIRES_MAXIMAL } from "./options-du-comparateur.js"
 
 /** Paramètre refusé : l'appel IPC échoue avec ce message, sans rien faire. */
@@ -24,7 +24,9 @@ export const ComparaisonOptionsSchema = z.object({
   remunerationNette: z.number(),
   repartition: RepartitionBeneficeSchema,
   partBncPrestations: z.number().min(0).max(1),
-  fraisFonctionnement: FraisFonctionnementSchema.optional()
+  fraisFonctionnement: FraisFonctionnementSchema.optional(),
+  // Conditions de la société de portage (ADR 016) : chacune bornée, écartée seule hors de ses bornes.
+  portage: ConditionsPortageSchema.optional()
 }) satisfies z.ZodType<ComparaisonOptions>
 
 /** Année d'une session à comparer ou à optimiser. */

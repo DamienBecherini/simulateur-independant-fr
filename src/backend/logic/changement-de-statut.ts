@@ -1,7 +1,7 @@
 // src/backend/logic/changement-de-statut.ts
 
-import { estSocieteIS, type FinancialFlow, type Relationship, type SessionState, type StatutCompare } from "../../types.js"
-import { convertirFlux, entiteCible, estMicro, relationDuDirigeant, type Activite } from "./conversion-de-statut.js"
+import { estSocieteIS, type FinancialFlow, type Relationship, type SessionState } from "../../types.js"
+import { convertirFlux, entiteCible, estMicro, relationDuDirigeant, type Activite, type StatutDeLActivite } from "./conversion-de-statut.js"
 import { microInterdite, professionDe, raisonMicroInterdite } from "./professions.js"
 import type { ReglesFiscales } from "./regles.js"
 
@@ -13,8 +13,8 @@ import type { ReglesFiscales } from "./regles.js"
  * qui a changé, pour que l'interface le montre avant de valider.
  */
 
-/** Le statut d'une activité tel qu'on le choisit dans sa fiche : le versement libératoire est un réglage de la micro-entreprise. */
-export type StatutDUneActivite = Exclude<StatutCompare, "micro-vfl">
+/** Le statut d'une activité tel qu'on le choisit dans sa fiche : le versement libératoire est un réglage de la micro-entreprise ; le portage salarial, un autre type d'acteur. */
+export type StatutDUneActivite = Exclude<StatutDeLActivite, "micro-vfl">
 
 /** Le statut d'une activité, tel que le propose sa fiche. */
 export function statutDeLActivite(activite: Activite): StatutDUneActivite {

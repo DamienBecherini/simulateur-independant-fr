@@ -533,6 +533,15 @@ describe("réglages du comparateur", () => {
     expect(rapportAvecCorrections(report)).toBe(true)
   })
 
+  it("conditions de la société de portage : gardées, une condition hors bornes écartée seule, des conditions illisibles écartées et comptées", () => {
+    const portage = { tauxFraisDeGestion: 0.06, contrat: "CDD", effectif: "de11a49", reductionGeneraleReversee: true, mutuelleMensuelle: 30 }
+    expect(sanitizeStateAndFillDefaults(session({ reglagesParActivite: { c1: { portage } } })).safeState.comparateur).toEqual({ reglagesParActivite: { c1: { portage } } })
+    // Comme sur l'acteur (ADR 016) : une condition hors bornes est écartée seule, une clé inconnue ignorée.
+    expect(sanitizeStateAndFillDefaults(session({ reglagesParActivite: { c1: { portage: { tauxFraisDeGestion: 0.5, contrat: "CDI", future: 1 } } } })).safeState.comparateur).toEqual({ reglagesParActivite: { c1: { portage: { contrat: "CDI" } } } })
+    expect(sanitizeStateAndFillDefaults(session({ reglagesParActivite: { c1: { portage: { plancherMensuel: 900, plafondMensuel: 100 } } } })).safeState.comparateur).toEqual({ reglagesParActivite: { c1: { portage: {} } } })
+    expect(sanitizeStateAndFillDefaults(session({ reglagesParActivite: { c1: { portage: "typique", partBncPrestations: 0.5 } } }))).toMatchObject({ safeState: { comparateur: { reglagesParActivite: { c1: { partBncPrestations: 0.5 } } } }, report: { reglagesRemoved: 1 } })
+  })
+
   it("écarte un comparateur ou une liste de réglages illisibles", () => {
     expect(sanitizeStateAndFillDefaults(session("abîmé"))).toMatchObject({ safeState: { entities: [{}, {}, {}] }, report: { reglagesRemoved: 1 } })
     expect(sanitizeStateAndFillDefaults(session("abîmé")).safeState).not.toHaveProperty("comparateur")

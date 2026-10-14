@@ -128,7 +128,7 @@ describe("serveur MCP : lecture", () => {
     const resultat = await appeler("chiffre_affaires_pour_net_vise", { activiteId: "micro-atelier", netVise: 90000 })
     expect(resultat.isError).toBeFalsy()
     const { colonnes } = donnees(resultat) as { colonnes: { statut: string; chiffreDAffaires: number | null; netApresImpots: number | null }[] }
-    expect(colonnes.map(c => c.statut)).toEqual(["SASU", "EURL", "EI", "micro", "micro-vfl"])
+    expect(colonnes.map(c => c.statut)).toEqual(["SASU", "EURL", "EI", "micro", "micro-vfl", "portage"])
     for (const c of colonnes) expect(c.netApresImpots).toBeGreaterThanOrEqual(90000)
   })
 

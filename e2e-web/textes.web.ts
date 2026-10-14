@@ -22,6 +22,8 @@ interface Texte {
   taille: number
   balise: string
   longueur: number
+  /** Dans un élément masqué aux lecteurs d'écran (aria-hidden) : un repère visuel, comme la pastille d'une note. */
+  decoratif: boolean
 }
 
 /**
@@ -40,7 +42,7 @@ async function mesurerLesTextes(page: Page): Promise<Texte[]> {
       const cadre = element.getBoundingClientRect()
       if (cadre.width <= 1 || cadre.height <= 1) continue
       const bloc = element.closest("p, li, dd, dt, td, th, label, button, h1, h2, h3, h4, text") ?? element
-      textes.push({ texte: texte.slice(0, 60), taille: parseFloat(getComputedStyle(element).fontSize) * zoom, balise: bloc.tagName.toLowerCase(), longueur: (bloc.textContent ?? "").trim().length })
+      textes.push({ texte: texte.slice(0, 60), taille: parseFloat(getComputedStyle(element).fontSize) * zoom, balise: bloc.tagName.toLowerCase(), longueur: (bloc.textContent ?? "").trim().length, decoratif: element.closest("[aria-hidden=true]") !== null })
     }
     return textes
   })
@@ -57,8 +59,10 @@ for (const largeur of [320, 375, 1440]) {
       const textes = await mesurerLesTextes(page)
       expect(textes.length).toBeGreaterThan(200)
       expect(decrire(textes.filter(t => t.taille < 12)), "Textes de moins de 12 px").toEqual([])
-      // Texte courant : un paragraphe ou un élément de liste de plus de 120 caractères.
-      const courants = textes.filter(t => (t.balise === "p" || t.balise === "li") && t.longueur > 120)
+      // Texte courant : un paragraphe ou un élément de liste de plus de 120 caractères. Le numéro d'une note (pastille
+      // masquée aux lecteurs d'écran, à 12 px comme les renvois des en-têtes) n'en fait pas partie, même quand la note
+      // est longue, comme celles de la colonne du portage salarial.
+      const courants = textes.filter(t => (t.balise === "p" || t.balise === "li") && t.longueur > 120 && !t.decoratif)
       expect(courants.length).toBeGreaterThan(5)
       expect(decrire(courants.filter(t => t.taille < 14)), "Paragraphes de texte courant de moins de 14 px").toEqual([])
     })

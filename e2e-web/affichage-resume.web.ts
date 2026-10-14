@@ -247,10 +247,13 @@ async function hauteur(page: Page, affichage: "classique" | "resume") {
 // téléphone, au plus 3 800 et 6 000 px. Les plafonds vérifiés gardent une marge d'environ 5 % pour les polices
 // larges (DejaVu Sans sous Linux, Verdana : 3 776 et 6 209 px) ; l'écart avec l'affichage classique, lui, ne dépend
 // pas de la police. Sur téléphone, « + Relation » sur chaque ligne d'acteur (parcours utilisateur, P-11) ajoute
-// environ 120 px : 6 573 px avec la police de Windows en octobre 2026, d'où un plafond de 6 800 px.
+// environ 120 px : 6 573 px avec la police de Windows en octobre 2026, d'où un plafond de 6 800 px. La colonne
+// « Portage salarial » (ADR 016, 14 octobre 2026) ajoute environ 300 px sur ordinateur (3 982 → 4 282 px : ses notes,
+// la section repliée de ses conditions, une colonne de plus qui fait passer à la ligne les en-têtes et les écarts de
+// frais) et 530 px sur téléphone (6 609 → 7 139 px : sa carte et ses notes) ; les plafonds suivent, avec la même marge.
 for (const [largeur, hauteurEcran, plafond] of [
-  [1440, 900, 4000],
-  [375, 812, 6800]
+  [1440, 900, 4400],
+  [375, 812, 7400]
 ] as const) {
   test.describe(`hauteur de la page à ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: hauteurEcran }, hasTouch: largeur < 500, isMobile: largeur < 500 })

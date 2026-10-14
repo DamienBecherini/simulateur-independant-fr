@@ -1,7 +1,7 @@
 // src/lib/resume.ts
 // Chiffres clés de la barre de résumé (affichage « Résumé ») : tirés des résultats de l'année et du comparateur.
 
-import type { ComparaisonResult, OptimisationRemuneration, RaisonSousLaSituationSaisie, ScenarioStatut, SimulationReport } from "@/types"
+import type { ComparaisonResult, OptimisationRemuneration, RaisonPortageNonRetenu, RaisonSousLaSituationSaisie, ScenarioStatut, SimulationReport } from "@/types"
 import { ecartSigne, euros } from "@/backend/logic/format"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 
@@ -63,11 +63,21 @@ export function ecartAvecLaSituationSaisie(result: ComparaisonResult, scenario: 
   return reference === null || scenario.telleQueSaisie ? null : scenario.netApresImpots - reference
 }
 
-/** Une colonne micro hors plafond ou au régime fermé : jamais retenue comme meilleur statut. */
-export const estNonRetenue = (s: ScenarioStatut) => s.horsPlafond || s.regimeMicroFerme !== undefined
+/**
+ * Une colonne micro hors plafond ou au régime fermé, ou une colonne du portage salarial sans prestations ou avec des
+ * salariés : jamais retenue comme meilleur statut.
+ */
+export const estNonRetenue = (s: ScenarioStatut) => s.horsPlafond || s.regimeMicroFerme !== undefined || s.portageNonRetenu !== undefined
 
-/** Pourquoi une colonne micro n'est jamais retenue, écrit dans la cellule : la couleur seule ne le dit pas. */
+/** Ce que dit la cellule d'une colonne du portage salarial non retenue. */
+const PORTAGE_NON_RETENU: Record<RaisonPortageNonRetenu, string> = {
+  sansPrestations: "non retenue : aucune prestation à facturer",
+  salaries: "non retenue : salariés de l'activité"
+}
+
+/** Pourquoi une colonne n'est jamais retenue, écrit dans la cellule : la couleur seule ne le dit pas. */
 export function raisonDeNonRetenue(scenario: ScenarioStatut): string | null {
+  if (scenario.portageNonRetenu) return PORTAGE_NON_RETENU[scenario.portageNonRetenu]
   if (scenario.regimeMicroFerme) return "non retenue : régime micro fermé"
   return scenario.horsPlafond ? "non retenue : plafond dépassé" : null
 }

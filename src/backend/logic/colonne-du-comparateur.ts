@@ -1,15 +1,17 @@
 // src/backend/logic/colonne-du-comparateur.ts
 
-import { estSocieteIS, type ComparaisonOptions, type DonneesDeLAnnee, type MicroEntreprise, type ModeRepartition, type ScenarioStatut, type SimulationReport, type StatutCompare } from "../../types.js"
+import { estSocieteIS, type ComparaisonOptions, type ConditionsPortageRetenues, type DonneesDeLAnnee, type MicroEntreprise, type ModeRepartition, type RaisonPortageNonRetenu, type ScenarioStatut, type SimulationReport, type StatutCompare } from "../../types.js"
 import { depassePlafondMicro } from "./calculsAE.js"
 import { estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, prorataDesPlafonds } from "./dispositifs.js"
 import { ecartDeFrais } from "./frais-de-fonctionnement.js"
+import { conditionsPortageParDefaut, LIBELLES_DES_CONDITIONS_PORTAGE } from "./options-du-comparateur.js"
+import { pourcent } from "./format.js"
 import { professionDe, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import type { ReglesFiscales } from "./regles.js"
 import type { ContexteDeLAnnee } from "./simulation-engine.js"
-import { LIBELLES_DES_STATUTS } from "./statuts.js"
+import { LIBELLE_DU_PORTAGE, LIBELLES_DES_STATUTS } from "./statuts.js"
 
 /*
  * Une colonne du comparateur : ce qu'elle étudie (`ColonneEtudiee` : l'année, l'activité, les réglages, les règles et le
@@ -38,11 +40,12 @@ export interface SimulationDeLaColonne {
   dividendes: number | null
 }
 
-/** Titre de chaque colonne : le nom du statut au réel, et les deux variantes de la micro-entreprise. */
+/** Titre de chaque colonne : le nom du statut au réel, les deux variantes de la micro-entreprise, le portage salarial. */
 const LIBELLES: Record<StatutCompare, string> = {
   ...LIBELLES_DES_STATUTS,
   micro: "Micro-entreprise",
-  "micro-vfl": "Micro + versement libératoire"
+  "micro-vfl": "Micro + versement libératoire",
+  portage: LIBELLE_DU_PORTAGE
 }
 
 /**
@@ -115,7 +118,46 @@ function regimeFerme(statut: StatutCompare, activiteId: string, contexte: Contex
  */
 function assiettesDeProtection(activite: ActiviteDuRapport) {
   const caisse = activite?.cotisationsTNS?.caisse?.caisse
-  return { remunerationBrute: activite?.cotisationsPresident?.brut ?? 0, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0, ...(caisse ? { caisse } : {}) }
+  return { remunerationBrute: activite?.cotisationsPresident?.brut ?? 0, assietteTNS: activite?.cotisationsTNS?.assiette ?? 0, ...salaireDuPorte(activite), ...(caisse ? { caisse } : {}) }
+}
+
+/** Le salaire brut versé dans l'année au salarié porté, sur lequel il cotise à la retraite de base. */
+function salaireDuPorte(activite: ActiviteDuRapport): { salaireBrutPorte?: number } {
+  return activite?.portage ? { salaireBrutPorte: activite.portage.brutVerse } : {}
+}
+
+/**
+ * Ce que la colonne du portage salarial dit de plus (voir l'ADR 016) : pourquoi elle n'est pas retenue (aucune
+ * prestation de services à facturer, des salariés qu'un salarié porté ne peut pas avoir), les conditions de la société
+ * prises à leur valeur typique, une profession réglementée qui perd sa caisse. Rien pour les autres colonnes.
+ */
+function colonneDuPortage(statut: StatutCompare, { source, regles }: Pick<ColonneEtudiee, "source" | "regles">, simulation: SimulationDeLaColonne, activite: ActiviteDuRapport): Pick<ScenarioStatut, "portageNonRetenu"> & { notes: string[] } {
+  if (statut !== "portage") return { notes: [] }
+  const raison = raisonPortageNonRetenu(source.id, simulation.session, activite?.portage?.chiffreAffaires ?? 0)
+  const notes = raison ? [NOTE_PORTAGE_NON_RETENU[raison]] : []
+  const typiques = activite?.portage?.valeursTypiques ?? []
+  if (typiques.length > 0) notes.push(noteDesValeursTypiques(typiques))
+  if (professionDe(source, regles)) notes.push("Le salarié porté relève du régime général, sans la caisse de sa profession libérale ; ses prestations sont facturées à des entreprises clientes (code du travail, art. L1254-1) : vérifiez que votre profession et votre clientèle s'y prêtent.")
+  return { ...(raison ? { portageNonRetenu: raison } : {}), notes }
+}
+
+/** Les conditions de la société de portage prises à leur valeur typique, toutes ou celles qui le sont. */
+function noteDesValeursTypiques(typiques: (keyof ConditionsPortageRetenues)[]): string {
+  if (typiques.length === Object.keys(LIBELLES_DES_CONDITIONS_PORTAGE).length) return `Conditions typiques d'une société de portage (frais de gestion de ${pourcent(conditionsPortageParDefaut().tauxFraisDeGestion)}, CDI) : à remplacer par celles de la vôtre.`
+  return `Conditions de la société de portage à leur valeur typique (${typiques.map(cle => LIBELLES_DES_CONDITIONS_PORTAGE[cle]).join(", ")}) : à remplacer par celles de la vôtre.`
+}
+
+/** Ce que dit la colonne du portage salarial quand elle n'est pas retenue. */
+const NOTE_PORTAGE_NON_RETENU: Record<RaisonPortageNonRetenu, string> = {
+  sansPrestations: "Sans prestations de services, rien à facturer en portage salarial : cette colonne n'est pas retenue.",
+  salaries: "Un salarié porté n'emploie personne : le coût des salariés de l'activité n'est pas compté dans cette colonne, qui n'est pas retenue."
+}
+
+/** Pourquoi l'activité convertie en portage ne peut pas tenir lieu de l'activité ; `null` si elle le peut. */
+function raisonPortageNonRetenu(activiteId: string, session: DonneesDeLAnnee, chiffreAffairesFacture: number): RaisonPortageNonRetenu | null {
+  const vente = session.monthlyData.some(mois => mois.flows.some(f => f.entityId === activiteId && f.type === "ca_vente" && f.amount > 0))
+  if (chiffreAffairesFacture <= 0 && vente) return "sansPrestations"
+  return session.relationships.some(rel => rel.type === "Salarié" && (rel.toId === activiteId || rel.fromId === activiteId)) ? "salaries" : null
 }
 
 /** Les montants du foyer et des prélèvements, d'après le bilan de toute la simulation. */
@@ -149,7 +191,8 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
   const caMicro = chiffreAffairesDeLaMicro(simulation.session.monthlyData, source.id)
   const { prorata, reglesMicro, ...acre } = microDeLaColonne(simulation, source.id, regles, contexte.annee ?? regles.annee)
   const { notes, ...ferme } = regimeFerme(statut, source.id, contexte)
-  const { resultatConserveActivite, ...details } = detailsDeLActivite(activite, notes)
+  const { notes: notesDuPortage, ...portage } = colonneDuPortage(statut, { source, regles }, simulation, activite)
+  const { resultatConserveActivite, ...details } = detailsDeLActivite(activite, [...notes, ...notesDuPortage])
   return {
     statut,
     libelle: libelleDeLaColonne(statut, source, options),
@@ -161,6 +204,7 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
     resultatConserveActivite,
     horsPlafond: estMicro(statut) && depassePlafondMicro(caMicro, regles, prorata),
     ...ferme,
+    ...portage,
     ...details
   }
 }

@@ -22,6 +22,12 @@ describe("réglages du comparateur et de l'optimiseur", () => {
     expect(entreeValide(ComparaisonOptionsSchema, sansFrais, "compareStatuts")).toEqual(sansFrais)
   })
 
+  it("transmettent les conditions de la société de portage, une condition hors bornes écartée seule", () => {
+    const avecPortage = { ...options, portage: { tauxFraisDeGestion: 0.03, contrat: "CDD" } }
+    expect(entreeValide(ComparaisonOptionsSchema, avecPortage, "compareStatuts")).toEqual(avecPortage)
+    expect(entreeValide(ComparaisonOptionsSchema, { ...options, portage: { tauxFraisDeGestion: 2, contrat: "CDD" } }, "compareStatuts").portage).toEqual({ contrat: "CDD" })
+  })
+
   it("retirent un champ inconnu", () => {
     expect(entreeValide(ComparaisonOptionsSchema, { ...options, inconnu: true }, "compareStatuts")).toEqual(options)
   })

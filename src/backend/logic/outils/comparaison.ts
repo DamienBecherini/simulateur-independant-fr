@@ -20,7 +20,7 @@ function activiteDemandee(session: SessionState, activiteId: string | undefined)
   if (activiteId !== undefined) {
     const acteur = trouverActeur(session, activiteId)
     if (acteur.type === "person") throw new ErreurOutil(`« ${acteur.name} » est une personne : le comparateur porte sur une activité (société, EI ou micro-entreprise).`)
-    if (acteur.type === "portage") throw new ErreurOutil(`« ${acteur.name} » est en portage salarial : le comparateur ne le propose pas encore. Son résultat : simuler ou expliquer_resultat.`)
+    if (acteur.type === "portage") throw new ErreurOutil(`« ${acteur.name} » est déjà en portage salarial : le comparateur ne convertit pas encore une activité en portage dans les autres statuts. Son résultat : simuler ou expliquer_resultat.`)
     return acteur
   }
   const activites = session.entities.filter(estEntrepriseOuMicro)
@@ -88,7 +88,7 @@ export const comparerStatuts = definirOutil({
   nom: "comparer_statuts",
   titre: "Comparer les statuts d'une activité",
   description: [
-    "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro-entreprise avec et sans versement libératoire), le reste de la simulation inchangé, et désigne le statut au meilleur net après impôts du foyer.",
+    "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro-entreprise avec et sans versement libératoire, portage salarial), le reste de la simulation inchangé, et désigne le statut au meilleur net après impôts du foyer.",
     "Utilise les réglages enregistrés du comparateur ; les paramètres essaient une variante sans rien enregistrer (pour l'enregistrer : proposer_reglages_comparateur).",
     "La colonne telleQueSaisie est la situation saisie : son net est celui de simuler (situationNet). Les frais réels étant dans la grille, les autres colonnes n'ajoutent aux charges que l'écart de frais de fonctionnement supposés avec le statut actuel (ecartDeFrais, négatif si le statut en coûte moins). Une société hors partage grille n'est pas la situation saisie ; si le meilleur statut fait moins bien qu'elle, sousLaSituationNet dit de combien et pourquoi (à reprendre dans la réponse). En partage grille, chaque société reprend la rémunération de la grille. Sans chiffre d'affaires, meilleur est null.",
     "Montants annuels en euros, arrondis, pour tous les foyers ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant.",
@@ -137,7 +137,7 @@ const ColonneALEnversSchema = z.object({
   chiffreDAffaires: z.number().nullable(),
   chiffreDAffairesMensuel: z.number().nullable(),
   netApresImpots: z.number().nullable(),
-  horsDePortee: z.enum(["plafondMicro", "regimeMicroFerme", "partageSelonLaGrille", "auDelaDeLaBorne"]).nullable()
+  horsDePortee: z.enum(["plafondMicro", "regimeMicroFerme", "partageSelonLaGrille", "auDelaDeLaBorne", "portageSansPrestations"]).nullable()
 })
 
 const resumeDeLaColonne = (c: ChiffreDAffairesDUnStatut): z.infer<typeof ColonneALEnversSchema> => ({
@@ -155,7 +155,7 @@ export const chiffreAffairesPourNetVise = definirOutil({
   titre: "Chiffre d'affaires pour un net visé",
   description: [
     "Calcul à l'envers de comparer_statuts : pour un net après impôts visé (tous les foyers, comme situationNet), le chiffre d'affaires annuel de l'activité qu'il faut dans chaque statut, avec les réglages enregistrés du comparateur, à l'euro près.",
-    "Le chiffre d'affaires saisi est mis à l'échelle (mêmes mois, mêmes natures), le reste de la simulation inchangé. 0 : net déjà atteint sans chiffre d'affaires. null : horsDePortee dit pourquoi (plafondMicro, regimeMicroFerme, partageSelonLaGrille où la grille fixe rémunération et dividendes : essayez mode meilleurNet, auDelaDeLaBorne)."
+    "Le chiffre d'affaires saisi est mis à l'échelle (mêmes mois, mêmes natures), le reste de la simulation inchangé. 0 : net déjà atteint sans chiffre d'affaires. null : horsDePortee dit pourquoi (plafondMicro, regimeMicroFerme, partageSelonLaGrille où la grille fixe rémunération et dividendes : essayez mode meilleurNet, auDelaDeLaBorne, portageSansPrestations)."
   ].join(" "),
   lecture: true,
   parametres: z.strictObject({

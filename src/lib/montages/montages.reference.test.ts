@@ -191,7 +191,8 @@ casDeReference("Montages types : chiffres de référence", () => {
     expect(comparaison.scenarios.find(s => s.statut === "micro")?.protectionSociale.trimestres).toBe(4)
     // Le versement libératoire (2,2 % de 37 200 € = 818 € au lieu de 1 172 €) fait gagner 354 € ; l'EI au réel, qui
     // déduit le loyer mais supporte les cotisations du réel et des frais de gestion estimés, fait moins bien.
-    expect(comparaison.scenarios.map(s => [s.statut, s.netApresImpots])).toEqual([["SASU", 19346], ["EURL", 21487], ["EI", 21623], ["micro", 21803], ["micro-vfl", 22157]])
+    // La colonne du portage salarial a ses propres cas de référence (portage.reference.test.ts).
+    expect(comparaison.scenarios.filter(s => s.statut !== "portage").map(s => [s.statut, s.netApresImpots])).toEqual([["SASU", 19346], ["EURL", 21487], ["EI", 21623], ["micro", 21803], ["micro-vfl", 22157]])
     expect(comparaison.warnings).toContainEqual(expect.stringContaining("Ostéopathe : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut"))
   })
 
@@ -204,7 +205,7 @@ casDeReference("Montages types : chiffres de référence", () => {
     // Une seule année : la complémentaire et l'ASV se calculent sur le revenu de 2026, ce que la carte signale.
     expect(tns.caisse!.baseDesCotisationsDeLAnneePrecedente).toMatchObject({ annee: 2026, anneePrecedenteConnue: false })
     expect(cabinet.fraisDeDeplacement).toEqual({ kilometres: 4000, montant: 2544, deductible: true })
-    expect(comparaison.scenarios.map(s => [s.statut, s.netApresImpots])).toEqual([["SASU", 37867], ["EURL", 39506], ["EI", 38570]])
+    expect(comparaison.scenarios.filter(s => s.statut !== "portage").map(s => [s.statut, s.netApresImpots])).toEqual([["SASU", 37867], ["EURL", 39506], ["EI", 38570]])
     // L'EURL fait mieux, mais n'est pas désignée : le kinésithérapeute exerce en principe en société d'exercice libéral.
     expect(comparaison.warnings).toContainEqual(expect.stringContaining("Micro-entreprise non proposée"))
     expect(comparaison.warnings).toContainEqual(expect.stringContaining("Masseur-kinésithérapeute : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut"))

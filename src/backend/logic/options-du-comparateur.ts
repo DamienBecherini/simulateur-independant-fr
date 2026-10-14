@@ -41,6 +41,19 @@ export function conditionsPortageParDefaut(): ConditionsPortageRetenues {
   }
 }
 
+/** Nom de chaque condition de la société de portage, tel que le disent l'interface, les notes et les exports. */
+export const LIBELLES_DES_CONDITIONS_PORTAGE: Record<keyof ConditionsPortageRetenues, string> = {
+  tauxFraisDeGestion: "frais de gestion",
+  plancherMensuel: "plancher mensuel des frais de gestion",
+  plafondMensuel: "plafond mensuel des frais de gestion",
+  fraisFixesMensuels: "frais fixes mensuels",
+  contrat: "contrat",
+  effectif: "effectif de la société",
+  tauxVersementMobilite: "versement mobilité",
+  reductionGeneraleReversee: "réduction générale reversée",
+  mutuelleMensuelle: "mutuelle"
+}
+
 /** Les conditions saisies, complétées par les valeurs typiques, et la liste de celles qui en sont. */
 export function conditionsPortageRetenues(saisies: ConditionsPortage | undefined): { conditions: ConditionsPortageRetenues; valeursTypiques: (keyof ConditionsPortageRetenues)[] } {
   const conditions = conditionsPortageParDefaut()
@@ -50,7 +63,14 @@ export function conditionsPortageRetenues(saisies: ConditionsPortage | undefined
     if (saisie === undefined) valeursTypiques.push(cle)
     else Object.assign(conditions, { [cle]: saisie })
   }
+  // Un plancher au-dessus du plafond fait écarter les deux, comme à la lecture d'un fichier (ConditionsPortageSchema).
+  if (plancherAuDessusDuPlafond(conditions)) return { conditions: { ...conditions, plancherMensuel: null, plafondMensuel: null }, valeursTypiques }
   return { conditions, valeursTypiques }
+}
+
+/** Le plancher mensuel des frais de gestion dépasse-t-il leur plafond ? Les deux sont alors écartés. */
+export function plancherAuDessusDuPlafond({ plancherMensuel, plafondMensuel }: Pick<ConditionsPortageRetenues, "plancherMensuel" | "plafondMensuel">): boolean {
+  return plancherMensuel !== null && plafondMensuel !== null && plancherMensuel > plafondMensuel
 }
 
 /**
@@ -121,7 +141,7 @@ export function defaultComparisonOptions(session: DonneesDeLAnnee, activityId: s
 /**
  * Réglages du comparateur pour une activité et l'année affichée : ceux que l'utilisateur a choisis, et pour les autres
  * les valeurs par défaut tirées de la grille de l'année. La rémunération saisie vaut pour son année seulement ;
- * le mode de partage, la part BNC et les frais de fonctionnement valent pour toutes les années.
+ * le mode de partage, la part BNC, les frais de fonctionnement et les conditions du portage valent pour toutes les années.
  */
 export function optionsDuComparateur(vue: SimulationAnnuelle, activityId: string, reglages: ReglagesComparateur | undefined): ComparaisonOptions {
   const defaut = defaultComparisonOptions(vue, activityId)
@@ -131,7 +151,8 @@ export function optionsDuComparateur(vue: SimulationAnnuelle, activityId: string
     remunerationNette: reglages.remunerationParAnnee?.[String(vue.annee)] ?? defaut.remunerationNette,
     repartition: avecLaRetraiteParDefaut(reglages.repartition ?? defaut.repartition),
     partBncPrestations: reglages.partBncPrestations ?? defaut.partBncPrestations,
-    fraisFonctionnement: reglages.fraisFonctionnement ?? defaut.fraisFonctionnement
+    fraisFonctionnement: reglages.fraisFonctionnement ?? defaut.fraisFonctionnement,
+    ...(reglages.portage ? { portage: reglages.portage } : {})
   }
   return avecLaRemunerationDeLaGrille(options, vue)
 }

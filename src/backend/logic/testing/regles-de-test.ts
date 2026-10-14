@@ -116,10 +116,11 @@ export const reglesDeTest: ReglesFiscales = {
       apec: { salariale: [{ jusquA: 4, taux: 0.001 }], patronale: [{ jusquA: 4, taux: 0.002 }] },
       prevoyanceCadres: { salariale: [], patronale: [{ jusquA: 1, taux: 0.01 }] }
     },
+    prelevementsSurLaPrevoyance: { forfaitSocial: 0.1 },
     selonLEffectif: {
-      moinsDe11: { fnal: { salariale: [], patronale: [] }, formationProfessionnelle: { salariale: [], patronale: [] }, formationConventionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.01 }] }, effortConstruction: { salariale: [], patronale: [] }, tDeltaReductionGenerale: 0.38, versementMobiliteDu: false },
-      de11a49: { fnal: { salariale: [], patronale: [] }, formationProfessionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.01 }] }, formationConventionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, effortConstruction: { salariale: [], patronale: [] }, tDeltaReductionGenerale: 0.38, versementMobiliteDu: true },
-      "50EtPlus": { fnal: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, formationProfessionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.01 }] }, formationConventionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, effortConstruction: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, tDeltaReductionGenerale: 0.385, versementMobiliteDu: true }
+      moinsDe11: { fnal: { salariale: [], patronale: [] }, formationProfessionnelle: { salariale: [], patronale: [] }, formationConventionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.01 }] }, effortConstruction: { salariale: [], patronale: [] }, tDeltaReductionGenerale: 0.38, versementMobiliteDu: false, forfaitSocialSurLaPrevoyanceDu: false },
+      de11a49: { fnal: { salariale: [], patronale: [] }, formationProfessionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.01 }] }, formationConventionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, effortConstruction: { salariale: [], patronale: [] }, tDeltaReductionGenerale: 0.38, versementMobiliteDu: true, forfaitSocialSurLaPrevoyanceDu: true },
+      "50EtPlus": { fnal: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, formationProfessionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.01 }] }, formationConventionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, effortConstruction: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, tDeltaReductionGenerale: 0.385, versementMobiliteDu: true, forfaitSocialSurLaPrevoyanceDu: true }
     }
   },
   TNS: {

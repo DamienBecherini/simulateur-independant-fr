@@ -220,7 +220,7 @@
     }
   },
   "portageSalarial": {
-    "description": "Portage salarial en 2024 (voir l'ADR 016) : ce que la loi et la convention de branche des salariés en portage salarial du 22 mars 2017 (IDCC 3219, étendue) fixent pour toutes les sociétés de portage. Le salarié porté est un cadre du régime général : son bulletin est celui d'un salarié (bloc regimeGeneral), avec les lignes et le paramètre de la réduction générale de l'effectif de la société, l'APEC, la prévoyance des cadres, la contribution conventionnelle à la formation et, à partir de 11 salariés, le versement mobilité de la commune (taux réglé sur l'activité, 0 par défaut). La réduction générale s'applique à tout salarié dont l'employeur cotise à l'assurance chômage (code de la sécurité sociale, art. L241-13, II ; code du travail, art. L5422-13) ; aucun texte n'en exclut le portage ; la société la reverse ou non, c'est une condition de l'activité. Ne sont pas modélisés : la CSG-CRDS et le forfait social (8 % à partir de 11 salariés, art. L137-15 et L137-16) sur la prévoyance patronale, la part patronale de la mutuelle, le régime d'Alsace-Moselle.",
+    "description": "Portage salarial en 2024 (voir l'ADR 016) : ce que la loi et la convention de branche des salariés en portage salarial du 22 mars 2017 (IDCC 3219, étendue) fixent pour toutes les sociétés de portage. Le salarié porté est un cadre du régime général : son bulletin est celui d'un salarié (bloc regimeGeneral), avec les lignes et le paramètre de la réduction générale de l'effectif de la société, l'APEC, la prévoyance des cadres, la contribution conventionnelle à la formation et, à partir de 11 salariés, le versement mobilité de la commune (taux réglé sur l'activité, 0 par défaut). La réduction générale s'applique à tout salarié dont l'employeur cotise à l'assurance chômage (code de la sécurité sociale, art. L241-13, II ; code du travail, art. L5422-13) ; aucun texte n'en exclut le portage ; la société la reverse ou non, c'est une condition de l'activité. La CSG-CRDS et le forfait social sur la prévoyance patronale sont dans prelevementsSurLaPrevoyance. Ne sont pas modélisés : la part patronale de la mutuelle, le régime d'Alsace-Moselle.",
     "source": "https://www.legifrance.gouv.fr/conv_coll/id/KALITEXT000035184768",
     "indemniteApportDAffaires": {
       "description": "Indemnité d'apport d'affaires : 5 % de la rémunération brute mensuelle (article 21.2 de la convention de branche ; code du travail, art. L1254-25 pour son information mensuelle), en part du salaire de base.",
@@ -252,6 +252,11 @@
         "patronale": [{ "jusquA": 1, "taux": 0.015 }]
       }
     },
+    "prelevementsSurLaPrevoyance": {
+      "description": "Prélèvements sur la contribution patronale de prévoyance des cadres. CSG et CRDS du salarié : la CSG est due sur toutes les sommes versées à l'occasion du travail (code de la sécurité sociale, art. L136-1-1, I), dont les contributions des employeurs à la protection sociale complémentaire (art. L242-1, II, 4°), que l'art. L136-1-1, III n'exclut pas ; la réduction de 1,75 % pour frais professionnels ne s'applique pas à ces contributions (art. L136-2, I, 1° : revenus d'activité « à l'exception de ceux mentionnés au II de l'article L. 242-1 »). Elles sont prélevées aux taux du régime général (bloc regimeGeneral), sur toute la contribution. Forfait social de l'employeur : 8 % pour les contributions destinées au financement des prestations complémentaires de prévoyance (art. L137-16, en vigueur depuis le 1er janvier 2022), dont sont exemptés les employeurs de moins de onze salariés (art. L137-15, en vigueur depuis le 1er septembre 2023). Textes consultés sur Légifrance le 2026-10-14.",
+      "source": "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006073189/LEGISCTA000019946240/",
+      "forfaitSocial": 0.08
+    },
     "selonLEffectif": {
       "moinsDe11": {
         "description": "Société de portage de moins de 11 salariés : FNAL de 0,10 % dans la limite du plafond, contribution légale à la formation professionnelle de 0,55 %, ni participation à l'effort de construction ni versement mobilité. Réduction Fillon de 2024 (art. D241-7 du code de la sécurité sociale, décret 2023-1329) : T = 0,3194 sous 50 salariés, 0,3234 à partir de 50 (contribution au FNAL de 0,50 %).",
@@ -281,7 +286,8 @@
           "patronale": []
         },
         "tDeltaReductionGenerale": 0.3194,
-        "versementMobiliteDu": false
+        "versementMobiliteDu": false,
+        "forfaitSocialSurLaPrevoyanceDu": false
       },
       "de11a49": {
         "description": "Société de portage de 11 à 49 salariés : FNAL de 0,10 % dans la limite du plafond, contribution légale à la formation professionnelle de 1 %, versement mobilité dû selon la commune, pas de participation à l'effort de construction. Réduction Fillon de 2024 (art. D241-7 du code de la sécurité sociale, décret 2023-1329) : T = 0,3194 sous 50 salariés, 0,3234 à partir de 50 (contribution au FNAL de 0,50 %).",
@@ -311,7 +317,8 @@
           "patronale": []
         },
         "tDeltaReductionGenerale": 0.3194,
-        "versementMobiliteDu": true
+        "versementMobiliteDu": true,
+        "forfaitSocialSurLaPrevoyanceDu": true
       },
       "50EtPlus": {
         "description": "Société de portage de 50 salariés et plus : FNAL de 0,50 % sur tout le brut, contribution légale à la formation professionnelle de 1 %, participation à l'effort de construction de 0,45 %, versement mobilité dû selon la commune. Réduction Fillon de 2024 (art. D241-7 du code de la sécurité sociale, décret 2023-1329) : T = 0,3194 sous 50 salariés, 0,3234 à partir de 50 (contribution au FNAL de 0,50 %).",
@@ -341,7 +348,8 @@
           "patronale": [{ "jusquA": null, "taux": 0.0045 }]
         },
         "tDeltaReductionGenerale": 0.3234,
-        "versementMobiliteDu": true
+        "versementMobiliteDu": true,
+        "forfaitSocialSurLaPrevoyanceDu": true
       }
     }
   },

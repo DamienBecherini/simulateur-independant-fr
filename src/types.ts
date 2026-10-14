@@ -366,7 +366,12 @@ export const ReglagesComparateurSchema = z.object({
   /** Statut de société étudié dans « Rémunération ou dividendes ? » et la barre de partage du bénéfice. */
   statutEtudie: z.enum(STATUTS_SOCIETE).optional(),
   /** « Sur toutes les années » : part du bénéfice distribuable gardée chaque année, puis distribuée la dernière (0 à 1). */
-  partMiseEnReserve: z.number().min(0).max(1).optional()
+  partMiseEnReserve: z.number().min(0).max(1).optional(),
+  /**
+   * Conditions de la société de portage de la colonne « Portage salarial » (voir l'ADR 016) : seules celles que
+   * l'utilisateur a changées ; les autres prennent leur valeur typique. Valables pour toutes les années.
+   */
+  portage: ConditionsPortageSchema.optional()
 })
 
 /** Comparateur de statuts : l'activité comparée et les réglages choisis pour chaque activité, par identifiant. */
@@ -599,9 +604,13 @@ export type CotisationSalarie =
 /**
  * Les cotisations d'un salarié porté qui s'ajoutent à celles d'un salarié (voir l'ADR 016) : celles du cadre (APEC,
  * prévoyance), celles qui dépendent de l'effectif de la société de portage (participation à l'effort de construction,
- * versement mobilité) et la contribution conventionnelle à la formation professionnelle.
+ * versement mobilité), la contribution conventionnelle à la formation professionnelle, et les prélèvements sur la
+ * prévoyance patronale : CSG et CRDS du salarié, forfait social de l'employeur à partir de 11 salariés.
  */
-export type CotisationPortage = "apec" | "prevoyanceCadres" | "formationConventionnelle" | "effortConstruction" | "versementMobilite"
+export type CotisationPortage = CotisationPortageAuBareme | "csgCrdsPrevoyance" | "forfaitSocialPrevoyance"
+
+/** Les cotisations propres au salarié porté qui ont leur barème par tranches (les autres se calculent sur la prévoyance). */
+export type CotisationPortageAuBareme = "apec" | "prevoyanceCadres" | "formationConventionnelle" | "effortConstruction" | "versementMobilite"
 
 /** Bulletin de paie annuel simplifié d'un président de SASU (assimilé salarié), d'un salarié ou d'un salarié porté. */
 export interface DetailCotisationsSalarie {
@@ -622,7 +631,7 @@ export interface DetailCotisationsSalarie {
   reductionGenerale: number
   /** Brut, plus les cotisations patronales, moins la réduction générale : ce que paie l'employeur. */
   coutEmployeur: number
-  /** CSG non déductible et CRDS : elles s'ajoutent au net pour le revenu imposable. */
+  /** CSG non déductible et CRDS (celles sur la prévoyance patronale du salarié porté comprises) : elles s'ajoutent au net pour le revenu imposable. */
   partNonDeductible: number
   /** Salarié porté : ses cotisations propres, comprises dans les totaux (voir `CotisationPortage`). */
   cotisationsDuPortage?: Record<CotisationPortage, { salariale: number; patronale: number }>
@@ -915,8 +924,11 @@ export interface SimulationPluriannuelle {
   annees: ResultatAnnee[]
 }
 
-/** Statuts proposés par le comparateur : chaque statut au réel, et la micro-entreprise avec et sans versement libératoire. */
-export const STATUTS_COMPARES = [...STATUTS_JURIDIQUES, "micro", "micro-vfl"] as const
+/**
+ * Statuts proposés par le comparateur : chaque statut au réel, la micro-entreprise avec et sans versement libératoire,
+ * et le portage salarial (voir l'ADR 016), qui n'est pas un statut juridique mais une colonne comme les autres.
+ */
+export const STATUTS_COMPARES = [...STATUTS_JURIDIQUES, "micro", "micro-vfl", "portage"] as const
 export type StatutCompare = (typeof STATUTS_COMPARES)[number]
 
 /**
@@ -975,6 +987,8 @@ export interface ComparaisonOptions {
    * colonne reçoit les frais de son statut moins ceux du statut actuel, dont les frais réels sont déjà dans la grille.
    */
   fraisFonctionnement?: FraisFonctionnement
+  /** Conditions de la société de portage de la colonne « Portage salarial » ; absentes, les valeurs typiques. */
+  portage?: ConditionsPortage
 }
 
 /**
@@ -1011,6 +1025,9 @@ export interface SousLaSituationSaisie {
   explication: string
 }
 
+/** Pourquoi la colonne du portage salarial n'est pas retenue (voir `ScenarioStatut.portageNonRetenu`). */
+export type RaisonPortageNonRetenu = "sansPrestations" | "salaries"
+
 export interface ScenarioStatut {
   statut: StatutCompare
   libelle: string
@@ -1029,6 +1046,11 @@ export interface ScenarioStatut {
   horsPlafond: boolean
   /** Colonne micro d'une activité sortie du régime micro cette année-là : régime plus accessible, jamais désigné meilleur net. */
   regimeMicroFerme?: SortieDuRegimeMicro
+  /**
+   * Colonne du portage salarial qui ne peut pas tenir lieu de l'activité, jamais désignée meilleur net : aucune prestation
+   * de services à facturer (le portage n'en connaît pas d'autres), ou des salariés, qu'un salarié porté ne peut pas avoir.
+   */
+  portageNonRetenu?: RaisonPortageNonRetenu
   protectionSociale: ProtectionSociale
   /** Indicateurs de toute la simulation, l'activité ayant pris ce statut. */
   netApresImpots: number
@@ -1096,9 +1118,10 @@ export interface ComparaisonResult {
  * - « regimeMicroFerme » : l'activité est sortie du régime micro cette année-là ;
  * - « partageSelonLaGrille » : la société reprend la rémunération et les dividendes de la grille, son net ne suit pas
  *   le chiffre d'affaires ;
- * - « auDelaDeLaBorne » : même le chiffre d'affaires le plus haut essayé ne suffit pas.
+ * - « auDelaDeLaBorne » : même le chiffre d'affaires le plus haut essayé ne suffit pas ;
+ * - « portageSansPrestations » : l'activité ne facture que de la vente, que le portage salarial ne permet pas.
  */
-export type RaisonHorsDePortee = "plafondMicro" | "regimeMicroFerme" | "partageSelonLaGrille" | "auDelaDeLaBorne"
+export type RaisonHorsDePortee = "plafondMicro" | "regimeMicroFerme" | "partageSelonLaGrille" | "auDelaDeLaBorne" | "portageSansPrestations"
 
 /** Le chiffre d'affaires d'une colonne du comparateur qui donne le net visé. */
 export interface ChiffreDAffairesDUnStatut {

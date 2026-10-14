@@ -17,6 +17,26 @@ function scenario(statut: StatutCompare, libelle: string, net: number, autres: P
   return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: "" }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...autres }
 }
 
+describe("cartes des statuts : le portage salarial", () => {
+  const micro = scenario("micro", "Micro-entreprise", 30000, { actuel: true, telleQueSaisie: true })
+  const avec = (portage: ScenarioStatut, meilleur: StatutCompare): ComparaisonResult => ({ scenarios: [micro, portage], meilleur, situationSaisie: { statut: "micro", libelle: "Micro-entreprise", netApresImpots: 30000 }, couples: [], warnings: [] })
+  const cartes = () => within(screen.getByRole("list", { name: "Net dans la poche selon le statut" })).getAllByRole("listitem")
+
+  it("a sa carte, avec ses cinq étoiles, son écart et les frais dont la société de portage se charge ; il peut être le meilleur net", () => {
+    const portage = scenario("portage", "Portage salarial", 31000, { protectionSociale: { etoiles: 5, trimestres: 4, resume: "" }, ecartDeFrais: { total: -850, postes: { assurance: -850 } } })
+    render(<CartesDesStatuts result={avec(portage, "portage")} />)
+    expect(cartes()[0]).toHaveTextContent(/^Portage salarialmeilleur net ·/)
+    expect(within(cartes()[0]).getByText("protection sociale 5 sur 5")).toBeInTheDocument()
+    expect(espaces(cartes()[0].textContent)).toContain("dont environ 850 € de frais de fonctionnement en moins qu'en micro-entreprise")
+    expect(espaces(cartes()[0].textContent)).toContain("+1 000 €")
+  })
+
+  it("non retenu, dit pourquoi", () => {
+    render(<CartesDesStatuts result={avec(scenario("portage", "Portage salarial", 20000, { portageNonRetenu: "sansPrestations" }), "micro")} />)
+    expect(cartes()[1]).toHaveTextContent(/^Portage salarialnon retenue : aucune prestation à facturer ·/)
+  })
+})
+
 describe("cartes des statuts", () => {
   it("disent qu'une colonne micro n'est pas retenue, plafond dépassé ou régime fermé, et l'écart de frais de gestion", () => {
     const sortie = { depuis: 2028, depassements: [2026, 2027] as [number, number] }

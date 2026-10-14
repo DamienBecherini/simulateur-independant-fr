@@ -30,7 +30,8 @@ test("donne, pour un net visé, le chiffre d'affaires annuel et mensuel de chaqu
 
   const tableau = section.getByRole("table", { name: /« Atelier de Camille » nécessaire pour 90\s000\s€ nets par an/ })
   await expect(tableau).toBeVisible()
-  await expect(tableau.getByRole("row")).toHaveCount(6)
+  // Un en-tête et six colonnes du comparateur, portage salarial compris.
+  await expect(tableau.getByRole("row")).toHaveCount(7)
   // Le chiffre d'affaires saisi de l'atelier, référence des écarts : 40 200 €.
   await expect(tableau.getByRole("columnheader", { name: montant("Écart avec le chiffre d'affaires saisi (40 200 €)") })).toBeVisible()
   const vfl = tableau.getByRole("row", { name: /^Micro \+ versement libératoire/ })
@@ -67,7 +68,7 @@ test.describe("sur un téléphone", () => {
   test("une carte par statut remplace le tableau, sans défilement en largeur ni violation WCAG", async ({ page }) => {
     const section = await viser(page, "90000")
     const cartes = section.getByRole("list", { name: "Chiffre d'affaires nécessaire selon le statut" })
-    await expect(cartes.getByRole("listitem")).toHaveCount(5)
+    await expect(cartes.getByRole("listitem")).toHaveCount(6)
     await expect(cartes.getByRole("listitem").filter({ hasText: "Micro + versement libératoire" })).toContainText(montant("soit 5 974 € par mois"))
     await expect(section.getByRole("table")).toBeHidden()
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)

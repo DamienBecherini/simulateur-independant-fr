@@ -1,7 +1,8 @@
 // src/lib/comparateur-options.test.ts
 
 import { describe, expect, it } from "vitest"
-import { activiteComparee, appliquerRemuneration, avecLaRetraiteParDefaut, avecLeMode, avecActiviteComparee, avecRemuneration, avecRemunerationSaisie, avecReglagesDeLActivite, comparableActivities, defaultComparisonOptions, defaultFraisFonctionnement, descriptionDuMode, libellesCourtsRepartition, libellesRepartition, optionsDuComparateur, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
+import { activiteComparee, appliquerRemuneration, avecLaRetraiteParDefaut, avecLeMode, avecActiviteComparee, avecRemuneration, avecRemunerationSaisie, avecReglagesDeLActivite, comparableActivities, conditionsDuPortageEnPhrase, defaultComparisonOptions, defaultFraisFonctionnement, descriptionDuMode, libellesCourtsRepartition, libellesRepartition, optionsDuComparateur, partBncUtile, phraseDeLEcartDeFrais, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
+import { enTexteBrut } from "@/backend/logic/format"
 import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
 import type { ComparaisonOptions, FinancialFlow, DonneesDeLAnnee, OptimisationRemuneration, PointRemuneration } from "@/types"
 
@@ -166,12 +167,39 @@ describe("réglages enregistrés du comparateur", () => {
     expect(retenirLesReglages(undefined, avant, { ...avant, partBncPrestations: 0.7, fraisFonctionnement: frais }, 2026)).toEqual({ partBncPrestations: 0.7, fraisFonctionnement: frais })
   })
 
+  it("conditions de la société de portage : seules celles changées sont retenues, pour toutes les années, et relues telles quelles", () => {
+    const avant = defaultComparisonOptions(vue, "sasu")
+    expect(avant.portage).toBeUndefined()
+    const reglages = retenirLesReglages(undefined, avant, { ...avant, portage: { tauxFraisDeGestion: 0.06 } }, 2026)
+    expect(reglages).toEqual({ portage: { tauxFraisDeGestion: 0.06 } })
+    const relus = JSON.parse(JSON.stringify(reglages))
+    expect(optionsDuComparateur(vue, "sasu", relus).portage).toEqual({ tauxFraisDeGestion: 0.06 })
+    expect(optionsDuComparateur({ ...vue, annee: 2025 }, "sasu", relus).portage).toEqual({ tauxFraisDeGestion: 0.06 })
+    // Revenir aux valeurs typiques retire les conditions des réglages enregistrés.
+    const avecPortage = optionsDuComparateur(vue, "sasu", relus)
+    expect(JSON.parse(JSON.stringify(retenirLesReglages(relus, avecPortage, { ...avecPortage, portage: undefined }, 2026)))).toEqual({})
+  })
+
   it("range les réglages par activité, et retient l'activité comparée", () => {
     const comparateur = avecReglagesDeLActivite(undefined, "sasu", { partBncPrestations: 0.5 })
     expect(comparateur).toEqual({ activiteComparee: "sasu", reglagesParActivite: { sasu: { partBncPrestations: 0.5 } } })
     expect(avecReglagesDeLActivite(comparateur, "micro", {})).toEqual({ activiteComparee: "micro", reglagesParActivite: { sasu: { partBncPrestations: 0.5 }, micro: {} } })
     expect(avecActiviteComparee(comparateur, "micro")).toEqual({ activiteComparee: "micro", reglagesParActivite: { sasu: { partBncPrestations: 0.5 } } })
     expect(avecActiviteComparee(undefined, "micro")).toEqual({ activiteComparee: "micro", reglagesParActivite: {} })
+  })
+})
+
+describe("portage salarial dans les phrases du comparateur", () => {
+  it("décrit les conditions de la société de portage, en disant les valeurs typiques", () => {
+    expect(enTexteBrut(conditionsDuPortageEnPhrase(undefined))).toBe("frais de gestion de 7 % du chiffre d'affaires HT, CDI, société de 50 salariés et plus, réduction générale gardée par la société, sans mutuelle (valeurs typiques)")
+    const reglees = enTexteBrut(conditionsDuPortageEnPhrase({ tauxFraisDeGestion: 0.085, plancherMensuel: 150, plafondMensuel: 900, fraisFixesMensuels: 25, contrat: "CDD", effectif: "de11a49", tauxVersementMobilite: 0.0295, reductionGeneraleReversee: true, mutuelleMensuelle: 42 }))
+    expect(reglees).toBe("frais de gestion de 8,5 % du chiffre d'affaires HT (au moins 150 €, au plus 900 € par mois), plus 25 € de frais fixes par mois, CDD, société de 11 à 49 salariés, versement mobilité de 2,95 %, réduction générale reversée, mutuelle de 42 € par mois")
+    expect(enTexteBrut(conditionsDuPortageEnPhrase({ contrat: "CDD" }))).toMatch(/\(valeurs typiques : frais de gestion, plancher mensuel des frais de gestion, .*mutuelle\)$/)
+  })
+
+  it("l'écart de frais du portage dit que la société de portage s'en charge", () => {
+    expect(enTexteBrut(phraseDeLEcartDeFrais(-850, "micro", "portage") ?? "")).toBe("dont environ 850 € de frais de fonctionnement en moins qu'en micro-entreprise")
+    expect(enTexteBrut(phraseDeLEcartDeFrais(-850, "micro", "EI") ?? "")).toBe("dont environ 850 € de frais de gestion en moins qu'en micro-entreprise")
   })
 })
 

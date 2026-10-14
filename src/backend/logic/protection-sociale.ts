@@ -7,7 +7,7 @@ import type { ReglesFiscales, TauxMicro } from "./regles.js"
  * Note qualitative de protection sociale, sur 5 étoiles, pour le comparateur. Elle combine le régime
  * (assimilé salarié, travailleur non salarié, micro-entrepreneur) et le nombre de trimestres de retraite
  * validés dans l'année. Aucun statut d'indépendant n'ouvre droit à l'assurance chômage : la cinquième
- * étoile, celle du salarié classique, n'est jamais atteinte.
+ * étoile, celle du salarié classique, n'est atteinte qu'en portage salarial, avec 4 trimestres.
  */
 
 export interface DonneesProtection {
@@ -15,6 +15,8 @@ export interface DonneesProtection {
   remunerationBrute: number
   /** Assiette sociale de l'année du gérant d'EURL ou de l'entrepreneur individuel au réel, après l'abattement forfaitaire. */
   assietteTNS: number
+  /** Salaire brut versé dans l'année au salarié porté, sur lequel il cotise à la retraite de base (sans la réserve d'un CDI) ; 0 s'il est absent. */
+  salaireBrutPorte?: number
   /** Chiffre d'affaires annuel par nature, pour une micro-entreprise. */
   chiffreAffairesMicro: { caVente: number; caServicesBic: number; caServicesBnc: number }
   /** Micro-entreprise bénéficiant de l'ACRE : les cotisations, donc les droits, sont réduits. */
@@ -59,6 +61,20 @@ function protectionSASU(remunerationBrute: number, regles: ReglesFiscales): Prot
 }
 
 /**
+ * Salarié porté (voir l'ADR 016) : salarié du régime général, cadre, couvert par l'assurance chômage. C'est la cinquième
+ * étoile du salarié classique quand son salaire valide 4 trimestres. Ses droits suivent le salaire versé : une année
+ * sans mission n'en ouvre aucun.
+ */
+function protectionPortage(salaireBrut: number, regles: ReglesFiscales): ProtectionSociale {
+  if (salaireBrut <= 0) {
+    return { etoiles: 1, trimestres: 0, resume: "Sans salaire versé par la société de portage, aucune couverture liée à l'activité : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni droits au chômage." }
+  }
+  const trimestres = trimestresValides(salaireBrut, regles)
+  const couverture = "Salarié cadre du régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance des cadres, assurance chômage"
+  return { etoiles: trimestres === 4 ? 5 : 4, trimestres, resume: `${couverture}. ${texteTrimestres(trimestres)}.` }
+}
+
+/**
  * Gérant d'EURL ou entrepreneur individuel au réel : régime des indépendants. La retraite de base est cotisée
  * sur l'assiette sociale, au moins sur son assiette minimale, qui garantit un plancher de trimestres.
  */
@@ -97,14 +113,16 @@ function protectionMicro({ chiffreAffairesMicro: ca, beneficieACRE = false, acre
  * Protection sociale de chaque colonne du comparateur : le président de SASU est assimilé salarié (droits du régime
  * général sur sa rémunération brute) ; le gérant d'EURL et l'entrepreneur individuel au réel sont travailleurs non
  * salariés (droits sur leur assiette, selon leur caisse) ; le micro-entrepreneur acquiert ses droits sur son chiffre
- * d'affaires. Un nouveau statut doit y dire quel régime est le sien.
+ * d'affaires ; le salarié porté est un salarié du régime général, avec l'assurance chômage. Un nouveau statut doit y dire
+ * quel régime est le sien.
  */
 const PROTECTION_PAR_STATUT: Record<StatutCompare, (donnees: DonneesProtection, regles: ReglesFiscales) => ProtectionSociale> = {
   SASU: (donnees, regles) => protectionSASU(donnees.remunerationBrute, regles),
   EURL: (donnees, regles) => protectionTNS(donnees.assietteTNS, regles, donnees.caisse),
   EI: (donnees, regles) => protectionTNS(donnees.assietteTNS, regles, donnees.caisse),
   micro: protectionMicro,
-  "micro-vfl": protectionMicro
+  "micro-vfl": protectionMicro,
+  portage: (donnees, regles) => protectionPortage(donnees.salaireBrutPorte ?? 0, regles)
 }
 
 export function evaluerProtectionSociale(statut: StatutCompare, donnees: DonneesProtection, regles: ReglesFiscales): ProtectionSociale {

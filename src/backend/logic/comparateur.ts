@@ -14,7 +14,7 @@ import { sousLaSituationSaisie, type ReferenceDeLaSituationSaisie } from "./sous
 
 /*
  * Comparateur de statuts : l'activité choisie est convertie dans chaque statut (SASU, EURL, entreprise
- * individuelle au réel, micro-entreprise avec et sans versement libératoire), puis toute la simulation est
+ * individuelle au réel, micro-entreprise avec et sans versement libératoire, portage salarial), puis toute la simulation est
  * relancée. Le reste de la session (autres activités, salaires, foyers) ne change pas : l'écart entre deux
  * colonnes vient donc uniquement du statut de cette activité.
  *
@@ -56,7 +56,7 @@ export function avertissementsDeLActivite(session: DonneesDeLAnnee, source: Acti
   const warnings: string[] = []
   const { principale, associes } = personnesDeLActivite(session, source.id)
   if (!principale) warnings.push("Cette activité n'est reliée à aucune personne : ses revenus ne rejoignent aucun foyer, la comparaison ne mesure que les prélèvements.")
-  if (associes.length > 0) warnings.push("En entreprise individuelle et en micro-entreprise, seul le dirigeant reprend l'activité : les autres associés n'en reçoivent plus rien.")
+  if (associes.length > 0) warnings.push("En entreprise individuelle, en micro-entreprise et en portage salarial, seul le dirigeant reprend l'activité : les autres associés n'en reçoivent plus rien.")
   if (profession && microInterdite(profession)) warnings.push(raisonMicroInterdite(profession))
   return warnings
 }
@@ -70,7 +70,8 @@ export function statutsDeLaComparaison(profession: ProfessionReglementee | null)
 /**
  * Le statut au meilleur net, parmi les colonnes tenables : une micro-entreprise hors plafond ne l'est que deux ans, et
  * une profession qui exerce en principe en société d'exercice libéral n'a pas de SASU ou d'EURL classique à désigner ;
- * leurs colonnes restent, avec leur avertissement, mais le meilleur net se choisit ailleurs (ADR 015).
+ * leurs colonnes restent, avec leur avertissement, mais le meilleur net se choisit ailleurs (ADR 015). Une colonne du
+ * portage salarial sans prestations à facturer, ou avec des salariés, n'est pas tenable non plus (ADR 016).
  */
 function meilleurStatut(scenarios: ScenarioStatut[], profession: ProfessionReglementee | null): { meilleur: StatutCompare; warnings: string[] } {
   const sansSocieteClassique = profession?.societeExerciceLiberal === true
@@ -78,7 +79,7 @@ function meilleurStatut(scenarios: ScenarioStatut[], profession: ProfessionRegle
     sansSocieteClassique && scenarios.some(s => estSocieteIS(s.statut))
       ? [`${profession.libelle} : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut, cette profession exerçant en principe en société d'exercice libéral, dont la rémunération n'est pas encore modélisée. Leurs colonnes restent indicatives.`]
       : []
-  const tenables = scenarios.filter(s => !s.horsPlafond && !s.regimeMicroFerme && !(sansSocieteClassique && estSocieteIS(s.statut)))
+  const tenables = scenarios.filter(s => !s.horsPlafond && !s.regimeMicroFerme && !s.portageNonRetenu && !(sansSocieteClassique && estSocieteIS(s.statut)))
   const candidats = tenables.length > 0 ? tenables : scenarios
   return { meilleur: candidats.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), candidats[0]).statut, warnings }
 }

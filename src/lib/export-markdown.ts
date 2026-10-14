@@ -3,11 +3,11 @@
 // acteurs et relations, flux saisis, résultats, comparateur de statuts et avertissements.
 
 import { estSocieteIS, type ComparaisonOptions, type ComparaisonResult, type Company, type DeplacementsProfessionnels, type Entity, type FraisProfessionnelsResult, type MicroEntreprise, type ModeRepartition, type Person, type Relationship, type ScenarioStatut, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport } from "@/types"
-import { defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
+import { conditionsDuPortageEnPhrase, defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { LIMITES, TITRE_DES_LIMITES } from "./limites-du-modele"
 import { numeroterNotes } from "./notes"
-import { ecartAvecLaSituationSaisie } from "./resume"
+import { ecartAvecLaSituationSaisie, raisonDeNonRetenue } from "./resume"
 import { professionDeLaFiche, statutEtProfession } from "./professions"
 import { reglesDeLAnneeAffichee } from "./regles-affichees"
 import { enTexteBrut, eurosEnTexteBrut, pourcentDeNombre } from "@/backend/logic/format"
@@ -307,7 +307,8 @@ function reglagesUtilises(options: ComparaisonOptions, scenarios: ScenarioStatut
   return [
     `- Bénéfice de la société en SASU et EURL : ${descriptionRepartition(options, scenarios)}`,
     `- En micro-entreprise, part des prestations de services en BNC : ${pourcentage(options.partBncPrestations)} (le reste en BIC)`,
-    `- Frais de fonctionnement supposés : ${options.fraisFonctionnement ? totalDesFrais(options) : "aucun"} ; la grille contient déjà les frais réels du statut actuel, chaque autre statut ne reçoit que l'écart avec lui`
+    `- Frais de fonctionnement supposés : ${options.fraisFonctionnement ? totalDesFrais(options) : "aucun"} ; la grille contient déjà les frais réels du statut actuel, chaque autre statut ne reçoit que l'écart avec lui (aucun frais supposé en portage salarial, la société de portage s'en chargeant)`,
+    `- Portage salarial, conditions de la société de portage : ${enTexteBrut(conditionsDuPortageEnPhrase(options.portage))}`
   ].join("\n")
 }
 
@@ -315,7 +316,7 @@ function tableauDeComparaison(resultat: ComparaisonResult, nomActivite: string):
   const { scenarios } = resultat
   const signe = (montant: number) => eurosEnTexteBrut(montant).replace(/^(?!-)/, "+")
   const entete = (s: ScenarioStatut) => {
-    const mentions = [s.telleQueSaisie ? "actuel" : null, s.statut === resultat.meilleur ? "meilleur net" : null, s.horsPlafond ? "non retenue : plafond dépassé" : null, s.regimeMicroFerme ? "plus accessible" : null].filter(Boolean)
+    const mentions = [s.telleQueSaisie ? "actuel" : null, s.statut === resultat.meilleur ? "meilleur net" : null, s.horsPlafond ? "non retenue : plafond dépassé" : null, s.regimeMicroFerme ? "plus accessible" : null, s.portageNonRetenu ? raisonDeNonRetenue(s) : null].filter(Boolean)
     return mentions.length > 0 ? `${s.libelle} (${mentions.join(", ")})` : s.libelle
   }
   const indicateurs: [string, (s: ScenarioStatut) => string][] = [

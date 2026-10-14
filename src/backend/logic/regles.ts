@@ -182,6 +182,8 @@ interface CotisationsSelonLEffectif {
   tDeltaReductionGenerale: number
   /** Le versement mobilité est dû (à partir de 11 salariés). */
   versementMobiliteDu: boolean
+  /** Le forfait social est dû sur la prévoyance patronale (à partir de 11 salariés). */
+  forfaitSocialSurLaPrevoyanceDu: boolean
 }
 
 /**
@@ -198,6 +200,11 @@ export interface ReglesPortageSalarial {
   minimumConventionnel: { mensuel: number; expert: number }
   /** Cotisations du cadre, ajoutées au bulletin d'un salarié. */
   cotisationsDuCadre: { apec: CotisationRegimeGeneral; prevoyanceCadres: CotisationRegimeGeneral }
+  /**
+   * Prélèvements sur la prévoyance patronale des cadres : la CSG et la CRDS du salarié, aux taux du régime général, sur
+   * toute la contribution, sans abattement ; le forfait social de l'employeur, à ce taux, là où il est dû.
+   */
+  prelevementsSurLaPrevoyance: { forfaitSocial: number }
   /** Ce qui dépend de l'effectif de la société de portage. */
   selonLEffectif: Record<EffectifPortage, CotisationsSelonLEffectif>
 }

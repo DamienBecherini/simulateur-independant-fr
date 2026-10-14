@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
-import { coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, phraseDuVerdict, remunerationOptimale, tauxDePrelevement } from "./resume"
+import { coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, phraseDuVerdict, raisonDeNonRetenue, remunerationOptimale, tauxDePrelevement } from "./resume"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
 
@@ -83,6 +83,19 @@ describe("verdict du comparateur", () => {
   it("ne cite pas derrière le statut actuel une colonne micro qui n'est plus accessible", () => {
     const result = { ...comparaison("micro"), scenarios: comparaison("micro").scenarios.map(s => (s.statut === "micro-vfl" ? { ...s, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] as [number, number] } } : s)) }
     expect(espaces(phraseDuVerdict(result, "Atelier"))).toBe("Pour « Atelier », le statut actuel, Micro-entreprise, donne le meilleur net : 32 000 €. Juste derrière : SASU, −2 000 €.")
+  })
+
+  it("le portage salarial peut être désigné ; non retenu, il n'est pas cité derrière le statut actuel et sa cellule dit pourquoi", () => {
+    const portage = scenario("portage", "Portage salarial", 35000)
+    const gagnant = { ...comparaison("portage"), scenarios: [...comparaison("portage").scenarios, portage] }
+    expect(espaces(phraseDuVerdict(gagnant, "Atelier"))).toBe("Pour « Atelier », Portage salarial donnerait le meilleur net : 35 000 €, soit +3 000 € par rapport à votre situation telle que saisie (Micro-entreprise, 32 000 €).")
+    expect(espaces(meilleurStatut(gagnant))).toBe("Portage salarial, +3 000 €")
+
+    const nonRetenu = { ...portage, netApresImpots: 31500, portageNonRetenu: "sansPrestations" as const }
+    expect(estNonRetenue(nonRetenu)).toBe(true)
+    expect(raisonDeNonRetenue(nonRetenu)).toBe("non retenue : aucune prestation à facturer")
+    expect(raisonDeNonRetenue({ ...nonRetenu, portageNonRetenu: "salaries" })).toBe("non retenue : salariés de l'activité")
+    expect(espaces(phraseDuVerdict({ ...comparaison("micro"), scenarios: [...comparaison("micro").scenarios, nonRetenu] }, "Atelier"))).toContain("Juste derrière : Micro + versement libératoire")
   })
 
   it("seul en tête, le statut actuel n'a personne derrière lui", () => {

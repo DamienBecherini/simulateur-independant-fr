@@ -40,9 +40,10 @@ Cette ADR fixe le modèle de calcul, la place du portage dans l'application, les
   - participation à l'effort de construction : 0,45 % à partir de 50 salariés ([code de la construction, art. L313-1](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006176366)). Une société exonérée de taxe sur les salaires parce que son chiffre d'affaires est soumis à la TVA y reste soumise ([BOI-TPS-PEEC-10, § 40](https://bofip.impots.gouv.fr/bofip/6360-PGP.html/identifiant=BOI-TPS-PEEC-10-20141218)) ;
   - taxe d'apprentissage : 0,68 % ([art. L6241-1](https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006072050/LEGISCTA000006178193/)), déjà dans le bulletin du salarié. La contribution supplémentaire à l'apprentissage (250 salariés et plus, [art. L6242-1](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000043701803)) n'est pas modélisée.
 - **Formation professionnelle conventionnelle** (art. 36 de la convention).
-  - L'[avenant n° 10 du 15 décembre 2020](https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000043477274) l'avait fixée, étendue, à 1,05 % de la masse salariale sous 11 salariés et à 0,60 % à partir de 11, du 1er janvier 2021 au 31 décembre 2024.
-  - L'[avenant n° 14 du 24 février 2025](https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000051668460), « en vigueur non étendu » depuis le 31 décembre 2024, réécrit l'article sans aucun taux.
-  - Pour 2025 et 2026, le taux de 2024 est repris comme valeur prudente, marquée « NON SOURCÉ » dans les règles (« À vérifier »).
+  - La version « en vigueur étendu » de l'[article 36](https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000043477274), modifiée par l'avenant n° 10 du 15 décembre 2020 (art. 5), la fixe à « 1,05 % de la masse salariale pour les entreprises de moins de 11 salariés ; 0,60 % de la masse salariale pour les entreprises à partir de 11 salariés » (consulté le 2026-10-14).
+  - L'[avenant n° 14 du 24 février 2025](https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000051668460) réécrit l'article sans aucun taux, mais n'est pas étendu : la version étendue reste celle de l'avenant n° 10.
+  - Les règles de 2024, 2025 et 2026 retiennent donc 1,05 % et 0,60 %, sourcés (complément du 14 octobre 2026 : la version précédente de cette ADR les disait « non sourcés » pour 2025 et 2026).
+  - L'accord du 24 février 2025 crée une autre contribution, « innovation sociale et transition professionnelle » (gérée par l'AISTP-OPPS), dont l'annexe de statuts est marquée « dénoncé » sur Légifrance : elle n'est pas modélisée (« Hors périmètre », « À vérifier »).
 - **Réduction générale des cotisations patronales.**
   - **Qui y a droit.** Elle s'applique aux salariés pour lesquels l'employeur est tenu à l'assurance chômage ([code de la sécurité sociale, art. L241-13, II, 1°](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000042912368) ; [code du travail, art. L5422-13](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006903835)). Le salarié porté en bénéficie (fiche F31620 : « Les salariés portés bénéficient de l'assurance chômage »). Aucun texte consulté n'exclut le portage.
   - **2026 : réduction dégressive unique** ([art. D241-7](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006185779/), décret n° 2026-509). C = Tmin + Tdelta × (½ × (3 × SMIC annuel / brut − 1))^1,75, avec :
@@ -58,6 +59,9 @@ Cette ADR fixe le modèle de calcul, la place du portage dans l'application, les
 - **Mutuelle (part du salarié).** La cotisation salariale à une complémentaire santé collective et obligatoire, sous contrat « responsable », est déductible du revenu imposable ([CGI, art. 83, 1° quater](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053545390)). La limite est de 5 % du plafond plus 2 % de la rémunération, sans dépasser 2 % de 8 plafonds, prévoyance comprise.
   Elle ne réduit pas l'assiette de la CSG : l'art. L136-1-1, III, 2° du code de la sécurité sociale n'exclut que la part salariale prise en charge par l'employeur.
   La part patronale de la mutuelle s'ajoute au salaire imposable et à l'assiette de la CSG. La part patronale de prévoyance est soumise à la CSG-CRDS et, à partir de 11 salariés, au forfait social de 8 % (art. L137-15 et L137-16).
+- **Prélèvements sur la prévoyance patronale des cadres** (code de la sécurité sociale, sur Légifrance, consulté le 2026-10-14 ; modélisés depuis le 14 octobre 2026, décision du propriétaire) :
+  - **CSG et CRDS, à la charge du salarié.** La CSG est due « sur toutes les sommes, ainsi que les avantages » versés à l'occasion du travail ([art. L136-1-1, I](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053282440), en vigueur depuis le 31 décembre 2025). Les contributions des employeurs à la protection sociale complémentaire, exclues de l'assiette des cotisations ([art. L242-1, II, 4°](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000038836902)), ne figurent pas parmi les exclusions de l'art. L136-1-1, III. La réduction de 1,75 % pour frais professionnels ne s'y applique pas : l'[art. L136-2, I, 1°](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006173055) la réserve aux revenus d'activité « à l'exception de ceux mentionnés au II de l'article L. 242-1 ». Le moteur prélève donc 9,70 % (6,80 déductibles, 2,40 non déductibles et 0,50 de CRDS) sur toute la contribution de 1,50 % ; la part non déductible rejoint le salaire imposable.
+  - **Forfait social, à la charge de l'employeur** : 8 % « pour les contributions des employeurs destinées au financement des prestations » complémentaires de prévoyance ([art. L137-16](https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006073189/LEGISCTA000019946240/), en vigueur depuis le 1er janvier 2022) ; « ne sont pas assujettis à cette contribution les employeurs de moins de onze salariés » (art. L137-15, en vigueur depuis le 1er septembre 2023). Il est pris sur l'enveloppe, comme les cotisations patronales, pour les effectifs « de 11 à 49 » et « 50 et plus ».
 - **Versement mobilité** : dû à partir de 11 salariés ([CGCT, art. L2333-64 et suivants](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000039802388)). Ses taux maximaux :
   - hors Île-de-France : de 0,55 % à 1,75 % selon la population et les transports (art. L2333-67) ;
   - Paris, Hauts-de-Seine, Seine-Saint-Denis et Val-de-Marne : 3,20 % au plus ([art. L2531-4](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000048837031)).
@@ -128,6 +132,7 @@ Il part du bulletin `"salarie"` (règles `regimeGeneral` de l'année) et en chan
 | Catégorie | non cadre | cadre |
 | APEC | non | 0,024 % salarié, 0,036 % employeur, jusqu'à 4 PASS |
 | Prévoyance des cadres | non | 1,50 % employeur sur la tranche 1 (minimum de l'ANI du 17/11/2017) |
+| Prélèvements sur cette prévoyance | non | CSG et CRDS du salarié, 9,70 % de la contribution, sans abattement ; forfait social de 8 % pour l'employeur à partir de 11 salariés |
 | FNAL | 0,10 % jusqu'au PASS (moins de 50 salariés) | selon l'effectif réglé : 0,50 % sur tout le brut à partir de 50 |
 | Formation professionnelle | 0,55 % (moins de 11) | selon l'effectif : 0,55 % ou 1 %, plus la contribution conventionnelle (1,05 % ou 0,60 %) |
 | Participation à l'effort de construction | non | 0,45 % à partir de 50 salariés |
@@ -145,30 +150,29 @@ Une personne seule, sans autre revenu, 60 000 € HT facturés en 2026, réparti
 | Chiffre d'affaires HT | | 60 000 € |
 | Frais de gestion | 7 % × 60 000 | − 4 200 € |
 | Enveloppe disponible | | 55 800 € |
-| Taux patronal (brut sous le PASS) | 13 + 8,55 + 2,11 + 5,25 + 0,64 + 0,30 + 0,50 (FNAL) + 4,72 + 1,29 + 4,00 + 0,25 + 0,016 + 1,00 + 0,60 (formation) + 0,68 + 0,036 (APEC) + 1,50 (prévoyance) + 0,45 (construction) | 44,892 % |
-| Masse salariale brute `M` | 55 800 / 1,44892 | 38 511 € |
-| dont salaire de base, apport d'affaires, précarité | `M` / 1,15 ; × 5 % ; × 10 % | 33 488 € ; 1 674 € ; 3 349 € |
-| Cotisations patronales | 38 511 × 44,892 % | 17 289 € |
-| Taux salarial | 6,90 + 0,40 + 3,15 + 0,86 + 0,024 (APEC) + 9,70 × 0,9825 (CSG-CRDS) | 20,864 % |
-| **Salaire net** | 38 511 × (1 − 20,864 %) | **30 476 €**, soit 50,8 % du chiffre d'affaires |
-| Net imposable | 30 476 + 38 511 × 0,9825 × 2,9 % | 31 574 € |
-| Déduction de 10 % | | − 3 157 € |
-| Revenu net imposable | | 28 416 € |
-| Impôt (1 part) | 11 % × (28 416 − 11 600) = 1 850, décote 897 − 45,25 % × 1 850 = 60 ; 1 789,82 arrondi à l'euro | 1 790 € |
-| **Net après impôt** | 30 476,32 − 1 790 | **28 686 €** |
+| Taux patronal (brut sous le PASS) | 13 + 8,55 + 2,11 + 5,25 + 0,64 + 0,30 + 0,50 (FNAL) + 4,72 + 1,29 + 4,00 + 0,25 + 0,016 + 1,00 + 0,60 (formation) + 0,68 + 0,036 (APEC) + 1,50 (prévoyance) + 0,12 (forfait social de 8 % sur la prévoyance) + 0,45 (construction) | 45,012 % |
+| Masse salariale brute `M` | 55 800 / 1,45012 | 38 480 € |
+| dont salaire de base, apport d'affaires, précarité | `M` / 1,15 ; × 5 % ; × 10 % | 33 461 € ; 1 673 € ; 3 346 € |
+| Cotisations patronales | 38 479,57 × 45,012 % | 17 320 € |
+| Taux salarial | 6,90 + 0,40 + 3,15 + 0,86 + 0,024 (APEC) + 9,70 × 0,9825 (CSG-CRDS) + 9,70 × 1,50 (CSG-CRDS sur la prévoyance) | 21,00975 % |
+| **Salaire net** | 38 479,57 × (1 − 21,00975 %) | **30 395 €**, soit 50,7 % du chiffre d'affaires |
+| Net imposable | 30 395,11 + 38 479,57 × (0,9825 + 0,015) × 2,9 % | 31 508 € |
+| Déduction de 10 % | | − 3 151 € |
+| Revenu net imposable | | 28 357 € |
+| Impôt (1 part) | 11 % × (28 357,41 − 11 600) = 1 843,31, décote 897 − 45,25 % × 1 843,31 = 62,90 ; 1 780,41 arrondi à l'euro | 1 780 € |
+| **Net après impôt** | 30 395,11 − 1 780 | **28 615 €** |
 
-La version proposée donnait 28 687 € : elle retranchait l'impôt non arrondi (1 789,82 €). Le moteur, qui arrondit l'impôt à l'euro comme l'administration, donne 28 686 € ; la ligne est corrigée.
+La version proposée donnait 28 687 € : elle retranchait l'impôt non arrondi (1 789,82 €) et ne comptait pas les prélèvements sur la prévoyance. Sans eux, le moteur, qui arrondit l'impôt à l'euro comme l'administration, donnait 28 686 € ; avec eux (complément du 14 octobre 2026), 28 615 €. L'écart de 71 € dépasse les 56 € qu'annonçait la version précédente : la CSG-CRDS sur la prévoyance retire bien 56 €, mais le forfait social (46 €), pris sur l'enveloppe, réduit aussi la masse salariale de 32 €, donc le net de 25 € ; l'impôt baisse de 10 €.
 
 Variantes, mêmes hypothèses :
 
-- **CDI, réserve conservée** (contrat par défaut) : 35 163 € bruts versés, 27 826 € nets dans l'année, et 2 650 € nets (3 349 € bruts) sur le compte d'activité, montrés comme conservés. Impôt 1 395 €, net après impôt 26 431 €.
-- **Réduction générale reversée** : la masse salariale `M` vérifie `M × (1,44892 − C(M)) = 55 800`. À 50 salariés et plus, Tdelta vaut 0,3821, d'où un coefficient de 0,0695 ; `M` = 40 452 €, réduction 2 811 €, net 32 012 € (+ 1 536 €), impôt 2 058 €, net après impôt 29 954 €. La version proposée calculait avec le Tdelta des moins de 50 salariés (0,3781) : `M` = 40 440 €, net 32 003 €. L'écart d'une dizaine d'euros était annoncé ; le moteur prend le bon paramètre. Non reversée, la réduction que garde la société vaut 0,0815 × 38 511 = 3 139 €. C'est l'écart le plus fort entre deux conditions plausibles : il justifie un réglage explicite.
+- **CDI, réserve conservée** (contrat par défaut) : 35 134 € bruts versés, 27 752 € nets dans l'année, et 2 643 € nets (3 346 € bruts) sur le compte d'activité, montrés comme conservés. Impôt 1 386 €, net après impôt 26 366 € (26 431 € sans les prélèvements sur la prévoyance).
+- **Réduction générale reversée** : la masse salariale `M` vérifie `M × (1,45012 − C(M)) = 55 800`. À 50 salariés et plus, Tdelta vaut 0,3821, d'où un coefficient de 0,0697 ; `M` = 40 422 €, réduction 2 817 €, net 31 930 € (+ 1 535 €), impôt 2 041 €, net après impôt 29 889 €. La version proposée calculait avec le Tdelta des moins de 50 salariés (0,3781) : l'écart d'une dizaine d'euros était annoncé ; le moteur prend le bon paramètre. Non reversée, la réduction que garde la société vaut 0,0817 × 38 480 = 3 144 €. C'est l'écart le plus fort entre deux conditions plausibles : il justifie un réglage explicite.
 
 Approximations de cet exemple, toutes dites dans l'interface ou ici :
 - cotisations annuelles au lieu de douze bulletins (identiques pour un salaire régulier, la régularisation progressive des plafonds le garantit à peu près) ;
 - taux d'accidents du travail de 0,64 % (celui des règles actuelles) ;
-- ni mutuelle, ni prévoyance au-delà du minimum des cadres ;
-- ni la CSG-CRDS ni le forfait social de 8 % sur la prévoyance patronale. Ils réduiraient le net d'environ 56 € et coûteraient environ 46 € de plus à l'enveloppe (art. L136-1-1, L137-15 et L137-16 du code de la sécurité sociale).
+- ni mutuelle, ni prévoyance au-delà du minimum des cadres.
 
 Ces montants sont figés par les cas de référence (`references/portage.reference.test.ts`), dérivés à la main ligne à ligne : le moteur les retrouve au centime.
 
@@ -187,9 +191,9 @@ Trois options ont été comparées :
 
 - **L'acteur** : `PortageSchema = { id, type: "portage", name, conditions?: ConditionsPortage, avatar, locked }`. Flux permis : `ca_services` (prestations facturées HT) et `deductible_expense` (frais professionnels remboursés). Pas de `profession` : la caisse d'un libéral ne s'applique pas à un salarié (l'ADR 015 ne concerne que les non-salariés). Pas de `dateDeCreation` non plus, prévue dans la version proposée : sans ACRE ni CFE, elle ne changerait aucun calcul.
 - **La relation** : la relation existante **« Titulaire »**, de la personne vers l'acteur, affichée « salarié porté » sur cette carte (et déjà par les outils pour les IA : « Lucie — Titulaire (salarié porté) — … »). Un seul titulaire ; le salaire calculé est celui de cette personne, et rejoint son foyer.
-- **Le comparateur** : `STATUTS_COMPARES` recevra `"portage"` avec la colonne. Chaque table typée par `StatutCompare` (titres, dirigeant, frais, protection sociale) fera échouer la compilation jusqu'à ce qu'elle ait sa ligne, comme le prévoit le guide du développeur (« Ajouter un statut »). La colonne s'appelle « Portage salarial » ; elle n'a pas de partage du bénéfice ni d'optimiseur. Tant qu'elle n'existe pas, une activité en portage n'est pas proposée au comparateur (`comparableActivities`, `activiteComparee`, `comparer_statuts` le disent).
-- **Frais de fonctionnement supposés** (ADR 009) : aucun pour le portage. La société de portage tient la comptabilité, facture et assure le plus souvent la responsabilité civile ; ses frais de gestion en tiennent lieu. `FRAIS_DES_COLONNES` passera donc à `Record<StatutCompare, StatutFrais | null>` : la colonne du portage reçoit un écart de frais égal à moins les frais supposés du statut actuel. **`STATUTS_FRAIS` ne change pas** : chacune de ses clés est obligatoire dans les fichiers enregistrés, et une clé `portage` les rendrait invalides pour les versions précédentes.
-- **Calcul à l'envers** (point 1 de la phase 18) : la colonne passera par `colonneDuStatut`, donc « Combien facturer pour un net visé ? » et `chiffre_affaires_pour_net_vise` la calculeront sans code de plus. La dichotomie sur la masse salariale (60 bulletins) s'ajoute à chaque essai du calcul à l'envers : à mesurer avec la colonne.
+- **Le comparateur** : `STATUTS_COMPARES` a reçu `"portage"` avec la colonne (fait le 14 octobre 2026, voir « Mise en œuvre de la colonne »). Chaque table typée par `StatutCompare` (titres, dirigeant, frais, protection sociale) a fait échouer la compilation jusqu'à ce qu'elle ait sa ligne, comme le prévoit le guide du développeur (« Ajouter un statut »). La colonne s'appelle « Portage salarial » ; elle n'a pas de partage du bénéfice ni d'optimiseur. Une activité déjà en portage n'est pas encore proposée au comparateur, qui ne sait pas la convertir dans les autres statuts (`comparableActivities`, `activiteComparee`, `comparer_statuts` le disent) : cela viendra avec la grille.
+- **Frais de fonctionnement supposés** (ADR 009) : aucun pour le portage. La société de portage tient la comptabilité, facture et assure le plus souvent la responsabilité civile ; ses frais de gestion en tiennent lieu. `FRAIS_DES_COLONNES` est donc passé à `Record<StatutCompare, StatutFrais | null>` : la colonne du portage reçoit un écart de frais égal à moins les frais supposés du statut actuel. **`STATUTS_FRAIS` ne change pas** : chacune de ses clés est obligatoire dans les fichiers enregistrés, et une clé `portage` les rendrait invalides pour les versions précédentes.
+- **Calcul à l'envers** (point 1 de la phase 18) : la colonne passe par `colonneDuStatut`, donc « Combien facturer pour un net visé ? » et `chiffre_affaires_pour_net_vise` la calculent sans code de plus. La dichotomie sur la masse salariale (60 bulletins) s'ajoute à chaque essai du calcul à l'envers : mesurée, elle ne coûte presque rien (voir « Mise en œuvre de la colonne »).
 
 ### 3. Réglages
 
@@ -221,16 +225,16 @@ Valeurs typiques réunies dans `conditionsPortageParDefaut()` (`options-du-compa
 **Où elles sont enregistrées :**
 
 - **Sur l'acteur** (`PortageSchema.conditions`) pour une activité en portage dans la grille (fait).
-- **Dans les réglages du comparateur** (ADR 009), pour l'activité comparée : `ReglagesComparateurSchema.portage?: ConditionsPortage` (avec la colonne). Comme les frais de fonctionnement, ce sont des choix de structure, valables pour toutes les années, et seuls les champs changés sont enregistrés. Quand l'activité comparée est elle-même en portage, sa colonne prend les conditions de l'acteur, et le comparateur n'affiche pas les siennes.
+- **Dans les réglages du comparateur** (ADR 009), pour l'activité comparée : `ReglagesComparateurSchema.portage?: ConditionsPortage` (fait avec la colonne). Comme les frais de fonctionnement, ce sont des choix de structure, valables pour toutes les années, et seuls les champs changés sont enregistrés. Quand l'activité comparée est elle-même en portage, sa colonne prend les conditions de l'acteur, et le comparateur n'affiche pas les siennes.
 - Comme pour l'ADR 009, ils sont hors de l'historique d'annulation dans le comparateur ; sur l'acteur, ils en font partie, comme toute modification d'un acteur.
 
 **Format de fichier.** La règle de l'ADR 005 (section « Versionnage du format ») s'applique : **le numéro de format reste 3, sans migration**.
 - `conditions` (et plus tard `portage` dans les réglages du comparateur) sont des champs facultatifs dont l'absence a un sens : les valeurs typiques.
 - `"portage"` est une nouvelle variante de l'union des acteurs. Une version précédente l'écarte en le signalant dans son rapport, avec ses flux et sa relation, ce que l'ADR 005 accepte pour une nouvelle valeur d'énumération.
 - Une condition hors bornes est écartée seule (`.catch(undefined)`), comme la part conventionnée de l'ADR 015 ; un plancher supérieur au plafond fait écarter les deux. Dans le fichier, une clé inconnue de `conditions` est ignorée et non refusée, pour qu'une condition ajoutée plus tard ne fasse pas perdre l'acteur à une version précédente. Le paramètre de l'outil pour les IA, lui, est strict (section 4).
-- La session « maximale » (`session-maximale.ts`) contient un acteur en portage avec toutes ses conditions, sa relation et ses flux, pour le test « rien ne se perd ». Les réglages du comparateur avec `portage` y entreront avec la colonne.
+- La session « maximale » (`session-maximale.ts`) contient un acteur en portage avec toutes ses conditions, sa relation et ses flux, pour le test « rien ne se perd ». Les réglages du comparateur avec `portage` y sont entrés avec la colonne (trois activités, pour prendre chaque contrat, chaque effectif et les deux réponses de la réduction générale).
 
-**Exports.** Le rapport Markdown décrira l'acteur, ses conditions et le détail de l'étape 1 à 8 (enveloppe, masse salariale, partage, net, conservé) ; le CSV et le PDF du comparateur auront une colonne de plus ; l'export de la grille liste l'acteur comme les autres. Les conditions annoncées typiques y seront marquées comme telles. Dans cette première étape, l'export Markdown nomme seulement la nature de l'acteur.
+**Exports.** Le rapport Markdown décrira l'acteur, ses conditions et le détail de l'étape 1 à 8 (enveloppe, masse salariale, partage, net, conservé) ; le CSV et le PDF du comparateur auront une colonne de plus ; l'export de la grille liste l'acteur comme les autres. Les conditions annoncées typiques y seront marquées comme telles. Fait avec la colonne : le CSV et le rapport Markdown du comparateur ont la colonne du portage, ses conditions retenues en une phrase (valeurs typiques signalées) et, le cas échéant, la raison pour laquelle elle n'est pas retenue ; le PDF, imprimé depuis la page, a la colonne. L'export Markdown nomme encore seulement la nature d'un acteur en portage.
 
 ### 4. Avec une IA
 
@@ -259,7 +263,7 @@ La personne colle les conditions de sa société de portage (page de tarifs, con
 
 | Point | Raison |
 | --- | --- |
-| Part patronale de la mutuelle, forfait social et CSG sur la prévoyance patronale | Garanties et prix propres à chaque contrat ; quelques dizaines à quelques centaines d'euros par an. La part salariale de la mutuelle est un réglage (décision 5) |
+| Part patronale de la mutuelle | Garanties et prix propres à chaque contrat ; quelques dizaines à quelques centaines d'euros par an. La part salariale de la mutuelle est un réglage (décision 5) |
 | Prévoyance au-delà du minimum des cadres | Idem ; le minimum de 1,50 % est modélisé |
 | Limite de déduction de l'art. 83, 1° quater du CGI | Une mutuelle ordinaire et la prévoyance minimale restent en dessous |
 | Indemnités kilométriques et frais de déplacement détaillés | Les frais professionnels sont un montant saisi ; le barème kilométrique existant (`frais-kilometriques.ts`) sert aux frais réels de la personne, pas aux remboursements de la société |
@@ -271,6 +275,7 @@ La personne colle les conditions de sa société de portage (page de tarifs, con
 | Avance de salaire, affacturage, délais de paiement du client | Trésorerie, pas revenu de l'année |
 | Plusieurs sociétés de portage pour une même personne | Une personne, un titulaire de chaque acteur ; deux acteurs en portage pour une même personne additionnent deux bulletins (les plafonds ne sont pas partagés), avec un avertissement |
 | Contribution supplémentaire à l'apprentissage (250 salariés et plus) | Dépend de la part d'alternants de la société |
+| Contribution « innovation sociale et transition professionnelle » (accord de branche du 24 février 2025, AISTP-OPPS) | Statuts marqués « dénoncé » sur Légifrance (« À vérifier ») |
 | Régime d'Alsace-Moselle, outre-mer | Comme pour les autres salariés du moteur |
 
 ### Alternatives écartées
@@ -286,6 +291,19 @@ La personne colle les conditions de sa société de portage (page de tarifs, con
 - **Un nouveau numéro de format** : rien à convertir ; un format 4 serait refusé par les versions précédentes (ADR 009).
 - **Payer exactement l'enveloppe en résolvant `coutEmployeur(M) = E`** : impossible dans un saut du coût employeur ; le reliquat sur le compte d'activité garde l'identité du bilan au centime.
 
+### Mise en œuvre de la colonne (14 octobre 2026)
+
+Cahier des charges validé par le propriétaire le 14 octobre 2026 ; cible : version 0.13.0.
+
+- **Conversion** (`convertirLActivite`, `conversion-de-statut.ts`) : l'activité comparée devient un acteur `"portage"` qui ne garde que son identité et les conditions réglées dans le comparateur (`ComparaisonOptions.portage`). Prestations (et BNC ou BIC d'une micro-entreprise) : chiffre d'affaires facturé ; charges : frais professionnels remboursés ; vente : gardée telle quelle, puis écartée par le calcul du portage, qui le dit. Le dirigeant devient le titulaire (salarié porté) ; les associés n'en reçoivent plus rien, comme en entreprise individuelle. Les déplacements professionnels de l'activité sont remboursés au barème kilométrique (frais professionnels pris sur l'enveloppe). La date de création, l'ACRE et la profession ne suivent pas : le salarié porté relève du régime général, et une note le rappelle pour une profession réglementée, avec la clientèle d'entreprises que suppose le portage (code du travail, art. L1254-1).
+- **Colonne non retenue** (`ScenarioStatut.portageNonRetenu`) : jamais désignée meilleur net, grisée, la cellule de l'écart dit pourquoi : `"sansPrestations"` (rien à facturer, l'activité ne fait que de la vente) ou `"salaries"` (un salarié porté n'emploie personne ; le coût des salariés de l'activité n'est pas compté). Le calcul à l'envers dit `"portageSansPrestations"` au lieu de chercher.
+- **Notes de la colonne** : les conditions prises à leur valeur typique (« Conditions typiques d'une société de portage (frais de gestion de 7 %, CDI) : à remplacer par celles de la vôtre. », ou la liste de celles qui le restent), et les avertissements du moteur (vente écartée, minimum conventionnel). Les conditions sont aussi rappelées en une phrase dans les exports.
+- **Protection sociale** : salarié cadre du régime général, assurance chômage comprise : 5 étoiles avec 4 trimestres (sur le brut versé), 4 sinon, 1 sans salaire. La note de protection le dit : la cinquième étoile n'était jusque-là jamais atteinte.
+- **Réglages** : la section repliée « Conditions de la société de portage » des réglages du comparateur (`ConditionsDuPortage.tsx`), avec les bornes du fichier, la mention « valeur typique » sous chaque condition non réglée et « Revenir aux valeurs typiques ». Un plancher au-dessus du plafond fait écarter les deux, dans le calcul (`conditionsPortageRetenues`) comme à la lecture du fichier. Les conditions passent la vérification des entrées IPC (`entrees-ipc.ts`) avec les mêmes bornes.
+- **Outils pour les IA** : `comparer_statuts` et `chiffre_affaires_pour_net_vise` rendent la colonne sans paramètre nouveau (la description de `comparer_statuts` nomme le portage) ; un acteur déjà en portage y reste refusé, et non créable par une proposition. `optimiser_remuneration` ne concerne que les sociétés à l'IS : son paramètre `statut` refuse `"portage"`.
+- **Calcul à l'envers** : mesuré sur l'exemple de la démo (atelier de Camille, toutes les colonnes) : 404 ms pour 60 000 € nets visés et 811 ms pour 90 000 € avant la colonne, 402 et 787 ms après (bruit de mesure). Un essai de la colonne du portage coûte 0,3 ms, contre 33 ms pour la SASU au meilleur net (optimiseur) : aucune optimisation n'a été nécessaire.
+- **Micro-entreprise BNC à 60 000 €** (Camille seule, 2026, réglages par défaut du comparateur) : net après impôt 39 536 € en micro-entreprise, 43 200 € avec le versement libératoire (meilleur net), 34 497 € en EI au réel, 36 973 € en SASU et 35 348 € en EURL (au meilleur net avec 4 trimestres), 26 726 € en portage salarial (2 683 € de réserve conservée en plus ; aucun frais de fonctionnement supposé, soit 850 € de moins que la micro-entreprise).
+
 ## Conséquences
 
 - **Positives :**
@@ -298,7 +316,6 @@ La personne colle les conditions de sa société de portage (page de tarifs, con
   - Le net dépend fortement de conditions mal connues (réduction générale, effectif, versement mobilité : plus de 2 000 € d'écart sur l'exemple) ; les valeurs typiques sont prudentes et l'interface invite à saisir celles de sa société.
   - La mutuelle (part patronale) et la prévoyance réelles manquent : le net est légèrement surestimé (quelques dizaines à quelques centaines d'euros par an).
   - La réserve d'un CDI n'est pas reportée d'une année sur l'autre dans une session de plusieurs années.
-  - Le taux conventionnel de formation de 2025 et 2026 est une valeur prudente, non sourcée.
 
 ### Effort estimé
 
@@ -306,8 +323,8 @@ La personne colle les conditions de sa société de portage (page de tarifs, con
 | --- | --- | --- |
 | Règles | Bloc `portageSalarial` (2024 à 2026) avec sources, types dans `regles.ts`, tests des règles | 1 jour (fait) |
 | Moteur | Bulletin `"porte"`, frais de gestion mensuels, dichotomie sur le coût employeur, partage et réserve, foyer, avertissements | 2 à 3 jours (fait) |
-| Format et nettoyage | `PortageSchema`, `ConditionsPortageSchema`, session maximale (fait) ; `ReglagesComparateurSchema.portage`, nettoyage des réglages | 1 jour |
-| Comparateur | `"portage"` dans `STATUTS_COMPARES`, conversion, colonne, protection sociale, écart de frais, réglages à l'écran | 2 jours |
+| Format et nettoyage | `PortageSchema`, `ConditionsPortageSchema`, session maximale ; `ReglagesComparateurSchema.portage`, nettoyage des réglages | 1 jour (fait) |
+| Comparateur | `"portage"` dans `STATUTS_COMPARES`, conversion, colonne, protection sociale, écart de frais, réglages à l'écran | 2 jours (fait) |
 | Grille | Carte et fiche de l'acteur, relation affichée « salarié porté », flux permis, glisser-déposer | 2 jours |
 | Exports | Markdown, CSV, PDF | 1 jour |
 | IA | Lecture (fait) ; `proposer_conditions_portage`, opération `regler_portage`, avertissements, catalogue (addendum ADR 010) | 1 à 2 jours |
@@ -320,18 +337,18 @@ Soit environ deux semaines, en petites branches (règles et moteur ; comparateur
 1. L'exemple ci-dessus (60 000 €, 7 %, CDD, 50 salariés et plus, sans réduction générale) : enveloppe, masse salariale, net, impôt, à l'euro. **Fait.**
 2. Le même en CDI : bruts versés, réserve conservée. **Fait.**
 3. Le même avec la réduction générale reversée. **Fait.**
-4. Un chiffre d'affaires de 150 000 € : masse salariale au-delà du PASS (tranche 2, contribution d'équilibre technique, sans réduction générale). **Fait** (M = 96 638 €, net 76 918 €, net après impôt 62 303 €).
+4. Un chiffre d'affaires de 150 000 € : masse salariale au-delà du PASS (tranche 2, contribution d'équilibre technique, sans réduction générale). **Fait** (M = 96 598 €, net 76 816 €, net après impôt 62 223 €).
 5. Un plancher mensuel qui joue (petit chiffre d'affaires sur trois mois, avec l'avertissement du minimum conventionnel) et un plafond qui joue (gros chiffre d'affaires, frais fixes en plus). **Fait.**
 6. Des frais professionnels : l'enveloppe baisse exactement de leur montant (les frais de gestion portent sur le chiffre d'affaires), et ils n'entrent ni dans le brut ni dans l'imposable. **Fait.** (La version proposée parlait de « même enveloppe qu'un chiffre d'affaires diminué d'autant » : c'est faux, ce chiffre d'affaires diminué aurait aussi des frais de gestion plus bas.)
 7. Une mutuelle de 60 € par mois : retirée du net et de l'imposable. **Fait.**
-8. La colonne du comparateur pour une micro-entreprise BNC à 60 000 € : même résultat que l'acteur en portage saisi directement. **Avec la colonne.**
+8. La colonne du comparateur pour une micro-entreprise BNC à 60 000 € : même résultat que l'acteur en portage saisi directement. **Fait** : conditions typiques (net après impôt 26 366 €, celui du cas 2), conditions réglées (CDD, 8 %, réduction générale reversée), et avec les frais de fonctionnement supposés, que la colonne ne garde pas (850 € de la micro-entreprise, en frais professionnels négatifs).
 
 Le recoupement avec un simulateur public de portage et avec le simulateur de l'Urssaf pour un cadre (mon-entreprise.urssaf.fr) reste à faire (« À vérifier ») : urssaf.fr n'a pas répondu le 14 octobre 2026.
 
 ## À vérifier
 
 1. **Base des minima par niveau** : l'art. 21.3 en vigueur ne précise « base 2017 » que pour le plancher de 69 %. Pour les niveaux (63, 70, 75, 85 %), il ne dit pas si le plafond est celui de 2017 ou celui de l'année. Les règles retiennent 2017 pour le montant du niveau expert, qui ne sert qu'au texte de l'avertissement.
-2. **Formation conventionnelle de 2025 et 2026** : l'avenant n° 14 (non étendu) retire le taux de l'art. 36. Un accord du même jour créerait une autre contribution, dénoncée en juillet 2025 selon une source non officielle. Valeur prudente retenue : celle de 2024 (1,05 % ou 0,60 %), « NON SOURCÉ ».
+2. **Contribution « innovation sociale et transition professionnelle »** (accord du 24 février 2025, AISTP-OPPS) : son annexe de statuts est marquée « dénoncé » sur Légifrance ; vérifier qu'elle n'est plus due avant de la modéliser. Le taux de la formation conventionnelle (art. 36, version étendue de l'avenant n° 10 : 1,05 % ou 0,60 %) est, lui, sourcé.
 3. **BOSS et urssaf.fr** (injoignables le 14 octobre 2026) : confirmer sur le Bulletin officiel de la sécurité sociale les assiettes de la réduction générale, du FNAL, de la participation à l'effort de construction et de la prévoyance patronale (CSG sans abattement de 1,75 %, forfait social). Faire le recoupement avec le simulateur de l'Urssaf pour un cadre.
 4. **Date d'effet de la nouvelle grille des minima** : le 17 ou le 18 juillet 2024 selon la lecture de l'avenant n° 12 (art. 6.1) et de son arrêté d'extension. Sans effet sur les règles, qui gardent la valeur du 1er janvier.
 5. **CGI, art. 81, 1°** : la version consultée date de 2019 ; le texte est stable, mais sa version de 2026 n'a pas été affichée.

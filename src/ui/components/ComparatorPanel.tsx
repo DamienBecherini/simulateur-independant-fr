@@ -273,7 +273,7 @@ function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-slate-600 dark:text-slate-400">Note indicative : la cinquième étoile correspond au salarié classique, seul à cotiser à l'assurance chômage.</p>
+      <p className="mt-2 text-slate-600 dark:text-slate-400">Note indicative : la cinquième étoile correspond au salarié, seul à cotiser à l'assurance chômage, comme en portage salarial avec 4 trimestres.</p>
     </Depliable>
   )
 }
@@ -478,8 +478,8 @@ function ReglagesEtPartage({ vue, activities, selected, options, result, arbitra
 }
 
 /**
- * Comparateur de statuts : l'activité choisie est simulée en SASU, EURL, EI au réel et micro-entreprise
- * (avec et sans versement libératoire), le reste de la simulation restant identique. Les couples en union
+ * Comparateur de statuts : l'activité choisie est simulée en SASU, EURL, EI au réel, micro-entreprise
+ * (avec et sans versement libératoire) et portage salarial, le reste de la simulation restant identique. Les couples en union
  * libre sont aussi comparés avec une imposition commune.
  */
 export function ComparatorPanel({ session, annee, onComparateurChange, onComparaison }: ComparatorPanelProps) {
@@ -506,7 +506,7 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
           Comparateur de statuts
         </h2>
         <ReplieEnResume titre={`Année ${vue.annee} : ce que compare le tableau`} id="comparateur-explication" className="text-sm text-slate-600 dark:text-slate-400">
-          <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée. Les charges d'une micro-entreprise y deviennent déductibles dans les statuts au réel (société, EI). La colonne « actuel » est votre situation telle que saisie, au même net que les résultats ; les autres statuts y ajoutent seulement l'écart de frais de gestion estimé avec le vôtre.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée. Les charges d'une micro-entreprise y deviennent déductibles dans les statuts au réel (société, EI), et des frais remboursés en portage salarial, où la société de portage facture les prestations et verse un salaire après ses frais de gestion. La colonne « actuel » est votre situation telle que saisie, au même net que les résultats ; les autres statuts y ajoutent seulement l'écart de frais de gestion estimé avec le vôtre.</p>
         </ReplieEnResume>
       </div>
       <VerdictDuComparateur result={result} activite={selected?.name} />

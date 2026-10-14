@@ -154,7 +154,16 @@ function horsDePorteeDEmblee(colonne: ColonneEtudiee, statut: StatutCompare): Ra
   if (estMicro(statut) && colonne.contexte.regimeMicro?.sorties[colonne.source.id]) return "regimeMicroFerme"
   // La grille fixe la rémunération et les dividendes : le chiffre d'affaires ne change que ce que la société garde.
   if (estSocieteIS(statut) && colonne.options.repartition.mode === "grille") return "partageSelonLaGrille"
+  // Le portage salarial ne facture que des prestations : une activité qui ne vend que des marchandises n'y gagne rien.
+  if (statut === "portage" && chiffreDAffaires(colonne.donnees, colonne.source.id) > 0 && !aDesPrestations(colonne)) return "portageSansPrestations"
   return null
+}
+
+const TYPES_DE_PRESTATIONS: ReadonlySet<FinancialFlow["type"]> = new Set<FinancialFlow["type"]>(["ca_services", "ca_micro_services_bic", "ca_micro_services_bnc"])
+
+/** L'activité a-t-elle des prestations de services dans la grille de l'année ? */
+function aDesPrestations({ donnees, source }: ColonneEtudiee): boolean {
+  return donnees.monthlyData.some(mois => mois.flows.some(f => f.entityId === source.id && TYPES_DE_PRESTATIONS.has(f.type) && f.amount > 0))
 }
 
 /** Le chiffre d'affaires d'une colonne qui donne le net visé, ou pourquoi il est hors de portée. */

@@ -102,7 +102,7 @@ describe("chiffreDAffairesPourUnNet", { timeout: 30_000 }, () => {
     const resultat = chiffreDAffairesPourUnNet(d, opts, 25000, reglesDeTest)
 
     it("donne une colonne par statut du comparateur, avec son titre", () => {
-      expect(resultat.colonnes.map(c => c.statut)).toEqual(["SASU", "EURL", "EI", "micro", "micro-vfl"])
+      expect(resultat.colonnes.map(c => c.statut)).toEqual(["SASU", "EURL", "EI", "micro", "micro-vfl", "portage"])
       expect(colonne(resultat, "micro-vfl").libelle).toBe("Micro + versement libératoire")
       expect(colonne(resultat, "micro").telleQueSaisie).toBe(true)
       expect(resultat.chiffreDAffairesSaisi).toBe(40000)
@@ -141,7 +141,7 @@ describe("chiffreDAffairesPourUnNet", { timeout: 30_000 }, () => {
   it("rend 0 € quand le foyer atteint déjà le net visé sans chiffre d'affaires", () => {
     const d = donnees([personne("alice"), micro("m1")], [relation("alice", "m1", "Titulaire")], [["alice", "salary", 40000], ["m1", "ca_micro_services_bnc", 10000]])
     const resultat = chiffreDAffairesPourUnNet(d, options("m1"), 20000, reglesDeTest)
-    expect(resultat.colonnes.map(c => c.chiffreDAffaires)).toEqual([0, 0, 0, 0, 0])
+    expect(resultat.colonnes.map(c => c.chiffreDAffaires)).toEqual([0, 0, 0, 0, 0, 0])
     expect(resultat.colonnes.every(c => c.netApresImpots !== null && c.netApresImpots >= 20000)).toBe(true)
   })
 
