@@ -295,6 +295,15 @@ describe("csvComparaison", () => {
     ])
   })
 
+  it("signale une colonne du portage salarial non retenue, et pourquoi", () => {
+    const result = comparaisonExemple()
+    const [sasu] = result.scenarios
+    result.scenarios = [...result.scenarios, { ...sasu, statut: "portage", libelle: "Portage salarial", actuel: false, telleQueSaisie: false, portageNonRetenu: "sansPrestations" }]
+    const csv = lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))
+    expect(csv[0]).toBe("Indicateur;SASU;Micro-entreprise;Portage salarial")
+    expect(csv).toContain("Portage salarial non retenu;;;non retenue : aucune prestation à facturer")
+  })
+
   it("signale les colonnes micro plus accessibles après la sortie du régime, et la CFE de l'année de création", () => {
     const result = comparaisonExemple()
     result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? { ...s, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] } } : s))
