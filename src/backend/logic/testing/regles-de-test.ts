@@ -104,6 +104,24 @@ export const reglesDeTest: ReglesFiscales = {
     // Réduction générale linéaire (puissance 1) : 40 % du brut au SMIC de 20 000 €, 2 % juste sous 3 SMIC (60 000 €).
     reductionGenerale: { smicAnnuel: 20000, tMin: 0.02, tDelta: 0.38, puissance: 1, plafondEnSmic: 3 }
   },
+  // Portage salarial : apport d'affaires 5 % et réserve 10 % du salaire de base. Le salarié porté ajoute au bulletin du
+  // salarié l'APEC (0,1 % salarié, 0,2 % employeur jusqu'à 4 plafonds) et la prévoyance des cadres (1 % employeur
+  // jusqu'au plafond). À 50 salariés et plus, s'y ajoutent FNAL 0,5 %, formation 1 % et 0,5 % conventionnelle, effort de
+  // construction 0,5 % : patronales sous le plafond de 39 + 0,2 + 1 + 0,5 + 1 + 0,5 + 0,5 = 42,7 %, salariales de 19,1 %.
+  portageSalarial: {
+    indemniteApportDAffaires: { taux: 0.05 },
+    reserveFinanciere: { taux: 0.1 },
+    minimumConventionnel: { mensuel: 2000, expert: 2500 },
+    cotisationsDuCadre: {
+      apec: { salariale: [{ jusquA: 4, taux: 0.001 }], patronale: [{ jusquA: 4, taux: 0.002 }] },
+      prevoyanceCadres: { salariale: [], patronale: [{ jusquA: 1, taux: 0.01 }] }
+    },
+    selonLEffectif: {
+      moinsDe11: { fnal: { salariale: [], patronale: [] }, formationProfessionnelle: { salariale: [], patronale: [] }, formationConventionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.01 }] }, effortConstruction: { salariale: [], patronale: [] }, tDeltaReductionGenerale: 0.38, versementMobiliteDu: false },
+      de11a49: { fnal: { salariale: [], patronale: [] }, formationProfessionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.01 }] }, formationConventionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, effortConstruction: { salariale: [], patronale: [] }, tDeltaReductionGenerale: 0.38, versementMobiliteDu: true },
+      "50EtPlus": { fnal: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, formationProfessionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.01 }] }, formationConventionnelle: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, effortConstruction: { salariale: [], patronale: [{ jusquA: null, taux: 0.005 }] }, tDeltaReductionGenerale: 0.385, versementMobiliteDu: true }
+    }
+  },
   TNS: {
     // Plafond de 40 000 € : abattement de 25 % borné entre 800 € et 40 000 €.
     plafondSecuriteSociale: 40000,

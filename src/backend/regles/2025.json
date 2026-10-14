@@ -1,6 +1,6 @@
 {
   "annee": 2025,
-  "derniereMiseAJour": "2026-10-08",
+  "derniereMiseAJour": "2026-10-14",
   "IR": {
     "description": "Barème de l'impôt sur le revenu qui impose les revenus de 2025 : loi de finances pour 2026 (loi n° 2026-103 du 19 février 2026, article 4), limites des tranches indexées de 0,9 %. La dernière tranche n'a pas de plafond (null).",
     "source": "https://bofip.impots.gouv.fr/bofip/14954-PGP.html/ACTU-2026-00022",
@@ -217,6 +217,132 @@
       "tDelta": 0.3194,
       "puissance": 1,
       "plafondEnSmic": 1.6
+    }
+  },
+  "portageSalarial": {
+    "description": "Portage salarial en 2025 (voir l'ADR 016) : ce que la loi et la convention de branche des salariés en portage salarial du 22 mars 2017 (IDCC 3219, étendue) fixent pour toutes les sociétés de portage. Le salarié porté est un cadre du régime général : son bulletin est celui d'un salarié (bloc regimeGeneral), avec les lignes et le paramètre de la réduction générale de l'effectif de la société, l'APEC, la prévoyance des cadres, la contribution conventionnelle à la formation et, à partir de 11 salariés, le versement mobilité de la commune (taux réglé sur l'activité, 0 par défaut). La réduction générale s'applique à tout salarié dont l'employeur cotise à l'assurance chômage (code de la sécurité sociale, art. L241-13, II ; code du travail, art. L5422-13) ; aucun texte n'en exclut le portage ; la société la reverse ou non, c'est une condition de l'activité. Ne sont pas modélisés : la CSG-CRDS et le forfait social (8 % à partir de 11 salariés, art. L137-15 et L137-16) sur la prévoyance patronale, la part patronale de la mutuelle, le régime d'Alsace-Moselle.",
+    "source": "https://www.legifrance.gouv.fr/conv_coll/id/KALITEXT000035184768",
+    "indemniteApportDAffaires": {
+      "description": "Indemnité d'apport d'affaires : 5 % de la rémunération brute mensuelle (article 21.2 de la convention de branche ; code du travail, art. L1254-25 pour son information mensuelle), en part du salaire de base.",
+      "source": "https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000050004613",
+      "taux": 0.05
+    },
+    "reserveFinanciere": {
+      "description": "Réserve financière : en CDI, 10 % du salaire de base de la dernière mission, gardés sur le compte d'activité pour les périodes sans mission (article 21.3, utilisation à l'article 22.2) ; en CDD, indemnité de précarité de 10 % versée en fin de contrat.",
+      "source": "https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000050004613",
+      "taux": 0.1
+    },
+    "minimumConventionnel": {
+      "description": "Revenu mensuel minimal d'un temps plein en portage salarial en 2025 : article 21.3 de la convention de branche (IDCC 3219) modifié par l'avenant n° 12 du 20 décembre 2022, étendu par l'arrêté du 10 juillet 2024 (JO du 17 juillet 2024 ; recours rejeté par le Conseil d'État le 19 mai 2026, n° 497965). Plancher : 69 % du plafond de la sécurité sociale « base 2017 » (3 269 € par mois), soit 2 255,61 € ; salaire minimum de chaque niveau de l'article 37 : premier niveau 63 % (2 059,47 €, 24 mois au plus), junior 70 % (2 288,30 €), senior 75 % (2 451,75 €), expert 85 % (2 778,65 €). Le texte ne précise l'année du plafond que pour le plancher : les montants des niveaux sont calculés ici sur le plafond de 2017 (à vérifier). La fiche F31620 de service-public.fr cite encore l'ancien barème (77 %). Le minimum se compte au jour, à la demi-journée ou à l'heure : le simulateur ne s'en sert que pour avertir.",
+      "source": "https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000050004613",
+      "mensuel": 2255.61,
+      "expert": 2778.65
+    },
+    "cotisationsDuCadre": {
+      "apec": {
+        "description": "Cotisation APEC des cadres : 0,06 %, dont 0,036 % à la charge de l'employeur et 0,024 % à la charge du salarié, sur le salaire brut dans la limite de 4 plafonds de la sécurité sociale (circulaire ou guide Agirc-Arrco de 2025).",
+        "source": "https://www.agirc-arrco.fr/storage/2025/03/Aide-a-la-codification_AA_CT2025_v1.2-3.pdf",
+        "salariale": [{ "jusquA": 4, "taux": 0.00024 }],
+        "patronale": [{ "jusquA": 4, "taux": 0.00036 }]
+      },
+      "prevoyanceCadres": {
+        "description": "Prévoyance des cadres : 1,50 % de la rémunération inférieure au plafond de la sécurité sociale, à la charge exclusive de l'employeur, affectée par priorité au décès (article 1er de l'accord national interprofessionnel du 17 novembre 2017 relatif à la prévoyance des cadres, étendu par arrêté du 27 juillet 2018, qui reprend l'obligation de la convention collective nationale du 14 mars 1947 ; il ne modifie pas ses articles 4 et 4 bis, qui définissent les cadres). Minimum légal : un contrat plus large coûte plus.",
+        "source": "https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000036732016",
+        "salariale": [],
+        "patronale": [{ "jusquA": 1, "taux": 0.015 }]
+      }
+    },
+    "selonLEffectif": {
+      "moinsDe11": {
+        "description": "Société de portage de moins de 11 salariés : FNAL de 0,10 % dans la limite du plafond, contribution légale à la formation professionnelle de 0,55 %, ni participation à l'effort de construction ni versement mobilité. Réduction Fillon de 2025 : T = 0,3194 sous 50 salariés, 0,3234 à partir de 50, du 1er janvier au 30 avril ; 0,3193 et 0,3233 à partir du 1er mai (décret 2025-318 du 4 avril 2025, art. 1 et 5). Le fichier garde la valeur du 1er janvier (ADR 007).",
+        "source": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000051430146",
+        "fnal": {
+          "description": "Fonds national d'aide au logement (contribution de l'article L813-4 du code de la construction et de l'habitation) : 0,10 % dans la limite du plafond sous 50 salariés, 0,50 % sur la totalité des rémunérations à partir de 50 (article L813-5).",
+          "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000038839912",
+          "salariale": [],
+          "patronale": [{ "jusquA": 1, "taux": 0.001 }]
+        },
+        "formationProfessionnelle": {
+          "description": "Contribution légale à la formation professionnelle : 0,55 % sous 11 salariés (code du travail, art. L6331-1), 1 % à partir de 11 (art. L6331-3).",
+          "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044981927",
+          "salariale": [],
+          "patronale": [{ "jusquA": null, "taux": 0.0055 }]
+        },
+        "formationConventionnelle": {
+          "description": "Contribution conventionnelle à la formation professionnelle, valeur prudente NON SOURCÉE pour 2025 : le taux de 2024 (1,05 % sous 11 salariés, 0,60 % à partir de 11) est repris. L'article 36 de la convention de branche, réécrit par l'avenant n° 14 du 24 février 2025 (en vigueur depuis le 31 décembre 2024, non étendu), ne fixe plus de taux ; une contribution créée par un autre accord du même jour, et sa dénonciation annoncée en juillet 2025, n'ont pas été vérifiées sur une source officielle (ADR 016, « À vérifier »). Reprendre ce taux sous-estime le net plutôt que de le surestimer.",
+          "source": "https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000051668460",
+          "salariale": [],
+          "patronale": [{ "jusquA": null, "taux": 0.0105 }]
+        },
+        "effortConstruction": {
+          "description": "Participation à l'effort de construction : pas due sous 50 salariés (code de la construction et de l'habitation, art. L313-1).",
+          "source": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006176366",
+          "salariale": [],
+          "patronale": []
+        },
+        "tDeltaReductionGenerale": 0.3194,
+        "versementMobiliteDu": false
+      },
+      "de11a49": {
+        "description": "Société de portage de 11 à 49 salariés : FNAL de 0,10 % dans la limite du plafond, contribution légale à la formation professionnelle de 1 %, versement mobilité dû selon la commune, pas de participation à l'effort de construction. Réduction Fillon de 2025 : T = 0,3194 sous 50 salariés, 0,3234 à partir de 50, du 1er janvier au 30 avril ; 0,3193 et 0,3233 à partir du 1er mai (décret 2025-318 du 4 avril 2025, art. 1 et 5). Le fichier garde la valeur du 1er janvier (ADR 007).",
+        "source": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000051430146",
+        "fnal": {
+          "description": "Fonds national d'aide au logement (contribution de l'article L813-4 du code de la construction et de l'habitation) : 0,10 % dans la limite du plafond sous 50 salariés, 0,50 % sur la totalité des rémunérations à partir de 50 (article L813-5).",
+          "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000038839912",
+          "salariale": [],
+          "patronale": [{ "jusquA": 1, "taux": 0.001 }]
+        },
+        "formationProfessionnelle": {
+          "description": "Contribution légale à la formation professionnelle : 0,55 % sous 11 salariés (code du travail, art. L6331-1), 1 % à partir de 11 (art. L6331-3).",
+          "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044981918",
+          "salariale": [],
+          "patronale": [{ "jusquA": null, "taux": 0.01 }]
+        },
+        "formationConventionnelle": {
+          "description": "Contribution conventionnelle à la formation professionnelle, valeur prudente NON SOURCÉE pour 2025 : le taux de 2024 (1,05 % sous 11 salariés, 0,60 % à partir de 11) est repris. L'article 36 de la convention de branche, réécrit par l'avenant n° 14 du 24 février 2025 (en vigueur depuis le 31 décembre 2024, non étendu), ne fixe plus de taux ; une contribution créée par un autre accord du même jour, et sa dénonciation annoncée en juillet 2025, n'ont pas été vérifiées sur une source officielle (ADR 016, « À vérifier »). Reprendre ce taux sous-estime le net plutôt que de le surestimer.",
+          "source": "https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000051668460",
+          "salariale": [],
+          "patronale": [{ "jusquA": null, "taux": 0.006 }]
+        },
+        "effortConstruction": {
+          "description": "Participation à l'effort de construction : pas due sous 50 salariés (code de la construction et de l'habitation, art. L313-1).",
+          "source": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006176366",
+          "salariale": [],
+          "patronale": []
+        },
+        "tDeltaReductionGenerale": 0.3194,
+        "versementMobiliteDu": true
+      },
+      "50EtPlus": {
+        "description": "Société de portage de 50 salariés et plus : FNAL de 0,50 % sur tout le brut, contribution légale à la formation professionnelle de 1 %, participation à l'effort de construction de 0,45 %, versement mobilité dû selon la commune. Réduction Fillon de 2025 : T = 0,3194 sous 50 salariés, 0,3234 à partir de 50, du 1er janvier au 30 avril ; 0,3193 et 0,3233 à partir du 1er mai (décret 2025-318 du 4 avril 2025, art. 1 et 5). Le fichier garde la valeur du 1er janvier (ADR 007).",
+        "source": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000051430146",
+        "fnal": {
+          "description": "Fonds national d'aide au logement (contribution de l'article L813-4 du code de la construction et de l'habitation) : 0,10 % dans la limite du plafond sous 50 salariés, 0,50 % sur la totalité des rémunérations à partir de 50 (article L813-5).",
+          "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000038839912",
+          "salariale": [],
+          "patronale": [{ "jusquA": null, "taux": 0.005 }]
+        },
+        "formationProfessionnelle": {
+          "description": "Contribution légale à la formation professionnelle : 0,55 % sous 11 salariés (code du travail, art. L6331-1), 1 % à partir de 11 (art. L6331-3).",
+          "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044981918",
+          "salariale": [],
+          "patronale": [{ "jusquA": null, "taux": 0.01 }]
+        },
+        "formationConventionnelle": {
+          "description": "Contribution conventionnelle à la formation professionnelle, valeur prudente NON SOURCÉE pour 2025 : le taux de 2024 (1,05 % sous 11 salariés, 0,60 % à partir de 11) est repris. L'article 36 de la convention de branche, réécrit par l'avenant n° 14 du 24 février 2025 (en vigueur depuis le 31 décembre 2024, non étendu), ne fixe plus de taux ; une contribution créée par un autre accord du même jour, et sa dénonciation annoncée en juillet 2025, n'ont pas été vérifiées sur une source officielle (ADR 016, « À vérifier »). Reprendre ce taux sous-estime le net plutôt que de le surestimer.",
+          "source": "https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000051668460",
+          "salariale": [],
+          "patronale": [{ "jusquA": null, "taux": 0.006 }]
+        },
+        "effortConstruction": {
+          "description": "Participation des employeurs à l'effort de construction : 0,45 % des rémunérations, pour les employeurs d'au moins 50 salariés (code de la construction et de l'habitation, art. L313-1). Une société de portage exonérée de taxe sur les salaires parce que son chiffre d'affaires est soumis à la TVA y reste soumise (BOI-TPS-PEEC-10, § 40).",
+          "source": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006176366",
+          "salariale": [],
+          "patronale": [{ "jusquA": null, "taux": 0.0045 }]
+        },
+        "tDeltaReductionGenerale": 0.3234,
+        "versementMobiliteDu": true
+      }
     }
   },
   "TNS": {
