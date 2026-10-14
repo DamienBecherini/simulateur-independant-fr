@@ -20,9 +20,11 @@ interface GrilleDeLAnneeProps {
   monthlyData: MonthlyGridData
   preferences: UserPreferences
   flowTypeToNumberMap: Map<string, number>
+  /** Une case touchée sur un écran tactile : l'aide au-dessus de la grille ne revient plus. */
+  onGrilleTouchee?: () => void
 }
 
-export function GrilleDeLAnnee({ session, setSession, annee, onAnnee, monthlyData, preferences, flowTypeToNumberMap }: GrilleDeLAnneeProps) {
+export function GrilleDeLAnnee({ session, setSession, annee, onAnnee, monthlyData, preferences, flowTypeToNumberMap, onGrilleTouchee }: GrilleDeLAnneeProps) {
   return (
     <MonthlyGrid
       entities={session.entities}
@@ -37,6 +39,7 @@ export function GrilleDeLAnnee({ session, setSession, annee, onAnnee, monthlyDat
       }}
       preferences={preferences}
       flowTypeToNumberMap={flowTypeToNumberMap}
+      onGrilleTouchee={onGrilleTouchee}
       annee={annee}
       // Une opération appliquée aussi à d'autres années remplace toutes les années d'un coup : une seule étape d'annulation.
       annees={session.annees}
