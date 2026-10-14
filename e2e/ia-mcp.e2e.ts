@@ -10,6 +10,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
 import type { SessionState } from "../src/types"
 import { test, expect, deposerAffichage, deposerSession, lireFichier } from "./support/fixtures"
+import { auditerAccessibilite } from "./support/accessibilite"
 import { valeurDeLigne } from "./support/interface"
 import { ATELIER, sessionMicroBnc } from "./support/sessions"
 
@@ -65,6 +66,55 @@ test("une proposition envoyée par le serveur MCP s'applique dans l'application 
   await page.getByRole("button", { name: "Annuler" }).click()
   await expect(chiffreDAffaires).toHaveText(/^30\s000\s€$/)
   await expect(page.getByRole("button", { name: "Annuler" })).toBeDisabled()
+  expect(erreursConsole).toEqual([])
+})
+
+test("l'utilisateur laisse l'IA modifier directement la simulation : la proposition s'applique dès son arrivée, et s'annule", async ({ dossierDonnees, lancer }) => {
+  await deposerSession(dossierDonnees, sessionMicroBnc())
+  // Choix fait lors d'une ouverture précédente (case de la fenêtre de relecture), retenu dans les préférences.
+  await fs.writeFile(path.join(dossierDonnees, "userPreferences.json"), JSON.stringify({ slotOrder: [], affichage: "classique", iaModifieDirectement: true }))
+  const { page, erreursConsole } = await lancer()
+  const chiffreDAffaires = valeurDeLigne(page.getByRole("article").filter({ hasText: ATELIER.name }), "Chiffre d'affaires")
+  await expect(chiffreDAffaires).toHaveText(/^30\s000\s€$/)
+  const pastille = page.getByRole("navigation", { name: "Barre d'outils" }).getByRole("checkbox", { name: "IA en direct" })
+  await expect(pastille).toBeVisible()
+  // La pastille, dans la barre d'outils, en thème clair puis sombre : contraste, nom et description accessibles.
+  await auditerAccessibilite(page, "pastille « IA en direct », thème clair", "nav")
+  await page.getByRole("switch", { name: "Changer de thème" }).click()
+  await expect(page.locator("html")).toHaveClass(/dark/)
+  await auditerAccessibilite(page, "pastille « IA en direct », thème sombre", "nav")
+  // Dans une fenêtre de la largeur d'un téléphone, la barre garde la pastille sans déborder.
+  await page.setViewportSize({ width: 360, height: 700 })
+  await expect(pastille).toBeInViewport()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  await page.setViewportSize({ width: 1280, height: 800 })
+
+  const client = await connecterUnClient((await page.evaluate(() => window.api.infosDuServeurMcp()))!)
+  try {
+    const proposee = (await client.callTool({ name: "proposer_flux", arguments: { flux: [mission] } })) as CallToolResult
+    const { proposition } = JSON.parse((proposee.content as { text: string }[])[0].text.split("\n").at(-1)!) as { proposition: unknown }
+    const envoyee = (await client.callTool({ name: "appliquer_proposition", arguments: { proposition } })) as CallToolResult
+    expect((envoyee.content as { text: string }[])[0].text).toMatch(/^Proposition envoyée à l'application, qui l'applique aussitôt, sans relecture/)
+  } finally {
+    await client.close()
+  }
+
+  // Aucune fenêtre de relecture : la proposition est appliquée, retirée de la boîte, annoncée par une notification.
+  await expect(chiffreDAffaires).toHaveText(/^36\s000\s€$/)
+  await expect(page.getByRole("dialog", { name: "Proposition de votre IA" })).toHaveCount(0)
+  const notification = page.locator("[data-sonner-toast]").filter({ hasText: "Modifié par l'IA : Ajouter 1 flux" })
+  await expect(notification).toBeVisible()
+  await expect.poll(() => fs.readdir(path.join(dossierDonnees, "propositions"))).toEqual([])
+
+  // « Annuler » de la notification défait la modification, en une étape.
+  await notification.getByRole("button", { name: "Annuler" }).click()
+  await expect(chiffreDAffaires).toHaveText(/^30\s000\s€$/)
+
+  // Décocher la pastille y met fin, et l'enregistre.
+  // Un clic, pas uncheck() : la case disparaît avec la pastille, Playwright ne pourrait pas vérifier son état.
+  await pastille.click()
+  await expect(pastille).toBeHidden()
+  await expect.poll(async () => (await lireFichier<{ iaModifieDirectement?: boolean }>(dossierDonnees, "userPreferences.json"))?.iaModifieDirectement).toBeUndefined()
   expect(erreursConsole).toEqual([])
 })
 

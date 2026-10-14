@@ -119,7 +119,7 @@ function CaseDeModificationDirecte({ cochee, onChange }: { cochee: boolean; onCh
           Laisser l'IA modifier directement la simulation
         </label>
         <p id={`${id}-aide`} className={PETIT_TEXTE}>
-          Case cochée, « Appliquer » applique cette proposition, puis l'IA n'enverra plus de propositions à relire : ses modifications suivantes, et celles qui attendent déjà, s'appliqueront aussitôt. Chacune reste annulable (Ctrl+Z ou « Annuler »). Ce choix est retenu d'une ouverture à l'autre : décochez la case affichée en bas de la page, à tout moment, pour revenir aux propositions.
+          Case cochée, « Appliquer » applique cette proposition, puis l'IA n'enverra plus de propositions à relire : ses modifications suivantes, et celles qui attendent déjà, s'appliqueront aussitôt. Chacune reste annulable (Ctrl+Z ou « Annuler »). Ce choix est retenu d'une ouverture à l'autre : décochez la pastille « IA en direct » de la barre d'outils, à tout moment, pour revenir aux propositions.
         </p>
       </div>
     </div>

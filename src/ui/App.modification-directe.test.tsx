@@ -63,7 +63,7 @@ async function renderApp(propositions: PropositionRecue[], preferences: Partial<
 
 const noms = () => screen.queryAllByRole("textbox", { name: "Nom", hidden: true }).map(champ => (champ as HTMLInputElement).value)
 const undoButton = () => screen.getByRole("button", { name: "Annuler" })
-const pastille = () => screen.queryByRole("region", { name: "Modification directe de la simulation par l'IA" })
+const pastille = () => screen.queryByRole("checkbox", { name: "IA en direct" })
 const dernier = <T,>(liste: T[]): T | undefined => liste[liste.length - 1]
 const derniereNotification = () => dernier(vi.mocked(toast.success).mock.calls)!
 /** Le bouton « Annuler » d'une notification de sonner. */
@@ -153,9 +153,10 @@ describe("App : l'IA modifie directement la simulation", () => {
   it("décocher la pastille revient aux propositions à relire, et l'enregistre", async () => {
     const [bruno] = deuxPropositions()
     const { user, deposer } = await renderApp([], { iaModifieDirectement: true })
-    const caseDeLaPastille = within(pastille()!).getByRole("checkbox", { name: "L'IA modifie directement la simulation" })
+    // Une pastille courte dans la barre d'outils ; l'explication complète dans sa description et son info-bulle.
+    const caseDeLaPastille = within(screen.getByRole("navigation", { name: "Barre d'outils" })).getByRole("checkbox", { name: "IA en direct" })
     expect(caseDeLaPastille).toBeChecked()
-    expect(caseDeLaPastille).toHaveAccessibleDescription("Décochez pour revenir aux propositions à relire.")
+    expect(caseDeLaPastille).toHaveAccessibleDescription(/^L'IA modifie directement la simulation, sans proposition à relire ; chaque modification reste annulable \(Ctrl\+Z\)\. Décochez pour revenir aux propositions\.$/)
 
     await user.click(caseDeLaPastille)
     expect(pastille()).not.toBeInTheDocument()

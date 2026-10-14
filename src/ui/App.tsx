@@ -155,6 +155,8 @@ function App() {
           zoom={zoom}
           onParametres={() => setSettingsOpen(true)}
           onExporter={() => setExportOpen(true)}
+          // Tant que l'IA modifie directement la simulation, une pastille le signale et permet d'y mettre fin.
+          indicateurIA={iaModifieDirectement ? <IndicateurDeModificationDirecte onCouper={() => laisserLIAModifier(false)} /> : null}
         />
 
         <header className={cn("text-center pt-16 print:mb-6 print:pt-0", enTete.header)}>
@@ -216,8 +218,6 @@ function App() {
           onLaisserLIAModifier={() => laisserLIAModifier(true)}
           onAnnuler={undo}
         />
-        {/* Tant que l'IA modifie directement la simulation, une pastille le signale et permet d'y mettre fin. */}
-        {iaModifieDirectement ? <IndicateurDeModificationDirecte onCouper={() => laisserLIAModifier(false)} /> : null}
         <ExportDialog isOpen={isExportOpen} onClose={() => setExportOpen(false)} session={currentSession} annee={annee} simulationReport={simulationReport} simulation={simulation} onExportJson={handleExportAll} />
         <SettingsSheet
           isOpen={isSettingsOpen}

@@ -1,7 +1,9 @@
 // src/ui/components/IndicateurDeModificationDirecte.tsx
 // Tant que l'utilisateur laisse l'IA modifier directement la simulation (voir l'ADR 011, addendum du 2026-10-14), une
-// pastille reste visible en bas de la page, avec la case qui y met fin : les propositions de l'IA repassent alors par
-// la fenêtre de relecture. Ce choix est une préférence enregistrée : la pastille revient à l'ouverture suivante.
+// petite pastille « IA en direct » reste dans la barre d'outils, près d'« Annuler », avec la case qui y met fin : les
+// propositions de l'IA repassent alors par la fenêtre de relecture. L'explication complète est dans l'info-bulle et
+// dans la description accessible de la case. Ce choix est une préférence enregistrée : la pastille revient à
+// l'ouverture suivante.
 
 import { useId } from "react"
 import { Bot } from "lucide-react"
@@ -12,6 +14,8 @@ interface IndicateurDeModificationDirecteProps {
   onCouper: () => void
 }
 
+const EXPLICATION = "L'IA modifie directement la simulation, sans proposition à relire ; chaque modification reste annulable (Ctrl+Z). Décochez pour revenir aux propositions."
+
 export function IndicateurDeModificationDirecte({ onCouper }: IndicateurDeModificationDirecteProps) {
   const id = useId()
   const couper = () => {
@@ -20,22 +24,19 @@ export function IndicateurDeModificationDirecte({ onCouper }: IndicateurDeModifi
     document.getElementById(ANCRES.contenu)?.focus({ preventScroll: true })
   }
   return (
-    <section
-      aria-label="Modification directe de la simulation par l'IA"
-      className="fixed bottom-3 left-3 z-50 max-w-[calc(100vw-1.5rem)] rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-sm text-violet-950 shadow-md dark:border-violet-700 dark:bg-violet-950 dark:text-violet-50 print:hidden"
-    >
-      <div className="flex min-h-11 items-center gap-2">
-        <Bot aria-hidden="true" className="size-5 shrink-0" />
-        <input id={id} type="checkbox" checked onChange={couper} aria-describedby={`${id}-aide`} className="size-5 shrink-0 cursor-pointer accent-violet-700 pointer-coarse:size-6 dark:accent-violet-300" />
-        <div>
-          <label htmlFor={id} className="cursor-pointer font-semibold">
-            L'IA modifie directement la simulation
-          </label>
-          <p id={`${id}-aide`} className="text-xs">
-            Décochez pour revenir aux propositions à relire.
-          </p>
-        </div>
-      </div>
-    </section>
+    <>
+      <label
+        title={EXPLICATION}
+        className="ml-1 inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-violet-300 bg-violet-50 px-2 text-xs font-semibold whitespace-nowrap text-violet-900 pointer-coarse:h-11 sm:ml-2 dark:border-violet-700 dark:bg-violet-950 dark:text-violet-100"
+      >
+        <input type="checkbox" checked onChange={couper} aria-describedby={id} className="size-4 shrink-0 cursor-pointer accent-violet-700 pointer-coarse:size-5 dark:accent-violet-300" />
+        <Bot aria-hidden="true" className="size-4 shrink-0" />
+        IA en direct
+      </label>
+      {/* Hors de l'étiquette : sinon l'explication entrerait dans le nom de la case. */}
+      <span id={id} className="sr-only">
+        {EXPLICATION}
+      </span>
+    </>
   )
 }
