@@ -127,6 +127,7 @@ export function preferencesMaximales(): UserPreferences {
     zoom: 1.3,
     sectionsOuvertes: { "legende-des-flux": true, "detail-du-calcul": false },
     questionsFermees: true,
-    grilleTouchee: true
+    grilleTouchee: true,
+    iaModifieDirectement: true
   }
 }
