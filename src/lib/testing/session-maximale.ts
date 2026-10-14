@@ -23,7 +23,9 @@ const FLUX_PAR_ACTEUR: [FinancialFlow["entityId"], FinancialFlow["type"], number
   ["c-eurl", "dividends_payment", 4000],
   ["m-bic", "ca_micro_services_bic", 2200],
   ["m-bnc", "ca_micro_services_bnc", 1800],
-  ["m-bnc", "ca_micro_vente", 600]
+  ["m-bnc", "ca_micro_vente", 600],
+  ["po-dan", "ca_services", 6500],
+  ["po-dan", "deductible_expense", 180]
 ]
 
 function grilleDeLAnnee(annee: number, facteur: number): AnneeSimulee {
@@ -77,7 +79,8 @@ export function sessionMaximale(): SessionState {
       { id: "c-eurl", type: "company", name: "Martin Bois", legalStatus: "EURL", capitalSocial: 1500, deplacementsProfessionnels: { kmParAn: 450, puissanceFiscale: "7", electrique: false }, avatar: icone("Hammer", "#8b5cf6"), locked: false },
       { id: "c-ei", type: "company", name: "Bob Réparations", legalStatus: "EI", capitalSocial: 0, dateDeCreation: "2025-04", profession: "masseur-kinesitherapeute", partConventionnee: 0.85, deplacementsProfessionnels: { kmParAn: 1200, puissanceFiscale: "5", electrique: false }, avatar: icone("Wrench", "#0ea5e9"), locked: false },
       { id: "m-bic", type: "micro-entreprise", name: "Alice Formations", beneficieACRE: true, opteVFL: true, rfrN2: 24000, dateDeCreation: "2026-09", horsPlafondAnneePrecedente: false, deplacementsProfessionnels: { kmParAn: 300, puissanceFiscale: "3", electrique: false }, avatar: icone("Store", "#f97316"), locked: false },
-      { id: "m-bnc", type: "micro-entreprise", name: "Bob Photos", beneficieACRE: false, opteVFL: false, rfrN2: 0, horsPlafondAnneePrecedente: true, profession: "osteopathe", partConventionnee: 1, deplacementsProfessionnels: { kmParAn: 0, puissanceFiscale: "4", electrique: true }, avatar: initiales("BP", "#14b8a6"), locked: true }
+      { id: "m-bnc", type: "micro-entreprise", name: "Bob Photos", beneficieACRE: false, opteVFL: false, rfrN2: 0, horsPlafondAnneePrecedente: true, profession: "osteopathe", partConventionnee: 1, deplacementsProfessionnels: { kmParAn: 0, puissanceFiscale: "4", electrique: true }, avatar: initiales("BP", "#14b8a6"), locked: true },
+      { id: "po-dan", type: "portage", name: "Dan Conseil", conditions: { tauxFraisDeGestion: 0.085, plancherMensuel: 150, plafondMensuel: 900, fraisFixesMensuels: 25, contrat: "CDD", effectif: "de11a49", tauxVersementMobilite: 0.0295, reductionGeneraleReversee: true, mutuelleMensuelle: 42.5 }, avatar: icone("Briefcase", "#0891b2"), locked: false }
     ],
     relationships: [
       { id: "r-mariage", fromId: "p-alice", toId: "p-bob", type: "Marié(e)" },
@@ -89,7 +92,8 @@ export function sessionMaximale(): SessionState {
       { id: "r-associe", fromId: "p-alice", toId: "c-eurl", type: "Associé" },
       { id: "r-titulaire", fromId: "p-bob", toId: "c-ei", type: "Titulaire" },
       { id: "r-titulaire-micro", fromId: "p-alice", toId: "m-bic", type: "Titulaire" },
-      { id: "r-salarie", fromId: "p-dan", toId: "c-sasu", type: "Salarié" }
+      { id: "r-salarie", fromId: "p-dan", toId: "c-sasu", type: "Salarié" },
+      { id: "r-salarie-porte", fromId: "p-dan", toId: "po-dan", type: "Titulaire" }
     ],
     annees: [grilleDeLAnnee(2024, 0.9), grilleDeLAnnee(2025, 1), grilleDeLAnnee(2026, 1.1)],
     comparateur: {
