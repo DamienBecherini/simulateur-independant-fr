@@ -25,6 +25,7 @@ import { ANCRES } from "@/lib/ancres"
 import { avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
 import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type OptimisationRemuneration, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutCompare, type StatutSociete } from "@/types"
 import { COLONNE_FIXE } from "../colonne-fixe"
+import { ligneAlternee } from "../lignes-alternees"
 import { ecartSigne, euros } from "@/backend/logic/format"
 
 /** Colonne micro non retenue (plafond dépassé, régime fermé) : grisée, la cellule de l'écart dit pourquoi. */
@@ -146,10 +147,10 @@ function fondDeLaCellule(s: ScenarioStatut, meilleur: ComparaisonResult["meilleu
  * Écart du net de chaque colonne avec la situation telle que saisie (le net des résultats). Une colonne micro non
  * retenue n'est pas colorée : la cellule dit pourquoi elle ne l'est pas.
  */
-function LigneDeLEcart({ result }: { result: ComparaisonResult }) {
+function LigneDeLEcart({ result, rang }: { result: ComparaisonResult; rang: number }) {
   if (netDeLaSituationSaisie(result) === null) return null
   return (
-    <tr className="border-t border-slate-200 dark:border-slate-700">
+    <tr className={cn("border-t border-slate-200 dark:border-slate-700", ligneAlternee(rang))}>
       <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
         Écart avec votre situation actuelle
       </th>
@@ -181,8 +182,11 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
   if (result.scenarios.length === 0) return null
   const fond = (s: ScenarioStatut) => fondDeLaCellule(s, result.meilleur)
 
-  const lignes = rows(activityName, result.situationSaisie?.statut).map(row => (
-    <tr key={row.label} className="border-t border-slate-200 dark:border-slate-700">
+  // Rang de chaque ligne dans l'ordre affiché, pour les lignes alternées : l'affichage « Résumé » remonte l'écart et la
+  // protection sociale sous la première ligne.
+  const avecEcart = netDeLaSituationSaisie(result) !== null
+  const ligne = (row: ReturnType<typeof rows>[number], rang: number) => (
+    <tr key={row.label} className={cn("border-t border-slate-200 dark:border-slate-700", ligneAlternee(rang))}>
       <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
         {row.label}
       </th>
@@ -193,9 +197,10 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
         </td>
       ))}
     </tr>
-  ))
-  const protection = (
-    <tr className="border-t border-slate-200 dark:border-slate-700">
+  )
+  const lignes = rows(activityName, result.situationSaisie?.statut)
+  const protection = (rang: number) => (
+    <tr className={cn("border-t border-slate-200 dark:border-slate-700", ligneAlternee(rang))}>
       <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
         Protection sociale
       </th>
@@ -210,7 +215,8 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
       ))}
     </tr>
   )
-  const ecart = <LigneDeLEcart result={result} />
+  const ecart = (rang: number) => <LigneDeLEcart result={result} rang={rang} />
+  const apresLEcart = avecEcart ? 2 : 1
   return (
     <ZoneDefilante libelle="Tableau de comparaison" className={cn("rounded-lg border border-slate-200 dark:border-slate-700", className)}>
       <table className="w-full min-w-[48rem] text-sm print:min-w-0 print:text-[8pt]" aria-label="Comparaison des statuts">
@@ -227,19 +233,19 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
         {reduit ? (
           <>
             <tbody>
-              {lignes[0]}
-              {ecart}
-              {protection}
+              {ligne(lignes[0], 0)}
+              {ecart(1)}
+              {protection(apresLEcart)}
             </tbody>
             <tbody id="comparateur-lignes-detail" className={cn(!detailOuvert && "hidden print:table-row-group")}>
-              {lignes.slice(1)}
+              {lignes.slice(1).map((row, i) => ligne(row, apresLEcart + 1 + i))}
             </tbody>
           </>
         ) : (
           <tbody>
-            {lignes}
-            {protection}
-            {ecart}
+            {lignes.map(ligne)}
+            {protection(lignes.length)}
+            {ecart(lignes.length + 1)}
           </tbody>
         )}
       </table>

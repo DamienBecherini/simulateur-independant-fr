@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { avecRemuneration, libellesRepartition } from "@/lib/comparateur-options"
 import { apercuDuPartage, auPas, coutRemuneration, dividendesVerses, libellesPostes, PAS_PART, PAS_REMUNERATION, partDistribueeDe, POSTES, postesArrondis, remunerationPourUnCout, type PosteDuPartage, reglageDeLaBarre } from "@/lib/repartition-benefice"
 import { cn } from "@/lib/utils"
+import { ligneAlternee } from "../lignes-alternees"
 import type { ComparaisonOptions, OptimisationRemuneration, PartageDuBenefice, ReservesDeLaSociete, ScenarioStatut, StatutSociete } from "@/types"
 import { clavierDuCurseur, gestesDuCurseur, montantAuPointeur, type Glissement as GlissementDuCurseur } from "../curseur"
 import { PoigneeDeCurseur } from "./Curseur"
@@ -163,8 +164,8 @@ function Legende({ partage, statut, estimation }: { partage: PartageDuBenefice; 
         </tr>
       </thead>
       <tbody>
-        {postes.map(poste => (
-          <tr key={poste} className="border-t border-slate-100 first:border-t-0 dark:border-slate-800">
+        {postes.map((poste, rang) => (
+          <tr key={poste} className={cn("border-t border-slate-100 first:border-t-0 dark:border-slate-800", ligneAlternee(rang))}>
             <th scope="row" className="py-1 pr-3 text-left font-normal text-slate-700 dark:text-slate-200">
               <span aria-hidden="true" className={cn("mr-2 inline-block size-3 rounded-[3px] align-[-1px]", COULEURS[poste])} />
               {libelleDuPoste(poste, partage)}
@@ -173,7 +174,7 @@ function Legende({ partage, statut, estimation }: { partage: PartageDuBenefice; 
             <td className="whitespace-nowrap py-1 text-right text-slate-600 dark:text-slate-300">{total > 0 ? pourcentage(arrondis[poste] / total) : "—"}</td>
           </tr>
         ))}
-        <tr className="border-t border-slate-300 font-medium dark:border-slate-600">
+        <tr className={cn("border-t border-slate-300 font-medium dark:border-slate-600", ligneAlternee(postes.length))}>
           <th scope="row" className="py-1 pr-3 text-left">
             Bénéfice avant rémunération
           </th>

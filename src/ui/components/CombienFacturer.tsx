@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { ecartAvecLeChiffreDAffairesSaisi, lireLeNetVise, parMois, phraseDuCalculALEnvers, raisonHorsDePortee } from "@/lib/combien-facturer"
 import { ecartSigne, euros } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
+import { ligneAlternee } from "../lignes-alternees"
 import type { ChiffreDAffairesDUnStatut, ChiffreDAffairesPourUnNet, ComparaisonOptions, Entity, SessionState } from "@/types"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useCalculDiffere } from "../hooks/useCalculDiffere"
@@ -73,8 +74,8 @@ function TableauDuCalcul({ resultat, activityName }: { resultat: ChiffreDAffaire
           </tr>
         </thead>
         <tbody>
-          {resultat.colonnes.map(c => (
-            <tr key={c.statut} className="border-t border-slate-200 align-top dark:border-slate-700">
+          {resultat.colonnes.map((c, rang) => (
+            <tr key={c.statut} className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
               <th scope="row" className="px-3 py-2 text-left font-medium text-slate-700 dark:text-slate-200">
                 {c.libelle}
                 {c.telleQueSaisie ? <span className={mention}>actuel</span> : null}

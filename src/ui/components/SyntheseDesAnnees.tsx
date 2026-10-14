@@ -6,6 +6,7 @@ import { reservesDesSocietes } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
 import { ZoneDefilante } from "./ZoneDefilante"
 import { COLONNE_FIXE } from "../colonne-fixe"
+import { ligneAlternee } from "../lignes-alternees"
 import { euros } from "@/backend/logic/format"
 
 
@@ -59,7 +60,7 @@ export function SyntheseDesAnnees({ simulation, annee }: SyntheseDesAnneesProps)
           </thead>
           <tbody>
             {simulation.annees.map(({ annee: a, report, erreur }, i) => (
-              <tr key={a} className={cn("border-b border-slate-100 dark:border-slate-800", a === annee && "bg-blue-50 font-semibold dark:bg-blue-950/40")} aria-current={a === annee ? "true" : undefined}>
+              <tr key={a} className={cn("border-b border-slate-100 dark:border-slate-800", a === annee ? "bg-blue-50 font-semibold dark:bg-blue-950/40" : ligneAlternee(i))} aria-current={a === annee ? "true" : undefined}>
                 <th scope="row" className={cn(COLONNE_DES_ANNEES, "py-2 pr-4 text-left font-medium", a === annee ? FOND_ANNEE_AFFICHEE : "bg-background")}>
                   {a}
                   {report && report.anneeDesRegles !== a ? <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">règles {report.anneeDesRegles}</span> : null}

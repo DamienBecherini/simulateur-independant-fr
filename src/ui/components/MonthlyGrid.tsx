@@ -14,6 +14,7 @@ import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlu
 import { toast } from "sonner"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { cn } from "@/lib/utils"
+import { caseAlternee } from "../lignes-alternees"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useDefilementDeLaGrille } from "../hooks/useDefilementDeLaGrille"
 import { useHautDesBarres } from "../hooks/useHautDesBarres"
@@ -47,15 +48,19 @@ function autresAnneesQue(annees: AnneeSimulee[] | undefined, annee: number | und
   return annees.map(a => a.annee).filter(a => a !== annee)
 }
 
-/** La ligne d'un acteur : son nom, son total annuel et ses douze mois, chaque mois ouvrant la fenêtre de ses flux. */
-function LigneDeLActeur({ ligne, onOuvrir }: { ligne: LigneDeLaGrille; onOuvrir: (monthIndex: number) => void }) {
+/**
+ * La ligne d'un acteur : son nom, son total annuel et ses douze mois, chaque mois ouvrant la fenêtre de ses flux. Son
+ * rang donne les lignes alternées : chaque case, nom compris, reçoit la teinte de la bande.
+ */
+function LigneDeLActeur({ ligne, rang, onOuvrir }: { ligne: LigneDeLaGrille; rang: number; onOuvrir: (monthIndex: number) => void }) {
   const { entity, monthlyScale, monthlyCellData, annualCellData, annualScale } = ligne
+  const bande = caseAlternee(rang)
   // Affichage « Résumé » : lignes plus basses, avatar en petit à côté du nom.
   const resume = useAffichageResume()
   return (
     <>
       {/* Colonne 1 : Nom de l'entité + Avatar */}
-      <div className="font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center print:static print:p-1">
+      <div className={cn("font-bold col-span-1 sticky left-0 bg-slate-100 dark:bg-gray-800 z-10 p-2 flex items-center justify-center print:static print:p-1", bande)}>
         <div className={cn("flex items-center gap-2 py-1 mx-0 text-sm sm:mx-3 sm:text-base print:mx-0 print:gap-1 print:text-[9pt]", resume ? "max-sm:flex-col" : "flex-col")}>
           <AvatarDisplay avatar={entity.avatar} size={resume ? "sm" : "md"} />
           {/* Un nom long passe à la ligne ; un mot plus large que la colonne est coupé. */}
@@ -64,7 +69,7 @@ function LigneDeLActeur({ ligne, onOuvrir }: { ligne: LigneDeLaGrille; onOuvrir:
       </div>
 
       {/* Colonne 2 : Total annuel */}
-      <div role="group" aria-label={`Total annuel : ${entity.name}`} className="bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start print:p-1">
+      <div role="group" aria-label={`Total annuel : ${entity.name}`} className={cn("bg-slate-200 dark:bg-gray-700 p-2 flex flex-col justify-start print:p-1", bande)}>
         <CellChartDisplay
           gains={annualCellData.gains}
           expenses={annualCellData.expenses}
@@ -80,7 +85,7 @@ function LigneDeLActeur({ ligne, onOuvrir }: { ligne: LigneDeLaGrille; onOuvrir:
       {monthlyCellData.map((cellData, monthIndex) => (
         <div
           key={monthIndex}
-          className={cn("bg-slate-100 dark:bg-gray-800 p-2 group transition-colors cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start print:min-h-0 print:p-1", resume ? "min-h-12" : "min-h-[80px]")}
+          className={cn("bg-slate-100 dark:bg-gray-800 p-2 group transition-colors cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 flex flex-col justify-start print:min-h-0 print:p-1", resume ? "min-h-12" : "min-h-[80px]", bande)}
           role="button"
           tabIndex={0}
           aria-label={`Flux ${deMois(MOIS[monthIndex])} : ${entity.name}`}
@@ -280,10 +285,10 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                     </div>
                   ))}
                   {/* Corps de la grille */}
-                  {gridData.map(ligne => (
+                  {gridData.map((ligne, rang) => (
                     // Un fragment par acteur, sans élément englobant : `position: sticky` de la première colonne en dépend.
                     <React.Fragment key={ligne.entity.id}>
-                      <LigneDeLActeur ligne={ligne} onOuvrir={monthIndex => setOpenCell({ entityId: ligne.entity.id, monthIndex })} />
+                      <LigneDeLActeur ligne={ligne} rang={rang} onOuvrir={monthIndex => setOpenCell({ entityId: ligne.entity.id, monthIndex })} />
                     </React.Fragment>
                   ))}
                 </div>

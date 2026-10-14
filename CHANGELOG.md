@@ -16,6 +16,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 ### Modifié
 
 - **Une même règle pour charger une situation type.** La fenêtre des situations types et l'encart « Que voulez-vous savoir ? » (« Partir de zéro » compris) chargent désormais directement par-dessus une simulation vide ou l'exemple de la démo non modifié, comme le lien `#situation=…`, et gardent la confirmation sur toute simulation non enregistrée ; le chargement reste annulable en une étape.
+- **Lignes alternées dans les tableaux.** Le tableau du comparateur, la grille mensuelle, « Toutes les années », « Sur toutes les années », « Combien facturer pour un net visé ? », les valeurs de la courbe et le partage du bénéfice teintent très légèrement une ligne sur deux, en clair comme en sombre, colonne fixe comprise ; les couleurs qui ont un sens (meilleur statut, colonne grisée, montants, survol de la grille) restent visibles dessous.
 
 ### Maintenance
 
