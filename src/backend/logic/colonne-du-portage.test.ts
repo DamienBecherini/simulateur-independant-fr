@@ -81,7 +81,7 @@ describe("la colonne « Portage salarial »", () => {
 
   it("dit les conditions typiques, et seulement celles qui le sont", () => {
     const typiques = colonneDuPortage(comparer(alice, titulaire, [["m1", "ca_micro_services_bnc", 48000]], options("m1"))).warnings
-    expect(typiques).toContainEqual(expect.stringContaining("Conditions typiques d'une société de portage"))
+    expect(typiques).toContainEqual(expect.stringMatching(/^Conditions typiques d'une société de portage \(frais de gestion de 7\s%, CDI\) : à remplacer par celles de la vôtre\.$/))
     const reglees = colonneDuPortage(comparer(alice, titulaire, [["m1", "ca_micro_services_bnc", 48000]], options("m1", { portage: { tauxFraisDeGestion: 0.06, contrat: "CDD" } }))).warnings
     expect(reglees).toContainEqual(expect.stringMatching(/^Conditions de la société de portage à leur valeur typique \(plancher mensuel des frais de gestion, .*effectif de la société.*\)/))
     expect(reglees.join(" ")).not.toMatch(/typique \([^)]*\bcontrat\b/)

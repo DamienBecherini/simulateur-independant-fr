@@ -5,7 +5,8 @@ import { depassePlafondMicro } from "./calculsAE.js"
 import { estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, prorataDesPlafonds } from "./dispositifs.js"
 import { ecartDeFrais } from "./frais-de-fonctionnement.js"
-import { LIBELLES_DES_CONDITIONS_PORTAGE } from "./options-du-comparateur.js"
+import { conditionsPortageParDefaut, LIBELLES_DES_CONDITIONS_PORTAGE } from "./options-du-comparateur.js"
+import { pourcent } from "./format.js"
 import { professionDe, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import type { ReglesFiscales } from "./regles.js"
@@ -142,9 +143,8 @@ function colonneDuPortage(statut: StatutCompare, { source, regles }: Pick<Colonn
 
 /** Les conditions de la société de portage prises à leur valeur typique, toutes ou celles qui le sont. */
 function noteDesValeursTypiques(typiques: (keyof ConditionsPortageRetenues)[]): string {
-  const reglez = "réglez celles de votre société dans « Conditions de la société de portage »."
-  if (typiques.length === Object.keys(LIBELLES_DES_CONDITIONS_PORTAGE).length) return `Conditions typiques d'une société de portage (frais de gestion de 7 %, CDI, 50 salariés et plus, réduction générale gardée par la société) : ${reglez}`
-  return `Conditions de la société de portage à leur valeur typique (${typiques.map(cle => LIBELLES_DES_CONDITIONS_PORTAGE[cle]).join(", ")}) : ${reglez}`
+  if (typiques.length === Object.keys(LIBELLES_DES_CONDITIONS_PORTAGE).length) return `Conditions typiques d'une société de portage (frais de gestion de ${pourcent(conditionsPortageParDefaut().tauxFraisDeGestion)}, CDI) : à remplacer par celles de la vôtre.`
+  return `Conditions de la société de portage à leur valeur typique (${typiques.map(cle => LIBELLES_DES_CONDITIONS_PORTAGE[cle]).join(", ")}) : à remplacer par celles de la vôtre.`
 }
 
 /** Ce que dit la colonne du portage salarial quand elle n'est pas retenue. */
