@@ -59,12 +59,13 @@ function App() {
   // Session, historique d'annulation, sauvegardes et préférences (voir useSessionManager).
   const { currentSession, setCurrentSession, setComparateur, allSaveSlots, setAllSaveSlots, setSlotOrder, userPreferences, setUserPreferences, importConfirmation, handleImport, proceedWithImport, cancelImport, handleResetSession, handleLoadMontage, canUndo, canRedo, undo, redo, loadedSlotId, setLoadedSlotId, handleLoadSlot, sessionChargee } = useSessionManager()
 
-  // Propositions d'un client d'IA déposées par le serveur MCP local (application de bureau seulement, voir l'ADR 011).
-  const { propositions, retirer: retirerProposition } = usePropositionsEnAttente(sessionChargee)
   // L'utilisateur peut laisser l'IA modifier directement la simulation : une préférence enregistrée, désactivée par
-  // défaut, signalée par une pastille tant qu'elle est active (voir l'ADR 011, addendum du 2026-10-14).
+  // défaut, signalée par une pastille tant qu'elle est active, et réglable aussi dans les paramètres (voir l'ADR 011,
+  // addendum du 2026-10-14).
   const iaModifieDirectement = userPreferences.iaModifieDirectement === true
   const laisserLIAModifier = useCallback((oui: boolean) => setUserPreferences(prefs => ({ ...prefs, iaModifieDirectement: oui || undefined })), [setUserPreferences])
+  // Propositions d'un client d'IA déposées par le serveur MCP local (application de bureau seulement, voir l'ADR 011).
+  const { propositions, retirer: retirerProposition, arriveesEnDirect, garderEnRelecture } = usePropositionsEnAttente(sessionChargee, iaModifieDirectement)
 
   // L'année affichée : celle de la grille, des résultats, du comparateur et des exports. Elle n'est pas enregistrée
   // dans la session (voir l'ADR 008) ; par défaut, ou si elle disparaît, c'est la plus récente.
@@ -215,6 +216,8 @@ function App() {
           onAppliquer={setCurrentSession}
           onRetirer={retirerProposition}
           iaModifieDirectement={iaModifieDirectement}
+          arriveesEnDirect={arriveesEnDirect}
+          onGarderEnRelecture={garderEnRelecture}
           onLaisserLIAModifier={() => laisserLIAModifier(true)}
           onAnnuler={undo}
         />
@@ -238,6 +241,8 @@ function App() {
           // La sauvegarde chargée : « Sauvegarder » la met à jour au lieu d'en créer une autre.
           loadedSlotId={loadedSlotId}
           setLoadedSlotId={setLoadedSlotId}
+          // La même préférence que la pastille « IA en direct » : la case des paramètres et la pastille restent d'accord.
+          modificationDirecte={{ active: iaModifieDirectement, onChange: laisserLIAModifier }}
         />
       </div>
     </VuesContext.Provider>
