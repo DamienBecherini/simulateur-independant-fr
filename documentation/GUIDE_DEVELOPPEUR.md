@@ -218,7 +218,7 @@ flowchart TD
 | `migrations.ts`, `data-sanitizer.ts`, `nettoyage-comparateur.ts`, `fichiers-de-donnees.ts`, `sauvegardes-groupees.ts`, `donnees-brutes.ts` | Format de fichier : conversion, nettoyage, lecture et écriture des contenus (`estObjet`, commun, teste un objet JSON encore non validé). | `donnees-de-l-application.ts`, démo, serveur MCP |
 | `baremes.ts`, `format.ts` | Barèmes par tranches et progressifs ; formatage. | calculs |
 
-ADR à lire selon le sujet : persistance 002 et 005 ; IPC 003 ; état de l'interface 004 ; grille 006 ; années de règles 007 ; plusieurs années 008 ; réglages du comparateur 009 ; outils pour les IA 010 et 011 ; démo installable 012 ; Microsoft Store 013 ; réserves 014 ; libéraux réglementés 015.
+ADR à lire selon le sujet : persistance 002 et 005 ; IPC 003 ; état de l'interface 004 ; grille 006 ; années de règles 007 ; plusieurs années 008 ; réglages du comparateur 009 ; outils pour les IA 010 et 011 ; démo installable 012 ; Microsoft Store 013 ; réserves 014 ; libéraux réglementés 015 ; portage salarial 016 (proposée).
 
 ### 2.4 Process principal d'Electron
 
