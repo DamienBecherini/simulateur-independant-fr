@@ -40,9 +40,10 @@ Cette ADR fixe le modèle de calcul, la place du portage dans l'application, les
   - participation à l'effort de construction : 0,45 % à partir de 50 salariés ([code de la construction, art. L313-1](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006176366)). Une société exonérée de taxe sur les salaires parce que son chiffre d'affaires est soumis à la TVA y reste soumise ([BOI-TPS-PEEC-10, § 40](https://bofip.impots.gouv.fr/bofip/6360-PGP.html/identifiant=BOI-TPS-PEEC-10-20141218)) ;
   - taxe d'apprentissage : 0,68 % ([art. L6241-1](https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006072050/LEGISCTA000006178193/)), déjà dans le bulletin du salarié. La contribution supplémentaire à l'apprentissage (250 salariés et plus, [art. L6242-1](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000043701803)) n'est pas modélisée.
 - **Formation professionnelle conventionnelle** (art. 36 de la convention).
-  - L'[avenant n° 10 du 15 décembre 2020](https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000043477274) l'avait fixée, étendue, à 1,05 % de la masse salariale sous 11 salariés et à 0,60 % à partir de 11, du 1er janvier 2021 au 31 décembre 2024.
-  - L'[avenant n° 14 du 24 février 2025](https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000051668460), « en vigueur non étendu » depuis le 31 décembre 2024, réécrit l'article sans aucun taux.
-  - Pour 2025 et 2026, le taux de 2024 est repris comme valeur prudente, marquée « NON SOURCÉ » dans les règles (« À vérifier »).
+  - La version « en vigueur étendu » de l'[article 36](https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000043477274), modifiée par l'avenant n° 10 du 15 décembre 2020 (art. 5), la fixe à « 1,05 % de la masse salariale pour les entreprises de moins de 11 salariés ; 0,60 % de la masse salariale pour les entreprises à partir de 11 salariés » (consulté le 2026-10-14).
+  - L'[avenant n° 14 du 24 février 2025](https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000051668460) réécrit l'article sans aucun taux, mais n'est pas étendu : la version étendue reste celle de l'avenant n° 10.
+  - Les règles de 2024, 2025 et 2026 retiennent donc 1,05 % et 0,60 %, sourcés (complément du 14 octobre 2026 : la version précédente de cette ADR les disait « non sourcés » pour 2025 et 2026).
+  - L'accord du 24 février 2025 crée une autre contribution, « innovation sociale et transition professionnelle » (gérée par l'AISTP-OPPS), dont l'annexe de statuts est marquée « dénoncé » sur Légifrance : elle n'est pas modélisée (« Hors périmètre », « À vérifier »).
 - **Réduction générale des cotisations patronales.**
   - **Qui y a droit.** Elle s'applique aux salariés pour lesquels l'employeur est tenu à l'assurance chômage ([code de la sécurité sociale, art. L241-13, II, 1°](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000042912368) ; [code du travail, art. L5422-13](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006903835)). Le salarié porté en bénéficie (fiche F31620 : « Les salariés portés bénéficient de l'assurance chômage »). Aucun texte consulté n'exclut le portage.
   - **2026 : réduction dégressive unique** ([art. D241-7](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006185779/), décret n° 2026-509). C = Tmin + Tdelta × (½ × (3 × SMIC annuel / brut − 1))^1,75, avec :
@@ -271,6 +272,7 @@ La personne colle les conditions de sa société de portage (page de tarifs, con
 | Avance de salaire, affacturage, délais de paiement du client | Trésorerie, pas revenu de l'année |
 | Plusieurs sociétés de portage pour une même personne | Une personne, un titulaire de chaque acteur ; deux acteurs en portage pour une même personne additionnent deux bulletins (les plafonds ne sont pas partagés), avec un avertissement |
 | Contribution supplémentaire à l'apprentissage (250 salariés et plus) | Dépend de la part d'alternants de la société |
+| Contribution « innovation sociale et transition professionnelle » (accord de branche du 24 février 2025, AISTP-OPPS) | Statuts marqués « dénoncé » sur Légifrance (« À vérifier ») |
 | Régime d'Alsace-Moselle, outre-mer | Comme pour les autres salariés du moteur |
 
 ### Alternatives écartées
@@ -298,7 +300,6 @@ La personne colle les conditions de sa société de portage (page de tarifs, con
   - Le net dépend fortement de conditions mal connues (réduction générale, effectif, versement mobilité : plus de 2 000 € d'écart sur l'exemple) ; les valeurs typiques sont prudentes et l'interface invite à saisir celles de sa société.
   - La mutuelle (part patronale) et la prévoyance réelles manquent : le net est légèrement surestimé (quelques dizaines à quelques centaines d'euros par an).
   - La réserve d'un CDI n'est pas reportée d'une année sur l'autre dans une session de plusieurs années.
-  - Le taux conventionnel de formation de 2025 et 2026 est une valeur prudente, non sourcée.
 
 ### Effort estimé
 
@@ -331,7 +332,7 @@ Le recoupement avec un simulateur public de portage et avec le simulateur de l'U
 ## À vérifier
 
 1. **Base des minima par niveau** : l'art. 21.3 en vigueur ne précise « base 2017 » que pour le plancher de 69 %. Pour les niveaux (63, 70, 75, 85 %), il ne dit pas si le plafond est celui de 2017 ou celui de l'année. Les règles retiennent 2017 pour le montant du niveau expert, qui ne sert qu'au texte de l'avertissement.
-2. **Formation conventionnelle de 2025 et 2026** : l'avenant n° 14 (non étendu) retire le taux de l'art. 36. Un accord du même jour créerait une autre contribution, dénoncée en juillet 2025 selon une source non officielle. Valeur prudente retenue : celle de 2024 (1,05 % ou 0,60 %), « NON SOURCÉ ».
+2. **Contribution « innovation sociale et transition professionnelle »** (accord du 24 février 2025, AISTP-OPPS) : son annexe de statuts est marquée « dénoncé » sur Légifrance ; vérifier qu'elle n'est plus due avant de la modéliser. Le taux de la formation conventionnelle (art. 36, version étendue de l'avenant n° 10 : 1,05 % ou 0,60 %) est, lui, sourcé.
 3. **BOSS et urssaf.fr** (injoignables le 14 octobre 2026) : confirmer sur le Bulletin officiel de la sécurité sociale les assiettes de la réduction générale, du FNAL, de la participation à l'effort de construction et de la prévoyance patronale (CSG sans abattement de 1,75 %, forfait social). Faire le recoupement avec le simulateur de l'Urssaf pour un cadre.
 4. **Date d'effet de la nouvelle grille des minima** : le 17 ou le 18 juillet 2024 selon la lecture de l'avenant n° 12 (art. 6.1) et de son arrêté d'extension. Sans effet sur les règles, qui gardent la valeur du 1er janvier.
 5. **CGI, art. 81, 1°** : la version consultée date de 2019 ; le texte est stable, mais sa version de 2026 n'a pas été affichée.
