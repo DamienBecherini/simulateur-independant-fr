@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { grilleVide, SessionStateSchema, type SessionState, type StatutSociete } from "../../types.js"
 import { calculsDuPont, sessionRevalidee } from "./calculs-du-pont.js"
 import { EntreeIpcInvalide } from "./entrees-ipc.js"
-import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./simulation-pluriannuelle.js"
+import { chiffreDAffairesPourUnNetDeLAnnee, comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./simulation-pluriannuelle.js"
 import { comparerStrategiesDeDistribution } from "./strategies-de-distribution.js"
 import { personne, relation, societe } from "./testing/session-de-test.js"
 
@@ -45,6 +45,7 @@ describe("calculsDuPont", () => {
     expect(calculsDuPont.compareStatuts(sasu, options, 2026)).toEqual(comparerStatutsDeLAnnee(lue, options, 2026))
     expect(calculsDuPont.optimiserRemuneration(sasu, options, "EURL", 2026)).toEqual(optimiserRemunerationDeLAnnee(lue, options, "EURL", 2026))
     expect(calculsDuPont.comparerStrategies(sasu, "s1")).toEqual(comparerStrategiesDeDistribution(lue, "s1", undefined))
+    expect(calculsDuPont.chiffreDAffairesPourUnNet(sasu, options, 30000, 2026)).toEqual(chiffreDAffairesPourUnNetDeLAnnee(lue, options, 30000, 2026))
   })
 
   it("optimise comme une SASU un statut qui n'est pas une société à l'IS", () => {
@@ -66,5 +67,8 @@ describe("calculsDuPont", () => {
     expect(() => calculsDuPont.optimiserRemuneration(sasu, horsBornes, "SASU", 2026)).toThrow(EntreeIpcInvalide)
     expect(() => calculsDuPont.optimiserRemuneration(sasu, options, "SASU", "2026" as unknown as number)).toThrow(EntreeIpcInvalide)
     expect(() => calculsDuPont.comparerStrategies(sasu, 42 as unknown as string)).toThrow("comparerStrategies : paramètres invalides.")
+    expect(() => calculsDuPont.chiffreDAffairesPourUnNet(sasu, options, -1, 2026)).toThrow("chiffreDAffairesPourUnNet : paramètres invalides.")
+    expect(() => calculsDuPont.chiffreDAffairesPourUnNet(sasu, options, Number.POSITIVE_INFINITY, 2026)).toThrow(EntreeIpcInvalide)
+    expect(() => calculsDuPont.chiffreDAffairesPourUnNet(sasu, horsBornes, 30000, 2026)).toThrow(EntreeIpcInvalide)
   })
 })

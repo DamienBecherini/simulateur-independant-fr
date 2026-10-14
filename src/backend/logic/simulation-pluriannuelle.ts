@@ -7,8 +7,9 @@
  * Le comparateur et l'optimiseur travaillent sur une seule année, celle que l'utilisateur consulte.
  */
 
-import type { ComparaisonOptions, EtatDeLaSociete, ComparaisonResult, DonneesDeLAnnee, OptimisationRemuneration, ResultatAnnee, SessionState, SimulationPluriannuelle, SimulationReport, StatutSociete } from "../../types.js"
+import type { ChiffreDAffairesPourUnNet, ComparaisonOptions, EtatDeLaSociete, ComparaisonResult, DonneesDeLAnnee, OptimisationRemuneration, ResultatAnnee, SessionState, SimulationPluriannuelle, SimulationReport, StatutSociete } from "../../types.js"
 import { anneeExistante, donneesDeLAnnee } from "./annees.js"
+import { chiffreDAffairesPourUnNet } from "./chiffre-d-affaires-pour-un-net.js"
 import { comparerStatuts, situationActuelle, type SituationActuelle } from "./comparateur.js"
 import { activiteComparee, convertirLActivite, statutActuel } from "./conversion-de-statut.js"
 import { regimesMicroDesAnnees, type RegimeMicroDeLAnnee } from "./dispositifs.js"
@@ -137,6 +138,15 @@ function preparerOuEchouer(session: SessionState, annee: number) {
 export function comparerStatutsDeLAnnee(session: SessionState, options: ComparaisonOptions, annee: number): ComparaisonResult {
   const { donnees, regles, contexte } = preparerOuEchouer(session, annee)
   return comparerStatuts(donnees, options, regles, contexte)
+}
+
+/**
+ * Calcul à l'envers sur une année de la session : le chiffre d'affaires de l'activité qui donne ce net du foyer dans
+ * chaque colonne du comparateur, avec les règles de cette année et ce qu'elle hérite des précédentes.
+ */
+export function chiffreDAffairesPourUnNetDeLAnnee(session: SessionState, options: ComparaisonOptions, netVise: number, annee: number): ChiffreDAffairesPourUnNet {
+  const { donnees, regles, contexte } = preparerOuEchouer(session, annee)
+  return chiffreDAffairesPourUnNet(donnees, options, netVise, regles, contexte)
 }
 
 /**

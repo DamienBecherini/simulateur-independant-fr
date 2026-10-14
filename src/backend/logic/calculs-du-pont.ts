@@ -7,9 +7,9 @@
 // pont à l'autre.
 
 import { z } from "zod"
-import { estSocieteIS, SessionStateSchema, type ComparaisonOptions, type ComparaisonResult, type OptimisationRemuneration, type SessionState, type SimulationPluriannuelle, type StatutSociete, type StrategiesDeDistribution } from "../../types.js"
-import { AnneeSchema, ComparaisonOptionsSchema, entreeValide, IdentifiantSchema } from "./entrees-ipc.js"
-import { comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./simulation-pluriannuelle.js"
+import { estSocieteIS, SessionStateSchema, type ChiffreDAffairesPourUnNet, type ComparaisonOptions, type ComparaisonResult, type OptimisationRemuneration, type SessionState, type SimulationPluriannuelle, type StatutSociete, type StrategiesDeDistribution } from "../../types.js"
+import { AnneeSchema, ComparaisonOptionsSchema, entreeValide, IdentifiantSchema, NetViseSchema } from "./entrees-ipc.js"
+import { chiffreDAffairesPourUnNetDeLAnnee, comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "./simulation-pluriannuelle.js"
 import { comparerStrategiesDeDistribution } from "./strategies-de-distribution.js"
 
 /** Session reçue de l'interface, revalidée avant calcul ; une session invalide est remplacée par la session par défaut. */
@@ -21,7 +21,7 @@ export function sessionRevalidee(session: unknown, appelant: string): SessionSta
 }
 
 /**
- * Les quatre calculs, nommés comme les canaux de `window.api`.
+ * Les cinq calculs, nommés comme les canaux de `window.api`.
  * @throws {EntreeIpcInvalide} Si les réglages, l'année ou l'activité ne sont pas conformes à leur schéma.
  */
 export const calculsDuPont = {
@@ -32,6 +32,9 @@ export const calculsDuPont = {
 
   optimiserRemuneration: (session: unknown, options: ComparaisonOptions, statut: StatutSociete, annee: number): OptimisationRemuneration =>
     optimiserRemunerationDeLAnnee(sessionRevalidee(session, "optimiserRemuneration"), entreeValide(ComparaisonOptionsSchema, options, "optimiserRemuneration"), estSocieteIS(statut) ? statut : "SASU", entreeValide(AnneeSchema, annee, "optimiserRemuneration")),
+
+  chiffreDAffairesPourUnNet: (session: unknown, options: ComparaisonOptions, netVise: number, annee: number): ChiffreDAffairesPourUnNet =>
+    chiffreDAffairesPourUnNetDeLAnnee(sessionRevalidee(session, "chiffreDAffairesPourUnNet"), entreeValide(ComparaisonOptionsSchema, options, "chiffreDAffairesPourUnNet"), entreeValide(NetViseSchema, netVise, "chiffreDAffairesPourUnNet"), entreeValide(AnneeSchema, annee, "chiffreDAffairesPourUnNet")),
 
   comparerStrategies: (session: unknown, activityId: string): StrategiesDeDistribution => {
     const validee = sessionRevalidee(session, "comparerStrategies")

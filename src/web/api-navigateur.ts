@@ -125,6 +125,7 @@ export function creerApiNavigateur(): EventPayloadMapping {
     simulerLesAnnees: async session => calculsDuPont.simulerLesAnnees(session),
     compareStatuts: async (session, options, annee) => calculsDuPont.compareStatuts(session, options, annee),
     optimiserRemuneration: async (session, options, statut, annee) => calculsDuPont.optimiserRemuneration(session, options, statut, annee),
+    chiffreDAffairesPourUnNet: async (session, options, netVise, annee) => calculsDuPont.chiffreDAffairesPourUnNet(session, options, netVise, annee),
     comparerStrategies: async (session, activityId) => calculsDuPont.comparerStrategies(session, activityId),
 
     // Des sauvegardes illisibles sont mises de côté avant que la prochaine sauvegarde ne les remplace.

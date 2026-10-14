@@ -52,7 +52,7 @@ function comparerCouples(session: DonneesDeLAnnee, regles: ReglesFiscales, conte
 }
 
 /** Ce que la comparaison doit dire des personnes de l'activité et de sa profession, avant toute colonne. */
-function avertissementsDeLActivite(session: DonneesDeLAnnee, source: Activite, profession: ProfessionReglementee | null): string[] {
+export function avertissementsDeLActivite(session: DonneesDeLAnnee, source: Activite, profession: ProfessionReglementee | null): string[] {
   const warnings: string[] = []
   const { principale, associes } = personnesDeLActivite(session, source.id)
   if (!principale) warnings.push("Cette activité n'est reliée à aucune personne : ses revenus ne rejoignent aucun foyer, la comparaison ne mesure que les prélèvements.")
@@ -62,7 +62,7 @@ function avertissementsDeLActivite(session: DonneesDeLAnnee, source: Activite, p
 }
 
 /** Les statuts comparés : la micro-entreprise est interdite aux praticiens et auxiliaires médicaux, ses colonnes sont retirées. */
-function statutsDeLaComparaison(profession: ProfessionReglementee | null): StatutCompare[] {
+export function statutsDeLaComparaison(profession: ProfessionReglementee | null): StatutCompare[] {
   const sansMicro = profession !== null && microInterdite(profession)
   return STATUTS_COMPARES.filter(statut => !(sansMicro && estMicro(statut)))
 }
@@ -83,10 +83,10 @@ function meilleurStatut(scenarios: ScenarioStatut[], profession: ProfessionRegle
   return { meilleur: candidats.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), candidats[0]).statut, warnings }
 }
 
-const TYPES_DE_CHIFFRE_D_AFFAIRES = new Set<FinancialFlow["type"]>(["ca_services", "ca_vente", "ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente"])
+export const TYPES_DE_CHIFFRE_D_AFFAIRES: ReadonlySet<FinancialFlow["type"]> = new Set<FinancialFlow["type"]>(["ca_services", "ca_vente", "ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente"])
 
 /** Chiffre d'affaires de l'année de l'activité, tous types confondus (société, entreprise individuelle, micro). */
-function chiffreDAffaires(donnees: DonneesDeLAnnee, activiteId: string): number {
+export function chiffreDAffaires(donnees: DonneesDeLAnnee, activiteId: string): number {
   return donnees.monthlyData.flatMap(mois => mois.flows).filter(f => f.entityId === activiteId && TYPES_DE_CHIFFRE_D_AFFAIRES.has(f.type)).reduce((somme, f) => somme + f.amount, 0)
 }
 
@@ -119,32 +119,50 @@ function colonneTelleQueSaisie(colonne: ColonneEtudiee, report: SimulationReport
 }
 
 /**
- * Les colonnes de la comparaison : la situation saisie pour le statut actuel quand le partage le permet, les sociétés
- * au meilleur net avec leur arbitrage, les autres simulées avec les réglages de la colonne.
+ * La colonne d'un statut, comme le comparateur la calcule : la situation saisie pour le statut actuel quand le partage
+ * le permet (le rapport de l'année, simulé ici s'il n'est pas fourni), une société au meilleur net avec son arbitrage,
+ * les autres simulées avec les réglages de la colonne. Le calcul à l'envers (chiffre-d-affaires-pour-un-net.ts) la
+ * reprend telle quelle à chaque chiffre d'affaires essayé.
  */
+export function colonneDuStatut(colonne: ColonneEtudiee, statut: StatutCompare, reportActuel?: SimulationReport): { scenario: ScenarioStatut; optimisation?: OptimisationRemuneration } {
+  if (estTelleQueSaisie(statut, colonne.source, colonne.options)) return { scenario: colonneTelleQueSaisie(colonne, reportActuel ?? runMetaSimulation(colonne.donnees, colonne.regles, colonne.contexte)) }
+  if (colonne.options.repartition.mode !== "meilleurNet" || !estSocieteIS(statut)) return { scenario: simulerScenario(colonne, statut).scenario }
+  return colonneAuMeilleurNet(colonne, statut)
+}
+
+/** Les colonnes de la comparaison (voir `colonneDuStatut`) et, au meilleur net, l'arbitrage de chaque société. */
 function colonnesDeLaComparaison(colonne: ColonneEtudiee, statuts: StatutCompare[], reportActuel: SimulationReport) {
   const auMeilleurNet = colonne.options.repartition.mode === "meilleurNet"
   const optimisations: Partial<Record<StatutSociete, OptimisationRemuneration>> = {}
   const scenarios = statuts.map(statut => {
-    if (estTelleQueSaisie(statut, colonne.source, colonne.options)) return colonneTelleQueSaisie(colonne, reportActuel)
-    if (!auMeilleurNet || !estSocieteIS(statut)) return simulerScenario(colonne, statut).scenario
-    const auMeilleur = colonneAuMeilleurNet(colonne, statut)
-    optimisations[statut] = auMeilleur.optimisation
-    return auMeilleur.scenario
+    const { scenario, optimisation } = colonneDuStatut(colonne, statut, reportActuel)
+    if (optimisation && estSocieteIS(statut)) optimisations[statut] = optimisation
+    return scenario
   })
   return { scenarios, ...(auMeilleurNet ? { optimisations } : {}) }
+}
+
+/**
+ * Ce qu'étudie le comparateur pour l'activité des réglages : la colonne, avec la rémunération de la grille en partage
+ * « grille » et la CFE de l'année d'après la date de création ; `null` si les réglages ne désignent aucune activité.
+ */
+export function colonneDuComparateur(session: DonneesDeLAnnee, optionsSaisies: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee): ({ colonne: ColonneEtudiee } & Pick<ComparaisonResult, "noteCFE" | "partCFE">) | null {
+  const source = activiteComparee(session, optionsSaisies.activityId)
+  if (!source) return null
+  const { options, ...cfe } = avecLaCFEDeLAnnee(avecLaRemunerationDeLaGrille(optionsSaisies, session), source, contexte.annee ?? regles.annee, regles)
+  return { colonne: { donnees: session, source, options, regles, contexte }, ...cfe }
 }
 
 export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: ComparaisonOptions, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): ComparaisonResult {
   const reportActuel = runMetaSimulation(session, regles, contexte)
   const couples = comparerCouples(session, regles, contexte, reportActuel)
 
-  const source = activiteComparee(session, optionsSaisies.activityId)
-  if (!source) {
+  const etudiee = colonneDuComparateur(session, optionsSaisies, regles, contexte)
+  if (!etudiee) {
     return { scenarios: [], meilleur: null, couples, warnings: ["Choisissez une activité à comparer."] }
   }
-  const { options, ...cfe } = avecLaCFEDeLAnnee(avecLaRemunerationDeLaGrille(optionsSaisies, session), source, contexte.annee ?? regles.annee, regles)
-  const colonne: ColonneEtudiee = { donnees: session, source, options, regles, contexte }
+  const { colonne, ...cfe } = etudiee
+  const { source } = colonne
   const profession = professionDe(source, regles)
   const actuel = statutActuel(source)
   const situationSaisie = { statut: actuel, libelle: libelleDuStatut(actuel), netApresImpots: reportActuel.totalNetApresImpots }

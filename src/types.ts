@@ -951,6 +951,38 @@ export interface ComparaisonResult {
   partCFE?: number
 }
 
+/**
+ * Pourquoi aucun chiffre d'affaires ne donne le net visé dans une colonne du comparateur :
+ * - « plafondMicro » : il faudrait dépasser les plafonds de la micro-entreprise ;
+ * - « regimeMicroFerme » : l'activité est sortie du régime micro cette année-là ;
+ * - « partageSelonLaGrille » : la société reprend la rémunération et les dividendes de la grille, son net ne suit pas
+ *   le chiffre d'affaires ;
+ * - « auDelaDeLaBorne » : même le chiffre d'affaires le plus haut essayé ne suffit pas.
+ */
+export type RaisonHorsDePortee = "plafondMicro" | "regimeMicroFerme" | "partageSelonLaGrille" | "auDelaDeLaBorne"
+
+/** Le chiffre d'affaires d'une colonne du comparateur qui donne le net visé. */
+export interface ChiffreDAffairesDUnStatut {
+  statut: StatutCompare
+  libelle: string
+  /** La colonne est la situation telle que saisie (voir `ScenarioStatut`). */
+  telleQueSaisie: boolean
+  /** Chiffre d'affaires annuel de l'activité, en euros entiers ; 0 si le net visé est atteint sans chiffre d'affaires ; `null` hors de portée. */
+  chiffreDAffaires: number | null
+  /** Net du foyer obtenu avec ce chiffre d'affaires (au moins le net visé) ; `null` hors de portée. */
+  netApresImpots: number | null
+  horsDePortee?: RaisonHorsDePortee
+}
+
+/** « Combien facturer ? » : pour un net du foyer visé, le chiffre d'affaires nécessaire dans chaque colonne du comparateur. */
+export interface ChiffreDAffairesPourUnNet {
+  netVise: number
+  /** Chiffre d'affaires de l'année saisi pour l'activité, référence des écarts. */
+  chiffreDAffairesSaisi: number
+  colonnes: ChiffreDAffairesDUnStatut[]
+  warnings: string[]
+}
+
 /** Formats de fichier texte que l'application sait enregistrer ou ouvrir (exports, sauvegardes groupées). */
 export type FormatFichierTexte = "csv" | "markdown" | "json"
 

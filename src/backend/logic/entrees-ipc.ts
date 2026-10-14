@@ -8,6 +8,7 @@
 
 import { z } from "zod"
 import { FraisFonctionnementSchema, RepartitionBeneficeSchema, type ComparaisonOptions, type FormatFichierTexte } from "../../types.js"
+import { CHIFFRE_D_AFFAIRES_MAXIMAL } from "./chiffre-d-affaires-pour-un-net.js"
 
 /** Paramètre refusé : l'appel IPC échoue avec ce message, sans rien faire. */
 export class EntreeIpcInvalide extends Error {
@@ -28,6 +29,9 @@ export const ComparaisonOptionsSchema = z.object({
 
 /** Année d'une session à comparer ou à optimiser. */
 export const AnneeSchema = z.number().int()
+
+/** Net du foyer visé par le calcul à l'envers, en euros par an : positif, et au plus la borne de la recherche. */
+export const NetViseSchema = z.number().min(0).max(CHIFFRE_D_AFFAIRES_MAXIMAL)
 
 /** Identifiant d'une activité. */
 export const IdentifiantSchema = z.string()
