@@ -8,11 +8,17 @@ import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 
 const SECTION = "section[aria-labelledby=combien-facturer-titre]"
 
-/** Ouvre la démo et demande le chiffre d'affaires de l'atelier pour ce net du foyer. */
+/**
+ * Ouvre la démo, déplie la section (repliée sur une ligne dans l'affichage « Résumé », par défaut) et demande le
+ * chiffre d'affaires de l'atelier pour ce net du foyer.
+ */
 async function viser(page: Page, net: string) {
   await page.goto("./")
   const section = page.locator(SECTION)
-  await section.getByLabel("Net visé du foyer (€ par an)").fill(net)
+  const champ = section.getByLabel("Net visé du foyer (€ par an)")
+  await expect(champ).toBeHidden()
+  await section.getByText("Combien facturer pour un net visé ?").click()
+  await champ.fill(net)
   return section
 }
 

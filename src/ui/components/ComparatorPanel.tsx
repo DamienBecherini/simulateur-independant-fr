@@ -324,7 +324,11 @@ function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[
   )
 }
 
-function ComparisonResults({ result, activityName, onExporter }: { result: ComparaisonResult; activityName: string; onExporter: () => void }) {
+/**
+ * Les résultats de la comparaison et, en `children`, le calcul à l'envers : dans l'affichage « Résumé », replié sur la
+ * ligne du bouton d'export, où il n'allonge pas la page ; dans l'affichage classique, sous le tableau et ses notes.
+ */
+function ComparisonResults({ result, activityName, onExporter, children }: { result: ComparaisonResult; activityName: string; onExporter: () => void; children?: ReactNode }) {
   const { notes, renvois } = numeroterNotes(result.scenarios.map(s => ({ id: s.statut, libelle: s.libelle, avertissements: s.warnings })))
   // Affichage « Résumé » : tableau réduit (cartes sur téléphone), le reste des lignes à la demande.
   const resume = useAffichageResume()
@@ -333,7 +337,9 @@ function ComparisonResults({ result, activityName, onExporter }: { result: Compa
   return (
     <>
       {result.scenarios.length > 0 ? (
-        <div className="flex justify-end">
+        <div className={cn("flex justify-end", reduit && "flex-wrap items-start gap-x-4 gap-y-2")}>
+          {/* Déplié, le calcul prend toute la largeur : le bouton d'export passe dessous, juste au-dessus du tableau. */}
+          {reduit ? <div className="min-w-0 flex-1 has-[details[open]]:basis-full">{children}</div> : null}
           <BoutonExportCsv contenu="le tableau de comparaison" onClick={onExporter} />
         </div>
       ) : null}
@@ -344,6 +350,7 @@ function ComparisonResults({ result, activityName, onExporter }: { result: Compa
       <RappelDesFrais result={result} />
       <NotesDuTableau notes={notes} activityName={activityName} />
       <ProtectionDetails scenarios={result.scenarios} />
+      {reduit ? null : children}
     </>
   )
 }
@@ -508,9 +515,12 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
 
       <ErreurDuCalcul erreur={error} />
 
-      {result ? <ComparisonResults result={result} activityName={nomDeLActivite} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, nomDeLActivite)} /> : null}
-      {/* Le calcul à l'envers du tableau : les mêmes colonnes, pour un net visé plutôt que pour le chiffre d'affaires saisi. */}
-      <CombienFacturer session={session} annee={vue.annee} options={effectiveOptions} activite={selected} />
+      {result ? (
+        <ComparisonResults result={result} activityName={nomDeLActivite} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, nomDeLActivite)}>
+          {/* Le calcul à l'envers du tableau : les mêmes colonnes, pour un net visé plutôt que pour le chiffre d'affaires saisi. */}
+          <CombienFacturer session={session} annee={vue.annee} options={effectiveOptions} activite={selected} />
+        </ComparisonResults>
+      ) : null}
       {/* La réponse à « mariage ou Pacs ? » passe avant les années et la courbe, qui ne portent que sur l'activité comparée. */}
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
       {selected ? <SurToutesLesAnnees session={session} activityId={selected.id} activityName={selected.name} partMiseEnReserve={partMiseEnReserve} onPartMiseEnReserve={setPartMiseEnReserve} /> : null}

@@ -1,7 +1,7 @@
 // src/ui/components/CombienFacturer.tsx
 // « Combien facturer ? » : le calcul à l'envers du comparateur. Pour un net du foyer visé, le chiffre d'affaires annuel
 // et mensuel de l'activité comparée dans chaque statut, avec les réglages du comparateur, et l'écart avec celui saisi.
-// Sur téléphone, une carte par statut au lieu du tableau.
+// Sur téléphone, une carte par statut au lieu du tableau ; dans l'affichage « Résumé », une section à déplier.
 
 import { useCallback, useId, useState } from "react"
 import { Label } from "@/components/ui/label"
@@ -9,8 +9,10 @@ import { ecartAvecLeChiffreDAffairesSaisi, lireLeNetVise, parMois, phraseDuCalcu
 import { ecartSigne, euros } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
 import type { ChiffreDAffairesDUnStatut, ChiffreDAffairesPourUnNet, ComparaisonOptions, Entity, SessionState } from "@/types"
+import { useAffichageResume } from "../hooks/useAffichage"
 import { useCalculDiffere } from "../hooks/useCalculDiffere"
 import { ChampNumerique } from "./ChampNumerique"
+import { Depliable } from "./Depliable"
 import { ZoneDefilante } from "./ZoneDefilante"
 
 /** Recalcule peu après chaque modification du net visé, de la session ou des réglages ; rien sans net visé. */
@@ -90,23 +92,28 @@ function TableauDuCalcul({ resultat, activityName }: { resultat: ChiffreDAffaire
   )
 }
 
+/** Sous le titre d'une carte : pourquoi le statut est hors de portée, ou le montant mensuel et l'écart avec le chiffre d'affaires saisi. */
+function DetailDeLaCarte({ colonne, saisi }: { colonne: ChiffreDAffairesDUnStatut; saisi: number }) {
+  const raison = raisonHorsDePortee(colonne)
+  if (raison) return <p className="text-xs font-medium text-amber-800 dark:text-amber-300">{raison}</p>
+  const parties = [colonne.chiffreDAffaires === 0 ? "déjà atteint sans chiffre d'affaires" : `soit ${parMoisDe(colonne)} par mois`, ecartAvecLeChiffreDAffairesSaisi(colonne, saisi) === null ? null : `${ecartAvecLeSaisi(colonne, saisi)} par rapport au chiffre d'affaires saisi`]
+  return <p className="text-xs text-slate-600 tabular-nums dark:text-slate-400">{parties.filter(Boolean).join(" · ")}</p>
+}
+
 /** Sur téléphone, une carte par statut : le tableau n'a pas à défiler en largeur. */
 function CartesDuCalcul({ resultat }: { resultat: ChiffreDAffairesPourUnNet }) {
   return (
     <ul aria-label="Chiffre d'affaires nécessaire selon le statut" className="space-y-2 sm:hidden print:hidden">
       {resultat.colonnes.map(c => (
-        <li key={c.statut} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
-          <p className="min-w-0 font-medium text-slate-800 dark:text-slate-100">
-            {c.libelle}
-            {c.telleQueSaisie ? <span className={mention}>actuel</span> : null}
-          </p>
-          <p className="shrink-0 text-right tabular-nums">
-            <span className="block font-semibold">
-              <ChiffreDAffairesAnnuel colonne={c} />
-            </span>
-            {c.chiffreDAffaires ? <span className={mention}>soit {parMoisDe(c)} par mois</span> : null}
-            {ecartAvecLeChiffreDAffairesSaisi(c, resultat.chiffreDAffairesSaisi) === null ? null : <span className={mention}>{ecartAvecLeSaisi(c, resultat.chiffreDAffairesSaisi)} par rapport au chiffre d'affaires saisi</span>}
-          </p>
+        <li key={c.statut} className="rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="min-w-0 font-medium text-slate-800 dark:text-slate-100">
+              {c.libelle}
+              {c.telleQueSaisie ? <span className="font-normal text-slate-600 dark:text-slate-400"> · actuel</span> : null}
+            </p>
+            <p className="shrink-0 text-right font-semibold tabular-nums">{c.chiffreDAffaires === null ? "—" : euros(c.chiffreDAffaires)}</p>
+          </div>
+          <DetailDeLaCarte colonne={c} saisi={resultat.chiffreDAffairesSaisi} />
         </li>
       ))}
     </ul>
@@ -152,7 +159,37 @@ export function CombienFacturer({ activite, ...props }: Omit<CombienFacturerProp
   return activite ? <CalculALEnvers activityName={activite.name} {...props} /> : null
 }
 
-function CalculALEnvers({ session, annee, options, activityName }: CombienFacturerProps) {
+const TITRE = "Combien facturer pour un net visé ?"
+const ID_DU_TITRE = "combien-facturer-titre"
+const CADRE = "space-y-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700"
+
+/**
+ * Dans l'affichage « Résumé », la section tient sur une ligne à déplier (son état est retenu), pour ne pas allonger la
+ * page ; dans l'affichage classique, elle est affichée telle quelle, sous son titre.
+ */
+function CalculALEnvers(props: CombienFacturerProps) {
+  if (useAffichageResume()) {
+    return (
+      <section aria-labelledby={ID_DU_TITRE} className="text-sm text-slate-700 dark:text-slate-200">
+        <Depliable titre={<span id={ID_DU_TITRE}>{TITRE}</span>} id="comparateur-combien-facturer">
+          <div className={cn(CADRE, "mt-2")}>
+            <ContenuDuCalcul {...props} />
+          </div>
+        </Depliable>
+      </section>
+    )
+  }
+  return (
+    <section aria-labelledby={ID_DU_TITRE} className={CADRE}>
+      <h3 id={ID_DU_TITRE} className="text-lg font-medium text-slate-800 dark:text-slate-100">
+        {TITRE}
+      </h3>
+      <ContenuDuCalcul {...props} />
+    </section>
+  )
+}
+
+function ContenuDuCalcul({ session, annee, options, activityName }: CombienFacturerProps) {
   const [saisie, setSaisie] = useState("")
   const netVise = lireLeNetVise(saisie)
   const { resultat, erreur } = useCalculALEnvers(session, options, netVise, annee)
@@ -161,13 +198,8 @@ function CalculALEnvers({ session, annee, options, activityName }: CombienFactur
   const idChamp = useId()
   const idAide = useId()
   return (
-    <section aria-labelledby="combien-facturer-titre" className="space-y-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-      <div>
-        <h3 id="combien-facturer-titre" className="text-lg font-medium text-slate-800 dark:text-slate-100">
-          Combien facturer pour un net visé ?
-        </h3>
-        <p className="text-sm text-slate-600 dark:text-slate-300">Le calcul à l'envers du tableau : pour le net annuel que vous visez, le chiffre d'affaires de « {activityName} » nécessaire dans chaque statut.</p>
-      </div>
+    <>
+      <p className="text-sm text-slate-600 dark:text-slate-300">Le calcul à l'envers du tableau : pour le net annuel que vous visez, le chiffre d'affaires de « {activityName} » nécessaire dans chaque statut.</p>
       <div className="flex flex-wrap items-center gap-3">
         <Label htmlFor={idChamp}>Net visé du foyer (€ par an)</Label>
         <ChampNumerique id={idChamp} className="w-40" min="0" step="1000" quoi="le net visé" placeholder="30000" value={saisie} onChange={e => setSaisie(e.target.value)} aria-describedby={idAide} />
@@ -181,6 +213,6 @@ function CalculALEnvers({ session, annee, options, activityName }: CombienFactur
         {etatDuCalcul(netVise, aJour, erreur)}
       </p>
       {aJour ? <ResultatsDuCalcul resultat={aJour} activityName={activityName} /> : null}
-    </section>
+    </>
   )
 }

@@ -3,7 +3,9 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import type { ChiffreDAffairesPourUnNet, ComparaisonOptions, Entity } from "@/types"
+import userEvent from "@testing-library/user-event"
 import { emptySession } from "@/ui/testing/fixtures"
+import { AffichageContext } from "../hooks/useAffichage"
 import { CombienFacturer } from "./CombienFacturer"
 
 const money = (n: number) => `${n.toLocaleString("fr-FR")} €`.replace(/\s/g, " ")
@@ -77,8 +79,10 @@ describe("CombienFacturer", () => {
     afficher()
     fireEvent.change(champ(), { target: { value: "30000" } })
     const cartes = await screen.findByRole("list", { name: "Chiffre d'affaires nécessaire selon le statut" })
-    const sasu = within(cartes).getAllByRole("listitem")[0]
-    expect(espaces(sasu.textContent)).toBe(`SASU, rémunération optimisée${money(48111)}soit ${money(4009)} par mois+${money(8111)} par rapport au chiffre d'affaires saisi`)
+    const [sasu, , micro, vfl] = within(cartes).getAllByRole("listitem")
+    expect(espaces(sasu.textContent)).toBe(`SASU, rémunération optimisée${money(48111)}soit ${money(4009)} par mois · +${money(8111)} par rapport au chiffre d'affaires saisi`)
+    expect(espaces(micro.textContent)).toContain("Micro-entreprise · actuel")
+    expect(vfl.textContent).toBe("Micro + versement libératoire—hors de portée : plafond dépassé")
   })
 
   it("dit l'échec du calcul", async () => {
@@ -87,6 +91,20 @@ describe("CombienFacturer", () => {
     fireEvent.change(champ(), { target: { value: "30000" } })
     expect(await screen.findByText("chiffreDAffairesPourUnNet : paramètres invalides.")).toBeInTheDocument()
     expect(screen.queryByText("Calcul en cours…")).not.toBeInTheDocument()
+  })
+
+  it("dans l'affichage « Résumé », tient sur une ligne à déplier", async () => {
+    const user = userEvent.setup()
+    render(
+      <AffichageContext.Provider value="resume">
+        <CombienFacturer session={emptySession()} annee={2026} options={options} activite={activite} />
+      </AffichageContext.Provider>
+    )
+    const section = screen.getByRole("region", { name: "Combien facturer pour un net visé ?" })
+    expect(within(section).queryByRole("heading")).not.toBeInTheDocument()
+    expect(champ()).not.toBeVisible()
+    await user.click(within(section).getByText("Combien facturer pour un net visé ?"))
+    expect(champ()).toBeVisible()
   })
 
   it("n'apparaît pas sans activité comparée", () => {
