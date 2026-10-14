@@ -119,7 +119,8 @@ describe("serveur MCP : lecture", () => {
     expect(ecartDeFrais).toBe(0)
   })
 
-  it("publie le calcul à l'envers en lecture seule : le chiffre d'affaires pour un net visé, statut par statut", async () => {
+  // Calcul à l'envers : des dizaines de simulations complètes par statut, cinq fois plus lentes sous la mesure de couverture de la CI.
+  it("publie le calcul à l'envers en lecture seule : le chiffre d'affaires pour un net visé, statut par statut", { timeout: 30_000 }, async () => {
     await ecrireLaSession(sessionExemple())
     await connecter()
     const { tools } = await client.listTools()
