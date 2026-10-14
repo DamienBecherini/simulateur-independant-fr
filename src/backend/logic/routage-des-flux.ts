@@ -19,6 +19,10 @@ interface RevenusDActivite {
   remunerations: number
   /** Les mêmes, telles qu'imposées comme des salaires (CSG non déductible et CRDS du gérant d'EURL comprises). */
   remunerationsImposables: number
+  /** Salaires nets versés par ses activités en portage salarial, encaissés (voir l'ADR 016). */
+  salairesPortes: number
+  /** Les mêmes, tels qu'imposés : CSG non déductible et CRDS comprises. */
+  salairesPortesImposables: number
   /** Bénéfices imposables au barème (micro-entreprise après abattement, entreprise individuelle après cotisations déductibles). */
   beneficesImposables: number
   dividendes: number
@@ -32,13 +36,13 @@ interface RevenusDActivite {
   beneficesEncaisses: number
   /** Cotisations sociales et impôt sur les sociétés payés par ses activités, pour la part qui lui revient. */
   prelevementsActivites: number
-  /** Sa part des bénéfices laissés dans les sociétés. */
+  /** Sa part des bénéfices laissés dans les sociétés, et la réserve de ses activités en portage salarial en CDI. */
   resultatConserve: number
 }
 
 /** Total encaissé par une personne depuis ses activités, net de cotisations. */
 export function encaisse(revenus: RevenusDActivite): number {
-  return revenus.remunerations + revenus.dividendesEncaisses + revenus.beneficesEncaisses
+  return revenus.remunerations + revenus.salairesPortes + revenus.dividendesEncaisses + revenus.beneficesEncaisses
 }
 
 export interface Contexte {
@@ -96,7 +100,7 @@ export function bulletinsDesSalaries(session: DonneesDeLAnnee, flux: Map<string,
     const [personId, employeurId] = typeDe.get(rel.fromId) === "person" ? [rel.fromId, rel.toId] : [rel.toId, rel.fromId]
     const net = flux.get(personId)?.salary ?? 0
     // Un seul employeur par personne : tous ses salaires viennent de la première activité qui l'emploie.
-    if (typeDe.get(personId) !== "person" || [undefined, "person"].includes(typeDe.get(employeurId)) || bulletins.has(personId) || net <= 0) continue
+    if (typeDe.get(personId) !== "person" || [undefined, "person", "portage"].includes(typeDe.get(employeurId)) || bulletins.has(personId) || net <= 0) continue
     const salaires = session.monthlyData.flatMap(mois => mois.flows).filter(f => f.entityId === personId && f.type === "salary")
     const brut = salaires.every(f => f.grossAmount !== undefined) ? salaires.reduce((cumul, f) => cumul + (f.grossAmount ?? 0), 0) : brutPourUnNet(net, "salarie", regles.regimeGeneral)
     bulletins.set(personId, { employeurId, bulletin: { ...calculerCotisationsSalarie(brut, "salarie", regles.regimeGeneral), personId } })
@@ -131,7 +135,7 @@ export function personnesLiees(ctx: Contexte, entityId: string, types: Relations
 export function revenusDe(ctx: Contexte, personId: string): RevenusDActivite {
   let revenus = ctx.revenus.get(personId)
   if (!revenus) {
-    revenus = { remunerations: 0, remunerationsImposables: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, revenusAuVersementLiberatoire: 0, dividendesEncaisses: 0, beneficesEncaisses: 0, prelevementsActivites: 0, resultatConserve: 0 }
+    revenus = { remunerations: 0, remunerationsImposables: 0, salairesPortes: 0, salairesPortesImposables: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, revenusAuVersementLiberatoire: 0, dividendesEncaisses: 0, beneficesEncaisses: 0, prelevementsActivites: 0, resultatConserve: 0 }
     ctx.revenus.set(personId, revenus)
   }
   return revenus

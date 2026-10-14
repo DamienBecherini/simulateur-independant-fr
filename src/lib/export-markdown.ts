@@ -65,6 +65,7 @@ function detailDesDeplacements(deplacements: DeplacementsProfessionnels | undefi
 
 function detailDeLActeur(entity: Entity, annee: number): string {
   if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}${detailDesFraisReels(entity)}`
+  if (entity.type === "portage") return "Prestations facturées par une société de portage, qui verse le salaire"
   const creee = detailCommunDesActivites(entity, annee)
   if (entity.type === "company") return `${natureDeLaSociete(entity)}${creee}`
   return `${detailDeLaMicroEntreprise(entity)}${creee}${entity.horsPlafondAnneePrecedente ? " ; au-delà des plafonds l'année d'avant la simulation" : ""}`

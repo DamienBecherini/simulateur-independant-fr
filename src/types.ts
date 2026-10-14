@@ -204,7 +204,63 @@ export const MicroEntrepriseSchema = z.object({
   locked: z.boolean().default(false)
 })
 
-export const EntitySchema = z.union([PersonSchema, CompanySchema, MicroEntrepriseSchema])
+/** Effectif de la société de portage, dont dépendent plusieurs cotisations patronales (voir l'ADR 016). */
+const EFFECTIFS_PORTAGE = ["moinsDe11", "de11a49", "50EtPlus"] as const
+export type EffectifPortage = (typeof EFFECTIFS_PORTAGE)[number]
+
+/** Contrat de travail du salarié porté : la réserve financière d'un CDI reste sur son compte d'activité (voir l'ADR 016). */
+const CONTRATS_PORTAGE = ["CDI", "CDD"] as const
+
+/** Un réglage de la société de portage : facultatif, et écarté seul s'il sort de ses bornes. */
+const conditionBornee = (min: number, max: number) => z.number().min(min).max(max).optional().catch(undefined)
+
+/**
+ * Conditions de la société de portage (voir l'ADR 016) : ce qui varie d'une société à l'autre, au schéma fixe. Chaque
+ * champ est facultatif : absent, il prend la valeur typique (`CONDITIONS_PORTAGE_PAR_DEFAUT`, options-du-comparateur.ts).
+ * Une valeur hors bornes est écartée seule ; un plancher supérieur au plafond fait écarter les deux. Le droit et la
+ * convention de branche (indemnité d'apport d'affaires, réserve, minima, taux de cotisation) ne s'y trouvent jamais :
+ * ils sont dans les règles de l'année.
+ */
+export const ConditionsPortageSchema = z
+  .object({
+    /** Frais de gestion, en part du chiffre d'affaires HT encaissé. */
+    tauxFraisDeGestion: conditionBornee(0, 0.3),
+    /** Frais de gestion minimaux d'un mois avec chiffre d'affaires, en euros. */
+    plancherMensuel: conditionBornee(0, 5000),
+    /** Frais de gestion maximaux d'un mois avec chiffre d'affaires, en euros. */
+    plafondMensuel: conditionBornee(0, 50000),
+    /** Frais fixes ajoutés aux frais de gestion de chaque mois avec chiffre d'affaires, en euros. */
+    fraisFixesMensuels: conditionBornee(0, 2000),
+    contrat: z.enum(CONTRATS_PORTAGE).optional().catch(undefined),
+    effectif: z.enum(EFFECTIFS_PORTAGE).optional().catch(undefined),
+    /** Versement mobilité de la commune de l'établissement, en part du brut (dû à partir de 11 salariés). */
+    tauxVersementMobilite: conditionBornee(0, 0.032),
+    /** La société reverse au salarié la réduction générale des cotisations patronales (dans son salaire). */
+    reductionGeneraleReversee: z.boolean().optional().catch(undefined),
+    /** Mutuelle : part du salarié, en euros par mois avec salaire, retenue sur son net. */
+    mutuelleMensuelle: conditionBornee(0, 1000)
+  })
+  .transform(conditions => {
+    const { plancherMensuel, plafondMensuel } = conditions
+    if (plancherMensuel !== undefined && plafondMensuel !== undefined && plancherMensuel > plafondMensuel) return { ...conditions, plancherMensuel: undefined, plafondMensuel: undefined }
+    return conditions
+  })
+
+/**
+ * Activité en portage salarial (voir l'ADR 016) : une personne, reliée par « Titulaire » (le salarié porté), facture des
+ * prestations de services par une société de portage, qui lui verse un salaire après ses frais de gestion. Ses flux :
+ * le chiffre d'affaires de prestations (`ca_services`) et les frais professionnels remboursés (`deductible_expense`).
+ */
+const PortageSchema = z.object({
+  id: z.string(),
+  type: z.literal("portage"),
+  name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle activité en portage"),
+  conditions: ConditionsPortageSchema.optional().catch(undefined),
+  avatar: AvatarSchema,
+  locked: z.boolean().default(false)
+})
+
+export const EntitySchema = z.union([PersonSchema, CompanySchema, MicroEntrepriseSchema, PortageSchema])
 
 export const RelationshipSchema = z.object({
   id: z.string(),
@@ -380,6 +436,8 @@ export type DeplacementsProfessionnels = z.infer<typeof DeplacementsProfessionne
 export type Person = z.infer<typeof PersonSchema>
 export type Company = z.infer<typeof CompanySchema>
 export type MicroEntreprise = z.infer<typeof MicroEntrepriseSchema>
+export type ConditionsPortage = z.infer<typeof ConditionsPortageSchema>
+export type Portage = z.infer<typeof PortageSchema>
 export type Entity = z.infer<typeof EntitySchema>
 export type Relationship = z.infer<typeof RelationshipSchema>
 export type FinancialFlow = z.infer<typeof FinancialFlowSchema>
@@ -395,6 +453,15 @@ export type SessionState = z.infer<typeof SessionStateSchema>
 export type SaveSlot = z.infer<typeof SaveSlotSchema>
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>
 export type Affichage = z.infer<typeof AffichageSchema>
+
+/**
+ * Vrai pour une activité qu'on crée et qu'on exploite soi-même : société, entreprise individuelle ou micro-entreprise.
+ * Elles seules ont une date de création, une profession réglementée et des déplacements professionnels ; faux pour
+ * une personne et pour une activité en portage salarial, dont l'employeur est la société de portage.
+ */
+export function estEntrepriseOuMicro(entity: Entity): entity is Company | MicroEntreprise {
+  return entity.type === "company" || entity.type === "micro-entreprise"
+}
 
 // ===================================================================================
 // == 3. TYPES NON LIÉS À LA VALIDATION (API, ÉTATS VOLATILES, ETC.)
@@ -452,6 +519,8 @@ export interface ActivityResult {
   reserves?: ReservesDeLaSociete
   /** Micro-entreprise passée au régime réel (deux années de suite au-delà des plafonds) : simulée en EI au réel. */
   sortieDuRegimeMicro?: SortieDuRegimeMicro
+  /** Activité en portage salarial : le calcul pas à pas, du chiffre d'affaires au net (voir l'ADR 016). */
+  portage?: DetailPortage
   /** Micro-entreprise à l'ACRE dont la date de création est connue : l'aide de l'année, mois par mois. */
   acre?: ACREDeLAnnee
   /** Dispositifs limités dans le temps qui jouent cette année (sortie du régime micro, ACRE, plafonds au prorata). */
@@ -527,10 +596,20 @@ export type CotisationSalarie =
   | "csgDeductible"
   | "csgNonDeductibleEtCrds"
 
-/** Bulletin de paie annuel simplifié d'un président de SASU (assimilé salarié) ou d'un salarié. */
+/**
+ * Les cotisations d'un salarié porté qui s'ajoutent à celles d'un salarié (voir l'ADR 016) : celles du cadre (APEC,
+ * prévoyance), celles qui dépendent de l'effectif de la société de portage (participation à l'effort de construction,
+ * versement mobilité) et la contribution conventionnelle à la formation professionnelle.
+ */
+export type CotisationPortage = "apec" | "prevoyanceCadres" | "formationConventionnelle" | "effortConstruction" | "versementMobilite"
+
+/** Bulletin de paie annuel simplifié d'un président de SASU (assimilé salarié), d'un salarié ou d'un salarié porté. */
 export interface DetailCotisationsSalarie {
-  /** Le président, assimilé salarié, ne cotise pas à l'assurance chômage et n'a pas droit à la réduction générale. */
-  statut: "president" | "salarie"
+  /**
+   * Le président, assimilé salarié, ne cotise pas à l'assurance chômage et n'a pas droit à la réduction générale. Le
+   * salarié porté (« porte ») est un cadre : ses cotisations propres sont dans `cotisationsDuPortage`.
+   */
+  statut: "president" | "salarie" | "porte"
   brut: number
   /** Brut moins les cotisations salariales, CSG et CRDS comprises. */
   net: number
@@ -545,6 +624,64 @@ export interface DetailCotisationsSalarie {
   coutEmployeur: number
   /** CSG non déductible et CRDS : elles s'ajoutent au net pour le revenu imposable. */
   partNonDeductible: number
+  /** Salarié porté : ses cotisations propres, comprises dans les totaux (voir `CotisationPortage`). */
+  cotisationsDuPortage?: Record<CotisationPortage, { salariale: number; patronale: number }>
+}
+
+/** Conditions de la société de portage retenues pour le calcul : celles saisies, les autres à leur valeur typique. */
+export interface ConditionsPortageRetenues {
+  tauxFraisDeGestion: number
+  plancherMensuel: number | null
+  plafondMensuel: number | null
+  fraisFixesMensuels: number
+  contrat: (typeof CONTRATS_PORTAGE)[number]
+  effectif: EffectifPortage
+  tauxVersementMobilite: number
+  reductionGeneraleReversee: boolean
+  mutuelleMensuelle: number
+}
+
+/**
+ * Activité en portage salarial sur une année, pas à pas (voir l'ADR 016) : le chiffre d'affaires, moins les frais de
+ * gestion et les frais professionnels remboursés, est l'enveloppe ; elle paie la masse salariale brute et ses
+ * cotisations patronales. Montants annuels, non arrondis.
+ */
+export interface DetailPortage {
+  conditions: ConditionsPortageRetenues
+  /** Les conditions non saisies, qui prennent leur valeur typique : à remplacer par celles de la société. */
+  valeursTypiques: (keyof ConditionsPortageRetenues)[]
+  /** Mois avec chiffre d'affaires : les seuls avec frais de gestion et salaire (les autres sont sans mission). */
+  moisAvecChiffreDAffaires: number
+  chiffreAffaires: number
+  fraisDeGestion: number
+  /** Frais professionnels remboursés sur justificatifs : ni cotisés ni imposés. */
+  fraisProfessionnels: number
+  /** Chiffre d'affaires moins frais de gestion et frais professionnels (0 si négatif). */
+  enveloppe: number
+  /** Masse salariale brute : salaire de base, indemnité d'apport d'affaires et réserve (ou indemnité de précarité). */
+  masseSalariale: number
+  salaireDeBase: number
+  indemniteApportDAffaires: number
+  /** CDI : réserve financière, gardée sur le compte d'activité ; CDD : indemnité de précarité, versée. Montant brut. */
+  reserve: number
+  /** Bulletin de paie de toute la masse salariale. */
+  bulletin: DetailCotisationsSalarie
+  /** Brut versé dans l'année : toute la masse salariale en CDD, sans la réserve en CDI. */
+  brutVerse: number
+  /** Part salariale de la mutuelle, retenue sur le net. */
+  mutuelle: number
+  /** Net versé dans l'année, après les cotisations salariales et la mutuelle. */
+  netVerse: number
+  /** Salaire imposable avant la déduction pour frais professionnels : net versé, plus CSG non déductible et CRDS. */
+  netImposable: number
+  /** CDI : la réserve, nette de ses cotisations, gardée sur le compte d'activité. */
+  reserveConservee: number
+  /** Ce que l'enveloppe ne peut pas payer à l'euro près (saut des cotisations au plafond) : reste sur le compte d'activité. */
+  reliquat: number
+  /** Réduction générale des cotisations patronales que la société garde quand elle ne la reverse pas. */
+  reductionGeneraleGardee: number
+  /** Salaire de base mensuel moyen des mois avec chiffre d'affaires, comparé au minimum conventionnel. */
+  salaireDeBaseMensuel: number
 }
 
 /** Un salarié d'une activité de la simulation, avec son bulletin de paie annuel. */
@@ -648,6 +785,8 @@ export interface PersonResult {
     dividendes: number
     /** Bénéfices de micro-entreprise ou d'entreprise individuelle, nets de cotisations. */
     benefices: number
+    /** Salaires nets versés par ses activités en portage salarial ; absent sans portage. */
+    salairesPortage?: number
   }
   /** Écart entre le brut et le net des salaires dont le brut est renseigné. */
   cotisationsSalariales: number

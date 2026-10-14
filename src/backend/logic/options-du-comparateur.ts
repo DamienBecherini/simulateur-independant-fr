@@ -3,7 +3,7 @@
 // Ils vivent avec le moteur pour servir à la fois l'interface (src/lib/comparateur-options.ts) et les outils des
 // clients d'IA (src/backend/logic/outils, voir l'ADR 010) : les deux comparent avec les mêmes réglages.
 
-import type { ComparaisonOptions, DonneesDeLAnnee, FinancialFlow, FraisFonctionnement, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle } from "../../types.js"
+import type { ComparaisonOptions, ConditionsPortage, ConditionsPortageRetenues, DonneesDeLAnnee, FinancialFlow, FraisFonctionnement, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle } from "../../types.js"
 
 /**
  * Frais de fonctionnement annuels proposés par défaut : des ordres de grandeur, à ajuster à sa situation.
@@ -17,6 +17,40 @@ export function defaultFraisFonctionnement(): FraisFonctionnement {
     EI: { expertComptable: 1200, banque: 150, logiciel: 150, assurance: 250, cfe: 300 },
     micro: { expertComptable: 0, banque: 100, logiciel: 100, assurance: 350, cfe: 300 }
   }
+}
+
+/**
+ * Conditions d'une société de portage quand elles ne sont pas saisies (voir l'ADR 016, décisions du 14 octobre 2026) :
+ * des valeurs typiques, annoncées comme telles, à remplacer par celles de sa société. Aucun texte ne fixe les frais de
+ * gestion : 7 % est le milieu de la fourchette de 5 à 10 % couramment annoncée. CDI : le contrat qui couvre plusieurs
+ * clients ; sa réserve est montrée conservée. 50 salariés et plus : les salariés portés sont regroupés dans des sociétés
+ * qui en emploient beaucoup. Réduction générale non reversée et versement mobilité nul : rien ne permet de supposer le
+ * contraire. Mutuelle à 0 € : son prix dépend du contrat.
+ */
+export function conditionsPortageParDefaut(): ConditionsPortageRetenues {
+  return {
+    tauxFraisDeGestion: 0.07,
+    plancherMensuel: null,
+    plafondMensuel: null,
+    fraisFixesMensuels: 0,
+    contrat: "CDI",
+    effectif: "50EtPlus",
+    tauxVersementMobilite: 0,
+    reductionGeneraleReversee: false,
+    mutuelleMensuelle: 0
+  }
+}
+
+/** Les conditions saisies, complétées par les valeurs typiques, et la liste de celles qui en sont. */
+export function conditionsPortageRetenues(saisies: ConditionsPortage | undefined): { conditions: ConditionsPortageRetenues; valeursTypiques: (keyof ConditionsPortageRetenues)[] } {
+  const conditions = conditionsPortageParDefaut()
+  const valeursTypiques: (keyof ConditionsPortageRetenues)[] = []
+  for (const cle of Object.keys(conditions) as (keyof ConditionsPortageRetenues)[]) {
+    const saisie = saisies?.[cle]
+    if (saisie === undefined) valeursTypiques.push(cle)
+    else Object.assign(conditions, { [cle]: saisie })
+  }
+  return { conditions, valeursTypiques }
 }
 
 /**

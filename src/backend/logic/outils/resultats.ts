@@ -3,7 +3,7 @@
 // vient de simulerLesAnnees, comme à l'écran ; l'outil ne fait qu'arrondir à l'euro et nommer les lignes en français.
 
 import { z } from "zod"
-import type { ActivityResult, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, FoyerFiscalResult, PersonResult, ReservesDeLaSociete, SessionState, SimulationReport } from "../../../types.js"
+import type { ActivityResult, CotisationPortage, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, DetailPortage, FoyerFiscalResult, PersonResult, ReservesDeLaSociete, SessionState, SimulationReport } from "../../../types.js"
 import { pourcent, pourcentDeNombre } from "../format.js"
 import { LIBELLES_DES_COTISATIONS_TNS } from "../libelles-des-cotisations.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
@@ -70,7 +70,7 @@ export const simuler = definirOutil({
   titre: "Simuler une année",
   description: [
     "Calcule une année avec le moteur du simulateur et en rend le résumé : bilan (chiffre d'affaires, charges, cotisations, impôt sur les sociétés, impôt sur le revenu, prélèvements sociaux, résultat conservé), chaque foyer fiscal (net après impôts, impôt, revenu fiscal de référence), chaque activité et chaque personne.",
-    "Société à l'IS : resultatConserve est ce que ses réserves gagnent dans l'année (négatif si elle est déficitaire, ou si elle distribue plus que son bénéfice de l'année en puisant dans ses réserves) ; reservesALaFin, ses réserves distribuables au 31 décembre, reportées d'une année à l'autre.",
+    "Société à l'IS : resultatConserve est ce que ses réserves gagnent dans l'année (négatif si elle est déficitaire, ou si elle distribue plus que son bénéfice de l'année en puisant dans ses réserves) ; reservesALaFin, ses réserves distribuables au 31 décembre, reportées d'une année à l'autre. Portage salarial : resultatConserve reste sur le compte d'activité (réserve d'un CDI).",
     "Montants annuels en euros, arrondis. C'est la seule source des chiffres à donner à l'utilisateur : ne les recalculez pas. Pour le détail d'une ligne : expliquer_resultat."
   ].join(" "),
   lecture: true,
@@ -139,6 +139,15 @@ const LIBELLES_REGIME_GENERAL: Record<CotisationSalarie, string> = {
   csgNonDeductibleEtCrds: "CSG non déductible et CRDS"
 }
 
+/** Les cotisations propres au salarié porté (voir l'ADR 016). */
+const LIBELLES_DU_PORTAGE: Record<CotisationPortage, string> = {
+  apec: "APEC (cadres)",
+  prevoyanceCadres: "Prévoyance des cadres",
+  formationConventionnelle: "Formation professionnelle conventionnelle",
+  effortConstruction: "Participation à l'effort de construction",
+  versementMobilite: "Versement mobilité"
+}
+
 const ComposanteSchema = z.object({ libelle: z.string(), montant: z.number() })
 const LigneSchema = z.object({ libelle: z.string(), montant: z.number(), composantes: z.array(ComposanteSchema).optional() })
 type Ligne = z.infer<typeof LigneSchema>
@@ -168,7 +177,31 @@ function informationsDeLaProfession(a: ActivityResult): string[] {
 
 function lignesBulletin(titre: string, bulletin: DetailCotisationsSalarie): Ligne {
   const composantes = (Object.keys(LIBELLES_REGIME_GENERAL) as CotisationSalarie[]).map(cle => composante(`${LIBELLES_REGIME_GENERAL[cle]} (salariale + patronale)`, bulletin.cotisations[cle].salariale + bulletin.cotisations[cle].patronale))
-  return ligne(`${titre} : brut ${arrondir(bulletin.brut)} €, net ${arrondir(bulletin.net)} €, coût employeur ${arrondir(bulletin.coutEmployeur)} €`, bulletin.totalSalarial + bulletin.totalPatronal - bulletin.reductionGenerale, [...composantes, composante("Réduction générale (en moins)", -bulletin.reductionGenerale)])
+  const duPortage = bulletin.cotisationsDuPortage
+  const propres = duPortage ? (Object.keys(LIBELLES_DU_PORTAGE) as CotisationPortage[]).map(cle => composante(`${LIBELLES_DU_PORTAGE[cle]} (salariale + patronale)`, duPortage[cle].salariale + duPortage[cle].patronale)) : []
+  return ligne(`${titre} : brut ${arrondir(bulletin.brut)} €, net ${arrondir(bulletin.net)} €, coût employeur ${arrondir(bulletin.coutEmployeur)} €`, bulletin.totalSalarial + bulletin.totalPatronal - bulletin.reductionGenerale, [...composantes, ...propres, composante("Réduction générale (en moins)", -bulletin.reductionGenerale)])
+}
+
+/** Le portage salarial pas à pas : du chiffre d'affaires à l'enveloppe, puis le partage de la masse salariale (ADR 016). */
+function lignesDuPortage(p: DetailPortage): Ligne[] {
+  const reserve = p.conditions.contrat === "CDI" ? "Réserve financière, gardée sur le compte d'activité" : "Indemnité de précarité, versée"
+  return [
+    ligne("Portage salarial : enveloppe disponible", p.enveloppe, [composante("Chiffre d'affaires", p.chiffreAffaires), composante("Frais de gestion (en moins)", -p.fraisDeGestion), composante("Frais professionnels remboursés, ni cotisés ni imposés (en moins)", -p.fraisProfessionnels)]),
+    ligne("Masse salariale brute payée par l'enveloppe", p.masseSalariale, [composante("Salaire de base", p.salaireDeBase), composante("Indemnité d'apport d'affaires", p.indemniteApportDAffaires), composante(reserve, p.reserve)]),
+    lignesBulletin("Bulletin du salarié porté", p.bulletin),
+    ligne("Salaire net versé dans l'année", p.netVerse, [composante("Brut versé", p.brutVerse), composante("Mutuelle, part du salarié (en moins)", -p.mutuelle), composante("Salaire imposable, avant la déduction pour frais professionnels", p.netImposable)]),
+    ligne("Gardé sur le compte d'activité", p.reserveConservee + p.reliquat, [composante("Réserve nette de cotisations", p.reserveConservee), composante("Reliquat de l'enveloppe", p.reliquat)])
+  ]
+}
+
+/** Les conditions de la société de portage retenues, en signalant les valeurs typiques, et la réduction générale gardée. */
+function informationsDuPortage(p: DetailPortage): string[] {
+  const c = p.conditions
+  const bornes = `plancher ${c.plancherMensuel === null ? "aucun" : `${c.plancherMensuel} €`}, plafond ${c.plafondMensuel === null ? "aucun" : `${c.plafondMensuel} €`}, frais fixes ${c.fraisFixesMensuels} €`
+  const infos = [`Conditions retenues : frais de gestion de ${pourcent(c.tauxFraisDeGestion)} (${bornes}, par mois avec chiffre d'affaires), ${c.contrat}, effectif ${c.effectif}, versement mobilité ${pourcent(c.tauxVersementMobilite)}, réduction générale ${c.reductionGeneraleReversee ? "reversée" : "non reversée"}, mutuelle ${c.mutuelleMensuelle} € par mois ; ${p.moisAvecChiffreDAffaires} mois avec chiffre d'affaires.`]
+  if (p.valeursTypiques.length > 0) infos.push(`Valeurs typiques, à remplacer par celles de la société de portage : ${p.valeursTypiques.join(", ")}.`)
+  if (p.reductionGeneraleGardee > 0) infos.push(`Réduction générale des cotisations patronales gardée par la société de portage : ${arrondir(p.reductionGeneraleGardee)} €.`)
+  return infos
 }
 
 /** Les réserves d'une société à l'IS sur l'année, en une phrase (voir l'ADR 014). */
@@ -186,6 +219,7 @@ function informationsDeLActivite(session: SessionState, a: ActivityResult): stri
   if (a.fraisDeDeplacement) infos.push(`Déplacements professionnels : ${a.fraisDeDeplacement.kilometres} km, ${arrondir(a.fraisDeDeplacement.montant)} € au barème kilométrique, ${a.fraisDeDeplacement.deductible ? "déductibles" : "non déductibles en micro-entreprise"}.`)
   if (a.sortieDuRegimeMicro) infos.push(`Sortie du régime micro depuis le 1er janvier ${a.sortieDuRegimeMicro.depuis} (plafonds dépassés en ${a.sortieDuRegimeMicro.depassements.join(" et ")}) : simulée en EI au réel.`)
   if (a.reserves) infos.push(phraseDesReserves(a.reserves))
+  if (a.portage) infos.push(...informationsDuPortage(a.portage))
   if (a.beneficiaireIds.length > 0) infos.push(`Revenus versés à : ${a.beneficiaireIds.map(id => nomDe(session, id)).join(", ")}.`)
   return [...informationsDeLaProfession(a), ...infos, ...(a.dispositifs ?? [])]
 }
@@ -195,7 +229,8 @@ function expliquerActivite(session: SessionState, a: ActivityResult) {
     ...(a.cotisationsTNS ? [lignesTNS(a.cotisationsTNS)] : []),
     ...(a.formationProfessionnelle ? [ligne("dont contribution à la formation professionnelle (micro-entreprise, non réduite par l'ACRE)", a.formationProfessionnelle)] : []),
     ...(a.cotisationsPresident ? [lignesBulletin("Cotisations du président (assimilé salarié)", a.cotisationsPresident)] : []),
-    ...(a.salaries ?? []).map(s => lignesBulletin(`Salarié ${nomDe(session, s.personId)}`, s))
+    ...(a.salaries ?? []).map(s => lignesBulletin(`Salarié ${nomDe(session, s.personId)}`, s)),
+    ...(a.portage ? lignesDuPortage(a.portage) : [])
   ]
   const p = a.partage
   const partage = p ? [ligne("Partage du bénéfice avant rémunération", p.beneficeAvantRemuneration, [composante("Rémunération nette", p.remunerationNette), composante("Cotisations sur la rémunération", p.cotisationsRemuneration), composante("Impôt sur les sociétés", p.impotSocietes), composante("Dividendes nets", p.dividendesNets), composante("Cotisations sur les dividendes", p.cotisationsSurDividendes), composante("Ajouté aux réserves (négatif : pris sur les réserves ou déficit)", p.resultatConserve)])] : []
@@ -208,7 +243,7 @@ function expliquerActivite(session: SessionState, a: ActivityResult) {
 
 function expliquerPersonne(session: SessionState, rapport: SimulationReport, p: PersonResult) {
   const d = p.detail
-  const revenus = ligne("Revenus de l'année, nets de cotisations", p.revenusDirects + p.revenusActivites, [composante("Salaires", d.salaires), composante("Allocations chômage", d.allocationsChomage), composante("Autres revenus", d.autresRevenus), composante("Rémunérations de dirigeant", d.remunerationsDirigeant), composante("Dividendes", d.dividendes), composante("Bénéfices", d.benefices)])
+  const revenus = ligne("Revenus de l'année, nets de cotisations", p.revenusDirects + p.revenusActivites, [composante("Salaires", d.salaires), composante("Allocations chômage", d.allocationsChomage), composante("Autres revenus", d.autresRevenus), composante("Rémunérations de dirigeant", d.remunerationsDirigeant), composante("Dividendes", d.dividendes), composante("Bénéfices", d.benefices), ...(d.salairesPortage ? [composante("Salaire en portage salarial", d.salairesPortage)] : [])])
   const f = p.fraisProfessionnels
   const frais = f ? [ligne(`Frais professionnels retenus (${f.retenue === "reels" ? "frais réels" : `déduction forfaitaire de ${pourcent(f.tauxDeductionForfaitaire)}`})`, f.deduction, [composante("Déduction forfaitaire", f.deductionForfaitaire), composante("Frais réels", f.fraisReels), composante("dont trajets domicile-travail", f.fraisDeTrajet)])] : []
   const foyer = rapport.foyers.find(fo => fo.personIds.includes(p.entityId))
@@ -225,7 +260,7 @@ export const expliquerResultat = definirOutil({
   titre: "Expliquer le résultat d'un acteur",
   description: [
     "Détaille le résultat calculé par le moteur pour un acteur et une année.",
-    "Activité : chiffre d'affaires, charges, cotisations ligne à ligne (caisse d'un libéral réglementé comprise), impôt sur les sociétés, partage du bénéfice, versement libératoire, ACRE, avertissements.",
+    "Activité : chiffre d'affaires, charges, cotisations ligne à ligne (caisse d'un libéral réglementé comprise), impôt sur les sociétés, partage du bénéfice, portage salarial pas à pas, versement libératoire, ACRE, avertissements.",
     "Personne : revenus par nature, cotisations salariales, frais professionnels retenus, et l'impôt de son foyer fiscal.",
     "Montants annuels en euros, arrondis. Pour répondre à « pourquoi ce montant ? » sans refaire le calcul."
   ].join(" "),

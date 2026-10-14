@@ -148,12 +148,13 @@ const incomeLabels: Record<keyof PersonResult["detail"], string> = {
   autresRevenus: "Autres revenus",
   remunerationsDirigeant: "Rémunération de dirigeant",
   dividendes: "Dividendes",
-  benefices: "Bénéfices d'activité"
+  benefices: "Bénéfices d'activité",
+  salairesPortage: "Salaire en portage salarial"
 }
 
 /** Revenus d'un membre du foyer, ventilés par nature ; seules les lignes non nulles sont affichées. */
 function PersonIncome({ person, showName }: { person: PersonResult; showName: boolean }) {
-  const lines = (Object.keys(incomeLabels) as (keyof PersonResult["detail"])[]).filter(key => person.detail[key] !== 0)
+  const lines = (Object.keys(incomeLabels) as (keyof PersonResult["detail"])[]).filter(key => (person.detail[key] ?? 0) !== 0)
   if (lines.length === 0) return showName ? <p className="text-sm text-slate-600 dark:text-slate-400">{person.name} : aucun revenu</p> : null
 
   return (
@@ -161,7 +162,7 @@ function PersonIncome({ person, showName }: { person: PersonResult; showName: bo
       {showName ? <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{person.name}</p> : null}
       <dl className="space-y-1 text-sm">
         {lines.map(key => (
-          <Row key={key} label={incomeLabels[key]} value={euros(person.detail[key])} />
+          <Row key={key} label={incomeLabels[key]} value={euros(person.detail[key] ?? 0)} />
         ))}
         {person.fraisProfessionnels ? <FraisProfessionnelsRow frais={person.fraisProfessionnels} /> : null}
       </dl>

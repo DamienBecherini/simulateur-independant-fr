@@ -1,6 +1,6 @@
 // src/backend/logic/cotisationsSalarie.ts
 
-import type { CotisationSalarie, DetailCotisationsSalarie } from "../../types.js"
+import type { CotisationPortage, CotisationSalarie, DetailCotisationsSalarie } from "../../types.js"
 import { parTranches } from "./cotisationsTNS.js"
 import type { CotisationRegimeGeneral, ReglesRegimeGeneral } from "./regles.js"
 
@@ -44,21 +44,53 @@ export function reductionGenerale(brut: number, regles: ReglesRegimeGeneral["red
   return (brut * Math.round(coefficient * 10000)) / 10000
 }
 
+/** Chaque cotisation d'un barème, calculée sur le brut. */
+function lignes<Nom extends string>(brut: number, bareme: Record<Nom, CotisationRegimeGeneral>, statut: StatutSalarie, pass: number): Record<Nom, Montants> {
+  return Object.fromEntries(Object.entries<CotisationRegimeGeneral>(bareme).map(([nom, cotisation]) => [nom, ligne(brut, cotisation, statut, pass)])) as Record<Nom, Montants>
+}
+
+/**
+ * Ce que le bulletin d'un salarié porté change à celui d'un salarié (voir l'ADR 016 et `parametresDuBulletinDuPorte`,
+ * simulation-portage.ts) : les règles du régime général où les lignes et la réduction générale qui dépendent de
+ * l'effectif de la société de portage sont déjà remplacées, les cotisations propres au salarié porté, et si la réduction
+ * générale lui est reversée.
+ */
+export interface BulletinDuPorte {
+  regimeGeneral: ReglesRegimeGeneral
+  cotisationsDuPortage: Record<CotisationPortage, CotisationRegimeGeneral>
+  reductionGeneraleReversee: boolean
+}
+
 /** Bulletin de paie annuel : toutes les cotisations d'une rémunération brute, et ce qu'elle coûte à l'employeur. */
-export function calculerCotisationsSalarie(brut: number, statut: StatutSalarie, regles: ReglesRegimeGeneral): DetailCotisationsSalarie {
+export function calculerCotisationsSalarie(brut: number, statut: Exclude<StatutSalarie, "porte">, regles: ReglesRegimeGeneral): DetailCotisationsSalarie {
+  return bulletinDePaie(brut, statut, regles, statut === "salarie")
+}
+
+/**
+ * Bulletin de paie annuel d'un salarié porté : celui d'un salarié, avec les lignes de l'effectif de la société de
+ * portage, ses cotisations propres (cadre, effort de construction, versement mobilité, formation conventionnelle), et la
+ * réduction générale seulement si la société la reverse : sinon, elle la garde, et le coût pris sur l'enveloppe du
+ * salarié porté est celui d'avant la réduction.
+ */
+export function calculerBulletinDuPorte(brut: number, porte: BulletinDuPorte): DetailCotisationsSalarie {
+  return bulletinDePaie(brut, "porte", porte.regimeGeneral, porte.reductionGeneraleReversee, porte.cotisationsDuPortage)
+}
+
+function bulletinDePaie(brut: number, statut: StatutSalarie, regles: ReglesRegimeGeneral, avecReduction: boolean, duPortage?: Record<CotisationPortage, CotisationRegimeGeneral>): DetailCotisationsSalarie {
   const pass = regles.plafondSecuriteSociale
   const { csgDeductible, csgNonDeductible, crds } = regles.csgCrds
   const assietteCsg = parTranches(brut, regles.csgCrds.assiette, pass)
 
   const cotisations = {
-    ...(Object.fromEntries(Object.entries(regles.cotisations).map(([nom, cotisation]) => [nom, ligne(brut, cotisation, statut, pass)])) as Record<keyof ReglesRegimeGeneral["cotisations"], Montants>),
+    ...lignes(brut, regles.cotisations, statut, pass),
     csgDeductible: { salariale: assietteCsg * csgDeductible, patronale: 0 },
     csgNonDeductibleEtCrds: { salariale: assietteCsg * (csgNonDeductible + crds), patronale: 0 }
   }
-  const montants = Object.values(cotisations)
+  const cotisationsDuPortage = duPortage ? lignes(brut, duPortage, statut, pass) : undefined
+  const montants = [...Object.values(cotisations), ...Object.values(cotisationsDuPortage ?? {})]
   const totalSalarial = montants.reduce((somme, { salariale }) => somme + salariale, 0)
   const totalPatronal = montants.reduce((somme, { patronale }) => somme + patronale, 0)
-  const reduction = statut === "salarie" ? Math.min(totalPatronal, reductionGenerale(brut, regles.reductionGenerale)) : 0
+  const reduction = avecReduction ? Math.min(totalPatronal, reductionGenerale(brut, regles.reductionGenerale)) : 0
 
   return {
     statut,
@@ -69,7 +101,8 @@ export function calculerCotisationsSalarie(brut: number, statut: StatutSalarie, 
     totalPatronal,
     reductionGenerale: reduction,
     coutEmployeur: brut + totalPatronal - reduction,
-    partNonDeductible: cotisations.csgNonDeductibleEtCrds.salariale
+    partNonDeductible: cotisations.csgNonDeductibleEtCrds.salariale,
+    ...(cotisationsDuPortage ? { cotisationsDuPortage } : {})
   }
 }
 
@@ -82,7 +115,7 @@ export function calculerCotisationsSalarie(brut: number, statut: StatutSalarie, 
  * croît avec le brut ; sinon entre `net` et `net + écart`, l'écart doublant jusqu'à couvrir les cotisations.
  * L'intervalle est ensuite divisé par deux à chaque tour. Une rémunération nulle ou négative n'a ni brut ni cotisations.
  */
-export function brutPourUnNet(net: number, statut: StatutSalarie, regles: ReglesRegimeGeneral): number {
+export function brutPourUnNet(net: number, statut: Exclude<StatutSalarie, "porte">, regles: ReglesRegimeGeneral): number {
   if (net <= 0) return 0
   const netDe = (brut: number) => calculerCotisationsSalarie(brut, statut, regles).net
   const plafond = regles.plafondSecuriteSociale

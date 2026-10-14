@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest"
 import { CAISSES_LIBERALES, PUISSANCES_FISCALES } from "../../types.js"
 import { reductionGenerale } from "../logic/cotisationsSalarie.js"
 import { montantBaremeKilometrique } from "../logic/frais-kilometriques.js"
-import { type BaremeProgressif, type ReglesFiscales, type ReglesLiberauxReglementes, type TrancheCotisation } from "../logic/regles.js"
+import { type BaremeProgressif, type CotisationRegimeGeneral, type ReglesFiscales, type ReglesLiberauxReglementes, type ReglesPortageSalarial, type TrancheCotisation } from "../logic/regles.js"
 import fichier2024 from "./2024.json" with { type: "json" }
 import fichier2025 from "./2025.json" with { type: "json" }
 import fichier2026 from "./2026.json" with { type: "json" }
@@ -94,6 +94,7 @@ function taux(r: ReglesFiscales): [string, number][] {
     ["TNS.csgCrds.crds", tns.csgCrds.crds],
     ["TNS.formationProfessionnelle.tauxSurPlafond", tns.formationProfessionnelle.tauxSurPlafond],
     ...tauxDesLiberaux(r.liberauxReglementes),
+    ...tauxDuPortage(r.portageSalarial),
     ["protectionSociale.tauxRetraiteDeBase", r.protectionSociale.tauxRetraiteDeBase],
     ...parActivite("protectionSociale.partRetraiteDeBaseMicro", r.protectionSociale.partRetraiteDeBaseMicro),
     ["EURL.seuilDividendesPartDuCapital", r.EURL.seuilDividendesPartDuCapital],
@@ -107,6 +108,24 @@ function taux(r: ReglesFiscales): [string, number][] {
     ["CFE.partDueAnneeSuivante", r.CFE.partDueAnneeSuivante],
     ...parActivite("microEntreprise.abattement", micro.abattement),
     ...parActivite("microEntreprise.versementLiberatoire.taux", micro.versementLiberatoire.taux)
+  ]
+}
+
+/** Les taux du portage salarial, avec leur nom (« portage.selonLEffectif.50EtPlus.fnal.patronale.0 »). */
+function tauxDuPortage(p: ReglesPortageSalarial): [string, number][] {
+  const cotisation = (nom: string, { salariale, patronale }: CotisationRegimeGeneral) => [...salariale.map(({ taux }, i): [string, number] => [`portage.${nom}.salariale.${i}`, taux]), ...patronale.map(({ taux }, i): [string, number] => [`portage.${nom}.patronale.${i}`, taux])]
+  return [
+    ["portage.indemniteApportDAffaires", p.indemniteApportDAffaires.taux],
+    ["portage.reserveFinanciere", p.reserveFinanciere.taux],
+    ...cotisation("apec", p.cotisationsDuCadre.apec),
+    ...cotisation("prevoyanceCadres", p.cotisationsDuCadre.prevoyanceCadres),
+    ...Object.entries(p.selonLEffectif).flatMap(([effectif, e]): [string, number][] => [
+      ...cotisation(`selonLEffectif.${effectif}.fnal`, e.fnal),
+      ...cotisation(`selonLEffectif.${effectif}.formationProfessionnelle`, e.formationProfessionnelle),
+      ...cotisation(`selonLEffectif.${effectif}.formationConventionnelle`, e.formationConventionnelle),
+      ...cotisation(`selonLEffectif.${effectif}.effortConstruction`, e.effortConstruction),
+      [`portage.selonLEffectif.${effectif}.tDeltaReductionGenerale`, e.tDeltaReductionGenerale]
+    ])
   ]
 }
 
@@ -368,6 +387,20 @@ describe("règles par année", () => {
       // Maximale au SMIC (Tmin + Tdelta, arrondi à 4 décimales), nulle à partir du plafond.
       expect(reductionGenerale(rg.smicAnnuel, rg)).toBeCloseTo(rg.smicAnnuel * Math.round((rg.tMin + rg.tDelta) * 10000) / 10000, 6)
       expect(reductionGenerale(rg.plafondEnSmic * rg.smicAnnuel, rg)).toBe(0)
+    })
+
+    it("a des règles du portage salarial cohérentes avec le régime général (ADR 016)", () => {
+      const { portageSalarial: portage, regimeGeneral } = regles
+      const effectifs = portage.selonLEffectif
+      // Moins de 50 salariés : le FNAL et le paramètre de la réduction générale sont ceux du régime général du fichier.
+      expect(effectifs.moinsDe11.fnal.patronale).toEqual(regimeGeneral.cotisations.fnal.patronale)
+      expect(effectifs.moinsDe11.formationProfessionnelle.patronale).toEqual(regimeGeneral.cotisations.formationProfessionnelle.patronale)
+      expect([effectifs.moinsDe11.tDeltaReductionGenerale, effectifs.de11a49.tDeltaReductionGenerale]).toEqual([regimeGeneral.reductionGenerale.tDelta, regimeGeneral.reductionGenerale.tDelta])
+      // 50 salariés et plus : FNAL de 0,50 % au lieu de 0,10 %, d'où 0,0040 de plus au paramètre de la réduction.
+      expect(effectifs["50EtPlus"].tDeltaReductionGenerale - effectifs.moinsDe11.tDeltaReductionGenerale).toBeCloseTo(0.004, 6)
+      expect([effectifs.moinsDe11.versementMobiliteDu, effectifs.de11a49.versementMobiliteDu, effectifs["50EtPlus"].versementMobiliteDu]).toEqual([false, true, true])
+      expect([portage.indemniteApportDAffaires.taux, portage.reserveFinanciere.taux]).toEqual([0.05, 0.1])
+      expect(portage.minimumConventionnel.expert).toBeGreaterThan(portage.minimumConventionnel.mensuel)
     })
 
     it("a des seuils de micro-entreprise et de TVA positifs et ordonnés", () => {

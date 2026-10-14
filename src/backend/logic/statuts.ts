@@ -49,5 +49,12 @@ export const REGIME_DU_DIRIGEANT: Record<StatutJuridique, "assimilé salarié" |
   EI: "non salarié"
 }
 
+/**
+ * Nom d'une activité en portage salarial (voir l'ADR 016), tel que l'affichent l'application, les exports et les outils
+ * pour les IA. Ce n'est pas un statut juridique : la personne est salariée de la société de portage, reliée à l'activité
+ * par « Titulaire » (affiché « salarié porté »).
+ */
+export const LIBELLE_DU_PORTAGE = "Portage salarial"
+
 /** Les statuts au réel dont le dirigeant est non salarié, auxquels se propose une profession libérale réglementée. */
 export const STATUTS_A_PROFESSION = STATUTS_JURIDIQUES.filter(statut => REGIME_DU_DIRIGEANT[statut] === "non salarié")

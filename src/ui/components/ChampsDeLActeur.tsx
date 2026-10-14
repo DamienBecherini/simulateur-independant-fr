@@ -5,7 +5,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { estSocieteIS, type Avatar, type Company, type Entity, type MicroEntreprise, type StatutSociete } from "@/types"
+import { estEntrepriseOuMicro, estSocieteIS, type Avatar, type Company, type Entity, type MicroEntreprise, type StatutSociete } from "@/types"
 import { statutDeLActivite, type StatutDUneActivite } from "@/backend/logic/changement-de-statut"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
@@ -75,7 +75,7 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee, 
           </div>
         </div>
       )}
-      {entity.type !== "person" && <ChampDuStatut activite={entity} onChangerDeStatut={onChangerDeStatut} />}
+      {estEntrepriseOuMicro(entity) && <ChampDuStatut activite={entity} onChangerDeStatut={onChangerDeStatut} />}
       <StatusSpecificFields entity={entity} onChange={onChange} anneesSimulees={anneesSimulees} annee={annee} />
       <div className="grid grid-cols-4 items-center gap-4">
         <span id="avatar-couleur" className="text-right text-sm font-medium">
@@ -101,7 +101,8 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee, 
           </div>
         </div>
       )}
-      {entity.type === "person" ? <ChampsFraisReels personne={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} /> : <ChampsDeplacements activite={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
+      {entity.type === "person" && <ChampsFraisReels personne={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
+      {estEntrepriseOuMicro(entity) && <ChampsDeplacements activite={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
     </>
   )
 }
@@ -143,7 +144,7 @@ function StatusSpecificFields({ entity, onChange, anneesSimulees = [], annee }: 
   const rfr = texteDuRfrN2(anneesSimulees)
   return (
     <>
-      {entity.type !== "person" && proposeLaProfession(entity) && <ChampProfession activite={entity} onChange={onChange} annee={annee} />}
+      {estEntrepriseOuMicro(entity) && proposeLaProfession(entity) && <ChampProfession activite={entity} onChange={onChange} annee={annee} />}
       {entity.type === "micro-entreprise" && (
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="rfrN2" className="text-right">
@@ -170,7 +171,7 @@ function StatusSpecificFields({ entity, onChange, anneesSimulees = [], annee }: 
           </div>
         </div>
       )}
-      {entity.type !== "person" && <ChampDateDeCreation activite={entity} onChange={onChange} />}
+      {estEntrepriseOuMicro(entity) && <ChampDateDeCreation activite={entity} onChange={onChange} />}
       {entity.type === "micro-entreprise" && <ChampHorsPlafondAnneePrecedente activite={entity} onChange={onChange} />}
       {entity.type === "company" && estSocieteIS(entity.legalStatus) && <ChampsDeLaSociete societe={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
     </>

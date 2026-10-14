@@ -1,6 +1,6 @@
 // src/backend/logic/testing/session-de-test.ts
 
-import type { Company, Entity, FinancialFlow, MicroEntreprise, Person, Relationship, SimulationAnnuelle } from "../../../types.js"
+import type { Company, ConditionsPortage, Entity, FinancialFlow, MicroEntreprise, Person, Portage, Relationship, SimulationAnnuelle } from "../../../types.js"
 
 /* Petites fabriques pour décrire une session en quelques lignes dans les tests du moteur. */
 
@@ -16,6 +16,16 @@ export function societe(id: string, legalStatus: Company["legalStatus"] = "SASU"
 
 export function micro(id: string, options: Partial<Pick<MicroEntreprise, "beneficieACRE" | "opteVFL">> = {}): MicroEntreprise {
   return { id, type: "micro-entreprise", name: id, beneficieACRE: false, opteVFL: false, avatar, locked: false, ...options }
+}
+
+export function portage(id: string, conditions?: ConditionsPortage): Portage {
+  return { id, type: "portage", name: id, ...(conditions ? { conditions } : {}), avatar, locked: false }
+}
+
+/** Le même montant chaque mois indiqué (tous par défaut), sur une session construite par `session`. */
+export function chaqueMois(donnees: SimulationAnnuelle, entityId: string, type: FinancialFlow["type"], montant: number, mois: number[] = Array.from({ length: 12 }, (_, m) => m)): SimulationAnnuelle {
+  for (const m of mois) donnees.monthlyData[m].flows.push({ id: `${entityId}-${type}-${m}`, label: type, amount: montant, entityId, type })
+  return donnees
 }
 
 export function relation(fromId: string, toId: string, type: Relationship["type"]): Relationship {

@@ -1,6 +1,6 @@
 // src/lib/comparateur-options.ts
 
-import { STATUTS_FRAIS } from "@/types"
+import { estEntrepriseOuMicro, STATUTS_FRAIS } from "@/types"
 import type { ComparaisonOptions, Comparateur, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle, StatutCompare, StatutFrais, StatutSociete } from "@/types"
 import { euros } from "@/backend/logic/format"
 import { avecLaRetraiteParDefaut, optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
@@ -109,9 +109,12 @@ export function appliquerRemuneration(options: ComparaisonOptions, remunerationN
   return avecRemuneration(options, remunerationNette)
 }
 
-/** Activités qu'on peut faire changer de statut dans le comparateur. */
+/**
+ * Activités qu'on peut faire changer de statut dans le comparateur. Pas encore une activité en portage salarial, qui
+ * n'a pas sa colonne (voir l'ADR 016).
+ */
 export function comparableActivities(session: DonneesDeLAnnee): (Company | MicroEntreprise)[] {
-  return session.entities.filter((e): e is Company | MicroEntreprise => e.type !== "person")
+  return session.entities.filter(estEntrepriseOuMicro)
 }
 
 /**

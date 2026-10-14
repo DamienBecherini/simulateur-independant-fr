@@ -4,7 +4,7 @@
 // l'outil compare ce que l'utilisateur voit à l'écran, sauf réglages passés en paramètres pour essayer une variante.
 
 import { z } from "zod"
-import { MODES_REPARTITION, STATUTS_SOCIETE, type ChiffreDAffairesDUnStatut, type ComparaisonOptions, type ComparaisonResult, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
+import { estEntrepriseOuMicro, MODES_REPARTITION, STATUTS_SOCIETE, type ChiffreDAffairesDUnStatut, type ComparaisonOptions, type ComparaisonResult, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
 import { vueDeLAnnee } from "../annees.js"
 import { enTexteBrut } from "../format.js"
 import { avecLaRemunerationDeLaGrille, optionsDuComparateur } from "../options-du-comparateur.js"
@@ -20,9 +20,10 @@ function activiteDemandee(session: SessionState, activiteId: string | undefined)
   if (activiteId !== undefined) {
     const acteur = trouverActeur(session, activiteId)
     if (acteur.type === "person") throw new ErreurOutil(`« ${acteur.name} » est une personne : le comparateur porte sur une activité (société, EI ou micro-entreprise).`)
+    if (acteur.type === "portage") throw new ErreurOutil(`« ${acteur.name} » est en portage salarial : le comparateur ne le propose pas encore. Son résultat : simuler ou expliquer_resultat.`)
     return acteur
   }
-  const activites = session.entities.filter(e => e.type !== "person")
+  const activites = session.entities.filter(estEntrepriseOuMicro)
   const activite = activites.find(a => a.id === session.comparateur?.activiteComparee) ?? activites[0]
   if (!activite) throw new ErreurOutil("La simulation ne contient aucune activité à comparer : proposez-en une avec proposer_acteur.")
   return activite

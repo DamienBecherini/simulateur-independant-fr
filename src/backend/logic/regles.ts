@@ -1,6 +1,6 @@
 // src/backend/logic/regles.ts
 
-import type { CaisseLiberale, CotisationSalarie, PuissanceFiscale } from "../../types.js"
+import type { CaisseLiberale, CotisationSalarie, EffectifPortage, PuissanceFiscale } from "../../types.js"
 import { ANNEE_COURANTE, FICHIERS_DE_REGLES } from "../regles/index.js"
 
 export { ANNEE_COURANTE }
@@ -168,6 +168,40 @@ export interface ReglesRegimeGeneral {
   reductionGenerale: { smicAnnuel: number; tMin: number; tDelta: number; puissance: number; plafondEnSmic: number }
 }
 
+/** Ce qui change, selon l'effectif de la société de portage, au bulletin d'un salarié porté (voir l'ADR 016). */
+interface CotisationsSelonLEffectif {
+  /** Remplace la ligne `fnal` du régime général. */
+  fnal: CotisationRegimeGeneral
+  /** Remplace la ligne `formationProfessionnelle` du régime général (contribution légale). */
+  formationProfessionnelle: CotisationRegimeGeneral
+  /** Contribution conventionnelle à la formation professionnelle de la branche, en plus de la légale. */
+  formationConventionnelle: CotisationRegimeGeneral
+  /** Participation des employeurs à l'effort de construction. */
+  effortConstruction: CotisationRegimeGeneral
+  /** Paramètre de la réduction générale qui dépend du taux du FNAL, à la place de celui du régime général. */
+  tDeltaReductionGenerale: number
+  /** Le versement mobilité est dû (à partir de 11 salariés). */
+  versementMobiliteDu: boolean
+}
+
+/**
+ * Le portage salarial (voir l'ADR 016) : ce que la loi et la convention de branche fixent, identique dans toutes les
+ * sociétés de portage. Les conditions propres à chaque société (frais de gestion, contrat, effectif…) sont des réglages
+ * de l'activité, jamais des règles.
+ */
+export interface ReglesPortageSalarial {
+  /** Indemnité d'apport d'affaires, en part du salaire de base. */
+  indemniteApportDAffaires: { taux: number }
+  /** Réserve financière (CDI) ou indemnité de précarité (CDD), en part du salaire de base. */
+  reserveFinanciere: { taux: number }
+  /** Revenu mensuel minimal d'un temps plein, en euros : le plancher de la convention, et le salaire du niveau le plus haut (expert). */
+  minimumConventionnel: { mensuel: number; expert: number }
+  /** Cotisations du cadre, ajoutées au bulletin d'un salarié. */
+  cotisationsDuCadre: { apec: CotisationRegimeGeneral; prevoyanceCadres: CotisationRegimeGeneral }
+  /** Ce qui dépend de l'effectif de la société de portage. */
+  selonLEffectif: Record<EffectifPortage, CotisationsSelonLEffectif>
+}
+
 /**
  * Une tranche du barème kilométrique : pour une distance annuelle `d` jusqu'à `jusquA` kilomètres (`null` : sans limite),
  * le montant est `d x taux + forfait`.
@@ -210,6 +244,8 @@ export interface ReglesFiscales {
   }
   dividendes: { tauxIrForfaitaire: number; prelevementsSociaux: number; abattementBareme: number; csgDeductible: number }
   regimeGeneral: ReglesRegimeGeneral
+  /** Portage salarial : convention de branche et cotisations propres au salarié porté (voir l'ADR 016). */
+  portageSalarial: ReglesPortageSalarial
   TNS: ReglesTNS
   /** Professions libérales réglementées : professions proposées, caisses et leurs barèmes (voir l'ADR 015). */
   liberauxReglementes: ReglesLiberauxReglementes

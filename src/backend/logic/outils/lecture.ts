@@ -3,7 +3,8 @@
 // Ils ne calculent rien : les résultats viennent des outils de resultats.ts, qui appellent le moteur.
 
 import { z } from "zod"
-import type { Entity, FinancialFlow, Person, SessionState } from "../../../types.js"
+import type { Entity, FinancialFlow, Person, Portage, SessionState } from "../../../types.js"
+import { conditionsPortageRetenues } from "../options-du-comparateur.js"
 import { ANNEE_COURANTE, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, type ReglesFiscales } from "../regles.js"
 import { anneeDeLaSession, empreinteDeLaSession, ErreurOutil, genreDe, GENRES_D_ACTEUR, nomDe, phraseDeLaRelation, trouverActeur, TYPES_DE_FLUX } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LIMITES, ListeDeMoisSchema } from "./limites.js"
@@ -32,8 +33,18 @@ function reglagesDUnePersonne(acteur: Person, detaille: boolean): Reglages {
   return detaille && frais ? { ...resume, trajets: JSON.stringify(frais.trajets) } : resume
 }
 
-/** Réglages communs aux activités, puis ceux d'une société ou d'une micro-entreprise. */
+/**
+ * Conditions de la société de portage retenues par le calcul (voir l'ADR 016) : celles saisies, et les autres à leur
+ * valeur typique, nommées dans `valeursTypiques`.
+ */
+function reglagesDuPortage(acteur: Portage): Reglages {
+  const { conditions, valeursTypiques } = conditionsPortageRetenues(acteur.conditions)
+  return { ...conditions, valeursTypiques: valeursTypiques.join(", ") }
+}
+
+/** Réglages communs aux activités, puis ceux d'une société ou d'une micro-entreprise ; ceux d'une activité en portage. */
 function reglagesDUneActivite(acteur: Exclude<Entity, Person>): Reglages {
+  if (acteur.type === "portage") return reglagesDuPortage(acteur)
   // Profession libérale réglementée et part conventionnée : seulement quand elles sont saisies (voir l'ADR 015).
   const profession = { ...(acteur.profession === undefined ? {} : { profession: acteur.profession }), ...(acteur.partConventionnee === undefined ? {} : { partConventionnee: acteur.partConventionnee }) }
   const commun = { dateDeCreation: acteur.dateDeCreation ?? null, deplacementsKmParAn: acteur.deplacementsProfessionnels?.kmParAn ?? null, ...profession }

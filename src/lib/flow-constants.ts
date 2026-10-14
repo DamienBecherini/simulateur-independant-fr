@@ -102,7 +102,9 @@ export const isOutgoingFlowType = (type: FlowType): boolean => outgoingFlowTypes
 export const flowTypesByEntityType: Record<Entity["type"], ReadonlyArray<FlowType>> = {
   person: ["are", "salary", "other_taxable_income", "expense"],
   company: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
-  "micro-entreprise": ["ca_micro_services_bnc", "ca_micro_services_bic", "ca_micro_vente", "expense"]
+  "micro-entreprise": ["ca_micro_services_bnc", "ca_micro_services_bic", "ca_micro_vente", "expense"],
+  // Portage salarial : des prestations de services seulement, et les frais professionnels remboursés (voir l'ADR 016).
+  portage: ["ca_services", "deductible_expense"]
 }
 
 const individualBusinessFlowTypes: ReadonlyArray<FlowType> = ["ca_services", "ca_vente", "deductible_expense"]

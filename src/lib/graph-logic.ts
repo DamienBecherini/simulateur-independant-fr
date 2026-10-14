@@ -10,10 +10,10 @@ const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant",
 /**
  * Relations possibles entre une personne et une activité : celles de son statut au réel (`RELATIONS_PAR_STATUT`), ou le
  * seul titulaire d'une micro-entreprise. La relation « Salarié » n'y est pas proposée, le coût d'un salarié n'y
- * réduisant ni cotisations ni impôt.
+ * réduisant ni cotisations ni impôt. Une activité en portage salarial n'a qu'un titulaire, le salarié porté.
  */
 function getPersonToActivityRelationTypes(activite: Activite): Relationship["type"][] {
-  if (activite.type === "micro-entreprise") return ["Titulaire"]
+  if (activite.type === "micro-entreprise" || activite.type === "portage") return ["Titulaire"]
   return RELATIONS_PAR_STATUT[activite.legalStatus]
 }
 

@@ -16,6 +16,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 - **Une même règle pour charger une situation type.** La fenêtre des situations types et l'encart « Que voulez-vous savoir ? » (« Partir de zéro » compris) chargent désormais directement par-dessus une simulation vide ou l'exemple de la démo non modifié, comme le lien `#situation=…`, et gardent la confirmation sur toute simulation non enregistrée ; le chargement reste annulable en une étape.
 
+### Maintenance
+
+- Portage salarial, première étape ([ADR 016](./documentation/adr/016-portage-salarial.md), acceptée) : le moteur calcule une activité en portage salarial (frais de gestion mois par mois, enveloppe, bulletin d'un cadre selon l'effectif de la société de portage, indemnité d'apport d'affaires, réserve d'un CDI gardée sur le compte d'activité, mutuelle, impôt du foyer), avec les règles de la convention de branche pour 2024 à 2026 et des cas de référence vérifiés à la main ; les outils pour les IA la décrivent. Rien ne change encore à l'écran : la colonne du comparateur et la saisie dans la grille viendront ensuite. Le format de fichier reste le 3 : une version précédente écarte une activité en portage en le signalant.
+
 ## [0.12.0] — 2026-10-13
 
 ### Ajouté
