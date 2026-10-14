@@ -42,7 +42,7 @@ export function ecartAvecLeChiffreDAffairesSaisi(colonne: ChiffreDAffairesDUnSta
 export function phraseDuCalculALEnvers({ netVise, colonnes }: ChiffreDAffairesPourUnNet): string {
   const atteints = colonnes.filter((c): c is ChiffreDAffairesDUnStatut & { chiffreDAffaires: number } => c.chiffreDAffaires !== null)
   if (atteints.length === 0) return `Aucun statut n'atteint ${euros(netVise)} nets par an.`
-  const moins = atteints.reduce((a, b) => (b.chiffreDAffaires < a.chiffreDAffaires ? b : a))
+  const moins = atteints.reduce((a, b) => (b.chiffreDAffaires < a.chiffreDAffaires ? b : a), atteints[0])
   if (moins.chiffreDAffaires === 0) return `Le foyer atteint déjà ${euros(netVise)} nets par an sans chiffre d'affaires de cette activité.`
   return `Pour ${euros(netVise)} nets par an, il faut au moins ${euros(moins.chiffreDAffaires)} de chiffre d'affaires par an (${euros(parMois(moins.chiffreDAffaires))} par mois), en ${moins.libelle}.`
 }
