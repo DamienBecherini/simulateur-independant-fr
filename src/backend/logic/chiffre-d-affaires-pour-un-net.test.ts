@@ -94,7 +94,8 @@ describe("avecUnChiffreDAffaires", () => {
   })
 })
 
-describe("chiffreDAffairesPourUnNet", () => {
+// Calcul à l'envers : des dizaines de simulations complètes par statut, cinq fois plus lentes sous la mesure de couverture de la CI.
+describe("chiffreDAffairesPourUnNet", { timeout: 30_000 }, () => {
   describe("une personne seule en micro-entreprise BNC", () => {
     const d = aliceEnMicro(40000)
     const opts = options("m1")

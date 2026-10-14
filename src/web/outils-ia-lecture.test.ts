@@ -253,7 +253,8 @@ describe("comparer_statuts et optimiser_remuneration", () => {
   })
 })
 
-describe("chiffre_affaires_pour_net_vise", () => {
+// Calcul à l'envers : des dizaines de simulations complètes par statut, cinq fois plus lentes sous la mesure de couverture de la CI.
+describe("chiffre_affaires_pour_net_vise", { timeout: 30_000 }, () => {
   type CalculALEnvers = { activiteId: string; netVise: number; chiffreDAffairesSaisi: number; colonnes: { statut: string; chiffreDAffaires: number | null; chiffreDAffairesMensuel: number | null; netApresImpots: number | null; horsDePortee: string | null }[]; notes: string[] }
 
   it("rend le calcul à l'envers du moteur, avec les réglages que l'application affiche", () => {
