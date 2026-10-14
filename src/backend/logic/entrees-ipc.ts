@@ -8,7 +8,7 @@
 
 import { z } from "zod"
 import { FraisFonctionnementSchema, RepartitionBeneficeSchema, type ComparaisonOptions, type FormatFichierTexte } from "../../types.js"
-import { CHIFFRE_D_AFFAIRES_MAXIMAL } from "./chiffre-d-affaires-pour-un-net.js"
+import { CHIFFRE_D_AFFAIRES_MAXIMAL } from "./options-du-comparateur.js"
 
 /** Paramètre refusé : l'appel IPC échoue avec ce message, sans rien faire. */
 export class EntreeIpcInvalide extends Error {

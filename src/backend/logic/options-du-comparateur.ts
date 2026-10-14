@@ -31,6 +31,16 @@ export const SANS_CHIFFRE_D_AFFAIRES = "Saisissez un chiffre d'affaires pour com
  */
 export const AUCUNE_CHARGE = "Aucune charge saisie pour cette activité : pensez à la CFE, à l'assurance, à la banque. Sans elles, un statut aux frais de gestion estimés plus bas que le vôtre paraît plus avantageux de toute l'économie de frais estimée."
 
+/**
+ * Calcul à l'envers (chiffre-d-affaires-pour-un-net.ts) : chiffre d'affaires le plus haut essayé, au-delà duquel le net
+ * visé est dit hors de portée ; une borne de la recherche, pas une règle fiscale. Ici, comme le message suivant, pour
+ * que l'interface les lise sans importer le comparateur.
+ */
+export const CHIFFRE_D_AFFAIRES_MAXIMAL = 10_000_000
+
+/** Calcul à l'envers sans chiffre d'affaires saisi : comment il le répartit. */
+export const CHIFFRE_D_AFFAIRES_REPARTI = "Aucun chiffre d'affaires saisi pour cette activité cette année : le calcul le répartit également sur les 12 mois, en prestations de services (libérales, en BNC, pour une micro-entreprise)."
+
 /** « Sur toutes les années » : part du bénéfice distribuable gardée chaque année proposée par défaut (voir l'ADR 014). */
 export const PART_MISE_EN_RESERVE_PAR_DEFAUT = 0.5
 

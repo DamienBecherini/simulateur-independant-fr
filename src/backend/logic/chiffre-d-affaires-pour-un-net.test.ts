@@ -1,7 +1,8 @@
 // src/backend/logic/chiffre-d-affaires-pour-un-net.test.ts
 
 import { describe, expect, it } from "vitest"
-import { avecUnChiffreDAffaires, CHIFFRE_D_AFFAIRES_MAXIMAL, CHIFFRE_D_AFFAIRES_REPARTI, chiffreDAffairesPourUnNet } from "./chiffre-d-affaires-pour-un-net.js"
+import { avecUnChiffreDAffaires, chiffreDAffairesPourUnNet } from "./chiffre-d-affaires-pour-un-net.js"
+import { CHIFFRE_D_AFFAIRES_MAXIMAL, CHIFFRE_D_AFFAIRES_REPARTI } from "./options-du-comparateur.js"
 import { chiffreDAffaires, comparerStatuts } from "./comparateur.js"
 import { activiteComparee } from "./conversion-de-statut.js"
 import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js"

@@ -4,6 +4,7 @@ import { estSocieteIS, type ChiffreDAffairesDUnStatut, type ChiffreDAffairesPour
 import { estTelleQueSaisie, libelleDeLaColonne, type ColonneEtudiee } from "./colonne-du-comparateur.js"
 import { avertissementsDeLActivite, chiffreDAffaires, colonneDuComparateur, colonneDuStatut, statutsDeLaComparaison, TYPES_DE_CHIFFRE_D_AFFAIRES } from "./comparateur.js"
 import { estMicro, type Activite } from "./conversion-de-statut.js"
+import { CHIFFRE_D_AFFAIRES_MAXIMAL, CHIFFRE_D_AFFAIRES_REPARTI } from "./options-du-comparateur.js"
 import { professionDe } from "./professions.js"
 import type { ReglesFiscales } from "./regles.js"
 import type { ContexteDeLAnnee } from "./simulation-engine.js"
@@ -34,17 +35,11 @@ import type { ContexteDeLAnnee } from "./simulation-engine.js"
  * `CHIFFRE_D_AFFAIRES_MAXIMAL`.
  */
 
-/** Chiffre d'affaires le plus haut essayé : au-delà, le net visé est dit hors de portée. Borne de la recherche, pas une règle fiscale. */
-export const CHIFFRE_D_AFFAIRES_MAXIMAL = 10_000_000
-
 /** Premier palier essayé, doublé jusqu'à atteindre le net visé. */
 const PREMIER_PALIER = 1000
 
 /** Garde-fou : simulations d'une colonne au plus (une quarantaine suffisent au pire : 15 paliers, 24 dichotomies). */
 const ESSAIS_MAXIMUM = 80
-
-/** Message sans chiffre d'affaires saisi : comment le calcul le répartit. */
-export const CHIFFRE_D_AFFAIRES_REPARTI = "Aucun chiffre d'affaires saisi pour cette activité cette année : le calcul le répartit également sur les 12 mois, en prestations de services (libérales, en BNC, pour une micro-entreprise)."
 
 /**
  * Nature du chiffre d'affaires créé quand aucun n'est saisi : des prestations de services, en BNC pour une

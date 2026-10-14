@@ -354,6 +354,15 @@ describe("ComparatorPanel", () => {
     expect(within(table).queryByText("meilleur net")).not.toBeInTheDocument()
   })
 
+  it("calcule à l'envers, pour un net visé, avec les réglages du comparateur et l'année affichée", async () => {
+    const user = userEvent.setup()
+    const session = withActivity()
+    render(<ComparateurDeTest annee={2026} session={session} />)
+
+    await user.type(screen.getByLabelText("Net visé du foyer (€ par an)"), "30000")
+    await vi.waitFor(() => expect(window.api.chiffreDAffairesPourUnNet).toHaveBeenLastCalledWith(expect.objectContaining({ entities: session.entities }), vi.mocked(window.api.compareStatuts).mock.lastCall?.[1], 30000, 2026))
+  })
+
   it("sans charge saisie pour l'activité, l'alerte remplace le rappel des frais sous le tableau, une seule fois", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ warnings: [AUCUNE_CHARGE] }))
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)

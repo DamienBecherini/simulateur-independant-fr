@@ -9,6 +9,7 @@ import { PART_MISE_EN_RESERVE_PAR_DEFAUT } from "@/backend/logic/options-du-comp
 import { cn } from "@/lib/utils"
 import { exporterComparaisonCsv } from "../exports-texte"
 import { BoutonExportCsv } from "./BoutonExportCsv"
+import { CombienFacturer } from "./CombienFacturer"
 import { Depliable } from "./Depliable"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
 import { RepartitionDuBenefice } from "./RepartitionBenefice"
@@ -508,6 +509,8 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
       <ErreurDuCalcul erreur={error} />
 
       {result ? <ComparisonResults result={result} activityName={nomDeLActivite} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, nomDeLActivite)} /> : null}
+      {/* Le calcul à l'envers du tableau : les mêmes colonnes, pour un net visé plutôt que pour le chiffre d'affaires saisi. */}
+      <CombienFacturer session={session} annee={vue.annee} options={effectiveOptions} activite={selected} />
       {/* La réponse à « mariage ou Pacs ? » passe avant les années et la courbe, qui ne portent que sur l'activité comparée. */}
       {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
       {selected ? <SurToutesLesAnnees session={session} activityId={selected.id} activityName={selected.name} partMiseEnReserve={partMiseEnReserve} onPartMiseEnReserve={setPartMiseEnReserve} /> : null}
