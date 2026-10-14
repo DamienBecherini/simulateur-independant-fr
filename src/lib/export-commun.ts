@@ -1,18 +1,18 @@
 // src/lib/export-commun.ts
 // Briques partagées par les exports CSV et Markdown : noms de fichiers, nature des acteurs, flux regroupés par acteur.
 
-import type { Entity, FinancialFlow, FoyerFiscalResult, FraisProfessionnelsResult, PuissanceFiscale, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport, VersementLiberatoireInfo } from "@/types"
+import { estEntrepriseOuMicro, type Entity, type FinancialFlow, type FoyerFiscalResult, type FraisProfessionnelsResult, type PuissanceFiscale, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport, type VersementLiberatoireInfo } from "@/types"
 import { flowTypeLabels, libelleDuType, isOutgoingFlowType, type FlowType } from "./flow-constants"
 import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
 import { pourcent } from "@/backend/logic/format"
-import { LIBELLES_DES_STATUTS } from "@/backend/logic/statuts"
+import { LIBELLE_DU_PORTAGE, LIBELLES_DES_STATUTS } from "@/backend/logic/statuts"
 import { detailDesCotisations } from "./detail-des-cotisations"
 import { libelleDeLaProfession } from "./professions"
 import { lectureDesReserves, type LectureDesReserves } from "./reserves"
 
 /** Mois de création d'une activité en toutes lettres (« septembre 2026 ») ; `null` pour une personne ou sans date. */
 export function dateDeCreationLisible(entity: Entity): string | null {
-  const mois = entity.type === "person" ? null : lireMois(entity.dateDeCreation)
+  const mois = estEntrepriseOuMicro(entity) ? lireMois(entity.dateDeCreation) : null
   return mois ? libelleDuMois(mois) : null
 }
 
@@ -46,6 +46,7 @@ export function nomDeFichier(nomSimulation: string, contenu: string, extension: 
 export function natureActeur(entity: Entity): string {
   if (entity.type === "person") return "Personne"
   if (entity.type === "micro-entreprise") return "Micro-entreprise"
+  if (entity.type === "portage") return LIBELLE_DU_PORTAGE
   return LIBELLES_DES_STATUTS[entity.legalStatus]
 }
 

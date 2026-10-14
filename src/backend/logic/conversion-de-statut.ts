@@ -1,6 +1,6 @@
 // src/backend/logic/conversion-de-statut.ts
 
-import { CAPITAL_SOCIAL_PAR_DEFAUT, estSocieteIS, type Company, type DonneesDeLAnnee, type FinancialFlow, type MicroEntreprise, type Relationship, type StatutCompare } from "../../types.js"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, estEntrepriseOuMicro, estSocieteIS, type Company, type DonneesDeLAnnee, type FinancialFlow, type MicroEntreprise, type Relationship, type StatutCompare } from "../../types.js"
 import { DIRIGEANT_DES_STATUTS } from "./statuts.js"
 
 /*
@@ -39,9 +39,12 @@ export function statutActuel(activite: Activite): StatutCompare {
   return activite.legalStatus
 }
 
-/** L'activité à comparer, ou `undefined` si l'identifiant ne désigne aucune activité. */
+/**
+ * L'activité à comparer, ou `undefined` si l'identifiant ne désigne aucune activité qu'on peut convertir : pas encore
+ * une activité en portage salarial, qui n'a pas sa colonne (voir l'ADR 016).
+ */
 export function activiteComparee(session: DonneesDeLAnnee, activityId: string): Activite | undefined {
-  return session.entities.find((e): e is Activite => e.id === activityId && e.type !== "person")
+  return session.entities.filter(estEntrepriseOuMicro).find(e => e.id === activityId)
 }
 
 /**

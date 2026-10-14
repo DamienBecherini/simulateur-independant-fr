@@ -2,7 +2,7 @@
 
 import { ajoutDUneActivite, createPerson, type Exercant } from "@/lib/entity-factory"
 import { appliquerLeChangement, type NatureDesPrestations, type StatutDUneActivite } from "@/lib/changement-de-statut"
-import type { Entity, Person, Relationship, SessionState } from "@/types"
+import { estEntrepriseOuMicro, type Entity, type Person, type Relationship, type SessionState } from "@/types"
 import { Button } from "@/components/ui/button"
 import { useState, useMemo } from "react"
 import EditEntityModal from "./EditEntityModal"
@@ -54,7 +54,7 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
   // modifie, en une seule étape d'historique ; la fiche reste ouverte sur l'activité convertie.
   const [changement, setChangement] = useState<DemandeDeChangement | null>(null)
   const demanderLeChangement = (brouillon: Entity, relationsDuBrouillon: Relationship[], cible: StatutDUneActivite) => {
-    if (brouillon.type === "person") return
+    if (!estEntrepriseOuMicro(brouillon)) return
     setChangement({ session: { ...session, entities: entities.map(e => (e.id === brouillon.id ? brouillon : e)), relationships: relationsDuBrouillon }, activite: brouillon, cible })
   }
   const convertir = (nature: NatureDesPrestations) => {

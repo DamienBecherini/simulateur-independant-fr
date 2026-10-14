@@ -23,7 +23,8 @@ export function resultatPersonne(ctx: Contexte, personne: Person): PersonResult 
       autresRevenus: Math.round(total(ctx, personne.id, "other_taxable_income")),
       remunerationsDirigeant: Math.round(revenus.remunerations),
       dividendes: Math.round(revenus.dividendesEncaisses),
-      benefices: Math.round(revenus.beneficesEncaisses)
+      benefices: Math.round(revenus.beneficesEncaisses),
+      ...(revenus.salairesPortes > 0 ? { salairesPortage: Math.round(revenus.salairesPortes) } : {})
     },
     cotisationsSalariales: Math.round(ctx.cotisationsSalariales.get(personne.id) ?? 0),
     depenses: Math.round(total(ctx, personne.id, "expense")),
@@ -59,12 +60,14 @@ function abattementSalaires(salaires: number, regles: ReglesFiscales["IR"]["abat
 
 /**
  * Revenus imposés comme des salaires d'une personne : salaires et allocations chômage saisis, rémunérations de dirigeant
- * (président de SASU, gérant d'EURL) imposables. Salarié d'une activité de la simulation : sa CSG non déductible et sa
- * CRDS s'ajoutent au net imposable. Ni les bénéfices (micro, EI) ni les dividendes n'en font partie.
+ * (président de SASU, gérant d'EURL) et salaires d'une activité en portage salarial, imposables. Salarié d'une activité
+ * de la simulation : sa CSG non déductible et sa CRDS s'ajoutent au net imposable. Ni les bénéfices (micro, EI) ni les
+ * dividendes n'en font partie.
  */
 function revenusSalariaux(ctx: Contexte, personId: string): number {
   const salarie = ctx.salaries.get(personId)?.bulletin
-  return total(ctx, personId, "salary", "are") + revenusDe(ctx, personId).remunerationsImposables + (salarie?.partNonDeductible ?? 0)
+  const revenus = revenusDe(ctx, personId)
+  return total(ctx, personId, "salary", "are") + revenus.remunerationsImposables + revenus.salairesPortesImposables + (salarie?.partNonDeductible ?? 0)
 }
 
 /**
