@@ -317,6 +317,18 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
+### **Phase 18 : Répondre aux premières questions [En cours 🚧]**
+
+- **Objectif :** répondre directement aux questions avec lesquelles on arrive (« combien facturer ? », « et en portage salarial ? »), et pouvoir mener d'une page extérieure à l'exemple qui y répond.
+
+1.  **Calcul à l'envers [En cours 🚧] :** pour un net du foyer visé, le chiffre d'affaires nécessaire dans chaque colonne du comparateur, trouvé par recherche numérique sur le moteur existant (même répartition des mois et des natures que la saisie, reste du foyer inchangé) ; « hors de portée » quand le régime ne l'atteint pas (micro-entreprise au-delà de son plafond, régime fermé). Outil en lecture seule pour les IA.
+2.  **Adresse d'une situation type :** une adresse de la démo web (par exemple `#situation=couple-union-libre`) qui ouvre la situation type correspondante, avec la même confirmation que la fenêtre des situations types quand une simulation est en cours ; un lien « Ouvrir cet exemple dans le simulateur » peut alors mener d'une explication extérieure au calcul.
+3.  **Portage salarial :** une colonne du comparateur et un statut de la grille. Modèle : chiffre d'affaires, moins les frais de gestion de la société de portage (pourcentage, plancher ou plafond mensuel, frais fixes), les frais professionnels remboursés hors salaire et la réserve financière ; le reste devient un salaire de cadre au régime général, avec ses cotisations, puis l'impôt du foyer. Les conditions variant d'une société à l'autre, elles se règlent dans le comparateur, avec des valeurs typiques annoncées comme telles. **Avec une IA :** la personne colle les conditions de sa société de portage dans son client d'IA, qui les traduit en réglages au schéma fixe et validé et les envoie comme une proposition, relue puis appliquée dans l'application (ADR 010 et 011) ; l'IA ne remplit que ces réglages, jamais des règles libres. **Avant de coder :** une ADR qui fixe le modèle de calcul, les réglages, le format de fichier et ce qui n'est pas modélisé (mutuelle, indemnités kilométriques détaillées, contrat à durée déterminée ou indéterminée, période sans mission).
+
+- **Ordre conseillé :** 1, puis 2, puis l'ADR du portage, puis 3.
+
+---
+
 ### **Travaux transverses [À faire 🧰]**
 
 Tâches sans phase attitrée, à traiter entre deux fonctionnalités.
