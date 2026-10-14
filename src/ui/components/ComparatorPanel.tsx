@@ -150,7 +150,7 @@ function fondDeLaCellule(s: ScenarioStatut, meilleur: ComparaisonResult["meilleu
 function LigneDeLEcart({ result, rang }: { result: ComparaisonResult; rang: number }) {
   if (netDeLaSituationSaisie(result) === null) return null
   return (
-    <tr className={cn("border-t border-slate-200 dark:border-slate-700", ligneAlternee(rang))}>
+    <tr className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
       <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
         Écart avec votre situation actuelle
       </th>
@@ -183,10 +183,11 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
   const fond = (s: ScenarioStatut) => fondDeLaCellule(s, result.meilleur)
 
   // Rang de chaque ligne dans l'ordre affiché, pour les lignes alternées : l'affichage « Résumé » remonte l'écart et la
-  // protection sociale sous la première ligne.
+  // protection sociale sous la première ligne. Les cases sont alignées en haut : d'une colonne à l'autre, les montants
+  // restent sur la même ligne, et la note à déplier d'une colonne (écart de frais de gestion) vient dessous.
   const avecEcart = netDeLaSituationSaisie(result) !== null
   const ligne = (row: ReturnType<typeof rows>[number], rang: number) => (
-    <tr key={row.label} className={cn("border-t border-slate-200 dark:border-slate-700", ligneAlternee(rang))}>
+    <tr key={row.label} className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
       <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
         {row.label}
       </th>
@@ -200,7 +201,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
   )
   const lignes = rows(activityName, result.situationSaisie?.statut)
   const protection = (rang: number) => (
-    <tr className={cn("border-t border-slate-200 dark:border-slate-700", ligneAlternee(rang))}>
+    <tr className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
       <th scope="row" className={cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")}>
         Protection sociale
       </th>
