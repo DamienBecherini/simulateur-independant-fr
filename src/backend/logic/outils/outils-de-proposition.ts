@@ -5,7 +5,7 @@
 
 import { z } from "zod"
 import { RelationshipSchema, type SessionState } from "../../../types.js"
-import { empreinteDeLaSession, ErreurOutil, GENRES_D_ACTEUR, TYPES_DE_FLUX, typesExpliquesParGenre, type GenreDActeur } from "./commun.js"
+import { empreinteDeLaSession, ErreurOutil, GENRES_CREABLES, TYPES_DE_FLUX, typesExpliquesParGenre, type GenreCreable } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, LIMITES, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
 import { designationDeLOperation, operationsApplicables, ReglagesActeurSchema, ReglagesComparateurProposesSchema, SerieSchema, type Operation } from "./operations.js"
 import { definirOutil, resultatSeul } from "./outil.js"
@@ -74,7 +74,7 @@ export const proposerFlux = definirOutil({
 // == proposer_acteur
 // ===================================================================================
 
-const PREFIXES: Record<GenreDActeur, string> = { personne: "person", SASU: "company", EURL: "company", EI: "company", "micro-entreprise": "micro" }
+const PREFIXES: Record<GenreCreable, string> = { personne: "person", SASU: "company", EURL: "company", EI: "company", "micro-entreprise": "micro" }
 
 export const proposerActeur = definirOutil({
   nom: "proposer_acteur",
@@ -86,7 +86,7 @@ export const proposerActeur = definirOutil({
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,
-  parametres: z.strictObject({ genre: z.enum(GENRES_D_ACTEUR).describe("personne, SASU, EURL, EI (entreprise individuelle au réel) ou micro-entreprise."), nom: NomSchema, reglages: ReglagesActeurSchema.optional(), suiteDe: SuiteDeSchema }),
+  parametres: z.strictObject({ genre: z.enum(GENRES_CREABLES).describe("personne, SASU, EURL, EI (entreprise individuelle au réel) ou micro-entreprise."), nom: NomSchema, reglages: ReglagesActeurSchema.optional(), suiteDe: SuiteDeSchema }),
   resultat: ResultatPropositionSchema,
   executer: (session, { genre, nom, reglages, suiteDe }) => proposer(session, suiteDe, suite => [{ type: "ajouter_acteur", id: identifiantLibre(session, suite, PREFIXES[genre]), genre, nom, reglages: reglages ?? {} }])
 })

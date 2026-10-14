@@ -4,12 +4,12 @@
 // proposition, avec un message qui dit quelle opération et pourquoi.
 
 import { z } from "zod"
-import { CAPITAL_SOCIAL_PAR_DEFAUT, grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, STATUTS_JURIDIQUES, STATUTS_SOCIETE, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, estEntrepriseOuMicro, grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, STATUTS_FRAIS, STATUTS_JURIDIQUES, STATUTS_SOCIETE, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
 import { NOMBRE_MAX_ANNEES } from "../annees.js"
 import { professionDe, professionsConnues } from "../professions.js"
 import { ANNEE_COURANTE, reglesDesAnneesConnues } from "../regles.js"
 import { STATUTS_A_PROFESSION } from "../statuts.js"
-import { anneeDeLaSession, enumerer, ErreurOutil, genreDe, GENRES_D_ACTEUR, RELATIONS_REQUISES, trouverActeur, TYPES_DE_FLUX, verifierNouvelleRelation, verifierTypePermis, type GenreDActeur } from "./commun.js"
+import { anneeDeLaSession, enumerer, ErreurOutil, genreDe, GENRES_CREABLES, RELATIONS_REQUISES, trouverActeur, TYPES_DE_FLUX, verifierNouvelleRelation, verifierTypePermis, type GenreCreable, type GenreDActeur } from "./commun.js"
 import { AnneeSchema, IdentifiantSchema, LibelleSchema, ListeDeMoisSchema, MontantSchema, NomSchema } from "./limites.js"
 
 // ===================================================================================
@@ -63,7 +63,7 @@ const REGLAGE_PAR_GENRE: Record<keyof ReglagesActeur, GenreDActeur[]> = {
  * comme pour `professionsConnues`, il suffit que la profession soit conventionnable dans les règles d'une année.
  */
 function verifierProfession(acteur: Entity): void {
-  if (acteur.type === "person") return
+  if (!estEntrepriseOuMicro(acteur)) return
   if (acteur.profession !== undefined && !professionsConnues().has(acteur.profession)) throw new ErreurOutil(`Profession inconnue : « ${acteur.profession} » (identifiants : regles_de_l_annee, ou « non-reglementee »).`)
   if (acteur.partConventionnee === undefined || reglesDesAnneesConnues().some(regles => professionDe(acteur, regles)?.conventionnable)) return
   throw new ErreurOutil(`La part conventionnée ne vaut que pour une profession conventionnable (auxiliaires médicaux de la CARPIMKO) : « ${acteur.name} » n'en a pas.`)
@@ -87,7 +87,7 @@ export const ReglagesComparateurProposesSchema = z.strictObject({
 
 export const OperationSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("ajouter_annee"), annee: AnneeSchema }),
-  z.strictObject({ type: z.literal("ajouter_acteur"), id: IdentifiantSchema, genre: z.enum(GENRES_D_ACTEUR), nom: NomSchema, reglages: ReglagesActeurSchema.default({}) }),
+  z.strictObject({ type: z.literal("ajouter_acteur"), id: IdentifiantSchema, genre: z.enum(GENRES_CREABLES), nom: NomSchema, reglages: ReglagesActeurSchema.default({}) }),
   z.strictObject({ type: z.literal("modifier_acteur"), acteurId: IdentifiantSchema, nom: NomSchema.optional(), reglages: ReglagesActeurSchema.default({}) }),
   z.strictObject({ type: z.literal("ajouter_relation"), id: IdentifiantSchema, deId: IdentifiantSchema, versId: IdentifiantSchema, typeRelation: RelationshipSchema.shape.type }),
   z.strictObject({ type: z.literal("supprimer_relation"), relationId: IdentifiantSchema }),
@@ -121,8 +121,8 @@ const verifierIdLibre = (session: SessionState, id: string) => {
 }
 
 /** Pastille d'un nouvel acteur : couleur et icône de son genre, initiales pour une personne. */
-function avatarDuGenre(genre: GenreDActeur, nom: string): Avatar {
-  const icones: Record<Exclude<GenreDActeur, "personne">, [string, string]> = { SASU: ["Briefcase", "#b91c1c"], EURL: ["Building", "#16a34a"], EI: ["User", "#7e22ce"], "micro-entreprise": ["Store", "#d97706"] }
+function avatarDuGenre(genre: GenreCreable, nom: string): Avatar {
+  const icones: Record<Exclude<GenreCreable, "personne">, [string, string]> = { SASU: ["Briefcase", "#b91c1c"], EURL: ["Building", "#16a34a"], EI: ["User", "#7e22ce"], "micro-entreprise": ["Store", "#d97706"] }
   if (genre === "personne") {
     const initiales = nom.split(/\s+/).map(mot => mot.charAt(0).toUpperCase()).join("").slice(0, 2)
     return { type: "initials", value: initiales || "?", color: "#3b82f6" }
@@ -158,7 +158,7 @@ function ajouterActeur(c: Chantier, op: OperationDe<"ajouter_acteur">): void {
   verifierIdLibre(c.session, op.id)
   verifierReglages(op.genre, op.reglages)
   const commun = { id: op.id, name: op.nom, avatar: avatarDuGenre(op.genre, op.nom), locked: false, ...champsDeLActeur(op.reglages) }
-  const acteurs: Record<GenreDActeur, () => Entity> = {
+  const acteurs: Record<GenreCreable, () => Entity> = {
     personne: () => ({ type: "person", fiscalParts: 1, ...commun }),
     "micro-entreprise": () => ({ type: "micro-entreprise", beneficieACRE: false, opteVFL: false, ...commun }),
     SASU: () => ({ type: "company", legalStatus: "SASU", capitalSocial: CAPITAL_SOCIAL_PAR_DEFAUT, ...commun }),

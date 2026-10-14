@@ -26,13 +26,20 @@ export function enumerer(parties: (string | number)[], conjonction: "et" | "ou" 
 // == ACTEURS
 // ===================================================================================
 
-/** Ce qu'est un acteur, en un mot : une personne, ou une activité et son statut. */
-export const GENRES_D_ACTEUR = ["personne", ...STATUTS_JURIDIQUES, "micro-entreprise"] as const
+/**
+ * Les genres d'acteur qu'une proposition peut créer : une personne, ou une activité et son statut. Pas encore le portage
+ * salarial, que l'interface ne sait pas encore saisir (voir l'ADR 016) : une IA le lit, ne le crée pas.
+ */
+export const GENRES_CREABLES = ["personne", ...STATUTS_JURIDIQUES, "micro-entreprise"] as const
+export type GenreCreable = (typeof GENRES_CREABLES)[number]
+
+/** Ce qu'est un acteur, en un mot : un genre qu'on peut créer, ou une activité en portage salarial. */
+export const GENRES_D_ACTEUR = [...GENRES_CREABLES, "portage"] as const
 export type GenreDActeur = (typeof GENRES_D_ACTEUR)[number]
 
 export function genreDe(acteur: Entity): GenreDActeur {
   if (acteur.type === "person") return "personne"
-  if (acteur.type === "micro-entreprise") return "micro-entreprise"
+  if (acteur.type === "micro-entreprise" || acteur.type === "portage") return acteur.type
   return acteur.legalStatus
 }
 
@@ -90,16 +97,18 @@ const TYPES_PERMIS: Record<GenreDActeur, readonly TypeDeFlux[]> = {
   SASU: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
   EURL: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
   EI: ["ca_services", "ca_vente", "deductible_expense"],
-  "micro-entreprise": ["ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "expense"]
+  "micro-entreprise": ["ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "expense"],
+  portage: ["ca_services", "deductible_expense"]
 }
 
 /**
  * Les types de flux permis à chaque genre d'acteur, ceux qui ont les mêmes réunis, chaque type expliqué la première
  * fois qu'il paraît : « personne : salary (salaire net…), … ; SASU, EURL : ca_services (…), … ; EI : ca_services, … ».
+ * Seulement les genres qu'une proposition peut créer : le texte entre dans la description de proposer_flux.
  */
 export function typesExpliquesParGenre(): string {
-  const groupes = new Map<string, GenreDActeur[]>()
-  for (const genre of GENRES_D_ACTEUR) {
+  const groupes = new Map<string, GenreCreable[]>()
+  for (const genre of GENRES_CREABLES) {
     const cle = TYPES_PERMIS[genre].join()
     groupes.set(cle, [...(groupes.get(cle) ?? []), genre])
   }
@@ -131,7 +140,8 @@ const DIRECTION = new Set<Relationship["type"]>(["Président", "Gérant", "Titul
 /** Relations possibles d'une personne vers une activité, selon le statut de l'activité (voir `RELATIONS_PAR_STATUT`). */
 const RELATIONS_VERS_UNE_ACTIVITE: Record<Exclude<GenreDActeur, "personne">, Relationship["type"][]> = {
   ...RELATIONS_PAR_STATUT,
-  "micro-entreprise": ["Titulaire"]
+  "micro-entreprise": ["Titulaire"],
+  portage: ["Titulaire"]
 }
 
 /** Ce que dit une relation, en français : « Camille est titulaire de Atelier ». */
@@ -140,6 +150,8 @@ export function phraseDeLaRelation(session: Pick<SessionState, "entities">, rela
   const vers = nomDe(session, relation.toId)
   if (relation.type === "Enfant") return `${vers} est l'enfant à charge de ${de}`
   if (TYPES_DE_RELATION_FAMILIALE.includes(relation.type)) return `${de} et ${vers} : ${relation.type}`
+  // Le titulaire d'une activité en portage salarial en est le salarié porté (voir l'ADR 016).
+  if (relation.type === "Titulaire" && session.entities.some(e => e.id === relation.toId && e.type === "portage")) return `${de} — Titulaire (salarié porté) — ${vers}`
   return `${de} — ${relation.type} — ${vers}`
 }
 
