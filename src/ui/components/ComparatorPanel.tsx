@@ -39,10 +39,10 @@ const FOND_DE_L_EN_TETE = "bg-slate-100 dark:bg-[color-mix(in_oklab,var(--color-
  * largeur d'un mot avant de défiler, et une note d'écart de frais s'écrit sur neuf lignes. Le tableau défile donc plus
  * tôt, chaque colonne restant lisible. Sur un téléphone étroit (moins de 480 px), un minimum plus petit pour les statuts,
  * et aucun pour les libellés (la largeur de leur plus long mot), laissent voir le libellé et un peu plus d'une colonne de
- * statut : on comprend que le tableau défile.
+ * statut : on comprend que le tableau défile. Sur papier, rien ne défile : le tableau tient dans la largeur de la feuille.
  */
-const LARGEUR_DES_LIBELLES = "min-w-36 max-[30rem]:min-w-0"
-const LARGEUR_D_UN_STATUT = "min-w-40 max-[30rem]:min-w-34"
+const LARGEUR_DES_LIBELLES = "min-w-36 max-[30rem]:min-w-0 print:min-w-0"
+const LARGEUR_D_UN_STATUT = "min-w-40 max-[30rem]:min-w-34 print:min-w-0"
 
 /** Libellé d'une ligne, dans la colonne fixe. */
 const LIBELLE_DE_LIGNE = cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")
