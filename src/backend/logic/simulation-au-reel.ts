@@ -12,6 +12,7 @@ import type { ReglesFiscales } from "./regles.js"
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementsDeLaProfession, parametresDeLaCaisse, professionDe } from "./professions.js"
 import { lireMois, noteSortie } from "./dispositifs.js"
+import { avecLaZone, beneficeExonereDeLActivite, detailDeLaZone, parametresDExoneration, zoneDeLActivite } from "./exoneration-de-zone.js"
 import { anneeSimulee, attribuerResultatSociete, personnesLiees, RELATIONS_D_ASSOCIE, RELATIONS_D_EXPLOITANT, revenusDe, total, verserDividendes, verserRemuneration, type Contexte } from "./routage-des-flux.js"
 import { deplacementsProfessionnels, detailDeplacements, detailProfession, detailSalaries, masseSalariale } from "./details-des-activites.js"
 
@@ -28,13 +29,16 @@ const CALCUL_DES_SOCIETES: Record<StatutSociete, (entrees: EntreesEURL, ctx: Con
 function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete): ActivityResult {
   const masse = masseSalariale(ctx, societe.id)
   const deplacements = deplacementsProfessionnels(ctx, societe)
+  const zone = zoneDeLActivite(societe, anneeSimulee(ctx), ctx.regles)
+  const exonerationDeZone = parametresDExoneration(zone)
   const entrees = {
     chiffreAffaires: total(ctx, societe.id, "ca_services", "ca_vente"),
     chargesDeductibles: total(ctx, societe.id, "deductible_expense") + masse.cout + deplacements,
     remunerationNette: total(ctx, societe.id, "director_remuneration"),
     dividendesDemandes: total(ctx, societe.id, "dividends_payment"),
     capitalSocial: societe.capitalSocial,
-    etat: ctx.annee.etatsDesSocietes?.[societe.id] ?? etatAuDebutDeLaSimulation(societe, anneeSimulee(ctx), ctx.regles)
+    etat: ctx.annee.etatsDesSocietes?.[societe.id] ?? etatAuDebutDeLaSimulation(societe, anneeSimulee(ctx), ctx.regles),
+    ...(exonerationDeZone ? { exonerationDeZone } : {})
   }
   const resultat = CALCUL_DES_SOCIETES[statut](entrees, ctx, societe)
   const profession = professionDe(societe, ctx.regles)
@@ -44,7 +48,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
   attribuerResultatSociete(ctx, societe, resultat)
   verserDividendes(ctx, societe, { verses: resultat.dividendesVerses, soumisPS: resultat.dividendesSoumisPS, cotisations: resultat.cotisationsSurDividendes }, warnings)
 
-  return {
+  const activite: ActivityResult = {
     entityId: societe.id,
     name: societe.name,
     type: "company",
@@ -66,6 +70,15 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
     ...detailProfession(profession, ctx.regles, false),
     warnings
   }
+  return avecLaZone(activite, detailDeLaZone(zone, anneeSimulee(ctx), ctx.regles, { beneficeExonere: resultat.beneficeExonere, recettesLiberales: recettesLiberalesHorsSante(profession) }))
+}
+
+/**
+ * Profession libérale réglementée qui n'est pas, à coup sûr, une profession de santé : seules celles de la CARPIMKO
+ * (auxiliaires médicaux) le sont toutes. Sans profession, le simulateur ne sait pas si l'activité est libérale.
+ */
+function recettesLiberalesHorsSante(profession: ReturnType<typeof professionDe>): boolean {
+  return profession !== null && profession !== undefined && profession.caisse !== "CARPIMKO"
 }
 
 /**
@@ -112,11 +125,16 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     warnings.push("Une entreprise individuelle ne verse ni rémunération de dirigeant ni dividendes : ces flux sont ignorés, tout le bénéfice revient à l'entrepreneur.")
   }
 
+  // Implantée en zone : une part du bénéfice imposable est exonérée d'impôt sur le revenu, sans changer les cotisations.
+  const zone = zoneDeLActivite(entreprise, anneeSimulee(ctx), ctx.regles)
+  const beneficeExonere = beneficeExonereDeLActivite(zone, resultat.revenuImposable)
+
   const exploitant = personnesLiees(ctx, entreprise.id, RELATIONS_D_EXPLOITANT)[0]
   if (exploitant) {
     const revenus = revenusDe(ctx, exploitant)
     // Un déficit d'entreprise individuelle au réel s'impute sur les autres revenus du foyer (article 156 du CGI).
-    revenus.beneficesImposables += resultat.revenuImposable
+    revenus.beneficesImposables += resultat.revenuImposable - beneficeExonere
+    revenus.beneficesExoneres += beneficeExonere
     revenus.beneficesEncaisses += resultat.revenuNet
     revenus.prelevementsActivites += resultat.cotisationsSociales
   } else {
@@ -124,7 +142,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     ctx.nonRattache += resultat.revenuNet
   }
 
-  return {
+  const activite: ActivityResult = {
     entityId: entreprise.id,
     name: entreprise.name,
     type: "company",
@@ -143,6 +161,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     ...detailProfession(profession, ctx.regles, false),
     warnings
   }
+  return avecLaZone(activite, detailDeLaZone(zone, anneeSimulee(ctx), ctx.regles, { beneficeExonere, recettesLiberales: recettesLiberalesHorsSante(profession) }))
 }
 
 /** Micro-entreprise sortie du régime micro, simulée en entreprise individuelle au réel : la sortie et sa note. */

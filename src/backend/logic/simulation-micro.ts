@@ -9,6 +9,7 @@ import { euros } from "./format.js"
 import type { ReglesFiscales } from "./regles.js"
 import { avertissementsDeLaProfession, professionDe, reglesDeLaMicro } from "./professions.js"
 import { acreDeLAnnee, ecrireMois, economieACRE, lireMois, noteACRE, noteAnnonce, noteProrata, noteRetour, prorataDesPlafonds, type ACREDuneAnnee } from "./dispositifs.js"
+import { avecLaZone, beneficeExonereDeLActivite, detailDeLaZone, zoneDeLActivite } from "./exoneration-de-zone.js"
 import { anneeSimulee, personnesLiees, revenusDe, total, type Contexte } from "./routage-des-flux.js"
 import { deplacementsProfessionnels, detailDeplacements, detailProfession, detailSalaries, masseSalariale } from "./details-des-activites.js"
 
@@ -99,10 +100,15 @@ export function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): A
   const deplacements = deplacementsProfessionnels(ctx, micro)
   const depenses = total(ctx, micro.id, "expense") + masse.cout + deplacements
   const revenuVerse = resultat.chiffreAffaires - resultat.cotisationsSociales - depenses
+  // Implantée en zone : une part du bénéfice après abattement est exonérée d'impôt sur le revenu. Au versement
+  // libératoire, impôt sur le chiffre d'affaires, il n'y a pas de bénéfice à exonérer (BOI-BIC-DECLA-10-40-20, § 140).
+  const zone = zoneDeLActivite(micro, anneeSimulee(ctx), ctx.regles)
+  const beneficeExonere = vfl.applique ? 0 : beneficeExonereDeLActivite(zone, resultat.revenuImposable)
 
   if (titulaire) {
     const revenus = revenusDe(ctx, titulaire)
-    revenus.beneficesImposables += resultat.revenuImposable
+    revenus.beneficesImposables += resultat.revenuImposable - beneficeExonere
+    revenus.beneficesExoneres += beneficeExonere
     revenus.versementLiberatoire += resultat.versementLiberatoire
     if (vfl.applique) revenus.revenusAuVersementLiberatoire += resultat.revenuApresAbattement
     revenus.beneficesEncaisses += revenuVerse
@@ -112,7 +118,7 @@ export function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): A
     ctx.nonRattache += revenuVerse
   }
 
-  return {
+  const activite: ActivityResult = {
     entityId: micro.id,
     name: micro.name,
     type: "micro-entreprise",
@@ -132,4 +138,7 @@ export function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): A
     ...detailProfession(profession, ctx.regles, true),
     warnings
   }
+  // Recettes libérales : des prestations BNC, hors des professions de santé de la CARPIMKO.
+  const recettesLiberales = total(ctx, micro.id, "ca_micro_services_bnc") > 0 && profession?.caisse !== "CARPIMKO"
+  return avecLaZone(activite, detailDeLaZone(zone, anneeSimulee(ctx), ctx.regles, { beneficeExonere, versementLiberatoire: vfl.applique, recettesLiberales }))
 }

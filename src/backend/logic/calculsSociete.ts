@@ -2,6 +2,8 @@
 
 import type { DetailCotisationsSalarie, EtatDeLaSociete, ReservesDeLaSociete } from "../../types.js"
 import type { CotisationsTNS } from "./cotisationsTNS.js"
+import { beneficeExonereEnZone } from "./dispositifs.js"
+import type { ParametresDExoneration } from "./exoneration-de-zone.js"
 import { euros } from "./format.js"
 import type { ReglesFiscales } from "./regles.js"
 
@@ -16,6 +18,8 @@ export interface EntreesSociete {
   capitalSocial?: number
   /** Ce que la société a gardé des années précédentes (voir l'ADR 014). Absent : ni réserves ni déficit, réserve légale constituée. */
   etat?: EtatDeLaSociete
+  /** Société implantée en zone (ZFU-TE, QPV) dont l'exonération joue cette année (voir l'ADR 017). Absent : aucune. */
+  exonerationDeZone?: ParametresDExoneration
 }
 
 /** Résultat annuel d'une société à l'IS, avant toute imposition personnelle des bénéficiaires. */
@@ -28,6 +32,8 @@ export interface ResultatSociete {
   /** Cotisations sociales sur la rémunération, et sur les dividendes pour une EURL. */
   cotisationsSociales: number
   beneficeAvantIS: number
+  /** Part du bénéfice exonérée d'impôt sur les sociétés en zone (0 sans exonération). */
+  beneficeExonere: number
   impotSocietes: number
   /** Dividendes effectivement versés, plafonnés au bénéfice distribuable de l'année augmenté des réserves. */
   dividendesVerses: number
@@ -83,7 +89,7 @@ export function etatSansReserves(capitalSocial: number | undefined, regles: Regl
 
 /**
  * Tronc commun des sociétés à l'IS : la rémunération et ses cotisations sont des charges ; le bénéfice restant, après
- * imputation des déficits antérieurs, supporte l'IS ; une part du bénéfice après IS va à la réserve légale tant qu'elle
+ * imputation des déficits antérieurs puis exonération de zone (BOI-BIC-CHAMP-80-10-20-40, § 100), supporte l'IS ; une part du bénéfice après IS va à la réserve légale tant qu'elle
  * n'est pas constituée. Les dividendes saisis sont distribués dans la limite du bénéfice distribuable de l'année et des
  * réserves des années précédentes : l'IS a déjà été payé sur ces réserves, il n'est pas dû une seconde fois.
  */
@@ -94,7 +100,10 @@ export function calculerResultatSociete(entrees: EntreesSociete, cotisationsRemu
 
   const beneficeAvantIS = chiffreAffaires - chargesDeductibles - remunerationNette - cotisationsRemuneration
   const deficitImpute = deficitImputable(beneficeAvantIS, auDebut.deficitReportable, regles.IS.reportEnAvantDesDeficits)
-  const impotSocietes = calculerIS(beneficeAvantIS - deficitImpute, regles.IS)
+  const beneficeImposable = beneficeAvantIS - deficitImpute
+  const zone = entrees.exonerationDeZone
+  const beneficeExonere = zone ? beneficeExonereEnZone(beneficeImposable, zone.partDansLaZone, zone) : 0
+  const impotSocietes = calculerIS(beneficeImposable - beneficeExonere, regles.IS)
   const beneficeNet = beneficeAvantIS - impotSocietes
   const dotation = dotationReserveLegale(beneficeNet, auDebut, entrees.capitalSocial ?? 0, regles.reserveLegale)
   // Ce que la société peut distribuer : le bénéfice de l'année après la réserve légale, et ses réserves ; des pertes
@@ -125,6 +134,7 @@ export function calculerResultatSociete(entrees: EntreesSociete, cotisationsRemu
     remunerationImposable: remunerationNette,
     cotisationsSociales: cotisationsRemuneration,
     beneficeAvantIS,
+    beneficeExonere,
     impotSocietes,
     dividendesVerses,
     dividendesSoumisPS: dividendesVerses,

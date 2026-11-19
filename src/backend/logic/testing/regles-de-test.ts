@@ -176,8 +176,8 @@ export const reglesDeTest: ReglesFiscales = {
   // Deux régimes de zone, comme dans les règles publiées : l'ancien, plafonné, fermé aux créations depuis l'an 2000 ; le nouveau, sans plafond.
   exonerationsDeZone: {
     regimes: [
-      { id: "ancienne", nom: "ZA", creationDepuis: "1990-01", creationJusquA: "1999-12", moisExonerationTotale: 60, partsExonereesEnsuite: [0.6, 0.4, 0.2], plafondAnnuel: 50000, hypotheses: ["Hypothèse de l'ancienne zone."] },
-      { id: "nouvelle", nom: "ZN", creationDepuis: "2000-01", creationJusquA: "2004-12", moisExonerationTotale: 60, partsExonereesEnsuite: [0.6, 0.4, 0.2], plafondAnnuel: null, hypotheses: ["Hypothèse de la nouvelle zone."] }
+      { id: "ancienne", nom: "ZA", creationDepuis: "1990-01", creationJusquA: "1999-12", moisExonerationTotale: 60, partsExonereesEnsuite: [0.6, 0.4, 0.2], plafondAnnuel: 50000, conditionsNonVerifiees: "taille de l'entreprise", liberauxHorsSanteExclus: false, hypotheses: ["Hypothèse de l'ancienne zone."] },
+      { id: "nouvelle", nom: "ZN", creationDepuis: "2000-01", creationJusquA: "2004-12", moisExonerationTotale: 60, partsExonereesEnsuite: [0.6, 0.4, 0.2], plafondAnnuel: null, conditionsNonVerifiees: "nature de l'activité", liberauxHorsSanteExclus: true, hypotheses: ["Hypothèse de la nouvelle zone."] }
     ]
   },
   microEntreprise: {

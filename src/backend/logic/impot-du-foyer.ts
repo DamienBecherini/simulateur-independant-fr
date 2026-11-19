@@ -98,7 +98,7 @@ function fraisProfessionnels(ctx: Contexte, personId: string): FraisProfessionne
 
 /** Additionne les revenus de tous les membres d'un foyer, par traitement fiscal. */
 function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
-  const cumul = { baseBareme: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, revenusAuVersementLiberatoire: 0, encaisse: 0, depenses: 0, prelevementsActivites: 0, resultatConserve: 0 }
+  const cumul = { baseBareme: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, revenusAuVersementLiberatoire: 0, beneficesExoneres: 0, encaisse: 0, depenses: 0, prelevementsActivites: 0, resultatConserve: 0 }
   for (const personId of [...foyer.declarantIds, ...foyer.enfantIds]) {
     const revenus = revenusDe(ctx, personId)
     const salarie = ctx.salaries.get(personId)?.bulletin
@@ -110,6 +110,7 @@ function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
     cumul.dividendesSoumisPS += revenus.dividendesSoumisPS
     cumul.versementLiberatoire += revenus.versementLiberatoire
     cumul.revenusAuVersementLiberatoire += revenus.revenusAuVersementLiberatoire
+    cumul.beneficesExoneres += revenus.beneficesExoneres
     cumul.encaisse += total(ctx, personId, "salary", "are", "other_taxable_income") + encaisse(revenus)
     cumul.depenses += total(ctx, personId, "expense")
     // Les cotisations patronales de son salaire comptent parmi les prélèvements de son foyer.
@@ -141,7 +142,8 @@ export function calculerFoyer(ctx: Contexte, foyer: Foyer): FoyerFiscalResult {
   // Revenu fiscal de référence : on rajoute ce que le barème ne voit pas. Au prélèvement forfaitaire, les dividendes
   // bruts ; au barème, l'abattement de 40 % (le reste y est déjà, net de la CSG déductible).
   const dividendesHorsBareme = optionBareme ? revenus.dividendes * reglesDividendes.abattementBareme : revenus.dividendes
-  const revenuFiscalDeReference = revenuImposableGlobal + dividendesHorsBareme + revenus.revenusAuVersementLiberatoire
+  // Les bénéfices exonérés d'impôt en zone (ZFU-TE, QPV) y reviennent aussi (article 1417, IV, 1°, b du CGI).
+  const revenuFiscalDeReference = revenuImposableGlobal + dividendesHorsBareme + revenus.revenusAuVersementLiberatoire + revenus.beneficesExoneres
 
   return {
     personIds: [...foyer.declarantIds, ...foyer.enfantIds],
@@ -149,6 +151,7 @@ export function calculerFoyer(ctx: Contexte, foyer: Foyer): FoyerFiscalResult {
     revenusEncaisses: Math.round(revenus.encaisse),
     revenuImposableGlobal: Math.round(revenuImposableGlobal),
     revenuFiscalDeReference: Math.round(revenuFiscalDeReference),
+    ...(revenus.beneficesExoneres > 0 ? { beneficesExoneres: Math.round(revenus.beneficesExoneres) } : {}),
     impotSurLeRevenu: Math.round(impotSurLeRevenu),
     ...(revenus.versementLiberatoire > 0 ? { versementLiberatoire: Math.round(revenus.versementLiberatoire) } : {}),
     prelevementsSociaux: Math.round(prelevementsSociaux),
