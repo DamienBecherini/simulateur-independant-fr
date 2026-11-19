@@ -22,13 +22,13 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Historique complet : SonarQube s'en sert pour attribuer les nouvelles lignes.
           fetch-depth: 0
 
       - name: Installer Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -64,7 +64,7 @@ jobs:
       # prend le relais.
       - name: Analyse SonarQube Cloud
         if: env.SONAR_TOKEN != '' && github.ref == 'refs/heads/main'
-        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
+        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
         # Attend le verdict de la porte qualité et fait échouer le job s'il est rouge : main passe au rouge, et la
         # démo n'est publiée qu'après un examen.
         timeout-minutes: 8

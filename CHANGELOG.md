@@ -6,6 +6,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Maintenance
+
+- Actions GitHub des workflows passées à leurs versions pour Node.js 24 (checkout, setup-node, upload-artifact, download-artifact, deploy-pages, upload-pages-artifact, analyse SonarQube) : GitHub retire Node.js 20 de ses runners.
+
 ## [0.13.0] — 2026-11-19
 
 ### Ajouté
