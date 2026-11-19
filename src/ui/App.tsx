@@ -45,6 +45,9 @@ import { useRaccourcisDAnnulation } from "./hooks/useRaccourcisDAnnulation"
 import { useSimulationDesAnnees } from "./hooks/useSimulationDesAnnees"
 import { useEncartDesQuestions } from "./hooks/useEncartDesQuestions"
 import { numerosDesTypesDeFlux } from "@/lib/grille-mensuelle"
+import { ajoutDUnConjoint, personnesSansConjoint } from "@/lib/conjoint"
+import type { AjoutDuConjoint } from "./components/AjouterUnConjoint"
+import { toast } from "sonner"
 
 /** En-tête de la page : dans l'affichage « Résumé », un titre plus petit et sans sous-titre à l'écran. */
 const EN_TETE_CLASSIQUE = { header: "mb-10", titre: "text-4xl", sousTitre: "" }
@@ -71,6 +74,20 @@ function App() {
   // dans la session (voir l'ADR 008) ; par défaut, ou si elle disparaît, c'est la plus récente.
   const [anneeChoisie, setAnneeChoisie] = useState<number | null>(null)
   const annee = anneeExistante(currentSession, anneeChoisie)
+  // « Ajouter un conjoint » sur la carte d'un foyer d'une seule personne : personne, relation et salaire en une étape.
+  const conjoint = useMemo<AjoutDuConjoint>(
+    () => ({
+      personnes: personnesSansConjoint(currentSession),
+      annee,
+      ajouter: (personneId, choix) => {
+        const { session, conjointId } = ajoutDUnConjoint(currentSession, annee, personneId, choix)
+        setCurrentSession(session)
+        const nom = session.entities.find(e => e.id === conjointId)?.name ?? "Conjoint"
+        toast.success(`${nom} ajouté au foyer. Ctrl+Z pour annuler.`)
+      }
+    }),
+    [currentSession, annee, setCurrentSession]
+  )
   const vue = useMemo(() => vueDeLAnnee(currentSession, annee), [currentSession, annee])
   // La simulation de toutes les années, recalculée peu après chaque modification de la session.
   const { simulation, simulationError, report: simulationReport, erreurDeLAnnee } = useSimulationDesAnnees(currentSession, annee)
@@ -192,7 +209,7 @@ function App() {
 
           <VueDeLaPage vue="resultats">
             {/* Dans l'affichage « Résumé », la synthèse des années remonte sous le bilan, avant les cartes détaillées. */}
-            <ResultsPanel report={simulationReport} error={erreurDeLAnnee} apresLeBilan={resume ? <SyntheseDesAnnees simulation={simulation} annee={annee} /> : null} />
+            <ResultsPanel report={simulationReport} error={erreurDeLAnnee} apresLeBilan={resume ? <SyntheseDesAnnees simulation={simulation} annee={annee} /> : null} conjoint={conjoint} />
 
             {resume ? null : <SyntheseDesAnnees simulation={simulation} annee={annee} />}
           </VueDeLaPage>

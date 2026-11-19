@@ -234,7 +234,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 - **Objectif :** partir d'une situation courante plutôt que d'une page vide. Peut s'intercaler entre deux autres phases.
 
-1.  **Bibliothèque de montages [✅] :** dix montages types (micro-entreprise seule, ostéopathe en micro-entreprise, kinésithérapeute conventionné en entreprise individuelle, SASU sans salaire, SASU avec un salaire qui valide 4 trimestres, EURL à l'IS, salarié avec une micro-entreprise, micro-entreprise et SASU du conjoint, conjoint salarié de la SASU, couple en union libre), chargés depuis les paramètres ou une simulation vide, avec confirmation avant de remplacer une simulation non enregistrée ; leurs chiffres 2026 sont figés par un test de référence. L'EURL à l'IR est approchée par l'EI au réel du comparateur.
+1.  **Bibliothèque de montages [✅] :** onze montages types (micro-entreprise seule, ostéopathe en micro-entreprise, kinésithérapeute conventionné en entreprise individuelle, SASU sans salaire, SASU avec un salaire qui valide 4 trimestres, EURL à l'IS, salarié avec une micro-entreprise, SASU avec un conjoint salarié ailleurs, micro-entreprise et SASU du conjoint, conjoint salarié de la SASU, couple en union libre), chargés depuis les paramètres ou une simulation vide, avec confirmation avant de remplacer une simulation non enregistrée ; leurs chiffres 2026 sont figés par un test de référence. L'EURL à l'IR est approchée par l'EI au réel du comparateur.
 2.  **Explication [✅] :** pour chaque montage, ce qu'il illustre, ses conditions, ses risques et ses sources officielles.
 3.  **Plus tard :** recherche automatique d'une meilleure structure, en s'appuyant sur le comparateur et l'optimiseur.
 

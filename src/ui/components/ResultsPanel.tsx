@@ -13,6 +13,7 @@ import { useAffichageResume } from "../hooks/useAffichage"
 import { classeDuDetail, useDetailDesCartes } from "../hooks/useDetailsDesCartes"
 import { BoutonDuDetailDesCartes, FournisseurDesDetails } from "./DetailsDesCartes"
 import { Depliable } from "./Depliable"
+import { BoutonAjouterUnConjoint, type AjoutDuConjoint } from "./AjouterUnConjoint"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { euros } from "@/backend/logic/format"
 
@@ -21,6 +22,8 @@ type ResultsPanelProps = {
   error: string | null
   /** Affiché juste sous le bilan (affichage « Résumé » : la synthèse des années). */
   apresLeBilan?: ReactNode
+  /** Raccourci « Ajouter un conjoint » sur la carte d'un foyer d'une seule personne ; absent, aucun bouton. */
+  conjoint?: AjoutDuConjoint
 }
 
 /** Part de ce que l'activité verse aux personnes par rapport à son chiffre d'affaires (ex. « 62 % du CA »). */
@@ -254,9 +257,17 @@ interface FoyerCardProps {
   showRates: boolean
   /** Nombre de foyers : le bouton du détail les ouvre ou les ferme tous. */
   nombre: number
+  conjoint?: AjoutDuConjoint
 }
 
-function FoyerCard({ foyer, persons, showRates, nombre }: FoyerCardProps) {
+/** La personne seule d'un foyer à qui le raccourci peut ajouter un conjoint, s'il y en a une. */
+function seulSansConjoint(members: PersonResult[], conjoint: AjoutDuConjoint | undefined): PersonResult | null {
+  if (!conjoint) return null
+  const declarants = members.filter(m => conjoint.personnes.has(m.entityId))
+  return declarants.length === 1 ? declarants[0] : null
+}
+
+function FoyerCard({ foyer, persons, showRates, nombre, conjoint }: FoyerCardProps) {
   const resume = useAffichageResume()
   const { ouvert } = useDetailDesCartes()
   const idDuDetail = useId()
@@ -265,6 +276,8 @@ function FoyerCard({ foyer, persons, showRates, nombre }: FoyerCardProps) {
   // Affichage classique : chaque ligne de détail se masque à sa place ; ailleurs, tout le détail, sous le bouton.
   const p = piecesDuFoyer(foyer, members, showRates, resume ? undefined : classeDuDetail(ouvert, "flex"))
   const bouton = <BoutonDuDetailDesCartes nombre={nombre} controle={idDuDetail} className="mt-2" />
+  const seul = seulSansConjoint(members, conjoint)
+  const ajoutDuConjoint = seul && conjoint ? <BoutonAjouterUnConjoint personneId={seul.entityId} nomDeLaPersonne={seul.name} ajout={conjoint} /> : null
 
   return (
     <Card title={members.map(m => m.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
@@ -286,6 +299,7 @@ function FoyerCard({ foyer, persons, showRates, nombre }: FoyerCardProps) {
             </dl>
             {p.complements}
           </div>
+          {ajoutDuConjoint}
         </>
       ) : (
         <>
@@ -302,6 +316,7 @@ function FoyerCard({ foyer, persons, showRates, nombre }: FoyerCardProps) {
             <div className={classeDuDetail(ouvert)}>{p.complements}</div>
           </div>
           {bouton}
+          {ajoutDuConjoint}
         </>
       )}
     </Card>
@@ -515,8 +530,8 @@ function NoteDesAssocies({ sharedCompanies }: { sharedCompanies: ActivityResult[
 }
 
 /** Les cartes des foyers fiscaux ; le bouton du détail de chacune compte toutes les cartes de la page. */
-function cartesDesFoyers(report: SimulationReport) {
-  return report.foyers.map(foyer => <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length + report.activities.length} />)
+function cartesDesFoyers(report: SimulationReport, conjoint: AjoutDuConjoint | undefined) {
+  return report.foyers.map(foyer => <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length + report.activities.length} conjoint={conjoint} />)
 }
 
 /** Les cartes des activités. */
@@ -527,15 +542,21 @@ function cartesDesActivites(report: SimulationReport) {
 const GRILLE_DES_CARTES = "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
 const TITRE_DES_CARTES = "text-lg font-medium text-slate-800 dark:text-slate-100"
 
+interface CartesProps {
+  report: SimulationReport
+  sharedCompanies: ActivityResult[]
+  conjoint?: AjoutDuConjoint
+}
+
 /** Affichage « Résumé » : les cartes des foyers et des activités, réduites à leur chiffre clé, dans une seule grille. */
-function CartesDuResume({ report, sharedCompanies }: { report: SimulationReport; sharedCompanies: ActivityResult[] }) {
+function CartesDuResume({ report, sharedCompanies, conjoint }: CartesProps) {
   if (report.foyers.length + report.activities.length === 0) return null
   return (
     <div className="space-y-3">
       <h3 className={TITRE_DES_CARTES}>Par foyer fiscal et par activité</h3>
       <NoteDesAssocies sharedCompanies={sharedCompanies} />
       <div className={GRILLE_DES_CARTES}>
-        {cartesDesFoyers(report)}
+        {cartesDesFoyers(report, conjoint)}
         {cartesDesActivites(report)}
       </div>
     </div>
@@ -543,14 +564,14 @@ function CartesDuResume({ report, sharedCompanies }: { report: SimulationReport;
 }
 
 /** Affichage classique : les cartes des foyers, puis celles des activités. */
-function CartesClassiques({ report, sharedCompanies }: { report: SimulationReport; sharedCompanies: ActivityResult[] }) {
+function CartesClassiques({ report, sharedCompanies, conjoint }: CartesProps) {
   return (
     <>
       {report.foyers.length > 0 ? (
         <div className="space-y-3">
           <h3 className={TITRE_DES_CARTES}>Par foyer fiscal</h3>
           <NoteDesAssocies sharedCompanies={sharedCompanies} />
-          <div className={GRILLE_DES_CARTES}>{cartesDesFoyers(report)}</div>
+          <div className={GRILLE_DES_CARTES}>{cartesDesFoyers(report, conjoint)}</div>
         </div>
       ) : null}
 
@@ -564,7 +585,7 @@ function CartesClassiques({ report, sharedCompanies }: { report: SimulationRepor
   )
 }
 
-export function ResultsPanel({ report, error, apresLeBilan }: ResultsPanelProps) {
+export function ResultsPanel({ report, error, apresLeBilan, conjoint }: ResultsPanelProps) {
   // L'affichage classique a deux grilles de cartes, l'affichage « Résumé » une seule.
   const Cartes = useAffichageResume() ? CartesDuResume : CartesClassiques
   // Sociétés dont les revenus se partagent entre plusieurs personnes : seule situation où la répartition à parts égales s'applique.
@@ -585,7 +606,7 @@ export function ResultsPanel({ report, error, apresLeBilan }: ResultsPanelProps)
       {/* Le détail des cartes s'ouvre et se ferme pour toutes à la fois, foyers et activités. */}
       {report ? (
         <FournisseurDesDetails>
-          <Cartes report={report} sharedCompanies={sharedCompanies} />
+          <Cartes report={report} sharedCompanies={sharedCompanies} conjoint={conjoint} />
         </FournisseurDesDetails>
       ) : null}
     </section>
