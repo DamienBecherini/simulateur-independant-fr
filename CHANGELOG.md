@@ -20,6 +20,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ### Modifié
 
+- **L'historique d'annulation est annoncé comme éphémère.** Le panneau des paramètres et les info-bulles d'« Annuler » et « Rétablir » disent que la simulation en cours s'enregistre d'elle-même, mais que l'historique d'annulation s'efface au rechargement de la page ou à la fermeture de l'application.
 - **« Trois vues » devient l'affichage par défaut.** Qui n'a jamais choisi d'affichage ouvre la page en trois vues (Ma situation, Mes résultats, Comparer et optimiser), sous la barre de résumé ; un choix enregistré dans la barre d'outils l'emporte toujours. Le sélecteur propose « Trois vues » en premier, puis « Résumé » et « Classique ».
 - **Une situation type chargée ouvre la vue « Ma situation ».** Dans l'affichage « Trois vues », charger une situation type (fenêtre des situations types, encart « Que voulez-vous savoir ? », lien `#situation=…`) mène à ses acteurs et à sa grille, d'où que l'on vienne.
 - **Une même règle pour charger une situation type.** La fenêtre des situations types et l'encart « Que voulez-vous savoir ? » (« Partir de zéro » compris) chargent désormais directement par-dessus une simulation vide ou l'exemple de la démo non modifié, comme le lien `#situation=…`, et gardent la confirmation sur toute simulation non enregistrée ; le chargement reste annulable en une étape.
