@@ -130,6 +130,24 @@ test("l'utilisateur laisse l'IA modifier directement la simulation : la proposit
   await expect(fenetre).toBeHidden()
   await expect(chiffreDAffaires).toHaveText(/^30\s000\s€$/)
 
+  // Une modification de ce qui était déjà saisi s'applique seule, mais reste signalée jusqu'au clic sur « Vu ».
+  const troisiemeClient = await connecterUnClient((await page.evaluate(() => window.api.infosDuServeurMcp()))!)
+  try {
+    const hausse = { cible: "serie", annee: 2026, serie: { acteurId: ATELIER.id, typeFlux: "ca_micro_services_bnc", libelle: "Prestations" }, montant: 3000 }
+    const proposee = (await troisiemeClient.callTool({ name: "proposer_modification", arguments: { modifications: [hausse] } })) as CallToolResult
+    const { proposition } = JSON.parse((proposee.content as { text: string }[])[0].text.split("\n").at(-1)!) as { proposition: unknown }
+    await troisiemeClient.callTool({ name: "appliquer_proposition", arguments: { proposition } })
+  } finally {
+    await troisiemeClient.close()
+  }
+  await expect(chiffreDAffaires).toHaveText(/^36\s000\s€$/)
+  const signalement = page.locator("[data-sonner-toast]").filter({ hasText: "L'IA a modifié un élément déjà saisi" })
+  await expect(signalement).toBeVisible()
+  await expect(signalement).toContainText("Modifier la série « Prestations »")
+  await auditerAccessibilite(page, "notification des modifications de l'IA, thème sombre", "[data-sonner-toaster]")
+  await signalement.getByRole("button", { name: "Vu" }).click()
+  await expect(signalement).toBeHidden()
+
   // Décocher la pastille y met fin, et l'enregistre.
   // Un clic, pas uncheck() : la case disparaît avec la pastille, Playwright ne pourrait pas vérifier son état.
   await pastille.click()

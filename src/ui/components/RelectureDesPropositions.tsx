@@ -13,7 +13,7 @@ import { Bot } from "lucide-react"
 import { toast } from "sonner"
 import type { SessionState } from "@/types"
 import type { PropositionRecue } from "@/backend/mcp/proposition-en-attente"
-import { supprimeQuelqueChose } from "@/backend/logic/outils/propositions"
+import { modifieLExistant, supprimeQuelqueChose } from "@/backend/logic/outils/propositions"
 import { euros } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
 import { ligneAlternee } from "../lignes-alternees"
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { relireLaProposition, type ApercuDUneAnnee, type Relecture } from "@/lib/relecture-de-proposition"
 import { CaseDeModificationDirecte } from "./IndicateurDeModificationDirecte"
+import { useModificationsDeLIA } from "../hooks/useModificationsDeLIA"
 
 interface RelectureDesPropositionsProps {
   session: SessionState
@@ -172,6 +173,9 @@ function useModificationDirecte(
     sessionAffichee.current = session
   }, [session])
 
+  // Ce qu'elles changent de l'existant reste signalé jusqu'à ce que l'utilisateur l'ait vu.
+  const signalerLesModifications = useModificationsDeLIA()
+
   const dejaAppliquees = useRef(new Set<string>())
   useEffect(() => {
     if (inapplicables.length > 0) onGarderEnRelecture(inapplicables)
@@ -186,7 +190,8 @@ function useModificationDirecte(
       else toast.info("La simulation a changé depuis : utilisez « Annuler » dans la barre d'outils, étape par étape.")
     }
     toast.success(`Modifié par l'IA : ${sansQuestion(recapitulatif)}`, { action: { label: "Annuler", onClick: annuler }, duration: 10_000 })
-  }, [aAppliquer, inapplicables, onAppliquer, onRetirer, onAnnuler, onGarderEnRelecture])
+    signalerLesModifications(relecture.resume.filter((_, rang) => modifieLExistant(proposition.proposition.operations[rang])))
+  }, [aAppliquer, inapplicables, onAppliquer, onRetirer, onAnnuler, onGarderEnRelecture, signalerLesModifications])
   return aRelire
 }
 

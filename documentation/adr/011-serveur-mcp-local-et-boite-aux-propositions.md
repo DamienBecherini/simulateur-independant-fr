@@ -119,3 +119,26 @@ Saisir des factures avec une IA demande deux validations par proposition : l'acc
 
 - **Positives :** une séance de saisie avec l'IA ne demande plus un clic par proposition ; rien ne change pour qui ne coche pas la case ; la sécurité repose toujours sur la relecture de l'application, l'annulation par étape et un serveur qui n'écrit pas la simulation.
 - **Négatives ou Compromis :** une instruction piégée dans un document, que le modèle suivrait, modifierait la simulation sans clic : la modification reste visible (notification, pastille) et annulable en une étape, mais l'utilisateur doit la repérer ; seules les suppressions (acteurs, années, « repartir de zéro », ADR 010) attendent toujours son clic. Une proposition applicable affichée dans la fenêtre peut devenir périmée sous les yeux de l'utilisateur si une autre, arrivée en direct, s'applique entre-temps. Le consentement dans la conversation dépend du client d'IA et du modèle. Le bouton « Annuler » d'une notification n'agit plus dès qu'une autre modification a suivi.
+
+## Addendum (2026-11-19) : ce qui change l'existant reste affiché jusqu'au clic
+
+### Contexte
+
+La revue de sécurité du 19 novembre 2026 relève qu'en mode direct, une modification de ce qui était déjà saisi (montant d'une série, acteur, réglage du comparateur) s'applique sans clic, comme un ajout. Une instruction piégée dans un document pourrait ainsi changer des chiffres ; la notification « Modifié par l'IA » disparaît au bout de dix secondes, et l'utilisateur peut ne pas la voir.
+
+### Décision
+
+- **Les modifications de l'existant** (`modifier_acteur`, `modifier_serie`, `regler_comparateur` : `modifieLExistant` dans `propositions.ts`) restent appliquées sans clic, mais leurs lignes de résumé vont dans **une seule notification qui reste à l'écran** jusqu'au clic sur « Vu » (`useModificationsDeLIA`). Elle se complète à chaque nouvelle modification (« L'IA a modifié 3 éléments déjà saisis », les six dernières lignes et le nombre des plus anciennes) et rappelle que « Annuler » de la barre d'outils les défait une à une.
+- **Les ajouts** gardent leur notification brève : ils se voient dans la grille, et une saisie de factures en produit beaucoup.
+- **Les suppressions** restent à valider dans la fenêtre de relecture (addendum du 2026-10-14).
+
+### Alternatives écartées
+
+- **Faire relire les modifications comme les suppressions** : plus sûr, mais une IA qui remplace une estimation par le montant de la facture, cas courant, redemanderait un clic à chaque fois ; le mode direct perdrait son intérêt.
+- **Une notification persistante par proposition** : une séance de saisie en empilerait des dizaines, qu'on finirait par fermer sans les lire.
+- **Un bouton « Tout annuler »** dans la notification : il défairait aussi ce que l'utilisateur ou l'IA ont fait entre-temps (ajouts, autres modifications), l'historique étant commun ; « Annuler » de la barre d'outils, étape par étape, reste le seul moyen sûr.
+
+### Conséquences
+
+- **Positives :** un chiffre changé par l'IA ne passe plus inaperçu ; la saisie de factures reste fluide.
+- **Négatives ou Compromis :** la notification ne montre que la nouvelle valeur (le résumé de l'opération), pas l'ancienne ; elle peut rester ouverte longtemps si l'utilisateur ne clique pas sur « Vu ».
