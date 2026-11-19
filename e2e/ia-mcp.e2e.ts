@@ -140,20 +140,25 @@ test("l'utilisateur laisse l'IA modifier directement la simulation : la proposit
 
 // Constat du 13 octobre 2026 : un nouvel utilisateur ouvre l'application sans rien modifier, et le serveur MCP ne
 // trouvait aucune simulation. La session vierge est désormais enregistrée dès le premier lancement.
-test("au tout premier lancement, sans aucune modification, le serveur MCP trouve la simulation", async ({ dossierDonnees, lancer }) => {
-  const { page } = await lancer()
-  await expect.poll(async () => (await lireFichier<SessionState>(dossierDonnees, "sessionState.json"))?.entities).toEqual([])
+test.describe("au tout premier lancement", () => {
+  // Rien de déposé dans le dossier de données, pas même les préférences.
+  test.use({ affichageDuTest: null })
 
-  const infos = (await page.evaluate(() => window.api.infosDuServeurMcp()))!
-  const client = await connecterUnClient(infos)
-  try {
-    const decrite = (await client.callTool({ name: "decrire_simulation", arguments: {} })) as CallToolResult
-    expect(decrite.isError).toBeFalsy()
-  } finally {
-    await client.close()
-  }
-  // Rien n'a été modifié : il n'y a rien à annuler.
-  await expect(page.getByRole("button", { name: "Annuler" })).toBeDisabled()
+  test("sans aucune modification, le serveur MCP trouve la simulation", async ({ dossierDonnees, lancer }) => {
+    const { page } = await lancer()
+    await expect.poll(async () => (await lireFichier<SessionState>(dossierDonnees, "sessionState.json"))?.entities).toEqual([])
+
+    const infos = (await page.evaluate(() => window.api.infosDuServeurMcp()))!
+    const client = await connecterUnClient(infos)
+    try {
+      const decrite = (await client.callTool({ name: "decrire_simulation", arguments: {} })) as CallToolResult
+      expect(decrite.isError).toBeFalsy()
+    } finally {
+      await client.close()
+    }
+    // Rien n'a été modifié : il n'y a rien à annuler.
+    await expect(page.getByRole("button", { name: "Annuler" })).toBeDisabled()
+  })
 })
 
 test("une proposition déposée dans la boîte sur une autre version de la simulation est montrée périmée, puis retirée", async ({ dossierDonnees, lancer }) => {
