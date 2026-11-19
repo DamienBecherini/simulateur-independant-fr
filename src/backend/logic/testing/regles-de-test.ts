@@ -173,6 +173,13 @@ export const reglesDeTest: ReglesFiscales = {
   reserveLegale: { partDuBenefice: 0.05, plafondPartDuCapital: 0.1 },
   TVA: { services: { franchiseBase: 40000, seuilMajore: 45000 }, vente: { franchiseBase: 100000, seuilMajore: 110000 } },
   CFE: { partDueAnneeDeCreation: 0, partDueAnneeSuivante: 0.5 },
+  // Deux régimes de zone, comme dans les règles publiées : l'ancien, plafonné, fermé aux créations depuis l'an 2000 ; le nouveau, sans plafond.
+  exonerationsDeZone: {
+    regimes: [
+      { id: "ancienne", nom: "ZA", creationDepuis: "1990-01", creationJusquA: "1999-12", moisExonerationTotale: 60, partsExonereesEnsuite: [0.6, 0.4, 0.2], plafondAnnuel: 50000, hypotheses: ["Hypothèse de l'ancienne zone."] },
+      { id: "nouvelle", nom: "ZN", creationDepuis: "2000-01", creationJusquA: "2004-12", moisExonerationTotale: 60, partsExonereesEnsuite: [0.6, 0.4, 0.2], plafondAnnuel: null, hypotheses: ["Hypothèse de la nouvelle zone."] }
+    ]
+  },
   microEntreprise: {
     plafonds: { services: 80000, vente: 200000 },
     cotisations: { venteBic: 0.1, servicesBic: 0.2, servicesBnc: 0.25 },

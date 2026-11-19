@@ -596,3 +596,22 @@ describe("professions libérales réglementées (ADR 015)", () => {
     expect(texteProfessionsEcartees(3)).toContain("3 activités")
   })
 })
+
+describe("activité implantée en zone (ADR 017)", () => {
+  const sasu = { id: "c1", type: "company", name: "Atelier", legalStatus: "SASU", capitalSocial: 1000, dateDeCreation: "2024-01", avatar, locked: false }
+  const micro = { id: "m1", type: "micro-entreprise", name: "Boutique", beneficieACRE: false, opteVFL: false, avatar, locked: false }
+  const session = (...entities: unknown[]) => ({ formatVersion: FORMAT_VERSION_ACTUEL, entities: [alice, ...entities], relationships: [], annees: [{ annee: 2026, monthlyData: grille() }] })
+  const zone = (entite: unknown) => (entite as { implantationEnZone?: { partDuChiffreDAffaires?: number } }).implantationEnZone
+
+  it("lit tel quel un fichier d'avant, sans le champ, et garde la case cochée avec ou sans part du chiffre d'affaires", () => {
+    const { safeState, report } = sanitizeStateAndFillDefaults(session(sasu, { ...sasu, id: "c2", implantationEnZone: {} }, { ...micro, implantationEnZone: { partDuChiffreDAffaires: 0.6 } }))
+    expect(safeState.entities.slice(1).map(zone)).toEqual([undefined, {}, { partDuChiffreDAffaires: 0.6 }])
+    expect(rapportAvecCorrections(report)).toBe(false)
+  })
+
+  it("écarte seule une part hors limites, en gardant la case cochée, et le champ entier s'il est mal formé", () => {
+    const { safeState } = sanitizeStateAndFillDefaults(session({ ...sasu, implantationEnZone: { partDuChiffreDAffaires: 1.5 } }, { ...micro, implantationEnZone: "oui" }))
+    expect(safeState.entities).toHaveLength(3)
+    expect(safeState.entities.slice(1).map(zone)).toEqual([{}, undefined])
+  })
+})

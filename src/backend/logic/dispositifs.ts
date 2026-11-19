@@ -15,7 +15,7 @@
 import type { FinancialFlow, MicroEntreprise, MonthlyGridData, SortieDuRegimeMicro } from "../../types.js"
 import { depassePlafondMicro, type ChiffreAffairesMicro } from "./calculsAE.js"
 import { euros, pourcentDeNombre } from "./format.js"
-import { reglesDeLAnnee, type ReglesFiscales } from "./regles.js"
+import { reglesDeLAnnee, type RegimeDeZone, type ReglesFiscales } from "./regles.js"
 
 /** Un mois du calendrier : son année et son numéro, de 1 (janvier) à 12. */
 export interface MoisCivil {
@@ -162,6 +162,76 @@ export function noteCFE(creation: MoisCivil | null, annee: number, regles: Regle
   if (annee < creation.annee) return `CFE non comptée en ${annee} : l'activité n'est créée qu'en ${libelleDuMois(creation)}.`
   if (annee === creation.annee) return `CFE exonérée l'année de création (${annee}) : le poste CFE des frais de fonctionnement n'est pas compté.`
   return `CFE de ${annee}, l'année qui suit la création : base d'imposition réduite de moitié, le poste CFE des frais de fonctionnement est compté pour ${pourcentDeNombre(Math.round(part * 100))}.`
+}
+
+// --- Exonération d'impôt sur les bénéfices en zone (ZFU-TE, QPV : voir l'ADR 017) ---
+
+/** Le régime de zone d'une activité d'après son mois de création : celui dont la fenêtre le contient ; `null` s'il n'y en a pas. */
+export function regimeDeZone(creation: MoisCivil, regles: Pick<ReglesFiscales, "exonerationsDeZone">): RegimeDeZone | null {
+  const creee = ecrireMois(creation)
+  return regles.exonerationsDeZone.regimes.find(regime => regime.creationDepuis <= creee && creee <= regime.creationJusquA) ?? null
+}
+
+/** Part du bénéfice exonérée un mois donné, d'après son rang depuis le mois de création (0 pour celui-ci) ; 0 avant la création. */
+function partExonereeDuMois(rang: number, regime: RegimeDeZone): number {
+  if (rang < 0) return 0
+  if (rang < regime.moisExonerationTotale) return 1
+  return regime.partsExonereesEnsuite[Math.floor((rang - regime.moisExonerationTotale) / 12)] ?? 0
+}
+
+/** Moyenne de taux mensuels ; des mois au même taux donnent ce taux, sans erreur d'arrondi (douze fois 0,6 font 0,6). */
+function moyenne(taux: number[]): number {
+  if (taux.length === 0) return 0
+  if (taux.every(t => t === taux[0])) return taux[0]
+  return taux.reduce((somme, t) => somme + t, 0) / taux.length
+}
+
+/** L'exonération de zone d'une activité sur une année. */
+export interface ExonerationDeZone {
+  regime: RegimeDeZone
+  /** Mois d'activité de l'année : douze, ou moins l'année de création. */
+  moisDActivite: number
+  /** Part du bénéfice de l'année exonérée (0 à 1) : la moyenne des taux de ses mois d'activité. */
+  partExoneree: number
+  /** Bénéfice exonéré maximal de l'année, au prorata des mois d'activité ; `null` : aucun plafond. */
+  plafond: number | null
+  /** Dernier mois exonéré en totalité, et dernier mois exonéré en partie. */
+  finExonerationTotale: MoisCivil
+  fin: MoisCivil
+}
+
+/**
+ * L'exonération de zone d'une activité créée ce mois-là, pour une année ; `null` si aucun régime ne couvre sa date de
+ * création. Chaque mois d'activité de l'année a son taux, d'après son rang depuis le mois de création ; le bénéfice de
+ * l'année est réputé réparti également entre eux (choix de modélisation : aucun texte ne fixe la répartition d'une année
+ * à cheval sur deux taux). Avant la création ou après la dernière période, la part exonérée est nulle.
+ */
+export function exonerationDeZoneDeLAnnee(creation: MoisCivil, annee: number, regles: Pick<ReglesFiscales, "exonerationsDeZone">): ExonerationDeZone | null {
+  const regime = regimeDeZone(creation, regles)
+  if (!regime) return null
+  const debut = rangDuMois(creation)
+  const taux = Array.from({ length: 12 }, (_, mois) => annee * 12 + mois - debut)
+    .filter(rang => rang >= 0)
+    .map(rang => partExonereeDuMois(rang, regime))
+  const moisDActivite = taux.length
+  return {
+    regime,
+    moisDActivite,
+    partExoneree: moyenne(taux),
+    plafond: regime.plafondAnnuel === null ? null : (regime.plafondAnnuel * moisDActivite) / 12,
+    finExonerationTotale: moisDuRang(debut + regime.moisExonerationTotale - 1),
+    fin: moisDuRang(debut + regime.moisExonerationTotale + regime.partsExonereesEnsuite.length * 12 - 1)
+  }
+}
+
+/**
+ * Bénéfice exonéré d'impôt de l'année : la part du bénéfice imposable réalisée dans la zone, multipliée par la part
+ * exonérée, dans la limite du plafond (BOI-BIC-CHAMP-80-10-20-40, § 260 : le plafond s'applique après le taux dégressif).
+ * Le bénéfice imposable s'entend après imputation des déficits antérieurs (§ 100) ; une perte n'exonère rien.
+ */
+export function beneficeExonereEnZone(beneficeImposable: number, partDansLaZone: number, exoneration: Pick<ExonerationDeZone, "partExoneree" | "plafond">): number {
+  const exonere = Math.max(0, beneficeImposable) * Math.min(1, Math.max(0, partDansLaZone)) * exoneration.partExoneree
+  return exoneration.plafond === null ? exonere : Math.min(exonere, exoneration.plafond)
 }
 
 // --- Sortie du régime micro ---

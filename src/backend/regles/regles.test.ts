@@ -106,6 +106,7 @@ function taux(r: ReglesFiscales): [string, number][] {
     ...micro.ACRE.reductionsParDateDeCreation.map(({ reduction }, i): [string, number] => [`microEntreprise.ACRE.reductionsParDateDeCreation.${i}`, reduction]),
     ["CFE.partDueAnneeDeCreation", r.CFE.partDueAnneeDeCreation],
     ["CFE.partDueAnneeSuivante", r.CFE.partDueAnneeSuivante],
+    ...r.exonerationsDeZone.regimes.flatMap(regime => regime.partsExonereesEnsuite.map((part, i): [string, number] => [`exonerationsDeZone.${regime.id}.partsExonereesEnsuite.${i}`, part])),
     ...parActivite("microEntreprise.abattement", micro.abattement),
     ...parActivite("microEntreprise.versementLiberatoire.taux", micro.versementLiberatoire.taux)
   ]
@@ -272,6 +273,26 @@ describe("règles par année", () => {
     it("a une CFE non due l'année de création et réduite l'année suivante", () => {
       expect(regles.CFE.partDueAnneeDeCreation).toBe(0)
       expect(regles.CFE.partDueAnneeSuivante).toBe(0.5)
+    })
+
+    it("a des régimes d'exonération en zone aux fenêtres de création datées, qui se suivent sans se chevaucher (ADR 017)", () => {
+      const { regimes } = regles.exonerationsDeZone
+      expect(regimes.map(regime => regime.id)).toEqual(["zfuTe", "qpv"])
+      for (const regime of regimes) {
+        expect(regime.creationDepuis, regime.id).toMatch(/^\d{4}-(0[1-9]|1[0-2])$/)
+        expect(regime.creationJusquA, regime.id).toMatch(/^\d{4}-(0[1-9]|1[0-2])$/)
+        expect(regime.creationDepuis < regime.creationJusquA, regime.id).toBe(true)
+        expect(regime.moisExonerationTotale, regime.id).toBe(60)
+        // La part exonérée décroît d'une période de douze mois à la suivante.
+        expectCroissante([...regime.partsExonereesEnsuite].reverse())
+        expect(regime.nom, regime.id).toMatch(/\S/)
+        regime.hypotheses.forEach(hypothese => expect(hypothese, regime.id).toMatch(/\S{3,}.*\.$/))
+      }
+      // La ZFU-TE, plafonnée, est fermée aux créations le mois où le régime QPV, sans plafond annuel, s'ouvre.
+      const [zfuTe, qpv] = regimes
+      expect([zfuTe.creationJusquA, qpv.creationDepuis]).toEqual(["2025-12", "2026-01"])
+      expect(zfuTe.plafondAnnuel).toBe(50000)
+      expect(qpv.plafondAnnuel).toBeNull()
     })
 
     it("a un impôt sur les sociétés au taux réduit inférieur au taux normal", () => {

@@ -594,6 +594,45 @@
     "partDueAnneeDeCreation": 0,
     "partDueAnneeSuivante": 0.5
   },
+  "exonerationsDeZone": {
+    "description": "Exonération d'impôt sur les bénéfices d'une activité implantée en zone (voir l'ADR 017). Le régime est celui dont la fenêtre contient le mois de création de l'activité. Exonération totale pendant les premiers mois, comptés depuis le mois de création, puis part exonérée dégressive par périodes de douze mois ; le plafond porte sur le bénéfice exonéré, après le taux dégressif. Le bénéfice exonéré d'impôt sur le revenu s'ajoute au revenu fiscal de référence (article 1417, IV, 1°, b du code général des impôts). Les hypothèses de chaque régime sont montrées à l'utilisateur qui l'active.",
+    "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054373249/2026-11-19",
+    "sourceCalcul": "https://bofip.impots.gouv.fr/bofip/9605-PGP.html/identifiant=BOI-BIC-CHAMP-80-10-20-40-20150805",
+    "sourceVersementLiberatoire": "https://bofip.impots.gouv.fr/bofip/4789-PGP.html/identifiant=BOI-BIC-DECLA-10-40-20-20180601",
+    "regimes": [
+      {
+        "id": "zfuTe",
+        "nom": "ZFU-TE",
+        "description": "Zones franches urbaines-territoires entrepreneurs (article 44 octies A du code général des impôts) : activités créées du 1er janvier 2015 au 31 décembre 2025 ; le régime n'a pas été reconduit par la loi de finances pour 2026, et les activités créées avant gardent leur exonération jusqu'à son terme. Soixante mois d'exonération totale à partir du premier jour du mois du début d'activité, puis bénéfice imposé à 40 %, 60 % et 80 % les trois périodes de douze mois suivantes. Bénéfice exonéré plafonné à 50 000 € par période de douze mois ; la majoration de 5 000 € par salarié embauché n'est pas modélisée.",
+        "source": "https://bofip.impots.gouv.fr/bofip/5903-PGP.html/identifiant=BOI-BIC-CHAMP-80-10-30-20250702",
+        "creationDepuis": "2015-01",
+        "creationJusquA": "2025-12",
+        "moisExonerationTotale": 60,
+        "partsExonereesEnsuite": [0.6, 0.4, 0.2],
+        "plafondAnnuel": 50000,
+        "hypotheses": [
+          "Une année à cheval sur deux taux d'exonération est répartie également entre ses mois : aucun texte officiel ne fixe cette répartition.",
+          "Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise ; ce point n'a pas été confirmé sur un texte officiel."
+        ]
+      },
+      {
+        "id": "qpv",
+        "nom": "QPV",
+        "description": "Quartiers prioritaires de la politique de la ville (article 44 octies B du code général des impôts, créé par l'article 42 de la loi n° 2026-103 du 19 février 2026) : activités commerciales, artisanales ou de professions de santé créées ou reprises du 1er janvier 2026 au 31 décembre 2030. Exonération totale jusqu'au terme du 59e mois suivant celui de la création, puis bénéfice imposé à 40 %, 60 % et 80 % les trois périodes de douze mois suivantes. Aucun plafond annuel ; le plafond européen des aides de minimis n'est pas modélisé.",
+        "source": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053521035",
+        "creationDepuis": "2026-01",
+        "creationJusquA": "2030-12",
+        "moisExonerationTotale": 60,
+        "partsExonereesEnsuite": [0.6, 0.4, 0.2],
+        "plafondAnnuel": null,
+        "hypotheses": [
+          "Une année à cheval sur deux taux d'exonération est répartie également entre ses mois : aucun texte officiel ne fixe cette répartition.",
+          "Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise ; ce point n'a pas été confirmé sur un texte officiel.",
+          "L'administration n'a pas encore publié son commentaire de ce régime, créé en 2026 : les règles de calcul de la ZFU-TE lui sont appliquées par analogie (déficits antérieurs, versement libératoire de la micro-entreprise)."
+        ]
+      }
+    ]
+  },
   "microEntreprise": {
     "plafonds": {
       "description": "Plafonds de chiffre d'affaires du régime micro pour les revenus de 2025 (2023-2025). Le régime s'applique en N si le chiffre d'affaires de N-1 ou de N-2 ne dépasse pas les plafonds en vigueur en N (sortie au 1er janvier qui suit deux années de suite au-delà) ; l'année de création, le plafond est réduit au prorata des jours d'activité (plafond x jours / 365).",
