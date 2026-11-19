@@ -54,7 +54,7 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 - **Scénarios** : sauvegardes nommées, chargement, import / export JSON, export et import de toutes les sauvegardes en un fichier.
 - **Exports** : CSV pour Excel (grille, résultats, comparateur, courbe rémunération / dividendes), document PDF mis en page, rapport Markdown à lire ou à confier à une IA.
 - **Pérennité des données** : validation Zod et réparation automatique des sessions à l'ouverture.
-- **Confort d'édition** : undo / redo (Ctrl+Z / Ctrl+Y, Cmd+Shift+Z), sauvegarde automatique, glisser-déposer, zoom.
+- **Confort d'édition** : undo / redo (Ctrl+Z / Ctrl+Y, Cmd+Shift+Z), sauvegarde automatique, glisser-déposer, zoom. La simulation en cours se retrouve à la prochaine ouverture ; l'historique d'annulation, lui, s'efface au rechargement de la page ou à la fermeture de l'application.
 - **100 % hors-ligne** : aucune donnée ne quitte la machine.
 
 ## 📖 Documentation

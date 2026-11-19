@@ -347,3 +347,10 @@ describe("échec de l'enregistrement des sauvegardes", () => {
     expect(screen.queryByRole("dialog", { name: "Import des sauvegardes" })).not.toBeInTheDocument()
   })
 })
+
+describe("SettingsSheet, historique d'annulation", () => {
+  it("dit que la simulation s'enregistre d'elle-même, mais que l'historique s'efface au rechargement", () => {
+    render(<PanneauDesSauvegardes initiales={[]} ordreInitial={[]} onChange={() => {}} />)
+    expect(screen.getByText(/L'historique d'annulation \(Ctrl\+Z\), lui, s'efface quand la page est rechargée ou l'application fermée\./)).toBeInTheDocument()
+  })
+})
