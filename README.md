@@ -55,7 +55,8 @@ Les captures sont générées par `npm run captures` (Playwright, sur l'applicat
 - **Exports** : CSV pour Excel (grille, résultats, comparateur, courbe rémunération / dividendes), document PDF mis en page, rapport Markdown à lire ou à confier à une IA.
 - **Pérennité des données** : validation Zod et réparation automatique des sessions à l'ouverture.
 - **Confort d'édition** : undo / redo (Ctrl+Z / Ctrl+Y, Cmd+Shift+Z), sauvegarde automatique, glisser-déposer, zoom. La simulation en cours se retrouve à la prochaine ouverture ; l'historique d'annulation, lui, s'efface au rechargement de la page ou à la fermeture de l'application.
-- **100 % hors-ligne** : aucune donnée ne quitte la machine.
+- **Avec une IA** (application de bureau) : un serveur MCP local laisse une IA (Claude Desktop, Claude Code, LM Studio…) lire la simulation, la faire calculer, et proposer des ajouts tirés de factures ou de relevés, que l'utilisateur applique d'un clic ; il peut aussi la laisser modifier directement la simulation, sauf pour une suppression. Voir [Utiliser le simulateur avec une IA](./documentation/utiliser-avec-une-ia.md).
+- **100 % hors-ligne** : l'application n'envoie rien, ni compte ni mesure d'audience. Seul ce que vous confiez vous-même à une IA part chez son fournisseur, et un retour (« Donner mon avis ») n'est envoyé que par vous, sur GitHub ou par e-mail.
 
 ## 📖 Documentation
 

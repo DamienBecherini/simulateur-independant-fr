@@ -1,10 +1,10 @@
 # Roadmap de Développement Détaillée v3.0
 
-- **Dernière mise à jour :** 13/10/2026
+- **Dernière mise à jour :** 19/11/2026
 
 ## **État Actuel du Projet**
 
-Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue, le moteur de simulation par foyer fiscal, le comparateur de statuts et l'arbitrage rémunération / dividendes sont en place, avec une démo web publiée sur GitHub Pages. L'accessibilité (WCAG 2.2 AA) est vérifiée automatiquement. Les chiffres s'exportent en CSV, en PDF et en rapport Markdown. Les cotisations du président de SASU et des salariés sont calculées ligne à ligne. Une session couvre désormais plusieurs années, chacune avec ses règles, et le revenu fiscal de référence est reporté sur le versement libératoire. La suite de la phase 13 : bénéfice mis en réserve, flux récurrents, sortie du régime micro.
+Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les tests automatisés avec intégration continue, le moteur de simulation par foyer fiscal, le comparateur de statuts et l'arbitrage rémunération / dividendes sont en place, avec une démo web publiée sur GitHub Pages. L'accessibilité (WCAG 2.2 AA) est vérifiée automatiquement. Les chiffres s'exportent en CSV, en PDF et en rapport Markdown. Les cotisations du président de SASU et des salariés sont calculées ligne à ligne. Une session couvre désormais plusieurs années, chacune avec ses règles, et le revenu fiscal de référence est reporté sur le versement libératoire. Sont venus depuis : bénéfice mis en réserve, flux récurrents, sortie du régime micro, professions libérales réglementées (CIPAV, CARPIMKO), portage salarial, calcul à l'envers (« Combien facturer ? »), serveur MCP local pour les IA (propositions validées dans l'application, ou modification directe sauf suppression), situations types et leurs liens, affichage « Trois vues » par défaut. Prochaine étape : les retours des utilisateurs (issue 1 : le conjoint est fait ; l'exonération d'impôt sur les bénéfices ZFU-TE / QPV reste à faire).
 
 > **Chantier en cours : les professions libérales réglementées et leurs caisses (phase 14 bis).** Les affiliés de la CIPAV et de la CARPIMKO (ostéopathes, psychologues, architectes, kinésithérapeutes, infirmiers…) ont désormais leurs propres cotisations, au réel et en micro-entreprise. Restent les autres caisses (CARMF, CARCDSF, CNBF…), calculées comme une profession non réglementée avec un avertissement ; deux montages types (ostéopathe, kinésithérapeute) en partent.
 
