@@ -17,13 +17,14 @@ import type { InfosDuServeurMcp } from "@/lib/configuration-mcp"
 import { emptySession, makeFlow, makePerson } from "@/ui/testing/fixtures"
 import App from "./App"
 
-vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), info: vi.fn(), warning: vi.fn(), error: vi.fn(), dismiss: vi.fn() }) }))
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), info: vi.fn(), warning: vi.fn(), error: vi.fn(), dismiss: vi.fn(), custom: vi.fn() }) }))
 
 beforeEach(() => {
   vi.mocked(toast.success).mockClear()
   vi.mocked(toast.info).mockClear()
   vi.mocked(toast).mockClear()
   vi.mocked(toast.dismiss).mockClear()
+  vi.mocked(toast.custom).mockClear()
 })
 
 function initialSession(): SessionState {
@@ -306,12 +307,16 @@ describe("App : l'IA modifie directement la simulation", () => {
   })
 
   describe("ce que l'IA change dans l'existant reste signalé jusqu'au clic sur « Vu »", () => {
-    /** Titre, options et texte de la dernière notification des modifications de l'IA. */
+    /** Options, contenu affiché et bouton « Vu » de la dernière notification des modifications de l'IA. */
     const notificationDesModifications = () => {
-      const [titre, options] = dernier(vi.mocked(toast).mock.calls)!
-      const { description, duration, id, action } = options as { description: React.ReactElement; duration: number; id: string; action: { label: string; onClick: () => void } }
-      const { container } = render(description)
-      return { titre, duration, id, action, texte: container.textContent ?? "" }
+      const [dessin, options] = dernier(vi.mocked(toast.custom).mock.calls)!
+      const { duration, id } = options as { duration: number; id: string }
+      const { container, unmount } = render(dessin(id))
+      const titre = container.querySelector("p")?.textContent
+      const lignes = [...container.querySelectorAll("li")].map(li => li.textContent)
+      const texte = container.textContent ?? ""
+      const vu = within(container).getByRole("button", { name: "Vu" })
+      return { titre, duration, id, lignes, texte, vu, unmount }
     }
 
     it("une modification d'une série déjà saisie : une notification qui reste, avec ce qui a changé ; une seconde la complète", async () => {
@@ -319,19 +324,25 @@ describe("App : l'IA modifie directement la simulation", () => {
       const seconde = propositionDeModification(sessionApresLaProposition(initialSession(), premiere.proposition), 0, "b-loyer.json")
       const { deposer } = await renderApp([], { iaModifieDirectement: true })
       deposer([premiere])
-      await waitFor(() => expect(toast).toHaveBeenCalledTimes(1))
+      await waitFor(() => expect(toast.custom).toHaveBeenCalledTimes(1))
       const apresLaPremiere = notificationDesModifications()
       expect(apresLaPremiere.titre).toBe("L'IA a modifié un élément déjà saisi")
       expect(apresLaPremiere.duration).toBe(Infinity)
       expect(apresLaPremiere.texte).toMatch(/Modifier la série « Loyer perçu ».*1 200 €/)
       expect(apresLaPremiere.texte).toMatch(/Vérifiez-la ; « Annuler » dans la barre d'outils \(Ctrl\+Z\) la défait\./)
 
+      apresLaPremiere.unmount()
       deposer([seconde])
-      await waitFor(() => expect(toast).toHaveBeenCalledTimes(2))
+      await waitFor(() => expect(toast.custom).toHaveBeenCalledTimes(2))
       const apresLaSeconde = notificationDesModifications()
       expect(apresLaSeconde.titre).toBe("L'IA a modifié 2 éléments déjà saisis")
-      expect(apresLaSeconde.id).toBe(apresLaPremiere.id)
-      expect(apresLaSeconde.texte).toMatch(/1 200 €[\s\S]*0 €/)
+      // La précédente est retirée : la nouvelle, complétée, passe devant les notifications brèves arrivées depuis.
+      expect(apresLaSeconde.id).not.toBe(apresLaPremiere.id)
+      expect(toast.dismiss).toHaveBeenCalledWith(apresLaPremiere.id)
+      // La plus récente en premier.
+      expect(apresLaSeconde.lignes).toHaveLength(2)
+      expect(apresLaSeconde.lignes[0]).toMatch(/ 0 €/)
+      expect(apresLaSeconde.lignes[1]).toMatch(/1 200 €/)
       expect(apresLaSeconde.texte).toMatch(/Vérifiez-les ; « Annuler » dans la barre d'outils \(Ctrl\+Z\) les défait une à une\./)
     })
 
@@ -340,14 +351,14 @@ describe("App : l'IA modifie directement la simulation", () => {
       const seconde = propositionDeModification(sessionApresLaProposition(initialSession(), premiere.proposition), 900, "b-loyer.json")
       const { deposer } = await renderApp([], { iaModifieDirectement: true })
       deposer([premiere])
-      await waitFor(() => expect(toast).toHaveBeenCalledTimes(1))
-      const { action, id } = notificationDesModifications()
-      expect(action.label).toBe("Vu")
-      act(() => action.onClick())
+      await waitFor(() => expect(toast.custom).toHaveBeenCalledTimes(1))
+      const { vu, id, unmount } = notificationDesModifications()
+      act(() => vu.click())
       expect(toast.dismiss).toHaveBeenCalledWith(id)
+      unmount()
 
       deposer([seconde])
-      await waitFor(() => expect(toast).toHaveBeenCalledTimes(2))
+      await waitFor(() => expect(toast.custom).toHaveBeenCalledTimes(2))
       const apres = notificationDesModifications()
       expect(apres.titre).toBe("L'IA a modifié un élément déjà saisi")
       expect(apres.texte).not.toMatch(/1 200 €/)
@@ -359,7 +370,7 @@ describe("App : l'IA modifie directement la simulation", () => {
       deposer([bruno])
       await waitFor(() => expect(noms()).toEqual(["Alice Martin", "Bruno Durand"]))
       expect(toast.success).toHaveBeenCalled()
-      expect(toast).not.toHaveBeenCalled()
+      expect(toast.custom).not.toHaveBeenCalled()
     })
   })
 })

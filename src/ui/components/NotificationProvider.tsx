@@ -27,5 +27,7 @@ export function NotificationProvider() {
     return cleanup
   }, [])
 
-  return <Toaster position="top-right" richColors />
+  // Une croix sur chaque notification : on n'attend pas qu'une notification brève s'efface pour voir celles du
+  // dessous. Les notifications dessinées par l'application (toast.custom) n'en ont pas.
+  return <Toaster position="top-right" richColors closeButton toastOptions={{ closeButtonAriaLabel: "Fermer la notification" }} />
 }
