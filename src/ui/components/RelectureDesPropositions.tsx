@@ -219,7 +219,7 @@ export function RelectureDesPropositions({ session, propositions, onAppliquer, o
 
   return (
     <Dialog open={proposition !== null && relecture !== null} onOpenChange={ouverte => (ouverte ? undefined : remettre())}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-2xl">
         {proposition && relecture ? (
           <>
             <DialogHeader>

@@ -238,7 +238,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
         <div className="space-y-2 py-2">
           {flows.length > 0 && (
             <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <div ref={listRef} className="max-h-[50vh] space-y-2 overflow-y-auto">
+              <div ref={listRef} className="max-h-[calc(50vh/var(--zoom,1))] space-y-2 overflow-y-auto">
                 <SortableContext items={flowIds} strategy={verticalListSortingStrategy}>
                   {flows.map(flow => (
                     <FlowItem key={flow.id} flow={flow} allowedTypes={allowedTypes} onUpdate={(flowId, changes) => onUpdate(flowId, changes, portee, aussiEn)} onDelete={flowId => onDelete(flowId, portee, aussiEn)} onRecopier={onRecopier} onTypeUsed={setNewFlowType} typeActeur={entity.type} regles={regles} />

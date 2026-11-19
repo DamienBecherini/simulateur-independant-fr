@@ -119,7 +119,7 @@ export function SauvegardesGroupees({ allSaveSlots, slotOrder, setAllSaveSlots, 
       </div>
 
       <Dialog open={bilan !== null} onOpenChange={open => !open && setBilan(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{bilan && "erreur" in bilan ? "Import impossible" : "Import des sauvegardes"}</DialogTitle>
             <DialogDescription asChild>

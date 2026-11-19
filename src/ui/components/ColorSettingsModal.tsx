@@ -61,7 +61,7 @@ export function ColorSettingsModal({ isOpen, onClose, preferences, onSave }: Col
           <DialogDescription>Choisissez une couleur pour chaque type de flux financier. Ces couleurs seront utilisées dans la grille visuelle.</DialogDescription>
         </DialogHeader>
         {/* Conteneur scrollable pour la liste des couleurs */}
-        <div className="py-4 max-h-[60vh] overflow-y-auto pr-4 space-y-3">
+        <div className="py-4 max-h-[calc(60vh/var(--zoom,1))] overflow-y-auto pr-4 space-y-3">
           {/* Itère sur tous les types de flux possibles pour afficher un sélecteur de couleur pour chacun. */}
           {allFlowTypes.map(type => (
             <div key={type} className="grid grid-cols-[1fr_auto] items-center gap-4">

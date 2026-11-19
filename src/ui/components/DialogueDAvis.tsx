@@ -238,7 +238,7 @@ export function DialogueDAvis({ isOpen, onClose, diagnostic, declencheur }: Dial
   return (
     <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
       <DialogContent
-        className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+        className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-2xl"
         onCloseAutoFocus={event => {
           if (!declencheur?.current) return
           event.preventDefault()
