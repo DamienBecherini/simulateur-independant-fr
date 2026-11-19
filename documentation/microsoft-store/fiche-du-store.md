@@ -45,7 +45,20 @@ Textes et réponses à recopier dans Partner Center pour la soumission de l'appl
 
 Pour la première soumission (version 0.11.0) : **laisser le champ vide**, comme le demande Partner Center.
 
-Pour les suivantes, reprendre la section de la version dans [CHANGELOG.md](../../CHANGELOG.md), en quelques lignes, du point de vue de l'utilisateur.
+Pour les suivantes, reprendre la section de la version dans [CHANGELOG.md](../../CHANGELOG.md), en quelques lignes, du point de vue de l'utilisateur (1 500 caractères au plus).
+
+### Version 0.13.0
+
+```text
+Version 0.13.0
+
+- Portage salarial : une nouvelle colonne du comparateur, avec les conditions de la société de portage réglables (frais de gestion, contrat, effectif…).
+- « Combien facturer pour un net visé ? » : pour chaque statut, le chiffre d'affaires qui donne le net du foyer que vous visez.
+- « Ajouter un conjoint » sur la carte d'une personne seule, et une nouvelle situation type « SASU avec un conjoint salarié ailleurs ».
+- Avec une IA : elle peut proposer de supprimer plusieurs éléments ou de repartir de zéro, toujours après votre accord ; si vous le choisissez, elle peut aussi modifier directement la simulation, chaque modification s'annulant d'un clic.
+- Affichage « Trois vues » par défaut, lignes alternées dans les tableaux, grille plus facile à toucher, croix pour fermer les notifications.
+- Corrections : fenêtres qui débordaient de l'écran avec l'interface agrandie, contrastes des notifications et du thème sombre, paramètres accessibles sur un petit écran, mises à jour de sécurité.
+```
 
 ## Fonctionnalités du produit
 
@@ -54,18 +67,19 @@ Une par ligne dans Partner Center (vingt au plus) :
 1. Net dans la poche du foyer et taux global de prélèvement, recalculés à chaque modification
 2. Micro-entreprise, entreprise individuelle au réel, EURL et SASU
 3. Impôt sur le revenu calculé par foyer fiscal : quotient familial, décote, dividendes
-4. Comparateur de statuts : net, prélèvements, frais et trimestres de retraite
+4. Comparateur de statuts, portage salarial compris : net, prélèvements, frais et trimestres de retraite
 5. Rémunération ou dividendes : la répartition qui donne le meilleur net
-6. Grille annuelle des revenus et charges, mois par mois
-7. Plusieurs années de simulation, chacune avec ses règles fiscales
-8. Situations types préremplies et expliquées, avec leurs sources
-9. Frais réels et barème kilométrique
-10. Sauvegardes nommées, import et export JSON
-11. Exports CSV pour Excel, PDF mis en page et rapport Markdown
-12. Annuler et rétablir, sauvegarde automatique
-13. 100 % hors ligne : aucune donnée ne quitte l'ordinateur
-14. Serveur MCP local pour les assistants d'IA de bureau, avec validation de chaque proposition
-15. Gratuit, sans publicité, open source (licence MIT)
+6. Combien facturer pour un net visé, statut par statut
+7. Grille annuelle des revenus et charges, mois par mois
+8. Plusieurs années de simulation, chacune avec ses règles fiscales
+9. Situations types préremplies et expliquées, avec leurs sources
+10. Frais réels et barème kilométrique
+11. Sauvegardes nommées, import et export JSON
+12. Exports CSV pour Excel, PDF mis en page et rapport Markdown
+13. Annuler et rétablir, sauvegarde automatique
+14. 100 % hors ligne : aucune donnée ne quitte l'ordinateur
+15. Serveur MCP local pour les assistants d'IA de bureau, avec validation de chaque proposition
+16. Gratuit, sans publicité, open source (licence MIT)
 
 ## Mots-clés
 
