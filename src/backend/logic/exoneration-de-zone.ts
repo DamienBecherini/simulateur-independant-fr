@@ -73,6 +73,33 @@ function fenetresDesRegimes(regles: ReglesDeZone): string {
     .join(" ; ")
 }
 
+/**
+ * Ce que la fiche de l'activité dit de la case cochée, d'après sa date de création : le régime et son calendrier, ou la
+ * raison pour laquelle rien n'est exonéré, et les hypothèses du calcul à montrer (ADR 017, décision 5). `null` si la
+ * case n'est pas cochée.
+ */
+export function descriptionDeLaZone(activite: ActiviteEnZone, annee: number, regles: ReglesDeZone): { texte: string; hypotheses: string[] } | null {
+  const zone = zoneDeLActivite(activite, annee, regles)
+  if (!zone) return null
+  if (zone.etat === "sansDateDeCreation") {
+    const sigles = regles.exonerationsDeZone.regimes.map(regime => regime.nom).join(" ou ")
+    return { texte: `Indiquez la date de création de l'activité, plus haut : le régime (${sigles}) et le taux d'exonération en dépendent. Rien n'est exonéré en attendant.`, hypotheses: [] }
+  }
+  if (zone.etat === "sansRegime") {
+    return { texte: `Aucun régime d'exonération pour une activité créée en ${libelleDuMois(zone.creation)} (${fenetresDesRegimes(regles)}). Rien n'est exonéré.`, hypotheses: [] }
+  }
+  const { regime, finExonerationTotale, fin } = zone.exoneration
+  const creation = libelleDuMois(lireMois(activite.dateDeCreation)!)
+  if (fin.annee < annee) return { texte: `Créée en ${creation} : régime ${regime.nom}, dont l'exonération est terminée depuis fin ${libelleDuMois(fin)}.`, hypotheses: [] }
+  const parts = regime.partsExonereesEnsuite.map(pourcentage)
+  const degressif = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}` : parts.join("")
+  const plafond = regime.plafondAnnuel === null ? "Aucun plafond annuel." : `Bénéfice exonéré plafonné à ${euros(regime.plafondAnnuel)} par an.`
+  return {
+    texte: `Créée en ${creation} : régime ${regime.nom}. Bénéfice exonéré d'impôt en totalité jusqu'à fin ${libelleDuMois(finExonerationTotale)}, puis à ${degressif} par périodes de douze mois, jusqu'à fin ${libelleDuMois(fin)}. ${plafond}`,
+    hypotheses: regime.hypotheses
+  }
+}
+
 /** Ce que l'activité montre de son implantation en zone : le détail chiffré, la note de l'année, les avertissements. */
 export interface DetailDeLaZone {
   exonerationDeZone?: ExonerationDeZoneDeLActivite

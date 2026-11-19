@@ -15,7 +15,7 @@ import { BoutonDuDetailDesCartes, FournisseurDesDetails } from "./DetailsDesCart
 import { Depliable } from "./Depliable"
 import { BoutonAjouterUnConjoint, type AjoutDuConjoint } from "./AjouterUnConjoint"
 import { ReplieEnResume } from "./ReplieEnResume"
-import { euros } from "@/backend/logic/format"
+import { euros, pourcentDeNombre } from "@/backend/logic/format"
 
 type ResultsPanelProps = {
   report: SimulationReport | null
@@ -240,7 +240,7 @@ function piecesDuFoyer(foyer: FoyerFiscalResult, members: PersonResult[], showRa
     encaisse: <Row label="Total encaissé" value={euros(foyer.revenusEncaisses)} className={cache} />,
     impot: <LignesDeLImpot foyer={foyer} />,
     prelevementsSociaux: foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${euros(foyer.prelevementsSociaux)}`} className={cache} /> : null,
-    rfr: <Row label="Revenu fiscal de référence" value={euros(foyer.revenuFiscalDeReference)} hint="pour le versement libératoire dans deux ans" />,
+    rfr: <Row label="Revenu fiscal de référence" value={euros(foyer.revenuFiscalDeReference)} hint={foyer.beneficesExoneres ? `dont ${euros(foyer.beneficesExoneres)} de bénéfice exonéré en zone ; pour le versement libératoire dans deux ans` : "pour le versement libératoire dans deux ans"} />,
     reste: foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={euros(foyer.netApresImpots - foyer.depenses)} hint={`${euros(foyer.depenses)} de dépenses`} className={cache} /> : null,
     complements: (
       <>
@@ -432,6 +432,14 @@ function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: 
   )
 }
 
+/** Activité implantée en zone : le bénéfice exonéré d'impôt cette année, quand il y en a un (voir l'ADR 017). */
+function BeneficeExonereRow({ exoneration, className }: { exoneration: ActivityResult["exonerationDeZone"]; className?: string }) {
+  if (!exoneration || exoneration.beneficeExonere <= 0) return null
+  const taux = pourcentDeNombre(exoneration.partExoneree * 100, 1)
+  const precision = `${exoneration.nom ?? "zone"}, exonéré à ${taux}${exoneration.plafondAtteint ? ", plafond atteint" : ""}`
+  return <Row label="Bénéfice exonéré d'impôt" value={euros(exoneration.beneficeExonere)} hint={precision} className={className} />
+}
+
 /** Du chiffre d'affaires au résultat conservé : le calcul de ce que l'activité verse. */
 function LignesDeLActivite({ activity, className }: { activity: ActivityResult; className?: string }) {
   const isMicro = activity.type === "micro-entreprise"
@@ -444,6 +452,7 @@ function LignesDeLActivite({ activity, className }: { activity: ActivityResult; 
       <DetailDesCotisations activity={activity} className={className} />
       {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={euros(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${euros(activity.cotisationsPresident.brut)} bruts`} className={className} /> : null}
       {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} className={className} /> : null}
+      <BeneficeExonereRow exoneration={activity.exonerationDeZone} className={className} />
       {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${euros(activity.impotSocietes)}`} className={className} /> : null}
       {activity.reserves ? <MouvementsDesReserves activity={activity} className={className} /> : null}
     </>

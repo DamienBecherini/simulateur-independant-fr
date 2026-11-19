@@ -1,6 +1,6 @@
 // src/ui/components/ChampsDeLActeur.tsx
-// Réglages d'un acteur hors relations : nom, parts, statut, profession, revenu fiscal de référence, date de création, capital, couleur,
-// icône, frais. Affichés dans la fenêtre « Modifier », qui les enregistre à la validation.
+// Réglages d'un acteur hors relations : nom, parts, statut, profession, revenu fiscal de référence, date de création, capital,
+// implantation en zone, couleur, icône, frais. Affichés dans la fenêtre « Modifier », qui les enregistre à la validation.
 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,6 +11,7 @@ import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 import { ChampNumerique } from "./ChampNumerique"
 import { ChampDateDeCreation, ChampHorsPlafondAnneePrecedente } from "./ChampDateDeCreation"
+import { ChampImplantationEnZone } from "./ChampImplantationEnZone"
 import { ChampProfession } from "./ChampProfession"
 import { pourcent } from "@/backend/logic/format"
 import type { ReglesFiscales } from "@/backend/logic/regles"
@@ -103,6 +104,8 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee, 
       )}
       {entity.type === "person" && <ChampsFraisReels personne={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
       {estEntrepriseOuMicro(entity) && <ChampsDeplacements activite={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
+      {/* Dispositif de niche (ADR 017) : en dernier, replié, sans rien montrer tant que sa case n'est pas cochée. */}
+      {estEntrepriseOuMicro(entity) && <ChampImplantationEnZone activite={entity} onChange={onChange} annee={annee} regles={reglesDeLAnneeAffichee(annee)} />}
     </>
   )
 }
