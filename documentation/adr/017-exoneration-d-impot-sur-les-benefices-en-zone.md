@@ -1,7 +1,7 @@
 # ADR-017: Exonération d'impôt sur les bénéfices en zone (ZFU-TE et QPV)
 
 - **Date :** 2026-11-19
-- **Statut :** Proposé
+- **Statut :** Accepté (2026-11-19)
 
 ## Contexte
 
@@ -32,12 +32,17 @@ Trois règles communes aux deux régimes :
 - **Revenu fiscal de référence** (article 1417, IV, 1°, b du CGI, version en vigueur au 19 novembre 2026) : le bénéfice exonéré au titre des articles 44 octies A et 44 octies B s'y ajoute. Il compte donc pour l'accès au versement libératoire deux ans plus tard (`rfr-n2.ts`).
 - **Cotisations sociales :** l'exonération porte sur l'impôt. Les cotisations d'un travailleur indépendant restent calculées sur le bénéfice entier, celles d'une micro-entreprise sur le chiffre d'affaires.
 
-Un point repose sur une source secondaire : une micro-entreprise qui a opté pour le **versement libératoire** n'a pas droit à l'exonération (cour administrative d'appel de Douai, 4 mars 2021, sur la ZFU ; BOI-BIC-DECLA-10-40-20, version de 2018). Le versement libératoire est un impôt sur le chiffre d'affaires, sans bénéfice déclaré à exonérer. Voir « À vérifier ».
+**Versement libératoire** (BOI-BIC-DECLA-10-40-20 du 1er juin 2018, version en vigueur, § 130 à 150) : une micro-entreprise qui a opté pour le versement libératoire n'a pas droit aux exonérations de zone, « déterminées selon le résultat net de l'entreprise », alors que le versement libératoire porte sur le chiffre d'affaires. Qui veut l'exonération reste au régime micro et n'opte pour le versement libératoire qu'à l'issue de la période d'exonération. Le texte cite l'article 44 octies A ; il est appliqué par analogie à l'article 44 octies B, pas encore commenté.
+
+**Calcul du bénéfice exonéré** (BOI-BIC-CHAMP-80-10-20-40 du 5 août 2015, auquel renvoie le § 180 du commentaire de la ZFU-TE) : le bénéfice exonéré s'entend « après déduction des déficits reportables » (§ 100) ; le plafond s'applique au bénéfice « après application des abattements dégressifs » (§ 260) ; pour une micro-entreprise, le bénéfice est le chiffre d'affaires après l'abattement forfaitaire (§ 20). Certains produits n'ouvrent pas droit à l'exonération (dividendes, subventions, produits financiers nets, § 110 à 160).
 
 ## Décisions du propriétaire (2026-11-19)
 
 1. **Rien de visible tant que le dispositif n'est pas activé** : une case à cocher, dans une section repliée de la fiche de l'activité ; le régime et le taux se déduisent de la date de création.
 2. **Pas de champ pour les salariés qui majorent le plafond de la ZFU-TE** : la majoration n'est pas comptée, et une note le dit.
+3. **Professions libérales en QPV : avertir sans bloquer.** Seules les professions de santé ont droit au régime ; le simulateur ne connaît pas toutes les professions de santé (médecins, dentistes et sages-femmes sont absents de la liste de l'ADR 015).
+4. **Une seule situation type : « SASU en zone franche urbaine (ZFU-TE) »**, créée en janvier 2024, bénéfice au-delà de 50 000 € : elle répond à l'issue 1 et montre le plafond, donc un vrai arbitrage entre rémunération, dividendes et réserve. Son texte dit qu'une création depuis 2026 relève du régime QPV, sans plafond.
+5. **Les hypothèses du calcul sont montrées à qui active le dispositif** : ce qui n'a pas pu être confirmé sur un texte officiel, ou que l'administration n'a pas encore commenté, s'affiche dans la fiche de l'activité, sous la case cochée.
 
 ## Décision
 
@@ -67,6 +72,8 @@ Dans le fichier de chaque année (`regles/2024.json`, `2025.json`, `2026.json`),
 }
 ```
 
+Chaque régime porte aussi ses `hypotheses` : la liste des phrases montrées à l'utilisateur (décision 5). Elles vivent avec les règles : une hypothèse confirmée ou démentie se retire ou se corrige là, sans toucher au code.
+
 Les années 2024 et 2025 n'ont que `zfuTe`. Le régime retenu est celui dont la fenêtre contient le mois de création ; aucun : pas d'exonération, et la carte le dit (créée avant 2015, ou après 2030).
 
 ### 3. Calcul
@@ -94,6 +101,7 @@ Le résultat de l'activité porte le bénéfice exonéré et le régime (`Activi
 Pour celui-ci :
 
 - **Fiche de l'activité** (`ChampsDeLActeur.tsx`), pour une société ou une micro-entreprise : une section repliée « Aides liées au lieu d'implantation », fermée par défaut (`Depliable`), ouverte d'office quand la case est cochée. Dedans : la case « Activité implantée en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV) », et un lien vers la carte officielle des quartiers pour vérifier une adresse.
+- **Hypothèses du calcul** (décision 5) : sous la case cochée, une liste courte « Ce que ce calcul suppose », tirée des règles de l'année. Au 19 novembre 2026 : une année à cheval sur deux taux est répartie également entre ses mois (aucune règle officielle explicite) ; les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise (non confirmé sur le texte) ; pour le régime QPV, l'administration n'a pas encore publié son commentaire, et la règle du versement libératoire de la ZFU-TE lui est appliquée par analogie. L'avertissement de l'activité y renvoie (« hypothèses du calcul dans la fiche de l'activité »), l'export Markdown les reprend, et les outils pour l'IA les restituent avec le résultat.
 - **Case cochée** : une phrase calculée (« Créée en mars 2024 : ZFU-TE, bénéfice exonéré d'impôt à 100 % jusqu'en février 2029, puis à 60 %, 40 % et 20 % ») et un seul champ, « Part du chiffre d'affaires réalisée dans la zone », à 100 %. Sans date de création, la phrase la demande (le champ est juste au-dessus) et rien n'est exonéré.
 - **Carte de l'activité** : une mention parmi les dispositifs de l'année (`ActivityResult.dispositifs`, comme l'ACRE) : « ZFU-TE : bénéfice exonéré d'impôt à 100 % en 2026 (12 400 €) », ou « exonération terminée depuis mars 2032 ».
 - **Résultats et exports** (CSV, Markdown) : une ligne « Bénéfice exonéré d'impôt » quand elle n'est pas nulle.
@@ -102,12 +110,13 @@ Pour celui-ci :
 
 ### 5. Pour que les intéressés le trouvent
 
-- **Une situation type**, avec son lien public (`#situation=…`, ADR des liens) : voir la question 2 ci-dessous.
+- **Une situation type**, « SASU en zone franche urbaine (ZFU-TE) » (décision 4), avec son lien public (`#situation=sasu-en-zone-franche-urbaine`, voir `liens-vers-les-situations-types.md`).
 - **Avec une IA** : le champ fait partie des réglages d'un acteur, que `proposer_modification` sait déjà changer ; `lire_simulation` et les résultats le restituent. Pas de nouvel outil (dix-sept).
 - **Documentation** : guide de l'utilisateur, Roadmap (ligne « Dispositifs limités dans le temps »), CHANGELOG.
 
 ### 6. Hors périmètre
 
+- Produits exclus de l'exonération (dividendes reçus, subventions, produits financiers nets) : le simulateur n'a pas ces flux pour une activité.
 - Majoration du plafond de la ZFU-TE par salarié embauché ; clause d'emploi local ; seuils de taille ; plafond des aides de minimis ; secteurs exclus : signalés, pas calculés.
 - Activité non sédentaire (règle des 25 %) : l'utilisateur saisit lui-même 100 %.
 - Reprises d'activité, transferts, restructurations, option entre régimes de zone, reversement en cas de départ du quartier.
@@ -122,11 +131,6 @@ Pour celui-ci :
 - **Saisir le taux d'exonération de l'année** : plus simple à coder, mais à refaire chaque année et faux sur une session de plusieurs années, alors que la sortie progressive est précisément ce qui fait bouger l'arbitrage.
 - **Un réglage dans le comparateur** : le dispositif tient à l'activité, pas à la comparaison, et il chargerait un écran que tout le monde voit.
 - **Refuser le calcul quand une condition semble manquer** (profession libérale hors santé en QPV, par exemple) : le simulateur ne connaît ni toutes les professions de santé ni l'adresse ; il avertit, et l'utilisateur, qui a coché la case, décide.
-
-## Questions au propriétaire
-
-1. **Professions libérales en QPV** : avertir sans bloquer (proposé ci-dessus), ou n'exonérer les recettes libérales que si la profession choisie dans la fiche est une profession de santé ? La seconde option serait fausse pour les médecins, dentistes et sages-femmes, absents de la liste des professions (ADR 015).
-2. **Situation type** : une seule, pour ne pas allonger la liste. Proposée : « SASU en zone franche urbaine (ZFU-TE) », créée en janvier 2024, bénéfice au-delà de 50 000 € : elle répond à l'issue 1 et montre le plafond, donc un vrai arbitrage entre rémunération, dividendes et réserve. Son texte dirait qu'une création depuis 2026 relève du régime QPV, sans plafond. L'autre choix serait une SASU créée en 2026 en QPV, plus utile aux nouveaux créateurs mais moins parlante (aucun impôt sur les sociétés, donc tout en dividendes).
 
 ## Conséquences
 
@@ -163,10 +167,13 @@ Pour celui-ci :
 
 ## À vérifier
 
-- **Versement libératoire** : relire la version en vigueur de BOI-BIC-DECLA-10-40-20 (n° 130) et chercher une position de l'administration sur l'article 44 octies B, dont le commentaire au BOFiP n'était pas publié le 19 novembre 2026.
-- **Ordre entre déficit reportable et exonération** à l'impôt sur les sociétés, et **répartition au prorata du temps** d'un exercice à cheval sur deux taux : à confirmer dans BOI-BIC-CHAMP-80-10-20-40 (portée et calcul des allègements), auquel renvoie le commentaire de la ZFU-TE.
-- **Cotisations sociales de l'entreprise individuelle** : confirmer dans l'article L131-6 du code de la sécurité sociale que le bénéfice exonéré reste dans leur assiette.
-- **Commentaire du BOFiP sur le régime QPV**, à sa publication : plafond, professions de santé, micro-entreprise.
+Confirmé le 19 novembre 2026, après la première rédaction : l'incompatibilité avec le versement libératoire en ZFU-TE, l'imputation du déficit reportable avant l'exonération, le plafond appliqué après le taux dégressif, le bénéfice d'une micro-entreprise après abattement (voir « Ce que disent les textes »).
+
+Restent ouverts ; tant qu'ils le sont, ils figurent dans les `hypotheses` des règles et s'affichent à l'utilisateur :
+
+- **Année à cheval sur deux taux** : le BOFiP raisonne par périodes de douze mois et répartit par douzièmes dans des cas voisins (BOI-BIC-CHAMP-80-10-20-40, § 250 et 340 ; BOI-BIC-CHAMP-80-10-30, § 100), sans règle explicite pour un exercice qui chevauche deux taux. Le prorata des mois, et celui du plafond l'année de création, sont des choix de modélisation.
+- **Cotisations sociales de l'entreprise individuelle** : confirmer dans l'article L131-6 du code de la sécurité sociale, ou au BOSS, que le bénéfice exonéré reste dans leur assiette.
+- **Commentaire du BOFiP sur le régime QPV**, à sa publication : versement libératoire, professions de santé, micro-entreprise, plafond.
 
 ## Sources consultées le 2026-11-19
 
@@ -176,5 +183,6 @@ Pour celui-ci :
 - [Exonération d'impôt sur les bénéfices dans les ZFU-TE](https://bpifrance-creation.fr/encyclopedie/aides-a-creation-a-reprise-dentreprise/aides-fiscales/exoneration-dimpot-benefices-zfu) (Bpifrance Création, avril 2026)
 - [Quelles exonérations d'impôt dans les quartiers prioritaires de la ville ?](https://www.economie.gouv.fr/entreprises/trouver-des-aides-et-des-financements/les-aides-limplantation-geographique/quelles-exonerations-dimpot-dans-les-quartiers-prioritaires-de) (economie.gouv.fr)
 - [Réforme des exonérations fiscales en QPV](https://anct.gouv.fr/programmes-dispositifs/politique-de-la-ville/reforme-des-exonerations-fiscales-en-quartiers) (ANCT)
-- [BOI-BIC-DECLA-10-40-20, versement libératoire](https://bofip.impots.gouv.fr/bofip/4789-PGP.html/identifiant=BOI-BIC-DECLA-10-40-20-20180601) (BOFiP, version de 2018)
+- [BOI-BIC-DECLA-10-40-20, versement libératoire](https://bofip.impots.gouv.fr/bofip/4789-PGP.html/identifiant=BOI-BIC-DECLA-10-40-20-20180601) (BOFiP, 1er juin 2018, version en vigueur)
+- [BOI-BIC-CHAMP-80-10-20-40, portée et calcul des allègements en ZFU](https://bofip.impots.gouv.fr/bofip/9605-PGP.html/identifiant=BOI-BIC-CHAMP-80-10-20-40-20150805) (BOFiP, 5 août 2015, version en vigueur)
 - [Zones franches urbaines : les micro-entrepreneurs au versement libératoire](https://www.bncplus.fr/actualites/zones-franches-urbaines-les-micro-entrepreneurs-ne-peuvent-pas-beneficier-de) (BNC+, sur l'arrêt de la CAA de Douai du 4 mars 2021)
