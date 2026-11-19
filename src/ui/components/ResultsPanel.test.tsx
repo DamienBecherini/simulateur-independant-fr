@@ -163,6 +163,25 @@ describe("ResultsPanel", () => {
     expect(rowValue(carte, "Revenu fiscal de référence")).toHaveTextContent(`${money(27000)}pour le versement libératoire dans deux ans`)
   })
 
+  it("activité exonérée en zone : une ligne « Bénéfice exonéré d'impôt », et sa part dans le revenu fiscal de référence (ADR 017)", () => {
+    const report = makeReport()
+    report.activities = [{ ...report.activities[0], exonerationDeZone: { regime: "zfuTe", nom: "ZFU-TE", partExoneree: 2 / 3, partDansLaZone: 1, beneficeExonere: 40000, plafond: 50000, plafondAtteint: false, hypotheses: [] } }]
+    report.foyers = [{ ...report.foyers[0], beneficesExoneres: 12000 }, ...report.foyers.slice(1)]
+    render(<ResultsPanel report={report} error={null} />)
+
+    const activite = screen.getAllByRole("article").find(a => a.textContent?.includes("Ma SASU"))!
+    expect(normalize(rowValue(activite, "Bénéfice exonéré d'impôt").textContent!)).toBe(`${money(40000)}ZFU-TE, exonéré à 66,7 %`)
+    const foyer = screen.getAllByRole("article").find(a => a.textContent?.includes("Revenu fiscal de référence"))!
+    expect(normalize(rowValue(foyer, "Revenu fiscal de référence").textContent!)).toContain(`dont ${money(12000)} de bénéfice exonéré en zone ; pour le versement libératoire dans deux ans`)
+  })
+
+  it("sans bénéfice exonéré (case non cochée, exonération terminée), aucune ligne de plus", () => {
+    const report = makeReport()
+    report.activities = [{ ...report.activities[0], exonerationDeZone: { regime: "zfuTe", nom: "ZFU-TE", partExoneree: 0, partDansLaZone: 1, beneficeExonere: 0, plafondAtteint: false, sansExoneration: "terminee", hypotheses: [] } }]
+    render(<ResultsPanel report={report} error={null} />)
+    expect(screen.queryByText("Bénéfice exonéré d'impôt")).not.toBeInTheDocument()
+  })
+
   it.each([
     ["calcule", true, "le vôtre, de 29 040 €, calculé par la simulation, y donne accès"],
     ["saisi", false, "le vôtre, de 29 040 €, saisi dans la fiche, le dépasse"]

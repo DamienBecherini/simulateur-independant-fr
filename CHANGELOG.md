@@ -6,6 +6,14 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Ajouté
+
+- **Exonération d'impôt sur les bénéfices en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV).** Dans la fiche d'une société ou d'une micro-entreprise, une section repliée « Aides liées au lieu d'implantation » porte une seule case : « Activité implantée en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV) ». Le régime et le taux de chaque année se déduisent de la date de création : ZFU-TE pour une activité créée de 2015 à 2025 (bénéfice exonéré plafonné à 50 000 € par an), QPV pour une création de 2026 à 2030 (sans plafond annuel) ; exonération totale pendant soixante mois, puis 60 %, 40 % et 20 % par périodes de douze mois. En SASU et en EURL, le bénéfice exonéré échappe à l'impôt sur les sociétés, après le déficit des années précédentes : il y a plus à distribuer ou à garder, et « Rémunération ou dividendes ? » en tient compte. En entreprise individuelle et en micro-entreprise, il sort de l'impôt du foyer mais reste dans le revenu fiscal de référence ; les cotisations ne changent pas ; au versement libératoire, il n'y a pas d'exonération, et l'activité le dit. On peut indiquer la part du chiffre d'affaires réalisée dans la zone. La carte de l'activité annonce l'exonération de l'année et son calendrier, une ligne « Bénéfice exonéré d'impôt » entre dans son calcul, et le comparateur l'applique à chaque statut. Les conditions d'accès (taille, activité, emploi local, aides de minimis) ne sont pas vérifiées : un avertissement les rappelle, et la fiche liste ce que le calcul suppose faute de texte officiel pour le confirmer. Rien de tout cela n'apparaît tant que la case n'est pas cochée ([ADR 017](./documentation/adr/017-exoneration-d-impot-sur-les-benefices-en-zone.md)). Suite à un retour d'utilisateur ([issue 1](https://github.com/DamienBecherini/simulateur-independant-fr/issues/1)).
+
+### Corrigé
+
+- **La fiche « Modifier » d'un acteur tient dans une fenêtre basse.** Son titre et ses boutons « Annuler » et « Enregistrer » restent à l'écran, et seule la zone des réglages défile : dans une fenêtre de moins de 650 px de haut, ou avec l'interface agrandie, la fiche dépassait par le haut et par le bas.
+
 ### Maintenance
 
 - Actions GitHub des workflows passées à leurs versions pour Node.js 24 (checkout, setup-node, upload-artifact, download-artifact, deploy-pages, upload-pages-artifact, analyse SonarQube) : GitHub retire Node.js 20 de ses runners.

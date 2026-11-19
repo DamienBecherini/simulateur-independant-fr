@@ -112,14 +112,16 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
-        <form onSubmit={handleFormSubmit}>
+      {/* La fenêtre ne dépasse jamais l'écran (fenêtre basse, interface zoomée) : son titre et ses boutons restent
+          visibles, et seule la zone des réglages se resserre et défile. */}
+      <DialogContent className="flex max-h-[calc(100dvh/var(--zoom,1)_-_2rem)] flex-col sm:max-w-lg">
+        <form onSubmit={handleFormSubmit} className="flex min-h-0 flex-1 flex-col">
           {/* Un filet sépare le titre de la zone qui défile : ce qui passe dessous (les pastilles de couleur) ne semble
               plus le toucher. Sur un téléphone, le titre centré laisse la place du bouton de fermeture, de chaque côté. */}
           <DialogHeader className="border-b pb-3 max-sm:px-8">
             <DialogTitle className="leading-snug">Modifier : {localEntity.name}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-6 py-4 max-h-[calc(70vh/var(--zoom,1))] overflow-y-auto pr-4">
+          <div className="grid min-h-0 flex-1 gap-6 py-4 max-h-[calc(70vh/var(--zoom,1))] overflow-y-auto pr-4">
             <ChampsDeLActeur entity={localEntity} anneesSimulees={anneesSimulees} annee={annee} onChange={entity => setFormData(prev => ({ ...prev, entity }))} onChangerDeStatut={cible => onChangerDeStatut?.(localEntity, localRelationships, cible)} />
             <div className="space-y-4 pt-6 border-t">
               <h3 className="font-semibold text-base">Relations</h3>
