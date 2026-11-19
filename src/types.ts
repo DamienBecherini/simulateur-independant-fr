@@ -401,7 +401,7 @@ export const SaveSlotSchema = SessionStateSchema.extend({
   lastModified: z.number()
 })
 
-/** Affichage de la page choisi par l'utilisateur pendant la bêta : « Résumé » (par défaut), l'affichage d'origine ou « Trois vues ». */
+/** Affichage de la page choisi par l'utilisateur pendant la bêta : « Trois vues » (par défaut), « Résumé » ou l'affichage d'origine. */
 const AffichageSchema = z.enum(["resume", "classique", "vues"])
 
 /** Longueur maximale de l'identifiant d'une section repliable mémorisée. */

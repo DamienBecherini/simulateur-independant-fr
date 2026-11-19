@@ -39,7 +39,7 @@ describe("menu « Plus d'actions »", () => {
     expect(bouton).toHaveAttribute("aria-expanded", "true")
     const menu = screen.getByRole("menu", { name: "Plus d'actions" })
     expect(bouton).toHaveAttribute("aria-controls", menu.id)
-    expect(entrees().map(e => e.textContent)).toEqual(["Partir d'une situation type", "Donner mon avis", "Résumé", "Classique", "Trois vues", "Thème sombre"])
+    expect(entrees().map(e => e.textContent)).toEqual(["Partir d'une situation type", "Donner mon avis", "Trois vues", "Résumé", "Classique", "Thème sombre"])
     expect(screen.getByRole("menuitem", { name: "Partir d'une situation type" })).toHaveFocus()
   })
 
@@ -55,7 +55,7 @@ describe("menu « Plus d'actions »", () => {
     await user.keyboard("{Home}")
     expect(screen.getByRole("menuitem", { name: "Partir d'une situation type" })).toHaveFocus()
     await user.keyboard("{End}{ArrowUp}")
-    expect(screen.getByRole("menuitemradio", { name: "Trois vues" })).toHaveFocus()
+    expect(screen.getByRole("menuitemradio", { name: "Classique" })).toHaveFocus()
   })
 
   it("Échap le ferme et rend le focus au bouton ; Tab le ferme et passe à la suite", async () => {
