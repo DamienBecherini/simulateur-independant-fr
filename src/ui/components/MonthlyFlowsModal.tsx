@@ -210,7 +210,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
       <DialogContent
         // Sur un téléphone, la fenêtre peut dépasser la hauteur de l'écran : elle défile plutôt que d'être coupée.
         // `min-w-0` : son contenu (la longue liste « Appliquer à ») se resserre au lieu de la faire défiler en largeur.
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-4xl [&>*]:min-w-0"
+        className="max-h-[calc(100dvh/var(--zoom,1)_-_2rem)] overflow-y-auto sm:max-w-4xl [&>*]:min-w-0"
         // À l'ouverture, le focus va sur la ligne d'ajout pour saisir sans clic supplémentaire.
         onOpenAutoFocus={event => {
           event.preventDefault()

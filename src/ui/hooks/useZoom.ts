@@ -21,6 +21,9 @@ export function useZoom(zoomDemande: number, setZoomDemande: (zoom: number) => v
 
   useEffect(() => {
     document.body.style.zoom = `${zoom}`
+    // Sous un zoom, Chromium agrandit aussi les unités de l'écran (100dvh vaut 1,3 écran à 130 %) : ce qui doit tenir
+    // dans la hauteur de la fenêtre divise par --zoom (notification de l'IA, fenêtre de saisie mensuelle).
+    document.documentElement.style.setProperty("--zoom", `${zoom}`)
   }, [zoom])
 
   return {
