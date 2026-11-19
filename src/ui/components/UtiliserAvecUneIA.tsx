@@ -166,7 +166,7 @@ export function FenetreIA({ declencheur, children }: { declencheur: ReactNode; c
   return (
     <Dialog open={ouverte} onOpenChange={setOuverte}>
       <DialogTrigger asChild>{declencheur}</DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl [&>*]:min-w-0">
+      <DialogContent className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-2xl [&>*]:min-w-0">
         <DialogHeader>
           <DialogTitle>{TITRE_IA}</DialogTitle>
           <DialogDescription>Connecter un client d'IA de bureau au simulateur, par le protocole MCP (Model Context Protocol).</DialogDescription>

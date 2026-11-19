@@ -222,7 +222,7 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
       <Dialog open={open} onOpenChange={changerOuverture}>
         {boutonDOuverture ? <DialogTrigger asChild>{boutonDOuverture}</DialogTrigger> : null}
         <DialogContent
-          className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
+          className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-3xl"
           onCloseAutoFocus={event => {
             if (!declencheurDeLaFenetre?.current) return
             event.preventDefault()

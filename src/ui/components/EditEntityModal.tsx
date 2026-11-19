@@ -119,7 +119,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
           <DialogHeader className="border-b pb-3 max-sm:px-8">
             <DialogTitle className="leading-snug">Modifier : {localEntity.name}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-4">
+          <div className="grid gap-6 py-4 max-h-[calc(70vh/var(--zoom,1))] overflow-y-auto pr-4">
             <ChampsDeLActeur entity={localEntity} anneesSimulees={anneesSimulees} annee={annee} onChange={entity => setFormData(prev => ({ ...prev, entity }))} onChangerDeStatut={cible => onChangerDeStatut?.(localEntity, localRelationships, cible)} />
             <div className="space-y-4 pt-6 border-t">
               <h3 className="font-semibold text-base">Relations</h3>

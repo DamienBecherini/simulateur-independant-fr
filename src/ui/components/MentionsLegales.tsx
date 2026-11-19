@@ -77,7 +77,7 @@ function FenetreDesMentionsLegales({ open, onOpenChange, declencheur }: FenetreD
     <Dialog open={open} onOpenChange={onOpenChange}>
       {declencheur ? <DialogTrigger asChild>{declencheur}</DialogTrigger> : null}
       <DialogContent
-        className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+        className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-2xl"
         onOpenAutoFocus={evenement => {
           evenement.preventDefault()
           titre.current?.focus()

@@ -100,7 +100,7 @@ export function ConfirmationDuChangementDeStatut({ demande, annee, onAnnuler, on
           <DialogDescription>{examen?.refus ?? "La conversion reprend l'activité, ses flux de toutes les années et ses relations. Elle est enregistrée dès que vous confirmez, avec les autres modifications de la fiche ; « Annuler » (Ctrl+Z) la défait en une étape."}</DialogDescription>
         </DialogHeader>
         {examen && !examen.refus ? (
-          <div className="max-h-[50vh] space-y-3 overflow-y-auto pr-2">
+          <div className="max-h-[calc(50vh/var(--zoom,1))] space-y-3 overflow-y-auto pr-2">
             {examen.prestationsAQualifier ? <ChoixDeLaNature nature={nature} onChange={setNature} /> : null}
             <ul aria-label="Ce que la conversion change" className="list-disc space-y-1 pl-5 text-sm">
               {examen.consequences.map(phrase => (

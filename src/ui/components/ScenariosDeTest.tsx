@@ -30,7 +30,7 @@ export default function ScenariosDeTest({ onCharger }: ScenariosDeTestProps) {
           <span className="hidden md:inline">Tests</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{TITRE_DES_TESTS}</DialogTitle>
           <DialogDescription>Mode développement seulement. Charger un scénario remplace la simulation en cours, sans confirmation.</DialogDescription>

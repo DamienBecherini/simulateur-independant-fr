@@ -59,7 +59,7 @@ export function ExportDialog({ isOpen, onClose, session, annee, simulationReport
 
   return (
     <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Exporter</DialogTitle>
           <DialogDescription>Pour présenter les chiffres, les transmettre ou les faire analyser.</DialogDescription>
