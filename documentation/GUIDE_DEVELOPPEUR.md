@@ -56,7 +56,7 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run essai:store` | Sous Windows : installe une copie signée du paquet du Microsoft Store comme le Store l'installe et vérifie le serveur MCP ; `verifier`, `etat`, `nettoyer`. | Avant une soumission : [publier-sur-le-store.md](./microsoft-store/publier-sur-le-store.md#2-essayer-le-paquet-avant-la-première-soumission). |
 | `npm run captures` | Captures d'écran du README. | Après un changement visible. |
 
-La CI (`.github/workflows/ci.yml`) lance lint, `code-mort`, `typecheck`, `transpile:electron`, `typecheck:tests`, `test:coverage`, `build` et la duplication à chaque push ; `e2e.yml` les tests de bout en bout sur `integration` et `main` ; `demo-web.yml` teste et publie la démo à chaque push sur `main`.
+La CI (`.github/workflows/ci.yml`) lance lint, `code-mort`, `typecheck`, `transpile:electron`, `typecheck:tests`, `test:coverage`, `build` et la duplication à chaque push ; `e2e.yml` les tests de bout en bout sur `integration` et `main`, de l'application Electron (`test:e2e`) et de la démo web (`test:web`) ; `demo-web.yml` teste et publie la démo à chaque push sur `main`.
 
 **Vérification complète**, à lancer avant de proposer une fusion :
 

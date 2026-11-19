@@ -41,6 +41,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ### Maintenance
 
+- Les tests de la démo web (`e2e-web/`) tournent aussi dans la CI de la branche `integration`, à côté de ceux de l'application de bureau : une régression de la démo se voit avant d'arriver sur `main`, où elle bloquait la publication.
 - Portage salarial ([ADR 016](./documentation/adr/016-portage-salarial.md), acceptée) : le moteur calcule une activité en portage salarial (frais de gestion mois par mois, enveloppe, bulletin d'un cadre selon l'effectif de la société de portage, indemnité d'apport d'affaires, réserve d'un CDI gardée sur le compte d'activité, mutuelle, impôt du foyer), avec les règles de la convention de branche pour 2024 à 2026 et des cas de référence vérifiés à la main ; les outils pour les IA la décrivent. La CSG-CRDS du salarié et le forfait social de 8 % (sociétés de 11 salariés et plus) sur la prévoyance patronale des cadres sont comptés (code de la sécurité sociale, art. L136-1-1, L136-2, L137-15 et L137-16) ; la formation conventionnelle de 2025 et 2026 est sourcée (article 36 étendu de la convention). La saisie d'une activité en portage dans la grille viendra ensuite. Le format de fichier reste le 3 : une version précédente écarte une activité en portage en le signalant, et ignore les conditions du portage des réglages du comparateur.
 
 ## [0.12.0] — 2026-10-13
