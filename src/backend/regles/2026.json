@@ -610,6 +610,8 @@
         "moisExonerationTotale": 60,
         "partsExonereesEnsuite": [0.6, 0.4, 0.2],
         "plafondAnnuel": 50000,
+        "conditionsNonVerifiees": "moins de 50 salariés, chiffre d'affaires ou bilan de 10 M€ au plus, activité hors des secteurs exclus, clause d'emploi local à partir du deuxième salarié, plafond européen des aides de minimis ; la majoration du plafond de 5 000 € par salarié embauché n'est pas comptée",
+        "liberauxHorsSanteExclus": false,
         "hypotheses": [
           "Une année à cheval sur deux taux d'exonération est répartie également entre ses mois : aucun texte officiel ne fixe cette répartition.",
           "Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise ; ce point n'a pas été confirmé sur un texte officiel."
@@ -625,6 +627,8 @@
         "moisExonerationTotale": 60,
         "partsExonereesEnsuite": [0.6, 0.4, 0.2],
         "plafondAnnuel": null,
+        "conditionsNonVerifiees": "activité commerciale, artisanale ou profession de santé, moins de 50 salariés, chiffre d'affaires ou bilan sous 10 M€, plafond européen des aides de minimis (300 000 € sur trois exercices)",
+        "liberauxHorsSanteExclus": true,
         "hypotheses": [
           "Une année à cheval sur deux taux d'exonération est répartie également entre ses mois : aucun texte officiel ne fixe cette répartition.",
           "Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise ; ce point n'a pas été confirmé sur un texte officiel.",

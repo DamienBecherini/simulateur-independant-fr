@@ -30,6 +30,8 @@ interface RevenusDActivite {
   versementLiberatoire: number
   /** Chiffre d'affaires après abattement des micro-entreprises au versement libératoire : hors barème, mais dans le revenu fiscal de référence. */
   revenusAuVersementLiberatoire: number
+  /** Bénéfices exonérés d'impôt sur le revenu en zone (entreprise individuelle, micro-entreprise) : hors barème, mais dans le revenu fiscal de référence. */
+  beneficesExoneres: number
   /** Dividendes réellement encaissés, nets des cotisations sociales éventuelles. */
   dividendesEncaisses: number
   /** Bénéfices réellement encaissés (micro-entreprise, entreprise individuelle), nets de cotisations. */
@@ -135,7 +137,7 @@ export function personnesLiees(ctx: Contexte, entityId: string, types: Relations
 export function revenusDe(ctx: Contexte, personId: string): RevenusDActivite {
   let revenus = ctx.revenus.get(personId)
   if (!revenus) {
-    revenus = { remunerations: 0, remunerationsImposables: 0, salairesPortes: 0, salairesPortesImposables: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, revenusAuVersementLiberatoire: 0, dividendesEncaisses: 0, beneficesEncaisses: 0, prelevementsActivites: 0, resultatConserve: 0 }
+    revenus = { remunerations: 0, remunerationsImposables: 0, salairesPortes: 0, salairesPortesImposables: 0, beneficesImposables: 0, dividendes: 0, dividendesSoumisPS: 0, versementLiberatoire: 0, revenusAuVersementLiberatoire: 0, beneficesExoneres: 0, dividendesEncaisses: 0, beneficesEncaisses: 0, prelevementsActivites: 0, resultatConserve: 0 }
     ctx.revenus.set(personId, revenus)
   }
   return revenus

@@ -552,8 +552,10 @@ export interface ActivityResult {
   portage?: DetailPortage
   /** Micro-entreprise à l'ACRE dont la date de création est connue : l'aide de l'année, mois par mois. */
   acre?: ACREDeLAnnee
-  /** Dispositifs limités dans le temps qui jouent cette année (sortie du régime micro, ACRE, plafonds au prorata). */
+  /** Dispositifs limités dans le temps qui jouent cette année (sortie du régime micro, ACRE, plafonds au prorata, exonération de zone). */
   dispositifs?: string[]
+  /** Activité déclarée implantée en zone (ZFU-TE, QPV) : son exonération d'impôt sur les bénéfices cette année (voir l'ADR 017). */
+  exonerationDeZone?: ExonerationDeZoneDeLActivite
   /** Profession libérale réglementée de l'activité (voir l'ADR 015). */
   profession?: ProfessionDeLActivite
   warnings: string[]
@@ -594,6 +596,33 @@ export interface SortieDuRegimeMicro {
 }
 
 /** ACRE d'une micro-entreprise sur une année : la réduction, sa période (« AAAA-MM ») et les mois de l'année couverts. */
+/**
+ * Exonération d'impôt sur les bénéfices d'une activité implantée en zone, pour une année (voir l'ADR 017). Présente dès
+ * que la case de la fiche est cochée et que l'activité existe cette année-là, même quand rien n'est exonéré : la raison
+ * est alors dans `sansExoneration`.
+ */
+export interface ExonerationDeZoneDeLActivite {
+  /** Identifiant et sigle du régime des règles de l'année (« zfuTe », « ZFU-TE ») ; absents quand aucun régime ne s'applique. */
+  regime?: string
+  nom?: string
+  /** Part du bénéfice de l'année exonérée (0 à 1), d'après les mois écoulés depuis la création. */
+  partExoneree: number
+  /** Part du chiffre d'affaires réalisée dans la zone (0 à 1). */
+  partDansLaZone: number
+  /** Bénéfice exonéré d'impôt cette année, arrondi à l'euro. */
+  beneficeExonere: number
+  /** Bénéfice exonéré maximal de l'année, pour un régime plafonné. */
+  plafond?: number
+  plafondAtteint: boolean
+  /** Dernier mois exonéré en totalité, et dernier mois exonéré en partie, « AAAA-MM ». */
+  finExonerationTotale?: string
+  fin?: string
+  /** Pourquoi rien n'est exonéré, le cas échéant. */
+  sansExoneration?: "sansDateDeCreation" | "sansRegime" | "terminee" | "versementLiberatoire"
+  /** Ce que le calcul suppose sans texte officiel pour le confirmer (règles de l'année) : à montrer à l'utilisateur. */
+  hypotheses: string[]
+}
+
 interface ACREDeLAnnee {
   /** Part des cotisations retirée : 0,5 ou 0,25 selon la date de création. */
   reduction: number
@@ -865,9 +894,12 @@ export interface FoyerFiscalResult {
   /**
    * Revenu fiscal de référence (article 1417 IV du CGI), tel que le simulateur peut le calculer : revenu imposable au
    * barème, plus les dividendes imposés au prélèvement forfaitaire (montant brut) ou l'abattement de 40 % s'ils sont
-   * imposés au barème, plus le chiffre d'affaires après abattement des micro-entreprises au versement libératoire.
+   * imposés au barème, plus le chiffre d'affaires après abattement des micro-entreprises au versement libératoire, plus
+   * les bénéfices exonérés d'impôt sur le revenu des activités implantées en zone (1°, b du même IV ; voir l'ADR 017).
    */
   revenuFiscalDeReference: number
+  /** Bénéfices des activités implantées en zone exonérés d'impôt sur le revenu, compris dans `revenuFiscalDeReference` ; absent quand il n'y en a pas. */
+  beneficesExoneres?: number
   /** Impôt au barème, impôt forfaitaire sur les dividendes et versement libératoire. */
   impotSurLeRevenu: number
   /**

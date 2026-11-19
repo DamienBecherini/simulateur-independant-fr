@@ -245,6 +245,10 @@ export interface RegimeDeZone {
   partsExonereesEnsuite: number[]
   /** Bénéfice exonéré maximal par période de douze mois, en euros ; `null` : aucun plafond. */
   plafondAnnuel: number | null
+  /** Conditions du régime que le simulateur ne vérifie pas, pour l'avertissement de l'activité (une suite de groupes nominaux). */
+  conditionsNonVerifiees: string
+  /** Parmi les professions libérales, seules celles de santé ont droit au régime. */
+  liberauxHorsSanteExclus: boolean
   /** Ce que le calcul suppose sans texte officiel pour le confirmer : montré à l'utilisateur qui active le dispositif. */
   hypotheses: string[]
 }

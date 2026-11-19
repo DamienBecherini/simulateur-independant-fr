@@ -119,6 +119,8 @@ function champsQuiSuivent(source: Activite) {
     ...(source.deplacementsProfessionnels ? { deplacementsProfessionnels: source.deplacementsProfessionnels } : {}),
     // La date de création suit l'activité : ACRE, plafonds au prorata et CFE en dépendent dans chaque statut.
     ...(source.dateDeCreation ? { dateDeCreation: source.dateDeCreation } : {}),
+    // L'implantation en zone aussi : l'exonération d'impôt tient au lieu, pas au statut (ADR 017).
+    ...(source.implantationEnZone ? { implantationEnZone: source.implantationEnZone } : {}),
     // La profession aussi : sa caisse, son taux micro et ses avertissements s'appliquent dans chaque statut (ADR 015).
     ...(source.profession === undefined ? {} : { profession: source.profession }),
     ...(source.partConventionnee === undefined ? {} : { partConventionnee: source.partConventionnee })
