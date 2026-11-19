@@ -233,9 +233,10 @@ test("beaucoup de modifications de l'IA dans une fenêtre basse : la notificatio
   }
 
   const notification = page.locator("[data-notification-ia]")
-  await expect(notification).toContainText(`L'IA a modifié ${montants.length} éléments déjà saisis`)
-  // Au premier plan de la pile, devant les notifications brèves arrivées avec chaque modification ; une seule.
+  // Une seule, une fois sortie la précédente (chaque modification la remplace, le temps d'une animation)…
   await expect(notification).toHaveCount(1)
+  await expect(notification).toContainText(`L'IA a modifié ${montants.length} éléments déjà saisis`)
+  // … au premier plan de la pile, devant les notifications brèves arrivées avec chaque modification.
   await expect(page.locator("[data-sonner-toast][data-front='true']").locator("[data-notification-ia]")).toBeVisible()
   // La plus récente en premier, et toutes listées.
   const liste = notification.getByRole("list")
