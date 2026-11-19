@@ -5,8 +5,11 @@
 
 import type { Affichage } from "@/types"
 
-/** « Résumé » (proposition A) : l'affichage par défaut, retenu après l'essai des propositions. */
-export const AFFICHAGE_PAR_DEFAUT: Affichage = "resume"
+/**
+ * « Trois vues » (proposition B) : l'affichage par défaut depuis novembre 2026, après « Résumé ». Il s'applique à qui
+ * n'a jamais choisi d'affichage ; un choix enregistré l'emporte.
+ */
+export const AFFICHAGE_PAR_DEFAUT: Affichage = "vues"
 
 interface DescriptionDAffichage {
   valeur: Affichage
@@ -16,11 +19,11 @@ interface DescriptionDAffichage {
   description: string
 }
 
-/** Les affichages, dans l'ordre du sélecteur : celui par défaut, l'original, puis la proposition B. */
+/** Les affichages, dans l'ordre du sélecteur : celui par défaut, puis « Résumé » et l'original. */
 export const AFFICHAGES: readonly DescriptionDAffichage[] = [
+  { valeur: "vues", libelle: "Trois vues", description: "Le résumé, et trois vues : ma situation, mes résultats, comparer." },
   { valeur: "resume", libelle: "Résumé", description: "Un résumé toujours visible en haut, le détail replié." },
-  { valeur: "classique", libelle: "Classique", description: "La page d'origine, tout affiché." },
-  { valeur: "vues", libelle: "Trois vues", description: "Le résumé, et trois vues : ma situation, mes résultats, comparer." }
+  { valeur: "classique", libelle: "Classique", description: "La page d'origine, tout affiché." }
 ]
 
 /** Affichage à appliquer : celui des préférences s'il existe encore, l'affichage par défaut sinon. */

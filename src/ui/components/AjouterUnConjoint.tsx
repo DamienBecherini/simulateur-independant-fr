@@ -111,10 +111,14 @@ export function BoutonAjouterUnConjoint({ personneId, nomDeLaPersonne, ajout }: 
   const [ouverte, setOuverte] = useState(false)
   return (
     <>
-      <Button type="button" variant="outline" className="mt-3 print:hidden" onClick={() => setOuverte(true)}>
-        <UserPlus aria-hidden="true" className="size-4" />
-        Ajouter un conjoint
-      </Button>
+      {/* Un encart teinté et un bouton plein : le raccourci doit se voir parmi les montants de la carte. */}
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-dashed border-blue-300 bg-blue-50 px-3 py-2 print:hidden dark:border-blue-700 dark:bg-blue-950/40">
+        <p className="min-w-0 flex-1 basis-40 text-sm text-slate-700 dark:text-slate-200">Marié ou pacsé ? L'impôt se calcule sur les revenus du foyer.</p>
+        <Button type="button" className="bg-blue-700 text-white shadow hover:bg-blue-800 dark:bg-blue-300 dark:text-slate-950 dark:hover:bg-blue-200" onClick={() => setOuverte(true)}>
+          <UserPlus aria-hidden="true" className="size-4" />
+          Ajouter un conjoint
+        </Button>
+      </div>
       <FenetreDuConjoint ouverte={ouverte} onFermer={() => setOuverte(false)} nomDeLaPersonne={nomDeLaPersonne} annee={ajout.annee} onAjouter={choix => ajout.ajouter(personneId, choix)} />
     </>
   )

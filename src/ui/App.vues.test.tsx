@@ -127,6 +127,23 @@ describe("App : affichage « Trois vues »", () => {
     expect(document.body).toHaveFocus()
   })
 
+  it("une situation type chargée depuis une autre vue ouvre « Ma situation », avec ses acteurs", async () => {
+    await renderApp()
+    const user = userEvent.setup({ delay: null })
+    await user.click(onglet(/résultats/))
+    expect(window.location.hash).toBe("#resultats")
+
+    await user.click(within(screen.getByRole("navigation", { name: "Barre d'outils" })).getByRole("button", { name: "Situations types" }))
+    await user.click(screen.getByRole("button", { name: "Charger la situation « Micro-entreprise seule (BNC) »" }))
+    const remplacer = screen.queryByRole("button", { name: "Remplacer" })
+    if (remplacer) await user.click(remplacer)
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Micro-entreprise seule (BNC)" })).toBeInTheDocument()
+    expect(onglet(/situation/)).toHaveAttribute("aria-selected", "true")
+    expect(vue("situation")).not.toHaveClass("hidden")
+    expect(window.location.hash).toBe("#situation")
+  })
+
   it("un clic sur l'onglet déjà choisi ne change rien", async () => {
     await renderApp()
     const longueur = window.history.length

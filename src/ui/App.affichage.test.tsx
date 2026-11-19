@@ -16,9 +16,9 @@ async function renderApp(preferences: Awaited<ReturnType<typeof window.api.getUs
 }
 
 describe("App : affichage de la page", () => {
-  it("s'ouvre dans l'affichage « Résumé » par défaut, avec la barre de résumé", async () => {
+  it("s'ouvre dans l'affichage « Trois vues » par défaut, avec la barre de résumé", async () => {
     await renderApp({ slotOrder: [] })
-    expect(screen.getByRole("combobox", { name: "Affichage : Résumé" })).toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "Affichage : Trois vues" })).toBeInTheDocument()
     expect(await screen.findByRole("region", { name: "Résumé de l'année" })).toBeInTheDocument()
   })
 
@@ -30,12 +30,12 @@ describe("App : affichage de la page", () => {
 
   it.each(["retire", "panneaux"])("ignore un affichage inconnu ou retiré après la bêta (%s)", async affichage => {
     await renderApp({ slotOrder: [], affichage: affichage as never })
-    expect(screen.getByRole("combobox", { name: "Affichage : Résumé" })).toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "Affichage : Trois vues" })).toBeInTheDocument()
   })
 
   it("enregistre le choix dans les préférences de l'utilisateur, pas dans la session", async () => {
     await renderApp({ slotOrder: [] })
-    await userEvent.click(screen.getByRole("combobox", { name: "Affichage : Résumé" }))
+    await userEvent.click(screen.getByRole("combobox", { name: "Affichage : Trois vues" }))
     await userEvent.click(await screen.findByRole("option", { name: "Classique" }))
 
     await vi.waitFor(() => expect(screen.queryByRole("region", { name: "Résumé de l'année" })).not.toBeInTheDocument())

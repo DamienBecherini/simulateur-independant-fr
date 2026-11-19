@@ -87,14 +87,14 @@ describe("App : adresse d'une situation type (#situation=…)", () => {
     expect(annuler()).toBeDisabled()
   })
 
-  it("suit l'adresse en cours de route, et rend ensuite le fragment d'avant (la vue affichée)", async () => {
+  it("suit l'adresse en cours de route, puis ouvre la vue « Ma situation » de la situation chargée", async () => {
     await ouvrir("/#resultats", emptySession())
     await screen.findByRole("heading", { level: 1, name: emptySession().name })
 
     window.location.hash = "#situation=micro-bnc-seule"
 
     expect(await screen.findByRole("heading", { level: 1, name: "Micro-entreprise seule (BNC)" })).toBeInTheDocument()
-    expect(adresse()).toBe("/#resultats")
+    expect(adresse()).toBe("/#situation")
   })
 
   it("pour un identifiant inconnu, ne change rien et le dit discrètement, avec l'accès aux situations types", async () => {

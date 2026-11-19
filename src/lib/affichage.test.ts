@@ -5,27 +5,27 @@ import { UserPreferencesSchema } from "@/types"
 import { AFFICHAGE_PAR_DEFAUT, AFFICHAGES, affichageApplicable, avecResume, avecVues, libelleDeLAffichage } from "./affichage"
 
 describe("affichages de la bêta", () => {
-  it("propose trois affichages, « Résumé » d'abord, qui est l'affichage par défaut", () => {
-    expect(AFFICHAGES.map(a => a.valeur)).toEqual(["resume", "classique", "vues"])
-    expect(AFFICHAGE_PAR_DEFAUT).toBe("resume")
+  it("propose trois affichages, « Trois vues » d'abord, qui est l'affichage par défaut", () => {
+    expect(AFFICHAGES.map(a => a.valeur)).toEqual(["vues", "resume", "classique"])
+    expect(AFFICHAGE_PAR_DEFAUT).toBe("vues")
   })
 
   it("l'affichage « Trois vues » reprend le résumé et le détail replié de l'affichage « Résumé »", () => {
     expect(AFFICHAGES.map(a => [a.valeur, avecResume(a.valeur), avecVues(a.valeur)])).toEqual([
+      ["vues", true, true],
       ["resume", true, false],
-      ["classique", false, false],
-      ["vues", true, true]
+      ["classique", false, false]
     ])
   })
 
-  it("applique l'affichage des préférences s'il existe encore, l'affichage « Résumé » sinon", () => {
+  it("applique l'affichage des préférences s'il existe encore, l'affichage « Trois vues » sinon", () => {
     expect(affichageApplicable("resume")).toBe("resume")
     expect(affichageApplicable("classique")).toBe("classique")
     expect(affichageApplicable("vues")).toBe("vues")
-    expect(affichageApplicable(undefined)).toBe("resume")
-    expect(affichageApplicable("inconnu")).toBe("resume")
+    expect(affichageApplicable(undefined)).toBe("vues")
+    expect(affichageApplicable("inconnu")).toBe("vues")
     // L'affichage « Panneaux », retiré après l'essai, laisse place à l'affichage par défaut.
-    expect(affichageApplicable("panneaux")).toBe("resume")
+    expect(affichageApplicable("panneaux")).toBe("vues")
   })
 
   it("nomme chaque affichage", () => {
@@ -50,6 +50,6 @@ describe("préférence d'affichage dans les préférences de l'utilisateur", () 
   it("l'affichage « Panneaux » retenu par une version précédente est écarté seul, les autres préférences restent", () => {
     const resultat = UserPreferencesSchema.parse({ slotOrder: ["a", "b"], zoom: 1.2, affichage: "panneaux" })
     expect(resultat).toEqual({ slotOrder: ["a", "b"], zoom: 1.2, affichage: undefined })
-    expect(affichageApplicable(resultat.affichage)).toBe("resume")
+    expect(affichageApplicable(resultat.affichage)).toBe("vues")
   })
 })

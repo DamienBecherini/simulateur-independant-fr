@@ -138,10 +138,12 @@ function App() {
     setSettingsOpen(false)
   }
 
-  // Un montage type (ou un scénario de test) remplace la session, nommée d'après lui ; la page remonte en haut, sur ses acteurs.
+  // Un montage type (ou un scénario de test) remplace la session, nommée d'après lui ; la page remonte en haut, sur ses
+  // acteurs : dans l'affichage « Trois vues », la vue « Ma situation », d'où que l'on vienne.
   const chargerUneSession = (session: SessionState) => {
     handleLoadMontage(session)
     setSettingsOpen(false)
+    vues?.choisir("situation", true)
     window.scrollTo(0, 0)
   }
   const chargerUnMontage = (montage: MontageType) => chargerUneSession(sessionDUnMontage(montage))
