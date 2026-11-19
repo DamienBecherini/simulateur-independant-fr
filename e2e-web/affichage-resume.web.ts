@@ -5,7 +5,7 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
-import { choisirAvantLeChargement } from "./support/affichage"
+import { choisirAvantLeChargement, NOUVEAU_VISITEUR } from "./support/affichage"
 import { choisirLaPolice, POLICES } from "./support/police"
 
 /** Ouvre la démo et attend la simulation d'exemple, le comparateur et la courbe de l'arbitrage. */
@@ -24,33 +24,37 @@ async function ouvrirEnResume(page: Page) {
 const barre = (page: Page) => page.getByRole("region", { name: "Résumé de l'année" })
 const espaces = (texte: string | null) => (texte ?? "").replace(/\s+/g, " ").trim()
 
-test("l'affichage « Résumé » s'ouvre par défaut ; un autre se choisit dans la barre d'outils et reste choisi au rechargement", async ({ page }) => {
-  await ouvrir(page)
-  await expect(barre(page)).toBeVisible()
-  await expect(page.getByRole("button", { name: /Voir le détail/ })).toBeVisible()
+test.describe("un nouveau visiteur", () => {
+  test.use({ storageState: NOUVEAU_VISITEUR })
 
-  await page.getByRole("combobox", { name: "Affichage : Résumé" }).click()
-  await expect(page.getByText("Bêta : dites-nous quel affichage vous préférez.")).toBeVisible()
-  await expect(page.getByRole("option")).toHaveText(["Résumé", "Classique", "Trois vues"])
-  await expect(page.locator("[role=option][aria-disabled=true]")).toHaveCount(0)
-  await page.getByRole("option", { name: "Classique" }).click()
-  await expect(barre(page)).toHaveCount(0)
+  test("ouvre la page en « Trois vues » ; un autre affichage se choisit dans la barre d'outils et reste choisi au rechargement", async ({ page }) => {
+    await page.goto("./")
+    await expect(page.getByRole("tablist", { name: "Vues de la page" })).toBeVisible()
+    await expect(barre(page)).toBeVisible()
 
-  // La préférence est enregistrée peu après le choix, dans le stockage du navigateur, à part de la simulation.
-  await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("simulateur.preferences") ?? "{}").affichage)).toBe("classique")
-  // La session n'est enregistrée qu'après une modification : ici, elle peut ne pas l'être du tout.
-  expect((await page.evaluate(() => window.localStorage.getItem("simulateur.session"))) ?? "").not.toContain("affichage")
+    await page.getByRole("combobox", { name: "Affichage : Trois vues" }).click()
+    await expect(page.getByText("Bêta : dites-nous quel affichage vous préférez.")).toBeVisible()
+    await expect(page.getByRole("option")).toHaveText(["Trois vues", "Résumé", "Classique"])
+    await expect(page.locator("[role=option][aria-disabled=true]")).toHaveCount(0)
+    await page.getByRole("option", { name: "Classique" }).click()
+    await expect(barre(page)).toHaveCount(0)
 
-  await page.reload()
-  await expect(page.getByRole("combobox", { name: "Affichage : Classique" })).toBeVisible()
-  await expect(barre(page)).toHaveCount(0)
+    // La préférence est enregistrée peu après le choix, dans le stockage du navigateur, à part de la simulation.
+    await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("simulateur.preferences") ?? "{}").affichage)).toBe("classique")
+    // La session n'est enregistrée qu'après une modification : ici, elle peut ne pas l'être du tout.
+    expect((await page.evaluate(() => window.localStorage.getItem("simulateur.session"))) ?? "").not.toContain("affichage")
+
+    await page.reload()
+    await expect(page.getByRole("combobox", { name: "Affichage : Classique" })).toBeVisible()
+    await expect(barre(page)).toHaveCount(0)
+  })
 })
 
-test("un affichage retiré après la bêta (« Panneaux ») laisse place au « Résumé », sans perdre les autres préférences", async ({ page }) => {
+test("un affichage retiré après la bêta (« Panneaux ») laisse place à l'affichage par défaut, « Trois vues », sans perdre les autres préférences", async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], zoom: 1.2, affichage: "panneaux" })))
-  await ouvrir(page)
-  await expect(page.getByRole("combobox", { name: "Affichage : Résumé" })).toBeVisible()
-  await expect(barre(page)).toBeVisible()
+  await page.goto("./")
+  await expect(page.getByRole("combobox", { name: "Affichage : Trois vues" })).toBeVisible()
+  await expect(page.getByRole("tablist", { name: "Vues de la page" })).toBeVisible()
   await expect.poll(() => page.evaluate(() => document.body.style.zoom)).toBe("1.2")
 })
 

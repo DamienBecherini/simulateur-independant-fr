@@ -191,7 +191,8 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                 <SheetTitle>Configuration</SheetTitle>
                 <SheetDescription>Enregistrez la simulation actuelle ou chargez-en une autre.</SheetDescription>
               </SheetHeader>
-              <div className="p-6 space-y-4">
+              {/* Défile sous le titre quand l'écran est trop bas (téléphone, grande police) : rien ne reste hors d'atteinte. */}
+              <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="config-name">Nom de la simulation</Label>
                   <Input id="config-name" value={currentSession.name} onChange={e => setCurrentSession(prev => ({ ...prev, name: e.target.value }))} />

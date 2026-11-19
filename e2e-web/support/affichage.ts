@@ -1,8 +1,12 @@
 // e2e-web/support/affichage.ts
-// Affichage de la page dans les tests de la démo web : « Résumé » par défaut, les autres choisis avant le chargement.
+// Affichage de la page dans les tests de la démo web : « Résumé », déposé dans le stockage du navigateur par
+// playwright.web.config.ts, les autres choisis avant le chargement.
 
 import { expect, type Page } from "@playwright/test"
 import type { Affichage } from "../../src/types"
+
+/** Stockage vide, sans préférence d'affichage : la démo telle que l'ouvre un nouveau visiteur (test.use). */
+export const NOUVEAU_VISITEUR = { cookies: [], origins: [] }
 
 /** Dépose la préférence d'affichage avant le chargement, comme si elle avait été choisie lors d'une visite précédente. */
 export async function choisirAvantLeChargement(page: Page, affichage: Affichage) {
