@@ -243,9 +243,11 @@ test("beaucoup de modifications de l'IA dans une fenêtre basse, interface zoom�
   const liste = notification.getByRole("list")
   await expect(liste.getByRole("listitem")).toHaveCount(montants.length)
   await expect(liste.getByRole("listitem").first()).toContainText("3 300")
-  // Elle tient dans la fenêtre ; la liste défile, le titre et « Vu » restent visibles.
+  // Fenêtre basse : elle garde son plancher de 16rem (256 px × 1,5 = 384 px), sans dépasser la fenêtre ; la liste
+  // défile, le titre et « Vu » restent visibles.
   const cadre = (await notification.boundingBox())!
   expect(cadre.y).toBeGreaterThanOrEqual(0)
+  expect(cadre.height).toBeLessThanOrEqual(16 * 16 * 1.5 + 1)
   expect(cadre.y + cadre.height).toBeLessThanOrEqual(480)
   expect(await liste.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true)
   await liste.evaluate(el => el.scrollTo(0, el.scrollHeight))
@@ -253,6 +255,11 @@ test("beaucoup de modifications de l'IA dans une fenêtre basse, interface zoom�
   await expect(notification.getByRole("button", { name: "Vu" })).toBeInViewport()
   await auditerAccessibilite(page, "notification défilante des modifications de l'IA", "[data-sonner-toaster]")
   await page.screenshot({ path: test.info().outputPath("notification-defilante.png") })
+  // Fenêtre haute : la moitié de la hauteur au plus, le reste étant laissé aux notifications brèves de dessous.
+  await page.setViewportSize({ width: 900, height: 1000 })
+  await expect.poll(async () => (await notification.boundingBox())!.height).toBeLessThanOrEqual(1000 / 2 + 1)
+  expect(await liste.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true)
+  await page.screenshot({ path: test.info().outputPath("notification-moitie.png") })
 
   await notification.getByRole("button", { name: "Vu" }).click()
   await expect(notification).toBeHidden()

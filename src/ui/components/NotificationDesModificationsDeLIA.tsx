@@ -25,7 +25,7 @@ export function NotificationDesModificationsDeLIA({ lignes, onVu }: Props) {
     // l'interface (voir useZoom).
     <div
       data-notification-ia=""
-      className="flex h-full max-h-[calc(100dvh/var(--zoom,1)_-_3rem)] w-(--width) flex-col overflow-hidden rounded-lg border-2 border-amber-600 bg-white text-[13px] text-neutral-900 shadow-lg dark:bg-black dark:text-neutral-100 max-[600px]:w-full"
+      className="flex h-full max-h-[min(calc(100dvh/var(--zoom,1)_-_3rem),max(calc(50dvh/var(--zoom,1)),16rem))] w-(--width) flex-col overflow-hidden rounded-lg border-2 border-amber-600 bg-white text-[13px] text-neutral-900 shadow-lg dark:bg-black dark:text-neutral-100 max-[600px]:w-full"
     >
       <div className="flex items-start gap-2 border-b border-neutral-100 px-3.5 pt-3.5 pb-2 dark:border-neutral-800">
         <TriangleAlert aria-hidden="true" className="mt-px size-4 shrink-0 text-amber-700 dark:text-amber-400" />
