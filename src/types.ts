@@ -143,6 +143,20 @@ const ProfessionSchema = z.string().min(1).optional().catch(undefined)
  */
 const PartConventionneeSchema = z.number().min(0).max(1).optional().catch(undefined)
 
+/**
+ * Activité implantée en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV) : son bénéfice est exonéré
+ * d'impôt, en tout ou partie, pendant ses premières années (voir l'ADR 017). La présence du champ vaut la case cochée ;
+ * le régime et le taux de l'année se déduisent de la date de création, jamais enregistrés. Facultatif : absent, rien ne
+ * change. Une valeur mal formée est écartée seule, sans faire perdre l'activité.
+ */
+const ImplantationEnZoneSchema = z
+  .object({
+    /** Part du chiffre d'affaires hors taxes réalisée dans la zone (0 à 1). Absente ou hors limites : 1. */
+    partDuChiffreDAffaires: z.number().min(0).max(1).optional().catch(undefined)
+  })
+  .optional()
+  .catch(undefined)
+
 export const PersonSchema = z.object({
   id: z.string(),
   type: z.literal("person"),
@@ -176,6 +190,7 @@ export const CompanySchema = z.object({
    */
   reservesInitiales: z.number().min(0).optional(),
   dateDeCreation: DateDeCreationSchema,
+  implantationEnZone: ImplantationEnZoneSchema,
   profession: ProfessionSchema,
   partConventionnee: PartConventionneeSchema,
   deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),
@@ -197,6 +212,7 @@ export const MicroEntrepriseSchema = z.object({
    * dépassement cette première année fait sortir du régime au 1er janvier suivant. Absent : non.
    */
   horsPlafondAnneePrecedente: z.boolean().optional(),
+  implantationEnZone: ImplantationEnZoneSchema,
   profession: ProfessionSchema,
   partConventionnee: PartConventionneeSchema,
   deplacementsProfessionnels: DeplacementsProfessionnelsSchema.optional(),

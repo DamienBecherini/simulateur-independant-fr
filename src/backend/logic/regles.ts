@@ -229,6 +229,27 @@ export interface BaremeKilometrique {
 }
 
 /**
+ * Un régime d'exonération d'impôt sur les bénéfices en zone (ZFU-TE, QPV : voir l'ADR 017). Il s'applique aux activités
+ * créées dans sa fenêtre : exonération totale les premiers mois, comptés depuis le mois de création, puis une part
+ * exonérée par période de douze mois.
+ */
+export interface RegimeDeZone {
+  id: string
+  /** Sigle montré à l'utilisateur : « ZFU-TE », « QPV ». */
+  nom: string
+  /** Premier et dernier mois de création ouvrant droit au régime, « AAAA-MM ». */
+  creationDepuis: string
+  creationJusquA: string
+  moisExonerationTotale: number
+  /** Part du bénéfice exonérée pendant chacune des périodes de douze mois qui suivent l'exonération totale. */
+  partsExonereesEnsuite: number[]
+  /** Bénéfice exonéré maximal par période de douze mois, en euros ; `null` : aucun plafond. */
+  plafondAnnuel: number | null
+  /** Ce que le calcul suppose sans texte officiel pour le confirmer : montré à l'utilisateur qui active le dispositif. */
+  hypotheses: string[]
+}
+
+/**
  * Les règles fiscales et sociales d'une année, lues par le moteur. Elles vivent dans `src/backend/regles/<année>.json`
  * (liste dans `src/backend/regles/index.ts`) : ajouter une année ne demande qu'un fichier et une ligne de cette liste.
  */
@@ -269,6 +290,8 @@ export interface ReglesFiscales {
   TVA: Record<"services" | "vente", { franchiseBase: number; seuilMajore: number }>
   /** Cotisation foncière des entreprises d'une activité créée récemment : part due l'année de création et la suivante. */
   CFE: { partDueAnneeDeCreation: number; partDueAnneeSuivante: number }
+  /** Exonération d'impôt sur les bénéfices d'une activité implantée en zone : un régime par fenêtre de création (voir l'ADR 017). */
+  exonerationsDeZone: { regimes: RegimeDeZone[] }
   microEntreprise: {
     plafonds: { services: number; vente: number }
     cotisations: TauxMicro

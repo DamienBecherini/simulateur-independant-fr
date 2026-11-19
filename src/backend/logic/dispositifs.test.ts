@@ -3,7 +3,23 @@
 import { describe, expect, it } from "vitest"
 import { grilleVide } from "../../types.js"
 import { calculerMicro } from "./calculsAE.js"
-import { acreDeLAnnee, ecrireMois, joursDActivite, libelleDuMois, lireMois, moisCouverts, noteACRE, noteCFE, partDeCFEDue, periodeACRE, prorataDesPlafonds, regimesMicroDesAnnees } from "./dispositifs.js"
+import {
+  acreDeLAnnee,
+  beneficeExonereEnZone,
+  ecrireMois,
+  exonerationDeZoneDeLAnnee,
+  joursDActivite,
+  libelleDuMois,
+  lireMois,
+  moisCouverts,
+  noteACRE,
+  noteCFE,
+  partDeCFEDue,
+  periodeACRE,
+  prorataDesPlafonds,
+  regimeDeZone,
+  regimesMicroDesAnnees
+} from "./dispositifs.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import { reglesPubliees } from "./regles.js"
 
@@ -141,5 +157,74 @@ describe("régime des micro-entreprises d'une session", () => {
   it("ne concerne que les micro-entreprises", () => {
     const session = { entities: [{ id: "m1", type: "company" }], annees: [2026, 2027, 2028].map(annee => ({ annee, monthlyData: avecCA(200000) })) }
     expect(regimesMicroDesAnnees(session).get(2028)?.sorties).toEqual({})
+  })
+})
+
+describe("exonération d'impôt sur les bénéfices en zone (ADR 017)", () => {
+  const exoneration = (creation: string, annee: number) => exonerationDeZoneDeLAnnee(lireMois(creation)!, annee, regles2026)
+
+  it("le régime est celui de la date de création : ZFU-TE jusqu'en décembre 2025, QPV de janvier 2026 à décembre 2030", () => {
+    const regime = (creation: string) => regimeDeZone(lireMois(creation)!, regles2026)?.id ?? null
+    expect(["2015-01", "2024-03", "2025-12"].map(regime)).toEqual(["zfuTe", "zfuTe", "zfuTe"])
+    expect(["2026-01", "2028-07", "2030-12"].map(regime)).toEqual(["qpv", "qpv", "qpv"])
+    // Avant 2015 (régimes plus anciens, tous terminés) ou après 2030 : aucun régime.
+    expect(["2014-12", "2031-01"].map(regime)).toEqual([null, null])
+    expect(exoneration("2014-12", 2026)).toBeNull()
+  })
+
+  it("le régime ne dépend pas de l'année simulée : une ZFU-TE de 2025 le reste dans les règles de 2025 comme de 2026", () => {
+    expect(regimeDeZone({ annee: 2025, mois: 6 }, regles2025)?.id).toBe("zfuTe")
+    expect(regimeDeZone({ annee: 2025, mois: 6 }, regles2026)?.id).toBe("zfuTe")
+  })
+
+  it("soixante mois d'exonération totale à partir du mois de création, puis 60 %, 40 % et 20 % par périodes de douze mois", () => {
+    // Créée en janvier 2024 : les périodes suivent les années civiles.
+    expect([2024, 2025, 2026, 2027, 2028].map(annee => exoneration("2024-01", annee)?.partExoneree)).toEqual([1, 1, 1, 1, 1])
+    expect([2029, 2030, 2031, 2032, 2033].map(annee => exoneration("2024-01", annee)?.partExoneree)).toEqual([0.6, 0.4, 0.2, 0, 0])
+    expect(exoneration("2024-01", 2026)).toMatchObject({ moisDActivite: 12, finExonerationTotale: { annee: 2028, mois: 12 }, fin: { annee: 2031, mois: 12 } })
+  })
+
+  it("une année à cheval sur deux taux prend la moyenne de ses mois", () => {
+    // Créée en mars 2021 : exonération totale jusqu'en février 2026, puis 60 % de mars 2026 à février 2027.
+    const en2026 = exoneration("2021-03", 2026)!
+    expect(en2026.finExonerationTotale).toEqual({ annee: 2026, mois: 2 })
+    expect(en2026.partExoneree).toBeCloseTo((2 * 1 + 10 * 0.6) / 12, 10)
+    expect(exoneration("2021-03", 2027)!.partExoneree).toBeCloseTo((2 * 0.6 + 10 * 0.4) / 12, 10)
+    // Dernière année : deux mois à 20 %, puis plus rien.
+    expect(exoneration("2021-03", 2029)!.partExoneree).toBeCloseTo((2 * 0.2) / 12, 10)
+    expect(exoneration("2021-03", 2029)!.fin).toEqual({ annee: 2029, mois: 2 })
+    expect(exoneration("2021-03", 2030)!.partExoneree).toBe(0)
+  })
+
+  it("l'année de création ne compte que ses mois d'activité, et le plafond de la ZFU-TE suit au prorata", () => {
+    // Créée en octobre 2025 : trois mois d'activité, tous exonérés ; plafond de 50 000 € x 3 / 12.
+    expect(exoneration("2025-10", 2025)).toMatchObject({ moisDActivite: 3, partExoneree: 1, plafond: 12500 })
+    expect(exoneration("2025-10", 2026)).toMatchObject({ moisDActivite: 12, partExoneree: 1, plafond: 50000 })
+    // Avant la création : aucun mois d'activité, rien d'exonéré.
+    expect(exoneration("2025-10", 2024)).toMatchObject({ moisDActivite: 0, partExoneree: 0, plafond: 0 })
+  })
+
+  it("le régime QPV n'a pas de plafond annuel", () => {
+    expect(exoneration("2026-07", 2026)).toMatchObject({ moisDActivite: 6, partExoneree: 1, plafond: null })
+    expect(exoneration("2026-07", 2031)!.partExoneree).toBeCloseTo((6 * 1 + 6 * 0.6) / 12, 10)
+  })
+
+  it("bénéfice exonéré : part dans la zone, taux de l'année, puis plafond", () => {
+    const totale = { partExoneree: 1, plafond: 50000 }
+    expect(beneficeExonereEnZone(30000, 1, totale)).toBe(30000)
+    expect(beneficeExonereEnZone(80000, 1, totale)).toBe(50000)
+    // 60 % du chiffre d'affaires dans la zone : 48 000 € exonérables, sous le plafond.
+    expect(beneficeExonereEnZone(80000, 0.6, totale)).toBe(48000)
+    // Le plafond joue après le taux dégressif : 120 000 € x 60 % = 72 000 €, ramenés à 50 000 €.
+    expect(beneficeExonereEnZone(120000, 1, { partExoneree: 0.6, plafond: 50000 })).toBe(50000)
+    expect(beneficeExonereEnZone(120000, 1, { partExoneree: 0.6, plafond: null })).toBe(72000)
+  })
+
+  it("une perte n'exonère rien, et une part hors limites est ramenée entre 0 et 1", () => {
+    const totale = { partExoneree: 1, plafond: null }
+    expect(beneficeExonereEnZone(-5000, 1, totale)).toBe(0)
+    expect(beneficeExonereEnZone(0, 1, totale)).toBe(0)
+    expect(beneficeExonereEnZone(10000, 1.5, totale)).toBe(10000)
+    expect(beneficeExonereEnZone(10000, -0.2, totale)).toBe(0)
   })
 })
