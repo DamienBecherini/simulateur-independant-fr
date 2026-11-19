@@ -223,3 +223,25 @@
     background-color: Highlight;
   }
 }
+
+/* Notification des modifications de l'IA (dessinée par l'application) : passée derrière une plus récente, elle
+   devient, comme celles de sonner, une carte vide en retrait, jusqu'au survol de la pile. */
+[data-sonner-toast][data-expanded="false"][data-front="false"] > [data-notification-ia] > * {
+  opacity: 0;
+}
+
+/* Notifications de sonner, couleurs « riches » du thème clair : son texte n'atteint pas le contraste de 4,5:1 sur son
+   fond (de 3,07 pour l'avertissement à 4,36 pour l'erreur). Mêmes teintes, plus sombres. « :root » l'emporte sur la
+   feuille que sonner insère après la nôtre. */
+:root [data-sonner-toaster][data-sonner-theme="light"] {
+  --success-text: hsl(140, 100%, 24%); /* 5,2:1 */
+  --info-text: hsl(210, 92%, 38%); /* 5,7:1 */
+  --warning-text: hsl(31, 92%, 35%); /* 4,8:1 */
+  --error-text: hsl(360, 100%, 40%); /* 5,3:1 */
+}
+
+/* Croix de fermeture : 24 px, la taille minimale d'une cible (sonner la dessine en 20 px). */
+:root [data-sonner-toast][data-styled="true"] [data-close-button] {
+  width: 24px;
+  height: 24px;
+}

@@ -211,3 +211,48 @@ test("l'aide « Utiliser avec une IA » tient dans la largeur de la fenêtre, sa
   expect(debordements).toEqual([])
   expect((await fenetre.boundingBox())!.width).toBeLessThanOrEqual(900)
 })
+
+test("beaucoup de modifications de l'IA dans une fenêtre basse : la notification défile, son titre et « Vu » restent visibles", async ({ dossierDonnees, lancer }) => {
+  await deposerSession(dossierDonnees, sessionMicroBnc())
+  await fs.writeFile(path.join(dossierDonnees, "userPreferences.json"), JSON.stringify({ slotOrder: [], affichage: "classique", iaModifieDirectement: true }))
+  const { page, erreursConsole } = await lancer()
+  await page.setViewportSize({ width: 900, height: 480 })
+  const client = await connecterUnClient((await page.evaluate(() => window.api.infosDuServeurMcp()))!)
+  const montants = Array.from({ length: 14 }, (_, rang) => 2000 + 100 * rang)
+  try {
+    for (const montant of montants) {
+      const hausse = { cible: "serie", annee: 2026, serie: { acteurId: ATELIER.id, typeFlux: "ca_micro_services_bnc", libelle: "Prestations" }, montant }
+      const proposee = (await client.callTool({ name: "proposer_modification", arguments: { modifications: [hausse] } })) as CallToolResult
+      const { proposition } = JSON.parse((proposee.content as { text: string }[])[0].text.split("\n").at(-1)!) as { proposition: unknown }
+      await client.callTool({ name: "appliquer_proposition", arguments: { proposition } })
+      // Chaque proposition part de la simulation modifiée par la précédente.
+      await expect.poll(async () => (await lireFichier<SessionState>(dossierDonnees, "sessionState.json"))?.annees[0].monthlyData[0].flows[0].amount).toBe(montant)
+    }
+  } finally {
+    await client.close()
+  }
+
+  const notification = page.locator("[data-notification-ia]")
+  await expect(notification).toContainText(`L'IA a modifié ${montants.length} éléments déjà saisis`)
+  // Au premier plan de la pile, devant les notifications brèves arrivées avec chaque modification ; une seule.
+  await expect(notification).toHaveCount(1)
+  await expect(page.locator("[data-sonner-toast][data-front='true']").locator("[data-notification-ia]")).toBeVisible()
+  // La plus récente en premier, et toutes listées.
+  const liste = notification.getByRole("list")
+  await expect(liste.getByRole("listitem")).toHaveCount(montants.length)
+  await expect(liste.getByRole("listitem").first()).toContainText("3 300")
+  // Elle tient dans la fenêtre ; la liste défile, le titre et « Vu » restent visibles.
+  const cadre = (await notification.boundingBox())!
+  expect(cadre.y).toBeGreaterThanOrEqual(0)
+  expect(cadre.y + cadre.height).toBeLessThanOrEqual(480)
+  expect(await liste.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true)
+  await liste.evaluate(el => el.scrollTo(0, el.scrollHeight))
+  await expect(notification.getByText(`L'IA a modifié ${montants.length} éléments déjà saisis`)).toBeInViewport()
+  await expect(notification.getByRole("button", { name: "Vu" })).toBeInViewport()
+  await auditerAccessibilite(page, "notification défilante des modifications de l'IA", "[data-sonner-toaster]")
+  await page.screenshot({ path: test.info().outputPath("notification-defilante.png") })
+
+  await notification.getByRole("button", { name: "Vu" }).click()
+  await expect(notification).toBeHidden()
+  expect(erreursConsole).toEqual([])
+})

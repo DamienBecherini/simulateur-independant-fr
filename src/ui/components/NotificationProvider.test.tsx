@@ -2,7 +2,7 @@
 // Les notifications du pont (process principal ou démo web) s'affichent : un échec d'enregistrement en erreur, jamais
 // en réussite.
 
-import { act, render, screen } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import type { NotificationPayload } from "@/types"
 import { NotificationProvider } from "./NotificationProvider"
@@ -39,5 +39,13 @@ describe("NotificationProvider", () => {
     expect((await screen.findByText("Sauvegarde réussie !")).closest("[data-sonner-toast]")).toHaveAttribute("data-type", "success")
     expect((await screen.findByText("Sauvegardes illisibles mises de côté.")).closest("[data-sonner-toast]")).toHaveAttribute("data-type", "warning")
     expect((await screen.findByText("Pour information.")).closest("[data-sonner-toast]")).toHaveAttribute("data-type", "info")
+  })
+
+  it("donne à chaque notification une croix pour la fermer sans attendre", async () => {
+    const notifier = afficher()
+    notifier({ message: "Pour information." })
+
+    const notification = (await screen.findByText("Pour information.")).closest<HTMLElement>("[data-sonner-toast]")!
+    expect(within(notification).getByRole("button", { name: "Fermer la notification" })).toBeInTheDocument()
   })
 })
