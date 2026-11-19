@@ -16,6 +16,9 @@ delaiDesTestsDIntegration()
 
 const situation = (id: string): SessionState => sessionDUnMontage(MONTAGES_TYPES.find(m => m.id === id)!)
 
+/** Les résultats arrivent après le recalcul différé, avec le vrai moteur : plus lent sur une machine d'intégration chargée. */
+const ATTENTE = { timeout: 10_000 }
+
 async function afficher(session: SessionState) {
   vi.mocked(window.api.getCurrentSession).mockResolvedValue(session)
   vi.mocked(window.api.simulerLesAnnees).mockImplementation(async s => simulerLesAnnees(s))
@@ -32,31 +35,31 @@ async function afficher(session: SessionState) {
 describe("App : ajouter un conjoint", () => {
   it("ajoute le conjoint et son salaire en une étape : un foyer de deux personnes, sur deux parts", async () => {
     const user = await afficher(situation("micro-bnc-seule"))
-    await user.click(await screen.findByRole("button", { name: "Ajouter un conjoint" }))
+    await user.click(await screen.findByRole("button", { name: "Ajouter un conjoint" }, ATTENTE))
     const fenetre = screen.getByRole("dialog", { name: "Ajouter le conjoint de Sophie" })
     await user.type(within(fenetre).getByRole("textbox", { name: "Prénom" }), "Nadia")
     await user.type(within(fenetre).getByRole("spinbutton", { name: "Son salaire net par mois (€), facultatif" }), "2500")
     await user.click(within(fenetre).getByRole("button", { name: "Ajouter au foyer" }))
 
-    expect(await screen.findByText("Foyer fiscal · 2 parts")).toBeInTheDocument()
+    expect(await screen.findByText("Foyer fiscal · 2 parts", undefined, ATTENTE)).toBeInTheDocument()
     expect(screen.getByText("Sophie, Nadia")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Ajouter un conjoint" })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Annuler" }))
-    expect(await screen.findByText("Foyer fiscal · 1 part")).toBeInTheDocument()
+    expect(await screen.findByText("Foyer fiscal · 1 part", undefined, ATTENTE)).toBeInTheDocument()
     expect(screen.queryByText("Sophie, Nadia")).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Ajouter un conjoint" })).toBeInTheDocument()
   })
 
   it("pas de raccourci pour un couple déjà marié, ni pour un couple en union libre", async () => {
     await afficher(situation("conjoint-salarie-sasu"))
-    expect(await screen.findByText("Foyer fiscal · 2 parts")).toBeInTheDocument()
+    expect(await screen.findByText("Foyer fiscal · 2 parts", undefined, ATTENTE)).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Ajouter un conjoint" })).not.toBeInTheDocument()
   })
 
   it("en union libre, aucun des deux foyers ne le propose", async () => {
     await afficher(situation("couple-union-libre"))
-    expect(await screen.findAllByText("Foyer fiscal · 1 part")).toHaveLength(2)
+    expect(await screen.findAllByText("Foyer fiscal · 1 part", undefined, ATTENTE)).toHaveLength(2)
     expect(screen.queryByRole("button", { name: "Ajouter un conjoint" })).not.toBeInTheDocument()
   })
 })

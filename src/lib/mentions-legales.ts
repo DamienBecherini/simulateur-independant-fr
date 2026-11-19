@@ -71,11 +71,12 @@ export const RUBRIQUES: readonly Rubrique[] = [
           ["dans l'application de bureau, dans un dossier de votre ordinateur : ", { code: String.raw`%APPDATA%\simulateur-independant-fr` }, " sous Windows (la version du Microsoft Store range aussi des fichiers dans ", { code: String.raw`%LOCALAPPDATA%\Packages` }, ", dans le dossier de l'application, que Windows supprime quand vous la désinstallez), ", { code: "~/Library/Application Support/simulateur-independant-fr" }, " sous macOS, ", { code: "~/.config/simulateur-independant-fr" }, " sous Linux."]
         ]
       },
-      { paragraphe: ["Le projet n'a pas de serveur : rien ne lui est envoyé automatiquement. Des données ne quittent votre appareil que si vous le décidez, en donnant votre avis :"] },
+      { paragraphe: ["Le projet n'a pas de serveur : rien ne lui est envoyé automatiquement. Des données ne quittent votre appareil que si vous le décidez, en donnant votre avis ou en reliant l'application de bureau à une IA :"] },
       {
         liste: [
           ["sur GitHub, votre message devient un ticket public du dépôt, et la ", { texte: "déclaration de confidentialité de GitHub", adresse: "https://docs.github.com/fr/site-policy/privacy-policies/github-general-privacy-statement" }, " s'applique ;"],
-          ["par e-mail, votre message part de votre messagerie vers l'adresse de contact."]
+          ["par e-mail, votre message part de votre messagerie vers l'adresse de contact ;"],
+          ["avec une IA (serveur MCP de l'application de bureau, que vous configurez vous-même) : ce que l'IA lit de votre simulation, comme les factures et relevés que vous lui donnez, part chez le fournisseur de l'IA choisie (Anthropic pour Claude), selon ses conditions ; une IA installée sur votre ordinateur (LM Studio, par exemple) garde tout sur place."]
         ]
       },
       { paragraphe: ["Aucun montant ni aucun nom de la simulation n'est joint à un avis : vous relisez le texte avant de l'envoyer."] },

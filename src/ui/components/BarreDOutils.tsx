@@ -87,10 +87,10 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
             <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-9 sm:w-10 [&_svg]:size-6" onClick={onParametres}>
               <Settings className="text-slate-600 dark:text-slate-400" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z)" onClick={historique.annuler} disabled={!historique.peutAnnuler} className="h-10 w-9 sm:w-10 [&_svg]:size-6 sm:ml-2">
+            <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.annuler} disabled={!historique.peutAnnuler} className="h-10 w-9 sm:w-10 [&_svg]:size-6 sm:ml-2">
               <Undo2 className="dark:text-slate-300" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y)" onClick={historique.retablir} disabled={!historique.peutRetablir} className="h-10 w-9 sm:w-10 [&_svg]:size-6">
+            <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.retablir} disabled={!historique.peutRetablir} className="h-10 w-9 sm:w-10 [&_svg]:size-6">
               <Redo2 className="dark:text-slate-300" />
             </Button>
             {indicateurIA}

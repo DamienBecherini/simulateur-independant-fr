@@ -25,10 +25,11 @@ Le simulateur ne demande ni compte, ni nom, ni adresse e-mail. Les calculs se fo
 - dans la démo web, dans le stockage local de votre navigateur (localStorage) : la simulation en cours, vos sauvegardes, vos préférences et le thème choisi ;
 - dans l'application de bureau, dans un dossier de votre ordinateur : `%APPDATA%\simulateur-independant-fr` sous Windows (la version du Microsoft Store range aussi des fichiers dans `%LOCALAPPDATA%\Packages`, dans le dossier de l'application, que Windows supprime quand vous la désinstallez), `~/Library/Application Support/simulateur-independant-fr` sous macOS, `~/.config/simulateur-independant-fr` sous Linux.
 
-Le projet n'a pas de serveur : rien ne lui est envoyé automatiquement. Des données ne quittent votre appareil que si vous le décidez, en donnant votre avis :
+Le projet n'a pas de serveur : rien ne lui est envoyé automatiquement. Des données ne quittent votre appareil que si vous le décidez, en donnant votre avis ou en reliant l'application de bureau à une IA :
 
 - sur GitHub, votre message devient un ticket public du dépôt, et la [déclaration de confidentialité de GitHub](https://docs.github.com/fr/site-policy/privacy-policies/github-general-privacy-statement) s'applique ;
-- par e-mail, votre message part de votre messagerie vers l'adresse de contact.
+- par e-mail, votre message part de votre messagerie vers l'adresse de contact ;
+- avec une IA (serveur MCP de l'application de bureau, que vous configurez vous-même) : ce que l'IA lit de votre simulation, comme les factures et relevés que vous lui donnez, part chez le fournisseur de l'IA choisie (Anthropic pour Claude), selon ses conditions ; une IA installée sur votre ordinateur (LM Studio, par exemple) garde tout sur place.
 
 Aucun montant ni aucun nom de la simulation n'est joint à un avis : vous relisez le texte avant de l'envoyer.
 

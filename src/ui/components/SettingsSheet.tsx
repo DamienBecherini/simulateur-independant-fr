@@ -199,6 +199,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                 <Button onClick={handleSave} className="w-full" size="lg">
                   <Save className="mr-2 h-4 w-4" /> Sauvegarder
                 </Button>
+                <p className="text-sm text-slate-600 dark:text-slate-400">La simulation en cours s'enregistre d'elle-même et se retrouve à la prochaine ouverture. L'historique d'annulation (Ctrl+Z), lui, s'efface quand la page est rechargée ou l'application fermée.</p>
                 <Button onClick={() => setView("load")} variant="secondary" className="w-full">
                   Charger une sauvegarde...
                 </Button>

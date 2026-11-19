@@ -2,6 +2,9 @@
 
 import { test, expect } from "./support/fixtures"
 
+// Le démarrage tel que le voit un nouvel utilisateur : sans préférence déposée, à l'affichage par défaut.
+test.use({ affichageDuTest: null })
+
 test("au démarrage, la fenêtre principale s'ouvre avec le preload chargé et sans erreur", async ({ lancer }) => {
   const { electronApp, page, erreursConsole } = await lancer()
 

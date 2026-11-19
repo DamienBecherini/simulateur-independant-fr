@@ -20,6 +20,8 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ### Modifié
 
+- **Mentions légales : le cas de l'IA.** La confidentialité dit désormais que, si vous reliez l'application de bureau à une IA, ce qu'elle lit de votre simulation part chez son fournisseur (une IA locale garde tout sur l'ordinateur). Le guide « Utiliser avec une IA » prévient aussi qu'un client d'IA doté d'autres outils (fichiers et commandes de Claude Code, web, autres serveurs MCP) échappe aux protections du simulateur, et dit comment s'en garder.
+- **L'historique d'annulation est annoncé comme éphémère.** Le panneau des paramètres et les info-bulles d'« Annuler » et « Rétablir » disent que la simulation en cours s'enregistre d'elle-même, mais que l'historique d'annulation s'efface au rechargement de la page ou à la fermeture de l'application.
 - **« Trois vues » devient l'affichage par défaut.** Qui n'a jamais choisi d'affichage ouvre la page en trois vues (Ma situation, Mes résultats, Comparer et optimiser), sous la barre de résumé ; un choix enregistré dans la barre d'outils l'emporte toujours. Le sélecteur propose « Trois vues » en premier, puis « Résumé » et « Classique ».
 - **Une situation type chargée ouvre la vue « Ma situation ».** Dans l'affichage « Trois vues », charger une situation type (fenêtre des situations types, encart « Que voulez-vous savoir ? », lien `#situation=…`) mène à ses acteurs et à sa grille, d'où que l'on vienne.
 - **Une même règle pour charger une situation type.** La fenêtre des situations types et l'encart « Que voulez-vous savoir ? » (« Partir de zéro » compris) chargent désormais directement par-dessus une simulation vide ou l'exemple de la démo non modifié, comme le lien `#situation=…`, et gardent la confirmation sur toute simulation non enregistrée ; le chargement reste annulable en une étape.
@@ -29,6 +31,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ### Corrigé
 
+- **Dépendances à jour pour la sécurité.** Electron 44.11.5 (certificats intermédiaires compromis écartés) et zod 4.6.7 (validation d'une liste démesurée sans épuiser la mémoire), avec les dépendances du serveur MCP ; les failles restantes ne touchent que les outils de développement.
 - **Montants du comparateur alignés.** Dans le tableau des statuts, les cases sont alignées en haut : les montants d'une ligne restent à la même hauteur dans toutes les colonnes, et la note à déplier sous le net d'une colonne (écart de frais de gestion) ne décale plus son montant, repliée comme dépliée.
 - **Contraste du total annuel de la grille en thème sombre.** Le « — » d'un acteur sans flux, les numéros au-dessus des barres, un total nul et le total des gains y sont éclaircis d'un cran : ils passaient sous le seuil AA de 4,5:1 sur le fond plus clair de cette colonne (3,9:1, et 3,5:1 sur une ligne zébrée, pour le « — ») et le dépassent désormais (6,9:1 et 6,1:1).
 

@@ -32,6 +32,12 @@ export interface Application {
 }
 
 interface Fixtures {
+  /**
+   * Affichage de la page donné à l'application quand le test n'a déposé aucune préférence : « Résumé », la page d'un
+   * seul tenant que la plupart des tests parcourent. `null` laisse l'application à son affichage par défaut
+   * (« Trois vues »), comme au tout premier lancement : `test.use({ affichageDuTest: null })`.
+   */
+  affichageDuTest: Affichage | null
   /** Dossier de données de l'application pour ce test. */
   dossierDonnees: string
   /** Lance l'application sur le dossier de données du test ; plusieurs lancements successifs sont possibles. */
@@ -84,7 +90,7 @@ export async function deposerSession(dossierDonnees: string, session: SessionSta
   await fs.writeFile(path.join(dossierDonnees, "sessionState.json"), JSON.stringify(auFormatActuel(session), null, 2))
 }
 
-/** Choisit l'affichage de la page avant le lancement (« Résumé » sinon, l'affichage par défaut). */
+/** Choisit l'affichage de la page avant le lancement (sinon, celui de l'option `affichageDuTest`). */
 export async function deposerAffichage(dossierDonnees: string, affichage: Affichage) {
   await fs.writeFile(path.join(dossierDonnees, "userPreferences.json"), JSON.stringify({ slotOrder: [], affichage }))
 }
@@ -133,6 +139,8 @@ export async function lireFichier<T = unknown>(dossierDonnees: string, nom: stri
 }
 
 export const test = base.extend<Fixtures>({
+  affichageDuTest: ["resume", { option: true }],
+
   // eslint-disable-next-line no-empty-pattern
   dossierDonnees: async ({}, fournir) => {
     const dossier = await fs.mkdtemp(path.join(os.tmpdir(), "simulateur-e2e-"))
@@ -141,9 +149,11 @@ export const test = base.extend<Fixtures>({
     await fs.rm(dossier, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
   },
 
-  lancer: async ({ dossierDonnees }, fournir, testInfo) => {
+  lancer: async ({ dossierDonnees, affichageDuTest }, fournir, testInfo) => {
     const lancees: Application[] = []
     await fournir(async () => {
+      const preferences = path.join(dossierDonnees, "userPreferences.json")
+      if (affichageDuTest !== null && !existsSync(preferences)) await deposerAffichage(dossierDonnees, affichageDuTest)
       const application = await lancerApplication(dossierDonnees)
       lancees.push(application)
       return application

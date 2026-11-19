@@ -1,15 +1,18 @@
 // e2e/affichage-vues.e2e.ts
-// Affichage « Trois vues » dans l'application de bureau : l'adresse de la page change de fragment à chaque vue, sans
-// couper les échanges avec le processus principal ; l'affichage choisi est retrouvé au lancement suivant.
+// Affichage « Trois vues » dans l'application de bureau : c'est l'affichage d'un nouvel utilisateur ; l'adresse de la
+// page change de fragment à chaque vue, sans couper les échanges avec le processus principal ; un autre affichage
+// choisi est retrouvé au lancement suivant.
 
 import { test, expect, lireFichier } from "./support/fixtures"
 import type { UserPreferences } from "../src/types"
 
-test("les trois vues se parcourent, la simulation suit, et l'affichage est retrouvé au lancement suivant", async ({ dossierDonnees, lancer }) => {
+// Aucune préférence déposée : l'application s'ouvre à son affichage par défaut, comme au tout premier lancement.
+test.use({ affichageDuTest: null })
+
+test("un nouvel utilisateur ouvre les trois vues, qui se parcourent ; un autre affichage choisi est retrouvé au lancement suivant", async ({ dossierDonnees, lancer }) => {
   const premier = await lancer()
   const { page } = premier
-  await page.getByRole("combobox", { name: /^Affichage :/ }).click()
-  await page.getByRole("option", { name: "Trois vues" }).click()
+  await expect(page.getByRole("combobox", { name: "Affichage : Trois vues" })).toBeVisible()
 
   const onglets = page.getByRole("tablist", { name: "Vues de la page" })
   await expect(onglets.getByRole("tab", { name: "Ma situation" })).toHaveAttribute("aria-selected", "true")
@@ -32,12 +35,16 @@ test("les trois vues se parcourent, la simulation suit, et l'affichage est retro
   await page.goBack()
   await expect(onglets.getByRole("tab", { name: "Ma situation" })).toHaveAttribute("aria-selected", "true")
   expect(premier.erreursConsole).toEqual([])
-  // La préférence est enregistrée peu après le choix, dans les préférences de l'utilisateur.
-  await expect.poll(async () => (await lireFichier<UserPreferences>(dossierDonnees, "userPreferences.json"))?.affichage).toBe("vues")
+
+  // Un autre affichage choisi est enregistré peu après, dans les préférences de l'utilisateur.
+  await page.getByRole("combobox", { name: "Affichage : Trois vues" }).click()
+  await page.getByRole("option", { name: "Résumé" }).click()
+  await expect(onglets).toBeHidden()
+  await expect.poll(async () => (await lireFichier<UserPreferences>(dossierDonnees, "userPreferences.json"))?.affichage).toBe("resume")
   await premier.electronApp.close()
 
   const second = await lancer()
-  await expect(second.page.getByRole("combobox", { name: "Affichage : Trois vues" })).toBeVisible()
-  await expect(second.page.getByRole("tablist", { name: "Vues de la page" }).getByRole("tab", { name: "Ma situation" })).toHaveAttribute("aria-selected", "true")
+  await expect(second.page.getByRole("combobox", { name: "Affichage : Résumé" })).toBeVisible()
+  await expect(second.page.getByRole("tablist", { name: "Vues de la page" })).toBeHidden()
   await expect(second.page.getByRole("textbox", { name: "Nom" })).toHaveValue("Bernard Petit")
 })
