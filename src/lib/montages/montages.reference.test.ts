@@ -110,6 +110,14 @@ const ATTENDUS: Record<string, ChiffresAttendus> = {
     activites: { "s-paul": activite(18805, 5468, 988) },
     comparateur: { activite: "s-paul", meilleur: "EI" }
   },
+  "sasu-et-conjoint-salarie-ailleurs": {
+    // Le salaire de Nadia (2 700 € nets par mois) s'ajoute aux revenus de Thomas dans le même foyer : les dividendes y
+    // sont imposés au barème plutôt qu'au prélèvement forfaitaire. 42 000 € de dividendes laissent 955 € dans la SASU.
+    totalNetApresImpots: 82216,
+    foyers: [foyer(["p-thomas", "p-nadia"], 8372, 7812, 51549, 82216)],
+    activites: { "s-thomas": activite(17594, 8652, 955) },
+    comparateur: { activite: "s-thomas", meilleur: "SASU" }
+  },
   "couple-union-libre": {
     // Charges non déductibles de la micro d'Emma (CFE 200 €, assurance 240 €, banque 60 €) : 500 € de moins sur son net.
     totalNetApresImpots: 45960,

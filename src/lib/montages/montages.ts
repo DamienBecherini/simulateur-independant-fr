@@ -282,6 +282,46 @@ const eurlIS: MontageType = {
   })
 }
 
+const CHARGES_DE_THOMAS: ChargesDeLaSociete = { expertComptableMensuel: 150, cfe: 400, assurance: 360, banqueMensuelle: 20 }
+
+const sasuEtConjointSalarieAilleurs: MontageType = {
+  id: "sasu-et-conjoint-salarie-ailleurs",
+  titre: "SASU avec un conjoint salarié ailleurs",
+  resume: "Thomas préside une SASU qui facture 8 000 € par mois ; Nadia, son épouse, est salariée d'un autre employeur à 2 700 € nets par mois.",
+  etiquettes: ["SASU", "Salarié", "Couple", "Marié"],
+  questions: ["Combien reste-t-il au foyer, avec le salaire du conjoint ?", "Le salaire du conjoint change-t-il le meilleur partage entre rémunération et dividendes ?", "Prélèvement forfaitaire ou barème pour les dividendes ?"],
+  illustre: [
+    "Le salaire de Nadia et les revenus que Thomas tire de sa SASU sont imposés ensemble : un foyer fiscal marié, sur deux parts.",
+    "Le salaire du conjoint relève le taux marginal du foyer : il pèse sur le choix entre rémunération et dividendes, et entre prélèvement forfaitaire et barème, que le simulateur fait pour le foyer entier.",
+    "Le comparateur cherche le partage au meilleur net du foyer, avec 4 trimestres de retraite pour Thomas.",
+    "Pour décrire votre propre foyer : ajoutez une personne, reliez-la à vous par « Marié(e) » ou « PACSé(e) », puis saisissez son salaire net dans la grille (le brut est facultatif)."
+  ],
+  conditions: [
+    "Mariés ou pacsés : une déclaration commune pour le foyer, sauf option pour l'imposition distincte l'année du mariage ou du Pacs.",
+    "Le conjoint est salarié d'un employeur sans lien avec la SASU : son salaire ne coûte rien à la société.",
+    TAUX_REDUIT_IS
+  ],
+  pointsDAttention: [
+    "Le salaire saisi est le net imposable, celui de la déclaration de revenus ; la déduction forfaitaire de 10 % pour frais professionnels s'applique, ou les frais réels saisis sur la fiche de Nadia.",
+    "En union libre, chacun déclare seul : remplacez la relation « Marié(e) » par « En couple » pour voir deux foyers distincts.",
+    hypothesesDeChargesDeLaSociete("la SASU de Thomas", CHARGES_DE_THOMAS),
+    RESERVE_LEGALE
+  ],
+  sources: [SOURCES.anneeDuMariage, SOURCES.cotisationsSas, SOURCES.impotSocietes, SOURCES.dividendes, SOURCES.trimestres],
+  contenu: () => ({
+    entities: [personne("p-thomas", "Thomas"), personne("p-nadia", "Nadia", true), societe("s-thomas", "SASU de Thomas", "SASU", 1000)],
+    relationships: [relation("p-thomas", "p-nadia", "Marié(e)"), relation("p-thomas", "s-thomas", "Président")],
+    flux: [
+      { entityId: "s-thomas", type: "ca_services", amount: 8000, label: "Facturation" },
+      ...fluxDesChargesDeLaSociete("s-thomas", CHARGES_DE_THOMAS),
+      { entityId: "s-thomas", type: "director_remuneration", amount: 2000, label: "Rémunération" },
+      { entityId: "s-thomas", type: "dividends_payment", amount: 42000, label: "Dividendes", mois: 11 },
+      { entityId: "p-nadia", type: "salary", amount: 2700, grossAmount: 3460, label: "Salaire" }
+    ],
+    comparateur: comparateurAuMeilleurNet("s-thomas", true)
+  })
+}
+
 const microEtSasuDuConjoint: MontageType = {
   id: "micro-et-sasu-du-conjoint",
   titre: "Micro-entreprise et SASU du conjoint",
@@ -494,4 +534,4 @@ const kinesitherapeuteEI: MontageType = {
 }
 
 /** Les montages types, dans l'ordre de la bibliothèque : du plus simple au plus composé. */
-export const MONTAGES_TYPES: MontageType[] = [microSeule, osteopatheMicro, kinesitherapeuteEI, sasuSansSalaire, sasuAvecSalaire, eurlIS, salariePlusMicro, microEtSasuDuConjoint, conjointSalarie, unionLibre]
+export const MONTAGES_TYPES: MontageType[] = [microSeule, osteopatheMicro, kinesitherapeuteEI, sasuSansSalaire, sasuAvecSalaire, eurlIS, salariePlusMicro, sasuEtConjointSalarieAilleurs, microEtSasuDuConjoint, conjointSalarie, unionLibre]
