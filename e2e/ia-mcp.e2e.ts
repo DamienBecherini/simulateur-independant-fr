@@ -212,9 +212,10 @@ test("l'aide « Utiliser avec une IA » tient dans la largeur de la fenêtre, sa
   expect((await fenetre.boundingBox())!.width).toBeLessThanOrEqual(900)
 })
 
-test("beaucoup de modifications de l'IA dans une fenêtre basse : la notification défile, son titre et « Vu » restent visibles", async ({ dossierDonnees, lancer }) => {
+test("beaucoup de modifications de l'IA dans une fenêtre basse, interface zoomée : la notification défile, son titre et « Vu » restent visibles", async ({ dossierDonnees, lancer }) => {
   await deposerSession(dossierDonnees, sessionMicroBnc())
-  await fs.writeFile(path.join(dossierDonnees, "userPreferences.json"), JSON.stringify({ slotOrder: [], affichage: "classique", iaModifieDirectement: true }))
+  // Zoomée à 150 % : sous un zoom, Chromium agrandit aussi la hauteur de l'écran (100dvh), constat de la recette.
+  await fs.writeFile(path.join(dossierDonnees, "userPreferences.json"), JSON.stringify({ slotOrder: [], affichage: "classique", iaModifieDirectement: true, zoom: 1.5 }))
   const { page, erreursConsole } = await lancer()
   await page.setViewportSize({ width: 900, height: 480 })
   const client = await connecterUnClient((await page.evaluate(() => window.api.infosDuServeurMcp()))!)

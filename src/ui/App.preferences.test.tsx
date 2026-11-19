@@ -24,12 +24,15 @@ function enregistreesALaFermeture(): UserPreferences {
 
 afterEach(() => {
   document.body.style.zoom = ""
+  document.documentElement.style.removeProperty("--zoom")
 })
 
 describe("préférences retenues par l'application", () => {
   it("applique le zoom retenu, et retient le nouveau zoom choisi", async () => {
     await renderApp({ slotOrder: [], zoom: 1.3 })
     expect(document.body.style.zoom).toBe("1.3")
+    // Pour ce qui doit tenir dans la hauteur de la fenêtre malgré le zoom.
+    expect(document.documentElement.style.getPropertyValue("--zoom")).toBe("1.3")
 
     await userEvent.click(screen.getByRole("button", { name: "Zoom avant" }))
 

@@ -21,10 +21,11 @@ export function NotificationDesModificationsDeLIA({ lignes, onVu }: Props) {
   const plusRecenteDAbord = [...lignes].reverse()
   return (
     // La hauteur suit celle que la pile de notifications donne à l'élément (h-full), sans dépasser la fenêtre : la
-    // pile de sonner est à 24 px du haut (16 px sur un téléphone).
+    // pile de sonner est à 24 px du haut (16 px sur un téléphone) ; la hauteur de l'écran est ramenée au zoom de
+    // l'interface (voir useZoom).
     <div
       data-notification-ia=""
-      className="flex h-full max-h-[calc(100dvh-3rem)] w-(--width) flex-col overflow-hidden rounded-lg border-2 border-amber-600 bg-white text-[13px] text-neutral-900 shadow-lg dark:bg-black dark:text-neutral-100 max-[600px]:w-full"
+      className="flex h-full max-h-[calc(100dvh/var(--zoom,1)_-_3rem)] w-(--width) flex-col overflow-hidden rounded-lg border-2 border-amber-600 bg-white text-[13px] text-neutral-900 shadow-lg dark:bg-black dark:text-neutral-100 max-[600px]:w-full"
     >
       <div className="flex items-start gap-2 border-b border-neutral-100 px-3.5 pt-3.5 pb-2 dark:border-neutral-800">
         <TriangleAlert aria-hidden="true" className="mt-px size-4 shrink-0 text-amber-700 dark:text-amber-400" />
