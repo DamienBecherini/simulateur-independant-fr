@@ -40,6 +40,10 @@ export type Proposition = z.infer<typeof PropositionSchema>
  */
 export const supprimeQuelqueChose = (proposition: Pick<Proposition, "operations">) => proposition.operations.some(estUneSuppression)
 
+/** Opérations qui changent ce qui existait déjà, sans rien supprimer : un acteur, une série de flux, un réglage. */
+const TYPES_DE_MODIFICATION = ["modifier_acteur", "modifier_serie", "regler_comparateur"] as const satisfies readonly Operation["type"][]
+export const modifieLExistant = (operation: Operation) => (TYPES_DE_MODIFICATION as readonly string[]).includes(operation.type)
+
 /**
  * Une proposition telle que le modèle la renvoie. Son schéma public reste sommaire, pour ne pas répéter le détail des
  * opérations dans la description de chaque outil : elle est validée en entier par `propositionValidee`.

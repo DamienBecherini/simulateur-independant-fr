@@ -17,11 +17,13 @@ import type { InfosDuServeurMcp } from "@/lib/configuration-mcp"
 import { emptySession, makeFlow, makePerson } from "@/ui/testing/fixtures"
 import App from "./App"
 
-vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), info: vi.fn(), warning: vi.fn(), error: vi.fn() }) }))
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), info: vi.fn(), warning: vi.fn(), error: vi.fn(), dismiss: vi.fn() }) }))
 
 beforeEach(() => {
   vi.mocked(toast.success).mockClear()
   vi.mocked(toast.info).mockClear()
+  vi.mocked(toast).mockClear()
+  vi.mocked(toast.dismiss).mockClear()
 })
 
 function initialSession(): SessionState {
@@ -43,6 +45,14 @@ function propositionRecue(session: SessionState, nom: string, id: string): Propo
 /** Une proposition de supprimer la série « Loyer perçu » d'Alice, construite sur la session de départ. */
 function propositionDeSuppression(id: string): PropositionRecue {
   const reponse = executerOutil("proposer_suppression", initialSession(), { suppressions: [{ cible: "serie", annee: 2026, serie: { acteurId: "person-alice", typeFlux: "other_taxable_income", libelle: "Loyer perçu" } }] })
+  if (!reponse.ok) throw new Error(reponse.erreur)
+  const { proposition } = reponse.resultat as { proposition: PropositionRecue["proposition"] }
+  return { id, creeeLe: "2026-10-14T08:30:00.000Z", proposition }
+}
+
+/** Une proposition de changer le montant mensuel de la série « Loyer perçu » d'Alice, construite sur une session donnée. */
+function propositionDeModification(session: SessionState, montant: number, id: string): PropositionRecue {
+  const reponse = executerOutil("proposer_modification", session, { modifications: [{ cible: "serie", annee: 2026, serie: { acteurId: "person-alice", typeFlux: "other_taxable_income", libelle: "Loyer perçu" }, montant }] })
   if (!reponse.ok) throw new Error(reponse.erreur)
   const { proposition } = reponse.resultat as { proposition: PropositionRecue["proposition"] }
   return { id, creeeLe: "2026-10-14T08:30:00.000Z", proposition }
@@ -293,5 +303,63 @@ describe("App : l'IA modifie directement la simulation", () => {
     act(() => action.onClick())
     expect(noms()).toEqual(["Alice Martin", "Bruno Durand", "Chloé Petit"])
     expect(toast.info).toHaveBeenCalledWith(expect.stringMatching(/utilisez « Annuler » dans la barre d'outils/))
+  })
+
+  describe("ce que l'IA change dans l'existant reste signalé jusqu'au clic sur « Vu »", () => {
+    /** Titre, options et texte de la dernière notification des modifications de l'IA. */
+    const notificationDesModifications = () => {
+      const [titre, options] = dernier(vi.mocked(toast).mock.calls)!
+      const { description, duration, id, action } = options as { description: React.ReactElement; duration: number; id: string; action: { label: string; onClick: () => void } }
+      const { container } = render(description)
+      return { titre, duration, id, action, texte: container.textContent ?? "" }
+    }
+
+    it("une modification d'une série déjà saisie : une notification qui reste, avec ce qui a changé ; une seconde la complète", async () => {
+      const premiere = propositionDeModification(initialSession(), 1200, "a-loyer.json")
+      const seconde = propositionDeModification(sessionApresLaProposition(initialSession(), premiere.proposition), 0, "b-loyer.json")
+      const { deposer } = await renderApp([], { iaModifieDirectement: true })
+      deposer([premiere])
+      await waitFor(() => expect(toast).toHaveBeenCalledTimes(1))
+      const apresLaPremiere = notificationDesModifications()
+      expect(apresLaPremiere.titre).toBe("L'IA a modifié un élément déjà saisi")
+      expect(apresLaPremiere.duration).toBe(Infinity)
+      expect(apresLaPremiere.texte).toMatch(/Modifier la série « Loyer perçu ».*1 200 €/)
+      expect(apresLaPremiere.texte).toMatch(/Vérifiez-la ; « Annuler » dans la barre d'outils \(Ctrl\+Z\) la défait\./)
+
+      deposer([seconde])
+      await waitFor(() => expect(toast).toHaveBeenCalledTimes(2))
+      const apresLaSeconde = notificationDesModifications()
+      expect(apresLaSeconde.titre).toBe("L'IA a modifié 2 éléments déjà saisis")
+      expect(apresLaSeconde.id).toBe(apresLaPremiere.id)
+      expect(apresLaSeconde.texte).toMatch(/1 200 €[\s\S]*0 €/)
+      expect(apresLaSeconde.texte).toMatch(/Vérifiez-les ; « Annuler » dans la barre d'outils \(Ctrl\+Z\) les défait une à une\./)
+    })
+
+    it("« Vu » ferme la notification ; la modification suivante en ouvre une nouvelle, qui repart de zéro", async () => {
+      const premiere = propositionDeModification(initialSession(), 1200, "a-loyer.json")
+      const seconde = propositionDeModification(sessionApresLaProposition(initialSession(), premiere.proposition), 900, "b-loyer.json")
+      const { deposer } = await renderApp([], { iaModifieDirectement: true })
+      deposer([premiere])
+      await waitFor(() => expect(toast).toHaveBeenCalledTimes(1))
+      const { action, id } = notificationDesModifications()
+      expect(action.label).toBe("Vu")
+      act(() => action.onClick())
+      expect(toast.dismiss).toHaveBeenCalledWith(id)
+
+      deposer([seconde])
+      await waitFor(() => expect(toast).toHaveBeenCalledTimes(2))
+      const apres = notificationDesModifications()
+      expect(apres.titre).toBe("L'IA a modifié un élément déjà saisi")
+      expect(apres.texte).not.toMatch(/1 200 €/)
+    })
+
+    it("un ajout seul garde sa notification brève, sans la notification qui reste", async () => {
+      const [bruno] = deuxPropositions()
+      const { deposer } = await renderApp([], { iaModifieDirectement: true })
+      deposer([bruno])
+      await waitFor(() => expect(noms()).toEqual(["Alice Martin", "Bruno Durand"]))
+      expect(toast.success).toHaveBeenCalled()
+      expect(toast).not.toHaveBeenCalled()
+    })
   })
 })
