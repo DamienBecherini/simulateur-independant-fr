@@ -257,7 +257,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
           </>
         ) : (
           <tbody>
-            {lignes.map(ligne)}
+            {lignes.map((row, i) => ligne(row, i))}
             {protection(lignes.length)}
             {ecart(lignes.length + 1)}
           </tbody>

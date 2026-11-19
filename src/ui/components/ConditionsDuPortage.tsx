@@ -121,7 +121,7 @@ export function ConditionsDuPortage({ conditions, onChange }: ConditionsDuPortag
           <ChampDeCondition cle="tauxVersementMobilite" libelle="Versement mobilité (% du brut)" valeur={pourcent(retenues.tauxVersementMobilite)} max={3.2} step="0.05" typique={typique("tauxVersementMobilite")} noteTypique="selon la commune, 3,2 % à Paris ; dû à partir de 11 salariés" onChange={v => regler("tauxVersementMobilite", v === undefined ? undefined : enTaux(v))} />
           <ChampDeCondition cle="mutuelleMensuelle" libelle="Mutuelle, part du salarié (€ par mois)" valeur={retenues.mutuelleMensuelle} max={1000} step="5" typique={typique("mutuelleMensuelle")} noteTypique="valeur typique : aucune" onChange={v => regler("mutuelleMensuelle", v)} />
           <label className="flex min-h-9 items-center gap-2 self-end text-sm font-medium pointer-coarse:min-h-11">
-            <input type="checkbox" className="size-4 accent-slate-700 dark:accent-slate-300" checked={retenues.reductionGeneraleReversee} onChange={e => regler("reductionGeneraleReversee", e.target.checked)} />
+            <input type="checkbox" className="size-4 accent-slate-700 dark:accent-slate-300" checked={retenues.reductionGeneraleReversee} onChange={e => regler("reductionGeneraleReversee", e.target.checked)} />{" "}
             La société reverse la réduction générale des cotisations
           </label>
         </div>
