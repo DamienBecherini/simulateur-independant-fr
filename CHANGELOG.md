@@ -6,6 +6,8 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+## [0.13.0] — 2026-11-19
+
 ### Ajouté
 
 - **« Ajouter un conjoint » sur la carte d'un foyer d'une seule personne.** Un bouton ouvre une petite fenêtre : prénom, marié ou pacsé, salaire net par mois (facultatif). La personne, sa relation et son salaire de chaque mois de l'année affichée s'ajoutent en une étape d'annulation ; le foyer passe à deux parts et l'impôt sur le revenu se calcule sur les revenus des deux, comme l'arbitrage rémunération / dividendes. Le bouton n'apparaît ni pour un couple déjà marié ou pacsé, ni en union libre (la relation « En couple » se change à la main), ni pour un enfant rattaché. Suite à un retour d'utilisateur ([issue 1](https://github.com/DamienBecherini/simulateur-independant-fr/issues/1)) : il fallait trouver seul l'ajout d'une personne, la relation et le flux « Salaire ».
@@ -211,7 +213,8 @@ Première version publiée : ces notes décrivent ce que contient l'application.
 - Calculs : abattement minimum de la micro-entreprise appliqué séparément à chaque nature d'activité, réduction générale éteinte à exactement 3 SMIC, micro-entreprise au-delà des plafonds jamais désignée meilleur net.
 - Sauvegardes : validation avant écriture, rien de perdu à la fermeture, copie importée numérotée au lieu d'empiler « (importée) ».
 
-[Non publié]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.12.0...HEAD
+[Non publié]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.9.1...v0.10.0
