@@ -23,11 +23,12 @@ import { useAffichageResume } from "../hooks/useAffichage"
 import { useCalculDiffere } from "../hooks/useCalculDiffere"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
 import { ANCRES } from "@/lib/ancres"
-import { avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
+import { avecUnePerteConservee, avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, lieuDeLaPerte, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
 import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type OptimisationRemuneration, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutCompare, type StatutSociete } from "@/types"
 import { COLONNE_FIXE } from "../colonne-fixe"
 import { ligneAlternee } from "../lignes-alternees"
 import { ecartSigne, euros } from "@/backend/logic/format"
+import { netCompare } from "@/backend/logic/net-compare"
 
 /** Colonne micro non retenue (plafond dépassé, régime fermé) : grisée, la cellule de l'écart dit pourquoi. */
 const GRISE = "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
@@ -80,18 +81,39 @@ function rate(scenario: ScenarioStatut): string {
 const ecartDeFrais = (s: ScenarioStatut) => (Math.round(s.ecartDeFrais.total) === 0 ? "—" : ecartSigne(s.ecartDeFrais.total))
 
 /**
- * Lignes du tableau : libellé et valeur d'une colonne, et ce que la cellule précise dessous (l'écart de frais de gestion
- * sous le net). Seule la dernière porte sur l'activité comparée.
+ * Sous le net d'une société déficitaire (ou d'une activité en portage à découvert), la perte que ce net ne montre
+ * pas : elle reste dans la société, et la comparaison la déduit (voir src/backend/logic/net-compare.ts). L'écart de la ligne suivante en tient compte.
  */
-const rows = (activityName: string, actuel: StatutCompare | undefined): { label: string; value: (s: ScenarioStatut) => string; detail?: (s: ScenarioStatut) => ReactNode; strong?: boolean }[] => [
-  { label: "Net dans la poche", value: s => euros(s.netApresImpots), detail: s => <EcartDeFraisDeLaColonne scenario={s} actuel={actuel} />, strong: true },
+function PerteConservee({ scenario }: { scenario: ScenarioStatut }) {
+  if (!scenario.perteConservee) return null
+  return <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">et <span className="whitespace-nowrap">{euros(scenario.perteConservee)}</span> de perte restée {lieuDeLaPerte(scenario.statut)}</span>
+}
+
+/**
+ * Lignes du tableau : libellé et valeur d'une colonne, et ce que la cellule précise dessous (sous le net : la perte
+ * restée dans la société, l'écart de frais de gestion). Les deux dernières portent sur l'activité comparée ; la toute
+ * dernière, le net une fois la perte déduite, n'existe que si une perte est déduite quelque part.
+ */
+const rows = (activityName: string, actuel: StatutCompare | undefined, avecPerte: boolean): { label: string; value: (s: ScenarioStatut) => string; detail?: (s: ScenarioStatut) => ReactNode; strong?: boolean }[] => [
+  {
+    label: "Net dans la poche",
+    value: s => euros(s.netApresImpots),
+    detail: s => (
+      <>
+        <PerteConservee scenario={s} />
+        <EcartDeFraisDeLaColonne scenario={s} actuel={actuel} />
+      </>
+    ),
+    strong: true
+  },
   { label: "Taux global de prélèvement", value: rate },
   { label: "Frais de gestion par rapport au statut actuel", value: ecartDeFrais },
   { label: "Cotisations sociales", value: s => euros(s.cotisationsSociales) },
   { label: "Impôt sur les sociétés", value: s => euros(s.impotSocietes) },
   { label: "Impôt sur le revenu", value: s => euros(s.impotSurLeRevenu) },
   { label: "Prélèvements sociaux", value: s => euros(s.prelevementsSociaux) },
-  { label: `Conservé dans « ${activityName} »`, value: s => euros(s.resultatConserveActivite) }
+  { label: `Conservé dans « ${activityName} »`, value: s => euros(s.resultatConserveActivite) },
+  ...(avecPerte ? [{ label: "Net, perte restée dans l'activité déduite", value: (s: ScenarioStatut) => euros(netCompare(s)) }] : [])
 ]
 
 /** Étoiles pleines et vides, sur 5. */
@@ -235,7 +257,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
       ))}
     </tr>
   )
-  const lignes = rows(activityName, result.situationSaisie?.statut)
+  const lignes = rows(activityName, result.situationSaisie?.statut, avecUnePerteConservee(result))
   const protection = (rang: number) => (
     <tr className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
       <th scope="row" className={LIBELLE_DE_LIGNE}>

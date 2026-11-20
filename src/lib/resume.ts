@@ -3,6 +3,7 @@
 
 import type { ComparaisonResult, OptimisationRemuneration, RaisonPortageNonRetenu, RaisonSousLaSituationSaisie, ScenarioStatut, SimulationReport } from "@/types"
 import { ecartSigne, euros } from "@/backend/logic/format"
+import { netCompare } from "@/backend/logic/net-compare"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 
 /**
@@ -83,10 +84,34 @@ export function netDeLaSituationSaisie(result: ComparaisonResult): number | null
   return result.situationSaisie?.netApresImpots ?? result.scenarios.find(s => s.telleQueSaisie)?.netApresImpots ?? null
 }
 
-/** Écart du net d'une colonne avec la situation telle que saisie ; `null` pour cette situation elle-même, ou sans référence. */
+/**
+ * Référence des écarts du comparateur : le net de la situation telle que saisie, moins la perte qu'elle laisse dans la
+ * société (voir src/backend/logic/net-compare.ts) ; `null` sans activité comparée. Sans perte, c'est le « Net du foyer ».
+ */
+export function referenceDesEcarts(result: ComparaisonResult): number | null {
+  const saisie = result.situationSaisie ?? result.scenarios.find(s => s.telleQueSaisie)
+  return saisie ? netCompare(saisie) : null
+}
+
+/**
+ * Écart d'une colonne avec la situation telle que saisie, chacune à son net une fois déduite la perte restée dans la
+ * société ; `null` pour cette situation elle-même, ou sans référence.
+ */
 export function ecartAvecLaSituationSaisie(result: ComparaisonResult, scenario: ScenarioStatut): number | null {
-  const reference = netDeLaSituationSaisie(result)
-  return reference === null || scenario.telleQueSaisie ? null : scenario.netApresImpots - reference
+  const reference = referenceDesEcarts(result)
+  return reference === null || scenario.telleQueSaisie ? null : netCompare(scenario) - reference
+}
+
+/** Une perte restée dans la société est-elle déduite quelque part dans cette comparaison (une colonne, ou la situation saisie) ? */
+export const avecUnePerteConservee = (result: ComparaisonResult) => (result.situationSaisie?.perteConservee ?? 0) > 0 || result.scenarios.some(s => (s.perteConservee ?? 0) > 0)
+
+/** Où reste la perte que le net du foyer ne montre pas : dans la société, ou sur le compte d'une activité en portage. */
+export const lieuDeLaPerte = (statut: ScenarioStatut["statut"]) => (statut === "portage" ? "sur le compte d'activité" : "dans la société")
+
+/** « 0 € (et 20 000 € de perte restée dans la société) » : le net d'une colonne, et la perte que la comparaison en déduit. */
+export function netEtPerte(colonne: { statut: ScenarioStatut["statut"]; netApresImpots: number; perteConservee?: number }): string {
+  const perte = colonne.perteConservee ?? 0
+  return perte > 0 ? `${euros(colonne.netApresImpots)} (et ${euros(perte)} de perte restée ${lieuDeLaPerte(colonne.statut)})` : euros(colonne.netApresImpots)
 }
 
 /**
@@ -99,6 +124,7 @@ export const estNonRetenue = (s: ScenarioStatut) => s.horsPlafond || s.regimeMic
 /** Ce que dit la cellule d'une colonne du portage salarial non retenue. */
 const PORTAGE_NON_RETENU: Record<RaisonPortageNonRetenu, string> = {
   sansPrestations: "non retenue : aucune prestation à facturer",
+  aDecouvert: "non retenue : frais supérieurs au chiffre d'affaires",
   salaries: "non retenue : salariés de l'activité"
 }
 
@@ -146,11 +172,13 @@ export function phraseDuVerdict(result: ComparaisonResult, activite: string): st
   if (!meilleur || !saisie) return null
   // Meilleur statut sous la situation saisie : il n'est pas présenté comme un gain, l'écart est expliqué.
   const sous = result.sousLaSituationSaisie
-  if (sous) return `Pour « ${activite} », le meilleur des statuts comparés, ${meilleur.libelle}, donnerait ${euros(meilleur.netApresImpots)}, contre ${euros(saisie.netApresImpots)} pour votre situation telle que saisie (${saisie.libelle}). ${sous.explication}`
+  if (sous) return `Pour « ${activite} », le meilleur des statuts comparés, ${meilleur.libelle}, donnerait ${netEtPerte(meilleur)}, contre ${netEtPerte(saisie)} pour votre situation telle que saisie (${saisie.libelle}). ${sous.explication}`
+  // Les écarts se mesurent sur le net, perte restée dans la société déduite : une société déficitaire ne passe pas devant
+  // parce que sa perte ne se voit pas dans le net du foyer.
   if (meilleur.telleQueSaisie) {
-    const suivant = [...result.scenarios].filter(s => !s.telleQueSaisie && !estNonRetenue(s)).sort((a, b) => b.netApresImpots - a.netApresImpots)[0]
-    const derriere = suivant ? ` Juste derrière : ${suivant.libelle}, ${ecartSigne(suivant.netApresImpots - saisie.netApresImpots)}.` : ""
-    return `Pour « ${activite} », le statut actuel, ${meilleur.libelle}, donne le meilleur net : ${euros(meilleur.netApresImpots)}.${derriere}`
+    const suivant = [...result.scenarios].filter(s => !s.telleQueSaisie && !estNonRetenue(s)).sort((a, b) => netCompare(b) - netCompare(a))[0]
+    const derriere = suivant ? ` Juste derrière : ${suivant.libelle}, ${ecartSigne(netCompare(suivant) - netCompare(saisie))}.` : ""
+    return `Pour « ${activite} », le statut actuel, ${meilleur.libelle}, donne le meilleur net : ${netEtPerte(meilleur)}.${derriere}`
   }
-  return `Pour « ${activite} », ${meilleur.libelle} donnerait le meilleur net : ${euros(meilleur.netApresImpots)}, soit ${ecartSigne(meilleur.netApresImpots - saisie.netApresImpots)} par rapport à votre situation telle que saisie (${saisie.libelle}, ${euros(saisie.netApresImpots)}).`
+  return `Pour « ${activite} », ${meilleur.libelle} donnerait le meilleur net : ${netEtPerte(meilleur)}, soit ${ecartSigne(netCompare(meilleur) - netCompare(saisie))} par rapport à votre situation telle que saisie (${saisie.libelle}, ${netEtPerte(saisie)}).`
 }

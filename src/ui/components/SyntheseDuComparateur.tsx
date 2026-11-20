@@ -7,10 +7,11 @@ import { useState } from "react"
 import { ChevronRight } from "lucide-react"
 import { ANCRES } from "@/lib/ancres"
 import { ecartDeRepartition } from "@/lib/ecart-de-repartition"
-import { ecartAvecLaSituationSaisie, phraseDuVerdict, raisonDeNonRetenue } from "@/lib/resume"
+import { ecartAvecLaSituationSaisie, lieuDeLaPerte, phraseDuVerdict, raisonDeNonRetenue } from "@/lib/resume"
 import { phraseDeLEcartDeFrais, posteFraisLabels } from "@/lib/comparateur-options"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { ecartSigne, euros } from "@/backend/logic/format"
+import { netCompare } from "@/backend/logic/net-compare"
 import { cn } from "@/lib/utils"
 import type { ComparaisonResult, PosteFrais, ScenarioStatut, StatutCompare } from "@/types"
 import { useAffichageResume } from "../hooks/useAffichage"
@@ -71,7 +72,7 @@ export function SituationTelleQueSaisie({ result }: { result: ComparaisonResult 
   if (!saisie || result.scenarios.length === 0 || result.scenarios.some(s => s.telleQueSaisie)) return null
   return (
     <p className="text-sm text-slate-700 dark:text-slate-200">
-      Votre situation telle que saisie ({saisie.libelle}) : <span className="font-semibold tabular-nums">{euros(saisie.netApresImpots)}</span> de net, comme dans les résultats. Les écarts du tableau se mesurent à partir de ce montant.
+      Votre situation telle que saisie ({saisie.libelle}) : <span className="font-semibold tabular-nums">{euros(saisie.netApresImpots)}</span> de net, comme dans les résultats{saisie.perteConservee ? <>, et <span className="font-semibold tabular-nums">{euros(saisie.perteConservee)}</span> de perte restée {lieuDeLaPerte(saisie.statut)}, déduite pour comparer</> : null}. Les écarts du tableau se mesurent à partir de ce montant.
     </p>
   )
 }
@@ -149,6 +150,7 @@ function CarteDeStatut({ scenario, result, meilleur }: { scenario: ScenarioStatu
       </div>
       <p className="shrink-0 text-right tabular-nums">
         <span className="block font-semibold">{euros(scenario.netApresImpots)}</span>
+        {scenario.perteConservee ? <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">et {euros(scenario.perteConservee)} de perte restée {lieuDeLaPerte(scenario.statut)}</span> : null}
         {ecart !== null ? <span className={cn("block text-xs", !nonRetenue && couleurDeLEcart(ecart))}>{ecartSigne(ecart)}</span> : null}
       </p>
     </li>
@@ -165,9 +167,9 @@ export function BoutonDuDetail({ ouvert, onClick }: { ouvert: boolean; onClick: 
   )
 }
 
-/** Sur téléphone, une carte par statut, triées par net : le tableau n'a plus à défiler en largeur. */
+/** Sur téléphone, une carte par statut, triées par net (perte restée dans la société déduite) : le tableau n'a plus à défiler en largeur. */
 export function CartesDesStatuts({ result, className }: { result: ComparaisonResult; className?: string }) {
-  const tries = [...result.scenarios].sort((a, b) => b.netApresImpots - a.netApresImpots)
+  const tries = [...result.scenarios].sort((a, b) => netCompare(b) - netCompare(a))
   return (
     <ul aria-label="Net dans la poche selon le statut" className={cn("space-y-2", className)}>
       {tries.map(s => (

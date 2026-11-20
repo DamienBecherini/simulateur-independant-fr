@@ -7,7 +7,8 @@ import { conditionsDuPortageEnPhrase, defaultFraisFonctionnement, libellesRepart
 import { dateDeCreationLisible, dispositifsDesAnnees, exonerationsDeZone, fluxParActeur, fraisProfessionnelsDesPersonnes, hypothesesDesExonerationsDeZone, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { LIMITES, TITRE_DES_LIMITES } from "./limites-du-modele"
 import { numeroterNotes } from "./notes"
-import { ecartAvecLaSituationSaisie, raisonDeNonRetenue } from "./resume"
+import { avecUnePerteConservee, ecartAvecLaSituationSaisie, raisonDeNonRetenue } from "./resume"
+import { netCompare } from "@/backend/logic/net-compare"
 import { professionDeLaFiche, statutEtProfession } from "./professions"
 import { reglesDeLAnneeAffichee } from "./regles-affichees"
 import { enTexteBrut, eurosEnTexteBrut, pourcentDeNombre } from "@/backend/logic/format"
@@ -349,6 +350,7 @@ function tableauDeComparaison(resultat: ComparaisonResult, nomActivite: string):
     ["Impôt sur le revenu", s => eurosEnTexteBrut(s.impotSurLeRevenu)],
     ["Prélèvements sociaux", s => eurosEnTexteBrut(s.prelevementsSociaux)],
     [`Conservé dans « ${echapper(nomActivite)} »`, s => eurosEnTexteBrut(s.resultatConserveActivite)],
+    ...(avecUnePerteConservee(resultat) ? [["Net, perte restée dans l'activité déduite", (s: ScenarioStatut) => eurosEnTexteBrut(netCompare(s))] as [string, (s: ScenarioStatut) => string]] : []),
     ["Protection sociale", s => `${s.protectionSociale.etoiles}/5, ${s.protectionSociale.trimestres} trim. de retraite`],
     ["Écart avec votre situation telle que saisie", s => {
       const ecart = ecartAvecLaSituationSaisie(resultat, s)
@@ -379,7 +381,7 @@ function sectionComparateur(session: SimulationAnnuelle, comparaison: Comparaiso
   const intro = "L'activité est simulée dans chaque statut, le reste de la simulation restant identique. Les montants portent sur toute la simulation, sauf la ligne « Conservé », propre à l'activité. Comparaison calculée à l'export avec les réglages du comparateur :"
   const tableauOuAbsence = resultat.scenarios.length > 0 ? tableauDeComparaison(resultat, comparaison.nomActivite) + notesDeComparaison(resultat) : "Aucun statut comparé."
   const cfe = resultat.noteCFE ? `\n- ${echapper(resultat.noteCFE)}` : ""
-  const saisie = resultat.situationSaisie ? `\n- Votre situation telle que saisie (${resultat.situationSaisie.libelle}) : ${eurosEnTexteBrut(resultat.situationSaisie.netApresImpots)} de net, comme dans les résultats` : ""
+  const saisie = resultat.situationSaisie ? `\n- Votre situation telle que saisie (${resultat.situationSaisie.libelle}) : ${eurosEnTexteBrut(resultat.situationSaisie.netApresImpots)} de net, comme dans les résultats${resultat.situationSaisie.perteConservee ? `, et ${eurosEnTexteBrut(resultat.situationSaisie.perteConservee)} de perte restée dans l'activité, déduite pour comparer` : ""}` : ""
   // Un meilleur statut sous la situation saisie : la raison de l'écart, comme dans le verdict de l'application.
   const sous = resultat.sousLaSituationSaisie ? `\n- ${enTexteBrut(resultat.sousLaSituationSaisie.explication)}` : ""
   return `${titre}\n\n${intro}\n\n${reglagesUtilises(options, resultat.scenarios)}${cfe}${saisie}${sous}\n\n${tableauOuAbsence}${couplesEnUnionLibre(session, resultat)}`

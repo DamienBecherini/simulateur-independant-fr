@@ -4,6 +4,7 @@ import { estSocieteIS, STATUTS_COMPARES, type ComparaisonCouple, type Comparaiso
 import { estTelleQueSaisie, libelleDeLaColonne, libelleDuStatut, scenarioDeLaColonne, type ColonneEtudiee } from "./colonne-du-comparateur.js"
 import { activiteComparee, estMicro, personnesDeLActivite, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { avecLaCFEDeLAnnee } from "./frais-de-fonctionnement.js"
+import { netCompare } from "./net-compare.js"
 import { optimiserLaColonne } from "./optimisation-remuneration.js"
 import { AUCUNE_CHARGE, avecLaRemunerationDeLaGrille, ECART_NEGLIGEABLE, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
 import { microInterdite, professionDe, raisonMicroInterdite } from "./professions.js"
@@ -73,7 +74,8 @@ export function statutsDeLaComparaison(profession: ProfessionReglementee | null)
  * une profession qui exerce en principe en société d'exercice libéral n'a pas de SASU ou d'EURL classique à désigner ;
  * leurs colonnes restent, avec leur avertissement, mais le meilleur net se choisit ailleurs (ADR 015). Une colonne du
  * portage salarial sans prestations à facturer, ou avec des salariés, n'est pas tenable non plus (ADR 016), ni une
- * société dont la grille verse une rémunération qu'elle ne gagne pas : ce net ne vient pas de l'activité.
+ * société dont la grille verse une rémunération qu'elle ne gagne pas : ce net ne vient pas de l'activité. Les
+ * colonnes se comparent sur leur net une fois déduite la perte restée dans la société (voir net-compare.ts).
  */
 function meilleurStatut(scenarios: ScenarioStatut[], profession: ProfessionReglementee | null): { meilleur: StatutCompare; warnings: string[] } {
   const sansSocieteClassique = profession?.societeExerciceLiberal === true
@@ -84,7 +86,7 @@ function meilleurStatut(scenarios: ScenarioStatut[], profession: ProfessionRegle
   const ecartee = (s: ScenarioStatut) => s.horsPlafond || s.regimeMicroFerme !== undefined || s.portageNonRetenu !== undefined || s.remunerationNonCouverte === true
   const tenables = scenarios.filter(s => !ecartee(s) && !(sansSocieteClassique && estSocieteIS(s.statut)))
   const candidats = tenables.length > 0 ? tenables : scenarios
-  return { meilleur: candidats.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), candidats[0]).statut, warnings }
+  return { meilleur: candidats.reduce((a, b) => (netCompare(b) > netCompare(a) ? b : a), candidats[0]).statut, warnings }
 }
 
 export const TYPES_DE_CHIFFRE_D_AFFAIRES: ReadonlySet<FinancialFlow["type"]> = new Set<FinancialFlow["type"]>(["ca_services", "ca_vente", "ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente"])
@@ -112,7 +114,7 @@ function motifNonRetenu(actuel: ScenarioStatut | undefined, profession: Professi
 /** La situation saisie, pour expliquer un meilleur statut qui fait moins bien qu'elle : son net, ses trimestres, son statut retenu ou non. */
 function referenceDeLaSaisie(colonne: ColonneEtudiee, scenarios: ScenarioStatut[], report: SimulationReport, profession: ProfessionReglementee | null): ReferenceDeLaSituationSaisie {
   const saisie = scenarios.find(s => s.telleQueSaisie) ?? colonneTelleQueSaisie(colonne, report)
-  return { netApresImpots: report.totalNetApresImpots, trimestres: saisie.protectionSociale.trimestres, motifNonRetenu: motifNonRetenu(scenarios.find(s => s.actuel), profession) }
+  return { netCompare: report.totalNetApresImpots - (saisie.perteConservee ?? 0), trimestres: saisie.protectionSociale.trimestres, motifNonRetenu: motifNonRetenu(scenarios.find(s => s.actuel), profession) }
 }
 
 /**
@@ -143,7 +145,7 @@ export function colonneDuStatut(colonne: ColonneEtudiee, statut: StatutCompare, 
 function ouLaSituationSaisie(arbitree: ScenarioStatut, saisie: ScenarioStatut): ScenarioStatut {
   const retenue = arbitree.remunerationOptimale
   const trimestresEnPlus = retenue?.avecRetraite === true && arbitree.protectionSociale.trimestres > saisie.protectionSociale.trimestres
-  if (!retenue || trimestresEnPlus || Math.abs(arbitree.netApresImpots - saisie.netApresImpots) >= ECART_NEGLIGEABLE) return arbitree
+  if (!retenue || trimestresEnPlus || Math.abs(netCompare(arbitree) - netCompare(saisie)) >= ECART_NEGLIGEABLE) return arbitree
   return {
     ...saisie,
     libelle: libelleDuStatut(saisie.statut),
@@ -194,7 +196,8 @@ export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: Compar
   const { source } = colonne
   const profession = professionDe(source, regles)
   const actuel = statutActuel(source)
-  const situationSaisie = { statut: actuel, libelle: libelleDuStatut(actuel), netApresImpots: reportActuel.totalNetApresImpots, ...repartitionSaisie(colonneTelleQueSaisie(colonne, reportActuel)) }
+  const telleQueSaisie = colonneTelleQueSaisie(colonne, reportActuel)
+  const situationSaisie = { statut: actuel, libelle: libelleDuStatut(actuel), netApresImpots: reportActuel.totalNetApresImpots, ...(telleQueSaisie.perteConservee ? { perteConservee: telleQueSaisie.perteConservee } : {}), ...repartitionSaisie(telleQueSaisie) }
 
   const colonnes = colonnesDeLaComparaison(colonne, statutsDeLaComparaison(profession), reportActuel)
   const avertissements = avertissementsDeLActivite(session, source, profession)

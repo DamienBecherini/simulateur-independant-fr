@@ -6,6 +6,7 @@ import { convertirLActivite, estMicro, statutActuel, type Activite } from "./con
 import { ecartDeFrais } from "./frais-de-fonctionnement.js"
 import { montantBaremeKilometrique } from "./frais-kilometriques.js"
 import type { ReglesFiscales } from "./regles.js"
+import { PRECISION_REMUNERATION, remunerationMaximale } from "./remuneration-maximale.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 
 /*
@@ -20,8 +21,7 @@ import { runMetaSimulation } from "./simulation-engine.js"
  * (une simulation par rémunération essayée) s'appuient tous deux sur ce module.
  */
 
-/** Précision des rémunérations calculées. */
-export const PRECISION_REMUNERATION = 100
+export { PRECISION_REMUNERATION, remunerationMaximale }
 
 /** La colonne avec d'autres réglages. */
 export function avecLesReglages(colonne: ColonneEtudiee, reglages: Partial<ComparaisonOptions>): ColonneEtudiee {
@@ -79,22 +79,6 @@ export function sessionConvertie({ donnees, source, options, regles }: Pick<Colo
   // La rémunération et les dividendes calculés sont saisis sur janvier : seuls les totaux annuels comptent.
   monthlyData[0] = { ...monthlyData[0], flows: [...monthlyData[0].flows, ...fluxAjoutes(source, statut, options, dividendes), ...deplacementsRembourses(source, statut, regles)] }
   return { ...convertie, monthlyData }
-}
-
-/**
- * Rémunération nette la plus haute qui laisse un bénéfice positif ou nul, à 100 € près. Le bénéfice baisse quand
- * la rémunération monte : on double la borne haute jusqu'à le rendre négatif, puis on procède par dichotomie.
- */
-export function remunerationMaximale(benefice: (remuneration: number) => number): number {
-  let haut = Math.max(PRECISION_REMUNERATION, benefice(0))
-  for (let i = 0; i < 20 && benefice(haut) >= 0; i++) haut *= 2
-  let bas = 0
-  while (haut - bas > PRECISION_REMUNERATION / 10) {
-    const milieu = (bas + haut) / 2
-    if (benefice(milieu) >= 0) bas = milieu
-    else haut = milieu
-  }
-  return Math.floor(bas / PRECISION_REMUNERATION) * PRECISION_REMUNERATION
 }
 
 /** Bénéfice après impôt sur les sociétés que la société garde avec la rémunération de la colonne, avant tout dividende. */

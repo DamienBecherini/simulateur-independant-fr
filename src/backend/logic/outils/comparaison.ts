@@ -62,6 +62,7 @@ const ScenarioSchema = z.object({
   horsPlafond: z.boolean(),
   remunerationDemandee: z.number().nullable().describe("SASU, EURL : la rémunération demandée, quand elle dépassait ce que la société peut verser sans déficit ; remunerationRetenue est alors ce maximum."),
   remunerationNonCouverte: z.boolean().describe("SASU, EURL : la grille verse une rémunération supérieure au bénéfice ; colonne jamais désignée meilleur statut."),
+  perteConservee: z.number().describe("SASU, EURL : perte de l'année restée dans la société (0 sans perte). Le meilleur statut se désigne sur netApresImpots moins cette perte."),
   protectionSociale: z.object({ etoiles: z.number(), trimestres: z.number(), resume: z.string() }),
   remunerationRetenue: z.number().nullable(),
   avertissements: z.array(z.string())
@@ -76,6 +77,7 @@ const resumeDuScenario = (s: ScenarioStatut): z.infer<typeof ScenarioSchema> => 
   horsPlafond: s.horsPlafond,
   remunerationDemandee: s.remunerationPlafonnee ? arrondir(s.remunerationPlafonnee.demandee) : null,
   remunerationNonCouverte: s.remunerationNonCouverte === true,
+  perteConservee: arrondir(s.perteConservee ?? 0),
   protectionSociale: s.protectionSociale,
   remunerationRetenue: s.remunerationOptimale ? arrondir(s.remunerationOptimale.remunerationNette) : s.partage ? arrondir(s.partage.remunerationNette) : null,
   avertissements: s.warnings

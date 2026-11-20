@@ -105,6 +105,20 @@ describe("la colonne « Portage salarial »", () => {
     expect(resultat.meilleur).not.toBe("portage")
   })
 
+  it("des frais supérieurs au chiffre d'affaires : une société de portage ne fait pas crédit, la colonne n'est pas retenue", () => {
+    const perte: Flux[] = [["s1", "ca_services", 10000], ["s1", "deductible_expense", 30000]]
+    const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], perte, options("s1"))
+    const colonne = colonneDuPortage(resultat)
+    expect(colonne.portageNonRetenu).toBe("aDecouvert")
+    expect(colonne.resultatConserveActivite).toBeLessThan(0)
+    expect(colonne.warnings).toContainEqual(expect.stringContaining("Une société de portage ne fait pas crédit"))
+    expect(resultat.meilleur).not.toBe("portage")
+
+    // Des frais que le chiffre d'affaires couvre : la colonne reste retenue.
+    const tenable = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], [["s1", "ca_services", 40000], ["s1", "deductible_expense", 30000]], options("s1"))
+    expect(colonneDuPortage(tenable).portageNonRetenu).toBeUndefined()
+  })
+
   it("une activité avec des salariés : la colonne n'est pas retenue, même si elle fait mieux", () => {
     const resultat = comparer([...alice, personne("dan")], [...titulaire, relation("dan", "m1", "Salarié")], [["m1", "ca_micro_services_bnc", 48000], ["m1", "expense", 30000], ["dan", "salary", 20000]], options("m1", { portage: { tauxFraisDeGestion: 0 } }))
     expect(colonneDuPortage(resultat).portageNonRetenu).toBe("salaries")

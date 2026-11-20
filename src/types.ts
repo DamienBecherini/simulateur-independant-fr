@@ -1073,6 +1073,8 @@ interface SituationSaisie {
   statut: StatutCompare
   libelle: string
   netApresImpots: number
+  /** Perte de l'année restée dans la société (ou découvert du compte d'une activité en portage), déduite du net pour mesurer les écarts ; absente sans perte. */
+  perteConservee?: number
   /**
    * En société (SASU, EURL) : ce que la grille verse au dirigeant et ce que le foyer en paie. La colonne du même statut
    * simulée avec un autre partage du bénéfice s'y compare poste par poste, pour dire d'où vient son écart.
@@ -1113,7 +1115,7 @@ export interface RemunerationPlafonnee {
 }
 
 /** Pourquoi la colonne du portage salarial n'est pas retenue (voir `ScenarioStatut.portageNonRetenu`). */
-export type RaisonPortageNonRetenu = "sansPrestations" | "salaries"
+export type RaisonPortageNonRetenu = "sansPrestations" | "aDecouvert" | "salaries"
 
 export interface ScenarioStatut {
   statut: StatutCompare
@@ -1148,6 +1150,12 @@ export interface ScenarioStatut {
    * l'activité : la colonne n'est jamais désignée meilleur net.
    */
   remunerationNonCouverte?: true
+  /**
+   * Perte de l'année restée dans l'activité, en euros positifs : celle d'une société déficitaire, ou le découvert du
+   * compte d'une activité en portage ; absente sans perte. Le net du foyer ne la montre pas : elle en est déduite pour
+   * comparer les colonnes (voir src/backend/logic/net-compare.ts).
+   */
+  perteConservee?: number
   protectionSociale: ProtectionSociale
   /** Indicateurs de toute la simulation, l'activité ayant pris ce statut. */
   netApresImpots: number
@@ -1192,7 +1200,7 @@ export interface ComparaisonCouple {
 
 export interface ComparaisonResult {
   scenarios: ScenarioStatut[]
-  /** Statut au meilleur net après impôts ; `null` sans activité, ou sans chiffre d'affaires à comparer. */
+  /** Statut au meilleur net après impôts, perte restée dans la société déduite ; `null` sans activité, ou sans chiffre d'affaires à comparer. */
   meilleur: StatutCompare | null
   /** L'activité comparée telle que saisie, référence des écarts : son net est celui des résultats de l'année. */
   situationSaisie?: SituationSaisie
