@@ -6,6 +6,8 @@
 // Les points de rupture CSS (`sm:`, 640 px) suivent la largeur de la fenêtre, pas la largeur zoomée : dès 640 px
 // de fenêtre, c'est la mise en page large qui s'affiche, même si le zoom ne lui laisse que 400 px. Elle demande
 // plus de place que la mise en page compacte, d'où deux largeurs minimales. Valeurs mesurées dans Chromium.
+// La barre d'outils fait exception : elle suit sa propre largeur (requêtes de conteneur, BarreDOutils.tsx), donc la
+// largeur zoomée ; e2e-web/zoom-lisibilite.web.ts vérifie que la page et ses fenêtres restent lisibles à chaque zoom.
 // La mise en page compacte tient dans 320 px (critère 1.4.10 des WCAG) : à cette largeur, le zoom reste à 100 %, et
 // textes et zones cliquables gardent leur taille.
 

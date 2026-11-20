@@ -78,64 +78,71 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
 
   return (
     <>
-      <nav aria-label="Barre d'outils" className="print:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-2 backdrop-blur-sm bg-background/80 border-b">
-        {/* Sur un téléphone, la barre perd ses marges verticales (moins de hauteur collée en haut). Sous 1024 px, elle n'a
-            pas non plus de marges latérales : entre 640 et 900 px, ses boutons ne tiendraient pas avec. */}
-        <div className="container mx-auto flex items-center justify-between px-0 sm:py-2 lg:px-8">
-          {/* Groupe de boutons de gauche */}
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-9 sm:w-10 [&_svg]:size-6" onClick={onParametres}>
-              <Settings className="text-slate-600 dark:text-slate-400" />
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.annuler} disabled={!historique.peutAnnuler} className="h-10 w-9 sm:w-10 [&_svg]:size-6 sm:ml-2">
-              <Undo2 className="dark:text-slate-300" />
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.retablir} disabled={!historique.peutRetablir} className="h-10 w-9 sm:w-10 [&_svg]:size-6">
-              <Redo2 className="dark:text-slate-300" />
-            </Button>
-            {indicateurIA}
-            {/* Sur un écran large, les deux boutons les plus utiles à qui découvre le simulateur montrent leur nom ;
-                en dessous, leur icône seule. Sur un téléphone (moins de 640 px), ils passent dans le menu « Plus
-                d'actions », avec l'affichage et le thème : la barre garde les actions principales sans rien couper. */}
-            <Button variant="ghost" size="icon" aria-label="Donner mon avis" title="Donner mon avis" onClick={e => avis.ouvrir(e.currentTarget)} className="h-10 w-9 max-sm:hidden sm:ml-2 sm:w-10 lg:w-auto lg:gap-2 lg:px-3 [&_svg]:size-6">
-              <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
-              <span className="hidden lg:inline">Donner mon avis</span>
-            </Button>
-            <BoutonDesMontages variant="outline" size="sm" aria-label="Situations types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 max-sm:hidden sm:ml-2" onCharger={chargement.onChargerUnMontage} confirmationNecessaire={chargement.confirmationNecessaire} nomDeLaSession={session.name}>
-              <span className="hidden md:inline">Situations types</span>
-            </BoutonDesMontages>
-            {/* En mode développement seulement : scénarios prêts à charger pour vérifier une fonctionnalité. */}
-            <BoutonDesTests onCharger={chargement.onChargerUneSession} />
-          </div>
-          {/* Groupe de boutons de droite */}
-          <div className="flex items-center gap-1">
-            <div className="max-sm:hidden">
-              <SelecteurAffichage affichage={affichage} onChange={onAffichage} />
+      {/* La barre s'adapte à sa propre largeur (requêtes de conteneur, « @min-[40rem]: »), pas à celle de la fenêtre :
+          avec l'interface agrandie, une fenêtre de 1 280 px zoomée à 200 % n'offre que 640 px, et la barre y prend sa
+          forme de 640 px au lieu de pousser ses boutons hors de l'écran. Mêmes seuils que les points de rupture de la
+          page : 40rem (640 px), 48rem (768 px), 64rem (1 024 px). Le conteneur n'a pas de marge intérieure : sa largeur
+          est celle de la fenêtre au zoom par défaut. */}
+      <nav aria-label="Barre d'outils" className="@container print:hidden fixed top-0 left-0 right-0 z-50 backdrop-blur-sm bg-background/80 border-b">
+        <div className="flex items-center justify-between p-2">
+          {/* Sur un téléphone, la barre perd ses marges verticales (moins de hauteur collée en haut). Sous 1024 px, elle n'a
+              pas non plus de marges latérales : entre 640 et 900 px, ses boutons ne tiendraient pas avec. */}
+          <div className="container mx-auto flex items-center justify-between px-0 @min-[40rem]:py-2 @min-[64rem]:px-8">
+            {/* Groupe de boutons de gauche */}
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-9 @min-[40rem]:w-10 [&_svg]:size-6" onClick={onParametres}>
+                <Settings className="text-slate-600 dark:text-slate-400" />
+              </Button>
+              <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.annuler} disabled={!historique.peutAnnuler} className="h-10 w-9 @min-[40rem]:w-10 [&_svg]:size-6 @min-[40rem]:ml-2">
+                <Undo2 className="dark:text-slate-300" />
+              </Button>
+              <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.retablir} disabled={!historique.peutRetablir} className="h-10 w-9 @min-[40rem]:w-10 [&_svg]:size-6">
+                <Redo2 className="dark:text-slate-300" />
+              </Button>
+              {indicateurIA}
+              {/* Sur un écran large, les deux boutons les plus utiles à qui découvre le simulateur montrent leur nom ;
+                  en dessous, leur icône seule. Sur un téléphone (moins de 640 px), ils passent dans le menu « Plus
+                  d'actions », avec l'affichage et le thème : la barre garde les actions principales sans rien couper. */}
+              <Button variant="ghost" size="icon" aria-label="Donner mon avis" title="Donner mon avis" onClick={e => avis.ouvrir(e.currentTarget)} className="h-10 w-9 @max-[40rem]:hidden @min-[40rem]:ml-2 @min-[40rem]:w-10 @min-[64rem]:w-auto @min-[64rem]:gap-2 @min-[64rem]:px-3 [&_svg]:size-6">
+                <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
+                <span className="hidden @min-[64rem]:inline">Donner mon avis</span>
+              </Button>
+              <BoutonDesMontages variant="outline" size="sm" aria-label="Situations types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 @max-[40rem]:hidden @min-[40rem]:ml-2" onCharger={chargement.onChargerUnMontage} confirmationNecessaire={chargement.confirmationNecessaire} nomDeLaSession={session.name}>
+                <span className="hidden @min-[48rem]:inline">Situations types</span>
+              </BoutonDesMontages>
+              {/* En mode développement seulement : scénarios prêts à charger pour vérifier une fonctionnalité. */}
+              <BoutonDesTests onCharger={chargement.onChargerUneSession} />
             </div>
-            {/* Son nom visible à partir de 1024 px ; en dessous, l'icône seule, pour que la barre tienne. */}
-            <Button variant="outline" size="sm" aria-label="Exporter" title="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 sm:mr-2" onClick={onExporter}>
-              <Download className="size-4" />
-              <span className="hidden lg:inline">Exporter</span>
-            </Button>
-            {/* Sur un écran tactile de moins de 768 px, on zoome avec les doigts : les boutons de zoom y laissent la place
-                aux autres. Dans une fenêtre très étroite (moins de 416 px), ils s'effacent aussi : le zoom du navigateur reste. */}
-            <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoom.zoomOut} disabled={!zoom.canZoomOut} className="h-10 w-9 pointer-coarse:max-md:hidden max-[26rem]:hidden sm:w-10 [&_svg]:size-6">
-              <ZoomOut className="text-slate-600 dark:text-slate-400" />
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoom.zoomIn} disabled={!zoom.canZoomIn} className="h-10 w-9 pointer-coarse:max-md:hidden max-[26rem]:hidden sm:w-10 [&_svg]:size-6 sm:mr-4">
-              <ZoomIn className="text-slate-600 dark:text-slate-400" />
-            </Button>
-            <ThemeToggle className="max-sm:hidden" />
-            <MenuPlusDActions
-              className="sm:hidden"
-              affichage={affichage}
-              onAffichage={onAffichage}
-              onAvis={avis.ouvrir}
-              onMontages={declencheur => {
-                declencheurDesMontages.current = declencheur
-                setMontagesDuMenu(true)
-              }}
-            />
+            {/* Groupe de boutons de droite */}
+            <div className="flex items-center gap-1">
+              <div className="@max-[40rem]:hidden">
+                <SelecteurAffichage affichage={affichage} onChange={onAffichage} />
+              </div>
+              {/* Son nom visible à partir de 1024 px ; en dessous, l'icône seule, pour que la barre tienne. */}
+              <Button variant="outline" size="sm" aria-label="Exporter" title="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 @min-[40rem]:mr-2" onClick={onExporter}>
+                <Download className="size-4" />
+                <span className="hidden @min-[64rem]:inline">Exporter</span>
+              </Button>
+              {/* Sur un écran tactile de moins de 768 px, on zoome avec les doigts : les boutons de zoom y laissent la place
+                  aux autres. Dans une fenêtre très étroite (moins de 416 px), ils s'effacent aussi : le zoom du navigateur reste. */}
+              <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoom.zoomOut} disabled={!zoom.canZoomOut} className="h-10 w-9 pointer-coarse:@max-[48rem]:hidden @max-[26rem]:hidden @min-[40rem]:w-10 [&_svg]:size-6">
+                <ZoomOut className="text-slate-600 dark:text-slate-400" />
+              </Button>
+              <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoom.zoomIn} disabled={!zoom.canZoomIn} className="h-10 w-9 pointer-coarse:@max-[48rem]:hidden @max-[26rem]:hidden @min-[40rem]:w-10 [&_svg]:size-6 @min-[40rem]:mr-4">
+                <ZoomIn className="text-slate-600 dark:text-slate-400" />
+              </Button>
+              <ThemeToggle className="@max-[40rem]:hidden" />
+              <MenuPlusDActions
+                className="@min-[40rem]:hidden"
+                affichage={affichage}
+                onAffichage={onAffichage}
+                onAvis={avis.ouvrir}
+                onMontages={declencheur => {
+                  declencheurDesMontages.current = declencheur
+                  setMontagesDuMenu(true)
+                }}
+              />
+            </div>
           </div>
         </div>
       </nav>

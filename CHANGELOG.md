@@ -12,10 +12,12 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ### Corrigé
 
+- **Barre d'outils lisible avec l'interface agrandie.** La barre d'outils choisissait sa forme d'après la largeur de la fenêtre, alors que le zoom réduit la place disponible : à fort zoom (200 % dans une fenêtre de 1 280 px ou de 1 024 px, 173 % dans une fenêtre de 800 px), ses boutons de droite (affichage, export, « Zoom avant », thème) sortaient de l'écran, sans moyen de les atteindre. Elle suit désormais sa largeur réelle : zoomée, elle réduit ses boutons à leur icône, puis range les actions secondaires dans « Plus d'actions », comme elle le fait dans une fenêtre plus étroite.
 - **La fiche « Modifier » d'un acteur tient dans une fenêtre basse.** Son titre et ses boutons « Annuler » et « Enregistrer » restent à l'écran, et seule la zone des réglages défile : dans une fenêtre de moins de 650 px de haut, ou avec l'interface agrandie, la fiche dépassait par le haut et par le bas.
 
 ### Maintenance
 
+- Lisibilité sous zoom vérifiée par les tests de la démo web (`e2e-web/zoom-lisibilite.web.ts`) : à 150 % et 200 %, dans cinq largeurs de fenêtre et les trois affichages, aucun texte ni bouton hors de l'écran, coupé ou trop petit, et chaque fenêtre (situations types, export, paramètres, fiche d'un acteur) tient dans l'écran.
 - Actions GitHub des workflows passées à leurs versions pour Node.js 24 (checkout, setup-node, upload-artifact, download-artifact, deploy-pages, upload-pages-artifact, analyse SonarQube) : GitHub retire Node.js 20 de ses runners.
 
 ## [0.13.0] — 2026-11-19
