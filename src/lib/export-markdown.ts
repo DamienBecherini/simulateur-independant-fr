@@ -4,7 +4,7 @@
 
 import { estSocieteIS, type ComparaisonOptions, type ComparaisonResult, type Company, type DeplacementsProfessionnels, type Entity, type FraisProfessionnelsResult, type MicroEntreprise, type ModeRepartition, type Person, type Relationship, type ScenarioStatut, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport } from "@/types"
 import { conditionsDuPortageEnPhrase, defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
-import { dateDeCreationLisible, dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
+import { dateDeCreationLisible, dispositifsDesAnnees, exonerationsDeZone, fluxParActeur, fraisProfessionnelsDesPersonnes, hypothesesDesExonerationsDeZone, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { LIMITES, TITRE_DES_LIMITES } from "./limites-du-modele"
 import { numeroterNotes } from "./notes"
 import { ecartAvecLaSituationSaisie, raisonDeNonRetenue } from "./resume"
@@ -75,7 +75,14 @@ function detailDeLActeur(entity: Entity, annee: number): string {
 function detailCommunDesActivites(entity: Company | MicroEntreprise, annee: number): string {
   const creation = dateDeCreationLisible(entity)
   const profession = professionDeLaFiche(entity, reglesDeLAnneeAffichee(annee))
-  return `${creation ? ` ; créée en ${creation}` : ""}${profession ? ` ; profession : ${profession}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}`
+  return `${creation ? ` ; créée en ${creation}` : ""}${profession ? ` ; profession : ${profession}` : ""}${detailDesDeplacements(entity.deplacementsProfessionnels)}${detailDeLImplantation(entity)}`
+}
+
+/** Activité déclarée implantée en zone franche urbaine ou en quartier prioritaire (ADR 017), et la part de son chiffre d'affaires qui y est réalisée. */
+function detailDeLImplantation({ implantationEnZone: zone }: Company | MicroEntreprise): string {
+  if (!zone) return ""
+  const part = zone.partDuChiffreDAffaires ?? 1
+  return ` ; implantée en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV)${part < 1 ? `, pour ${pourcentage(part)} de son chiffre d'affaires` : ""}`
 }
 
 /** Société à l'IS (capital, réserves de départ) ou entreprise individuelle au régime réel. */
@@ -192,6 +199,7 @@ function sectionResultats(session: SimulationAnnuelle, report: SimulationReport 
     sousSectionDeplacements(report),
     sousSectionVersementLiberatoire(report),
     sousSectionDispositifs(report),
+    sousSectionExonerationsDeZone(report),
     sousSectionFoyers(session, report),
     sousSectionFraisProfessionnels(report)
   ].filter(Boolean)
@@ -217,6 +225,19 @@ function sousSectionReserves(report: SimulationReport): string {
 function sousSectionDispositifs(report: SimulationReport): string {
   const notes = report.activities.flatMap(a => (a.dispositifs ?? []).map(note => `- ${echapper(a.name)} : ${echapper(note)}`))
   return notes.length > 0 ? `### Dispositifs dans le temps\n\n${notes.join("\n")}` : ""
+}
+
+/**
+ * Bénéfices exonérés d'impôt en zone franche urbaine ou en quartier prioritaire (ADR 017), et ce que le calcul suppose :
+ * les hypothèses que la fiche de l'activité montre à qui coche la case. Rien quand aucun bénéfice n'est exonéré.
+ */
+function sousSectionExonerationsDeZone(report: SimulationReport): string {
+  const lignes = exonerationsDeZone(report).map(({ activite, regime, exoneration: e }) => [echapper(activite), regime, pourcentage(e.partExoneree), pourcentage(e.partDansLaZone), `**${eurosEnTexteBrut(e.beneficeExonere)}**`, e.plafond === undefined ? "aucun" : `${eurosEnTexteBrut(e.plafond)}${e.plafondAtteint ? " (atteint)" : ""}`])
+  if (lignes.length === 0) return ""
+  const hypotheses = hypothesesDesExonerationsDeZone(report).map(h => `- ${echapper(h)}`)
+  const blocHypotheses = hypotheses.length > 0 ? `\n\nCe que ce calcul suppose :\n\n${hypotheses.join("\n")}` : ""
+  const entete = ["Activité", "Régime", "Part du bénéfice exonérée", "Part du chiffre d'affaires dans la zone", "Bénéfice exonéré d'impôt", "Plafond de l'année"]
+  return `### Exonération d'impôt en zone\n\nBénéfice exonéré d'impôt sur les bénéfices pour une activité implantée en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV), d'après sa date de création. Les conditions d'accès au régime ne sont pas vérifiées : voir les avertissements.\n\n${tableau(entete, lignes, [2, 3, 4, 5])}${blocHypotheses}`
 }
 
 /** Déplacements professionnels des activités au barème kilométrique, compris dans leurs charges ; rien sans déplacements. */
