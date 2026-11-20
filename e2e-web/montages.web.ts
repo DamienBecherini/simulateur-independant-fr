@@ -1,6 +1,7 @@
 // e2e-web/montages.web.ts
 // Montages types dans la démo web : la fenêtre s'ouvre depuis les paramètres, montre le détail d'une situation et le
-// charge à la place de la simulation d'exemple, sans confirmation tant qu'elle n'est pas retouchée. Accessibilité en clair, en sombre et à 375 px.
+// charge à la place de la simulation d'exemple, sans confirmation tant qu'elle n'est pas retouchée. Une recherche et des
+// filtres (statut, foyer) retrouvent une situation dans la bibliothèque. Accessibilité en clair, en sombre et à 375 px.
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
@@ -72,6 +73,42 @@ test("sur l'exemple retouché, la confirmation précède le remplacement ; « An
 })
 
 for (const theme of ["clair", "sombre"] as const) {
+  test(`la recherche et les filtres retrouvent une situation, sans violation WCAG, thème ${theme}`, async ({ page }) => {
+    await page.goto("./")
+    if (theme === "sombre") {
+      await page.getByRole("switch", { name: "Changer de thème" }).click()
+      await expect(page.locator("html")).toHaveClass(/dark/)
+    }
+    const montages = await ouvrirLesMontages(page)
+    const cartes = montages.getByRole("list", { name: "Situations types" }).getByRole("heading", { level: 3 })
+    const total = await cartes.count()
+    expect(total).toBeGreaterThanOrEqual(12)
+    // À la souris, on tape tout de suite : le focus est sur la recherche.
+    const recherche = montages.getByRole("searchbox", { name: "Rechercher une situation" })
+    await expect(recherche).toBeFocused()
+
+    await page.keyboard.type("kine")
+    await expect(cartes).toHaveText(["Kinésithérapeute conventionné en entreprise individuelle"])
+    await expect(montages.getByText(`1 situation sur ${total}`)).toBeVisible()
+    await montages.getByRole("button", { name: "Tout afficher" }).click()
+    await expect(cartes).toHaveCount(total)
+
+    // Deux filtres : les SASU d'un couple.
+    await montages.getByRole("button", { name: "SASU", exact: true }).click()
+    await montages.getByRole("button", { name: "En couple", exact: true }).click()
+    await expect(montages.getByRole("button", { name: "SASU", exact: true })).toHaveAttribute("aria-pressed", "true")
+    await expect(cartes).toHaveText(["SASU avec un conjoint salarié ailleurs", "Micro-entreprise et SASU du conjoint", "Conjoint salarié de la SASU"])
+    await auditer(page, `montages types filtrés, ${theme}`, "[role=dialog]")
+
+    // Les critères sont gardés au retour du détail, et la situation trouvée se charge.
+    await montages.getByRole("button", { name: "Détails de la situation « Conjoint salarié de la SASU »" }).click()
+    await page.getByRole("dialog", { name: "Conjoint salarié de la SASU" }).getByRole("button", { name: "Retour" }).click()
+    await expect(cartes).toHaveCount(3)
+    await recherche.fill("licorne")
+    await expect(montages.getByText("Aucune situation ne correspond.")).toBeVisible()
+    await expect(cartes).toHaveCount(0)
+  })
+
   test(`la fenêtre des montages et le détail d'une situation ne présentent aucune violation WCAG, thème ${theme}`, async ({ page }) => {
     await page.goto("./")
     if (theme === "sombre") {
@@ -95,6 +132,11 @@ test.describe("sur un téléphone", () => {
       const montages = await ouvrirLesMontages(page)
       await sansDefilementHorizontal(page)
       await auditer(page, "montages types, 375 px", "[role=dialog]")
+      // Filtres cochés : les puces passent à la ligne, sans élargir la fenêtre.
+      await montages.getByRole("button", { name: "Entreprise individuelle", exact: true }).click()
+      await montages.getByRole("button", { name: "Seul", exact: true }).click()
+      await sansDefilementHorizontal(page)
+      await montages.getByRole("button", { name: "Tout afficher" }).click()
       await montages.getByRole("button", { name: "Détails de la situation « Couple en union libre, puis marié ou pacsé »" }).click()
       await expect(page.getByRole("button", { name: "Charger cette situation" })).toBeVisible()
       await sansDefilementHorizontal(page)
