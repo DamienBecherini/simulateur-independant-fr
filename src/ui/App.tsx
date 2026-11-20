@@ -44,6 +44,7 @@ import { usePropositionsEnAttente } from "./hooks/usePropositionsEnAttente"
 import { useRaccourcisDAnnulation } from "./hooks/useRaccourcisDAnnulation"
 import { useSimulationDesAnnees } from "./hooks/useSimulationDesAnnees"
 import { useEncartDesQuestions } from "./hooks/useEncartDesQuestions"
+import { useDiagnostic, useReglageDuBoutonDAvis } from "./hooks/useAvis"
 import { numerosDesTypesDeFlux } from "@/lib/grille-mensuelle"
 import { ajoutDUnConjoint, personnesSansConjoint } from "@/lib/conjoint"
 import type { AjoutDuConjoint } from "./components/AjouterUnConjoint"
@@ -98,6 +99,9 @@ function App() {
   // Affichage « Trois vues » : la vue affichée, suivie dans l'adresse de la page.
   const vues = useVues(avecVues(affichage), currentSession.name)
   const marquerLaGrilleTouchee = useCallback(() => setUserPreferences(prefs => ({ ...prefs, grilleTouchee: true })), [setUserPreferences])
+  // « Donner mon avis » : retiré de la barre d'outils au choix de l'utilisateur, toujours accessible depuis les paramètres.
+  const boutonDAvis = useReglageDuBoutonDAvis(userPreferences.boutonDAvisMasque, setUserPreferences)
+  const diagnostic = useDiagnostic(currentSession, affichage)
   const choisirAffichage = useCallback((choix: Affichage) => setUserPreferences(prefs => ({ ...prefs, affichage: choix })), [setUserPreferences])
   // Le zoom choisi est retenu dans les préférences, d'une ouverture à l'autre.
   const zoom = useZoom(userPreferences.zoom ?? 1, nouveau => setUserPreferences(prefs => ({ ...prefs, zoom: nouveau })))
@@ -177,6 +181,7 @@ function App() {
           onExporter={() => setExportOpen(true)}
           // Tant que l'IA modifie directement la simulation, une pastille le signale et permet d'y mettre fin.
           indicateurIA={iaModifieDirectement ? <IndicateurDeModificationDirecte onCouper={() => laisserLIAModifier(false)} /> : null}
+          boutonDAvis={boutonDAvis}
         />
 
         <header className={cn("text-center pt-16 print:mb-6 print:pt-0", enTete.header)}>
@@ -255,6 +260,7 @@ function App() {
           onImport={handleImport}
           onLoadMontage={chargerUnMontage}
           onChargerUneSession={chargerUneSession}
+          avis={{ diagnostic, bouton: boutonDAvis }}
           importConfirmation={importConfirmation}
           onConfirmImport={handleConfirmImportAndClose}
           onCancelImport={cancelImport}

@@ -110,8 +110,8 @@ describe("la session maximale", () => {
     // Un affichage n'est choisi qu'à la fois : les autres sont pris par des préférences qui ne diffèrent que par lui.
     const autresAffichages = AFFICHAGES.map(({ valeur }) => ({ ...preferencesMaximales(), affichage: valeur }))
     // De même, l'encart des questions de départ fermé, puis ouvert, l'aide de la grille tactile déjà lue, puis pas encore,
-    // et l'IA qui modifie directement la simulation, puis plus.
-    const questionsOuvertes = { ...preferencesMaximales(), questionsFermees: false, grilleTouchee: false, iaModifieDirectement: false }
+    // l'IA qui modifie directement la simulation, puis plus, et « Donner mon avis » retiré de la barre d'outils, puis remis.
+    const questionsOuvertes = { ...preferencesMaximales(), questionsFermees: false, grilleTouchee: false, iaModifieDirectement: false, boutonDAvisMasque: false }
     expect(champsNonRemplis(UserPreferencesSchema, [preferencesMaximales(), ...autresAffichages, questionsOuvertes], "préférences")).toEqual([])
   })
 

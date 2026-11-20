@@ -152,17 +152,3 @@ export function BandeDesMois({ libelles, noms, flux, visibles, auDebut, aLaFin, 
     </div>
   )
 }
-
-/**
- * Fondus aux bords de la zone qui défile : à droite tant qu'il reste des mois à voir, à gauche (après la première
- * colonne, fixe) dès que la grille a défilé. Purement décoratifs.
- */
-export function FondusDesBords({ gauche, droite, colonneFixe }: { gauche: boolean; droite: boolean; colonneFixe: number }) {
-  const fondu = "pointer-events-none absolute inset-y-0 z-10 w-6 from-slate-50 to-transparent transition-opacity motion-reduce:transition-none dark:from-gray-950 print:hidden"
-  return (
-    <>
-      <div aria-hidden data-fondu="gauche" style={{ left: colonneFixe }} className={cn(fondu, "bg-linear-to-r", gauche ? "opacity-100" : "opacity-0")} />
-      <div aria-hidden data-fondu="droite" className={cn(fondu, "right-0 bg-linear-to-l", droite ? "opacity-100" : "opacity-0")} />
-    </>
-  )
-}

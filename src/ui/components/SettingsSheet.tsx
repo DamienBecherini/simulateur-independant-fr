@@ -1,6 +1,6 @@
 // src/ui/components/SettingsSheet.tsx
 // Panneau des paramètres : nom et enregistrement de la simulation, sauvegardes nommées (chargement, ordre,
-// suppression, export, import), montages types, thème et liens d'information. Ce que fait « Sauvegarder » (mise à
+// suppression, export, import), montages types, thème, avis et liens d'information. Ce que fait « Sauvegarder » (mise à
 // jour, « sauvegarder sous », écrasement confirmé) est décidé par `enregistrerLaSession` (src/lib/session-service.ts) ;
 // le panneau l'affiche, demande la confirmation et n'actualise la liste qu'une fois les sauvegardes écrites.
 
@@ -10,6 +10,7 @@ import { texteAnneesEcartees, texteProfessionsEcartees } from "@/backend/logic/d
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Save, Upload, Download, Trash2, ChevronLeft, RefreshCcw } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -29,6 +30,9 @@ import { BoutonUtiliserAvecUneIA, type ReglageDeModificationDirecte } from "./Ut
 import { confirmationDuMontageNecessaire } from "@/lib/montages/confirmation"
 import { usePlateforme } from "../plateforme"
 import { BoutonDesTests } from "./BoutonDesTests"
+import { BoutonDAvis } from "./DialogueDAvis"
+import type { Diagnostic } from "@/lib/retours"
+import type { ReglageDuBoutonDAvis } from "../hooks/useAvis"
 
 interface SettingsSheetProps {
   // Gestion de l'ouverture/fermeture du panneau
@@ -62,6 +66,9 @@ interface SettingsSheetProps {
 
   /** La case « Laisser l'IA modifier directement la simulation » de la fenêtre « Utiliser avec une IA » (bureau seulement). */
   modificationDirecte?: ReglageDeModificationDirecte
+
+  /** « Donner mon avis » : l'interrupteur qui l'affiche dans la barre d'outils ou l'en retire, et un accès à la fenêtre, qui reste ici dans les deux cas. */
+  avis?: { diagnostic: Diagnostic; bouton: ReglageDuBoutonDAvis }
 }
 
 /**
@@ -105,7 +112,7 @@ function VersionDuFichier({ appVersion }: { appVersion: string | undefined }) {
   return <p className="mt-3 text-sm">Fichier écrit par la version {appVersion} du simulateur.</p>
 }
 
-export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, onLoadMontage, onChargerUneSession, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId, modificationDirecte }: SettingsSheetProps) {
+export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, onLoadMontage, onChargerUneSession, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId, modificationDirecte, avis }: SettingsSheetProps) {
   // Dans la démo web, le bouton d'aide à l'installation (fourni par la plateforme).
   const { BoutonInstaller, estLaSessionDExemple } = usePlateforme()
   const [view, setView] = useState<"main" | "load">("main")
@@ -218,6 +225,21 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                   <Label htmlFor="theme-parametres">Thème clair ou sombre</Label>
                   <ThemeToggle id="theme-parametres" />
                 </div>
+                {avis ? (
+                  <div className="space-y-3 border-t pt-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <Label htmlFor="bouton-d-avis-parametres">Afficher « Donner mon avis » dans la barre d'outils</Label>
+                      {/* Au doigt, une bordure transparente porte la zone cliquable à 44 px sans grossir l'interrupteur. */}
+                      <Switch
+                        id="bouton-d-avis-parametres"
+                        checked={!avis.bouton.masque}
+                        onCheckedChange={affiche => avis.bouton.onMasquer(!affiche)}
+                        className="data-[state=unchecked]:bg-slate-400 pointer-coarse:h-11 pointer-coarse:w-16 pointer-coarse:border-[12px] pointer-coarse:bg-clip-padding dark:data-[state=unchecked]:bg-slate-600"
+                      />
+                    </div>
+                    <BoutonDAvis variant="outline" className="h-auto min-h-9 w-full whitespace-normal" diagnostic={avis.diagnostic} boutonDansLaBarre={avis.bouton} />
+                  </div>
+                ) : null}
                 <BoutonUtiliserAvecUneIA variant="outline" className="h-auto min-h-9 w-full whitespace-normal" modificationDirecte={modificationDirecte} />
                 {BoutonInstaller && <BoutonInstaller variant="outline" className="h-auto min-h-9 w-full whitespace-normal" />}
                 <BoutonDesMentionsLegales variant="outline" className="h-auto min-h-9 w-full whitespace-normal" icone />

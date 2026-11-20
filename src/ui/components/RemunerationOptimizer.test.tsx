@@ -1,6 +1,6 @@
 // src/ui/components/RemunerationOptimizer.test.tsx
 
-import { act, render, screen, within } from "@testing-library/react"
+import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { useState } from "react"
@@ -102,6 +102,43 @@ describe("RemunerationOptimizer", () => {
     expect(infobulle).toHaveTextContent("3 trim.")
     await userEvent.keyboard("{End}")
     expect(screen.getByRole("status")).toHaveTextContent(money(48000))
+  })
+
+  it("se lit au doigt : un toucher affiche le point le plus proche, qui reste une fois le doigt levé, jusqu'au toucher ailleurs", async () => {
+    vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
+    afficher()
+
+    const courbe = await screen.findByRole("group", { name: /Net du foyer selon la rémunération nette en SASU/ })
+    const surface = courbe.querySelector("rect.cursor-crosshair")!
+    // La surface de la courbe : 400 px de large à partir de 100 px, pour des rémunérations de 0 à 10 000 €.
+    vi.spyOn(surface, "getBoundingClientRect").mockReturnValue({ left: 100, width: 400 } as DOMRect)
+    expect(surface).toHaveClass("touch-pan-y")
+
+    fireEvent.pointerDown(surface, { pointerType: "touch", clientX: 300 })
+    expect(screen.getByRole("status")).toHaveTextContent(`Rémunération${money(5000)}`)
+    fireEvent.pointerUp(surface, { pointerType: "touch", clientX: 300 })
+    fireEvent.pointerLeave(surface, { pointerType: "touch" })
+    expect(screen.getByRole("status")).toHaveTextContent(money(49500))
+
+    // Le doigt glisse le long de la courbe.
+    fireEvent.pointerMove(surface, { pointerType: "touch", clientX: 495 })
+    expect(screen.getByRole("status")).toHaveTextContent(`Rémunération${money(10000)}`)
+
+    fireEvent.pointerDown(screen.getByText(/^Meilleur net :/))
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+  })
+
+  it("se lit à la souris : la valeur suit le pointeur et disparaît quand il quitte la courbe", async () => {
+    vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
+    afficher()
+
+    const courbe = await screen.findByRole("group", { name: /Net du foyer selon la rémunération nette en SASU/ })
+    const surface = courbe.querySelector("rect.cursor-crosshair")!
+    vi.spyOn(surface, "getBoundingClientRect").mockReturnValue({ left: 100, width: 400 } as DOMRect)
+    fireEvent.pointerMove(surface, { pointerType: "mouse", clientX: 100 })
+    expect(screen.getByRole("status")).toHaveTextContent(money(50000))
+    fireEvent.pointerLeave(surface, { pointerType: "mouse" })
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
   })
 
   it("redessine la courbe à la largeur de la feuille le temps d'une impression", async () => {

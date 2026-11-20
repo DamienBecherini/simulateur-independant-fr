@@ -17,6 +17,7 @@ import { Depliable } from "./Depliable"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
 import { ChampNumerique } from "./ChampNumerique"
 import { ConditionsDuPortage } from "./ConditionsDuPortage"
+import { ZoneDefilante } from "./ZoneDefilante"
 
 const statutFraisLabels: Record<StatutFrais, string> = { SASU: "SASU", EURL: "EURL", EI: "EI au réel", micro: "Micro-entreprise" }
 
@@ -126,7 +127,7 @@ function FraisFonctionnementTable({ frais, cfe, onChange }: { frais: FraisFoncti
       <p className="text-sm text-slate-600 dark:text-slate-400">
         Frais annuels supposés par statut : des ordres de grandeur, à ajuster à votre situation. Ils servent à estimer l'écart de frais entre statuts : vos frais réels sont ceux saisis dans la grille, et chaque autre colonne n'ajoute que la différence entre ses frais et ceux de votre statut actuel (en moins, s'il en coûte moins). Déductibles en société et en EI, ils ne réduisent ni cotisations ni impôt en micro. La CFE varie selon la commune ; avec la date de création de l'activité, elle est exonérée l'année de création et réduite de moitié l'année suivante.
       </p>
-      <div className="relative mt-3 overflow-x-auto print:overflow-visible">
+      <ZoneDefilante libelle="Tableau des frais de fonctionnement" className="mt-3">
         <table className="w-full min-w-[40rem] text-sm" aria-label="Frais de fonctionnement annuels">
           <thead>
             <tr>
@@ -170,7 +171,7 @@ function FraisFonctionnementTable({ frais, cfe, onChange }: { frais: FraisFoncti
             </tr>
           </tbody>
         </table>
-      </div>
+      </ZoneDefilante>
       {cfe ? <p className="mt-2 text-sm text-blue-900 dark:text-blue-200">{cfe.note}</p> : null}
     </div>
   )

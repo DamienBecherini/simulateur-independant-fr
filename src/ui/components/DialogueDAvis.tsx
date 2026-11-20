@@ -2,15 +2,18 @@
 // Fenêtre « Donner mon avis » (phase 13 quater, étape 1) : une note, l'affichage préféré, le type de retour et un
 // message, tous facultatifs, et un diagnostic sans aucune donnée de la simulation. Le retour part sans serveur, par un
 // ticket GitHub ou un e-mail préremplis, ou se copie pour une messagerie en ligne. L'aperçu montre le texte envoyé.
+// Une case, en bas, retire « Donner mon avis » de la barre d'outils ; les paramètres gardent un accès à la fenêtre
+// (`BoutonDAvis`) et permettent de le réafficher.
 
 import { useId, useRef, useState, type ReactNode, type RefObject } from "react"
-import { Copy, ExternalLink, Mail, Star } from "lucide-react"
+import { Copy, ExternalLink, Mail, MessageSquareHeart, Star } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { Button, type ButtonProps } from "@/components/ui/button"
 import { AFFICHAGES } from "@/lib/affichage"
 import { ADRESSE_E_MAIL_DES_RETOURS } from "@/lib/adresses-des-retours"
 import { adresseDeLEMail, adresseDuTicket, CONDITION_D_ENVOI, NOTES, retourEnvoyable, RETOUR_VIDE, texteACopier, texteDuRetour, TYPES_DE_RETOUR, type Diagnostic, type Retour } from "@/lib/retours"
 import { cn } from "@/lib/utils"
+import type { ReglageDuBoutonDAvis } from "../hooks/useAvis"
 
 interface DialogueDAvisProps {
   isOpen: boolean
@@ -18,6 +21,10 @@ interface DialogueDAvisProps {
   diagnostic: Diagnostic
   /** Bouton qui ouvre la fenêtre : le focus lui revient à la fermeture. */
   declencheur?: RefObject<HTMLElement | null>
+  /** Où va le focus quand ce bouton n'est plus là (retiré de la barre d'outils pendant que la fenêtre était ouverte). */
+  repli?: RefObject<HTMLElement | null>
+  /** Le réglage qui retire « Donner mon avis » de la barre d'outils : sa case s'affiche en bas de la fenêtre. */
+  boutonDansLaBarre?: ReglageDuBoutonDAvis
 }
 
 /** Taille des cibles : 24 px au moins, 44 px au doigt. */
@@ -232,7 +239,25 @@ function Formulaire({ retour, setRetour }: { retour: Retour; setRetour: (retour:
   )
 }
 
-export function DialogueDAvis({ isOpen, onClose, diagnostic, declencheur }: DialogueDAvisProps) {
+/** La case qui retire « Donner mon avis » de la barre d'outils. Elle agit aussitôt, et se décoche de même. */
+function ReglageDuBouton({ reglage }: { reglage: ReglageDuBoutonDAvis }) {
+  const id = useId()
+  return (
+    <div className="flex items-start gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
+      <input id={id} type="checkbox" checked={reglage.masque} onChange={event => reglage.onMasquer(event.target.checked)} aria-describedby={`${id}-aide`} className="mt-0.5 size-5 shrink-0 accent-blue-600 pointer-coarse:size-6" />
+      <div>
+        <label htmlFor={id} className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+          Ne plus afficher « Donner mon avis » dans la barre d'outils
+        </label>
+        <p id={`${id}-aide`} className={PETIT_TEXTE}>
+          Vous retrouverez cette fenêtre dans les Paramètres, qui permettent aussi de réafficher le bouton.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export function DialogueDAvis({ isOpen, onClose, diagnostic, declencheur, repli, boutonDansLaBarre }: DialogueDAvisProps) {
   // Le brouillon reste le temps de la session de l'application, même fenêtre fermée.
   const [retour, setRetour] = useState<Retour>(RETOUR_VIDE)
   return (
@@ -240,9 +265,10 @@ export function DialogueDAvis({ isOpen, onClose, diagnostic, declencheur }: Dial
       <DialogContent
         className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-2xl"
         onCloseAutoFocus={event => {
-          if (!declencheur?.current) return
+          const cible = [declencheur?.current, repli?.current].find(element => element?.isConnected)
+          if (!cible) return
           event.preventDefault()
-          declencheur.current.focus()
+          cible.focus()
         }}
       >
         <DialogHeader>
@@ -252,7 +278,23 @@ export function DialogueDAvis({ isOpen, onClose, diagnostic, declencheur }: Dial
         <Formulaire retour={retour} setRetour={setRetour} />
         <Apercu retour={retour} diagnostic={diagnostic} />
         <ZoneDEnvoi retour={retour} diagnostic={diagnostic} />
+        {boutonDansLaBarre ? <ReglageDuBouton reglage={boutonDansLaBarre} /> : null}
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** Le bouton des paramètres qui ouvre la fenêtre d'avis ; le focus lui revient à la fermeture. */
+export function BoutonDAvis({ diagnostic, boutonDansLaBarre, ...bouton }: Pick<ButtonProps, "variant" | "size" | "className"> & Pick<DialogueDAvisProps, "diagnostic" | "boutonDansLaBarre">) {
+  const [ouvert, setOuvert] = useState(false)
+  const declencheur = useRef<HTMLButtonElement>(null)
+  return (
+    <>
+      <Button ref={declencheur} {...bouton} onClick={() => setOuvert(true)}>
+        <MessageSquareHeart />
+        Donner mon avis
+      </Button>
+      <DialogueDAvis isOpen={ouvert} onClose={() => setOuvert(false)} diagnostic={diagnostic} declencheur={declencheur} boutonDansLaBarre={boutonDansLaBarre} />
+    </>
   )
 }

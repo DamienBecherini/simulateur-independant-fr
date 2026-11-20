@@ -73,7 +73,7 @@ describe("bande des mois de la grille", () => {
     afficher()
     expect(screen.queryByRole("toolbar", { name: "Mois de la grille" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Mois suivant" })).not.toBeInTheDocument()
-    expect(document.querySelector("[data-fondu]")).toBeNull()
+    expect(document.querySelector("[data-ombre]")).toBeNull()
   })
 
   it("apparaît quand la grille déborde : douze mois nommés, et un point sous ceux qui ont des flux", () => {
@@ -146,9 +146,9 @@ describe("bande des mois de la grille", () => {
     expect(suivant).toHaveFocus()
   })
 
-  it("fondus aux bords : à droite tant qu'il reste des mois, à gauche une fois la grille défilée", async () => {
+  it("ombres aux bords : à droite tant qu'il reste des mois, à gauche une fois la grille défilée", async () => {
     afficher()
-    const fondu = (cote: string) => document.querySelector(`[data-fondu="${cote}"]`)
+    const fondu = (cote: string) => document.querySelector(`[data-ombre="${cote}"]`)
     expect(fondu("gauche")).toHaveClass("opacity-0")
     expect(fondu("droite")).toHaveClass("opacity-100")
     expect(fondu("gauche")).toHaveAttribute("aria-hidden", "true")

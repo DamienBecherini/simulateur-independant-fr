@@ -2,7 +2,8 @@
 // « Donner mon avis » dans la démo web : la fenêtre s'ouvre depuis la barre d'outils, l'aperçu montre le texte envoyé,
 // le ticket GitHub s'ouvre dans un nouvel onglet détaché et l'e-mail dans la messagerie (window.open remplacé pour
 // relever les adresses), la copie remplit le presse-papiers, et le tout reste accessible, en clair, en sombre et sur
-// téléphone.
+// téléphone. Le bouton de la barre se retire depuis la fenêtre et se réaffiche depuis les paramètres, qui gardent
+// toujours un accès à la fenêtre.
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
@@ -157,6 +158,72 @@ for (const theme of ["clair", "sombre"] as const) {
     await auditer(page, `avis rempli, thème ${theme}`, "[role=dialog]")
   })
 }
+
+const barreDOutils = (page: Page) => page.getByRole("navigation", { name: "Barre d'outils" })
+const caseDuBouton = (page: Page) => fenetre(page).getByRole("checkbox", { name: "Ne plus afficher « Donner mon avis » dans la barre d'outils" })
+const interrupteur = (page: Page) => page.getByRole("switch", { name: "Afficher « Donner mon avis » dans la barre d'outils" })
+
+test("le bouton se retire de la barre depuis la fenêtre d'avis, reste retiré au rechargement, et se réaffiche depuis les paramètres", async ({ page }) => {
+  await page.goto("./")
+  await barreDOutils(page).getByRole("button", { name: "Donner mon avis" }).click()
+  await expect(caseDuBouton(page)).not.toBeChecked()
+  await caseDuBouton(page).check()
+  await auditer(page, "avis, case du bouton cochée", "[role=dialog]")
+
+  // La fenêtre fermée, le bouton n'est plus là : le focus va aux paramètres, qui la rouvrent.
+  await page.keyboard.press("Escape")
+  await expect(fenetre(page)).toBeHidden()
+  await expect(barreDOutils(page).getByRole("button", { name: "Donner mon avis" })).toHaveCount(0)
+  await expect(barreDOutils(page).getByRole("button", { name: "Paramètres" })).toBeFocused()
+
+  // Le choix est une préférence du poste : il tient au rechargement.
+  await expect.poll(() => page.evaluate(() => JSON.parse(window.localStorage.getItem("simulateur.preferences") ?? "{}").boutonDAvisMasque)).toBe(true)
+  await page.reload()
+  await expect(barreDOutils(page).getByRole("button", { name: "Paramètres" })).toBeVisible()
+  await expect(barreDOutils(page).getByRole("button", { name: "Donner mon avis" })).toHaveCount(0)
+
+  // Les paramètres gardent un accès à la fenêtre, où la case est cochée, et un interrupteur qui réaffiche le bouton.
+  await barreDOutils(page).getByRole("button", { name: "Paramètres" }).click()
+  await expect(interrupteur(page)).not.toBeChecked()
+  await page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: "Donner mon avis" }).click()
+  await expect(caseDuBouton(page)).toBeChecked()
+  await page.keyboard.press("Escape")
+  await expect(fenetre(page)).toBeHidden()
+  await expect(page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: "Donner mon avis" })).toBeFocused()
+
+  await interrupteur(page).click()
+  await expect(interrupteur(page)).toBeChecked()
+  await auditer(page, "paramètres, bouton d'avis", "[role=dialog]")
+  await page.keyboard.press("Escape")
+  await expect(barreDOutils(page).getByRole("button", { name: "Donner mon avis" })).toBeVisible()
+})
+
+test.describe("sur un téléphone de 375 px, « Donner mon avis » retiré", () => {
+  test.use({ viewport: { width: 375, height: 740 }, hasTouch: true, isMobile: true })
+
+  test("l'entrée quitte le menu « Plus d'actions » ; les paramètres mènent encore à la fenêtre, et l'interrupteur se touche", async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], affichage: "resume", boutonDAvisMasque: true })))
+    await page.goto("./")
+    await plusDActions(page).click()
+    await expect(page.getByRole("menuitem", { name: "Partir d'une situation type" })).toBeVisible()
+    await expect(page.getByRole("menuitem", { name: "Donner mon avis" })).toHaveCount(0)
+    await page.keyboard.press("Escape")
+
+    await barreDOutils(page).getByRole("button", { name: "Paramètres" }).click()
+    await interrupteur(page).scrollIntoViewIfNeeded()
+    // Cible au doigt : 44 px au moins.
+    const cible = (await interrupteur(page).boundingBox())!
+    expect(Math.min(cible.width, cible.height)).toBeGreaterThanOrEqual(43.5)
+    await page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: "Donner mon avis" }).click()
+    await expect(caseDuBouton(page)).toBeChecked()
+    await caseDuBouton(page).uncheck()
+    await page.keyboard.press("Escape")
+    await expect(interrupteur(page)).toBeChecked()
+    await page.keyboard.press("Escape")
+    await plusDActions(page).click()
+    await expect(page.getByRole("menuitem", { name: "Donner mon avis" })).toBeVisible()
+  })
+})
 
 for (const largeur of [320, 375]) {
   test(`à ${largeur} px, avec une souris, tous les boutons de la barre d'outils tiennent dans la largeur`, async ({ page }) => {

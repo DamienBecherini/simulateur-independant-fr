@@ -31,6 +31,7 @@ L'examen des sociétés a montré le même genre de défaut :
 1. **Le président d'une SASU n'est plus compté d'office comme associé.** Il ne reçoit des dividendes que relié aussi par « Associé ». Les sauvegardes existantes sont converties pour que leurs chiffres ne changent pas.
 2. **Une SASU ou une EURL à plusieurs associés reste acceptée**, avec l'avertissement existant : les dividendes sont partagés à parts égales, la répartition du capital n'est pas modélisée.
 3. **Le gérant d'EURL non associé n'est pas proposé** : le simulateur ne le calcule pas, et ne donne pas un chiffre faux à la place.
+4. **Un second gérant d'EURL reste accepté**, avec l'avertissement existant (décision du 2026-11-20, après la recette) : le droit l'admet (article L223-18), le calcul ne rémunère que le premier et le dit.
 
 ## Décision
 
@@ -120,7 +121,6 @@ Les trois derniers points ont été trouvés par le test exhaustif ci-dessous, p
 ## À vérifier
 
 - Le numéro exact de l'alinéa de l'article L311-3 du code de la sécurité sociale qui vise le gérant non associé d'une EURL : la fiche de service-public.fr est citée à sa place.
-- Faut-il interdire à la saisie un second gérant d'EURL, tant que le calcul ne rémunère que le premier ? Le droit l'admet ; le simulateur l'accepte avec un avertissement.
 
 ## Sources consultées le 2026-11-20
 

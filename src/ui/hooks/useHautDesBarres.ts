@@ -6,6 +6,8 @@
 import { useEffect, useState } from "react"
 import { useAffichage } from "./useAffichage"
 
+const barresPresentes = () => [document.querySelector<HTMLElement>("nav[aria-label=\"Barre d'outils\"]"), document.querySelector<HTMLElement>("[data-barre-visible]")].filter(barre => barre !== null)
+
 export function useHautDesBarres(actif: boolean): number {
   const [haut, setHaut] = useState(0)
   // La barre de résumé apparaît ou disparaît avec l'affichage choisi : on la cherche de nouveau à chaque changement.
@@ -13,11 +15,18 @@ export function useHautDesBarres(actif: boolean): number {
 
   useEffect(() => {
     if (!actif) return
-    const barres = [document.querySelector<HTMLElement>("nav[aria-label=\"Barre d'outils\"]"), document.querySelector<HTMLElement>("[data-barre-visible]")].filter(barre => barre !== null)
-    const mesurer = () => setHaut(barres.reduce((total, barre) => total + barre.offsetHeight, 0))
-    mesurer()
+    let suivies: HTMLElement[] = []
+    const mesurer = () => {
+      const barres = barresPresentes()
+      // La barre de résumé attend les résultats de la simulation : apparue après la première mesure, elle est suivie à son tour.
+      for (const barre of barres) if (!suivies.includes(barre)) observateur.observe(barre)
+      suivies = barres
+      setHaut(barres.reduce((total, barre) => total + barre.offsetHeight, 0))
+    }
     const observateur = new ResizeObserver(mesurer)
-    barres.forEach(barre => observateur.observe(barre))
+    mesurer()
+    // La page change de hauteur quand une barre y apparaît ou en disparaît : les barres sont alors cherchées de nouveau.
+    observateur.observe(document.body)
     return () => observateur.disconnect()
   }, [actif, affichage])
 

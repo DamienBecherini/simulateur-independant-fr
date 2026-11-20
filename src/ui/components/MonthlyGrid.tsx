@@ -18,7 +18,8 @@ import { caseAlternee } from "../lignes-alternees"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useDefilementDeLaGrille } from "../hooks/useDefilementDeLaGrille"
 import { useHautDesBarres } from "../hooks/useHautDesBarres"
-import { BandeDesMois, FondusDesBords } from "./BandeDesMois"
+import { BandeDesMois } from "./BandeDesMois"
+import { OmbresDesBords } from "./ReperesDeDefilement"
 import { defilementPourLaPosition, defilementPourLeMois, defilementVoisin } from "@/lib/bande-des-mois"
 
 /**
@@ -127,7 +128,7 @@ function LigneDeLActeur({ ligne, rang, onOuvrir }: { ligne: LigneDeLaGrille; ran
 }
 
 function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees, onGrilleTouchee }: MonthlyGridProps) {
-  // Bande des mois et fondus des bords : seulement quand la grille déborde de sa zone et doit défiler.
+  // Bande des mois et ombres des bords : seulement quand la grille déborde de sa zone et doit défiler.
   const zone = useRef<HTMLDivElement>(null)
   const defilement = useDefilementDeLaGrille(zone, entities.length > 0, annee)
   const haut = useHautDesBarres(defilement.deborde)
@@ -320,7 +321,8 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                   ))}
                 </div>
               </div>
-              {defilement.deborde ? <FondusDesBords gauche={!defilement.auDebut} droite={!defilement.aLaFin} colonneFixe={defilement.colonneFixe} /> : null}
+              {/* Une ombre du côté où des mois sont cachés : à droite tant qu'il en reste, à gauche (après la première colonne, fixe) dès que la grille a défilé. */}
+              {defilement.deborde ? <OmbresDesBords gauche={!defilement.auDebut} droite={!defilement.aLaFin} colonneFixe={defilement.colonneFixe} /> : null}
             </div>
           </div>
         )}

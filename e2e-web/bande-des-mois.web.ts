@@ -150,11 +150,11 @@ test.describe("sur un grand écran de 1440 px", () => {
     await expect.poll(() => ecartAuBord(page, 0)).toBeLessThanOrEqual(1)
   })
 
-  test("la bande, les flèches et les fondus ne sont pas imprimés", async ({ page }) => {
+  test("la bande, les flèches et les ombres ne sont pas imprimées", async ({ page }) => {
     await ouvrir(page)
     await page.emulateMedia({ media: "print" })
     await expect(bande(page)).toBeHidden()
     await expect(page.getByRole("button", { name: "Mois suivant" })).toBeHidden()
-    await expect(page.locator("[data-fondu]").first()).toBeHidden()
+    await expect(page.locator("[data-ombre]").first()).toBeHidden()
   })
 })
