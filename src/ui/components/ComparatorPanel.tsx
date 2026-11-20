@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, type ReactNode } from "react"
 import { useOptimisation } from "../hooks/useOptimisation"
 import { appliquerRemuneration, avecActiviteComparee, avecReglagesDeLActivite, comparableActivities, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
-import { numeroterNotes, type Note } from "@/lib/notes"
+import { numeroterNotes } from "@/lib/notes"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { ECART_NEGLIGEABLE, PART_MISE_EN_RESERVE_PAR_DEFAUT } from "@/backend/logic/options-du-comparateur"
 import { cn } from "@/lib/utils"
@@ -18,6 +18,7 @@ import { ReglagesDuComparateur } from "./ReglagesDuComparateur"
 import { ZoneDefilante } from "./ZoneDefilante"
 import { BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 import { ReplieEnResume } from "./ReplieEnResume"
+import { BullesDesNotes, NotesDuTableau, RenvoisAuxNotes } from "./NotesDuComparateur"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useCalculDiffere } from "../hooks/useCalculDiffere"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
@@ -132,11 +133,18 @@ function MentionDuPlafond({ scenario }: { scenario: ScenarioStatut }) {
   return scenario.horsPlafond ? <span className={classe}>hors plafond · 2 ans au plus</span> : null
 }
 
-const pastilleNote ="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-100"
+/**
+ * Colonne d'une société que la rémunération choisie met en déficit. L'en-tête le dit : la note qui le détaille peut
+ * être réduite à une pastille (affichage « Résumé »), et une alerte ne doit pas attendre un clic.
+ */
+function MentionDuDeficit({ scenario }: { scenario: ScenarioStatut }) {
+  if (!scenario.partage || scenario.partage.resultatConserve >= 0) return null
+  return <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">société déficitaire</span>
+}
 
 /**
  * En-tête d'une colonne : le statut, ses mentions (actuel : la situation saisie, au net des résultats ; meilleur net) et
- * ses renvois aux notes sous le tableau. Une colonne micro non retenue est grisée.
+ * les pastilles de ses notes (un clic ouvre la note dans une bulle). Une colonne micro non retenue est grisée.
  */
 function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioStatut; meilleur: boolean; renvois: number[] }) {
   const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null].filter(Boolean).join(" · ")
@@ -146,15 +154,8 @@ function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioSta
       <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{mentions || " "}</span>
       <RemunerationRetenue scenario={scenario} />
       <MentionDuPlafond scenario={scenario} />
-      {renvois.length > 0 ? (
-        <span className="mt-1 flex justify-end gap-1">
-          {renvois.map(numero => (
-            <a key={numero} href={`#note-comparateur-${numero}`} aria-label={`Voir la note ${numero}`} className={cn(pastilleNote, "hover:bg-amber-200 dark:hover:bg-amber-800")}>
-              {numero}
-            </a>
-          ))}
-        </span>
-      ) : null}
+      <MentionDuDeficit scenario={scenario} />
+      <RenvoisAuxNotes colonne={scenario.statut} renvois={renvois} />
     </th>
   )
 }
@@ -308,29 +309,6 @@ function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
   )
 }
 
-/** Avertissements des statuts, numérotés : les pastilles des en-têtes de colonne y renvoient. */
-function NotesDuTableau({ notes, activityName }: { notes: Note[]; activityName: string }) {
-  if (notes.length === 0) return null
-  return (
-    <div className="space-y-2 text-sm text-amber-900 dark:text-amber-100">
-      <p className="font-medium">Notes sur « {activityName} »</p>
-      <ol className="space-y-2">
-        {notes.map(note => (
-          <li key={note.numero} id={`note-comparateur-${note.numero}`} className="flex scroll-mt-24 items-start gap-2">
-            <span aria-hidden="true" className={pastilleNote}>
-              {note.numero}
-            </span>
-            <p>
-              <span className="sr-only">Note {note.numero}. </span>
-              <span className="font-medium">{note.colonnes.join(", ")} :</span> {note.texte}
-            </p>
-          </li>
-        ))}
-      </ol>
-    </div>
-  )
-}
-
 /**
  * Les couples en union libre, imposés ensemble comme s'ils étaient mariés ou pacsés. Le titre, où mène la barre de
  * résumé, peut recevoir le focus.
@@ -359,7 +337,7 @@ function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[
  * ligne du bouton d'export, où il n'allonge pas la page ; dans l'affichage classique, sous le tableau et ses notes.
  */
 function ComparisonResults({ result, activityName, onExporter, children }: { result: ComparaisonResult; activityName: string; onExporter: () => void; children?: ReactNode }) {
-  const { notes, renvois } = numeroterNotes(result.scenarios.map(s => ({ id: s.statut, libelle: s.libelle, avertissements: s.warnings })))
+  const { notes, renvois } = numeroterNotes(result.scenarios.map(s => ({ id: s.statut, libelle: s.libelle, avertissements: s.warnings, actuelle: s.actuel })))
   // Affichage « Résumé » : tableau réduit (cartes sur téléphone), le reste des lignes à la demande.
   const resume = useAffichageResume()
   const [detailOuvert, setDetailOuvert] = useSectionOuverte("comparateur-toutes-les-lignes")
@@ -375,7 +353,10 @@ function ComparisonResults({ result, activityName, onExporter, children }: { res
       ) : null}
       <SituationTelleQueSaisie result={result} />
       {reduit ? <CartesDesStatuts result={result} className="sm:hidden print:hidden" /> : null}
-      <ComparisonTable result={result} activityName={activityName} renvois={renvois} reduit={reduit} detailOuvert={detailOuvert} className={reduit && !detailOuvert ? "max-sm:hidden print:block" : undefined} />
+      {/* Les pastilles des en-têtes ouvrent leur note dans une bulle, une seule à la fois. */}
+      <BullesDesNotes notes={notes}>
+        <ComparisonTable result={result} activityName={activityName} renvois={renvois} reduit={reduit} detailOuvert={detailOuvert} className={reduit && !detailOuvert ? "max-sm:hidden print:block" : undefined} />
+      </BullesDesNotes>
       {reduit ? <BoutonDuDetail ouvert={detailOuvert} onClick={() => setDetailOuvert(!detailOuvert)} /> : null}
       <RappelDesFrais result={result} />
       <NotesDuTableau notes={notes} activityName={activityName} />

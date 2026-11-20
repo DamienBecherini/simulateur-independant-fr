@@ -12,8 +12,8 @@ describe("numeroterNotes", () => {
     ])
 
     expect(notes).toEqual([
-      { numero: 1, texte: "TVA due.", colonnes: ["Micro-entreprise", "Micro + versement libératoire"] },
-      { numero: 2, texte: "Seuil de revenu à vérifier.", colonnes: ["Micro + versement libératoire"] }
+      { numero: 1, texte: "TVA due.", colonnes: ["Micro-entreprise", "Micro + versement libératoire"], duStatutActuel: false },
+      { numero: 2, texte: "Seuil de revenu à vérifier.", colonnes: ["Micro + versement libératoire"], duStatutActuel: false }
     ])
     expect(renvois.get("SASU")).toEqual([])
     expect(renvois.get("micro")).toEqual([1])
@@ -22,8 +22,20 @@ describe("numeroterNotes", () => {
 
   it("ne renvoie qu'une fois à un avertissement répété dans la même colonne", () => {
     const { notes, renvois } = numeroterNotes([{ id: "EI", libelle: "EI au réel", avertissements: ["Déficit.", "Déficit."] }])
-    expect(notes).toEqual([{ numero: 1, texte: "Déficit.", colonnes: ["EI au réel"] }])
+    expect(notes).toEqual([{ numero: 1, texte: "Déficit.", colonnes: ["EI au réel"], duStatutActuel: false }])
     expect(renvois.get("EI")).toEqual([1])
+  })
+
+  it("marque les notes qui concernent la colonne du statut actuel, même partagées avec une autre colonne", () => {
+    const { notes } = numeroterNotes([
+      { id: "micro", libelle: "Micro-entreprise", avertissements: ["TVA due.", "Plafond dépassé."] },
+      { id: "SASU", libelle: "SASU", avertissements: ["TVA due.", "Société déficitaire."], actuelle: true }
+    ])
+    expect(notes.map(note => [note.texte, note.duStatutActuel])).toEqual([
+      ["TVA due.", true],
+      ["Plafond dépassé.", false],
+      ["Société déficitaire.", true]
+    ])
   })
 
   it("n'a aucune note sans avertissement", () => {

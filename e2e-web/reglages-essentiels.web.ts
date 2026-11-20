@@ -148,7 +148,12 @@ for (const affichage of ["classique", "resume"] as const) {
     await champ(page).fill(String(maximum + 20000))
     await expect(curseur(page)).toHaveAttribute("aria-valuenow", String(maximum))
     await expect(curseur(page)).toHaveAttribute("aria-valuetext", /au-delà des/)
-    await expect(page.getByText(/La société est déficitaire/).first()).toBeVisible()
+    // L'en-tête de la colonne le dit, et sa note le détaille : dans une bulle, ou sous le tableau.
+    const sasu = page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: /^SASU/ })
+    await expect(sasu).toContainText("société déficitaire")
+    await sasu.getByRole("button", { name: /^Voir la note/ }).first().click()
+    await expect(page.getByRole("tooltip")).toContainText(/La société est déficitaire de/)
+    await page.keyboard.press("Escape")
     await expect(champ(page)).toHaveValue(String(maximum + 20000))
   })
 }

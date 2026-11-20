@@ -220,7 +220,7 @@ test("à l'impression, les trois vues s'impriment dans l'ordre, quelle que soit 
   expect(hauts).toEqual([...hauts].sort((a, b) => a - b))
   // Le détail replié est déplié, comme dans l'affichage « Résumé ».
   await expect(page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("rowheader", { name: "Impôt sur le revenu" })).toBeVisible()
-  await expect(page.getByRole("heading", { name: "Légende des flux" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Gains", exact: true })).toBeVisible()
 
   const pdf = (await page.pdf({ preferCSSPageSize: true, printBackground: true })).toString("latin1")
   expect(pdf.match(/\/Type\s*\/Page\b/g)?.length ?? 0).toBeGreaterThanOrEqual(4)

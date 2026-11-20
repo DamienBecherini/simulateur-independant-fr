@@ -186,7 +186,7 @@ test("à l'impression, l'affichage « Résumé » déplie tout et masque la barr
   await page.setViewportSize({ width: 794, height: 1123 })
   await ouvrir(page)
   const tableau = page.getByRole("table", { name: "Comparaison des statuts" })
-  const replies = [tableau.getByRole("rowheader", { name: "Impôt sur le revenu" }), page.getByText("Cotisations sociales des activités"), page.getByRole("table", { name: "Frais de fonctionnement annuels" }), page.getByRole("heading", { name: "Légende des flux" }), page.locator("#repartition-titre")]
+  const replies = [tableau.getByRole("rowheader", { name: "Impôt sur le revenu" }), page.getByText("Cotisations sociales des activités"), page.getByRole("table", { name: "Frais de fonctionnement annuels" }), page.getByRole("heading", { name: "Gains", exact: true }), page.locator("#repartition-titre")]
   for (const contenu of replies) await expect(contenu.first()).toBeHidden()
   await expect(barre(page)).toBeVisible()
 
