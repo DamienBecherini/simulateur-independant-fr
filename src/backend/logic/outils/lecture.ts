@@ -3,7 +3,7 @@
 // Ils ne calculent rien : les résultats viennent des outils de resultats.ts, qui appellent le moteur.
 
 import { z } from "zod"
-import type { Entity, FinancialFlow, Person, Portage, SessionState } from "../../../types.js"
+import type { Company, Entity, FinancialFlow, MicroEntreprise, Person, Portage, SessionState } from "../../../types.js"
 import { conditionsPortageRetenues } from "../options-du-comparateur.js"
 import { ANNEE_COURANTE, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, type ReglesFiscales } from "../regles.js"
 import { anneeDeLaSession, empreinteDeLaSession, ErreurOutil, genreDe, GENRES_D_ACTEUR, nomDe, phraseDeLaRelation, trouverActeur, TYPES_DE_FLUX } from "./commun.js"
@@ -42,12 +42,17 @@ function reglagesDuPortage(acteur: Portage): Reglages {
   return { ...conditions, valeursTypiques: valeursTypiques.join(", ") }
 }
 
+/** Implantation en zone (ADR 017) : seulement quand l'activité y est déclarée, sous le nom du réglage qui la propose. */
+function reglageDeLaZone({ implantationEnZone: zone }: Company | MicroEntreprise): Reglages {
+  return zone ? { partEnZone: zone.partDuChiffreDAffaires ?? 1 } : {}
+}
+
 /** Réglages communs aux activités, puis ceux d'une société ou d'une micro-entreprise ; ceux d'une activité en portage. */
 function reglagesDUneActivite(acteur: Exclude<Entity, Person>): Reglages {
   if (acteur.type === "portage") return reglagesDuPortage(acteur)
   // Profession libérale réglementée et part conventionnée : seulement quand elles sont saisies (voir l'ADR 015).
   const profession = { ...(acteur.profession === undefined ? {} : { profession: acteur.profession }), ...(acteur.partConventionnee === undefined ? {} : { partConventionnee: acteur.partConventionnee }) }
-  const commun = { dateDeCreation: acteur.dateDeCreation ?? null, deplacementsKmParAn: acteur.deplacementsProfessionnels?.kmParAn ?? null, ...profession }
+  const commun = { dateDeCreation: acteur.dateDeCreation ?? null, deplacementsKmParAn: acteur.deplacementsProfessionnels?.kmParAn ?? null, ...profession, ...reglageDeLaZone(acteur) }
   if (acteur.type === "company") return { capitalSocial: acteur.capitalSocial, ...(acteur.reservesInitiales === undefined ? {} : { reservesInitiales: acteur.reservesInitiales }), ...commun }
   return { beneficieACRE: acteur.beneficieACRE, opteVFL: acteur.opteVFL, rfrN2: acteur.rfrN2 ?? null, horsPlafondAnneePrecedente: acteur.horsPlafondAnneePrecedente ?? false, ...commun }
 }
@@ -197,6 +202,11 @@ function reglesCles(r: ReglesFiscales): z.infer<typeof RegleSchema>[] {
     { sujet: "Micro-entreprise : abattement forfaitaire avant impôt", valeurs: valeurs(micro.abattement), source: source(micro.abattement) },
     { sujet: "Micro-entreprise : versement libératoire (taux sur le chiffre d'affaires, plafond de revenu fiscal de référence par part)", valeurs: { plafondRfrParPart: micro.versementLiberatoire.plafondRfrParPart, ...valeurs(micro.versementLiberatoire.taux) }, source: source(micro.versementLiberatoire) },
     { sujet: "Franchise en base de TVA (seuils de chiffre d'affaires)", valeurs: valeurs(r.TVA), source: source(r.TVA) },
+    {
+      sujet: "Exonération d'impôt sur les bénéfices en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV), réglage partEnZone : régime selon la date de création, mois d'exonération totale puis parts exonérées par périodes de douze mois, plafond annuel du bénéfice exonéré (null : aucun), conditions que le simulateur ne vérifie pas et hypothèses du calcul",
+      valeurs: { regimes: r.exonerationsDeZone.regimes.map(({ id, nom, creationDepuis, creationJusquA, moisExonerationTotale, partsExonereesEnsuite, plafondAnnuel, conditionsNonVerifiees, liberauxHorsSanteExclus, hypotheses }) => ({ id, nom, creationDepuis, creationJusquA, moisExonerationTotale, partsExonereesEnsuite, plafondAnnuel, conditionsNonVerifiees, liberauxHorsSanteExclus, hypotheses })) },
+      source: source(r.exonerationsDeZone)
+    },
     ...reglesDesLiberaux(r.liberauxReglementes)
   ]
 }

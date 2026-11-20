@@ -4,7 +4,7 @@
 
 import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { documentCsv, montant, type CelluleCsv } from "./csv"
-import { dispositifsDesAnnees, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
+import { dispositifsDesAnnees, exonerationsDeZone, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
 import { conditionsDuPortageEnPhrase, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
 import { netDeLaSituationSaisie, raisonDeNonRetenue } from "./resume"
@@ -83,6 +83,14 @@ function lignesDesReserves(report: SimulationReport): Ligne[] {
   return tableauFacultatif(entete, lignes)
 }
 
+/** Bénéfices exonérés d'impôt en zone franche urbaine ou en quartier prioritaire (ADR 017) : régime, taux, montant et plafond. */
+function lignesDesExonerationsDeZone(report: SimulationReport): Ligne[] {
+  const entete: Ligne = ["Exonération d'impôt en zone", "Régime", "Part du bénéfice exonérée (%)", "Part du chiffre d'affaires dans la zone (%)", "Bénéfice exonéré d'impôt", "Plafond de l'année", "Plafond atteint"]
+  const pourcents = (part: number) => Math.round(part * 1000) / 10
+  const lignes = exonerationsDeZone(report).map(({ activite, regime, exoneration: e }): Ligne => [activite, regime, pourcents(e.partExoneree), pourcents(e.partDansLaZone), montant(e.beneficeExonere), e.plafond === undefined ? null : montant(e.plafond), ouiNon(e.plafondAtteint)])
+  return tableauFacultatif(entete, lignes)
+}
+
 /** Les cotisations sociales de chaque activité, une ligne par cotisation : celles de l'écran, à l'euro, dont la somme est le total. */
 function lignesDesCaisses(report: SimulationReport): Ligne[] {
   const entete: Ligne = ["Détail des cotisations", "Profession", "Cotisation", "Montant", "Précision"]
@@ -110,11 +118,11 @@ function lignesDesFraisProfessionnels(report: SimulationReport): Ligne[] {
 
 /**
  * Bilan, activités, personnes et foyers fiscaux, séparés par une ligne vide ; puis, quand la simulation en contient,
- * le versement libératoire, les déplacements professionnels et les frais professionnels.
+ * le versement libératoire, les bénéfices exonérés en zone, les déplacements professionnels et les frais professionnels.
  */
 export function csvResultats(session: SimulationAnnuelle, report: SimulationReport): string {
   const tableaux = [...lignesDuBilan(report), [], ...lignesDesActivites(session, report), [], ...lignesDesPersonnes(report), [], ...lignesDesFoyers(session, report)]
-  return documentCsv([...tableaux, ...lignesDesCaisses(report), ...lignesDesReserves(report), ...lignesDuVersementLiberatoire(report), ...lignesDesDeplacements(report), ...lignesDesFraisProfessionnels(report)])
+  return documentCsv([...tableaux, ...lignesDesCaisses(report), ...lignesDesReserves(report), ...lignesDuVersementLiberatoire(report), ...lignesDesExonerationsDeZone(report), ...lignesDesDeplacements(report), ...lignesDesFraisProfessionnels(report)])
 }
 
 // --- Toutes les années ---

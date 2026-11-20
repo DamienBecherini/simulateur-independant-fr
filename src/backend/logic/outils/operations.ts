@@ -36,7 +36,8 @@ export const ReglagesActeurSchema = z.strictObject({
     .string()
     .optional()
     .describe("EI, EURL, micro : profession réglementée (regles_de_l_annee)."),
-  partConventionnee: z.number().min(0).max(1).optional().describe("Part conventionnée (CARPIMKO), 0 à 1.")
+  partConventionnee: z.number().min(0).max(1).optional().describe("Part conventionnée (CARPIMKO), 0 à 1."),
+  partEnZone: z.number().min(0).max(1).optional().describe("Activité : part du chiffre d'affaires réalisée en zone ZFU-TE ou QPV, 0 à 1 (0 : hors zone).")
 })
 type ReglagesActeur = z.infer<typeof ReglagesActeurSchema>
 
@@ -54,7 +55,8 @@ const REGLAGE_PAR_GENRE: Record<keyof ReglagesActeur, GenreDActeur[]> = {
   rfrN2: ["micro-entreprise"],
   horsPlafondAnneePrecedente: ["micro-entreprise"],
   profession: [...STATUTS_A_PROFESSION, "micro-entreprise"],
-  partConventionnee: [...STATUTS_A_PROFESSION, "micro-entreprise"]
+  partConventionnee: [...STATUTS_A_PROFESSION, "micro-entreprise"],
+  partEnZone: [...STATUTS_JURIDIQUES, "micro-entreprise"]
 }
 
 /**
@@ -146,16 +148,29 @@ function sansValeursAbsentes<T extends object>(objet: T): Partial<T> {
   return Object.fromEntries(Object.entries(objet).filter(([, valeur]) => valeur !== undefined)) as Partial<T>
 }
 
-/** Les réglages d'un acteur sous les noms des champs de la session (`partsFiscales` y devient `fiscalParts`). */
-type ChampsReglables = Omit<ReglagesActeur, "partsFiscales"> & { fiscalParts?: number }
+/**
+ * Les réglages d'un acteur sous les noms des champs de la session : `partsFiscales` y devient `fiscalParts`, et
+ * `partEnZone` l'implantation en zone de l'activité (ADR 017).
+ */
+type ChampsReglables = Omit<ReglagesActeur, "partsFiscales" | "partEnZone"> & { fiscalParts?: number; implantationEnZone?: { partDuChiffreDAffaires?: number } }
+
+/**
+ * L'implantation en zone que dit `partEnZone` : rien à changer s'il n'est pas proposé ; à 0, l'activité n'est plus en
+ * zone (le champ est retiré) ; à 1, seule la case est enregistrée, comme dans la fiche de l'activité.
+ */
+function implantationProposee(partEnZone: number | undefined): Pick<ChampsReglables, "implantationEnZone"> {
+  if (partEnZone === undefined) return {}
+  if (partEnZone === 0) return { implantationEnZone: undefined }
+  return { implantationEnZone: partEnZone < 1 ? { partDuChiffreDAffaires: partEnZone } : {} }
+}
 
 /**
  * Les réglages proposés, sous les noms des champs de la session. Typés champ par champ : un acteur construit avec eux
  * est vérifié par le compilateur, sans conversion forcée ; `verifierReglages` garantit qu'ils conviennent à son genre.
  */
 function champsDeLActeur(reglages: ReglagesActeur): ChampsReglables {
-  const { partsFiscales, ...reste } = reglages
-  return sansValeursAbsentes({ fiscalParts: partsFiscales, ...reste })
+  const { partsFiscales, partEnZone, ...reste } = reglages
+  return { ...sansValeursAbsentes({ fiscalParts: partsFiscales, ...reste }), ...implantationProposee(partEnZone) }
 }
 
 function ajouterActeur(c: Chantier, op: OperationDe<"ajouter_acteur">): void {

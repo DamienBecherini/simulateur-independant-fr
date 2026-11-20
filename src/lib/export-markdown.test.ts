@@ -278,6 +278,35 @@ Une ligne par année de la session, avec les mêmes acteurs et la grille de chaq
     expect(rapportComplet()).not.toContain("### Dispositifs dans le temps")
   })
 
+  it("donne le bénéfice exonéré en zone, son régime, son plafond et les hypothèses du calcul ; l'implantation est dite parmi les acteurs", () => {
+    const hypotheses = ["Une année à cheval sur deux taux d'exonération est répartie également entre ses mois.", "L'administration n'a pas encore publié son commentaire de ce régime."]
+    const avecZone = (exoneration: Partial<NonNullable<ReturnType<typeof rapportExemple>["activities"][number]["exonerationDeZone"]>>) => {
+      const report = rapportExemple()
+      report.activities = report.activities.map(a => ({ ...a, exonerationDeZone: { regime: "zfuTe", nom: "ZFU-TE", partExoneree: 0.6, partDansLaZone: 0.75, beneficeExonere: 12400, plafond: 50000, plafondAtteint: false, hypotheses, ...exoneration } }))
+      return report
+    }
+    const session = sessionExemple()
+    session.entities = session.entities.map(e => (e.type === "company" ? { ...e, implantationEnZone: { partDuChiffreDAffaires: 0.75 } } : e))
+
+    const rapport = rapportComplet({ report: avecZone({}), session })
+    expect(rapport).toMatch(/\| Ma SASU \| ZFU-TE \| 60\s% \| 75\s% \| \*\*12 400 €\*\* \| 50 000 € \|/)
+    // Les hypothèses que la fiche montre à qui coche la case, chacune une fois, avant la suite du rapport.
+    expect(rapport).toContain(`Ce que ce calcul suppose :\n\n- ${hypotheses[0]}\n- ${hypotheses[1]}\n\n### Par foyer fiscal`)
+    expect(rapport).toMatch(/capital social 1 000 € ; implantée en zone franche urbaine \(ZFU-TE\) ou en quartier prioritaire \(QPV\), pour 75\s% de son chiffre d'affaires \|/)
+
+    // Plafond atteint ; régime sans plafond ; tout le chiffre d'affaires dans la zone : la part n'est pas redite parmi les acteurs.
+    expect(rapportComplet({ report: avecZone({ beneficeExonere: 50000, plafondAtteint: true }) })).toContain("| **50 000 €** | 50 000 € (atteint) |")
+    expect(rapportComplet({ report: avecZone({ regime: "qpv", nom: "QPV", plafond: undefined, hypotheses: [] }) })).toMatch(/\| QPV \| 60\s% \| 75\s% \| \*\*12 400 €\*\* \| aucun \|\n\n### Par foyer fiscal/)
+    const sessionEntiere = sessionExemple()
+    sessionEntiere.entities = sessionEntiere.entities.map(e => (e.type === "company" ? { ...e, implantationEnZone: {} } : e))
+    expect(rapportComplet({ session: sessionEntiere })).toContain("; implantée en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV) |")
+
+    // Rien d'exonéré (exonération terminée, déficit) : la section disparaît, la note de l'activité reste dans les dispositifs.
+    expect(rapportComplet({ report: avecZone({ beneficeExonere: 0, sansExoneration: "terminee" }) })).not.toContain("### Exonération d'impôt en zone")
+    expect(rapportComplet()).not.toContain("### Exonération d'impôt en zone")
+    expect(rapportComplet()).not.toContain("implantée en zone")
+  })
+
   it("dans le comparateur, signale les colonnes plus accessibles et la CFE de l'année", () => {
     const resultat = comparaisonExemple()
     resultat.scenarios = resultat.scenarios.map(s => (s.statut === "micro" ? { ...s, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] } } : s))

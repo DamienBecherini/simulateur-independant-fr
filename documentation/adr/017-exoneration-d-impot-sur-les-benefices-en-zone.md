@@ -111,7 +111,7 @@ Pour celui-ci :
 ### 5. Pour que les intéressés le trouvent
 
 - **Une situation type**, « SASU en zone franche urbaine (ZFU-TE) » (décision 4), avec son lien public (`#situation=sasu-en-zone-franche-urbaine`, voir `liens-vers-les-situations-types.md`).
-- **Avec une IA** : le champ fait partie des réglages d'un acteur, que `proposer_modification` sait déjà changer ; `lire_simulation` et les résultats le restituent. Pas de nouvel outil (dix-sept).
+- **Avec une IA** : un réglage de l'activité, `partEnZone` (part du chiffre d'affaires réalisée dans la zone, de 0 à 1 ; 0 retire l'activité de la zone), que `proposer_acteur` et `proposer_modification` savent fixer et que `decrire_simulation` restitue. `regles_de_l_annee` donne les régimes, leur calendrier, leur plafond et leurs hypothèses ; `simuler` donne le bénéfice exonéré de chaque activité, `expliquer_resultat` sa ligne et ce que le calcul suppose. Pas de nouvel outil (dix-sept).
 - **Documentation** : guide de l'utilisateur, Roadmap (ligne « Dispositifs limités dans le temps »), CHANGELOG.
 
 ### 6. Hors périmètre

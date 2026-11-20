@@ -1,7 +1,7 @@
 // src/lib/export-commun.ts
 // Briques partagées par les exports CSV et Markdown : noms de fichiers, nature des acteurs, flux regroupés par acteur.
 
-import { estEntrepriseOuMicro, type Entity, type FinancialFlow, type FoyerFiscalResult, type FraisProfessionnelsResult, type PuissanceFiscale, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport, type VersementLiberatoireInfo } from "@/types"
+import { estEntrepriseOuMicro, type Entity, type ExonerationDeZoneDeLActivite, type FinancialFlow, type FoyerFiscalResult, type FraisProfessionnelsResult, type PuissanceFiscale, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport, type VersementLiberatoireInfo } from "@/types"
 import { flowTypeLabels, libelleDuType, isOutgoingFlowType, type FlowType } from "./flow-constants"
 import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
 import { pourcent } from "@/backend/logic/format"
@@ -158,6 +158,28 @@ export function reservesDesAnnees(simulation: SimulationPluriannuelle): { annee:
 /** Dispositifs limités dans le temps, année par année et activité par activité. */
 export function dispositifsDesAnnees(simulation: SimulationPluriannuelle): { annee: number; activite: string; note: string }[] {
   return simulation.annees.flatMap(({ annee, report }) => (report?.activities ?? []).flatMap(a => (a.dispositifs ?? []).map(note => ({ annee, activite: a.name, note }))))
+}
+
+/** Une activité dont une part du bénéfice est exonérée d'impôt en zone cette année (ADR 017). */
+export interface ExonerationDeZoneExportee {
+  activite: string
+  /** Sigle du régime : « ZFU-TE », « QPV ». */
+  regime: string
+  exoneration: ExonerationDeZoneDeLActivite
+}
+
+/**
+ * Les activités dont un bénéfice est exonéré d'impôt en zone franche urbaine ou en quartier prioritaire : une ligne par
+ * activité, seulement quand le montant exonéré n'est pas nul (une exonération terminée ou sans effet reste dite par la
+ * note de l'activité, dans les dispositifs de l'année).
+ */
+export function exonerationsDeZone(report: SimulationReport): ExonerationDeZoneExportee[] {
+  return report.activities.flatMap(({ name, exonerationDeZone: e }) => (e && e.beneficeExonere > 0 ? [{ activite: name, regime: e.nom ?? "", exoneration: e }] : []))
+}
+
+/** Les hypothèses du calcul des exonérations en zone de l'année, chacune une fois (ce que la fiche de l'activité montre). */
+export function hypothesesDesExonerationsDeZone(report: SimulationReport): string[] {
+  return [...new Set(exonerationsDeZone(report).flatMap(({ exoneration }) => exoneration.hypotheses))]
 }
 
 /** Une ligne du détail des cotisations d'une activité, telle que l'écran la montre : mêmes lignes, mêmes montants. */

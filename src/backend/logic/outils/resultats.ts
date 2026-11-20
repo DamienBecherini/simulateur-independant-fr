@@ -48,7 +48,7 @@ function resumeDuFoyer(session: SessionState, foyer: FoyerFiscalResult): z.infer
   }
 }
 
-const ActiviteSchema = z.object({ id: z.string(), nom: z.string(), statut: z.string(), chiffreAffaires: z.number(), charges: z.number(), cotisationsSociales: z.number(), impotSocietes: z.number(), revenuVerse: z.number(), resultatConserve: z.number(), reservesALaFin: z.number().optional(), dispositifs: z.array(z.string()), avertissements: z.array(z.string()) })
+const ActiviteSchema = z.object({ id: z.string(), nom: z.string(), statut: z.string(), chiffreAffaires: z.number(), charges: z.number(), cotisationsSociales: z.number(), impotSocietes: z.number(), revenuVerse: z.number(), resultatConserve: z.number(), reservesALaFin: z.number().optional(), beneficeExonereEnZone: z.number().optional(), dispositifs: z.array(z.string()), avertissements: z.array(z.string()) })
 
 const resumeDeLActivite = (a: ActivityResult): z.infer<typeof ActiviteSchema> => ({
   id: a.entityId,
@@ -57,6 +57,8 @@ const resumeDeLActivite = (a: ActivityResult): z.infer<typeof ActiviteSchema> =>
   ...arrondirTout({ chiffreAffaires: a.chiffreAffaires, charges: a.charges, cotisationsSociales: a.cotisationsSociales, impotSocietes: a.impotSocietes, revenuVerse: a.revenuVerse, resultatConserve: a.resultatConserve }),
   // Société à l'IS : ses réserves distribuables au 31 décembre, reportées d'une année à l'autre (voir l'ADR 014).
   ...(a.reserves ? { reservesALaFin: arrondir(a.reserves.aLaFin.reserves) } : {}),
+  // Activité implantée en zone (ZFU-TE, QPV) : son bénéfice exonéré d'impôt cette année (voir l'ADR 017).
+  ...(a.exonerationDeZone && a.exonerationDeZone.beneficeExonere > 0 ? { beneficeExonereEnZone: arrondir(a.exonerationDeZone.beneficeExonere) } : {}),
   dispositifs: a.dispositifs ?? [],
   avertissements: a.warnings
 })
@@ -213,6 +215,12 @@ function phraseDesReserves(r: ReservesDeLaSociete): string {
   return `Réserves distribuables : ${arrondir(r.auDebut.reserves)} € au 1er janvier, ${arrondir(r.aLaFin.reserves)} € au 31 décembre ; bénéfice distribuable de l'année ${arrondir(r.beneficeDistribuableDeLAnnee)} € (après ${arrondir(r.dotationReserveLegale)} € de réserve légale), dividendes pris sur les réserves ${arrondir(r.dividendesPrisSurLesReserves)} €. Réserve légale : ${arrondir(r.aLaFin.reserveLegale)} €.${impute}${deficit}`
 }
 
+/** Exonération en zone (ADR 017) : sa note est parmi les dispositifs ; les hypothèses du calcul suivent, pour que l'IA les dise. */
+function hypothesesDeLaZone(a: ActivityResult): string[] {
+  const hypotheses = a.exonerationDeZone?.hypotheses ?? []
+  return hypotheses.length > 0 ? [`Exonération en zone, ce que le calcul suppose : ${hypotheses.join(" ")}`] : []
+}
+
 function informationsDeLActivite(session: SessionState, a: ActivityResult): string[] {
   const infos: string[] = []
   const vl = a.versementLiberatoire
@@ -223,7 +231,14 @@ function informationsDeLActivite(session: SessionState, a: ActivityResult): stri
   if (a.reserves) infos.push(phraseDesReserves(a.reserves))
   if (a.portage) infos.push(...informationsDuPortage(a.portage))
   if (a.beneficiaireIds.length > 0) infos.push(`Revenus versés à : ${a.beneficiaireIds.map(id => nomDe(session, id)).join(", ")}.`)
-  return [...informationsDeLaProfession(a), ...infos, ...(a.dispositifs ?? [])]
+  return [...informationsDeLaProfession(a), ...infos, ...(a.dispositifs ?? []), ...hypothesesDeLaZone(a)]
+}
+
+/** Le bénéfice exonéré d'impôt d'une activité implantée en zone, avec son régime et son taux ; rien quand il est nul. */
+function beneficeExonereEnZone(a: ActivityResult): Ligne[] {
+  const e = a.exonerationDeZone
+  if (!e || e.beneficeExonere <= 0) return []
+  return [ligne(`Bénéfice exonéré d'impôt en zone (${e.nom}, exonéré à ${pourcentDeNombre(e.partExoneree * 100, 1)}${e.plafondAtteint ? ", plafond atteint" : ""})`, e.beneficeExonere)]
 }
 
 function expliquerActivite(session: SessionState, a: ActivityResult) {
@@ -237,7 +252,7 @@ function expliquerActivite(session: SessionState, a: ActivityResult) {
   const p = a.partage
   const partage = p ? [ligne("Partage du bénéfice avant rémunération", p.beneficeAvantRemuneration, [composante("Rémunération nette", p.remunerationNette), composante("Cotisations sur la rémunération", p.cotisationsRemuneration), composante("Impôt sur les sociétés", p.impotSocietes), composante("Dividendes nets", p.dividendesNets), composante("Cotisations sur les dividendes", p.cotisationsSurDividendes), composante("Ajouté aux réserves (négatif : pris sur les réserves ou déficit)", p.resultatConserve)])] : []
   return {
-    lignes: [ligne("Chiffre d'affaires", a.chiffreAffaires), ligne("Charges", a.charges), ligne("Cotisations sociales", a.cotisationsSociales), ...cotisations, ligne("Impôt sur les sociétés", a.impotSocietes), ligne("Revenu versé aux personnes, avant impôt sur le revenu", a.revenuVerse), ligne("Résultat conservé dans l'activité", a.resultatConserve), ...partage],
+    lignes: [ligne("Chiffre d'affaires", a.chiffreAffaires), ligne("Charges", a.charges), ligne("Cotisations sociales", a.cotisationsSociales), ...cotisations, ...beneficeExonereEnZone(a), ligne("Impôt sur les sociétés", a.impotSocietes), ligne("Revenu versé aux personnes, avant impôt sur le revenu", a.revenuVerse), ligne("Résultat conservé dans l'activité", a.resultatConserve), ...partage],
     informations: informationsDeLActivite(session, a),
     avertissements: a.warnings
   }

@@ -73,6 +73,21 @@ describe("csvResultats", () => {
     expect(lignes(csvResultats(sessionExemple(), rapport))).toContain("Ma SASU;SASU;36000,00;100,50;8000,00;1000,00;26499,50;400,00;Alice;ACRE : cotisations réduites de 25 %. Plafonds au prorata.")
   })
 
+  it("ajoute les bénéfices exonérés en zone : régime, parts en pourcents, montant et plafond", () => {
+    const avecZone = (exoneration: Partial<NonNullable<ReturnType<typeof rapportExemple>["activities"][number]["exonerationDeZone"]>>) => {
+      const rapport = rapportExemple()
+      rapport.activities = rapport.activities.map(a => ({ ...a, exonerationDeZone: { regime: "zfuTe", nom: "ZFU-TE", partExoneree: 2 / 3, partDansLaZone: 1, beneficeExonere: 50000, plafond: 50000, plafondAtteint: true, hypotheses: [], ...exoneration } }))
+      return lignes(csvResultats(sessionExemple(), rapport))
+    }
+    const plafonnee = avecZone({})
+    expect(plafonnee).toContain("Exonération d'impôt en zone;Régime;Part du bénéfice exonérée (%);Part du chiffre d'affaires dans la zone (%);Bénéfice exonéré d'impôt;Plafond de l'année;Plafond atteint")
+    expect(plafonnee).toContain("Ma SASU;ZFU-TE;66,7;100;50000,00;50000,00;oui")
+    // Régime sans plafond : la case reste vide.
+    expect(avecZone({ regime: "qpv", nom: "QPV", partExoneree: 1, partDansLaZone: 0.6, beneficeExonere: 18000, plafond: undefined, plafondAtteint: false })).toContain("Ma SASU;QPV;100;60;18000,00;;non")
+    // Rien d'exonéré : pas de tableau.
+    expect(avecZone({ beneficeExonere: 0, sansExoneration: "terminee" }).join("\n")).not.toContain("Exonération d'impôt en zone;")
+  })
+
   it("nomme l'imposition au barème, et laisse la case vide sans dividendes", () => {
     const rapport = rapportExemple()
     rapport.foyers = [{ ...rapport.foyers[0], optionDividendes: "bareme" }, { ...rapport.foyers[0], optionDividendes: null }]
@@ -122,7 +137,7 @@ describe("csvResultats avec des frais au barème kilométrique et le versement l
 
   it("omet ces tableaux quand la simulation n'a ni frais réels, ni déplacements, ni versement libératoire", () => {
     const csv = csvResultats(sessionExemple(), rapportExemple())
-    for (const entete of ["Versement libératoire;", "Déplacements professionnels;", "Frais professionnels;", "Voiture des trajets;"]) expect(csv).not.toContain(entete)
+    for (const entete of ["Versement libératoire;", "Exonération d'impôt en zone;", "Déplacements professionnels;", "Frais professionnels;", "Voiture des trajets;"]) expect(csv).not.toContain(entete)
   })
 })
 
