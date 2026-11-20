@@ -81,8 +81,9 @@ interface RemunerationSaisieProps {
 
 /**
  * Rémunération saisie (SASU, EURL) : un champ, et à côté un curseur de 0 à la plus haute rémunération que la société
- * peut verser sans déficit. Les deux se suivent ; une rémunération saisie au-delà reste acceptée (le comparateur
- * signale alors le déficit), la poignée restant en bout de piste. Sans bénéfice, pas de curseur.
+ * peut verser sans déficit. Les deux se suivent. Une rémunération saisie au-delà n'est pas versée : chaque colonne
+ * retient au plus ce que sa société peut verser, et une phrase le dit sous le champ, la poignée restant en bout de
+ * piste. Sans bénéfice, pas de curseur.
  */
 function RemunerationSaisie({ remunerationNette, statut, plafond, onChange }: RemunerationSaisieProps) {
   // Pendant un glissement, le champ montre la valeur de la poignée ; le comparateur ne recalcule qu'au relâchement.
@@ -107,6 +108,11 @@ function RemunerationSaisie({ remunerationNette, statut, plafond, onChange }: Re
       {plafond === 0 ? (
         <p id={note} className={classeDeLaNote}>
           En {statut}, l'activité ne dégage pas de bénéfice : aucune rémunération possible sans déficit.
+        </p>
+      ) : null}
+      {plafond !== null && remunerationNette > plafond ? (
+        <p role="status" className="text-sm text-amber-800 dark:text-amber-200">
+          {plafond > 0 ? `Une société ne verse pas plus qu'elle ne gagne : en ${statut}, le comparateur retient ${euros(plafond)}, le plus qu'elle peut verser.` : `Une société ne verse pas plus qu'elle ne gagne : en ${statut}, le comparateur ne retient aucune rémunération.`}
         </p>
       ) : null}
     </div>

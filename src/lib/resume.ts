@@ -90,10 +90,11 @@ export function ecartAvecLaSituationSaisie(result: ComparaisonResult, scenario: 
 }
 
 /**
- * Une colonne micro hors plafond ou au régime fermé, ou une colonne du portage salarial sans prestations ou avec des
- * salariés : jamais retenue comme meilleur statut.
+ * Une colonne micro hors plafond ou au régime fermé, une colonne du portage salarial sans prestations ou avec des
+ * salariés, une société dont la grille verse une rémunération supérieure à son bénéfice : jamais retenue comme
+ * meilleur statut.
  */
-export const estNonRetenue = (s: ScenarioStatut) => s.horsPlafond || s.regimeMicroFerme !== undefined || s.portageNonRetenu !== undefined
+export const estNonRetenue = (s: ScenarioStatut) => s.horsPlafond || s.regimeMicroFerme !== undefined || s.portageNonRetenu !== undefined || s.remunerationNonCouverte === true
 
 /** Ce que dit la cellule d'une colonne du portage salarial non retenue. */
 const PORTAGE_NON_RETENU: Record<RaisonPortageNonRetenu, string> = {
@@ -105,6 +106,7 @@ const PORTAGE_NON_RETENU: Record<RaisonPortageNonRetenu, string> = {
 export function raisonDeNonRetenue(scenario: ScenarioStatut): string | null {
   if (scenario.portageNonRetenu) return PORTAGE_NON_RETENU[scenario.portageNonRetenu]
   if (scenario.regimeMicroFerme) return "non retenue : régime micro fermé"
+  if (scenario.remunerationNonCouverte) return "non retenue : rémunération supérieure au bénéfice"
   return scenario.horsPlafond ? "non retenue : plafond dépassé" : null
 }
 

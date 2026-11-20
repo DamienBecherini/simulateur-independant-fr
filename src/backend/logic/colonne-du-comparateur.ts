@@ -1,12 +1,12 @@
 // src/backend/logic/colonne-du-comparateur.ts
 
-import { estSocieteIS, type ComparaisonOptions, type ConditionsPortageRetenues, type DonneesDeLAnnee, type MicroEntreprise, type ModeRepartition, type RaisonPortageNonRetenu, type ScenarioStatut, type SimulationReport, type StatutCompare } from "../../types.js"
+import { estSocieteIS, type ComparaisonOptions, type ConditionsPortageRetenues, type DonneesDeLAnnee, type MicroEntreprise, type ModeRepartition, type PartageDuBenefice, type RaisonPortageNonRetenu, type RemunerationPlafonnee, type ScenarioStatut, type SimulationReport, type StatutCompare } from "../../types.js"
 import { depassePlafondMicro } from "./calculsAE.js"
 import { estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, prorataDesPlafonds } from "./dispositifs.js"
 import { ecartDeFrais } from "./frais-de-fonctionnement.js"
 import { conditionsPortageParDefaut, LIBELLES_DES_CONDITIONS_PORTAGE } from "./options-du-comparateur.js"
-import { pourcent } from "./format.js"
+import { euros, pourcent } from "./format.js"
 import { professionDe, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import type { ReglesFiscales } from "./regles.js"
@@ -38,6 +38,8 @@ export interface SimulationDeLaColonne {
   session: DonneesDeLAnnee
   /** Dividendes calculés selon la répartition choisie ; `null` quand ce sont ceux de la grille. */
   dividendes: number | null
+  /** La rémunération choisie dépassait ce que la société peut verser sans déficit : celle demandée, et celle simulée. */
+  remunerationPlafonnee?: RemunerationPlafonnee
 }
 
 /** Titre de chaque colonne : le nom du statut au réel, les deux variantes de la micro-entreprise, le portage salarial. */
@@ -185,6 +187,22 @@ function detailsDeLActivite(activite: ActiviteDuRapport, notes: string[]) {
   }
 }
 
+/** Ce que dit la colonne d'une société dont la rémunération choisie a été ramenée à ce qu'elle peut verser. */
+function noteDuPlafond(statut: StatutCompare, plafond: RemunerationPlafonnee | undefined): string[] {
+  if (!plafond) return []
+  const demandee = euros(plafond.demandee)
+  if (plafond.retenue <= 0) return [`Aucune rémunération retenue, au lieu des ${demandee} choisis : en ${LIBELLES[statut]}, l'activité ne dégage pas de bénéfice à verser.`]
+  return [`Rémunération limitée à ${euros(plafond.retenue)} nets, au lieu des ${demandee} choisis : en ${LIBELLES[statut]}, la société ne peut pas verser davantage sans déficit.`]
+}
+
+/**
+ * La société verse-t-elle une rémunération alors qu'elle est déficitaire ? Possible avec les montants de la grille
+ * seulement : une rémunération choisie dans les réglages est ramenée à ce que la société peut verser.
+ */
+function remunerationNonCouverte(partage: PartageDuBenefice | undefined): boolean {
+  return partage !== undefined && partage.remunerationNette > 0 && partage.beneficeAvantRemuneration - partage.remunerationNette - partage.cotisationsRemuneration < -0.5
+}
+
 /** La colonne du statut, d'après la simulation de l'activité dans ce statut. */
 export function scenarioDeLaColonne({ source, options, regles, contexte }: ColonneEtudiee, statut: StatutCompare, simulation: SimulationDeLaColonne): ScenarioStatut {
   const activite = simulation.report.activities.find(a => a.entityId === source.id)
@@ -192,7 +210,7 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
   const { prorata, reglesMicro, ...acre } = microDeLaColonne(simulation, source.id, regles, contexte.annee ?? regles.annee)
   const { notes, ...ferme } = regimeFerme(statut, source.id, contexte)
   const { notes: notesDuPortage, ...portage } = colonneDuPortage(statut, { source, regles }, simulation, activite)
-  const { resultatConserveActivite, ...details } = detailsDeLActivite(activite, [...notes, ...notesDuPortage])
+  const { resultatConserveActivite, ...details } = detailsDeLActivite(activite, [...notes, ...notesDuPortage, ...noteDuPlafond(statut, simulation.remunerationPlafonnee)])
   return {
     statut,
     libelle: libelleDeLaColonne(statut, source, options),
@@ -205,6 +223,8 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
     horsPlafond: estMicro(statut) && depassePlafondMicro(caMicro, regles, prorata),
     ...ferme,
     ...portage,
+    ...(simulation.remunerationPlafonnee ? { remunerationPlafonnee: simulation.remunerationPlafonnee } : {}),
+    ...(remunerationNonCouverte(activite?.partage) ? { remunerationNonCouverte: true as const } : {}),
     ...details
   }
 }

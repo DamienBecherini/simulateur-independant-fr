@@ -337,7 +337,7 @@ function tableauDeComparaison(resultat: ComparaisonResult, nomActivite: string):
   const { scenarios } = resultat
   const signe = (montant: number) => eurosEnTexteBrut(montant).replace(/^(?!-)/, "+")
   const entete = (s: ScenarioStatut) => {
-    const mentions = [s.telleQueSaisie ? "actuel" : null, s.statut === resultat.meilleur ? "meilleur net" : null, s.horsPlafond ? "non retenue : plafond dépassé" : null, s.regimeMicroFerme ? "plus accessible" : null, s.portageNonRetenu ? raisonDeNonRetenue(s) : null].filter(Boolean)
+    const mentions = [s.telleQueSaisie ? "actuel" : null, s.statut === resultat.meilleur ? "meilleur net" : null, s.horsPlafond ? "non retenue : plafond dépassé" : null, s.regimeMicroFerme ? "plus accessible" : null, s.portageNonRetenu || s.remunerationNonCouverte ? raisonDeNonRetenue(s) : null].filter(Boolean)
     return mentions.length > 0 ? `${s.libelle} (${mentions.join(", ")})` : s.libelle
   }
   const indicateurs: [string, (s: ScenarioStatut) => string][] = [

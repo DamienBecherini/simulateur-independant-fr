@@ -328,6 +328,21 @@ describe("csvComparaison", () => {
     expect(csv).toContain("CFE exonérée l'année de création (2026).;Tous")
   })
 
+  it("signale une société non retenue pour sa rémunération, et une rémunération limitée à ce que la société peut verser", () => {
+    const nonCouverte = comparaisonExemple()
+    nonCouverte.scenarios = nonCouverte.scenarios.map(s => (s.statut === "SASU" ? { ...s, remunerationNonCouverte: true as const } : s))
+    expect(lignes(csvComparaison(nonCouverte, optionsExemple(), "Ma SASU"))).toContain("Non retenue : rémunération supérieure au bénéfice;oui;non")
+
+    const plafonnee = comparaisonExemple()
+    plafonnee.scenarios = plafonnee.scenarios.map(s => (s.statut === "SASU" ? { ...s, remunerationPlafonnee: { demandee: 80000000, retenue: 38000 } } : s))
+    expect(lignes(csvComparaison(plafonnee, optionsExemple(), "Ma SASU"))).toContain("Rémunération limitée à;38000,00;")
+
+    // Sans l'un ni l'autre, ces lignes n'existent pas.
+    const csv = lignes(csvComparaison(comparaisonExemple(), optionsExemple(), "Ma SASU")).join("\n")
+    expect(csv).not.toContain("Rémunération limitée à")
+    expect(csv).not.toContain("rémunération supérieure au bénéfice")
+  })
+
   it("signale une colonne micro non retenue, plafond dépassé", () => {
     const result = comparaisonExemple()
     result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? { ...s, horsPlafond: true } : s))

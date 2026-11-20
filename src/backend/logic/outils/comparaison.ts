@@ -60,6 +60,8 @@ const ScenarioSchema = z.object({
   resultatConserveActivite: z.number(),
   ecartDeFrais: z.number(),
   horsPlafond: z.boolean(),
+  remunerationDemandee: z.number().nullable().describe("SASU, EURL : la rémunération demandée, quand elle dépassait ce que la société peut verser sans déficit ; remunerationRetenue est alors ce maximum."),
+  remunerationNonCouverte: z.boolean().describe("SASU, EURL : la grille verse une rémunération supérieure au bénéfice ; colonne jamais désignée meilleur statut."),
   protectionSociale: z.object({ etoiles: z.number(), trimestres: z.number(), resume: z.string() }),
   remunerationRetenue: z.number().nullable(),
   avertissements: z.array(z.string())
@@ -72,6 +74,8 @@ const resumeDuScenario = (s: ScenarioStatut): z.infer<typeof ScenarioSchema> => 
   telleQueSaisie: s.telleQueSaisie,
   ...arrondirTout({ netApresImpots: s.netApresImpots, totalPrelevements: s.totalPrelevements, cotisationsSociales: s.cotisationsSociales, impotSocietes: s.impotSocietes, impotSurLeRevenu: s.impotSurLeRevenu, prelevementsSociaux: s.prelevementsSociaux, resultatConserveActivite: s.resultatConserveActivite, ecartDeFrais: s.ecartDeFrais.total }),
   horsPlafond: s.horsPlafond,
+  remunerationDemandee: s.remunerationPlafonnee ? arrondir(s.remunerationPlafonnee.demandee) : null,
+  remunerationNonCouverte: s.remunerationNonCouverte === true,
   protectionSociale: s.protectionSociale,
   remunerationRetenue: s.remunerationOptimale ? arrondir(s.remunerationOptimale.remunerationNette) : s.partage ? arrondir(s.partage.remunerationNette) : null,
   avertissements: s.warnings
@@ -98,7 +102,7 @@ export const comparerStatuts = definirOutil({
   parametres: z.strictObject({
     ...ParametresVariante,
     mode: z.enum(MODES_REPARTITION).optional().describe("Partage du bénéfice en SASU et EURL : meilleurNet (rémunération au meilleur net, reste en dividendes), dividendes (rémunération saisie, reste en dividendes), remuneration (tout), personnalisee (rémunération saisie et part distribuée), grille (montants saisis)."),
-    remunerationNette: MontantSchema.optional().describe("Rémunération nette annuelle du dirigeant, en euros (modes dividendes et personnalisee)."),
+    remunerationNette: MontantSchema.optional().describe("Rémunération nette annuelle du dirigeant, en euros (modes dividendes et personnalisee) ; plafonnée à ce que la société peut verser."),
     partDistribuee: z.number().min(0).max(1).optional().describe("Mode personnalisee : part du bénéfice distribuable versée en dividendes, de 0 à 1."),
     avecRetraite: z.boolean().optional().describe("Mode meilleurNet : exiger 4 trimestres de retraite."),
     partBncPrestations: z.number().min(0).max(1).optional().describe("Part BNC des prestations si l'activité devient une micro-entreprise, de 0 à 1.")

@@ -19,7 +19,7 @@ export function ZoneDefilante({ libelle, className, children }: { libelle: strin
   const { deborde, auDebut, aLaFin, colonneFixe, defiler } = useDefilementHorizontal(zone)
   const hautDesBarres = useHautDesBarres(deborde)
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("group/zone relative", className)}>
       <div ref={zone} tabIndex={0} role="region" aria-label={libelle} className="relative overflow-x-auto rounded-[inherit] print:overflow-visible focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         {children}
       </div>

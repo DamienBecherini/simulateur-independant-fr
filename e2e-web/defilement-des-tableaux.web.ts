@@ -1,7 +1,8 @@
 // e2e-web/defilement-des-tableaux.web.ts
-// Un tableau plus large que sa zone dit qu'il défile : une ombre du côté où des colonnes sont cachées (claire en thème
-// sombre), et une flèche qui y mène, au milieu de ce qui se voit du tableau. Les flèches suivent la page sans sauter,
-// y compris avec l'interface agrandie ; un écran tactile n'en a pas (on y fait glisser le tableau), l'impression non plus.
+// Un tableau plus large que sa zone dit qu'il défile : une ombre du côté où des colonnes sont cachées, et une flèche
+// qui y mène. Les flèches sont attachées au tableau, à mi-hauteur ; elles ne s'en détachent que pour rester à l'écran,
+// à 30 % du haut ou du bas de ce qui se voit, et jamais près du haut ou du bas du tableau. Un écran tactile n'en a pas
+// (on y fait glisser le tableau), l'impression non plus.
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
@@ -36,8 +37,21 @@ async function mesurer(page: Page): Promise<{ tableau: Cadre; gauche: Cadre; dro
 
 const milieu = (cadre: Cadre) => (cadre.haut + cadre.bas) / 2
 
-/** Le milieu de ce qui se voit du tableau, sous les barres collées en haut. */
-const milieuVisible = ({ tableau, barres, fenetre }: { tableau: Cadre; barres: number; fenetre: number }) => (Math.max(tableau.haut, barres) + Math.min(tableau.bas, fenetre)) / 2
+const borner = (valeur: number, minimum: number, maximum: number) => Math.min(Math.max(valeur, minimum), maximum)
+
+/**
+ * Où doit être le milieu d'une flèche, en pixels d'écran : à mi-hauteur du tableau ; ramené entre 30 % du haut et
+ * 30 % du bas de ce qui se voit sous les barres (sans jamais bouger les flèches d'un tableau entièrement visible) ;
+ * et dans tous les cas à 4 rem au moins du haut et du bas du tableau (le quart de sa hauteur s'il est petit).
+ */
+function milieuAttendu({ tableau, barres, fenetre }: { tableau: Cadre; barres: number; fenetre: number }, zoom: number): number {
+  const fleche = 32 * zoom
+  const hauteur = tableau.bas - tableau.haut
+  const retenue = Math.max(0, Math.min((fenetre - barres) * 0.3, (hauteur - fleche) / 2))
+  const marge = Math.min(64 * zoom, hauteur / 4)
+  const aLEcran = borner((tableau.haut + tableau.bas) / 2, barres + retenue + fleche / 2, fenetre - retenue - fleche / 2)
+  return borner(aLEcran, tableau.haut + marge + fleche / 2, tableau.bas - marge - fleche / 2)
+}
 
 /** Amène le haut du tableau (ou son bas) à cette distance du haut de la fenêtre, en pixels d'écran. */
 async function placerLeTableau(page: Page, distance: number, bord: "top" | "bottom" = "top") {
@@ -110,43 +124,33 @@ test.describe("dans une fenêtre de 700 px", () => {
   })
 
   for (const zoom of [1, 1.5]) {
-    test(`les flèches restent au milieu de ce qui se voit du tableau, à ${zoom * 100} %`, async ({ page }) => {
+    test(`les flèches suivent le tableau et ne s'en détachent que pour rester à l'écran, loin de ses bords, à ${zoom * 100} %`, async ({ page }) => {
       await page.addInitScript(z => window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], affichage: "resume", zoom: z })), zoom)
       await page.goto(SITUATION)
       await deplierLeTableauDuComparateur(page)
       await zone(page).evaluate(element => element.scrollTo({ left: 150, behavior: "instant" }))
       await expect(fleche(page, "gauche")).toBeVisible()
 
-      // Déplié, le tableau est plus haut que la fenêtre. Son haut juste sous les barres : les flèches au milieu de ce
-      // qui s'en voit, donc au milieu de l'écran sous les barres.
-      await placerLeTableauSousLesBarres(page, 20)
-      let mesure = await mesurer(page)
-      expect(mesure.tableau.bas).toBeGreaterThan(mesure.fenetre)
-      for (const cote of ["gauche", "droite"] as const) {
-        expect(mesure[cote].haut).toBeGreaterThanOrEqual(mesure.tableau.haut - 1)
-        expect(mesure[cote].bas).toBeLessThanOrEqual(mesure.fenetre)
-        expect(Math.abs(milieu(mesure[cote]) - milieuVisible(mesure))).toBeLessThanOrEqual(12)
+      // Déplié, le tableau est plus haut que la fenêtre. On le fait traverser l'écran, de son entrée par le bas à sa
+      // sortie par le haut, et l'on relève à chaque pas où sont les flèches.
+      await placerLeTableau(page, 560)
+      expect((await mesurer(page)).tableau.bas).toBeGreaterThan(620)
+      const releves: { attachee: boolean; dansLeTableau: number }[] = []
+      for (let pas = 0; pas < 40; pas++) {
+        const mesure = await mesurer(page)
+        if (mesure.tableau.bas < mesure.barres) break
+        const attendu = milieuAttendu(mesure, zoom)
+        for (const cote of ["gauche", "droite"] as const) expect(Math.abs(milieu(mesure[cote]) - attendu), `pas ${pas}, flèche de ${cote}, tableau de ${mesure.tableau.haut} à ${mesure.tableau.bas}`).toBeLessThanOrEqual(2)
+        // Jamais près du haut ni du bas du tableau.
+        const marge = Math.min(64 * zoom, (mesure.tableau.bas - mesure.tableau.haut) / 4)
+        expect(mesure.droite.haut).toBeGreaterThanOrEqual(mesure.tableau.haut + marge - 1)
+        expect(mesure.droite.bas).toBeLessThanOrEqual(mesure.tableau.bas - marge + 1)
+        releves.push({ attachee: Math.abs(milieu(mesure.droite) - (mesure.tableau.haut + mesure.tableau.bas) / 2) <= 2, dansLeTableau: Math.round(milieu(mesure.droite) - mesure.tableau.haut) })
+        await page.evaluate(() => window.scrollBy({ top: 50, behavior: "instant" }))
       }
-
-      // Le tableau traverse la fenêtre : les flèches au milieu de l'écran, sous les barres, et elles n'en bougent pas.
-      await placerLeTableau(page, -100)
-      mesure = await mesurer(page)
-      expect(mesure.tableau.haut).toBeLessThan(mesure.barres)
-      expect(mesure.tableau.bas).toBeGreaterThan(mesure.fenetre)
-      expect(Math.abs(milieu(mesure.droite) - milieuVisible(mesure))).toBeLessThanOrEqual(2)
-      expect(Math.abs(milieu(mesure.gauche) - milieu(mesure.droite))).toBeLessThanOrEqual(1)
-      const avant = milieu(mesure.droite)
-      await page.evaluate(() => window.scrollBy({ top: 60, behavior: "instant" }))
-      mesure = await mesurer(page)
-      if (mesure.tableau.bas > mesure.fenetre) expect(Math.abs(milieu(mesure.droite) - avant)).toBeLessThanOrEqual(1)
-
-      // Le bas du tableau remonte dans la fenêtre : les flèches le quittent avec son bord, sans en sortir.
-      await placerLeTableau(page, mesure.barres + 60 * zoom, "bottom")
-      mesure = await mesurer(page)
-      for (const cote of ["gauche", "droite"] as const) {
-        expect(mesure[cote].bas).toBeLessThanOrEqual(mesure.tableau.bas + 1)
-        expect(mesure[cote].haut).toBeGreaterThanOrEqual(mesure.barres - 1)
-      }
+      // En chemin, les flèches ont été à mi-hauteur du tableau (attachées à lui), et retenues ailleurs à d'autres moments.
+      expect(releves.some(releve => releve.attachee)).toBe(true)
+      expect(new Set(releves.map(releve => releve.dansLeTableau)).size).toBeGreaterThan(3)
     })
   }
 
@@ -160,25 +164,49 @@ test.describe("dans une fenêtre de 700 px", () => {
     expect(Math.abs(milieu(mesure.droite) - milieu(mesure.tableau))).toBeLessThanOrEqual(1)
     // À cheval sur le bord du tableau : la flèche n'en cache presque rien.
     expect(Math.abs((mesure.droite.gauche + mesure.droite.droite) / 2 - mesure.tableau.droite)).toBeLessThanOrEqual(2)
+
+    // Tant qu'il se voit en entier, où qu'il soit à l'écran, ses flèches n'en bougent pas.
+    await placerLeTableau(page, mesure.fenetre - 5, "bottom")
+    const enBas = await mesurer(page)
+    expect(enBas.tableau.haut).toBeGreaterThanOrEqual(enBas.barres)
+    expect(Math.abs(milieu(enBas.droite) - milieu(enBas.tableau))).toBeLessThanOrEqual(1)
   })
 
-  test("l'ombre est claire en thème sombre, sombre en thème clair, et le tout reste accessible", async ({ page }) => {
+  test("les flèches sont discrètes au repos, et pleinement visibles quand le pointeur est sur le tableau", async ({ page }) => {
+    await page.goto(SITUATION)
+    await page.mouse.move(5, 300)
+    await expect(fleche(page, "droite")).toHaveCSS("opacity", "0.6")
+    await zone(page).getByRole("columnheader").first().hover()
+    await expect(fleche(page, "droite")).toHaveCSS("opacity", "1")
+  })
+
+  test("l'ombre est sombre dans les deux thèmes, et le tout reste accessible", async ({ page }) => {
     await page.goto(SITUATION)
     await fleche(page, "droite").click()
     await expect(fleche(page, "gauche")).toBeVisible()
-    const luminosite = () =>
+    /** La teinte de départ du dégradé, lue telle que le navigateur la peint : rouge, vert, bleu et opacité, sur 255. */
+    const teinte = () =>
       ombre(page, "droite").evaluate(element => {
-        const [r, g, b] = (getComputedStyle(element).backgroundImage.match(/[\d.]+/g) ?? []).map(Number)
-        return (r + g + b) / 3
+        const couleur = getComputedStyle(element).backgroundImage.match(/(?:rgba?|oklab|oklch|color|color-mix)\((?:[^()]|\([^()]*\))*\)/)?.[0] ?? ""
+        const toile = document.createElement("canvas")
+        toile.width = toile.height = 1
+        const dessin = toile.getContext("2d")!
+        dessin.fillStyle = couleur
+        dessin.fillRect(0, 0, 1, 1)
+        const [rouge, vert, bleu, opacite] = dessin.getImageData(0, 0, 1, 1).data
+        return { clarte: (rouge + vert + bleu) / 3, opacite }
       })
-    // La teinte est donnée en fraction (color(srgb …)) ou sur 255 (rgb …) selon le navigateur : on compare les deux thèmes.
-    const enClair = await luminosite()
+    const enClair = await teinte()
+    expect(enClair.clarte).toBeLessThan(60)
+    expect(enClair.opacite).toBeGreaterThan(30)
     await auditer(page, "tableau qui défile, thème clair", CADRE_DU_TABLEAU)
     await page.evaluate(() => {
       document.documentElement.classList.remove("light")
       document.documentElement.classList.add("dark")
     })
-    await expect.poll(luminosite).toBeGreaterThan(enClair * 3)
+    // Sur un fond sombre, l'ombre est plus dense pour se voir.
+    await expect.poll(async () => (await teinte()).opacite).toBeGreaterThan(150)
+    expect((await teinte()).clarte).toBeLessThan(60)
     await auditer(page, "tableau qui défile, thème sombre", CADRE_DU_TABLEAU)
   })
 

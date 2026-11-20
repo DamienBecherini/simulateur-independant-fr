@@ -109,6 +109,16 @@ describe("verdict du comparateur", () => {
     expect(espaces(phraseDuVerdict({ ...comparaison("micro"), scenarios: [...comparaison("micro").scenarios, nonRetenu] }, "Atelier"))).toContain("Juste derrière : Micro + versement libératoire")
   })
 
+  it("une société dont la grille verse plus que son bénéfice n'est pas retenue, et sa cellule dit pourquoi", () => {
+    const societe = { ...scenario("SASU", "SASU", 40000), remunerationNonCouverte: true as const }
+    expect(estNonRetenue(societe)).toBe(true)
+    expect(raisonDeNonRetenue(societe)).toBe("non retenue : rémunération supérieure au bénéfice")
+    // Une rémunération choisie ramenée à ce que la société peut verser reste une colonne retenue.
+    const plafonnee = { ...scenario("SASU", "SASU", 30000), remunerationPlafonnee: { demandee: 80000000, retenue: 38000 } }
+    expect(estNonRetenue(plafonnee)).toBe(false)
+    expect(raisonDeNonRetenue(plafonnee)).toBeNull()
+  })
+
   it("seul en tête, le statut actuel n'a personne derrière lui", () => {
     expect(espaces(phraseDuVerdict({ ...comparaison("micro"), scenarios: [scenario("micro", "Micro-entreprise", 32000, true)] }, "Atelier"))).toBe("Pour « Atelier », le statut actuel, Micro-entreprise, donne le meilleur net : 32 000 €.")
   })

@@ -68,7 +68,7 @@
   --radius: 0.6rem;
   /* Bande des lignes alternées (voir les utilitaires `ligne-de-bande` et `case-de-bande` plus bas). */
   --fond-bande: --alpha(var(--color-slate-500) / 6%);
-  /* Ombre au bord d'un tableau qui défile en largeur (ReperesDeDefilement.tsx) : elle suit la couleur du texte. */
+  /* Ombre au bord d'un tableau qui défile en largeur (ReperesDeDefilement.tsx) : sombre dans les deux thèmes. */
   --ombre-de-defilement: --alpha(var(--color-slate-900) / 20%);
 }
 
@@ -100,7 +100,8 @@
     --chart-4: hsl(280 65% 60%);
     --chart-5: hsl(340 75% 55%);
     --fond-bande: --alpha(var(--color-slate-400) / 8%);
-    --ombre-de-defilement: --alpha(var(--color-slate-100) / 26%);
+    /* Variante claire, en balance pendant la recette du 20 novembre 2026 : --alpha(var(--color-slate-100) / 26%). */
+    --ombre-de-defilement: --alpha(var(--color-black) / 75%);
   }
 }
 

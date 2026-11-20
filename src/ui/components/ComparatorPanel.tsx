@@ -134,8 +134,19 @@ function MentionDuPlafond({ scenario }: { scenario: ScenarioStatut }) {
 }
 
 /**
- * Colonne d'une société que la rémunération choisie met en déficit. L'en-tête le dit : la note qui le détaille peut
- * être réduite à une pastille (affichage « Résumé »), et une alerte ne doit pas attendre un clic.
+ * Colonne d'une société dont la rémunération choisie dépassait ce qu'elle peut verser : la colonne en retient moins,
+ * et l'en-tête le dit, comme pour le déficit ci-dessous.
+ */
+function MentionDeLaRemunerationLimitee({ scenario }: { scenario: ScenarioStatut }) {
+  const plafond = scenario.remunerationPlafonnee
+  if (!plafond) return null
+  return <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">{plafond.retenue > 0 ? <>rémunération limitée à <span className="whitespace-nowrap">{euros(plafond.retenue)}</span></> : "aucune rémunération possible"}</span>
+}
+
+/**
+ * Colonne d'une société déficitaire (une année de perte, ou une rémunération de la grille supérieure au bénéfice).
+ * L'en-tête le dit : la note qui le détaille peut être réduite à une pastille (affichage « Résumé »), et une alerte ne
+ * doit pas attendre un clic.
  */
 function MentionDuDeficit({ scenario }: { scenario: ScenarioStatut }) {
   if (!scenario.partage || scenario.partage.resultatConserve >= 0) return null
@@ -144,7 +155,7 @@ function MentionDuDeficit({ scenario }: { scenario: ScenarioStatut }) {
 
 /**
  * En-tête d'une colonne : le statut, ses mentions (actuel : la situation saisie, au net des résultats ; meilleur net) et
- * les pastilles de ses notes (un clic ouvre la note dans une bulle). Une colonne micro non retenue est grisée.
+ * les pastilles de ses notes (un clic ouvre la note dans une bulle). Une colonne non retenue est grisée.
  */
 function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioStatut; meilleur: boolean; renvois: number[] }) {
   const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null].filter(Boolean).join(" · ")
@@ -154,6 +165,7 @@ function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioSta
       <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{mentions || " "}</span>
       <RemunerationRetenue scenario={scenario} />
       <MentionDuPlafond scenario={scenario} />
+      <MentionDeLaRemunerationLimitee scenario={scenario} />
       <MentionDuDeficit scenario={scenario} />
       <RenvoisAuxNotes colonne={scenario.statut} renvois={renvois} />
     </th>
