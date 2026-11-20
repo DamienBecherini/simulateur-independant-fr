@@ -72,7 +72,8 @@ export function statutsDeLaComparaison(profession: ProfessionReglementee | null)
  * Le statut au meilleur net, parmi les colonnes tenables : une micro-entreprise hors plafond ne l'est que deux ans, et
  * une profession qui exerce en principe en société d'exercice libéral n'a pas de SASU ou d'EURL classique à désigner ;
  * leurs colonnes restent, avec leur avertissement, mais le meilleur net se choisit ailleurs (ADR 015). Une colonne du
- * portage salarial sans prestations à facturer, ou avec des salariés, n'est pas tenable non plus (ADR 016).
+ * portage salarial sans prestations à facturer, ou avec des salariés, n'est pas tenable non plus (ADR 016), ni une
+ * société dont la grille verse une rémunération qu'elle ne gagne pas : ce net ne vient pas de l'activité.
  */
 function meilleurStatut(scenarios: ScenarioStatut[], profession: ProfessionReglementee | null): { meilleur: StatutCompare; warnings: string[] } {
   const sansSocieteClassique = profession?.societeExerciceLiberal === true
@@ -80,7 +81,8 @@ function meilleurStatut(scenarios: ScenarioStatut[], profession: ProfessionRegle
     sansSocieteClassique && scenarios.some(s => estSocieteIS(s.statut))
       ? [`${profession.libelle} : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut, cette profession exerçant en principe en société d'exercice libéral, dont la rémunération n'est pas encore modélisée. Leurs colonnes restent indicatives.`]
       : []
-  const tenables = scenarios.filter(s => !s.horsPlafond && !s.regimeMicroFerme && !s.portageNonRetenu && !(sansSocieteClassique && estSocieteIS(s.statut)))
+  const ecartee = (s: ScenarioStatut) => s.horsPlafond || s.regimeMicroFerme !== undefined || s.portageNonRetenu !== undefined || s.remunerationNonCouverte === true
+  const tenables = scenarios.filter(s => !ecartee(s) && !(sansSocieteClassique && estSocieteIS(s.statut)))
   const candidats = tenables.length > 0 ? tenables : scenarios
   return { meilleur: candidats.reduce((a, b) => (b.netApresImpots > a.netApresImpots ? b : a), candidats[0]).statut, warnings }
 }
@@ -103,6 +105,7 @@ function aDesCharges(donnees: DonneesDeLAnnee, activiteId: string): boolean {
 function motifNonRetenu(actuel: ScenarioStatut | undefined, profession: ProfessionReglementee | null): string | null {
   if (actuel?.regimeMicroFerme) return "régime micro fermé"
   if (actuel?.horsPlafond) return "plafond de la micro-entreprise dépassé"
+  if (actuel?.remunerationNonCouverte) return "la société verse une rémunération supérieure à son bénéfice"
   return actuel && profession?.societeExerciceLiberal === true && estSocieteIS(actuel.statut) ? "profession exercée en principe en société d'exercice libéral" : null
 }
 

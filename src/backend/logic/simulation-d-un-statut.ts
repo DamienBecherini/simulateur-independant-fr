@@ -13,7 +13,10 @@ import { runMetaSimulation } from "./simulation-engine.js"
  * rémunération, les dividendes et l'écart de frais de fonctionnement entre ce statut et le statut actuel, puis toute
  * l'année est simulée par le moteur.
  * En SASU ou en EURL, les dividendes suivent la répartition choisie : part du bénéfice distribuable de l'année, ou
- * rémunération la plus haute que la société peut verser. Le comparateur (une colonne par statut) et l'optimiseur
+ * rémunération la plus haute que la société peut verser. Une rémunération choisie au-delà de ce que la société peut
+ * verser sans déficit est ramenée à ce maximum : une société ne verse pas ce qu'elle ne gagne pas, et le net de la
+ * colonne ne voudrait plus rien dire. Seuls les montants de la grille (partage « grille ») sont repris tels quels.
+ * Le comparateur (une colonne par statut) et l'optimiseur
  * (une simulation par rémunération essayée) s'appuient tous deux sur ce module.
  */
 
@@ -130,9 +133,21 @@ function simulerAvec(colonne: ColonneEtudiee, statut: StatutCompare, dividendes:
  * changent, par prudence : ce bénéfice n'en dépend pas aujourd'hui.
  */
 function simulerLaSociete(colonne: ColonneEtudiee, statut: StatutSociete): SimulationDeLaColonne {
-  const { remunerationNette, part } = remunerationEtPart(colonne, statut)
+  const { remunerationNette: demandee, part } = remunerationEtPart(colonne, statut)
+  const sansPlafond = simulerAvec(avecLesReglages(colonne, { remunerationNette: demandee }), statut, 0)
+  // Sans dividendes, ce que la société garde est son bénéfice de l'année : négatif, la rémunération demandée la met en déficit.
+  const plafonnee = demandee > 0 && (sansPlafond.report.activities.find(a => a.entityId === colonne.source.id)?.resultatConserve ?? 0) < 0
+  if (!plafonnee) return avecLesDividendes(colonne, statut, demandee, part, sansPlafond)
+  const benefice = (remunerationNette: number) => beneficeAvantDividendes(avecLesReglages(colonne, { remunerationNette }), statut)
+  const retenue = benefice(0) > 0 ? remunerationMaximale(benefice) : 0
+  const simulation = avecLesDividendes(colonne, statut, retenue, part, simulerAvec(avecLesReglages(colonne, { remunerationNette: retenue }), statut, 0))
+  return { ...simulation, remunerationPlafonnee: { demandee, retenue } }
+}
+
+/** La société à cette rémunération, d'abord simulée sans dividendes, puis avec la part choisie de son bénéfice distribuable. */
+function avecLesDividendes(colonne: ColonneEtudiee, statut: StatutSociete, remunerationNette: number, part: number, sansDividendes: SimulationDeLaColonne): SimulationDeLaColonne {
   const reglee = avecLesReglages(colonne, { remunerationNette })
-  let simulation = simulerAvec(reglee, statut, 0)
+  let simulation = sansDividendes
   for (let tour = 0; tour < 5; tour++) {
     const suivants = Math.max(0, part * beneficeDistribuableDeLAnnee(simulation.report, colonne.source.id))
     if (Math.abs(suivants - (simulation.dividendes ?? 0)) < 1) break

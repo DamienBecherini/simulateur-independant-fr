@@ -262,7 +262,27 @@ describe("ComparatorPanel", () => {
     expect(screen.getByText(/Couverture SASU./)).toBeInTheDocument()
   })
 
-  it("écrit « société déficitaire » dans l'en-tête d'une société que la rémunération choisie met en déficit", async () => {
+  it("écrit dans l'en-tête qu'une rémunération choisie a été limitée à ce que la société peut verser", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(
+      comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, remunerationPlafonnee: { demandee: 80000000, retenue: 38000 } } : s.statut === "EURL" ? { ...s, remunerationPlafonnee: { demandee: 80000000, retenue: 0 } } : s)) })
+    )
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent(/rémunération limitée à 38\s000\s€/)
+    expect(within(table).getByRole("columnheader", { name: /^EURL/ })).toHaveTextContent("aucune rémunération possible")
+    expect(within(table).getByRole("columnheader", { name: /^EI au réel/ })).not.toHaveTextContent(/rémunération/)
+  })
+
+  it("grise une société dont la grille verse plus que le bénéfice, et écrit pourquoi elle n'est pas retenue", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, remunerationNonCouverte: true as const } : s)) }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    expect(within(table).getByRole("row", { name: /^Écart avec votre situation actuelle/ })).toHaveTextContent("non retenue : rémunération supérieure au bénéfice")
+  })
+
+  it("écrit « société déficitaire » dans l'en-tête d'une société que la rémunération de la grille met en déficit", async () => {
     const partage = { beneficeAvantRemuneration: 10000, remunerationNette: 20000, cotisationsRemuneration: 15000, impotSocietes: 0, dividendesNets: 0, cotisationsSurDividendes: 0, resultatConserve: -25000 }
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, partage } : s.statut === "EURL" ? { ...s, partage: { ...partage, resultatConserve: 0 } } : s)) }))
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)

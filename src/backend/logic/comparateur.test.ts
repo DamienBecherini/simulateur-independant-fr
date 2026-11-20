@@ -595,3 +595,96 @@ describe("au meilleur net", () => {
     }
   })
 })
+
+describe("une société ne verse pas ce qu'elle ne gagne pas", () => {
+  const sasu = [personne("alice"), societe("s1", "SASU")]
+  const liens = [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")]
+  const auMaximum = { repartition: { mode: "remuneration", partDistribuee: 1 } } as const
+  const grille = { repartition: { mode: "grille", partDistribuee: 1 } } as const
+
+  it("ramène une rémunération choisie hors de portée à la plus haute que la société peut verser, statut par statut, et le dit", () => {
+    const flux: Flux[] = [["s1", "ca_services", 60000]]
+    const demesuree = comparer(sasu, liens, flux, options("s1", { remunerationNette: 80_000_000 }))
+    const maximale = comparer(sasu, liens, flux, options("s1", auMaximum))
+
+    for (const statut of ["SASU", "EURL"] as const) {
+      const c = colonne(demesuree, statut)
+      const retenue = colonne(maximale, statut).partage!.remunerationNette
+      expect(retenue).toBeGreaterThan(0)
+      expect(c.remunerationPlafonnee).toEqual({ demandee: 80_000_000, retenue })
+      expect(c.partage!.remunerationNette).toBe(retenue)
+      // La société n'est plus déficitaire, et la colonne n'annonce pas un net qu'elle n'a pas : c'est celle du maximum,
+      // au reliquat près (le maximum est arrondi à 100 €, et ce reliquat part ici en dividendes).
+      expect(c.partage!.resultatConserve).toBeGreaterThanOrEqual(0)
+      expect(Math.abs(c.netApresImpots - colonne(maximale, statut).netApresImpots)).toBeLessThan(100)
+      expect(c.netApresImpots).toBeLessThan(60000)
+      expect(c.warnings).toContain(`Rémunération limitée à ${euros(retenue)} nets, au lieu des ${euros(80_000_000)} choisis : en ${statut}, la société ne peut pas verser davantage sans déficit.`)
+      expect(c.warnings.some(w => w.includes("déficitaire"))).toBe(false)
+      expect(c.remunerationNonCouverte).toBeUndefined()
+    }
+    // Chaque statut a son maximum : les cotisations d'un président coûtent plus que celles d'un gérant.
+    expect(colonne(demesuree, "SASU").remunerationPlafonnee!.retenue).toBeLessThan(colonne(demesuree, "EURL").remunerationPlafonnee!.retenue)
+    // Le meilleur statut, quel qu'il soit, n'affiche plus des millions.
+    expect(colonne(demesuree, demesuree.meilleur!).netApresImpots).toBeLessThan(60000)
+  })
+
+  it("laisse telle quelle une rémunération que la société peut verser", () => {
+    const resultat = comparer(sasu, liens, [["s1", "ca_services", 60000]], options("s1", { remunerationNette: 20000 }))
+    for (const statut of ["SASU", "EURL"] as const) {
+      expect(colonne(resultat, statut).remunerationPlafonnee).toBeUndefined()
+      expect(colonne(resultat, statut).partage!.remunerationNette).toBe(20000)
+    }
+  })
+
+  it("ne plafonne que le statut qui ne peut pas la verser", () => {
+    const flux: Flux[] = [["s1", "ca_services", 60000]]
+    const maximale = comparer(sasu, liens, flux, options("s1", auMaximum))
+    const entreLesDeux = Math.round((colonne(maximale, "SASU").partage!.remunerationNette + colonne(maximale, "EURL").partage!.remunerationNette) / 2)
+    const resultat = comparer(sasu, liens, flux, options("s1", { remunerationNette: entreLesDeux }))
+    expect(colonne(resultat, "SASU").remunerationPlafonnee).toEqual({ demandee: entreLesDeux, retenue: colonne(maximale, "SASU").partage!.remunerationNette })
+    expect(colonne(resultat, "EURL").remunerationPlafonnee).toBeUndefined()
+    expect(colonne(resultat, "EURL").partage!.remunerationNette).toBe(entreLesDeux)
+  })
+
+  it("une année de perte, ne retient aucune rémunération : la société reste retenue, déficitaire sans rien verser", () => {
+    const perte: Flux[] = [["s1", "ca_services", 10000], ["s1", "deductible_expense", 30000]]
+    const resultat = comparer(sasu, liens, perte, options("s1", { remunerationNette: 20000 }))
+    const c = colonne(resultat, "SASU")
+    expect(c.remunerationPlafonnee).toEqual({ demandee: 20000, retenue: 0 })
+    expect(c.partage!.remunerationNette).toBe(0)
+    expect(c.netApresImpots).toBe(0)
+    expect(c.warnings).toContain(`Aucune rémunération retenue, au lieu des ${euros(20000)} choisis : en SASU, l'activité ne dégage pas de bénéfice à verser.`)
+    // Déficitaire sans rien verser à personne : la colonne reste candidate, comme l'entreprise individuelle qui porte la même perte.
+    expect(c.remunerationNonCouverte).toBeUndefined()
+    expect(c.resultatConserveActivite).toBeLessThan(0)
+  })
+
+  it("le partage sur mesure est plafonné de même", () => {
+    const resultat = comparer(sasu, liens, [["s1", "ca_services", 60000]], options("s1", { remunerationNette: 500000, repartition: { mode: "personnalisee", partDistribuee: 0.5 } }))
+    expect(colonne(resultat, "SASU").remunerationPlafonnee?.demandee).toBe(500000)
+    expect(colonne(resultat, "SASU").partage!.resultatConserve).toBeGreaterThanOrEqual(0)
+  })
+
+  it("selon la grille, garde la rémunération saisie, mais n'en fait pas le meilleur statut quand elle dépasse le bénéfice", () => {
+    const flux: Flux[] = [["s1", "ca_services", 60000], ["s1", "director_remuneration", 200000]]
+    const resultat = comparer(sasu, liens, flux, options("s1", grille))
+    const actuelle = colonne(resultat, "SASU")
+    // La situation saisie n'est pas réécrite : c'est celle des résultats de l'année, avec son avertissement.
+    expect(actuelle).toMatchObject({ telleQueSaisie: true, remunerationNonCouverte: true })
+    expect(actuelle.remunerationPlafonnee).toBeUndefined()
+    expect(actuelle.partage!.remunerationNette).toBe(200000)
+    expect(actuelle.warnings.some(w => w.includes("déficitaire"))).toBe(true)
+    // L'EURL reprend la même grille : même défaut. Le meilleur statut se choisit parmi les autres, bien que leur net soit moindre.
+    expect(colonne(resultat, "EURL").remunerationNonCouverte).toBe(true)
+    expect(["SASU", "EURL"]).not.toContain(resultat.meilleur)
+    expect(colonne(resultat, resultat.meilleur!).netApresImpots).toBeLessThan(actuelle.netApresImpots)
+    expect(resultat.sousLaSituationSaisie).toMatchObject({ raison: "statutActuelNonRetenu", explication: expect.stringContaining("(la société verse une rémunération supérieure à son bénéfice)") })
+  })
+
+  it("selon la grille, une rémunération que le bénéfice couvre reste retenue", () => {
+    const flux: Flux[] = [["s1", "ca_services", 60000], ["s1", "director_remuneration", 20000]]
+    const resultat = comparer(sasu, liens, flux, options("s1", grille))
+    expect(colonne(resultat, "SASU").remunerationNonCouverte).toBeUndefined()
+    expect(colonne(resultat, "EURL").remunerationNonCouverte).toBeUndefined()
+  })
+})

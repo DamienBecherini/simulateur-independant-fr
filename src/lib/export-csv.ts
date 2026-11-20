@@ -159,6 +159,10 @@ function lignesDesIndicateurs(result: ComparaisonResult, nomActivite: string): L
     ...(result.scenarios.some(s => s.regimeMicroFerme) ? [["Régime plus accessible", s => ouiNon(s.regimeMicroFerme !== undefined)] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
     // Une colonne du portage salarial sans prestations à facturer, ou avec des salariés, n'est jamais retenue.
     ...(result.scenarios.some(s => s.portageNonRetenu) ? [["Portage salarial non retenu", s => (s.portageNonRetenu ? raisonDeNonRetenue(s) : null)] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
+    // Une société dont la grille verse une rémunération supérieure à son bénéfice n'est jamais retenue.
+    ...(result.scenarios.some(s => s.remunerationNonCouverte) ? [["Non retenue : rémunération supérieure au bénéfice", s => ouiNon(s.remunerationNonCouverte === true)] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
+    // Une rémunération choisie au-delà de ce que la société peut verser : celle que la colonne retient.
+    ...(result.scenarios.some(s => s.remunerationPlafonnee) ? [["Rémunération limitée à", s => (s.remunerationPlafonnee ? montant(s.remunerationPlafonnee.retenue) : null)] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
     ["Net dans la poche", s => montant(s.netApresImpots)],
     ["Taux global de prélèvement (%)", tauxDePrelevement],
     ["Revenus avant prélèvements", s => montant(s.revenusAvantPrelevements)],

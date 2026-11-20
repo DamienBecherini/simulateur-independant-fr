@@ -141,20 +141,39 @@ for (const affichage of ["classique", "resume"] as const) {
     await expect(netSasu(page)).not.toHaveText(avant!)
   })
 
-  test(`affichage ${affichage} : une rémunération saisie au-delà du maximum est acceptée, et le déficit signalé`, async ({ page }) => {
+  test(`affichage ${affichage} : une rémunération saisie au-delà du maximum n'est pas versée, la colonne retient le maximum et le dit`, async ({ page }) => {
     await ouvrir(page, affichage)
     await page.getByRole("radio", { name: "Ma rémunération" }).check({ force: true })
     const maximum = Number(await curseur(page).getAttribute("aria-valuemax"))
-    await champ(page).fill(String(maximum + 20000))
+    const sasu = page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: /^SASU/ })
+    const limitee = new RegExp(`rémunération limitée à ${maximum.toLocaleString("fr-FR").replace(/\s/g, "\\s")}\\s€`)
+
+    // Quatre-vingts millions : la société ne les a pas. Le champ garde la saisie, la colonne retient le maximum.
+    await champ(page).fill("80000000")
+    await expect(sasu).toContainText(limitee)
+    await expect(sasu).not.toContainText("société déficitaire")
+    const plafonne = await netSasu(page).textContent()
+    expect(Number(plafonne!.replace(/\s/g, "").match(/^\d+/)![0])).toBeLessThan(1_000_000)
     await expect(curseur(page)).toHaveAttribute("aria-valuenow", String(maximum))
     await expect(curseur(page)).toHaveAttribute("aria-valuetext", /au-delà des/)
-    // L'en-tête de la colonne le dit, et sa note le détaille : dans une bulle, ou sous le tableau.
-    const sasu = page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: /^SASU/ })
-    await expect(sasu).toContainText("société déficitaire")
-    await sasu.getByRole("button", { name: /^Voir la note/ }).first().click()
-    await expect(page.getByRole("tooltip")).toContainText(/La société est déficitaire de/)
-    await page.keyboard.press("Escape")
-    await expect(champ(page)).toHaveValue(String(maximum + 20000))
+    await expect(page.getByText(/^Une société ne verse pas plus qu'elle ne gagne : en SASU, le comparateur retient/)).toBeVisible()
+    await expect(champ(page)).toHaveValue("80000000")
+
+    // Sa note le détaille : dans une bulle, à l'une des pastilles de l'en-tête.
+    const pastilles = sasu.getByRole("button", { name: /^Voir la note/ })
+    const textes: string[] = []
+    for (let rang = 0; rang < (await pastilles.count()); rang++) {
+      await pastilles.nth(rang).click()
+      textes.push(await page.getByRole("tooltip").innerText())
+      await page.keyboard.press("Escape")
+    }
+    expect(textes.some(texte => /Rémunération limitée à .* nets, au lieu des 80\s000\s000\s€ choisis : en SASU, la société ne peut pas verser davantage sans déficit\./.test(texte)), textes.join(" | ")).toBe(true)
+
+    // Au maximum même : plus rien à signaler, et la colonne ne change pas, c'était déjà elle.
+    await champ(page).fill(String(maximum))
+    await expect(sasu).not.toContainText("rémunération limitée")
+    await expect(page.getByText(/^Une société ne verse pas plus qu'elle ne gagne/)).toHaveCount(0)
+    await expect(netSasu(page)).toHaveText(plafonne!)
   })
 }
 

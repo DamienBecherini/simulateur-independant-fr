@@ -1106,6 +1106,12 @@ export interface SousLaSituationSaisie {
   explication: string
 }
 
+/** Une rémunération choisie ramenée à ce que la société peut verser (voir `ScenarioStatut.remunerationPlafonnee`), en euros nets par an. */
+export interface RemunerationPlafonnee {
+  demandee: number
+  retenue: number
+}
+
 /** Pourquoi la colonne du portage salarial n'est pas retenue (voir `ScenarioStatut.portageNonRetenu`). */
 export type RaisonPortageNonRetenu = "sansPrestations" | "salaries"
 
@@ -1132,6 +1138,16 @@ export interface ScenarioStatut {
    * de services à facturer (le portage n'en connaît pas d'autres), ou des salariés, qu'un salarié porté ne peut pas avoir.
    */
   portageNonRetenu?: RaisonPortageNonRetenu
+  /**
+   * SASU et EURL, rémunération choisie dans les réglages : elle dépassait ce que la société peut verser sans déficit,
+   * la colonne retient la plus haute qu'elle peut verser (0 quand l'activité ne dégage pas de bénéfice).
+   */
+  remunerationPlafonnee?: RemunerationPlafonnee
+  /**
+   * SASU et EURL, rémunération de la grille : la société la verse alors qu'elle est déficitaire. Ce net ne vient pas de
+   * l'activité : la colonne n'est jamais désignée meilleur net.
+   */
+  remunerationNonCouverte?: true
   protectionSociale: ProtectionSociale
   /** Indicateurs de toute la simulation, l'activité ayant pris ce statut. */
   netApresImpots: number

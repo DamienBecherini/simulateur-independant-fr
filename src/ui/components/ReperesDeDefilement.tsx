@@ -1,18 +1,21 @@
 // src/ui/components/ReperesDeDefilement.tsx
 // Ce qui dit qu'un tableau défile en largeur : une ombre du côté où des colonnes sont cachées, et une flèche qui y mène.
 //
-// L'ombre prend la couleur du texte (`--ombre-de-defilement`, App.css) : sombre sur un fond clair, claire sur un fond
-// sombre, où une ombre noire ne se verrait pas.
+// L'ombre vient de `--ombre-de-defilement` (App.css), une teinte par thème.
 //
-// Les flèches restent au milieu de ce qui se voit du tableau, sans calcul au défilement de la page : chacune est
-// collante (`position: sticky`) dans un calque qui recouvre le tableau, à mi-hauteur de celui-ci, et retenue à
-// distance égale du haut et du bas de la fenêtre. Cette distance vaut la moitié de la plus petite des deux hauteurs,
-// celle du tableau et celle de la fenêtre sous les barres collées en haut :
-// - un tableau qui tient à l'écran garde ses flèches à mi-hauteur ;
-// - un tableau plus haut que l'écran les garde au milieu de l'écran, tant qu'il le traverse ;
-// - quand le tableau sort de l'écran, elles le quittent avec son bord, sans jamais en dépasser.
-// Le navigateur les place lui-même pendant le défilement : elles ne sautent pas. Chacune est à cheval sur le bord du
-// tableau, pour n'en cacher presque rien.
+// Les flèches sont attachées au tableau, à mi-hauteur : elles défilent avec lui, on ne les voit pas bouger. Elles ne
+// s'en détachent que pour rester à l'écran, loin de ses bords :
+// - un tableau qui tient à l'écran garde ses flèches à mi-hauteur, sans exception ;
+// - un tableau plus haut que l'écran les retient à 30 % du haut ou du bas de ce qui se voit (sous les barres collées
+//   en haut) : elles attendent là que le milieu du tableau arrive, le suivent, puis attendent de l'autre côté ;
+// - elles ne s'approchent jamais du haut ni du bas du tableau (4 rem, ou le quart de sa hauteur s'il est petit) : quand
+//   il sort de l'écran, elles sortent avec lui.
+// Le tout sans calcul au défilement : chaque flèche est collante (`position: sticky`) dans un calque plus court que le
+// tableau, et le navigateur la place lui-même, sans saut. La retenue est bornée par la moitié de la hauteur du
+// tableau : c'est ce qui laisse en place les flèches d'un tableau entièrement visible.
+//
+// Elles sont à cheval sur le bord du tableau, pour n'en cacher presque rien, et discrètes au repos : pleinement
+// visibles quand le pointeur est sur le tableau.
 //
 // Écran tactile : pas de flèches (on fait glisser le tableau du doigt, et une cible de 44 px en cacherait trop) ; les
 // ombres restent. Au clavier, la zone elle-même prend le focus et défile avec les flèches du clavier : les boutons
@@ -42,12 +45,18 @@ export function OmbresDesBords({ gauche, droite, colonneFixe }: OmbresDesBordsPr
   )
 }
 
-/** Moitié de la hauteur libre autour d'une flèche de 2 rem : voir l'en-tête du fichier. */
-const RETENUE = "max(0px, (min(100dvh / var(--zoom, 1) - var(--haut-des-barres, 0px), 100cqh) - 2rem) / 2)"
+/** Part de la hauteur visible, sous les barres, que les flèches d'un tableau plus haut que l'écran gardent libre au-dessus et au-dessous d'elles. */
+const PART_LIBRE = 0.3
+
+/**
+ * Distance à laquelle une flèche de 2 rem est retenue du haut et du bas de ce qui se voit : la part libre de la hauteur
+ * visible, sans dépasser la moitié de la place autour d'elle dans le tableau (voir l'en-tête du fichier).
+ */
+const RETENUE = `max(0px, min((100dvh / var(--zoom, 1) - var(--haut-des-barres, 0px)) * ${PART_LIBRE}, (100cqh - 2rem) / 2))`
 const PLACE_DE_LA_FLECHE: CSSProperties = { top: `calc(var(--haut-des-barres, 0px) + ${RETENUE})`, bottom: RETENUE }
 
 interface FlechesDeDefilementProps extends Pick<OmbresDesBordsProps, "gauche" | "droite"> {
-  /** Hauteur des barres collées en haut de la fenêtre, en pixels : les flèches se centrent sur ce qui se voit dessous. */
+  /** Hauteur des barres collées en haut de la fenêtre, en pixels : les flèches restent à l'écran dessous. */
   hautDesBarres: number
   onDefiler: (sens: -1 | 1) => void
 }
@@ -66,7 +75,7 @@ function Fleche({ sens, visible, onDefiler }: { sens: -1 | 1; visible: boolean; 
       onMouseDown={e => e.preventDefault()}
       onClick={() => onDefiler(sens)}
       className={cn(
-        "pointer-events-auto sticky flex size-8 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-800 shadow-md hover:bg-slate-100 dark:border-slate-500 dark:bg-gray-900 dark:text-slate-100 dark:shadow-[0_2px_10px_var(--ombre-de-defilement)] dark:hover:bg-gray-800",
+        "pointer-events-auto sticky flex size-8 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-800 opacity-60 shadow-sm transition-opacity group-hover/zone:opacity-100 hover:bg-slate-100 hover:opacity-100 motion-reduce:transition-none dark:border-slate-600 dark:bg-gray-900 dark:text-slate-100 dark:hover:bg-gray-800",
         !visible && "invisible"
       )}
     >
@@ -75,12 +84,17 @@ function Fleche({ sens, visible, onDefiler }: { sens: -1 | 1; visible: boolean; 
   )
 }
 
-/** Flèches de défilement, au milieu de ce qui se voit du tableau. Absentes sur écran tactile et à l'impression. */
+/** Flèches de défilement, attachées au tableau (voir l'en-tête du fichier). Absentes sur écran tactile et à l'impression. */
 export function FlechesDeDefilement({ gauche, droite, hautDesBarres, onDefiler }: FlechesDeDefilementProps) {
   return (
-    <div data-fleches-de-defilement style={{ "--haut-des-barres": `${hautDesBarres}px` } as CSSProperties} className="pointer-events-none absolute inset-y-0 -right-4 -left-[1.125rem] z-10 flex items-center justify-between [container-type:size] pointer-coarse:hidden print:hidden">
-      <Fleche sens={-1} visible={gauche} onDefiler={onDefiler} />
-      <Fleche sens={1} visible={droite} onDefiler={onDefiler} />
+    // Le calque extérieur donne la hauteur du tableau (`100cqh`) ; le calque intérieur, plus court, tient les flèches
+    // loin du haut et du bas. 18 px dehors à gauche : la flèche ne touche pas le texte de la première colonne ; 16 px
+    // à droite : la marge de la page.
+    <div data-fleches-de-defilement style={{ "--haut-des-barres": `${hautDesBarres}px` } as CSSProperties} className="pointer-events-none absolute inset-y-0 -right-4 -left-[1.125rem] z-10 [container-type:size] pointer-coarse:hidden print:hidden">
+      <div className="absolute inset-x-0 inset-y-[min(4rem,25cqh)] flex items-center justify-between">
+        <Fleche sens={-1} visible={gauche} onDefiler={onDefiler} />
+        <Fleche sens={1} visible={droite} onDefiler={onDefiler} />
+      </div>
     </div>
   )
 }
