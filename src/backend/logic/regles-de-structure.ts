@@ -117,7 +117,7 @@ export function rolesDeQuiExerce(genre: GenreDeStructure): RoleDansUneActivite[]
   return associes.length === 0 || associes.includes(direction) ? [direction] : [direction, associes[0]]
 }
 
-type Relations = Pick<Relationship, "fromId" | "toId" | "type">[]
+export type Relations = Pick<Relationship, "fromId" | "toId" | "type">[]
 
 /** Les personnes reliées à l'activité par ce rôle, sans doublon, dans l'ordre des relations. */
 function tenantsDuRole(relations: Relations, activiteId: string, role: Relationship["type"]): string[] {
@@ -128,6 +128,41 @@ function tenantsDuRole(relations: Relations, activiteId: string, role: Relations
 /** Les rôles que cette personne tient déjà dans l'activité. */
 function rolesDeLaPersonne(relations: Relations, activiteId: string, personneId: string): Relationship["type"][] {
   return relations.filter(rel => (rel.fromId === personneId && rel.toId === activiteId) || (rel.fromId === activiteId && rel.toId === personneId)).map(rel => rel.type)
+}
+
+/** Le titulaire d'une activité exercée en nom propre : la première personne reliée par « Titulaire », celle que le calcul retient. */
+function titulaireDe(relations: Relations, activiteId: string): string | undefined {
+  return tenantsDuRole(relations, activiteId, "Titulaire")[0]
+}
+
+/** Le strict nécessaire d'une activité pour savoir si elle est exercée en nom propre. */
+interface FormeDeLActivite {
+  id: string
+  type: string
+  legalStatus?: string
+}
+
+/** Une micro-entreprise ou une entreprise individuelle au réel : la personne l'exerce en son nom. Le portage n'en est pas (un salarié porté). */
+const enNomPropre = (activite: FormeDeLActivite) => activite.type === "micro-entreprise" || (activite.type === "company" && activite.legalStatus === "EI")
+
+/**
+ * Les entreprises en nom propre du titulaire de celle-ci, elle comprise, dans l'ordre de la session ; elle seule si
+ * elle n'a pas de titulaire ou n'est pas exercée en nom propre.
+ *
+ * Une personne physique n'a qu'une entreprise individuelle (un seul numéro SIREN), qui réunit toutes ses activités :
+ * leurs seuils s'apprécient sur le chiffre d'affaires de l'ensemble (service-public.fr, F33339 : « un seuil global »
+ * pour « l'ensemble des activités exercées par l'entreprise »). La saisie laisse pourtant créer plusieurs
+ * micro-entreprises pour une même personne, façon naturelle de décrire deux activités : le calcul les réunit pour les
+ * plafonds (voir `chiffreAffairesReuni`, dispositifs.ts) et le dit sur leur carte (`anomaliesDeStructure`).
+ */
+export function entreprisesDuTitulaire<A extends FormeDeLActivite>(session: { entities: A[]; relationships?: Relations }, activiteId: string): A[] {
+  const relations = session.relationships ?? []
+  const activite = session.entities.find(e => e.id === activiteId)
+  if (!activite) return []
+  const titulaire = enNomPropre(activite) ? titulaireDe(relations, activiteId) : undefined
+  // Une relation « Titulaire » vers autre chose qu'une personne (fichier écrit à la main) ne réunit rien.
+  if (titulaire === undefined || !session.entities.some(e => e.id === titulaire && e.type === "person")) return [activite]
+  return session.entities.filter(e => e.id === activiteId || (enNomPropre(e) && titulaireDe(relations, e.id) === titulaire))
 }
 
 /** Ce qui s'oppose à ce qu'une personne prenne un rôle dans une activité. */
@@ -200,5 +235,20 @@ export function anomaliesDeStructure(session: { entities: Entity[]; relationship
       if (cumul && regle.dirige) anomalies.push(`${nomDe(personneId)} est à la fois ${role.toLowerCase()} et ${cumul.toLowerCase()} de « ${activite.name} » : on ne dirige pas l'activité dont on est salarié. Supprimez l'une des deux relations.`)
     }
   }
-  return anomalies
+  return [...anomalies, ...plusieursEntreprisesEnNomPropre(session, activite, nomDe)]
+}
+
+/**
+ * Le titulaire de l'activité l'est aussi d'autres entreprises en nom propre. La saisie le permet (deux activités se
+ * décrivent bien par deux micro-entreprises), mais une personne n'a qu'une entreprise individuelle : la carte de
+ * chacune le dit, avec ce que le calcul en fait.
+ */
+function plusieursEntreprisesEnNomPropre(session: { entities: Entity[]; relationships: Relations }, activite: Activite, nomDe: (id: string) => string): string[] {
+  const entreprises = entreprisesDuTitulaire(session, activite.id)
+  const titulaire = titulaireDe(session.relationships, activite.id)
+  if (entreprises.length < 2 || titulaire === undefined) return []
+  const micros = entreprises.filter(e => e.type === "micro-entreprise")
+  const reunies = micros.length > 1 ? " Les plafonds du régime micro et de la franchise de TVA sont calculés sur le chiffre d'affaires réuni de ses micro-entreprises." : ""
+  const aPart = micros.length < entreprises.length ? " Le régime micro de l'une et le régime réel de l'autre sont calculés côte à côte, chacun de son côté." : ""
+  return [`${nomDe(titulaire)} est titulaire de plusieurs entreprises en nom propre (${entreprises.map(e => `« ${e.name} »`).join(", ")}) : une personne n'a qu'une entreprise individuelle, qui réunit toutes ses activités.${reunies}${aPart}`]
 }

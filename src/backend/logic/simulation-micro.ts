@@ -4,11 +4,11 @@
 // régime, annonce de la sortie). Ses revenus sont inscrits sur le compte de son titulaire (routage-des-flux.ts).
 
 import type { ActivityResult, MicroEntreprise, VersementLiberatoireInfo } from "../../types.js"
-import { calculerMicro, plafondRfrVersementLiberatoire } from "./calculsAE.js"
+import { calculerMicro, plafondRfrVersementLiberatoire, type ChiffreAffairesMicro, type EntrepriseDuTitulaire } from "./calculsAE.js"
 import { euros } from "./format.js"
 import type { ReglesFiscales } from "./regles.js"
 import { avertissementsDeLaProfession, professionDe, reglesDeLaMicro } from "./professions.js"
-import { acreDeLAnnee, ecrireMois, economieACRE, lireMois, noteACRE, noteAnnonce, noteProrata, noteRetour, prorataDesPlafonds, type ACREDuneAnnee } from "./dispositifs.js"
+import { acreDeLAnnee, ecrireMois, economieACRE, lireMois, microsReunies, noteACRE, noteAnnonce, noteProrata, noteRetour, prorataDeLEntreprise, prorataDesPlafonds, type ACREDuneAnnee } from "./dispositifs.js"
 import { avecLaZone, beneficeExonereDeLActivite, detailDeLaZone, zoneDeLActivite } from "./exoneration-de-zone.js"
 import { anneeSimulee, anomaliesDeLActivite, dirigeantsDe, revenusDe, total, type Contexte } from "./routage-des-flux.js"
 import { deplacementsProfessionnels, detailDeplacements, detailProfession, detailSalaries, masseSalariale } from "./details-des-activites.js"
@@ -71,6 +71,28 @@ function avertissementsVersementLiberatoire(micro: MicroEntreprise, vfl: Verseme
   return []
 }
 
+/**
+ * Quand le titulaire a d'autres micro-entreprises : leur chiffre d'affaires réuni, sur lequel se jugent les plafonds
+ * du régime et la franchise de TVA (les soins exonérés de chacune mis à part), et la part des plafonds de l'année, celle
+ * de la plus ancienne. Pour une micro-entreprise seule, le cas ordinaire : rien à réunir, et la part de ses propres
+ * plafonds.
+ */
+function entrepriseDuTitulaire(ctx: Contexte, micro: MicroEntreprise): { reunie: { entreprise?: EntrepriseDuTitulaire }; prorata: number } {
+  const micros = microsReunies(ctx.session, micro.id).filter((e): e is MicroEntreprise => e.type === "micro-entreprise")
+  if (micros.length < 2) return { reunie: {}, prorata: prorataDesPlafonds(lireMois(micro.dateDeCreation), anneeSimulee(ctx)) }
+  const reunir = (pourLaTVA: boolean): ChiffreAffairesMicro => {
+    const somme = { caVente: 0, caServicesBic: 0, caServicesBnc: 0 }
+    for (const m of micros) {
+      const soinsExoneres = pourLaTVA && (professionDe(m, ctx.regles)?.soinsExoneresDeTVA ?? false)
+      somme.caVente += total(ctx, m.id, "ca_micro_vente")
+      somme.caServicesBic += total(ctx, m.id, "ca_micro_services_bic")
+      somme.caServicesBnc += soinsExoneres ? 0 : total(ctx, m.id, "ca_micro_services_bnc")
+    }
+    return somme
+  }
+  return { reunie: { entreprise: { chiffreAffaires: reunir(false), chiffreAffairesSoumisALaTVA: reunir(true), activites: micros.map(m => m.name) } }, prorata: prorataDeLEntreprise(micros, anneeSimulee(ctx)) }
+}
+
 export function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): ActivityResult {
   const titulaire = dirigeantsDe(ctx, micro)[0]
   const vfl = analyserVersementLiberatoire(ctx, micro, titulaire)
@@ -79,7 +101,7 @@ export function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): A
   const reglesMicro = reglesDeLaMicro(ctx.regles, profession)
   // Avec une date de création : ACRE limitée aux mois qu'elle couvre, plafonds au prorata l'année de création.
   const acre = acreDeLAnnee(micro, anneeSimulee(ctx), ctx.session.monthlyData, reglesMicro)
-  const prorata = prorataDesPlafonds(lireMois(micro.dateDeCreation), anneeSimulee(ctx))
+  const { reunie, prorata } = entrepriseDuTitulaire(ctx, micro)
   const resultat = calculerMicro(
     {
       caVente: total(ctx, micro.id, "ca_micro_vente"),
@@ -89,7 +111,8 @@ export function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): A
       ...(acre ? { caSousACRE: acre.chiffreAffaires, reductionACRE: acre.reduction } : {}),
       prorataPlafonds: prorata,
       opteVFL: vfl.applique,
-      soinsExoneresDeTVA: profession?.soinsExoneresDeTVA ?? false
+      soinsExoneresDeTVA: profession?.soinsExoneresDeTVA ?? false,
+      ...reunie
     },
     reglesMicro
   )

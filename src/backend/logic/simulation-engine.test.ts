@@ -408,6 +408,33 @@ describe("runMetaSimulation", () => {
     })
   })
 
+  describe("plusieurs micro-entreprises d'un même titulaire", () => {
+    // Règles de test : plafond des prestations à 80 000 €, franchise de TVA perdue au-delà de 45 000 €.
+    const flux: Flux[] = [["m1", "ca_micro_services_bnc", 50000], ["m2", "ca_micro_services_bic", 35000]]
+    const reunies = "Chiffre d'affaires réuni de « m1 » et « m2 », micro-entreprises du même titulaire."
+
+    it("juge les plafonds et la franchise de TVA sur leur chiffre d'affaires réuni, et le dit sur chaque carte", () => {
+      const report = simuler([personne("alice"), micro("m1"), micro("m2")], [relation("alice", "m1", "Titulaire"), relation("alice", "m2", "Titulaire")], flux)
+      for (const id of ["m1", "m2"]) {
+        const alertes = activite(report, id).warnings.map(enTexteBrut)
+        expect(alertes).toEqual([
+          `Plafond du régime micro dépassé (prestations de services 85 000 € pour un plafond de 80 000 €) : le régime n'est conservé que si le dépassement ne se répète pas deux années de suite. ${reunies}`,
+          `Franchise en base de TVA perdue (prestations de services 85 000 € pour un seuil de 45 000 €) : la TVA est due dès le jour du dépassement. Le simulateur ne calcule pas la TVA : il considère les montants saisis comme hors taxe. ${reunies}`,
+          "« alice » est titulaire de plusieurs entreprises en nom propre (« m1 », « m2 ») : une personne n'a qu'une entreprise individuelle, qui réunit toutes ses activités. Les plafonds du régime micro et de la franchise de TVA sont calculés sur le chiffre d'affaires réuni de ses micro-entreprises."
+        ])
+      }
+      // Cotisations et impôt restent ceux de chaque activité : 25 % et 0,2 % de 50 000 €, 20 % et 0,3 % de 35 000 €.
+      expect(activite(report, "m1").cotisationsSociales).toBe(12600)
+      expect(activite(report, "m2").cotisationsSociales).toBe(7105)
+    })
+
+    it("deux titulaires : deux entreprises, chacune jugée sur le sien", () => {
+      const report = simuler([personne("alice"), personne("bob"), micro("m1"), micro("m2")], [relation("alice", "m1", "Titulaire"), relation("bob", "m2", "Titulaire")], flux)
+      expect(activite(report, "m1").warnings.map(enTexteBrut)).toEqual(["Franchise en base de TVA perdue (prestations de services 50 000 € pour un seuil de 45 000 €) : la TVA est due dès le jour du dépassement. Le simulateur ne calcule pas la TVA : il considère les montants saisis comme hors taxe."])
+      expect(activite(report, "m2").warnings).toEqual([])
+    })
+  })
+
   describe("EURL", () => {
     it("retire des revenus du gérant les cotisations dues sur ses dividendes", () => {
       const report = simuler(

@@ -3,7 +3,7 @@
 import { estSocieteIS, type ComparaisonOptions, type ConditionsPortageRetenues, type DetailPortage, type DonneesDeLAnnee, type MicroEntreprise, type ModeRepartition, type PartageDuBenefice, type RaisonPortageNonRetenu, type RemunerationPlafonnee, type ScenarioStatut, type SimulationReport, type StatutCompare } from "../../types.js"
 import { depassePlafondMicro } from "./calculsAE.js"
 import { estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
-import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, prorataDesPlafonds } from "./dispositifs.js"
+import { acreDeLAnnee, chiffreAffairesDeLaMicro, chiffreAffairesReuni, microsReunies, prorataDeLEntreprise } from "./dispositifs.js"
 import { ecartDeFrais } from "./frais-de-fonctionnement.js"
 import { beneficeGarde, perteDeLaSociete } from "./net-compare.js"
 import { conditionsPortageParDefaut, LIBELLES_DES_CONDITIONS_PORTAGE } from "./options-du-comparateur.js"
@@ -90,7 +90,9 @@ type ActiviteDuRapport =SimulationReport["activities"][number] | undefined
 
 /**
  * Ce que la micro-entreprise de la colonne donne à la protection sociale : son ACRE (mois couverts si la date de
- * création est connue, toute l'année sinon) et ses plafonds de l'année (au prorata l'année de création).
+ * création est connue, toute l'année sinon), et si elle dépasse ses plafonds de l'année (au prorata l'année de création).
+ * Les plafonds se jugent sur le chiffre d'affaires de toutes les micro-entreprises de son titulaire, qui ne forment
+ * qu'une entreprise.
  */
 function microDeLaColonne(simulation: SimulationDeLaColonne, activiteId: string, regles: ReglesFiscales, annee: number) {
   const micro = simulation.session.entities.find((e): e is MicroEntreprise => e.id === activiteId && e.type === "micro-entreprise")
@@ -103,9 +105,14 @@ function microDeLaColonne(simulation: SimulationDeLaColonne, activiteId: string,
     beneficieACRE: micro?.beneficieACRE ?? false,
     ...(acre ? { acre: { reduction: acre.reduction, chiffreAffaires: acre.chiffreAffaires } } : {}),
     ...(retraite ? { retraiteBnc: retraite } : {}),
-    prorata: prorataDesPlafonds(lireMois(micro?.dateDeCreation), annee),
+    horsPlafond: micro ? plafondsDepasses(simulation, micro, regles, annee) : false,
     reglesMicro
   }
+}
+
+function plafondsDepasses(simulation: SimulationDeLaColonne, micro: MicroEntreprise, regles: ReglesFiscales, annee: number): boolean {
+  const micros = microsReunies(simulation.session, micro.id).filter((e): e is MicroEntreprise => e.type === "micro-entreprise")
+  return depassePlafondMicro(chiffreAffairesReuni(simulation.session.monthlyData, micros.map(m => m.id)), regles, prorataDeLEntreprise(micros, annee))
 }
 
 /** Colonne micro d'une activité sortie du régime micro cette année : le régime fermé et pourquoi, dans les notes. */
@@ -221,7 +228,7 @@ function perteConservee(statut: StatutCompare, activite: ActiviteDuRapport): num
 export function scenarioDeLaColonne({ source, options, regles, contexte }: ColonneEtudiee, statut: StatutCompare, simulation: SimulationDeLaColonne): ScenarioStatut {
   const activite = simulation.report.activities.find(a => a.entityId === source.id)
   const caMicro = chiffreAffairesDeLaMicro(simulation.session.monthlyData, source.id)
-  const { prorata, reglesMicro, ...acre } = microDeLaColonne(simulation, source.id, regles, contexte.annee ?? regles.annee)
+  const { horsPlafond, reglesMicro, ...acre } = microDeLaColonne(simulation, source.id, regles, contexte.annee ?? regles.annee)
   const { notes, ...ferme } = regimeFerme(statut, source.id, contexte)
   const { notes: notesDuPortage, ...portage } = colonneDuPortage(statut, { source, regles }, simulation, activite)
   const { resultatConserveActivite, ...details } = detailsDeLActivite(activite, [...notes, ...notesDuPortage, ...noteDuPlafond(statut, simulation.remunerationPlafonnee)])
@@ -234,7 +241,7 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
     protectionSociale: evaluerProtectionSociale(statut, { ...assiettesDeProtection(activite), chiffreAffairesMicro: caMicro, ...acre }, estMicro(statut) ? reglesMicro : regles),
     ...montantsDuBilan(simulation.report),
     resultatConserveActivite,
-    horsPlafond: estMicro(statut) && depassePlafondMicro(caMicro, regles, prorata),
+    horsPlafond,
     ...ferme,
     ...portage,
     ...(simulation.remunerationPlafonnee ? { remunerationPlafonnee: simulation.remunerationPlafonnee } : {}),
