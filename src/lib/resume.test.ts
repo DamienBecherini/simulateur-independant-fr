@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
-import { coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, porteurDeLaPremiereAlerte, phraseDuVerdict, raisonDeNonRetenue, remunerationOptimale, tauxDePrelevement } from "./resume"
+import { avecUnePerteConservee, coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, porteurDeLaPremiereAlerte, phraseDuVerdict, netEtPerte, raisonDeNonRetenue, referenceDesEcarts, remunerationOptimale, tauxDePrelevement } from "./resume"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
 
@@ -84,6 +84,33 @@ describe("verdict du comparateur", () => {
   it("quand un autre statut est meilleur, donne son gain par rapport au statut actuel", () => {
     const result = { ...comparaison("SASU"), scenarios: comparaison("SASU").scenarios.map(s => (s.statut === "SASU" ? { ...s, netApresImpots: 34000 } : s)) }
     expect(espaces(phraseDuVerdict(result, "Atelier"))).toBe("Pour « Atelier », SASU donnerait le meilleur net : 34 000 €, soit +2 000 € par rapport à votre situation telle que saisie (Micro-entreprise, 32 000 €).")
+  })
+
+  it("déduit la perte restée dans la société : des écarts, du classement et du verdict, qui la dit", () => {
+    // Une année de perte : l'EI porte −21 500 € dans le net du foyer ; la SASU affiche 0 €, et garde 20 000 € de perte.
+    const sasu = { ...scenario("SASU", "SASU", 0, true), perteConservee: 20000 }
+    const ei = scenario("EI", "EI au réel", -21500)
+    const eurl = { ...scenario("EURL", "EURL", 0), perteConservee: 21654 }
+    const perte: ComparaisonResult = { scenarios: [sasu, eurl, ei], meilleur: "SASU", situationSaisie: { statut: "SASU", libelle: "SASU", netApresImpots: 0, perteConservee: 20000 }, couples: [], warnings: [] }
+
+    expect(referenceDesEcarts(perte)).toBe(-20000)
+    expect(avecUnePerteConservee(perte)).toBe(true)
+    expect(ecartAvecLaSituationSaisie(perte, sasu)).toBeNull()
+    // L'EI ne fait que 1 500 € de moins, pas 21 500 € ; l'EURL, au même net affiché que la SASU, fait moins bien.
+    expect(ecartAvecLaSituationSaisie(perte, ei)).toBe(-1500)
+    expect(ecartAvecLaSituationSaisie(perte, eurl)).toBe(-1654)
+    expect(espaces(phraseDuVerdict(perte, "Atelier"))).toBe("Pour « Atelier », le statut actuel, SASU, donne le meilleur net : 0 € (et 20 000 € de perte restée dans la société). Juste derrière : EI au réel, −1 500 €.")
+
+    // Vue depuis l'EI : la SASU n'apporte que 1 500 €, et sa perte est dite.
+    const depuisLEi: ComparaisonResult = { ...perte, scenarios: [{ ...sasu, telleQueSaisie: false }, { ...ei, telleQueSaisie: true }], situationSaisie: { statut: "EI", libelle: "EI au réel", netApresImpots: -21500 } }
+    expect(espaces(phraseDuVerdict(depuisLEi, "Atelier"))).toBe("Pour « Atelier », SASU donnerait le meilleur net : 0 € (et 20 000 € de perte restée dans la société), soit +1 500 € par rapport à votre situation telle que saisie (EI au réel, -21 500 €).")
+    expect(espaces(meilleurStatut(depuisLEi))).toBe("SASU, +1 500 €")
+
+    // Sans perte, rien ne change.
+    expect(avecUnePerteConservee(comparaison("micro"))).toBe(false)
+    expect(referenceDesEcarts(comparaison("micro"))).toBe(32000)
+    expect(netEtPerte({ statut: "micro", netApresImpots: 32000 }).replace(/\s/g, " ")).toBe("32 000 €")
+    expect(netEtPerte({ statut: "portage", netApresImpots: 0, perteConservee: 17800 }).replace(/\s/g, " ")).toBe("0 € (et 17 800 € de perte restée sur le compte d'activité)")
   })
 
   it("ne conclut pas sans meilleur statut ou sans statut actuel", () => {

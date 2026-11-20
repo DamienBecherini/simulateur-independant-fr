@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest"
 import { comparerStatuts, coutDesQuatreTrimestres, remunerationOptimale } from "./comparateur.js"
 import { statutActuel } from "./conversion-de-statut.js"
+import { netCompare, perteDeLaSociete } from "./net-compare.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { AUCUNE_CHARGE, defaultFraisFonctionnement, ECART_NEGLIGEABLE, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
 import { euros } from "./format.js"
@@ -678,7 +679,12 @@ describe("une société ne verse pas ce qu'elle ne gagne pas", () => {
     expect(colonne(resultat, "EURL").remunerationNonCouverte).toBe(true)
     expect(["SASU", "EURL"]).not.toContain(resultat.meilleur)
     expect(colonne(resultat, resultat.meilleur!).netApresImpots).toBeLessThan(actuelle.netApresImpots)
-    expect(resultat.sousLaSituationSaisie).toMatchObject({ raison: "statutActuelNonRetenu", explication: expect.stringContaining("(la société verse une rémunération supérieure à son bénéfice)") })
+    // La situation saisie laisse dans la société une perte que son net ne montre pas : une fois déduite, le meilleur
+    // des autres statuts fait mieux qu'elle, et n'est donc pas présenté comme un recul.
+    expect(resultat.situationSaisie?.perteConservee).toBe(actuelle.perteConservee)
+    expect(actuelle.perteConservee).toBeGreaterThan(200000)
+    expect(netCompare(colonne(resultat, resultat.meilleur!))).toBeGreaterThan(netCompare(actuelle))
+    expect(resultat.sousLaSituationSaisie).toBeUndefined()
   })
 
   it("selon la grille, une rémunération que le bénéfice couvre reste retenue", () => {
@@ -686,5 +692,53 @@ describe("une société ne verse pas ce qu'elle ne gagne pas", () => {
     const resultat = comparer(sasu, liens, flux, options("s1", grille))
     expect(colonne(resultat, "SASU").remunerationNonCouverte).toBeUndefined()
     expect(colonne(resultat, "EURL").remunerationNonCouverte).toBeUndefined()
+  })
+})
+
+describe("les colonnes se comparent sur le net, perte restée dans la société déduite", () => {
+  const sasu = [personne("alice"), societe("s1", "SASU")]
+  const liens = [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")]
+  const perte: Flux[] = [["s1", "ca_services", 10000], ["s1", "deductible_expense", 30000]]
+
+  it("la perte d'une société est ce que ses charges, sa rémunération et ses cotisations dépassent de son chiffre d'affaires", () => {
+    const partage = { beneficeAvantRemuneration: -20000, remunerationNette: 0, cotisationsRemuneration: 1654, impotSocietes: 0, dividendesNets: 0, cotisationsSurDividendes: 0, resultatConserve: -21654 }
+    expect(perteDeLaSociete(partage)).toBe(21654)
+    expect(perteDeLaSociete(undefined)).toBe(0)
+    // Des dividendes pris sur les réserves des années précédentes : ce qui reste baisse, sans perte.
+    expect(perteDeLaSociete({ beneficeAvantRemuneration: 30000, remunerationNette: 10000, cotisationsRemuneration: 8000, impotSocietes: 1800, dividendesNets: 40000, cotisationsSurDividendes: 0, resultatConserve: -29800 })).toBe(0)
+    // Un bénéfice gardé dans la société n'est pas ajouté au net.
+    expect(netCompare({ netApresImpots: 30000 })).toBe(30000)
+    expect(netCompare({ netApresImpots: 0, perteConservee: 20000 })).toBe(-20000)
+  })
+
+  it("une année de perte, une société n'est pas meilleure parce que sa perte ne se voit pas dans le net du foyer", () => {
+    const resultat = comparer(sasu, liens, perte, options("s1"))
+    const [laSasu, lEurl, lEi] = (["SASU", "EURL", "EI"] as const).map(statut => colonne(resultat, statut))
+
+    // En société, le foyer ne reçoit rien et ne perd rien : la perte reste dans la société.
+    expect(laSasu).toMatchObject({ netApresImpots: 0, perteConservee: 20000, resultatConserveActivite: -20000 })
+    expect(netCompare(laSasu)).toBe(-20000)
+    // En entreprise individuelle, la même perte est dans le net du foyer : aucune perte conservée.
+    expect(lEi.perteConservee).toBeUndefined()
+    expect(lEi.netApresImpots).toBeLessThan(-20000)
+    // L'EURL affiche un net de 0 €, meilleur que celui de l'EI ; perte déduite (cotisations minimales du gérant
+    // comprises), elle fait moins bien qu'elle.
+    expect(lEurl.netApresImpots).toBeGreaterThan(lEi.netApresImpots)
+    expect(netCompare(lEurl)).toBeLessThan(netCompare(lEi))
+
+    // Le meilleur statut est celui du meilleur net comparé parmi les colonnes retenues ; le portage, à découvert, n'en est pas.
+    const retenues = resultat.scenarios.filter(s => !s.horsPlafond && !s.portageNonRetenu)
+    expect(colonne(resultat, "portage").portageNonRetenu).toBe("aDecouvert")
+    expect(netCompare(colonne(resultat, resultat.meilleur!))).toBe(Math.max(...retenues.map(netCompare)))
+    expect(resultat.situationSaisie).toMatchObject({ netApresImpots: 0, perteConservee: 20000 })
+  })
+
+  it("sans perte, rien ne change : le net comparé est le net du foyer", () => {
+    const resultat = comparer(sasu, liens, [["s1", "ca_services", 60000]], options("s1", { remunerationNette: 20000 }))
+    for (const s of resultat.scenarios) {
+      expect(s.perteConservee).toBeUndefined()
+      expect(netCompare(s)).toBe(s.netApresImpots)
+    }
+    expect(resultat.situationSaisie?.perteConservee).toBeUndefined()
   })
 })

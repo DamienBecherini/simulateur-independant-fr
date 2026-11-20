@@ -343,6 +343,21 @@ describe("csvComparaison", () => {
     expect(csv).not.toContain("rémunération supérieure au bénéfice")
   })
 
+  it("déduit la perte restée dans la société : une ligne le montre, et les écarts en tiennent compte", () => {
+    const result = comparaisonExemple()
+    const reference = result.scenarios.find(s => s.telleQueSaisie)!.netApresImpots
+    result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? s : { ...s, perteConservee: 5000 }))
+    result.situationSaisie = { statut: "SASU", libelle: "SASU", netApresImpots: reference, perteConservee: 5000 }
+    const csv = lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))
+    const micro = result.scenarios.find(s => s.statut === "micro")!.netApresImpots
+    expect(csv.find(ligne => ligne.startsWith("Net, perte restée dans l'activité déduite;"))).toBe(`Net, perte restée dans l'activité déduite;${(reference - 5000).toFixed(2).replace(".", ",")};${micro.toFixed(2).replace(".", ",")}`)
+    // L'écart de la micro se mesure à la situation saisie une fois sa perte déduite : 5 000 € de plus qu'entre les deux nets.
+    expect(csv.find(ligne => ligne.startsWith("Écart avec la situation telle que saisie;"))).toBe(`Écart avec la situation telle que saisie;0,00;${(micro - reference + 5000).toFixed(2).replace(".", ",")}`)
+    expect(csv).toContain("Perte restée dans l'activité, déduite pour comparer;5000,00")
+    // Sans perte, pas de ligne.
+    expect(lignes(csvComparaison(comparaisonExemple(), optionsExemple(), "Ma SASU")).join("\n")).not.toContain("perte restée dans l'activité déduite")
+  })
+
   it("signale une colonne micro non retenue, plafond dépassé", () => {
     const result = comparaisonExemple()
     result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? { ...s, horsPlafond: true } : s))

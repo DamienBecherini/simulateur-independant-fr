@@ -2,7 +2,8 @@
 
 import type { RaisonSousLaSituationSaisie, ScenarioStatut, SousLaSituationSaisie } from "../../types.js"
 import { euros } from "./format.js"
-import { PRECISION_REMUNERATION } from "./simulation-d-un-statut.js"
+import { netCompare } from "./net-compare.js"
+import { PRECISION_REMUNERATION } from "./remuneration-maximale.js"
 
 /*
  * Le meilleur statut du comparateur peut faire moins bien que la situation saisie quand celle-ci n'est pas une colonne
@@ -13,7 +14,8 @@ import { PRECISION_REMUNERATION } from "./simulation-d-un-statut.js"
 
 /** Ce que le comparateur sait de la situation saisie pour expliquer l'écart. */
 export interface ReferenceDeLaSituationSaisie {
-  netApresImpots: number
+  /** Son net du foyer, moins la perte qu'elle laisse dans la société : ce sur quoi les colonnes se comparent. */
+  netCompare: number
   /** Trimestres de retraite que la situation saisie valide. */
   trimestres: number
   /** Pourquoi la colonne du statut actuel n'est pas retenue comme meilleur statut ; `null` si elle peut l'être. */
@@ -44,7 +46,7 @@ function raisonDeLEcart(meilleur: ScenarioStatut, saisie: ReferenceDeLaSituation
 /** L'écart du meilleur statut avec la situation saisie, quand il fait moins bien qu'elle d'au moins un euro, et pourquoi. */
 export function sousLaSituationSaisie(meilleur: ScenarioStatut | undefined, saisie: ReferenceDeLaSituationSaisie): SousLaSituationSaisie | undefined {
   if (!meilleur || meilleur.telleQueSaisie) return undefined
-  const ecart = Math.round(saisie.netApresImpots - meilleur.netApresImpots)
+  const ecart = Math.round(saisie.netCompare - netCompare(meilleur))
   if (ecart <= 0) return undefined
   const raison = raisonDeLEcart(meilleur, saisie, ecart)
   return { ecart, raison, explication: EXPLICATIONS[raison](ecart, saisie.motifNonRetenu) }

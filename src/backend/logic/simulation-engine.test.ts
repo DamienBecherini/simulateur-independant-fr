@@ -365,8 +365,25 @@ describe("runMetaSimulation", () => {
         ["sasu", "director_remuneration", 24300]
       ])
 
-      expect(activite(report, "sasu").warnings[0]).toContain("déficitaire")
+      // En tête, l'alerte qui dit où est la limite ; puis le déficit, chiffré.
+      expect(activite(report, "sasu").warnings[0]).toMatch(/^Rémunération du dirigeant supérieure à ce que la société gagne : 24\s300\s€ nets saisis, pour 12\s000\s€ au plus sans déficit cette année\.$/)
+      expect(activite(report, "sasu").warnings[1]).toContain("déficitaire")
       expect(activite(report, "sasu").resultatConserve).toBe(-20200)
+    })
+
+    it("la limite annoncée est bien la plus haute rémunération sans déficit, à 100 € près", () => {
+      const avec = (remuneration: number) => activite(simuler(entites, president, [["sasu", "ca_services", 20000], ["sasu", "director_remuneration", remuneration]]), "sasu")
+      expect(avec(12000).warnings).toEqual([])
+      expect(avec(12000).resultatConserve).toBeGreaterThanOrEqual(0)
+      expect(avec(12100).warnings[0]).toContain("pour 12 000 € au plus sans déficit".replace(/ (?=\d{3}|€)/g, "\u202f").replace("\u202f€", "\u00a0€"))
+    })
+
+    it("une activité déficitaire sans rémunération : l'alerte dit qu'aucune n'est possible ; sans rémunération saisie, pas d'alerte de rémunération", () => {
+      const perte = activite(simuler(entites, president, [["sasu", "ca_services", 5000], ["sasu", "deductible_expense", 9000], ["sasu", "director_remuneration", 3000]]), "sasu")
+      expect(perte.warnings[0]).toMatch(/^Rémunération du dirigeant impossible à verser : 3\s000\s€ nets saisis, alors que l'activité est déjà déficitaire sans elle\./)
+      const sansRemuneration = activite(simuler(entites, president, [["sasu", "ca_services", 5000], ["sasu", "deductible_expense", 9000]]), "sasu")
+      expect(sansRemuneration.warnings.some(w => w.startsWith("Rémunération du dirigeant"))).toBe(false)
+      expect(sansRemuneration.warnings.some(w => w.includes("déficitaire"))).toBe(true)
     })
   })
 

@@ -282,6 +282,24 @@ describe("ComparatorPanel", () => {
     expect(within(table).getByRole("row", { name: /^Écart avec votre situation actuelle/ })).toHaveTextContent("non retenue : rémunération supérieure au bénéfice")
   })
 
+  it("sous le net d'une société déficitaire, dit la perte restée dans la société, et ajoute au détail le net une fois la perte déduite", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, netApresImpots: 0, perteConservee: 20000 } : s)) }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    expect(within(table).getByRole("row", { name: /^Net dans la poche/ })).toHaveTextContent(/et 20\s000\s€ de perte restée dans la société/)
+    const deduite = within(table).getByRole("row", { name: /^Net, perte restée dans l'activité déduite/ })
+    expect(deduite).toHaveTextContent(/-20\s000\s€/)
+  })
+
+  it("sans perte, pas de ligne « Net, perte restée dans l'activité déduite »", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    expect(within(table).queryByRole("row", { name: /^Net, perte restée dans l'activité déduite/ })).not.toBeInTheDocument()
+    expect(table).not.toHaveTextContent("perte restée dans la société")
+  })
+
   it("écrit « société déficitaire » dans l'en-tête d'une société que la rémunération de la grille met en déficit", async () => {
     const partage = { beneficeAvantRemuneration: 10000, remunerationNette: 20000, cotisationsRemuneration: 15000, impotSocietes: 0, dividendesNets: 0, cotisationsSurDividendes: 0, resultatConserve: -25000 }
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, partage } : s.statut === "EURL" ? { ...s, partage: { ...partage, resultatConserve: 0 } } : s)) }))

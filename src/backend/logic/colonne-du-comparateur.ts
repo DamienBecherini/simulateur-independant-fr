@@ -1,10 +1,11 @@
 // src/backend/logic/colonne-du-comparateur.ts
 
-import { estSocieteIS, type ComparaisonOptions, type ConditionsPortageRetenues, type DonneesDeLAnnee, type MicroEntreprise, type ModeRepartition, type PartageDuBenefice, type RaisonPortageNonRetenu, type RemunerationPlafonnee, type ScenarioStatut, type SimulationReport, type StatutCompare } from "../../types.js"
+import { estSocieteIS, type ComparaisonOptions, type ConditionsPortageRetenues, type DetailPortage, type DonneesDeLAnnee, type MicroEntreprise, type ModeRepartition, type PartageDuBenefice, type RaisonPortageNonRetenu, type RemunerationPlafonnee, type ScenarioStatut, type SimulationReport, type StatutCompare } from "../../types.js"
 import { depassePlafondMicro } from "./calculsAE.js"
 import { estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, prorataDesPlafonds } from "./dispositifs.js"
 import { ecartDeFrais } from "./frais-de-fonctionnement.js"
+import { perteDeLaSociete } from "./net-compare.js"
 import { conditionsPortageParDefaut, LIBELLES_DES_CONDITIONS_PORTAGE } from "./options-du-comparateur.js"
 import { euros, pourcent } from "./format.js"
 import { professionDe, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
@@ -130,12 +131,13 @@ function salaireDuPorte(activite: ActiviteDuRapport): { salaireBrutPorte?: numbe
 
 /**
  * Ce que la colonne du portage salarial dit de plus (voir l'ADR 016) : pourquoi elle n'est pas retenue (aucune
- * prestation de services à facturer, des salariés qu'un salarié porté ne peut pas avoir), les conditions de la société
+ * prestation de services à facturer, des frais supérieurs au chiffre d'affaires, des salariés qu'un salarié porté ne
+ * peut pas avoir), les conditions de la société
  * prises à leur valeur typique, une profession réglementée qui perd sa caisse. Rien pour les autres colonnes.
  */
 function colonneDuPortage(statut: StatutCompare, { source, regles }: Pick<ColonneEtudiee, "source" | "regles">, simulation: SimulationDeLaColonne, activite: ActiviteDuRapport): Pick<ScenarioStatut, "portageNonRetenu"> & { notes: string[] } {
   if (statut !== "portage") return { notes: [] }
-  const raison = raisonPortageNonRetenu(source.id, simulation.session, activite?.portage?.chiffreAffaires ?? 0)
+  const raison = raisonPortageNonRetenu(source.id, simulation.session, activite?.portage)
   const notes = raison ? [NOTE_PORTAGE_NON_RETENU[raison]] : []
   const typiques = activite?.portage?.valeursTypiques ?? []
   if (typiques.length > 0) notes.push(noteDesValeursTypiques(typiques))
@@ -152,13 +154,16 @@ function noteDesValeursTypiques(typiques: (keyof ConditionsPortageRetenues)[]): 
 /** Ce que dit la colonne du portage salarial quand elle n'est pas retenue. */
 const NOTE_PORTAGE_NON_RETENU: Record<RaisonPortageNonRetenu, string> = {
   sansPrestations: "Sans prestations de services, rien à facturer en portage salarial : cette colonne n'est pas retenue.",
+  aDecouvert: "Une société de portage ne fait pas crédit : les frais de l'activité dépassent son chiffre d'affaires, et le compte d'activité serait à découvert. Cette colonne n'est pas retenue.",
   salaries: "Un salarié porté n'emploie personne : le coût des salariés de l'activité n'est pas compté dans cette colonne, qui n'est pas retenue."
 }
 
 /** Pourquoi l'activité convertie en portage ne peut pas tenir lieu de l'activité ; `null` si elle le peut. */
-function raisonPortageNonRetenu(activiteId: string, session: DonneesDeLAnnee, chiffreAffairesFacture: number): RaisonPortageNonRetenu | null {
+function raisonPortageNonRetenu(activiteId: string, session: DonneesDeLAnnee, portage: DetailPortage | undefined): RaisonPortageNonRetenu | null {
   const vente = session.monthlyData.some(mois => mois.flows.some(f => f.entityId === activiteId && f.type === "ca_vente" && f.amount > 0))
-  if (chiffreAffairesFacture <= 0 && vente) return "sansPrestations"
+  if ((portage?.chiffreAffaires ?? 0) <= 0 && vente) return "sansPrestations"
+  // Frais de gestion et frais professionnels au-delà du chiffre d'affaires : aucun salaire, et un compte à découvert.
+  if (portage && portage.chiffreAffaires - portage.fraisDeGestion - portage.fraisProfessionnels < 0) return "aDecouvert"
   return session.relationships.some(rel => rel.type === "Salarié" && (rel.toId === activiteId || rel.fromId === activiteId)) ? "salaries" : null
 }
 
@@ -200,7 +205,16 @@ function noteDuPlafond(statut: StatutCompare, plafond: RemunerationPlafonnee | u
  * seulement : une rémunération choisie dans les réglages est ramenée à ce que la société peut verser.
  */
 function remunerationNonCouverte(partage: PartageDuBenefice | undefined): boolean {
-  return partage !== undefined && partage.remunerationNette > 0 && partage.beneficeAvantRemuneration - partage.remunerationNette - partage.cotisationsRemuneration < -0.5
+  return partage !== undefined && partage.remunerationNette > 0 && perteDeLaSociete(partage) > 0.5
+}
+
+/**
+ * La perte de l'année que le net du foyer ne montre pas, en euros positifs : celle d'une société déficitaire, ou le
+ * découvert du compte d'une activité en portage dont les frais dépassent le chiffre d'affaires (voir net-compare.ts).
+ */
+function perteConservee(statut: StatutCompare, activite: ActiviteDuRapport): number {
+  if (statut === "portage") return Math.max(0, -(activite?.resultatConserve ?? 0))
+  return perteDeLaSociete(activite?.partage)
 }
 
 /** La colonne du statut, d'après la simulation de l'activité dans ce statut. */
@@ -225,6 +239,7 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
     ...portage,
     ...(simulation.remunerationPlafonnee ? { remunerationPlafonnee: simulation.remunerationPlafonnee } : {}),
     ...(remunerationNonCouverte(activite?.partage) ? { remunerationNonCouverte: true as const } : {}),
+    ...(perteConservee(statut, activite) >= 0.5 ? { perteConservee: perteConservee(statut, activite) } : {}),
     ...details
   }
 }

@@ -16,7 +16,7 @@ const avecTrimestres = (net: number, cout: number): ScenarioStatut => {
   return scenario("SASU", net, { libelle: "SASU, rémunération optimisée", actuel: true, remunerationOptimale, protectionSociale: { etoiles: 2, trimestres: 4, resume: "" } })
 }
 
-const saisie = (autres: Partial<ReferenceDeLaSituationSaisie> = {}): ReferenceDeLaSituationSaisie => ({ netApresImpots: 47960, trimestres: 0, motifNonRetenu: null, ...autres })
+const saisie = (autres: Partial<ReferenceDeLaSituationSaisie> = {}): ReferenceDeLaSituationSaisie => ({ netCompare: 47960, trimestres: 0, motifNonRetenu: null, ...autres })
 
 describe("meilleur statut sous la situation saisie", () => {
   it("SASU sans salaire, au meilleur net avec 4 trimestres : le coût des trimestres explique l'écart", () => {
@@ -39,7 +39,7 @@ describe("meilleur statut sous la situation saisie", () => {
   })
 
   it("dit que le statut actuel n'est pas retenu, et pourquoi", () => {
-    const sous = sousLaSituationSaisie(scenario("EI", 40000), saisie({ netApresImpots: 42000, motifNonRetenu: "plafond de la micro-entreprise dépassé" }))
+    const sous = sousLaSituationSaisie(scenario("EI", 40000), saisie({ netCompare: 42000, motifNonRetenu: "plafond de la micro-entreprise dépassé" }))
 
     expect(sous).toMatchObject({ ecart: 2000, raison: "statutActuelNonRetenu" })
     expect(espaces(sous?.explication)).toBe("Votre statut actuel n'est pas retenu comme meilleur statut (plafond de la micro-entreprise dépassé) : le meilleur des autres vous coûterait environ 2 000 € par rapport à votre situation telle que saisie.")

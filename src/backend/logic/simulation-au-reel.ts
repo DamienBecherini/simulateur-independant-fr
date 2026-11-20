@@ -9,6 +9,8 @@ import { calculerEURL, type EntreesEURL } from "./calculsEURL.js"
 import { calculerSASU } from "./calculsSASU.js"
 import { etatSansReserves, type ResultatSociete } from "./calculsSociete.js"
 import type { ReglesFiscales } from "./regles.js"
+import { euros } from "./format.js"
+import { remunerationMaximale } from "./remuneration-maximale.js"
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementsDeLaProfession, parametresDeLaCaisse, professionDe } from "./professions.js"
 import { lireMois, noteSortie } from "./dispositifs.js"
@@ -24,6 +26,17 @@ import { deplacementsProfessionnels, detailDeplacements, detailProfession, detai
 const CALCUL_DES_SOCIETES: Record<StatutSociete, (entrees: EntreesEURL, ctx: Contexte, societe: Company) => ResultatSociete> = {
   SASU: (entrees, ctx) => calculerSASU(entrees, ctx.regles),
   EURL: (entrees, ctx, societe) => calculerEURL(entrees, ctx.regles, caisseDeLActivite(ctx, societe))
+}
+
+/**
+ * La grille verse au dirigeant plus que la société ne gagne. Le moteur le calcule tel quel (ce sont les montants de
+ * l'utilisateur), mais l'alerte le dit en tête, avec la limite : la plus haute rémunération possible sans déficit.
+ */
+function alerteDeRemuneration(nette: number, beneficeAvantIS: number, benefice: (remunerationNette: number) => number): string[] {
+  if (nette <= 0 || beneficeAvantIS >= 0) return []
+  const maximum = benefice(0) > 0 ? remunerationMaximale(benefice) : 0
+  if (maximum <= 0) return [`Rémunération du dirigeant impossible à verser : ${euros(nette)} nets saisis, alors que l'activité est déjà déficitaire sans elle. Cette année, aucune rémunération n'est possible sans creuser le déficit.`]
+  return [`Rémunération du dirigeant supérieure à ce que la société gagne : ${euros(nette)} nets saisis, pour ${euros(maximum)} au plus sans déficit cette année.`]
 }
 
 function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete): ActivityResult {
@@ -42,7 +55,8 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
   }
   const resultat = CALCUL_DES_SOCIETES[statut](entrees, ctx, societe)
   const profession = professionDe(societe, ctx.regles)
-  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, statut), ...anomaliesDeLActivite(ctx, societe)]
+  const alerte = alerteDeRemuneration(entrees.remunerationNette, resultat.beneficeAvantIS, remunerationNette => CALCUL_DES_SOCIETES[statut]({ ...entrees, remunerationNette, dividendesDemandes: 0 }, ctx, societe).beneficeAvantIS)
+  const warnings = [...alerte, ...resultat.warnings, ...avertissementsDeLaProfession(profession, statut), ...anomaliesDeLActivite(ctx, societe)]
 
   verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable, cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
   attribuerResultatSociete(ctx, societe, resultat)

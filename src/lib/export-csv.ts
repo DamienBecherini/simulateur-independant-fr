@@ -7,7 +7,8 @@ import { documentCsv, montant, type CelluleCsv } from "./csv"
 import { dispositifsDesAnnees, exonerationsDeZone, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
 import { conditionsDuPortageEnPhrase, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
-import { netDeLaSituationSaisie, raisonDeNonRetenue } from "./resume"
+import { avecUnePerteConservee, netDeLaSituationSaisie, raisonDeNonRetenue, referenceDesEcarts } from "./resume"
+import { netCompare } from "@/backend/logic/net-compare"
 import { statutEtProfession } from "./professions"
 import { enTexteBrut } from "@/backend/logic/format"
 
@@ -148,7 +149,7 @@ function tauxDePrelevement(s: ScenarioStatut): number | null {
 }
 
 function lignesDesIndicateurs(result: ComparaisonResult, nomActivite: string): Ligne[] {
-  const reference = netDeLaSituationSaisie(result)
+  const reference = referenceDesEcarts(result)
   const indicateurs: [string, (s: ScenarioStatut) => CelluleCsv][] = [
     ["Statut actuel", s => ouiNon(s.actuel)],
     ["Situation telle que saisie", s => ouiNon(s.telleQueSaisie)],
@@ -173,9 +174,11 @@ function lignesDesIndicateurs(result: ComparaisonResult, nomActivite: string): L
     ["Prélèvements sociaux", s => montant(s.prelevementsSociaux)],
     ["Total des prélèvements", s => montant(s.totalPrelevements)],
     [`Conservé dans « ${nomActivite} »`, s => montant(s.resultatConserveActivite)],
+    // Une société déficitaire : sa perte, que le net du foyer ne montre pas, est déduite pour comparer les colonnes.
+    ...(avecUnePerteConservee(result) ? [["Net, perte restée dans l'activité déduite", s => montant(netCompare(s))] as [string, (s: ScenarioStatut) => CelluleCsv]] : []),
     ["Protection sociale (étoiles sur 5)", s => s.protectionSociale.etoiles],
     ["Trimestres de retraite validés", s => s.protectionSociale.trimestres],
-    ["Écart avec la situation telle que saisie", s => (reference === null ? null : montant(s.netApresImpots - reference))]
+    ["Écart avec la situation telle que saisie", s => (reference === null ? null : montant(netCompare(s) - reference))]
   ]
   return [["Indicateur", ...result.scenarios.map(s => s.libelle)], ...indicateurs.map(([libelle, valeur]): Ligne => [libelle, ...result.scenarios.map(valeur)])]
 }
@@ -219,6 +222,7 @@ function lignesDesAvertissements(result: ComparaisonResult): Ligne[] {
 export function csvComparaison(result: ComparaisonResult, options: ComparaisonOptions, nomActivite: string): string {
   const reference = netDeLaSituationSaisie(result)
   const situation: Ligne[] = reference === null ? [] : [["Net de votre situation telle que saisie", montant(reference)]]
+  if (result.situationSaisie?.perteConservee) situation.push(["Perte restée dans l'activité, déduite pour comparer", montant(result.situationSaisie.perteConservee)])
   // Un meilleur statut sous la situation saisie : la raison de l'écart, comme dans le verdict de l'application.
   if (result.sousLaSituationSaisie) situation.push(["Meilleur statut sous la situation telle que saisie", enTexteBrut(result.sousLaSituationSaisie.explication)])
   return documentCsv([...lignesDesIndicateurs(result, nomActivite), ...situation, [], ["Réglage", "Valeur"], ...reglagesDuComparateur(options, nomActivite, result.scenarios), ...lignesDesAvertissements(result)])
