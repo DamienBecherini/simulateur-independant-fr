@@ -49,7 +49,7 @@ export function IndicateurDeModificationDirecte({ onCouper }: IndicateurDeModifi
     <>
       <label
         title={EXPLICATION}
-        className="ml-1 inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-violet-300 bg-violet-50 px-2 text-xs font-semibold whitespace-nowrap text-violet-900 pointer-coarse:h-11 sm:ml-2 dark:border-violet-700 dark:bg-violet-950 dark:text-violet-100"
+        className="ml-1 inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-violet-300 bg-violet-50 px-2 text-xs font-semibold whitespace-nowrap text-violet-900 pointer-coarse:h-11 @min-[40rem]:ml-2 dark:border-violet-700 dark:bg-violet-950 dark:text-violet-100"
       >
         <input type="checkbox" checked onChange={couper} aria-describedby={id} className="size-4 shrink-0 cursor-pointer accent-violet-700 pointer-coarse:size-5 dark:accent-violet-300" />
         <Bot aria-hidden="true" className="size-4 shrink-0" />
