@@ -89,7 +89,7 @@ test("une session au format 2 devient une session d'une année, 2026, après cop
   // L'original est gardé à côté ; le fichier réécrit place la grille dans l'année 2026.
   expect(await fs.readFile(path.join(dossierDonnees, "sessionState.format-2.json"), "utf-8")).toBe(contenuOriginal)
   const converti = await lireFichier<FichierSession & { monthlyData?: unknown }>(dossierDonnees, "sessionState.json")
-  expect(converti?.formatVersion).toBe(3)
+  expect(converti?.formatVersion).toBe(FORMAT_VERSION_ACTUEL)
   expect(converti?.monthlyData).toBeUndefined()
   expect(converti?.annees.map(a => a.annee)).toEqual([2026])
   expect(converti?.annees[0].monthlyData[0].flows).toEqual([expect.objectContaining({ id: "flow-ca", amount: 2500 })])
@@ -101,6 +101,46 @@ test("une session au format 2 devient une session d'une année, 2026, après cop
   const messages = await dialogues()
   expect(messages).toHaveLength(1)
   expect(messages[0].message).toContain("votre grille a été placée en 2026")
+})
+
+test("une session au format 3 donne au président de sa SASU la relation « Associé », sans message : ses chiffres ne changent pas", async ({ dossierDonnees, lancer }) => {
+  // Format 3 : tout président de SASU était compté comme associé (ADR 018). Alice préside sa SASU et s'en verse des dividendes.
+  const sasu = { id: "company-sasu", type: "company" as const, name: "Conseil SASU", legalStatus: "SASU" as const, capitalSocial: 1000, avatar: { type: "icon" as const, value: "Briefcase", color: "#b91c1c" }, locked: false }
+  const ancienneSession = {
+    formatVersion: 3,
+    name: "Session du format 3",
+    entities: [ALICE, sasu],
+    relationships: [{ id: "rel-president", fromId: ALICE.id, toId: sasu.id, type: "Président" }],
+    annees: [
+      {
+        annee: 2026,
+        monthlyData: grilleMensuelle([
+          { mois: 0, flux: { id: "flow-ca", entityId: sasu.id, type: "ca_services", label: "Prestations", amount: 60000 } },
+          { mois: 11, flux: { id: "flow-dividendes", entityId: sasu.id, type: "dividends_payment", label: "Dividendes", amount: 20000 } }
+        ])
+      }
+    ]
+  }
+  const contenuOriginal = JSON.stringify(ancienneSession, null, 2)
+  await fs.writeFile(path.join(dossierDonnees, "sessionState.json"), contenuOriginal)
+
+  const { page, dialogues } = await lancer()
+  await expect(page.getByRole("textbox", { name: "Nom" })).toHaveCount(2)
+
+  // L'original est gardé à côté ; le fichier réécrit porte les deux relations de qui exerce seul sa SASU.
+  expect(await fs.readFile(path.join(dossierDonnees, "sessionState.format-3.json"), "utf-8")).toBe(contenuOriginal)
+  const converti = await lireFichier<FichierSession>(dossierDonnees, "sessionState.json")
+  expect(converti?.formatVersion).toBe(FORMAT_VERSION_ACTUEL)
+  expect(converti?.relationships).toEqual([
+    { id: "rel-president", fromId: ALICE.id, toId: sasu.id, type: "Président" },
+    { id: "rel-president-associe", fromId: ALICE.id, toId: sasu.id, type: "Associé" }
+  ])
+
+  // Les dividendes rejoignent toujours le foyer d'Alice : aucune alerte sur la carte de la société, et rien à signaler.
+  const carte = page.getByRole("article").filter({ hasText: sasu.name })
+  await expect(carte).toContainText(/20\s000\s€/)
+  await expect(carte).not.toContainText("Dividendes versés sans associé")
+  expect(await dialogues()).toEqual([])
 })
 
 test("les réglages du comparateur sont retrouvés au lancement suivant", async ({ dossierDonnees, lancer }) => {
