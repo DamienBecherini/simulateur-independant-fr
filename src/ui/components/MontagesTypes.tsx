@@ -1,18 +1,21 @@
 // src/ui/components/MontagesTypes.tsx
-// « Partir d'une situation type » : la bibliothèque des montages types en cartes, le détail de chacun (ce qu'il
+// « Partir d'une situation type » : la bibliothèque des montages types en cartes, à retrouver par une recherche et
+// des filtres (statut, foyer : voir src/lib/montages/filtres.ts), le détail de chacun (ce qu'il
 // illustre, ses conditions, ses risques, ses sources), puis son chargement, confirmé quand la simulation en cours
 // serait perdue. Les boutons qui ouvrent la fenêtre parlent de « situation type », ce que l'on vient y chercher ;
 // dans la fenêtre, chacune reste un « montage ». Dans la démo web, chaque carte donne aussi le lien qui ouvre la
 // situation (#situation=…), à copier pour le partager.
 
 import { useRef, useState, type ReactNode, type RefObject } from "react"
-import { Check, ChevronLeft, ExternalLink, LayoutTemplate, Link } from "lucide-react"
+import { Check, ChevronLeft, ExternalLink, LayoutTemplate, Link, Search } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { usePlateforme } from "../plateforme"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ConfirmationDeRemplacement } from "./ConfirmationDeRemplacement"
 import { ANNEE_DES_MONTAGES } from "@/lib/montages/construction"
+import { AUCUN_CRITERE, criteresActifs, FILTRES_DE_FOYER, FILTRES_DE_STATUT, filtrerLesMontages, type CriteresDesMontages } from "@/lib/montages/filtres"
 import { MONTAGES_TYPES, type MontageType } from "@/lib/montages/montages"
 
 /** Titre de la fenêtre, repris par le bouton qui l'ouvre dans les paramètres et dans une simulation vide. */
@@ -156,16 +159,77 @@ function useCopieDuLien() {
   return { etat, copier }
 }
 
-function ListeDesMontages({ onDetails, onCharger, montageVu }: { onDetails: (montage: MontageType) => void; onCharger: (montage: MontageType) => void; montageVu: string | null }) {
+const PUCE = "inline-flex h-8 cursor-pointer items-center rounded-full border border-slate-300 px-3 text-sm font-medium text-slate-800 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:min-h-11 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+const PUCE_COCHEE = "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+
+/** Un axe de filtres à cocher : plusieurs choix s'ajoutent, aucun ne filtre pas. */
+function PucesDeFiltre<T extends string>({ titre, choix, coches, onChange }: { titre: string; choix: { valeur: T; libelle: string }[]; coches: T[]; onChange: (coches: T[]) => void }) {
+  return (
+    <div role="group" aria-label={titre} className="flex flex-wrap items-center gap-1.5">
+      <span className="mr-0.5 text-sm text-slate-600 dark:text-slate-400">{titre}</span>
+      {choix.map(({ valeur, libelle }) => {
+        const coche = coches.includes(valeur)
+        return (
+          <button key={valeur} type="button" aria-pressed={coche} className={cn(PUCE, coche && PUCE_COCHEE)} onClick={() => onChange(coche ? coches.filter(c => c !== valeur) : [...coches, valeur])}>
+            {libelle}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** La recherche et les filtres de la bibliothèque, puis le nombre de situations trouvées tant qu'un critère restreint la liste. */
+function FiltresDesMontages({ criteres, onChange, trouvees }: { criteres: CriteresDesMontages; onChange: (criteres: CriteresDesMontages) => void; trouvees: number }) {
+  const actifs = criteresActifs(criteres)
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
+        <Input type="search" aria-label="Rechercher une situation" placeholder="Rechercher : dividendes, retraite, kiné…" className="pl-9" value={criteres.recherche} onChange={evenement => onChange({ ...criteres, recherche: evenement.target.value })} />
+      </div>
+      <div className="flex flex-wrap gap-x-6 gap-y-2">
+        <PucesDeFiltre titre="Statut" choix={FILTRES_DE_STATUT} coches={criteres.statuts} onChange={statuts => onChange({ ...criteres, statuts })} />
+        <PucesDeFiltre titre="Foyer" choix={FILTRES_DE_FOYER} coches={criteres.foyers} onChange={foyers => onChange({ ...criteres, foyers })} />
+      </div>
+      {/* Annoncé aux lecteurs d'écran à chaque changement ; vide sans critère, pour ne rien ajouter à la fenêtre. */}
+      <p aria-live="polite" className="flex min-h-6 flex-wrap items-center gap-x-3 text-sm text-slate-700 dark:text-slate-300">
+        {actifs ? (
+          <>
+            <span>
+              {trouvees === 0 ? "Aucune situation ne correspond." : `${trouvees} situation${trouvees > 1 ? "s" : ""} sur ${MONTAGES_TYPES.length}`}
+            </span>
+            <button type="button" className="inline-flex min-h-6 cursor-pointer items-center rounded-sm text-blue-700 underline underline-offset-2 hover:no-underline pointer-coarse:min-h-11 dark:text-blue-300" onClick={() => onChange(AUCUN_CRITERE)}>
+              Tout afficher
+            </button>
+          </>
+        ) : null}
+      </p>
+    </div>
+  )
+}
+
+interface ListeDesMontagesProps {
+  onDetails: (montage: MontageType) => void
+  onCharger: (montage: MontageType) => void
+  montageVu: string | null
+  /** Recherche et filtres : gardés par la fenêtre, pour les retrouver au retour du détail d'une situation. */
+  criteres: CriteresDesMontages
+  onCriteres: (criteres: CriteresDesMontages) => void
+}
+
+function ListeDesMontages({ onDetails, onCharger, montageVu, criteres, onCriteres }: ListeDesMontagesProps) {
   const { etat, copier } = useCopieDuLien()
+  const montages = filtrerLesMontages(MONTAGES_TYPES, criteres)
   return (
     <>
       <DialogHeader>
         <DialogTitle>{TITRE_DE_LA_FENETRE}</DialogTitle>
         <DialogDescription>Des simulations d'une année, préremplies avec des chiffres fictifs, à charger puis à adapter. Chacune explique ce qu'elle illustre, ses conditions et ses risques.</DialogDescription>
       </DialogHeader>
+      <FiltresDesMontages criteres={criteres} onChange={onCriteres} trouvees={montages.length} />
       <ul aria-label="Situations types" className="grid gap-3 sm:grid-cols-2">
-        {MONTAGES_TYPES.map(montage => (
+        {montages.map(montage => (
           <CarteDuMontage
             key={montage.id}
             montage={montage}
@@ -192,6 +256,8 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
   // Dernier montage dont on a vu le détail : de retour à la liste, le focus revient sur sa carte.
   const [montageVu, setMontageVu] = useState<string | null>(null)
   const [aConfirmer, setAConfirmer] = useState<MontageType | null>(null)
+  // Recherche et filtres : gardés tant que la fenêtre est ouverte, oubliés à sa fermeture.
+  const [criteres, setCriteres] = useState<CriteresDesMontages>(AUCUN_CRITERE)
   // Bouton qui a demandé la confirmation : « Annuler » y ramène le focus.
   const declencheur = useRef<HTMLElement | null>(null)
 
@@ -199,6 +265,7 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
     if (!ouverte) {
       setDetail(null)
       setMontageVu(null)
+      setCriteres(AUCUN_CRITERE)
     }
     onOpenChange(ouverte)
   }
@@ -223,13 +290,20 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
         {boutonDOuverture ? <DialogTrigger asChild>{boutonDOuverture}</DialogTrigger> : null}
         <DialogContent
           className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-3xl"
+          // À la souris, le focus va au champ de recherche : on tape tout de suite. Au doigt, il reste sur la fenêtre,
+          // pour ne pas ouvrir le clavier, qui cacherait la moitié des situations.
+          onOpenAutoFocus={event => {
+            if (!window.matchMedia?.("(pointer: coarse)").matches) return
+            event.preventDefault()
+            if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus()
+          }}
           onCloseAutoFocus={event => {
             if (!declencheurDeLaFenetre?.current) return
             event.preventDefault()
             declencheurDeLaFenetre.current.focus()
           }}
         >
-          {detail ? <DetailDuMontage montage={detail} onRetour={() => setDetail(null)} onCharger={() => demanderLeChargement(detail)} /> : <ListeDesMontages onDetails={voirLeDetail} onCharger={demanderLeChargement} montageVu={montageVu} />}
+          {detail ? <DetailDuMontage montage={detail} onRetour={() => setDetail(null)} onCharger={() => demanderLeChargement(detail)} /> : <ListeDesMontages onDetails={voirLeDetail} onCharger={demanderLeChargement} montageVu={montageVu} criteres={criteres} onCriteres={setCriteres} />}
         </DialogContent>
       </Dialog>
 

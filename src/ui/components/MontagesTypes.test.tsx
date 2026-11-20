@@ -1,5 +1,5 @@
 // src/ui/components/MontagesTypes.test.tsx
-// Fenêtre des situations types : liste en cartes, détail, chargement direct ou après confirmation, retour du focus ;
+// Fenêtre des situations types : liste en cartes, recherche et filtres, détail, chargement direct ou après confirmation, retour du focus ;
 // dans la démo web, la copie du lien de chaque situation.
 
 import { render, screen, within } from "@testing-library/react"
@@ -138,5 +138,85 @@ describe("Fenêtre des situations types", () => {
       expect(await within(fenetre()).findByRole("status")).toHaveTextContent("La copie a échoué : sélectionnez le lien pour le copier, https://exemple.fr/simulateur/#situation=salarie-et-micro")
       expect(bouton).toHaveTextContent("Copier le lien")
     })
+  })
+})
+
+describe("Recherche et filtres des situations types", () => {
+  const titres = () =>
+    within(within(fenetre()).getByRole("list", { name: "Situations types" }))
+      .queryAllByRole("heading", { level: 3 })
+      .map(titre => titre.textContent)
+  const puce = (nom: string) => within(fenetre()).getByRole("button", { name: new RegExp(`^${nom}$`) })
+  const recherche = () => within(fenetre()).getByRole("searchbox", { name: "Rechercher une situation" })
+
+  it("à l'ouverture, le focus est sur la recherche, et rien n'est filtré", async () => {
+    const { ouvrirLaFenetre } = ouvrir()
+    await ouvrirLaFenetre()
+    expect(recherche()).toHaveFocus()
+    expect(titres()).toHaveLength(MONTAGES_TYPES.length)
+    expect(within(fenetre()).queryByText(/situations? sur/)).not.toBeInTheDocument()
+    expect(within(within(fenetre()).getByRole("group", { name: "Statut" })).getAllByRole("button").map(b => [b.textContent, b.getAttribute("aria-pressed")])).toEqual([
+      ["Micro", "false"],
+      ["SASU", "false"],
+      ["EURL", "false"],
+      ["Entreprise individuelle", "false"]
+    ])
+    expect(within(within(fenetre()).getByRole("group", { name: "Foyer" })).getAllByRole("button").map(b => b.textContent)).toEqual(["Seul", "En couple"])
+  })
+
+  it("la recherche filtre à la frappe, sans accent ni majuscule ; « Tout afficher » rend la bibliothèque", async () => {
+    const { user, ouvrirLaFenetre } = ouvrir()
+    await ouvrirLaFenetre()
+    await user.type(recherche(), "kine")
+    expect(titres()).toEqual(["Kinésithérapeute conventionné en entreprise individuelle"])
+    expect(within(fenetre()).getByText(`1 situation sur ${MONTAGES_TYPES.length}`)).toBeInTheDocument()
+
+    await user.clear(recherche())
+    await user.type(recherche(), "licorne")
+    expect(titres()).toEqual([])
+    expect(within(fenetre()).getByText("Aucune situation ne correspond.")).toBeInTheDocument()
+
+    await user.click(within(fenetre()).getByRole("button", { name: "Tout afficher" }))
+    expect(recherche()).toHaveValue("")
+    expect(titres()).toHaveLength(MONTAGES_TYPES.length)
+  })
+
+  it("les filtres se cochent et se combinent : statut et foyer", async () => {
+    const { user, ouvrirLaFenetre } = ouvrir()
+    await ouvrirLaFenetre()
+    await user.click(puce("EURL"))
+    expect(puce("EURL")).toHaveAttribute("aria-pressed", "true")
+    expect(titres()).toHaveLength(1)
+    // Un second statut s'ajoute au premier.
+    await user.click(puce("Entreprise individuelle"))
+    expect(titres()).toHaveLength(2)
+    expect(within(fenetre()).getByText(`2 situations sur ${MONTAGES_TYPES.length}`)).toBeInTheDocument()
+    // Le foyer restreint : aucune de ces deux situations n'est en couple.
+    await user.click(puce("En couple"))
+    expect(titres()).toEqual([])
+    // Décocher rend les situations.
+    await user.click(puce("EURL"))
+    await user.click(puce("Entreprise individuelle"))
+    expect(puce("EURL")).toHaveAttribute("aria-pressed", "false")
+    expect(titres().length).toBeGreaterThan(2)
+    expect(titres().length).toBeLessThan(MONTAGES_TYPES.length)
+  })
+
+  it("les critères sont gardés au retour du détail d'une situation, et oubliés à la fermeture de la fenêtre", async () => {
+    const { user, ouvrirLaFenetre } = ouvrir()
+    await ouvrirLaFenetre()
+    await user.type(recherche(), "zone franche")
+    await user.click(puce("SASU"))
+    expect(titres()).toEqual(["SASU en zone franche urbaine (ZFU-TE)"])
+    await user.click(within(fenetre()).getByRole("button", { name: "Détails de la situation « SASU en zone franche urbaine (ZFU-TE) »" }))
+    await user.click(screen.getByRole("button", { name: "Retour" }))
+    expect(recherche()).toHaveValue("zone franche")
+    expect(puce("SASU")).toHaveAttribute("aria-pressed", "true")
+    expect(titres()).toEqual(["SASU en zone franche urbaine (ZFU-TE)"])
+
+    await user.keyboard("{Escape}")
+    await ouvrirLaFenetre()
+    expect(recherche()).toHaveValue("")
+    expect(titres()).toHaveLength(MONTAGES_TYPES.length)
   })
 })
