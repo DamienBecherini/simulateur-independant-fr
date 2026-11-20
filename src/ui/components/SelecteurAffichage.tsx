@@ -17,10 +17,10 @@ interface SelecteurAffichageProps {
 export function SelecteurAffichage({ affichage, onChange }: SelecteurAffichageProps) {
   return (
     <Select value={affichage} onValueChange={valeur => onChange(valeur as Affichage)}>
-      <SelectTrigger size="sm" aria-label={`Affichage : ${libelleDeLAffichage(affichage)}`} title="Affichage de la page (bêta)" className="h-8 gap-1.5 px-2 pointer-coarse:min-w-11 @min-[40rem]:px-3 [&>svg:last-child]:@max-[40rem]:hidden">
+      <SelectTrigger size="sm" aria-label={`Affichage : ${libelleDeLAffichage(affichage)}`} title="Affichage de la page (bêta)" className="h-8 gap-1.5 px-2 pointer-coarse:min-w-11 @min-[39rem]:px-3 [&>svg:last-child]:@max-[39rem]:hidden">
         <LayoutTemplate aria-hidden className="text-slate-600 dark:text-slate-400" />
-        <span className="hidden text-slate-600 @min-[64rem]:inline dark:text-slate-400">Affichage :</span>
-        <span className="@max-[40rem]:hidden">
+        <span className="hidden text-slate-600 @min-[63rem]:inline dark:text-slate-400">Affichage :</span>
+        <span className="@max-[39rem]:hidden">
           <SelectValue />
         </span>
       </SelectTrigger>

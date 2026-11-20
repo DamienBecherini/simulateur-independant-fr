@@ -25,9 +25,12 @@ export default function ScenariosDeTest({ onCharger }: ScenariosDeTestProps) {
   return (
     <Dialog open={ouverte} onOpenChange={setOuverte}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" aria-label={TITRE_DES_TESTS} title={`${TITRE_DES_TESTS} (développement)`} className="ml-1 h-8 gap-2 border-dashed pointer-coarse:min-w-11 max-[22rem]:hidden sm:ml-2">
+        {/* La barre d'outils est mesurée sans ce bouton, que la démo et l'application n'ont pas : il ne s'affiche que là
+            où elle a de la place en plus (requêtes de conteneur de la barre, voir BarreDOutils.tsx), soit en icône entre
+            768 et 1 024 px, et avec son nom à partir de 1 280 px. */}
+        <Button variant="outline" size="sm" aria-label={TITRE_DES_TESTS} title={`${TITRE_DES_TESTS} (développement)`} className="ml-1 h-8 gap-2 border-dashed pointer-coarse:min-w-11 @max-[47rem]:hidden @min-[63rem]:@max-[79rem]:hidden @min-[39rem]:ml-2">
           <FlaskConical />
-          <span className="hidden md:inline">Tests</span>
+          <span className="hidden @min-[79rem]:inline">Tests</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-3xl">

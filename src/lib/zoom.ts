@@ -10,7 +10,8 @@
 // conteneur), donc la largeur zoomée. Ce sont la barre d'outils (BarreDOutils.tsx), les cartes des résultats
 // (ResultsPanel.tsx), la bande des mois (BandeDesMois.tsx) et les lignes de flux de la saisie mensuelle
 // (MonthlyFlowsModal.tsx). Une nouvelle mise en page à points de rupture doit faire de même, ou tenir dans 460 px ;
-// e2e-web/zoom-lisibilite.web.ts vérifie que la page et toutes ses fenêtres restent lisibles à chaque zoom.
+// e2e-web/zoom-lisibilite.web.ts vérifie que la page et toutes ses fenêtres restent lisibles à cinq couples de largeur
+// et de zoom ; e2e-web/zoom-balayage.web.ts balaie les deux dimensions (chaque zoom, fenêtre de 1 920 à 320 px).
 // La mise en page compacte tient dans 320 px (critère 1.4.10 des WCAG) : à cette largeur, le zoom reste à 100 %, et
 // textes et zones cliquables gardent leur taille.
 
