@@ -19,6 +19,7 @@ import { anneesDuRaccourci, LIBELLES_PORTEE, LIBELLES_RACCOURCIS_ANNEES, listerA
 import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
 import type { ReglesFiscales } from "@/backend/logic/regles"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 /**
  * Interface pour les props du composant MonthlyFlowsModal.
@@ -212,6 +213,14 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
     previousFlowCount.current = flows.length
   }, [flows.length])
 
+  // Un montant ramené à 0 € retire le flux, avec la portée choisie, au lieu de laisser une ligne à 0 € : elle ne
+  // compte pour rien dans le calcul, mais occupe sa case et fait croire qu'un revenu ou une charge est saisi.
+  const modifier = (flowId: string, changes: FlowChanges) => {
+    if (changes.amount !== 0) return onUpdate(flowId, changes, portee, aussiEn)
+    onDelete(flowId, portee, aussiEn)
+    toast.info("Montant à 0 € : le flux est retiré.")
+  }
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (over && active.id !== over.id) {
@@ -252,7 +261,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
           <DialogDescription>Modifiez les flux dans la liste ; la dernière ligne en ajoute un (Entrée sur le montant valide et enchaîne).</DialogDescription>
           <Depliable titre="Aide à la saisie" className="text-sm text-slate-600 dark:text-slate-400">
             <p className="mt-1">
-              Réorganisez les flux par glisser-déposer. Pour une charge ou un revenu qui revient chaque mois, choisissez « Appliquer à » en dessous : l'ajout, la modification ou la suppression vaut alors aussi pour les autres mois (même type et même libellé).{autresAnnees.length > 0 ? " Cochez d'autres années sous « Aussi en » : les mêmes mois y sont visés (en juillet, « ce mois et les suivants » vise juillet à décembre de chaque année cochée)." : ""} Le bouton de recopie d'un flux le recopie jusqu'en décembre de l'année affichée. Pour un salaire, le brut est calculé avec les cotisations salariales de {regles.annee} si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.
+              Réorganisez les flux par glisser-déposer. Pour une charge ou un revenu qui revient chaque mois, choisissez « Appliquer à » en dessous : l'ajout, la modification ou la suppression vaut alors aussi pour les autres mois (même type et même libellé).{autresAnnees.length > 0 ? " Cochez d'autres années sous « Aussi en » : les mêmes mois y sont visés (en juillet, « ce mois et les suivants » vise juillet à décembre de chaque année cochée)." : ""} Le bouton de recopie d'un flux le recopie jusqu'en décembre de l'année affichée. Un montant ramené à 0 retire le flux, comme sa corbeille. Pour un salaire, le brut est calculé avec les cotisations salariales de {regles.annee} si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.
             </p>
           </Depliable>
         </DialogHeader>
@@ -265,7 +274,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
               <div ref={listRef} className="max-h-[calc(50vh/var(--zoom,1))] space-y-2 overflow-y-auto">
                 <SortableContext items={flowIds} strategy={verticalListSortingStrategy}>
                   {flows.map(flow => (
-                    <FlowItem key={flow.id} flow={flow} allowedTypes={allowedTypes} onUpdate={(flowId, changes) => onUpdate(flowId, changes, portee, aussiEn)} onDelete={flowId => onDelete(flowId, portee, aussiEn)} onRecopier={onRecopier} onTypeUsed={setNewFlowType} typeActeur={entity.type} regles={regles} />
+                    <FlowItem key={flow.id} flow={flow} allowedTypes={allowedTypes} onUpdate={modifier} onDelete={flowId => onDelete(flowId, portee, aussiEn)} onRecopier={onRecopier} onTypeUsed={setNewFlowType} typeActeur={entity.type} regles={regles} />
                   ))}
                 </SortableContext>
               </div>

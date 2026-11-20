@@ -66,6 +66,20 @@ test("une charge mensuelle ajoutée sur l'année, augmentée en juillet puis sup
   await terminer(fenetre)
   await expect(depensesDeLAnnee(page)).toHaveText(/^\s*3\s130$/)
 
+  // Un flux à 0 € ne s'ajoute pas : la ligne d'ajout le refuse et dit comment retirer un flux.
+  fenetre = await ouvrirLeMois(page, "de mars")
+  const lignes = fenetre.getByRole("textbox", { name: "Libellé", exact: true })
+  const avant = await lignes.count()
+  await fenetre.getByLabel("Appliquer à :").selectOption("annee")
+  await fenetre.getByLabel("Montant du nouveau flux").fill("0")
+  await fenetre.getByLabel("Montant du nouveau flux").press("Enter")
+  await expect(fenetre.getByRole("alert")).toContainText("Un flux à 0 € n'est pas ajouté.")
+  await expect(lignes).toHaveCount(avant)
+  await fenetre.getByLabel("Montant du nouveau flux").fill("")
+  await terminer(fenetre)
+  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*3\s130$/)
+  // La suppression de la série reste la dernière modification : c'est elle que l'annulation défait.
+
   // Une seule annulation rend toute la série, avec ses deux montants (en plus des 190 € de charges de mars et juillet).
   await page.getByRole("button", { name: "Annuler", exact: true }).click()
   await expect(depensesDeLAnnee(page)).toHaveText(/^\s*8\s230$/)
@@ -74,4 +88,18 @@ test("une charge mensuelle ajoutée sur l'année, augmentée en juillet puis sup
   // Juillet retrouve ses quatre flux de l'exemple (facturation, expert-comptable, banque, rémunération) et le loyer rétabli, sans doublon.
   const fenetreDeJuillet = await ouvrirLeMois(page, "de juillet")
   await expect(fenetreDeJuillet.getByRole("textbox", { name: "Libellé", exact: true })).toHaveCount(5)
+
+  // Le loyer ramené à 0 € sur toute l'année : la série est retirée, sans ligne à 0 € dans aucun mois.
+  await fenetreDeJuillet.getByLabel("Appliquer à :").selectOption("annee")
+  const loyer = fenetreDeJuillet.getByRole("textbox", { name: "Montant", exact: true }).last()
+  await loyer.fill("0")
+  await loyer.press("Enter")
+  await expect(page.getByText("Montant à 0 € : le flux est retiré.")).toBeVisible()
+  // La notification de la première suppression peut être encore affichée : on regarde la dernière.
+  await expect(page.getByText("Supprimé aussi sur 11 autres mois.").last()).toBeVisible()
+  await expect(fenetreDeJuillet.getByRole("textbox", { name: "Libellé", exact: true })).toHaveCount(4)
+  await terminer(fenetreDeJuillet)
+  await expect(depensesDeLAnnee(page)).toHaveText(/^\s*3\s130$/)
+  const fenetreDeMars = await ouvrirLeMois(page, "de mars")
+  await expect(fenetreDeMars.getByRole("textbox", { name: "Libellé", exact: true })).toHaveCount(avant)
 })

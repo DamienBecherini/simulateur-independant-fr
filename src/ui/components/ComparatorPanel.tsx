@@ -171,7 +171,9 @@ function MentionDuDeficit({ scenario }: { scenario: ScenarioStatut }) {
  * les pastilles de ses notes (un clic ouvre la note dans une bulle). Une colonne non retenue est grisée.
  */
 function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioStatut; meilleur: boolean; renvois: number[] }) {
-  const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null].filter(Boolean).join(" · ")
+  // « non retenue » se lit dès l'en-tête, comme « meilleur net » : le fond grisé ne le dit pas à lui seul, en thème
+  // sombre surtout. La cellule de l'écart dit pourquoi.
+  const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null, estNonRetenue(scenario) ? "non retenue" : null].filter(Boolean).join(" · ")
   return (
     <th scope="col" className={cn(LARGEUR_D_UN_STATUT, "px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "bg-emerald-100 dark:bg-emerald-900/40", estNonRetenue(scenario) && GRISE)}>
       {scenario.libelle}
