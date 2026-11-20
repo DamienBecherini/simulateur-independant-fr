@@ -70,6 +70,26 @@ describe("simulerLesAnnees", () => {
   })
 })
 
+describe("limite de rémunération des sociétés", () => {
+  it("chaque année donne la plus haute rémunération sans déficit de ses sociétés à l'IS, et d'elles seules", () => {
+    const session: SessionState = {
+      name: "Limite",
+      entities: [personne("alice"), societe("s1"), micro("m1")],
+      relationships: [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé"), relation("alice", "m1", "Titulaire")],
+      annees: [
+        { annee: 2025, monthlyData: grilleAvecCA("s1", "ca_services", 20000) },
+        { annee: 2026, monthlyData: grilleAvecCA("s1", "ca_services", 60000) }
+      ]
+    }
+    const activites = simulerLesAnnees(session).annees.map(a => a.report!.activities)
+
+    const limites = activites.map(liste => liste.find(a => a.entityId === "s1")?.limiteDeRemuneration ?? 0)
+    expect(limites[0]).toBeGreaterThan(10000)
+    expect(limites[1]).toBeGreaterThan(limites[0] * 2.5)
+    expect(activites.every(liste => liste.find(a => a.entityId === "m1")?.limiteDeRemuneration === undefined)).toBe(true)
+  })
+})
+
 describe("comparateur et optimiseur sur une année", () => {
   const sasu: SessionState = {
     name: "SASU",

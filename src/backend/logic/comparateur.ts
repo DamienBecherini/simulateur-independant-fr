@@ -197,7 +197,7 @@ export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: Compar
   const profession = professionDe(source, regles)
   const actuel = statutActuel(source)
   const telleQueSaisie = colonneTelleQueSaisie(colonne, reportActuel)
-  const situationSaisie = { statut: actuel, libelle: libelleDuStatut(actuel), netApresImpots: reportActuel.totalNetApresImpots, ...(telleQueSaisie.perteConservee ? { perteConservee: telleQueSaisie.perteConservee } : {}), ...repartitionSaisie(telleQueSaisie) }
+  const situationSaisie = { statut: actuel, libelle: libelleDuStatut(actuel), netApresImpots: reportActuel.totalNetApresImpots, ...(telleQueSaisie.perteConservee ? { perteConservee: telleQueSaisie.perteConservee } : {}), ...(telleQueSaisie.beneficeGarde ? { beneficeGarde: telleQueSaisie.beneficeGarde } : {}), ...repartitionSaisie(telleQueSaisie) }
 
   const colonnes = colonnesDeLaComparaison(colonne, statutsDeLaComparaison(profession), reportActuel)
   const avertissements = avertissementsDeLActivite(session, source, profession)

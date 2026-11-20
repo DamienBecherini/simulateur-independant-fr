@@ -6,7 +6,7 @@ import type { Dispatch, SetStateAction } from "react"
 import { ajouterAnnee, anneeAAjouter, anneesDeLaSession, donneesDeLAnnee, remplacerGrille, supprimerAnnee } from "@/backend/logic/annees"
 import { PREMIERE_ANNEE_DES_REGLES } from "@/backend/logic/regles"
 import { createId } from "@/lib/id"
-import type { MonthlyGridData, SessionState, UserPreferences } from "@/types"
+import type { MonthlyGridData, SessionState, SimulationReport, UserPreferences } from "@/types"
 import MonthlyGrid from "./MonthlyGrid"
 import { SelecteurAnnee } from "./SelecteurAnnee"
 
@@ -22,9 +22,11 @@ interface GrilleDeLAnneeProps {
   flowTypeToNumberMap: Map<string, number>
   /** Une case touchée sur un écran tactile : l'aide au-dessus de la grille ne revient plus. */
   onGrilleTouchee?: () => void
+  /** Résultats de l'année affichée, pour la limite de rémunération rappelée dans la fenêtre de saisie. */
+  rapport?: SimulationReport | null
 }
 
-export function GrilleDeLAnnee({ session, setSession, annee, onAnnee, monthlyData, preferences, flowTypeToNumberMap, onGrilleTouchee }: GrilleDeLAnneeProps) {
+export function GrilleDeLAnnee({ session, setSession, annee, onAnnee, monthlyData, preferences, flowTypeToNumberMap, onGrilleTouchee, rapport }: GrilleDeLAnneeProps) {
   return (
     <MonthlyGrid
       entities={session.entities}
@@ -40,6 +42,7 @@ export function GrilleDeLAnnee({ session, setSession, annee, onAnnee, monthlyDat
       preferences={preferences}
       flowTypeToNumberMap={flowTypeToNumberMap}
       onGrilleTouchee={onGrilleTouchee}
+      rapport={rapport}
       annee={annee}
       // Une opération appliquée aussi à d'autres années remplace toutes les années d'un coup : une seule étape d'annulation.
       annees={session.annees}

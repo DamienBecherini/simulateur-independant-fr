@@ -48,7 +48,7 @@ function resumeDuFoyer(session: SessionState, foyer: FoyerFiscalResult): z.infer
   }
 }
 
-const ActiviteSchema = z.object({ id: z.string(), nom: z.string(), statut: z.string(), chiffreAffaires: z.number(), charges: z.number(), cotisationsSociales: z.number(), impotSocietes: z.number(), revenuVerse: z.number(), resultatConserve: z.number(), reservesALaFin: z.number().optional(), beneficeExonereEnZone: z.number().optional(), dispositifs: z.array(z.string()), avertissements: z.array(z.string()) })
+const ActiviteSchema = z.object({ id: z.string(), nom: z.string(), statut: z.string(), chiffreAffaires: z.number(), charges: z.number(), cotisationsSociales: z.number(), impotSocietes: z.number(), revenuVerse: z.number(), resultatConserve: z.number(), reservesALaFin: z.number().optional(), limiteDeRemuneration: z.number().optional().describe("Société à l'IS : rémunération nette annuelle du dirigeant la plus haute sans déficit sur l'année, réserves non comptées."), beneficeExonereEnZone: z.number().optional(), dispositifs: z.array(z.string()), avertissements: z.array(z.string()) })
 
 const resumeDeLActivite = (a: ActivityResult): z.infer<typeof ActiviteSchema> => ({
   id: a.entityId,
@@ -57,6 +57,7 @@ const resumeDeLActivite = (a: ActivityResult): z.infer<typeof ActiviteSchema> =>
   ...arrondirTout({ chiffreAffaires: a.chiffreAffaires, charges: a.charges, cotisationsSociales: a.cotisationsSociales, impotSocietes: a.impotSocietes, revenuVerse: a.revenuVerse, resultatConserve: a.resultatConserve }),
   // Société à l'IS : ses réserves distribuables au 31 décembre, reportées d'une année à l'autre (voir l'ADR 014).
   ...(a.reserves ? { reservesALaFin: arrondir(a.reserves.aLaFin.reserves) } : {}),
+  ...(a.limiteDeRemuneration === undefined ? {} : { limiteDeRemuneration: a.limiteDeRemuneration }),
   // Activité implantée en zone (ZFU-TE, QPV) : son bénéfice exonéré d'impôt cette année (voir l'ADR 017).
   ...(a.exonerationDeZone && a.exonerationDeZone.beneficeExonere > 0 ? { beneficeExonereEnZone: arrondir(a.exonerationDeZone.beneficeExonere) } : {}),
   dispositifs: a.dispositifs ?? [],

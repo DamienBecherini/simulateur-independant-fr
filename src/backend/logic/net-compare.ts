@@ -8,8 +8,9 @@
 // propriétaire, 20 novembre 2026).
 //
 // Seule la perte compte. Un bénéfice gardé dans la société n'est pas ajouté au net : il n'est pas encore dans la
-// poche du foyer, et le distribuer coûterait l'impôt des dividendes. Les dividendes pris sur les réserves des années
-// précédentes ne sont pas une perte non plus.
+// poche du foyer, et ce qu'il vaut dépend de ce qu'on en fera (le distribuer coûtera l'impôt des dividendes). Il est
+// écrit sous le net, sans entrer dans le classement (décision du propriétaire, 20 novembre 2026). Les dividendes pris
+// sur les réserves des années précédentes ne sont pas une perte non plus.
 
 import type { PartageDuBenefice } from "../../types.js"
 
@@ -17,6 +18,17 @@ import type { PartageDuBenefice } from "../../types.js"
 export function perteDeLaSociete(partage: PartageDuBenefice | undefined): number {
   if (!partage) return 0
   return Math.max(0, -(partage.beneficeAvantRemuneration - partage.remunerationNette - partage.cotisationsRemuneration))
+}
+
+/**
+ * En dessous, un bénéfice gardé n'est pas écrit sous le net : dotation à la réserve légale, reste d'une rémunération
+ * calculée à 100 € près. Le détail du tableau le donne toujours à l'euro.
+ */
+export const BENEFICE_GARDE_NOTABLE = 1000
+
+/** Ce que l'activité garde de l'année, quand cela vaut d'être dit sous le net ; `undefined` sinon (perte comprise). */
+export function beneficeGarde(resultatConserve: number): number | undefined {
+  return resultatConserve >= BENEFICE_GARDE_NOTABLE ? resultatConserve : undefined
 }
 
 /** Le net du foyer, moins la perte restée dans la société comparée : c'est lui qui désigne le meilleur statut et mesure les écarts. */

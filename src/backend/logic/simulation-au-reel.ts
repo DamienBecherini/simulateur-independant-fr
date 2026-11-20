@@ -32,11 +32,42 @@ const CALCUL_DES_SOCIETES: Record<StatutSociete, (entrees: EntreesEURL, ctx: Con
  * La grille verse au dirigeant plus que la société ne gagne. Le moteur le calcule tel quel (ce sont les montants de
  * l'utilisateur), mais l'alerte le dit en tête, avec la limite : la plus haute rémunération possible sans déficit.
  */
-function alerteDeRemuneration(nette: number, beneficeAvantIS: number, benefice: (remunerationNette: number) => number): string[] {
-  if (nette <= 0 || beneficeAvantIS >= 0) return []
-  const maximum = benefice(0) > 0 ? remunerationMaximale(benefice) : 0
-  if (maximum <= 0) return [`Rémunération du dirigeant impossible à verser : ${euros(nette)} nets saisis, alors que l'activité est déjà déficitaire sans elle. Cette année, aucune rémunération n'est possible sans creuser le déficit.`]
-  return [`Rémunération du dirigeant supérieure à ce que la société gagne : ${euros(nette)} nets saisis, pour ${euros(maximum)} au plus sans déficit cette année.`]
+function alerteDeRemuneration(nette: number, beneficeAvantIS: number, limite: number, reserves: number): string[] {
+  const couverture = couvertureParLesReserves(-beneficeAvantIS, reserves)
+  if (limite <= 0) return [`Rémunération du dirigeant impossible à verser : ${euros(nette)} nets saisis, alors que l'activité est déjà déficitaire sans elle. Cette année, aucune rémunération n'est possible sans creuser le déficit.${couverture}`]
+  return [`Rémunération du dirigeant supérieure à ce que la société gagne : ${euros(nette)} nets saisis, pour ${euros(limite)} au plus sans déficit cette année.${couverture}`]
+}
+
+/**
+ * La limite d'une rémunération est un bénéfice positif ou nul sur l'année (voir l'ADR 019). Une société qui a des
+ * réserves peut pourtant verser davantage, en les entamant : l'alerte le dit, pour ne pas présenter comme impossible
+ * ce que les années précédentes financent.
+ */
+function couvertureParLesReserves(deficit: number, reserves: number): string {
+  if (reserves < 0.5) return ""
+  if (reserves >= deficit) return ` Les réserves des années précédentes (${euros(reserves)}) couvrent le déficit de l'année.`
+  return ` Les réserves des années précédentes (${euros(reserves)}) n'en couvrent qu'une partie.`
+}
+
+/**
+ * La plus haute rémunération nette que la société peut verser à son dirigeant sans déficit sur l'année, à 100 € près ;
+ * 0 quand l'activité est déjà déficitaire sans rémunération.
+ */
+function limiteDeRemuneration(benefice: (remunerationNette: number) => number): number {
+  return benefice(0) > 0 ? remunerationMaximale(benefice) : 0
+}
+
+/**
+ * La limite de rémunération de la société, et l'alerte quand la grille la dépasse. La limite demande une quinzaine de
+ * calculs de la société : elle n'est cherchée que pour les résultats de l'année (`demandee` : la fenêtre de saisie
+ * l'affiche), ou pour la dire dans l'alerte. Jamais à chaque simulation d'une colonne du comparateur, qui en fait des
+ * centaines.
+ */
+function limiteEtAlerte(demandee: boolean, entrees: EntreesEURL & { etat: EtatDeLaSociete }, beneficeAvantIS: number, benefice: (remunerationNette: number) => number): { limite: number | undefined; alerte: string[] } {
+  const depassee = entrees.remunerationNette > 0 && beneficeAvantIS < 0
+  if (!demandee && !depassee) return { limite: undefined, alerte: [] }
+  const limite = limiteDeRemuneration(benefice)
+  return { limite, alerte: depassee ? alerteDeRemuneration(entrees.remunerationNette, beneficeAvantIS, limite, entrees.etat.reserves) : [] }
 }
 
 function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete): ActivityResult {
@@ -55,7 +86,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
   }
   const resultat = CALCUL_DES_SOCIETES[statut](entrees, ctx, societe)
   const profession = professionDe(societe, ctx.regles)
-  const alerte = alerteDeRemuneration(entrees.remunerationNette, resultat.beneficeAvantIS, remunerationNette => CALCUL_DES_SOCIETES[statut]({ ...entrees, remunerationNette, dividendesDemandes: 0 }, ctx, societe).beneficeAvantIS)
+  const { limite, alerte } = limiteEtAlerte(ctx.annee.limitesDeRemuneration === true, entrees, resultat.beneficeAvantIS, remunerationNette => CALCUL_DES_SOCIETES[statut]({ ...entrees, remunerationNette, dividendesDemandes: 0 }, ctx, societe).beneficeAvantIS)
   const warnings = [...alerte, ...resultat.warnings, ...avertissementsDeLaProfession(profession, statut), ...anomaliesDeLActivite(ctx, societe)]
 
   verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable, cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
@@ -82,6 +113,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
     ...detailDeplacements(societe, deplacements, true),
     partage: partageDuBenefice(resultat),
     reserves: resultat.reserves,
+    ...(limite === undefined ? {} : { limiteDeRemuneration: limite }),
     ...detailProfession(profession, ctx.regles, false),
     warnings
   }

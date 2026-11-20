@@ -5,7 +5,7 @@ import { depassePlafondMicro } from "./calculsAE.js"
 import { estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, lireMois, prorataDesPlafonds } from "./dispositifs.js"
 import { ecartDeFrais } from "./frais-de-fonctionnement.js"
-import { perteDeLaSociete } from "./net-compare.js"
+import { beneficeGarde, perteDeLaSociete } from "./net-compare.js"
 import { conditionsPortageParDefaut, LIBELLES_DES_CONDITIONS_PORTAGE } from "./options-du-comparateur.js"
 import { euros, pourcent } from "./format.js"
 import { professionDe, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
@@ -240,6 +240,7 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
     ...(simulation.remunerationPlafonnee ? { remunerationPlafonnee: simulation.remunerationPlafonnee } : {}),
     ...(remunerationNonCouverte(activite?.partage) ? { remunerationNonCouverte: true as const } : {}),
     ...(perteConservee(statut, activite) >= 0.5 ? { perteConservee: perteConservee(statut, activite) } : {}),
+    ...(beneficeGarde(resultatConserveActivite) === undefined ? {} : { beneficeGarde: resultatConserveActivite }),
     ...details
   }
 }

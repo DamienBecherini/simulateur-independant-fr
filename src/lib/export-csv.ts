@@ -223,6 +223,7 @@ export function csvComparaison(result: ComparaisonResult, options: ComparaisonOp
   const reference = netDeLaSituationSaisie(result)
   const situation: Ligne[] = reference === null ? [] : [["Net de votre situation telle que saisie", montant(reference)]]
   if (result.situationSaisie?.perteConservee) situation.push(["Perte restée dans l'activité, déduite pour comparer", montant(result.situationSaisie.perteConservee)])
+  if (result.situationSaisie?.beneficeGarde) situation.push(["Bénéfice gardé dans l'activité, non compté dans le net", montant(result.situationSaisie.beneficeGarde)])
   // Un meilleur statut sous la situation saisie : la raison de l'écart, comme dans le verdict de l'application.
   if (result.sousLaSituationSaisie) situation.push(["Meilleur statut sous la situation telle que saisie", enTexteBrut(result.sousLaSituationSaisie.explication)])
   return documentCsv([...lignesDesIndicateurs(result, nomActivite), ...situation, [], ["Réglage", "Valeur"], ...reglagesDuComparateur(options, nomActivite, result.scenarios), ...lignesDesAvertissements(result)])

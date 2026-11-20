@@ -16,14 +16,14 @@ import { RepartitionDuBenefice } from "./RepartitionBenefice"
 import { SurToutesLesAnnees } from "./SurToutesLesAnnees"
 import { ReglagesDuComparateur } from "./ReglagesDuComparateur"
 import { ZoneDefilante } from "./ZoneDefilante"
-import { BoutonDesPrecisions, BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
+import { BoutonDesPrecisions, BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, RappelDuBeneficeGarde, ResteDansLActivite, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { BullesDesNotes, NotesDuTableau, RenvoisAuxNotes } from "./NotesDuComparateur"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useCalculDiffere } from "../hooks/useCalculDiffere"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
 import { ANCRES } from "@/lib/ancres"
-import { avecUnePerteConservee, avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, lieuDeLaPerte, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
+import { avecUnePerteConservee, avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
 import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type OptimisationRemuneration, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutCompare, type StatutSociete } from "@/types"
 import { COLONNE_FIXE } from "../colonne-fixe"
 import { ligneAlternee } from "../lignes-alternees"
@@ -81,17 +81,8 @@ function rate(scenario: ScenarioStatut): string {
 const ecartDeFrais = (s: ScenarioStatut) => (Math.round(s.ecartDeFrais.total) === 0 ? "—" : ecartSigne(s.ecartDeFrais.total))
 
 /**
- * Sous le net d'une société déficitaire (ou d'une activité en portage à découvert), la perte que ce net ne montre
- * pas : elle reste dans la société, et la comparaison la déduit (voir src/backend/logic/net-compare.ts). L'écart de la ligne suivante en tient compte.
- */
-function PerteConservee({ scenario }: { scenario: ScenarioStatut }) {
-  if (!scenario.perteConservee) return null
-  return <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">et <span className="whitespace-nowrap">{euros(scenario.perteConservee)}</span> de perte restée {lieuDeLaPerte(scenario.statut)}</span>
-}
-
-/**
  * Lignes du tableau : libellé et valeur d'une colonne, et ce que la cellule précise dessous (sous le net : la perte
- * restée dans la société, l'écart de frais de gestion). Les deux dernières portent sur l'activité comparée ; la toute
+ * restée dans la société ou le bénéfice qu'elle garde, l'écart de frais de gestion). Les deux dernières portent sur l'activité comparée ; la toute
  * dernière, le net une fois la perte déduite, n'existe que si une perte est déduite quelque part.
  */
 const rows = (activityName: string, actuel: StatutCompare | undefined, avecPerte: boolean): { label: string; value: (s: ScenarioStatut) => string; detail?: (s: ScenarioStatut) => ReactNode; strong?: boolean }[] => [
@@ -100,7 +91,7 @@ const rows = (activityName: string, actuel: StatutCompare | undefined, avecPerte
     value: s => euros(s.netApresImpots),
     detail: s => (
       <>
-        <PerteConservee scenario={s} />
+        <ResteDansLActivite scenario={s} />
         <EcartDeFraisDeLaColonne scenario={s} actuel={actuel} />
       </>
     ),
@@ -394,6 +385,7 @@ function ComparisonResults({ result, activityName, onExporter, children }: { res
       </BullesDesNotes>
       {reduit ? <BoutonDuDetail ouvert={detailOuvert} onClick={() => setDetailOuvert(!detailOuvert)} /> : null}
       <RappelDesFrais result={result} />
+      <RappelDuBeneficeGarde result={result} />
       <NotesDuTableau notes={notes} activityName={activityName} />
       <ProtectionDetails scenarios={result.scenarios} />
       {reduit ? null : children}

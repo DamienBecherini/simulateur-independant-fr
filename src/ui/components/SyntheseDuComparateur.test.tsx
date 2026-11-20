@@ -166,6 +166,11 @@ describe("situation saisie et rappel des frais", () => {
     expect(espaces(screen.getByText(/Votre situation telle que saisie/).textContent)).toBe("Votre situation telle que saisie (SASU) : 40 000 € de net, comme dans les résultats. Les écarts du tableau se mesurent à partir de ce montant.")
   })
 
+  it("dit ce que la situation saisie garde dans la société, non compté dans le net", () => {
+    render(<SituationTelleQueSaisie result={{ ...base, situationSaisie: { ...base.situationSaisie!, beneficeGarde: 12000 } }} />)
+    expect(espaces(screen.getByText(/Votre situation telle que saisie/).textContent)).toBe("Votre situation telle que saisie (SASU) : 40 000 € de net, comme dans les résultats. Les écarts du tableau se mesurent à partir de ce montant. Elle garde en plus 12 000 € dans la société, non comptés dans le net.")
+  })
+
   it("ne la répète pas quand une colonne est la situation saisie", () => {
     const { container } = render(<SituationTelleQueSaisie result={{ ...base, scenarios: [{ ...optimisee, telleQueSaisie: true }] }} />)
     expect(container).toBeEmptyDOMElement()

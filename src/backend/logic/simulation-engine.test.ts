@@ -1,6 +1,7 @@
 // src/backend/logic/simulation-engine.test.ts
 
 import { describe, expect, it } from "vitest"
+import { enTexteBrut } from "./format.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 import { micro, personne, relation, session, societe, type Flux } from "./testing/session-de-test.js"
@@ -384,6 +385,26 @@ describe("runMetaSimulation", () => {
       const sansRemuneration = activite(simuler(entites, president, [["sasu", "ca_services", 5000], ["sasu", "deductible_expense", 9000]]), "sasu")
       expect(sansRemuneration.warnings.some(w => w.startsWith("Rémunération du dirigeant"))).toBe(false)
       expect(sansRemuneration.warnings.some(w => w.includes("déficitaire"))).toBe(true)
+    })
+
+    it("l'alerte dit quand les réserves des années précédentes couvrent le déficit de l'année, ou une partie seulement", () => {
+      const flux: Flux[] = [["sasu", "ca_services", 20000], ["sasu", "director_remuneration", 24300]]
+      const avecReserves = (reservesInitiales: number) => enTexteBrut(activite(simuler([personne("alice"), { ...societe("sasu"), reservesInitiales }], president, flux), "sasu").warnings[0])
+
+      // Le déficit de l'année est de 20 200 € : la limite reste celle de l'année, les réserves sont dites à côté.
+      expect(avecReserves(50000)).toBe("Rémunération du dirigeant supérieure à ce que la société gagne : 24 300 € nets saisis, pour 12 000 € au plus sans déficit cette année. Les réserves des années précédentes (50 000 €) couvrent le déficit de l'année.")
+      expect(avecReserves(5000)).toMatch(/au plus sans déficit cette année\. Les réserves des années précédentes \(5 000 €\) n'en couvrent qu'une partie\.$/)
+      expect(avecReserves(0)).toMatch(/au plus sans déficit cette année\.$/)
+    })
+
+    it("donne la limite de rémunération quand le contexte la demande (résultats de l'année), ou quand la grille la dépasse", () => {
+      const avec = (remuneration: number, contexte = {}) => runMetaSimulation(session(entites, president, [["sasu", "ca_services", 20000], ["sasu", "director_remuneration", remuneration]]), reglesDeTest, contexte).activities[0]
+
+      expect(avec(6000, { limitesDeRemuneration: true }).limiteDeRemuneration).toBe(12000)
+      expect(avec(0, { limitesDeRemuneration: true }).limiteDeRemuneration).toBe(12000)
+      expect(avec(24300).limiteDeRemuneration).toBe(12000)
+      // Une colonne du comparateur ne la demande pas : la chercher coûte une quinzaine de calculs de la société.
+      expect(avec(6000)).not.toHaveProperty("limiteDeRemuneration")
     })
   })
 

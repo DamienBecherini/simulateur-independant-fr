@@ -1,7 +1,7 @@
 // src/ui/components/MonthlyGrid.tsx
 
 import React, { useState, useMemo, useRef, Dispatch, SetStateAction } from "react"
-import { ANNEE_PAR_DEFAUT, type AnneeSimulee, type Entity, type MonthlyGridData, type FinancialFlow, type UserPreferences } from "@/types"
+import { ANNEE_PAR_DEFAUT, type AnneeSimulee, type Entity, type MonthlyGridData, type FinancialFlow, type SimulationReport, type UserPreferences } from "@/types"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import type { FlowChanges } from "./FlowItem"
 import type { NewFlowValues } from "./NewFlowItem"
@@ -43,6 +43,8 @@ interface MonthlyGridProps {
   setAnnees?: (annees: AnneeSimulee[]) => void
   /** Une case vient d'être touchée sur un écran tactile : l'aide au-dessus de la grille ne reviendra plus. */
   onGrilleTouchee?: () => void
+  /** Résultats de l'année affichée : la fenêtre de saisie d'une société y lit la limite de la rémunération de son dirigeant. */
+  rapport?: SimulationReport | null
 }
 
 /**
@@ -63,6 +65,9 @@ function AideTactile({ grilleTouchee }: { grilleTouchee: boolean | undefined }) 
   if (grilleTouchee) return null
   return <p className="mb-3 hidden text-sm text-slate-700 pointer-coarse:block dark:text-slate-300 print:hidden">Touchez une case pour saisir un montant.</p>
 }
+
+/** Société à l'IS : la plus haute rémunération de son dirigeant sans déficit, d'après les résultats de l'année ; `undefined` sinon. */
+const limiteDeRemuneration = (rapport: SimulationReport | null | undefined, entityId: string) => rapport?.activities.find(a => a.entityId === entityId)?.limiteDeRemuneration
 
 /** Les années de la session autres que celle de la grille ; aucune si la grille ne les connaît pas. */
 function autresAnneesQue(annees: AnneeSimulee[] | undefined, annee: number | undefined): number[] {
@@ -127,7 +132,7 @@ function LigneDeLActeur({ ligne, rang, onOuvrir }: { ligne: LigneDeLaGrille; ran
   )
 }
 
-function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees, onGrilleTouchee }: MonthlyGridProps) {
+function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees, onGrilleTouchee, rapport }: MonthlyGridProps) {
   // Bande des mois et ombres des bords : seulement quand la grille déborde de sa zone et doit défiler.
   const zone = useRef<HTMLDivElement>(null)
   const defilement = useDefilementDeLaGrille(zone, entities.length > 0, annee)
@@ -338,6 +343,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           annee={annee ?? ANNEE_PAR_DEFAUT}
           autresAnnees={autresAnnees}
           fluxDeLAnnee={monthlyData.flatMap(mois => mois.flows.filter(f => f.entityId === openCell.entityId))}
+          limiteDeRemuneration={limiteDeRemuneration(rapport, openCell.entityId)}
           onCreate={handleCreateFlow}
           onRecopier={openCell.monthIndex < 11 ? handleRecopierFlux : undefined}
           onUpdate={handleUpdateFlow}
