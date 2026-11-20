@@ -1,6 +1,7 @@
 // e2e-web/comparateur-notes.web.ts
 // Les notes du tableau de comparaison. Dans le tableau, un clic sur la pastille d'une colonne ouvre sa note dans une
-// bulle, à côté d'elle, y compris avec l'interface agrandie ; un clic ailleurs ou Échap la ferme. Sous le tableau,
+// bulle, à côté d'elle, y compris avec l'interface agrandie ; un clic ailleurs ou Échap la ferme, pas le défilement :
+// la bulle suit la page, ce qui permet de lire une note plus longue que l'écran. Sous le tableau,
 // l'affichage « Résumé » garde écrites les notes du statut actuel et réduit les autres à une ligne de pastilles, avec
 // la note choisie ; « Tout afficher » rend la liste complète, et ce choix est retenu. L'impression montre toujours
 // toutes les notes.
@@ -63,13 +64,37 @@ test("un clic sur une pastille du tableau ouvre sa note dans une bulle ; un clic
   await expect(bulle(page)).toHaveCount(0)
   await expect(pastille).toBeFocused()
 
-  // Une autre pastille remplace la note affichée ; faire défiler la page ferme la bulle, qui ne suit pas.
+  // Une autre pastille remplace la note affichée ; faire défiler la page ne ferme pas la bulle, qui suit sa pastille.
   await pastille.click()
   await tableau(page).getByRole("columnheader", { name: /^EURL/ }).getByRole("button", { name: /^Voir la note/ }).first().click()
   await expect(bulle(page)).toHaveCount(1)
   await expect(bulle(page)).not.toContainText(NOTE_DU_PORTAGE)
-  await page.mouse.wheel(0, 300)
-  await expect(bulle(page)).toHaveCount(0)
+  const avant = await bullePresDeSaPastille(page)
+  const hautAvant = await bulle(page).evaluate(element => element.getBoundingClientRect().top)
+  await page.mouse.wheel(0, 120)
+  await expect.poll(() => bulle(page).evaluate(element => element.getBoundingClientRect().top)).toBeLessThan(hautAvant - 60)
+  await expect(bulle(page)).toBeVisible()
+  expect((await bullePresDeSaPastille(page)).ecart).toBe(avant.ecart)
+})
+
+test("une note plus haute que la place restante s'ouvre quand même sous sa pastille, et se lit en faisant défiler la page", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 520 })
+  await page.addInitScript(() => window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], affichage: "resume", zoom: 2, sectionsOuvertes: { "comparateur-toutes-les-lignes": true } })))
+  await page.goto(SITUATION)
+  await expect(tableau(page)).toBeVisible()
+  // La note 2 de la SASU, la plus longue : les conditions de l'exonération.
+  const pastille = tableau(page).getByRole("columnheader", { name: /^SASU/ }).getByRole("button", { name: "Voir la note 2" })
+  await pastille.click()
+  await expect(bulle(page)).toContainText(/Exonération ZFU-TE appliquée sans vérifier ses conditions/)
+  const bas = () => bulle(page).evaluate(element => Math.round(element.getBoundingClientRect().bottom - window.innerHeight))
+  // Elle dépasse le bas de l'écran...
+  expect(await bas()).toBeGreaterThan(0)
+  // ... et la page défile jusqu'à sa fin, la bulle toujours ouverte.
+  await bulle(page).scrollIntoViewIfNeeded()
+  await page.mouse.wheel(0, 400)
+  await expect.poll(bas).toBeLessThanOrEqual(0)
+  await expect(bulle(page)).toBeVisible()
+  await expect(pastille).toHaveAttribute("aria-expanded", "true")
 })
 
 for (const [largeur, zoom] of [

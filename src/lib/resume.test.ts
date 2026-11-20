@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
-import { coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, phraseDuVerdict, raisonDeNonRetenue, remunerationOptimale, tauxDePrelevement } from "./resume"
+import { coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, porteurDeLaPremiereAlerte, phraseDuVerdict, raisonDeNonRetenue, remunerationOptimale, tauxDePrelevement } from "./resume"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
 
@@ -16,6 +16,17 @@ function comparaison(meilleur: StatutCompare): ComparaisonResult {
 }
 
 describe("barre de résumé", () => {
+  it("désigne ce qui porte la première alerte affichée : l'année, sinon la première carte qui en a, foyers d'abord", () => {
+    const foyer = (personIds: string[], warnings: string[]) => ({ personIds, warnings }) as SimulationReport["foyers"][number]
+    const activite = (entityId: string, warnings: string[]) => ({ entityId, warnings }) as SimulationReport["activities"][number]
+    expect(porteurDeLaPremiereAlerte(null)).toBeNull()
+    expect(porteurDeLaPremiereAlerte(emptyReport())).toBeNull()
+    const cartes = { foyers: [foyer(["p1"], []), foyer(["p2", "p3"], ["a"])], activities: [activite("sasu", ["b"])] }
+    expect(porteurDeLaPremiereAlerte({ ...emptyReport(), ...cartes, avertissements: ["Règles reprises."] })).toBe("annee")
+    expect(porteurDeLaPremiereAlerte({ ...emptyReport(), ...cartes })).toBe("foyer:p2-p3")
+    expect(porteurDeLaPremiereAlerte({ ...emptyReport(), foyers: [foyer(["p1"], [])], activities: [activite("micro", []), activite("sasu", ["b"])] })).toBe("activite:sasu")
+  })
+
   it("compte les alertes de l'année, des foyers et des activités", () => {
     const report: SimulationReport = { ...emptyReport(), avertissements: ["Règles 2026 reprises pour 2027."] }
     expect(nombreDAlertes(null)).toBe(0)

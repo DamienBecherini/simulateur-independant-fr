@@ -51,6 +51,24 @@ export function nombreDAlertes(report: SimulationReport | null): number {
   return report.avertissements.length + report.foyers.reduce((n, f) => n + f.warnings.length, 0) + report.activities.reduce((n, a) => n + a.warnings.length, 0)
 }
 
+/**
+ * Ce qui porte la première alerte affichée dans les résultats, où mène le lien « Alertes » de la barre de résumé : les
+ * avertissements de l'année, sous le titre ; sinon la première carte qui en a, foyers d'abord, dans l'ordre des cartes.
+ * `null` sans alerte.
+ */
+export function porteurDeLaPremiereAlerte(report: SimulationReport | null): string | null {
+  if (!report) return null
+  if (report.avertissements.length > 0) return "annee"
+  const foyer = report.foyers.find(f => f.warnings.length > 0)
+  if (foyer) return cleDuFoyer(foyer.personIds)
+  const activite = report.activities.find(a => a.warnings.length > 0)
+  return activite ? cleDeLActivite(activite.entityId) : null
+}
+
+/** Clés des cartes des résultats, pour désigner celle qui porte la première alerte. */
+export const cleDuFoyer = (personIds: string[]) => `foyer:${personIds.join("-")}`
+export const cleDeLActivite = (entityId: string) => `activite:${entityId}`
+
 /** Taux global de prélèvement de l'année, comme dans le bilan des résultats. */
 export function tauxDePrelevement(report: SimulationReport): string | null {
   const base = report.bilan.revenusAvantPrelevements

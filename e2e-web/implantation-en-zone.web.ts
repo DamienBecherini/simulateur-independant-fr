@@ -200,3 +200,21 @@ for (const cas of [
     })
   })
 }
+
+for (const zoom of [1, 1.5]) {
+  test(`le lien « Alertes » de la barre de résumé mène à la première alerte, sur la carte de l'activité, zoom de ${zoom * 100} %`, async ({ page }) => {
+    await page.addInitScript(z => window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], affichage: "resume", zoom: z })), zoom)
+    await page.goto("./#situation=sasu-en-zone-franche-urbaine")
+    const barre = page.getByRole("region", { name: "Résumé de l'année" })
+    const lien = barre.getByRole("link", { name: /^Alertes/ })
+    await expect(lien).toHaveText(/Alertes\s*1/)
+    await expect(lien).toHaveAttribute("href", "#premiere-alerte")
+    await lien.click()
+    // L'alerte de la carte « SASU de Karim », pas le titre des résultats, loin au-dessus : entière sous la barre collée.
+    const alerte = page.locator("#premiere-alerte")
+    await expect(alerte).toContainText("Exonération ZFU-TE appliquée sans vérifier ses conditions")
+    await expect(alerte).toBeInViewport({ ratio: 1 })
+    const [hautDeLAlerte, basDeLaBarre] = await Promise.all([alerte.evaluate(e => e.getBoundingClientRect().top), barre.evaluate(e => e.getBoundingClientRect().bottom)])
+    expect(hautDeLAlerte).toBeGreaterThanOrEqual(basDeLaBarre)
+  })
+}

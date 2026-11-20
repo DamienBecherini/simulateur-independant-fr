@@ -8,7 +8,8 @@ import { LIMITES, TITRE_DES_LIMITES } from "@/lib/limites-du-modele"
 import { statutEtProfession } from "@/lib/professions"
 import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
-import { useId, useState, type ReactNode } from "react"
+import { createContext, useContext, useId, useState, type ReactNode } from "react"
+import { cleDeLActivite, cleDuFoyer, porteurDeLaPremiereAlerte } from "@/lib/resume"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { classeDuDetail, useDetailDesCartes } from "../hooks/useDetailsDesCartes"
 import { BoutonDuDetailDesCartes, FournisseurDesDetails } from "./DetailsDesCartes"
@@ -156,7 +157,12 @@ function ConditionsDepliables({ resume, avertissement, source }: ConditionsNonVe
   )
 }
 
+/** Ce qui porte la première alerte des résultats (voir porteurDeLaPremiereAlerte) : le lien « Alertes » de la barre de résumé y mène. */
+const PremiereAlerteContext = createContext<string | null>(null)
+
 interface CardProps {
+  /** Clé de la carte, pour y mener si elle porte la première alerte. */
+  cle: string
   title: string
   subtitle: string
   warnings: string[]
@@ -166,7 +172,8 @@ interface CardProps {
   children: ReactNode
 }
 
-function Card({ title, subtitle, warnings, conditions, className, children }: CardProps) {
+function Card({ cle, title, subtitle, warnings, conditions, className, children }: CardProps) {
+  const premiereAlerte = useContext(PremiereAlerteContext) === cle
   return (
     <article className={cn("rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80", className)}>
       <header className="mb-2 border-b border-slate-100 pb-2 dark:border-slate-800">
@@ -175,7 +182,7 @@ function Card({ title, subtitle, warnings, conditions, className, children }: Ca
       </header>
       {children}
       {warnings.length > 0 ? (
-        <ul className="mt-3 list-inside list-disc text-sm text-amber-800 dark:text-amber-200/90">
+        <ul id={premiereAlerte ? ANCRES.premiereAlerte : undefined} className="mt-3 list-inside list-disc text-sm text-amber-800 dark:text-amber-200/90">
           {warnings.map((warning, i) => (
             <li key={i}>{conditions && warning === conditions.avertissement ? <ConditionsDepliables {...conditions} /> : warning}</li>
           ))}
@@ -320,7 +327,7 @@ function FoyerCard({ foyer, persons, showRates, nombre, conjoint }: FoyerCardPro
   const ajoutDuConjoint = seul && conjoint ? <BoutonAjouterUnConjoint personneId={seul.entityId} nomDeLaPersonne={seul.name} ajout={conjoint} /> : null
 
   return (
-    <Card title={members.map(m => m.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
+    <Card cle={cleDuFoyer(foyer.personIds)} title={members.map(m => m.name).join(", ")} subtitle={`Foyer fiscal · ${parts} ${foyer.totalParts > 1 ? "parts" : "part"}`} warnings={foyer.warnings}>
       {resume ? (
         // Affichage « Résumé » : l'impôt et le revenu fiscal de référence d'abord. Le net du foyer n'est pas répété :
         // il est dans le bilan, et dans le taux du foyer quand il y en a plusieurs.
@@ -437,7 +444,7 @@ function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: 
   const bouton = <BoutonDuDetailDesCartes nombre={nombre} controle={idDuDetail} className="mt-2" />
 
   return (
-    <Card title={activity.name} subtitle={statutAffiche(activity)} warnings={activity.warnings} conditions={activity.exonerationDeZone?.conditionsNonVerifiees}>
+    <Card cle={cleDeLActivite(activity.entityId)} title={activity.name} subtitle={statutAffiche(activity)} warnings={activity.warnings} conditions={activity.exonerationDeZone?.conditionsNonVerifiees}>
       <NotesDesDispositifs notes={activity.dispositifs} />
       {resume ? (
         // Affichage « Résumé » : ce que l'activité verse d'abord, le calcul replié.
@@ -556,7 +563,7 @@ function EnTeteDesResultats({ report }: { report: SimulationReport | null }) {
       </div>
 
       {report?.avertissements.length ? (
-        <ul className="list-inside list-disc rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+        <ul id={ANCRES.premiereAlerte} className="list-inside list-disc rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
           {report.avertissements.map(avertissement => (
             <li key={avertissement}>{avertissement}</li>
           ))}
@@ -658,7 +665,9 @@ export function ResultsPanel({ report, error, apresLeBilan, conjoint }: ResultsP
       {/* Le détail des cartes s'ouvre et se ferme pour toutes à la fois, foyers et activités. */}
       {report ? (
         <FournisseurDesDetails>
-          <Cartes report={report} sharedCompanies={sharedCompanies} conjoint={conjoint} />
+          <PremiereAlerteContext.Provider value={porteurDeLaPremiereAlerte(report)}>
+            <Cartes report={report} sharedCompanies={sharedCompanies} conjoint={conjoint} />
+          </PremiereAlerteContext.Provider>
         </FournisseurDesDetails>
       ) : null}
     </section>

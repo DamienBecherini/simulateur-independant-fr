@@ -37,6 +37,7 @@ const VUE_DE_L_ANCRE: Readonly<Record<Ancre, Vue | null>> = {
   [ANCRES.contenu]: null,
   [ANCRES.bilan]: "resultats",
   [ANCRES.titreDesResultats]: "resultats",
+  [ANCRES.premiereAlerte]: "resultats",
   [ANCRES.verdictDuComparateur]: "comparer",
   [ANCRES.titreDuComparateur]: "comparer",
   // Les réponses de « Comparer et optimiser » : mariage ou Pacs, rémunération ou dividendes.

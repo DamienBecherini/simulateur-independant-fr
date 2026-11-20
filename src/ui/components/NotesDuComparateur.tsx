@@ -3,6 +3,7 @@
 //
 // Dans le tableau, l'en-tête d'une colonne porte les pastilles de ses notes. Un clic sur une pastille ouvre la note
 // dans une bulle, à côté d'elle, sans quitter le tableau des yeux ; un clic ailleurs, Échap ou un second clic la ferme.
+// La bulle est posée dans la page : elle défile avec elle, ce qui permet de lire une note plus longue que l'écran.
 // C'est le même geste dans tous les affichages.
 //
 // Sous le tableau, l'affichage « Résumé » garde écrites les notes du statut actuel, qui parlent de la situation réelle
@@ -12,7 +13,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { createPortal } from "react-dom"
-import { placerLaBulle } from "@/lib/bulle"
+import { placerLaBulle, type CoteDeLaBulle } from "@/lib/bulle"
 import type { Note } from "@/lib/notes"
 import { cn } from "@/lib/utils"
 import { useAffichageResume } from "../hooks/useAffichage"
@@ -68,24 +69,32 @@ interface Bulles {
 const BullesContext = createContext<Bulles | null>(null)
 
 /**
- * La bulle, en position fixe près de sa pastille (voir src/lib/bulle.ts). Elle se ferme d'un clic ailleurs, à Échap
- * (le focus revient à la pastille), quand la fenêtre change de taille, et dès que sa pastille bouge à l'écran (la page
- * ou le tableau défile) : elle ne la suit pas.
+ * La bulle, posée dans la page près de sa pastille (voir src/lib/bulle.ts) : elle défile avec la page, comme la
+ * pastille, et se replace quand le tableau défile de côté. Elle se ferme d'un clic ailleurs, à Échap (le focus revient
+ * à la pastille) et quand la fenêtre change de taille. Faire défiler n'est pas cliquer : cela ne la ferme pas.
  */
 function BulleDeNote({ id, note, ancre, onFermer }: { id: string; note: Note; ancre: HTMLElement; onFermer: () => void }) {
   const bulle = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
-  // Où était la pastille à l'ouverture : un défilement qui ne la déplace pas (événement tardif d'un défilement déjà fini) ne ferme rien.
-  const depart = useRef<{ left: number; top: number } | null>(null)
+  // Le côté retenu à l'ouverture (dessous, ou dessus faute de place) : la bulle replacée ne change pas de côté.
+  const cote = useRef<CoteDeLaBulle | undefined>(undefined)
 
-  useLayoutEffect(() => {
+  // Place la bulle dans la page : sa place à l'écran, plus le défilement de la page, en pixels de la page zoomée.
+  const placer = useCallback(() => {
     if (!bulle.current) return
     const zoom = Number.parseFloat(getComputedStyle(document.body).zoom) || 1
     const cadre = bulle.current.getBoundingClientRect()
-    const pastille = ancre.getBoundingClientRect()
-    depart.current = { left: pastille.left, top: pastille.top }
-    setPosition(placerLaBulle(pastille, { largeur: cadre.width, hauteur: cadre.height }, { largeur: document.documentElement.clientWidth, hauteur: window.innerHeight }, zoom))
-  }, [ancre, note])
+    const place = placerLaBulle(ancre.getBoundingClientRect(), { largeur: cadre.width, hauteur: cadre.height }, { largeur: document.documentElement.clientWidth, hauteur: window.innerHeight }, zoom, cote.current)
+    cote.current = place.cote
+    // Sans arrondir le défilement : deux arrondis de suite décaleraient la bulle de 2 px à l'écran sous un zoom de 200 %.
+    const dansLaPage = { left: place.left + window.scrollX / zoom, top: place.top + window.scrollY / zoom }
+    setPosition(actuelle => (actuelle?.left === dansLaPage.left && actuelle.top === dansLaPage.top ? actuelle : dansLaPage))
+  }, [ancre])
+
+  useLayoutEffect(() => {
+    cote.current = undefined
+    placer()
+  }, [placer, note])
 
   useEffect(() => {
     const clicAilleurs = (evenement: PointerEvent) => {
@@ -98,15 +107,15 @@ function BulleDeNote({ id, note, ancre, onFermer }: { id: string; note: Note; an
       onFermer()
       ancre.focus()
     }
-    const defilement = () => {
-      const pastille = ancre.getBoundingClientRect()
-      const bouge = depart.current !== null && (Math.abs(pastille.left - depart.current.left) > 1 || Math.abs(pastille.top - depart.current.top) > 1)
-      if (bouge) onFermer()
+    // La page qui défile emporte la bulle avec la pastille : rien à faire. Le tableau qui défile de côté (téléphone)
+    // déplace la pastille seule : la bulle la rejoint.
+    const defilement = (evenement: Event) => {
+      if (evenement.target !== document) placer()
     }
     document.addEventListener("pointerdown", clicAilleurs)
     document.addEventListener("keydown", touche)
     window.addEventListener("resize", onFermer)
-    // En capture : le défilement du tableau, plus large que l'écran sur un téléphone, compte aussi.
+    // En capture : le défilement du tableau, plus large que l'écran sur un téléphone, ne remonte pas jusqu'à la fenêtre.
     window.addEventListener("scroll", defilement, true)
     return () => {
       document.removeEventListener("pointerdown", clicAilleurs)
@@ -114,16 +123,17 @@ function BulleDeNote({ id, note, ancre, onFermer }: { id: string; note: Note; an
       window.removeEventListener("resize", onFermer)
       window.removeEventListener("scroll", defilement, true)
     }
-  }, [ancre, onFermer])
+  }, [ancre, onFermer, placer])
 
-  // Hors du tableau : dans l'en-tête, son texte s'ajouterait au nom de la colonne, relu à chaque cellule.
+  // Hors du tableau : dans l'en-tête, son texte s'ajouterait au nom de la colonne, relu à chaque cellule. Au-dessus de la
+  // colonne fixe du tableau, sous la barre de résumé et la barre d'outils, collées en haut de l'écran.
   return createPortal(
     <div
       ref={bulle}
       id={id}
       role="tooltip"
       style={{ left: position?.left ?? 0, top: position?.top ?? 0, visibility: position ? "visible" : "hidden" }}
-      className="fixed z-50 w-80 max-w-[calc(100vw/var(--zoom,1)_-_1rem)] rounded-md border border-amber-300 bg-amber-50 p-3 text-left text-sm font-normal text-amber-950 shadow-lg dark:border-amber-700 dark:bg-amber-950 dark:text-amber-50 print:hidden"
+      className="absolute z-30 w-80 max-w-[calc(100vw/var(--zoom,1)_-_1rem)] rounded-md border border-amber-300 bg-amber-50 p-3 text-left text-sm font-normal text-amber-950 shadow-lg dark:border-amber-700 dark:bg-amber-950 dark:text-amber-50 print:hidden"
     >
       <p>
         <span className="font-medium">Note {note.numero}.</span> <TexteDeLaNote note={note} />

@@ -3,6 +3,7 @@
 // (affichage « Résumé ») ; dans tous les affichages, l'invitation à saisir un chiffre d'affaires, la situation saisie
 // de référence, l'écart de frais de gestion de chaque colonne, les colonnes non retenues et le rappel des frais réels.
 
+import { useState } from "react"
 import { ChevronRight } from "lucide-react"
 import { ANCRES } from "@/lib/ancres"
 import { ecartDeRepartition } from "@/lib/ecart-de-repartition"
@@ -173,5 +174,29 @@ export function CartesDesStatuts({ result, className }: { result: ComparaisonRes
         <CarteDeStatut key={s.statut} scenario={s} result={result} meilleur={s.statut === result.meilleur} />
       ))}
     </ul>
+  )
+}
+
+/** Vrai si une case du tableau porte une précision à déplier : écart de frais de gestion, autre partage du bénéfice. */
+function aDesPrecisions(result: ComparaisonResult): boolean {
+  const actuel = result.situationSaisie?.statut
+  return result.scenarios.some(s => (actuel !== undefined && phraseDeLEcartDeFrais(s.ecartDeFrais.total, actuel, s.statut) !== null) || ecartDeRepartition(result, s) !== null)
+}
+
+/**
+ * Dans le coin du tableau : déplie ou replie d'un geste toutes les précisions de ses cases, au lieu d'un clic par case.
+ * Chacune reste une section repliable à part entière, que l'on peut encore ouvrir ou fermer seule.
+ */
+export function BoutonDesPrecisions({ result }: { result: ComparaisonResult }) {
+  const [ouvertes, setOuvertes] = useState(false)
+  if (!aDesPrecisions(result)) return null
+  const basculer = (bouton: HTMLButtonElement) => {
+    for (const precision of bouton.closest("table")?.querySelectorAll("details") ?? []) precision.open = !ouvertes
+    setOuvertes(!ouvertes)
+  }
+  return (
+    <button type="button" aria-pressed={ouvertes} className="inline-flex min-h-6 cursor-pointer items-center rounded-sm text-left text-xs font-normal text-blue-700 underline-offset-2 hover:underline pointer-coarse:min-h-11 dark:text-blue-400 print:hidden" onClick={evenement => basculer(evenement.currentTarget)}>
+      {ouvertes ? "Masquer tous les détails" : "Afficher tous les détails"}
+    </button>
   )
 }

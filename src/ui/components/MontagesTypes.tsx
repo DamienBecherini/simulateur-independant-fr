@@ -186,7 +186,7 @@ function FiltresDesMontages({ criteres, onChange, trouvees }: { criteres: Criter
     <div className="space-y-2">
       <div className="relative">
         <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
-        <Input type="search" aria-label="Rechercher une situation" placeholder="Rechercher : dividendes, retraite, kiné…" className="pl-9" value={criteres.recherche} onChange={evenement => onChange({ ...criteres, recherche: evenement.target.value })} />
+        <Input type="search" aria-label="Rechercher une situation" placeholder="Rechercher" title="Rechercher dans les titres, les résumés et les mots-clés : dividendes, retraite, kiné…" className="pl-9" value={criteres.recherche} onChange={evenement => onChange({ ...criteres, recherche: evenement.target.value })} />
       </div>
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         <PucesDeFiltre titre="Statut" choix={FILTRES_DE_STATUT} coches={criteres.statuts} onChange={statuts => onChange({ ...criteres, statuts })} />
