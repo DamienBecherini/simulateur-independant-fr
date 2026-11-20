@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Entity, Relationship } from "@/types"
 import { Plus, X } from "lucide-react"
-import { AIDE_RELATION_SALARIE, getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
+import { aidesDesRelations, getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
 import { createId } from "@/lib/id"
 
 interface NewRelationshipFormProps {
@@ -90,7 +90,13 @@ export function NewRelationshipForm({ entity, allEntities, relationships, onAdd 
           <X className="h-4 w-4" />
         </button>
       </div>
-      {target && availableTypes.includes("Salarié") ? <p className="max-w-md text-sm text-slate-600 dark:text-slate-400">{AIDE_RELATION_SALARIE}</p> : null}
+      {target
+        ? aidesDesRelations(availableTypes).map(aide => (
+            <p key={aide} className="max-w-md text-sm text-slate-600 dark:text-slate-400">
+              {aide}
+            </p>
+          ))
+        : null}
     </div>
   )
 }

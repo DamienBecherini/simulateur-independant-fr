@@ -5,7 +5,7 @@ import { grilleVide, type Company, type SessionState } from "../../../types.js"
 import { revenuAvantCotisationsPourUnNet } from "../cotisationsTNS.js"
 import { reglesPubliees } from "../regles.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
-import { personne, relation, societe, type Flux } from "../testing/session-de-test.js"
+import { exercant, personne, relation, societe, type Flux } from "../testing/session-de-test.js"
 
 /*
  * Cas de référence du bénéfice mis en réserve puis distribué (voir l'ADR 014), avec les règles réelles de 2025
@@ -41,11 +41,10 @@ function grille(flux: Flux[]) {
 }
 
 function deuxAnnees(entreprise: Company, flux2025: Flux[], flux2026: Flux[]): SessionState {
-  const lien = entreprise.legalStatus === "SASU" ? "Président" : "Gérant"
   return {
     name: "Réserves",
     entities: [alice, entreprise],
-    relationships: [relation("alice", entreprise.id, lien)],
+    relationships: exercant("alice", entreprise.id, entreprise.legalStatus),
     annees: [
       { annee: 2025, monthlyData: grille(flux2025) },
       { annee: 2026, monthlyData: grille(flux2026) }
@@ -134,7 +133,7 @@ describe("le plafond des dividendes : bénéfice distribuable de l'année et ré
     const session: SessionState = {
       name: "Plafond",
       entities: [alice, sasu],
-      relationships: [relation("alice", "sasu", "Président")],
+      relationships: [relation("alice", "sasu", "Président"), relation("alice", "sasu", "Associé")],
       annees: [
         {
           annee: 2026,

@@ -13,7 +13,7 @@ import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementsDeLaProfession, parametresDeLaCaisse, professionDe } from "./professions.js"
 import { lireMois, noteSortie } from "./dispositifs.js"
 import { avecLaZone, beneficeExonereDeLActivite, detailDeLaZone, parametresDExoneration, zoneDeLActivite } from "./exoneration-de-zone.js"
-import { anneeSimulee, attribuerResultatSociete, avertirDesTitulairesEnTrop, personnesLiees, RELATIONS_D_ASSOCIE, RELATIONS_D_EXPLOITANT, revenusDe, total, verserDividendes, verserRemuneration, type Contexte } from "./routage-des-flux.js"
+import { anneeSimulee, anomaliesDeLActivite, associesDe, attribuerResultatSociete, dirigeantsDe, revenusDe, total, verserDividendes, verserRemuneration, type Contexte } from "./routage-des-flux.js"
 import { deplacementsProfessionnels, detailDeplacements, detailProfession, detailSalaries, masseSalariale } from "./details-des-activites.js"
 
 /**
@@ -42,7 +42,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
   }
   const resultat = CALCUL_DES_SOCIETES[statut](entrees, ctx, societe)
   const profession = professionDe(societe, ctx.regles)
-  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, statut)]
+  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, statut), ...anomaliesDeLActivite(ctx, societe)]
 
   verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable, cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
   attribuerResultatSociete(ctx, societe, resultat)
@@ -60,7 +60,8 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
     impotSocietes: resultat.impotSocietes,
     revenuVerse: resultat.remunerationNette + resultat.dividendesVerses - resultat.cotisationsSurDividendes,
     resultatConserve: resultat.resultatConserve,
-    beneficiaireIds: personnesLiees(ctx, societe.id, RELATIONS_D_ASSOCIE),
+    // Ceux qui en reçoivent un revenu : le dirigeant, pour sa rémunération, et les associés, pour les dividendes.
+    beneficiaireIds: [...new Set([...dirigeantsDe(ctx, societe), ...associesDe(ctx, societe)])],
     ...(resultat.cotisationsTNS ? { cotisationsTNS: resultat.cotisationsTNS } : {}),
     ...(resultat.cotisationsPresident && resultat.remunerationNette > 0 ? { cotisationsPresident: resultat.cotisationsPresident } : {}),
     ...detailSalaries(masse),
@@ -119,7 +120,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
   const deplacements = deplacementsProfessionnels(ctx, entreprise)
   const resultat = calculerEI({ chiffreAffaires: total(ctx, entreprise.id, "ca_services", "ca_vente"), chargesDeductibles: total(ctx, entreprise.id, "deductible_expense") + masse.cout + deplacements }, ctx.regles, caisseDeLActivite(ctx, entreprise))
   const profession = professionDe(entreprise, ctx.regles)
-  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, "EI")]
+  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, "EI"), ...anomaliesDeLActivite(ctx, entreprise)]
 
   if (total(ctx, entreprise.id, "director_remuneration", "dividends_payment") > 0) {
     warnings.push("Une entreprise individuelle ne verse ni rémunération de dirigeant ni dividendes : ces flux sont ignorés, tout le bénéfice revient à l'entrepreneur.")
@@ -129,9 +130,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
   const zone = zoneDeLActivite(entreprise, anneeSimulee(ctx), ctx.regles)
   const beneficeExonere = beneficeExonereDeLActivite(zone, resultat.revenuImposable)
 
-  const exploitants = personnesLiees(ctx, entreprise.id, RELATIONS_D_EXPLOITANT)
-  const exploitant = exploitants[0]
-  avertirDesTitulairesEnTrop(ctx, exploitants, "entreprise individuelle", warnings)
+  const exploitant = dirigeantsDe(ctx, entreprise)[0]
   if (exploitant) {
     const revenus = revenusDe(ctx, exploitant)
     // Un déficit d'entreprise individuelle au réel s'impute sur les autres revenus du foyer (article 156 du CGI).

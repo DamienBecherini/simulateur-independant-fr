@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import { activite, casDeReference, foyerDe, simuler, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
-import { personne, relation, societe, type Flux } from "../testing/session-de-test.js"
+import { exercant, personne, societe, type Flux } from "../testing/session-de-test.js"
 import type { Company } from "../../../types.js"
 
 /*
@@ -49,8 +49,7 @@ import type { Company } from "../../../types.js"
 const alice = personne("alice")
 
 function simulerSociete(statut: Company["legalStatus"], flux: Flux[], capitalSocial = 1000, autresFlux: Flux[] = []) {
-  const lien = statut === "SASU" ? "Président" : statut === "EURL" ? "Gérant" : "Titulaire"
-  return simuler([alice, societe("s1", statut, capitalSocial)], [relation("alice", "s1", lien)], [...flux, ...autresFlux])
+  return simuler([alice, societe("s1", statut, capitalSocial)], exercant("alice", "s1", statut), [...flux, ...autresFlux])
 }
 
 casDeReference("Cas de référence 2026 : sociétés et entreprise individuelle", () => {

@@ -164,7 +164,11 @@ describe("sanitizeStateAndFillDefaults", () => {
         ]
       })
 
-      expect(safeState.relationships).toEqual([{ id: "r1", fromId: "p1", toId: "c1", type: "Président" }])
+      // Fichier sans numéro de format : la migration du format 4 a d'abord donné « Associé » au président de la SASU.
+      expect(safeState.relationships).toEqual([
+        { id: "r1", fromId: "p1", toId: "c1", type: "Président" },
+        { id: "r1-associe", fromId: "p1", toId: "c1", type: "Associé" }
+      ])
       expect(report.relationshipsRemoved).toBe(3)
       expect(report.flowsRemoved).toBe(0)
     })
@@ -208,7 +212,8 @@ describe("sanitizeStateAndFillDefaults", () => {
 
       expect(safeState.name).toBe("Scénario 2025")
       expect(safeState.entities).toEqual([alice, sasu])
-      expect(safeState.relationships).toHaveLength(1)
+      // La relation « Président », et « Associé », que la migration du format 4 lui ajoute.
+      expect(safeState.relationships.map(r => r.type)).toEqual(["Président", "Associé"])
       expect(safeState.annees[0].monthlyData[0].flows).toHaveLength(1)
       expect(report).toMatchObject({ entitiesRemoved: 2, relationshipsRemoved: 0, flowsRemoved: 0 })
     })

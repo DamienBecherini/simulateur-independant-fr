@@ -9,6 +9,7 @@ import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.
 import type { Foyer } from "./foyers.js"
 import type { ReglesFiscales } from "./regles.js"
 import type { RegimeMicroDeLAnnee } from "./dispositifs.js"
+import { anomaliesDeStructure, genreDeStructure, rolesQui, type Activite } from "./regles-de-structure.js"
 
 type FlowType = FinancialFlow["type"]
 type FlowTotals = Partial<Record<FlowType, number>>
@@ -63,9 +64,6 @@ export interface Contexte {
   nonRattache: number
 }
 
-const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant"]
-export const RELATIONS_D_ASSOCIE: Relationship["type"][] = ["Président", "Gérant", "Associé"]
-export const RELATIONS_D_EXPLOITANT: Relationship["type"][] = ["Titulaire", "Président", "Gérant"]
 
 export function aggregateAnnualFlowsByEntity(session: DonneesDeLAnnee): Map<string, FlowTotals> {
   const map = new Map<string, FlowTotals>()
@@ -124,7 +122,7 @@ export function total(ctx: Contexte, entityId: string, ...types: FlowType[]): nu
 }
 
 /** Personnes reliées à une activité par l'un des types de relation donnés, sans doublon, dans l'ordre des relations. */
-export function personnesLiees(ctx: Contexte, entityId: string, types: Relationship["type"][]): string[] {
+function personnesLiees(ctx: Contexte, entityId: string, types: Relationship["type"][]): string[] {
   const ids = new Set<string>()
   for (const rel of ctx.session.relationships) {
     if (!types.includes(rel.type) || (rel.fromId !== entityId && rel.toId !== entityId)) continue
@@ -135,13 +133,21 @@ export function personnesLiees(ctx: Contexte, entityId: string, types: Relations
 }
 
 /**
- * Une entreprise individuelle ou une micro-entreprise n'ont qu'un titulaire. La saisie n'en laisse plus relier qu'un,
- * mais une ancienne sauvegarde ou un fichier importé peuvent en porter plusieurs : tout va au premier, et c'est dit.
+ * Qui dirige l'activité (dirigeant d'une société, titulaire), et qui en est associé : les rôles qu'en donne la table
+ * des règles de structure, selon la forme de l'activité. Le président d'une SASU ne reçoit donc des dividendes que
+ * s'il en est aussi l'associé ; le gérant d'une EURL en est toujours un.
  */
-export function avertirDesTitulairesEnTrop(ctx: Contexte, titulaires: string[], genre: string, warnings: string[]): void {
-  if (titulaires.length < 2) return
-  const premier = ctx.session.entities.find(e => e.id === titulaires[0])?.name ?? titulaires[0]
-  warnings.push(`Plusieurs titulaires : une ${genre} n'en a qu'un. Tous ses revenus sont attribués au premier, « ${premier} » ; supprimez les autres relations « Titulaire ».`)
+export function dirigeantsDe(ctx: Contexte, activite: Activite): string[] {
+  return personnesLiees(ctx, activite.id, rolesQui(genreDeStructure(activite), "dirige"))
+}
+
+export function associesDe(ctx: Contexte, societe: Activite): string[] {
+  return personnesLiees(ctx, societe.id, rolesQui(genreDeStructure(societe), "associe"))
+}
+
+/** Ce qui, dans les relations de l'activité, contredit les règles de sa forme (sauvegarde ancienne, fichier importé). */
+export function anomaliesDeLActivite(ctx: Contexte, activite: Activite): string[] {
+  return anomaliesDeStructure(ctx.session, activite)
 }
 
 export function revenusDe(ctx: Contexte, personId: string): RevenusDActivite {
@@ -153,10 +159,10 @@ export function revenusDe(ctx: Contexte, personId: string): RevenusDActivite {
   return revenus
 }
 
-/** La rémunération du dirigeant est versée à la première personne reliée par « Président » ou « Gérant ». */
+/** La rémunération du dirigeant est versée à la première personne qui dirige la société (président de SASU, gérant d'EURL). */
 export function verserRemuneration(ctx: Contexte, societe: Company, remuneration: { nette: number; imposable: number; cotisations: number }, warnings: string[]) {
   if (remuneration.nette <= 0) return
-  const dirigeants = personnesLiees(ctx, societe.id, RELATIONS_DE_DIRECTION)
+  const dirigeants = dirigeantsDe(ctx, societe)
   if (dirigeants.length === 0) {
     warnings.push("Rémunération dirigeant saisie sans relation Président/Gérant vers une personne : non routée vers un foyer.")
     ctx.nonRattache += remuneration.nette
@@ -173,10 +179,10 @@ export function verserRemuneration(ctx: Contexte, societe: Company, remuneration
 
 /**
  * L'impôt sur les sociétés, les cotisations sur dividendes et le bénéfice conservé sont attribués
- * à parts égales aux personnes reliées à la société, pour mesurer ce que chaque foyer supporte.
+ * à parts égales aux associés de la société, pour mesurer ce que chaque foyer supporte.
  */
 export function attribuerResultatSociete(ctx: Contexte, societe: Company, resultat: { impotSocietes: number; cotisationsSurDividendes: number; resultatConserve: number }) {
-  const associes = personnesLiees(ctx, societe.id, RELATIONS_D_ASSOCIE)
+  const associes = associesDe(ctx, societe)
   for (const associe of associes) {
     const revenus = revenusDe(ctx, associe)
     revenus.prelevementsActivites += (resultat.impotSocietes + resultat.cotisationsSurDividendes) / associes.length
@@ -184,17 +190,23 @@ export function attribuerResultatSociete(ctx: Contexte, societe: Company, result
   }
 }
 
-/** Les dividendes sont partagés à parts égales entre les personnes reliées à la société. */
+/** Dividendes versés par une société qui n'a pas d'associé relié : à qui les verser, et comment le dire. */
+const DIVIDENDES_SANS_ASSOCIE = {
+  SASU: "Dividendes versés sans associé : non routés vers un foyer. Reliez une personne à la société par « Associé » ; son président n'en reçoit que s'il est aussi associé.",
+  EURL: "Dividendes versés sans associé : non routés vers un foyer. Reliez une personne à la société par « Gérant » ou « Associé »."
+}
+
+/** Les dividendes sont partagés à parts égales entre les associés de la société. */
 export function verserDividendes(ctx: Contexte, societe: Company, dividendes: { verses: number; soumisPS: number; cotisations: number }, warnings: string[]) {
   if (dividendes.verses <= 0) return
-  const associes = personnesLiees(ctx, societe.id, RELATIONS_D_ASSOCIE)
+  const associes = associesDe(ctx, societe)
   if (associes.length === 0) {
-    warnings.push("Dividendes versés sans relation Président, Gérant ou Associé vers une personne : non routés vers un foyer.")
+    warnings.push(societe.legalStatus === "SASU" ? DIVIDENDES_SANS_ASSOCIE.SASU : DIVIDENDES_SANS_ASSOCIE.EURL)
     ctx.nonRattache += dividendes.verses - dividendes.cotisations
     return
   }
   if (associes.length > 1) {
-    warnings.push(`Dividendes répartis à parts égales entre les ${associes.length} personnes liées : la répartition du capital n'est pas modélisée.`)
+    warnings.push(`Dividendes répartis à parts égales entre les ${associes.length} associés : la répartition du capital n'est pas modélisée.`)
   }
   for (const associe of associes) {
     const revenus = revenusDe(ctx, associe)

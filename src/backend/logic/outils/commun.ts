@@ -3,7 +3,7 @@
 // des relations, et empreinte d'une session (pour refuser une proposition construite sur une session qui a changé).
 
 import { STATUTS_JURIDIQUES, type Entity, type FinancialFlow, type Relationship, type SessionState } from "../../../types.js"
-import { RELATIONS_PAR_STATUT } from "../statuts.js"
+import { obstacleAuRole, phraseDeLObstacle } from "../regles-de-structure.js"
 
 /** Erreur prévue, dont le message en français dit au modèle ce qui ne va pas et comment s'y prendre autrement. */
 export class ErreurOutil extends Error {
@@ -80,7 +80,7 @@ export const SENS_DES_TYPES: Record<FinancialFlow["type"], string> = {
   ca_vente: "chiffre d'affaires HT de ventes de marchandises",
   deductible_expense: "charge déductible HT : loyer, matériel, sous-traitance…",
   director_remuneration: "rémunération nette du dirigeant, exige une relation Président ou Gérant",
-  dividends_payment: "dividendes bruts, exigent une relation Président, Gérant ou Associé",
+  dividends_payment: "dividendes bruts, exigent un associé : relation Associé, ou Gérant en EURL",
   ca_micro_services_bic: "chiffre d'affaires de prestations commerciales ou artisanales, BIC",
   ca_micro_services_bnc: "chiffre d'affaires de prestations libérales, BNC",
   ca_micro_vente: "chiffre d'affaires de ventes de marchandises, restauration, hébergement",
@@ -120,7 +120,8 @@ export function typesExpliquesParGenre(): string {
 /** Flux qu'une activité ne verse qu'à une personne reliée par l'une de ces relations. */
 export const RELATIONS_REQUISES: Partial<Record<TypeDeFlux, Relationship["type"][]>> = {
   director_remuneration: ["Président", "Gérant"],
-  dividends_payment: ["Président", "Gérant", "Associé"]
+  // Le président d'une SASU n'en est l'associé que relié aussi par « Associé » (regles-de-structure.ts).
+  dividends_payment: ["Gérant", "Associé"]
 }
 
 export function verifierTypePermis(acteur: Entity, typeFlux: TypeDeFlux): void {
@@ -135,15 +136,6 @@ export function verifierTypePermis(acteur: Entity, typeFlux: TypeDeFlux): void {
 // ===================================================================================
 
 const TYPES_DE_RELATION_FAMILIALE: Relationship["type"][] = ["Marié(e)", "PACSé(e)", "En couple", "Enfant"]
-const DIRECTION = new Set<Relationship["type"]>(["Président", "Gérant", "Titulaire"])
-
-/** Relations possibles d'une personne vers une activité, selon le statut de l'activité (voir `RELATIONS_PAR_STATUT`). */
-const RELATIONS_VERS_UNE_ACTIVITE: Record<Exclude<GenreDActeur, "personne">, Relationship["type"][]> = {
-  ...RELATIONS_PAR_STATUT,
-  "micro-entreprise": ["Titulaire"],
-  portage: ["Titulaire"]
-}
-
 /** Ce que dit une relation, en français : « Camille est titulaire de Atelier ». */
 export function phraseDeLaRelation(session: Pick<SessionState, "entities">, relation: Relationship): string {
   const de = nomDe(session, relation.fromId)
@@ -157,8 +149,8 @@ export function phraseDeLaRelation(session: Pick<SessionState, "entities">, rela
 
 /**
  * Vérifie qu'une relation peut être créée, avec les règles de la fenêtre des relations : un seul lien familial entre
- * deux personnes ; d'une personne vers une activité, les relations de son statut ; jamais entre deux activités ;
- * on ne dirige pas une activité dont on est salarié, et inversement ; une activité n'a qu'un titulaire.
+ * deux personnes ; jamais entre deux activités ; d'une personne vers une activité, ce que permettent les règles de sa
+ * forme (regles-de-structure.ts) : les rôles qu'elle a, leur nombre, et ceux qu'une même personne ne cumule pas.
  */
 export function verifierNouvelleRelation(session: Pick<SessionState, "entities" | "relationships">, deId: string, versId: string, type: Relationship["type"]): void {
   const de = trouverActeur(session, deId)
@@ -172,33 +164,16 @@ export function verifierNouvelleRelation(session: Pick<SessionState, "entities" 
     return
   }
   if (de.type !== "person") throw new ErreurOutil("Une relation part d'une personne : « deId » est la personne (le parent pour « Enfant »), « versId » la personne ou l'activité.")
-  verifierRelationVersUneActivite(de, vers, type, existantes)
-  if (type === "Titulaire") verifierTitulaireUnique(session, vers)
-}
-
-/** Une entreprise individuelle, une micro-entreprise ou une activité en portage n'ont qu'un titulaire : le calcul attribuerait tout au premier. */
-function verifierTitulaireUnique(session: Pick<SessionState, "entities" | "relationships">, activite: Entity): void {
-  const relation = session.relationships.find(r => r.type === "Titulaire" && (r.fromId === activite.id || r.toId === activite.id))
-  if (!relation) return
-  const titulaire = nomDe(session, relation.fromId === activite.id ? relation.toId : relation.fromId)
-  throw new ErreurOutil(`« ${activite.name} » a déjà un titulaire, « ${titulaire} » : une entreprise individuelle, une micro-entreprise ou une activité en portage n'en ont qu'un. Supprimez d'abord cette relation pour en changer.`)
+  // « vers » est une activité : entre deux personnes, la vérification s'est arrêtée au lien familial.
+  if (vers.type === "person") return
+  const obstacle = obstacleAuRole(session.relationships, de.id, vers, type)
+  if (obstacle) throw new ErreurOutil(phraseDeLObstacle(obstacle, type, de.name, vers, id => nomDe(session, id)))
 }
 
 /** Entre deux personnes : un lien familial, un seul. `existantes` : les relations déjà présentes entre elles. */
 function verifierLienFamilial(de: Entity, vers: Entity, type: Relationship["type"], existantes: Relationship["type"][]): void {
   if (!TYPES_DE_RELATION_FAMILIALE.includes(type)) throw new ErreurOutil(`Entre deux personnes, seules ces relations existent : ${TYPES_DE_RELATION_FAMILIALE.join(", ")}.`)
   if (existantes.length > 0) throw new ErreurOutil(`« ${de.name} » et « ${vers.name} » ont déjà un lien familial (${existantes.join(", ")}) : un seul est possible.`)
-}
-
-/**
- * D'une personne vers une activité : les relations du statut de l'activité, et jamais direction et salariat ensemble.
- * `existantes` : les relations déjà présentes entre elles.
- */
-function verifierRelationVersUneActivite(de: Entity, vers: Entity, type: Relationship["type"], existantes: Relationship["type"][]): void {
-  const possibles = RELATIONS_VERS_UNE_ACTIVITE[genreDe(vers) as Exclude<GenreDActeur, "personne">]
-  if (!possibles.includes(type)) throw new ErreurOutil(`Relations possibles d'une personne vers « ${vers.name} » (${genreDe(vers)}) : ${possibles.join(", ")}.`)
-  if (type === "Salarié" && existantes.some(t => DIRECTION.has(t))) throw new ErreurOutil(`« ${de.name} » dirige déjà « ${vers.name} » : pas de relation « Salarié » en plus.`)
-  if (DIRECTION.has(type) && existantes.includes("Salarié")) throw new ErreurOutil(`« ${de.name} » est déjà salarié(e) de « ${vers.name} » : pas de relation de direction en plus.`)
 }
 
 // ===================================================================================

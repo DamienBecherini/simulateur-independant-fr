@@ -1,9 +1,9 @@
 // src/backend/logic/references/exoneration-de-zone.reference.test.ts
 
 import { describe, expect, it } from "vitest"
-import { grilleVide, type Company, type ComparaisonOptions, type Entity, type MicroEntreprise, type Relationship, type SessionState } from "../../../types.js"
+import { grilleVide, type Company, type ComparaisonOptions, type Entity, type MicroEntreprise, type SessionState } from "../../../types.js"
 import { comparerStatutsDeLAnnee, simulerLesAnnees } from "../simulation-pluriannuelle.js"
-import { micro, personne, relation, societe, type Flux } from "../testing/session-de-test.js"
+import { exercant, micro, personne, societe, type Flux } from "../testing/session-de-test.js"
 
 /*
  * Cas de référence de l'exonération d'impôt sur les bénéfices en zone (voir l'ADR 017), avec les règles réelles de 2025
@@ -36,12 +36,10 @@ function grille(flux: Flux[]) {
   return monthlyData
 }
 
-const LIENS: Record<string, Relationship["type"]> = { SASU: "Président", EURL: "Gérant", EI: "Titulaire", micro: "Titulaire" }
-
 function session(activite: Company | MicroEntreprise, annees: Record<number, Flux[]>): SessionState {
-  const lien = LIENS[activite.type === "company" ? activite.legalStatus : "micro"]
+  const statut = activite.type === "company" ? activite.legalStatus : "micro"
   const entities: Entity[] = [personne("alice"), activite]
-  return { name: "Zone", entities, relationships: [relation("alice", activite.id, lien)], annees: Object.entries(annees).map(([annee, flux]) => ({ annee: Number(annee), monthlyData: grille(flux) })) }
+  return { name: "Zone", entities, relationships: exercant("alice", activite.id, statut), annees: Object.entries(annees).map(([annee, flux]) => ({ annee: Number(annee), monthlyData: grille(flux) })) }
 }
 
 const rapportDe = (s: SessionState, annee = 2026) => simulerLesAnnees(s).annees.find(a => a.annee === annee)!.report!

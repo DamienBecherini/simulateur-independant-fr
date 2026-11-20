@@ -16,6 +16,8 @@ const conseil: Company = { id: "company-conseil", type: "company", name: "Consei
 const relations: Relationship[] = [
   { id: "rel-titulaire", fromId: camille.id, toId: atelier.id, type: "Titulaire" },
   { id: "rel-president", fromId: julien.id, toId: conseil.id, type: "Président" },
+  // Président et associé unique : il reçoit la rémunération de dirigeant et les dividendes (voir regles-de-structure.ts).
+  { id: "rel-associe", fromId: julien.id, toId: conseil.id, type: "Associé" },
   { id: "rel-pacs", fromId: camille.id, toId: julien.id, type: "PACSé(e)" },
   { id: "rel-enfant", fromId: camille.id, toId: lea.id, type: "Enfant" }
 ]

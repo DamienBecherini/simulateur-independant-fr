@@ -82,7 +82,7 @@ describe("comparerStatuts", () => {
     it("répartit les prestations d'une société entre BNC et BIC selon la part choisie", () => {
       // 40 000 € de prestations, moitié BNC (25 %), moitié BIC (20 %) : 9 000 € de cotisations, plus 40 + 60 € de
       // formation professionnelle (0,2 % des BNC, 0,3 % des BIC).
-      const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 40000]], options("s1", { partBncPrestations: 0.5 }))
+      const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], [["s1", "ca_services", 40000]], options("s1", { partBncPrestations: 0.5 }))
 
       expect(colonne(resultat, "micro").cotisationsSociales).toBe(9000 + 100)
       expect(colonne(resultat, "SASU").actuel).toBe(true)
@@ -134,8 +134,8 @@ describe("comparerStatuts", () => {
         ["s1", "dividends_payment", 20000]
       ]
       const grille = { repartition: { mode: "grille", partDistribuee: 1 } } as const
-      const reglee = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { ...grille, remunerationNette: 50000 }))
-      const deLaGrille = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], flux, options("s1", { ...grille, remunerationNette: 24300 }))
+      const reglee = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], flux, options("s1", { ...grille, remunerationNette: 50000 }))
+      const deLaGrille = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], flux, options("s1", { ...grille, remunerationNette: 24300 }))
 
       expect(colonne(reglee, "EURL").partage?.remunerationNette).toBe(24300)
       expect(colonne(reglee, "EURL").netApresImpots).toBe(colonne(deLaGrille, "EURL").netApresImpots)
@@ -148,7 +148,7 @@ describe("comparerStatuts", () => {
     // et 200 € de formation professionnelle.
     const resultat = comparer(
       [personne("alice"), personne("bob"), societe("s1", "SASU")],
-      [relation("alice", "s1", "Président"), relation("bob", "s1", "Salarié")],
+      [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé"), relation("bob", "s1", "Salarié")],
       [
         ["s1", "ca_services", 100000],
         ["bob", "salary", 24300]
@@ -183,7 +183,7 @@ describe("comparerStatuts", () => {
     it("rend à la poche l'écart négatif d'un statut qui coûte moins que le statut actuel", () => {
       // SASU actuelle (2 500 €), colonne micro (500 €) : 2 000 € de frais en moins, qui ne changent ni cotisations ni
       // impôt en micro. 40 000 € de prestations en BNC : 28 120 € sans frais, plus 2 000 €.
-      const depuisLaSasu = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 40000]], options("s1", { fraisFonctionnement }))
+      const depuisLaSasu = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], [["s1", "ca_services", 40000]], options("s1", { fraisFonctionnement }))
 
       expect(colonne(depuisLaSasu, "micro")).toMatchObject({ ecartDeFrais: { total: -2000, postes: { expertComptable: -2000 } }, cotisationsSociales: 10080, impotSurLeRevenu: 1800, netApresImpots: 30120 })
       expect(colonne(depuisLaSasu, "EURL").ecartDeFrais.total).toBe(0)
@@ -224,7 +224,7 @@ describe("comparerStatuts", () => {
     })
 
     it("en société au meilleur net, la colonne du statut actuel dit son partage, et la situation saisie reste la référence", () => {
-      const donnees = session([personne("alice"), societe("a", "SASU")], [relation("alice", "a", "Président")], [["a", "ca_services", 90000], ["a", "director_remuneration", 24000]])
+      const donnees = session([personne("alice"), societe("a", "SASU")], [relation("alice", "a", "Président"), relation("alice", "a", "Associé")], [["a", "ca_services", 90000], ["a", "director_remuneration", 24000]])
       const resultat = comparerStatuts(donnees, options("a", { repartition: { mode: "meilleurNet", partDistribuee: 1 } }), reglesDeTest)
 
       expect(colonne(resultat, "SASU")).toMatchObject({ actuel: true, telleQueSaisie: false, libelle: "SASU, rémunération optimisée", ecartDeFrais: { total: 0 } })
@@ -233,7 +233,7 @@ describe("comparerStatuts", () => {
     })
 
     describe(`au meilleur net, un arbitrage à moins de ${ECART_NEGLIGEABLE} € de la situation saisie ne la remplace pas`, () => {
-      const acteurs: [Entity[], Relationship[]] = [[personne("alice"), societe("a", "SASU")], [relation("alice", "a", "Président")]]
+      const acteurs: [Entity[], Relationship[]] = [[personne("alice"), societe("a", "SASU")], [relation("alice", "a", "Président"), relation("alice", "a", "Associé")]]
       const auMeilleurNet = (autres: Partial<RepartitionBenefice> = {}) => options("a", { repartition: { mode: "meilleurNet", partDistribuee: 1, ...autres } })
       // Le meilleur net de l'arbitrage, sans rien de saisi : sa rémunération et ses dividendes deviennent la grille.
       const arbitrage = optimiserRemuneration(session(...acteurs, [["a", "ca_services", 90000]]), auMeilleurNet(), "SASU", reglesDeTest)
@@ -296,7 +296,7 @@ describe("comparerStatuts", () => {
       ["remuneration", "SASU, tout en rémunération"],
       ["personnalisee", "SASU, répartition sur mesure"]
     ] as const)("partage « %s » : « %s »", (mode, libelle) => {
-      const donnees = session([personne("alice"), societe("a", "SASU")], [relation("alice", "a", "Président")], [["a", "ca_services", 90000]])
+      const donnees = session([personne("alice"), societe("a", "SASU")], [relation("alice", "a", "Président"), relation("alice", "a", "Associé")], [["a", "ca_services", 90000]])
       const resultat = comparerStatuts(donnees, options("a", { remunerationNette: 20000, repartition: { mode, partDistribuee: 0.5 } }), reglesDeTest)
 
       expect(colonne(resultat, "SASU").libelle).toBe(libelle)
@@ -337,7 +337,7 @@ describe("comparerStatuts", () => {
     })
 
     it("prévient que les associés ne suivent pas en entreprise individuelle", () => {
-      const resultat = comparer([personne("alice"), personne("bob"), societe("s1")], [relation("alice", "s1", "Président"), relation("bob", "s1", "Associé")], [["s1", "ca_services", 50000]], options("s1"))
+      const resultat = comparer([personne("alice"), personne("bob"), societe("s1")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé"), relation("bob", "s1", "Associé")], [["s1", "ca_services", 50000]], options("s1"))
 
       expect(resultat.warnings).toEqual([expect.stringContaining("autres associés"), AUCUNE_CHARGE])
     })
@@ -477,7 +477,7 @@ describe("micro-entreprise au-delà des plafonds", () => {
   })
 
   it("une société convertie en micro est aussi comparée au plafond", () => {
-    const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 90000]], options("s1"))
+    const resultat = comparer([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], [["s1", "ca_services", 90000]], options("s1"))
     expect(colonne(resultat, "micro").horsPlafond).toBe(true)
     expect(colonne(resultat, "SASU").horsPlafond).toBe(false)
   })
@@ -485,7 +485,7 @@ describe("micro-entreprise au-delà des plafonds", () => {
 
 describe("au meilleur net", () => {
   /** Alice, présidente d'une SASU qui facture 100 000 € de prestations. */
-  const sessionDAlice = (chiffreAffaires = 100000) => session([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", chiffreAffaires]])
+  const sessionDAlice = (chiffreAffaires = 100000) => session([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], [["s1", "ca_services", chiffreAffaires]])
   const auMeilleurNet = (avecRetraite?: boolean) => options("s1", { remunerationNette: 30000, repartition: { mode: "meilleurNet", partDistribuee: 1, ...(avecRetraite === undefined ? {} : { avecRetraite }) } })
   const s = sessionDAlice()
   const resultat = comparerStatuts(s, auMeilleurNet(), reglesDeTest)
@@ -555,7 +555,7 @@ describe("au meilleur net", () => {
 
   it("situation saisie au meilleur net sans trimestre : la colonne avec 4 trimestres reste désignée, leur coût explique l'écart", () => {
     const { meilleur } = optimiserRemuneration(s, options("s1"), "SASU", reglesDeTest)
-    const saisie = session([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 100000], ["s1", "director_remuneration", meilleur!.remunerationNette], ["s1", "dividends_payment", meilleur!.dividendes]])
+    const saisie = session([personne("alice"), societe("s1", "SASU")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], [["s1", "ca_services", 100000], ["s1", "director_remuneration", meilleur!.remunerationNette], ["s1", "dividends_payment", meilleur!.dividendes]])
     const avec = comparerStatuts(saisie, auMeilleurNet(true), reglesDeTest)
     const ecart = Math.round(avec.situationSaisie!.netApresImpots - colonne(avec, "SASU").netApresImpots)
 

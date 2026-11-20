@@ -16,7 +16,7 @@ import { CAPITAL_SOCIAL_PAR_DEFAUT } from "../../types.js"
 import { euros } from "./format.js"
 import { estObjet, type DonneesBrutes } from "./donnees-brutes.js"
 
-export const FORMAT_VERSION_ACTUEL = 3
+export const FORMAT_VERSION_ACTUEL = 4
 
 /**
  * Année des sessions écrites avant les années multiples (formats 1 et 2) : celle des seules règles alors connues.
@@ -90,10 +90,33 @@ function migrerV2VersV3(donnees: DonneesBrutes): { donnees: DonneesBrutes; notes
   }
 }
 
+/**
+ * Version 3 → 4 (novembre 2026, règles de structure, ADR 018). Le président d'une SASU n'est plus compté d'office comme
+ * associé : il ne reçoit des dividendes que relié aussi par « Associé ». Jusqu'ici, tout président l'était : chaque
+ * président d'une SASU reçoit donc la relation « Associé » qui lui manque, et les chiffres ne changent pas. Rien à
+ * signaler à l'utilisateur. Le gérant d'une EURL reste associé par sa seule relation « Gérant ».
+ */
+function migrerV3VersV4(donnees: DonneesBrutes): { donnees: DonneesBrutes; notes: string[] } {
+  if (!Array.isArray(donnees.relationships)) return { donnees, notes: [] }
+  const sasu = new Set(tableau(donnees.entities).filter(e => e.type === "company" && e.legalStatus === "SASU").map(e => e.id))
+  const relations = tableau(donnees.relationships)
+  const entre = (rel: DonneesBrutes, a: unknown, b: unknown) => (rel.fromId === a && rel.toId === b) || (rel.fromId === b && rel.toId === a)
+  const ajoutees: DonneesBrutes[] = []
+  for (const rel of relations) {
+    if (rel.type !== "Président") continue
+    const [societe, personne] = sasu.has(rel.toId) ? [rel.toId, rel.fromId] : [rel.fromId, rel.toId]
+    if (!sasu.has(societe)) continue
+    const dejaAssocie = [...relations, ...ajoutees].some(autre => autre.type === "Associé" && entre(autre, societe, personne))
+    if (!dejaAssocie) ajoutees.push({ id: `${String(rel.id)}-associe`, fromId: personne, toId: societe, type: "Associé" })
+  }
+  return { donnees: ajoutees.length > 0 ? { ...donnees, relationships: [...donnees.relationships, ...ajoutees] } : donnees, notes: [] }
+}
+
 /** `migrations[n]` convertit un fichier de la version n à la version n + 1. */
 const migrations: Record<number, (donnees: DonneesBrutes) => { donnees: DonneesBrutes; notes: string[] }> = {
   1: migrerV1VersV2,
-  2: migrerV2VersV3
+  2: migrerV2VersV3,
+  3: migrerV3VersV4
 }
 
 /**

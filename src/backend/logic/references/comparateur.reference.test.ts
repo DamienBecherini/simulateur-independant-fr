@@ -96,7 +96,7 @@ casDeReference("Cas de référence 2026 : comparateur", () => {
     const resultat = comparerStatuts(
       session(
         [personne("alice"), societe("s1", "SASU")],
-        [relation("alice", "s1", "Président")],
+        [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")],
         [
           ["s1", "ca_services", 60000],
           ["s1", "deductible_expense", 5000]

@@ -35,8 +35,8 @@ describe("supprimer un acteur", () => {
     const avant = JSON.stringify(session)
     const resultat = supprimer(session, { cible: "acteur", acteurId: "company-conseil" })
     expect(JSON.stringify(session)).toBe(avant)
-    expect(resultat.recapitulatif).toBe("Supprimer 1 acteur, 1 relation et 7 séries de flux ?")
-    expect(resultat.resume).toEqual(["Supprimer l'acteur « Conseil SASU » (SASU), avec 1 relation (Julien Martin — Président — Conseil SASU) et 7 séries de flux (51 flux, 2026)."])
+    expect(resultat.recapitulatif).toBe("Supprimer 1 acteur, 2 relations et 7 séries de flux ?")
+    expect(resultat.resume).toEqual(["Supprimer l'acteur « Conseil SASU » (SASU), avec 2 relations (Julien Martin — Président — Conseil SASU ; Julien Martin — Associé — Conseil SASU) et 7 séries de flux (51 flux, 2026)."])
 
     const apres = appliquer(session, resultat.proposition)
     expect(apres.entities.map(e => e.id)).not.toContain("company-conseil")
@@ -49,10 +49,10 @@ describe("supprimer un acteur", () => {
 
   it("refuse de laisser une rémunération ou des dividendes sans dirigeant, sauf s'ils partent aussi", () => {
     expect(erreurDe("proposer_suppression", exemple(), { suppressions: [{ cible: "acteur", acteurId: "person-julien" }] })).toContain("exigent une relation")
-    // Julien et sa société : la relation « Président » n'est comptée qu'une fois.
+    // Julien et sa société : ses relations « Président » et « Associé » ne sont comptées qu'une fois.
     const resultat = supprimer(exemple(), { cible: "acteur", acteurId: "person-julien" }, { cible: "acteur", acteurId: "company-conseil" })
-    expect(resultat.recapitulatif).toBe("Supprimer 2 acteurs, 2 relations et 7 séries de flux ?")
-    expect(resultat.resume[0]).toBe("Supprimer l'acteur « Julien Martin » (personne), avec 2 relations (Julien Martin — Président — Conseil SASU ; Camille Martin et Julien Martin : PACSé(e)) et aucun flux.")
+    expect(resultat.recapitulatif).toBe("Supprimer 2 acteurs, 3 relations et 7 séries de flux ?")
+    expect(resultat.resume[0]).toBe("Supprimer l'acteur « Julien Martin » (personne), avec 3 relations (Julien Martin — Président — Conseil SASU ; Julien Martin — Associé — Conseil SASU ; Camille Martin et Julien Martin : PACSé(e)) et aucun flux.")
     expect(resultat.resume[1]).toMatch(/^Supprimer l'acteur « Conseil SASU » \(SASU\), avec aucune relation et 7 séries de flux/)
     expect(appliquer(exemple(), resultat.proposition).entities.map(e => e.id)).toEqual(["person-camille", "person-lea", "micro-atelier"])
   })
@@ -116,7 +116,8 @@ describe("plusieurs suppressions", () => {
     expect(suite.resume[2]).toBe("Supprimer l'acteur « Léa Martin » (personne), avec aucune relation et aucun flux.")
     const apres = appliquer(session, suite.proposition)
     expect(apres.entities).toHaveLength(4)
-    expect(apres.relationships).toHaveLength(3)
+    // Titulaire, Président, Associé et Pacs : seule la relation « Enfant » est partie.
+    expect(apres.relationships.map(r => r.id)).toEqual(["rel-titulaire", "rel-president", "rel-associe", "rel-pacs"])
   })
 
   it("met les suppressions en tête du récapitulatif quand la proposition ajoute aussi", () => {
@@ -149,8 +150,8 @@ describe("repartir de zéro", () => {
     const avant = JSON.stringify(session)
     const resultat = supprimer(session, { cible: "simulation" })
     expect(JSON.stringify(session)).toBe(avant)
-    expect(resultat.recapitulatif).toBe(`Repartir de zéro : supprimer 5 acteurs, 4 relations${annees(2025, 2026, 2027)} et 39 séries de flux ?`)
-    expect(resultat.resume).toEqual([expect.stringMatching(new RegExp(`^Repartir de zéro, comme « Nouvelle simulation » dans l'application : supprimer 5 acteurs, 4 relations, 39 séries de flux \\(303 flux, 2025, 2026 et 2027\\) et les réglages du comparateur\\. Il reste l'année ${ANNEE_PAR_DEFAUT}, vide, et le nom « Nouvelle Simulation »\\.$`))])
+    expect(resultat.recapitulatif).toBe(`Repartir de zéro : supprimer 5 acteurs, 5 relations${annees(2025, 2026, 2027)} et 39 séries de flux ?`)
+    expect(resultat.resume).toEqual([expect.stringMatching(new RegExp(`^Repartir de zéro, comme « Nouvelle simulation » dans l'application : supprimer 5 acteurs, 5 relations, 39 séries de flux \\(303 flux, 2025, 2026 et 2027\\) et les réglages du comparateur\\. Il reste l'année ${ANNEE_PAR_DEFAUT}, vide, et le nom « Nouvelle Simulation »\\.$`))])
     expect(resultat.avertissements).toEqual([])
 
     const apres = appliquer(session, resultat.proposition)
@@ -162,8 +163,8 @@ describe("repartir de zéro", () => {
   it("supprime aussi les acteurs verrouillés, mais le dit dans le récapitulatif, le résumé et un avertissement", () => {
     const session = avecVerrou("micro-atelier")
     const resultat = supprimer(session, { cible: "simulation" })
-    expect(resultat.recapitulatif).toBe(`Repartir de zéro : supprimer 5 acteurs (dont 1 verrouillé), 4 relations${annees(2026)} et 13 séries de flux ?`)
-    expect(resultat.resume[0]).toContain("supprimer 5 acteurs (dont « Atelier de Camille », verrouillé par l'utilisateur), 4 relations")
+    expect(resultat.recapitulatif).toBe(`Repartir de zéro : supprimer 5 acteurs (dont 1 verrouillé), 5 relations${annees(2026)} et 13 séries de flux ?`)
+    expect(resultat.resume[0]).toContain("supprimer 5 acteurs (dont « Atelier de Camille », verrouillé par l'utilisateur), 5 relations")
     expect(resultat.avertissements).toEqual(["Repartir de zéro supprime aussi « Atelier de Camille », que l'utilisateur a verrouillé : vérifiez avec lui que c'est bien voulu."])
     expect(appliquer(session, resultat.proposition).entities).toEqual([])
   })
@@ -176,7 +177,7 @@ describe("repartir de zéro", () => {
     const prestations = { annee: ANNEE_PAR_DEFAUT, acteurId: id, typeFlux: "ca_micro_services_bnc", libelle: "Prestations", montant: 2600, mois: TOUTE_L_ANNEE }
     // Une année voisine de celle qui reste est ajoutée, même si la simulation d'avant l'avait.
     const resultat = proposer("proposer_flux", session, { flux: [prestations, { ...prestations, annee: ANNEE_PAR_DEFAUT + 1 }], suiteDe: acteur.proposition })
-    expect(resultat.recapitulatif).toBe(`Repartir de zéro : supprimer 5 acteurs, 4 relations${annees(2026)} et 13 séries de flux, puis ajouter 24 flux, ajouter 1 acteur et ajouter 1 année ?`)
+    expect(resultat.recapitulatif).toBe(`Repartir de zéro : supprimer 5 acteurs, 5 relations${annees(2026)} et 13 séries de flux, puis ajouter 24 flux, ajouter 1 acteur et ajouter 1 année ?`)
     expect(resultat.avertissements.filter(a => a.includes("doublon"))).toEqual([])
     const apres = appliquer(session, resultat.proposition)
     expect(apres.entities.map(e => e.name)).toEqual(["Atelier"])

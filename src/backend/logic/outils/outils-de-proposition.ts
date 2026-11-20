@@ -116,7 +116,7 @@ export const proposerRelation = definirOutil({
   description: [
     "Propose une relation entre deux acteurs, toujours depuis une personne (deId).",
     "Entre deux personnes, un seul lien : Marié(e), PACSé(e) (imposition commune), En couple (union libre, foyers distincts) ou Enfant (deId = le parent, versId = l'enfant à charge).",
-    "D'une personne vers une activité : Président (SASU), Gérant (EURL), Titulaire (EI, micro-entreprise : un seul par activité), Associé (SASU, EURL), Salarié (SASU, EURL, EI ; jamais avec une relation de direction).",
+    "D'une personne vers une activité : Président (SASU, un seul ; il n'en est l'associé, et n'en reçoit des dividendes, que relié aussi par Associé : proposez les deux pour qui exerce seul sa SASU), Gérant (EURL ; il en est toujours l'associé), Titulaire (EI, micro-entreprise : un seul par activité), Associé (SASU, EURL), Salarié (SASU, EURL, EI ; jamais avec une relation de direction).",
     RAPPEL_VALIDATION
   ].join(" "),
   lecture: false,

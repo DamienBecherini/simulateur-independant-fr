@@ -128,15 +128,17 @@ describe("ajoutDUneActivite", () => {
   const avant = { entities: [alice], relationships: [] }
 
   it.each([
-    ["micro", "Titulaire"],
-    ["EI", "Titulaire"],
-    ["SASU", "Président"],
-    ["EURL", "Gérant"]
-  ] as const)("relie la personne qui exerce une activité « %s » par la relation « %s »", (statut, type) => {
+    ["micro", ["Titulaire"]],
+    ["EI", ["Titulaire"]],
+    // Le président d'une SASU n'en est l'associé que relié aussi par « Associé » : qui l'exerce seul reçoit les deux.
+    ["SASU", ["Président", "Associé"]],
+    ["EURL", ["Gérant"]]
+  ] as const)("relie la personne qui exerce une activité « %s » par les relations de qui l'exerce : %s", (statut, types) => {
     const { entities, relationships } = ajoutDUneActivite(avant, statut, { personneId: alice.id })
     const activite = entities[1]
     expect(entities).toHaveLength(2)
-    expect(relationships).toEqual([{ id: idAvecPrefixe("rel"), fromId: alice.id, toId: activite.id, type }])
+    expect(relationships).toEqual(types.map(type => ({ id: idAvecPrefixe("rel"), fromId: alice.id, toId: activite.id, type })))
+    expect(new Set(relationships.map(r => r.id)).size).toBe(types.length)
   })
 
   it("crée la personne avec l'activité quand on le demande", () => {

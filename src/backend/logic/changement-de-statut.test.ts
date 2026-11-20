@@ -21,6 +21,8 @@ const relationsDe = (s: SessionState, id: string) => s.relationships.filter(r =>
 const STATUTS: StatutDUneActivite[] = ["micro", "EI", "SASU", "EURL"]
 const activiteDuStatut = (statut: StatutDUneActivite): Activite => (statut === "micro" ? micro("a1") : societe("a1", statut))
 const DIRIGEANT: Record<StatutDUneActivite, Relationship["type"]> = { micro: "Titulaire", EI: "Titulaire", SASU: "Président", EURL: "Gérant" }
+/** Les relations de la personne qui exerce seule l'activité : en SASU, « Président » et « Associé » (regles-de-structure.ts). */
+const EXERCANT: Record<StatutDUneActivite, Relationship["type"][]> = { micro: ["Titulaire"], EI: ["Titulaire"], SASU: ["Président", "Associé"], EURL: ["Gérant"] }
 
 describe("changerLeStatut : chaque paire de statuts", () => {
   const paires = STATUTS.flatMap(de => STATUTS.filter(vers => vers !== de).map(vers => [de, vers] as const))
@@ -28,13 +30,14 @@ describe("changerLeStatut : chaque paire de statuts", () => {
   it.each(paires)("%s → %s : l'activité prend le statut, la personne la relation de son dirigeant, le chiffre d'affaires est repris", (de, vers) => {
     const source = activiteDuStatut(de)
     const chiffre: Flux = de === "micro" ? ["a1", "ca_micro_vente", 30000] : ["a1", "ca_vente", 30000]
-    const s = sessionDeDeuxAnnees([personne("alice"), source], [relation("alice", "a1", DIRIGEANT[de])], [chiffre])
+    const s = sessionDeDeuxAnnees([personne("alice"), source], EXERCANT[de].map(type => relation("alice", "a1", type)), [chiffre])
 
     const { session: apres, activite } = changerLeStatut(s, source, vers)
 
     expect(statutDeLActivite(activite)).toBe(vers)
     expect(apres.entities.find(e => e.id === "a1")).toEqual(activite)
-    expect(relationsDe(apres, "a1")).toEqual([DIRIGEANT[vers]])
+    // Qui exerçait seul l'activité l'exerce toujours : dirigeant et, en SASU, associé.
+    expect(relationsDe(apres, "a1")).toEqual([...EXERCANT[vers]].sort((a, b) => a.localeCompare(b)))
     // La relation est modifiée sur place : même identifiant.
     expect(apres.relationships[0].id).toBe("alice-a1-" + DIRIGEANT[de])
     for (const annee of [2025, 2026]) expect(fluxDe(apres, annee, "a1")).toEqual([expect.objectContaining({ id: "flux-0", amount: 30000, type: vers === "micro" ? "ca_micro_vente" : "ca_vente" })])
@@ -43,7 +46,23 @@ describe("changerLeStatut : chaque paire de statuts", () => {
   it("garder le même statut ne change rien", () => {
     const source = micro("a1", { beneficieACRE: true })
     const s = sessionDeDeuxAnnees([personne("alice"), source], [relation("alice", "a1", "Titulaire")], [["a1", "ca_micro_services_bnc", 1000]])
-    expect(changerLeStatut(s, source, "micro")).toEqual({ session: s, activite: source, fluxConvertis: [], fluxRetires: {}, relationsChangees: [], relationsRetirees: [] })
+    expect(changerLeStatut(s, source, "micro")).toEqual({ session: s, activite: source, fluxConvertis: [], fluxRetires: {}, relationsChangees: [], relationsRetirees: [], relationsAjoutees: [] })
+  })
+
+  it("vers une SASU, la personne qui possédait l'activité en devient aussi l'associée ; un président non associé ne le devient pas", () => {
+    const eurl = societe("a1", "EURL")
+    const depuisUneEurl = changerLeStatut(sessionDeDeuxAnnees([personne("alice"), eurl], [relation("alice", "a1", "Gérant")], []), eurl, "SASU")
+    expect(depuisUneEurl.relationsAjoutees).toEqual([{ id: "alice-a1-Gérant-associe", fromId: "alice", toId: "a1", type: "Associé" }])
+    expect(depuisUneEurl.relationsChangees.map(c => [c.avant, c.relation.type])).toEqual([["Gérant", "Président"]])
+
+    // Bob préside la SASU d'Alice, seule associée : passée en EURL puis revenue en SASU, il n'en devient pas l'associé...
+    const sasu = societe("a1", "SASU")
+    const tiers = sessionDeDeuxAnnees([personne("alice"), personne("bob"), sasu], [relation("bob", "a1", "Président"), relation("alice", "a1", "Associé")], [])
+    const enEI = changerLeStatut(tiers, sasu, "EI")
+    // ... et, en entreprise individuelle, il en devient le titulaire : Alice n'est plus associée, c'est dit.
+    expect(relationsDe(enEI.session, "a1")).toEqual(["Titulaire"])
+    expect(enEI.relationsRetirees.map(r => r.fromId)).toEqual(["alice"])
+    expect(enEI.relationsAjoutees).toEqual([])
   })
 })
 
@@ -128,7 +147,9 @@ describe("changerLeStatut : rémunération, dividendes, capital et associés d'u
     expect(activite).toMatchObject({ legalStatus: "EURL", capitalSocial: 5000, reservesInitiales: 12000 })
     expect(fluxDe(apres, 2026, "a1").map(f => f.type)).toEqual(["ca_services", "director_remuneration", "dividends_payment"])
     expect(fluxRetires).toEqual({})
-    expect(relationsDe(apres, "a1")).toEqual(["Associé", "Associé", "Gérant"])
+    // Bob reste associé ; Alice l'est désormais par sa relation « Gérant », celle d'associée ferait double emploi.
+    expect(relationsDe(apres, "a1")).toEqual(["Associé", "Gérant"])
+    expect(apres.relationships.filter(r => r.type === "Associé").map(r => r.fromId)).toEqual(["bob"])
     expect(relationsChangees).toEqual([{ relation: { ...relation("alice", "a1", "Président"), type: "Gérant" }, avant: "Président" }])
     expect(relationsRetirees).toEqual([])
   })
@@ -140,7 +161,8 @@ describe("changerLeStatut : rémunération, dividendes, capital et associés d'u
     expect(fluxDe(apres, 2026, "a1").map(f => f.type)).toEqual(["ca_services"])
     expect(fluxRetires).toEqual({ director_remuneration: 40000, dividends_payment: 20000 })
     expect(relationsDe(apres, "a1")).toEqual(["Titulaire"])
-    expect(relationsRetirees.map(r => r.fromId)).toEqual(["alice", "bob"])
+    // Alice, qui dirigeait la société, en devient la titulaire : sa relation d'associée disparaît sans rien annoncer.
+    expect(relationsRetirees.map(r => r.fromId)).toEqual(["bob"])
   })
 
   it("une société sans dirigeant : son premier associé reprend l'entreprise individuelle, comme dans le comparateur", () => {

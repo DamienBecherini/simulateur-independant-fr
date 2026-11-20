@@ -123,7 +123,7 @@ describe("chiffreDAffairesPourUnNet", { timeout: 30_000 }, () => {
   })
 
   it("trouve aussi le chiffre d'affaires d'une société au meilleur net, rémunération optimisée à chaque essai", () => {
-    const d = donnees([personne("alice"), societe("s1")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 50000]])
+    const d = donnees([personne("alice"), societe("s1")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], [["s1", "ca_services", 50000]])
     const opts = options("s1", { repartition: { mode: "meilleurNet", partDistribuee: 1 } })
     const resultat = chiffreDAffairesPourUnNet(d, opts, 30000, reglesDeTest)
     verifierLAllerRetour(d, opts, resultat)
@@ -164,7 +164,7 @@ describe("chiffreDAffairesPourUnNet", { timeout: 30_000 }, () => {
   })
 
   it("en partage « grille », dit que le net d'une société ne suit pas le chiffre d'affaires", () => {
-    const d = donnees([personne("alice"), societe("s1")], [relation("alice", "s1", "Président")], [["s1", "ca_services", 60000], ["s1", "director_remuneration", 20000]])
+    const d = donnees([personne("alice"), societe("s1")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], [["s1", "ca_services", 60000], ["s1", "director_remuneration", 20000]])
     const resultat = chiffreDAffairesPourUnNet(d, options("s1", { repartition: { mode: "grille", partDistribuee: 1 } }), 30000, reglesDeTest)
     expect(colonne(resultat, "SASU")).toMatchObject({ chiffreDAffaires: null, horsDePortee: "partageSelonLaGrille", telleQueSaisie: true })
     expect(colonne(resultat, "EURL").horsDePortee).toBe("partageSelonLaGrille")

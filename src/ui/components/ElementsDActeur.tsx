@@ -55,7 +55,7 @@ export function PastilleDeRelation({ relation, entity, allEntities, onDelete, co
       <span className="flex min-w-0 items-center gap-2">
         {compacte ? null : <AvatarDisplay avatar={otherEntity.avatar} />}
         <span className="min-w-0 break-words font-semibold">{otherEntity.name}</span>
-        <button type="button" aria-label={`Supprimer la relation avec ${otherEntity.name}`} className="print:hidden inline-flex min-h-6 min-w-6 items-center justify-center rounded text-slate-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11 dark:text-slate-400 hover:bg-slate-200 hover:text-destructive dark:hover:bg-gray-700" onClick={() => onDelete(relation.id)}>
+        <button type="button" aria-label={`Supprimer la relation « ${getRelationshipLabel(relation.type, isSource)} » avec ${otherEntity.name}`} className="print:hidden inline-flex min-h-6 min-w-6 items-center justify-center rounded text-slate-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11 dark:text-slate-400 hover:bg-slate-200 hover:text-destructive dark:hover:bg-gray-700" onClick={() => onDelete(relation.id)}>
           <X className="h-3.5 w-3.5" />
         </button>
       </span>

@@ -334,7 +334,8 @@ Le compilateur **ne réclame pas** le reste, et un oubli fait **ignorer le flux 
 | Erreur | Fichier | À écrire |
 |---|---|---|
 | `does not satisfy the expected type` sur `IMPOSITION_DES_STATUTS` (et deux erreurs qui en découlent dans `StatutSociete` et `estSocieteIS`) | `src/types.ts` | « IS » ou « IR » : décide de `StatutSociete`, donc du capital social, des flux de rémunération et de dividendes, du comparateur au meilleur net et de « Sur toutes les années » |
-| `Property 'SARL' is missing` dans `LIBELLES_DES_STATUTS`, `DIRIGEANT_DES_STATUTS`, `RELATIONS_PAR_STATUT`, `REGIME_DU_DIRIGEANT` | `src/backend/logic/statuts.ts` | Nom affiché, relation du dirigeant (« Gérant »), relations permises (saisie et outils pour les IA), régime social du dirigeant (« non salarié » : la profession lui est proposée) |
+| `Property 'SARL' is missing` dans `LIBELLES_DES_STATUTS`, `REGIME_DU_DIRIGEANT` | `src/backend/logic/statuts.ts` | Nom affiché, régime social du dirigeant (« non salarié » : la profession lui est proposée) |
+| `Property 'SARL' is missing` dans `REGLES_DE_STRUCTURE` | `src/backend/logic/regles-de-structure.ts` | Qui peut y tenir quel rôle (ADR 018) : pour chaque rôle, s'il dirige, s'il vaut associé, son maximum et ses incompatibilités. La saisie, les outils pour les IA et le calcul lisent cette table ; `regles-de-structure.test.ts` en fige le contenu, et `src/lib/regles-de-structure.exhaustif.test.ts` en vérifie les conséquences sur toutes les combinaisons de relations |
 | `Property 'SARL' is missing` dans `SIMULATION_PAR_STATUT` | `logic/simulation-au-reel.ts` | Comment le moteur simule une activité de ce statut (`simulerSocieteIS` ou un calcul propre) |
 | `Property 'SARL' is missing` dans `PROTECTION_PAR_STATUT` | `logic/protection-sociale.ts` | La protection sociale de la colonne du comparateur |
 | `Property 'SARL' is missing` dans `FRAIS_DES_COLONNES` | `logic/frais-de-fonctionnement.ts` | Les frais de fonctionnement que reprend sa colonne : les siens (à ajouter à `STATUTS_FRAIS`, avec des frais par défaut dans `options-du-comparateur.ts`) ou ceux d'un autre statut |
@@ -375,13 +376,13 @@ Le format est versionné par `formatVersion` (`FORMAT_VERSION_ACTUEL`, `src/back
 
 Pour un nouveau numéro :
 
-1. `migrations.ts` : `FORMAT_VERSION_ACTUEL = 4` et une fonction `migrerV3VersV4(donnees)` ajoutée à la table `migrations` (clé `3`). Elle travaille sur des données **brutes**, avant Zod : défensive (`estObjet`, `tableau`), elle convertit ce qui peut l'être et rend des `notes` pour l'utilisateur sur ce qu'il doit vérifier. L'essai d'un numéro changé sans migration fait échouer 54 tests (`migrations[3] is not a function`) : on ne peut pas l'oublier.
+1. `migrations.ts` : `FORMAT_VERSION_ACTUEL = 5` et une fonction `migrerV4VersV5(donnees)` ajoutée à la table `migrations` (clé `4`), sur le modèle de `migrerV3VersV4` (ADR 018 : la relation « Associé » du président d'une SASU). Elle travaille sur des données **brutes**, avant Zod : défensive (`estObjet`, `tableau`), elle convertit ce qui peut l'être et rend des `notes` pour l'utilisateur sur ce qu'il doit vérifier. L'essai d'un numéro changé sans migration fait échouer 54 tests (`migrations[3] is not a function`) : on ne peut pas l'oublier.
 2. `src/types.ts` : le nouveau schéma.
-3. `migrations.test.ts` : un fichier au format 3 réel (copié d'un export) est converti, ses notes sont justes, et la chaîne 1 → 2 → 3 → 4 fonctionne.
+3. `migrations.test.ts` : un fichier au format 4 réel (copié d'un export) est converti, ses notes sont justes, et la chaîne 1 → 2 → 3 → 4 → 5 fonctionne.
 4. La copie de l'original est déjà faite à la lecture (`sessionState.format-3.json`, `donnees-de-l-application.ts`, `copieAvantConversion`) : rien à écrire, mais vérifiez-la dans `donnees-de-l-application.test.ts` si la conversion perd quelque chose.
 5. « Rien ne se perd » : `src/lib/testing/session-maximale.ts` doit remplir chaque champ du nouveau schéma ; `src/web/rien-ne-se-perd.test.ts` échoue sinon, puis fait passer cette session par chaque enregistrement et chaque relecture (nettoyage, fichiers, stockage du navigateur, sauvegardes groupées, export et import).
 6. Le reste qui lit ou écrit le champ : `data-sanitizer.ts` (nettoyage élément par élément), `sauvegardes-groupees.ts`, les outils pour les IA (`outils/lecture.ts`, `operations.ts`), les exports.
-7. Une ADR (ou un complément daté) et le CHANGELOG : un fichier au format 4 ouvert par une version précédente est signalé « créé par une version plus récente », puis lu avec ce qu'elle connaît.
+7. Une ADR (ou un complément daté) et le CHANGELOG : un fichier au format 5 ouvert par une version précédente est signalé « créé par une version plus récente », puis lu avec ce qu'elle connaît.
 
 **Vérification :** `npx vitest run src/backend/logic/migrations.test.ts src/backend/logic/data-sanitizer.test.ts src/backend/donnees-de-l-application.test.ts src/web/rien-ne-se-perd.test.ts`, puis `npm run test:e2e` (conversion d'un ancien format dans l'application).
 
@@ -585,6 +586,7 @@ Une valeur qu'aucune source ne donne n'est **pas** estimée en silence : on repr
 | Réserves | Bénéfice gardé dans la société d'une année à l'autre, distribuable plus tard ; la réserve légale (un vingtième du bénéfice jusqu'au dixième du capital) ne l'est pas (ADR 014). | `reserves`, `reserveLegale`, `EtatDeLaSociete` |
 | Déficit reportable | Perte d'une société imputée sur les bénéfices suivants. | `reportEnAvantDesDeficits`, `deficitImputable` |
 | ZFU-TE, QPV | Zone franche urbaine - territoire entrepreneur et quartier prioritaire de la politique de la ville : exonération d'impôt sur les bénéfices d'une activité qui y est implantée, totale puis dégressive, selon sa date de création (ADR 017). | `exonerationsDeZone`, `implantationEnZone`, `exonerationDeZone`, `partEnZone` (outils pour l'IA) |
+| Règles de structure | Qui peut tenir quel rôle dans une activité selon sa forme : un président par SASU, un titulaire par activité exercée en son nom ; le président n'est associé que relié aussi par « Associé », le gérant d'EURL l'est toujours (ADR 018). | `REGLES_DE_STRUCTURE`, `obstacleAuRole`, `anomaliesDeStructure` |
 | Profession réglementée | Profession libérale affiliée à une caisse de la CNAVPL ; la caisse se déduit de la profession par les règles de l'année (ADR 015). | `profession`, `ProfessionReglementee`, `caisseDe` |
 | Caisse | Organisme de retraite d'une profession libérale : CIPAV, CARPIMKO (CARMF, CARCDSF, CNBF… non calculées). | `CAISSES_LIBERALES`, `CaisseLiberale`, `CALCUL_PAR_CAISSE` |
 | CNAVPL | Caisse nationale des professions libérales : retraite de base commune à toutes les caisses. | `liberauxReglementes.commun` |

@@ -143,11 +143,11 @@ describe("version 2 → 3 (plusieurs années)", () => {
     expect(notes).toEqual([])
   })
 
-  it("convertit un fichier au format 1 en chaîne, jusqu'au format 3", () => {
+  it("convertit un fichier au format 1 en chaîne, jusqu'au format actuel", () => {
     const { donnees, versionOrigine, notes } = migrerVersFormatActuel(ancienneSession({ entities: [eurl] }))
 
     expect(versionOrigine).toBe(1)
-    expect(donnees).toMatchObject({ formatVersion: 3, annees: [{ annee: 2026, monthlyData: grille() }] })
+    expect(donnees).toMatchObject({ formatVersion: FORMAT_VERSION_ACTUEL, annees: [{ annee: 2026, monthlyData: grille() }] })
     expect(donnees).not.toHaveProperty("monthlyData")
     expect(notes).toHaveLength(3)
     expect(notes[2]).toContain("placée en 2026")
@@ -185,5 +185,49 @@ describe("migration au chargement", () => {
 
     expect(slots.map(s => s.id)).toEqual(["s1", "s2"])
     expect(slots.every(s => !("formatVersion" in s))).toBe(true)
+  })
+})
+
+describe("version 3 → 4 (règles de structure) : le président d'une SASU porte aussi la relation « Associé »", () => {
+  const sessionV3 = (relationships: unknown[], entities: unknown[] = [alice, enfant, sasu, eurl, ei]) => ({ formatVersion: 3, name: "V3", entities, relationships, annees: [{ annee: 2026, monthlyData: grille() }] })
+  const relationsDe = (donnees: unknown) => (donnees as { relationships: unknown[] }).relationships
+
+  it("ajoute « Associé » au président qui ne l'a pas, sans note : les chiffres ne changent pas", () => {
+    const president = { id: "r1", fromId: "p1", toId: "c1", type: "Président" }
+    const { donnees, versionOrigine, notes } = migrerVersFormatActuel(sessionV3([president]))
+    expect(versionOrigine).toBe(3)
+    expect(donnees).toMatchObject({ formatVersion: FORMAT_VERSION_ACTUEL })
+    expect(relationsDe(donnees)).toEqual([president, { id: "r1-associe", fromId: "p1", toId: "c1", type: "Associé" }])
+    expect(notes).toEqual([])
+  })
+
+  it("reconnaît le président quel que soit le sens de la relation, et ne double pas une relation « Associé » déjà là", () => {
+    const aLEnvers = { id: "r1", fromId: "c1", toId: "p1", type: "Président" }
+    expect(relationsDe(migrerVersFormatActuel(sessionV3([aLEnvers])).donnees)).toEqual([aLEnvers, { id: "r1-associe", fromId: "p1", toId: "c1", type: "Associé" }])
+    const dejaAssocie = [{ id: "r1", fromId: "p1", toId: "c1", type: "Président" }, { id: "r2", fromId: "c1", toId: "p1", type: "Associé" }]
+    expect(relationsDe(migrerVersFormatActuel(sessionV3(dejaAssocie)).donnees)).toEqual(dejaAssocie)
+  })
+
+  it("ne touche ni au gérant d'une EURL, associé par sa seule relation, ni aux autres relations", () => {
+    const relations = [
+      { id: "r1", fromId: "p1", toId: "c2", type: "Gérant" },
+      { id: "r2", fromId: "p1", toId: "c3", type: "Titulaire" },
+      { id: "r3", fromId: "p1", toId: "p2", type: "Enfant" },
+      { id: "r4", fromId: "p2", toId: "c1", type: "Salarié" },
+      // Une relation « Président » vers autre chose qu'une SASU (fichier abîmé) : laissée à la validation.
+      { id: "r5", fromId: "p1", toId: "c3", type: "Président" }
+    ]
+    const session = sessionV3(relations)
+    expect(relationsDe(migrerVersFormatActuel(session).donnees)).toEqual(relations)
+  })
+
+  it("laisse tel quel un fichier déjà au format 4 : un président sans « Associé » y est un président non associé", () => {
+    const session = { ...sessionV3([{ id: "r1", fromId: "p1", toId: "c1", type: "Président" }]), formatVersion: 4 }
+    expect(migrerVersFormatActuel(session).donnees).toEqual(session)
+  })
+
+  it("ne lève pas sur un fichier sans relations, ou dont les relations ne sont pas une liste", () => {
+    expect(migrerVersFormatActuel({ formatVersion: 3, entities: [sasu] }).donnees).toEqual({ formatVersion: FORMAT_VERSION_ACTUEL, entities: [sasu] })
+    expect(migrerVersFormatActuel({ formatVersion: 3, entities: [sasu], relationships: "abîmé" }).donnees).toMatchObject({ relationships: "abîmé" })
   })
 })

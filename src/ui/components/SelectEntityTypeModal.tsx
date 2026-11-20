@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Briefcase, Building, Store, User } from "lucide-react"
-import { relationDuDirigeant } from "@/backend/logic/conversion-de-statut"
+import { relationsDeQuiExerce } from "@/backend/logic/conversion-de-statut"
 import type { Exercant } from "@/lib/entity-factory"
 import type { StatutDUneActivite } from "@/lib/changement-de-statut"
 import type { Person } from "@/types"
@@ -111,7 +111,7 @@ function ChoixDeLaPersonne({ statut, personnes, choix, onChoix, onRetour, onAjou
           ))}
         </div>
         <p id="exercant-aide" className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          Elle sera reliée à l'activité comme « {relationDuDirigeant(statut)} » : son revenu rejoint son foyer. Sans personne, le net de l'activité reste à 0 € tant qu'aucune relation n'est ajoutée.
+          Elle sera reliée à l'activité comme {relationsDeQuiExerce(statut).map(relation => `« ${relation} »`).join(" et ")} : son revenu rejoint son foyer. Sans personne, le net de l'activité reste à 0 € tant qu'aucune relation n'est ajoutée.
         </p>
       </fieldset>
       <div className="flex justify-end gap-2">

@@ -9,7 +9,7 @@ import { calculerBulletinDuPorte, reductionGenerale, type BulletinDuPorte } from
 import { euros } from "./format.js"
 import { conditionsPortageRetenues } from "./options-du-comparateur.js"
 import type { ReglesFiscales } from "./regles.js"
-import { personnesLiees, revenusDe, total, type Contexte } from "./routage-des-flux.js"
+import { anomaliesDeLActivite, dirigeantsDe, revenusDe, total, type Contexte } from "./routage-des-flux.js"
 import { LIBELLE_DU_PORTAGE } from "./statuts.js"
 
 /** Nombre de divisions de l'intervalle par deux dans la recherche de la masse salariale. */
@@ -158,15 +158,14 @@ function avertissementsDuPortage(ctx: Contexte, portage: Portage, detail: Detail
 
 /** Inscrit le salaire sur le compte du titulaire (le salarié porté), ou le signale sans titulaire. */
 function verserAuTitulaire(ctx: Contexte, portage: Portage, detail: DetailPortage, cotisations: number, warnings: string[]): string[] {
-  const titulaires = personnesLiees(ctx, portage.id, ["Titulaire"])
-  const titulaire = titulaires[0]
+  warnings.push(...anomaliesDeLActivite(ctx, portage))
+  const titulaire = dirigeantsDe(ctx, portage)[0]
   if (!titulaire) {
     warnings.push("Aucune relation « Titulaire » vers une personne : le salaire de cette activité en portage n'est rattaché à aucun foyer.")
     ctx.nonRattache += detail.netVerse
     return []
   }
-  if (titulaires.length > 1) warnings.push("Plusieurs titulaires : le salaire est versé au premier, seul salarié porté de cette activité.")
-  const autresPortages = ctx.session.entities.filter(e => e.type === "portage" && e.id !== portage.id && personnesLiees(ctx, e.id, ["Titulaire"])[0] === titulaire)
+  const autresPortages = ctx.session.entities.filter((e): e is Portage => e.type === "portage" && e.id !== portage.id).filter(e => dirigeantsDe(ctx, e)[0] === titulaire)
   if (autresPortages.length > 0) warnings.push("Cette personne a plusieurs activités en portage : chacune a son bulletin, et les plafonds de la sécurité sociale ne sont pas partagés entre elles.")
   const revenus = revenusDe(ctx, titulaire)
   revenus.salairesPortes += detail.netVerse
