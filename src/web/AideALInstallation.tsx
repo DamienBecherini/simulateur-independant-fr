@@ -105,7 +105,7 @@ function FenetreDInstallation({ declencheur }: { declencheur: ReactNode }) {
   return (
     <Dialog open={ouverte} onOpenChange={setOuverte}>
       <DialogTrigger asChild>{declencheur}</DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl [&>*]:min-w-0">
+      <DialogContent className="sm:max-w-xl [&>*]:min-w-0">
         <DialogHeader>
           <DialogTitle>{TITRE_INSTALLER}</DialogTitle>
           <DialogDescription>{chromium ? "Ce navigateur installe la démo comme une application, sans rien télécharger d'autre." : "Ce navigateur (Firefox, Safari…) n'installe pas un site comme une application, à la façon d'Edge et de Chrome."}</DialogDescription>

@@ -11,6 +11,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
 import type { SessionState } from "../src/types"
 import { test, expect, deposerAffichage, deposerSession, lireFichier } from "./support/fixtures"
 import { auditerAccessibilite } from "./support/accessibilite"
+import { defautsDeLaFenetre, defautsDeLisibilite } from "../e2e-web/support/lisibilite"
 import { valeurDeLigne } from "./support/interface"
 import { ATELIER, sessionMicroBnc } from "./support/sessions"
 
@@ -254,6 +255,8 @@ test("beaucoup de modifications de l'IA dans une fenêtre basse, interface zoom�
   await expect(notification.getByText(`L'IA a modifié ${montants.length} éléments déjà saisis`)).toBeInViewport()
   await expect(notification.getByRole("button", { name: "Vu" })).toBeInViewport()
   await auditerAccessibilite(page, "notification défilante des modifications de l'IA", "[data-sonner-toaster]")
+  // Zoomée, la notification reste lisible : rien de coupé, de trop petit, ni deux textes l'un sur l'autre.
+  expect(await defautsDeLisibilite(page, notification)).toEqual([])
   await page.screenshot({ path: test.info().outputPath("notification-defilante.png") })
   // Fenêtre haute : la moitié de la hauteur au plus, le reste étant laissé aux notifications brèves de dessous.
   await page.setViewportSize({ width: 900, height: 1000 })
@@ -263,5 +266,42 @@ test("beaucoup de modifications de l'IA dans une fenêtre basse, interface zoom�
 
   await notification.getByRole("button", { name: "Vu" }).click()
   await expect(notification).toBeHidden()
+  expect(erreursConsole).toEqual([])
+})
+
+test("interface zoomée à 200 % dans une fenêtre de 1 024 px : l'aide « Utiliser avec une IA » et la proposition de l'IA tiennent dans l'écran et restent lisibles", async ({ dossierDonnees, lancer }) => {
+  // Les deux fenêtres propres à l'application de bureau ; les autres sont contrôlées dans la démo web (e2e-web/zoom-lisibilite.web.ts).
+  await deposerSession(dossierDonnees, sessionMicroBnc())
+  await fs.writeFile(path.join(dossierDonnees, "userPreferences.json"), JSON.stringify({ slotOrder: [], affichage: "classique", zoom: 2 }))
+  const { page, erreursConsole } = await lancer()
+  const taille = { largeur: 1024, hauteur: 700 }
+  await page.setViewportSize({ width: taille.largeur, height: taille.hauteur })
+  await expect.poll(() => page.evaluate(() => document.body.style.zoom)).toBe("2")
+
+  // L'aide, avec la configuration réelle : des chemins de fichiers très longs, qui doivent passer à la ligne.
+  await page.getByRole("button", { name: "Paramètres" }).click()
+  await page.getByRole("button", { name: /Utiliser avec une IA/ }).click()
+  const aide = page.getByRole("dialog", { name: /Utiliser avec une IA/ })
+  await expect(aide.getByRole("button", { name: "Copier le bloc à insérer (fichier existant)" })).toBeVisible()
+  expect(await defautsDeLaFenetre(page, aide, taille, "Utiliser avec une IA")).toEqual([])
+  await expect.poll(async () => {
+    const ouvertes = await page.getByRole("dialog").count()
+    if (ouvertes > 0) await page.keyboard.press("Escape")
+    return ouvertes
+  }).toBe(0)
+
+  // Une proposition envoyée par le serveur MCP, à relire avant de l'appliquer.
+  const client = await connecterUnClient((await page.evaluate(() => window.api.infosDuServeurMcp()))!)
+  try {
+    const proposee = (await client.callTool({ name: "proposer_flux", arguments: { flux: [mission] } })) as CallToolResult
+    const { proposition } = JSON.parse((proposee.content as { text: string }[])[0].text.split("\n").at(-1)!) as { proposition: unknown }
+    await client.callTool({ name: "appliquer_proposition", arguments: { proposition } })
+  } finally {
+    await client.close()
+  }
+  const fenetre = page.getByRole("dialog", { name: "Proposition de votre IA" })
+  await expect(fenetre).toContainText("Mission ponctuelle")
+  expect(await defautsDeLaFenetre(page, fenetre, taille, "Proposition de votre IA")).toEqual([])
+  await expect(fenetre.getByRole("button", { name: "Appliquer" })).toBeInViewport()
   expect(erreursConsole).toEqual([])
 })

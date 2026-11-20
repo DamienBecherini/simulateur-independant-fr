@@ -202,7 +202,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
   }
 
   return (
-    <div ref={setNodeRef} style={style} className={cn("flex flex-wrap items-center gap-2 rounded-md border bg-slate-50 p-2 sm:flex-nowrap dark:bg-gray-800", isAmountInvalid && "sm:flex-wrap", isDragging && "relative z-10 shadow-md")}>
+    <div ref={setNodeRef} style={style} className={cn("flex flex-wrap items-center gap-2 rounded-md border bg-slate-50 p-2 @min-[34rem]:flex-nowrap dark:bg-gray-800", isAmountInvalid && "@min-[34rem]:flex-wrap", isDragging && "relative z-10 shadow-md")}>
       {/* Poignée de glisser-déposer : au clavier, Espace la saisit et les flèches déplacent le flux. */}
       <div {...attributes} {...listeners} aria-label="Réordonner le flux" className={POIGNEE_DE_TRI}>
         <GripVertical className="h-4 w-4" aria-hidden="true" />
@@ -212,7 +212,7 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
       <RetourALaLigneSurTelephone />
 
       <Input
-        className="min-w-32 flex-1 bg-background sm:min-w-0"
+        className="min-w-32 flex-1 bg-background @min-[34rem]:min-w-0"
         aria-label="Libellé"
         placeholder="Libellé (optionnel)"
         value={labelDraft ?? (hasDefaultLabel ? "" : flow.label)}

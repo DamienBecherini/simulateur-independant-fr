@@ -110,7 +110,9 @@ export function BandeDesMois({ libelles, noms, flux, visibles, auDebut, aLaFin, 
         aria-label="Mois de la grille"
         onKeyDown={auClavier}
         onBlur={e => !e.currentTarget.contains(e.relatedTarget as Node | null) && setFocalise(null)}
-        className="flex min-w-0 flex-1 touch-pan-y rounded-md bg-slate-200 select-none dark:bg-gray-800"
+        // Conteneur : les noms des mois suivent la largeur de la bande, pas celle de la fenêtre. Interface agrandie, une
+        // fenêtre large n'offre plus la place des noms abrégés, qui se chevaucheraient : la bande passe aux initiales.
+        className="@container flex min-w-0 flex-1 touch-pan-y rounded-md bg-slate-200 select-none dark:bg-gray-800"
         {...gestes}
       >
         {noms.map((nom, index) => {
@@ -135,10 +137,10 @@ export function BandeDesMois({ libelles, noms, flux, visibles, auDebut, aLaFin, 
                 (!visible || !visibles.includes(index + 1)) && "rounded-r-md"
               )}
             >
-              <span aria-hidden className="sm:hidden">
+              <span aria-hidden className="@min-[30rem]:hidden">
                 {nom[0]}
               </span>
-              <span aria-hidden className="max-sm:hidden">
+              <span aria-hidden className="@max-[30rem]:hidden">
                 {libelles[index]}
               </span>
               {flux[index] > 0 ? <span aria-hidden data-point className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-current pointer-coarse:bottom-1.5" /> : null}

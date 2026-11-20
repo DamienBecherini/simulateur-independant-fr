@@ -219,7 +219,9 @@ export function RelectureDesPropositions({ session, propositions, onAppliquer, o
 
   return (
     <Dialog open={proposition !== null && relecture !== null} onOpenChange={ouverte => (ouverte ? undefined : remettre())}>
-      <DialogContent className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-2xl">
+      {/* Le titre et les boutons restent à l'écran, seul le détail défile : dans une fenêtre basse ou avec l'interface
+          agrandie, « Appliquer » et « Refuser » ne se cherchent pas sous le détail. */}
+      <DialogContent className="flex flex-col sm:max-w-2xl">
         {proposition && relecture ? (
           <>
             <DialogHeader>
@@ -234,9 +236,11 @@ export function RelectureDesPropositions({ session, propositions, onAppliquer, o
                 </span>
               </DialogDescription>
             </DialogHeader>
-            <DetailDeLaRelecture relecture={relecture}>
-              {iaModifieDirectement ? <NoteDeModificationDirecte suppression={supprimeQuelqueChose(proposition.proposition)} /> : <CaseDeModificationDirecte cochee={cocheePour === proposition.id} onChange={cochee => setCocheePour(cochee ? proposition.id : null)} aide={AIDE_DE_LA_CASE} />}
-            </DetailDeLaRelecture>
+            <div role="group" tabIndex={0} aria-label="Détail de la proposition" className="min-h-24 flex-1 overflow-y-auto rounded-sm pr-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+              <DetailDeLaRelecture relecture={relecture}>
+                {iaModifieDirectement ? <NoteDeModificationDirecte suppression={supprimeQuelqueChose(proposition.proposition)} /> : <CaseDeModificationDirecte cochee={cocheePour === proposition.id} onChange={cochee => setCocheePour(cochee ? proposition.id : null)} aide={AIDE_DE_LA_CASE} />}
+              </DetailDeLaRelecture>
+            </div>
             <DialogFooter className="gap-2">
               <Button variant="ghost" onClick={remettre}>
                 Plus tard

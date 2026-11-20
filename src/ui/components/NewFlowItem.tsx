@@ -116,13 +116,13 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
   }
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2 sm:flex-nowrap", isAmountInvalid && "sm:flex-wrap")}>
+    <div className={cn("flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2 @min-[34rem]:flex-nowrap", isAmountInvalid && "@min-[34rem]:flex-wrap")}>
       <Plus className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
 
       <FlowTypeSelect value={type} options={allowedTypes} onChange={onTypeChange} typeActeur={typeActeur} />
       <RetourALaLigneSurTelephone />
 
-      <Input ref={labelInputRef} className="min-w-32 flex-1 bg-background sm:min-w-0" aria-label="Libellé du nouveau flux" placeholder="Libellé (optionnel)" value={label} data-editing={label !== ""} onChange={e => setLabel(e.target.value)} onKeyDown={handleOptionalFieldKeyDown(() => setLabel(""))} />
+      <Input ref={labelInputRef} className="min-w-32 flex-1 bg-background @min-[34rem]:min-w-0" aria-label="Libellé du nouveau flux" placeholder="Libellé (optionnel)" value={label} data-editing={label !== ""} onChange={e => setLabel(e.target.value)} onKeyDown={handleOptionalFieldKeyDown(() => setLabel(""))} />
 
       {isSalary && (
         <>
