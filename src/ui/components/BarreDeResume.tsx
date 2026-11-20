@@ -212,7 +212,7 @@ export function BarreDeResume({ report, annees, annee, onAnnee, comparaison }: B
  */
 function ReponsesDuComparateur({ comparaison, className }: { comparaison: ResumeDeLaComparaison | null; className?: string }) {
   const gain = gainDuMariageOuDuPacs(comparaison?.result ?? null)
-  const remuneration = remunerationOptimale(comparaison?.optimisation)
+  const remuneration = remunerationOptimale(comparaison?.optimisation, comparaison?.result)
   return (
     <>
       {gain === null ? null : <Chiffre vers={ANCRES.comparaisonDuCouple} libelle="Mariage ou Pacs" valeur={ecartSigne(gain)} className={className} />}

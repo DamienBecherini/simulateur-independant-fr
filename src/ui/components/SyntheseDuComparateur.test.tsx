@@ -9,7 +9,7 @@ import type { ComparaisonResult, ScenarioStatut, StatutCompare } from "@/types"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { ESPACE_INSECABLE } from "@/backend/logic/format"
 import { AffichageContext } from "../hooks/useAffichage"
-import { CartesDesStatuts, EcartDeFraisDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
+import { CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? ""
 
@@ -76,6 +76,46 @@ describe("écart de frais de gestion d'une colonne", () => {
   it("ne dit rien sans écart : statut actuel, ou mêmes frais", () => {
     const { container } = render(<EcartDeFraisDeLaColonne scenario={scenario("micro", "Micro-entreprise", 30000)} actuel="micro-vfl" />)
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe("écart de la colonne du statut actuel, simulée avec un autre partage que la grille", () => {
+  const partage = (remunerationNette: number, dividendesNets: number) => ({ beneficeAvantRemuneration: 78000, remunerationNette, cotisationsRemuneration: 0, impotSocietes: 0, dividendesNets, cotisationsSurDividendes: 0, resultatConserve: 0 })
+  const optimisee = scenario("SASU", "SASU, rémunération optimisée", 47204, { actuel: true, partage: partage(5800, 55211), impotSurLeRevenu: 3538, prelevementsSociaux: 10269 })
+  const result: ComparaisonResult = {
+    scenarios: [optimisee, scenario("EURL", "EURL", 45000)],
+    meilleur: "SASU",
+    situationSaisie: { statut: "SASU", libelle: "SASU", netApresImpots: 47960, repartition: { remunerationNette: 0, dividendes: 62750, impotSurLeRevenu: 3119, prelevementsSociaux: 11671, resultatConserve: 0 } },
+    couples: [],
+    warnings: []
+  }
+
+  it("dit ce qui la distingue de la situation saisie, et déplie chaque poste du net du foyer", async () => {
+    render(<EcartDeRepartitionDeLaColonne result={result} scenario={optimisee} />)
+    const resume = screen.getByText((_, element) => element?.tagName === "SUMMARY" && espaces(element.textContent).startsWith("avec 5 800 € de rémunération nette au lieu de 0 €"))
+    expect(resume.closest("details")).not.toHaveAttribute("open")
+
+    await userEvent.setup().click(resume)
+    expect(resume.closest("details")).toHaveAttribute("open")
+    const postes = within(resume.closest("details")!).getAllByRole("listitem").map(poste => espaces(poste.textContent))
+    expect(postes).toEqual([
+      "Rémunération nette : 5 800 € au lieu de 0 €, soit +5 800 €",
+      "Dividendes : 55 211 € au lieu de 62 750 €, soit −7 539 €",
+      "Impôt sur le revenu : 3 538 € au lieu de 3 119 €, soit −419 €",
+      "Prélèvements sociaux : 10 269 € au lieu de 11 671 €, soit +1 402 €"
+    ])
+    expect(resume.closest("details")).toHaveTextContent("Même statut, autre partage du bénéfice.")
+  })
+
+  it("rien sous une colonne d'un autre statut : son écart vient du statut", () => {
+    const { container } = render(<EcartDeRepartitionDeLaColonne result={result} scenario={result.scenarios[1]} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it("sur téléphone, la carte du statut le dit en une ligne", () => {
+    render(<CartesDesStatuts result={result} />)
+    const carte = within(screen.getByRole("list", { name: "Net dans la poche selon le statut" })).getAllByRole("listitem")[0]
+    expect(espaces(carte.textContent)).toContain("avec 5 800 € de rémunération nette au lieu de 0 €")
   })
 })
 

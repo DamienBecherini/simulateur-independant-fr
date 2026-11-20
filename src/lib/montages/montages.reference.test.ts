@@ -194,8 +194,12 @@ casDeReference("Montages types : chiffres de référence", () => {
     const sansLaZone = simulerLeMontage(MONTAGES_TYPES.find(m => m.id === "sasu-sans-salaire")!).report.activities[0]
     expect(sansLaZone.impotSocietes - societe.impotSocietes).toBe(11050)
     // Le comparateur garde l'exonération dans chaque statut : en EI, le bénéfice exonéré sort de l'impôt sur le revenu.
+    // En SASU, l'arbitrage trouve 15 € de mieux avec 400 € de salaire, non imposé sous la déduction minimale de 509 € :
+    // un écart négligeable, la colonne reste la situation saisie (55 191 €), sans gain annoncé.
     expect(comparaison.sousLaSituationSaisie).toBeUndefined()
-    expect(comparaison.scenarios.filter(s => s.statut !== "portage").map(s => [s.statut, s.netApresImpots])).toEqual([["SASU", 55206], ["EURL", 47500], ["EI", 54093], ["micro", 58378], ["micro-vfl", 56530]])
+    expect(comparaison.optimisations?.SASU?.meilleur).toMatchObject({ remunerationNette: 400, netApresImpots: 55206 })
+    expect(comparaison.scenarios.find(s => s.statut === "SASU")).toMatchObject({ telleQueSaisie: true, saisieAuMeilleurNet: true, libelle: "SASU", remunerationOptimale: { remunerationNette: 0 } })
+    expect(comparaison.scenarios.filter(s => s.statut !== "portage").map(s => [s.statut, s.netApresImpots])).toEqual([["SASU", 55191], ["EURL", 47500], ["EI", 54093], ["micro", 58378], ["micro-vfl", 56530]])
     expect(comparaison.scenarios.filter(s => s.horsPlafond).map(s => s.statut)).toEqual(["micro", "micro-vfl"])
   })
 

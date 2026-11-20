@@ -1071,6 +1071,21 @@ interface SituationSaisie {
   statut: StatutCompare
   libelle: string
   netApresImpots: number
+  /**
+   * En société (SASU, EURL) : ce que la grille verse au dirigeant et ce que le foyer en paie. La colonne du même statut
+   * simulée avec un autre partage du bénéfice s'y compare poste par poste, pour dire d'où vient son écart.
+   */
+  repartition?: RepartitionSaisie
+}
+
+/** La rémunération et les dividendes saisis pour une société, l'impôt et les prélèvements sociaux de toute la simulation. */
+export interface RepartitionSaisie {
+  remunerationNette: number
+  dividendes: number
+  impotSurLeRevenu: number
+  prelevementsSociaux: number
+  /** Bénéfice après IS laissé dans la société. */
+  resultatConserve: number
 }
 
 /**
@@ -1133,6 +1148,11 @@ export interface ScenarioStatut {
   reserves?: ReservesDeLaSociete
   /** SASU et EURL, au meilleur net : la rémunération retenue pour ce statut. */
   remunerationOptimale?: RemunerationOptimale
+  /**
+   * Au meilleur net, colonne du statut actuel d'une société : la répartition saisie fait aussi bien que l'arbitrage, à
+   * un écart négligeable près (`ECART_NEGLIGEABLE`). La colonne reste la situation saisie, sans écart à annoncer.
+   */
+  saisieAuMeilleurNet?: true
 }
 
 /** Note qualitative de protection sociale d'un statut, sur 5 étoiles. */

@@ -5,6 +5,7 @@
 
 import { ChevronRight } from "lucide-react"
 import { ANCRES } from "@/lib/ancres"
+import { ecartDeRepartition } from "@/lib/ecart-de-repartition"
 import { ecartAvecLaSituationSaisie, phraseDuVerdict, raisonDeNonRetenue } from "@/lib/resume"
 import { phraseDeLEcartDeFrais, posteFraisLabels } from "@/lib/comparateur-options"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
@@ -92,7 +93,41 @@ export function EcartDeFraisDeLaColonne({ scenario, actuel }: { scenario: Scenar
   )
 }
 
+/**
+ * Sous l'écart de la colonne du statut actuel, quand une société y est simulée avec un autre partage que la grille : ce
+ * qui la distingue de la situation saisie (« avec 5 800 € de rémunération nette au lieu de 0 € ») et, à déplier, chaque
+ * poste du net du foyer dans l'une et dans l'autre. Sans cela, « +1 200 € » se lit comme un gain de statut.
+ */
+export function EcartDeRepartitionDeLaColonne({ result, scenario }: { result: ComparaisonResult; scenario: ScenarioStatut }) {
+  const ecart = ecartDeRepartition(result, scenario)
+  if (!ecart) return null
+  const montant = "whitespace-nowrap tabular-nums"
+  return (
+    <Depliable titre={ecart.resume} className="mt-1 text-left text-xs font-normal text-slate-600 dark:text-slate-400">
+      <p className="mt-1">Même statut, autre partage du bénéfice. Ce qui change pour le net du foyer :</p>
+      <ul className="mt-1 space-y-0.5">
+        {ecart.postes.map(poste => (
+          <li key={poste.libelle}>
+            {poste.libelle} : <span className={montant}>{euros(poste.colonne)}</span> au lieu de <span className={montant}>{euros(poste.saisie)}</span>, soit <span className={cn(montant, "font-medium", couleurDeLEcart(poste.effet))}>{ecartSigne(poste.effet)}</span>
+          </li>
+        ))}
+        {ecart.autres === undefined ? null : (
+          <li>
+            Autres écarts (cotisations, arrondis) : <span className={cn(montant, "font-medium", couleurDeLEcart(ecart.autres))}>{ecartSigne(ecart.autres)}</span>
+          </li>
+        )}
+      </ul>
+      {ecart.conserve ? (
+        <p className="mt-1">
+          Bénéfice laissé dans la société : <span className={montant}>{euros(ecart.conserve.colonne)}</span> au lieu de <span className={montant}>{euros(ecart.conserve.saisie)}</span>.
+        </p>
+      ) : null}
+    </Depliable>
+  )
+}
+
 function CarteDeStatut({ scenario, result, meilleur }: { scenario: ScenarioStatut; result: ComparaisonResult; meilleur: boolean }) {
+  const repartition = ecartDeRepartition(result, scenario)
   const ecart = ecartAvecLaSituationSaisie(result, scenario)
   const nonRetenue = raisonDeNonRetenue(scenario)
   const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null, nonRetenue].filter(Boolean).join(" · ")
@@ -109,6 +144,7 @@ function CarteDeStatut({ scenario, result, meilleur }: { scenario: ScenarioStatu
           <span className="sr-only">protection sociale {scenario.protectionSociale.etoiles} sur 5</span>
         </p>
         {frais ? <p className="text-xs text-slate-600 dark:text-slate-400">{frais}</p> : null}
+        {repartition ? <p className="text-xs text-slate-600 dark:text-slate-400">{repartition.resume}</p> : null}
       </div>
       <p className="shrink-0 text-right tabular-nums">
         <span className="block font-semibold">{euros(scenario.netApresImpots)}</span>

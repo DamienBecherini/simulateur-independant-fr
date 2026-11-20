@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { comparerStatuts, coutDesQuatreTrimestres, remunerationOptimale } from "./comparateur.js"
 import { statutActuel } from "./conversion-de-statut.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
-import { AUCUNE_CHARGE, defaultFraisFonctionnement, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
+import { AUCUNE_CHARGE, defaultFraisFonctionnement, ECART_NEGLIGEABLE, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
 import { euros } from "./format.js"
 import { runMetaSimulation } from "./simulation-engine.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
@@ -215,7 +215,12 @@ describe("comparerStatuts", () => {
 
       expect(actuelle).toHaveLength(1)
       expect(actuelle[0]).toMatchObject({ actuel: true, ecartDeFrais: { total: 0, postes: {} }, netApresImpots: resultats.totalNetApresImpots })
-      expect(resultat.situationSaisie).toEqual({ statut: actuelle[0].statut, libelle: actuelle[0].libelle, netApresImpots: resultats.totalNetApresImpots })
+      expect(resultat.situationSaisie).toMatchObject({ statut: actuelle[0].statut, libelle: actuelle[0].libelle, netApresImpots: resultats.totalNetApresImpots })
+      // En société seulement, ce que la grille verse au dirigeant : une colonne du même statut s'y compare poste par poste.
+      const partage = actuelle[0].partage
+      expect(resultat.situationSaisie?.repartition).toEqual(
+        partage ? { remunerationNette: partage.remunerationNette, dividendes: partage.dividendesNets, impotSurLeRevenu: actuelle[0].impotSurLeRevenu, prelevementsSociaux: actuelle[0].prelevementsSociaux, resultatConserve: partage.resultatConserve } : undefined
+      )
     })
 
     it("en société au meilleur net, la colonne du statut actuel dit son partage, et la situation saisie reste la référence", () => {
@@ -224,7 +229,66 @@ describe("comparerStatuts", () => {
 
       expect(colonne(resultat, "SASU")).toMatchObject({ actuel: true, telleQueSaisie: false, libelle: "SASU, rémunération optimisée", ecartDeFrais: { total: 0 } })
       expect(resultat.scenarios.some(s => s.telleQueSaisie)).toBe(false)
-      expect(resultat.situationSaisie).toEqual({ statut: "SASU", libelle: "SASU", netApresImpots: runMetaSimulation(donnees, reglesDeTest).totalNetApresImpots })
+      expect(resultat.situationSaisie).toMatchObject({ statut: "SASU", libelle: "SASU", netApresImpots: runMetaSimulation(donnees, reglesDeTest).totalNetApresImpots, repartition: { remunerationNette: 24000, dividendes: 0 } })
+    })
+
+    describe(`au meilleur net, un arbitrage à moins de ${ECART_NEGLIGEABLE} € de la situation saisie ne la remplace pas`, () => {
+      const acteurs: [Entity[], Relationship[]] = [[personne("alice"), societe("a", "SASU")], [relation("alice", "a", "Président")]]
+      const auMeilleurNet = (autres: Partial<RepartitionBenefice> = {}) => options("a", { repartition: { mode: "meilleurNet", partDistribuee: 1, ...autres } })
+      // Le meilleur net de l'arbitrage, sans rien de saisi : sa rémunération et ses dividendes deviennent la grille.
+      const arbitrage = optimiserRemuneration(session(...acteurs, [["a", "ca_services", 90000]]), auMeilleurNet(), "SASU", reglesDeTest)
+      const optimum = arbitrage.meilleur!
+      const grille = (remuneration: number, dividendes: number): Flux[] => [["a", "ca_services", 90000], ...(remuneration > 0 ? [["a", "director_remuneration", remuneration] as Flux] : []), ["a", "dividends_payment", dividendes]]
+
+      it("la grille est déjà au meilleur net : la colonne reste la situation saisie, sans écart ni partage à annoncer", () => {
+        const donnees = session(...acteurs, grille(optimum.remunerationNette, optimum.dividendes))
+        const resultat = comparerStatuts(donnees, auMeilleurNet(), reglesDeTest)
+        const net = runMetaSimulation(donnees, reglesDeTest).totalNetApresImpots
+
+        expect(Math.abs(net - optimum.netApresImpots)).toBeLessThan(ECART_NEGLIGEABLE)
+        expect(colonne(resultat, "SASU")).toMatchObject({ actuel: true, telleQueSaisie: true, saisieAuMeilleurNet: true, libelle: "SASU", netApresImpots: net, remunerationOptimale: { remunerationNette: optimum.remunerationNette } })
+        // L'arbitrage reste disponible pour « Rémunération ou dividendes ? », et les autres sociétés gardent le leur.
+        expect(resultat.optimisations?.SASU?.meilleur).toEqual(optimum)
+        expect(colonne(resultat, "EURL")).toMatchObject({ telleQueSaisie: false, libelle: "EURL" })
+        expect(colonne(resultat, "EURL").saisieAuMeilleurNet).toBeUndefined()
+      })
+
+      it("la grille s'en écarte de moins de 100 € de net : même chose, et le meilleur statut n'annonce aucun gain", () => {
+        // Un cran de rémunération à côté du meilleur net : quelques euros de net d'écart.
+        const voisin = arbitrage.points.filter(p => p !== optimum && Math.abs(p.netApresImpots - optimum.netApresImpots) < ECART_NEGLIGEABLE && p.netApresImpots !== optimum.netApresImpots)[0]
+        expect(voisin).toBeDefined()
+        const donnees = session(...acteurs, grille(voisin.remunerationNette, voisin.dividendes))
+        const resultat = comparerStatuts(donnees, auMeilleurNet(), reglesDeTest)
+
+        expect(colonne(resultat, "SASU")).toMatchObject({ telleQueSaisie: true, saisieAuMeilleurNet: true, netApresImpots: runMetaSimulation(donnees, reglesDeTest).totalNetApresImpots, remunerationOptimale: { remunerationNette: voisin.remunerationNette } })
+        expect(resultat.sousLaSituationSaisie).toBeUndefined()
+      })
+
+      it("à 100 € ou plus, la colonne garde l'arbitrage et dit son partage", () => {
+        const loin = arbitrage.points.filter(p => optimum.netApresImpots - p.netApresImpots >= ECART_NEGLIGEABLE).sort((a, b) => b.netApresImpots - a.netApresImpots)[0]
+        const resultat = comparerStatuts(session(...acteurs, grille(loin.remunerationNette, loin.dividendes)), auMeilleurNet(), reglesDeTest)
+
+        expect(colonne(resultat, "SASU")).toMatchObject({ telleQueSaisie: false, libelle: "SASU, rémunération optimisée", netApresImpots: optimum.netApresImpots, remunerationOptimale: { remunerationNette: optimum.remunerationNette } })
+        expect(colonne(resultat, "SASU").saisieAuMeilleurNet).toBeUndefined()
+      })
+
+      it("4 trimestres demandés, que la situation saisie ne valide pas : la colonne garde l'arbitrage, même pour quelques euros", () => {
+        // Un trimestre validé dès 50 € de rémunération : les quatre trimestres ne coûtent presque rien.
+        const regles = { ...reglesDeTest, protectionSociale: { ...reglesDeTest.protectionSociale, revenuParTrimestre: 50 } }
+        const donnees = session(...acteurs, grille(0, arbitrage.points[0].dividendes))
+        const resultat = comparerStatuts(donnees, auMeilleurNet({ avecRetraite: true }), regles)
+        const sasu = colonne(resultat, "SASU")
+
+        expect(Math.abs(sasu.netApresImpots - runMetaSimulation(donnees, regles).totalNetApresImpots)).toBeLessThan(ECART_NEGLIGEABLE)
+        expect(sasu).toMatchObject({ telleQueSaisie: false, libelle: "SASU, rémunération optimisée", remunerationOptimale: { avecRetraite: true }, protectionSociale: { trimestres: 4 } })
+      })
+
+      it("les autres partages choisis gardent leur écart, même infime : on a demandé à les voir", () => {
+        const donnees = session(...acteurs, grille(optimum.remunerationNette, optimum.dividendes))
+        const resultat = comparerStatuts(donnees, options("a", { remunerationNette: optimum.remunerationNette, repartition: { mode: "dividendes", partDistribuee: 1 } }), reglesDeTest)
+
+        expect(colonne(resultat, "SASU")).toMatchObject({ telleQueSaisie: false, libelle: "SASU, rémunération choisie" })
+      })
     })
 
     it.each([
