@@ -204,7 +204,7 @@ describe("ComparatorPanel", () => {
     expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent(`rémunération optimale : ${money(12300)} netsavec 4 trimestres de retraite`)
     const eurl = within(table).getByRole("columnheader", { name: /^EURL/ })
     expect(eurl).toHaveTextContent(`rémunération optimale : ${money(25700)} nets4 trimestres hors d'atteinte`)
-    expect(within(eurl).getByRole("link", { name: "Voir la note 1" })).toBeInTheDocument()
+    expect(within(eurl).getByRole("button", { name: "Voir la note 1" })).toBeInTheDocument()
     expect(document.getElementById("note-comparateur-1")).toHaveTextContent(`EURL : ${horsDAtteinte}`)
     expect(within(table).getByRole("columnheader", { name: /^EI au réel/ })).not.toHaveTextContent("rémunération optimale")
   })
@@ -262,6 +262,17 @@ describe("ComparatorPanel", () => {
     expect(screen.getByText(/Couverture SASU./)).toBeInTheDocument()
   })
 
+  it("écrit « société déficitaire » dans l'en-tête d'une société que la rémunération choisie met en déficit", async () => {
+    const partage = { beneficeAvantRemuneration: 10000, remunerationNette: 20000, cotisationsRemuneration: 15000, impotSocietes: 0, dividendesNets: 0, cotisationsSurDividendes: 0, resultatConserve: -25000 }
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, partage } : s.statut === "EURL" ? { ...s, partage: { ...partage, resultatConserve: 0 } } : s)) }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent("société déficitaire")
+    expect(within(table).getByRole("columnheader", { name: /^EURL/ })).not.toHaveTextContent("société déficitaire")
+    expect(within(table).getByRole("columnheader", { name: /^EI au réel/ })).not.toHaveTextContent("société déficitaire")
+  })
+
   it("numérote les avertissements sous le tableau, avec un renvoi dans l'en-tête de chaque colonne concernée", async () => {
     const seuil = "Seuil à vérifier."
     const tva = "TVA due."
@@ -270,10 +281,10 @@ describe("ComparatorPanel", () => {
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     const enTeteMicro = within(table).getByRole("columnheader", { name: /^Micro-entreprise/ })
-    expect(within(enTeteMicro).getByRole("link", { name: "Voir la note 1" })).toHaveAttribute("href", "#note-comparateur-1")
+    expect(within(enTeteMicro).getByRole("button", { name: "Voir la note 1" })).toHaveAttribute("aria-expanded", "false")
     const enTeteVfl = within(table).getByRole("columnheader", { name: /versement libératoire/ })
-    expect(within(enTeteVfl).getAllByRole("link").map(lien => lien.getAttribute("href"))).toEqual(["#note-comparateur-1", "#note-comparateur-2"])
-    expect(within(within(table).getByRole("columnheader", { name: /^SASU/ })).queryByRole("link")).not.toBeInTheDocument()
+    expect(within(enTeteVfl).getAllByRole("button").map(pastille => pastille.getAttribute("aria-label"))).toEqual(["Voir la note 1", "Voir la note 2"])
+    expect(within(within(table).getByRole("columnheader", { name: /^SASU/ })).queryByRole("button")).not.toBeInTheDocument()
 
     const note1 = document.getElementById("note-comparateur-1")!
     expect(note1).toHaveTextContent(`Micro-entreprise, Micro + versement libératoire : ${tva}`)
@@ -381,7 +392,9 @@ describe("ComparatorPanel", () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ meilleur: null, sansChiffreDAffaires: true, warnings: [SANS_CHIFFRE_D_AFFAIRES] }))
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
-    expect(await screen.findByRole("status")).toHaveTextContent(SANS_CHIFFRE_D_AFFAIRES)
+    // L'autre zone d'annonce du comparateur est celle de la bulle d'une note, vide tant qu'aucune n'est ouverte.
+    const annonces = await screen.findAllByRole("status")
+    expect(annonces.filter(zone => zone.textContent?.includes(SANS_CHIFFRE_D_AFFAIRES))).toHaveLength(1)
     // Le message n'est écrit qu'une fois, et aucune colonne n'est marquée « meilleur net ».
     expect(screen.getAllByText(SANS_CHIFFRE_D_AFFAIRES)).toHaveLength(1)
     const table = screen.getByRole("table", { name: "Comparaison des statuts" })

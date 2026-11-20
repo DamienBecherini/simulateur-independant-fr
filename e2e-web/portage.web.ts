@@ -20,7 +20,9 @@ test("le comparateur a une colonne « Portage salarial », qui dit la vente éca
   await expect(tableau(page).getByRole("columnheader", { name: /^Portage salarial/ })).toBeVisible()
   expect(await netDuPortage(page)).toBeGreaterThan(0)
   // Les ventes de l'atelier ne se facturent pas en portage : la note de la colonne le dit, avec les conditions typiques.
-  const notes = page.getByText(/^Notes sur « Atelier de Camille »/).locator("..")
+  // Affichage « Résumé » : les notes sont réduites à une ligne de pastilles, « Tout afficher » en rend la liste.
+  const notes = page.getByText(/^Notes sur « Atelier de Camille »/).locator("xpath=../..")
+  await notes.getByRole("button", { name: /^Tout afficher/ }).click()
   await expect(notes.getByText(/La vente de marchandises n'est pas permise en portage salarial/)).toBeVisible()
   await expect(notes.getByText(/Conditions typiques d'une société de portage/)).toBeVisible()
 })
