@@ -66,7 +66,8 @@ describe("ajouter une activité : qui l'exerce ?", () => {
     await user.click(ajouter)
 
     expect(modifications).toHaveLength(1)
-    expect(modifications[0].relationships).toEqual([expect.objectContaining({ fromId: "person-bob", type: "Président" })])
+    // Qui exerce seul une SASU la préside et en est l'associé : deux relations, en une modification.
+    expect(modifications[0].relationships).toEqual([expect.objectContaining({ fromId: "person-bob", type: "Président" }), expect.objectContaining({ fromId: "person-bob", type: "Associé" })])
   })
 
   it("sans personne, la création d'une personne est proposée : personne, EURL et relation « Gérant » en une modification", async () => {
@@ -156,9 +157,14 @@ describe("changer le statut d'une activité depuis sa fiche", () => {
     await choisirLeStatut(user, "SASU")
     const confirmation = screen.getByRole("dialog", { name: "Passer « Conseil » en SASU ?" })
     expect(within(confirmation).getByRole("list")).toHaveTextContent("Alice Martin : « Titulaire » devient « Président ».")
+    // Elle possédait l'entreprise : elle reste l'associée de la société, ce que la confirmation annonce.
+    expect(within(confirmation).getByRole("list")).toHaveTextContent("Alice Martin en reste l'associé : la relation « Associé » lui est ajoutée")
     await user.click(within(confirmation).getByRole("button", { name: "Convertir" }))
 
-    expect(derniere(modifications).relationships).toEqual([{ id: "r", fromId: "person-alice", toId: "ei", type: "Président" }])
+    expect(derniere(modifications).relationships).toEqual([
+      { id: "r", fromId: "person-alice", toId: "ei", type: "Président" },
+      { id: "r-associe", fromId: "person-alice", toId: "ei", type: "Associé" }
+    ])
     expect(derniere(modifications).entities[1]).toMatchObject({ legalStatus: "SASU", capitalSocial: 1000 })
   })
 

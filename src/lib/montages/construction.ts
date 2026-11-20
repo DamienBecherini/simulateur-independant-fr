@@ -1,6 +1,7 @@
 // src/lib/montages/construction.ts
 // Petites fabriques pour décrire un montage type en quelques lignes : acteurs, relations et grille d'une année.
 
+import { relationsDeQuiExerce } from "@/backend/logic/conversion-de-statut"
 import type { Comparateur, Company, FinancialFlow, MicroEntreprise, Person, Relationship, SessionState } from "@/types"
 
 /**
@@ -28,7 +29,16 @@ export function societe(id: string, name: string, legalStatus: Company["legalSta
 }
 
 export function relation(fromId: string, toId: string, type: Relationship["type"]): Relationship {
-  return { id: `rel-${fromId}-${toId}`, fromId, toId, type }
+  // Une même personne peut être président et associé de la même société : l'identifiant de la seconde relation le dit.
+  return { id: `rel-${fromId}-${toId}${type === "Associé" ? "-associe" : ""}`, fromId, toId, type }
+}
+
+/**
+ * Les relations de la personne qui exerce seule une activité de ce statut (voir regles-de-structure.ts) : elle la dirige
+ * et, en société, en est l'associée. Le président d'une SASU est donc relié deux fois : « Président » et « Associé ».
+ */
+export function exercant(personneId: string, activiteId: string, statut: Company["legalStatus"] | "micro"): Relationship[] {
+  return relationsDeQuiExerce(statut).map(type => relation(personneId, activiteId, type))
 }
 
 /** Un flux de la grille, sans son identifiant : il est saisi chaque mois, ou un seul mois (`mois`, de 0 à 11). */

@@ -2,7 +2,7 @@
 
 import { CAPITAL_SOCIAL_PAR_DEFAUT, type Person, type Company, type MicroEntreprise, type Relationship, type SessionState } from "@/types"
 import type { StatutDUneActivite } from "@/backend/logic/changement-de-statut"
-import { relationDuDirigeant } from "@/backend/logic/conversion-de-statut"
+import { relationsDeQuiExerce } from "@/backend/logic/conversion-de-statut"
 import { createId } from "@/lib/id"
 
 // Couleurs par défaut des pastilles, prises dans la palette des réglages d'un acteur (ChampsDeLActeur) :
@@ -81,14 +81,14 @@ function personneQuiExerce(exercant: Exercant): { personneId: string | null; nou
 
 /**
  * Les acteurs et relations après l'ajout d'une activité de ce statut et, s'il y a lieu, de la personne qui l'exerce,
- * reliée par la relation de son dirigeant (`relationDuDirigeant` : titulaire d'une micro-entreprise ou d'une EI,
- * président de SASU, gérant d'EURL) : sans relation, le revenu de l'activité ne rejoindrait aucun foyer. L'appelant en
+ * reliée par les relations de qui l'exerce (`relationsDeQuiExerce` : titulaire d'une micro-entreprise ou d'une EI,
+ * président et associé de SASU, gérant d'EURL) : sans relation, le revenu de l'activité ne rejoindrait aucun foyer. L'appelant en
  * fait une seule modification, annulable en une étape.
  */
 export function ajoutDUneActivite(session: Pick<SessionState, "entities" | "relationships">, statut: StatutDUneActivite, exercant: Exercant): Pick<SessionState, "entities" | "relationships"> {
   const activite: Company | MicroEntreprise = statut === "micro" ? createMicroEntreprise() : createCompany(statut)
   const { personneId, nouvelle } = personneQuiExerce(exercant)
-  const relation: Relationship[] = personneId ? [{ id: createId("rel"), fromId: personneId, toId: activite.id, type: relationDuDirigeant(statut) }] : []
+  const relation: Relationship[] = personneId ? relationsDeQuiExerce(statut).map(type => ({ id: createId("rel"), fromId: personneId, toId: activite.id, type })) : []
   return {
     entities: [...session.entities, ...(nouvelle ? [nouvelle] : []), activite],
     relationships: [...session.relationships, ...relation]

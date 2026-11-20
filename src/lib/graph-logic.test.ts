@@ -110,19 +110,28 @@ describe("getAvailableRelationships", () => {
       expect(getAvailableRelationships(personne("p2"), micro("m2"), [relation("p1", "m1", "Titulaire")])).toEqual(["Titulaire"])
     })
 
+    it("ne propose pas un second président : une SAS n'en a qu'un ; une EURL peut avoir plusieurs gérants", () => {
+      const preside = [relation("p1", "c1", "Président")]
+      expect(getAvailableRelationships(personne("p2"), societe("c1"), preside)).toEqual(["Associé", "Salarié"])
+      expect(getAvailableRelationships(societe("c1"), personne("p2"), preside)).toEqual(["Associé", "Salarié"])
+      // Le président peut encore devenir associé de sa société, pas son salarié.
+      expect(getAvailableRelationships(personne("p1"), societe("c1"), preside)).toEqual(["Associé"])
+      expect(getAvailableRelationships(personne("p2"), societe("c1", "EURL"), [relation("p1", "c1", "Gérant")])).toEqual(["Gérant", "Associé", "Salarié"])
+    })
+
     it("n'autorise qu'un seul lien familial entre deux personnes, quel que soit son sens", () => {
       expect(getAvailableRelationships(personne("p1"), personne("p2"), [relation("p2", "p1", "Marié(e)")])).toEqual([])
       expect(getAvailableRelationships(personne("p1"), personne("p2"), [relation("p1", "p2", "Enfant")])).toEqual([])
     })
 
     it("ignore les relations qui concernent d'autres entités", () => {
-      const existantes = [relation("p1", "c2", "Président"), relation("p2", "c1", "Président"), relation("p2", "c2", "Associé")]
+      const existantes = [relation("p1", "c2", "Président"), relation("p2", "c1", "Associé"), relation("p2", "c2", "Associé")]
 
       expect(getAvailableRelationships(personne("p1"), societe("c1"), existantes)).toEqual(["Président", "Associé", "Salarié"])
     })
 
     it("ignore une relation qui ne partage qu'une extrémité dans le sens inverse", () => {
-      const existantes = [relation("c1", "p2", "Président"), relation("c2", "p1", "Associé")]
+      const existantes = [relation("c1", "p2", "Associé"), relation("c2", "p1", "Associé")]
 
       expect(getAvailableRelationships(personne("p1"), societe("c1"), existantes)).toEqual(["Président", "Associé", "Salarié"])
     })

@@ -144,7 +144,7 @@ describe("acteurs dans l'affichage « Résumé »", () => {
     expect(screen.getByText("Personne · 1 part")).toBeInTheDocument()
     expect(screen.getByText("Micro-entreprise")).toBeInTheDocument()
     expect(screen.getAllByText("1 relation")).toHaveLength(2)
-    expect(screen.getByRole("button", { name: "Supprimer la relation avec Mon atelier" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Supprimer la relation « Titulaire » avec Mon atelier" })).toBeInTheDocument()
     expect(screen.getByRole("switch", { name: "Versement libératoire" })).toBeInTheDocument()
 
     const nom = screen.getAllByRole("textbox", { name: "Nom" })[0]

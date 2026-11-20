@@ -1,7 +1,7 @@
 // src/backend/logic/conversion-de-statut.ts
 
 import { CAPITAL_SOCIAL_PAR_DEFAUT, estEntrepriseOuMicro, estSocieteIS, type Company, type ConditionsPortage, type DonneesDeLAnnee, type FinancialFlow, type MicroEntreprise, type Portage, type Relationship, type StatutCompare } from "../../types.js"
-import { DIRIGEANT_DES_STATUTS } from "./statuts.js"
+import { genreDeStructure, rolesDeQuiExerce, rolesQui, type GenreDeStructure } from "./regles-de-structure.js"
 
 /*
  * Conversion d'une activité dans un autre statut : l'entité change de type, ses relations prennent le titre du
@@ -54,13 +54,36 @@ export function activiteComparee(session: DonneesDeLAnnee, activityId: string): 
   return session.entities.filter(estEntrepriseOuMicro).find(e => e.id === activityId)
 }
 
+/** La forme d'une activité dans ce statut, pour les règles de structure (regles-de-structure.ts). */
+export function genreDuStatut(statut: StatutCompare): GenreDeStructure {
+  if (estMicro(statut)) return "micro-entreprise"
+  return statut
+}
+
 /**
- * Relation qui fait diriger une activité de ce statut, ou en être titulaire : le titulaire d'une micro-entreprise, le
- * dirigeant de `DIRIGEANT_DES_STATUTS` au réel.
+ * Relations de la personne qui exerce seule une activité de ce statut : elle la dirige (titulaire d'une micro-entreprise,
+ * d'une entreprise individuelle ou d'une activité en portage, dont elle est le salarié porté ; président de SASU ; gérant
+ * d'EURL) et, en société, en est l'associée : le président d'une SASU reçoit aussi « Associé ».
  */
+export function relationsDeQuiExerce(statut: StatutCompare): Relationship["type"][] {
+  return rolesDeQuiExerce(genreDuStatut(statut))
+}
+
+/** Relation qui fait diriger une activité de ce statut, ou en être titulaire : la première de `relationsDeQuiExerce`. */
 export function relationDuDirigeant(statut: StatutCompare): Relationship["type"] {
-  // Le titulaire d'une activité en portage salarial en est le salarié porté (voir l'ADR 016).
-  return estMicro(statut) || statut === "portage" ? "Titulaire" : DIRIGEANT_DES_STATUTS[statut]
+  return relationsDeQuiExerce(statut)[0]
+}
+
+/**
+ * La personne possède-t-elle l'activité : elle l'exerce en son nom (entreprise individuelle, micro-entreprise, portage),
+ * ou elle est associée de la société ? Le président d'une SASU qui n'en est pas associé ne la possède pas : converti
+ * dans une autre société, il n'en devient pas associé.
+ */
+export function possedeLActivite(relationships: Relationship[], personneId: string, activite: Activite): boolean {
+  const genre = genreDeStructure(activite)
+  const associes = rolesQui(genre, "associe")
+  if (associes.length === 0) return true
+  return relationships.some(rel => associes.includes(rel.type as (typeof associes)[number]) && ((rel.fromId === personneId && rel.toId === activite.id) || (rel.fromId === activite.id && rel.toId === personneId)))
 }
 
 /** Type d'un flux de l'activité dans le statut cible ; `null` si le flux n'y a pas d'équivalent. */
@@ -161,14 +184,20 @@ function reservesQuiSuivent(source: Activite, statut: StatutCompare): Pick<Compa
 
 function relationsCibles(session: DonneesDeLAnnee, source: Activite, statut: StatutCompare): Relationship[] {
   const { principale, associes } = personnesDeLActivite(session, source.id)
-  // Les salariés de l'activité le restent dans tous les statuts : leur coût employeur pèse sur chaque colonne.
-  const autres = session.relationships.filter(rel => rel.type === "Salarié" || (rel.fromId !== source.id && rel.toId !== source.id))
+  // Les salariés de l'activité le restent dans tous les statuts : leur coût employeur pèse sur chaque colonne. Sauf la
+  // personne principale, quand c'est un associé salarié qui reprend une société sans dirigeant : on ne dirige pas
+  // l'activité dont on est salarié.
+  const deLaSource = (rel: Relationship) => rel.fromId === source.id || rel.toId === source.id
+  const duPrincipal = (rel: Relationship) => deLaSource(rel) && (rel.fromId === principale || rel.toId === principale)
+  const autres = session.relationships.filter(rel => (rel.type === "Salarié" && !duPrincipal(rel)) || !deLaSource(rel))
   if (!principale) return autres
 
   const lien = (personId: string, type: Relationship["type"]): Relationship => ({ id: `comparateur-${source.id}-${personId}-${type}`, fromId: personId, toId: source.id, type })
+  // La personne principale prend les relations de qui exerce ; « Associé », seulement si elle possédait l'activité.
+  const proprietaire = possedeLActivite(session.relationships, principale, source)
+  const dirigeant = relationsDeQuiExerce(statut).filter(type => type !== "Associé" || proprietaire).map(type => lien(principale, type))
   // Seule une société garde ses associés.
-  const dirigeant = lien(principale, relationDuDirigeant(statut))
-  return estSocieteIS(statut) ? [...autres, dirigeant, ...associes.map(id => lien(id, "Associé"))] : [...autres, dirigeant]
+  return estSocieteIS(statut) ? [...autres, ...dirigeant, ...associes.map(id => lien(id, "Associé"))] : [...autres, ...dirigeant]
 }
 
 /**

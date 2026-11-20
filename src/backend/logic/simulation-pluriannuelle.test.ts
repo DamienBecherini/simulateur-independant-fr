@@ -74,7 +74,7 @@ describe("comparateur et optimiseur sur une année", () => {
   const sasu: SessionState = {
     name: "SASU",
     entities: [personne("alice"), societe("s1")],
-    relationships: [relation("alice", "s1", "Président")],
+    relationships: [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")],
     annees: [
       { annee: 2025, monthlyData: grilleAvecCA("s1", "ca_services", 50000) },
       { annee: 2026, monthlyData: grilleAvecCA("s1", "ca_services", 90000) }
@@ -115,7 +115,7 @@ describe("réserves des sociétés d'une année à l'autre", () => {
     return {
       name: "Réserves",
       entities: [personne("alice"), { ...societe("s1"), reservesInitiales: 1000 }],
-      relationships: [relation("alice", "s1", "Président")],
+      relationships: [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")],
       annees: annees.map((annee, i) => ({ annee, monthlyData: i === 0 ? grilleAvecCA("s1", "ca_services", 50000) : grilleVide() }))
     }
   }

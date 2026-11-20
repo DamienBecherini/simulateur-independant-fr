@@ -1,22 +1,6 @@
 // src/lib/graph-logic.ts
-import { RELATIONS_PAR_STATUT } from "@/backend/logic/statuts"
+import { rolesDisponibles } from "@/backend/logic/regles-de-structure"
 import type { Entity, Relationship } from "@/types"
-
-type Activite = Exclude<Entity, { type: "person" }>
-
-/** Relations qui font diriger une activité ou en être titulaire. */
-const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant", "Titulaire"]
-
-/**
- * Relations possibles entre une personne et une activité : celles de son statut au réel (`RELATIONS_PAR_STATUT`), ou le
- * seul titulaire d'une micro-entreprise. La relation « Salarié » n'y est pas proposée, le coût d'un salarié n'y
- * réduisant ni cotisations ni impôt. Une activité en portage salarial n'a qu'un titulaire, le salarié porté.
- * Entreprise individuelle, micro-entreprise ou portage : un seul titulaire, vérifié dans `getAvailableRelationships`.
- */
-function getPersonToActivityRelationTypes(activite: Activite): Relationship["type"][] {
-  if (activite.type === "micro-entreprise" || activite.type === "portage") return ["Titulaire"]
-  return RELATIONS_PAR_STATUT[activite.legalStatus]
-}
 
 /**
  * Libellé d'une relation tel qu'il est affiché. La relation « Enfant » va du parent vers l'enfant :
@@ -53,20 +37,28 @@ export function getAvailableRelationships(sourceEntity: Entity, targetEntity: En
   // Aucune relation entre deux activités.
   if (sourceEntity.type !== "person" && targetEntity.type !== "person") return []
 
-  const activite = sourceEntity.type === "person" ? targetEntity : sourceEntity
-  // On ne dirige pas, et on n'est pas titulaire, d'une activité dont on est salarié, et inversement.
-  const dirige = RELATIONS_DE_DIRECTION.some(type => existingTypes.has(type))
-  // Une entreprise individuelle, une micro-entreprise ou une activité en portage n'ont qu'un titulaire : le calcul
-  // attribuerait tout au premier. Pour en changer, on supprime d'abord la relation de l'autre personne.
-  const aDejaUnTitulaire = allRelationships.some(r => r.type === "Titulaire" && (r.fromId === activite.id || r.toId === activite.id))
-  return getPersonToActivityRelationTypes(activite as Activite).filter(type => {
-    if (existingTypes.has(type)) return false
-    if (type === "Titulaire" && aDejaUnTitulaire) return false
-    if (type === "Salarié") return !dirige
-    return !(RELATIONS_DE_DIRECTION.includes(type) && existingTypes.has("Salarié"))
-  })
+  // D'une personne vers une activité : ce que permettent les règles de sa forme (regles-de-structure.ts), la même table
+  // que les propositions des IA et le calcul. Une SASU n'a qu'un président, une activité exercée en son nom qu'un
+  // titulaire, et l'on ne dirige pas l'activité dont on est salarié.
+  const [personne, activite] = sourceEntity.type === "person" ? [sourceEntity, targetEntity] : [targetEntity, sourceEntity]
+  if (activite.type === "person") return []
+  return rolesDisponibles(allRelationships, personne.id, activite)
 }
 
-/** Conditions d'une relation « Salarié », rappelées au moment de la créer. */
-export const AIDE_RELATION_SALARIE =
+/**
+ * Ce que veut dire chaque relation d'une personne vers une activité, rappelé au moment de la créer : qui reçoit quoi,
+ * et ce que le simulateur ne calcule pas (voir l'ADR 018).
+ */
+const AIDES_DES_RELATIONS: Partial<Record<Relationship["type"], string>> = {
+  Président: "Président : dirige la SASU et reçoit la rémunération de dirigeant. Il ne reçoit des dividendes que s'il est aussi relié comme « Associé ».",
+  Gérant: "Gérant : dirige l'EURL, dont il est l'associé, et reçoit rémunération et dividendes. Un gérant non associé, assimilé salarié, n'est pas calculé.",
+  Associé: "Associé : reçoit sa part des dividendes. À plusieurs, ils sont partagés à parts égales, la répartition du capital n'étant pas modélisée.",
+  // Conditions d'une relation « Salarié ».
+  Salarié:
   "Salarié : un vrai contrat de travail, avec un lien de subordination réel et sans gestion de fait de l'activité. Le salaire reste saisi, net, sur la personne ; l'activité en supporte le coût employeur (brut, cotisations patronales, moins la réduction générale)."
+}
+
+/** Les aides des relations proposées, dans l'ordre où elles le sont : affichées sous le choix de la relation. */
+export function aidesDesRelations(types: Relationship["type"][]): string[] {
+  return types.map(type => AIDES_DES_RELATIONS[type]).filter((aide): aide is string => aide !== undefined)
+}

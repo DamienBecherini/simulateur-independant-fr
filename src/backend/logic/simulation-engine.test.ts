@@ -47,7 +47,7 @@ describe("runMetaSimulation", () => {
     it("répartit les revenus avant prélèvements entre prélèvements, résultat conservé et net", () => {
       const report = simuler(
         [personne("alice"), societe("sasu")],
-        [relation("alice", "sasu", "Président")],
+        [relation("alice", "sasu", "Président"), relation("alice", "sasu", "Associé")],
         [
           ["alice", "salary", 10000],
           ["sasu", "ca_services", 100000],
@@ -178,7 +178,7 @@ describe("runMetaSimulation", () => {
 
   describe("SASU", () => {
     const entites = [personne("alice"), societe("sasu")]
-    const president = [relation("alice", "sasu", "Président")]
+    const president = [relation("alice", "sasu", "Président"), relation("alice", "sasu", "Associé")]
     const flux: Flux[] = [
       ["sasu", "ca_services", 90000],
       ["sasu", "ca_vente", 10000],
@@ -259,7 +259,7 @@ describe("runMetaSimulation", () => {
     })
 
     it("reconnaît le dirigeant quel que soit le sens de la relation", () => {
-      const report = simuler(entites, [relation("sasu", "alice", "Président")], flux)
+      const report = simuler(entites, [relation("sasu", "alice", "Président"), relation("sasu", "alice", "Associé")], flux)
 
       expect(report.persons[0].revenusActivites).toBe(44300)
     })
@@ -271,31 +271,76 @@ describe("runMetaSimulation", () => {
       expect(report.persons[0].revenusActivites).toBe(0)
     })
 
-    it("verse la rémunération au premier dirigeant quand il y en a plusieurs, et le signale", () => {
+    it("verse la rémunération au premier président quand une ancienne sauvegarde en porte deux, et le signale", () => {
       const report = simuler(
         [personne("alice"), personne("bob"), societe("sasu")],
-        [relation("alice", "sasu", "Président"), relation("bob", "sasu", "Gérant")],
+        [relation("alice", "sasu", "Président"), relation("alice", "sasu", "Associé"), relation("bob", "sasu", "Président")],
         [
           ["sasu", "ca_services", 100000],
           ["sasu", "director_remuneration", 30000]
         ]
       )
 
-      expect(activite(report, "sasu").warnings).toEqual(["Plusieurs dirigeants liés : la rémunération est attribuée au premier pour le routage fiscal simplifié."])
+      expect(activite(report, "sasu").warnings).toEqual([
+        "Plusieurs relations « Président » (« alice », « bob ») : une SAS n'a qu'un président (article L227-6 du Code de commerce). Le calcul ne retient que « alice » ; supprimez les autres.",
+        "Plusieurs dirigeants liés : la rémunération est attribuée au premier pour le routage fiscal simplifié."
+      ])
       expect(report.persons.map(p => p.revenusActivites)).toEqual([30000, 0])
+    })
+
+    it("le président qui n'est pas associé reçoit la rémunération, pas les dividendes : ils vont aux associés", () => {
+      const flux: Flux[] = [
+        ["sasu", "ca_services", 100000],
+        ["sasu", "director_remuneration", 30000],
+        ["sasu", "dividends_payment", 20000]
+      ]
+      // Alice préside la SASU dont Bob est le seul associé.
+      const report = simuler([personne("alice"), personne("bob"), societe("sasu")], [relation("alice", "sasu", "Président"), relation("bob", "sasu", "Associé")], flux)
+      expect(activite(report, "sasu").warnings).toEqual([])
+      expect(report.persons.map(p => p.revenusActivites)).toEqual([30000, 20000])
+      expect(activite(report, "sasu").beneficiaireIds).toEqual(["alice", "bob"])
+
+      // Sans aucun associé, les dividendes ne rejoignent aucun foyer, et c'est dit.
+      const sansAssocie = simuler([personne("alice"), societe("sasu")], [relation("alice", "sasu", "Président")], flux)
+      expect(activite(sansAssocie, "sasu").warnings).toEqual(["Dividendes versés sans associé : non routés vers un foyer. Reliez une personne à la société par « Associé » ; son président n'en reçoit que s'il est aussi associé."])
+      expect(sansAssocie.persons[0].revenusActivites).toBe(30000)
+      expect(sansAssocie.bilan.nonRattache).toBe(20000)
+    })
+
+    it("le gérant d'une EURL en est l'associé par sa seule relation ; à deux gérants, la rémunération va au premier, et c'est dit", () => {
+      const report = simuler(
+        [personne("alice"), personne("bob"), societe("eurl", "EURL")],
+        [relation("alice", "eurl", "Gérant"), relation("bob", "eurl", "Gérant")],
+        [
+          ["eurl", "ca_services", 100000],
+          ["eurl", "director_remuneration", 30000]
+        ]
+      )
+
+      expect(activite(report, "eurl").warnings).toEqual(["Plusieurs dirigeants liés : la rémunération est attribuée au premier pour le routage fiscal simplifié."])
+      expect(report.persons.map(p => p.revenusActivites)).toEqual([30000, 0])
+      expect(activite(report, "eurl").beneficiaireIds).toEqual(["alice", "bob"])
+    })
+
+    it("signale une relation que la forme de l'activité n'a pas, et l'ignore", () => {
+      const report = simuler([personne("alice"), societe("sasu")], [relation("alice", "sasu", "Gérant")], [["sasu", "ca_services", 100000], ["sasu", "director_remuneration", 30000]])
+      expect(activite(report, "sasu").warnings).toEqual([
+        "Relation « Gérant » de « alice » : ce rôle n'existe pas pour une SASU, le calcul l'ignore. Remplacez-la par l'une de celles-ci : Président, Associé, Salarié.",
+        "Rémunération dirigeant saisie sans relation Président/Gérant vers une personne : non routée vers un foyer."
+      ])
     })
 
     it("partage les dividendes à parts égales entre dirigeant et associés, et le signale", () => {
       const report = simuler(
         [personne("alice"), personne("bob"), societe("sasu")],
-        [relation("alice", "sasu", "Président"), relation("bob", "sasu", "Associé")],
+        [relation("alice", "sasu", "Président"), relation("alice", "sasu", "Associé"), relation("bob", "sasu", "Associé")],
         [
           ["sasu", "ca_services", 100000],
           ["sasu", "dividends_payment", 20000]
         ]
       )
 
-      expect(activite(report, "sasu").warnings).toEqual(["Dividendes répartis à parts égales entre les 2 personnes liées : la répartition du capital n'est pas modélisée."])
+      expect(activite(report, "sasu").warnings).toEqual(["Dividendes répartis à parts égales entre les 2 associés : la répartition du capital n'est pas modélisée."])
       expect(report.persons.map(p => p.revenusActivites)).toEqual([10000, 10000])
       expect(activite(report, "sasu").beneficiaireIds).toEqual(["alice", "bob"])
       expect(report.foyers.map(f => f.prelevementsSociaux)).toEqual([1800, 1800])
@@ -311,7 +356,7 @@ describe("runMetaSimulation", () => {
         ]
       )
 
-      expect(activite(report, "sasu").warnings).toEqual(["Dividendes versés sans relation Président, Gérant ou Associé vers une personne : non routés vers un foyer."])
+      expect(activite(report, "sasu").warnings).toEqual(["Dividendes versés sans associé : non routés vers un foyer. Reliez une personne à la société par « Associé » ; son président n'en reçoit que s'il est aussi associé."])
     })
 
     it("remonte les avertissements du calcul de la société", () => {
@@ -369,7 +414,7 @@ describe("runMetaSimulation", () => {
     it("avec deux titulaires (ancienne sauvegarde), attribue tout au premier et le signale", () => {
       const report = simuler([personne("carl"), personne("dora"), societe("ei", "EI")], [relation("carl", "ei", "Titulaire"), relation("dora", "ei", "Titulaire")], flux)
 
-      expect(activite(report, "ei").warnings).toEqual(["Plusieurs titulaires : une entreprise individuelle n'en a qu'un. Tous ses revenus sont attribués au premier, « carl » ; supprimez les autres relations « Titulaire »."])
+      expect(activite(report, "ei").warnings).toEqual(["Plusieurs relations « Titulaire » (« carl », « dora ») : une activité exercée en son nom propre n'a qu'un titulaire. Le calcul ne retient que « carl » ; supprimez les autres."])
       expect(report.persons.map(p => p.revenusActivites)).toEqual([27300, 0])
     })
 
@@ -409,7 +454,7 @@ describe("runMetaSimulation", () => {
     it("avec deux titulaires (ancienne sauvegarde), attribue tout au premier et le signale", () => {
       const report = simuler([personne("bob"), personne("cleo"), micro("m1")], [relation("bob", "m1", "Titulaire"), relation("cleo", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]])
 
-      expect(activite(report, "m1").warnings).toContain("Plusieurs titulaires : une micro-entreprise n'en a qu'un. Tous ses revenus sont attribués au premier, « bob » ; supprimez les autres relations « Titulaire ».")
+      expect(activite(report, "m1").warnings).toContain("Plusieurs relations « Titulaire » (« bob », « cleo ») : une activité exercée en son nom propre n'a qu'un titulaire. Le calcul ne retient que « bob » ; supprimez les autres.")
       expect(report.persons.map(p => p.revenusActivites > 0)).toEqual([true, false])
     })
 
@@ -532,7 +577,7 @@ describe("runMetaSimulation", () => {
     it("attribue à chaque foyer sa part des prélèvements et du bénéfice conservé d'une société partagée", () => {
       const report = simuler(
         [personne("alice"), personne("bob"), societe("sasu")],
-        [relation("alice", "sasu", "Président"), relation("bob", "sasu", "Associé")],
+        [relation("alice", "sasu", "Président"), relation("alice", "sasu", "Associé"), relation("bob", "sasu", "Associé")],
         [
           ["sasu", "ca_services", 100000],
           ["sasu", "director_remuneration", 24300],
@@ -592,7 +637,7 @@ describe("runMetaSimulation", () => {
     // Patronales d'un salarié : 39 % = 11 700 € ; réduction générale 2 % + 38 % x (60 000 / 30 000 - 1) / 2 = 21 %, 6 300 € ;
     // coût employeur 30 000 + 11 700 - 6 300 = 35 400 €. CSG non déductible et CRDS : 3 % de 27 000 = 810 €.
     const entites = [personne("alice"), personne("bob"), societe("sasu")]
-    const relations = [relation("alice", "sasu", "Président"), relation("bob", "sasu", "Salarié")]
+    const relations = [relation("alice", "sasu", "Président"), relation("alice", "sasu", "Associé"), relation("bob", "sasu", "Salarié")]
     const flux: Flux[] = [
       ["sasu", "ca_services", 100000],
       ["bob", "salary", 24300]
@@ -619,7 +664,7 @@ describe("runMetaSimulation", () => {
     })
 
     it("reconnaît la relation créée depuis la société", () => {
-      const report = simuler(entites, [relation("alice", "sasu", "Président"), relation("sasu", "bob", "Salarié")], flux)
+      const report = simuler(entites, [relation("alice", "sasu", "Président"), relation("alice", "sasu", "Associé"), relation("sasu", "bob", "Salarié")], flux)
 
       expect(activite(report, "sasu").salaries?.[0].personId).toBe("bob")
     })
@@ -666,7 +711,7 @@ describe("runMetaSimulation", () => {
     })
 
     it("sans relation, le salaire reste un revenu venu de l'extérieur", () => {
-      const report = simuler(entites, [relation("alice", "sasu", "Président")], flux)
+      const report = simuler(entites, [relation("alice", "sasu", "Président"), relation("alice", "sasu", "Associé")], flux)
 
       expect(activite(report, "sasu")).toMatchObject({ charges: 0, cotisationsSociales: 0 })
       expect(activite(report, "sasu").salaries).toBeUndefined()

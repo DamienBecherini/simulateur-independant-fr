@@ -27,7 +27,7 @@ function session(): SessionState {
   return {
     name: "Stratégies",
     entities: [personne("alice"), societe("sasu")],
-    relationships: [relation("alice", "sasu", "Président")],
+    relationships: [relation("alice", "sasu", "Président"), relation("alice", "sasu", "Associé")],
     annees: [
       { annee: 2025, monthlyData: en2025 },
       { annee: 2026, monthlyData: grilleVide() }

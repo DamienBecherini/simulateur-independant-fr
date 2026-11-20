@@ -6,7 +6,7 @@
 // leurs chiffres attendus viennent des règles de ces années : ils ne suivent pas l'année en cours.
 
 import type { Company, MicroEntreprise, Relationship, SessionState } from "@/types"
-import { comparateurAuMeilleurNet, fluxDuMois, microEntreprise, personne, relation, societe, type FluxDuMontage } from "./montages/construction"
+import { comparateurAuMeilleurNet, fluxDuMois, exercant, microEntreprise, personne, relation, societe, type FluxDuMontage } from "./montages/construction"
 
 export interface ScenarioDeTest {
   id: string
@@ -38,7 +38,7 @@ function sessionSurPlusieursAnnees(name: string, entities: SessionState["entitie
  */
 function presidentEtSasu(capital: number, options: { reservesInitiales?: number; dateDeCreation?: string } = {}) {
   const sasu = { ...societe("s-test", "SASU de test", "SASU", capital), ...options }
-  return { entities: [personne("p-test", "Camille"), sasu], relationships: [relation("p-test", "s-test", "Président")] }
+  return { entities: [personne("p-test", "Camille"), sasu], relationships: exercant("p-test", "s-test", "SASU") }
 }
 
 /** Une personne seule et son activité libérale réglementée (« a-test »), dont elle est titulaire (voir l'ADR 015). */

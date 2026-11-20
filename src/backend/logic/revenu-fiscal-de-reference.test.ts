@@ -30,7 +30,7 @@ describe("revenu fiscal de référence d'un foyer", () => {
       ["s1", "ca_services", 50000],
       ["s1", "dividends_payment", 10000]
     ]
-    const report = runMetaSimulation(session([personne("alice"), societe("s1")], [relation("alice", "s1", "Président")], flux), reglesDeTest)
+    const report = runMetaSimulation(session([personne("alice"), societe("s1")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], flux), reglesDeTest)
 
     expect(report.foyers[0].optionDividendes).toBe("pfu")
     expect(report.foyers[0].revenuImposableGlobal).toBe(90000)
@@ -59,7 +59,7 @@ describe("revenu fiscal de référence d'un foyer", () => {
       ["s1", "ca_services", 50000],
       ["s1", "dividends_payment", 10000]
     ]
-    const report = runMetaSimulation(session([personne("alice"), societe("s1")], [relation("alice", "s1", "Président")], flux), reglesDeTest)
+    const report = runMetaSimulation(session([personne("alice"), societe("s1")], [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé")], flux), reglesDeTest)
 
     expect(report.foyers[0]).toMatchObject({ optionDividendes: "bareme", revenuImposableGlobal: 5300, impotSurLeRevenu: 0 })
     expect(rfrDe(report, "alice")).toBe(9300)

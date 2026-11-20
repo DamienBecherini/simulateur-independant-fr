@@ -1,6 +1,7 @@
 // src/backend/logic/testing/session-de-test.ts
 
-import type { Company, ConditionsPortage, Entity, FinancialFlow, MicroEntreprise, Person, Portage, Relationship, SimulationAnnuelle } from "../../../types.js"
+import type { Company, ConditionsPortage, Entity, FinancialFlow, MicroEntreprise, Person, Portage, Relationship, SimulationAnnuelle, StatutCompare } from "../../../types.js"
+import { relationsDeQuiExerce } from "../conversion-de-statut.js"
 
 /* Petites fabriques pour décrire une session en quelques lignes dans les tests du moteur. */
 
@@ -30,6 +31,14 @@ export function chaqueMois(donnees: SimulationAnnuelle, entityId: string, type: 
 
 export function relation(fromId: string, toId: string, type: Relationship["type"]): Relationship {
   return { id: `${fromId}-${toId}-${type}`, fromId, toId, type }
+}
+
+/**
+ * Les relations de la personne qui exerce seule une activité de ce statut (regles-de-structure.ts) : elle la dirige et,
+ * en société, en est l'associée. En SASU : « Président » et « Associé ».
+ */
+export function exercant(personneId: string, activiteId: string, statut: StatutCompare): Relationship[] {
+  return relationsDeQuiExerce(statut).map(type => relation(personneId, activiteId, type))
 }
 
 /** Un flux annuel : il est saisi sur le mois de janvier. */

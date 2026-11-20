@@ -170,7 +170,9 @@ describe("EntityItem : relations", () => {
     await user.click(screen.getByRole("combobox", { name: "Avec qui" }))
     await user.click(await screen.findByRole("option", { name: "Ma SASU" }))
     expect(onAddRelationship).not.toHaveBeenCalled()
-    // La relation « Salarié » est proposée avec ses conditions.
+    // Chaque relation proposée est expliquée : qui reçoit quoi. La relation « Salarié » l'est avec ses conditions.
+    expect(screen.getByText(/^Président : dirige la SASU et reçoit la rémunération de dirigeant\. Il ne reçoit des dividendes que s'il est aussi relié comme « Associé »\.$/)).toBeInTheDocument()
+    expect(screen.getByText(/^Associé : reçoit sa part des dividendes\./)).toBeInTheDocument()
     expect(screen.getByText(/lien de subordination réel/)).toBeInTheDocument()
 
     await user.click(screen.getByRole("combobox", { name: "Type de relation" }))
@@ -178,6 +180,29 @@ describe("EntityItem : relations", () => {
     await user.click(screen.getByRole("option", { name: "Président" }))
 
     expect(onAddRelationship).toHaveBeenCalledWith(expect.objectContaining({ fromId: alice.id, toId: sasu.id, type: "Président" }))
+  })
+
+  it("ne propose pas un second président : une SASU n'en a qu'un ; associé et salarié restent possibles", async () => {
+    const bob = makePerson({ id: "person-bob", name: "Bob Martin" })
+    const preside: Relationship = { id: "rel-1", fromId: alice.id, toId: sasu.id, type: "Président" }
+    const { user } = renderItem(bob, { allEntities: [alice, bob, sasu], relationships: [preside] })
+
+    await user.click(screen.getByRole("button", { name: "Relation" }))
+    await user.click(screen.getByRole("combobox", { name: "Avec qui" }))
+    await user.click(await screen.findByRole("option", { name: "Ma SASU" }))
+    await user.click(screen.getByRole("combobox", { name: "Type de relation" }))
+    expect(screen.getAllByRole("option").map(option => option.textContent)).toEqual(["Associé", "Salarié"])
+    expect(screen.queryByText(/^Président : /)).not.toBeInTheDocument()
+  })
+
+  it("ne propose pas un second titulaire : la micro-entreprise qui en a un n'est plus dans la liste", async () => {
+    const bob = makePerson({ id: "person-bob", name: "Bob Martin" })
+    const titulaire: Relationship = { id: "rel-1", fromId: alice.id, toId: micro.id, type: "Titulaire" }
+    const { user } = renderItem(bob, { allEntities: [alice, bob, micro, sasu], relationships: [titulaire] })
+
+    await user.click(screen.getByRole("button", { name: "Relation" }))
+    await user.click(screen.getByRole("combobox", { name: "Avec qui" }))
+    expect((await screen.findAllByRole("option")).map(option => option.textContent)).toEqual(["Alice Martin", "Ma SASU"])
   })
 
   it("ne propose pas l'ajout quand aucun lien n'est possible", () => {
@@ -190,7 +215,7 @@ describe("EntityItem : relations", () => {
     const { user, onDeleteRelationship } = renderItem(alice, { allEntities: [alice, micro], relationships: [relationship] })
 
     expect(screen.getByText("Titulaire")).toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: "Supprimer la relation avec Mon atelier" }))
+    await user.click(screen.getByRole("button", { name: "Supprimer la relation « Titulaire » avec Mon atelier" }))
 
     expect(onDeleteRelationship).toHaveBeenCalledWith("rel-1")
   })

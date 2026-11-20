@@ -30,7 +30,7 @@ function commandesDeLEcran(page: Page) {
     page.getByRole("complementary", { name: "Démo web" }),
     page.getByRole("button", { name: "+ Ajouter une personne" }),
     page.getByRole("button", { name: "Supprimer", exact: true }).first(),
-    page.getByRole("button", { name: /^Supprimer la relation avec/ }).first(),
+    page.getByRole("button", { name: /^Supprimer la relation « / }).first(),
     page.getByRole("button", { name: /^Déplacer « / }).first(),
     page.getByRole("button", { name: "Relation" }).first(),
     page.getByRole("button", { name: "Gérer les couleurs" }),

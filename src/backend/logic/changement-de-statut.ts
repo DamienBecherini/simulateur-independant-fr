@@ -1,9 +1,10 @@
 // src/backend/logic/changement-de-statut.ts
 
 import { estSocieteIS, type FinancialFlow, type Relationship, type SessionState } from "../../types.js"
-import { convertirFlux, entiteCible, estMicro, relationDuDirigeant, type Activite, type StatutDeLActivite } from "./conversion-de-statut.js"
+import { convertirFlux, entiteCible, estMicro, genreDuStatut, possedeLActivite, relationDuDirigeant, relationsDeQuiExerce, type Activite, type StatutDeLActivite } from "./conversion-de-statut.js"
 import { microInterdite, professionDe, raisonMicroInterdite } from "./professions.js"
 import type { ReglesFiscales } from "./regles.js"
+import { maximumDuRole } from "./regles-de-structure.js"
 
 /*
  * Changement de statut d'une activité demandé par l'utilisateur, depuis sa fiche : micro-entreprise, entreprise
@@ -50,8 +51,10 @@ export interface ChangementDeStatut {
   fluxRetires: Partial<Record<FinancialFlow["type"], number>>
   /** Relations dont le type a changé, avec leur type d'avant. */
   relationsChangees: { relation: Relationship; avant: Relationship["type"] }[]
-  /** Relations retirées : associés d'une activité qui n'est plus une société. */
+  /** Relations retirées : associés d'une activité qui n'est plus une société ; salariat de l'associé qui la reprend à son nom. */
   relationsRetirees: Relationship[]
+  /** Relations ajoutées : « Associé », pour le dirigeant d'une SASU qui possédait l'activité (voir regles-de-structure.ts). */
+  relationsAjoutees: Relationship[]
 }
 
 const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant", "Titulaire"]
@@ -62,17 +65,38 @@ const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant",
  * associé reprend l'activité (comme dans le comparateur), les autres relations d'associé sont retirées. Les salariés
  * restent.
  */
-function relationsApres(session: SessionState, activiteId: string, cible: StatutDUneActivite): Pick<ChangementDeStatut, "relationsChangees" | "relationsRetirees"> & { relationships: Relationship[] } {
+function relationsApres(session: SessionState, activiteId: string, cible: StatutDUneActivite): Pick<ChangementDeStatut, "relationsChangees" | "relationsRetirees"> & { relationships: Relationship[]; dirigeants: Set<string> } {
   const personnes = new Set(session.entities.filter(e => e.type === "person").map(e => e.id))
   const deLActivite = (rel: Relationship) => (rel.fromId === activiteId && personnes.has(rel.toId)) || (rel.toId === activiteId && personnes.has(rel.fromId))
   const dirigeant = relationDuDirigeant(cible)
   const garderLesAssocies = estSocieteIS(cible)
+  const directionVautAssocie = relationsDeQuiExerce(cible).length === 1 && garderLesAssocies
   let reprise = !session.relationships.some(rel => deLActivite(rel) && RELATIONS_DE_DIRECTION.includes(rel.type))
 
+  const autre = (rel: Relationship) => (rel.fromId === activiteId ? rel.toId : rel.fromId)
+  // Ceux qui dirigeaient l'activité : leur relation « Associé », s'ils en ont une, les suit sans rien annoncer.
+  const dirigeants = new Set(session.relationships.filter(rel => deLActivite(rel) && RELATIONS_DE_DIRECTION.includes(rel.type)).map(autre))
   const relationsChangees: ChangementDeStatut["relationsChangees"] = []
   const relationsRetirees: Relationship[] = []
-  const relationships = session.relationships.flatMap(rel => {
-    if (!deLActivite(rel)) return [rel]
+  // Un seul dirigeant quand le nouveau statut n'en admet qu'un (président de SASU, titulaire) : le premier le reste. Un
+  // cogérant d'EURL, associé par son titre, reste l'associé d'une société, et quitte une activité qui n'a pas d'associé.
+  const [premier] = dirigeants
+  const unSeulDirigeant = maximumDuRole(genreDuStatut(cible), dirigeant) === 1
+  const dirigeantEnTrop = (rel: Relationship) => unSeulDirigeant && deLActivite(rel) && RELATIONS_DE_DIRECTION.includes(rel.type) && autre(rel) !== premier
+  const dejaAssocie = (personneId: string) => session.relationships.some(rel => rel.type === "Associé" && deLActivite(rel) && autre(rel) === personneId)
+  const avecUnSeulDirigeant = session.relationships.flatMap(rel => {
+    if (!dirigeantEnTrop(rel)) return [rel]
+    if (!garderLesAssocies) relationsRetirees.push(rel)
+    if (!garderLesAssocies || dejaAssocie(autre(rel))) return []
+    const changee = { ...rel, type: "Associé" as const }
+    relationsChangees.push({ relation: changee, avant: rel.type })
+    return [changee]
+  })
+  // La relation « Associé » de qui dirigeait l'activité n'a plus d'objet quand celle-ci n'est plus une société, ou quand
+  // son nouveau titre fait de lui un associé (gérant d'EURL) : elle part sans rien annoncer, il reste à sa tête.
+  const sansObjet = (rel: Relationship) => rel.type === "Associé" && deLActivite(rel) && dirigeants.has(autre(rel)) && (!garderLesAssocies || directionVautAssocie)
+  const relationships = avecUnSeulDirigeant.filter(rel => !sansObjet(rel)).flatMap(rel => {
+    if (!deLActivite(rel) || dirigeantEnTrop(rel)) return [rel]
     const devientDirigeant = RELATIONS_DE_DIRECTION.includes(rel.type) || (rel.type === "Associé" && !garderLesAssocies && reprise)
     if (rel.type === "Associé" && !devientDirigeant && !garderLesAssocies) {
       relationsRetirees.push(rel)
@@ -84,7 +108,31 @@ function relationsApres(session: SessionState, activiteId: string, cible: Statut
     relationsChangees.push({ relation: changee, avant: rel.type })
     return [changee]
   })
-  return { relationships, relationsChangees, relationsRetirees }
+  // L'associé qui reprend l'activité à son nom en était parfois le salarié : on ne dirige pas l'activité dont on est
+  // salarié, sa relation « Salarié » est retirée, et c'est dit.
+  const repreneurs = new Set(relationsChangees.filter(({ avant }) => avant === "Associé").map(({ relation }) => autre(relation)))
+  const sansLeSalariatDuRepreneur = relationships.filter(rel => {
+    const aRetirer = rel.type === "Salarié" && deLActivite(rel) && repreneurs.has(autre(rel))
+    if (aRetirer) relationsRetirees.push(rel)
+    return !aRetirer
+  })
+  return { relationships: sansLeSalariatDuRepreneur, relationsChangees, relationsRetirees, dirigeants }
+}
+
+/**
+ * Dans le nouveau statut, la personne qui dirigeait l'activité en la possédant en reste l'associée : en SASU, le
+ * président ne l'est que relié aussi par « Associé » (regles-de-structure.ts), relation qui lui est ajoutée s'il ne
+ * l'a pas. Un président qui n'était pas associé de la SASU d'origine ne le devient pas.
+ */
+function associationDesDirigeants(session: SessionState, source: Activite, cible: StatutDUneActivite, relationships: Relationship[], dirigeants: Set<string>): Relationship[] {
+  if (!relationsDeQuiExerce(cible).includes("Associé")) return []
+  const direction = relationDuDirigeant(cible)
+  return relationships
+    .filter(rel => rel.type === direction && (rel.fromId === source.id || rel.toId === source.id))
+    .map(rel => ({ rel, personneId: rel.fromId === source.id ? rel.toId : rel.fromId }))
+    .filter(({ personneId }) => dirigeants.has(personneId) && possedeLActivite(session.relationships, personneId, source))
+    .filter(({ personneId }) => !relationships.some(rel => rel.type === "Associé" && ((rel.fromId === personneId && rel.toId === source.id) || (rel.fromId === source.id && rel.toId === personneId))))
+    .map(({ rel, personneId }) => ({ id: `${rel.id}-associe`, fromId: personneId, toId: source.id, type: "Associé" as const }))
 }
 
 /**
@@ -136,14 +184,17 @@ function fluxDeLaSession(session: SessionState, source: Activite, cible: StatutD
  * des prestations commerciales ou artisanales (BIC). L'appelant vérifie d'abord `refusDuChangement`.
  */
 export function changerLeStatut(session: SessionState, source: Activite, cible: StatutDUneActivite, partBncPrestations = 1): ChangementDeStatut {
-  if (statutDeLActivite(source) === cible) return { session, activite: source, fluxConvertis: [], fluxRetires: {}, relationsChangees: [], relationsRetirees: [] }
+  if (statutDeLActivite(source) === cible) return { session, activite: source, fluxConvertis: [], fluxRetires: {}, relationsChangees: [], relationsRetirees: [], relationsAjoutees: [] }
   const activite = entiteCible(source, cible)
-  const { relationships, ...relations } = relationsApres(session, source.id, cible)
+  const { relationships: converties, dirigeants, ...relations } = relationsApres(session, source.id, cible)
+  const relationsAjoutees = associationDesDirigeants(session, source, cible, converties, dirigeants)
+  const relationships = [...converties, ...relationsAjoutees]
   const { annees, ...flux } = fluxDeLaSession(session, source, cible, Math.min(1, Math.max(0, partBncPrestations)))
   return {
     session: { ...session, entities: session.entities.map(e => (e.id === source.id ? activite : e)), relationships, annees },
     activite,
     ...flux,
-    ...relations
+    ...relations,
+    relationsAjoutees
   }
 }

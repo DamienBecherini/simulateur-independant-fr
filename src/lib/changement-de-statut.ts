@@ -149,7 +149,10 @@ function phrasesDesRelations(changement: ChangementDeStatut, entities: Entity[])
   const relations = changement.session.relationships.filter(rel => rel.fromId === changement.activite.id || rel.toId === changement.activite.id)
   return [
     ...changement.relationsChangees.map(({ relation, avant }) => `${personneDe(relation)} : « ${getRelationshipLabel(avant)} » devient « ${getRelationshipLabel(relation.type)} ».`),
-    ...changement.relationsRetirees.map(rel => `${personneDe(rel)} n'est plus associé : une entreprise individuelle n'a pas d'associé.`),
+    ...changement.relationsRetirees.map(rel =>
+      rel.type === "Salarié" ? `${personneDe(rel)} n'est plus salarié de l'activité : il la reprend à son nom, et l'on ne dirige pas l'activité dont on est salarié.` : `${personneDe(rel)} n'est plus associé : une entreprise individuelle n'a pas d'associé.`
+    ),
+    ...changement.relationsAjoutees.map(rel => `${personneDe(rel)} en reste l'associé : la relation « Associé » lui est ajoutée, le président d'une SASU ne recevant des dividendes que s'il est aussi associé.`),
     ...(changement.activite.type === "micro-entreprise" && relations.some(rel => rel.type === "Salarié") ? ["Les salariés restent : en micro-entreprise, leur coût réduit le net encaissé, mais plus les cotisations ni l'impôt."] : []),
     ...(relations.some(rel => ["Président", "Gérant", "Titulaire"].includes(rel.type)) ? [] : ["Aucune personne n'en est titulaire ou dirigeante : reliez-en une pour que son revenu rejoigne un foyer."])
   ]

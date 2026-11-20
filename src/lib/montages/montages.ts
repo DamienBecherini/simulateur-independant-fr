@@ -10,7 +10,7 @@ import { hypothesesDuRegime } from "@/backend/logic/exoneration-de-zone"
 import { reglesPubliees } from "@/backend/logic/regles"
 import type { SessionState } from "@/types"
 import { SOINS_EXONERES_DE_TVA } from "../professions"
-import { ANNEE_DES_MONTAGES, comparateurAuMeilleurNet, microEntreprise, personne, relation, sessionDuMontage, societe, type ContenuDuMontage, type FluxDuMontage } from "./construction"
+import { ANNEE_DES_MONTAGES, comparateurAuMeilleurNet, exercant, microEntreprise, personne, relation, sessionDuMontage, societe, type ContenuDuMontage, type FluxDuMontage } from "./construction"
 
 /** Les règles de l'année des montages, d'où viennent les taux et seuils cités. */
 const REGLES = reglesPubliees(ANNEE_DES_MONTAGES)
@@ -202,7 +202,7 @@ const microSeule: MontageType = {
 function sasuDeConseil(prenom: string, idPersonne: string, idSociete: string, remunerationMensuelle: number, dividendes: number, avecRetraite: boolean): ContenuDuMontage {
   return {
     entities: [personne(idPersonne, prenom), societe(idSociete, `SASU de ${prenom}`, "SASU", 1000)],
-    relationships: [relation(idPersonne, idSociete, "Président")],
+    relationships: exercant(idPersonne, idSociete, "SASU"),
     flux: [
       { entityId: idSociete, type: "ca_services", amount: 7000, label: "Facturation" },
       { entityId: idSociete, type: "deductible_expense", amount: 500, label: "Frais" },
@@ -363,7 +363,7 @@ const sasuEtConjointSalarieAilleurs: MontageType = {
   sources: [SOURCES.anneeDuMariage, SOURCES.cotisationsSas, SOURCES.impotSocietes, SOURCES.dividendes, SOURCES.trimestres],
   contenu: () => ({
     entities: [personne("p-thomas", "Thomas"), personne("p-nadia", "Nadia", true), societe("s-thomas", "SASU de Thomas", "SASU", 1000)],
-    relationships: [relation("p-thomas", "p-nadia", "Marié(e)"), relation("p-thomas", "s-thomas", "Président")],
+    relationships: [relation("p-thomas", "p-nadia", "Marié(e)"), ...exercant("p-thomas", "s-thomas", "SASU")],
     flux: [
       { entityId: "s-thomas", type: "ca_services", amount: 8000, label: "Facturation" },
       ...fluxDesChargesDeLaSociete("s-thomas", CHARGES_DE_THOMAS),
@@ -400,7 +400,7 @@ const microEtSasuDuConjoint: MontageType = {
   sources: [SOURCES.anneeDuMariage, SOURCES.versementLiberatoire, SOURCES.cotisationsMicro, SOURCES.dividendes, SOURCES.conjoint],
   contenu: () => ({
     entities: [personne("p-claire", "Claire"), personne("p-marc", "Marc", true), microEntreprise("m-claire", "Micro-entreprise de Claire", { opteVFL: false, rfrN2: 52000 }), societe("s-marc", "SASU de Marc", "SASU", 1000)],
-    relationships: [relation("p-claire", "p-marc", "Marié(e)"), relation("p-claire", "m-claire", "Titulaire"), relation("p-marc", "s-marc", "Président")],
+    relationships: [relation("p-claire", "p-marc", "Marié(e)"), relation("p-claire", "m-claire", "Titulaire"), ...exercant("p-marc", "s-marc", "SASU")],
     flux: [
       { entityId: "m-claire", type: "ca_micro_services_bnc", amount: 2500, label: "Prestations" },
       ...fluxDesCharges("m-claire", CHARGES.claire),
@@ -437,7 +437,7 @@ const conjointSalarie: MontageType = {
   sources: [SOURCES.conjoint, SOURCES.cotisationsSas, SOURCES.impotSocietes, SOURCES.dividendes],
   contenu: () => ({
     entities: [personne("p-paul", "Paul"), personne("p-julie", "Julie", true), societe("s-paul", "SASU de Paul", "SASU", 1000)],
-    relationships: [relation("p-paul", "p-julie", "Marié(e)"), relation("p-paul", "s-paul", "Président"), relation("p-julie", "s-paul", "Salarié")],
+    relationships: [relation("p-paul", "p-julie", "Marié(e)"), ...exercant("p-paul", "s-paul", "SASU"), relation("p-julie", "s-paul", "Salarié")],
     flux: [
       { entityId: "s-paul", type: "ca_services", amount: 9000, label: "Facturation" },
       { entityId: "s-paul", type: "deductible_expense", amount: 500, label: "Frais" },

@@ -2,12 +2,15 @@
 
 import { describe, expect, it } from "vitest"
 import { estSocieteIS, estStatutJuridique, IMPOSITION_DES_STATUTS, STATUTS_COMPARES, STATUTS_JURIDIQUES, STATUTS_SOCIETE, type StatutJuridique, type StatutSociete } from "../../types.js"
-import { DIRIGEANT_DES_STATUTS, LIBELLES_DES_STATUTS, REGIME_DU_DIRIGEANT, RELATIONS_PAR_STATUT, STATUTS_A_PROFESSION } from "./statuts.js"
+import { REGLES_DE_STRUCTURE } from "./regles-de-structure.js"
+import { LIBELLES_DES_STATUTS, REGIME_DU_DIRIGEANT, STATUTS_A_PROFESSION } from "./statuts.js"
 
 describe("statuts juridiques", () => {
   it("chaque table de statuts a une ligne par statut de STATUTS_JURIDIQUES, sans cas par défaut", () => {
-    const tables = [IMPOSITION_DES_STATUTS, LIBELLES_DES_STATUTS, DIRIGEANT_DES_STATUTS, RELATIONS_PAR_STATUT, REGIME_DU_DIRIGEANT]
+    const tables = [IMPOSITION_DES_STATUTS, LIBELLES_DES_STATUTS, REGIME_DU_DIRIGEANT]
     for (const table of tables) expect(Object.keys(table).sort()).toEqual([...STATUTS_JURIDIQUES].sort())
+    // Les règles de structure ont une ligne par statut au réel, et deux de plus : micro-entreprise et portage.
+    expect(Object.keys(REGLES_DE_STRUCTURE).sort()).toEqual([...STATUTS_JURIDIQUES, "micro-entreprise", "portage"].sort())
   })
 
   it("les sociétés à l'IS se déduisent de l'imposition de chaque statut", () => {

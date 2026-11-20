@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useMemo } from "react"
 import type { Entity, Relationship } from "@/types"
 import { Trash2, PlusCircle, ArrowRight } from "lucide-react"
-import { AIDE_RELATION_SALARIE, getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
+import { aidesDesRelations, getAvailableRelationships, getRelationshipLabel } from "@/lib/graph-logic"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { ChampsDeLActeur } from "./ChampsDeLActeur"
 import { updatePersonAvatar } from "@/lib/avatar-utils"
@@ -142,7 +142,7 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                         </div>
                         {isSource && <ArrowRight className="h-4 w-4 text-slate-500 dark:text-slate-400" />}
                       </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 pointer-coarse:h-11 pointer-coarse:w-11" aria-label={`Supprimer la relation avec ${otherEntity.name}`} onClick={() => handleDeleteRelationship(rel.id)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 pointer-coarse:h-11 pointer-coarse:w-11" aria-label={`Supprimer la relation « ${getRelationshipLabel(rel.type, isSource)} » avec ${otherEntity.name}`} onClick={() => handleDeleteRelationship(rel.id)}>
                         <Trash2 className="h-4 w-4 text-destructive dark:text-red-400" />
                       </Button>
                     </div>
@@ -179,7 +179,11 @@ function EditEntityModal({ entity, isOpen, onClose, onSave, allEntities, relatio
                       ))}
                     </SelectContent>
                   </Select>
-                  {availableTypes.includes("Salarié") ? <p className="text-sm text-slate-600 dark:text-slate-400">{AIDE_RELATION_SALARIE}</p> : null}
+                  {aidesDesRelations(availableTypes).map(aide => (
+                    <p key={aide} className="text-sm text-slate-600 dark:text-slate-400">
+                      {aide}
+                    </p>
+                  ))}
                   <div className="flex gap-2 justify-end">
                     <Button type="button" variant="ghost" onClick={() => setAddingRelation(false)}>
                       Annuler
