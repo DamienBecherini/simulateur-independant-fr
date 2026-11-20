@@ -119,6 +119,23 @@ describe("MonthlyFlowsModal : ligne d'ajout", () => {
     expect(onCreate).not.toHaveBeenCalled()
   })
 
+  it("n'ajoute pas un flux à 0 €, et dit comment retirer un flux existant", async () => {
+    const { user, onCreate } = renderModal()
+    const amount = textbox("Montant du nouveau flux")
+
+    await user.type(amount, "0{Enter}")
+
+    expect(onCreate).not.toHaveBeenCalled()
+    expect(amount).toHaveAttribute("aria-invalid", "true")
+    expect(amount).toHaveAccessibleDescription(/^Un flux à 0 € n'est pas ajouté\. Pour retirer un flux existant, ramenez son montant à 0 dans sa ligne ou utilisez sa corbeille/)
+    // Quitter le champ ne l'ajoute pas davantage ; un vrai montant, si.
+    await user.tab()
+    expect(onCreate).not.toHaveBeenCalled()
+    await user.clear(amount)
+    await user.type(amount, "0,5{Enter}")
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ amount: 0.5 }))
+  })
+
   it("vide le montant en cours avec Échap sans fermer la fenêtre", async () => {
     const { user, onCreate, onClose } = renderModal()
     const amount = textbox("Montant du nouveau flux")
@@ -157,6 +174,19 @@ describe("MonthlyFlowsModal : lignes existantes", () => {
     expect(onUpdate).toHaveBeenCalledTimes(1)
     expect(onUpdate).toHaveBeenCalledWith("flow-1", { amount: 1250.75 })
     expect(amount).toHaveValue(formatAmount(1250.75))
+  })
+
+  it("un montant ramené à 0 retire le flux, au lieu de laisser une ligne à 0 €", async () => {
+    const { user, onUpdate, onDelete } = renderModal({ flows: [flow] })
+    const amount = textbox("Montant")
+
+    await user.clear(amount)
+    await user.type(amount, "0{Enter}")
+
+    expect(onDelete).toHaveBeenCalledTimes(1)
+    expect(onDelete).toHaveBeenCalledWith("flow-1")
+    expect(onUpdate).not.toHaveBeenCalled()
+    expect(screen.queryByRole("textbox", { name: "Montant" })).not.toBeInTheDocument()
   })
 
   it("signale un montant invalide par un message lié au champ, sans rien enregistrer", async () => {

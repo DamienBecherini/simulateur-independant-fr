@@ -280,6 +280,9 @@ describe("ComparatorPanel", () => {
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     expect(within(table).getByRole("row", { name: /^Écart avec votre situation actuelle/ })).toHaveTextContent("non retenue : rémunération supérieure au bénéfice")
+    // L'en-tête le dit aussi, comme « meilleur net » : le fond grisé ne suffit pas à le faire lire.
+    expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent("non retenue")
+    expect(within(table).getByRole("columnheader", { name: /^EI/ })).not.toHaveTextContent("non retenue")
   })
 
   it("sous le net d'une société déficitaire, dit la perte restée dans la société, et ajoute au détail le net une fois la perte déduite", async () => {

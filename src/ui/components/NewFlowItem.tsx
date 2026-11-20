@@ -39,6 +39,9 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
   const [label, setLabel] = useState("")
   const [amount, setAmount] = useState("")
   const [isAmountInvalid, setAmountInvalid] = useState(false)
+  // Le montant validé est 0 : rien à ajouter. Un flux à 0 € ne compte pour rien dans le calcul, mais occupe sa case
+  // et fait croire qu'un revenu ou une charge est saisi.
+  const estNul = isAmountInvalid && parseAmount(amount) === 0
   const idErreurDuMontant = useId()
   const amountInputRef = useRef<HTMLInputElement>(null)
 
@@ -75,7 +78,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
   const handleAmountBlur = () => {
     if (amount.trim() === "") return
     const parsedAmount = parseAmount(amount)
-    if (parsedAmount === null) {
+    if (parsedAmount === null || parsedAmount === 0) {
       setAmountInvalid(true)
       return
     }
@@ -92,7 +95,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
   const handleAmountKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault()
-      if (parseAmount(amount) === null) {
+      if (!parseAmount(amount)) {
         setAmountInvalid(amount.trim() !== "")
         return
       }
@@ -180,7 +183,7 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
         onKeyDown={handleAmountKeyDown}
       />
       <span className="text-sm text-slate-600 dark:text-slate-400">€</span>
-      {isAmountInvalid && <MessageDeMontantInvalide id={idErreurDuMontant} />}
+      {isAmountInvalid && <MessageDeMontantInvalide id={idErreurDuMontant} nul={estNul} />}
 
       {/* Réserve la largeur du bouton de suppression pour aligner les colonnes sur les lignes existantes. */}
       <div className="h-9 w-9 shrink-0 pointer-coarse:w-11" />
