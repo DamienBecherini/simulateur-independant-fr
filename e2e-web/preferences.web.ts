@@ -71,6 +71,32 @@ test("le zoom choisi est retrouvé au rechargement", async ({ page }) => {
   await expect.poll(() => page.evaluate(() => document.body.style.zoom)).toBe("1.2")
 })
 
+test("le niveau du zoom s'affiche dans la barre d'outils ; un clic dessus ou Ctrl+0 ramène l'interface à 100 %", async ({ page }) => {
+  await ouvrir(page)
+  const barre = page.getByRole("navigation", { name: "Barre d'outils" })
+  const niveau = barre.getByRole("button", { name: /Revenir à 100 %/ })
+  // À 100 %, rien de plus dans la barre : l'infobulle du bouton dit le niveau.
+  await expect(niveau).toHaveCount(0)
+  await expect(barre.getByRole("button", { name: "Zoom avant" })).toHaveAttribute("title", /^Agrandir l'interface\. Interface à 100\s%\.$/)
+
+  await barre.getByRole("button", { name: "Zoom avant" }).click()
+  await barre.getByRole("button", { name: "Zoom avant" }).click()
+  await expect(niveau).toHaveText(/^120\s%$/)
+  await expect(niveau).toHaveAttribute("title", "Revenir à 100 % (Ctrl+0)")
+  await expect(barre.getByRole("button", { name: "Zoom avant" })).toHaveAttribute("title", /Interface à 120\s%\. Ctrl\+0 : revenir à 100 %\.$/)
+
+  await niveau.click()
+  await expect.poll(() => page.evaluate(() => document.body.style.zoom)).toBe("1")
+  await expect(niveau).toHaveCount(0)
+
+  // Au clavier, y compris depuis un champ de saisie : le zoom n'est pas une frappe.
+  await barre.getByRole("button", { name: "Zoom avant" }).click()
+  await expect(niveau).toHaveText(/^110\s%$/)
+  await page.keyboard.press("Control+Digit0")
+  await expect.poll(() => page.evaluate(() => document.body.style.zoom)).toBe("1")
+  await expect.poll(async () => (await preferences(page)).zoom).toBe(1)
+})
+
 test("la légende des flux dépliée dans l'affichage « Résumé » l'est encore au rechargement, et se déplie toujours à l'impression", async ({ page }) => {
   await ouvrir(page)
   // « Résumé » est l'affichage par défaut.

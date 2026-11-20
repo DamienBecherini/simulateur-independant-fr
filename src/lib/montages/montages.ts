@@ -6,6 +6,7 @@
 
 import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
 import { euros, pourcent } from "@/backend/logic/format"
+import { hypothesesDuRegime } from "@/backend/logic/exoneration-de-zone"
 import { reglesPubliees } from "@/backend/logic/regles"
 import type { SessionState } from "@/types"
 import { SOINS_EXONERES_DE_TVA } from "../professions"
@@ -292,7 +293,7 @@ const sasuEnZoneFrancheUrbaine: MontageType = {
   pointsDAttention: [
     "L'exonération ne porte que sur l'impôt sur les bénéfices : les dividendes restent imposés chez l'associé, et les cotisations sociales ne changent pas.",
     "Seul le bénéfice réalisé dans la zone est exonéré : la part du chiffre d'affaires réalisée dans la zone se règle dans la fiche de la société (100 % ici).",
-    `Ce que le calcul suppose, faute de texte officiel pour le confirmer : ${ZFU_TE.hypotheses.join(" ")}`,
+    `Ce que le calcul suppose, faute de texte officiel pour le confirmer : ${hypothesesDuRegime(ZFU_TE, "SASU").join(" ")}`,
     RESERVE_LEGALE
   ],
   sources: [SOURCES.zfuTe, SOURCES.qpv, SOURCES.carteDesZones, SOURCES.impotSocietes, SOURCES.dividendes],

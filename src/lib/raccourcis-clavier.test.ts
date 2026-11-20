@@ -1,7 +1,7 @@
 // src/lib/raccourcis-clavier.test.ts
 
 import { describe, expect, it } from "vitest"
-import { actionDuRaccourci, estUnMac, saisieDeTexte, type Touche } from "./raccourcis-clavier"
+import { actionDuRaccourci, demandeLeZoomNormal, estUnMac, saisieDeTexte, type Touche } from "./raccourcis-clavier"
 
 const touche = (key: string, modificateurs: Partial<Omit<Touche, "key">> = {}): Touche => ({ key, ctrlKey: false, metaKey: false, shiftKey: false, ...modificateurs })
 
@@ -49,5 +49,29 @@ describe("saisie de texte : le raccourci appartient au champ", () => {
     expect(saisieDeTexte({ tagName: "BODY", isContentEditable: false })).toBe(false)
     expect(saisieDeTexte({})).toBe(false)
     expect(saisieDeTexte(null)).toBe(false)
+  })
+})
+
+describe("retour de l'interface à 100 %", () => {
+  it("Ctrl+0, par le zéro du haut du clavier ou celui du pavé numérique", () => {
+    expect(demandeLeZoomNormal(touche("0", { ctrlKey: true, code: "Digit0" }), false)).toBe(true)
+    expect(demandeLeZoomNormal(touche("0", { ctrlKey: true, code: "Numpad0" }), false)).toBe(true)
+    expect(demandeLeZoomNormal(touche("0", { ctrlKey: true }), false)).toBe(true)
+  })
+
+  it("en AZERTY, le zéro du haut écrit « à » sans Maj : c'est la touche physique qui compte", () => {
+    expect(demandeLeZoomNormal(touche("à", { ctrlKey: true, code: "Digit0" }), false)).toBe(true)
+    expect(demandeLeZoomNormal(touche("0", { ctrlKey: true, shiftKey: true, code: "Digit0" }), false)).toBe(true)
+  })
+
+  it("AltGr+0, qui écrit « @ » et vaut Ctrl+Alt sous Windows, n'est pas le raccourci", () => {
+    expect(demandeLeZoomNormal(touche("@", { ctrlKey: true, altKey: true, code: "Digit0" }), false)).toBe(false)
+  })
+
+  it("sur Mac, Cmd remplace Ctrl ; sans touche de commande ou avec un autre chiffre, rien", () => {
+    expect(demandeLeZoomNormal(touche("0", { metaKey: true, code: "Digit0" }), true)).toBe(true)
+    expect(demandeLeZoomNormal(touche("0", { ctrlKey: true, code: "Digit0" }), true)).toBe(false)
+    expect(demandeLeZoomNormal(touche("0", { code: "Digit0" }), false)).toBe(false)
+    expect(demandeLeZoomNormal(touche("1", { ctrlKey: true, code: "Digit1" }), false)).toBe(false)
   })
 })

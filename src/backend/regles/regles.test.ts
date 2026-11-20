@@ -2,7 +2,7 @@
 
 import { readdirSync } from "node:fs"
 import { describe, expect, it } from "vitest"
-import { CAISSES_LIBERALES, PUISSANCES_FISCALES } from "../../types.js"
+import { CAISSES_LIBERALES, PUISSANCES_FISCALES, STATUTS_JURIDIQUES } from "../../types.js"
 import { reductionGenerale } from "../logic/cotisationsSalarie.js"
 import { montantBaremeKilometrique } from "../logic/frais-kilometriques.js"
 import { type BaremeProgressif, type CotisationRegimeGeneral, type ReglesFiscales, type ReglesLiberauxReglementes, type ReglesPortageSalarial, type TrancheCotisation } from "../logic/regles.js"
@@ -286,7 +286,12 @@ describe("règles par année", () => {
         // La part exonérée décroît d'une période de douze mois à la suivante.
         expectCroissante([...regime.partsExonereesEnsuite].reverse())
         expect(regime.nom, regime.id).toMatch(/\S/)
-        regime.hypotheses.forEach(hypothese => expect(hypothese, regime.id).toMatch(/\S{3,}.*\.$/))
+        expect(regime.source, regime.id).toMatch(/^https:\/\/(bofip\.impots\.gouv\.fr|www\.legifrance\.gouv\.fr)\//)
+        regime.hypotheses.forEach(hypothese => expect(hypothese.texte, regime.id).toMatch(/\S{3,}.*\.$/))
+        // Un statut mal écrit ferait disparaître l'hypothèse pour tout le monde.
+        regime.hypotheses.flatMap(hypothese => hypothese.statuts ?? []).forEach(statut => expect([...STATUTS_JURIDIQUES, "micro-entreprise"], regime.id).toContain(statut))
+        // L'hypothèse sur les cotisations de l'entreprise individuelle ne concerne qu'elle : elle n'est montrée qu'à elle.
+        expect(regime.hypotheses.filter(hypothese => hypothese.statuts).map(hypothese => [hypothese.texte.split(" :")[0], hypothese.statuts]), regime.id).toEqual([["Entreprise individuelle au réel", ["EI"]]])
       }
       // La ZFU-TE, plafonnée, est fermée aux créations le mois où le régime QPV, sans plafond annuel, s'ouvre.
       const [zfuTe, qpv] = regimes

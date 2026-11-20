@@ -50,13 +50,24 @@ describe("aides liées au lieu d'implantation", () => {
       "Créée en mars 2024 : régime ZFU-TE. Bénéfice exonéré d'impôt en totalité jusqu'à fin février 2029, puis à 60 %, 40 % et 20 % par périodes de douze mois, jusqu'à fin février 2032. Bénéfice exonéré plafonné à 50 000 € par an."
     )
     const hypotheses = within(screen.getByRole("list", { name: "Ce que ce calcul suppose" })).getAllByRole("listitem")
-    expect(hypotheses).toHaveLength(2)
+    // Une seule : celle qui ne concerne que l'entreprise individuelle n'est pas montrée à une SASU.
+    expect(hypotheses).toHaveLength(1)
     expect(hypotheses[0]).toHaveTextContent("Une année à cheval sur deux taux d'exonération est répartie également entre ses mois")
+    expect(section()).not.toHaveTextContent("Entreprise individuelle au réel")
     expect(screen.getByRole("link", { name: "Vérifier une adresse sur la carte officielle" })).toHaveAttribute("href", "https://sig.ville.gouv.fr/")
 
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
     // À 100 % du chiffre d'affaires dans la zone, seule la case est enregistrée.
     expect(onSave.mock.calls[0][0].implantationEnZone).toEqual({})
+  })
+
+  it("une entreprise individuelle au réel lit en plus l'hypothèse sur ses cotisations sociales", async () => {
+    const { user } = ouvrir(makeCompany({ legalStatus: "EI", dateDeCreation: "2024-03" }))
+    await user.click(screen.getByText(TITRE))
+    await user.click(laCase())
+    const hypotheses = within(screen.getByRole("list", { name: "Ce que ce calcul suppose" })).getAllByRole("listitem")
+    expect(hypotheses).toHaveLength(2)
+    expect(hypotheses[1]).toHaveTextContent("Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise")
   })
 
   it("une création depuis 2026 relève du régime QPV, sans plafond, avec une hypothèse de plus", async () => {
@@ -65,8 +76,8 @@ describe("aides liées au lieu d'implantation", () => {
     await user.click(laCase())
     expect(texteDe(within(section()).getByRole("status"))).toMatch(/^Créée en juillet 2026 : régime QPV\. .*jusqu'à fin juin 2031, .*jusqu'à fin juin 2034\. Aucun plafond annuel\.$/)
     const hypotheses = within(screen.getByRole("list", { name: "Ce que ce calcul suppose" })).getAllByRole("listitem")
-    expect(hypotheses).toHaveLength(3)
-    expect(hypotheses[2]).toHaveTextContent("L'administration n'a pas encore publié son commentaire de ce régime")
+    expect(hypotheses).toHaveLength(2)
+    expect(hypotheses[1]).toHaveTextContent("L'administration n'a pas encore publié son commentaire de ce régime")
   })
 
   it("sans date de création, la section la demande et n'annonce aucun régime", async () => {
