@@ -128,6 +128,7 @@ export function preferencesMaximales(): UserPreferences {
     sectionsOuvertes: { "legende-des-flux": true, "detail-du-calcul": false },
     questionsFermees: true,
     grilleTouchee: true,
-    iaModifieDirectement: true
+    iaModifieDirectement: true,
+    boutonDAvisMasque: true
   }
 }

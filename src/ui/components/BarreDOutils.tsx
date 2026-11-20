@@ -2,21 +2,21 @@
 // La barre d'outils, fixée en haut de la page : paramètres, annuler et rétablir, avis, situations types, affichage,
 // export, zoom et thème. Sur un téléphone, les actions secondaires passent dans le menu « Plus d'actions ». La barre
 // porte aussi les deux fenêtres qu'elle ouvre (avis, situations types depuis le menu), pour y rendre le focus au bouton
-// qui les a ouvertes.
+// qui les a ouvertes. « Donner mon avis » est mis en valeur (le simulateur est en bêta) ; l'utilisateur peut le
+// retirer de la barre, depuis la fenêtre d'avis ou les paramètres.
 
 import { useRef, useState, type ReactNode } from "react"
 import { Download, MessageSquareHeart, Redo2, Settings, Undo2, ZoomIn, ZoomOut } from "lucide-react"
 import { pourcentDeNombre } from "@/backend/logic/format"
 import { Button } from "@/components/ui/button"
 import type { MontageType } from "@/lib/montages/montages"
-import { ADRESSE_DE_L_AVIS, systemeEtNavigateur, type Diagnostic } from "@/lib/retours"
+import { ADRESSE_DE_L_AVIS } from "@/lib/retours"
 import { cn } from "@/lib/utils"
-import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { infobulleDuZoom } from "@/lib/zoom"
 import type { Affichage, SessionState } from "@/types"
+import { useDiagnostic, type ReglageDuBoutonDAvis } from "../hooks/useAvis"
 import { useFenetreParLAdresse } from "../hooks/useFenetreParLAdresse"
 import type { useZoom } from "../hooks/useZoom"
-import { usePlateforme } from "../plateforme"
 import { BoutonDesTests } from "./BoutonDesTests"
 import { DialogueDAvis } from "./DialogueDAvis"
 import { MenuPlusDActions } from "./MenuPlusDActions"
@@ -52,10 +52,12 @@ interface BarreDOutilsProps {
   onExporter: () => void
   /** La pastille « IA en direct », près d'« Annuler », tant que l'IA modifie directement la simulation. */
   indicateurIA?: ReactNode
+  /** « Donner mon avis » affiché dans la barre ou retiré par l'utilisateur ; sans ce réglage, il est toujours affiché. */
+  boutonDAvis?: ReglageDuBoutonDAvis
 }
 
 /** La fenêtre d'avis : ouverte par son bouton, par « Plus d'actions », ou par l'adresse #donner-mon-avis (lien de la page outil du site). */
-function useAvis() {
+function useFenetreDAvis() {
   const [ouvert, setOuvert] = useFenetreParLAdresse(ADRESSE_DE_L_AVIS)
   // Le bouton qui a ouvert la fenêtre (celui de la barre, ou « Plus d'actions » sur un téléphone) : le focus y revient.
   const declencheur = useRef<HTMLElement | null>(null)
@@ -79,16 +81,23 @@ const NOM_DE_L_AVIS = {
   avecNiveauDuZoom: { bouton: "@min-[79rem]:w-auto @min-[79rem]:gap-2 @min-[79rem]:px-3", nom: "hidden @min-[79rem]:inline" }
 }
 
-export function BarreDOutils({ session, historique, chargement, affichage, onAffichage, zoom, onParametres, onExporter, indicateurIA }: BarreDOutilsProps) {
-  const plateforme = usePlateforme()
-  const avis = useAvis()
+/**
+ * « Donner mon avis », mis en valeur par une teinte : fond et contour bleus, sans changer sa taille (la place de la
+ * barre est comptée au pixel).
+ */
+const TEINTE_DE_L_AVIS = "bg-blue-50 text-blue-800 ring-1 ring-inset ring-blue-200 hover:bg-blue-100 hover:text-blue-900 dark:bg-blue-950/60 dark:text-blue-200 dark:ring-blue-800 dark:hover:bg-blue-900/60 dark:hover:text-blue-100"
+
+export function BarreDOutils({ session, historique, chargement, affichage, onAffichage, zoom, onParametres, onExporter, indicateurIA, boutonDAvis }: BarreDOutilsProps) {
+  const avis = useFenetreDAvis()
+  const avisMasque = boutonDAvis?.masque === true
+  // Le bouton d'avis retiré pendant que sa fenêtre est ouverte : à la fermeture, le focus va aux paramètres, qui la rouvrent.
+  const parametres = useRef<HTMLButtonElement>(null)
   // Les situations types ouvertes depuis le menu « Plus d'actions » d'un téléphone ; le focus revient à ce menu.
   const [montagesDuMenu, setMontagesDuMenu] = useState(false)
   const declencheurDesMontages = useRef<HTMLElement | null>(null)
-  // Diagnostic proposé avec un avis : aucune donnée de la simulation, seulement des nombres d'années et d'acteurs.
   const niveauDuZoom = pourcentDeNombre(zoom.zoom * 100)
   const nomDeLAvis = zoom.zoom === 1 ? NOM_DE_L_AVIS.sansNiveauDuZoom : NOM_DE_L_AVIS.avecNiveauDuZoom
-  const diagnostic: Diagnostic = { version: VERSION_DE_L_APPLICATION, web: plateforme.web, installee: plateforme.installee(), ...systemeEtNavigateur(navigator.userAgent), affichageEnCours: affichage, nombreDAnnees: session.annees.length, nombreDActeurs: session.entities.length }
+  const diagnostic = useDiagnostic(session, affichage)
 
   return (
     <>
@@ -106,7 +115,7 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
           <div className="flex items-center justify-between px-0 @min-[39rem]:py-2 @min-[63rem]:px-8">
             {/* Groupe de boutons de gauche */}
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-9 @min-[39rem]:w-10 [&_svg]:size-6" onClick={onParametres}>
+              <Button ref={parametres} variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-9 @min-[39rem]:w-10 [&_svg]:size-6" onClick={onParametres}>
                 <Settings className="text-slate-600 dark:text-slate-400" />
               </Button>
               <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.annuler} disabled={!historique.peutAnnuler} className="h-10 w-9 @min-[39rem]:w-10 [&_svg]:size-6 @min-[39rem]:ml-2">
@@ -120,10 +129,12 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
                   en dessous, leur icône seule. Le nom de « Donner mon avis » attend 1 280 px quand le niveau du zoom
                   s'affiche : entre 1 024 et 1 280 px, la barre n'a que 944 px, et il en faudrait 1 020 pour les deux. Sur un téléphone (moins de 640 px), ils passent dans le menu « Plus
                   d'actions », avec l'affichage et le thème : la barre garde les actions principales sans rien couper. */}
-              <Button variant="ghost" size="icon" aria-label="Donner mon avis" title="Donner mon avis" onClick={e => avis.ouvrir(e.currentTarget)} className={cn("h-10 w-9 @max-[39rem]:hidden @min-[39rem]:ml-2 @min-[39rem]:w-10 [&_svg]:size-6", nomDeLAvis.bouton)}>
-                <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
-                <span className={nomDeLAvis.nom}>Donner mon avis</span>
-              </Button>
+              {avisMasque ? null : (
+                <Button variant="ghost" size="icon" aria-label="Donner mon avis" title="Donner mon avis" onClick={e => avis.ouvrir(e.currentTarget)} className={cn("h-10 w-9 @max-[39rem]:hidden @min-[39rem]:ml-2 @min-[39rem]:w-10 [&_svg]:size-6", TEINTE_DE_L_AVIS, nomDeLAvis.bouton)}>
+                  <MessageSquareHeart />
+                  <span className={nomDeLAvis.nom}>Donner mon avis</span>
+                </Button>
+              )}
               <BoutonDesMontages variant="outline" size="sm" aria-label="Situations types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 @max-[39rem]:hidden @min-[39rem]:ml-2" onCharger={chargement.onChargerUnMontage} confirmationNecessaire={chargement.confirmationNecessaire} nomDeLaSession={session.name}>
                 <span className="hidden @min-[47rem]:inline">Situations types</span>
               </BoutonDesMontages>
@@ -163,7 +174,7 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
                 affichage={affichage}
                 onAffichage={onAffichage}
                 zoom={zoom}
-                onAvis={avis.ouvrir}
+                onAvis={avisMasque ? undefined : avis.ouvrir}
                 onMontages={declencheur => {
                   declencheurDesMontages.current = declencheur
                   setMontagesDuMenu(true)
@@ -173,7 +184,7 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
           </div>
         </div>
       </nav>
-      <DialogueDAvis isOpen={avis.ouvert} onClose={avis.fermer} diagnostic={diagnostic} declencheur={avis.declencheur} />
+      <DialogueDAvis isOpen={avis.ouvert} onClose={avis.fermer} diagnostic={diagnostic} declencheur={avis.declencheur} repli={parametres} boutonDansLaBarre={boutonDAvis} />
       <FenetreDesMontages open={montagesDuMenu} onOpenChange={setMontagesDuMenu} onCharger={chargement.onChargerUnMontage} confirmationNecessaire={chargement.confirmationNecessaire} nomDeLaSession={session.name} declencheur={declencheurDesMontages} />
     </>
   )

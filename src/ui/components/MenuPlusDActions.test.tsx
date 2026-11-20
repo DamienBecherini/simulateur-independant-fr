@@ -33,6 +33,12 @@ function afficher(affichage: Affichage = "resume", zoom = zoomA(1)) {
 const entrees = () => Array.from(screen.getByRole("menu").querySelectorAll("[role^=menuitem]"))
 
 describe("menu « Plus d'actions »", () => {
+  it("n'a pas d'entrée « Donner mon avis » quand l'utilisateur l'a retiré de la barre d'outils", async () => {
+    render(<MenuPlusDActions affichage="resume" zoom={zoomA(1)} onAffichage={vi.fn()} onMontages={vi.fn()} />)
+    await userEvent.click(screen.getByRole("button", { name: "Plus d'actions" }))
+    expect(entrees().map(e => e.textContent)).toEqual(["Partir d'une situation type", "Trois vues", "Résumé", "Classique", "Agrandir", "Réduire", "Thème sombre"])
+  })
+
   it("s'annonce comme un bouton de menu, fermé, puis s'ouvre au clic sur sa première entrée", async () => {
     const { user, bouton } = afficher()
     expect(bouton).toHaveAttribute("aria-haspopup", "menu")

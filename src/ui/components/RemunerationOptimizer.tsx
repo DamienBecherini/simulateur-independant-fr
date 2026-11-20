@@ -2,7 +2,7 @@
 // Arbitrage rémunération / dividendes : courbe du net du foyer selon la rémunération du dirigeant, en SASU ou en EURL,
 // avec la meilleure rémunération et la meilleure parmi celles qui valident 4 trimestres de retraite.
 
-import { useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
 import { flushSync } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { echelle, graduations, indiceLePlusProche, montantCourt, positionInfoBulle } from "@/lib/graphique"
@@ -114,7 +114,12 @@ interface CourbeProps {
   remunerationActuelle: number
 }
 
-/** Courbe du net du foyer selon la rémunération, avec survol (pointeur ou flèches du clavier). */
+/**
+ * Courbe du net du foyer selon la rémunération, qui se lit point par point : au survol de la souris, aux flèches du
+ * clavier, ou au doigt. Un écran tactile n'a pas de survol : un toucher choisit le point le plus proche, un doigt qui
+ * glisse le long de la courbe la parcourt (`touch-pan-y` : la page ne défile alors que de haut en bas), et le point
+ * reste affiché jusqu'au toucher suivant, ailleurs sur la page.
+ */
 function Courbe({ resultat, remunerationActuelle }: CourbeProps) {
   const { ref, largeur } = useLargeur(640)
   const [survol, setSurvol] = useState<number | null>(null)
@@ -140,6 +145,15 @@ function Courbe({ resultat, remunerationActuelle }: CourbeProps) {
     setSurvol(i => Math.min(points.length - 1, Math.max(0, (i ?? points.indexOf(meilleur!)) + pas)))
   }
   const pointSurvole = survol === null ? null : points[survol]
+  const ouvert = survol !== null
+  useEffect(() => {
+    if (!ouvert) return
+    const fermer = (e: Event) => {
+      if (!(e.target instanceof Node && ref.current?.contains(e.target))) setSurvol(null)
+    }
+    document.addEventListener("pointerdown", fermer)
+    return () => document.removeEventListener("pointerdown", fermer)
+  }, [ouvert, ref])
 
   return (
     <div ref={ref} className="relative">
@@ -181,10 +195,11 @@ function Courbe({ resultat, remunerationActuelle }: CourbeProps) {
           {meilleurAvecRetraite && meilleurAvecRetraite !== meilleur ? <Repere point={meilleurAvecRetraite} x={x} y={y} classe="fill-violet-600 dark:fill-violet-500" libelle="4 trimestres" largeur={largeur} /> : null}
           {meilleur ? <Repere point={meilleur} x={x} y={y} classe="fill-emerald-600" libelle="Meilleur net" largeur={largeur} /> : null}
 
-          <rect x={MARGES.gauche} y={MARGES.haut} width={Math.max(0, largeur - MARGES.gauche - MARGES.droite)} height={HAUTEUR - MARGES.haut - MARGES.bas} fill="transparent" className="cursor-crosshair" onPointerMove={surPointeur} onPointerLeave={() => setSurvol(null)} />
+          <rect x={MARGES.gauche} y={MARGES.haut} width={Math.max(0, largeur - MARGES.gauche - MARGES.droite)} height={HAUTEUR - MARGES.haut - MARGES.bas} fill="transparent" className="cursor-crosshair touch-pan-y" onPointerDown={surPointeur} onPointerMove={surPointeur} onPointerLeave={e => e.pointerType === "mouse" && setSurvol(null)} />
         </svg>
       </div>
       {pointSurvole ? <InfoBulle point={pointSurvole} gauche={x(pointSurvole.remunerationNette)} largeur={largeur} /> : null}
+      <p className="mt-1 text-xs text-slate-600 pointer-fine:hidden dark:text-slate-400 print:hidden">Touchez la courbe, ou faites-y glisser le doigt, pour lire ses valeurs.</p>
     </div>
   )
 }

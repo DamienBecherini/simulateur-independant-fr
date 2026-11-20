@@ -451,7 +451,9 @@ export const UserPreferencesSchema = z.object({
    * leur arrivée, sans relecture (voir l'ADR 011, addendum du 2026-10-14). Désactivé par défaut ; seule la case de la
    * fenêtre de relecture l'active. Le serveur MCP le lit, sans jamais l'écrire, pour le dire au modèle.
    */
-  iaModifieDirectement: z.boolean().optional().catch(undefined)
+  iaModifieDirectement: z.boolean().optional().catch(undefined),
+  /** « Donner mon avis » retiré de la barre d'outils par l'utilisateur ; la fenêtre reste accessible depuis les paramètres. */
+  boutonDAvisMasque: z.boolean().optional().catch(undefined)
 })
 
 // ===================================================================================

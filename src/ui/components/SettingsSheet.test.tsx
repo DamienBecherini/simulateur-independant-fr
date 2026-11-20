@@ -54,6 +54,78 @@ function PanneauDesSauvegardes({ initiales, ordreInitial, onChange }: { initiale
   )
 }
 
+/** Le panneau avec le réglage du bouton d'avis, tenu comme le fait l'application. */
+function PanneauAvecLAvis({ onMasquer }: { onMasquer: (masque: boolean) => void }) {
+  const [masque, setMasque] = useState(false)
+  const [session, setSession] = useState(emptySession())
+  return (
+    <SettingsSheet
+      isOpen
+      onOpenChange={() => {}}
+      allSaveSlots={[]}
+      setAllSaveSlots={() => {}}
+      currentSession={session}
+      setCurrentSession={setSession}
+      slotOrder={[]}
+      setSlotOrder={() => {}}
+      onReset={() => {}}
+      onLoadSlot={() => {}}
+      onImport={async () => {}}
+      onLoadMontage={() => {}}
+      importConfirmation={null}
+      onConfirmImport={() => {}}
+      onCancelImport={() => {}}
+      loadedSlotId={null}
+      setLoadedSlotId={() => {}}
+      avis={{
+        diagnostic: { version: "0.9.0", web: true, systeme: "Windows", navigateur: "Firefox", affichageEnCours: "resume", nombreDAnnees: 1, nombreDActeurs: 0 },
+        bouton: {
+          masque,
+          onMasquer: oui => {
+            setMasque(oui)
+            onMasquer(oui)
+          }
+        }
+      }}
+    />
+  )
+}
+
+describe("« Donner mon avis » dans les paramètres", () => {
+  it("n'apparaît pas sans son réglage", () => {
+    render(<PanneauDesSauvegardes initiales={[]} ordreInitial={[]} onChange={() => {}} />)
+    expect(screen.queryByRole("switch", { name: /Donner mon avis/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Donner mon avis" })).not.toBeInTheDocument()
+  })
+
+  it("un interrupteur affiche le bouton dans la barre d'outils ou l'en retire", async () => {
+    const onMasquer = vi.fn()
+    render(<PanneauAvecLAvis onMasquer={onMasquer} />)
+    const interrupteur = screen.getByRole("switch", { name: "Afficher « Donner mon avis » dans la barre d'outils" })
+    expect(interrupteur).toBeChecked()
+
+    await userEvent.click(interrupteur)
+    expect(onMasquer).toHaveBeenLastCalledWith(true)
+    expect(interrupteur).not.toBeChecked()
+
+    await userEvent.click(interrupteur)
+    expect(onMasquer).toHaveBeenLastCalledWith(false)
+  })
+
+  it("garde un accès à la fenêtre d'avis, dont la case suit l'interrupteur ; le focus revient au bouton", async () => {
+    render(<PanneauAvecLAvis onMasquer={() => {}} />)
+    await userEvent.click(screen.getByRole("button", { name: "Donner mon avis" }))
+    const fenetre = await screen.findByRole("dialog", { name: "Donner mon avis" })
+    await userEvent.click(within(fenetre).getByRole("checkbox", { name: /Ne plus afficher/ }))
+
+    await userEvent.keyboard("{Escape}")
+    expect(screen.queryByRole("dialog", { name: "Donner mon avis" })).not.toBeInTheDocument()
+    // Les paramètres sont restés ouverts dessous.
+    expect(screen.getByRole("switch", { name: /Donner mon avis/ })).not.toBeChecked()
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "Donner mon avis" })).toHaveFocus())
+  })
+})
+
 /** Ouvre la liste des sauvegardes ; renvoie l'état courant des sauvegardes et de leur ordre. */
 async function ouvrirLaListe(initiales: SaveSlot[] = [], ordreInitial = initiales.map(slot => slot.id)) {
   const etat = { slots: initiales, ordre: ordreInitial }

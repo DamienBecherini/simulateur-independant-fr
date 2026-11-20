@@ -21,8 +21,8 @@ import { useTheme } from "../hooks/useTheme"
 interface MenuPlusDActionsProps {
   affichage: Affichage
   onAffichage: (affichage: Affichage) => void
-  /** Ouvre la fenêtre d'avis ; le focus reviendra sur le bouton du menu, donné en paramètre. */
-  onAvis: (declencheur: HTMLElement) => void
+  /** Ouvre la fenêtre d'avis ; le focus reviendra sur le bouton du menu, donné en paramètre. Absent quand l'utilisateur a retiré « Donner mon avis » de la barre d'outils. */
+  onAvis?: (declencheur: HTMLElement) => void
   /** Ouvre la fenêtre des montages types, de même. */
   onMontages: (declencheur: HTMLElement) => void
   /** Le zoom de l'interface : dans une fenêtre étroite, la barre d'outils n'a plus ses boutons de zoom, le menu les remplace. */
@@ -113,7 +113,7 @@ export function MenuPlusDActions({ affichage, onAffichage, onAvis, onMontages, z
 
   const actions: Entree[] = [
     { cle: "montages", libelle: "Partir d'une situation type", role: "menuitem", icone: <LayoutTemplate />, choisir: onMontages },
-    { cle: "avis", libelle: "Donner mon avis", role: "menuitem", icone: <MessageSquareHeart />, choisir: onAvis }
+    ...(onAvis ? [{ cle: "avis", libelle: "Donner mon avis", role: "menuitem" as const, icone: <MessageSquareHeart />, choisir: onAvis }] : [])
   ]
   const affichages: Entree[] = AFFICHAGES.map(a => ({ cle: a.valeur, libelle: a.libelle, role: "menuitemradio", coche: a.valeur === affichage, description: a.description, choisir: () => onAffichage(a.valeur) }))
   const zooms: Entree[] = [

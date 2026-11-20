@@ -68,6 +68,8 @@
   --radius: 0.6rem;
   /* Bande des lignes alternées (voir les utilitaires `ligne-de-bande` et `case-de-bande` plus bas). */
   --fond-bande: --alpha(var(--color-slate-500) / 6%);
+  /* Ombre au bord d'un tableau qui défile en largeur (ReperesDeDefilement.tsx) : elle suit la couleur du texte. */
+  --ombre-de-defilement: --alpha(var(--color-slate-900) / 20%);
 }
 
 /* Couleurs du thème sombre, à l'écran seulement (voir la variante `dark` ci-dessus). */
@@ -98,6 +100,7 @@
     --chart-4: hsl(280 65% 60%);
     --chart-5: hsl(340 75% 55%);
     --fond-bande: --alpha(var(--color-slate-400) / 8%);
+    --ombre-de-defilement: --alpha(var(--color-slate-100) / 26%);
   }
 }
 

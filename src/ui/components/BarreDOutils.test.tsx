@@ -5,6 +5,7 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { useState } from "react"
 import type { SessionState } from "@/types"
 import { emptySession, makePerson } from "@/ui/testing/fixtures"
 import { BarreDOutils } from "./BarreDOutils"
@@ -25,6 +26,29 @@ function afficher({ peutAnnuler = true, peutRetablir = false, zoom: zoomChoisi =
   }
   render(<BarreDOutils session={session} affichage="classique" {...rappels} />)
   return { user: userEvent.setup(), ...rappels }
+}
+
+/** La barre avec le réglage du bouton d'avis, tenu comme le fait l'application. */
+function afficherAvecLeReglage(masqueAuDepart = false) {
+  const session: SessionState = { ...emptySession(), name: "Ma simulation", entities: [makePerson()] }
+  function Barre() {
+    const [masque, setMasque] = useState(masqueAuDepart)
+    return (
+      <BarreDOutils
+        session={session}
+        affichage="classique"
+        historique={{ annuler: vi.fn(), retablir: vi.fn(), peutAnnuler: false, peutRetablir: false }}
+        chargement={{ onChargerUnMontage: vi.fn(), onChargerUneSession: vi.fn(), confirmationNecessaire: false }}
+        onAffichage={vi.fn()}
+        zoom={{ zoom: 1, zoomMaximal: 2, zoomIn: vi.fn(), zoomOut: vi.fn(), reinitialiser: vi.fn(), canZoomIn: true, canZoomOut: false }}
+        onParametres={vi.fn()}
+        onExporter={vi.fn()}
+        boutonDAvis={{ masque, onMasquer: setMasque }}
+      />
+    )
+  }
+  render(<Barre />)
+  return { user: userEvent.setup() }
 }
 
 const barre = () => screen.getByRole("navigation", { name: "Barre d'outils" })
@@ -100,6 +124,47 @@ describe("BarreDOutils", () => {
     window.history.replaceState(null, "", "/#donner-mon-avis")
     afficher()
     expect(screen.getByRole("dialog", { name: "Donner mon avis" })).toBeInTheDocument()
+  })
+
+  it("met « Donner mon avis » en valeur, sans proposer de le retirer quand aucun réglage n'est donné", async () => {
+    const { user } = afficher()
+    expect(bouton("Donner mon avis")).toHaveClass("bg-blue-50", "text-blue-800")
+    await user.click(bouton("Donner mon avis"))
+    expect(within(screen.getByRole("dialog")).queryByRole("checkbox", { name: /Ne plus afficher/ })).not.toBeInTheDocument()
+  })
+
+  it("retire « Donner mon avis » de la barre et du menu depuis la fenêtre d'avis ; le focus va alors aux paramètres", async () => {
+    const { user } = afficherAvecLeReglage()
+    await user.click(bouton("Donner mon avis"))
+    const caseDuBouton = within(screen.getByRole("dialog")).getByRole("checkbox", { name: "Ne plus afficher « Donner mon avis » dans la barre d'outils" })
+    expect(caseDuBouton).not.toBeChecked()
+    expect(caseDuBouton).toHaveAccessibleDescription(/Vous retrouverez cette fenêtre dans les Paramètres/)
+
+    await user.click(caseDuBouton)
+    expect(caseDuBouton).toBeChecked()
+    // La fenêtre reste ouverte : la case se décoche aussi vite qu'elle s'est cochée.
+    expect(screen.getByRole("dialog", { name: "Donner mon avis" })).toBeInTheDocument()
+
+    await user.keyboard("{Escape}")
+    expect(within(barre()).queryByRole("button", { name: "Donner mon avis" })).not.toBeInTheDocument()
+    await vi.waitFor(() => expect(bouton("Paramètres")).toHaveFocus())
+
+    await user.click(bouton("Plus d'actions"))
+    expect(screen.getByRole("menuitem", { name: "Partir d'une situation type" })).toBeInTheDocument()
+    expect(screen.queryByRole("menuitem", { name: "Donner mon avis" })).not.toBeInTheDocument()
+  })
+
+  it("bouton retiré : la fenêtre s'ouvre encore par son adresse, où la case le réaffiche", async () => {
+    window.history.replaceState(null, "", "/#donner-mon-avis")
+    const { user } = afficherAvecLeReglage(true)
+    // Fenêtre ouverte, la barre est cachée aux lecteurs d'écran : on la cherche quand même.
+    expect(within(screen.getByRole("navigation", { name: "Barre d'outils", hidden: true })).queryByRole("button", { name: "Donner mon avis", hidden: true })).not.toBeInTheDocument()
+    const caseDuBouton = within(screen.getByRole("dialog")).getByRole("checkbox", { name: /Ne plus afficher/ })
+    expect(caseDuBouton).toBeChecked()
+
+    await user.click(caseDuBouton)
+    await user.keyboard("{Escape}")
+    expect(bouton("Donner mon avis")).toBeInTheDocument()
   })
 
   it("ouvre les situations types depuis « Plus d'actions », et rend le focus au menu à la fermeture", async () => {

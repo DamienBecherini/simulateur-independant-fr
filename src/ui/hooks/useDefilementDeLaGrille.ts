@@ -4,6 +4,7 @@
 // taille. La zone qui défile marque sa première colonne `data-colonne-fixe` et les en-têtes des mois `data-mois`.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react"
+import { comportementDuDefilement } from "./useDefilementHorizontal"
 import { aLaFin, auDebut, deborde, defilementPourLeMois, moisVisibles, type GeometrieDeLaGrille } from "@/lib/bande-des-mois"
 
 export interface EtatDuDefilement {
@@ -30,11 +31,6 @@ function etatDe(g: GeometrieDeLaGrille): EtatDuDefilement {
 
 const memeEtat = (a: EtatDuDefilement, b: EtatDuDefilement) =>
   a.deborde === b.deborde && a.auDebut === b.auDebut && a.aLaFin === b.aLaFin && a.colonneFixe === b.colonneFixe && a.visibles.join() === b.visibles.join()
-
-/** Défilement doux, sauf si l'utilisateur a demandé de réduire les animations. */
-function comportement(): ScrollBehavior {
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth"
-}
 
 /**
  * @param zone La zone qui défile (absente tant qu'aucun acteur n'est saisi).
@@ -85,7 +81,7 @@ export function useDefilementDeLaGrille(zone: RefObject<HTMLElement | null>, pre
       const element = zone.current
       const g = element && mesurerLaGrille(element)
       if (!element || !g) return
-      element.scrollTo({ left: calcul(g), behavior: immediat ? "instant" : comportement() })
+      element.scrollTo({ left: calcul(g), behavior: immediat ? "instant" : comportementDuDefilement() })
     },
     [zone]
   )
