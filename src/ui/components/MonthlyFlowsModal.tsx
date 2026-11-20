@@ -124,9 +124,9 @@ function CasesDesAnnees({ annee, autresAnnees, aussiEn, setAussiEn }: CasesDesAn
   return (
     <fieldset className={cn("rounded-md border border-transparent px-2", avecRaccourcis && "w-full", aussiEn.length > 0 && EN_EVIDENCE)}>
       {/* Sur un écran étroit, avec les raccourcis, la légende prend toute la ligne : les raccourcis vont dessous. */}
-      <legend className={cn("float-left mr-2 flex min-h-9 items-center pointer-coarse:min-h-11", avecRaccourcis && "max-sm:w-full")}>Aussi en :</legend>
+      <legend className={cn("float-left mr-2 flex min-h-9 items-center pointer-coarse:min-h-11", avecRaccourcis && "@max-[34rem]:w-full")}>Aussi en :</legend>
       {avecRaccourcis ? (
-        <div className="flex flex-wrap items-center gap-1 py-0.5 max-sm:clear-left">
+        <div className="flex flex-wrap items-center gap-1 py-0.5 @max-[34rem]:clear-left">
           {RACCOURCIS.map(raccourci => {
             const annees = anneesDuRaccourci(raccourci, annee, autresAnnees)
             // Pas d'année avant (ou après) l'année affichée : le raccourci est désactivé. Il ne l'est jamais à la suite
@@ -235,7 +235,9 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
           </Depliable>
         </DialogHeader>
 
-        <div className="space-y-2 py-2">
+        {/* Conteneur : les lignes de flux suivent la largeur de la fenêtre de saisie (une ligne par flux dès 34 rem, sinon
+            deux), pas celle de l'écran : interface agrandie, la fenêtre est bien plus étroite que l'écran ne le laisse croire. */}
+        <div className="@container space-y-2 py-2">
           {flows.length > 0 && (
             <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <div ref={listRef} className="max-h-[calc(50vh/var(--zoom,1))] space-y-2 overflow-y-auto">

@@ -89,7 +89,7 @@ function SaveSlotItem({ slot, onDelete, onExport, onLoad }: { slot: SaveSlot; on
           <Trash2 className="h-4 w-4 text-destructive dark:text-red-400" />
         </Button>
       </div>
-      <Button onClick={onExport} variant="outline" size="sm" className="self-start min-w-[200px] justify-start">
+      <Button onClick={onExport} variant="outline" size="sm" className="h-auto min-h-8 max-w-full justify-start self-start py-1 text-left whitespace-normal">
         <Download className="mr-2 h-4 w-4" /> Exporter cette sauvegarde...
       </Button>
     </div>
@@ -221,11 +221,13 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
           )}
           {view === "load" && (
             <>
-              <SheetHeader className="p-6 pb-4 border-b flex-shrink-0">
-                <Button variant="ghost" onClick={() => setView("main")} className="absolute top-4 left-4 p-2 h-auto">
+              {/* « Retour » et le titre côte à côte, le titre passant à la ligne s'il le faut : posé par-dessus un titre
+                  centré, le bouton le recouvrait dès que le panneau se resserrait (interface agrandie, téléphone). */}
+              <SheetHeader className="flex-shrink-0 flex-row flex-wrap items-center gap-x-3 gap-y-1 border-b py-4 pr-12 pl-4">
+                <Button variant="ghost" onClick={() => setView("main")} className="h-auto p-2">
                   <ChevronLeft className="mr-2 h-4 w-4" /> Retour
                 </Button>
-                <SheetTitle className="text-center">Charger une sauvegarde</SheetTitle>
+                <SheetTitle>Charger une sauvegarde</SheetTitle>
               </SheetHeader>
               <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <div className="flex-grow overflow-y-auto p-6 space-y-3">
@@ -235,7 +237,7 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                 </div>
               </DndContext>
               <SheetFooter className="border-t p-6 bg-slate-50 dark:bg-slate-900">
-                <Button onClick={onImport} variant="secondary" className="w-full">
+                <Button onClick={onImport} variant="secondary" className="h-auto min-h-9 w-full whitespace-normal py-1.5">
                   <Upload className="mr-2 h-4 w-4" /> Importer une simulation...
                 </Button>
                 <SauvegardesGroupees allSaveSlots={allSaveSlots} slotOrder={slotOrder} setAllSaveSlots={setAllSaveSlots} setSlotOrder={setSlotOrder} />

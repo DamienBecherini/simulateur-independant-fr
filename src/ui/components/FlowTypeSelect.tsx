@@ -14,11 +14,12 @@ interface FlowTypeSelectProps {
 }
 
 /**
- * Retour à la ligne d'une ligne de flux, sur téléphone seulement : le type occupe la première ligne, le libellé
- * et les montants la suivante, pour que chaque champ garde une largeur utilisable.
+ * Retour à la ligne d'une ligne de flux, dans une fenêtre de saisie étroite seulement (téléphone, interface agrandie) :
+ * le type occupe la première ligne, le libellé et les montants la suivante, pour que chaque champ garde une largeur
+ * utilisable. La largeur est celle de la fenêtre de saisie (conteneur de MonthlyFlowsModal), pas celle de l'écran.
  */
 export function RetourALaLigneSurTelephone() {
-  return <div aria-hidden="true" className="basis-full sm:hidden" />
+  return <div aria-hidden="true" className="basis-full @min-[34rem]:hidden" />
 }
 
 /**
@@ -30,7 +31,7 @@ export function RetourALaLigneSurTelephone() {
 export function FlowTypeSelect({ value, options, onChange, typeActeur }: FlowTypeSelectProps) {
   return (
     <Select value={value} onValueChange={type => onChange(type as FlowType)}>
-      <SelectTrigger className="min-h-9 min-w-0 flex-1 whitespace-normal bg-background py-1 text-left data-[size=default]:h-auto sm:w-60 sm:flex-none *:data-[slot=select-value]:line-clamp-2" aria-label="Type de flux">
+      <SelectTrigger className="min-h-9 min-w-0 flex-1 whitespace-normal bg-background py-1 text-left data-[size=default]:h-auto @min-[34rem]:w-60 @min-[34rem]:flex-none *:data-[slot=select-value]:line-clamp-2" aria-label="Type de flux">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

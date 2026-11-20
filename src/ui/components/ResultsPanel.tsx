@@ -548,7 +548,10 @@ function cartesDesActivites(report: SimulationReport) {
   return report.activities.map(activity => <ActivityCard key={activity.entityId} activity={activity} nombre={report.foyers.length + report.activities.length} />)
 }
 
-const GRILLE_DES_CARTES = "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+// Le nombre de colonnes suit la largeur de la section (requêtes de conteneur), pas celle de la fenêtre : interface
+// agrandie, une fenêtre de 1 024 px zoomée à 200 % n'offre que 512 px, où trois cartes côte à côte seraient illisibles.
+const SECTION_DES_CARTES = "@container space-y-3"
+const GRILLE_DES_CARTES = "grid gap-4 @min-[34rem]:grid-cols-2 @min-[58rem]:grid-cols-3"
 const TITRE_DES_CARTES = "text-lg font-medium text-slate-800 dark:text-slate-100"
 
 interface CartesProps {
@@ -561,7 +564,7 @@ interface CartesProps {
 function CartesDuResume({ report, sharedCompanies, conjoint }: CartesProps) {
   if (report.foyers.length + report.activities.length === 0) return null
   return (
-    <div className="space-y-3">
+    <div className={SECTION_DES_CARTES}>
       <h3 className={TITRE_DES_CARTES}>Par foyer fiscal et par activité</h3>
       <NoteDesAssocies sharedCompanies={sharedCompanies} />
       <div className={GRILLE_DES_CARTES}>
@@ -577,7 +580,7 @@ function CartesClassiques({ report, sharedCompanies, conjoint }: CartesProps) {
   return (
     <>
       {report.foyers.length > 0 ? (
-        <div className="space-y-3">
+        <div className={SECTION_DES_CARTES}>
           <h3 className={TITRE_DES_CARTES}>Par foyer fiscal</h3>
           <NoteDesAssocies sharedCompanies={sharedCompanies} />
           <div className={GRILLE_DES_CARTES}>{cartesDesFoyers(report, conjoint)}</div>
@@ -585,7 +588,7 @@ function CartesClassiques({ report, sharedCompanies, conjoint }: CartesProps) {
       ) : null}
 
       {report.activities.length > 0 ? (
-        <div className="space-y-3">
+        <div className={SECTION_DES_CARTES}>
           <h3 className={TITRE_DES_CARTES}>Par activité</h3>
           <div className={GRILLE_DES_CARTES}>{cartesDesActivites(report)}</div>
         </div>

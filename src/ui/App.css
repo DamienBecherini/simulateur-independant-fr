@@ -245,3 +245,11 @@
   width: 24px;
   height: 24px;
 }
+
+/* Listes déroulantes sous le zoom de l'interface (useZoom). Leur place est calculée en pixels réels de l'écran, puis
+   appliquée à un élément lui-même zoomé avec le corps de page : à 200 %, la liste s'ouvrait deux fois trop loin de son
+   bouton, hors de l'écran. On retire donc le zoom du cadre qui la place, et on le rend à son contenu (select.tsx, qui
+   divise aussi par le zoom les mesures du bouton reçues en pixels réels). */
+[data-radix-popper-content-wrapper] {
+  zoom: calc(1 / var(--zoom, 1));
+}
