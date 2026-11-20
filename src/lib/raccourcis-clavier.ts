@@ -1,7 +1,8 @@
 // src/lib/raccourcis-clavier.ts
-// Raccourcis d'annulation de la page (Ctrl+Z, Ctrl+Y, Ctrl+Maj+Z ; Cmd sur Mac) : quelle touche annule ou rétablit
-// une modification de la simulation, et quand le raccourci appartient au champ où l'on écrit. Fonctions pures, sans
-// DOM : le hook `useRaccourcisDAnnulation` les branche sur le clavier.
+// Raccourcis de la page. Annulation (Ctrl+Z, Ctrl+Y, Ctrl+Maj+Z ; Cmd sur Mac) : quelle touche annule ou rétablit une
+// modification de la simulation, et quand le raccourci appartient au champ où l'on écrit. Zoom : Ctrl+0 ramène
+// l'interface à 100 %. Fonctions pures, sans DOM : les hooks `useRaccourcisDAnnulation` et `useZoom` les branchent sur
+// le clavier.
 
 /** Ce que demande un raccourci de la page. */
 export type ActionDuRaccourci = "annuler" | "retablir"
@@ -12,6 +13,9 @@ export interface Touche {
   ctrlKey: boolean
   metaKey: boolean
   shiftKey: boolean
+  altKey?: boolean
+  /** Touche physique (« Digit0 », « Numpad0 ») : sur un clavier AZERTY, le zéro du haut écrit « à » sans la touche Maj. */
+  code?: string
 }
 
 /** Ce que les raccourcis lisent de l'élément qui a le focus (un `HTMLElement` convient). */
@@ -53,4 +57,15 @@ export function actionDuRaccourci(touche: Touche, mac: boolean): ActionDuRaccour
   if (lettre === "z") return touche.shiftKey ? "retablir" : "annuler"
   if (lettre === "y" && !mac) return "retablir"
   return null
+}
+
+/**
+ * Ctrl+0 (Cmd+0 sur Mac) : le retour de l'interface à 100 %, par le zéro du haut du clavier ou celui du pavé numérique.
+ * On lit la touche physique : en AZERTY, le zéro du haut écrit « à ». Avec Alt, ce n'est pas le raccourci : sous
+ * Windows, AltGr vaut Ctrl+Alt, et AltGr+0 écrit « @ ».
+ */
+export function demandeLeZoomNormal(touche: Touche, mac: boolean): boolean {
+  const commande = mac ? touche.metaKey : touche.ctrlKey
+  if (!commande || touche.altKey) return false
+  return touche.key === "0" || touche.code === "Digit0" || touche.code === "Numpad0"
 }

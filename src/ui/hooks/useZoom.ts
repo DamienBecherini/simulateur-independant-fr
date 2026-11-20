@@ -1,8 +1,10 @@
 // src/ui/hooks/useZoom.ts
 // Zoom de l'interface, borné selon la largeur de la fenêtre (voir src/lib/zoom.ts) et réajusté quand elle change.
 // Le zoom demandé est une préférence de l'utilisateur, retenue d'une ouverture à l'autre : il est fourni par l'appelant.
+// Ctrl+0 (Cmd+0 sur Mac) ramène l'interface à 100 %.
 
 import { useEffect, useState } from "react"
+import { demandeLeZoomNormal, estUnMac } from "@/lib/raccourcis-clavier"
 import { PAS_DE_ZOOM, ZOOM_MINIMAL, bornerZoom, zoomMaximalPour } from "@/lib/zoom"
 
 /**
@@ -26,8 +28,23 @@ export function useZoom(zoomDemande: number, setZoomDemande: (zoom: number) => v
     document.documentElement.style.setProperty("--zoom", `${zoom}`)
   }, [zoom])
 
+  useEffect(() => {
+    const mac = estUnMac(navigator.userAgent)
+    const surTouche = (event: KeyboardEvent) => {
+      // À 100 %, la touche reste au navigateur ou à l'application de bureau : elle y remet leur propre zoom à 100 %.
+      if (zoom === 1 || !demandeLeZoomNormal(event, mac)) return
+      event.preventDefault()
+      setZoomDemande(1)
+    }
+    window.addEventListener("keydown", surTouche)
+    return () => window.removeEventListener("keydown", surTouche)
+  }, [zoom, setZoomDemande])
+
   return {
     zoom,
+    /** Le zoom maximal que permet la largeur de la fenêtre : au-delà, la mise en page ne tiendrait plus. */
+    zoomMaximal: zoomMaximalPour(largeurFenetre),
+    reinitialiser: () => setZoomDemande(1),
     // On part du zoom affiché, pas du zoom demandé : après un rétrécissement de la fenêtre, un clic agit tout de suite.
     zoomIn: () => setZoomDemande(bornerZoom(zoom + PAS_DE_ZOOM, largeurFenetre)),
     zoomOut: () => setZoomDemande(bornerZoom(zoom - PAS_DE_ZOOM, largeurFenetre)),

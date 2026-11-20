@@ -21,7 +21,7 @@ export const LARGEUR_MINIMALE = 320
 /** Largeur effective minimale, en pixels CSS, de la mise en page large. */
 export const LARGEUR_MINIMALE_LARGE = 460
 export const ZOOM_MINIMAL = 0.5
-const ZOOM_MAXIMAL = 2
+export const ZOOM_MAXIMAL = 2
 export const PAS_DE_ZOOM = 0.1
 
 const arrondi = (zoom: number) => Math.round(zoom * 100) / 100

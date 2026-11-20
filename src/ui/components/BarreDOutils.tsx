@@ -6,10 +6,12 @@
 
 import { useRef, useState, type ReactNode } from "react"
 import { Download, MessageSquareHeart, Redo2, Settings, Undo2, ZoomIn, ZoomOut } from "lucide-react"
+import { pourcentDeNombre } from "@/backend/logic/format"
 import { Button } from "@/components/ui/button"
 import type { MontageType } from "@/lib/montages/montages"
 import { ADRESSE_DE_L_AVIS, systemeEtNavigateur, type Diagnostic } from "@/lib/retours"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
+import { ZOOM_MAXIMAL } from "@/lib/zoom"
 import type { Affichage, SessionState } from "@/types"
 import { useFenetreParLAdresse } from "../hooks/useFenetreParLAdresse"
 import type { useZoom } from "../hooks/useZoom"
@@ -67,6 +69,20 @@ function useAvis() {
   }
 }
 
+/**
+ * Ce que dit l'infobulle d'un bouton de zoom : le niveau actuel, comment revenir à 100 %, et, à la butée, pourquoi le
+ * bouton est grisé (le zoom maximal dépend de la largeur de la fenêtre).
+ */
+function infobulleDuZoom({ zoom, zoomMaximal, canZoomIn, canZoomOut }: BarreDOutilsProps["zoom"], sens: "avant" | "arriere"): string {
+  const niveau = `Interface à ${pourcentDeNombre(zoom * 100)}`
+  const retour = zoom === 1 ? "" : " Ctrl+0 : revenir à 100 %."
+  if (sens === "avant") {
+    if (canZoomIn) return `Agrandir l'interface. ${niveau}.${retour}`
+    return `${niveau}, le maximum${zoomMaximal < ZOOM_MAXIMAL ? " pour cette largeur de fenêtre" : ""}.${retour}`
+  }
+  return canZoomOut ? `Réduire l'interface. ${niveau}.${retour}` : `${niveau}, le minimum.${retour}`
+}
+
 export function BarreDOutils({ session, historique, chargement, affichage, onAffichage, zoom, onParametres, onExporter, indicateurIA }: BarreDOutilsProps) {
   const plateforme = usePlateforme()
   const avis = useAvis()
@@ -74,6 +90,7 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
   const [montagesDuMenu, setMontagesDuMenu] = useState(false)
   const declencheurDesMontages = useRef<HTMLElement | null>(null)
   // Diagnostic proposé avec un avis : aucune donnée de la simulation, seulement des nombres d'années et d'acteurs.
+  const niveauDuZoom = pourcentDeNombre(zoom.zoom * 100)
   const diagnostic: Diagnostic = { version: VERSION_DE_L_APPLICATION, web: plateforme.web, installee: plateforme.installee(), ...systemeEtNavigateur(navigator.userAgent), affichageEnCours: affichage, nombreDAnnees: session.annees.length, nombreDActeurs: session.entities.length }
 
   return (
@@ -123,12 +140,20 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
                 <Download className="size-4" />
                 <span className="hidden @min-[64rem]:inline">Exporter</span>
               </Button>
+              {/* Le niveau du zoom, tant que l'interface n'est pas à 100 % : un clic y ramène. Il se place à gauche des deux
+                  boutons, qui ne bougent donc pas sous le pointeur quand il apparaît, et s'efface quand la barre n'a plus la
+                  place (moins de 768 px) : les infobulles des boutons disent alors le niveau, et Ctrl+0 ramène à 100 %. */}
+              {zoom.zoom === 1 ? null : (
+                <Button variant="ghost" size="sm" aria-label={`Zoom de l'interface : ${niveauDuZoom}. Revenir à 100 %`} title="Revenir à 100 % (Ctrl+0)" onClick={zoom.reinitialiser} className="h-8 px-2 text-sm tabular-nums text-slate-600 @max-[48rem]:hidden dark:text-slate-400">
+                  {niveauDuZoom}
+                </Button>
+              )}
               {/* Sur un écran tactile de moins de 768 px, on zoome avec les doigts : les boutons de zoom y laissent la place
                   aux autres. Dans une fenêtre très étroite (moins de 416 px), ils s'effacent aussi : le zoom du navigateur reste. */}
-              <Button variant="ghost" size="icon" aria-label="Zoom arrière" onClick={zoom.zoomOut} disabled={!zoom.canZoomOut} className="h-10 w-9 pointer-coarse:@max-[48rem]:hidden @max-[26rem]:hidden @min-[40rem]:w-10 [&_svg]:size-6">
+              <Button variant="ghost" size="icon" aria-label="Zoom arrière" title={infobulleDuZoom(zoom, "arriere")} onClick={zoom.zoomOut} disabled={!zoom.canZoomOut} className="h-10 w-9 pointer-coarse:@max-[48rem]:hidden @max-[26rem]:hidden @min-[40rem]:w-10 [&_svg]:size-6">
                 <ZoomOut className="text-slate-600 dark:text-slate-400" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Zoom avant" onClick={zoom.zoomIn} disabled={!zoom.canZoomIn} className="h-10 w-9 pointer-coarse:@max-[48rem]:hidden @max-[26rem]:hidden @min-[40rem]:w-10 [&_svg]:size-6 @min-[40rem]:mr-4">
+              <Button variant="ghost" size="icon" aria-label="Zoom avant" title={infobulleDuZoom(zoom, "avant")} onClick={zoom.zoomIn} disabled={!zoom.canZoomIn} className="h-10 w-9 pointer-coarse:@max-[48rem]:hidden @max-[26rem]:hidden @min-[40rem]:w-10 [&_svg]:size-6 @min-[40rem]:mr-4">
                 <ZoomIn className="text-slate-600 dark:text-slate-400" />
               </Button>
               <ThemeToggle className="@max-[40rem]:hidden" />

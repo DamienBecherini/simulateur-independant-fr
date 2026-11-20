@@ -11,13 +11,15 @@ import { BarreDOutils } from "./BarreDOutils"
 
 beforeEach(() => window.history.replaceState(null, "", "/"))
 
-function afficher({ peutAnnuler = true, peutRetablir = false } = {}) {
+type Zoom = Parameters<typeof BarreDOutils>[0]["zoom"]
+
+function afficher({ peutAnnuler = true, peutRetablir = false, zoom: zoomChoisi = {} as Partial<Zoom> } = {}) {
   const session: SessionState = { ...emptySession(), name: "Ma simulation", entities: [makePerson()] }
   const rappels = {
     historique: { annuler: vi.fn(), retablir: vi.fn(), peutAnnuler, peutRetablir },
     chargement: { onChargerUnMontage: vi.fn(), onChargerUneSession: vi.fn(), confirmationNecessaire: false },
     onAffichage: vi.fn(),
-    zoom: { zoom: 1, zoomIn: vi.fn(), zoomOut: vi.fn(), canZoomIn: true, canZoomOut: false },
+    zoom: { zoom: 1, zoomMaximal: 2, zoomIn: vi.fn(), zoomOut: vi.fn(), reinitialiser: vi.fn(), canZoomIn: true, canZoomOut: false, ...zoomChoisi },
     onParametres: vi.fn(),
     onExporter: vi.fn()
   }
@@ -48,6 +50,40 @@ describe("BarreDOutils", () => {
     expect(bouton("Rétablir")).toBeDisabled()
     expect(bouton("Zoom arrière")).toBeDisabled()
     expect(bouton("Zoom avant")).toBeEnabled()
+  })
+
+  it("à 100 %, aucun niveau de zoom n'est affiché ; les infobulles des boutons le disent", () => {
+    afficher({ zoom: { canZoomOut: true } })
+    expect(within(barre()).queryByRole("button", { name: /Revenir à 100 %/ })).not.toBeInTheDocument()
+    expect(bouton("Zoom avant")).toHaveAttribute("title", "Agrandir l'interface. Interface à 100\u00a0%.")
+    expect(bouton("Zoom arrière")).toHaveAttribute("title", "Réduire l'interface. Interface à 100\u00a0%.")
+  })
+
+  it("interface agrandie : le niveau s'affiche, un clic dessus ramène à 100 %, et les infobulles rappellent Ctrl+0", async () => {
+    const { user, zoom } = afficher({ zoom: { zoom: 1.5, canZoomOut: true } })
+    const niveau = within(barre()).getByRole("button", { name: /^Zoom de l'interface : 150\s%\. Revenir à 100 %$/ })
+    expect(niveau).toHaveTextContent(/^150\s%$/)
+    expect(niveau).toHaveAttribute("title", "Revenir à 100 % (Ctrl+0)")
+    expect(bouton("Zoom avant")).toHaveAttribute("title", "Agrandir l'interface. Interface à 150\u00a0%. Ctrl+0 : revenir à 100 %.")
+
+    await user.click(niveau)
+    expect(zoom.reinitialiser).toHaveBeenCalledTimes(1)
+  })
+
+  it("à la butée, l'infobulle du bouton grisé dit pourquoi : le maximum dépend de la largeur de la fenêtre", () => {
+    afficher({ zoom: { zoom: 1.73, zoomMaximal: 1.73, canZoomIn: false, canZoomOut: true } })
+    expect(bouton("Zoom avant")).toBeDisabled()
+    expect(bouton("Zoom avant")).toHaveAttribute("title", "Interface à 173\u00a0%, le maximum pour cette largeur de fenêtre. Ctrl+0 : revenir à 100 %.")
+  })
+
+  it("au zoom le plus fort, l'infobulle du bouton grisé le dit", () => {
+    afficher({ zoom: { zoom: 2, zoomMaximal: 2, canZoomIn: false, canZoomOut: true } })
+    expect(bouton("Zoom avant")).toHaveAttribute("title", "Interface à 200\u00a0%, le maximum. Ctrl+0 : revenir à 100 %.")
+  })
+
+  it("au zoom le plus faible, l'infobulle du bouton grisé le dit", () => {
+    afficher({ zoom: { zoom: 0.5, canZoomOut: false } })
+    expect(bouton("Zoom arrière")).toHaveAttribute("title", "Interface à 50\u00a0%, le minimum. Ctrl+0 : revenir à 100 %.")
   })
 
   it("ouvre la fenêtre d'avis, et rend le focus à son bouton à la fermeture", async () => {
