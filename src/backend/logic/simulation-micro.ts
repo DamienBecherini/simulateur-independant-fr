@@ -10,7 +10,7 @@ import type { ReglesFiscales } from "./regles.js"
 import { avertissementsDeLaProfession, professionDe, reglesDeLaMicro } from "./professions.js"
 import { acreDeLAnnee, ecrireMois, economieACRE, lireMois, noteACRE, noteAnnonce, noteProrata, noteRetour, prorataDesPlafonds, type ACREDuneAnnee } from "./dispositifs.js"
 import { avecLaZone, beneficeExonereDeLActivite, detailDeLaZone, zoneDeLActivite } from "./exoneration-de-zone.js"
-import { anneeSimulee, personnesLiees, revenusDe, total, type Contexte } from "./routage-des-flux.js"
+import { anneeSimulee, avertirDesTitulairesEnTrop, personnesLiees, revenusDe, total, type Contexte } from "./routage-des-flux.js"
 import { deplacementsProfessionnels, detailDeplacements, detailProfession, detailSalaries, masseSalariale } from "./details-des-activites.js"
 
 /**
@@ -72,7 +72,8 @@ function avertissementsVersementLiberatoire(micro: MicroEntreprise, vfl: Verseme
 }
 
 export function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): ActivityResult {
-  const titulaire = personnesLiees(ctx, micro.id, ["Titulaire"])[0]
+  const titulaires = personnesLiees(ctx, micro.id, ["Titulaire"])
+  const titulaire = titulaires[0]
   const vfl = analyserVersementLiberatoire(ctx, micro, titulaire)
   // Un affilié de la CIPAV a son propre taux global sur ses BNC (cotisations, ACRE) ; les autres, celui de l'année.
   const profession = professionDe(micro, ctx.regles)
@@ -94,6 +95,7 @@ export function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): A
     reglesMicro
   )
   const warnings = [...resultat.warnings, ...avertissementsVersementLiberatoire(micro, vfl), ...avertissementsDeLaProfession(profession, "micro")]
+  avertirDesTitulairesEnTrop(ctx, titulaires, "micro-entreprise", warnings)
   // Au régime micro, les dépenses réelles ne réduisent ni les cotisations ni l'impôt : elles ne pèsent que sur la trésorerie.
   // Il en va de même du coût des salariés et des déplacements professionnels.
   const masse = masseSalariale(ctx, micro.id)

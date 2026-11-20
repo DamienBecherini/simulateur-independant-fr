@@ -5,6 +5,7 @@ import type { Entity, FinancialFlow } from "@/types"
 import { Input } from "@/components/ui/input"
 import { formatAmount, parseAmount } from "@/lib/amount-utils"
 import { libelleDuType, type FlowType } from "@/lib/flow-constants"
+import { AIDE_DU_LIBELLE, LIBELLE_INDICATIF, LIGNE_DE_FLUX } from "@/lib/ligne-de-flux"
 import { brutCalcule, grossFromNet, netCalcule, netFromGross, parsePercent } from "@/lib/salary-utils"
 import type { ReglesFiscales } from "@/backend/logic/regles"
 import { Plus } from "lucide-react"
@@ -115,14 +116,17 @@ export function NewFlowItem({ type, allowedTypes, onTypeChange, onCreate, labelI
     }
   }
 
+  const forme = isSalary ? "salaire" : "simple"
+  const ligne = LIGNE_DE_FLUX[forme]
+
   return (
-    <div className={cn("flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2 @min-[34rem]:flex-nowrap", isAmountInvalid && "@min-[34rem]:flex-wrap")}>
+    <div className={cn("flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2", ligne.rangee, isAmountInvalid && ligne.avecErreur)}>
       <Plus className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
 
-      <FlowTypeSelect value={type} options={allowedTypes} onChange={onTypeChange} typeActeur={typeActeur} />
-      <RetourALaLigneSurTelephone />
+      <FlowTypeSelect value={type} options={allowedTypes} onChange={onTypeChange} typeActeur={typeActeur} forme={forme} />
+      <RetourALaLigneSurTelephone forme={forme} />
 
-      <Input ref={labelInputRef} className="min-w-32 flex-1 bg-background @min-[34rem]:min-w-0" aria-label="Libellé du nouveau flux" placeholder="Libellé (optionnel)" value={label} data-editing={label !== ""} onChange={e => setLabel(e.target.value)} onKeyDown={handleOptionalFieldKeyDown(() => setLabel(""))} />
+      <Input ref={labelInputRef} className={cn("bg-background", ligne.libelle)} aria-label="Libellé du nouveau flux" title={AIDE_DU_LIBELLE} placeholder={LIBELLE_INDICATIF} value={label} data-editing={label !== ""} onChange={e => setLabel(e.target.value)} onKeyDown={handleOptionalFieldKeyDown(() => setLabel(""))} />
 
       {isSalary && (
         <>

@@ -28,6 +28,7 @@ import { BoutonDesMentionsLegales } from "./MentionsLegales"
 import { BoutonUtiliserAvecUneIA, type ReglageDeModificationDirecte } from "./UtiliserAvecUneIA"
 import { confirmationDuMontageNecessaire } from "@/lib/montages/confirmation"
 import { usePlateforme } from "../plateforme"
+import { BoutonDesTests } from "./BoutonDesTests"
 
 interface SettingsSheetProps {
   // Gestion de l'ouverture/fermeture du panneau
@@ -48,6 +49,8 @@ interface SettingsSheetProps {
   onImport: () => Promise<void>
   /** Remplace la session par un montage type (la confirmation a déjà eu lieu si elle était nécessaire). */
   onLoadMontage: (montage: MontageType) => void
+  /** Remplace la session par celle d'un scénario de test (mode développement seulement : l'entrée n'existe pas ailleurs). */
+  onChargerUneSession?: (session: SessionState) => void
 
   // Props pour le flux de confirmation d'import
   importConfirmation: { session: SessionState; report: SanitizationReport } | null
@@ -102,7 +105,7 @@ function VersionDuFichier({ appVersion }: { appVersion: string | undefined }) {
   return <p className="mt-3 text-sm">Fichier écrit par la version {appVersion} du simulateur.</p>
 }
 
-export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, onLoadMontage, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId, modificationDirecte }: SettingsSheetProps) {
+export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSlots, currentSession, setCurrentSession, onReset, onLoadSlot, slotOrder, setSlotOrder, onImport, onLoadMontage, onChargerUneSession, importConfirmation, onConfirmImport, onCancelImport, loadedSlotId, setLoadedSlotId, modificationDirecte }: SettingsSheetProps) {
   // Dans la démo web, le bouton d'aide à l'installation (fourni par la plateforme).
   const { BoutonInstaller, estLaSessionDExemple } = usePlateforme()
   const [view, setView] = useState<"main" | "load">("main")
@@ -205,6 +208,8 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                   Charger une sauvegarde...
                 </Button>
                 <BoutonDesMontages variant="secondary" className="h-auto min-h-9 w-full whitespace-normal py-1.5" onCharger={onLoadMontage} confirmationNecessaire={confirmationDuMontageNecessaire(currentSession, SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId), estLaSessionDExemple)} nomDeLaSession={currentSession.name} />
+                {/* En mode développement seulement, et toujours ici : le bouton « Tests » de la barre s'efface quand elle manque de place. */}
+                {onChargerUneSession ? <BoutonDesTests dansLesParametres onCharger={onChargerUneSession} /> : null}
                 <Button onClick={demanderLaReinitialisation} variant="destructive" className="h-auto min-h-9 w-full whitespace-normal py-1.5">
                   <RefreshCcw className="mr-2 h-4 w-4" /> Nouvelle Simulation / Réinitialiser
                 </Button>

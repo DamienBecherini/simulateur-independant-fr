@@ -158,7 +158,7 @@ export function phraseDeLaRelation(session: Pick<SessionState, "entities">, rela
 /**
  * Vérifie qu'une relation peut être créée, avec les règles de la fenêtre des relations : un seul lien familial entre
  * deux personnes ; d'une personne vers une activité, les relations de son statut ; jamais entre deux activités ;
- * on ne dirige pas une activité dont on est salarié, et inversement.
+ * on ne dirige pas une activité dont on est salarié, et inversement ; une activité n'a qu'un titulaire.
  */
 export function verifierNouvelleRelation(session: Pick<SessionState, "entities" | "relationships">, deId: string, versId: string, type: Relationship["type"]): void {
   const de = trouverActeur(session, deId)
@@ -173,6 +173,15 @@ export function verifierNouvelleRelation(session: Pick<SessionState, "entities" 
   }
   if (de.type !== "person") throw new ErreurOutil("Une relation part d'une personne : « deId » est la personne (le parent pour « Enfant »), « versId » la personne ou l'activité.")
   verifierRelationVersUneActivite(de, vers, type, existantes)
+  if (type === "Titulaire") verifierTitulaireUnique(session, vers)
+}
+
+/** Une entreprise individuelle, une micro-entreprise ou une activité en portage n'ont qu'un titulaire : le calcul attribuerait tout au premier. */
+function verifierTitulaireUnique(session: Pick<SessionState, "entities" | "relationships">, activite: Entity): void {
+  const relation = session.relationships.find(r => r.type === "Titulaire" && (r.fromId === activite.id || r.toId === activite.id))
+  if (!relation) return
+  const titulaire = nomDe(session, relation.fromId === activite.id ? relation.toId : relation.fromId)
+  throw new ErreurOutil(`« ${activite.name} » a déjà un titulaire, « ${titulaire} » : une entreprise individuelle, une micro-entreprise ou une activité en portage n'en ont qu'un. Supprimez d'abord cette relation pour en changer.`)
 }
 
 /** Entre deux personnes : un lien familial, un seul. `existantes` : les relations déjà présentes entre elles. */

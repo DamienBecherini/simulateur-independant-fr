@@ -68,12 +68,8 @@ export function ColorSettingsModal({ isOpen, onClose, preferences, onSave }: Col
               <label htmlFor={`color-${type}`} className="text-sm font-medium">
                 {flowTypeShortLabels[type] || type}
               </label>
-              <div className="flex items-center gap-2">
-                {/* Aperçu de la couleur */}
-                <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: localColors[type] }} />
-                {/* Sélecteur de couleur natif du navigateur */}
-                <input id={`color-${type}`} type="color" value={localColors[type] || "#ffffff"} onChange={e => handleColorChange(type, e.target.value)} className="p-0 h-10 w-12 border-none bg-transparent cursor-pointer pointer-coarse:h-11" title="Choisir une couleur" />
-              </div>
+              {/* Le sélecteur de couleur du navigateur montre lui-même la couleur choisie : pas d'aperçu à côté. */}
+              <input id={`color-${type}`} type="color" value={localColors[type] || "#ffffff"} onChange={e => handleColorChange(type, e.target.value)} className="p-0 h-10 w-12 border-none bg-transparent cursor-pointer pointer-coarse:h-11" title="Choisir une couleur" />
             </div>
           ))}
         </div>

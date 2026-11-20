@@ -366,6 +366,13 @@ describe("runMetaSimulation", () => {
       expect(foyerDe(report, "carl")).toMatchObject({ revenusEncaisses: 27300, revenuImposableGlobal: 28200, impotSurLeRevenu: 1820, netApresImpots: 25480 })
     })
 
+    it("avec deux titulaires (ancienne sauvegarde), attribue tout au premier et le signale", () => {
+      const report = simuler([personne("carl"), personne("dora"), societe("ei", "EI")], [relation("carl", "ei", "Titulaire"), relation("dora", "ei", "Titulaire")], flux)
+
+      expect(activite(report, "ei").warnings).toEqual(["Plusieurs titulaires : une entreprise individuelle n'en a qu'un. Tous ses revenus sont attribués au premier, « carl » ; supprimez les autres relations « Titulaire »."])
+      expect(report.persons.map(p => p.revenusActivites)).toEqual([27300, 0])
+    })
+
     it("signale une entreprise sans titulaire", () => {
       const report = simuler([personne("carl"), societe("ei", "EI")], [], flux)
 
@@ -399,6 +406,13 @@ describe("runMetaSimulation", () => {
   })
 
   describe("micro-entreprise", () => {
+    it("avec deux titulaires (ancienne sauvegarde), attribue tout au premier et le signale", () => {
+      const report = simuler([personne("bob"), personne("cleo"), micro("m1")], [relation("bob", "m1", "Titulaire"), relation("cleo", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 40000]])
+
+      expect(activite(report, "m1").warnings).toContain("Plusieurs titulaires : une micro-entreprise n'en a qu'un. Tous ses revenus sont attribués au premier, « bob » ; supprimez les autres relations « Titulaire ».")
+      expect(report.persons.map(p => p.revenusActivites > 0)).toEqual([true, false])
+    })
+
     it("impose le chiffre d'affaires après abattement et verse le reste au titulaire", () => {
       const report = simuler(
         [personne("bob"), micro("m1")],

@@ -1,6 +1,7 @@
 // src/ui/components/MenuPlusDActions.test.tsx
 // Le menu « Plus d'actions » de la barre d'outils d'un téléphone : motif « bouton de menu » des WAI-ARIA, au clavier
-// comme au doigt, et ce que fait chaque entrée.
+// comme au doigt, et ce que fait chaque entrée. Il porte aussi le zoom de l'interface : dans une fenêtre étroite, la
+// barre d'outils n'a plus ses boutons de zoom.
 
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
@@ -15,15 +16,18 @@ afterEach(() => {
   oublierLeTheme()
 })
 
-function afficher(affichage: Affichage = "resume") {
+/** Le zoom tel que le donne `useZoom` : à 100 % dans une fenêtre qui permet 200 %, sauf mention contraire. */
+const zoomA = (zoom: number, zoomMaximal = 2) => ({ zoom, zoomMaximal, canZoomIn: zoom < zoomMaximal, canZoomOut: zoom > 0.5, zoomIn: vi.fn(), zoomOut: vi.fn(), reinitialiser: vi.fn() })
+
+function afficher(affichage: Affichage = "resume", zoom = zoomA(1)) {
   const rappels = { onAffichage: vi.fn(), onAvis: vi.fn(), onMontages: vi.fn() }
   render(
     <>
-      <MenuPlusDActions affichage={affichage} {...rappels} />
+      <MenuPlusDActions affichage={affichage} zoom={zoom} {...rappels} />
       <button type="button">Après le menu</button>
     </>
   )
-  return { user: userEvent.setup(), bouton: screen.getByRole("button", { name: "Plus d'actions" }), ...rappels }
+  return { user: userEvent.setup(), bouton: screen.getByRole("button", { name: "Plus d'actions" }), zoom, ...rappels }
 }
 
 const entrees = () => Array.from(screen.getByRole("menu").querySelectorAll("[role^=menuitem]"))
@@ -39,7 +43,7 @@ describe("menu « Plus d'actions »", () => {
     expect(bouton).toHaveAttribute("aria-expanded", "true")
     const menu = screen.getByRole("menu", { name: "Plus d'actions" })
     expect(bouton).toHaveAttribute("aria-controls", menu.id)
-    expect(entrees().map(e => e.textContent)).toEqual(["Partir d'une situation type", "Donner mon avis", "Trois vues", "Résumé", "Classique", "Thème sombre"])
+    expect(entrees().map(e => e.textContent)).toEqual(["Partir d'une situation type", "Donner mon avis", "Trois vues", "Résumé", "Classique", "Agrandir", "Réduire", "Thème sombre"])
     expect(screen.getByRole("menuitem", { name: "Partir d'une situation type" })).toHaveFocus()
   })
 
@@ -55,7 +59,7 @@ describe("menu « Plus d'actions »", () => {
     await user.keyboard("{Home}")
     expect(screen.getByRole("menuitem", { name: "Partir d'une situation type" })).toHaveFocus()
     await user.keyboard("{End}{ArrowUp}")
-    expect(screen.getByRole("menuitemradio", { name: "Classique" })).toHaveFocus()
+    expect(screen.getByRole("menuitem", { name: "Réduire" })).toHaveFocus()
   })
 
   it("Échap le ferme et rend le focus au bouton ; Tab le ferme et passe à la suite", async () => {
@@ -100,6 +104,35 @@ describe("menu « Plus d'actions »", () => {
     expect(screen.getByRole("menuitemradio", { name: "Résumé" })).toHaveAttribute("aria-checked", "false")
     await user.click(screen.getByRole("menuitemradio", { name: "Trois vues" }))
     expect(onAffichage).toHaveBeenCalledWith("vues")
+  })
+
+  it("agrandit et réduit l'interface, et dit son niveau ; « Revenir à 100 % » n'apparaît que sous un zoom", async () => {
+    const { user, bouton, zoom } = afficher("resume", zoomA(1.5))
+    await user.click(bouton)
+    expect(screen.getByRole("group", { name: /^Zoom de l'interface : 150\s%$/ })).toBeInTheDocument()
+    expect(screen.getByRole("menuitem", { name: "Agrandir" })).toHaveAttribute("title", expect.stringMatching(/^Agrandir l'interface\. Interface à 150\s%\. Ctrl\+0/))
+    await user.click(screen.getByRole("menuitem", { name: "Agrandir" }))
+    expect(zoom.zoomIn).toHaveBeenCalledOnce()
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument()
+
+    await user.click(bouton)
+    await user.click(screen.getByRole("menuitem", { name: "Réduire" }))
+    expect(zoom.zoomOut).toHaveBeenCalledOnce()
+    await user.click(bouton)
+    await user.click(screen.getByRole("menuitem", { name: "Revenir à 100 %" }))
+    expect(zoom.reinitialiser).toHaveBeenCalledOnce()
+  })
+
+  it("à la butée de la fenêtre, « Agrandir » reste dans le menu, sans effet, et son info-bulle dit pourquoi", async () => {
+    const { user, bouton, zoom } = afficher("resume", zoomA(1.2, 1.2))
+    await user.click(bouton)
+    const agrandir = screen.getByRole("menuitem", { name: "Agrandir" })
+    expect(agrandir).toHaveAttribute("aria-disabled", "true")
+    expect(agrandir).toHaveAttribute("title", expect.stringMatching(/le maximum pour cette largeur de fenêtre/))
+    await user.click(agrandir)
+    expect(zoom.zoomIn).not.toHaveBeenCalled()
+    expect(screen.getByRole("menu")).toBeInTheDocument()
+    expect(screen.queryByRole("menuitem", { name: "Revenir à 100 %" })).toBeInTheDocument()
   })
 
   it("passe au thème sombre, et le coche", async () => {

@@ -12,7 +12,7 @@ import type { MontageType } from "@/lib/montages/montages"
 import { ADRESSE_DE_L_AVIS, systemeEtNavigateur, type Diagnostic } from "@/lib/retours"
 import { cn } from "@/lib/utils"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
-import { ZOOM_MAXIMAL } from "@/lib/zoom"
+import { infobulleDuZoom } from "@/lib/zoom"
 import type { Affichage, SessionState } from "@/types"
 import { useFenetreParLAdresse } from "../hooks/useFenetreParLAdresse"
 import type { useZoom } from "../hooks/useZoom"
@@ -77,20 +77,6 @@ function useAvis() {
 const NOM_DE_L_AVIS = {
   sansNiveauDuZoom: { bouton: "@min-[63rem]:w-auto @min-[63rem]:gap-2 @min-[63rem]:px-3", nom: "hidden @min-[63rem]:inline" },
   avecNiveauDuZoom: { bouton: "@min-[79rem]:w-auto @min-[79rem]:gap-2 @min-[79rem]:px-3", nom: "hidden @min-[79rem]:inline" }
-}
-
-/**
- * Ce que dit l'infobulle d'un bouton de zoom : le niveau actuel, comment revenir à 100 %, et, à la butée, pourquoi le
- * bouton est grisé (le zoom maximal dépend de la largeur de la fenêtre).
- */
-function infobulleDuZoom({ zoom, zoomMaximal, canZoomIn, canZoomOut }: BarreDOutilsProps["zoom"], sens: "avant" | "arriere"): string {
-  const niveau = `Interface à ${pourcentDeNombre(zoom * 100)}`
-  const retour = zoom === 1 ? "" : " Ctrl+0 : revenir à 100 %."
-  if (sens === "avant") {
-    if (canZoomIn) return `Agrandir l'interface. ${niveau}.${retour}`
-    return `${niveau}, le maximum${zoomMaximal < ZOOM_MAXIMAL ? " pour cette largeur de fenêtre" : ""}.${retour}`
-  }
-  return canZoomOut ? `Réduire l'interface. ${niveau}.${retour}` : `${niveau}, le minimum.${retour}`
 }
 
 export function BarreDOutils({ session, historique, chargement, affichage, onAffichage, zoom, onParametres, onExporter, indicateurIA }: BarreDOutilsProps) {
@@ -163,7 +149,8 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
                 </Button>
               )}
               {/* Sur un écran tactile de moins de 768 px, on zoome avec les doigts : les boutons de zoom y laissent la place
-                  aux autres. Dans une fenêtre très étroite (moins de 416 px), ils s'effacent aussi : le zoom du navigateur reste. */}
+                  aux autres. Dans une fenêtre très étroite (moins de 416 px), ils s'effacent aussi : le menu « Plus d'actions »,
+                  affiché sous 640 px, porte alors les mêmes commandes de zoom. */}
               <Button variant="ghost" size="icon" aria-label="Zoom arrière" title={infobulleDuZoom(zoom, "arriere")} onClick={zoom.zoomOut} disabled={!zoom.canZoomOut} className="h-10 w-9 pointer-coarse:@max-[47rem]:hidden @max-[25rem]:hidden @min-[39rem]:w-10 [&_svg]:size-6">
                 <ZoomOut className="text-slate-600 dark:text-slate-400" />
               </Button>
@@ -175,6 +162,7 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
                 className="@min-[39rem]:hidden"
                 affichage={affichage}
                 onAffichage={onAffichage}
+                zoom={zoom}
                 onAvis={avis.ouvrir}
                 onMontages={declencheur => {
                   declencheurDesMontages.current = declencheur

@@ -101,6 +101,15 @@ describe("getAvailableRelationships", () => {
       expect(getAvailableRelationships(personne("p1"), societe("c1", "EI"), [relation("p1", "c1", "Salarié")])).toEqual([])
     })
 
+    it("ne propose pas un second titulaire : une entreprise individuelle, une micro-entreprise ou un portage n'en ont qu'un", () => {
+      expect(getAvailableRelationships(personne("p2"), micro("m1"), [relation("p1", "m1", "Titulaire")])).toEqual([])
+      expect(getAvailableRelationships(micro("m1"), personne("p2"), [relation("p1", "m1", "Titulaire")])).toEqual([])
+      // Au réel, une seconde personne peut encore être salariée de l'entreprise.
+      expect(getAvailableRelationships(personne("p2"), societe("c1", "EI"), [relation("p1", "c1", "Titulaire")])).toEqual(["Salarié"])
+      // Le titulaire d'une autre activité ne compte pas.
+      expect(getAvailableRelationships(personne("p2"), micro("m2"), [relation("p1", "m1", "Titulaire")])).toEqual(["Titulaire"])
+    })
+
     it("n'autorise qu'un seul lien familial entre deux personnes, quel que soit son sens", () => {
       expect(getAvailableRelationships(personne("p1"), personne("p2"), [relation("p2", "p1", "Marié(e)")])).toEqual([])
       expect(getAvailableRelationships(personne("p1"), personne("p2"), [relation("p1", "p2", "Enfant")])).toEqual([])
