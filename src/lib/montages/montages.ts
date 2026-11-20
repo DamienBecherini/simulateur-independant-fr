@@ -4,6 +4,7 @@
 // renvoient aux sources officielles, et les chiffres de chaque montage sont figés par montages.reference.test.ts.
 // Les taux et seuils que citent les textes viennent des règles de l'année des montages, jamais recopiés à la main.
 
+import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
 import { euros, pourcent } from "@/backend/logic/format"
 import { reglesPubliees } from "@/backend/logic/regles"
 import type { SessionState } from "@/types"
@@ -61,6 +62,9 @@ const SOURCES = {
   franchiseTva: { libelle: "Franchise en base de TVA (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F21746" },
   impotSocietes: { libelle: `Impôt sur les sociétés, taux réduit de ${pourcent(IS.tauxReduit)} (service-public.fr)`, url: "https://entreprendre.service-public.gouv.fr/vosdroits/F23575" },
   dividendes: { libelle: "Imposition des dividendes (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F32963" },
+  zfuTe: { libelle: "Exonération d'impôt sur les bénéfices en zone franche urbaine, ZFU-TE (BOFiP)", url: "https://bofip.impots.gouv.fr/bofip/5903-PGP.html/identifiant=BOI-BIC-CHAMP-80-10-30-20250702" },
+  qpv: { libelle: "Exonérations d'impôt dans les quartiers prioritaires de la ville, régime QPV (economie.gouv.fr)", url: "https://www.economie.gouv.fr/entreprises/trouver-des-aides-et-des-financements/les-aides-limplantation-geographique/quelles-exonerations-dimpot-dans-les-quartiers-prioritaires-de" },
+  carteDesZones: { libelle: "Carte officielle des quartiers prioritaires et des zones franches urbaines (sig.ville.gouv.fr)", url: "https://sig.ville.gouv.fr/" },
   cotisationsSas: { libelle: "Cotisations sociales d'une SAS (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F36007" },
   protectionDirigeant: { libelle: "Protection sociale du dirigeant (service-public.fr)", url: "https://entreprendre.service-public.gouv.fr/vosdroits/F38152" },
   trimestres: { libelle: "Valider des trimestres de retraite (lassuranceretraite.fr)", url: "https://www.lassuranceretraite.fr/portail-info/home/actif/ma-carriere/cotisation-carriere.html" },
@@ -249,6 +253,54 @@ const sasuAvecSalaire: MontageType = {
   ],
   sources: [SOURCES.trimestres, SOURCES.cotisationsSas, SOURCES.impotSocietes, SOURCES.dividendes],
   contenu: () => sasuDeConseil("Antoine", "p-antoine", "s-antoine", 1000, 47000, false)
+}
+
+/** Création de la SASU de Karim : avant 2026, donc sous le régime ZFU-TE, encore en exonération totale en 2026. */
+const CREATION_EN_ZONE = "2024-01"
+
+/** Les régimes d'exonération en zone des règles de l'année, d'où viennent la durée, les taux et le plafond cités (ADR 017). */
+function regimeDeZoneCite(id: string) {
+  const regime = REGLES.exonerationsDeZone.regimes.find(r => r.id === id)
+  if (!regime) throw new Error(`Régime d'exonération en zone inconnu des règles ${ANNEE_DES_MONTAGES} : ${id}`)
+  return regime
+}
+const ZFU_TE = regimeDeZoneCite("zfuTe")
+const QPV = regimeDeZoneCite("qpv")
+const moisDesRegles = (mois: string) => {
+  const lu = lireMois(mois)
+  return lu ? libelleDuMois(lu) : mois
+}
+
+const sasuEnZoneFrancheUrbaine: MontageType = {
+  id: "sasu-en-zone-franche-urbaine",
+  titre: "SASU en zone franche urbaine (ZFU-TE)",
+  resume: `Karim préside seul une SASU créée en ${moisDesRegles(CREATION_EN_ZONE)} dans une zone franche urbaine ; elle facture 84 000 € par an, et son bénéfice est exonéré d'impôt sur les sociétés jusqu'à ${euros(ZFU_TE.plafondAnnuel ?? 0)} par an.`,
+  etiquettes: ["SASU", "Zone franche", "Dividendes"],
+  questions: ["Combien d'impôt sur les sociétés l'implantation en zone franche urbaine fait-elle économiser ?", "Jusqu'à quand l'exonération dure-t-elle, et que devient-elle ensuite ?", "Une activité créée depuis 2026 dans un quartier prioritaire y a-t-elle droit ?"],
+  illustre: [
+    "Dans la fiche de la société, section « Aides liées au lieu d'implantation », la case « Activité implantée en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV) » est cochée : le régime et le taux de chaque année se déduisent de la date de création.",
+    `Régime ZFU-TE : le bénéfice est exonéré d'impôt en totalité pendant ${ZFU_TE.moisExonerationTotale} mois, puis à ${ZFU_TE.partsExonereesEnsuite.map(part => pourcent(part)).join(", ")} par périodes de douze mois, dans la limite de ${euros(ZFU_TE.plafondAnnuel ?? 0)} par an. Sur 78 000 € de bénéfice, 50 000 € sont exonérés et 28 000 € imposés : la carte de la société le dit, avec le calendrier.`,
+    "Mêmes chiffres que « SASU sans salaire, tout en dividendes », la zone en plus : l'économie d'impôt sur les sociétés se lit en chargeant l'une puis l'autre.",
+    "Le comparateur applique l'exonération à chaque statut : en entreprise individuelle ou en micro-entreprise, le bénéfice exonéré sort de l'impôt sur le revenu, pas des cotisations sociales."
+  ],
+  conditions: [
+    `Régime ZFU-TE : activité créée ou implantée dans la zone au plus tard en ${moisDesRegles(ZFU_TE.creationJusquA)}. Une activité créée dans un quartier prioritaire à partir de ${moisDesRegles(QPV.creationDepuis)} relève du régime QPV, sans plafond annuel, réservé aux activités commerciales, artisanales et aux professions de santé : le simulateur choisit le régime d'après la date de création.`,
+    `Conditions que le simulateur ne vérifie pas : ${ZFU_TE.conditionsNonVerifiees}.`,
+    "L'adresse de l'activité se vérifie sur la carte officielle des quartiers prioritaires et des zones franches urbaines.",
+    TAUX_REDUIT_IS
+  ],
+  pointsDAttention: [
+    "L'exonération ne porte que sur l'impôt sur les bénéfices : les dividendes restent imposés chez l'associé, et les cotisations sociales ne changent pas.",
+    "Seul le bénéfice réalisé dans la zone est exonéré : la part du chiffre d'affaires réalisée dans la zone se règle dans la fiche de la société (100 % ici).",
+    `Ce que le calcul suppose, faute de texte officiel pour le confirmer : ${ZFU_TE.hypotheses.join(" ")}`,
+    RESERVE_LEGALE
+  ],
+  sources: [SOURCES.zfuTe, SOURCES.qpv, SOURCES.carteDesZones, SOURCES.impotSocietes, SOURCES.dividendes],
+  contenu: () => {
+    // Les chiffres de « SASU sans salaire » : 78 000 € de bénéfice, dont 50 000 € exonérés ; 28 000 € imposés à 15 %, soit 4 200 € ; le reste en dividendes.
+    const contenu = sasuDeConseil("Karim", "p-karim", "s-karim", 0, 73800, false)
+    return { ...contenu, entities: contenu.entities.map(e => (e.type === "company" ? { ...e, dateDeCreation: CREATION_EN_ZONE, implantationEnZone: {} } : e)) }
+  }
 }
 
 const eurlIS: MontageType = {
@@ -533,5 +585,8 @@ const kinesitherapeuteEI: MontageType = {
   })
 }
 
-/** Les montages types, dans l'ordre de la bibliothèque : du plus simple au plus composé. */
-export const MONTAGES_TYPES: MontageType[] = [microSeule, osteopatheMicro, kinesitherapeuteEI, sasuSansSalaire, sasuAvecSalaire, eurlIS, salariePlusMicro, sasuEtConjointSalarieAilleurs, microEtSasuDuConjoint, conjointSalarie, unionLibre]
+/**
+ * Les montages types, dans l'ordre de la bibliothèque : du plus simple au plus composé, puis les dispositifs qui ne
+ * concernent que peu de monde (zone franche urbaine, ADR 017).
+ */
+export const MONTAGES_TYPES: MontageType[] = [microSeule, osteopatheMicro, kinesitherapeuteEI, sasuSansSalaire, sasuAvecSalaire, eurlIS, salariePlusMicro, sasuEtConjointSalarieAilleurs, microEtSasuDuConjoint, conjointSalarie, unionLibre, sasuEnZoneFrancheUrbaine]
