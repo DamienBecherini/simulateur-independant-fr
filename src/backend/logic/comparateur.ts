@@ -5,7 +5,7 @@ import { estTelleQueSaisie, libelleDeLaColonne, libelleDuStatut, scenarioDeLaCol
 import { activiteComparee, estMicro, personnesDeLActivite, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { avecLaCFEDeLAnnee } from "./frais-de-fonctionnement.js"
 import { optimiserLaColonne } from "./optimisation-remuneration.js"
-import { AUCUNE_CHARGE, avecLaRemunerationDeLaGrille, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
+import { AUCUNE_CHARGE, avecLaRemunerationDeLaGrille, ECART_NEGLIGEABLE, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
 import { microInterdite, professionDe, raisonMicroInterdite } from "./professions.js"
 import type { ProfessionReglementee, ReglesFiscales } from "./regles.js"
 import { avecLesReglages, simulerScenario, toutEnDividendes } from "./simulation-d-un-statut.js"
@@ -24,7 +24,8 @@ import { sousLaSituationSaisie, type ReferenceDeLaSituationSaisie } from "./sous
  * sa colonne le dit, et `situationSaisie` garde le net de référence. Selon la grille, toutes les sociétés reprennent la
  * rémunération et les dividendes de la grille. Un meilleur statut qui fait moins bien que la situation saisie reste
  * désigné, et `sousLaSituationSaisie` dit pourquoi (sous-la-situation-saisie.ts) ; sans aucune charge saisie pour
- * l'activité, une note le rappelle.
+ * l'activité, une note le rappelle. Au meilleur net, quand l'arbitrage du statut actuel ne s'écarte de la situation
+ * saisie que d'un montant négligeable, la colonne reste la situation saisie (`ouLaSituationSaisie`).
  *
  * Ce module choisit les colonnes, désigne le meilleur net et compare les couples en union libre. Une colonne se
  * simule dans simulation-d-un-statut.ts (conversion de l'activité : conversion-de-statut.ts ; frais :
@@ -131,6 +132,24 @@ export function colonneDuStatut(colonne: ColonneEtudiee, statut: StatutCompare, 
   return colonneAuMeilleurNet(colonne, statut)
 }
 
+/**
+ * Au meilleur net, la colonne du statut actuel d'une société : l'arbitrage, ou la situation saisie quand elle fait aussi
+ * bien à `ECART_NEGLIGEABLE` près. La colonne est alors la situation telle que saisie, à son net, sans écart à annoncer.
+ * L'arbitrage reste retenu quand il valide les trimestres de retraite demandés et que la situation saisie en valide moins.
+ */
+function ouLaSituationSaisie(arbitree: ScenarioStatut, saisie: ScenarioStatut): ScenarioStatut {
+  const retenue = arbitree.remunerationOptimale
+  const trimestresEnPlus = retenue?.avecRetraite === true && arbitree.protectionSociale.trimestres > saisie.protectionSociale.trimestres
+  if (!retenue || trimestresEnPlus || Math.abs(arbitree.netApresImpots - saisie.netApresImpots) >= ECART_NEGLIGEABLE) return arbitree
+  return {
+    ...saisie,
+    libelle: libelleDuStatut(saisie.statut),
+    telleQueSaisie: true,
+    saisieAuMeilleurNet: true,
+    remunerationOptimale: { ...retenue, remunerationNette: saisie.partage?.remunerationNette ?? retenue.remunerationNette }
+  }
+}
+
 /** Les colonnes de la comparaison (voir `colonneDuStatut`) et, au meilleur net, l'arbitrage de chaque société. */
 function colonnesDeLaComparaison(colonne: ColonneEtudiee, statuts: StatutCompare[], reportActuel: SimulationReport) {
   const auMeilleurNet = colonne.options.repartition.mode === "meilleurNet"
@@ -138,9 +157,15 @@ function colonnesDeLaComparaison(colonne: ColonneEtudiee, statuts: StatutCompare
   const scenarios = statuts.map(statut => {
     const { scenario, optimisation } = colonneDuStatut(colonne, statut, reportActuel)
     if (optimisation && estSocieteIS(statut)) optimisations[statut] = optimisation
-    return scenario
+    return auMeilleurNet && scenario.actuel && !scenario.telleQueSaisie ? ouLaSituationSaisie(scenario, colonneTelleQueSaisie(colonne, reportActuel)) : scenario
   })
   return { scenarios, ...(auMeilleurNet ? { optimisations } : {}) }
+}
+
+/** Ce que la grille verse au dirigeant d'une société et ce que le foyer en paie ; rien hors d'une société. */
+function repartitionSaisie({ partage, impotSurLeRevenu, prelevementsSociaux }: ScenarioStatut): Pick<NonNullable<ComparaisonResult["situationSaisie"]>, "repartition"> {
+  if (!partage) return {}
+  return { repartition: { remunerationNette: partage.remunerationNette, dividendes: partage.dividendesNets, impotSurLeRevenu, prelevementsSociaux, resultatConserve: partage.resultatConserve } }
 }
 
 /**
@@ -166,7 +191,7 @@ export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: Compar
   const { source } = colonne
   const profession = professionDe(source, regles)
   const actuel = statutActuel(source)
-  const situationSaisie = { statut: actuel, libelle: libelleDuStatut(actuel), netApresImpots: reportActuel.totalNetApresImpots }
+  const situationSaisie = { statut: actuel, libelle: libelleDuStatut(actuel), netApresImpots: reportActuel.totalNetApresImpots, ...repartitionSaisie(colonneTelleQueSaisie(colonne, reportActuel)) }
 
   const colonnes = colonnesDeLaComparaison(colonne, statutsDeLaComparaison(profession), reportActuel)
   const avertissements = avertissementsDeLActivite(session, source, profession)

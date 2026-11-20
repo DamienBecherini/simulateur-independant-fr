@@ -25,8 +25,16 @@ export function gainDuMariageOuDuPacs(result: ComparaisonResult | null): number 
   return couple ? couple.netApresImpotsMaries - couple.netApresImpotsActuel : null
 }
 
-/** La rémunération nette au meilleur net du foyer ; `null` tant que l'arbitrage n'a pas de résultat. */
-export const remunerationOptimale = (optimisation: OptimisationRemuneration | null | undefined): number | null => optimisation?.meilleur?.remunerationNette ?? null
+/**
+ * La rémunération nette au meilleur net du foyer ; `null` tant que l'arbitrage n'a pas de résultat. Quand la colonne de
+ * cette société a gardé la répartition saisie (écart négligeable avec l'arbitrage), c'est la rémunération saisie : la
+ * barre ne conseille pas un autre salaire que le tableau.
+ */
+export function remunerationOptimale(optimisation: OptimisationRemuneration | null | undefined, result?: ComparaisonResult | null): number | null {
+  if (!optimisation?.meilleur) return null
+  const gardee = result?.scenarios.find(s => s.saisieAuMeilleurNet && s.statut === optimisation.statut)
+  return gardee?.remunerationOptimale?.remunerationNette ?? optimisation.meilleur.remunerationNette
+}
 
 
 /** Ce que coûte l'exigence de 4 trimestres de retraite dans une colonne : « 4 trimestres : −1 234 € de net ». */

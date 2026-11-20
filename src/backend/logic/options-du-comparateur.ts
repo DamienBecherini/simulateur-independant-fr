@@ -80,6 +80,12 @@ export function plancherAuDessusDuPlafond({ plancherMensuel, plafondMensuel }: P
 export const SANS_CHIFFRE_D_AFFAIRES = "Saisissez un chiffre d'affaires pour comparer les statuts."
 
 /**
+ * Écart de net du foyer, en euros par an, sous lequel deux partages du bénéfice se valent : il est sous la précision
+ * du calcul, et sous ce que coûte un bulletin de paie. Un salaire de 400 € pour 15 € de net en plus n'est pas un conseil.
+ */
+export const ECART_NEGLIGEABLE = 100
+
+/**
  * Note du comparateur quand l'activité comparée a un chiffre d'affaires mais aucune charge dans la grille : ses frais
  * réels manquent, et chaque statut aux frais de gestion estimés plus bas que le statut actuel en garde toute l'économie.
  */

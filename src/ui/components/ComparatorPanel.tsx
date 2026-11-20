@@ -5,7 +5,7 @@ import { useOptimisation } from "../hooks/useOptimisation"
 import { appliquerRemuneration, avecActiviteComparee, avecReglagesDeLActivite, comparableActivities, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { numeroterNotes, type Note } from "@/lib/notes"
 import { vueDeLAnnee } from "@/backend/logic/annees"
-import { PART_MISE_EN_RESERVE_PAR_DEFAUT } from "@/backend/logic/options-du-comparateur"
+import { ECART_NEGLIGEABLE, PART_MISE_EN_RESERVE_PAR_DEFAUT } from "@/backend/logic/options-du-comparateur"
 import { cn } from "@/lib/utils"
 import { exporterComparaisonCsv } from "../exports-texte"
 import { BoutonExportCsv } from "./BoutonExportCsv"
@@ -16,7 +16,7 @@ import { RepartitionDuBenefice } from "./RepartitionBenefice"
 import { SurToutesLesAnnees } from "./SurToutesLesAnnees"
 import { ReglagesDuComparateur } from "./ReglagesDuComparateur"
 import { ZoneDefilante } from "./ZoneDefilante"
-import { BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
+import { BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useCalculDiffere } from "../hooks/useCalculDiffere"
@@ -104,7 +104,16 @@ function RemunerationRetenue({ scenario }: { scenario: ScenarioStatut }) {
   if (!retenue) return null
   return (
     <span className="mt-1 block text-xs font-normal text-slate-700 dark:text-slate-200">
-      rémunération optimale : <span className="whitespace-nowrap font-medium">{euros(retenue.remunerationNette)} nets</span>
+      {scenario.saisieAuMeilleurNet ? (
+        // La répartition saisie fait aussi bien que l'arbitrage, à un écart négligeable près : la colonne la garde.
+        <>
+          votre répartition, <span className="whitespace-nowrap">au meilleur net</span> à moins de <span className="whitespace-nowrap">{euros(ECART_NEGLIGEABLE)}</span> près
+        </>
+      ) : (
+        <>
+          rémunération optimale : <span className="whitespace-nowrap font-medium">{euros(retenue.remunerationNette)} nets</span>
+        </>
+      )}
       {retenue.avecRetraite ? <span className="block text-slate-600 dark:text-slate-400">avec 4 trimestres de retraite</span> : null}
       {retenue.retraiteHorsDAtteinte ? <span className="block text-amber-800 dark:text-amber-300">4 trimestres hors d'atteinte</span> : null}
       {/* Cochée ou non, ce que coûtent les 4 trimestres dans cette colonne : le choix se fait en connaissance de cause. */}
@@ -174,6 +183,7 @@ function LigneDeLEcart({ result, rang }: { result: ComparaisonResult; rang: numb
           <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", ecart !== null && !raison && deltaClass(ecart), fondDeLaCellule(s, result.meilleur))}>
             {ecart === null ? "—" : ecartSigne(ecart)}
             {raison ? <span className="block text-xs font-medium text-slate-700 dark:text-slate-300">{raison}</span> : null}
+            <EcartDeRepartitionDeLaColonne result={result} scenario={s} />
           </td>
         )
       })}

@@ -209,6 +209,23 @@ describe("ComparatorPanel", () => {
     expect(within(table).getByRole("columnheader", { name: /^EI au réel/ })).not.toHaveTextContent("rémunération optimale")
   })
 
+  it("au meilleur net, une société dont la répartition saisie fait aussi bien reste « actuel », sans écart ni rémunération conseillée", async () => {
+    const gardee = { telleQueSaisie: true, actuel: true, saisieAuMeilleurNet: true as const, remunerationOptimale: { remunerationNette: 0, avecRetraite: false, retraiteHorsDAtteinte: false, coutDesQuatreTrimestres: 1429 } }
+    const scenarios = comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, ...gardee } : { ...s, telleQueSaisie: false, actuel: false }))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios, meilleur: "SASU" }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    const sasu = within(table).getByRole("columnheader", { name: /^SASU/ })
+    expect((sasu.textContent ?? "").replace(/\s/g, " ")).toContain("actuel · meilleur net")
+    expect((sasu.textContent ?? "").replace(/\s/g, " ")).toContain(`votre répartition, au meilleur net à moins de ${money(100)} près`)
+    expect(sasu).not.toHaveTextContent("rémunération optimale")
+    // Ce que coûteraient les 4 trimestres reste dit : le choix se fait en connaissance de cause.
+    expect((sasu.textContent ?? "").replace(/\s/g, " ")).toContain(`4 trimestres : −${money(1429)} de net`)
+    const ecart = within(table).getByRole("row", { name: /Écart avec votre situation actuelle/ })
+    expect(within(ecart).getAllByRole("cell")[scenarios.findIndex(s => s.statut === "SASU")]).toHaveTextContent(/^—$/)
+  })
+
   it("au meilleur net, la case « avec 4 trimestres de retraite », cochée d'office, rejoint décochée les réglages du comparateur", async () => {
     const enregistre = vi.fn()
     render(<ComparateurDeTest annee={2026} session={withActivity()} onComparateur={enregistre} />)

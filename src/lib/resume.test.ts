@@ -125,4 +125,14 @@ describe("coût des 4 trimestres de retraite", () => {
     expect(remunerationOptimale({ ...optimisation, meilleur: null })).toBeNull()
     expect(remunerationOptimale(optimisation)).toBe(5800)
   })
+
+  it("quand la colonne de la société a gardé la répartition saisie, c'est sa rémunération : la barre ne conseille pas un autre salaire que le tableau", () => {
+    const point = { remunerationNette: 400, dividendes: 73211, netApresImpots: 55206, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, trimestres: 0 }
+    const optimisation = { statut: "SASU" as const, remunerationMaximale: 60000, points: [point], meilleur: point, meilleurAvecRetraite: null, warnings: [] }
+    const gardee: ScenarioStatut = { ...scenario("SASU", "SASU", 55191, true), saisieAuMeilleurNet: true, remunerationOptimale: { remunerationNette: 0, avecRetraite: false, retraiteHorsDAtteinte: false } }
+    expect(remunerationOptimale(optimisation, { ...comparaison("SASU"), scenarios: [gardee] })).toBe(0)
+    // L'arbitrage d'un autre statut de société, étudié dans « Rémunération ou dividendes ? », garde le sien.
+    expect(remunerationOptimale({ ...optimisation, statut: "EURL" }, { ...comparaison("SASU"), scenarios: [gardee] })).toBe(400)
+    expect(remunerationOptimale(optimisation, comparaison("micro"))).toBe(400)
+  })
 })
