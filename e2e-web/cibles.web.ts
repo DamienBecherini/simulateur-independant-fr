@@ -3,6 +3,7 @@
 // et 44 × 44 px sur écran tactile, où l'interface les agrandit. Mesuré sur la démo web, en largeur de téléphone.
 
 import { test, expect, type Page } from "@playwright/test"
+import { attendreLaFinDesAnimations } from "../e2e/support/animations"
 
 const CONTROLES = 'button, a[href], input, select, textarea, summary, [role="button"], [role="switch"], [role="combobox"], [tabindex="0"]'
 
@@ -112,7 +113,7 @@ async function ciblesDesFenetres(page: Page, minimum: number): Promise<string[]>
     await ouvrirFenetre()
     await expect(page.getByRole("dialog")).toBeVisible()
     // Une fenêtre apparaît en grossissant : on la mesure une fois l'animation terminée.
-    await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"))
+    await attendreLaFinDesAnimations(page)
     resultats.push(...tropPetites(await mesurerLesCibles(page), minimum).map(c => `[${nom}] ${c}`))
     // Une fenêtre ouverte depuis les paramètres se referme avec eux : une touche Échap par fenêtre.
     while ((await page.getByRole("dialog").count()) > 0) await page.keyboard.press("Escape")

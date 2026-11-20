@@ -207,7 +207,7 @@ function App() {
           <VueDeLaPage vue="situation">
             <EntitiesManager session={currentSession} setSession={setCurrentSession} annee={annee} onChargerMontage={chargerUnMontage} />
 
-            <GrilleDeLAnnee session={currentSession} setSession={setCurrentSession} annee={annee} onAnnee={setAnneeChoisie} monthlyData={vue.monthlyData} preferences={userPreferences} flowTypeToNumberMap={flowTypeToNumberMap} onGrilleTouchee={marquerLaGrilleTouchee} />
+            <GrilleDeLAnnee session={currentSession} setSession={setCurrentSession} annee={annee} onAnnee={setAnneeChoisie} monthlyData={vue.monthlyData} preferences={userPreferences} flowTypeToNumberMap={flowTypeToNumberMap} onGrilleTouchee={marquerLaGrilleTouchee} rapport={simulationReport} />
 
             <ReplieEnResume titre="Légende des flux" id="legende-des-flux" className="mt-3 print:mt-2">
               <FlowLegend preferences={userPreferences} onPreferencesChange={setUserPreferences} flowTypeToNumberMap={flowTypeToNumberMap} />

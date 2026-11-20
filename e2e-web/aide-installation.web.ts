@@ -7,6 +7,8 @@
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 import { choisirLaPolice, POLICES } from "./support/police"
+import { SEUL_CHROMIUM } from "./support/navigateur"
+import { attendreLaFinDesAnimations } from "../e2e/support/animations"
 
 const TITRE = "Installer le simulateur"
 const LIGNE = "Installer le simulateur sur votre ordinateur : il fonctionne hors ligne, sans compte."
@@ -27,7 +29,7 @@ const fenetre = (page: Page, nom = TITRE) => page.getByRole("dialog", { name: no
 async function ouvrirLAide(page: Page) {
   await bandeau(page).getByRole("button", { name: "Comment faire ?" }).click()
   await expect(fenetre(page)).toBeVisible()
-  await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"))
+  await attendreLaFinDesAnimations(page)
 }
 
 /** Ouvre la fenêtre « Utiliser avec une IA (MCP) » depuis les paramètres. */
@@ -35,7 +37,7 @@ async function ouvrirLaFenetreIA(page: Page) {
   await page.getByRole("button", { name: "Paramètres" }).click()
   await page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: TITRE_IA }).click()
   await expect(fenetre(page, TITRE_IA)).toBeVisible()
-  await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"))
+  await attendreLaFinDesAnimations(page)
 }
 
 /** L'événement que Chrome et Edge envoient quand le site est installable, imité ; `prompt` laisse une trace. */
@@ -49,7 +51,8 @@ async function imiterLInvitation(page: Page) {
   })
 }
 
-test("le bandeau invite à installer, sans rien ouvrir de lui-même ; « Comment faire ? » ouvre l'aide d'Edge et Chrome, en images", async ({ page }) => {
+test("le bandeau invite à installer, sans rien ouvrir de lui-même ; « Comment faire ? » ouvre l'aide d'Edge et Chrome, en images", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", SEUL_CHROMIUM.aideDInstallation)
   await ouvrir(page)
   await expect(bandeau(page)).toContainText(LIGNE)
   await expect(page.getByRole("dialog")).toHaveCount(0)

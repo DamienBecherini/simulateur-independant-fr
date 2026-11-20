@@ -292,6 +292,24 @@ describe("ComparatorPanel", () => {
     expect(deduite).toHaveTextContent(/-20\s000\s€/)
   })
 
+  it("sous le net d'une société qui garde un bénéfice, le dit, et explique sous le tableau qu'il n'est pas compté", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, beneficeGarde: 12000 } : s)) }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    expect(within(table).getByRole("row", { name: /^Net dans la poche/ })).toHaveTextContent(/et 12\s000\s€ gardés dans la société/)
+    expect(within(table).queryByRole("row", { name: /^Net, perte restée dans l'activité déduite/ })).not.toBeInTheDocument()
+    expect(screen.getByText(/^Un bénéfice gardé dans la société n'est pas compté dans le net ni dans le classement/)).toBeInTheDocument()
+  })
+
+  it("sans bénéfice gardé, ni mention sous le net ni explication", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    expect(table).not.toHaveTextContent("gardés dans la société")
+    expect(screen.queryByText(/^Un bénéfice gardé dans la société/)).not.toBeInTheDocument()
+  })
+
   it("sans perte, pas de ligne « Net, perte restée dans l'activité déduite »", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)

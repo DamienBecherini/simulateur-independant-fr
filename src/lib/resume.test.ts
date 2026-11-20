@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
-import { avecUnePerteConservee, coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, porteurDeLaPremiereAlerte, phraseDuVerdict, netEtPerte, raisonDeNonRetenue, referenceDesEcarts, remunerationOptimale, tauxDePrelevement } from "./resume"
+import { avecUnBeneficeGarde, avecUnePerteConservee, coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, porteurDeLaPremiereAlerte, phraseDuVerdict, netEtReste, raisonDeNonRetenue, referenceDesEcarts, remunerationOptimale, tauxDePrelevement } from "./resume"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
 
@@ -109,8 +109,24 @@ describe("verdict du comparateur", () => {
     // Sans perte, rien ne change.
     expect(avecUnePerteConservee(comparaison("micro"))).toBe(false)
     expect(referenceDesEcarts(comparaison("micro"))).toBe(32000)
-    expect(netEtPerte({ statut: "micro", netApresImpots: 32000 }).replace(/\s/g, " ")).toBe("32 000 €")
-    expect(netEtPerte({ statut: "portage", netApresImpots: 0, perteConservee: 17800 }).replace(/\s/g, " ")).toBe("0 € (et 17 800 € de perte restée sur le compte d'activité)")
+    expect(netEtReste({ statut: "micro", netApresImpots: 32000 }).replace(/\s/g, " ")).toBe("32 000 €")
+    expect(netEtReste({ statut: "portage", netApresImpots: 0, perteConservee: 17800 }).replace(/\s/g, " ")).toBe("0 € (et 17 800 € de perte restée sur le compte d'activité)")
+  })
+
+  it("dit le bénéfice gardé dans la société à côté du net, sans le compter dans les écarts", () => {
+    expect(espaces(netEtReste({ statut: "SASU", netApresImpots: 30000, beneficeGarde: 12000 }))).toBe("30 000 € (et 12 000 € gardés dans la société)")
+    expect(espaces(netEtReste({ statut: "portage", netApresImpots: 30000, beneficeGarde: 2000 }))).toBe("30 000 € (et 2 000 € gardés sur le compte d'activité)")
+
+    const sasu = { ...scenario("SASU", "SASU", 30000), actuel: true, telleQueSaisie: true, beneficeGarde: 12000 }
+    const ei = scenario("EI", "EI au réel", 38000)
+    const result: ComparaisonResult = { scenarios: [sasu, ei], meilleur: "EI", situationSaisie: { statut: "SASU", libelle: "SASU", netApresImpots: 30000, beneficeGarde: 12000 }, couples: [], warnings: [] }
+    expect(avecUnBeneficeGarde(result)).toBe(true)
+    expect(avecUnBeneficeGarde(comparaison("micro"))).toBe(false)
+    // La réserve du compte d'une activité en portage est écrite sous son net, sans l'explication sous le tableau.
+    expect(avecUnBeneficeGarde({ ...result, scenarios: [ei, { ...scenario("portage", "Portage salarial", 27000), beneficeGarde: 2780 }] })).toBe(false)
+    // L'écart reste celui des nets : les 12 000 € gardés ne rapprochent pas la SASU de l'EI.
+    expect(ecartAvecLaSituationSaisie(result, ei)).toBe(8000)
+    expect(espaces(phraseDuVerdict(result, "Conseil"))).toBe("Pour « Conseil », EI au réel donnerait le meilleur net : 38 000 €, soit +8 000 € par rapport à votre situation telle que saisie (SASU, 30 000 € (et 12 000 € gardés dans la société)).")
   })
 
   it("ne conclut pas sans meilleur statut ou sans statut actuel", () => {

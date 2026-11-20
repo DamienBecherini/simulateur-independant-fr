@@ -9,7 +9,7 @@ import { enTexteBrut, pourcent } from "@/backend/logic/format"
 import { ANNEE_COURANTE, reglesPubliees } from "@/backend/logic/regles"
 import { formatAmount } from "@/lib/amount-utils"
 import { brutCalcule, netCalcule } from "@/lib/salary-utils"
-import { makeFlow, makeMicro, makePerson } from "@/ui/testing/fixtures"
+import { makeCompany, makeFlow, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import type { FlowChanges } from "./FlowItem"
 import type { NewFlowValues } from "./NewFlowItem"
@@ -18,7 +18,7 @@ import type { NewFlowValues } from "./NewFlowItem"
  * Rend la fenêtre des flux avec un état local, comme le fait `MonthlyGrid` : les créations, modifications
  * et suppressions sont appliquées à la liste affichée, et chaque appel est espionné.
  */
-function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as Entity, annee = 2026, fluxDeLAnnee = [] as FinancialFlow[] } = {}) {
+function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as Entity, annee = 2026, fluxDeLAnnee = [] as FinancialFlow[], limiteDeRemuneration = undefined as number | undefined } = {}) {
   const onCreate = vi.fn<(values: NewFlowValues) => void>()
   // Le montant de chaque création est-il annuel (à répartir sur les douze mois) ?
   const annuels = vi.fn<(annuel: boolean) => void>()
@@ -35,6 +35,7 @@ function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as E
         monthName="Mars"
         annee={annee}
         fluxDeLAnnee={fluxDeLAnnee}
+        limiteDeRemuneration={limiteDeRemuneration}
         onClose={onClose}
         onCreate={(values, _portee, _aussiEn, annuel) => {
           onCreate(values)
@@ -454,6 +455,38 @@ describe("MonthlyFlowsModal : montant annuel", () => {
 
     await chooseType(user, "Salaire (emploi tiers)")
     expect(caseAnnuelle()).not.toBeInTheDocument()
+  })
+})
+
+describe("MonthlyFlowsModal : limite de la rémunération du dirigeant", () => {
+  const societe = makeCompany()
+  const remuneration = (amount: number) => makeFlow({ id: `r-${amount}`, entityId: societe.id, type: "director_remuneration", amount })
+  const rappel = () => document.querySelector<HTMLElement>("[data-limite-de-remuneration]")
+
+  it("ne dit rien tant qu'aucune rémunération n'est saisie ni choisie, puis donne la limite dès que le type est choisi", async () => {
+    const { user } = renderModal({ entity: societe, limiteDeRemuneration: 44900 })
+    expect(rappel()).not.toBeInTheDocument()
+
+    await chooseType(user, "Rémunération de dirigeant")
+    expect(enTexteBrut(rappel()!.textContent)).toBe("Rémunération du dirigeant. Cette année, la société peut verser au plus 44 900 € nets sans déficit.")
+    expect(rappel()).toHaveAttribute("data-limite-de-remuneration", "tenue")
+  })
+
+  it("situe ce qui est saisi sur l'année, tous mois confondus, par rapport à la limite", () => {
+    renderModal({ entity: societe, limiteDeRemuneration: 44900, flows: [remuneration(2000)], fluxDeLAnnee: [remuneration(2000), remuneration(22000)] })
+    expect(enTexteBrut(rappel()!.textContent)).toBe("Rémunération du dirigeant. 24 000 € nets saisis sur l'année, pour 44 900 € au plus sans déficit de la société.")
+  })
+
+  it("met en garde quand la saisie de l'année dépasse la limite", () => {
+    renderModal({ entity: societe, limiteDeRemuneration: 44900, fluxDeLAnnee: [remuneration(60000)] })
+    expect(enTexteBrut(rappel()!.textContent)).toBe("Rémunération du dirigeant. 60 000 € nets saisis sur l'année : c'est plus que les 44 900 € que la société peut verser sans déficit.")
+    expect(rappel()).toHaveAttribute("data-limite-de-remuneration", "depassee")
+  })
+
+  it("ne dit rien sans limite connue (entreprise individuelle, résultats pas encore calculés)", async () => {
+    const { user } = renderModal({ entity: societe, fluxDeLAnnee: [remuneration(60000)] })
+    await chooseType(user, "Rémunération de dirigeant")
+    expect(rappel()).not.toBeInTheDocument()
   })
 })
 

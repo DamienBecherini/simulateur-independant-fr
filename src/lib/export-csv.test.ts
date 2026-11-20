@@ -358,6 +358,13 @@ describe("csvComparaison", () => {
     expect(lignes(csvComparaison(comparaisonExemple(), optionsExemple(), "Ma SASU")).join("\n")).not.toContain("perte restée dans l'activité déduite")
   })
 
+  it("dit le bénéfice que la situation saisie garde dans l'activité, non compté dans le net", () => {
+    const result = comparaisonExemple()
+    result.situationSaisie = { statut: "SASU", libelle: "SASU", netApresImpots: 40000, beneficeGarde: 12000 }
+    expect(lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))).toContain("Bénéfice gardé dans l'activité, non compté dans le net;12000,00")
+    expect(lignes(csvComparaison(comparaisonExemple(), optionsExemple(), "Ma SASU")).join("\n")).not.toContain("Bénéfice gardé dans l'activité")
+  })
+
   it("signale une colonne micro non retenue, plafond dépassé", () => {
     const result = comparaisonExemple()
     result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? { ...s, horsPlafond: true } : s))

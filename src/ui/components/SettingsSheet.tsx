@@ -211,7 +211,8 @@ export function SettingsSheet({ isOpen, onOpenChange, allSaveSlots, setAllSaveSl
                   <Save className="mr-2 h-4 w-4" /> Sauvegarder
                 </Button>
                 <p className="text-sm text-slate-600 dark:text-slate-400">La simulation en cours s'enregistre d'elle-même et se retrouve à la prochaine ouverture. L'historique d'annulation (Ctrl+Z), lui, s'efface quand la page est rechargée ou l'application fermée.</p>
-                <Button onClick={() => setView("load")} variant="secondary" className="w-full">
+                {/* Comme ses voisins, il passe à la ligne dans un panneau étroit (téléphone de 320 px) plutôt que de rogner ses marges. */}
+                <Button onClick={() => setView("load")} variant="secondary" className="h-auto min-h-9 w-full whitespace-normal py-1.5">
                   Charger une sauvegarde...
                 </Button>
                 <BoutonDesMontages variant="secondary" className="h-auto min-h-9 w-full whitespace-normal py-1.5" onCharger={onLoadMontage} confirmationNecessaire={confirmationDuMontageNecessaire(currentSession, SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId), estLaSessionDExemple)} nomDeLaSession={currentSession.name} />

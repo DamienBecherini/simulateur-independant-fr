@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import type { Entity, FinancialFlow } from "@/types"
 import { flowTypeLabels, getFlowTypesForEntity, type FlowType } from "@/lib/flow-constants"
 import { natureDejaSaisie, typeProposeDOffice } from "@/lib/nature-de-l-activite"
+import { rappelDeLaLimite, remunerationSaisie } from "@/lib/limite-de-remuneration"
 import { deMois } from "@/lib/grille-mensuelle"
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable"
@@ -42,6 +43,11 @@ interface MonthlyFlowsModalProps {
    * nature de chiffre d'affaires qu'elle a déjà (voir typeProposeDOffice).
    */
   fluxDeLAnnee?: FinancialFlow[]
+  /**
+   * Société à l'IS : la plus haute rémunération nette que le dirigeant peut recevoir cette année sans déficit, d'après
+   * les résultats de l'année. Elle est rappelée dès qu'une rémunération est saisie ou choisie sur la ligne d'ajout.
+   */
+  limiteDeRemuneration?: number
   /**
    * Crée le flux dans ce mois et, selon la portée choisie, le recopie sur d'autres mois et dans les années cochées ;
    * `annuel` : son montant est annuel, à répartir sur les douze mois (de chaque année cochée aussi), quelle que soit la portée.
@@ -97,6 +103,22 @@ function NatureSiMicroEntreprise({ entity, regles, type, onChange, flows, fluxDe
   if (entity.type !== "micro-entreprise") return null
   const avecLaVente = type === "ca_micro_vente" || flows.some(f => f.type === "ca_micro_vente")
   return <NatureDuChiffreDAffaires activite={entity} regles={regles} valeur={type} onChange={onChange} avecLaVente={avecLaVente} natureDejaSaisie={dejaSaisie} />
+}
+
+/**
+ * Sous la ligne d'ajout, dès qu'une rémunération du dirigeant est saisie dans l'année ou choisie pour l'ajout : ce qui
+ * est saisi, et ce que la société peut verser au plus sans déficit. La limite se lit avant de la dépasser, pas dans
+ * une alerte des résultats après coup. Elle suit les résultats de l'année, recalculés peu après chaque saisie.
+ */
+function LimiteDeLaRemuneration({ limite, fluxDeLAnnee, enAjout }: { limite: number | undefined; fluxDeLAnnee: FinancialFlow[]; enAjout: boolean }) {
+  const saisie = remunerationSaisie(fluxDeLAnnee)
+  if (limite === undefined || (!enAjout && saisie <= 0)) return null
+  const { texte, depassee } = rappelDeLaLimite(saisie, limite)
+  return (
+    <p role="status" data-limite-de-remuneration={depassee ? "depassee" : "tenue"} className={cn("rounded-md px-3 py-1.5 text-sm", depassee ? "bg-amber-50 text-amber-950 dark:bg-amber-950 dark:text-amber-100" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300")}>
+      <span className="font-medium">Rémunération du dirigeant.</span> {texte}
+    </p>
+  )
 }
 
 /** Mise en évidence d'un réglage qui étend les opérations au-delà du mois ouvert. */
@@ -160,7 +182,7 @@ function CasesDesAnnees({ annee, autresAnnees, aussiEn, setAussiEn }: CasesDesAn
   )
 }
 
-export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], fluxDeLAnnee = [], onCreate, onRecopier, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
+export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], fluxDeLAnnee = [], limiteDeRemuneration, onCreate, onRecopier, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
   const flowIds = useMemo(() => flows.map(f => f.id), [flows])
   const tri = useTriAccessible(useMemo(() => flows.map(f => ({ id: f.id, nom: f.label || flowTypeLabels[f.type] })), [flows]))
   const allowedTypes = getFlowTypesForEntity(entity)
@@ -252,6 +274,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
 
           <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee, aussiEn, repartirSurLAnnee)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} regles={regles} montantAnnuel={repartirSurLAnnee} />
           <NatureSiMicroEntreprise entity={entity} regles={regles} type={newFlowType} onChange={setNewFlowType} flows={flows} fluxDeLAnnee={fluxDeLAnnee} />
+          <LimiteDeLaRemuneration limite={limiteDeRemuneration} fluxDeLAnnee={fluxDeLAnnee} enAjout={newFlowType === "director_remuneration"} />
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-sm text-slate-700 dark:text-slate-300">
             {/* `min-w-0 max-w-full` : avec une police large, la liste se resserre à la largeur de la fenêtre au lieu de la déborder. */}
             <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2">

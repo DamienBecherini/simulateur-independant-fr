@@ -548,6 +548,12 @@ export interface ActivityResult {
   partage?: PartageDuBenefice
   /** Société à l'IS : ses réserves, du 1er janvier au 31 décembre, montants non arrondis. */
   reserves?: ReservesDeLaSociete
+  /**
+   * Société à l'IS : la plus haute rémunération nette que le dirigeant peut recevoir sans déficit sur l'année, à 100 €
+   * près (0 quand l'activité est déjà déficitaire sans rémunération). Les réserves ne comptent pas (voir l'ADR 019).
+   * Calculée pour les résultats de l'année, où la fenêtre de saisie l'affiche ; absente des colonnes du comparateur.
+   */
+  limiteDeRemuneration?: number
   /** Micro-entreprise passée au régime réel (deux années de suite au-delà des plafonds) : simulée en EI au réel. */
   sortieDuRegimeMicro?: SortieDuRegimeMicro
   /** Activité en portage salarial : le calcul pas à pas, du chiffre d'affaires au net (voir l'ADR 016). */
@@ -1075,6 +1081,8 @@ interface SituationSaisie {
   netApresImpots: number
   /** Perte de l'année restée dans la société (ou découvert du compte d'une activité en portage), déduite du net pour mesurer les écarts ; absente sans perte. */
   perteConservee?: number
+  /** Bénéfice de l'année gardé dans l'activité, quand il est notable ; il n'entre pas dans la comparaison. */
+  beneficeGarde?: number
   /**
    * En société (SASU, EURL) : ce que la grille verse au dirigeant et ce que le foyer en paie. La colonne du même statut
    * simulée avec un autre partage du bénéfice s'y compare poste par poste, pour dire d'où vient son écart.
@@ -1156,6 +1164,12 @@ export interface ScenarioStatut {
    * comparer les colonnes (voir src/backend/logic/net-compare.ts).
    */
   perteConservee?: number
+  /**
+   * Bénéfice de l'année gardé dans l'activité (société, ou compte d'une activité en portage), quand il est notable
+   * (voir `BENEFICE_GARDE_NOTABLE`) ; absent sinon. Écrit sous le net, il n'entre pas dans la comparaison : il n'est
+   * pas dans la poche du foyer.
+   */
+  beneficeGarde?: number
   protectionSociale: ProtectionSociale
   /** Indicateurs de toute la simulation, l'activité ayant pris ce statut. */
   netApresImpots: number

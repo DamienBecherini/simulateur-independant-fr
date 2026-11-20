@@ -6,6 +6,7 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { autoriserLePressePapiers } from "./support/navigateur"
 
 const EXEMPLE = "Famille Martin, simulation 2026"
 const UNION_LIBRE = "Couple en union libre, puis marié ou pacsé"
@@ -89,8 +90,8 @@ test("un identifiant inconnu ne change rien et le dit discrètement, avec l'acc�
   await expect(titre(page)).toHaveText(EXEMPLE)
 })
 
-test("« Copier le lien » d'une situation donne l'adresse de la démo suivie de son fragment, qui l'ouvre", async ({ page, context }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"])
+test("« Copier le lien » d'une situation donne l'adresse de la démo suivie de son fragment, qui l'ouvre", async ({ page, context, browserName }) => {
+  await autoriserLePressePapiers(context, browserName)
   await page.goto("./")
   await expect(titre(page)).toHaveText(EXEMPLE)
   await page.getByRole("button", { name: "Paramètres" }).click()

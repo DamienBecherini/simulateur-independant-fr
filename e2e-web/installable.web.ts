@@ -4,6 +4,7 @@
 // aide-installation.web.ts. Seul fichier où le service worker n'est pas bloqué (playwright.web.config.ts).
 
 import { test, expect, type Page } from "@playwright/test"
+import { SEUL_CHROMIUM } from "./support/navigateur"
 
 const NOM_EXEMPLE = "Famille Martin, simulation 2026"
 const BASE = "/simulateur-independant-fr/"
@@ -46,7 +47,8 @@ test("le manifeste décrit la démo, en français, avec ses icônes", async ({ p
 test.describe("avec le service worker", () => {
   test.use({ serviceWorkers: "allow" })
 
-  test("la démo est installable : Chromium ne relève aucune erreur de manifeste ni d'installabilité", async ({ page, context }) => {
+  test("la démo est installable : Chromium ne relève aucune erreur de manifeste ni d'installabilité", async ({ page, context, browserName }) => {
+    test.skip(browserName !== "chromium", SEUL_CHROMIUM.installabilite)
     await ouvrir(page)
     await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
     const cdp = await context.newCDPSession(page)

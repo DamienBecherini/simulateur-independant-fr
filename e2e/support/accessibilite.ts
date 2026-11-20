@@ -4,6 +4,7 @@
 
 import { expect, type Page } from "@playwright/test"
 import { AxeBuilder } from "@axe-core/playwright"
+import { attendreLaFinDesAnimations } from "./animations"
 
 const CRITERES_WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]
 
@@ -25,7 +26,7 @@ export interface ExceptionsDeLAudit {
 /** Audite la page, ou la partie désignée par un sélecteur, et échoue en listant les violations trouvées. */
 export async function auditerAccessibilite(page: Page, etat: string, inclure?: string, { exclure = [], sansLesRegles = [] }: ExceptionsDeLAudit = {}) {
   // Une fenêtre qui apparaît en fondu aurait, pendant l'animation, des contrastes faussés.
-  await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"))
+  await attendreLaFinDesAnimations(page)
   // Mode « hérité » : axe s'exécute entièrement dans la page, sans ouvrir l'onglet annexe qui assemble les
   // résultats des iframes, ce qu'Electron ne permet pas. L'interface n'a pas d'iframe : le résultat est le même.
   let constructeur = new AxeBuilder({ page }).withTags(CRITERES_WCAG).setLegacyMode()

@@ -119,6 +119,7 @@ npm run test:coverage  # tests + couverture (v8), rapport dans coverage/
 npm run test:e2e       # compile l'application, puis tests de bout en bout (Playwright + Electron), fenêtres masquées
 npm run test:e2e:visible  # les mêmes, fenêtres affichées pour suivre les tests
 npm run test:web       # compile la démo web, puis la teste dans Chromium (Playwright)
+npm run test:web:firefox  # la même série dans Firefox (npm run installer:firefox une première fois)
 npm run test:all       # tout : tests avec couverture, puis tests de bout en bout (application et démo web)
 npm run lint           # ESLint, dont la complexité cyclomatique
 npm run duplication    # détection de code dupliqué (jscpd)

@@ -4,6 +4,7 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { choisirAvantLeChargement } from "./support/affichage"
+import { SEUL_CHROMIUM } from "./support/navigateur"
 
 /** Largeur d'une feuille A4 en pixels CSS (210 mm à 96 ppp). */
 const LARGEUR_A4 = 794
@@ -96,7 +97,8 @@ test("à l'impression, rien ne déborde de la largeur d'une feuille A4", async (
   expect(debordements).toEqual([])
 })
 
-test("Chromium produit un PDF de plusieurs pages A4", async ({ page }) => {
+test("Chromium produit un PDF de plusieurs pages A4", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", SEUL_CHROMIUM.pdf)
   await ouvrir(page, "dark")
   await page.emulateMedia({ media: "print" })
 
@@ -108,7 +110,8 @@ test("Chromium produit un PDF de plusieurs pages A4", async ({ page }) => {
 })
 
 for (const affichage of ["classique", "resume", "vues"] as const) {
-test(`affichage ${affichage} : la grille annuelle et sa légende sont imprimées sur une page en paysage, le reste en portrait`, async ({ page }) => {
+test(`affichage ${affichage} : la grille annuelle et sa légende sont imprimées sur une page en paysage, le reste en portrait`, async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", SEUL_CHROMIUM.pdf)
   await ouvrir(page, "light", affichage)
   await page.emulateMedia({ media: "print" })
 

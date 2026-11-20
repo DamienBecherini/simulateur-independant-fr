@@ -110,11 +110,21 @@ function parcourirLesAnnees(session: SessionState, ajuster?: (preparee: AnneePre
     const resultat: ResultatAnnee =
       "erreur" in preparation
         ? { annee, report: null, erreur: preparation.erreur }
-        : { annee, report: runMetaSimulation(ajuster ? ajuster(preparation) : preparation.donnees, preparation.regles, preparation.contexte), erreur: null }
+        : { annee, report: simulerLAnnee(preparation, ajuster), erreur: null }
     parcours.push({ annee, heritage, resultat })
     etatsDesSocietes = etatsALaFin(resultat.report, etatsDesSocietes)
   }
   return parcours
+}
+
+/**
+ * Les résultats d'une année. Sans ajustement, ce sont ceux que la page affiche : ils donnent aussi la limite de
+ * rémunération de chaque société (fenêtre de saisie). Les parcours ajustés (stratégies de distribution, qui en simulent
+ * beaucoup) s'en passent.
+ */
+function simulerLAnnee(preparation: AnneePreparee, ajuster?: (preparee: AnneePreparee) => DonneesDeLAnnee): SimulationReport {
+  if (ajuster) return runMetaSimulation(ajuster(preparation), preparation.regles, preparation.contexte)
+  return runMetaSimulation(preparation.donnees, preparation.regles, { ...preparation.contexte, limitesDeRemuneration: true })
 }
 
 /** Simule chaque année de la session (voir `parcourirLesAnnees`). */

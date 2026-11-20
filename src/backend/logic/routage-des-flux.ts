@@ -251,4 +251,9 @@ export interface ContexteDeLAnnee {
    * y assoit la retraite complémentaire et l'ASV de l'année (voir l'ADR 015). Une activité absente part de son année.
    */
   assiettesAnneePrecedente?: { annee: number; parActivite: Record<string, number> }
+  /**
+   * Chercher aussi, pour chaque société à l'IS, la plus haute rémunération du dirigeant sans déficit
+   * (`limiteDeRemuneration` du résultat) : pour les résultats de l'année, pas pour les colonnes du comparateur.
+   */
+  limitesDeRemuneration?: true
 }

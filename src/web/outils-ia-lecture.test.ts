@@ -125,6 +125,15 @@ describe("expliquer_resultat", () => {
     expect(explication.informations).toContainEqual(expect.stringMatching(/^Réserves distribuables : 0 € au 1er janvier, .* € au 31 décembre ; bénéfice distribuable de l'année/))
   })
 
+  it("donne la limite de rémunération du dirigeant d'une société à l'IS, la même que la fenêtre de saisie", () => {
+    const session = exemple()
+    const activite = rapport2026(session).activities.find(a => a.entityId === "company-conseil")!
+    const simulation = appeler<{ activites: { id: string; limiteDeRemuneration?: number }[] }>("simuler", session)
+    expect(activite.limiteDeRemuneration).toBeGreaterThan(0)
+    expect(simulation.activites.find(a => a.id === "company-conseil")!.limiteDeRemuneration).toBe(activite.limiteDeRemuneration)
+    expect(simulation.activites.find(a => a.id === "micro-atelier")).not.toHaveProperty("limiteDeRemuneration")
+  })
+
   it("explique le versement libératoire d'une micro-entreprise et l'impôt du foyer d'une personne", () => {
     const session = exemple()
     const micro = appeler<{ informations: string[] }>("expliquer_resultat", session, { acteurId: "micro-atelier" })

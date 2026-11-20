@@ -2,6 +2,7 @@
 // Affichage de l'interface, commun aux deux cibles : la racine de composition de chacune (src/ui/main.tsx pour le
 // bureau, src/web/main.tsx pour la démo) l'appelle avec sa plateforme, une fois window.api en place.
 
+import "./zod-sans-eval"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import App from "./App.tsx"

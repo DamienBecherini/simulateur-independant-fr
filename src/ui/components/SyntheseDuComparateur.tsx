@@ -7,7 +7,7 @@ import { useState } from "react"
 import { ChevronRight } from "lucide-react"
 import { ANCRES } from "@/lib/ancres"
 import { ecartDeRepartition } from "@/lib/ecart-de-repartition"
-import { ecartAvecLaSituationSaisie, lieuDeLaPerte, phraseDuVerdict, raisonDeNonRetenue } from "@/lib/resume"
+import { avecUnBeneficeGarde, ecartAvecLaSituationSaisie, lieuDuReste, phraseDuVerdict, raisonDeNonRetenue } from "@/lib/resume"
 import { phraseDeLEcartDeFrais, posteFraisLabels } from "@/lib/comparateur-options"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { ecartSigne, euros } from "@/backend/logic/format"
@@ -64,6 +64,42 @@ export function RappelDesFrais({ result }: { result: ComparaisonResult }) {
 }
 
 /**
+ * Sous le net d'une colonne, ce que l'année laisse dans l'activité et que ce net ne montre pas (voir
+ * src/backend/logic/net-compare.ts). Une perte (société déficitaire, portage à découvert) : la comparaison la déduit,
+ * l'écart de la colonne en tient compte. Un bénéfice gardé : il est dit, sans entrer dans la comparaison.
+ */
+export function ResteDansLActivite({ scenario }: { scenario: ScenarioStatut }) {
+  const montant = "whitespace-nowrap"
+  if (scenario.perteConservee) {
+    return (
+      <span data-reste="perte" className="block text-xs font-medium text-amber-800 dark:text-amber-300">
+        et <span className={montant}>{euros(scenario.perteConservee)}</span> de perte restée {lieuDuReste(scenario.statut)}
+      </span>
+    )
+  }
+  if (!scenario.beneficeGarde) return null
+  return (
+    <span data-reste="benefice" className="block text-xs font-normal text-slate-600 dark:text-slate-400">
+      et <span className={montant}>{euros(scenario.beneficeGarde)}</span> gardés {lieuDuReste(scenario.statut)}
+    </span>
+  )
+}
+
+/**
+ * Sous le tableau, dès qu'un bénéfice gardé est écrit sous le net d'une colonne : pourquoi il n'est pas compté. Sans
+ * cela, « et 40 000 € gardés » laisse croire à un oubli du classement. Celui de la situation saisie, quand elle n'est
+ * pas une colonne, est dit dans sa phrase au-dessus du tableau.
+ */
+export function RappelDuBeneficeGarde({ result }: { result: ComparaisonResult }) {
+  if (!avecUnBeneficeGarde(result)) return null
+  return (
+    <p role="note" className="text-sm text-slate-600 dark:text-slate-400">
+      Un bénéfice gardé dans la société n'est pas compté dans le net ni dans le classement : il n'est pas encore dans votre poche, et le distribuer coûtera encore de l'impôt.
+    </p>
+  )
+}
+
+/**
  * Une société simulée avec un autre partage que la grille n'est plus la situation saisie : son net de référence, celui
  * des résultats, est rappelé au-dessus du tableau. Rien quand une colonne est déjà cette situation.
  */
@@ -72,7 +108,7 @@ export function SituationTelleQueSaisie({ result }: { result: ComparaisonResult 
   if (!saisie || result.scenarios.length === 0 || result.scenarios.some(s => s.telleQueSaisie)) return null
   return (
     <p className="text-sm text-slate-700 dark:text-slate-200">
-      Votre situation telle que saisie ({saisie.libelle}) : <span className="font-semibold tabular-nums">{euros(saisie.netApresImpots)}</span> de net, comme dans les résultats{saisie.perteConservee ? <>, et <span className="font-semibold tabular-nums">{euros(saisie.perteConservee)}</span> de perte restée {lieuDeLaPerte(saisie.statut)}, déduite pour comparer</> : null}. Les écarts du tableau se mesurent à partir de ce montant.
+      Votre situation telle que saisie ({saisie.libelle}) : <span className="font-semibold tabular-nums">{euros(saisie.netApresImpots)}</span> de net, comme dans les résultats{saisie.perteConservee ? <>, et <span className="font-semibold tabular-nums">{euros(saisie.perteConservee)}</span> de perte restée {lieuDuReste(saisie.statut)}, déduite pour comparer</> : null}. Les écarts du tableau se mesurent à partir de ce montant.{saisie.beneficeGarde ? <> Elle garde en plus <span className="font-semibold tabular-nums">{euros(saisie.beneficeGarde)}</span> {lieuDuReste(saisie.statut)}, non comptés dans le net.</> : null}
     </p>
   )
 }
@@ -150,7 +186,7 @@ function CarteDeStatut({ scenario, result, meilleur }: { scenario: ScenarioStatu
       </div>
       <p className="shrink-0 text-right tabular-nums">
         <span className="block font-semibold">{euros(scenario.netApresImpots)}</span>
-        {scenario.perteConservee ? <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">et {euros(scenario.perteConservee)} de perte restée {lieuDeLaPerte(scenario.statut)}</span> : null}
+        <ResteDansLActivite scenario={scenario} />
         {ecart !== null ? <span className={cn("block text-xs", !nonRetenue && couleurDeLEcart(ecart))}>{ecartSigne(ecart)}</span> : null}
       </p>
     </li>

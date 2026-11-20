@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import { comparerStatuts, coutDesQuatreTrimestres, remunerationOptimale } from "./comparateur.js"
 import { statutActuel } from "./conversion-de-statut.js"
-import { netCompare, perteDeLaSociete } from "./net-compare.js"
+import { BENEFICE_GARDE_NOTABLE, beneficeGarde, netCompare, perteDeLaSociete } from "./net-compare.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { AUCUNE_CHARGE, defaultFraisFonctionnement, ECART_NEGLIGEABLE, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
 import { euros } from "./format.js"
@@ -740,5 +740,28 @@ describe("les colonnes se comparent sur le net, perte restée dans la société 
       expect(netCompare(s)).toBe(s.netApresImpots)
     }
     expect(resultat.situationSaisie?.perteConservee).toBeUndefined()
+  })
+
+  it("un bénéfice gardé dans la société est dit, sans entrer dans la comparaison", () => {
+    // Selon la grille : 20 000 € de rémunération, aucun dividende, le reste du bénéfice est gardé.
+    const flux: Flux[] = [["s1", "ca_services", 60000], ["s1", "director_remuneration", 20000]]
+    const resultat = comparer(sasu, liens, flux, options("s1", { repartition: { mode: "grille", partDistribuee: 1 } }))
+    const laSasu = colonne(resultat, "SASU")
+
+    expect(laSasu.beneficeGarde).toBe(laSasu.resultatConserveActivite)
+    expect(laSasu.beneficeGarde).toBeGreaterThan(BENEFICE_GARDE_NOTABLE)
+    expect(netCompare(laSasu)).toBe(laSasu.netApresImpots)
+    expect(resultat.situationSaisie?.beneficeGarde).toBe(laSasu.beneficeGarde)
+    // L'entreprise individuelle ne garde rien : tout son bénéfice est au foyer.
+    expect(colonne(resultat, "EI").beneficeGarde).toBeUndefined()
+  })
+
+  it("un reste négligeable, une perte ou des dividendes pris sur les réserves ne sont pas un bénéfice gardé", () => {
+    expect(beneficeGarde(BENEFICE_GARDE_NOTABLE)).toBe(BENEFICE_GARDE_NOTABLE)
+    expect(beneficeGarde(BENEFICE_GARDE_NOTABLE - 1)).toBeUndefined()
+    expect(beneficeGarde(-20000)).toBeUndefined()
+    // Tout en dividendes : la société ne garde que sa dotation à la réserve légale.
+    const resultat = comparer(sasu, liens, [["s1", "ca_services", 60000]], options("s1", { remunerationNette: 20000 }))
+    expect(colonne(resultat, "SASU").beneficeGarde).toBeUndefined()
   })
 })
