@@ -12,30 +12,8 @@
 // l'application de bureau (e2e/ia-mcp.e2e.ts).
 
 import { test, expect, type Locator, type Page } from "@playwright/test"
+import { AFFICHAGES, ouvrirLaSessionAgrandie as ouvrir } from "./support/interface-agrandie"
 import { defautsDeLaFenetre, defautsDeLisibilite } from "./support/lisibilite"
-
-const SESSION = {
-  formatVersion: 3,
-  name: "Atelier en zone franche",
-  entities: [
-    { id: "person-alice", type: "person", name: "Alice Martin", fiscalParts: 1, avatar: { type: "initials", value: "AM", color: "#3b82f6" }, locked: false },
-    { id: "company-atelier", type: "company", name: "Atelier", legalStatus: "SASU", capitalSocial: 1000, dateDeCreation: "2024-01", implantationEnZone: {}, avatar: { type: "icon", value: "Store", color: "#d97706" }, locked: false },
-    { id: "micro-boutique", type: "micro-entreprise", name: "Boutique", beneficieACRE: true, opteVFL: false, dateDeCreation: "2026-01", avatar: { type: "icon", value: "Store", color: "#f97316" }, locked: false }
-  ],
-  relationships: [
-    { id: "r-president", fromId: "person-alice", toId: "company-atelier", type: "Président" },
-    { id: "r-titulaire", fromId: "person-alice", toId: "micro-boutique", type: "Titulaire" }
-  ],
-  annees: [
-    {
-      annee: 2026,
-      monthlyData: Array.from({ length: 12 }, (_, month) => ({
-        month,
-        flows: [...(month === 0 ? [{ id: "ca", entityId: "company-atelier", type: "ca_services", label: "Prestations", amount: 80000 }] : []), { id: `boutique-${month}`, entityId: "micro-boutique", type: "ca_micro_services_bic", label: "Ateliers du samedi", amount: 1500 }]
-      }))
-    }
-  ]
-}
 
 /** Fenêtres et zooms essayés ; `zoom` est le zoom demandé, que l'application borne selon la largeur (src/lib/zoom.ts). */
 const CAS = [
@@ -45,19 +23,6 @@ const CAS = [
   { largeur: 800, hauteur: 700, zoom: 2, applique: "1.73" },
   { largeur: 375, hauteur: 700, zoom: 2, applique: "1.17" }
 ]
-const AFFICHAGES = ["resume", "classique", "vues"] as const
-
-async function ouvrir(page: Page, zoom: number, affichage: string) {
-  await page.addInitScript(
-    ([session, z, a]) => {
-      window.localStorage.setItem("simulateur.session", JSON.stringify(session))
-      window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], affichage: a, zoom: z }))
-    },
-    [SESSION, zoom, affichage] as const
-  )
-  await page.goto("./")
-  await expect(page.getByRole("navigation", { name: "Barre d'outils" })).toBeVisible()
-}
 
 /** Ouvre la fiche « Modifier » de l'acteur de ce nom, quel que soit le rang de son bouton dans la page. */
 async function ficheDe(page: Page, nom: string) {

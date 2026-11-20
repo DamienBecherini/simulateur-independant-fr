@@ -10,6 +10,7 @@ import { pourcentDeNombre } from "@/backend/logic/format"
 import { Button } from "@/components/ui/button"
 import type { MontageType } from "@/lib/montages/montages"
 import { ADRESSE_DE_L_AVIS, systemeEtNavigateur, type Diagnostic } from "@/lib/retours"
+import { cn } from "@/lib/utils"
 import { VERSION_DE_L_APPLICATION } from "@/lib/version"
 import { ZOOM_MAXIMAL } from "@/lib/zoom"
 import type { Affichage, SessionState } from "@/types"
@@ -70,6 +71,15 @@ function useAvis() {
 }
 
 /**
+ * « Donner mon avis » montre son nom quand la barre en a la place : à partir de 1 024 px de fenêtre, ou de 1 280 px
+ * quand le niveau du zoom s'affiche à côté des loupes. Classes écrites en entier : Tailwind les lit dans le source.
+ */
+const NOM_DE_L_AVIS = {
+  sansNiveauDuZoom: { bouton: "@min-[63rem]:w-auto @min-[63rem]:gap-2 @min-[63rem]:px-3", nom: "hidden @min-[63rem]:inline" },
+  avecNiveauDuZoom: { bouton: "@min-[79rem]:w-auto @min-[79rem]:gap-2 @min-[79rem]:px-3", nom: "hidden @min-[79rem]:inline" }
+}
+
+/**
  * Ce que dit l'infobulle d'un bouton de zoom : le niveau actuel, comment revenir à 100 %, et, à la butée, pourquoi le
  * bouton est grisé (le zoom maximal dépend de la largeur de la fenêtre).
  */
@@ -91,74 +101,78 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
   const declencheurDesMontages = useRef<HTMLElement | null>(null)
   // Diagnostic proposé avec un avis : aucune donnée de la simulation, seulement des nombres d'années et d'acteurs.
   const niveauDuZoom = pourcentDeNombre(zoom.zoom * 100)
+  const nomDeLAvis = zoom.zoom === 1 ? NOM_DE_L_AVIS.sansNiveauDuZoom : NOM_DE_L_AVIS.avecNiveauDuZoom
   const diagnostic: Diagnostic = { version: VERSION_DE_L_APPLICATION, web: plateforme.web, installee: plateforme.installee(), ...systemeEtNavigateur(navigator.userAgent), affichageEnCours: affichage, nombreDAnnees: session.annees.length, nombreDActeurs: session.entities.length }
 
   return (
     <>
-      {/* La barre s'adapte à sa propre largeur (requêtes de conteneur, « @min-[40rem]: »), pas à celle de la fenêtre :
-          avec l'interface agrandie, une fenêtre de 1 280 px zoomée à 200 % n'offre que 640 px, et la barre y prend sa
-          forme de 640 px au lieu de pousser ses boutons hors de l'écran. Mêmes seuils que les points de rupture de la
-          page : 40rem (640 px), 48rem (768 px), 64rem (1 024 px). Le conteneur n'a pas de marge intérieure : sa largeur
-          est celle de la fenêtre au zoom par défaut. */}
-      <nav aria-label="Barre d'outils" className="@container print:hidden fixed top-0 left-0 right-0 z-50 backdrop-blur-sm bg-background/80 border-b">
-        <div className="flex items-center justify-between p-2">
+      {/* La barre choisit sa forme d'après la place qu'elle a vraiment (requêtes de conteneur, « @min-[39rem]: »), pas
+          d'après la largeur de la fenêtre. Cette place, c'est la largeur du bloc centré ci-dessous : la fenêtre divisée
+          par le zoom (1 280 px zoomés à 200 % n'offrent que 640 px), moins 16 px de marges, et jamais plus que la largeur
+          du contenu de la page (classe `container`, qui suit la fenêtre : à 50 % dans 700 px, elle ne laisse que 640 px
+          là où la barre zoomée en compte 1 400). Les seuils sont ceux de la page moins ces 16 px : 39rem (fenêtre de
+          640 px), 47rem (768 px), 63rem (1 024 px), 79rem (1 280 px). La place demandée par chaque forme est mesurée ;
+          e2e-web/zoom-balayage.web.ts vérifie que rien ne sort de l'écran, à chaque zoom et à chaque largeur. */}
+      <nav aria-label="Barre d'outils" className="print:hidden fixed top-0 left-0 right-0 z-50 backdrop-blur-sm bg-background/80 border-b p-2">
+        <div className="@container container mx-auto">
           {/* Sur un téléphone, la barre perd ses marges verticales (moins de hauteur collée en haut). Sous 1024 px, elle n'a
               pas non plus de marges latérales : entre 640 et 900 px, ses boutons ne tiendraient pas avec. */}
-          <div className="container mx-auto flex items-center justify-between px-0 @min-[40rem]:py-2 @min-[64rem]:px-8">
+          <div className="flex items-center justify-between px-0 @min-[39rem]:py-2 @min-[63rem]:px-8">
             {/* Groupe de boutons de gauche */}
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-9 @min-[40rem]:w-10 [&_svg]:size-6" onClick={onParametres}>
+              <Button variant="ghost" size="icon" aria-label="Paramètres" className="h-10 w-9 @min-[39rem]:w-10 [&_svg]:size-6" onClick={onParametres}>
                 <Settings className="text-slate-600 dark:text-slate-400" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.annuler} disabled={!historique.peutAnnuler} className="h-10 w-9 @min-[40rem]:w-10 [&_svg]:size-6 @min-[40rem]:ml-2">
+              <Button variant="ghost" size="icon" aria-label="Annuler" title="Annuler (Ctrl+Z). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.annuler} disabled={!historique.peutAnnuler} className="h-10 w-9 @min-[39rem]:w-10 [&_svg]:size-6 @min-[39rem]:ml-2">
                 <Undo2 className="dark:text-slate-300" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.retablir} disabled={!historique.peutRetablir} className="h-10 w-9 @min-[40rem]:w-10 [&_svg]:size-6">
+              <Button variant="ghost" size="icon" aria-label="Rétablir" title="Rétablir (Ctrl+Y). L'historique s'efface au rechargement de la page ou à la fermeture de l'application." onClick={historique.retablir} disabled={!historique.peutRetablir} className="h-10 w-9 @min-[39rem]:w-10 [&_svg]:size-6">
                 <Redo2 className="dark:text-slate-300" />
               </Button>
               {indicateurIA}
               {/* Sur un écran large, les deux boutons les plus utiles à qui découvre le simulateur montrent leur nom ;
-                  en dessous, leur icône seule. Sur un téléphone (moins de 640 px), ils passent dans le menu « Plus
+                  en dessous, leur icône seule. Le nom de « Donner mon avis » attend 1 280 px quand le niveau du zoom
+                  s'affiche : entre 1 024 et 1 280 px, la barre n'a que 944 px, et il en faudrait 1 020 pour les deux. Sur un téléphone (moins de 640 px), ils passent dans le menu « Plus
                   d'actions », avec l'affichage et le thème : la barre garde les actions principales sans rien couper. */}
-              <Button variant="ghost" size="icon" aria-label="Donner mon avis" title="Donner mon avis" onClick={e => avis.ouvrir(e.currentTarget)} className="h-10 w-9 @max-[40rem]:hidden @min-[40rem]:ml-2 @min-[40rem]:w-10 @min-[64rem]:w-auto @min-[64rem]:gap-2 @min-[64rem]:px-3 [&_svg]:size-6">
+              <Button variant="ghost" size="icon" aria-label="Donner mon avis" title="Donner mon avis" onClick={e => avis.ouvrir(e.currentTarget)} className={cn("h-10 w-9 @max-[39rem]:hidden @min-[39rem]:ml-2 @min-[39rem]:w-10 [&_svg]:size-6", nomDeLAvis.bouton)}>
                 <MessageSquareHeart className="text-slate-600 dark:text-slate-400" />
-                <span className="hidden @min-[64rem]:inline">Donner mon avis</span>
+                <span className={nomDeLAvis.nom}>Donner mon avis</span>
               </Button>
-              <BoutonDesMontages variant="outline" size="sm" aria-label="Situations types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 @max-[40rem]:hidden @min-[40rem]:ml-2" onCharger={chargement.onChargerUnMontage} confirmationNecessaire={chargement.confirmationNecessaire} nomDeLaSession={session.name}>
-                <span className="hidden @min-[48rem]:inline">Situations types</span>
+              <BoutonDesMontages variant="outline" size="sm" aria-label="Situations types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 @max-[39rem]:hidden @min-[39rem]:ml-2" onCharger={chargement.onChargerUnMontage} confirmationNecessaire={chargement.confirmationNecessaire} nomDeLaSession={session.name}>
+                <span className="hidden @min-[47rem]:inline">Situations types</span>
               </BoutonDesMontages>
               {/* En mode développement seulement : scénarios prêts à charger pour vérifier une fonctionnalité. */}
               <BoutonDesTests onCharger={chargement.onChargerUneSession} />
             </div>
             {/* Groupe de boutons de droite */}
             <div className="flex items-center gap-1">
-              <div className="@max-[40rem]:hidden">
+              <div className="@max-[39rem]:hidden">
                 <SelecteurAffichage affichage={affichage} onChange={onAffichage} />
               </div>
               {/* Son nom visible à partir de 1024 px ; en dessous, l'icône seule, pour que la barre tienne. */}
-              <Button variant="outline" size="sm" aria-label="Exporter" title="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 @min-[40rem]:mr-2" onClick={onExporter}>
+              <Button variant="outline" size="sm" aria-label="Exporter" title="Exporter" className="h-8 gap-2 pointer-coarse:min-w-11 @min-[39rem]:mr-2" onClick={onExporter}>
                 <Download className="size-4" />
-                <span className="hidden @min-[64rem]:inline">Exporter</span>
+                <span className="hidden @min-[63rem]:inline">Exporter</span>
               </Button>
               {/* Le niveau du zoom, tant que l'interface n'est pas à 100 % : un clic y ramène. Il se place à gauche des deux
                   boutons, qui ne bougent donc pas sous le pointeur quand il apparaît, et s'efface quand la barre n'a plus la
-                  place (moins de 768 px) : les infobulles des boutons disent alors le niveau, et Ctrl+0 ramène à 100 %. */}
+                  place (moins de 832 px de fenêtre) : les infobulles des boutons disent alors le niveau, et Ctrl+0 ramène à 100 %. */}
               {zoom.zoom === 1 ? null : (
-                <Button variant="ghost" size="sm" aria-label={`Zoom de l'interface : ${niveauDuZoom}. Revenir à 100 %`} title="Revenir à 100 % (Ctrl+0)" onClick={zoom.reinitialiser} className="h-8 px-2 text-sm tabular-nums text-slate-600 @max-[48rem]:hidden dark:text-slate-400">
+                <Button variant="ghost" size="sm" aria-label={`Zoom de l'interface : ${niveauDuZoom}. Revenir à 100 %`} title="Revenir à 100 % (Ctrl+0)" onClick={zoom.reinitialiser} className="h-8 px-2 text-sm tabular-nums text-slate-600 @max-[51rem]:hidden dark:text-slate-400">
                   {niveauDuZoom}
                 </Button>
               )}
               {/* Sur un écran tactile de moins de 768 px, on zoome avec les doigts : les boutons de zoom y laissent la place
                   aux autres. Dans une fenêtre très étroite (moins de 416 px), ils s'effacent aussi : le zoom du navigateur reste. */}
-              <Button variant="ghost" size="icon" aria-label="Zoom arrière" title={infobulleDuZoom(zoom, "arriere")} onClick={zoom.zoomOut} disabled={!zoom.canZoomOut} className="h-10 w-9 pointer-coarse:@max-[48rem]:hidden @max-[26rem]:hidden @min-[40rem]:w-10 [&_svg]:size-6">
+              <Button variant="ghost" size="icon" aria-label="Zoom arrière" title={infobulleDuZoom(zoom, "arriere")} onClick={zoom.zoomOut} disabled={!zoom.canZoomOut} className="h-10 w-9 pointer-coarse:@max-[47rem]:hidden @max-[25rem]:hidden @min-[39rem]:w-10 [&_svg]:size-6">
                 <ZoomOut className="text-slate-600 dark:text-slate-400" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Zoom avant" title={infobulleDuZoom(zoom, "avant")} onClick={zoom.zoomIn} disabled={!zoom.canZoomIn} className="h-10 w-9 pointer-coarse:@max-[48rem]:hidden @max-[26rem]:hidden @min-[40rem]:w-10 [&_svg]:size-6 @min-[40rem]:mr-4">
+              <Button variant="ghost" size="icon" aria-label="Zoom avant" title={infobulleDuZoom(zoom, "avant")} onClick={zoom.zoomIn} disabled={!zoom.canZoomIn} className="h-10 w-9 pointer-coarse:@max-[47rem]:hidden @max-[25rem]:hidden @min-[39rem]:w-10 [&_svg]:size-6 @min-[39rem]:mr-4">
                 <ZoomIn className="text-slate-600 dark:text-slate-400" />
               </Button>
-              <ThemeToggle className="@max-[40rem]:hidden" />
+              <ThemeToggle className="@max-[39rem]:hidden" />
               <MenuPlusDActions
-                className="@min-[40rem]:hidden"
+                className="@min-[39rem]:hidden"
                 affichage={affichage}
                 onAffichage={onAffichage}
                 onAvis={avis.ouvrir}
