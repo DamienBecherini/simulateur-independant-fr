@@ -109,6 +109,18 @@ describe("examinerLeChangement", () => {
       ])
     })
 
+    it("compte les autres micro-entreprises du titulaire : elles ne forment qu'une entreprise", () => {
+      const sasu = societe("s1", "SASU", 5000)
+      const s = sessionDe([personne("alice"), sasu, micro("m1")], [relation("alice", "s1", "Président"), relation("alice", "m1", "Titulaire")], [["s1", "ca_services", 50000], ["m1", "ca_micro_services_bic", 40000]])
+      // Seule, la SASU devenue micro-entreprise resterait sous le plafond ; avec « m1 », elle le dépasse.
+      expect(avertissements(examinerLeChangement(s, sasu, "micro", reglesDeTest, "bnc").consequences)).toEqual([
+        `En 2026, les prestations de services (${euros(90000)}, « m1 » comprise) dépassent le plafond de la micro-entreprise pour cette activité (${euros(plafonds.services)}) : ${suite}`
+      ])
+      // La micro-entreprise d'une autre personne ne compte pas.
+      const autre = sessionDe([personne("alice"), personne("bob"), sasu, micro("m1")], [relation("alice", "s1", "Président"), relation("bob", "m1", "Titulaire")], [["s1", "ca_services", 50000], ["m1", "ca_micro_services_bic", 40000]])
+      expect(avertissements(examinerLeChangement(autre, sasu, "micro", reglesDeTest, "bnc").consequences)).toEqual([])
+    })
+
     it("l'année de la création, le plafond est réduit au prorata des jours d'activité", () => {
       const ei: Company = { ...societe("e1", "EI", 0), dateDeCreation: "2026-07" }
       const s = sessionDe([personne("alice"), ei], [relation("alice", "e1", "Titulaire")], [["e1", "ca_services", 50000]])

@@ -3,7 +3,7 @@
 // fait remarquer. Ses conséquences sur toutes les combinaisons de relations : src/lib/regles-de-structure.exhaustif.test.ts.
 
 import { describe, expect, it } from "vitest"
-import { anomaliesDeStructure, maximumDuRole, obstacleAuRole, phraseDeLObstacle, REGLES_DE_STRUCTURE, rolesDeLaStructure, rolesDeQuiExerce, rolesDisponibles, rolesQui, type GenreDeStructure } from "./regles-de-structure.js"
+import { anomaliesDeStructure, entreprisesDuTitulaire, maximumDuRole, obstacleAuRole, phraseDeLObstacle, REGLES_DE_STRUCTURE, rolesDeLaStructure, rolesDeQuiExerce, rolesDisponibles, rolesQui, type GenreDeStructure } from "./regles-de-structure.js"
 import { micro, personne, portage, relation, societe } from "./testing/session-de-test.js"
 
 const GENRES = Object.keys(REGLES_DE_STRUCTURE) as GenreDeStructure[]
@@ -104,6 +104,32 @@ describe("anomalies d'une structure venue d'une ancienne sauvegarde", () => {
       "« bob » est à la fois président et salarié de « s » : on ne dirige pas l'activité dont on est salarié. Supprimez l'une des deux relations.",
       "Relation « Titulaire » de « alice » : ce rôle n'existe pas pour une SASU, le calcul l'ignore. Remplacez-la par l'une de celles-ci : Président, Associé, Salarié."
     ])
+  })
+
+  it("dit qu'une personne titulaire de plusieurs entreprises en nom propre n'en a qu'une, et ce que le calcul en fait", () => {
+    const deuxMicros = { entities: [...entities, micro("n")], relationships: [relation("alice", "m", "Titulaire"), relation("alice", "n", "Titulaire")] }
+    const phrase = "« alice » est titulaire de plusieurs entreprises en nom propre (« m », « n ») : une personne n'a qu'une entreprise individuelle, qui réunit toutes ses activités. Les plafonds du régime micro et de la franchise de TVA sont calculés sur le chiffre d'affaires réuni de ses micro-entreprises."
+    expect(anomaliesDeStructure(deuxMicros, micro("m"))).toEqual([phrase])
+    expect(anomaliesDeStructure(deuxMicros, micro("n"))).toEqual([phrase])
+
+    // Une micro-entreprise et une entreprise individuelle au réel : dites aussi, chacune calculée de son côté.
+    const microEtEi = { entities: [...entities, societe("e", "EI")], relationships: [relation("alice", "m", "Titulaire"), relation("alice", "e", "Titulaire")] }
+    expect(anomaliesDeStructure(microEtEi, societe("e", "EI"))).toEqual(["« alice » est titulaire de plusieurs entreprises en nom propre (« m », « e ») : une personne n'a qu'une entreprise individuelle, qui réunit toutes ses activités. Le régime micro de l'une et le régime réel de l'autre sont calculés côte à côte, chacun de son côté."])
+  })
+
+  it("ne réunit ni les entreprises de deux personnes, ni une société, ni une activité en portage", () => {
+    const session = {
+      entities: [...entities, micro("n"), portage("p")],
+      relationships: [relation("alice", "m", "Titulaire"), relation("bob", "n", "Titulaire"), relation("alice", "s", "Président"), relation("alice", "s", "Associé"), relation("alice", "p", "Titulaire")]
+    }
+    for (const activite of [micro("m"), micro("n"), societe("s", "SASU"), portage("p")]) {
+      expect(anomaliesDeStructure(session, activite)).toEqual([])
+      expect(entreprisesDuTitulaire(session, activite.id).map(e => e.id)).toEqual([activite.id])
+    }
+    // Sans titulaire, ou avec un « titulaire » qui n'est pas une personne : seule.
+    expect(entreprisesDuTitulaire({ entities: [micro("m"), micro("n")], relationships: [] }, "m").map(e => e.id)).toEqual(["m"])
+    expect(entreprisesDuTitulaire({ entities: [micro("m"), micro("n"), societe("s")], relationships: [relation("s", "m", "Titulaire"), relation("s", "n", "Titulaire")] }, "m").map(e => e.id)).toEqual(["m"])
+    expect(entreprisesDuTitulaire({ entities: [micro("m")], relationships: [] }, "absente")).toEqual([])
   })
 
   it("ignore une relation vers autre chose qu'une personne", () => {

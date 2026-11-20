@@ -16,6 +16,7 @@ import type { FinancialFlow, MicroEntreprise, MonthlyGridData, SortieDuRegimeMic
 import { depassePlafondMicro, type ChiffreAffairesMicro } from "./calculsAE.js"
 import { euros, pourcentDeNombre } from "./format.js"
 import { reglesDeLAnnee, type RegimeDeZone, type ReglesFiscales } from "./regles.js"
+import { entreprisesDuTitulaire, type Relations } from "./regles-de-structure.js"
 
 /** Un mois du calendrier : son année et son numéro, de 1 (janvier) à 12. */
 export interface MoisCivil {
@@ -70,6 +71,30 @@ export function chiffreAffairesDeLaMicro(monthlyData: MonthlyGridData, microId: 
   const flux = monthlyData.filter(m => mois === undefined || mois.includes(m.month)).flatMap(m => m.flows.filter(f => f.entityId === microId))
   const total = (type: FinancialFlow["type"]) => flux.filter(f => f.type === type).reduce((somme, f) => somme + f.amount, 0)
   return { caVente: total("ca_micro_vente"), caServicesBic: total("ca_micro_services_bic"), caServicesBnc: total("ca_micro_services_bnc") }
+}
+
+/**
+ * Les micro-entreprises du titulaire de celle-ci, elle comprise. Une personne n'a qu'une entreprise individuelle : les
+ * plafonds du régime micro et de la franchise de TVA s'apprécient sur leur chiffre d'affaires réuni (voir
+ * `entreprisesDuTitulaire`, regles-de-structure.ts). Une seule, presque toujours.
+ */
+export function microsReunies<M extends { id: string; type: string; legalStatus?: string }>(session: { entities: M[]; relationships?: Relations }, microId: string): M[] {
+  return entreprisesDuTitulaire(session, microId).filter(e => e.type === "micro-entreprise")
+}
+
+/** Chiffre d'affaires réuni de plusieurs micro-entreprises, par nature. */
+export function chiffreAffairesReuni(monthlyData: MonthlyGridData, microIds: string[]): ChiffreAffairesMicro {
+  return microIds
+    .map(id => chiffreAffairesDeLaMicro(monthlyData, id))
+    .reduce((somme, ca) => ({ caVente: somme.caVente + ca.caVente, caServicesBic: somme.caServicesBic + ca.caServicesBic, caServicesBnc: somme.caServicesBnc + ca.caServicesBnc }), { caVente: 0, caServicesBic: 0, caServicesBnc: 0 })
+}
+
+/**
+ * Part des plafonds qui s'applique à l'entreprise que forment ces micro-entreprises : celle de la plus ancienne. Une
+ * activité ajoutée en cours d'année à une entreprise qui existait déjà ne réduit pas ses plafonds.
+ */
+export function prorataDeLEntreprise(micros: Pick<MicroEntreprise, "dateDeCreation">[], annee: number): number {
+  return Math.max(...micros.map(micro => prorataDesPlafonds(lireMois(micro.dateDeCreation), annee)))
 }
 
 // --- ACRE d'une micro-entreprise ---
@@ -248,7 +273,9 @@ export interface RegimeMicroDeLAnnee {
 
 /** Le strict nécessaire d'une session pour suivre le régime de ses micro-entreprises. */
 export interface SessionPourLeRegimeMicro {
-  entities: { id: string; type: string }[]
+  entities: { id: string; type: string; legalStatus?: string }[]
+  /** Pour réunir les micro-entreprises d'un même titulaire ; absentes, chaque micro-entreprise est seule. */
+  relationships?: Relations
   annees: { annee: number; monthlyData: MonthlyGridData }[]
 }
 
@@ -257,14 +284,15 @@ type Micro = Pick<MicroEntreprise, "id" | "dateDeCreation" | "horsPlafondAnneePr
 /**
  * L'année `x` est-elle au-delà des plafonds en vigueur l'année testée (dont on donne les règles) ? Avant la création,
  * non ; l'année de création, au prorata ; l'année qui précède la session, d'après la case de la fiche ; plus tôt, on
- * ne sait pas : non.
+ * ne sait pas : non. Le chiffre d'affaires est celui de toutes les micro-entreprises du titulaire, qui ne forment
+ * qu'une entreprise : elles sortent du régime, et y reviennent, ensemble.
  */
 function auDelaDesPlafonds(session: SessionPourLeRegimeMicro, micro: Micro, x: number, reglesTestees: ReglesFiscales): boolean {
-  const creation = lireMois(micro.dateDeCreation)
-  if (creation && x < creation.annee) return false
+  const creees = (microsReunies(session, micro.id) as Micro[]).filter(m => !((lireMois(m.dateDeCreation)?.annee ?? x) > x))
+  if (creees.length === 0) return false
   const annee = session.annees.find(a => a.annee === x)
-  if (!annee) return x === session.annees[0].annee - 1 && micro.horsPlafondAnneePrecedente === true
-  return depassePlafondMicro(chiffreAffairesDeLaMicro(annee.monthlyData, micro.id), reglesTestees, prorataDesPlafonds(creation, x))
+  if (!annee) return x === session.annees[0].annee - 1 && creees.some(m => m.horsPlafondAnneePrecedente === true)
+  return depassePlafondMicro(chiffreAffairesReuni(annee.monthlyData, creees.map(m => m.id)), reglesTestees, prorataDeLEntreprise(creees, x))
 }
 
 /**

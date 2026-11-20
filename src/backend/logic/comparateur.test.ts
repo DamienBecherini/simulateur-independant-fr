@@ -464,6 +464,23 @@ describe("micro-entreprise au-delà des plafonds", () => {
     expect(resultat.scenarios.some(s => s.horsPlafond)).toBe(false)
   })
 
+  it("juge le plafond sur toutes les micro-entreprises du titulaire, qui ne forment qu'une entreprise", () => {
+    // 50 000 € et 40 000 € de prestations : chacune sous le plafond de 80 000 €, leur total au-delà.
+    const flux: Flux[] = [["m1", "ca_micro_services_bnc", 50000], ["m2", "ca_micro_services_bic", 40000]]
+    const memeTitulaire = comparer([personne("alice"), micro("m1"), micro("m2")], [...titulaire, relation("alice", "m2", "Titulaire")], flux, options("m1"))
+    expect(memeTitulaire.scenarios.filter(s => s.horsPlafond).map(s => s.statut)).toEqual(["micro", "micro-vfl"])
+    expect(["micro", "micro-vfl"]).not.toContain(memeTitulaire.meilleur)
+
+    // La micro-entreprise d'une autre personne ne compte pas.
+    const deuxTitulaires = comparer([personne("alice"), personne("bob"), micro("m1"), micro("m2")], [...titulaire, relation("bob", "m2", "Titulaire")], flux, options("m1"))
+    expect(deuxTitulaires.scenarios.some(s => s.horsPlafond)).toBe(false)
+
+    // Une société comparée dont le président a aussi une micro-entreprise : sa colonne micro les réunit.
+    const liens = [relation("alice", "s1", "Président"), relation("alice", "s1", "Associé"), relation("alice", "m2", "Titulaire")]
+    const societeEtMicro = comparer([personne("alice"), societe("s1", "SASU"), micro("m2")], liens, [["s1", "ca_services", 50000], ["m2", "ca_micro_services_bic", 40000]], options("s1"))
+    expect(societeEtMicro.scenarios.filter(s => s.horsPlafond).map(s => s.statut)).toEqual(["micro", "micro-vfl"])
+  })
+
   it("à un euro au-delà du plafond, la micro au meilleur net cède la place au meilleur statut tenable", () => {
     // 80 000 € de BNC : plafond atteint, pas dépassé ; la micro avec versement libératoire donne le meilleur net.
     // 80 001 € : les deux colonnes micro sont hors plafond, leur net reste le meilleur mais n'est plus retenu.

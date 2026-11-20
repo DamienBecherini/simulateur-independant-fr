@@ -33,13 +33,19 @@ async function ouvrir(page: Page, affichage: "classique" | "resume") {
     { session: sessionNombreuse(), affichage }
   )
   await page.goto("./")
-  await expect(page.getByRole("article").filter({ hasText: `Activité ${NOMBRE_D_ACTIVITES}` })).toBeVisible()
+  await expect(carteDe(page, `Activité ${NOMBRE_D_ACTIVITES}`)).toBeVisible()
 }
+
+/**
+ * La carte qui porte ce nom. Chaque personne a ici deux micro-entreprises, et la carte de l'une cite l'autre dans son
+ * avertissement (« titulaire de plusieurs entreprises en nom propre ») : on cherche le nom seul, pas un texte contenu.
+ */
+const carteDe = (page: Page, nom: string) => page.getByRole("article").filter({ has: page.getByText(nom, { exact: true }) })
 
 const TOUTES = /le détail \(toutes les cartes\)$/
 const boutons = (page: Page) => page.getByRole("button", { name: TOUTES })
-/** Le bouton du détail d'une carte, désignée par un texte qu'elle contient. */
-const boutonDe = (page: Page, texte: string) => page.getByRole("article").filter({ hasText: texte }).getByRole("button", { name: TOUTES })
+/** Le bouton du détail d'une carte, désignée par son nom. */
+const boutonDe = (page: Page, nom: string) => carteDe(page, nom).getByRole("button", { name: TOUTES })
 const haut = (element: Locator) => element.evaluate(e => e.getBoundingClientRect().top)
 const hauteurDeLaPage = (page: Page) => page.evaluate(() => document.documentElement.scrollHeight)
 

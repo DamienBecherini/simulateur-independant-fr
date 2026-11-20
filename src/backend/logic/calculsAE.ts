@@ -22,6 +22,22 @@ export interface EntreesMicro {
    * les professions) : elles ne comptent pas pour la franchise en base.
    */
   soinsExoneresDeTVA?: boolean
+  /** Le titulaire a d'autres micro-entreprises : les plafonds et la franchise de TVA se jugent sur leur ensemble. */
+  entreprise?: EntrepriseDuTitulaire
+}
+
+/**
+ * Les micro-entreprises d'un même titulaire ne forment qu'une entreprise individuelle : ses seuils s'apprécient sur le
+ * chiffre d'affaires de toutes (service-public.fr, F33339 : « un seuil global » pour « l'ensemble des activités
+ * exercées par l'entreprise », pour le régime micro comme pour la franchise de TVA).
+ */
+export interface EntrepriseDuTitulaire {
+  /** Chiffre d'affaires réuni, celui de cette micro-entreprise compris. */
+  chiffreAffaires: ChiffreAffairesMicro
+  /** Le même, sans les soins exonérés de TVA de celles dont la profession en dispense. */
+  chiffreAffairesSoumisALaTVA: ChiffreAffairesMicro
+  /** Noms des micro-entreprises réunies, citées dans les avertissements. */
+  activites: string[]
 }
 
 /** Chiffre d'affaires d'une micro-entreprise, par nature d'activité. */
@@ -70,9 +86,9 @@ export function plafondsAuProrata(plafonds: ReglesMicro["plafonds"], prorata: nu
  * Une activité mixte doit respecter deux plafonds : le chiffre d'affaires total sous le plafond
  * de la vente, et sa part de prestations de services sous le plafond des services.
  */
-function verifierPlafonds(entrees: EntreesMicro, plafonds: ReglesMicro["plafonds"]): string[] {
-  const caServices = entrees.caServicesBic + entrees.caServicesBnc
-  const caTotal = entrees.caVente + caServices
+function verifierPlafonds(ca: ChiffreAffairesMicro, plafonds: ReglesMicro["plafonds"]): string[] {
+  const caServices = ca.caServicesBic + ca.caServicesBnc
+  const caTotal = ca.caVente + caServices
   const depassements: string[] = []
   if (caServices > plafonds.services) depassements.push(`prestations de services ${euros(caServices)} pour un plafond de ${euros(plafonds.services)}`)
   if (caTotal > plafonds.vente) depassements.push(`chiffre d'affaires total ${euros(caTotal)} pour un plafond de ${euros(plafonds.vente)}`)
@@ -85,11 +101,12 @@ function verifierPlafonds(entrees: EntreesMicro, plafonds: ReglesMicro["plafonds
  * et le chiffre d'affaires total à celui de la vente. Le seuil majoré fait perdre la franchise immédiatement,
  * le seuil de base seulement l'année suivante. La TVA n'est pas calculée : les montants saisis sont hors taxe.
  * Les soins exonérés ne comptent pas (BOI-TVA-DECLA-40-10-10, § 230) : pour une profession dont les soins le sont, les
- * prestations BNC sont tenues pour des soins, et seules les ventes et les prestations BIC sont comparées aux seuils.
+ * prestations BNC sont tenues pour des soins, et seules les ventes et les prestations BIC sont comparées aux seuils
+ * (`ca` les exclut déjà).
  */
-function verifierFranchiseTVA(entrees: EntreesMicro, seuils: ReglesFiscales["TVA"]): string[] {
-  const caServices = entrees.caServicesBic + (entrees.soinsExoneresDeTVA ? 0 : entrees.caServicesBnc)
-  const caTotal = entrees.caVente + caServices
+function verifierFranchiseTVA(ca: ChiffreAffairesMicro, seuils: ReglesFiscales["TVA"]): string[] {
+  const caServices = ca.caServicesBic + ca.caServicesBnc
+  const caTotal = ca.caVente + caServices
   const depasse = (seuil: "franchiseBase" | "seuilMajore") => {
     const depassements: string[] = []
     if (caServices > seuils.services[seuil]) depassements.push(`prestations de services ${euros(caServices)} pour un seuil de ${euros(seuils.services[seuil])}`)
@@ -102,6 +119,19 @@ function verifierFranchiseTVA(entrees: EntreesMicro, seuils: ReglesFiscales["TVA
   const base = depasse("franchiseBase")
   if (base) return [`Seuil de franchise en base de TVA dépassé (${base}) : la TVA sera due à partir du 1er janvier suivant. ${nonCalculee}`]
   return []
+}
+
+/**
+ * Plafonds du régime et franchise de TVA : sur le chiffre d'affaires de la micro-entreprise ou, quand son titulaire en
+ * a d'autres, sur celui de toutes, ce que l'avertissement précise alors.
+ */
+function verifierLesSeuils(entrees: EntreesMicro, regles: ReglesFiscales): string[] {
+  const { entreprise } = entrees
+  const soumisALaTVA = entreprise?.chiffreAffairesSoumisALaTVA ?? { ...entrees, caServicesBnc: entrees.soinsExoneresDeTVA ? 0 : entrees.caServicesBnc }
+  const avertissements = [...verifierPlafonds(entreprise?.chiffreAffaires ?? entrees, plafondsAuProrata(regles.microEntreprise.plafonds, entrees.prorataPlafonds ?? 1)), ...verifierFranchiseTVA(soumisALaTVA, regles.TVA)]
+  if (!entreprise) return avertissements
+  const reunies = `Chiffre d'affaires réuni de ${entreprise.activites.map(nom => `« ${nom} »`).join(" et ")}, micro-entreprises du même titulaire.`
+  return avertissements.map(avertissement => `${avertissement} ${reunies}`)
 }
 
 /**
@@ -137,7 +167,7 @@ export function plafondRfrVersementLiberatoire(partsFiscales: number, regles: Re
  */
 export function calculerMicro(entrees: EntreesMicro, regles: ReglesFiscales): ResultatMicro {
   const micro = regles.microEntreprise
-  const warnings = [...verifierPlafonds(entrees, plafondsAuProrata(micro.plafonds, entrees.prorataPlafonds ?? 1)), ...verifierFranchiseTVA(entrees, regles.TVA)]
+  const warnings = verifierLesSeuils(entrees, regles)
 
   const cotisationsPleinTaux = appliquerTaux(entrees, micro.cotisations)
   const formationProfessionnelle = appliquerTaux(entrees, micro.formationProfessionnelle)

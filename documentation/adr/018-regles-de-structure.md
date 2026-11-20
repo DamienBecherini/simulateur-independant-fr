@@ -32,6 +32,7 @@ L'examen des sociétés a montré le même genre de défaut :
 2. **Une SASU ou une EURL à plusieurs associés reste acceptée**, avec l'avertissement existant : les dividendes sont partagés à parts égales, la répartition du capital n'est pas modélisée.
 3. **Le gérant d'EURL non associé n'est pas proposé** : le simulateur ne le calcule pas, et ne donne pas un chiffre faux à la place.
 4. **Un second gérant d'EURL reste accepté**, avec l'avertissement existant (décision du 2026-11-20, après la recette) : le droit l'admet (article L223-18), le calcul ne rémunère que le premier et le dit.
+5. **Une personne titulaire de plusieurs micro-entreprises reste acceptée, avec un avertissement, et leurs plafonds se calculent sur le total** (décision du 2026-11-20, le soir). Plusieurs sociétés pour une même personne restent permises : le droit n'y met pas de limite.
 
 ## Décision
 
@@ -100,6 +101,23 @@ Les trois derniers points ont été trouvés par le test exhaustif ci-dessous, p
 
 `regles-de-structure.test.ts` fige le contenu de la table : la changer est un acte délibéré.
 
+### Une personne, une entreprise individuelle
+
+Une personne physique n'a qu'une entreprise individuelle, micro-entreprise ou au réel, qui réunit toutes ses activités en nom propre. Ses seuils s'apprécient sur le chiffre d'affaires de l'ensemble : « un seuil global » pour « l'ensemble des activités exercées par l'entreprise », pour le régime micro comme pour la franchise en base de TVA (service-public.fr, F33339).
+
+La saisie laisse pourtant créer plusieurs micro-entreprises pour une même personne : c'est la façon naturelle d'y décrire deux activités (deux professions, deux fiches). Elle n'est pas refusée ; le calcul fait ce que le droit ferait d'une seule entreprise, et le dit.
+
+- **Qui est réuni** : `entreprisesDuTitulaire` (`regles-de-structure.ts`) donne les entreprises en nom propre (micro-entreprise, entreprise individuelle au réel) dont la même personne est titulaire. Le portage n'en est pas (un salarié porté), ni les sociétés.
+- **L'avertissement**, sur la carte de chacune (`anomaliesDeStructure`) : « « Alice » est titulaire de plusieurs entreprises en nom propre (« Conseil », « Formation ») : une personne n'a qu'une entreprise individuelle… »
+- **Les plafonds sur le total**, pour les micro-entreprises réunies (`microsReunies`, `chiffreAffairesReuni`, `dispositifs.ts`) :
+  - plafonds du régime micro et franchise de TVA de l'année (`verifierLesSeuils`, `calculsAE.ts`), les soins exonérés de TVA de chacune mis à part ; l'avertissement dit que le chiffre d'affaires est réuni, et de quelles activités ;
+  - sortie du régime après deux années de dépassement, et retour : elles sortent et reviennent ensemble (`auDelaDesPlafonds`) ;
+  - colonnes micro du comparateur (`horsPlafond`), y compris quand une société comparée devient la seconde micro-entreprise de son dirigeant ;
+  - avertissement du changement de statut vers la micro-entreprise (`src/lib/changement-de-statut.ts`).
+- **Ce qui reste par activité** : cotisations (proportionnelles au chiffre d'affaires, donc identiques), abattement, ACRE, versement libératoire, profession. L'année de création, les plafonds sont ceux de la plus ancienne des micro-entreprises réunies : une activité ajoutée à une entreprise qui existait déjà ne les réduit pas.
+
+Une micro-entreprise et une entreprise individuelle au réel du même titulaire sont signalées, sans être réunies : chacune est calculée dans son régime.
+
 ## Conséquences
 
 - **Positives**
@@ -117,13 +135,19 @@ Les trois derniers points ont été trouvés par le test exhaustif ci-dessous, p
 - Le gérant d'EURL non associé (assimilé salarié), et les gérants minoritaires ou égalitaires d'une SARL.
 - La rémunération de plusieurs gérants : elle va au premier, avec l'avertissement existant.
 - Un président personne morale ; un directeur général de SAS.
+- L'entreprise individuelle unique d'une personne titulaire d'une micro-entreprise et d'une entreprise au réel : les deux sont calculées côte à côte, avec un avertissement.
+- Le plafond de la sécurité sociale partagé entre plusieurs employeurs : le président de deux SASU cotise société par société, ce qui majore un peu ses cotisations plafonnées (environ 1 000 € pour deux rémunérations de 40 000 €, mesuré le 2026-11-20).
 
 ## À vérifier
 
 - Le numéro exact de l'alinéa de l'article L311-3 du code de la sécurité sociale qui vise le gérant non associé d'une EURL : la fiche de service-public.fr est citée à sa place.
+- La règle du plafond de la sécurité sociale pour un dirigeant rémunéré par plusieurs sociétés (article L242-3 du code de la sécurité sociale, non relu).
+- Le texte qui pose qu'une personne physique n'a qu'une entreprise individuelle : Bpifrance Création le dit (un seul numéro SIREN) ; la page d'economie.gouv.fr sur les activités multiples n'a pas pu être relue (accès refusé).
 
 ## Sources consultées le 2026-11-20
 
 - Article L227-6 du Code de commerce (legifrance.gouv.fr).
 - Article L223-18 du Code de commerce (legifrance.gouv.fr).
 - [Cotisations sociales d'une EURL](https://entreprendre.service-public.gouv.fr/vosdroits/F36239) (service-public.fr).
+- [Micro-entrepreneur : peut-on cumuler plusieurs activités indépendantes ?](https://entreprendre.service-public.gouv.fr/vosdroits/F33339) (service-public.fr, vérifié le 21 février 2026) : seuil global de chiffre d'affaires pour l'ensemble des activités, seuils de TVA sur le montant global.
+- [Le cumul d'activités avec une micro-entreprise](https://bpifrance-creation.fr/encyclopedie/micro-entreprise-regime-auto-entrepreneur/lessentiel-ce-regime/cumul-dactivites-micro) (Bpifrance Création) : une personne ne peut pas avoir deux micro-entreprises.

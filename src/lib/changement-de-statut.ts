@@ -8,7 +8,7 @@ import { libelleDuStatut } from "@/backend/logic/colonne-du-comparateur"
 import { REGIME_DU_DIRIGEANT } from "@/backend/logic/statuts"
 import type { Activite } from "@/backend/logic/conversion-de-statut"
 import { plafondsAuProrata } from "@/backend/logic/calculsAE"
-import { chiffreAffairesDeLaMicro, lireMois, prorataDesPlafonds } from "@/backend/logic/dispositifs"
+import { chiffreAffairesReuni, microsReunies, prorataDeLEntreprise } from "@/backend/logic/dispositifs"
 import { euros } from "@/backend/logic/format"
 import { professionDe } from "@/backend/logic/professions"
 import type { ReglesFiscales } from "@/backend/logic/regles"
@@ -85,22 +85,27 @@ const PRESTATIONS: Record<NatureDesPrestations, string> = { bnc: "libérales (BN
  * Les années où la micro-entreprise que devient l'activité dépasserait les plafonds du régime (règles de chaque année,
  * au prorata l'année de la création, comme le moteur) : prestations de services au-delà du plafond des services, sinon
  * chiffre d'affaires total au-delà de celui de la vente. Un avertissement, pas un refus : le régime tient tant que le
- * dépassement ne se répète pas deux années de suite.
+ * dépassement ne se répète pas deux années de suite. Le chiffre d'affaires est celui de toutes les micro-entreprises
+ * du titulaire après le changement : elles ne forment qu'une entreprise, dont les plafonds se jugent sur l'ensemble.
  */
 function phrasesDesPlafonds(changement: ChangementDeStatut, nature: NatureDesPrestations): string[] {
   const { activite, session } = changement
   if (activite.type !== "micro-entreprise") return []
-  const creation = lireMois(activite.dateDeCreation)
+  const micros = microsReunies(session, activite.id).filter((e): e is Extract<Entity, { type: "micro-entreprise" }> => e.type === "micro-entreprise")
+  const autres = micros.filter(m => m.id !== activite.id).map(m => `« ${m.name} »`)
+  const avecLesAutres = autres.length > 0 ? `, ${autres.join(" et ")} ${autres.length > 1 ? "comprises" : "comprise"}` : ""
   const suite = "le régime est conservé cette année-là, mais deux années de dépassement de suite font passer l'activité au réel le 1er janvier suivant."
   return session.annees.flatMap(({ annee, monthlyData }) => {
-    const prorata = prorataDesPlafonds(creation, annee)
+    const prorata = prorataDeLEntreprise(micros, annee)
     const plafonds = plafondsAuProrata(reglesDeLAnneeAffichee(annee).microEntreprise.plafonds, prorata)
     const auProrata = prorata < 1 ? ", au prorata de l'année de création" : ""
-    const ca = chiffreAffairesDeLaMicro(monthlyData, activite.id)
+    const ca = chiffreAffairesReuni(monthlyData, micros.map(m => m.id))
     const services = ca.caServicesBic + ca.caServicesBnc
     const total = ca.caVente + services
-    if (services > plafonds.services) return [`En ${annee}, les prestations ${PRESTATIONS[nature]} (${euros(services)}) dépassent le plafond de la micro-entreprise pour cette activité (${euros(plafonds.services)}${auProrata}) : ${suite}`]
-    if (total > plafonds.vente) return [`En ${annee}, le chiffre d'affaires (${euros(total)}) dépasse le plafond de la micro-entreprise pour cette activité (${euros(plafonds.vente)}${auProrata}) : ${suite}`]
+    // Seule, la micro-entreprise n'a que des prestations de la nature choisie ; réunie à d'autres, toutes leurs prestations comptent.
+    const prestations = autres.length > 0 ? "de services" : PRESTATIONS[nature]
+    if (services > plafonds.services) return [`En ${annee}, les prestations ${prestations} (${euros(services)}${avecLesAutres}) dépassent le plafond de la micro-entreprise pour cette activité (${euros(plafonds.services)}${auProrata}) : ${suite}`]
+    if (total > plafonds.vente) return [`En ${annee}, le chiffre d'affaires (${euros(total)}${avecLesAutres}) dépasse le plafond de la micro-entreprise pour cette activité (${euros(plafonds.vente)}${auProrata}) : ${suite}`]
     return []
   })
 }

@@ -154,6 +154,32 @@ describe("régime des micro-entreprises d'une session", () => {
     expect(regimes.get(2027)?.annonces).toEqual({ m1: { depuis: 2028, depassements: [2026, 2027] } })
   })
 
+  it("réunit les micro-entreprises d'un même titulaire : elles sortent du régime ensemble, sur leur chiffre d'affaires total", () => {
+    // Deux micro-entreprises à 50 000 € de prestations chacune : aucune ne dépasse seule, leur total dépasse.
+    const grille = () => {
+      const g = grilleVide()
+      for (const id of ["m1", "m2"]) g[0].flows.push({ id: `ca-${id}`, label: "CA", amount: 50000, entityId: id, type: "ca_micro_services_bnc" })
+      return g
+    }
+    const micros = [
+      { id: "m1", type: "micro-entreprise" },
+      { id: "m2", type: "micro-entreprise" }
+    ]
+    const annees = [2025, 2026, 2027].map(annee => ({ annee, monthlyData: grille() }))
+    const titulaire = (personne: string, microId: string) => ({ fromId: personne, toId: microId, type: "Titulaire" as const })
+
+    const memeTitulaire = regimesMicroDesAnnees({ entities: [{ id: "alice", type: "person" }, ...micros], relationships: [titulaire("alice", "m1"), titulaire("alice", "m2")], annees })
+    const sortie = { depuis: 2027, depassements: [2025, 2026] }
+    expect(memeTitulaire.get(2026)?.annonces).toEqual({ m1: sortie, m2: sortie })
+    expect(memeTitulaire.get(2027)?.sorties).toEqual({ m1: sortie, m2: sortie })
+
+    // Deux titulaires : deux entreprises, chacune sous ses plafonds.
+    const deuxTitulaires = regimesMicroDesAnnees({ entities: [{ id: "alice", type: "person" }, { id: "bob", type: "person" }, ...micros], relationships: [titulaire("alice", "m1"), titulaire("bob", "m2")], annees })
+    expect(deuxTitulaires.get(2027)).toEqual({ sorties: {}, annonces: {}, retours: [] })
+    // Sans relations connues, rien n'est réuni.
+    expect(regimesMicroDesAnnees({ entities: micros, annees }).get(2027)?.sorties).toEqual({})
+  })
+
   it("ne concerne que les micro-entreprises", () => {
     const session = { entities: [{ id: "m1", type: "company" }], annees: [2026, 2027, 2028].map(annee => ({ annee, monthlyData: avecCA(200000) })) }
     expect(regimesMicroDesAnnees(session).get(2028)?.sorties).toEqual({})
