@@ -3,11 +3,16 @@
 // les points de rupture de la page suivent la largeur de la fenêtre, ceux de la barre d'outils sa largeur zoomée, et le
 // zoom lui-même est borné par la largeur. Un défaut peut donc n'apparaître qu'à 170 % en plein écran, ou à 130 % dans une
 // fenêtre de 900 px, juste avant qu'un point de rupture ne change la mise en page. zoom-lisibilite.web.ts contrôle cinq
-// couples en profondeur (toutes les fenêtres) ; ici, on balaie les deux dimensions : à chaque zoom des boutons (50 % à
-// 200 %), la fenêtre rétrécit de 1 920 à 320 px par pas de 16 px, et la page est relevée à chaque pas (aucun texte ni
-// aucune commande hors de l'écran, coupé, sorti de son cadre, trop petit ou écrit sur un autre : support/lisibilite.ts).
-// Un pas coûte quelques dizaines de millisecondes : la page n'est chargée qu'une fois par zoom, et les 4 848 relevés
-// (16 zooms, 101 largeurs, 3 affichages) prennent un peu plus d'une minute sur huit processus.
+// couples en profondeur (toutes les fenêtres) ; ici, on balaie les deux dimensions : à chaque zoom, la fenêtre rétrécit
+// de 1 920 à 320 px par pas de 24 px, et la page est relevée à chaque pas (aucun texte ni aucune commande hors de
+// l'écran, coupé, sorti de son cadre, trop petit ou écrit sur un autre : support/lisibilite.ts).
+// Le coût est celui du nombre de pas : la page n'est chargée qu'une fois par zoom, et un pas prend une centaine de
+// millisecondes (le redimensionnement plus que le relevé). L'affichage « Résumé » passe par les seize zooms des boutons
+// (50 % à 200 %) : la barre d'outils, la même dans les trois affichages, est ainsi vue partout. Les deux autres
+// affichages, dont seul le corps de page diffère, passent par quatre zooms. Soit 1 608 relevés, une demi-minute sur huit
+// processus et deux à trois minutes sur les deux de l'intégration continue. Le pas de 24 px tient compte de la plus
+// étroite des plages de défaut déjà rencontrées (32 px, à 110 %) ; un pas de 16 px sur les seize zooms et les trois
+// affichages triplait la durée sans rien trouver de plus.
 // Interface réduite (moins de 100 %), un texte plus petit que 12 px est le choix de l'utilisateur : ce défaut-là n'y est
 // pas relevé.
 
@@ -17,9 +22,12 @@ import { defautsDeLisibilite } from "./support/lisibilite"
 
 /** Les zooms qu'offrent les boutons : de 50 % à 200 %, par pas de 10 %. */
 const ZOOMS = Array.from({ length: 16 }, (_, i) => (5 + i) / 10)
+/** Hors de l'affichage « Résumé » : les deux butées, le zoom par défaut et un zoom intermédiaire. */
+const ZOOMS_DES_AUTRES_AFFICHAGES = [0.5, 1, 1.5, 2]
 const LARGEUR_MAXIMALE = 1920
+/** Le dernier pas s'arrête à 336 px ; zoom-lisibilite.web.ts couvre le téléphone de 375 px. */
 const LARGEUR_MINIMALE = 320
-const PAS = 16
+const PAS = 24
 const HAUTEUR = 900
 
 const largeurs = () => Array.from({ length: Math.floor((LARGEUR_MAXIMALE - LARGEUR_MINIMALE) / PAS) + 1 }, (_, i) => LARGEUR_MAXIMALE - i * PAS)
@@ -46,7 +54,7 @@ for (const affichage of AFFICHAGES) {
   test.describe(`affichage « ${affichage} » : la fenêtre rétrécit de ${LARGEUR_MAXIMALE} à ${LARGEUR_MINIMALE} px`, () => {
     test.use({ viewport: { width: LARGEUR_MAXIMALE, height: HAUTEUR } })
 
-    for (const zoom of ZOOMS) {
+    for (const zoom of affichage === "resume" ? ZOOMS : ZOOMS_DES_AUTRES_AFFICHAGES) {
       test(`zoom demandé de ${Math.round(zoom * 100)} % : la page reste lisible à chaque largeur`, async ({ page }) => {
         test.slow()
         await ouvrirLaSessionAgrandie(page, zoom, affichage)
