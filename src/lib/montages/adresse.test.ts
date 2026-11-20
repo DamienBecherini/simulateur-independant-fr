@@ -21,7 +21,8 @@ const IDENTIFIANTS_PUBLICS = [
   "micro-et-sasu-du-conjoint",
   "conjoint-salarie-sasu",
   "couple-union-libre",
-  "sasu-et-conjoint-salarie-ailleurs"
+  "sasu-et-conjoint-salarie-ailleurs",
+  "sasu-en-zone-franche-urbaine"
 ]
 
 describe("Adresse d'une situation type", () => {

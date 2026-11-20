@@ -14,7 +14,7 @@ import { MONTAGES_TYPES, sessionDUnMontage } from "./montages"
 const doublons = (valeurs: string[]) => valeurs.filter((valeur, i) => valeurs.indexOf(valeur) !== i)
 
 /** Domaines des sources officielles acceptées dans les explications. */
-const DOMAINES_OFFICIELS = ["entreprendre.service-public.gouv.fr", "www.service-public.gouv.fr", "www.impots.gouv.fr", "bofip.impots.gouv.fr", "www.legifrance.gouv.fr", "www.urssaf.fr", "www.lassuranceretraite.fr", "www.lacipav.fr", "www.carpimko.com"]
+const DOMAINES_OFFICIELS = ["entreprendre.service-public.gouv.fr", "www.service-public.gouv.fr", "www.impots.gouv.fr", "bofip.impots.gouv.fr", "www.legifrance.gouv.fr", "www.urssaf.fr", "www.lassuranceretraite.fr", "www.lacipav.fr", "www.carpimko.com", "www.economie.gouv.fr", "sig.ville.gouv.fr"]
 
 describe("Bibliothèque des montages types", () => {
   it("au moins dix montages, aux identifiants et aux titres uniques", () => {
@@ -97,6 +97,21 @@ describe("Bibliothèque des montages types", () => {
       // Les valeurs de 2026, pour qu'un changement de mise en forme ne passe pas inaperçu.
       expect(t.replace(/\s/g, " ")).toContain("25,6 % pour une activité libérale non réglementée en 2026")
       expect(t.replace(/\s/g, " ")).toContain("d'au plus 29 315 € par part pour 2026")
+    })
+
+    it("SASU en zone franche urbaine : durée, taux dégressifs, plafond, dates des deux régimes et hypothèses, tirés des règles", () => {
+      const t = texte("sasu-en-zone-franche-urbaine")
+      const [zfuTe, qpv] = regles.exonerationsDeZone.regimes
+      expect([zfuTe.id, qpv.id]).toEqual(["zfuTe", "qpv"])
+      for (const valeur of [`pendant ${zfuTe.moisExonerationTotale} mois`, ...zfuTe.partsExonereesEnsuite.map(part => pourcent(part)), euros(zfuTe.plafondAnnuel ?? 0), zfuTe.conditionsNonVerifiees, ...zfuTe.hypotheses, pourcent(regles.IS.tauxReduit)]) {
+        expect(t).toContain(valeur)
+      }
+      // Les valeurs de 2026, pour qu'un changement de mise en forme ne passe pas inaperçu.
+      const lisible = t.replace(/\s/g, " ")
+      expect(lisible).toContain("en totalité pendant 60 mois, puis à 60 %, 40 %, 20 % par périodes de douze mois, dans la limite de 50 000 € par an")
+      expect(lisible).toContain("au plus tard en décembre 2025")
+      expect(lisible).toContain("à partir de janvier 2026 relève du régime QPV")
+      expect(lisible).toContain("créée en janvier 2024 dans une zone franche urbaine")
     })
 
     it("SASU sans salaire : prélèvement forfaitaire, abattement des dividendes, taux réduit d'IS et plafond micro", () => {

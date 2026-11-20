@@ -34,5 +34,6 @@ Ces identifiants sont publiés dans des liens : **ils ne doivent plus changer**.
 | `conjoint-salarie-sasu` | Conjoint salarié de la SASU |
 | `couple-union-libre` | Couple en union libre, puis marié ou pacsé |
 | `sasu-et-conjoint-salarie-ailleurs` | SASU avec un conjoint salarié ailleurs |
+| `sasu-en-zone-franche-urbaine` | SASU en zone franche urbaine (ZFU-TE) |
 
 Le code : la lecture de l'adresse et la composition des liens dans `src/lib/montages/adresse.ts`, le comportement dans la page dans `src/ui/components/SituationParLAdresse.tsx`, le lien de la démo dans `src/web/plateforme-web.ts` (`lienVersUneSituation`).

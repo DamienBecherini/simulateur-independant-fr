@@ -29,6 +29,8 @@ interface ChiffresAttendus {
   activites: Record<string, { cotisationsSociales: number; impotSocietes: number; resultatConserve: number }>
   /** Activité ouverte dans le comparateur et statut au meilleur net. */
   comparateur: { activite: string; meilleur: StatutCompare | null }
+  /** Débuts des avertissements qu'un montage produit exprès, parce qu'il illustre un dispositif qui en émet un ; aucun sinon. */
+  avertissements?: string[]
 }
 
 const foyer = (personIds: string[], impotSurLeRevenu: number, prelevementsSociaux: number, totalPrelevements: number, netApresImpots: number): FoyerAttendu => ({ personIds, impotSurLeRevenu, prelevementsSociaux, totalPrelevements, netApresImpots })
@@ -74,6 +76,18 @@ const ATTENDUS: Record<string, ChiffresAttendus> = {
     foyers: [foyer(["p-thomas"], 3119, 11672, 30041, 47960)],
     activites: { "s-thomas": activite(0, 15250) },
     comparateur: { activite: "s-thomas", meilleur: "SASU" }
+  },
+  "sasu-en-zone-franche-urbaine": {
+    // Les chiffres de « SASU sans salaire », la zone en plus. Bénéfice 78 000 €, dont 50 000 € exonérés (plafond de la
+    // ZFU-TE, exonération totale jusqu'à fin 2028 pour une création en janvier 2024) : IS 28 000 x 15 % = 4 200 €.
+    // Dividendes 73 800 € : prélèvements sociaux 18,6 % = 13 727 € ; au barème, 73 800 x 60 % - 6,8 % de CSG déductible
+    // = 39 262 € imposables, soit (29 579 - 11 600) x 11 % + (39 262 - 29 579) x 30 % = 4 882 € d'impôt.
+    // Net 73 800 - 4 882 - 13 727 = 55 191 €, soit 7 231 € de plus que sans la zone (47 960 €).
+    totalNetApresImpots: 55191,
+    foyers: [foyer(["p-karim"], 4882, 13727, 22809, 55191)],
+    activites: { "s-karim": activite(0, 4200) },
+    comparateur: { activite: "s-karim", meilleur: "SASU" },
+    avertissements: ["Exonération ZFU-TE appliquée sans vérifier ses conditions"]
   },
   "sasu-salaire-4-trimestres": {
     totalNetApresImpots: 46296,
@@ -156,8 +170,9 @@ casDeReference("Montages types : chiffres de référence", () => {
       expect(activites).toEqual(attendus.activites)
     })
 
-    it("sans avertissement, et meilleur statut du comparateur", () => {
-      expect([...report.avertissements, ...report.activities.flatMap(a => a.warnings), ...report.foyers.flatMap(f => f.warnings)]).toEqual([])
+    it("sans avertissement autre que ceux qu'il illustre, et meilleur statut du comparateur", () => {
+      const avertissements = [...report.avertissements, ...report.activities.flatMap(a => a.warnings), ...report.foyers.flatMap(f => f.warnings)]
+      expect(avertissements).toEqual((attendus.avertissements ?? []).map(debut => expect.stringMatching(new RegExp(`^${debut}`))))
       expect({ activite: activiteComparee, meilleur: comparaison.meilleur }).toEqual(attendus.comparateur)
     })
 
@@ -168,6 +183,20 @@ casDeReference("Montages types : chiffres de référence", () => {
     it("des charges saisies pour chaque activité : pas d'alerte « aucune charge » quand on la choisit dans le comparateur", () => {
       expect(activitesSansCharge(sessionDUnMontage(montage), ANNEE_DES_MONTAGES)).toEqual([])
     })
+  })
+
+  it("SASU en zone franche urbaine : 50 000 € de bénéfice exonérés, plafond atteint, et 11 050 € d'impôt sur les sociétés de moins que sans la zone", () => {
+    const { report, comparaison } = simulerLeMontage(MONTAGES_TYPES.find(m => m.id === "sasu-en-zone-franche-urbaine")!)
+    const [societe] = report.activities
+    expect(societe.exonerationDeZone).toMatchObject({ regime: "zfuTe", partExoneree: 1, partDansLaZone: 1, beneficeExonere: 50000, plafond: 50000, plafondAtteint: true, finExonerationTotale: "2028-12", fin: "2031-12" })
+    expect(societe.dispositifs?.join(" ").replace(/\s/g, " ")).toContain("ZFU-TE : bénéfice exonéré d'impôt à 100 % en 2026, soit 50 000 € : plafond de 50 000 € atteint.")
+    // Mêmes flux que « SASU sans salaire », hors dividendes : 15 250 € d'impôt sur les sociétés sans la zone, 4 200 € avec.
+    const sansLaZone = simulerLeMontage(MONTAGES_TYPES.find(m => m.id === "sasu-sans-salaire")!).report.activities[0]
+    expect(sansLaZone.impotSocietes - societe.impotSocietes).toBe(11050)
+    // Le comparateur garde l'exonération dans chaque statut : en EI, le bénéfice exonéré sort de l'impôt sur le revenu.
+    expect(comparaison.sousLaSituationSaisie).toBeUndefined()
+    expect(comparaison.scenarios.filter(s => s.statut !== "portage").map(s => [s.statut, s.netApresImpots])).toEqual([["SASU", 55206], ["EURL", 47500], ["EI", 54093], ["micro", 58378], ["micro-vfl", 56530]])
+    expect(comparaison.scenarios.filter(s => s.horsPlafond).map(s => s.statut)).toEqual(["micro", "micro-vfl"])
   })
 
   it("micro-entreprise seule : le versement libératoire s'applique, avec 24 000 € de revenu fiscal de référence saisis", () => {

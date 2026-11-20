@@ -3,6 +3,7 @@
 // section « Aides liées au lieu d'implantation » de sa fiche est repliée ; cochée, elle annonce le régime ZFU-TE, son
 // calendrier et les hypothèses du calcul, et la carte de l'activité montre le bénéfice exonéré (50 000 €, le plafond)
 // et l'impôt sur les sociétés qui reste (4 500 € au lieu de 15 750 €). Rien de tout cela n'apparaît case décochée.
+// La situation type « SASU en zone franche urbaine (ZFU-TE) » s'ouvre par son adresse, case déjà cochée.
 
 import { test, expect, type Locator, type Page } from "@playwright/test"
 import { ligneDeLAnnee } from "./support/annees"
@@ -132,6 +133,33 @@ test("au clavier : déplier la section, cocher la case, régler la part", async 
   await expect(part).toBeFocused()
   await page.keyboard.press("ArrowDown")
   await expect(part).toHaveValue("95")
+})
+
+test("la situation type « SASU en zone franche urbaine (ZFU-TE) » s'ouvre par son adresse, case cochée : 50 000 € exonérés, 4 200 € d'impôt sur les sociétés", async ({ page }) => {
+  await page.goto("./#situation=sasu-en-zone-franche-urbaine")
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("SASU en zone franche urbaine (ZFU-TE)")
+  const carte = page.getByRole("article").filter({ has: page.getByText("SASU de Karim", { exact: true }) }).first()
+  await expect(carte.getByRole("list", { name: "Dispositifs de l'année" })).toContainText(NOTE)
+  await carte.getByRole("button", { name: "Afficher le détail" }).click()
+  await expect(carte).toContainText(/Bénéfice exonéré d'impôt\s*50\s000\s€/)
+  await expect(carte).toContainText(/Impôt sur les sociétés\s*− 4\s200\s€/)
+
+  // La fiche de la société s'ouvre sur la section dépliée, case cochée, avec le régime et les hypothèses.
+  const fenetre = await reglagesDe(page, "SASU de Karim")
+  await expect(section(fenetre)).toHaveAttribute("open", "")
+  await expect(fenetre.getByRole("switch", { name: CASE })).toBeChecked()
+  await expect(fenetre.getByRole("status")).toContainText("Créée en janvier 2024 : régime ZFU-TE.")
+  await page.keyboard.press("Escape")
+  await expect(fenetre).toBeHidden()
+
+  // La fenêtre des situations types la présente, avec ses conditions et ses sources officielles.
+  await page.getByRole("button", { name: "Paramètres" }).click()
+  await page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: "Partir d'une situation type..." }).click()
+  await page.getByRole("button", { name: "Détails de la situation « SASU en zone franche urbaine (ZFU-TE) »" }).click()
+  const detail = page.getByRole("dialog", { name: "SASU en zone franche urbaine (ZFU-TE)" })
+  await expect(detail).toContainText(/en totalité pendant 60 mois, puis à 60\s%, 40\s%, 20\s% par périodes de douze mois, dans la limite de 50\s000\s€ par an/)
+  await expect(detail.getByRole("link", { name: /Carte officielle des quartiers prioritaires et des zones franches urbaines/ })).toHaveAttribute("href", "https://sig.ville.gouv.fr/")
+  await auditer(page, "détail de la situation type en zone franche urbaine", "[role='dialog']")
 })
 
 for (const cas of [
