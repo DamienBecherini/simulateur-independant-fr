@@ -32,12 +32,14 @@ function situation(id: string): SessionState {
 }
 
 /**
- * Deux situations qui, à elles deux, font paraître toutes les réponses de la barre : le couple en union libre (mariage
- * ou Pacs) et la SASU (rémunération optimale) ; chacune attend le lien de sa réponse, arrivé après le calcul.
+ * Trois situations qui, à elles trois, font paraître toutes les réponses de la barre : le couple en union libre (mariage
+ * ou Pacs), la SASU (rémunération optimale) et la SASU en zone franche, dont la carte porte une alerte (le lien
+ * « Alertes » y mène) ; chacune attend le lien de sa réponse, arrivé après le calcul.
  */
 const SITUATIONS = [
   { id: "couple-union-libre", reponse: /^Mariage ou Pacs/ },
-  { id: "sasu-salaire-4-trimestres", reponse: /^Rémunération optimale/ }
+  { id: "sasu-salaire-4-trimestres", reponse: /^Rémunération optimale/ },
+  { id: "sasu-en-zone-franche-urbaine", reponse: /^Rémunération optimale/ }
 ]
 
 /** Monte l'application sur la situation et attend la réponse dans la barre ; rend les liens de la barre. */

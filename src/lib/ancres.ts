@@ -12,6 +12,8 @@ export const ANCRES = {
   bilan: "bilan",
   /** Titre des résultats, suivi de leurs alertes. */
   titreDesResultats: "resultats-titre",
+  /** Première alerte affichée dans les résultats : celles de l'année sous le titre, sinon la première carte qui en porte. */
+  premiereAlerte: "premiere-alerte",
   /** Verdict du comparateur (affichage « Résumé »), ou invitation à saisir un chiffre d'affaires. */
   verdictDuComparateur: "comparateur-verdict",
   /** Titre du comparateur de statuts. */

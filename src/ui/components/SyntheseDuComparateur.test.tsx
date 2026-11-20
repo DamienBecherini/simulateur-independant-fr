@@ -9,7 +9,7 @@ import type { ComparaisonResult, ScenarioStatut, StatutCompare } from "@/types"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { ESPACE_INSECABLE } from "@/backend/logic/format"
 import { AffichageContext } from "../hooks/useAffichage"
-import { CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
+import { BoutonDesPrecisions, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? ""
 
@@ -105,6 +105,44 @@ describe("écart de la colonne du statut actuel, simulée avec un autre partage 
       "Prélèvements sociaux : 10 269 € au lieu de 11 671 €, soit +1 402 €"
     ])
     expect(resume.closest("details")).toHaveTextContent("Même statut, autre partage du bénéfice.")
+  })
+
+  it("« Afficher tous les détails », dans le coin du tableau, déplie d'un geste les précisions de toutes les cases, puis les replie", async () => {
+    const eurl = scenario("EURL", "EURL", 45000, { ecartDeFrais: { total: 300, postes: { expertComptable: 300 } } })
+    const avecFrais = { ...result, scenarios: [optimisee, eurl] }
+    render(
+      <table>
+        <thead>
+          <tr>
+            <th>
+              <BoutonDesPrecisions result={avecFrais} />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <EcartDeRepartitionDeLaColonne result={avecFrais} scenario={optimisee} />
+              <EcartDeFraisDeLaColonne scenario={eurl} actuel="SASU" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    )
+    const precisions = () => Array.from(document.querySelectorAll("details")).map(precision => precision.open)
+    expect(precisions()).toEqual([false, false])
+    const bouton = screen.getByRole("button", { name: "Afficher tous les détails" })
+    expect(bouton).toHaveAttribute("aria-pressed", "false")
+    await userEvent.click(bouton)
+    expect(precisions()).toEqual([true, true])
+    await userEvent.click(screen.getByRole("button", { name: "Masquer tous les détails" }))
+    expect(precisions()).toEqual([false, false])
+  })
+
+  it("pas de bouton quand aucune case n'a de précision à déplier", () => {
+    const sansPrecision = { ...result, scenarios: [scenario("SASU", "SASU", 47960, { actuel: true, telleQueSaisie: true }), scenario("EURL", "EURL", 45000)] }
+    const { container } = render(<BoutonDesPrecisions result={sansPrecision} />)
+    expect(container).toBeEmptyDOMElement()
   })
 
   it("rien sous une colonne d'un autre statut : son écart vient du statut", () => {

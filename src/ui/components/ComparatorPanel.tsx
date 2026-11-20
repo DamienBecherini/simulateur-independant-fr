@@ -16,7 +16,7 @@ import { RepartitionDuBenefice } from "./RepartitionBenefice"
 import { SurToutesLesAnnees } from "./SurToutesLesAnnees"
 import { ReglagesDuComparateur } from "./ReglagesDuComparateur"
 import { ZoneDefilante } from "./ZoneDefilante"
-import { BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
+import { BoutonDesPrecisions, BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { BullesDesNotes, NotesDuTableau, RenvoisAuxNotes } from "./NotesDuComparateur"
 import { useAffichageResume } from "../hooks/useAffichage"
@@ -249,6 +249,7 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
           <tr>
             <th scope="col" className={cn(COLONNE_FIXE, FOND_DE_L_EN_TETE, LARGEUR_DES_LIBELLES, "px-3 py-2 text-left")}>
               <span className="sr-only">Indicateur</span>
+              <BoutonDesPrecisions result={result} />
             </th>
             {result.scenarios.map(s => (
               <EnTeteDeStatut key={s.statut} scenario={s} meilleur={s.statut === result.meilleur} renvois={renvois.get(s.statut) ?? []} />

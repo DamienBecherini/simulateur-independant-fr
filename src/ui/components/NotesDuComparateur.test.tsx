@@ -96,11 +96,12 @@ describe("bulle d'une pastille du tableau", () => {
     expect(pastille("micro", 1)).toHaveFocus()
   })
 
-  it("un défilement qui ne déplace pas la pastille ne ferme pas la bulle ; un changement de taille de la fenêtre la ferme", async () => {
+  it("faire défiler la page ou le tableau ne ferme pas la bulle ; un changement de taille de la fenêtre la ferme", async () => {
     const { user, pastille } = afficher()
     await user.click(pastille("micro", 1))
-    // jsdom ne met rien en page : la pastille reste à la même place, comme après l'événement tardif d'un défilement fini.
-    window.dispatchEvent(new Event("scroll"))
+    // Posée dans la page, la bulle défile avec elle ; le tableau qui défile de côté la fait seulement se replacer.
+    document.dispatchEvent(new Event("scroll"))
+    screen.getByTestId("micro").dispatchEvent(new Event("scroll"))
     expect(screen.getByRole("tooltip")).toBeInTheDocument()
     window.dispatchEvent(new Event("resize"))
     await screen.findByText("Ailleurs")

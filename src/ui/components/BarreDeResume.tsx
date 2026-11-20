@@ -39,7 +39,10 @@ function useSousLaBarreDOutils(barre: RefObject<HTMLElement | null>): number {
       const hauteurOutils = outils?.offsetHeight ?? 0
       const hautCollant = hauteurOutils + (barre.current?.offsetHeight ?? 0) + 8
       setHaut(hauteurOutils)
-      racine.style.scrollPaddingTop = `${hautCollant}px`
+      // Les hauteurs mesurées sont en pixels de la page zoomée (CSS `zoom` sur le body) ; la réserve se pose sur la racine,
+      // qui n'est pas zoomée : en pixels de l'écran. Sans cela, à 150 %, un lien suivi arrivait sous la barre de résumé.
+      const zoom = Number.parseFloat(getComputedStyle(document.body).zoom) || 1
+      racine.style.scrollPaddingTop = `${Math.ceil(hautCollant * zoom)}px`
       // Lue par la feuille de style : les éléments des barres elles-mêmes échappent à cette réserve (voir App.css).
       racine.style.setProperty("--hauteur-collee", `${hautCollant}px`)
     }
@@ -221,6 +224,12 @@ function ReponsesDuComparateur({ comparaison, className }: { comparaison: Resume
   )
 }
 
+/**
+ * Où mène le lien « Alertes » : à la première alerte affichée (celles de l'année sont sous le titre des résultats, les
+ * autres sur les cartes, plus bas) ; sans alerte, au titre des résultats.
+ */
+const ancreDesAlertes = (alertes: number) => (alertes > 0 ? ANCRES.premiereAlerte : ANCRES.titreDesResultats)
+
 /** La ligne des chiffres clés ; réduite, sur un téléphone, le taux, les réponses et les alertes attendent le bouton qui la déplie. */
 function ChiffresClesDeLAnnee({ report, annees, annee, onAnnee, comparaison, reduite, detail }: BarreDeResumeProps & { reduite: boolean; detail: ReactNode }) {
   const meilleur = meilleurStatut(comparaison?.result ?? null)
@@ -237,7 +246,7 @@ function ChiffresClesDeLAnnee({ report, annees, annee, onAnnee, comparaison, red
       ) : null}
       {meilleur && comparaison?.activite ? <Chiffre vers={ANCRES.verdictDuComparateur} libelle={`Meilleur statut pour « ${comparaison.activite} »`} libelleCourt="Meilleur" valeur={meilleur} icone={reduite ? <Trophy /> : undefined} /> : null}
       <ReponsesDuComparateur comparaison={comparaison} className={masqueSiReduite} />
-      <Chiffre vers={ANCRES.titreDesResultats} libelle="Alertes" valeur={alertes} className={cn(alertes > 0 && "text-amber-900 dark:text-amber-200", masqueSiReduite)} />
+      <Chiffre vers={ancreDesAlertes(alertes)} libelle="Alertes" valeur={alertes} className={cn(alertes > 0 && "text-amber-900 dark:text-amber-200", masqueSiReduite)} />
       {detail}
     </div>
   )
