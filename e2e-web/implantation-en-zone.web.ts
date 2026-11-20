@@ -73,7 +73,8 @@ test("cocher la case exonère le bénéfice, l'annonce sur la carte, et décoche
   await expect(fenetre.getByRole("status")).toHaveText(/^Créée en janvier 2024 : régime ZFU-TE\. Bénéfice exonéré d'impôt en totalité jusqu'à fin décembre 2028, puis à 60\s%, 40\s% et 20\s% par périodes de douze mois, jusqu'à fin décembre 2031\. Bénéfice exonéré plafonné à 50\s000\s€ par an\.$/)
   await expect(fenetre.getByRole("spinbutton", { name: "Part du chiffre d'affaires réalisée dans la zone (%)" })).toHaveValue("100")
   const hypotheses = fenetre.getByRole("list", { name: "Ce que ce calcul suppose" }).getByRole("listitem")
-  await expect(hypotheses).toHaveCount(2)
+  // Une seule pour une SASU : l'hypothèse sur les cotisations de l'entreprise individuelle ne la concerne pas.
+  await expect(hypotheses).toHaveCount(1)
   await expect(hypotheses.first()).toContainText("Une année à cheval sur deux taux d'exonération est répartie également entre ses mois")
   await expect(fenetre.getByRole("link", { name: "Vérifier une adresse sur la carte officielle" })).toHaveAttribute("href", "https://sig.ville.gouv.fr/")
   await auditer(page, "fiche de l'activité, aides liées au lieu d'implantation", "[role='dialog']")
@@ -82,7 +83,16 @@ test("cocher la case exonère le bénéfice, l'annonce sur la carte, et décoche
 
   // La carte annonce l'exonération, avertit des conditions non vérifiées, et le calcul la montre.
   await expect(carteAtelier(page).getByRole("list", { name: "Dispositifs de l'année" })).toContainText(NOTE)
-  await expect(carteAtelier(page)).toContainText(/Exonération ZFU-TE appliquée sans vérifier ses conditions : moins de 50 salariés.*Hypothèses du calcul dans la fiche de l'activité\./)
+  // L'avertissement tient en une phrase ; « Voir les conditions » déplie la liste et le lien vers le texte officiel.
+  const conditions = carteAtelier(page).getByText(/Exonération ZFU-TE appliquée sans vérifier ses conditions : moins de 50 salariés.*Hypothèses du calcul dans la fiche de l'activité\./)
+  await expect(carteAtelier(page).getByText("Exonération ZFU-TE appliquée sans vérifier ses conditions.", { exact: true })).toBeVisible()
+  await expect(conditions).toBeHidden()
+  await carteAtelier(page).getByRole("button", { name: "Voir les conditions" }).click()
+  await expect(conditions).toBeVisible()
+  await expect(carteAtelier(page).getByRole("link", { name: "Texte officiel" })).toHaveAttribute("href", /^https:\/\/bofip\.impots\.gouv\.fr\//)
+  await auditer(page, "résultats d'une activité exonérée en zone, conditions dépliées")
+  await carteAtelier(page).getByRole("button", { name: "Masquer les conditions" }).click()
+  await expect(conditions).toBeHidden()
   await expect(carteAtelier(page)).toContainText(/Bénéfice exonéré d'impôt\s*50\s000\s€\s*ZFU-TE, exonéré à 100\s%, plafond atteint/)
   await expect(carteAtelier(page)).toContainText(/Impôt sur les sociétés\s*− 4\s500\s€/)
   await auditer(page, "résultats d'une activité exonérée en zone")

@@ -619,8 +619,16 @@ export interface ExonerationDeZoneDeLActivite {
   fin?: string
   /** Pourquoi rien n'est exonéré, le cas échéant. */
   sansExoneration?: "sansDateDeCreation" | "sansRegime" | "terminee" | "versementLiberatoire"
-  /** Ce que le calcul suppose sans texte officiel pour le confirmer (règles de l'année) : à montrer à l'utilisateur. */
+  /**
+   * Ce que le calcul suppose sans texte officiel pour le confirmer (règles de l'année) : à montrer à l'utilisateur. Seules
+   * figurent les hypothèses qui concernent le statut de l'activité.
+   */
   hypotheses: string[]
+  /**
+   * Exonération appliquée : les conditions du régime, que le simulateur ne vérifie pas. `avertissement` figure tel quel
+   * parmi les avertissements de l'activité ; sa carte n'en montre que `resume` et déplie le reste, avec le texte officiel.
+   */
+  conditionsNonVerifiees?: { resume: string; avertissement: string; source: string }
 }
 
 interface ACREDeLAnnee {

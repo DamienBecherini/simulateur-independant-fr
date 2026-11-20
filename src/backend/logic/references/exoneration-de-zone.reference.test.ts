@@ -68,7 +68,13 @@ describe("SASU en ZFU-TE créée en janvier 2024", () => {
       plafondAtteint: false,
       finExonerationTotale: "2028-12",
       fin: "2031-12",
-      hypotheses: expect.arrayContaining([expect.stringContaining("à cheval sur deux taux")]) as string[]
+      // Une société ne voit pas l'hypothèse qui ne concerne que les cotisations de l'entreprise individuelle.
+      hypotheses: [expect.stringContaining("à cheval sur deux taux")] as string[],
+      conditionsNonVerifiees: {
+        resume: "Exonération ZFU-TE appliquée sans vérifier ses conditions",
+        avertissement: resultat.warnings[0],
+        source: "https://bofip.impots.gouv.fr/bofip/5903-PGP.html/identifiant=BOI-BIC-CHAMP-80-10-30-20250702"
+      }
     })
     expect(espaces(resultat.dispositifs)).toEqual(["ZFU-TE : bénéfice exonéré d'impôt à 100 % en 2026, soit 30 000 €. Exonération totale jusqu'à fin décembre 2028, puis dégressive (60 %, 40 %, 20 %) jusqu'à fin décembre 2031."])
     // Un seul avertissement : les conditions que le simulateur ne vérifie pas, et le renvoi aux hypothèses.
@@ -162,8 +168,9 @@ describe("SASU en QPV créée en juillet 2026", () => {
     expect(resultat.impotSocietes).toBe(0)
     expect(resultat.exonerationDeZone).toMatchObject({ regime: "qpv", nom: "QPV", beneficeExonere: 120000, plafondAtteint: false, finExonerationTotale: "2031-06", fin: "2034-06" })
     expect(resultat.exonerationDeZone).not.toHaveProperty("plafond")
-    expect(resultat.exonerationDeZone?.hypotheses.some(h => h.includes("n'a pas encore publié son commentaire"))).toBe(true)
+    expect(resultat.exonerationDeZone?.hypotheses).toEqual([expect.stringContaining("à cheval sur deux taux"), expect.stringContaining("n'a pas encore publié son commentaire")])
     expect(resultat.warnings[0]).toMatch(/^Exonération QPV appliquée sans vérifier ses conditions : activité commerciale, artisanale ou profession de santé/)
+    expect(resultat.exonerationDeZone?.conditionsNonVerifiees).toEqual({ resume: "Exonération QPV appliquée sans vérifier ses conditions", avertissement: resultat.warnings[0], source: "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053521035" })
   })
 
   it("avec 60 % du chiffre d'affaires dans le quartier", () => {
@@ -183,8 +190,10 @@ describe("entreprise individuelle au réel en ZFU-TE", () => {
     const enZone = rapportDe(session(ei, { 2026: flux(60000) }))
     expect(hors.foyers[0].impotSurLeRevenu).toBeGreaterThan(3000)
     expect(enZone.foyers[0].impotSurLeRevenu).toBe(0)
-    // Les cotisations portent sur le bénéfice entier : l'exonération ne les change pas.
+    // Les cotisations portent sur le bénéfice entier : l'exonération ne les change pas. Aucun texte officiel ne l'a
+    // confirmé : seule l'entreprise individuelle, que ce point concerne, le lit parmi ses hypothèses.
     expect(enZone.activities[0].cotisationsSociales).toBe(hors.activities[0].cotisationsSociales)
+    expect(enZone.activities[0].exonerationDeZone?.hypotheses).toEqual([expect.stringContaining("à cheval sur deux taux"), expect.stringMatching(/^Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier/)])
     expect(enZone.activities[0].revenuVerse).toBe(hors.activities[0].revenuVerse)
     // Tout le bénéfice imposable est exonéré : il quitte le barème et revient dans le revenu fiscal de référence.
     expect(enZone.foyers[0].revenuImposableGlobal).toBe(0)

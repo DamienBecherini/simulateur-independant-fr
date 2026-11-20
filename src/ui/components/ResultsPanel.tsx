@@ -8,7 +8,7 @@ import { LIMITES, TITRE_DES_LIMITES } from "@/lib/limites-du-modele"
 import { statutEtProfession } from "@/lib/professions"
 import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
-import { useId, type ReactNode } from "react"
+import { useId, useState, type ReactNode } from "react"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { classeDuDetail, useDetailDesCartes } from "../hooks/useDetailsDesCartes"
 import { BoutonDuDetailDesCartes, FournisseurDesDetails } from "./DetailsDesCartes"
@@ -126,7 +126,47 @@ function Row({ label, value, hint, strong = false, pastille, className }: { labe
   )
 }
 
-function Card({ title, subtitle, warnings, className, children }: { title: string; subtitle: string; warnings: string[]; className?: string; children: ReactNode }) {
+/** Les conditions non vérifiées d'une exonération en zone : l'avertissement entier, sa phrase d'annonce, le texte officiel. */
+type ConditionsNonVerifiees = NonNullable<NonNullable<ActivityResult["exonerationDeZone"]>["conditionsNonVerifiees"]>
+
+const LIEN_D_AVERTISSEMENT = "rounded-sm font-medium underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring print:hidden"
+
+/**
+ * L'avertissement des conditions non vérifiées, réduit à sa phrase d'annonce : la liste des conditions prenait la moitié
+ * de la carte. « Voir les conditions » déplie le texte entier et le lien vers le texte officiel. À l'impression (export
+ * PDF), le texte entier est toujours là, sans bouton.
+ */
+function ConditionsDepliables({ resume, avertissement, source }: ConditionsNonVerifiees) {
+  const [ouvert, setOuvert] = useState(false)
+  const id = useId()
+  return (
+    <>
+      <span className={ouvert ? "hidden" : "print:hidden"}>{resume}. </span>
+      <span id={id} className={ouvert ? undefined : "hidden print:inline"}>
+        {avertissement}{" "}
+        <a href={source} target="_blank" rel="noreferrer" className={LIEN_D_AVERTISSEMENT}>
+          Texte officiel
+        </a>
+        <span className="print:hidden"> · </span>
+      </span>
+      <button type="button" aria-expanded={ouvert} aria-controls={id} onClick={() => setOuvert(etat => !etat)} className={LIEN_D_AVERTISSEMENT}>
+        {ouvert ? "Masquer les conditions" : "Voir les conditions"}
+      </button>
+    </>
+  )
+}
+
+interface CardProps {
+  title: string
+  subtitle: string
+  warnings: string[]
+  /** Celui des avertissements qui s'affiche replié, avec ses conditions à déplier. */
+  conditions?: ConditionsNonVerifiees
+  className?: string
+  children: ReactNode
+}
+
+function Card({ title, subtitle, warnings, conditions, className, children }: CardProps) {
   return (
     <article className={cn("rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80", className)}>
       <header className="mb-2 border-b border-slate-100 pb-2 dark:border-slate-800">
@@ -137,7 +177,7 @@ function Card({ title, subtitle, warnings, className, children }: { title: strin
       {warnings.length > 0 ? (
         <ul className="mt-3 list-inside list-disc text-sm text-amber-800 dark:text-amber-200/90">
           {warnings.map((warning, i) => (
-            <li key={i}>{warning}</li>
+            <li key={i}>{conditions && warning === conditions.avertissement ? <ConditionsDepliables {...conditions} /> : warning}</li>
           ))}
         </ul>
       ) : null}
@@ -397,7 +437,7 @@ function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: 
   const bouton = <BoutonDuDetailDesCartes nombre={nombre} controle={idDuDetail} className="mt-2" />
 
   return (
-    <Card title={activity.name} subtitle={statutAffiche(activity)} warnings={activity.warnings}>
+    <Card title={activity.name} subtitle={statutAffiche(activity)} warnings={activity.warnings} conditions={activity.exonerationDeZone?.conditionsNonVerifiees}>
       <NotesDesDispositifs notes={activity.dispositifs} />
       {resume ? (
         // Affichage « Résumé » : ce que l'activité verse d'abord, le calcul replié.

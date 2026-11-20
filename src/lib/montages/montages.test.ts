@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest"
 import { erreurDesAnnees, NOMBRE_MAX_ANNEES } from "@/backend/logic/annees"
+import { hypothesesDuRegime } from "@/backend/logic/exoneration-de-zone"
 import { euros, pourcent } from "@/backend/logic/format"
 import { reglesDeLAnnee, reglesPubliees } from "@/backend/logic/regles"
 import { rapportAvecCorrections, sanitizeStateAndFillDefaults } from "@/backend/logic/data-sanitizer"
@@ -103,7 +104,7 @@ describe("Bibliothèque des montages types", () => {
       const t = texte("sasu-en-zone-franche-urbaine")
       const [zfuTe, qpv] = regles.exonerationsDeZone.regimes
       expect([zfuTe.id, qpv.id]).toEqual(["zfuTe", "qpv"])
-      for (const valeur of [`pendant ${zfuTe.moisExonerationTotale} mois`, ...zfuTe.partsExonereesEnsuite.map(part => pourcent(part)), euros(zfuTe.plafondAnnuel ?? 0), zfuTe.conditionsNonVerifiees, ...zfuTe.hypotheses, pourcent(regles.IS.tauxReduit)]) {
+      for (const valeur of [`pendant ${zfuTe.moisExonerationTotale} mois`, ...zfuTe.partsExonereesEnsuite.map(part => pourcent(part)), euros(zfuTe.plafondAnnuel ?? 0), zfuTe.conditionsNonVerifiees, ...hypothesesDuRegime(zfuTe, "SASU"), pourcent(regles.IS.tauxReduit)]) {
         expect(t).toContain(valeur)
       }
       // Les valeurs de 2026, pour qu'un changement de mise en forme ne passe pas inaperçu.

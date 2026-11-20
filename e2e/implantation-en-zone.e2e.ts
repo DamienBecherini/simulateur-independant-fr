@@ -38,7 +38,8 @@ test("la case « implantée en zone » s'enregistre avec la session, se retrouve
   await section.locator("summary").click()
   await fenetre.getByRole("switch", { name: CASE }).click()
   await expect(fenetre.getByRole("status")).toContainText("Créée en janvier 2024 : régime ZFU-TE.")
-  await expect(fenetre.getByRole("list", { name: "Ce que ce calcul suppose" }).getByRole("listitem")).toHaveCount(2)
+  // Une seule hypothèse pour une SASU : celle des cotisations de l'entreprise individuelle ne la concerne pas.
+  await expect(fenetre.getByRole("list", { name: "Ce que ce calcul suppose" }).getByRole("listitem")).toHaveCount(1)
   await auditerAccessibilite(page, "fiche d'une société, aides liées au lieu d'implantation", "[role='dialog']")
   await fenetre.getByRole("button", { name: "Enregistrer" }).click()
   await expect(fenetre).toBeHidden()

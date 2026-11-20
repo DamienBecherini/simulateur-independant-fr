@@ -390,6 +390,43 @@ describe("ResultsPanel", () => {
     expect(within(card).getByRole("list", { name: "Dispositifs de l'année" })).toHaveTextContent(sortie)
   })
 
+  it("exonération en zone : l'avertissement des conditions tient en une phrase, « Voir les conditions » déplie le reste et le texte officiel", async () => {
+    const user = userEvent.setup()
+    const resume = "Exonération ZFU-TE appliquée sans vérifier ses conditions"
+    const avertissement = `${resume} : moins de 50 salariés, activité hors des secteurs exclus. Hypothèses du calcul dans la fiche de l'activité.`
+    const autre = "Société déficitaire cette année."
+    const report = makeReport()
+    report.activities = [
+      {
+        ...report.activities[0],
+        name: "Mon atelier",
+        warnings: [autre, avertissement],
+        exonerationDeZone: { regime: "zfuTe", nom: "ZFU-TE", partExoneree: 1, partDansLaZone: 1, beneficeExonere: 30000, plafond: 50000, plafondAtteint: false, hypotheses: [], conditionsNonVerifiees: { resume, avertissement, source: "https://bofip.impots.gouv.fr/regime" } }
+      }
+    ]
+    render(<ResultsPanel report={report} error={null} />)
+    const card = screen.getAllByRole("article").find(article => within(article).queryByText("Mon atelier"))!
+
+    // Repliée : la phrase d'annonce seule ; les autres avertissements restent entiers.
+    const bouton = within(card).getByRole("button", { name: "Voir les conditions" })
+    expect(bouton).toHaveAttribute("aria-expanded", "false")
+    expect(within(card).getByText(`${resume}.`)).toBeVisible()
+    expect(within(card).getByText(autre)).toBeVisible()
+    const detail = document.getElementById(bouton.getAttribute("aria-controls")!)!
+    // Le texte entier reste dans la page, masqué à l'écran et montré à l'impression (export PDF).
+    expect(detail).toHaveClass("hidden", "print:inline")
+    expect(detail).toHaveTextContent(avertissement)
+
+    await user.click(bouton)
+    expect(within(card).getByRole("button", { name: "Masquer les conditions" })).toHaveAttribute("aria-expanded", "true")
+    expect(detail).not.toHaveClass("hidden")
+    expect(within(card).getByText(`${resume}.`)).toHaveClass("hidden")
+    expect(within(card).getByRole("link", { name: "Texte officiel" })).toHaveAttribute("href", "https://bofip.impots.gouv.fr/regime")
+
+    await user.click(within(card).getByRole("button", { name: "Masquer les conditions" }))
+    expect(detail).toHaveClass("hidden")
+  })
+
   it("n'affiche pas de liste de dispositifs quand aucun ne joue", () => {
     render(<ResultsPanel report={makeReport()} error={null} />)
     expect(screen.queryByRole("list", { name: "Dispositifs de l'année" })).not.toBeInTheDocument()

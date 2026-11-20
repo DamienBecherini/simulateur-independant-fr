@@ -7,16 +7,30 @@
 import type { ActivityResult, Company, ExonerationDeZoneDeLActivite, MicroEntreprise } from "../../types.js"
 import { beneficeExonereEnZone, ecrireMois, exonerationDeZoneDeLAnnee, libelleDuMois, lireMois, type ExonerationDeZone, type MoisCivil } from "./dispositifs.js"
 import { euros, pourcentDeNombre } from "./format.js"
-import type { ReglesFiscales } from "./regles.js"
+import type { RegimeDeZone, ReglesFiscales, StatutDActivite } from "./regles.js"
 
-type ActiviteEnZone = Pick<Company | MicroEntreprise, "implantationEnZone" | "dateDeCreation">
+/** Ce que la zone lit d'une activité : sa case, sa date de création, et son statut (certaines hypothèses en dépendent). */
+type ActiviteEnZone = Pick<Company, "type" | "legalStatus" | "implantationEnZone" | "dateDeCreation"> | Pick<MicroEntreprise, "type" | "implantationEnZone" | "dateDeCreation">
 type ReglesDeZone = Pick<ReglesFiscales, "exonerationsDeZone">
 
 /**
  * Ce que l'implantation en zone donne à une activité une année : un régime et son taux, ou la raison pour laquelle
  * aucun ne s'applique (sans date de création, le régime ne peut pas être déduit ; hors de toute fenêtre, il n'y en a pas).
  */
-export type ZoneDeLActivite = { etat: "sansDateDeCreation" } | { etat: "sansRegime"; creation: MoisCivil } | { etat: "applicable"; exoneration: ExonerationDeZone; partDansLaZone: number }
+export type ZoneDeLActivite =
+  | { etat: "sansDateDeCreation" }
+  | { etat: "sansRegime"; creation: MoisCivil }
+  | { etat: "applicable"; exoneration: ExonerationDeZone; partDansLaZone: number; /** Hypothèses du régime qui concernent le statut de l'activité. */ hypotheses: string[] }
+
+/**
+ * Les hypothèses d'un régime qui concernent un statut : une hypothèse propre à l'entreprise individuelle n'est pas
+ * montrée à une société ni à une micro-entreprise.
+ */
+export function hypothesesDuRegime(regime: Pick<RegimeDeZone, "hypotheses">, statut: StatutDActivite): string[] {
+  return regime.hypotheses.filter(hypothese => !hypothese.statuts || hypothese.statuts.includes(statut)).map(hypothese => hypothese.texte)
+}
+
+const statutDeLActivite = (activite: ActiviteEnZone): StatutDActivite => (activite.type === "micro-entreprise" ? activite.type : activite.legalStatus)
 
 /** L'implantation en zone de l'activité pour l'année ; `null` si la case n'est pas cochée. */
 export function zoneDeLActivite(activite: ActiviteEnZone, annee: number, regles: ReglesDeZone): ZoneDeLActivite | null {
@@ -25,7 +39,7 @@ export function zoneDeLActivite(activite: ActiviteEnZone, annee: number, regles:
   if (!creation) return { etat: "sansDateDeCreation" }
   const exoneration = exonerationDeZoneDeLAnnee(creation, annee, regles)
   if (!exoneration) return { etat: "sansRegime", creation }
-  return { etat: "applicable", exoneration, partDansLaZone: activite.implantationEnZone.partDuChiffreDAffaires ?? 1 }
+  return { etat: "applicable", exoneration, partDansLaZone: activite.implantationEnZone.partDuChiffreDAffaires ?? 1, hypotheses: hypothesesDuRegime(exoneration.regime, statutDeLActivite(activite)) }
 }
 
 /** Ce qu'un calcul de bénéfice doit connaître de l'exonération : la part réalisée dans la zone, le taux de l'année, le plafond. */
@@ -96,7 +110,7 @@ export function descriptionDeLaZone(activite: ActiviteEnZone, annee: number, reg
   const plafond = regime.plafondAnnuel === null ? "Aucun plafond annuel." : `Bénéfice exonéré plafonné à ${euros(regime.plafondAnnuel)} par an.`
   return {
     texte: `Créée en ${creation} : régime ${regime.nom}. Bénéfice exonéré d'impôt en totalité jusqu'à fin ${libelleDuMois(finExonerationTotale)}, puis à ${degressif} par périodes de douze mois, jusqu'à fin ${libelleDuMois(fin)}. ${plafond}`,
-    hypotheses: regime.hypotheses
+    hypotheses: zone.hypotheses
   }
 }
 
@@ -115,7 +129,7 @@ function detailSansRegime(sansExoneration: "sansDateDeCreation" | "sansRegime", 
 }
 
 /** Ce que tout détail d'un régime applicable porte : le régime, la part dans la zone, le calendrier, le plafond, les hypothèses. */
-function communAuRegime({ exoneration, partDansLaZone }: Extract<ZoneDeLActivite, { etat: "applicable" }>) {
+function communAuRegime({ exoneration, partDansLaZone, hypotheses }: Extract<ZoneDeLActivite, { etat: "applicable" }>) {
   const { regime } = exoneration
   return {
     regime: regime.id,
@@ -124,7 +138,7 @@ function communAuRegime({ exoneration, partDansLaZone }: Extract<ZoneDeLActivite
     finExonerationTotale: ecrireMois(exoneration.finExonerationTotale),
     fin: ecrireMois(exoneration.fin),
     ...(exoneration.plafond === null ? {} : { plafond: exoneration.plafond }),
-    hypotheses: regime.hypotheses
+    hypotheses
   }
 }
 
@@ -137,9 +151,18 @@ function noteDeLExoneration(exoneration: ExonerationDeZone, partDansLaZone: numb
   return `${exoneration.regime.nom} : ${chiffre}. ${calendrier(exoneration, annee)}`
 }
 
+/**
+ * L'avertissement des conditions non vérifiées : sa phrase d'annonce, puis le texte entier, celui des avertissements de
+ * l'activité (exports, outils pour l'IA, comparateur). La carte de l'activité n'en montre que l'annonce et déplie le reste.
+ */
+function conditionsNonVerifiees(regime: RegimeDeZone): NonNullable<ExonerationDeZoneDeLActivite["conditionsNonVerifiees"]> {
+  const resume = `Exonération ${regime.nom} appliquée sans vérifier ses conditions`
+  return { resume, avertissement: `${resume} : ${regime.conditionsNonVerifiees}. Hypothèses du calcul dans la fiche de l'activité.`, source: regime.source }
+}
+
 /** Les avertissements d'une exonération appliquée : les conditions non vérifiées, et le rappel sur les recettes libérales. */
 function avertissementsDeLExoneration({ regime }: ExonerationDeZone, recettesLiberales: boolean | undefined): string[] {
-  const conditions = `Exonération ${regime.nom} appliquée sans vérifier ses conditions : ${regime.conditionsNonVerifiees}. Hypothèses du calcul dans la fiche de l'activité.`
+  const conditions = conditionsNonVerifiees(regime).avertissement
   const liberales = `Recettes libérales en ${regime.nom} : parmi les professions libérales, seules les professions de santé ont droit à cette exonération.`
   return regime.liberauxHorsSanteExclus && recettesLiberales ? [conditions, liberales] : [conditions]
 }
@@ -176,7 +199,7 @@ export function detailDeLaZone(zone: ZoneDeLActivite | null, annee: number, regl
 
   const plafondAtteint = exoneration.plafond !== null && calcul.beneficeExonere > 0 && calcul.beneficeExonere >= exoneration.plafond - 0.5
   return {
-    exonerationDeZone: { ...commun, partExoneree: exoneration.partExoneree, beneficeExonere: Math.round(calcul.beneficeExonere), plafondAtteint },
+    exonerationDeZone: { ...commun, partExoneree: exoneration.partExoneree, beneficeExonere: Math.round(calcul.beneficeExonere), plafondAtteint, conditionsNonVerifiees: conditionsNonVerifiees(regime) },
     dispositifs: [noteDeLExoneration(exoneration, partDansLaZone, calcul.beneficeExonere, plafondAtteint, annee)],
     warnings: avertissementsDeLExoneration(exoneration, calcul.recettesLiberales)
   }

@@ -204,7 +204,7 @@ function reglesCles(r: ReglesFiscales): z.infer<typeof RegleSchema>[] {
     { sujet: "Franchise en base de TVA (seuils de chiffre d'affaires)", valeurs: valeurs(r.TVA), source: source(r.TVA) },
     {
       sujet: "Exonération d'impôt sur les bénéfices en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV), réglage partEnZone : régime selon la date de création, mois d'exonération totale puis parts exonérées par périodes de douze mois, plafond annuel du bénéfice exonéré (null : aucun), conditions que le simulateur ne vérifie pas et hypothèses du calcul",
-      valeurs: { regimes: r.exonerationsDeZone.regimes.map(({ id, nom, creationDepuis, creationJusquA, moisExonerationTotale, partsExonereesEnsuite, plafondAnnuel, conditionsNonVerifiees, liberauxHorsSanteExclus, hypotheses }) => ({ id, nom, creationDepuis, creationJusquA, moisExonerationTotale, partsExonereesEnsuite, plafondAnnuel, conditionsNonVerifiees, liberauxHorsSanteExclus, hypotheses })) },
+      valeurs: { regimes: r.exonerationsDeZone.regimes.map(({ id, nom, creationDepuis, creationJusquA, moisExonerationTotale, partsExonereesEnsuite, plafondAnnuel, conditionsNonVerifiees, liberauxHorsSanteExclus, hypotheses }) => ({ id, nom, creationDepuis, creationJusquA, moisExonerationTotale, partsExonereesEnsuite, plafondAnnuel, conditionsNonVerifiees, liberauxHorsSanteExclus, hypotheses: hypotheses.map(hypothese => hypothese.texte) })) },
       source: source(r.exonerationsDeZone)
     },
     ...reglesDesLiberaux(r.liberauxReglementes)

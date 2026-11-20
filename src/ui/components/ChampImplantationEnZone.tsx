@@ -86,7 +86,7 @@ export function ChampImplantationEnZone<T extends Company | MicroEntreprise>({ a
                       <li key={hypothese}>{hypothese}</li>
                     ))}
                   </ul>
-                  <p className={`mt-1 ${aide}`}>Les conditions d'accès au régime (taille, activité, emploi) ne sont pas vérifiées : l'avertissement de l'activité les rappelle.</p>
+                  <p className={`mt-1 ${aide}`}>Les conditions d'accès au régime (taille, activité, emploi) ne sont pas vérifiées : l'avertissement de l'activité les détaille (« Voir les conditions »).</p>
                 </div>
               ) : null}
             </>

@@ -1,6 +1,6 @@
 // src/backend/logic/regles.ts
 
-import type { CaisseLiberale, CotisationSalarie, EffectifPortage, PuissanceFiscale } from "../../types.js"
+import type { CaisseLiberale, CotisationSalarie, EffectifPortage, PuissanceFiscale, StatutJuridique } from "../../types.js"
 import { ANNEE_COURANTE, FICHIERS_DE_REGLES } from "../regles/index.js"
 
 export { ANNEE_COURANTE }
@@ -228,6 +228,19 @@ export interface BaremeKilometrique {
   domicileTravail: { distanceMaxParTrajet: number }
 }
 
+/** Statut d'une activité, pour ce qui ne vaut que pour certains : un statut au réel, ou la micro-entreprise. */
+export type StatutDActivite = StatutJuridique | "micro-entreprise"
+
+/** Ce que le calcul d'un régime de zone suppose sans texte officiel pour le confirmer. */
+interface HypotheseDeZone {
+  texte: string
+  /**
+   * Statuts que l'hypothèse concerne (des `StatutDActivite`) : elle n'est montrée que pour eux. Absent : tous les statuts.
+   * Des chaînes, parce qu'un fichier JSON importé ne garde pas ses valeurs littérales : regles.test.ts vérifie chacune.
+   */
+  statuts?: string[]
+}
+
 /**
  * Un régime d'exonération d'impôt sur les bénéfices en zone (ZFU-TE, QPV : voir l'ADR 017). Il s'applique aux activités
  * créées dans sa fenêtre : exonération totale les premiers mois, comptés depuis le mois de création, puis une part
@@ -237,6 +250,8 @@ export interface RegimeDeZone {
   id: string
   /** Sigle montré à l'utilisateur : « ZFU-TE », « QPV ». */
   nom: string
+  /** Texte officiel du régime : la carte de l'activité y renvoie, sous ses conditions. */
+  source: string
   /** Premier et dernier mois de création ouvrant droit au régime, « AAAA-MM ». */
   creationDepuis: string
   creationJusquA: string
@@ -250,7 +265,7 @@ export interface RegimeDeZone {
   /** Parmi les professions libérales, seules celles de santé ont droit au régime. */
   liberauxHorsSanteExclus: boolean
   /** Ce que le calcul suppose sans texte officiel pour le confirmer : montré à l'utilisateur qui active le dispositif. */
-  hypotheses: string[]
+  hypotheses: HypotheseDeZone[]
 }
 
 /**
