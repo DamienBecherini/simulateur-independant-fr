@@ -79,7 +79,9 @@ for (const largeur of [320, 375]) {
         await expect.poll(() => moisCourants(page)).toEqual(["Aller à septembre"])
         const suivant = page.getByRole("button", { name: "Mois suivant" })
         for (let i = 0; i < 4 && (await suivant.getAttribute("aria-disabled")) !== "true"; i++) {
-          await suivant.tap()
+          // Le défilement est animé : il peut atteindre la fin de la grille entre la lecture de l'état et le toucher.
+          // Sans `force`, le toucher attendrait alors sans fin un bouton qui ne redeviendra pas actif (vu dans Firefox).
+          await suivant.tap({ force: true })
           await page.waitForTimeout(400)
         }
         await expect(suivant).toBeDisabled()

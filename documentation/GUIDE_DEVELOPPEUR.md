@@ -48,6 +48,7 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run duplication` | Code dupliqué (jscpd, 70 jetons ; tests, règles JSON et `testing/` exclus). Attendu : 0 clone. | Avant de commiter. |
 | `npm run code-mort` | Code mort (knip) : fichiers, dépendances et exports que rien n'utilise. Configuration et points d'entrée dans `knip.jsonc` ; attendu : aucune ligne. Un export qui ne sert qu'à son fichier perd son `export` ; un export voulu malgré tout (API du format de fichier, par exemple) se garde avec une raison écrite dans `knip.jsonc`. | Avant de commiter. |
 | `npm run test:web` | Compile la démo web et la teste dans Chromium (`e2e-web/`). Port 4173 ; s'il est pris : `PORT_E2E_WEB=4391 npm run test:web`. | Avant de fusionner. |
+| `npm run test:web:firefox` | La même série dans Firefox (`playwright.web-firefox.config.ts` ; `npm run installer:firefox` une première fois). Deux fois plus longue que dans Chromium. `npm run test:web:firefox:mise-en-page` n'en lance que les fichiers de mise en page, comme la CI. | Après un changement de mise en page (zoom, tableaux, barres collées, téléphone). |
 | `npm run test:e2e` | Compile l'application et la teste avec Playwright + Electron (`e2e/`), fenêtres masquées (`test:e2e:visible` pour les voir). Le paquet `electron` télécharge son exécutable au premier usage, sans script d'installation : `e2e/support/installer-electron.ts` (`globalSetup`) l'installe une fois avant les workers, qui sinon le décompressaient tous en même temps après un `npm ci` et faisaient échouer leur premier test. | Avant de fusionner. |
 | `npm run test:all` | Couverture, puis les deux suites de bout en bout. | Avant de fusionner. |
 | `npm run test:mutation` | Tests de mutation (Stryker) de `src/backend/logic` ; long. | De temps en temps. |
@@ -56,7 +57,7 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run essai:store` | Sous Windows : installe une copie signée du paquet du Microsoft Store comme le Store l'installe et vérifie le serveur MCP ; `verifier`, `etat`, `nettoyer`. | Avant une soumission : [publier-sur-le-store.md](./microsoft-store/publier-sur-le-store.md#2-essayer-le-paquet-avant-la-première-soumission). |
 | `npm run captures` | Captures d'écran du README. | Après un changement visible. |
 
-La CI (`.github/workflows/ci.yml`) lance lint, `code-mort`, `typecheck`, `transpile:electron`, `typecheck:tests`, `test:coverage`, `build` et la duplication à chaque push ; `e2e.yml` les tests de bout en bout sur `integration` et `main`, de l'application Electron (`test:e2e`) et de la démo web (`test:web`) ; `demo-web.yml` teste et publie la démo à chaque push sur `main`.
+La CI (`.github/workflows/ci.yml`) lance lint, `code-mort`, `typecheck`, `transpile:electron`, `typecheck:tests`, `test:coverage`, `build` et la duplication à chaque push ; `e2e.yml` les tests de bout en bout sur `integration` et `main`, de l'application Electron (`test:e2e`) et de la démo web (`test:web`, et sa mise en page dans Firefox, `test:web:firefox:mise-en-page`) ; `demo-web.yml` teste et publie la démo à chaque push sur `main`.
 
 **Vérification complète**, à lancer avant de proposer une fusion :
 

@@ -6,6 +6,7 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { contrastesDesTextes } from "./support/contraste"
+import { attendreLaFinDesAnimations } from "../e2e/support/animations"
 
 /** Seuil WCAG AA d'un texte de taille normale : tous ceux de la grille le sont (text-sm, text-xs). */
 const SEUIL = 4.5
@@ -16,7 +17,7 @@ async function verifier(page: Page, theme: string) {
   // Aucune case survolée : le survol change le fond d'une case de mois.
   await page.mouse.move(0, 0)
   // Au changement de thème, les fonds des cases passent en fondu : on attend leur couleur finale.
-  await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"))
+  await attendreLaFinDesAnimations(page)
   const textes = await contrastesDesTextes(page.locator("[role=group][aria-label^='Total annuel : '], [role=button][aria-label^='Flux ']"))
   expect(textes.length).toBeGreaterThan(10)
   const insuffisants =textes.filter(t => t.rapport < SEUIL)

@@ -7,6 +7,7 @@
 import { test, expect, type Locator, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 import { choisirLaPolice, POLICES } from "./support/police"
+import { SEUL_CHROMIUM } from "./support/navigateur"
 
 type Affichage = "classique" | "resume" | "vues"
 
@@ -202,7 +203,8 @@ for (const theme of ["clair", "sombre"] as const) {
   })
 }
 
-test("à l'impression, les trois vues s'impriment dans l'ordre, quelle que soit la vue affichée", async ({ page }) => {
+test("à l'impression, les trois vues s'impriment dans l'ordre, quelle que soit la vue affichée", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", SEUL_CHROMIUM.pdf)
   await choisirAvantLeChargement(page, "vues")
   await page.setViewportSize({ width: 794, height: 1123 })
   await page.goto("./#resultats")

@@ -191,11 +191,12 @@ for (const cas of [
       expect(cadre.y + cadre.height).toBeLessThanOrEqual(cas.viewport.height)
       expect(cadre.x).toBeGreaterThanOrEqual(0)
       expect(cadre.x + cadre.width).toBeLessThanOrEqual(cas.viewport.width)
-      // Les hypothèses, tout en bas de la section, s'atteignent en défilant, sans défilement horizontal.
+      // Les hypothèses, tout en bas de la section, s'atteignent en défilant, sans défilement horizontal (la liste
+      // native que Radix cache derrière ses listes déroulantes, 1 px de côté, ne compte pas : Firefox en mesure le contenu).
       const hypotheses = fenetre.getByRole("list", { name: "Ce que ce calcul suppose" })
       await hypotheses.scrollIntoViewIfNeeded()
       await expect(hypotheses).toBeInViewport()
-      expect(await fenetre.evaluate(el => [el, ...Array.from(el.querySelectorAll("*"))].filter(e => !e.classList.contains("sr-only") && e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== "visible").map(e => e.className))).toEqual([])
+      expect(await fenetre.evaluate(el => [el, ...Array.from(el.querySelectorAll("*"))].filter(e => !e.matches(".sr-only, select[aria-hidden='true']") && e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflowX !== "visible").map(e => e.className))).toEqual([])
       await auditer(page, `fiche de l'activité en zone, ${cas.nom}`, "[role='dialog']")
     })
   })

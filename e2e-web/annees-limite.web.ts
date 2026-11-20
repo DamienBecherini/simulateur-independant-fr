@@ -108,6 +108,10 @@ test("dix années ne présentent aucune violation WCAG, en thème clair comme en
       await page.getByRole("switch", { name: "Changer de thème" }).click()
       await expect(page.locator("html")).toHaveClass(/dark/)
     }
+    // La fenêtre des flux, en se fermant, laisse la page là où était sa case : selon le navigateur, une poignée de tri
+    // se retrouve à moitié sous la barre de résumé collée, et axe la dit trop petite. En haut de page, rien n'est sous
+    // les barres.
+    await page.evaluate(() => window.scrollTo(0, 0))
     await auditer(page, `dix années, ${theme}`)
     const annees = await ouvrirLesFluxDeJanvier(page)
     await annees.getByRole("button", { name: "Cocher toutes les années" }).click()

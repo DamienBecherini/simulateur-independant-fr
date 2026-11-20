@@ -22,7 +22,7 @@ const TAILLE_MINIMALE = 12
  *   dessous, ce n'est pas un défaut ;
  * - « déborde de son cadre » : une ligne de texte sort, à gauche ou à droite, du cadre dessiné qui la porte (carte,
  *   bouton, encadré : une bordure ou un fond), faute de place pour un mot ou un montant insécable.
- * Les textes réservés aux lecteurs d'écran (sr-only) et les éléments masqués sont ignorés.
+ * Les textes réservés aux lecteurs d'écran (sr-only, élément rogné à rien) et les éléments masqués sont ignorés.
  */
 export async function defautsDeLisibilite(page: Page, racine?: Locator): Promise<string[]> {
   const cible = racine ?? page.locator("body")
@@ -32,12 +32,21 @@ export async function defautsDeLisibilite(page: Page, racine?: Locator): Promise
     const defauts = new Set<string>()
     const extrait = (el: Element) => (el.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 50)
     const visible = (el: Element) => {
+      // Ancêtre invisible (opacité nulle, contenu d'une section repliée) : rien n'est affiché, même si l'élément garde
+      // une taille. Firefox en donne une au contenu d'une section repliée, Chromium non.
+      if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true })) return false
       const style = getComputedStyle(el)
       if (style.visibility === "hidden" || style.display === "none" || Number.parseFloat(style.opacity) === 0) return false
       const cadre = el.getBoundingClientRect()
       return cadre.width > 1 && cadre.height > 1
     }
-    const reserveAuxLecteursDEcran = (el: Element) => el.closest(".sr-only") !== null
+    /**
+     * Masqué à la vue, gardé pour les lecteurs d'écran ou pour les formulaires : la classe sr-only, ou un élément rogné
+     * à rien, comme la liste native que Radix cache derrière chacune de ses listes déroulantes (1 px de côté, que le
+     * zoom agrandit, et dont Firefox compte le contenu comme plus large qu'elle).
+     */
+    const rogneARien = (el: Element) => getComputedStyle(el).clip.replace(/\s/g, "") === "rect(0px,0px,0px,0px)"
+    const reserveAuxLecteursDEcran = (el: Element) => el.closest(".sr-only, select[aria-hidden='true']") !== null || rogneARien(el)
     /** L'élément est dans une zone qui défile en largeur : ce qui en dépasse s'atteint en défilant. */
     const defileEnLargeur = (el: Element) => {
       for (let parent = el.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
@@ -70,8 +79,6 @@ export async function defautsDeLisibilite(page: Page, racine?: Locator): Promise
       (style.borderLeftStyle !== "none" && Number.parseFloat(style.borderLeftWidth) > 0 && opaque(style.borderLeftColor)) || (style.borderRightStyle !== "none" && Number.parseFloat(style.borderRightWidth) > 0 && opaque(style.borderRightColor)) || opaque(style.backgroundColor) || style.backgroundImage !== "none"
     /** Ce que les ancêtres de `el` laissent voir du cadre, et la barre collée ou fixe qui le porte, s'il y en a une. */
     const releverLesLignes = (el: HTMLElement) => {
-      // Ancêtre invisible (opacité nulle, contenu d'une section repliée) : rien n'est affiché.
-      if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true })) return
       let couche: Element | null = null
       // Le cadre dessiné le plus proche (carte, bouton, encadré), tant qu'aucune zone qui masque ou défile ne s'interpose.
       let cadreDessine: DOMRect | null | undefined

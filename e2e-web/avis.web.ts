@@ -8,6 +8,7 @@
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 import { choisirLaPolice, POLICES } from "./support/police"
+import { autoriserLePressePapiers } from "./support/navigateur"
 
 const ADRESSE_NOUVEAU_TICKET = "https://github.com/DamienBecherini/simulateur-independant-fr/issues/new"
 const ADRESSE_E_MAIL = "simulateur-independant@damien.becherini.fr"
@@ -69,7 +70,7 @@ test("le retour s'écrit dans la fenêtre, l'aperçu montre le texte, et le tick
   await expect(apercu).toContainText("Affichage préféré : Résumé")
   await expect(apercu).toContainText("Type de retour : Idée")
   await expect(apercu).toContainText(/Version : \d+\.\d+\.\d+/)
-  await expect(apercu).toContainText(/Environnement : démo web · \S+ · Chrome \d+/)
+  await expect(apercu).toContainText(/Environnement : démo web · \S+ · (Chrome|Firefox) \d+/)
   await expect(apercu).toContainText("Années simulées : 1")
   // La simulation d'exemple a des montants et des noms : aucun n'est envoyé.
   await expect(apercu).not.toContainText("€")
@@ -93,8 +94,8 @@ test("le retour s'écrit dans la fenêtre, l'aperçu montre le texte, et le tick
   await expect(bouton(page)).toBeFocused()
 })
 
-test("l'e-mail s'ouvre prérempli dans la messagerie, et la copie remplit le presse-papiers", async ({ page, context }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"])
+test("l'e-mail s'ouvre prérempli dans la messagerie, et la copie remplit le presse-papiers", async ({ page, context, browserName }) => {
+  await autoriserLePressePapiers(context, browserName)
   await ouvrir(page)
   await ouvrirLaFenetre(page)
   await fenetre(page).getByText("Bug", { exact: true }).click()

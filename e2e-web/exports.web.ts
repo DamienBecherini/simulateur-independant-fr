@@ -5,6 +5,7 @@
 import { readFile } from "node:fs/promises"
 import { test, expect, type Download, type Page } from "@playwright/test"
 import { auditerAccessibilite } from "../e2e/support/accessibilite"
+import { attendreLaFinDesAnimations } from "../e2e/support/animations"
 
 /** Ouvre la démo et attend la simulation d'exemple et le comparateur. */
 async function ouvrir(page: Page) {
@@ -75,7 +76,7 @@ test("la fenêtre « Exporter » ne présente aucune violation WCAG, et ses bout
   await page.getByRole("button", { name: "Exporter", exact: true }).click()
   const fenetre = page.getByRole("dialog", { name: "Exporter" })
   await expect(fenetre).toBeVisible()
-  await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"))
+  await attendreLaFinDesAnimations(page)
 
   await auditerAccessibilite(page, "fenêtre Exporter", "[role=dialog]")
   for (const bouton of await fenetre.getByRole("button").all()) {
