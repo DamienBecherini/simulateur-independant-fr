@@ -1,6 +1,6 @@
 // src/ui/components/MenuPlusDActions.tsx
 // « Plus d'actions » : sur un téléphone, les actions secondaires de la barre d'outils (situations types, avis,
-// affichage, thème) dans un menu, pour que la barre tienne dans l'écran sans rien couper. Sur un écran plus large,
+// affichage, zoom, thème) dans un menu, pour que la barre tienne dans l'écran sans rien couper. Sur un écran plus large,
 // elles restent dans la barre et ce bouton n'est pas affiché.
 //
 // Le projet n'a pas le menu de Radix (aucune dépendance ajoutée pour lui) : c'est le motif « bouton de menu » des
@@ -9,10 +9,12 @@
 // menu le ferme.
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react"
-import { Check, EllipsisVertical, LayoutTemplate, MessageSquareHeart, Moon } from "lucide-react"
+import { Check, EllipsisVertical, LayoutTemplate, MessageSquareHeart, Moon, RotateCcw, ZoomIn, ZoomOut } from "lucide-react"
+import { pourcentDeNombre } from "@/backend/logic/format"
 import { Button } from "@/components/ui/button"
 import { AFFICHAGES } from "@/lib/affichage"
 import { cn } from "@/lib/utils"
+import { infobulleDuZoom, type EtatDuZoom } from "@/lib/zoom"
 import type { Affichage } from "@/types"
 import { useTheme } from "../hooks/useTheme"
 
@@ -23,6 +25,8 @@ interface MenuPlusDActionsProps {
   onAvis: (declencheur: HTMLElement) => void
   /** Ouvre la fenêtre des montages types, de même. */
   onMontages: (declencheur: HTMLElement) => void
+  /** Le zoom de l'interface : dans une fenêtre étroite, la barre d'outils n'a plus ses boutons de zoom, le menu les remplace. */
+  zoom: EtatDuZoom & { zoomIn: () => void; zoomOut: () => void; reinitialiser: () => void }
   className?: string
 }
 
@@ -33,6 +37,8 @@ interface Entree {
   role: "menuitem" | "menuitemradio" | "menuitemcheckbox"
   coche?: boolean
   icone?: ReactNode
+  /** Entrée sans effet pour l'instant (zoom à sa butée) : elle reste dans le parcours au clavier, et son info-bulle dit pourquoi. */
+  desactivee?: boolean
   /** Ce que change un affichage, en info-bulle. */
   description?: string
   /** Reçoit le bouton du menu, où le focus reviendra après une fenêtre ouverte par l'entrée. */
@@ -60,7 +66,7 @@ function LigneDuMenu({ entree, onChoisir }: { entree: Entree; onChoisir: (entree
   // Un choix ou une case : la coche quand l'entrée est retenue ; une action : son icône.
   const icone = avecCoche ? entree.coche && <Check /> : entree.icone
   return (
-    <button type="button" role={entree.role} aria-checked={avecCoche ? Boolean(entree.coche) : undefined} tabIndex={-1} title={entree.description} className={ENTREE} onClick={() => onChoisir(entree)}>
+    <button type="button" role={entree.role} aria-checked={avecCoche ? Boolean(entree.coche) : undefined} aria-disabled={entree.desactivee || undefined} tabIndex={-1} title={entree.description} className={cn(ENTREE, entree.desactivee && "cursor-default text-slate-500 hover:bg-transparent dark:text-slate-400")} onClick={() => onChoisir(entree)}>
       <span aria-hidden className="flex size-4 items-center justify-center text-slate-600 dark:text-slate-400">
         {icone}
       </span>
@@ -69,7 +75,7 @@ function LigneDuMenu({ entree, onChoisir }: { entree: Entree; onChoisir: (entree
   )
 }
 
-export function MenuPlusDActions({ affichage, onAffichage, onAvis, onMontages, className }: MenuPlusDActionsProps) {
+export function MenuPlusDActions({ affichage, onAffichage, onAvis, onMontages, zoom, className }: MenuPlusDActionsProps) {
   const [ouvert, setOuvert] = useState(false)
   // Entrée à focaliser à l'ouverture : la première (clic, Entrée, flèche bas) ou la dernière (flèche haut).
   const [premiere, setPremiere] = useState<"debut" | "fin">("debut")
@@ -110,10 +116,16 @@ export function MenuPlusDActions({ affichage, onAffichage, onAvis, onMontages, c
     { cle: "avis", libelle: "Donner mon avis", role: "menuitem", icone: <MessageSquareHeart />, choisir: onAvis }
   ]
   const affichages: Entree[] = AFFICHAGES.map(a => ({ cle: a.valeur, libelle: a.libelle, role: "menuitemradio", coche: a.valeur === affichage, description: a.description, choisir: () => onAffichage(a.valeur) }))
+  const zooms: Entree[] = [
+    { cle: "zoom-avant", libelle: "Agrandir", role: "menuitem", icone: <ZoomIn />, description: infobulleDuZoom(zoom, "avant"), desactivee: !zoom.canZoomIn, choisir: zoom.zoomIn },
+    { cle: "zoom-arriere", libelle: "Réduire", role: "menuitem", icone: <ZoomOut />, description: infobulleDuZoom(zoom, "arriere"), desactivee: !zoom.canZoomOut, choisir: zoom.zoomOut },
+    ...(zoom.zoom === 1 ? [] : [{ cle: "zoom-normal", libelle: "Revenir à 100 %", role: "menuitem" as const, icone: <RotateCcw />, choisir: zoom.reinitialiser }])
+  ]
   const sombre: Entree = { cle: "theme", libelle: "Thème sombre", role: "menuitemcheckbox", coche: theme === "dark", icone: <Moon />, choisir: () => setTheme(theme === "dark" ? "light" : "dark") }
 
   // Le menu se ferme et rend le focus à son bouton, puis l'entrée agit (une fenêtre ouverte y ramènera le focus).
   const choisir = (entree: Entree) => {
+    if (entree.desactivee) return
     fermer(true)
     if (bouton.current) entree.choisir(bouton.current)
   }
@@ -148,7 +160,7 @@ export function MenuPlusDActions({ affichage, onAffichage, onAvis, onMontages, c
         <EllipsisVertical className="text-slate-600 dark:text-slate-400" />
       </Button>
       {ouvert ? (
-        <div ref={menu} id={`${id}-menu`} role="menu" tabIndex={-1} aria-label="Plus d'actions" onKeyDown={toucheDuMenu} className="absolute top-full right-0 z-50 mt-1 w-56 rounded-md border bg-popover p-1 text-popover-foreground shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
+        <div ref={menu} id={`${id}-menu`} role="menu" tabIndex={-1} aria-label="Plus d'actions" onKeyDown={toucheDuMenu} className="absolute top-full right-0 z-50 mt-1 max-h-[calc(100dvh/var(--zoom,1)_-_4rem)] w-56 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
           {actions.map(ligne)}
           <div role="separator" className="-mx-1 my-1 h-px bg-border" />
           <div role="group" aria-labelledby={`${id}-affichage`}>
@@ -156,6 +168,13 @@ export function MenuPlusDActions({ affichage, onAffichage, onAvis, onMontages, c
               Affichage (bêta)
             </p>
             {affichages.map(ligne)}
+          </div>
+          <div role="separator" className="-mx-1 my-1 h-px bg-border" />
+          <div role="group" aria-labelledby={`${id}-zoom`}>
+            <p id={`${id}-zoom`} className="px-2 py-1 text-xs text-slate-600 dark:text-slate-400">
+              Zoom de l'interface : {pourcentDeNombre(zoom.zoom * 100)}
+            </p>
+            {zooms.map(ligne)}
           </div>
           <div role="separator" className="-mx-1 my-1 h-px bg-border" />
           {ligne(sombre)}

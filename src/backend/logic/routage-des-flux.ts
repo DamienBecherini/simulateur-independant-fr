@@ -134,6 +134,16 @@ export function personnesLiees(ctx: Contexte, entityId: string, types: Relations
   return [...ids]
 }
 
+/**
+ * Une entreprise individuelle ou une micro-entreprise n'ont qu'un titulaire. La saisie n'en laisse plus relier qu'un,
+ * mais une ancienne sauvegarde ou un fichier importé peuvent en porter plusieurs : tout va au premier, et c'est dit.
+ */
+export function avertirDesTitulairesEnTrop(ctx: Contexte, titulaires: string[], genre: string, warnings: string[]): void {
+  if (titulaires.length < 2) return
+  const premier = ctx.session.entities.find(e => e.id === titulaires[0])?.name ?? titulaires[0]
+  warnings.push(`Plusieurs titulaires : une ${genre} n'en a qu'un. Tous ses revenus sont attribués au premier, « ${premier} » ; supprimez les autres relations « Titulaire ».`)
+}
+
 export function revenusDe(ctx: Contexte, personId: string): RevenusDActivite {
   let revenus = ctx.revenus.get(personId)
   if (!revenus) {

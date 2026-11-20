@@ -153,6 +153,8 @@ describe("proposer un acteur, ses relations et ses flux, validés en une fois", 
     expect(erreurDe("proposer_relation", exemple(), { deId: "person-julien", versId: "company-conseil", typeRelation: "Salarié" })).toContain("dirige déjà")
     expect(erreurDe("proposer_relation", exemple(), { deId: "person-julien", versId: "company-conseil", typeRelation: "Président" })).toContain("existe déjà")
     expect(erreurDe("proposer_relation", exemple(), { deId: "person-lea", versId: "person-julien", typeRelation: "Associé" })).toContain("Entre deux personnes")
+    // Une micro-entreprise n'a qu'un titulaire : le calcul attribuerait tout au premier.
+    expect(erreurDe("proposer_relation", exemple(), { deId: "person-julien", versId: "micro-atelier", typeRelation: "Titulaire" })).toContain("« Atelier de Camille » a déjà un titulaire, « Camille Martin »")
     expect(erreurDe("proposer_relation", exemple(), { deId: "person-lea", versId: "person-lea", typeRelation: "Enfant" })).toContain("deux acteurs différents")
     const salariee = proposer("proposer_relation", exemple(), { deId: "person-lea", versId: "company-conseil", typeRelation: "Salarié" })
     expect(erreurDe("proposer_relation", exemple(), { deId: "person-lea", versId: "company-conseil", typeRelation: "Président", suiteDe: salariee.proposition })).toContain("déjà salarié(e)")
@@ -321,7 +323,7 @@ describe("limites", () => {
     const toutEffaceEnDernier = { ...proposition, operations: [proposition.operations[0], { type: "vider_simulation" }] }
     expect(erreurDe("appliquer_proposition", session, { proposition: toutEffaceEnDernier })).toMatch(/^Proposition refusée :\n- operations : Repartir de zéro ouvre une proposition/)
     expect(erreurDe("appliquer_proposition", session, { proposition: { ...proposition, empreinteSession: "pas une empreinte" } })).toContain("16 caractères hexadécimaux")
-    const relationVolee = proposer("proposer_relation", session, { deId: "person-lea", versId: "micro-atelier", typeRelation: "Titulaire" }).proposition
+    const relationVolee = proposer("proposer_relation", session, { deId: "person-lea", versId: "company-conseil", typeRelation: "Salarié" }).proposition
     const collision = { ...relationVolee, operations: [{ ...relationVolee.operations[0], id: "rel-pacs" }] }
     expect(erreurDe("appliquer_proposition", session, { proposition: collision })).toContain("« rel-pacs » est déjà pris")
   })

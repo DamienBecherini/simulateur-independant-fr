@@ -1,6 +1,7 @@
 // src/ui/components/ScenariosDeTest.tsx
 // Fenêtre « Scénarios de test », en mode développement seulement (voir BoutonDesTests.tsx, qui la charge à la
-// demande) : chaque scénario remplace la session, comme un montage type, et dit ce qu'il faut vérifier.
+// demande) : chaque scénario remplace la session, comme un montage type, et dit ce qu'il faut vérifier. Elle s'ouvre
+// par un bouton de la barre d'outils, quand celle-ci a la place, et toujours par une entrée des paramètres.
 
 import { useState } from "react"
 import { FlaskConical } from "lucide-react"
@@ -14,9 +15,11 @@ const TITRE_DES_TESTS = "Scénarios de test"
 export interface ScenariosDeTestProps {
   /** Remplace la session par celle du scénario (nouvel historique). */
   onCharger: (session: SessionState) => void
+  /** Vrai : l'entrée des paramètres, toujours affichée ; sinon le bouton de la barre d'outils, qui s'efface quand elle manque de place. */
+  dansLesParametres?: boolean
 }
 
-export default function ScenariosDeTest({ onCharger }: ScenariosDeTestProps) {
+export default function ScenariosDeTest({ onCharger, dansLesParametres = false }: ScenariosDeTestProps) {
   const [ouverte, setOuverte] = useState(false)
   const charger = (session: SessionState) => {
     setOuverte(false)
@@ -25,13 +28,19 @@ export default function ScenariosDeTest({ onCharger }: ScenariosDeTestProps) {
   return (
     <Dialog open={ouverte} onOpenChange={setOuverte}>
       <DialogTrigger asChild>
-        {/* La barre d'outils est mesurée sans ce bouton, que la démo et l'application n'ont pas : il ne s'affiche que là
+        {dansLesParametres ? (
+          <Button variant="secondary" className="h-auto min-h-9 w-full whitespace-normal border border-dashed py-1.5">
+            <FlaskConical className="mr-2 h-4 w-4" /> {TITRE_DES_TESTS} (développement)
+          </Button>
+        ) : (
+        /* La barre d'outils est mesurée sans ce bouton, que la démo et l'application n'ont pas : il ne s'affiche que là
             où elle a de la place en plus (requêtes de conteneur de la barre, voir BarreDOutils.tsx), soit en icône entre
-            768 et 1 024 px, et avec son nom à partir de 1 280 px. */}
+            768 et 1 024 px, et avec son nom à partir de 1 280 px. Ailleurs, l'entrée des paramètres le remplace. */
         <Button variant="outline" size="sm" aria-label={TITRE_DES_TESTS} title={`${TITRE_DES_TESTS} (développement)`} className="ml-1 h-8 gap-2 border-dashed pointer-coarse:min-w-11 @max-[47rem]:hidden @min-[63rem]:@max-[79rem]:hidden @min-[39rem]:ml-2">
           <FlaskConical />
           <span className="hidden @min-[79rem]:inline">Tests</span>
         </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>

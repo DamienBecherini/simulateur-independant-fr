@@ -11,6 +11,7 @@ const RELATIONS_DE_DIRECTION: Relationship["type"][] = ["Président", "Gérant",
  * Relations possibles entre une personne et une activité : celles de son statut au réel (`RELATIONS_PAR_STATUT`), ou le
  * seul titulaire d'une micro-entreprise. La relation « Salarié » n'y est pas proposée, le coût d'un salarié n'y
  * réduisant ni cotisations ni impôt. Une activité en portage salarial n'a qu'un titulaire, le salarié porté.
+ * Entreprise individuelle, micro-entreprise ou portage : un seul titulaire, vérifié dans `getAvailableRelationships`.
  */
 function getPersonToActivityRelationTypes(activite: Activite): Relationship["type"][] {
   if (activite.type === "micro-entreprise" || activite.type === "portage") return ["Titulaire"]
@@ -55,8 +56,12 @@ export function getAvailableRelationships(sourceEntity: Entity, targetEntity: En
   const activite = sourceEntity.type === "person" ? targetEntity : sourceEntity
   // On ne dirige pas, et on n'est pas titulaire, d'une activité dont on est salarié, et inversement.
   const dirige = RELATIONS_DE_DIRECTION.some(type => existingTypes.has(type))
+  // Une entreprise individuelle, une micro-entreprise ou une activité en portage n'ont qu'un titulaire : le calcul
+  // attribuerait tout au premier. Pour en changer, on supprime d'abord la relation de l'autre personne.
+  const aDejaUnTitulaire = allRelationships.some(r => r.type === "Titulaire" && (r.fromId === activite.id || r.toId === activite.id))
   return getPersonToActivityRelationTypes(activite as Activite).filter(type => {
     if (existingTypes.has(type)) return false
+    if (type === "Titulaire" && aDejaUnTitulaire) return false
     if (type === "Salarié") return !dirige
     return !(RELATIONS_DE_DIRECTION.includes(type) && existingTypes.has("Salarié"))
   })

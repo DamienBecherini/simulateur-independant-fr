@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { formatAmount, parseAmount } from "@/lib/amount-utils"
 import { estLibelleParDefaut, libelleDuType, isOutgoingFlowType, type FlowType } from "@/lib/flow-constants"
+import { AIDE_DU_LIBELLE, LIBELLE_INDICATIF, LIGNE_DE_FLUX } from "@/lib/ligne-de-flux"
 import { formatPercent, grossFromNet, netCalcule, netFromGross, netRatio, parsePercent } from "@/lib/salary-utils"
 import type { ReglesFiscales } from "@/backend/logic/regles"
 import { cn } from "@/lib/utils"
@@ -201,20 +202,24 @@ export function FlowItem({ flow, allowedTypes, onUpdate, onDelete, onRecopier, o
     if (label !== flow.label) onUpdate(flow.id, { label })
   }
 
+  const forme = isSalary ? "salaire" : "simple"
+  const ligne = LIGNE_DE_FLUX[forme]
+
   return (
-    <div ref={setNodeRef} style={style} className={cn("flex flex-wrap items-center gap-2 rounded-md border bg-slate-50 p-2 @min-[34rem]:flex-nowrap dark:bg-gray-800", isAmountInvalid && "@min-[34rem]:flex-wrap", isDragging && "relative z-10 shadow-md")}>
+    <div ref={setNodeRef} style={style} className={cn("flex flex-wrap items-center gap-2 rounded-md border bg-slate-50 p-2 dark:bg-gray-800", ligne.rangee, isAmountInvalid && ligne.avecErreur, isDragging && "relative z-10 shadow-md")}>
       {/* Poignée de glisser-déposer : au clavier, Espace la saisit et les flèches déplacent le flux. */}
       <div {...attributes} {...listeners} aria-label="Réordonner le flux" className={POIGNEE_DE_TRI}>
         <GripVertical className="h-4 w-4" aria-hidden="true" />
       </div>
 
-      <FlowTypeSelect value={flow.type} options={typeOptions} onChange={handleTypeChange} typeActeur={typeActeur} />
-      <RetourALaLigneSurTelephone />
+      <FlowTypeSelect value={flow.type} options={typeOptions} onChange={handleTypeChange} typeActeur={typeActeur} forme={forme} />
+      <RetourALaLigneSurTelephone forme={forme} />
 
       <Input
-        className="min-w-32 flex-1 bg-background @min-[34rem]:min-w-0"
+        className={cn("bg-background", ligne.libelle)}
         aria-label="Libellé"
-        placeholder="Libellé (optionnel)"
+        title={AIDE_DU_LIBELLE}
+        placeholder={LIBELLE_INDICATIF}
         value={labelDraft ?? (hasDefaultLabel ? "" : flow.label)}
         data-editing={labelDraft !== null}
         onChange={e => setLabelDraft(e.target.value)}

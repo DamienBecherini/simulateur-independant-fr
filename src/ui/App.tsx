@@ -254,6 +254,7 @@ function App() {
           setSlotOrder={setSlotOrder}
           onImport={handleImport}
           onLoadMontage={chargerUnMontage}
+          onChargerUneSession={chargerUneSession}
           importConfirmation={importConfirmation}
           onConfirmImport={handleConfirmImportAndClose}
           onCancelImport={cancelImport}

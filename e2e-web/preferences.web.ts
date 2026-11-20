@@ -116,7 +116,8 @@ test("la légende des flux dépliée dans l'affichage « Résumé » l'est encor
   await expect(legende).not.toHaveAttribute("open")
   await expect.poll(async () => (await preferences(page)).sectionsOuvertes).toEqual({ "legende-des-flux": false })
   await page.emulateMedia({ media: "print" })
-  await expect(page.getByRole("heading", { name: "Légende des flux" })).toBeVisible()
+  // Le titre est celui de la section repliée ; son contenu (« Gains », « Dépenses ») n'est visible que dépliée.
+  await expect(page.getByRole("heading", { name: "Gains" })).toBeVisible()
   await page.emulateMedia({ media: "screen" })
   await recharger(page)
   await expect(legende).not.toHaveAttribute("open")

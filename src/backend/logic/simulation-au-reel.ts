@@ -13,7 +13,7 @@ import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementsDeLaProfession, parametresDeLaCaisse, professionDe } from "./professions.js"
 import { lireMois, noteSortie } from "./dispositifs.js"
 import { avecLaZone, beneficeExonereDeLActivite, detailDeLaZone, parametresDExoneration, zoneDeLActivite } from "./exoneration-de-zone.js"
-import { anneeSimulee, attribuerResultatSociete, personnesLiees, RELATIONS_D_ASSOCIE, RELATIONS_D_EXPLOITANT, revenusDe, total, verserDividendes, verserRemuneration, type Contexte } from "./routage-des-flux.js"
+import { anneeSimulee, attribuerResultatSociete, avertirDesTitulairesEnTrop, personnesLiees, RELATIONS_D_ASSOCIE, RELATIONS_D_EXPLOITANT, revenusDe, total, verserDividendes, verserRemuneration, type Contexte } from "./routage-des-flux.js"
 import { deplacementsProfessionnels, detailDeplacements, detailProfession, detailSalaries, masseSalariale } from "./details-des-activites.js"
 
 /**
@@ -129,7 +129,9 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
   const zone = zoneDeLActivite(entreprise, anneeSimulee(ctx), ctx.regles)
   const beneficeExonere = beneficeExonereDeLActivite(zone, resultat.revenuImposable)
 
-  const exploitant = personnesLiees(ctx, entreprise.id, RELATIONS_D_EXPLOITANT)[0]
+  const exploitants = personnesLiees(ctx, entreprise.id, RELATIONS_D_EXPLOITANT)
+  const exploitant = exploitants[0]
+  avertirDesTitulairesEnTrop(ctx, exploitants, "entreprise individuelle", warnings)
   if (exploitant) {
     const revenus = revenusDe(ctx, exploitant)
     // Un déficit d'entreprise individuelle au réel s'impute sur les autres revenus du foyer (article 156 du CGI).
