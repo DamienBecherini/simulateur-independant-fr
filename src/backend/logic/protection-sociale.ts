@@ -1,6 +1,6 @@
 // src/backend/logic/protection-sociale.ts
 
-import type { CaisseLiberale, ProtectionSociale, StatutCompare } from "../../types.js"
+import type { CaisseLiberale, GarantieSociale, NiveauDeGarantie, ProtectionSociale, StatutCompare } from "../../types.js"
 import type { ReglesFiscales, TauxMicro } from "./regles.js"
 
 /*
@@ -42,6 +42,27 @@ const COUVERTURE_TNS: Record<CaisseLiberale | "SSI", string> = {
   CARPIMKO: "Auxiliaire médical de la CARPIMKO : retraite de base des libéraux (CNAVPL), complémentaire et, conventionné, avantage social vieillesse ; indemnités journalières de l'Assurance maladie du 4e au 90e jour, puis de la CARPIMKO ; rente d'invalidité forfaitaire ; pas de chômage."
 }
 
+type Garanties = Record<GarantieSociale, NiveauDeGarantie>
+
+const OUI: NiveauDeGarantie = { niveau: "oui" }
+const NON: NiveauDeGarantie = { niveau: "non" }
+const FAIBLE: NiveauDeGarantie = { niveau: "faible" }
+const limite = (precision: string): NiveauDeGarantie => ({ niveau: "limite", precision })
+
+/**
+ * Les garanties de chaque régime, telles que les décrivent les résumés : sans revenu cotisé (président de SASU sans
+ * rémunération, salarié porté sans salaire), aucune garantie liée à l'activité.
+ */
+const SANS_GARANTIE: Garanties = { retraite: NON, arretMaladie: NON, invaliditeDeces: NON, accidentDuTravail: NON, chomage: NON }
+const REGIME_GENERAL: Garanties = { retraite: OUI, arretMaladie: OUI, invaliditeDeces: OUI, accidentDuTravail: OUI, chomage: NON }
+const SALARIE_PORTE: Garanties = { ...REGIME_GENERAL, chomage: OUI }
+const GARANTIES_TNS: Record<CaisseLiberale | "SSI", Garanties> = {
+  SSI: { retraite: OUI, arretMaladie: limite("après 1 an"), invaliditeDeces: OUI, accidentDuTravail: NON, chomage: NON },
+  CIPAV: { retraite: OUI, arretMaladie: limite("du 4e au 90e jour"), invaliditeDeces: limite("selon le revenu"), accidentDuTravail: NON, chomage: NON },
+  CARPIMKO: { retraite: OUI, arretMaladie: OUI, invaliditeDeces: limite("rente forfaitaire"), accidentDuTravail: NON, chomage: NON }
+}
+const GARANTIES_MICRO: Garanties = { retraite: FAIBLE, arretMaladie: FAIBLE, invaliditeDeces: FAIBLE, accidentDuTravail: NON, chomage: NON }
+
 function trimestresValides(revenuCotise: number, regles: ReglesFiscales): number {
   return Math.max(0, Math.min(4, Math.floor(revenuCotise / regles.protectionSociale.revenuParTrimestre)))
 }
@@ -53,11 +74,11 @@ function texteTrimestres(trimestres: number): string {
 /** Président de SASU : tout dépend de sa rémunération brute, sur laquelle il cotise à la retraite de base. */
 function protectionSASU(remunerationBrute: number, regles: ReglesFiscales): ProtectionSociale {
   if (remunerationBrute <= 0) {
-    return { etoiles: 1, trimestres: 0, resume: "Sans rémunération, aucune couverture liée au mandat : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni prévoyance." }
+    return { etoiles: 1, trimestres: 0, resume: "Sans rémunération, aucune couverture liée au mandat : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni prévoyance.", garanties: SANS_GARANTIE }
   }
   const trimestres = trimestresValides(remunerationBrute, regles)
   const couverture = "Régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance ; pas d'assurance chômage"
-  return { etoiles: trimestres === 4 ? 4 : 3, trimestres, resume: `${couverture}. ${texteTrimestres(trimestres)}.` }
+  return { etoiles: trimestres === 4 ? 4 : 3, trimestres, resume: `${couverture}. ${texteTrimestres(trimestres)}.`, garanties: REGIME_GENERAL }
 }
 
 /**
@@ -67,11 +88,11 @@ function protectionSASU(remunerationBrute: number, regles: ReglesFiscales): Prot
  */
 function protectionPortage(salaireBrut: number, regles: ReglesFiscales): ProtectionSociale {
   if (salaireBrut <= 0) {
-    return { etoiles: 1, trimestres: 0, resume: "Sans salaire versé par la société de portage, aucune couverture liée à l'activité : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni droits au chômage." }
+    return { etoiles: 1, trimestres: 0, resume: "Sans salaire versé par la société de portage, aucune couverture liée à l'activité : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni droits au chômage.", garanties: SANS_GARANTIE }
   }
   const trimestres = trimestresValides(salaireBrut, regles)
   const couverture = "Salarié cadre du régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance des cadres, assurance chômage"
-  return { etoiles: trimestres === 4 ? 5 : 4, trimestres, resume: `${couverture}. ${texteTrimestres(trimestres)}.` }
+  return { etoiles: trimestres === 4 ? 5 : 4, trimestres, resume: `${couverture}. ${texteTrimestres(trimestres)}.`, garanties: SALARIE_PORTE }
 }
 
 /**
@@ -85,7 +106,8 @@ function protectionTNS(assiette: number, regles: ReglesFiscales, caisse?: Caisse
   return {
     etoiles: 3,
     trimestres,
-    resume: `${COUVERTURE_TNS[caisse ?? "SSI"]} ${texteTrimestres(trimestres)} (${trimestresValides(assietteMinimale, regles)} au minimum grâce aux cotisations minimales).`
+    resume: `${COUVERTURE_TNS[caisse ?? "SSI"]} ${texteTrimestres(trimestres)} (${trimestresValides(assietteMinimale, regles)} au minimum grâce aux cotisations minimales).`,
+    garanties: GARANTIES_TNS[caisse ?? "SSI"]
   }
 }
 
@@ -105,7 +127,8 @@ function protectionMicro({ chiffreAffairesMicro: ca, beneficieACRE = false, acre
   return {
     etoiles: trimestres === 4 ? 2 : 1,
     trimestres,
-    resume: `${regime} : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. ${texteTrimestres(trimestres)}${retraite(sousACRE.chiffreAffaires) * sousACRE.reduction > 0 ? ", en tenant compte des cotisations réduites par l'ACRE" : ""}.`
+    resume: `${regime} : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. ${texteTrimestres(trimestres)}${retraite(sousACRE.chiffreAffaires) * sousACRE.reduction > 0 ? ", en tenant compte des cotisations réduites par l'ACRE" : ""}.`,
+    garanties: GARANTIES_MICRO
   }
 }
 

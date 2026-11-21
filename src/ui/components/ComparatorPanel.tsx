@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { exporterComparaisonCsv } from "../exports-texte"
 import { BoutonExportCsv } from "./BoutonExportCsv"
 import { CombienFacturer } from "./CombienFacturer"
-import { Depliable } from "./Depliable"
+import { ProtectionDesStatuts } from "./ProtectionDesStatuts"
 import { RemunerationOptimizer } from "./RemunerationOptimizer"
 import { RepartitionDuBenefice } from "./RepartitionBenefice"
 import { SurToutesLesAnnees } from "./SurToutesLesAnnees"
@@ -316,26 +316,6 @@ function WarningList({ warnings }: { warnings: string[] }) {
   )
 }
 
-/** Ce que recouvre chaque note de protection sociale. */
-function ProtectionDetails({ scenarios }: { scenarios: ScenarioStatut[] }) {
-  if (scenarios.length === 0) return null
-  return (
-    <Depliable titre="Ce que recouvre la note de protection sociale" id="comparateur-note-protection" className="text-sm text-slate-600 dark:text-slate-300">
-      <ul className="mt-2 space-y-1">
-        {scenarios.map(s => (
-          <li key={s.statut}>
-            <span className="font-medium">
-              {s.libelle} ({s.protectionSociale.etoiles}/5) :
-            </span>{" "}
-            {s.protectionSociale.resume}
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2 text-slate-600 dark:text-slate-400">Note indicative : la cinquième étoile correspond au salarié, seul à cotiser à l'assurance chômage, comme en portage salarial avec 4 trimestres.</p>
-    </Depliable>
-  )
-}
-
 /**
  * Les couples en union libre, imposés ensemble comme s'ils étaient mariés ou pacsés. Le titre, où mène la barre de
  * résumé, peut recevoir le focus.
@@ -388,7 +368,7 @@ function ComparisonResults({ result, activityName, onExporter, children }: { res
       <RappelDesFrais result={result} />
       <RappelDuBeneficeGarde result={result} />
       <NotesDuTableau notes={notes} activityName={activityName} />
-      <ProtectionDetails scenarios={result.scenarios} />
+      <ProtectionDesStatuts scenarios={result.scenarios} />
       {reduit ? null : children}
     </>
   )

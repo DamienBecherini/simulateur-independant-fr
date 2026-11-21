@@ -9,9 +9,10 @@ import { ComparateurDeTest } from "@/ui/testing/comparateur"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { AffichageContext } from "../hooks/useAffichage"
 import { ComparatorPanel } from "./ComparatorPanel"
+import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
 
 function scenario(statut: StatutCompare, libelle: string, net: number, overrides: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.` }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
+  return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.`, garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
 }
 
 function comparison(overrides: Partial<ComparaisonResult> = {}): ComparaisonResult {
@@ -177,7 +178,7 @@ describe("ComparatorPanel", () => {
   })
 
   it("a une colonne « Portage salarial », désignable meilleur net, grisée quand elle n'est pas retenue, et envoie ses conditions au calcul", async () => {
-    const portage = scenario("portage", "Portage salarial", 36000, { protectionSociale: { etoiles: 5, trimestres: 4, resume: "Salarié cadre du régime général." } })
+    const portage = scenario("portage", "Portage salarial", 36000, { protectionSociale: { etoiles: 5, trimestres: 4, resume: "Salarié cadre du régime général.", garanties: GARANTIES_DE_TEST } })
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: [...comparison().scenarios, portage], meilleur: "portage" }))
     const { unmount } = render(<ComparateurDeTest annee={2026} session={{ ...withActivity(), comparateur: { activiteComparee: "micro-atelier", reglagesParActivite: { "micro-atelier": { portage: { tauxFraisDeGestion: 0.06 } } } } }} />)
 
@@ -259,7 +260,22 @@ describe("ComparatorPanel", () => {
     const ligne = await screen.findByRole("row", { name: /^Protection sociale/ })
     expect(ligne).toHaveTextContent("★★★☆☆")
     expect(ligne).toHaveTextContent("3 sur 5")
-    expect(screen.getByText(/Couverture SASU./)).toBeInTheDocument()
+  })
+
+  it("détaille la protection sociale dans un tableau, garantie par garantie, le résumé de chaque régime dans une bulle", async () => {
+    const tns = { ...GARANTIES_DE_TEST, arretMaladie: { niveau: "limite" as const, precision: "après 1 an" }, accidentDuTravail: { niveau: "non" as const } }
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "EURL" ? { ...s, protectionSociale: { ...s.protectionSociale, garanties: tns } } : s)) }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const tableau = await screen.findByRole("table", { name: "Protection sociale selon le statut" })
+    expect(within(tableau).getAllByRole("columnheader").map(c => c.textContent)).toEqual(expect.arrayContaining([expect.stringMatching(/^SASU★★★☆☆ : 3 sur 5$/)]))
+    const ligne = (nom: string) => within(tableau).getByRole("row", { name: new RegExp(`^${nom}`) })
+    expect(within(ligne("Arrêt maladie")).getAllByRole("cell").map(c => c.textContent)).toEqual(expect.arrayContaining(["✓oui", "après 1 an"]))
+    expect(ligne("Chômage")).toHaveTextContent("✗non")
+    expect(ligne("Trimestres de retraite")).toHaveTextContent("4 / 4")
+
+    await userEvent.click(within(ligne("En détail")).getAllByRole("button", { name: /^Protection sociale en / })[0])
+    expect(screen.getByRole("tooltip")).toHaveTextContent(/Couverture SASU\./)
   })
 
   it("écrit dans l'en-tête qu'une rémunération choisie a été limitée à ce que la société peut verser", async () => {

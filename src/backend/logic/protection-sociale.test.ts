@@ -74,3 +74,28 @@ describe("evaluerProtectionSociale", () => {
     })
   })
 })
+
+describe("garanties de chaque régime, pour le tableau de la protection sociale", () => {
+  const niveaux = (statut: Parameters<typeof evaluerProtectionSociale>[0], autres: Partial<DonneesProtection> = {}) =>
+    Object.fromEntries(Object.entries(evaluerProtectionSociale(statut, donnees(autres), reglesDeTest).garanties).map(([garantie, { niveau, precision }]) => [garantie, precision ?? niveau]))
+
+  it("président de SASU rémunéré : le régime général, sans chômage ; sans rémunération, aucune garantie", () => {
+    expect(niveaux("SASU", { remunerationBrute: 30000 })).toEqual({ retraite: "oui", arretMaladie: "oui", invaliditeDeces: "oui", accidentDuTravail: "oui", chomage: "non" })
+    expect(Object.values(niveaux("SASU"))).toEqual(["non", "non", "non", "non", "non"])
+  })
+
+  it("salarié porté : le régime général et le chômage ; sans salaire, aucune garantie", () => {
+    expect(niveaux("portage", { salaireBrutPorte: 40000 })).toEqual({ retraite: "oui", arretMaladie: "oui", invaliditeDeces: "oui", accidentDuTravail: "oui", chomage: "oui" })
+    expect(Object.values(niveaux("portage"))).toEqual(["non", "non", "non", "non", "non"])
+  })
+
+  it("indépendant au réel : arrêt maladie après un an d'affiliation, ni accident du travail ni chômage ; selon sa caisse pour un libéral réglementé", () => {
+    expect(niveaux("EURL", { assietteTNS: 30000 })).toEqual({ retraite: "oui", arretMaladie: "après 1 an", invaliditeDeces: "oui", accidentDuTravail: "non", chomage: "non" })
+    expect(niveaux("EI", { assietteTNS: 30000, caisse: "CIPAV" })).toMatchObject({ arretMaladie: "du 4e au 90e jour", invaliditeDeces: "selon le revenu", accidentDuTravail: "non" })
+    expect(niveaux("EI", { assietteTNS: 30000, caisse: "CARPIMKO" })).toMatchObject({ arretMaladie: "oui", invaliditeDeces: "rente forfaitaire" })
+  })
+
+  it("micro-entrepreneur : retraite, arrêt maladie et invalidité faibles, proportionnels au chiffre d'affaires", () => {
+    expect(niveaux("micro", { chiffreAffairesMicro: { caVente: 0, caServicesBic: 0, caServicesBnc: 80000 } })).toEqual({ retraite: "faible", arretMaladie: "faible", invaliditeDeces: "faible", accidentDuTravail: "non", chomage: "non" })
+  })
+})

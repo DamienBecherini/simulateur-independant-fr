@@ -7,6 +7,7 @@ import type { ComparaisonOptions, ModeRepartition, OptimisationRemuneration, Par
 import { emptySession, makePerson, makeMicro } from "@/ui/testing/fixtures"
 import { ComparateurDeTest } from "@/ui/testing/comparateur"
 import { RepartitionDuBenefice } from "./RepartitionBenefice"
+import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
 
 // toHaveTextContent ramène les espaces insécables à des espaces simples : on fait de même.
 const money = (n: number) => `${n.toLocaleString("fr-FR")} €`.replace(/\s/g, " ")
@@ -14,7 +15,7 @@ const money = (n: number) => `${n.toLocaleString("fr-FR")} €`.replace(/\s/g, "
 /** 40 000 € de bénéfice : 10 000 € nets coûtent 17 000 €, 3 450 € d'IS, 19 550 € distribuables. */
 const partage = (changements: Partial<PartageDuBenefice> = {}): PartageDuBenefice => ({ beneficeAvantRemuneration: 40000, remunerationNette: 10000, cotisationsRemuneration: 7000, impotSocietes: 3450, dividendesNets: 19550, cotisationsSurDividendes: 0, resultatConserve: 0, ...changements })
 
-const scenario = (p: PartageDuBenefice | undefined, reserves?: ReservesDeLaSociete): ScenarioStatut => ({ statut: "SASU", libelle: "SASU", actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: "" }, netApresImpots: 0, revenusAvantPrelevements: 0, totalPrelevements: 0, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...(p ? { partage: p } : {}), ...(reserves ? { reserves } : {}) })
+const scenario = (p: PartageDuBenefice | undefined, reserves?: ReservesDeLaSociete): ScenarioStatut => ({ statut: "SASU", libelle: "SASU", actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: "", garanties: GARANTIES_DE_TEST }, netApresImpots: 0, revenusAvantPrelevements: 0, totalPrelevements: 0, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...(p ? { partage: p } : {}), ...(reserves ? { reserves } : {}) })
 
 const point = (remunerationNette: number, trimestres: number): PointRemuneration => ({ remunerationNette, dividendes: 0, netApresImpots: 30000, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, trimestres })
 const optimisation = (changements: Partial<OptimisationRemuneration> = {}): OptimisationRemuneration => ({ statut: "SASU", remunerationMaximale: 23000, points: [], meilleur: point(4000, 0), meilleurAvecRetraite: point(5700, 4), warnings: [], ...changements })

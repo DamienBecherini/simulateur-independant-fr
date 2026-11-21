@@ -10,11 +10,12 @@ import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-
 import { ESPACE_INSECABLE } from "@/backend/logic/format"
 import { AffichageContext } from "../hooks/useAffichage"
 import { CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
+import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? ""
 
 function scenario(statut: StatutCompare, libelle: string, net: number, autres: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: "" }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...autres }
+  return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: "", garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...autres }
 }
 
 describe("cartes des statuts : le portage salarial", () => {
@@ -23,7 +24,7 @@ describe("cartes des statuts : le portage salarial", () => {
   const cartes = () => within(screen.getByRole("list", { name: "Net dans la poche selon le statut" })).getAllByRole("listitem")
 
   it("a sa carte, avec ses cinq étoiles, son écart et les frais dont la société de portage se charge ; il peut être le meilleur net", () => {
-    const portage = scenario("portage", "Portage salarial", 31000, { protectionSociale: { etoiles: 5, trimestres: 4, resume: "" }, ecartDeFrais: { total: -850, postes: { assurance: -850 } } })
+    const portage = scenario("portage", "Portage salarial", 31000, { protectionSociale: { etoiles: 5, trimestres: 4, resume: "", garanties: GARANTIES_DE_TEST }, ecartDeFrais: { total: -850, postes: { assurance: -850 } } })
     render(<CartesDesStatuts result={avec(portage, "portage")} />)
     expect(cartes()[0]).toHaveTextContent(/^Portage salarialmeilleur net ·/)
     expect(within(cartes()[0]).getByText("protection sociale 5 sur 5")).toBeInTheDocument()
