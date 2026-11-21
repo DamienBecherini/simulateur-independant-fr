@@ -174,15 +174,16 @@ describe("App : flux qui reviennent chaque mois", () => {
     return montantsDeLARE()
   }
 
-  async function appliquerA(user: UserEvent, dialog: HTMLElement, portee: "suivants" | "annee") {
-    await user.selectOptions(within(dialog).getByLabelText("Appliquer à :"), portee)
+  /** Après une modification ou un retrait, la barre de la fenêtre propose de faire de même dans d'autres mois. */
+  async function aussi(user: UserEvent, dialog: HTMLElement, choix: string) {
+    await user.click(within(within(dialog).getByRole("group", { name: /aussi d'autres mois$/ })).getByRole("button", { name: choix }))
   }
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  it("ajouter sur l'année, modifier à partir de juillet, supprimer sur l'année : une étape d'annulation chacune", async () => {
+  it("ajouter sur l'année, modifier à partir de juillet, supprimer sur l'année : une étape pour l'ajout, deux pour une modification ou un retrait étendus", async () => {
     // Horloge simulée dès l'ouverture, pour que le recalcul de la session initiale ne puisse pas arriver en retard, au
     // milieu des étapes ; elle suit aussi le temps réel, dont l'attente de l'affichage de l'application a besoin.
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true })
@@ -190,7 +191,7 @@ describe("App : flux qui reviennent chaque mois", () => {
 
     // 1 200 € d'ARE chaque mois, saisis en mars pour toute l'année.
     let dialog = await openMonth(user, "mars")
-    await appliquerA(user, dialog, "annee")
+    await user.selectOptions(within(dialog).getByLabelText("Ajouter à :"), "annee")
     await user.type(within(dialog).getByLabelText("Libellé du nouveau flux"), "ARE")
     await user.type(within(dialog).getByLabelText("Montant du nouveau flux"), "1200{Enter}")
     await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
@@ -198,23 +199,26 @@ describe("App : flux qui reviennent chaque mois", () => {
 
     // 1 300 € à partir de juillet.
     dialog = await openMonth(user, "juillet")
-    await appliquerA(user, dialog, "suivants")
     const montant = within(dialog).getByRole("textbox", { name: "Montant" })
     await user.clear(montant)
     await user.type(montant, "1300{Enter}")
+    await aussi(user, dialog, "juillet à décembre")
     await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
     const avantSuppression = [...Array.from({ length: 6 }, () => [1200]), ...Array.from({ length: 6 }, () => [1300])]
     expect(await sessionRecalculee()).toEqual(avantSuppression)
 
     // Suppression depuis décembre, sur toute l'année : les deux montants disparaissent.
     dialog = await openMonth(user, "décembre")
-    await appliquerA(user, dialog, "annee")
     await user.click(within(dialog).getByRole("button", { name: "Supprimer le flux" }))
+    await aussi(user, dialog, "toute l'année")
     await user.click(within(dialog).getByRole("button", { name: "Terminé" }))
     expect(await sessionRecalculee()).toEqual(Array.from({ length: 12 }, () => []))
 
-    expect(await countUndoSteps(user)).toBe(3)
-    // Une seule annulation rend toute la série supprimée, avec ses deux montants.
+    // L'ajout sur l'année ; juillet, puis les mois suivants ; décembre, puis le reste de l'année.
+    expect(await countUndoSteps(user)).toBe(5)
+    // Une annulation rend les onze autres mois de la série retirée, avec ses deux montants ; la suivante, décembre.
+    await user.keyboard("{Control>}z{/Control}")
+    expect(await sessionRecalculee()).toEqual([...avantSuppression.slice(0, 11), []])
     await user.keyboard("{Control>}z{/Control}")
     expect(await sessionRecalculee()).toEqual(avantSuppression)
   })

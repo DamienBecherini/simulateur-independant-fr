@@ -37,9 +37,9 @@ test("ajouter une charge à tous les mois de 2026 et de 2025, la supprimer des d
   await page.getByRole("button", { name: "Flux de mars : Conseil SASU" }).click()
   const autresAnnees = fenetre.getByRole("group", { name: "Aussi en :" })
   await expect(autresAnnees.getByRole("checkbox")).toHaveCount(1)
-  await fenetre.getByLabel("Appliquer à :").selectOption("annee")
+  await fenetre.getByLabel("Ajouter à :").selectOption("annee")
   await autresAnnees.getByRole("checkbox", { name: "2025" }).check()
-  await expect(fenetre.getByText("Les ajouts, modifications et suppressions s'appliquent aussi aux autres mois choisis, et aux mêmes mois en 2025.")).toBeVisible()
+  await expect(fenetre.getByText("Les ajouts sont recopiés sur les autres mois choisis, et aux mêmes mois en 2025.")).toBeVisible()
   await auditer(page, "fenêtre des flux, une autre année cochée", "[role=dialog]")
   await fenetre.getByRole("combobox", { name: "Type de flux" }).last().click()
   await page.getByRole("option", { name: /^Charge déductible/ }).click()
@@ -53,21 +53,25 @@ test("ajouter une charge à tous les mois de 2026 et de 2025, la supprimer des d
   await afficher(page, "2025")
   await expect.poll(() => depensesAnnuelles(page)).toBe(1200)
 
-  // Suppression depuis 2025, pour toute l'année, avec 2026 cochée.
+  // Suppression en mars 2025, puis, par la barre, sur toute l'année, avec 2026 cochée.
   await page.getByRole("button", { name: "Flux de mars : Conseil SASU" }).click()
-  await fenetre.getByLabel("Appliquer à :").selectOption("annee")
-  await fenetre.getByRole("group", { name: "Aussi en :" }).getByRole("checkbox", { name: "2026" }).check()
   await fenetre.getByRole("button", { name: "Supprimer le flux" }).click()
-  await expect(page.getByText("Supprimé aussi sur 11 mois en 2025 et 12 mois en 2026.")).toBeVisible()
+  const barre = fenetre.getByRole("group", { name: "Retirer aussi d'autres mois" })
+  await barre.getByRole("checkbox", { name: "2026" }).check()
+  await auditer(page, "fenêtre des flux, barre après un retrait", "[role=dialog]")
+  await barre.getByRole("button", { name: "toute l'année" }).click()
+  await expect(page.getByText("Retiré aussi sur 11 mois en 2025 et 12 mois en 2026.")).toBeVisible()
   await fenetre.getByRole("button", { name: "Terminé" }).click()
   await expect.poll(() => depensesAnnuelles(page)).toBe(0)
   await afficher(page, "2026")
   await expect.poll(() => depensesAnnuelles(page)).toBe(avant)
 
-  // Une seule annulation rétablit la charge dans les deux années.
+  // Une annulation rétablit la charge dans les autres mois des deux années ; la suivante, en mars 2025.
   await page.getByRole("button", { name: "Annuler", exact: true }).click()
   await expect.poll(() => depensesAnnuelles(page)).toBe(avant + 1200)
   await afficher(page, "2025")
+  await expect.poll(() => depensesAnnuelles(page)).toBe(1100)
+  await page.getByRole("button", { name: "Annuler", exact: true }).click()
   await expect.poll(() => depensesAnnuelles(page)).toBe(1200)
 })
 

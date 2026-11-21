@@ -9,7 +9,7 @@ export function MessageDeMontantInvalide({ id, nul = false }: { id: string; nul?
   return (
     <p id={id} role="alert" className="basis-full text-right text-sm text-destructive dark:text-red-400">
       {nul
-        ? "Un flux à 0 € n'est pas ajouté. Pour retirer un flux existant, ramenez son montant à 0 dans sa ligne ou utilisez sa corbeille ; « Appliquer à » l'étend aux autres mois."
+        ? "Un flux à 0 € n'est pas ajouté. Pour retirer un flux existant, ramenez son montant à 0 dans sa ligne ou utilisez sa corbeille ; une barre propose ensuite de le retirer aussi des autres mois."
         : "Montant positif attendu, par exemple 1 250,50. Une charge se saisit avec un type de flux de charge, pas avec un montant négatif."}
     </p>
   )
