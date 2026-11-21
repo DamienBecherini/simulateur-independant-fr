@@ -3,6 +3,7 @@
 
 import type { ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { defaultFraisFonctionnement } from "@/lib/comparateur-options"
+import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
 
 const avatar = { type: "initials" as const, value: "A", color: "#000000" }
 
@@ -174,7 +175,7 @@ function scenario(statut: ScenarioStatut["statut"], libelle: string, net: number
     ecartDeFrais: { total: 1000, postes: { expertComptable: 1000 } },
     resultatConserveActivite: 0,
     horsPlafond: false,
-    protectionSociale: { etoiles: 3, trimestres: 4, resume: "Régime général." },
+    protectionSociale: { etoiles: 3, trimestres: 4, resume: "Régime général.", garanties: GARANTIES_DE_TEST },
     netApresImpots: net,
     revenusAvantPrelevements: 30000,
     totalPrelevements: 7500,
@@ -190,7 +191,7 @@ function scenario(statut: ScenarioStatut["statut"], libelle: string, net: number
 
 export function comparaisonExemple(): ComparaisonResult {
   return {
-    scenarios: [scenario("SASU", "SASU", 20000, { actuel: true, telleQueSaisie: true, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 400 }), scenario("micro", "Micro-entreprise", 22500.5, { ecartDeFrais: { total: -2050, postes: { expertComptable: -2000, banque: -50 } }, warnings: ["Plafond dépassé."], protectionSociale: { etoiles: 2, trimestres: 4, resume: "Indépendant." } })],
+    scenarios: [scenario("SASU", "SASU", 20000, { actuel: true, telleQueSaisie: true, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 400 }), scenario("micro", "Micro-entreprise", 22500.5, { ecartDeFrais: { total: -2050, postes: { expertComptable: -2000, banque: -50 } }, warnings: ["Plafond dépassé."], protectionSociale: { etoiles: 2, trimestres: 4, resume: "Indépendant.", garanties: GARANTIES_DE_TEST } })],
     meilleur: "micro",
     situationSaisie: { statut: "SASU", libelle: "SASU", netApresImpots: 20000 },
     couples: [],

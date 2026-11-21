@@ -3,17 +3,18 @@
 import { describe, expect, it } from "vitest"
 import type { RemunerationOptimale, ScenarioStatut, StatutCompare } from "../../types.js"
 import { sousLaSituationSaisie, type ReferenceDeLaSituationSaisie } from "./sous-la-situation-saisie.js"
+import { GARANTIES_DE_TEST } from "./testing/garanties-de-test.js"
 
 const espaces = (texte: string | undefined) => texte?.replace(/\s/g, " ")
 
 function scenario(statut: StatutCompare, net: number, autres: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return { statut, libelle: statut, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 2, trimestres: 0, resume: "" }, netApresImpots: net, revenusAvantPrelevements: 60000, totalPrelevements: 60000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...autres }
+  return { statut, libelle: statut, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 2, trimestres: 0, resume: "", garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 60000, totalPrelevements: 60000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...autres }
 }
 
 /** Une société au meilleur net avec 4 trimestres exigés, qui coûtent `cout` de net. */
 const avecTrimestres = (net: number, cout: number): ScenarioStatut => {
   const remunerationOptimale: RemunerationOptimale = { remunerationNette: 12000, avecRetraite: true, retraiteHorsDAtteinte: false, coutDesQuatreTrimestres: cout }
-  return scenario("SASU", net, { libelle: "SASU, rémunération optimisée", actuel: true, remunerationOptimale, protectionSociale: { etoiles: 2, trimestres: 4, resume: "" } })
+  return scenario("SASU", net, { libelle: "SASU, rémunération optimisée", actuel: true, remunerationOptimale, protectionSociale: { etoiles: 2, trimestres: 4, resume: "", garanties: GARANTIES_DE_TEST } })
 }
 
 const saisie = (autres: Partial<ReferenceDeLaSituationSaisie> = {}): ReferenceDeLaSituationSaisie => ({ netCompare: 47960, trimestres: 0, motifNonRetenu: null, ...autres })

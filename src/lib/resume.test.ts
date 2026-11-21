@@ -4,11 +4,12 @@ import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
 import { avecUnBeneficeGarde, avecUnePerteConservee, coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, porteurDeLaPremiereAlerte, phraseDuVerdict, netEtReste, raisonDeNonRetenue, referenceDesEcarts, remunerationOptimale, tauxDePrelevement } from "./resume"
+import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
 
 function scenario(statut: StatutCompare, libelle: string, net: number, actuel = false): ScenarioStatut {
-  return { statut, libelle, actuel, telleQueSaisie: actuel, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 2, trimestres: 4, resume: "" }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [] }
+  return { statut, libelle, actuel, telleQueSaisie: actuel, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 2, trimestres: 4, resume: "", garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [] }
 }
 
 function comparaison(meilleur: StatutCompare): ComparaisonResult {

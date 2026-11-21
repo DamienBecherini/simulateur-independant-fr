@@ -110,7 +110,8 @@ function CarteDuPoint({ titre, nom, point, couleur, note, appliquee, onAppliquer
       <p>
         <span className="text-2xl font-semibold tabular-nums text-slate-900 dark:text-slate-50">{euros(point.netApresImpots)}</span> <span className="text-sm text-slate-600 dark:text-slate-300">dans la poche du foyer</span>
       </p>
-      <dl className="grid grid-cols-[auto_auto] justify-start gap-x-6 gap-y-0.5 text-sm">
+      {/* Le libellé va à la ligne plutôt que de pousser le montant hors de la carte (interface agrandie). */}
+      <dl className="grid max-w-72 grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 text-sm">
         <dt className="text-slate-600 dark:text-slate-300">Rémunération nette</dt>
         <dd className="text-right font-medium tabular-nums">{euros(point.remunerationNette)}</dd>
         <dt className="text-slate-600 dark:text-slate-300">Dividendes</dt>
@@ -149,12 +150,15 @@ function Resume({ resultat, remunerationActuelle, onAppliquer }: ResumeProps) {
     <CarteDuPoint titre={titre} nom={nom} point={point} couleur={couleur} note={note} appliquee={remunerationActuelle === point.remunerationNette} onAppliquer={() => onAppliquer(point.remunerationNette)} />
   )
 
+  // Côte à côte selon la largeur de la section, pas celle de l'écran : interface agrandie, elle est plus étroite qu'il n'y paraît.
   return (
-    <ul className="grid gap-3 sm:grid-cols-2">
+    <div className="@container">
+      <ul className="grid gap-3 @xl:grid-cols-2">
       {memePoint ? carte("Meilleur net, 4 trimestres validés", "Meilleur net, 4 trimestres validés", meilleur, COULEUR_DU_MEILLEUR.point) : carte("Meilleur net", "Meilleur net", meilleur, COULEUR_DU_MEILLEUR.point)}
       {meilleurAvecRetraite && !memePoint ? carte("Avec 4 trimestres", "Meilleur net avec 4 trimestres", meilleurAvecRetraite, COULEUR_DES_4_TRIMESTRES.point, `${euros(meilleur.netApresImpots - meilleurAvecRetraite.netApresImpots)} de moins par an pour valider une année de retraite.`) : null}
       {!meilleurAvecRetraite ? <li className="flex items-center rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-600 dark:border-slate-600 dark:text-slate-300">Aucune rémunération possible en {statut} ne valide 4 trimestres de retraite.</li> : null}
-    </ul>
+      </ul>
+    </div>
   )
 }
 

@@ -1196,11 +1196,26 @@ export interface ScenarioStatut {
 }
 
 /** Note qualitative de protection sociale d'un statut, sur 5 étoiles. */
+/** Les garanties comparées d'un statut à l'autre ; les frais de santé, couverts partout, n'en font pas partie. */
+export const GARANTIES_SOCIALES = ["retraite", "arretMaladie", "invaliditeDeces", "accidentDuTravail", "chomage"] as const
+export type GarantieSociale = (typeof GARANTIES_SOCIALES)[number]
+
+/**
+ * Ce qu'un statut garantit : « oui » ; « limite » (couverte, avec une restriction que `precision` dit : après un an
+ * d'affiliation, du 4e au 90e jour) ; « faible » (proportionnelle au chiffre d'affaires, sans minimum) ; « non ».
+ */
+export interface NiveauDeGarantie {
+  niveau: "oui" | "limite" | "faible" | "non"
+  precision?: string
+}
+
 export interface ProtectionSociale {
   etoiles: number
   /** Trimestres de retraite validés sur l'année (4 au maximum). */
   trimestres: number
   resume: string
+  /** Chaque garantie, pour le tableau de la protection sociale : elle dépend du régime, pas des montants. */
+  garanties: Record<GarantieSociale, NiveauDeGarantie>
 }
 
 export interface ComparaisonCouple {
