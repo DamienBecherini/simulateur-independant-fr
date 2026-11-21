@@ -5,7 +5,7 @@
 
 import type { Entity, FinancialFlow, MonthlyGridData } from "@/types"
 import { DEFAULT_FLOW_COLORS } from "./color-constants"
-import { isExpenseFlowType } from "./flow-constants"
+import { isOutgoingFlowType } from "./flow-constants"
 
 type TypeDeFlux = FinancialFlow["type"]
 
@@ -70,12 +70,12 @@ function montantsParType(flux: FinancialFlow[]): Map<TypeDeFlux, number> {
   return montants
 }
 
-/** La case des flux donnés : un segment par type, du côté des gains ou des dépenses. */
+/** La case des flux donnés : un segment par type, du côté des gains ou des dépenses (rémunération et dividendes versés compris). */
 function caseDesFlux(flux: FinancialFlow[], couleurs: Record<string, string>, numeros: Map<string, number>): CaseDeLaGrille {
   const contenu: CaseDeLaGrille = { gains: [], expenses: [], totalGains: 0, totalExpenses: 0, flowCount: flux.length }
   montantsParType(flux).forEach((amount, type) => {
     const segment: SegmentDeFlux = { amount, color: couleurs[type] || COULEUR_INCONNUE, number: numeros.get(type) || 0 }
-    if (isExpenseFlowType(type)) {
+    if (isOutgoingFlowType(type)) {
       contenu.expenses.push(segment)
       contenu.totalExpenses += amount
     } else {

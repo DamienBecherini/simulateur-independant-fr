@@ -64,6 +64,13 @@ describe("données de la grille", () => {
     expect(ligneAlice.monthlyCellData[2]).toEqual({ gains: [], expenses: [], totalGains: 0, totalExpenses: 0, flowCount: 0 })
   })
 
+  it("range la rémunération du dirigeant et les dividendes versés du côté des dépenses", () => {
+    const societe = grilleAvec({ 0: [flux("atelier", "ca_services", 10000), flux("atelier", "director_remuneration", 4000), flux("atelier", "dividends_payment", 1000)] })
+    const [ligne] = donneesDeLaGrille([atelier], societe, undefined, numerosDesTypesDeFlux(societe))
+    expect(ligne.monthlyCellData[0].totalGains).toBe(10000)
+    expect(ligne.monthlyCellData[0].totalExpenses).toBe(5000)
+  })
+
   it("le total annuel additionne les mois, type par type", () => {
     const [ligneAlice] = donneesDeLaGrille([alice], grille, undefined, numeros)
     expect(ligneAlice.annualCellData.gains.map(s => s.amount)).toEqual([2500])
