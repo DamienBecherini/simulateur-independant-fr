@@ -24,8 +24,9 @@ test("créer une personne et sa micro-entreprise, saisir un chiffre d'affaires, 
   await page.getByRole("button", { name: "Flux de janvier : Ma Micro-Entreprise" }).click()
   const fenetreFlux = page.getByRole("dialog", { name: /Opérations de janvier/ })
   await expect(fenetreFlux).toBeVisible()
-  // La nature du chiffre d'affaires est proposée d'office, expliquée et visible : les prestations libérales.
-  await expect(fenetreFlux.getByRole("radio", { name: "Prestations libérales (BNC)" })).toBeChecked()
+  // La nature du chiffre d'affaires est proposée d'office, expliquée et visible : les prestations libérales, signalées
+  // dans l'aide sur les natures.
+  await expect(fenetreFlux.getByRole("list", { name: "Natures du chiffre d'affaires" }).getByRole("listitem").first()).toHaveAttribute("aria-current", "true")
   await expect(fenetreFlux.getByRole("combobox", { name: "Type de flux" })).toHaveText("Prestations libérales (BNC)")
   await fenetreFlux.getByRole("textbox", { name: "Montant du nouveau flux" }).click()
   await page.keyboard.type("30000")
