@@ -10,6 +10,7 @@ import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
 import { createContext, useContext, useId, useState, type ReactNode } from "react"
 import { cleDeLActivite, cleDuFoyer, porteurDeLaPremiereAlerte } from "@/lib/resume"
+import { AlerteCourte } from "./AlerteCourte"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { classeDuDetail, useDetailDesCartes } from "../hooks/useDetailsDesCartes"
 import { BoutonDuDetailDesCartes, FournisseurDesDetails } from "./DetailsDesCartes"
@@ -184,7 +185,7 @@ function Card({ cle, title, subtitle, warnings, conditions, className, children 
       {warnings.length > 0 ? (
         <ul id={premiereAlerte ? ANCRES.premiereAlerte : undefined} className="mt-3 list-inside list-disc text-sm text-amber-800 dark:text-amber-200/90">
           {warnings.map((warning, i) => (
-            <li key={i}>{conditions && warning === conditions.avertissement ? <ConditionsDepliables {...conditions} /> : warning}</li>
+            <li key={i}>{conditions && warning === conditions.avertissement ? <ConditionsDepliables {...conditions} /> : <AlerteCourte texte={warning} />}</li>
           ))}
         </ul>
       ) : null}
@@ -565,7 +566,9 @@ function EnTeteDesResultats({ report }: { report: SimulationReport | null }) {
       {report?.avertissements.length ? (
         <ul id={ANCRES.premiereAlerte} className="list-inside list-disc rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
           {report.avertissements.map(avertissement => (
-            <li key={avertissement}>{avertissement}</li>
+            <li key={avertissement}>
+              <AlerteCourte texte={avertissement} />
+            </li>
           ))}
         </ul>
       ) : null}

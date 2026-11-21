@@ -4,7 +4,7 @@
 // comparer à l'entreprise individuelle qui porte la même perte ; le portage, à découvert, n'est pas retenu. Une
 // rémunération de la grille supérieure au bénéfice : l'alerte dit où est la limite, et la colonne n'est pas désignée.
 
-import { test, expect, type Page } from "@playwright/test"
+import { test, expect, type Locator, type Page } from "@playwright/test"
 
 type Flux = [type: string, montant: number]
 
@@ -74,14 +74,25 @@ test("une année de perte : la perte restée dans la société est déduite pour
   await expect(table(page).getByRole("columnheader", { name: /^Portage salarial/ })).not.toContainText("meilleur net")
 })
 
+/** Le détail de l'alerte sur la rémunération du dirigeant, ouvert dans sa bulle : la limite y est donnée. */
+async function detailDeLAlerte(page: Page, carte: Locator): Promise<string> {
+  const alerte = carte.getByRole("listitem").filter({ hasText: /^Rémunération du dirigeant supérieure à ce que la société gagne/ })
+  await alerte.getByRole("button", { name: "Détail de l'alerte" }).click()
+  const detail = await page.getByRole("tooltip").innerText()
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("tooltip")).toHaveCount(0)
+  return detail
+}
+
 test("la grille verse au dirigeant plus que la société ne gagne : l'alerte dit la limite, et la colonne n'est pas désignée", async ({ page }) => {
   await ouvrir(page, session("Rémunération hors de portée", [["ca_services", 60000], ["director_remuneration", 200000]]))
 
   // Dans les résultats, en tête des alertes de la société, avec la plus haute rémunération possible sans déficit.
   const carte = page.getByRole("article").filter({ hasText: "Atelier" }).first()
-  const alerte = carte.getByText(/^Rémunération du dirigeant supérieure à ce que la société gagne/)
-  await expect(alerte).toContainText(/200\s000\s€ nets saisis, pour [\d\s]+€ au plus sans déficit cette année\./)
-  const limite = montant((await alerte.innerText()).split("pour ")[1])
+  // L'alerte tient en une ligne ; la limite est dans sa bulle.
+  const detail = await detailDeLAlerte(page, carte)
+  expect(detail).toMatch(/200\s000\s€ nets saisis, pour [\d\s]+€ au plus sans déficit cette année\./)
+  const limite = montant(detail.split("pour ")[1])
   expect(limite).toBeGreaterThan(20000)
   expect(limite).toBeLessThan(60000)
 
@@ -103,7 +114,7 @@ test("la grille verse au dirigeant plus que la société ne gagne : l'alerte dit
 test("la limite annoncée par l'alerte est la bonne : à ce montant, la société n'est plus déficitaire", async ({ page }) => {
   await ouvrir(page, session("Rémunération à la limite", [["ca_services", 60000], ["director_remuneration", 200000]]))
   const carte = page.getByRole("article").filter({ hasText: "Atelier" }).first()
-  const limite = montant((await carte.getByText(/^Rémunération du dirigeant supérieure/).innerText()).split("pour ")[1])
+  const limite = montant((await detailDeLAlerte(page, carte)).split("pour ")[1])
 
   // La même société, avec cette rémunération. La session est déposée avant chaque chargement : le dernier dépôt
   // l'emporte, et la page ne peut pas la réécrire en se fermant.
@@ -119,5 +130,5 @@ test("la limite annoncée par l'alerte est la bonne : à ce montant, la sociét�
 
   // Cent euros de plus : l'alerte revient, avec la même limite.
   await recharger("Au-delà de la limite", limite + 100)
-  expect(montant((await carte.getByText(/^Rémunération du dirigeant supérieure/).innerText()).split("pour ")[1])).toBe(limite)
+  expect(montant((await detailDeLAlerte(page, carte)).split("pour ")[1])).toBe(limite)
 })

@@ -11,13 +11,12 @@
 // pastilles : un clic en affiche la note, seule. « Tout afficher » rend la liste complète, et ce choix est retenu.
 // L'affichage « Classique » montre toujours la liste complète, comme l'impression, qui n'a pas de clic.
 
-import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { createPortal } from "react-dom"
-import { placerLaBulle, type CoteDeLaBulle } from "@/lib/bulle"
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react"
 import type { Note } from "@/lib/notes"
 import { cn } from "@/lib/utils"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
+import { BULLE_AMBRE, BullePosee } from "./Bulle"
 
 const PASTILLE = "inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 px-1.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-100"
 /** Pastille sur laquelle on clique (44 px au doigt) ; un contour marque celle dont la note est affichée. */
@@ -68,81 +67,6 @@ interface Bulles {
 
 const BullesContext = createContext<Bulles | null>(null)
 
-/**
- * La bulle, posée dans la page près de sa pastille (voir src/lib/bulle.ts) : elle défile avec la page, comme la
- * pastille, et se replace quand le tableau défile de côté. Elle se ferme d'un clic ailleurs, à Échap (le focus revient
- * à la pastille) et quand la fenêtre change de taille. Faire défiler n'est pas cliquer : cela ne la ferme pas.
- */
-function BulleDeNote({ id, note, ancre, onFermer }: { id: string; note: Note; ancre: HTMLElement; onFermer: () => void }) {
-  const bulle = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
-  // Le côté retenu à l'ouverture (dessous, ou dessus faute de place) : la bulle replacée ne change pas de côté.
-  const cote = useRef<CoteDeLaBulle | undefined>(undefined)
-
-  // Place la bulle dans la page : sa place à l'écran, plus le défilement de la page, en pixels de la page zoomée.
-  const placer = useCallback(() => {
-    if (!bulle.current) return
-    const zoom = Number.parseFloat(getComputedStyle(document.body).zoom) || 1
-    const cadre = bulle.current.getBoundingClientRect()
-    const place = placerLaBulle(ancre.getBoundingClientRect(), { largeur: cadre.width, hauteur: cadre.height }, { largeur: document.documentElement.clientWidth, hauteur: window.innerHeight }, zoom, cote.current)
-    cote.current = place.cote
-    // Sans arrondir le défilement : deux arrondis de suite décaleraient la bulle de 2 px à l'écran sous un zoom de 200 %.
-    const dansLaPage = { left: place.left + window.scrollX / zoom, top: place.top + window.scrollY / zoom }
-    setPosition(actuelle => (actuelle?.left === dansLaPage.left && actuelle.top === dansLaPage.top ? actuelle : dansLaPage))
-  }, [ancre])
-
-  useLayoutEffect(() => {
-    cote.current = undefined
-    placer()
-  }, [placer, note])
-
-  useEffect(() => {
-    const clicAilleurs = (evenement: PointerEvent) => {
-      const cible = evenement.target
-      // Un clic sur la pastille elle-même la referme par son propre bouton.
-      if (cible instanceof Node && !bulle.current?.contains(cible) && !ancre.contains(cible)) onFermer()
-    }
-    const touche = (evenement: KeyboardEvent) => {
-      if (evenement.key !== "Escape") return
-      onFermer()
-      ancre.focus()
-    }
-    // La page qui défile emporte la bulle avec la pastille : rien à faire. Le tableau qui défile de côté (téléphone)
-    // déplace la pastille seule : la bulle la rejoint.
-    const defilement = (evenement: Event) => {
-      if (evenement.target !== document) placer()
-    }
-    document.addEventListener("pointerdown", clicAilleurs)
-    document.addEventListener("keydown", touche)
-    window.addEventListener("resize", onFermer)
-    // En capture : le défilement du tableau, plus large que l'écran sur un téléphone, ne remonte pas jusqu'à la fenêtre.
-    window.addEventListener("scroll", defilement, true)
-    return () => {
-      document.removeEventListener("pointerdown", clicAilleurs)
-      document.removeEventListener("keydown", touche)
-      window.removeEventListener("resize", onFermer)
-      window.removeEventListener("scroll", defilement, true)
-    }
-  }, [ancre, onFermer, placer])
-
-  // Hors du tableau : dans l'en-tête, son texte s'ajouterait au nom de la colonne, relu à chaque cellule. Au-dessus de la
-  // colonne fixe du tableau, sous la barre de résumé et la barre d'outils, collées en haut de l'écran.
-  return createPortal(
-    <div
-      ref={bulle}
-      id={id}
-      role="tooltip"
-      style={{ left: position?.left ?? 0, top: position?.top ?? 0, visibility: position ? "visible" : "hidden" }}
-      className="absolute z-30 w-80 max-w-[calc(100vw/var(--zoom,1)_-_1rem)] rounded-md border border-amber-300 bg-amber-50 p-3 text-left text-sm font-normal text-amber-950 shadow-lg dark:border-amber-700 dark:bg-amber-950 dark:text-amber-50 print:hidden"
-    >
-      <p>
-        <span className="font-medium">Note {note.numero}.</span> <TexteDeLaNote note={note} />
-      </p>
-    </div>,
-    document.body
-  )
-}
-
 /** Porte la bulle ouverte, une seule à la fois, pour les pastilles du tableau qu'il entoure. */
 export function BullesDesNotes({ notes, children }: { notes: Note[]; children: ReactNode }) {
   const [ouverte, setOuverte] = useState<BulleOuverte | null>(null)
@@ -161,7 +85,13 @@ export function BullesDesNotes({ notes, children }: { notes: Note[]; children: R
           {note ? `Note ${note.numero}. ${note.colonnes.join(", ")} : ${note.texte}` : ""}
         </p>
       ) : null}
-      {note && ouverte ? <BulleDeNote id={idDeLaBulle} note={note} ancre={ouverte.ancre} onFermer={fermer} /> : null}
+      {note && ouverte ? (
+        <BullePosee id={idDeLaBulle} ancre={ouverte.ancre} onFermer={fermer} teinte={BULLE_AMBRE} contenuCle={note}>
+          <p>
+            <span className="font-medium">Note {note.numero}.</span> <TexteDeLaNote note={note} />
+          </p>
+        </BullePosee>
+      ) : null}
     </BullesContext.Provider>
   )
 }
