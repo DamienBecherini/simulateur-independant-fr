@@ -9,7 +9,7 @@ import type { ComparaisonResult, ScenarioStatut, StatutCompare } from "@/types"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
 import { ESPACE_INSECABLE } from "@/backend/logic/format"
 import { AffichageContext } from "../hooks/useAffichage"
-import { BoutonDesPrecisions, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
+import { CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? ""
 
@@ -62,15 +62,37 @@ describe("cartes des statuts", () => {
 })
 
 describe("écart de frais de gestion d'une colonne", () => {
-  it("l'écrit sous le net, avec le détail des postes à déplier", async () => {
+  it("le donne poste par poste dans une bulle, ouverte par un (?) à côté du net, posée hors du tableau", async () => {
     const sasu = scenario("SASU", "SASU", 34000, { ecartDeFrais: { total: 2050, postes: { expertComptable: 2000, banque: 100, logiciel: 50, assurance: -100 } } })
-    render(<EcartDeFraisDeLaColonne scenario={sasu} actuel="micro-vfl" />)
+    render(
+      <table>
+        <tbody>
+          <tr>
+            <td>
+              <EcartDeFraisDeLaColonne scenario={sasu} actuel="micro-vfl" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    )
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
 
-    const resume = screen.getByText(/dont environ/)
-    expect(espaces(resume.textContent)).toContain("dont environ 2 050 € de frais de gestion en plus qu'en micro-entreprise")
-    await userEvent.click(resume)
-    expect(espaces(screen.getByText(/Expert-comptable/).textContent)).toBe("Expert-comptable : +2 000 €")
-    expect(espaces(screen.getByText(/Assurance/).textContent)).toBe("Assurance responsabilité civile professionnelle : −100 €")
+    await userEvent.click(screen.getByRole("button", { name: "Détail des frais de gestion" }))
+    const bulle = screen.getByRole("tooltip")
+    expect(espaces(bulle.textContent)).toMatch(/^Environ 2 050 € de frais de gestion en plus qu'en micro-entreprise :/)
+    const postes = within(bulle).getAllByRole("listitem").map(poste => espaces(poste.textContent))
+    expect(postes).toContain("Expert-comptable : +2 000 €")
+    expect(postes).toContain("Assurance responsabilité civile professionnelle : −100 €")
+    // Posée dans la page : elle n'agrandit pas la case, ni le tableau qui défile de côté.
+    expect(screen.getByRole("cell")).not.toContainElement(bulle)
+  })
+
+  it("l'écrit dans la case pour l'impression, qui n'a pas de bulle", () => {
+    const sasu = scenario("SASU", "SASU", 34000, { ecartDeFrais: { total: 2050, postes: { expertComptable: 2050 } } })
+    const { container } = render(<EcartDeFraisDeLaColonne scenario={sasu} actuel="micro-vfl" />)
+    const imprime = container.querySelector(".print\\:block")
+    expect(imprime).toHaveClass("hidden")
+    expect(espaces(imprime?.textContent)).toBe("Environ 2 050 € de frais de gestion en plus qu'en micro-entreprise :Expert-comptable : +2 050 €")
   })
 
   it("ne dit rien sans écart : statut actuel, ou mêmes frais", () => {
@@ -90,59 +112,35 @@ describe("écart de la colonne du statut actuel, simulée avec un autre partage 
     warnings: []
   }
 
-  it("dit ce qui la distingue de la situation saisie, et déplie chaque poste du net du foyer", async () => {
+  it("dit dans une bulle ce qui la distingue de la situation saisie, et chaque poste du net du foyer", async () => {
     render(<EcartDeRepartitionDeLaColonne result={result} scenario={optimisee} />)
-    const resume = screen.getByText((_, element) => element?.tagName === "SUMMARY" && espaces(element.textContent).startsWith("avec 5 800 € de rémunération nette au lieu de 0 €"))
-    expect(resume.closest("details")).not.toHaveAttribute("open")
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
 
-    await userEvent.setup().click(resume)
-    expect(resume.closest("details")).toHaveAttribute("open")
-    const postes = within(resume.closest("details")!).getAllByRole("listitem").map(poste => espaces(poste.textContent))
+    await userEvent.setup().click(screen.getByRole("button", { name: "Détail du partage du bénéfice" }))
+    const bulle = screen.getByRole("tooltip")
+    expect(espaces(bulle.textContent)).toMatch(/^Même statut, autre partage du bénéfice : avec 5 800 € de rémunération nette au lieu de 0 €/)
+    const postes = within(bulle).getAllByRole("listitem").map(poste => espaces(poste.textContent))
     expect(postes).toEqual([
       "Rémunération nette : 5 800 € au lieu de 0 €, soit +5 800 €",
       "Dividendes : 55 211 € au lieu de 62 750 €, soit −7 539 €",
       "Impôt sur le revenu : 3 538 € au lieu de 3 119 €, soit −419 €",
       "Prélèvements sociaux : 10 269 € au lieu de 11 671 €, soit +1 402 €"
     ])
-    expect(resume.closest("details")).toHaveTextContent("Même statut, autre partage du bénéfice.")
   })
 
-  it("« Afficher tous les détails », dans le coin du tableau, déplie d'un geste les précisions de toutes les cases, puis les replie", async () => {
+  it("une seule bulle ouverte à la fois : ouvrir celle d'une autre case ferme la première", async () => {
     const eurl = scenario("EURL", "EURL", 45000, { ecartDeFrais: { total: 300, postes: { expertComptable: 300 } } })
-    const avecFrais = { ...result, scenarios: [optimisee, eurl] }
+    const user = userEvent.setup()
     render(
-      <table>
-        <thead>
-          <tr>
-            <th>
-              <BoutonDesPrecisions result={avecFrais} />
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <EcartDeRepartitionDeLaColonne result={avecFrais} scenario={optimisee} />
-              <EcartDeFraisDeLaColonne scenario={eurl} actuel="SASU" />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <>
+        <EcartDeRepartitionDeLaColonne result={result} scenario={optimisee} />
+        <EcartDeFraisDeLaColonne scenario={eurl} actuel="SASU" />
+      </>
     )
-    const precisions = () => Array.from(document.querySelectorAll("details")).map(precision => precision.open)
-    expect(precisions()).toEqual([false, false])
-    const bouton = screen.getByRole("button", { name: "Afficher tous les détails" })
-    expect(bouton).toHaveAttribute("aria-pressed", "false")
-    await userEvent.click(bouton)
-    expect(precisions()).toEqual([true, true])
-    await userEvent.click(screen.getByRole("button", { name: "Masquer tous les détails" }))
-    expect(precisions()).toEqual([false, false])
-  })
-
-  it("pas de bouton quand aucune case n'a de précision à déplier", () => {
-    const sansPrecision = { ...result, scenarios: [scenario("SASU", "SASU", 47960, { actuel: true, telleQueSaisie: true }), scenario("EURL", "EURL", 45000)] }
-    const { container } = render(<BoutonDesPrecisions result={sansPrecision} />)
-    expect(container).toBeEmptyDOMElement()
+    await user.click(screen.getByRole("button", { name: "Détail du partage du bénéfice" }))
+    await user.click(screen.getByRole("button", { name: "Détail des frais de gestion" }))
+    expect(screen.getAllByRole("tooltip")).toHaveLength(1)
+    expect(screen.getByRole("tooltip")).toHaveTextContent(/^Environ 300 €/)
   })
 
   it("rien sous une colonne d'un autre statut : son écart vient du statut", () => {

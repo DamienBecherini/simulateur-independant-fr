@@ -16,7 +16,7 @@ import { RepartitionDuBenefice } from "./RepartitionBenefice"
 import { SurToutesLesAnnees } from "./SurToutesLesAnnees"
 import { ReglagesDuComparateur } from "./ReglagesDuComparateur"
 import { ZoneDefilante } from "./ZoneDefilante"
-import { BoutonDesPrecisions, BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, RappelDuBeneficeGarde, ResteDansLActivite, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
+import { BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, RappelDuBeneficeGarde, ResteDansLActivite, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { BullesDesNotes, NotesDuTableau, RenvoisAuxNotes } from "./NotesDuComparateur"
 import { useAffichageResume } from "../hooks/useAffichage"
@@ -91,8 +91,8 @@ const rows = (activityName: string, actuel: StatutCompare | undefined, avecPerte
     value: s => euros(s.netApresImpots),
     detail: s => (
       <>
-        <ResteDansLActivite scenario={s} />
         <EcartDeFraisDeLaColonne scenario={s} actuel={actuel} />
+        <ResteDansLActivite scenario={s} />
       </>
     ),
     strong: true
@@ -210,8 +210,8 @@ function LigneDeLEcart({ result, rang }: { result: ComparaisonResult; rang: numb
         return (
           <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", ecart !== null && !raison && deltaClass(ecart), fondDeLaCellule(s, result.meilleur))}>
             {ecart === null ? "—" : ecartSigne(ecart)}
-            {raison ? <span className="block text-xs font-medium text-slate-700 dark:text-slate-300">{raison}</span> : null}
             <EcartDeRepartitionDeLaColonne result={result} scenario={s} />
+            {raison ? <span className="block text-xs font-medium text-slate-700 dark:text-slate-300">{raison}</span> : null}
           </td>
         )
       })}
@@ -276,7 +276,6 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
           <tr>
             <th scope="col" className={cn(COLONNE_FIXE, FOND_DE_L_EN_TETE, LARGEUR_DES_LIBELLES, "px-3 py-2 text-left")}>
               <span className="sr-only">Indicateur</span>
-              <BoutonDesPrecisions result={result} />
             </th>
             {result.scenarios.map(s => (
               <EnTeteDeStatut key={s.statut} scenario={s} meilleur={s.statut === result.meilleur} renvois={renvois.get(s.statut) ?? []} />

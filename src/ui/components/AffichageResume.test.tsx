@@ -121,7 +121,7 @@ describe("comparateur dans l'affichage « Résumé »", () => {
     expect(screen.queryByRole("button", { name: /Voir le détail/ })).not.toBeInTheDocument()
   })
 
-  it.each(["classique", "resume"] as const)("affichage %s : écrit l'écart de frais de gestion dans la cellule du net, et rappelle que les frais réels sont dans la grille", async affichage => {
+  it.each(["classique", "resume"] as const)("affichage %s : met l'écart de frais de gestion dans une bulle à côté du net, et rappelle que les frais réels sont dans la grille", async affichage => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparaison())
     render(dans(affichage, <ComparateurDeTest annee={2026} session={session()} />))
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
@@ -129,7 +129,9 @@ describe("comparateur dans l'affichage « Résumé »", () => {
     expect(within(table).getByRole("columnheader", { name: /^Micro-entreprise\s*actuel$/ })).toBeInTheDocument()
     const net = within(table).getByRole("rowheader", { name: "Net dans la poche" }).closest("tr")!
     const cellules = within(net).getAllByRole("cell")
-    expect(espaces(cellules[0].textContent ?? "")).toContain("30 000 €dont environ 2 050 € de frais de gestion en plus qu'en micro-entreprise")
+    expect(cellules[0]).toHaveTextContent(/^30.000.€/)
+    await userEvent.click(within(cellules[0]).getByRole("button", { name: "Détail des frais de gestion" }))
+    expect(espaces(screen.getByRole("tooltip").textContent ?? "")).toContain("Environ 2 050 € de frais de gestion en plus qu'en micro-entreprise")
     expect(cellules[1]).toHaveTextContent(/^32.000.€$/)
     expect(screen.getByText(/^Vos frais réels sont ceux que vous avez saisis dans la grille/)).toBeInTheDocument()
   })

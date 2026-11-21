@@ -37,9 +37,18 @@ test("deux micro-entreprises d'une même personne : la carte de chacune le dit, 
 
   for (const nom of ["Conseil", "Formation"]) {
     const alertes = carte(page, nom)
-    await expect(alertes.getByText(/^« Alice Martin » est titulaire de plusieurs entreprises en nom propre \(« Conseil », « Formation »\) : une personne n'a qu'une entreprise individuelle/)).toBeVisible()
+    // Chaque alerte tient en une ligne ; le reste est dans sa bulle.
+    const titulaire = alertes.getByRole("listitem").filter({ hasText: "« Alice Martin » : une seule entreprise individuelle par personne" })
+    await expect(titulaire).toBeVisible()
+    await titulaire.getByRole("button", { name: "Détail de l'alerte" }).click()
+    await expect(page.getByRole("tooltip")).toContainText(/^« Alice Martin » est titulaire de plusieurs entreprises en nom propre \(« Conseil », « Formation »\) : une personne n'a qu'une entreprise individuelle/)
+    await page.keyboard.press("Escape")
     // 90 000 € de prestations réunies, pour un plafond de 83 600 € en 2026 : aucune des deux ne le dépasse seule.
-    await expect(alertes.getByText(/^Plafond du régime micro dépassé \(prestations de services 90\s000\s€ pour un plafond de [\d\s]+€\)/)).toContainText("Chiffre d'affaires réuni de « Conseil » et « Formation », micro-entreprises du même titulaire.")
+    const plafond = alertes.getByRole("listitem").filter({ hasText: /^Plafond du régime micro dépassé \(prestations de services 90\s000\s€ pour un plafond de [\d\s]+€\)/ })
+    await expect(plafond).toBeVisible()
+    await plafond.getByRole("button", { name: "Détail de l'alerte" }).click()
+    await expect(page.getByRole("tooltip")).toContainText("Chiffre d'affaires réuni de « Conseil » et « Formation », micro-entreprises du même titulaire.")
+    await page.keyboard.press("Escape")
   }
 
   // Le comparateur ne désigne pas une colonne micro : la micro-entreprise comparée dépasse le plafond avec l'autre.

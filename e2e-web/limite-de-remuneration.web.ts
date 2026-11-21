@@ -38,6 +38,16 @@ const carteDeLaSociete = (page: Page) => page.getByRole("article").filter({ hasT
 const montant = (texte: string) => Number((texte.match(/[-−+]?\d[\d\s]*(?=\s?€)/)?.[0] ?? "NaN").replace(/\s/g, "").replace("−", "-"))
 const rappel = (fenetre: Locator) => fenetre.locator("[data-limite-de-remuneration]")
 
+/** L'alerte de la rémunération du dirigeant tient en une ligne : son détail, ouvert dans sa bulle, puis refermé. */
+async function detailDeLAlerte(page: Page): Promise<string> {
+  const alerte = carteDeLaSociete(page).getByRole("listitem").filter({ hasText: /^Rémunération du dirigeant supérieure à ce que la société gagne/ })
+  await alerte.getByRole("button", { name: "Détail de l'alerte" }).click()
+  const detail = await page.getByRole("tooltip").innerText()
+  await page.keyboard.press("Escape")
+  await expect(page.getByRole("tooltip")).toHaveCount(0)
+  return detail
+}
+
 async function ouvrirLeMois(page: Page, mois: string): Promise<Locator> {
   await page.getByRole("button", { name: `Flux ${mois} : Atelier` }).click()
   const fenetre = page.getByRole("dialog", { name: /^Opérations de .* \/ Atelier$/ })
@@ -77,9 +87,8 @@ test("la fenêtre de saisie donne la limite de la rémunération du dirigeant d�
   expect(montant((await rappel(fenetre).innerText()).split("plus que les ")[1])).toBe(limite)
 
   await fenetre.getByRole("button", { name: "Terminé" }).click()
-  const alerte = carteDeLaSociete(page).getByText(/^Rémunération du dirigeant supérieure à ce que la société gagne/)
-  await expect(alerte).toBeVisible()
-  expect(montant((await alerte.innerText()).split("pour ")[1])).toBe(limite)
+  await expect(carteDeLaSociete(page).getByText(/^Rémunération du dirigeant supérieure à ce que la société gagne/)).toBeVisible()
+  expect(montant((await detailDeLAlerte(page)).split("pour ")[1])).toBe(limite)
 })
 
 test("une rémunération déjà saisie dans l'année est rappelée dans la fenêtre d'un autre mois, sans choisir le type", async ({ page }) => {
@@ -91,8 +100,7 @@ test("une rémunération déjà saisie dans l'année est rappelée dans la fenê
 
 test("l'alerte des résultats dit quand les réserves des années précédentes couvrent le déficit de l'année", async ({ page }) => {
   await ouvrir(page, session("Réserves", [["ca_services", 60000], ["director_remuneration", 80000]], { reservesInitiales: 300000 }))
-  const alerte = carteDeLaSociete(page).getByText(/^Rémunération du dirigeant supérieure à ce que la société gagne/)
-  await expect(alerte).toContainText(/au plus sans déficit cette année\. Les réserves des années précédentes \(300\s000\s€\) couvrent le déficit de l'année\./)
+  expect(await detailDeLAlerte(page)).toMatch(/au plus sans déficit cette année\. Les réserves des années précédentes \(300\s000\s€\) couvrent le déficit de l'année\./)
 })
 
 test("le comparateur écrit sous le net le bénéfice gardé dans la société, sans le compter dans les écarts", async ({ page }) => {

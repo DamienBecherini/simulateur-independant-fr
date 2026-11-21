@@ -48,12 +48,13 @@ test("créer une personne et sa micro-entreprise, saisir un chiffre d'affaires, 
   }
   await expect(comparateur.getByRole("columnheader", { name: "Micro-entreprise actuel" })).toBeVisible()
   // La colonne du statut actuel (micro, 4e colonne) est la situation saisie : exactement le net du bilan, sans frais
-  // supposés. Les autres colonnes n'ajoutent que l'écart de frais de gestion avec la micro, écrit sous leur net.
+  // supposés. Les autres colonnes n'ajoutent que l'écart de frais de gestion avec la micro, dans la bulle de leur net.
   const cellule = (ligne: RegExp, colonne = 3) => comparateur.getByRole("row", { name: ligne }).getByRole("cell").nth(colonne)
   await expect(cellule(/^Net dans la poche/)).not.toHaveText("")
   expect(montant(await cellule(/^Net dans la poche/).innerText())).toBe(net)
   await expect(cellule(/^Frais de gestion par rapport au statut actuel/)).toHaveText("—")
-  await expect(cellule(/^Net dans la poche/, 0)).toContainText(/dont environ .+ de frais de gestion en plus qu'en micro-entreprise/)
+  await cellule(/^Net dans la poche/, 0).getByRole("button", { name: "Détail des frais de gestion" }).click()
+  await expect(page.getByRole("tooltip")).toContainText(/Environ .+ de frais de gestion en plus qu'en micro-entreprise/)
 })
 
 test("Ctrl+Z annule la dernière modification et Ctrl+Y la rétablit", async ({ dossierDonnees, lancer }) => {

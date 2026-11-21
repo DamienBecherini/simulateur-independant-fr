@@ -3,7 +3,7 @@
 // (affichage « Résumé ») ; dans tous les affichages, l'invitation à saisir un chiffre d'affaires, la situation saisie
 // de référence, l'écart de frais de gestion de chaque colonne, les colonnes non retenues et le rappel des frais réels.
 
-import { useState } from "react"
+import type { ReactNode } from "react"
 import { ChevronRight } from "lucide-react"
 import { ANCRES } from "@/lib/ancres"
 import { ecartDeRepartition } from "@/lib/ecart-de-repartition"
@@ -15,7 +15,7 @@ import { netCompare } from "@/backend/logic/net-compare"
 import { cn } from "@/lib/utils"
 import type { ComparaisonResult, PosteFrais, ScenarioStatut, StatutCompare } from "@/types"
 import { useAffichageResume } from "../hooks/useAffichage"
-import { Depliable } from "./Depliable"
+import { AideEnBulle, BULLE_NEUTRE } from "./Bulle"
 
 /** Couleur d'un écart avec le statut actuel : vert s'il est favorable, rouge sinon. */
 const couleurDeLEcart = (ecart: number) => (ecart > 0 ? "text-emerald-700 dark:text-emerald-400" : ecart < 0 ? "text-rose-700 dark:text-rose-400" : undefined)
@@ -113,54 +113,72 @@ export function SituationTelleQueSaisie({ result }: { result: ComparaisonResult 
   )
 }
 
-/** Sous le net d'une colonne, l'écart de frais de gestion avec le statut actuel, et le détail par poste à déplier. */
+/**
+ * Une précision d'une case du tableau : un (?) à côté du montant, qui l'ouvre dans une bulle. Le tableau garde sa
+ * hauteur, et la bulle, posée dans la page, ne le fait pas défiler. Sur papier, sans bulle, la précision est écrite
+ * dans la case.
+ */
+function PrecisionDeLaCase({ libelle, children }: { libelle: string; children: ReactNode }) {
+  return (
+    <>
+      <AideEnBulle libelle={libelle} teinte={BULLE_NEUTRE} className="-mr-1 ml-1 font-normal text-slate-600 dark:text-slate-400">
+        {children}
+      </AideEnBulle>
+      <span className="hidden text-left text-xs font-normal print:block">{children}</span>
+    </>
+  )
+}
+
+/** À côté du net d'une colonne, l'écart de frais de gestion avec le statut actuel, poste par poste, dans une bulle. */
 export function EcartDeFraisDeLaColonne({ scenario, actuel }: { scenario: ScenarioStatut; actuel: StatutCompare | undefined }) {
   const phrase = actuel ? phraseDeLEcartDeFrais(scenario.ecartDeFrais.total, actuel, scenario.statut) : null
   if (!phrase) return null
   const postes = Object.entries(scenario.ecartDeFrais.postes) as [PosteFrais, number][]
   return (
-    <Depliable titre={phrase} className="mt-1 text-left text-xs font-normal text-slate-600 dark:text-slate-400">
-      <ul className="mt-1 space-y-0.5">
+    <PrecisionDeLaCase libelle="Détail des frais de gestion">
+      <span className="block">{phrase.replace(/^dont e/, "E")} :</span>
+      <span role="list" className="mt-1 block space-y-0.5">
         {postes.map(([poste, montant]) => (
-          <li key={poste}>
+          <span role="listitem" key={poste} className="block">
             {posteFraisLabels[poste]} : <span className="whitespace-nowrap tabular-nums">{ecartSigne(montant)}</span>
-          </li>
+          </span>
         ))}
-      </ul>
-    </Depliable>
+      </span>
+    </PrecisionDeLaCase>
   )
 }
 
 /**
- * Sous l'écart de la colonne du statut actuel, quand une société y est simulée avec un autre partage que la grille : ce
- * qui la distingue de la situation saisie (« avec 5 800 € de rémunération nette au lieu de 0 € ») et, à déplier, chaque
- * poste du net du foyer dans l'une et dans l'autre. Sans cela, « +1 200 € » se lit comme un gain de statut.
+ * À côté de l'écart de la colonne du statut actuel, quand une société y est simulée avec un autre partage que la
+ * grille : dans une bulle, ce qui la distingue de la situation saisie (« avec 5 800 € de rémunération nette au lieu de
+ * 0 € ») et chaque poste du net du foyer dans l'une et dans l'autre. Sans cela, « +1 200 € » se lit comme un gain de
+ * statut.
  */
 export function EcartDeRepartitionDeLaColonne({ result, scenario }: { result: ComparaisonResult; scenario: ScenarioStatut }) {
   const ecart = ecartDeRepartition(result, scenario)
   if (!ecart) return null
   const montant = "whitespace-nowrap tabular-nums"
   return (
-    <Depliable titre={ecart.resume} className="mt-1 text-left text-xs font-normal text-slate-600 dark:text-slate-400">
-      <p className="mt-1">Même statut, autre partage du bénéfice. Ce qui change pour le net du foyer :</p>
-      <ul className="mt-1 space-y-0.5">
+    <PrecisionDeLaCase libelle="Détail du partage du bénéfice">
+      <span className="block">Même statut, autre partage du bénéfice : {ecart.resume}. Ce qui change pour le net du foyer :</span>
+      <span role="list" className="mt-1 block space-y-0.5">
         {ecart.postes.map(poste => (
-          <li key={poste.libelle}>
+          <span role="listitem" key={poste.libelle} className="block">
             {poste.libelle} : <span className={montant}>{euros(poste.colonne)}</span> au lieu de <span className={montant}>{euros(poste.saisie)}</span>, soit <span className={cn(montant, "font-medium", couleurDeLEcart(poste.effet))}>{ecartSigne(poste.effet)}</span>
-          </li>
+          </span>
         ))}
         {ecart.autres === undefined ? null : (
-          <li>
+          <span role="listitem" className="block">
             Autres écarts (cotisations, arrondis) : <span className={cn(montant, "font-medium", couleurDeLEcart(ecart.autres))}>{ecartSigne(ecart.autres)}</span>
-          </li>
+          </span>
         )}
-      </ul>
+      </span>
       {ecart.conserve ? (
-        <p className="mt-1">
+        <span className="mt-1 block">
           Bénéfice laissé dans la société : <span className={montant}>{euros(ecart.conserve.colonne)}</span> au lieu de <span className={montant}>{euros(ecart.conserve.saisie)}</span>.
-        </p>
+        </span>
       ) : null}
-    </Depliable>
+    </PrecisionDeLaCase>
   )
 }
 
@@ -215,26 +233,3 @@ export function CartesDesStatuts({ result, className }: { result: ComparaisonRes
   )
 }
 
-/** Vrai si une case du tableau porte une précision à déplier : écart de frais de gestion, autre partage du bénéfice. */
-function aDesPrecisions(result: ComparaisonResult): boolean {
-  const actuel = result.situationSaisie?.statut
-  return result.scenarios.some(s => (actuel !== undefined && phraseDeLEcartDeFrais(s.ecartDeFrais.total, actuel, s.statut) !== null) || ecartDeRepartition(result, s) !== null)
-}
-
-/**
- * Dans le coin du tableau : déplie ou replie d'un geste toutes les précisions de ses cases, au lieu d'un clic par case.
- * Chacune reste une section repliable à part entière, que l'on peut encore ouvrir ou fermer seule.
- */
-export function BoutonDesPrecisions({ result }: { result: ComparaisonResult }) {
-  const [ouvertes, setOuvertes] = useState(false)
-  if (!aDesPrecisions(result)) return null
-  const basculer = (bouton: HTMLButtonElement) => {
-    for (const precision of bouton.closest("table")?.querySelectorAll("details") ?? []) precision.open = !ouvertes
-    setOuvertes(!ouvertes)
-  }
-  return (
-    <button type="button" aria-pressed={ouvertes} className="inline-flex min-h-6 cursor-pointer items-center rounded-sm text-left text-xs font-normal text-blue-700 underline-offset-2 hover:underline pointer-coarse:min-h-11 dark:text-blue-400 print:hidden" onClick={evenement => basculer(evenement.currentTarget)}>
-      {ouvertes ? "Masquer tous les détails" : "Afficher tous les détails"}
-    </button>
-  )
-}
