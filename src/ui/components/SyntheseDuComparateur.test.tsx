@@ -92,7 +92,7 @@ describe("écart de frais de gestion d'une colonne", () => {
     const { container } = render(<EcartDeFraisDeLaColonne scenario={sasu} actuel="micro-vfl" />)
     const imprime = container.querySelector(".print\\:block")
     expect(imprime).toHaveClass("hidden")
-    expect(espaces(imprime?.textContent)).toBe("Environ 2 050 € de frais de gestion en plus qu'en micro-entreprise :Expert-comptable : +2 050 €")
+    expect(espaces(imprime?.textContent ?? null)).toBe("Environ 2 050 € de frais de gestion en plus qu'en micro-entreprise :Expert-comptable : +2 050 €")
   })
 
   it("ne dit rien sans écart : statut actuel, ou mêmes frais", () => {

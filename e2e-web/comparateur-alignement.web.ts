@@ -1,6 +1,6 @@
 // e2e-web/comparateur-alignement.web.ts
-// Tableau du comparateur : dans une ligne, les montants de toutes les colonnes restent à la même hauteur, que la note à
-// déplier d'une colonne (écart de frais de gestion) soit présente, absente, repliée ou dépliée.
+// Tableau du comparateur : dans une ligne, les montants de toutes les colonnes restent à la même hauteur, que le (?)
+// d'une colonne (écart de frais de gestion) soit présent ou absent, sa bulle ouverte ou fermée.
 
 import { test, expect, type Page } from "@playwright/test"
 import { deplierLeTableauDuComparateur } from "./support/affichage"
@@ -24,16 +24,16 @@ function verifierLAlignement(hauts: number[]) {
   for (const haut of hauts) expect(Math.abs(haut - hauts[0]), `hauts : ${hauts.join(", ")}`).toBeLessThanOrEqual(2)
 }
 
-test("les montants du net sont sur la même ligne dans toutes les colonnes, note de frais repliée ou dépliée", async ({ page }) => {
+test("les montants du net sont sur la même ligne dans toutes les colonnes, bulle des frais fermée ou ouverte", async ({ page }) => {
   await page.goto("./")
   await deplierLeTableauDuComparateur(page)
-  // Certaines colonnes ont une note de frais à déplier sous leur net, d'autres non.
-  const notes = ligneDuNet(page).locator("details")
-  await expect(notes.first()).toBeVisible()
-  expect(await notes.count()).toBeLessThan(await ligneDuNet(page).getByRole("cell").count())
+  // Certaines colonnes ont un (?) de frais à côté de leur net, d'autres non.
+  const frais = ligneDuNet(page).getByRole("button", { name: "Détail des frais de gestion" })
+  await expect(frais.first()).toBeVisible()
+  expect(await frais.count()).toBeLessThan(await ligneDuNet(page).getByRole("cell").count())
   verifierLAlignement(await hautsDesMontants(page))
 
-  await notes.first().locator("summary").click()
-  await expect(notes.first()).toHaveAttribute("open", "")
+  await frais.first().click()
+  await expect(page.getByRole("tooltip")).toBeVisible()
   verifierLAlignement(await hautsDesMontants(page))
 })
