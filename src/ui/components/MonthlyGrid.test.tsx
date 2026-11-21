@@ -5,9 +5,9 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { toast } from "sonner"
-import type { AnneeSimulee, MonthlyGridData } from "@/types"
+import type { AnneeSimulee, Entity, MonthlyGridData } from "@/types"
 import { euros } from "@/backend/logic/format"
-import { makePerson } from "@/ui/testing/fixtures"
+import { makeMicro, makePerson } from "@/ui/testing/fixtures"
 import MonthlyGrid from "./MonthlyGrid"
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), info: vi.fn() } }))
@@ -210,7 +210,7 @@ describe("MonthlyGrid, sur plusieurs années", () => {
    * remplacent toutes les années d'un coup. Chaque modification ajoute une étape à un historique minimal, que
    * le bouton « Annuler » remonte d'un cran.
    */
-  function afficherLesAnnees(depart: AnneeSimulee[], annee = 2026) {
+  function afficherLesAnnees(depart: AnneeSimulee[], annee = 2026, entites: Entity[] = [makePerson()]) {
     const etat = { annees: depart, etapes: 0 }
     function Harness() {
       const [historique, setHistorique] = useState([depart])
@@ -222,7 +222,7 @@ describe("MonthlyGrid, sur plusieurs années", () => {
       return (
         <>
           <MonthlyGrid
-            entities={[makePerson()]}
+            entities={entites}
             monthlyData={grille}
             setMonthlyData={maj => enregistrer(annees.map(a => (a.annee === annee ? { ...a, monthlyData: typeof maj === "function" ? maj(a.monthlyData) : maj } : a)))}
             preferences={{ slotOrder: [] }}
@@ -337,6 +337,21 @@ describe("MonthlyGrid, sur plusieurs années", () => {
     await user.click(screen.getByRole("button", { name: "Annuler" }))
     expect(etat.etapes).toBe(0)
     expect(montantsDe(etat, 2025)).toEqual(Array.from({ length: 12 }, () => []))
+  })
+
+  it("dans une année encore vide, propose d'office la nature de la micro-entreprise dans l'année la plus proche", async () => {
+    const atelier = makeMicro({ id: "atelier", name: "Atelier" })
+    const avec = (type: "ca_micro_services_bic" | "ca_micro_vente") => grilleVide().map((m, index) => (index === 0 ? { ...m, flows: [{ id: type, entityId: "atelier", type, label: "Ventes", amount: 1000 }] } : m))
+    const annees: AnneeSimulee[] = [
+      { annee: 2024, monthlyData: avec("ca_micro_services_bic") },
+      { annee: 2026, monthlyData: grilleVide() },
+      { annee: 2027, monthlyData: avec("ca_micro_vente") }
+    ]
+    const { user } = afficherLesAnnees(annees, 2026, [atelier])
+    await user.click(screen.getByRole("button", { name: "Flux de mars : Atelier" }))
+
+    const types = within(screen.getByRole("dialog")).getAllByRole("combobox", { name: "Type de flux" })
+    expect(types[types.length - 1]).toHaveTextContent("Vente de marchandises (BIC)")
   })
 
   /** La barre qui, après une modification ou un retrait, propose de faire de même dans les autres mois et années. */

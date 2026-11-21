@@ -35,8 +35,8 @@ export function estNatureMicro(type: FlowType): type is NatureMicro {
 
 /**
  * Type prérempli de la ligne d'ajout de la fenêtre des flux. Pour une micro-entreprise : la nature de son premier
- * chiffre d'affaires dans les flux donnés (le mois ouvert, puis le reste de l'année), pour ne pas mélanger les natures
- * par mégarde ; sinon la première de la liste, les prestations libérales. Pour un autre acteur : le premier type permis.
+ * chiffre d'affaires dans les flux donnés (le mois ouvert, le reste de l'année, puis les autres années de la plus
+ * proche à la plus lointaine), pour ne pas mélanger les natures par mégarde ; sinon la première de la liste, les prestations libérales. Pour un autre acteur : le premier type permis.
  */
 export function typeProposeDOffice(entity: Entity, flux: FinancialFlow[]): FlowType {
   const premier = getFlowTypesForEntity(entity)[0]
