@@ -38,34 +38,38 @@ function afficher(onAppliquer = vi.fn()) {
 }
 
 describe("RemunerationOptimizer", () => {
-  it("présente le meilleur net, et le meilleur net qui valide 4 trimestres avec ce qu'il coûte", async () => {
+  it("présente en deux cartes le meilleur net, et le meilleur net qui valide 4 trimestres avec ce qu'il coûte", async () => {
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
     afficher()
 
-    const meilleur = await screen.findByText(/^Meilleur net :/)
-    expect(meilleur.closest("li")).toHaveTextContent(`${money(50000)} dans la poche du foyer, avec ${money(0)} de rémunération nette`)
-    const retraite = screen.getByText(/^Meilleur net avec 4 trimestres/).closest("li")!
-    expect(retraite).toHaveTextContent(`${money(5700)} de rémunération nette`)
-    expect(retraite).toHaveTextContent(`Soit ${money(600)} de moins par an`)
+    const meilleur = await screen.findByRole("listitem", { name: "Meilleur net" })
+    expect(meilleur).toHaveTextContent(`Meilleur net${money(50000)} dans la poche du foyerRémunération nette${money(0)}Dividendes`)
+    expect(meilleur).toHaveTextContent("0 trimestre de retraite")
+    const retraite = screen.getByRole("listitem", { name: "Meilleur net avec 4 trimestres" })
+    expect(retraite).toHaveTextContent(/^Avec 4 trimestres/)
+    expect(retraite).toHaveTextContent(`Rémunération nette${money(5700)}`)
+    expect(retraite).toHaveTextContent(`${money(600)} de moins par an pour valider une année de retraite.`)
   })
 
   it("reporte une rémunération dans le comparateur, sauf celle qui y est déjà", async () => {
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
     const onAppliquer = afficher()
 
-    const retraite = (await screen.findByText(/^Meilleur net avec 4 trimestres/)).closest("li")!
+    const retraite = await screen.findByRole("listitem", { name: "Meilleur net avec 4 trimestres" })
     await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer au comparateur" }))
     expect(onAppliquer).toHaveBeenCalledWith(5700)
-    expect(within(screen.getByText(/^Meilleur net :/).closest("li")!).getByRole("button", { name: "Appliquée" })).toBeDisabled()
+    const meilleur = screen.getByRole("listitem", { name: "Meilleur net" })
+    expect(within(meilleur).queryByRole("button")).not.toBeInTheDocument()
+    expect(meilleur).toHaveTextContent("Appliqué au comparateur")
   })
 
-  it("ne présente qu'une ligne quand le meilleur net valide déjà 4 trimestres", async () => {
+  it("ne présente qu'une carte quand le meilleur net valide déjà 4 trimestres", async () => {
     const points = [point(0, 40000, 4), point(10000, 45000, 4)]
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation({ statut: "SASU", points, meilleur: points[1], meilleurAvecRetraite: points[1] }))
     afficher()
 
-    expect(await screen.findByText(/^Meilleur net, 4 trimestres validés/)).toBeInTheDocument()
-    expect(screen.queryByText(/^Meilleur net avec 4 trimestres/)).not.toBeInTheDocument()
+    expect(await screen.findByRole("listitem", { name: "Meilleur net, 4 trimestres validés" })).toBeInTheDocument()
+    expect(screen.queryByRole("listitem", { name: "Meilleur net avec 4 trimestres" })).not.toBeInTheDocument()
   })
 
   it("dit quand aucune rémunération ne valide 4 trimestres", async () => {
@@ -124,7 +128,7 @@ describe("RemunerationOptimizer", () => {
     fireEvent.pointerMove(surface, { pointerType: "touch", clientX: 495 })
     expect(screen.getByRole("status")).toHaveTextContent(`Rémunération${money(10000)}`)
 
-    fireEvent.pointerDown(screen.getByText(/^Meilleur net :/))
+    fireEvent.pointerDown(screen.getByRole("listitem", { name: "Meilleur net" }))
     expect(screen.queryByRole("status")).not.toBeInTheDocument()
   })
 
@@ -205,7 +209,7 @@ describe("RemunerationOptimizer", () => {
     render(<ComparateurDeTest annee={2026} session={session} />)
     await userEvent.click(await screen.findByRole("radio", { name: "Ma rémunération" }))
 
-    const retraite = (await screen.findByText(/^Meilleur net avec 4 trimestres/)).closest("li")!
+    const retraite = await screen.findByRole("listitem", { name: "Meilleur net avec 4 trimestres" })
     await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer au comparateur" }))
 
     expect(screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")).toHaveValue(5700)
@@ -217,7 +221,7 @@ describe("RemunerationOptimizer", () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue({ scenarios: [], meilleur: null, couples: [], warnings: [], optimisations })
     render(<ComparateurDeTest annee={2026} session={session} />)
 
-    const retraite = (await screen.findByText(/^Meilleur net avec 4 trimestres/)).closest("li")!
+    const retraite = await screen.findByRole("listitem", { name: "Meilleur net avec 4 trimestres" })
     expect(window.api.optimiserRemuneration).not.toHaveBeenCalled()
     await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer au comparateur" }))
 

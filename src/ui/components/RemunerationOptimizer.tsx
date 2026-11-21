@@ -16,6 +16,7 @@ import { Depliable } from "./Depliable"
 import { ZoneDefilante } from "./ZoneDefilante"
 import { euros } from "@/backend/logic/format"
 import { ANCRES } from "@/lib/ancres"
+import { Check } from "lucide-react"
 
 
 const trimestres = (n: number) => `${n} trimestre${n > 1 ? "s" : ""} de retraite`
@@ -78,30 +79,81 @@ interface ResumeProps {
   onAppliquer: (remunerationNette: number) => void
 }
 
-/** Les deux rémunérations à retenir, en phrases, chacune avec un bouton pour la reporter dans le comparateur. */
+/** Couleurs des repères de la courbe, reprises par le point du titre de chaque carte. */
+const COULEUR_DU_MEILLEUR = { repere: "fill-emerald-600", point: "bg-emerald-600" }
+const COULEUR_DES_4_TRIMESTRES = { repere: "fill-violet-600 dark:fill-violet-500", point: "bg-violet-600 dark:bg-violet-500" }
+
+interface CarteDuPointProps {
+  /** Titre court de la carte (« Meilleur net ») ; `nom`, plus complet, la nomme pour un lecteur d'écran. */
+  titre: string
+  nom: string
+  point: PointRemuneration
+  couleur: string
+  /** Ce que coûte ce choix, écrit en clair (le net perdu pour valider 4 trimestres). */
+  note?: string
+  appliquee: boolean
+  onAppliquer: () => void
+}
+
+/**
+ * Une rémunération à retenir, en carte : le net du foyer en grand, puis la rémunération et les dividendes, les montants
+ * à reporter dans la grille ; les trimestres validés ; un bouton pour la reporter dans le comparateur, ou la mention
+ * qu'elle y est.
+ */
+function CarteDuPoint({ titre, nom, point, couleur, note, appliquee, onAppliquer }: CarteDuPointProps) {
+  return (
+    <li aria-label={nom} className={cn("flex flex-col gap-2 rounded-lg border p-4", appliquee ? "border-emerald-300 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/30" : "border-slate-200 dark:border-slate-700")}>
+      <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+        <span aria-hidden="true" className={cn("size-2.5 shrink-0 rounded-full", couleur)} />
+        {titre}
+      </p>
+      <p>
+        <span className="text-2xl font-semibold tabular-nums text-slate-900 dark:text-slate-50">{euros(point.netApresImpots)}</span> <span className="text-sm text-slate-600 dark:text-slate-300">dans la poche du foyer</span>
+      </p>
+      <dl className="grid grid-cols-[auto_auto] justify-start gap-x-6 gap-y-0.5 text-sm">
+        <dt className="text-slate-600 dark:text-slate-300">Rémunération nette</dt>
+        <dd className="text-right font-medium tabular-nums">{euros(point.remunerationNette)}</dd>
+        <dt className="text-slate-600 dark:text-slate-300">Dividendes</dt>
+        <dd className="text-right font-medium tabular-nums">{euros(point.dividendes)}</dd>
+      </dl>
+      <p>
+        <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">{trimestres(point.trimestres)}</span>
+      </p>
+      {note ? <p className="text-sm text-slate-700 dark:text-slate-200">{note}</p> : null}
+      <div className="mt-auto pt-1 print:hidden">
+        {appliquee ? (
+          <p className="flex min-h-9 items-center gap-1.5 text-sm font-medium text-emerald-800 dark:text-emerald-300">
+            <Check aria-hidden="true" className="size-4" />
+            Appliqué au comparateur
+          </p>
+        ) : (
+          <Button variant="outline" size="sm" className="min-h-9" onClick={onAppliquer}>
+            Appliquer au comparateur
+          </Button>
+        )}
+      </div>
+    </li>
+  )
+}
+
+/**
+ * Les deux rémunérations à retenir, en cartes côte à côte au-dessus de la courbe : la réponse avant l'explication. Le
+ * coût de 4 trimestres de retraite est écrit dans la seconde carte. Une seule carte quand le meilleur net les valide
+ * déjà ; à la place de la seconde, une phrase quand aucune rémunération ne les valide.
+ */
 function Resume({ resultat, remunerationActuelle, onAppliquer }: ResumeProps) {
   const { meilleur, meilleurAvecRetraite, statut } = resultat
   if (!meilleur) return null
   const memePoint = meilleurAvecRetraite?.remunerationNette === meilleur.remunerationNette
-
-  const ligne = (titre: string, point: PointRemuneration, detail?: string) => (
-    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-md border border-slate-200 px-4 py-3 dark:border-slate-700">
-      <p>
-        <span className="font-semibold">{titre} : </span>
-        {euros(point.netApresImpots)} dans la poche du foyer, avec {euros(point.remunerationNette)} de rémunération nette et {euros(point.dividendes)} de dividendes ({trimestres(point.trimestres)}).
-        {detail ? <span className="text-slate-600 dark:text-slate-300"> {detail}</span> : null}
-      </p>
-      <Button variant="outline" size="sm" className="min-h-9 print:hidden" disabled={remunerationActuelle === point.remunerationNette} onClick={() => onAppliquer(point.remunerationNette)}>
-        {remunerationActuelle === point.remunerationNette ? "Appliquée" : "Appliquer au comparateur"}
-      </Button>
-    </li>
+  const carte = (titre: string, nom: string, point: PointRemuneration, couleur: string, note?: string) => (
+    <CarteDuPoint titre={titre} nom={nom} point={point} couleur={couleur} note={note} appliquee={remunerationActuelle === point.remunerationNette} onAppliquer={() => onAppliquer(point.remunerationNette)} />
   )
 
   return (
-    <ul className="space-y-2 text-sm">
-      {ligne(memePoint ? "Meilleur net, 4 trimestres validés" : "Meilleur net", meilleur)}
-      {meilleurAvecRetraite && !memePoint ? ligne("Meilleur net avec 4 trimestres", meilleurAvecRetraite, `Soit ${euros(meilleur.netApresImpots - meilleurAvecRetraite.netApresImpots)} de moins par an pour valider une année de retraite.`) : null}
-      {!meilleurAvecRetraite ? <li className="px-1 text-slate-600 dark:text-slate-300">Aucune rémunération possible en {statut} ne valide 4 trimestres de retraite.</li> : null}
+    <ul className="grid gap-3 sm:grid-cols-2">
+      {memePoint ? carte("Meilleur net, 4 trimestres validés", "Meilleur net, 4 trimestres validés", meilleur, COULEUR_DU_MEILLEUR.point) : carte("Meilleur net", "Meilleur net", meilleur, COULEUR_DU_MEILLEUR.point)}
+      {meilleurAvecRetraite && !memePoint ? carte("Avec 4 trimestres", "Meilleur net avec 4 trimestres", meilleurAvecRetraite, COULEUR_DES_4_TRIMESTRES.point, `${euros(meilleur.netApresImpots - meilleurAvecRetraite.netApresImpots)} de moins par an pour valider une année de retraite.`) : null}
+      {!meilleurAvecRetraite ? <li className="flex items-center rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-600 dark:border-slate-600 dark:text-slate-300">Aucune rémunération possible en {statut} ne valide 4 trimestres de retraite.</li> : null}
     </ul>
   )
 }
@@ -192,8 +244,8 @@ function Courbe({ resultat, remunerationActuelle }: CourbeProps) {
 
           {pointSurvole ? <line x1={x(pointSurvole.remunerationNette)} x2={x(pointSurvole.remunerationNette)} y1={MARGES.haut} y2={HAUTEUR - MARGES.bas} className="stroke-slate-500" strokeWidth={1} /> : null}
 
-          {meilleurAvecRetraite && meilleurAvecRetraite !== meilleur ? <Repere point={meilleurAvecRetraite} x={x} y={y} classe="fill-violet-600 dark:fill-violet-500" libelle="4 trimestres" largeur={largeur} /> : null}
-          {meilleur ? <Repere point={meilleur} x={x} y={y} classe="fill-emerald-600" libelle="Meilleur net" largeur={largeur} /> : null}
+          {meilleurAvecRetraite && meilleurAvecRetraite !== meilleur ? <Repere point={meilleurAvecRetraite} x={x} y={y} classe={COULEUR_DES_4_TRIMESTRES.repere} libelle="4 trimestres" largeur={largeur} /> : null}
+          {meilleur ? <Repere point={meilleur} x={x} y={y} classe={COULEUR_DU_MEILLEUR.repere} libelle="Meilleur net" largeur={largeur} /> : null}
 
           <rect x={MARGES.gauche} y={MARGES.haut} width={Math.max(0, largeur - MARGES.gauche - MARGES.droite)} height={HAUTEUR - MARGES.haut - MARGES.bas} fill="transparent" className="cursor-crosshair touch-pan-y" onPointerDown={surPointeur} onPointerMove={surPointeur} onPointerLeave={e => e.pointerType === "mouse" && setSurvol(null)} />
         </svg>
