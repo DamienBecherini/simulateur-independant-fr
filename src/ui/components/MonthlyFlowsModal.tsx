@@ -1,6 +1,6 @@
 // src/ui/components/MonthlyFlowsModal.tsx
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import type { Entity, FinancialFlow } from "@/types"
@@ -14,12 +14,12 @@ import { FlowItem, type FlowChanges } from "./FlowItem"
 import { NewFlowItem, type NewFlowValues } from "./NewFlowItem"
 import { NatureDuChiffreDAffaires } from "./NatureDuChiffreDAffaires"
 import { Depliable } from "./Depliable"
+import { useExtensionDeLaModification } from "../hooks/useExtensionDeLaModification"
 import { useTriAccessible } from "../hooks/useTriAccessible"
-import { anneesDuRaccourci, LIBELLES_PORTEE, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, type PorteeRecurrence, type RaccourciAnnees } from "@/lib/flux-recurrents"
+import { anneesDuRaccourci, LIBELLES_PORTEE, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, type ChangementsDeFlux, type PorteeRecurrence, type RaccourciAnnees, type SerieAilleurs } from "@/lib/flux-recurrents"
 import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
 import type { ReglesFiscales } from "@/backend/logic/regles"
 import { cn } from "@/lib/utils"
-import { toast } from "sonner"
 
 /**
  * Interface pour les props du composant MonthlyFlowsModal.
@@ -56,25 +56,31 @@ interface MonthlyFlowsModalProps {
   onCreate: (values: NewFlowValues, portee: PorteeRecurrence, aussiEn: number[], annuel: boolean) => void
   /** Recopie un flux sur les mois suivants de l'année affichée ; absent en décembre, où il n'y a pas de mois suivant. */
   onRecopier?: (flowId: string) => void
-  /** Modifie le flux et, selon la portée choisie, sa série dans les autres mois et les années cochées. */
-  onUpdate: (flowId: string, changes: FlowChanges, portee: PorteeRecurrence, aussiEn: number[]) => void
-  /** Supprime le flux et, selon la portée choisie, sa série dans les autres mois et les années cochées. */
-  onDelete: (flowId: string, portee: PorteeRecurrence, aussiEn: number[]) => void
+  /** Modifie le flux dans ce mois seulement ; la fenêtre propose ensuite de l'étendre (onEtendre). */
+  onUpdate: (flowId: string, changes: FlowChanges) => void
+  /** Retire le flux de ce mois seulement ; la fenêtre propose ensuite de l'étendre (onEtendre) ou de l'annuler (onRestaurer). */
+  onDelete: (flowId: string) => void
+  /** Où un flux (avant modification) existe hors de ce mois : dans les autres mois et les autres années. */
+  serieAilleurs?: (avant: FinancialFlow) => SerieAilleurs
+  /** Fait de même dans les autres mois (portée) et années : la modification `changements`, ou le retrait (`null`). */
+  onEtendre?: (avant: FinancialFlow, changements: ChangementsDeFlux | null, portee: PorteeRecurrence, aussiEn: number[]) => void
+  /** Remet un flux retiré dans ce mois, à son rang. */
+  onRestaurer?: (flux: FinancialFlow, rang: number) => void
   onReorder: (reorderedFlows: FinancialFlow[]) => void
 }
 
-/** Texte d'avertissement quand une opération touchera plus que le mois ouvert ; `null` sinon. */
+/** Texte d'avertissement quand un ajout sera recopié au-delà du mois ouvert ; `null` sinon. */
 function avertissement(portee: PorteeRecurrence, aussiEn: number[]): string | null {
-  const debut = "Les ajouts, modifications et suppressions s'appliquent aussi"
-  if (aussiEn.length === 0) return portee === "mois" ? null : `${debut} aux autres mois choisis.`
+  const debut = "Les ajouts sont recopiés"
+  if (aussiEn.length === 0) return portee === "mois" ? null : `${debut} sur les autres mois choisis.`
   const annees = listerAnnees(aussiEn)
-  return portee === "mois" ? `${debut} au même mois en ${annees}.` : `${debut} aux autres mois choisis, et aux mêmes mois en ${annees}.`
+  return portee === "mois" ? `${debut} au même mois en ${annees}.` : `${debut} sur les autres mois choisis, et aux mêmes mois en ${annees}.`
 }
 
 /** Ce que devient le montant de la ligne d'ajout quand il est annuel. */
 function texteDuMontantAnnuel(annee: number, aussiEn: number[]): string {
   const annees = aussiEn.length > 0 ? `de ${listerAnnees([annee, ...aussiEn])}` : `de ${annee}`
-  return `Le montant saisi sur la ligne d'ajout est annuel : il est réparti sur les 12 mois ${annees}, au centime près (l'arrondi va en décembre). « Appliquer à » ne vaut plus que pour les modifications et les suppressions.`
+  return `Le montant saisi sur la ligne d'ajout est annuel : il est réparti sur les 12 mois ${annees}, au centime près (l'arrondi va en décembre).`
 }
 
 /** Case qui fait du montant de la ligne d'ajout un montant annuel, réparti sur les douze mois. */
@@ -182,7 +188,46 @@ function CasesDesAnnees({ annee, autresAnnees, aussiEn, setAussiEn }: CasesDesAn
   )
 }
 
-export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], fluxDeLAnnee = [], limiteDeRemuneration, onCreate, onRecopier, onUpdate, onDelete, onReorder }: MonthlyFlowsModalProps) {
+interface ReglagesDeLAjoutProps extends CasesDesAnneesProps {
+  portee: PorteeRecurrence
+  setPortee: (portee: PorteeRecurrence) => void
+  annuel: boolean
+  setAnnuel: (annuel: boolean) => void
+  /** Un salaire se saisit par mois, comme son bulletin : ses cotisations dépendent du plafond mensuel. Pas de montant annuel. */
+  pourUnSalaire: boolean
+}
+
+/** Sous la ligne d'ajout, où l'ajout vaut : les mois (« Ajouter à »), le montant annuel, les autres années. */
+function ReglagesDeLAjout({ annee, autresAnnees, portee, setPortee, aussiEn, setAussiEn, annuel, setAnnuel, pourUnSalaire }: ReglagesDeLAjoutProps) {
+  const repartir = annuel && !pourUnSalaire
+  const texteAvertissement = repartir ? null : avertissement(portee, aussiEn)
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-sm text-slate-700 dark:text-slate-300">
+        {/* `min-w-0 max-w-full` : avec une police large, la liste se resserre à la largeur de la fenêtre au lieu de la déborder. */}
+        <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+          Ajouter à :
+          {/* Hors « ce mois seulement », la liste est mise en évidence : l'ajout sera recopié sur d'autres mois. Sans
+              objet pour un montant annuel, toujours réparti sur les douze mois. */}
+          <select disabled={repartir} className={cn("h-9 max-w-full rounded-md border border-input bg-background px-2 text-sm disabled:opacity-60 pointer-coarse:h-11", portee !== "mois" && !repartir && cn(EN_EVIDENCE, "font-medium"))} value={portee} onChange={e => setPortee(e.target.value as PorteeRecurrence)}>
+            {(Object.keys(LIBELLES_PORTEE) as PorteeRecurrence[]).map(cle => (
+              <option key={cle} value={cle}>
+                {LIBELLES_PORTEE[cle]}
+              </option>
+            ))}
+          </select>
+        </label>
+        {pourUnSalaire ? null : <CaseMontantAnnuel coche={annuel} onChange={setAnnuel} />}
+        {/* Les autres années de la session, seulement s'il y en a ; mises en évidence dès qu'une est cochée. */}
+        {autresAnnees.length > 0 ? <CasesDesAnnees annee={annee} autresAnnees={autresAnnees} aussiEn={aussiEn} setAussiEn={setAussiEn} /> : null}
+      </div>
+      {repartir ? <p className="px-1 text-sm text-slate-700 dark:text-slate-300">{texteDuMontantAnnuel(annee, aussiEn)}</p> : null}
+      {texteAvertissement ? <p className="px-1 text-sm text-amber-900 dark:text-amber-100">{texteAvertissement}</p> : null}
+    </>
+  )
+}
+
+export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], fluxDeLAnnee = [], limiteDeRemuneration, onCreate, onRecopier, onUpdate, onDelete, serieAilleurs, onEtendre, onRestaurer, onReorder }: MonthlyFlowsModalProps) {
   const flowIds = useMemo(() => flows.map(f => f.id), [flows])
   const tri = useTriAccessible(useMemo(() => flows.map(f => ({ id: f.id, nom: f.label || flowTypeLabels[f.type] })), [flows]))
   const allowedTypes = getFlowTypesForEntity(entity)
@@ -191,14 +236,15 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
   // Type prérempli de la ligne d'ajout : le dernier type utilisé dans cette fenêtre, sinon celui proposé d'office
   // (pour une micro-entreprise, la nature de chiffre d'affaires qu'elle a déjà dans l'année).
   const [newFlowType, setNewFlowType] = useState<FlowType>(() => typeProposeDOffice(entity, [...flows, ...fluxDeLAnnee]))
-  // Portée des ajouts, modifications et suppressions : gardée tant que la fenêtre est ouverte.
+  // Portée des ajouts, choisie avant d'ajouter : gardée tant que la fenêtre est ouverte.
   const [portee, setPortee] = useState<PorteeRecurrence>("mois")
-  // Autres années où appliquer aussi ces opérations : aucune cochée à chaque ouverture.
+  // Autres années où recopier aussi les ajouts : aucune cochée à chaque ouverture.
   const [aussiEn, setAussiEn] = useState<number[]>([])
+  // Modifications et retraits : pour ce mois, puis une barre propose de faire de même dans les autres mois.
+  const { modifier, retirer, oublier, barreApres, barreAuRang } = useExtensionDeLaModification({ flows, mois: monthName, onUpdate, onDelete, serieAilleurs, onEtendre, onRestaurer })
   // Montant de la ligne d'ajout saisi pour l'année, réparti sur les douze mois ; jamais pour un salaire.
   const [annuel, setAnnuel] = useState(false)
   const repartirSurLAnnee = annuel && newFlowType !== "salary"
-  const texteAvertissement = avertissement(portee, aussiEn)
 
   const listRef = useRef<HTMLDivElement>(null)
   const newFlowLabelRef = useRef<HTMLInputElement>(null)
@@ -212,13 +258,6 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
     previousFlowCount.current = flows.length
   }, [flows.length])
 
-  // Un montant ramené à 0 € retire le flux, avec la portée choisie, au lieu de laisser une ligne à 0 € : elle ne
-  // compte pour rien dans le calcul, mais occupe sa case et fait croire qu'un revenu ou une charge est saisi.
-  const modifier = (flowId: string, changes: FlowChanges) => {
-    if (changes.amount !== 0) return onUpdate(flowId, changes, portee, aussiEn)
-    onDelete(flowId, portee, aussiEn)
-    toast.info("Montant à 0 € : le flux est retiré.")
-  }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -239,7 +278,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
     <Dialog open onOpenChange={open => !open && handleClose()}>
       <DialogContent
         // Sur un téléphone, la fenêtre peut dépasser la hauteur de l'écran : elle défile plutôt que d'être coupée.
-        // `min-w-0` : son contenu (la longue liste « Appliquer à ») se resserre au lieu de la faire défiler en largeur.
+        // `min-w-0` : son contenu (la longue liste « Ajouter à ») se resserre au lieu de la faire défiler en largeur.
         className="max-h-[calc(100dvh/var(--zoom,1)_-_2rem)] overflow-y-auto sm:max-w-4xl [&>*]:min-w-0"
         // À l'ouverture, le focus va sur la ligne d'ajout pour saisir sans clic supplémentaire.
         onOpenAutoFocus={event => {
@@ -260,7 +299,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
           <DialogDescription>Modifiez les flux dans la liste ; la dernière ligne en ajoute un (Entrée sur le montant valide et enchaîne).</DialogDescription>
           <Depliable titre="Aide à la saisie" className="text-sm text-slate-600 dark:text-slate-400">
             <p className="mt-1">
-              Réorganisez les flux par glisser-déposer. Pour une charge ou un revenu qui revient chaque mois, choisissez « Appliquer à » en dessous : l'ajout, la modification ou la suppression vaut alors aussi pour les autres mois (même type et même libellé).{autresAnnees.length > 0 ? " Cochez d'autres années sous « Aussi en » : les mêmes mois y sont visés (en juillet, « ce mois et les suivants » vise juillet à décembre de chaque année cochée)." : ""} Le bouton de recopie d'un flux le recopie jusqu'en décembre de l'année affichée. Un montant ramené à 0 retire le flux, comme sa corbeille. Pour un salaire, le brut est calculé avec les cotisations salariales de {regles.annee} si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.
+              Réorganisez les flux par glisser-déposer. Pour une charge ou un revenu qui revient chaque mois, choisissez « Ajouter à » avant d'ajouter : l'ajout est recopié sur les autres mois.{autresAnnees.length > 0 ? " Cochez d'autres années sous « Aussi en » : les mêmes mois y sont visés (en juillet, « ce mois et les suivants » vise juillet à décembre de chaque année cochée)." : ""} Une modification ou un retrait ne vaut que pour ce mois ; si le même flux (même type et même libellé) existe dans d'autres mois, une barre propose ensuite de faire de même ailleurs. Le bouton de recopie d'un flux le recopie jusqu'en décembre de l'année affichée. Un montant ramené à 0 retire le flux, comme sa corbeille. Pour un salaire, le brut est calculé avec les cotisations salariales de {regles.annee} si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.
             </p>
           </Depliable>
         </DialogHeader>
@@ -272,37 +311,37 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
             <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <div ref={listRef} className="max-h-[calc(50vh/var(--zoom,1))] space-y-2 overflow-y-auto">
                 <SortableContext items={flowIds} strategy={verticalListSortingStrategy}>
-                  {flows.map(flow => (
-                    <FlowItem key={flow.id} flow={flow} allowedTypes={allowedTypes} onUpdate={modifier} onDelete={flowId => onDelete(flowId, portee, aussiEn)} onRecopier={onRecopier} onTypeUsed={setNewFlowType} typeActeur={entity.type} regles={regles} />
+                  {flows.map((flow, rang) => (
+                    <Fragment key={flow.id}>
+                      {barreAuRang(rang)}
+                      <FlowItem flow={flow} allowedTypes={allowedTypes} onUpdate={modifier} onDelete={retirer} onRecopier={onRecopier} onTypeUsed={setNewFlowType} typeActeur={entity.type} regles={regles} />
+                      {barreApres(flow.id)}
+                    </Fragment>
                   ))}
+                  {barreAuRang(flows.length)}
                 </SortableContext>
               </div>
             </DndContext>
           )}
+          {/* Le dernier flux du mois retiré : la liste a disparu, la barre reste au-dessus de la ligne d'ajout. */}
+          {flows.length === 0 ? barreAuRang(0) : null}
 
-          <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee, aussiEn, repartirSurLAnnee)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} regles={regles} montantAnnuel={repartirSurLAnnee} />
+          <NewFlowItem
+            type={newFlowType}
+            allowedTypes={allowedTypes}
+            onTypeChange={setNewFlowType}
+            onCreate={values => {
+              oublier()
+              onCreate(values, portee, aussiEn, repartirSurLAnnee)
+            }}
+            labelInputRef={newFlowLabelRef}
+            typeActeur={entity.type}
+            regles={regles}
+            montantAnnuel={repartirSurLAnnee}
+          />
           <NatureSiMicroEntreprise entity={entity} regles={regles} type={newFlowType} flows={flows} fluxDeLAnnee={fluxDeLAnnee} />
           <LimiteDeLaRemuneration limite={limiteDeRemuneration} fluxDeLAnnee={fluxDeLAnnee} enAjout={newFlowType === "director_remuneration"} />
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-sm text-slate-700 dark:text-slate-300">
-            {/* `min-w-0 max-w-full` : avec une police large, la liste se resserre à la largeur de la fenêtre au lieu de la déborder. */}
-            <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
-              Appliquer à :
-              {/* Hors « ce mois seulement », la liste est mise en évidence : modifier ou supprimer touchera aussi d'autres mois. */}
-              <select className={cn("h-9 max-w-full rounded-md border border-input bg-background px-2 text-sm pointer-coarse:h-11", portee !== "mois" && cn(EN_EVIDENCE, "font-medium"))} value={portee} onChange={e => setPortee(e.target.value as PorteeRecurrence)}>
-                {(Object.keys(LIBELLES_PORTEE) as PorteeRecurrence[]).map(cle => (
-                  <option key={cle} value={cle}>
-                    {LIBELLES_PORTEE[cle]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {/* Un salaire se saisit par mois, comme son bulletin : ses cotisations dépendent du plafond mensuel. */}
-            {newFlowType === "salary" ? null : <CaseMontantAnnuel coche={annuel} onChange={setAnnuel} />}
-            {/* Les autres années de la session, seulement s'il y en a ; mises en évidence dès qu'une est cochée. */}
-            {autresAnnees.length > 0 ? <CasesDesAnnees annee={annee} autresAnnees={autresAnnees} aussiEn={aussiEn} setAussiEn={setAussiEn} /> : null}
-          </div>
-          {repartirSurLAnnee ? <p className="px-1 text-sm text-slate-700 dark:text-slate-300">{texteDuMontantAnnuel(annee, aussiEn)}</p> : null}
-          {texteAvertissement ? <p className="px-1 text-sm text-amber-900 dark:text-amber-100">{texteAvertissement}</p> : null}
+          <ReglagesDeLAjout annee={annee} autresAnnees={autresAnnees} portee={portee} setPortee={setPortee} aussiEn={aussiEn} setAussiEn={setAussiEn} annuel={annuel} setAnnuel={setAnnuel} pourUnSalaire={newFlowType === "salary"} />
         </div>
 
         <DialogFooter>

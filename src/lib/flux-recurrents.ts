@@ -7,6 +7,7 @@ import type { AnneeSimulee, FinancialFlow, MonthlyGridData } from "@/types"
 /** Mois visés : le mois du flux seul, les mois suivants jusqu'en décembre, ou toute l'année. */
 export type PorteeRecurrence = "mois" | "suivants" | "annee"
 
+/** Portée d'un ajout, choisie sur sa ligne avant de l'ajouter. */
 export const LIBELLES_PORTEE: Record<PorteeRecurrence, string> = {
   mois: "Ce mois seulement",
   suivants: "Ce mois et les suivants, jusqu'en décembre",
@@ -54,7 +55,7 @@ export function montantsMensuels(annuel: number): number[] {
 
 /**
  * Ajoute le flux, dont le montant est annuel, à chacun des douze mois de la grille, avec les montants de
- * `montantsMensuels` : une série (même type, même libellé) que « Appliquer à » modifie ou supprime ensuite d'un coup.
+ * `montantsMensuels` : une série (même type, même libellé), qu'une modification ou un retrait peut ensuite étendre d'un coup.
  */
 export function repartirSurLAnnee(grille: MonthlyGridData, flux: FinancialFlow, nouvelId: () => string): { grille: MonthlyGridData; touches: number } {
   const montants = montantsMensuels(flux.amount)
@@ -63,6 +64,27 @@ export function repartirSurLAnnee(grille: MonthlyGridData, flux: FinancialFlow, 
 
 /** Même série : même acteur, même type et même libellé ; le montant peut varier d'un mois à l'autre (loyer augmenté). */
 const memeSerie = (a: FinancialFlow, b: FinancialFlow) => a.entityId === b.entityId && a.type === b.type && a.label === b.label
+
+/** Où la série d'un flux se trouve hors de son mois : combien de mois avant et après lui dans son année, et dans quelles autres années. */
+export interface SerieAilleurs {
+  precedents: number
+  suivants: number
+  autresAnnees: number[]
+}
+
+/**
+ * La série du flux (repérée d'après le flux avant modification) hors du mois `depuis` : dans les autres mois de la
+ * grille, et dans les autres années données, à n'importe quel mois. Une modification ou un retrait ne propose d'être
+ * étendu qu'aux mois et aux années où la série existe.
+ */
+export function serieAilleurs(grille: MonthlyGridData, flux: FinancialFlow, depuis: number, autres: AnneeSimulee[] = []): SerieAilleurs {
+  const contient = (mois: MonthlyGridData[number]) => mois.flows.some(f => memeSerie(f, flux))
+  return {
+    precedents: grille.filter((mois, index) => index < depuis && contient(mois)).length,
+    suivants: grille.filter((mois, index) => index > depuis && contient(mois)).length,
+    autresAnnees: autres.filter(a => a.monthlyData.some(contient)).map(a => a.annee)
+  }
+}
 
 /** Changements que l'on peut reporter sur les autres flux d'une série. */
 export type ChangementsDeFlux = Partial<Pick<FinancialFlow, "type" | "label" | "amount" | "grossAmount">>

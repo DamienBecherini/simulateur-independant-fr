@@ -215,7 +215,7 @@ describe("partage du bénéfice dans le comparateur", () => {
     await userEvent.keyboard("{PageUp}")
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 1000, repartition: { mode: "personnalisee", partDistribuee: 1 } }), 2026))
 
-    const meilleur = (await screen.findByText(/^Meilleur net avec 4 trimestres :/)).closest("li")!
+    const meilleur = await screen.findByRole("listitem", { name: "Meilleur net avec 4 trimestres" })
     await userEvent.click(within(meilleur).getByRole("button", { name: "Appliquer au comparateur" }))
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 5700, repartition: { mode: "personnalisee", partDistribuee: 1 } }), 2026))
   })

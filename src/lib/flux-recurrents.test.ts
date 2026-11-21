@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import type { AnneeSimulee, FinancialFlow, MonthlyGridData } from "@/types"
-import { ajouterDansLesAnnees, anneesDuRaccourci, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, modifierDansLesAnnees, modifierSerie, moisCibles, moisDesAutresAnnees, montantsMensuels, recopierFlux, repartirDansLesAnnees, repartirSurLAnnee, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type PorteeRecurrence } from "./flux-recurrents"
+import { ajouterDansLesAnnees, anneesDuRaccourci, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, modifierDansLesAnnees, modifierSerie, moisCibles, moisDesAutresAnnees, montantsMensuels, recopierFlux, repartirDansLesAnnees, repartirSurLAnnee, resumerMoisTouches, serieAilleurs, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type PorteeRecurrence } from "./flux-recurrents"
 
 const grilleVide = (): MonthlyGridData => Array.from({ length: 12 }, (_, month) => ({ month, flows: [] }))
 const loyer: FinancialFlow = { id: "flux-mars", entityId: "personne-alice", type: "expense", label: "Loyer", amount: 800 }
@@ -351,6 +351,28 @@ describe("sur plusieurs années", () => {
     expect(listerAnnees([2027, 2025])).toBe("2025 et 2027")
     expect(listerAnnees([2024])).toBe("2024")
     expect(listerAnnees([])).toBe("")
+  })
+})
+
+describe("série d'un flux hors de son mois", () => {
+  const grille = (mois: number[], flux: FinancialFlow = loyer): MonthlyGridData => grilleVide().map((m, index) => (mois.includes(index) ? { ...m, flows: [{ ...flux, id: `loyer-${index}` }] } : m))
+
+  it("compte les mois avant et après le mois ouvert où la série existe, quel que soit le montant", () => {
+    const avecUneHausse = grille([0, 1, 2, 6, 7]).map((m, index) => (index === 7 ? { ...m, flows: [{ ...loyer, id: "loyer-aout", amount: 900 }] } : m))
+    expect(serieAilleurs(avecUneHausse, loyer, 2)).toEqual({ precedents: 2, suivants: 2, autresAnnees: [] })
+  })
+
+  it("ne compte pas un flux d'un autre libellé, d'un autre type ou d'un autre acteur", () => {
+    const autres = grilleVide().map((m, index) => (index === 5 ? { ...m, flows: [{ ...loyer, id: "a", label: "Garage" }, { ...loyer, id: "b", type: "income" as const }, { ...loyer, id: "c", entityId: "personne-bob" }] } : m))
+    expect(serieAilleurs(autres, loyer, 2)).toEqual({ precedents: 0, suivants: 0, autresAnnees: [] })
+  })
+
+  it("donne les autres années où la série existe, à n'importe quel mois", () => {
+    const annees: AnneeSimulee[] = [
+      { annee: 2027, monthlyData: grille([11]) },
+      { annee: 2028, monthlyData: grilleVide() }
+    ]
+    expect(serieAilleurs(grille([2]), loyer, 2, annees)).toEqual({ precedents: 0, suivants: 0, autresAnnees: [2027] })
   })
 })
 

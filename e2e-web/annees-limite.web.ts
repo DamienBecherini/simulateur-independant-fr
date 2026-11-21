@@ -88,7 +88,7 @@ test("à dix années, l'ajout est désactivé et expliqué ; la fenêtre des flu
 
   await annees.getByRole("button", { name: "Cocher les années précédentes" }).click()
   await expect(cochees()).toHaveCount(4)
-  await expect(page.getByText("Les ajouts, modifications et suppressions s'appliquent aussi au même mois en 2024, 2025, 2026 et 2027.")).toBeVisible()
+  await expect(page.getByText("Les ajouts sont recopiés au même mois en 2024, 2025, 2026 et 2027.")).toBeVisible()
   await annees.getByRole("button", { name: "Cocher les années suivantes" }).click()
   await expect(cochees()).toHaveCount(5)
   await expect(annees.getByRole("checkbox", { name: "2029" })).toBeChecked()
@@ -96,7 +96,7 @@ test("à dix années, l'ajout est désactivé et expliqué ; la fenêtre des flu
   await expect(cochees()).toHaveCount(9)
   await annees.getByRole("button", { name: "Ne cocher aucune année" }).click()
   await expect(cochees()).toHaveCount(0)
-  await expect(page.getByText(/s'appliquent aussi/)).toBeHidden()
+  await expect(page.getByText(/sont recopiés/)).toBeHidden()
 })
 
 test("dix années ne présentent aucune violation WCAG, en thème clair comme en thème sombre", async ({ page }, testInfo) => {

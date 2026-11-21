@@ -10,7 +10,7 @@ import { deMois, donneesDeLaGrille, MOIS_ABREGES, nombreDeFluxParMois, type Lign
 import { MOIS } from "@/lib/export-commun"
 import { createId } from "@/lib/id"
 import { euros } from "@/backend/logic/format"
-import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlux, repartirDansLesAnnees, repartirSurLAnnee, resumerMoisTouches, supprimerDansLesAnnees, supprimerSerie, type CibleDansLesAnnees, type MoisTouches, type PorteeRecurrence } from "@/lib/flux-recurrents"
+import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlux, repartirDansLesAnnees, repartirSurLAnnee, resumerMoisTouches, serieAilleurs, supprimerDansLesAnnees, supprimerSerie, type ChangementsDeFlux, type CibleDansLesAnnees, type MoisTouches, type PorteeRecurrence } from "@/lib/flux-recurrents"
 import { toast } from "sonner"
 import { AvatarDisplay } from "./AvatarDisplay"
 import { cn } from "@/lib/utils"
@@ -221,21 +221,13 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
     setMonthlyData(grille)
     toast.success(`Flux recopié sur ${ajouts} mois, jusqu'en décembre.`)
   }
-  /** Flux du mois ouvert, pour reporter une modification ou une suppression sur sa série dans les autres mois. */
-  const fluxOuvert = (flowId: string) => (openCell ? monthlyData[openCell.monthIndex].flows.find(f => f.id === flowId) : undefined)
   /** Notification du nombre d'autres mois touchés par une modification ou une suppression de série. */
   const annoncerSerie = (action: string, touches: number) => {
     if (touches > 0) toast.success(`${action} aussi sur ${touches} autre${touches > 1 ? "s" : ""} mois.`)
   }
-  const handleUpdateFlow = (flowId: string, changes: FlowChanges, portee: PorteeRecurrence = "mois", aussiEn: number[] = []) => {
-    const flux = fluxOuvert(flowId)
-    if (flux && dansLesAnnees(aussiEn, portee, (a, cible) => modifierDansLesAnnees(a, flux, cible, changes), "Modifié aussi sur")) return
-    if (portee !== "mois" && flux && openCell) {
-      const { grille, touches } = modifierSerie(monthlyData, flux, openCell.monthIndex, portee, changes)
-      setMonthlyData(grille)
-      annoncerSerie("Modifié", touches)
-      return
-    }
+  // Une modification ou un retrait ne touche que le mois ouvert ; la fenêtre propose ensuite de l'étendre aux autres
+  // mois et années où le même flux existe (handleEtendre).
+  const handleUpdateFlow = (flowId: string, changes: FlowChanges) => {
     updateOpenMonthFlows(flows => {
       const current = flows.find(f => f.id === flowId)
       if (!current) return flows
@@ -244,17 +236,35 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       return flows.map(f => (f.id === flowId ? updated : f))
     })
   }
-  const handleDeleteFlow = (flowId: string, portee: PorteeRecurrence = "mois", aussiEn: number[] = []) => {
-    const flux = fluxOuvert(flowId)
-    if (flux && dansLesAnnees(aussiEn, portee, (a, cible) => supprimerDansLesAnnees(a, flux, cible), "Supprimé aussi sur")) return
-    if (portee !== "mois" && flux && openCell) {
-      const { grille, touches } = supprimerSerie(monthlyData, flux, openCell.monthIndex, portee)
-      setMonthlyData(grille)
-      annoncerSerie("Supprimé", touches)
-      return
-    }
+  const handleDeleteFlow = (flowId: string) => {
     updateOpenMonthFlows(flows => (flows.some(f => f.id === flowId) ? flows.filter(f => f.id !== flowId) : flows))
   }
+  /**
+   * Étend aux autres mois (portée) et aux autres années cochées la dernière modification (`changements`) ou le dernier
+   * retrait (`null`) d'un flux du mois ouvert. La série est repérée d'après le flux avant modification : un libellé
+   * changé dans ce mois est aussi changé ailleurs. Le mois ouvert, déjà à jour, ne change plus. Une étape d'annulation.
+   */
+  const handleEtendre = (avant: FinancialFlow, changements: ChangementsDeFlux | null, portee: PorteeRecurrence, aussiEn: number[]) => {
+    if (!openCell) return
+    const annonce = changements ? "Modifié" : "Retiré"
+    if (dansLesAnnees(aussiEn, portee, (a, cible) => (changements ? modifierDansLesAnnees(a, avant, cible, changements) : supprimerDansLesAnnees(a, avant, cible)), `${annonce} aussi sur`)) return
+    const { grille, touches } = changements ? modifierSerie(monthlyData, avant, openCell.monthIndex, portee, changements) : supprimerSerie(monthlyData, avant, openCell.monthIndex, portee)
+    if (touches === 0) return
+    setMonthlyData(grille)
+    annoncerSerie(annonce, touches)
+  }
+  /** Remet dans le mois ouvert un flux retiré, à son rang parmi les flux de son acteur (« Annuler » après un retrait). */
+  const handleRestaurer = (flux: FinancialFlow, rang: number) => {
+    updateOpenMonthFlows(flows => {
+      if (flows.some(f => f.id === flux.id)) return flows
+      const deLActeur = flows.filter(f => f.entityId === flux.entityId)
+      const suivant = deLActeur[rang]
+      const position = suivant ? flows.indexOf(suivant) : deLActeur.length > 0 ? flows.indexOf(deLActeur[deLActeur.length - 1]) + 1 : flows.length
+      return [...flows.slice(0, position), flux, ...flows.slice(position)]
+    })
+  }
+  /** Où le flux (avant modification) existe hors du mois ouvert : dans l'année affichée et dans les autres années de la session. */
+  const serieHorsDuMois = (avant: FinancialFlow) => (openCell ? serieAilleurs(monthlyData, avant, openCell.monthIndex, setAnnees ? (annees ?? []).filter(a => a.annee !== annee) : []) : { precedents: 0, suivants: 0, autresAnnees: [] })
   const handleReorderFlows = (reorderedFlows: FinancialFlow[]) => {
     if (!openCell) return
     const { entityId } = openCell
@@ -348,6 +358,9 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           onRecopier={openCell.monthIndex < 11 ? handleRecopierFlux : undefined}
           onUpdate={handleUpdateFlow}
           onDelete={handleDeleteFlow}
+          serieAilleurs={serieHorsDuMois}
+          onEtendre={handleEtendre}
+          onRestaurer={handleRestaurer}
           onReorder={handleReorderFlows}
         />
       )}
