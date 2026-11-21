@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
-import { estLibelleParDefaut, flowTypeLabels, flowTypeShortLabels, flowTypesByEntityType, getFlowTypesForEntity, isExpenseFlowType, isOutgoingFlowType, libelleDuType } from "@/lib/flow-constants"
+import { estLibelleParDefaut, flowTypeLabels, flowTypeShortLabels, flowTypesByEntityType, getFlowTypesForEntity, isOutgoingFlowType, libelleDuType } from "@/lib/flow-constants"
 import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
 import { cn } from "@/lib/utils"
 import { FinancialFlowSchema } from "@/types"
@@ -50,9 +50,8 @@ describe("classement des types de flux", () => {
     expect(Object.keys(flowTypeShortLabels).sort()).toEqual([...typesDeFlux].sort())
   })
 
-  it("distingue les dépenses des autres sorties d'argent", () => {
-    expect(isExpenseFlowType("deductible_expense")).toBe(true)
-    expect(isExpenseFlowType("director_remuneration")).toBe(false)
+  it("compte la rémunération du dirigeant et les dividendes parmi les sorties d'argent", () => {
+    expect(isOutgoingFlowType("deductible_expense")).toBe(true)
     expect(isOutgoingFlowType("director_remuneration")).toBe(true)
     expect(isOutgoingFlowType("dividends_payment")).toBe(true)
     expect(isOutgoingFlowType("salary")).toBe(false)

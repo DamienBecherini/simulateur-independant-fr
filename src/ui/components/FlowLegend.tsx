@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import type { UserPreferences, FinancialFlow } from "@/types"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
-import { flowTypeShortLabels, isExpenseFlowType } from "@/lib/flow-constants"
+import { flowTypeShortLabels, isOutgoingFlowType } from "@/lib/flow-constants"
 import { Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ColorSettingsModal } from "./ColorSettingsModal"
@@ -40,9 +40,10 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
   // Détermine les types de flux actuellement utilisés en extrayant les clés de la map passée en props.
   const usedFlowTypes = Array.from(flowTypeToNumberMap.keys()) as FinancialFlow["type"][]
 
-  // Gains et dépenses sont présentés dans deux colonnes.
-  const gainTypes = useMemo(() => usedFlowTypes.filter(type => !isExpenseFlowType(type)), [usedFlowTypes])
-  const expenseTypesFiltered = useMemo(() => usedFlowTypes.filter(isExpenseFlowType), [usedFlowTypes])
+  // Gains et dépenses sont présentés dans deux colonnes ; la rémunération et les dividendes versés par une société
+  // sont des dépenses pour elle, comme dans la grille.
+  const gainTypes = useMemo(() => usedFlowTypes.filter(type => !isOutgoingFlowType(type)), [usedFlowTypes])
+  const expenseTypesFiltered = useMemo(() => usedFlowTypes.filter(isOutgoingFlowType), [usedFlowTypes])
 
   // Gère la mise à jour d'une couleur directement depuis la légende.
   const handleColorChange = (flowType: FinancialFlow["type"], newColor: string) => {
