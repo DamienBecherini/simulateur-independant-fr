@@ -263,6 +263,12 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
       return [...flows.slice(0, position), flux, ...flows.slice(position)]
     })
   }
+  /** Flux de l'acteur dans les autres années de la session, de la plus proche de l'année affichée à la plus lointaine. */
+  const fluxDesAutresAnnees = (entityId: string) =>
+    [...(annees ?? [])]
+      .filter(a => a.annee !== annee)
+      .sort((a, b) => Math.abs(a.annee - (annee ?? a.annee)) - Math.abs(b.annee - (annee ?? b.annee)) || a.annee - b.annee)
+      .flatMap(a => a.monthlyData.flatMap(mois => mois.flows.filter(f => f.entityId === entityId)))
   /** Où le flux (avant modification) existe hors du mois ouvert : dans l'année affichée et dans les autres années de la session. */
   const serieHorsDuMois = (avant: FinancialFlow) => (openCell ? serieAilleurs(monthlyData, avant, openCell.monthIndex, setAnnees ? (annees ?? []).filter(a => a.annee !== annee) : []) : { precedents: 0, suivants: 0, autresAnnees: [] })
   const handleReorderFlows = (reorderedFlows: FinancialFlow[]) => {
@@ -353,6 +359,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           annee={annee ?? ANNEE_PAR_DEFAUT}
           autresAnnees={autresAnnees}
           fluxDeLAnnee={monthlyData.flatMap(mois => mois.flows.filter(f => f.entityId === openCell.entityId))}
+          fluxDesAutresAnnees={fluxDesAutresAnnees(openCell.entityId)}
           limiteDeRemuneration={limiteDeRemuneration(rapport, openCell.entityId)}
           onCreate={handleCreateFlow}
           onRecopier={openCell.monthIndex < 11 ? handleRecopierFlux : undefined}

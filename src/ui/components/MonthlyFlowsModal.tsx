@@ -45,6 +45,11 @@ interface MonthlyFlowsModalProps {
    */
   fluxDeLAnnee?: FinancialFlow[]
   /**
+   * Flux de l'acteur dans les autres années de la session, de la plus proche à la plus lointaine : dans une année
+   * encore vide, la micro-entreprise reçoit d'office la nature qu'elle a dans une autre année.
+   */
+  fluxDesAutresAnnees?: FinancialFlow[]
+  /**
    * Société à l'IS : la plus haute rémunération nette que le dirigeant peut recevoir cette année sans déficit, d'après
    * les résultats de l'année. Elle est rappelée dès qu'une rémunération est saisie ou choisie sur la ligne d'ajout.
    */
@@ -227,7 +232,7 @@ function ReglagesDeLAjout({ annee, autresAnnees, portee, setPortee, aussiEn, set
   )
 }
 
-export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], fluxDeLAnnee = [], limiteDeRemuneration, onCreate, onRecopier, onUpdate, onDelete, serieAilleurs, onEtendre, onRestaurer, onReorder }: MonthlyFlowsModalProps) {
+export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], fluxDeLAnnee = [], fluxDesAutresAnnees = [], limiteDeRemuneration, onCreate, onRecopier, onUpdate, onDelete, serieAilleurs, onEtendre, onRestaurer, onReorder }: MonthlyFlowsModalProps) {
   const flowIds = useMemo(() => flows.map(f => f.id), [flows])
   const tri = useTriAccessible(useMemo(() => flows.map(f => ({ id: f.id, nom: f.label || flowTypeLabels[f.type] })), [flows]))
   const allowedTypes = getFlowTypesForEntity(entity)
@@ -235,7 +240,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
 
   // Type prérempli de la ligne d'ajout : le dernier type utilisé dans cette fenêtre, sinon celui proposé d'office
   // (pour une micro-entreprise, la nature de chiffre d'affaires qu'elle a déjà dans l'année).
-  const [newFlowType, setNewFlowType] = useState<FlowType>(() => typeProposeDOffice(entity, [...flows, ...fluxDeLAnnee]))
+  const [newFlowType, setNewFlowType] = useState<FlowType>(() => typeProposeDOffice(entity, [...flows, ...fluxDeLAnnee, ...fluxDesAutresAnnees]))
   // Portée des ajouts, choisie avant d'ajouter : gardée tant que la fenêtre est ouverte.
   const [portee, setPortee] = useState<PorteeRecurrence>("mois")
   // Autres années où recopier aussi les ajouts : aucune cochée à chaque ouverture.
