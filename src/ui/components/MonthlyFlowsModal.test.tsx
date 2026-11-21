@@ -1,7 +1,7 @@
 // src/ui/components/MonthlyFlowsModal.test.tsx
 
 import { useState } from "react"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent, { type UserEvent } from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type { Entity, FinancialFlow } from "@/types"
@@ -410,26 +410,31 @@ describe("MonthlyFlowsModal : nature du chiffre d'affaires d'une micro-entrepris
   const { cotisations, abattement } = reglesPubliees(ANNEE_COURANTE).microEntreprise
   const micro = () => makeMicro({ id: "m" })
 
-  it("propose d'office les prestations libérales, cochées, avec les taux de l'année affichée et des exemples", () => {
+  const natures = () => within(screen.getByRole("list", { name: "Natures du chiffre d'affaires" })).getAllByRole("listitem")
+  const natureDeLaLigneDAjout = () => natures().find(nature => nature.getAttribute("aria-current") === "true")
+
+  it("propose d'office les prestations libérales ; l'aide liste les natures avec les taux de l'année affichée et des exemples, sans rien à cocher", () => {
     renderModal({ entity: micro(), annee: ANNEE_COURANTE })
 
     const types = screen.getAllByRole("combobox", { name: "Type de flux" })
     expect(types[types.length - 1]).toHaveTextContent("Prestations libérales (BNC)")
-    const bnc = screen.getByRole("radio", { name: "Prestations libérales (BNC)" })
-    expect(bnc).toBeChecked()
-    expect(bnc).toHaveAccessibleDescription(`: cotisations de ${pourcent(cotisations.servicesBnc)} du chiffre d'affaires, abattement de ${pourcent(abattement.servicesBnc)} pour l'impôt. Par exemple : développeur, consultant, traducteur, ostéopathe.`)
-    expect(screen.getByRole("radio", { name: "Prestations artisanales ou commerciales (BIC)" })).toHaveAccessibleDescription(new RegExp(`cotisations de ${pourcent(cotisations.servicesBic)}.*plombier`))
-    expect(screen.getByRole("radio", { name: "Vente de marchandises (BIC)" })).toHaveAccessibleDescription(new RegExp(`cotisations de ${pourcent(cotisations.venteBic)}.*revente`))
-    expect(screen.getByText(new RegExp(`^La nature fixe les taux de ${ANNEE_COURANTE}\\.`))).toBeInTheDocument()
+    const [bnc, bic, vente] = natures().map(nature => enTexteBrut(nature.textContent))
+    expect(bnc).toBe(enTexteBrut(`Prestations libérales (BNC) ligne d'ajout : cotisations de ${pourcent(cotisations.servicesBnc)} du chiffre d'affaires, abattement de ${pourcent(abattement.servicesBnc)} pour l'impôt. Par exemple : développeur, consultant, traducteur, ostéopathe.`))
+    expect(bic).toMatch(new RegExp(`^Prestations artisanales ou commerciales \\(BIC\\) : cotisations de ${enTexteBrut(pourcent(cotisations.servicesBic))}.*plombier`))
+    expect(vente).toMatch(new RegExp(`^Vente de marchandises \\(BIC\\) : cotisations de ${enTexteBrut(pourcent(cotisations.venteBic))}.*revente`))
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument()
+    expect(screen.getByText(new RegExp(`^La nature fixe les taux de ${ANNEE_COURANTE}\\. Elle se choisit dans la liste des types de la ligne d'ajout`))).toBeInTheDocument()
   })
 
   it("propose d'office la nature déjà saisie pour l'activité dans l'année", () => {
     renderModal({ entity: micro(), annee: ANNEE_COURANTE, fluxDeLAnnee: [makeFlow({ entityId: "m", type: "ca_micro_services_bic" })] })
 
-    expect(screen.getByRole("radio", { name: "Prestations artisanales ou commerciales (BIC)" })).toBeChecked()
+    const types = screen.getAllByRole("combobox", { name: "Type de flux" })
+    expect(types[types.length - 1]).toHaveTextContent("Prestations artisanales ou commerciales (BIC)")
+    expect(natureDeLaLigneDAjout()).toHaveTextContent(/^Prestations artisanales ou commerciales \(BIC\)/)
   })
 
-  const aideDesNatures = () => screen.getByRole("group", { name: "Nature du chiffre d'affaires à ajouter" }).closest("details")
+  const aideDesNatures = () => screen.getByRole("list", { name: "Natures du chiffre d'affaires" }).closest("details")
 
   it("l'aide est dépliée tant qu'aucune nature n'est saisie pour l'activité, et le reste après une première saisie", async () => {
     const { user } = renderModal({ entity: micro(), annee: ANNEE_COURANTE })
@@ -448,11 +453,12 @@ describe("MonthlyFlowsModal : nature du chiffre d'affaires d'une micro-entrepris
     expect(aide).toHaveAttribute("open")
   })
 
-  it("cocher une nature change le type de la ligne d'ajout ; la vente fait paraître la note sur les achats", async () => {
+  it("choisir une nature dans la liste des types la signale dans l'aide ; la vente fait paraître la note sur les achats", async () => {
     const { user, onCreate } = renderModal({ entity: micro(), annee: ANNEE_COURANTE })
     expect(screen.queryByText(/Vos achats/)).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole("radio", { name: "Vente de marchandises (BIC)" }))
+    await chooseType(user, "Vente de marchandises (BIC)")
+    expect(natureDeLaLigneDAjout()).toHaveTextContent(/^Vente de marchandises \(BIC\) ligne d'ajout/)
     expect(screen.getByText(/^Vos achats \(marchandises, matériaux, outils\) ne se déduisent pas en micro-entreprise/)).toHaveTextContent(enTexteBrut(`l'abattement de ${pourcent(abattement.venteBic)} est censé les couvrir`))
     await user.type(textbox("Montant du nouveau flux"), "1000{Enter}")
 
@@ -461,7 +467,7 @@ describe("MonthlyFlowsModal : nature du chiffre d'affaires d'une micro-entrepris
 
   it("n'apparaît pas pour un autre acteur", () => {
     renderModal()
-    expect(screen.queryByRole("radio")).not.toBeInTheDocument()
+    expect(screen.queryByRole("list", { name: "Natures du chiffre d'affaires" })).not.toBeInTheDocument()
   })
 })
 

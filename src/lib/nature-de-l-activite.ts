@@ -85,14 +85,14 @@ function liberalesLesPlusPrudentes(regles: ReglesFiscales): boolean {
 }
 
 /**
- * La phrase qui précède les natures : à quoi sert la nature, laquelle est proposée d'office et pourquoi, et la
- * nature attendue d'une profession libérale réglementée.
+ * La phrase qui précède les natures : à quoi sert la nature, où elle se choisit, laquelle est proposée d'office et
+ * pourquoi, et la nature attendue d'une profession libérale réglementée.
  */
 export function introductionDesNatures(activite: Pick<MicroEntreprise, "profession">, regles: ReglesFiscales): string {
   const prudence = liberalesLesPlusPrudentes(regles) ? ", la plus prudente (cotisations les plus élevées, abattement le plus faible)" : ""
   const profession = professionDe(activite, regles)
   const reglementee = profession ? ` ${profession.libelle} : prestations libérales (BNC).` : ""
-  return `La nature fixe les taux de ${regles.annee}. Proposée d'office : celle déjà saisie pour cette activité dans l'année, sinon les prestations libérales${prudence} ; changez-la si vous êtes artisan, commerçant ou vendeur.${reglementee}`
+  return `La nature fixe les taux de ${regles.annee}. Elle se choisit dans la liste des types de la ligne d'ajout, et chaque montant garde la sienne. La liste propose d'office celle déjà saisie pour cette activité dans l'année, sinon les prestations libérales${prudence} ; changez-la si vous êtes artisan, commerçant ou vendeur.${reglementee}`
 }
 
 /**

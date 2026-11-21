@@ -91,19 +91,18 @@ interface NatureSiMicroEntrepriseProps {
   entity: Entity
   regles: ReglesFiscales
   type: FlowType
-  onChange: (type: FlowType) => void
   flows: FinancialFlow[]
   /** Les flux de l'activité dans le reste de l'année : une nature déjà saisie replie l'aide. */
   fluxDeLAnnee: FinancialFlow[]
 }
 
-/** Le choix expliqué de la nature du chiffre d'affaires, pour une micro-entreprise seulement ; la note sur les achats dès qu'une vente est en jeu. */
-function NatureSiMicroEntreprise({ entity, regles, type, onChange, flows, fluxDeLAnnee }: NatureSiMicroEntrepriseProps) {
+/** L'aide sur la nature du chiffre d'affaires, pour une micro-entreprise seulement ; la note sur les achats dès qu'une vente est en jeu. */
+function NatureSiMicroEntreprise({ entity, regles, type, flows, fluxDeLAnnee }: NatureSiMicroEntrepriseProps) {
   // Lue à l'ouverture de la fenêtre seulement : le premier chiffre d'affaires saisi ne replie pas l'aide sous les yeux.
   const [dejaSaisie] = useState(() => natureDejaSaisie(entity, [...flows, ...fluxDeLAnnee]))
   if (entity.type !== "micro-entreprise") return null
   const avecLaVente = type === "ca_micro_vente" || flows.some(f => f.type === "ca_micro_vente")
-  return <NatureDuChiffreDAffaires activite={entity} regles={regles} valeur={type} onChange={onChange} avecLaVente={avecLaVente} natureDejaSaisie={dejaSaisie} />
+  return <NatureDuChiffreDAffaires activite={entity} regles={regles} valeur={type} avecLaVente={avecLaVente} natureDejaSaisie={dejaSaisie} />
 }
 
 /**
@@ -282,7 +281,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
           )}
 
           <NewFlowItem type={newFlowType} allowedTypes={allowedTypes} onTypeChange={setNewFlowType} onCreate={values => onCreate(values, portee, aussiEn, repartirSurLAnnee)} labelInputRef={newFlowLabelRef} typeActeur={entity.type} regles={regles} montantAnnuel={repartirSurLAnnee} />
-          <NatureSiMicroEntreprise entity={entity} regles={regles} type={newFlowType} onChange={setNewFlowType} flows={flows} fluxDeLAnnee={fluxDeLAnnee} />
+          <NatureSiMicroEntreprise entity={entity} regles={regles} type={newFlowType} flows={flows} fluxDeLAnnee={fluxDeLAnnee} />
           <LimiteDeLaRemuneration limite={limiteDeRemuneration} fluxDeLAnnee={fluxDeLAnnee} enAjout={newFlowType === "director_remuneration"} />
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-sm text-slate-700 dark:text-slate-300">
             {/* `min-w-0 max-w-full` : avec une police large, la liste se resserre à la largeur de la fenêtre au lieu de la déborder. */}
