@@ -140,6 +140,11 @@
   [data-impression="bloc"] {
     break-inside: avoid;
   }
+  /* Sauf les lignes d'un tableau marqué « lignes sécables » (le comparateur) : hautes d'une demi-page ou plus sur
+     papier (détail de chaque case), elles partiraient entières à la page suivante en laissant une page presque vide. */
+  table[data-lignes-secables] tr {
+    break-inside: auto;
+  }
   h1,
   h2,
   h3,

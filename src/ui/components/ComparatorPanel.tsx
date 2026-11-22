@@ -334,7 +334,10 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
     // Dans une fenêtre étroite, la colonne au meilleur net (la réponse) peut être hors de l'écran : la zone la montre à
     // sa première apparition.
     <ZoneDefilante libelle="Tableau de comparaison" montrerAuPremierAffichage="[data-meilleur]" className={cn("rounded-lg border border-slate-200 dark:border-slate-700", className)}>
-      <table className="w-full min-w-[48rem] text-sm print:min-w-0 print:text-[8pt]" aria-label="Comparaison des statuts">
+      {/* Sur papier, une ligne porte le détail de chaque case (frais poste par poste, partage du bénéfice) : haute
+          d'une demi-page ou plus, elle peut se couper entre deux pages, au lieu de partir entière et de laisser une page
+          presque vide sous l'en-tête. */}
+      <table data-lignes-secables className="w-full min-w-[48rem] text-sm print:min-w-0 print:text-[8pt]" aria-label="Comparaison des statuts">
         <thead className="bg-slate-100 dark:bg-slate-800/80">
           <tr>
             <th scope="col" className={cn(COLONNE_FIXE, FOND_DE_L_EN_TETE, LARGEUR_DES_LIBELLES, "px-3 py-2 text-left")}>
@@ -414,7 +417,7 @@ function GainDuCouple({ couple, personName }: { couple: ComparaisonCouple; perso
  */
 function CoupleComparison({ couples, personName, Titre = "h3" }: { couples: ComparaisonCouple[]; personName: (id: string) => string; Titre?: "h3" | "h4" }) {
   return (
-    <section aria-labelledby={ANCRES.comparaisonDuCouple} className="space-y-3 rounded-xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-900 dark:bg-violet-950/40">
+    <section aria-labelledby={ANCRES.comparaisonDuCouple} className="w-fit max-w-full space-y-3 rounded-xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-900 dark:bg-violet-950/40">
       <div className="flex items-center gap-3">
         <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full border border-violet-200 bg-card text-violet-700 dark:border-violet-800 dark:text-violet-300">
           <HeartHandshake className="size-5" />

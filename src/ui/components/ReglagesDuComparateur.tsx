@@ -320,8 +320,10 @@ export interface ReglagesCommunsProps {
  * fonctionnement et part BNC, conditions de la société de portage), chacune avec la puce des colonnes qu'elle change.
  */
 export function ReglagesCommuns({ options, result, bncUtile, onChange }: ReglagesCommunsProps) {
+  // Pas un bloc insécable à l'impression : plus haut qu'une demi-page (tableau des frais, conditions du portage), il
+  // partait d'un bloc à la page suivante et laissait le titre de l'étape seul sur une page presque vide.
   return (
-    <div data-impression="bloc" className="space-y-3">
+    <div className="space-y-3">
       <p id="comparateur-activite-aide" className="max-w-prose text-sm text-slate-600 dark:text-slate-400">
         Simulée dans chaque statut du tableau ; le reste de votre simulation ne change pas.
       </p>
