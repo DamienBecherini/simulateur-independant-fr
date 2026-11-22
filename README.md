@@ -7,15 +7,18 @@
 [![Démo web](https://img.shields.io/badge/démo-en%20ligne-brightgreen.svg)](https://damienbecherini.github.io/simulateur-independant-fr/)
 [![Avis des utilisateurs](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdamienbecherini.github.io%2Fsimulateur-independant-fr%2Fretours.json&query=%24.resume&label=avis&color=blue)](https://github.com/DamienBecherini/simulateur-independant-fr/issues?q=label%3Aretour)
 
-**Combien vous restera-t-il vraiment, selon votre statut ?** Un simulateur gratuit, hors ligne et open source pour les indépendants français et leur foyer.
+**Vous êtes indépendant ? Combien vous restera-t-il vraiment à la fin de l'année, selon votre statut ?**
+
+Un simulateur gratuit, hors ligne et open source, pour vous et votre foyer.
 
 1. **Ma situation** : décrivez les personnes du foyer, vos activités (micro-entreprise, entreprise individuelle, EURL, SASU) et leurs liens, puis vos revenus et charges mois par mois.
 2. **Mes résultats** : cotisations de chaque activité, impôt sur le revenu du foyer, net dans la poche et taux de prélèvement, recalculés à chaque modification.
-3. **Comparer et optimiser** : la même activité en SASU, EURL, EI au réel, micro-entreprise (avec ou sans versement libératoire) et portage salarial, puis le partage entre rémunération et dividendes qui donne le meilleur net.
+3. **Comparer et optimiser** : la même activité en SASU, EURL, EI au réel, micro-entreprise (avec ou sans versement libératoire) et portage salarial, puis le partage entre rémunération et dividendes qui donne le meilleur net, et, pour un couple en union libre, ce que changerait un mariage ou un PACS.
 
 **[▶ Essayer la démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/)**, sans installation · [Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72) · [Windows, macOS, Linux](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)
 
-Vos données restent sur votre poste : ni compte, ni serveur, ni mesure d'audience.
+> [!TIP]
+> 🔒 **Vos données restent sur votre poste** : ni compte, ni serveur, ni mesure d'audience.
 
 *Projet personnel, né d'un besoin d'entrepreneur. Je le partage pour montrer mes standards de code et ma vision produit, et parce qu'il peut aider d'autres entrepreneurs à y voir plus clair. Ce n'est pas un logiciel de conseil fiscal : les résultats sont indicatifs et n'ont pas été validés par un expert-comptable.*
 
@@ -33,9 +36,13 @@ Simulation fictive : une indépendante en micro-entreprise mixte, pacsée avec l
 
 | Acteurs et relations | Résultats du foyer |
 |---|---|
-| ![Acteurs et relations, éditables sur leur carte](docs/captures/acteurs-et-grille.png) | ![Bilan : net dans la poche, taux de prélèvement, détail par foyer](docs/captures/resultats.png) |
+| ![Acteurs et relations, éditables sur leur carte](docs/captures/acteurs-et-grille.png) | ![Bilan : net dans la poche, taux de prélèvement et détail du calcul, puis le détail de chaque foyer et de chaque activité](docs/captures/resultats.png) |
 
 ![Comparateur de statuts en trois étapes : l'activité comparée, le net dans la poche de chaque statut avec le meilleur net mis en évidence, puis le partage du bénéfice de la SASU et de l'EURL](docs/captures/comparateur.png)
+
+Le même foyer en union libre : le comparateur dit ce que changerait un mariage ou un PACS.
+
+![Et si vous étiez mariés ou pacsés ? Le gain du couple en net après impôts, et l'impôt sur le revenu en union libre et imposés ensemble](docs/captures/couple.png)
 
 ![Rémunération ou dividendes : courbe du net du foyer selon la rémunération, meilleur net et meilleur net avec 4 trimestres de retraite](docs/captures/optimisation.png)
 
