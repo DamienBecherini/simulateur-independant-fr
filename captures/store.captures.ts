@@ -6,6 +6,7 @@
 import path from "node:path"
 import type { Page } from "@playwright/test"
 import { test, expect, deposerSession } from "../e2e/support/fixtures"
+import { attendreLaFinDesAnimations } from "../e2e/support/animations"
 import { sessionExemple } from "../src/web/session-exemple"
 
 const DOSSIER = path.resolve("documentation/microsoft-store/captures")
@@ -44,4 +45,15 @@ test("captures de la fiche du Microsoft Store", async ({ dossierDonnees, lancer 
   await expect(page.getByRole("region", { name: "Rémunération ou dividendes ?" }).getByRole("group", { name: /Net du foyer selon la rémunération/ })).toBeVisible()
   await amenerSousLaBarre(page, "Rémunération ou dividendes ?")
   await capturer(page, "5-remuneration-ou-dividendes.png")
+
+  // Le thème sombre, sur la vue d'ensemble et le comparateur.
+  await page.getByRole("switch", { name: "Changer de thème" }).click()
+  await expect(page.locator("html")).toHaveClass(/dark/)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await attendreLaFinDesAnimations(page)
+  await capturer(page, "6-simulation-theme-sombre.png")
+
+  await amenerSousLaBarre(page, /^Étape 2 : Résultat \d{4}/)
+  await attendreLaFinDesAnimations(page)
+  await capturer(page, "7-comparateur-theme-sombre.png")
 })

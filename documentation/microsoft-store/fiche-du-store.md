@@ -126,8 +126,10 @@ Dans [captures/](./captures/) : 1366 × 768 pixels (la taille minimale demandée
 | `3-resultats.png` | Résultats de simulation | Le net dans la poche et le taux global de prélèvement, par foyer et par activité |
 | `4-comparateur.png` | Comparateur de statuts, étape 2 : le tableau, meilleur net mis en évidence | Comparez SASU, EURL, EI, micro-entreprise et portage salarial sur votre situation |
 | `5-remuneration-ou-dividendes.png` | Rémunération ou dividendes | Trouvez la rémunération qui donne le meilleur net |
+| `6-simulation-theme-sombre.png` | La capture 1, en thème sombre | Un thème sombre, d'un clic |
+| `7-comparateur-theme-sombre.png` | La capture 4, en thème sombre | Le comparateur de statuts, en thème sombre |
 
-Pistes pour compléter (jusqu'à dix captures) : la grille annuelle avec la fenêtre d'un flux ouverte, les situations types, le mode sombre, l'export PDF. Éviter la fenêtre « Utiliser avec une IA » : elle affiche les chemins réels du poste, donc le nom de l'utilisateur.
+Pistes pour compléter (jusqu'à dix captures) : la grille annuelle avec la fenêtre d'un flux ouverte, les situations types, l'export PDF. Éviter la fenêtre « Utiliser avec une IA » : elle affiche les chemins réels du poste, donc le nom de l'utilisateur.
 
 ## Logos de la fiche
 
