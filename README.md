@@ -65,7 +65,7 @@ Le même foyer en union libre : le comparateur dit ce que changerait un mariage 
 
 - Votre activité dans chaque statut, portage salarial compris, côte à côte, avec le meilleur net mis en évidence et la protection sociale de chacun.
 - Rémunération ou dividendes : la répartition qui donne le meilleur net, avec ou sans 4 trimestres de retraite validés.
-- Combien facturer pour toucher le net que vous visez.
+- Le chiffre d'affaires à faire pour toucher le net que vous visez.
 - Mariage ou PACS : ce que ça change à l'impôt d'un couple.
 
 **Et aussi**

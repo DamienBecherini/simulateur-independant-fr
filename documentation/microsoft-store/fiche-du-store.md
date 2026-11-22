@@ -95,7 +95,7 @@ Une par ligne dans Partner Center (vingt au plus), dans l'ordre où elles y sont
 13. 100 % hors ligne : aucune donnée ne quitte l'ordinateur
 14. Serveur MCP local pour les assistants d'IA de bureau, avec validation de chaque proposition
 15. Gratuit, sans publicité, open source (licence MIT)
-16. Combien facturer pour un net visé, statut par statut
+16. Quel chiffre d'affaires pour un net visé, statut par statut
 17. Exonération d'impôt en zone franche urbaine ou en quartier prioritaire
 
 ## Mots-clés

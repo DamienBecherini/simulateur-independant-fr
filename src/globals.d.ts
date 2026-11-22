@@ -15,7 +15,7 @@ export type EventPayloadMapping = {
   /** Le comparateur et l'optimiseur portent sur une année de la session. */
   compareStatuts: (session: SessionState, options: ComparaisonOptions, annee: number) => Promise<ComparaisonResult>
   optimiserRemuneration: (session: SessionState, options: ComparaisonOptions, statut: StatutSociete, annee: number) => Promise<OptimisationRemuneration>
-  /** « Combien facturer ? » : le chiffre d'affaires de l'activité comparée qui donne ce net du foyer, dans chaque colonne du comparateur. */
+  /** « Quel chiffre d'affaires pour un net visé ? » : le chiffre d'affaires de l'activité comparée qui donne ce net du foyer, dans chaque colonne du comparateur. */
   chiffreDAffairesPourUnNet: (session: SessionState, options: ComparaisonOptions, netVise: number, annee: number) => Promise<ChiffreDAffairesPourUnNet>
   /** « Sur toutes les années » : stratégies de distribution d'une activité en SASU et en EURL, avec les réglages enregistrés du comparateur. */
   comparerStrategies: (session: SessionState, activityId: string) => Promise<StrategiesDeDistribution>

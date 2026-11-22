@@ -37,7 +37,7 @@ const champ = () => screen.getByLabelText("Net visé du foyer (€ par an)")
 describe("CombienFacturer", () => {
   it("propose un champ « Net visé du foyer », et ne calcule rien tant qu'il est vide", async () => {
     afficher()
-    expect(screen.getByRole("heading", { name: "Combien facturer pour un net visé ?" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Quel chiffre d'affaires pour un net visé ?" })).toBeInTheDocument()
     expect(champ()).toHaveAccessibleDescription(/comme la ligne « Net dans la poche » du tableau/)
     await new Promise(resolve => setTimeout(resolve, 350))
     expect(window.api.chiffreDAffairesPourUnNet).not.toHaveBeenCalled()
@@ -120,10 +120,10 @@ describe("CombienFacturer", () => {
         <CombienFacturer session={emptySession()} annee={2026} options={options} activite={activite} />
       </AffichageContext.Provider>
     )
-    const section = screen.getByRole("region", { name: "Combien facturer pour un net visé ?" })
+    const section = screen.getByRole("region", { name: "Quel chiffre d'affaires pour un net visé ?" })
     expect(within(section).queryByRole("heading")).not.toBeInTheDocument()
     expect(champ()).not.toBeVisible()
-    await user.click(within(section).getByText("Combien facturer pour un net visé ?"))
+    await user.click(within(section).getByText("Quel chiffre d'affaires pour un net visé ?"))
     expect(champ()).toBeVisible()
   })
 

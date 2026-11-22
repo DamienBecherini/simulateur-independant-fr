@@ -1,5 +1,5 @@
 // src/ui/components/CombienFacturer.tsx
-// « Combien facturer ? » : le calcul à l'envers du comparateur. Pour un net du foyer visé, le chiffre d'affaires annuel
+// « Quel chiffre d'affaires pour un net visé ? » : le calcul à l'envers du comparateur. Pour un net du foyer visé, le chiffre d'affaires annuel
 // et mensuel de l'activité comparée dans chaque statut, avec les réglages du comparateur, et l'écart avec celui saisi.
 // Sur téléphone, une carte par statut au lieu du tableau ; dans l'affichage « Résumé », une section à déplier.
 
@@ -166,7 +166,7 @@ export function CombienFacturer({ activite, ...props }: Omit<CombienFacturerProp
   return activite ? <CalculALEnvers activityName={activite.name} {...props} /> : null
 }
 
-const TITRE = "Combien facturer pour un net visé ?"
+const TITRE = "Quel chiffre d'affaires pour un net visé ?"
 const ID_DU_TITRE = "combien-facturer-titre"
 const CADRE = "space-y-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700"
 

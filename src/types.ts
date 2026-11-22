@@ -1280,7 +1280,7 @@ export interface ChiffreDAffairesDUnStatut {
   horsDePortee?: RaisonHorsDePortee
 }
 
-/** « Combien facturer ? » : pour un net du foyer visé, le chiffre d'affaires nécessaire dans chaque colonne du comparateur. */
+/** « Quel chiffre d'affaires pour un net visé ? » : pour un net du foyer visé, le chiffre d'affaires nécessaire dans chaque colonne du comparateur. */
 export interface ChiffreDAffairesPourUnNet {
   netVise: number
   /** Chiffre d'affaires de l'année saisi pour l'activité, référence des écarts. */

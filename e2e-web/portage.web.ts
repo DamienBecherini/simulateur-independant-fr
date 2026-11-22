@@ -51,7 +51,7 @@ test("un réglage des conditions de la société de portage change le net de la 
 test("le calcul à l'envers donne le chiffre d'affaires du portage salarial", async ({ page }) => {
   await page.goto("./")
   const section = page.locator("section[aria-labelledby=combien-facturer-titre]")
-  await section.getByText("Combien facturer pour un net visé ?").click()
+  await section.getByText("Quel chiffre d'affaires pour un net visé ?").click()
   await section.getByLabel("Net visé du foyer (€ par an)").fill("90000")
   const ligne = section.getByRole("table").getByRole("row", { name: /^Portage salarial/ })
   await expect(ligne.getByRole("cell").first()).toHaveText(/^\d[\d\s]*\s€$/)

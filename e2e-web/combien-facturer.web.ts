@@ -1,5 +1,5 @@
 // e2e-web/combien-facturer.web.ts
-// « Combien facturer pour un net visé ? », le calcul à l'envers du comparateur : sur la simulation d'exemple, l'atelier
+// « Quel chiffre d'affaires pour un net visé ? », le calcul à l'envers du comparateur : sur la simulation d'exemple, l'atelier
 // de Camille (micro-entreprise, au meilleur net) ; le chiffre d'affaires nécessaire dans chaque statut, la micro hors de
 // portée au-delà de son plafond, des cartes sur téléphone, sans violation WCAG.
 
@@ -17,7 +17,7 @@ async function viser(page: Page, net: string) {
   const section = page.locator(SECTION)
   const champ = section.getByLabel("Net visé du foyer (€ par an)")
   await expect(champ).toBeHidden()
-  await section.getByText("Combien facturer pour un net visé ?").click()
+  await section.getByText("Quel chiffre d'affaires pour un net visé ?").click()
   await champ.fill(net)
   return section
 }

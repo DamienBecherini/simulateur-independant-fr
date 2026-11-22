@@ -1,5 +1,5 @@
 // src/lib/combien-facturer.ts
-// « Combien facturer ? », le calcul à l'envers du comparateur (src/backend/logic/chiffre-d-affaires-pour-un-net.ts) :
+// « Quel chiffre d'affaires pour un net visé ? », le calcul à l'envers du comparateur (src/backend/logic/chiffre-d-affaires-pour-un-net.ts) :
 // la lecture du net visé saisi, et ce que l'écran dit de chaque statut.
 
 import { CHIFFRE_D_AFFAIRES_MAXIMAL } from "@/backend/logic/options-du-comparateur"
