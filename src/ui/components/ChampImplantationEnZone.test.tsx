@@ -61,13 +61,22 @@ describe("aides liées au lieu d'implantation", () => {
     expect(onSave.mock.calls[0][0].implantationEnZone).toEqual({})
   })
 
-  it("une entreprise individuelle au réel lit en plus l'hypothèse sur ses cotisations sociales", async () => {
+  it("une entreprise individuelle au réel en QPV lit en plus l'hypothèse sur ses cotisations sociales", async () => {
+    const { user } = ouvrir(makeCompany({ legalStatus: "EI", dateDeCreation: "2026-03" }))
+    await user.click(screen.getByText(TITRE))
+    await user.click(laCase())
+    const hypotheses = within(screen.getByRole("list", { name: "Ce que ce calcul suppose" })).getAllByRole("listitem")
+    expect(hypotheses).toHaveLength(3)
+    expect(hypotheses[1]).toHaveTextContent("Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise, comme pour la ZFU-TE")
+  })
+
+  it("en ZFU-TE, les cotisations sur le bénéfice entier ne sont plus une hypothèse : l'Urssaf le confirme", async () => {
     const { user } = ouvrir(makeCompany({ legalStatus: "EI", dateDeCreation: "2024-03" }))
     await user.click(screen.getByText(TITRE))
     await user.click(laCase())
     const hypotheses = within(screen.getByRole("list", { name: "Ce que ce calcul suppose" })).getAllByRole("listitem")
-    expect(hypotheses).toHaveLength(2)
-    expect(hypotheses[1]).toHaveTextContent("Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise")
+    expect(hypotheses).toHaveLength(1)
+    expect(section()).not.toHaveTextContent("Entreprise individuelle au réel")
   })
 
   it("une création depuis 2026 relève du régime QPV, sans plafond, avec une hypothèse de plus", async () => {

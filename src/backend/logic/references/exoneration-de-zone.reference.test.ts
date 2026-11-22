@@ -188,10 +188,11 @@ describe("entreprise individuelle au réel en ZFU-TE", () => {
     const enZone = rapportDe(session(ei, { 2026: flux(60000) }))
     expect(hors.foyers[0].impotSurLeRevenu).toBeGreaterThan(3000)
     expect(enZone.foyers[0].impotSurLeRevenu).toBe(0)
-    // Les cotisations portent sur le bénéfice entier : l'exonération ne les change pas. Aucun texte officiel ne l'a
-    // confirmé : seule l'entreprise individuelle, que ce point concerne, le lit parmi ses hypothèses.
+    // Les cotisations portent sur le bénéfice entier : l'exonération ne les change pas. Les exonérations fiscales ne
+    // sont pas admises en déduction de leur assiette, et la notice Urssaf 2026 des indépendants cite l'article 44 octies A
+    // parmi elles : ce n'est plus une hypothèse.
     expect(enZone.activities[0].cotisationsSociales).toBe(hors.activities[0].cotisationsSociales)
-    expect(enZone.activities[0].exonerationDeZone?.hypotheses).toEqual([expect.stringContaining("à cheval sur deux taux"), expect.stringMatching(/^Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier/)])
+    expect(enZone.activities[0].exonerationDeZone?.hypotheses).toEqual([expect.stringContaining("à cheval sur deux taux")])
     expect(enZone.activities[0].revenuVerse).toBe(hors.activities[0].revenuVerse)
     // Tout le bénéfice imposable est exonéré : il quitte le barème et revient dans le revenu fiscal de référence.
     expect(enZone.foyers[0].revenuImposableGlobal).toBe(0)

@@ -608,8 +608,7 @@
         "conditionsNonVerifiees": "moins de 50 salariés, chiffre d'affaires ou bilan de 10 M€ au plus, activité hors des secteurs exclus, clause d'emploi local à partir du deuxième salarié, plafond européen des aides de minimis ; la majoration du plafond de 5 000 € par salarié embauché n'est pas comptée",
         "liberauxHorsSanteExclus": false,
         "hypotheses": [
-          { "texte": "Une année à cheval sur deux taux d'exonération est répartie également entre ses mois : aucun texte officiel ne fixe cette répartition." },
-          { "texte": "Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise ; ce point n'a pas été confirmé sur un texte officiel.", "statuts": ["EI"] }
+          { "texte": "Une année à cheval sur deux taux d'exonération est répartie également entre ses mois : aucun texte officiel ne fixe cette répartition." }
         ]
       },
       {
@@ -626,7 +625,7 @@
         "liberauxHorsSanteExclus": true,
         "hypotheses": [
           { "texte": "Une année à cheval sur deux taux d'exonération est répartie également entre ses mois : aucun texte officiel ne fixe cette répartition." },
-          { "texte": "Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise ; ce point n'a pas été confirmé sur un texte officiel.", "statuts": ["EI"] },
+          { "texte": "Entreprise individuelle au réel : les cotisations sociales sont calculées sur le bénéfice entier, exonération comprise, comme pour la ZFU-TE (article L136-3 du code de la sécurité sociale, auquel renvoie l'article L131-6) ; l'Urssaf ne cite pas encore ce régime parmi les exonérations fiscales à ne pas déduire.", "statuts": ["EI"] },
           { "texte": "L'administration n'a pas encore publié son commentaire de ce régime, créé en 2026 : les règles de calcul de la ZFU-TE lui sont appliquées par analogie (déficits antérieurs, versement libératoire de la micro-entreprise)." }
         ]
       }

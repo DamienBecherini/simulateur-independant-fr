@@ -291,7 +291,10 @@ describe("règles par année", () => {
         // Un statut mal écrit ferait disparaître l'hypothèse pour tout le monde.
         regime.hypotheses.flatMap(hypothese => hypothese.statuts ?? []).forEach(statut => expect([...STATUTS_JURIDIQUES, "micro-entreprise"], regime.id).toContain(statut))
         // L'hypothèse sur les cotisations de l'entreprise individuelle ne concerne qu'elle : elle n'est montrée qu'à elle.
-        expect(regime.hypotheses.filter(hypothese => hypothese.statuts).map(hypothese => [hypothese.texte.split(" :")[0], hypothese.statuts]), regime.id).toEqual([["Entreprise individuelle au réel", ["EI"]]])
+        // Confirmée pour la ZFU-TE (notice Urssaf 2026 des indépendants, qui cite l'article 44 octies A), elle n'en est
+        // plus une ; le régime QPV la garde, faute d'un texte qui le cite.
+        const attendues = regime.id === "qpv" ? [["Entreprise individuelle au réel", ["EI"]]] : []
+        expect(regime.hypotheses.filter(hypothese => hypothese.statuts).map(hypothese => [hypothese.texte.split(" :")[0], hypothese.statuts]), regime.id).toEqual(attendues)
       }
       // La ZFU-TE, plafonnée, est fermée aux créations le mois où le régime QPV, sans plafond annuel, s'ouvre.
       const [zfuTe, qpv] = regimes
