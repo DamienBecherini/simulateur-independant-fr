@@ -117,3 +117,48 @@ test("une charge mensuelle ajoutée sur l'année, augmentée en juillet puis sup
   const fenetreDeMars = await ouvrirLeMois(page, "de mars")
   await expect(fenetreDeMars.getByRole("textbox", { name: "Libellé", exact: true })).toHaveCount(avant)
 })
+
+test.describe("une ligne de la grille qui change de hauteur", () => {
+  const personne = (id: string, name: string) => ({ id, type: "person", name, fiscalParts: 1, avatar: { type: "initials", value: name.slice(0, 2), color: "#3b82f6" }, locked: false })
+  const SESSION_DE_DEUX = {
+    formatVersion: 3,
+    name: "Hauteur des lignes",
+    entities: [personne("p-alice", "Alice"), personne("p-bruno", "Bruno")],
+    relationships: [],
+    annees: [{ annee: 2026, monthlyData: Array.from({ length: 12 }, (_, month) => ({ month, flows: month === 0 ? [{ id: "b", entityId: "p-bruno", type: "salary", label: "Salaire", amount: 2000 }] : [] })) }]
+  }
+
+  test("son premier flux l'agrandit : la ligne du dessous glisse, sans barre de défilement verticale dans la grille", async ({ page }) => {
+    await page.addInitScript(session => window.localStorage.setItem("simulateur.session", JSON.stringify(session)), SESSION_DE_DEUX)
+    await page.goto("./")
+    // Par son attribut : une fois la fenêtre du mois ouverte, la grille derrière elle est masquée aux technologies d'assistance.
+    const dessous = page.locator('[aria-label="Flux de janvier : Bruno"]')
+    await dessous.scrollIntoViewIfNeeded()
+    const zone = dessous.locator("xpath=ancestor::div[contains(@class, 'overflow-x-auto')][1]")
+    await expect(zone).toHaveCSS("overflow-y", "hidden")
+    const haut = await dessous.evaluate(element => element.getBoundingClientRect().top)
+
+    await page.getByRole("button", { name: "Flux de janvier : Alice" }).click()
+    const fenetre = page.getByRole("dialog")
+    const montant = fenetre.getByRole("textbox", { name: "Montant" }).last()
+    await montant.fill("300")
+    // Relevé à chaque image : la case de Bruno a-t-elle été animée (une animation de 200 ms échappe à un sondage) ?
+    const animee = dessous.evaluate(
+      element =>
+        new Promise<boolean>(resoudre => {
+          const debut = performance.now()
+          const relever = () => {
+            if (element.getAnimations().length > 0) return resoudre(true)
+            if (performance.now() - debut > 1500) return resoudre(false)
+            requestAnimationFrame(relever)
+          }
+          relever()
+        })
+    )
+    await montant.press("Enter")
+    // La case de Bruno part de son ancienne place (translation vers le haut), puis rejoint la nouvelle, plus bas.
+    expect(await animee).toBe(true)
+    await expect.poll(() => dessous.evaluate(element => element.getAnimations().length)).toBe(0)
+    expect(await dessous.evaluate(element => element.getBoundingClientRect().top)).toBeGreaterThan(haut)
+  })
+})

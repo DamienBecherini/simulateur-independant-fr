@@ -137,8 +137,9 @@ function LigneDeLActeur({ ligne, rang, onOuvrir }: { ligne: LigneDeLaGrille; ran
 
 function MonthlyGrid({ entities, relationships, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees, onGrilleTouchee, rapport }: MonthlyGridProps) {
   // Un acteur ajouté, retiré ou déplacé : les cases de sa ligne apparaissent ou s'effacent, celles des lignes suivantes
-  // glissent à leur place (la grille n'a pas d'élément par ligne : ce sont ses cases qui s'animent).
-  const [refDeLaGrille] = useListeAnimee()
+  // glissent à leur place (la grille n'a pas d'élément par ligne : ce sont ses cases qui s'animent). De même quand une
+  // ligne change de hauteur : une case qui passe de « + Ajouter » aux barres d'un flux (ou des dividendes reçus).
+  const [refDeLaGrille] = useListeAnimee(undefined, undefined, true)
   // Bande des mois et ombres des bords : seulement quand la grille déborde de sa zone et doit défiler.
   const zone = useRef<HTMLDivElement>(null)
   const defilement = useDefilementDeLaGrille(zone, entities.length > 0, annee)
@@ -326,7 +327,7 @@ function MonthlyGrid({ entities, relationships, monthlyData, setMonthlyData, pre
               <div
                 ref={zone}
                 style={defilement.deborde ? { scrollPaddingLeft: defilement.colonneFixe } : undefined}
-                className={cn("relative overflow-x-auto print:overflow-visible", defilement.deborde && "[&_[role=button]]:scroll-mt-14")}
+                className={cn("relative overflow-x-auto overflow-y-hidden print:overflow-visible", defilement.deborde && "[&_[role=button]]:scroll-mt-14")}
               >
                 {/* `w-max` : la grille doit être aussi large que son contenu, sinon la première colonne (sticky) cesse de rester visible une fois la largeur de la fenêtre dépassée.
                     Sur papier, elle tient dans la largeur de la feuille : les douze mois se partagent la place, en petits caractères, et chaque case empile gains et dépenses.

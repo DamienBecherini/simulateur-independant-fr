@@ -124,7 +124,8 @@ function PrecisionDeLaCase({ libelle, children }: { libelle: string; children: R
       <AideEnBulle libelle={libelle} teinte={BULLE_NEUTRE} className="-mr-1 ml-1 font-normal text-slate-600 dark:text-slate-400">
         {children}
       </AideEnBulle>
-      <span className="hidden text-left text-xs font-normal print:block">{children}</span>
+      {/* Sur papier, le détail est écrit sous le montant, en couleur neutre : pas dans le rouge ou le vert de l'écart. */}
+      <span className="hidden text-left text-xs font-normal text-slate-700 print:block">{children}</span>
     </>
   )
 }
