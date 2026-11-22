@@ -33,6 +33,7 @@
     "test:web:firefox:mise-en-page": "vite build --mode web && cross-env FIREFOX_MISE_EN_PAGE=1 playwright test --config playwright.web-firefox.config.ts",
     "installer:firefox": "playwright install firefox",
     "test:all": "npm run test:coverage && npm run test:e2e && npm run test:web",
+    "verifier": "npm run lint && npm run code-mort && npm run typecheck && npm run transpile:electron && npm run typecheck:tests && npm run test:coverage && npm run duplication && npm run test:web && npm run test:web:firefox:mise-en-page && npm run test:e2e",
     "build:web": "vite build --mode web",
     "captures": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && playwright test --config playwright.captures.config.ts",
     "test:mutation": "stryker run",

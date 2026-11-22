@@ -166,6 +166,7 @@ npm run test:e2e:visible  # les mêmes, fenêtres affichées pour suivre les tes
 npm run test:web       # compile la démo web, puis la teste dans Chromium (Playwright)
 npm run test:web:firefox  # la même série dans Firefox (npm run installer:firefox une première fois)
 npm run test:all       # tout : tests avec couverture, puis tests de bout en bout (application et démo web)
+npm run verifier       # avant une fusion : ce que vérifie la CI, en 6 à 10 minutes sur un poste récent
 npm run lint           # ESLint, dont la complexité cyclomatique
 npm run duplication    # détection de code dupliqué (jscpd)
 npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutation/

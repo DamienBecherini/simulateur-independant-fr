@@ -16,7 +16,7 @@ Numérotation ([versionnage sémantique](https://semver.org/lang/fr/)) : le dern
 
 ## Avant de publier : liste de vérification
 
-- [ ] `main` contient tout ce qui doit partir, et l'intégration continue y est au vert : CI (lint, types, tests avec couverture, build), tests de bout en bout, démo web.
+- [ ] `main` contient tout ce qui doit partir, et l'intégration continue y est au vert : CI (lint, types, tests avec couverture, build) et démo web sur `main`, tests de bout en bout sur ce même commit passé par `integration`.
 - [ ] `package.json` et `package-lock.json` portent le numéro de la version (`node -p "require('./package.json').version"`).
 - [ ] [CHANGELOG.md](../CHANGELOG.md) a une section `## [X.Y.Z] — AAAA-MM-JJ` datée, une section « Non publié » vide au-dessus, et les liens de comparaison en bas du fichier pointent vers la nouvelle étiquette.
 - [ ] Si l'interface a changé, les captures du README et de la fiche du Store sont régénérées (`npm run captures`) et relues, et la fiche du Store ([microsoft-store/fiche-du-store.md](./microsoft-store/fiche-du-store.md)) dit les nouveautés.
@@ -26,7 +26,7 @@ Numérotation ([versionnage sémantique](https://semver.org/lang/fr/)) : le dern
 
 ## Marche à suivre
 
-1. **Partir de `main` à jour**, intégration continue au vert (CI, tests de bout en bout, démo web).
+1. **Partir de `main` à jour**, intégration continue au vert (CI et démo web sur `main` ; tests de bout en bout sur `integration`, pour le même commit).
 2. **Changer la version**, sans créer de commit ni d'étiquette à ce stade :
 
    ```sh

@@ -1,11 +1,12 @@
 name: Tests de bout en bout
 
-# Application de bureau et démo web. Plus lents que les tests unitaires : lancés sur integration, la branche de recette, puis sur main et à la demande,
-# pas à chaque push de branche. La règle de protection de main exige qu’ils aient réussi sur le commit avant qu’il y arrive.
+# Application de bureau et démo web. Plus lents que les tests unitaires : lancés sur integration, la branche de recette, et à
+# la demande, pas à chaque push de branche. La règle de protection de main exige qu’ils aient réussi sur le commit avant
+# qu’il y arrive : main avance en avance rapide sur ce même commit, déjà vérifié, et ne les relance pas.
 on:
   workflow_dispatch:
   push:
-    branches: [main, integration]
+    branches: [integration]
 
 concurrency:
   group: e2e-${{ github.ref }}
@@ -52,11 +53,16 @@ jobs:
           retention-days: 14
 
   # La démo web a sa propre suite (e2e-web/) : largeurs de 320 à 1 440 px, tactile, clavier, polices, accessibilité.
-  # Lancée aussi par « Démo web » avant chaque publication depuis main ; ici, une régression se voit dès integration.
+  # La plus longue (plus de 25 minutes de tests, dont un tiers pour le zoom) : elle est partagée entre trois machines.
   demo-web:
-    name: Playwright (démo web)
+    name: Playwright (démo web, partie ${{ matrix.partie }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      # Une partie en échec n'interrompt pas les autres : tous les échecs se voient en une fois.
+      fail-fast: false
+      matrix:
+        partie: [1, 2, 3]
     steps:
       - name: Récupérer le code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -74,16 +80,32 @@ jobs:
         run: npm run installer:chromium -- --with-deps
 
       - name: Compiler la démo et la tester dans le navigateur
-        run: npm run test:web
+        run: npm run test:web -- --shard=${{ matrix.partie }}/3
 
       - name: Publier le rapport
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: rapport-demo-web
+          name: rapport-demo-web-${{ matrix.partie }}
           path: test-results/web
           if-no-files-found: ignore
           retention-days: 14
+
+  # Le contrôle exigé par la protection de main s'appelle « Playwright (démo web) » : ce job le porte, vert seulement si
+  # les trois parties le sont.
+  demo-web-resultat:
+    name: Playwright (démo web)
+    needs: demo-web
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Vérifier les trois parties
+        run: |
+          if [ "${{ needs.demo-web.result }}" != "success" ]; then
+            echo "::error::Une partie au moins de la suite de la démo web a échoué (${{ needs.demo-web.result }})."
+            exit 1
+          fi
 
   # La recette se fait dans Firefox, dont le moteur de rendu n'est pas celui de Chromium. Seuls les tests de mise en
   # page y sont relancés (zoom, lisibilité, tableaux qui défilent, barres collées, téléphone) : la série entière y

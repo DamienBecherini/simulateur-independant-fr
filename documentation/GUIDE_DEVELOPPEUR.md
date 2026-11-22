@@ -57,14 +57,9 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run essai:store` | Sous Windows : installe une copie signée du paquet du Microsoft Store comme le Store l'installe et vérifie le serveur MCP ; `verifier`, `etat`, `nettoyer`. | Avant une soumission : [publier-sur-le-store.md](./microsoft-store/publier-sur-le-store.md#2-essayer-le-paquet-avant-la-première-soumission). |
 | `npm run captures` | Captures d'écran du README (`docs/captures/`) et de la fiche du Microsoft Store (`documentation/microsoft-store/captures/`, 1366 × 768), sur la simulation d'exemple de la démo (`captures/*.captures.ts`). | Après un changement visible, et avant chaque version. |
 
-La CI (`.github/workflows/ci.yml`) lance lint, `code-mort`, `typecheck`, `transpile:electron`, `typecheck:tests`, `test:coverage`, `build` et la duplication à chaque push et pull request (sur `main`, avec `SONAR_TOKEN`, l'analyse SonarQube Cloud à la place de la duplication) ; `e2e.yml` les tests de bout en bout sur `integration` et `main`, de l'application Electron (`test:e2e`) et de la démo web (`test:web`, et sa mise en page dans Firefox, `test:web:firefox:mise-en-page`) ; `demo-web.yml` teste et publie la démo à chaque push sur `main`.
+La CI (`.github/workflows/ci.yml`) lance lint, `code-mort`, `typecheck`, `transpile:electron`, `typecheck:tests`, `test:coverage`, `build` et la duplication à chaque push et pull request (sur `main`, avec `SONAR_TOKEN`, l'analyse SonarQube Cloud à la place de la duplication) ; `e2e.yml` les tests de bout en bout sur `integration`, de l'application Electron (`test:e2e`) et de la démo web (`test:web`, partagée entre trois machines, et sa mise en page dans Firefox, `test:web:firefox:mise-en-page`) ; `demo-web.yml` compile et publie la démo à chaque push sur `main`. Sur `main`, rien n'est retesté de bout en bout : la protection de `main` exige que ces tests aient réussi sur le commit, et `main` avance en avance rapide sur le commit déjà vérifié sur `integration`.
 
-**Vérification complète**, à lancer avant de proposer une fusion :
-
-```sh
-npx eslint . && npm run code-mort && npx tsc -b && npm run transpile:electron && npm run typecheck:tests \
-  && npm run test:coverage && npm run duplication && npm run test:web && npm run test:e2e
-```
+**Vérification complète**, à lancer avant de proposer une fusion : `npm run verifier` (lint, `code-mort`, les trois vérifications de types, `test:coverage`, duplication, `test:web`, `test:web:firefox:mise-en-page`, `test:e2e`). Comptez 6 à 10 minutes sur un poste de 16 cœurs (la suite de la démo web y prend 3 minutes, contre 13 sur une seule machine de la CI) : une erreur s'y voit avant l'aller-retour par `integration`. Firefox s'installe une fois avec `npm run installer:firefox`.
 
 ### 1.3 Dossiers
 
