@@ -14,7 +14,7 @@ export type OngletDuDepart = "questions" | "situations"
 export interface EtatDeLaBibliotheque {
   onglet: OngletDuDepart
   criteres: CriteresDesMontages
-  /** La question dont on a ouvert la situation : sa carte est mise en avant, et « Charger » mène à sa réponse. */
+  /** La question dont on a ouvert la situation : sa carte est mise en avant (son « Charger » mène en haut de la page, comme les autres). */
   questionSuivie: QuestionTrouvee | null
   /** Dernière situation dont on a vu le détail : de retour à la liste, le focus revient sur sa carte. */
   montageVu: string | null

@@ -5,9 +5,13 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
+import { ANCRES } from "@/lib/ancres"
 import { MONTAGES_TYPES } from "@/lib/montages/montages"
+import { allerALaReponse } from "../allerALaReponse"
 import { PLATEFORME_DE_BUREAU, PlateformeContext, type Plateforme } from "../plateforme"
 import { BoutonDesMontages } from "./MontagesTypes"
+
+vi.mock("../allerALaReponse", async importOriginal => ({ ...(await importOriginal<typeof import("../allerALaReponse")>()), allerALaReponse: vi.fn() }))
 
 function ouvrir(confirmationNecessaire = false) {
   const onCharger = vi.fn()
@@ -124,6 +128,19 @@ describe("Fenêtre des situations types", () => {
     await user.click(within(confirmation).getByRole("button", { name: "Remplacer" }))
     expect(onCharger).toHaveBeenCalledWith(MONTAGES_TYPES.find(m => m.id === "couple-union-libre"))
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(allerALaReponse).toHaveBeenCalledWith(ANCRES.comparaisonDuCouple)
+  })
+
+  it("la carte mise en avant depuis une question se charge comme les autres : en haut de la page, sans mener à la réponse", async () => {
+    vi.mocked(allerALaReponse).mockClear()
+    const { user, onCharger, ouvrirLaFenetre } = ouvrir()
+    await ouvrirLaFenetre()
+    await user.click(within(fenetre()).getByRole("tab", { name: /^Questions/ }))
+    await user.click(within(fenetre()).getAllByRole("button", { name: "Voir la situation « Couple en union libre, puis marié ou pacsé »" })[0])
+
+    await user.click(screen.getByRole("button", { name: "Charger la situation « Couple en union libre, puis marié ou pacsé »" }))
+    expect(onCharger).toHaveBeenCalledWith(MONTAGES_TYPES.find(m => m.id === "couple-union-libre"))
+    expect(allerALaReponse).not.toHaveBeenCalled()
   })
 
   it("la recherche et les filtres valent pour les questions : « En couple » n'en garde que celles des couples", async () => {

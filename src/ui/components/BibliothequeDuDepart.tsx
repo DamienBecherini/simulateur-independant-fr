@@ -3,7 +3,8 @@
 // questions auxquelles répond chaque situation (src/lib/montages/montages.ts) ; l'onglet « Situations types », les
 // situations en cartes. La recherche et les filtres (statut, foyer : src/lib/montages/filtres.ts) valent pour les deux
 // onglets. Une question montre sa situation : un clic sur son nom passe à l'onglet des situations, où sa carte est mise
-// en avant. « Charger » charge la situation, puis mène à la zone de la page qui répond à la question.
+// en avant. Le « Charger » d'une question charge sa situation, puis mène à la zone de la page qui y répond ; celui d'une
+// carte, mise en avant ou non, la charge en haut de la page.
 //
 // Partagée par la fenêtre (MontagesTypes.tsx) et par le bloc affiché dans la page au premier lancement
 // (ParOuCommencer.tsx). Dans la démo web, chaque carte donne aussi le lien qui ouvre la situation (#situation=…).
@@ -51,7 +52,8 @@ interface CarteDuMontageProps {
   onCharger: () => void
   /** Retour du détail de cette situation : le focus revient sur « Détails ». */
   focusSurLesDetails: boolean
-  /** La situation d'une question suivie : la carte est mise en avant, et le focus est sur « Charger ». */
+  /** La situation d'une question suivie : la carte est mise en avant, et le focus est sur « Charger ». Chargée d'ici,
+   *  elle s'ouvre en haut de la page comme toute carte : seul le « Charger » d'une question mène à sa réponse. */
   miseEnAvant: boolean
   /** Copie le lien de la situation ; absent sans lien à partager (application de bureau). */
   onCopierLeLien?: () => void
@@ -290,7 +292,7 @@ export function BibliothequeDuDepart({ etat, onEtat, onCharger, onDetails, liste
                     key={montage.id}
                     montage={montage}
                     onDetails={() => onDetails(montage)}
-                    onCharger={() => onCharger(montage, suivie ? questionSuivie?.question.reponse : undefined)}
+                    onCharger={() => onCharger(montage)}
                     focusSurLesDetails={montage.id === montageVu}
                     miseEnAvant={suivie}
                     onCopierLeLien={copier && (() => copier(montage))}
