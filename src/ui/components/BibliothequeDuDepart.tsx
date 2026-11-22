@@ -19,6 +19,12 @@ import { MONTAGES_TYPES, type MontageType } from "@/lib/montages/montages"
 import type { EtatDeLaBibliotheque, OngletDuDepart } from "../depart"
 import { usePlateforme } from "../plateforme"
 
+/**
+ * Fond des cartes des deux onglets, le même pour les questions et les situations. En sombre, un peu plus clair que le
+ * fond du bloc de la page (slate-900) et que celui de la fenêtre (presque noir) : la carte se détache des deux.
+ */
+const FOND_DES_CARTES = "bg-slate-50 dark:bg-slate-800/40"
+
 const NOMBRE_DE_QUESTIONS = questionsDesMontages(MONTAGES_TYPES).length
 
 const ONGLETS: { valeur: OngletDuDepart; libelle: string; nombre: number }[] = [
@@ -54,7 +60,7 @@ interface CarteDuMontageProps {
 
 function CarteDuMontage({ montage, onDetails, onCharger, focusSurLesDetails, miseEnAvant, onCopierLeLien, lienCopie }: CarteDuMontageProps) {
   return (
-    <li className={cn("flex flex-col gap-3 rounded-lg border bg-slate-50 p-4 dark:bg-gray-900", miseEnAvant && "border-2 border-blue-500 ring-4 ring-blue-500/20 dark:border-blue-400")}>
+    <li className={cn("flex flex-col gap-3 rounded-lg border p-4", FOND_DES_CARTES, miseEnAvant && "border-2 border-blue-500 ring-4 ring-blue-500/20 dark:border-blue-400")}>
       <h3 className="font-semibold">{montage.titre}</h3>
       <p className="text-sm text-slate-700 dark:text-slate-300">{montage.resume}</p>
       <Etiquettes etiquettes={montage.etiquettes} />
@@ -201,7 +207,7 @@ function Onglets({ id, onglet, onChoisir }: { id: string; onglet: OngletDuDepart
 function QuestionDeLaListe({ trouvee, onVoirLaSituation, onCharger }: { trouvee: QuestionTrouvee; onVoirLaSituation: () => void; onCharger: () => void }) {
   const { question, montage } = trouvee
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-slate-50 px-3.5 py-2.5 dark:bg-slate-950">
+    <li className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border px-3.5 py-2.5", FOND_DES_CARTES)}>
       <div className="min-w-0 flex-[1_1_18rem]">
         <p className="text-sm font-medium text-slate-900 dark:text-slate-50">{question.texte}</p>
         <p className="text-sm text-slate-600 dark:text-slate-400">
