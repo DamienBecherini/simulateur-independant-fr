@@ -14,12 +14,18 @@ class ObservateurFactice {
   disconnect() {}
 }
 
+/** Durée de la transition du bloc, telle que la donnerait le CSS : « 0s » quand le système demande moins d'animations. */
+let duree = "0.2s"
+
 beforeEach(() => {
+  duree = "0.2s"
   vi.stubGlobal("ResizeObserver", ObservateurFactice)
   // 40 px par ligne du contenu.
   vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
     return Number(this.dataset.lignes ?? this.firstElementChild?.getAttribute("data-lignes") ?? 0) * 40
   })
+  const vrai = window.getComputedStyle.bind(window)
+  vi.spyOn(window, "getComputedStyle").mockImplementation((element, pseudo) => new Proxy(vrai(element, pseudo), { get: (style, cle) => (cle === "transitionDuration" ? duree : Reflect.get(style, cle)) }))
 })
 
 afterEach(() => {
@@ -29,30 +35,46 @@ afterEach(() => {
 
 const bloc = (container: HTMLElement) => container.querySelector<HTMLElement>("[data-hauteur-animee]")!
 
-describe("bloc à hauteur animée", () => {
-  it("prend la hauteur de son contenu, puis la suit à chaque changement, même tardif (un calcul qui arrive)", () => {
-    const { container, rerender } = render(
+function rendre(lignes: number) {
+  const vue = render(
+    <HauteurAnimee>
+      <p data-lignes={lignes} />
+    </HauteurAnimee>
+  )
+  const passerA = (n: number) => {
+    vue.rerender(
       <HauteurAnimee>
-        <p data-lignes="2" />
-      </HauteurAnimee>
-    )
-    expect(bloc(container).style.height).toBe("80px")
-    rerender(
-      <HauteurAnimee>
-        <p data-lignes="5" />
+        <p data-lignes={n} />
       </HauteurAnimee>
     )
     changer()
-    expect(bloc(container).style.height).toBe("200px")
+  }
+  return { bloc: bloc(vue.container), passerA }
+}
+
+describe("bloc à hauteur animée", () => {
+  it("au repos, a sa hauteur naturelle : rien n'est jamais coupé", () => {
+    expect(rendre(2).bloc.style.height).toBe("")
+  })
+
+  it("quand le contenu change, même tardivement (un calcul qui arrive), va de l'ancienne hauteur à la nouvelle, puis reprend sa hauteur naturelle", () => {
+    const { bloc, passerA } = rendre(2)
+    passerA(5)
+    expect(bloc.style.height).toBe("200px")
+    bloc.dispatchEvent(Object.assign(new Event("transitionend"), { propertyName: "height" }))
+    expect(bloc.style.height).toBe("")
+  })
+
+  it("sans animation (le système en demande moins), garde sa hauteur naturelle", () => {
+    const { bloc, passerA } = rendre(2)
+    duree = "0s"
+    passerA(5)
+    expect(bloc.style.height).toBe("")
   })
 
   it("anime par une transition, seulement si le système ne demande pas moins d'animations", () => {
-    const { container } = render(
-      <HauteurAnimee>
-        <p data-lignes="1" />
-      </HauteurAnimee>
-    )
-    expect(bloc(container)).toHaveClass("motion-safe:transition-[height]")
-    expect(bloc(container).className).not.toMatch(/(^|\s)transition-/)
+    const { bloc } = rendre(1)
+    expect(bloc).toHaveClass("motion-safe:transition-[height]")
+    expect(bloc.className).not.toMatch(/(^|\s)transition-/)
   })
 })

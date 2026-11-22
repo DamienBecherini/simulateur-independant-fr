@@ -9,19 +9,16 @@ function poser(element: HTMLElement, propriete: "height" | "transition", valeur:
   element.style[propriete] = valeur
 }
 
-/** Pose la hauteur sans transition : lire une mesure l'applique avant de rendre la transition. */
-function poserSansTransition(bloc: HTMLElement, hauteur: string) {
-  poser(bloc, "transition", "none")
-  poser(bloc, "height", hauteur)
-  void bloc.offsetHeight
-  poser(bloc, "transition", "")
+/** Le bloc a une transition de hauteur : pas quand le système demande moins d'animations (classe `motion-safe`). */
+function anime(bloc: HTMLElement): boolean {
+  return Number.parseFloat(getComputedStyle(bloc).transitionDuration) > 0
 }
 
 /**
- * Donne à `exterieur` la hauteur de `interieur`, à chaque changement de celle-ci : la transition CSS de `exterieur`
- * l'anime quand le contenu change (un autre mode, un calcul qui arrive). Quand c'est la largeur qui change (fenêtre
- * redimensionnée, zoom), le texte passe à la ligne : la hauteur suit aussitôt, sans couper le texte le temps d'une
- * animation. La première hauteur est posée sans transition (rien ne bouge à l'affichage).
+ * Au repos, `exterieur` a sa hauteur naturelle (rien n'est jamais coupé). Quand la hauteur de `interieur` change (un
+ * autre mode, un calcul qui arrive), `exterieur` part de sa hauteur d'avant et va à la nouvelle par sa transition CSS,
+ * puis reprend sa hauteur naturelle. Quand c'est la largeur qui change (fenêtre redimensionnée, zoom), le texte passe à
+ * la ligne : rien à animer, la hauteur naturelle suit d'elle-même.
  */
 function useHauteurQuiSuit(exterieur: RefObject<HTMLElement | null>, interieur: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
@@ -29,24 +26,41 @@ function useHauteurQuiSuit(exterieur: RefObject<HTMLElement | null>, interieur: 
     const contenu = interieur.current
     if (!bloc || !contenu || typeof ResizeObserver === "undefined") return
     let largeur = contenu.offsetWidth
+    let hauteur = contenu.offsetHeight
     const suivre = () => {
-      const hauteur = `${contenu.offsetHeight}px`
-      if (contenu.offsetWidth === largeur) return poser(bloc, "height", hauteur)
+      const nouvelle = contenu.offsetHeight
+      const memeLargeur = contenu.offsetWidth === largeur
       largeur = contenu.offsetWidth
-      poserSansTransition(bloc, hauteur)
+      if (nouvelle === hauteur) return
+      // Pendant une transition, elle part de la hauteur atteinte ; au repos, de celle d'avant le changement.
+      const depuis = bloc.style.height ? bloc.offsetHeight : hauteur
+      hauteur = nouvelle
+      if (!memeLargeur || !anime(bloc)) return poser(bloc, "height", "")
+      poser(bloc, "transition", "none")
+      poser(bloc, "height", `${depuis}px`)
+      // Lire une mesure applique la hauteur de départ avant de rendre la transition.
+      void bloc.offsetHeight
+      poser(bloc, "transition", "")
+      poser(bloc, "height", `${nouvelle}px`)
     }
-    poserSansTransition(bloc, `${contenu.offsetHeight}px`)
+    const auRepos = (evenement: TransitionEvent) => {
+      if (evenement.target === bloc && evenement.propertyName === "height") poser(bloc, "height", "")
+    }
     const observateur = new ResizeObserver(suivre)
     observateur.observe(contenu)
+    bloc.addEventListener("transitionend", auRepos)
+    bloc.addEventListener("transitioncancel", auRepos)
     return () => {
       observateur.disconnect()
+      bloc.removeEventListener("transitionend", auRepos)
+      bloc.removeEventListener("transitioncancel", auRepos)
       poser(bloc, "height", "")
     }
   }, [exterieur, interieur])
 }
 
 /**
- * Le contenu est coupé pendant qu'il s'agrandit (avec une marge, pour l'anneau de focus d'un champ au bord) ; la
+ * Le contenu n'est coupé que pendant une transition (avec une marge, pour l'anneau de focus d'un champ au bord) ; la
  * transition (200 ms) n'a lieu que si le système ne demande pas moins d'animations.
  */
 export function HauteurAnimee({ className, children }: { className?: string; children: ReactNode }) {
