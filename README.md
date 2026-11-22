@@ -15,20 +15,20 @@ Un simulateur gratuit, hors ligne et open source, pour vous et votre foyer.
 2. **Mes résultats** : cotisations de chaque activité, impôt sur le revenu du foyer, net dans la poche et taux de prélèvement, recalculés à chaque modification.
 3. **Comparer et optimiser** : la même activité en SASU, EURL, EI au réel, micro-entreprise (avec ou sans versement libératoire) et portage salarial, puis le partage entre rémunération et dividendes qui donne le meilleur net, et, pour un couple en union libre, ce que changerait un mariage ou un PACS.
 
-**[▶ Essayer la démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/)**, sans installation · [Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72) · [Windows, macOS, Linux](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)
-
 > [!TIP]
 > 🔒 **Vos données restent sur votre poste** : ni compte, ni serveur, ni mesure d'audience.
 
 *Projet personnel, né d'un besoin d'entrepreneur. Je le partage pour montrer mes standards de code et ma vision produit, et parce qu'il peut aider d'autres entrepreneurs à y voir plus clair. Ce n'est pas un logiciel de conseil fiscal : les résultats sont indicatifs et n'ont pas été validés par un expert-comptable.*
+
+## ▶️ Essayer en ligne
+
+**[Ouvrir la démo](https://damienbecherini.github.io/simulateur-independant-fr/)**, sans installation ni compte. La même interface que l'application : le calcul se fait dans le navigateur et les simulations restent sur votre poste. Dans Chrome ou Edge, elle s'installe comme une application (« Comment faire ? » dans son bandeau) et fonctionne ensuite hors ligne : c'est la solution quand Windows bloque l'application de bureau, qui n'est pas signée ([pas à pas](./documentation/installation.md#si-windows-bloque-lapplication)).
 
 ## 📥 Télécharger
 
 **Sous Windows, le plus simple : [installer depuis le Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72)**. Le paquet est signé par Microsoft : il passe le Contrôle intelligent des applications et SmartScreen sans avertissement, et le Store le met à jour.
 
 L'application de bureau pour Windows, macOS (Apple Silicon et Intel) et Linux se télécharge aussi depuis la **[dernière version publiée](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)**. Ces exécutables ne sont pas signés par un certificat d'éditeur : Windows et macOS affichent un avertissement au premier lancement. Le [guide d'installation](./documentation/installation.md) explique comment le passer, système par système. Si le Contrôle intelligent des applications de Windows 11 la bloque, installez plutôt la démo web depuis Edge ou Chrome : voir [Si Windows bloque l'application](./documentation/installation.md#si-windows-bloque-lapplication). Les changements de chaque version sont dans le [journal des modifications](./CHANGELOG.md).
-
-**Sans installation : la [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/)**. La même interface : le moteur de calcul tourne dans le navigateur et les simulations restent sur votre poste. Dans Chrome ou Edge, elle s'installe comme une application (« Comment faire ? » dans son bandeau) et fonctionne ensuite hors ligne : c'est la solution quand Windows bloque l'application de bureau, qui n'est pas signée ([pas à pas](./documentation/installation.md#si-windows-bloque-lapplication)).
 
 ## 🖼️ Aperçu
 
