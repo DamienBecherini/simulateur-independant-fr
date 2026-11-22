@@ -39,67 +39,69 @@ Simulation fictive : une indépendante en micro-entreprise mixte, pacsée avec l
 
 ![Rémunération ou dividendes : courbe du net du foyer selon la rémunération, meilleur net et meilleur net avec 4 trimestres de retraite](docs/captures/optimisation.png)
 
-Les captures sont générées par `npm run captures` (Playwright, sur l'application compilée).
+## ✨ Ce que vous pouvez faire
 
-## ✨ Fonctionnalités
+**Décrire votre situation**
 
-- **Modélisation par graphe** : entités (personnes, sociétés, micro-entreprises) reliées par des relations (Marié(e), PACSé(e), Enfant, Président, Gérant…).
-- **Grille annuelle visuelle** : saisie des flux mois par mois ou d'un montant annuel réparti sur les 12 mois, ajout d'un flux sur plusieurs mois en une fois, modification ou retrait d'un mois puis, d'un clic, des autres mois où le même flux existe, et recopie sur les mois suivants (loyer, abonnement, salaire), légende numérotée et couleurs personnalisables. La rémunération et les dividendes versés par une société s'affichent aussi, hachurés, sur la ligne de la personne qui les reçoit. Pour une micro-entreprise, la nature du chiffre d'affaires (prestations libérales, prestations artisanales ou commerciales, vente de marchandises) est expliquée à la saisie, avec ses taux de l'année et des exemples de métiers.
-- **Simulation par foyer** : chaque activité (SASU, EURL, entreprise individuelle au réel, micro-entreprise) calcule ses cotisations et ce qu'elle verse ; l'impôt sur le revenu est ensuite calculé une seule fois par foyer fiscal (quotient familial plafonné, décote, dividendes au forfait ou au barème). Les résultats se recalculent à chaque modification.
-- **Comparateur de statuts**, en trois étapes (ce qui est comparé, le résultat, les réglages de la société) : pour une activité, net dans la poche (celui des résultats pour le statut actuel) en SASU, EURL, EI au réel, micro-entreprise (avec et sans versement libératoire) et portage salarial, le meilleur net mis en évidence ; taux de prélèvement, écart de frais de gestion avec le statut actuel détaillé par poste, bénéfice gardé ou perte restée dans la société, et note de protection sociale (trimestres de retraite validés), détaillée garantie par garantie dans un tableau. Pour un couple en union libre, effet d'un mariage ou d'un PACS sur l'impôt.
-- **Portage salarial** : une colonne du comparateur où l'activité est facturée par une société de portage, qui verse un salaire de cadre du régime général après ses frais de gestion ; bulletin calculé ligne à ligne selon l'effectif de la société, réserve d'un CDI gardée sur le compte d'activité, protection sociale d'un salarié (assurance chômage comprise). Les conditions de la société (frais de gestion, plancher, plafond, frais fixes, contrat, effectif, versement mobilité, réduction générale reversée, mutuelle) se règlent dans « Conditions de la société de portage » ; à défaut, des valeurs typiques annoncées comme telles.
-- **Combien facturer pour un net visé** : le calcul à l'envers du comparateur ; pour le net annuel visé du foyer, le chiffre d'affaires annuel et mensuel nécessaire dans chaque statut, à l'euro près, et l'écart avec celui saisi (ou « hors de portée » quand il faudrait dépasser le plafond de la micro-entreprise).
-- **Rémunération ou dividendes** : pour une société à l'IS (SASU, EURL), courbe du net du foyer selon la rémunération du dirigeant, le reste du bénéfice étant versé en dividendes ; meilleure rémunération, et meilleure parmi celles qui valident 4 trimestres de retraite, à reporter dans le comparateur en un clic. Par défaut, le comparateur place la SASU et l'EURL chacune à sa rémunération optimale qui valide 4 trimestres de retraite, tout le reste en dividendes, et affiche ce que coûte cette exigence en net (elle se décoche colonne par colonne). Une société ne verse jamais plus que ce qu'elle peut sans déficit, et la saisie d'une rémunération le rappelle. Le partage du bénéfice se choisit (tout en rémunération, tout en dividendes, ou répartition personnalisée) sur une barre réglée à la souris, au doigt ou au clavier, qui montre où va chaque euro du bénéfice.
-- **Professions libérales réglementées** : profession choisie sur l'activité (santé de la CARPIMKO, professions de la CIPAV), dont la caisse se déduit : retraite de base des libéraux, complémentaire et invalidité-décès de la caisse, micro-entreprise de la CIPAV à 23,2 % et interdite aux auxiliaires médicaux, CURPS, ASV et prise en charge par l'Assurance maladie de la part conventionnée ; complémentaire et ASV de la CARPIMKO sur le revenu de l'année précédente.
-- **Frais réels et kilométrage** : trajets domicile-travail au barème kilométrique de l'année, un par lieu de travail (limite de 40 km par trajet, kilomètres additionnés par voiture), comparés automatiquement à la déduction de 10 % sur les salaires et rémunérations ; déplacements professionnels d'une activité convertis au barème, déductibles au réel, jamais en micro.
-- **Situations types** : partir d'une situation courante (micro-entreprise, SASU, EURL, couple, ostéopathe, kinésithérapeute, SASU en zone franche urbaine…) préremplie et expliquée, avec ses sources, puis l'adapter ; une recherche et des filtres (statut, seul ou en couple) les trient. Au premier lancement, ou sur une simulation vide, l'encart « Que voulez-vous savoir ? » y mène par la question posée (combien me restera-t-il, société ou micro, mariage ou Pacs, rémunération ou dividendes, cotisations), ou part de zéro. Dans la démo web, chaque situation type a son lien (par exemple `…/simulateur-independant-fr/#situation=couple-union-libre`), à mettre dans un article pour « Ouvrir cet exemple dans le simulateur » : voir la [liste des identifiants](./documentation/liens-vers-les-situations-types.md).
-- **Dispositifs dans le temps** : ACRE mois par mois, CFE de création et sortie du régime micro après deux années au-delà des plafonds, d'après la date de création de l'activité.
-- **Zone franche urbaine et quartier prioritaire** : une case dans la fiche de l'activité (section repliée « Aides liées au lieu d'implantation ») exonère son bénéfice d'impôt, en tout ou partie, selon sa date de création : régime ZFU-TE pour une création de 2015 à 2025 (bénéfice exonéré plafonné à 50 000 € par an), régime QPV de 2026 à 2030 ; exonération totale pendant soixante mois, puis 60 %, 40 % et 20 %. Les conditions d'accès ne sont pas vérifiées : un avertissement les rappelle, et la fiche dit ce que le calcul suppose. Rien n'apparaît tant que la case n'est pas cochée.
-- **Plusieurs années** : une simulation couvre plusieurs années consécutives (2024 à 2026, et au-delà avec les dernières règles connues et un avertissement), chacune simulée avec ses propres règles ; le revenu fiscal de référence est calculé par foyer et reporté sur le versement libératoire deux ans plus tard ; un tableau compare les années. Jusqu'à dix années consécutives par simulation ; une charge ou un revenu récurrent s'ajoute, se modifie ou se supprime sur plusieurs années à la fois (cases « Aussi en » de la fenêtre des flux, avec raccourcis vers toutes les années, les précédentes ou les suivantes).
-- **Affichage au choix (bêta)** : « Trois vues », par défaut (ma situation, mes résultats, comparer et optimiser), chacune avec son adresse, sous les chiffres clés toujours visibles ; « Résumé », qui garde ces chiffres et replie le détail sur une seule page ; l'affichage classique, où tout est déplié.
-- **Réglages enregistrés** : les réglages du comparateur sont enregistrés avec la simulation et repris dans les sauvegardes, les exports et le rapport.
-- **Scénarios** : sauvegardes nommées, chargement, import / export JSON, export et import de toutes les sauvegardes en un fichier.
-- **Exports** : CSV pour Excel (grille, résultats, comparateur, courbe rémunération / dividendes), document PDF mis en page, rapport Markdown à lire ou à confier à une IA.
-- **Pérennité des données** : validation Zod et réparation automatique des sessions à l'ouverture.
-- **Confort d'édition** : undo / redo (Ctrl+Z / Ctrl+Y, Cmd+Shift+Z), sauvegarde automatique, glisser-déposer, zoom de l'interface (niveau affiché dans la barre d'outils, retour à 100 % d'un clic ou par Ctrl+0). La simulation en cours se retrouve à la prochaine ouverture ; l'historique d'annulation, lui, s'efface au rechargement de la page ou à la fermeture de l'application.
-- **Avec une IA** (application de bureau) : un serveur MCP local laisse une IA (Claude Desktop, Claude Code, LM Studio…) lire la simulation, la faire calculer, et proposer des ajouts tirés de factures ou de relevés, que l'utilisateur applique d'un clic ; il peut aussi la laisser modifier directement la simulation, sauf pour une suppression. Voir [Utiliser le simulateur avec une IA](./documentation/utiliser-avec-une-ia.md).
-- **100 % hors-ligne** : l'application n'envoie rien, ni compte ni mesure d'audience. Seul ce que vous confiez vous-même à une IA part chez son fournisseur, et un retour (« Donner mon avis ») n'est envoyé que par vous, sur GitHub ou par e-mail.
+- Tout le foyer : couple marié, pacsé ou en union libre, enfants à charge, et les activités de chacun.
+- Les statuts courants : micro-entreprise (avec ou sans versement libératoire), entreprise individuelle au réel, EURL, SASU.
+- Une grille mois par mois pour les revenus et les charges ; un loyer ou un salaire se recopie sur toute l'année en un clic.
+- Des situations types prêtes à adapter (SASU sans salaire, couple, ostéopathe…), expliquées et sourcées.
 
-## 📖 Documentation
+**Comprendre le résultat**
 
-- [Cahier des charges & architecture globale](./Cahier%20des%20charges.md)
-- [Roadmap itérative](./Roadmap.md)
-- [Guide du développeur](./documentation/GUIDE_DEVELOPPEUR.md) : prise en main, architecture, procédures pas à pas (nouvelle année de règles, nouvelle caisse, format de fichier, cas de référence, débogage d'un calcul…), sources officielles et glossaire
-- [Décisions d'architecture (ADR)](./documentation/adr/)
-- [Mentions légales et confidentialité](./documentation/mentions-legales.md)
-- [Liens vers les situations types](./documentation/liens-vers-les-situations-types.md) : adresses de la démo web qui ouvrent une situation type, et leurs identifiants publics
+- Le net dans la poche du foyer et le taux de prélèvement, recalculés à chaque saisie.
+- Le détail : cotisations de chaque activité, impôt du foyer, et une alerte quand un plafond est dépassé.
+- Plusieurs années à la suite, chacune avec ses règles fiscales (2024 à 2026).
+
+**Comparer et décider**
+
+- Votre activité dans chaque statut, portage salarial compris, côte à côte, avec le meilleur net mis en évidence et la protection sociale de chacun.
+- Rémunération ou dividendes : la répartition qui donne le meilleur net, avec ou sans 4 trimestres de retraite validés.
+- Combien facturer pour toucher le net que vous visez.
+- Mariage ou PACS : ce que ça change à l'impôt d'un couple.
+
+**Et aussi**
+
+- Professions libérales réglementées (CIPAV, CARPIMKO), frais réels et kilométriques, zone franche urbaine.
+- Sauvegardes nommées, annuler et rétablir, sauvegarde automatique.
+- Exports PDF, Excel (CSV), et un rapport à lire ou à confier à une IA.
+- Avec une IA de bureau (une IA locale est recommandée : vos données sont sensibles), qui lit vos factures et propose les montants : vous validez chaque ajout.
+- Thème clair ou sombre, interface agrandissable, utilisable au clavier et avec un lecteur d'écran.
+
+[Toutes les fonctionnalités, en détail](./documentation/fonctionnalites.md)
+
+## ⚠️ Limites connues
+
+La même liste est affichée dans l'application (« Hypothèses et limites », sous le titre des résultats) et reprise dans le rapport Markdown ; elle vient de `src/lib/limites-du-modele.ts`, et un test vérifie que cette section la recopie mot pour mot.
+
+- Résultats indicatifs, non validés par un expert-comptable : ce n'est pas un conseil fiscal.
+- Montants annuels en euros, hors taxe ; la grille saisit des montants mensuels, additionnés sur l'année.
+- Cotisations d'un travailleur non salarié au réel (entrepreneur individuel, gérant d'EURL) calculées sur le revenu de l'année, comme après la régularisation : les acomptes provisionnels que l'Urssaf appelle d'abord sur un revenu antérieur, et la régularisation de l'année suivante, ne sont pas simulés ; l'appel de l'Urssaf d'une année peut donc différer du montant affiché.
+- Cotisations des travailleurs non salariés calculées ligne à ligne selon le barème de l'année des artisans, commerçants et professions libérales non réglementées (assiette unique après l'abattement forfaitaire, assiettes minimales) ; la formation professionnelle d'un artisan est comptée au taux des commerçants, et la CSG déductible sur les dividendes soumis à cotisations n'est pas modélisée.
+- Professions libérales réglementées : seules la CIPAV et la CARPIMKO sont calculées (au réel et en micro-entreprise) ; les autres caisses (CARMF, CARCDSF, CNBF…) le sont comme une profession non réglementée, avec un avertissement. CARPIMKO : retraite complémentaire et ASV calculées sur le revenu de l'année précédente quand elle est dans la simulation, sinon sur celui de l'année. En SASU ou en EURL, la rémunération d'un associé de société d'exercice libéral (BNC, caisse de la profession) n'est pas modélisée : un avertissement le signale.
+- Président de SASU et salariés : cotisations calculées ligne à ligne avec les taux du régime général de l'année (président sans assurance chômage ni réduction générale, salarié avec la réduction générale) ; ne sont pas modélisés l'APEC des cadres, le régime d'Alsace-Moselle, le temps partiel, ni plus d'un employeur par personne ; le taux d'accident du travail retenu est celui des fonctions support.
+- Portage salarial (colonne du comparateur) : bulletin annuel d'un cadre, aux conditions réglées de la société de portage (valeurs typiques à défaut) ; prestations de services seulement ; réserve d'un CDI montrée conservée chaque année ; ni périodes sans mission, ni mutuelle patronale, ni prévoyance au-delà du minimum des cadres ; une activité déjà en portage n'est pas encore comparée.
+- Micro-entreprise : cotisations au taux de chaque nature d'activité, plus la contribution à la formation professionnelle, comptée au taux des artisans pour les prestations de services BIC (artisan et commerçant ne sont pas distingués).
+- La note de protection sociale du comparateur est indicative (régime et trimestres de retraite validés) ; l'arbitrage rémunération / dividendes porte sur une seule année, sans les droits à la retraite complémentaire ni le lissage sur plusieurs années.
+- Non modélisés : prévoyance et mutuelle, réductions et crédits d'impôt, résidence alternée, report sur les années suivantes du déficit d'une entreprise individuelle supérieur aux autres revenus du foyer (celui d'une société à l'IS est reporté), TVA (seul le dépassement des seuils de franchise est signalé ; les soins exonérés des professions de santé n'y comptent pas, et tout le chiffre d'affaires BNC de leur micro-entreprise est tenu pour des soins), répartition du capital entre associés (dividendes partagés à parts égales).
+
+## 📖 Guides
+
+- [Installer l'application](./documentation/installation.md), système par système, et que faire si Windows la bloque
 - [Utiliser le simulateur avec une IA (serveur MCP local)](./documentation/utiliser-avec-une-ia.md)
+- [Liens vers les situations types](./documentation/liens-vers-les-situations-types.md) : adresses de la démo web qui ouvrent une situation type
+- [Toutes les fonctionnalités, en détail](./documentation/fonctionnalites.md)
+- [Journal des modifications](./CHANGELOG.md)
+- [Mentions légales et confidentialité](./documentation/mentions-legales.md)
 
-## 🛠️ Stack technique
+---
 
-- **Application :** Electron (process principal Node.js, IPC typé via `contextBridge`).
-- **Interface :** React 19, hooks maison (historique undo/redo, sauvegarde debounced).
-- **Typage & validation :** TypeScript strict, Zod comme source de vérité unique.
-- **Design system :** Tailwind CSS v4, ShadCN/UI, Lucide, dnd-kit, AutoAnimate (listes animées).
-- **Build :** Vite, electron-builder.
+## 🧑‍💻 Pour les développeurs
 
-## ✨ Points d'intérêt dans le code
+Le code, ses choix techniques et la façon de contribuer.
 
-- `src/backend/logic/simulation-engine.ts` : moteur de simulation à sens unique (activités → revenus des personnes → impôt du foyer), point d'entrée d'une année ; les étapes sont dans `routage-des-flux.ts`, `simulation-au-reel.ts`, `simulation-micro.ts`, `details-des-activites.ts`, `impot-du-foyer.ts` et `bilan-de-la-simulation.ts`.
-- `src/backend/logic/foyers.ts` : regroupement des foyers fiscaux par union-find (couples, enfants rattachés, parts).
-- `src/backend/logic/regles.ts` + `src/backend/regles/<année>.json` : les règles fiscales et sociales, un fichier par année (liste dans `src/backend/regles/index.ts`), typées et sourcées, hors du code. L'année en cours du simulateur est la plus récente de ces années.
-- `src/backend/logic/data-sanitizer.ts` : validation et réparation des sessions (relations et flux orphelins).
-- `src/backend/logic/optimisation-remuneration.ts` : arbitrage rémunération / dividendes, par balayage puis affinage autour des optimums.
-- `src/backend/util.ts` + `src/backend/preload.cts` : contrat IPC typé de bout en bout, sans `any` sur la surface exposée.
-- `src/types.ts` : schémas Zod et types dérivés.
-- `src/ui/hooks/useSessionManager.ts` : état de session, historique, sauvegarde asynchrone.
-- `src/lib/business-logic.ts` : nettoyage du graphe lors de la rupture d'une relation.
-
-## 🤖 Développement assisté par IA
-
-Le projet est développé avec des agents IA qui travaillent directement dans le dépôt, sous relecture humaine. Leurs modifications passent par les mêmes garde-fous que le reste du code : tests, cas de référence, lint, vérification des types et intégration continue.
-
-## 🚀 Démarrage rapide
+### 🚀 Démarrage rapide
 
 Prérequis : Node.js 22 ou supérieur, npm.
 
@@ -116,7 +118,37 @@ npm run dev
 
 Pour contribuer : `git config core.hooksPath .githooks` (une fois par clone) active les crochets git du dépôt, qui refusent un commit directement sur `main` ([`.githooks/README.md`](.githooks/README.md)).
 
-## ✅ Qualité
+### 🛠️ Stack technique
+
+- **Application :** Electron (process principal Node.js, IPC typé via `contextBridge`).
+- **Interface :** React 19, hooks maison (historique undo/redo, sauvegarde debounced).
+- **Typage & validation :** TypeScript strict, Zod comme source de vérité unique.
+- **Design system :** Tailwind CSS v4, ShadCN/UI, Lucide, dnd-kit, AutoAnimate (listes animées).
+- **Build :** Vite, electron-builder.
+
+### 🗂️ Structure du projet
+
+- `documentation/` : guide du développeur et ADR.
+- `src/backend/` : process principal Electron (accès fichiers, IPC), serveur MCP et, dans `src/backend/logic/`, le moteur de calcul pur, partagé avec l'interface et la démo web (carte des modules dans le [guide du développeur](./documentation/GUIDE_DEVELOPPEUR.md#23-où-vit-quoi--carte-du-moteur)).
+- `src/ui/` : application React (composants, hooks, interface).
+- `src/lib/` : fonctions utilitaires et logique pure partagée.
+- `src/web/` : démo web, qui remplace le process Electron : même `window.api`, moteur exécuté dans la page, stockage dans le navigateur. `src/web/pwa/` la rend installable et utilisable hors ligne (manifeste, service worker écrit à la main, compilé par `vite-plugin-demo-installable.ts` : voir l'[ADR 012](./documentation/adr/012-demo-web-installable-hors-ligne.md)).
+- `src/types.ts` : schémas Zod et types centraux.
+- `scripts/retours/` : scripts Node des retours des utilisateurs, lancés par les workflows GitHub. `etiqueter.mjs` pose les étiquettes d'un ticket du formulaire `.github/ISSUE_TEMPLATE/retour.yml` (`note-1` à `note-5`, `affichage-resume`, `affichage-classique`, `affichage-vues`, `avis`, `bug`, `idee`) ; `agreger.mjs` écrit à chaque publication de la démo le fichier `retours.json` (`nombreDeNotes`, `moyenne` au dixième, `preferencesAffichage`, `misAJour`, et `resume`, le texte du badge : « 4,2/5 (12 notes) » ou « pas encore de note »). Les retours sans note n'entrent pas dans la moyenne ; chaque compte GitHub n'y compte qu'une fois, par son ticket le plus récent qui donne une note (de même pour l'affichage préféré), et les tickets étiquetés `invalide` ou `spam` sont écartés.
+
+### ✨ Points d'intérêt dans le code
+
+- `src/backend/logic/simulation-engine.ts` : moteur de simulation à sens unique (activités → revenus des personnes → impôt du foyer), point d'entrée d'une année ; les étapes sont dans `routage-des-flux.ts`, `simulation-au-reel.ts`, `simulation-micro.ts`, `details-des-activites.ts`, `impot-du-foyer.ts` et `bilan-de-la-simulation.ts`.
+- `src/backend/logic/foyers.ts` : regroupement des foyers fiscaux par union-find (couples, enfants rattachés, parts).
+- `src/backend/logic/regles.ts` + `src/backend/regles/<année>.json` : les règles fiscales et sociales, un fichier par année (liste dans `src/backend/regles/index.ts`), typées et sourcées, hors du code. L'année en cours du simulateur est la plus récente de ces années.
+- `src/backend/logic/data-sanitizer.ts` : validation et réparation des sessions (relations et flux orphelins).
+- `src/backend/logic/optimisation-remuneration.ts` : arbitrage rémunération / dividendes, par balayage puis affinage autour des optimums.
+- `src/backend/util.ts` + `src/backend/preload.cts` : contrat IPC typé de bout en bout, sans `any` sur la surface exposée.
+- `src/types.ts` : schémas Zod et types dérivés.
+- `src/ui/hooks/useSessionManager.ts` : état de session, historique, sauvegarde asynchrone.
+- `src/lib/business-logic.ts` : nettoyage du graphe lors de la rupture d'une relation.
+
+### ✅ Qualité
 
 ```sh
 npm test               # rapide : tests de la logique et des composants (Vitest)
@@ -144,31 +176,18 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - **Mutation** : Stryker sur `src/backend/logic/` (score d'environ 86 %), lancé chaque semaine et à la demande ; nécessite Node.js 22 ou supérieur.
 - **Intégration continue** : GitHub Actions exécute lint, vérification des types, tests avec couverture et build à chaque push et pull request.
 - **SonarQube Cloud** (facultatif) : quand le secret `SONAR_TOKEN` est configuré, la CI envoie le code et la couverture à SonarQube Cloud (`sonar-project.properties`) et attend le verdict de la porte qualité : une porte rouge fait échouer le job, exigé sur `main` ; sinon, elle se contente de la détection de code dupliqué.
+- **Captures d'écran** : celles du README et de la fiche du Microsoft Store sont générées par `npm run captures` (Playwright, sur l'application compilée).
 
-## 🗂️ Structure du projet
+### 🤖 Développement assisté par IA
 
-- `documentation/` : guide du développeur et ADR.
-- `src/backend/` : process principal Electron (accès fichiers, IPC), serveur MCP et, dans `src/backend/logic/`, le moteur de calcul pur, partagé avec l'interface et la démo web (carte des modules dans le [guide du développeur](./documentation/GUIDE_DEVELOPPEUR.md#23-où-vit-quoi--carte-du-moteur)).
-- `src/ui/` : application React (composants, hooks, interface).
-- `src/lib/` : fonctions utilitaires et logique pure partagée.
-- `src/web/` : démo web, qui remplace le process Electron : même `window.api`, moteur exécuté dans la page, stockage dans le navigateur. `src/web/pwa/` la rend installable et utilisable hors ligne (manifeste, service worker écrit à la main, compilé par `vite-plugin-demo-installable.ts` : voir l'[ADR 012](./documentation/adr/012-demo-web-installable-hors-ligne.md)).
-- `src/types.ts` : schémas Zod et types centraux.
-- `scripts/retours/` : scripts Node des retours des utilisateurs, lancés par les workflows GitHub. `etiqueter.mjs` pose les étiquettes d'un ticket du formulaire `.github/ISSUE_TEMPLATE/retour.yml` (`note-1` à `note-5`, `affichage-resume`, `affichage-classique`, `affichage-vues`, `avis`, `bug`, `idee`) ; `agreger.mjs` écrit à chaque publication de la démo le fichier `retours.json` (`nombreDeNotes`, `moyenne` au dixième, `preferencesAffichage`, `misAJour`, et `resume`, le texte du badge : « 4,2/5 (12 notes) » ou « pas encore de note »). Les retours sans note n'entrent pas dans la moyenne ; chaque compte GitHub n'y compte qu'une fois, par son ticket le plus récent qui donne une note (de même pour l'affichage préféré), et les tickets étiquetés `invalide` ou `spam` sont écartés.
+Le projet est développé avec des agents IA qui travaillent directement dans le dépôt, sous relecture humaine. Leurs modifications passent par les mêmes garde-fous que le reste du code : tests, cas de référence, lint, vérification des types et intégration continue.
 
-## ⚠️ Limites connues
+### 📚 Documentation technique
 
-La même liste est affichée dans l'application (« Hypothèses et limites », sous le titre des résultats) et reprise dans le rapport Markdown ; elle vient de `src/lib/limites-du-modele.ts`, et un test vérifie que cette section la recopie mot pour mot.
-
-- Résultats indicatifs, non validés par un expert-comptable : ce n'est pas un conseil fiscal.
-- Montants annuels en euros, hors taxe ; la grille saisit des montants mensuels, additionnés sur l'année.
-- Cotisations d'un travailleur non salarié au réel (entrepreneur individuel, gérant d'EURL) calculées sur le revenu de l'année, comme après la régularisation : les acomptes provisionnels que l'Urssaf appelle d'abord sur un revenu antérieur, et la régularisation de l'année suivante, ne sont pas simulés ; l'appel de l'Urssaf d'une année peut donc différer du montant affiché.
-- Cotisations des travailleurs non salariés calculées ligne à ligne selon le barème de l'année des artisans, commerçants et professions libérales non réglementées (assiette unique après l'abattement forfaitaire, assiettes minimales) ; la formation professionnelle d'un artisan est comptée au taux des commerçants, et la CSG déductible sur les dividendes soumis à cotisations n'est pas modélisée.
-- Professions libérales réglementées : seules la CIPAV et la CARPIMKO sont calculées (au réel et en micro-entreprise) ; les autres caisses (CARMF, CARCDSF, CNBF…) le sont comme une profession non réglementée, avec un avertissement. CARPIMKO : retraite complémentaire et ASV calculées sur le revenu de l'année précédente quand elle est dans la simulation, sinon sur celui de l'année. En SASU ou en EURL, la rémunération d'un associé de société d'exercice libéral (BNC, caisse de la profession) n'est pas modélisée : un avertissement le signale.
-- Président de SASU et salariés : cotisations calculées ligne à ligne avec les taux du régime général de l'année (président sans assurance chômage ni réduction générale, salarié avec la réduction générale) ; ne sont pas modélisés l'APEC des cadres, le régime d'Alsace-Moselle, le temps partiel, ni plus d'un employeur par personne ; le taux d'accident du travail retenu est celui des fonctions support.
-- Portage salarial (colonne du comparateur) : bulletin annuel d'un cadre, aux conditions réglées de la société de portage (valeurs typiques à défaut) ; prestations de services seulement ; réserve d'un CDI montrée conservée chaque année ; ni périodes sans mission, ni mutuelle patronale, ni prévoyance au-delà du minimum des cadres ; une activité déjà en portage n'est pas encore comparée.
-- Micro-entreprise : cotisations au taux de chaque nature d'activité, plus la contribution à la formation professionnelle, comptée au taux des artisans pour les prestations de services BIC (artisan et commerçant ne sont pas distingués).
-- La note de protection sociale du comparateur est indicative (régime et trimestres de retraite validés) ; l'arbitrage rémunération / dividendes porte sur une seule année, sans les droits à la retraite complémentaire ni le lissage sur plusieurs années.
-- Non modélisés : prévoyance et mutuelle, réductions et crédits d'impôt, résidence alternée, report sur les années suivantes du déficit d'une entreprise individuelle supérieur aux autres revenus du foyer (celui d'une société à l'IS est reporté), TVA (seul le dépassement des seuils de franchise est signalé ; les soins exonérés des professions de santé n'y comptent pas, et tout le chiffre d'affaires BNC de leur micro-entreprise est tenu pour des soins), répartition du capital entre associés (dividendes partagés à parts égales).
+- [Guide du développeur](./documentation/GUIDE_DEVELOPPEUR.md) : prise en main, architecture, procédures pas à pas (nouvelle année de règles, nouvelle caisse, format de fichier, cas de référence, débogage d'un calcul…), sources officielles et glossaire
+- [Décisions d'architecture (ADR)](./documentation/adr/)
+- [Roadmap itérative](./Roadmap.md)
+- [Cahier des charges & architecture globale](./Cahier%20des%20charges.md)
 
 ## 📄 Licence
 
