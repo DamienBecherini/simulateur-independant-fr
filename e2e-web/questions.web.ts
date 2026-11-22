@@ -97,6 +97,8 @@ test("« Partir de zéro » remplace l'exemple sans confirmation et porte le foc
   await bloc(page).getByRole("button", { name: "Partir de zéro" }).click()
   await expect(page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "+ Ajouter une personne" })).toBeFocused()
+  // La page est tout en haut : le focus ne l'a pas fait défiler jusqu'au bouton.
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
   // Simulation vide : le bloc reste proposé.
   await expect(bloc(page)).toBeVisible()
   await expect(page.getByRole("button", { name: "Annuler" })).toBeEnabled()

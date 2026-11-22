@@ -27,7 +27,13 @@ export const etatInitialDeLaBibliotheque = (onglet: OngletDuDepart): EtatDeLaBib
 /** Remplace la simulation par une simulation vierge et affiche la saisie ; hors de l'application, `null`. */
 export const PartirDeZeroContext = createContext<(() => void) | null>(null)
 
-/** Porte le focus sur l'ajout d'une personne, une fois la saisie affichée. */
+/**
+ * Une fois la saisie affichée : la page remonte tout en haut (la simulation vierge se lit depuis son début) et le focus
+ * passe sur l'ajout d'une personne, sans faire défiler la page jusqu'à lui.
+ */
 export function allerALaSaisie() {
-  requestAnimationFrame(() => document.getElementById(ID_DE_L_AJOUT_D_UNE_PERSONNE)?.focus())
+  requestAnimationFrame(() => {
+    window.scrollTo(0, 0)
+    document.getElementById(ID_DE_L_AJOUT_D_UNE_PERSONNE)?.focus({ preventScroll: true })
+  })
 }
