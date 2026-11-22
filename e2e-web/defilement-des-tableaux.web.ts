@@ -99,9 +99,26 @@ test.describe("dans une fenêtre de 700 px", () => {
     expect(Math.abs((await ombre(page, "gauche").boundingBox())!.x - (premiereColonne.x + premiereColonne.width))).toBeLessThanOrEqual(1)
 
     // Jusqu'au bout : la flèche de droite disparaît, et le focus n'a pas quitté sa place.
+    // Chaque clic attend la fin du défilement doux du précédent (plus lent dans Firefox) : arrivée au bout, la flèche
+    // disparaît, et un clic lancé pendant le défilement la manquerait.
+    const defilementArrete = async () => {
+      let precedent = -1
+      await expect
+        .poll(
+          async () => {
+            const position = await zone(page).evaluate(element => element.scrollLeft)
+            const arrete = position === precedent
+            precedent = position
+            return arrete
+          },
+          { intervals: [150] }
+        )
+        .toBe(true)
+    }
+    await defilementArrete()
     for (let clic = 0; clic < 6 && (await fleche(page, "droite").isVisible()); clic++) {
       await fleche(page, "droite").click()
-      await page.waitForTimeout(450)
+      await defilementArrete()
     }
     await expect(fleche(page, "droite")).toBeHidden()
     await expect(ombre(page, "droite")).toHaveCSS("opacity", "0")

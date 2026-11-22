@@ -91,7 +91,7 @@ test("un clic sur une pastille du tableau ouvre sa note dans une bulle ; un clic
   expect((await bullePresDeSaPastille(page)).ecart).toBe(avant.ecart)
 })
 
-test("une note plus haute que la place restante s'ouvre quand même sous sa pastille, et se lit en faisant défiler la page", async ({ page }) => {
+test("une note plus haute que la place restante s'ouvre en haut de la partie libre de l'écran, sous les barres, et se lit en faisant défiler la page", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 520 })
   await page.addInitScript(() => window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], affichage: "resume", zoom: 2, sectionsOuvertes: { "comparateur-toutes-les-lignes": true } })))
   await page.goto(SITUATION)
@@ -101,11 +101,16 @@ test("une note plus haute que la place restante s'ouvre quand même sous sa past
   await pastille.click()
   await expect(bulle(page)).toContainText(/Exonération ZFU-TE appliquée sans vérifier ses conditions/)
   const bas = () => bulle(page).evaluate(element => Math.round(element.getBoundingClientRect().bottom - window.innerHeight))
-  // Elle dépasse le bas de l'écran...
+  // Son début se lit tout de suite, sous les barres collées en haut...
+  expect((await bullePresDeSaPastille(page)).sousLesBarres).toBe(true)
+  // ... elle dépasse le bas de l'écran...
   expect(await bas()).toBeGreaterThan(0)
-  // ... et la page défile jusqu'à sa fin, la bulle toujours ouverte.
-  await bulle(page).scrollIntoViewIfNeeded()
-  await page.mouse.wheel(0, 400)
+  // ... et la page défile jusqu'à sa fin, la bulle toujours ouverte (une molette de Firefox défile moins loin : plusieurs tours).
+  await page.mouse.move(640, 400)
+  for (let tour = 0; tour < 10 && (await bas()) > 0; tour++) {
+    await page.mouse.wheel(0, 200)
+    await page.waitForTimeout(150)
+  }
   await expect.poll(bas).toBeLessThanOrEqual(0)
   await expect(bulle(page)).toBeVisible()
   await expect(pastille).toHaveAttribute("aria-expanded", "true")
