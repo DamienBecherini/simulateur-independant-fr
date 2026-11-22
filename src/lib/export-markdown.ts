@@ -3,7 +3,7 @@
 // acteurs et relations, flux saisis, résultats, comparateur de statuts et avertissements.
 
 import { estSocieteIS, type ComparaisonOptions, type ComparaisonResult, type Company, type DeplacementsProfessionnels, type Entity, type FraisProfessionnelsResult, type MicroEntreprise, type ModeRepartition, type Person, type Relationship, type ScenarioStatut, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport } from "@/types"
-import { conditionsDuPortageEnPhrase, defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
+import { conditionsDuPortageEnPhrase, defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, quatreTrimestresExiges, statutsFrais } from "./comparateur-options"
 import { dateDeCreationLisible, dispositifsDesAnnees, exonerationsDeZone, fluxParActeur, fraisProfessionnelsDesPersonnes, hypothesesDesExonerationsDeZone, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { LIMITES, TITRE_DES_LIMITES } from "./limites-du-modele"
 import { numeroterNotes } from "./notes"
@@ -313,10 +313,12 @@ function remunerationsRetenues(scenarios: ScenarioStatut[]): string {
 
 /** La répartition choisie du bénéfice des sociétés, en une phrase. */
 function descriptionRepartition(options: ComparaisonOptions, scenarios: ScenarioStatut[]): string {
-  const { mode, partDistribuee, avecRetraite } = options.repartition
+  const { mode, partDistribuee } = options.repartition
+  const exiges = quatreTrimestresExiges(options.repartition)
+  const trimestres = exiges === true ? " parmi celles qui valident 4 trimestres de retraite" : exiges ? ` (${exiges}, parmi celles qui valident 4 trimestres de retraite)` : ""
   const remuneration = eurosEnTexteBrut(options.remunerationNette)
   const descriptions: Record<ModeRepartition, string> = {
-    meilleurNet: `dans chaque statut, la rémunération nette au meilleur net du foyer${avecRetraite ? " parmi celles qui valident 4 trimestres de retraite" : ""}, tout le bénéfice restant versé en dividendes${remunerationsRetenues(scenarios)}`,
+    meilleurNet: `dans chaque statut, la rémunération nette au meilleur net du foyer${trimestres}, tout le bénéfice restant versé en dividendes${remunerationsRetenues(scenarios)}`,
     dividendes: `rémunération nette de ${remuneration}, tout le bénéfice restant versé en dividendes`,
     remuneration: "la plus haute rémunération que la société peut verser, sans dividendes",
     personnalisee: `rémunération nette de ${remuneration}, ${pourcentage(partDistribuee)} du bénéfice distribuable versé en dividendes, le reste conservé dans la société`,

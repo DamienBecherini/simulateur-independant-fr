@@ -4,7 +4,7 @@
 // de référence, l'écart de frais de gestion de chaque colonne, les colonnes non retenues et le rappel des frais réels.
 
 import type { ReactNode } from "react"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Crown } from "lucide-react"
 import { ANCRES } from "@/lib/ancres"
 import { ecartDeRepartition } from "@/lib/ecart-de-repartition"
 import { avecUnBeneficeGarde, ecartAvecLaSituationSaisie, lieuDuReste, phraseDuVerdict, raisonDeNonRetenue } from "@/lib/resume"
@@ -186,11 +186,19 @@ function CarteDeStatut({ scenario, result, meilleur }: { scenario: ScenarioStatu
   const repartition = ecartDeRepartition(result, scenario)
   const ecart = ecartAvecLaSituationSaisie(result, scenario)
   const nonRetenue = raisonDeNonRetenue(scenario)
-  const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null, nonRetenue].filter(Boolean).join(" · ")
+  const mentions = [scenario.telleQueSaisie ? "actuel" : null, nonRetenue].filter(Boolean).join(" · ")
   const frais = result.situationSaisie ? phraseDeLEcartDeFrais(scenario.ecartDeFrais.total, result.situationSaisie.statut, scenario.statut) : null
   return (
-    <li className={cn("flex items-center justify-between gap-3 rounded-lg border px-3 py-2", meilleur ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40" : "border-slate-200 dark:border-slate-700", nonRetenue && "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400")}>
+    <li className={cn("flex items-center justify-between gap-3 rounded-lg border px-3 py-2", meilleur ? "border-2 border-emerald-500 bg-emerald-50 shadow-[0_0_0_4px_rgb(16_185_129/0.2),0_0_18px_rgb(16_185_129/0.35)] dark:border-emerald-400 dark:bg-emerald-950/40" : "border-slate-200 dark:border-slate-700", nonRetenue && "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400")}>
       <div className="min-w-0">
+        {meilleur ? (
+          <span className="mb-1 flex">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white dark:bg-emerald-400 dark:text-emerald-950">
+              <Crown aria-hidden="true" className="size-3.5" />
+              Meilleur net
+            </span>
+          </span>
+        ) : null}
         <p className="font-medium text-slate-800 dark:text-slate-100">{scenario.libelle}</p>
         <p className="text-xs text-slate-600 dark:text-slate-400">
           {mentions ? `${mentions} · ` : ""}

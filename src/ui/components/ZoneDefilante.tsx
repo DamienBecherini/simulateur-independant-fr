@@ -2,7 +2,7 @@
 
 import { useRef, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
-import { useDefilementHorizontal } from "../hooks/useDefilementHorizontal"
+import { useDefilementHorizontal, useMontrerAuPremierAffichage } from "../hooks/useDefilementHorizontal"
 import { useHautDesBarres } from "../hooks/useHautDesBarres"
 import { FlechesDeDefilement, OmbresDesBords } from "./ReperesDeDefilement"
 
@@ -12,11 +12,13 @@ import { FlechesDeDefilement, OmbresDesBords } from "./ReperesDeDefilement"
  * Quand le tableau déborde, une ombre marque chaque côté où des colonnes sont cachées, et une flèche y mène
  * (voir ReperesDeDefilement.tsx). `className` habille le cadre ; la zone qui défile en reprend les coins arrondis.
  * La zone est elle-même `relative` : un contenu positionné du tableau (un texte réservé aux lecteurs d'écran, par
- * exemple) reste ainsi coupé par elle, au lieu d'élargir la page.
+ * exemple) reste ainsi coupé par elle, au lieu d'élargir la page. `montrerAuPremierAffichage` désigne (sélecteur) ce
+ * que la zone fait voir à sa première apparition, s'il est caché : la colonne au meilleur net du comparateur.
  */
-export function ZoneDefilante({ libelle, className, children }: { libelle: string; className?: string; children: ReactNode }) {
+export function ZoneDefilante({ libelle, className, montrerAuPremierAffichage, children }: { libelle: string; className?: string; montrerAuPremierAffichage?: string; children: ReactNode }) {
   const zone = useRef<HTMLDivElement>(null)
   const { deborde, auDebut, aLaFin, colonneFixe, defiler } = useDefilementHorizontal(zone)
+  useMontrerAuPremierAffichage(zone, montrerAuPremierAffichage)
   const hautDesBarres = useHautDesBarres(deborde)
   return (
     <div className={cn("group/zone relative", className)}>

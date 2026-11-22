@@ -50,6 +50,23 @@ describe("bandeau de la démo", () => {
     expect(bouton).toHaveFocus()
   })
 
+  it("se réduit à son nom, un bouton qui le déplie, aria-expanded à l'appui", async () => {
+    const { BandeauDemo } = await charger()
+    const user = userEvent.setup({ delay: null })
+    render(<BandeauDemo />)
+    const reduire = within(screen.getByRole("complementary", { name: "Démo web" })).getByRole("button", { name: "Réduire" })
+    expect(reduire).toHaveAttribute("aria-expanded", "true")
+    expect(reduire).toHaveAttribute("aria-controls")
+    await user.click(reduire)
+
+    const bandeau = screen.getByRole("complementary", { name: "Démo web" })
+    expect(bandeau).toHaveTextContent(/^Démo web : voir plus$/)
+    const voirPlus = within(bandeau).getByRole("button", { name: /^Démo web\s*: voir plus$/ })
+    expect(voirPlus).toHaveAttribute("aria-expanded", "false")
+    await user.click(voirPlus)
+    expect(screen.getByRole("complementary", { name: "Démo web" })).toHaveTextContent("Installer le simulateur sur votre ordinateur")
+  })
+
   it("installée depuis l'onglet, change de nom aussitôt", async () => {
     const { BandeauDemo, cible } = await charger()
     render(<BandeauDemo />)

@@ -8,7 +8,7 @@ import type { ComparaisonOptions, OptimisationRemuneration, PointRemuneration, S
 import { useOptimisation } from "../hooks/useOptimisation"
 import { emptySession, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { ComparateurDeTest } from "@/ui/testing/comparateur"
-import { RemunerationOptimizer } from "./RemunerationOptimizer"
+import { ChoixDuStatut, RemunerationOptimizer } from "./RemunerationOptimizer"
 
 // toHaveTextContent ramène les espaces insécables à des espaces simples : on fait de même.
 const money = (n: number) => `${n.toLocaleString("fr-FR")} €`.replace(/\s/g, " ")
@@ -25,11 +25,16 @@ function optimisation(overrides: Partial<OptimisationRemuneration> = {}): Optimi
 const options: ComparaisonOptions = { activityId: "micro-atelier", remunerationNette: 0, repartition: { mode: "dividendes", partDistribuee: 1 }, partBncPrestations: 1 }
 const session = { ...emptySession(), entities: [makePerson(), makeMicro()] }
 
-/** La section telle que le comparateur la monte : statut et optimisation tenus au-dessus d'elle. */
+/** La section telle que le comparateur la monte : le choix du statut au-dessus d'elle (« Approfondir une société »), et son optimisation. */
 function Section({ onAppliquer }: { onAppliquer: (remunerationNette: number) => void }) {
   const [statut, setStatut] = useState<StatutSociete>("SASU")
   const { resultat, erreur } = useOptimisation(session, options, statut, 2026)
-  return <RemunerationOptimizer annee={2026} session={session} options={options} activityName="Mon atelier" statut={statut} onStatut={setStatut} resultat={resultat} erreur={erreur} onAppliquer={onAppliquer} />
+  return (
+    <>
+      <ChoixDuStatut statut={statut} onChange={setStatut} />
+      <RemunerationOptimizer annee={2026} session={session} options={options} activityName="Mon atelier" statut={statut} resultat={resultat} erreur={erreur} onAppliquer={onAppliquer} />
+    </>
+  )
 }
 
 function afficher(onAppliquer = vi.fn()) {
@@ -38,6 +43,23 @@ function afficher(onAppliquer = vi.fn()) {
 }
 
 describe("RemunerationOptimizer", () => {
+  it("pendant le calcul d'un autre statut, garde le dernier arbitrage, pâli et inerte : la section ne rétrécit pas", async () => {
+    let fournir: (o: OptimisationRemuneration) => void = () => {}
+    vi.mocked(window.api.optimiserRemuneration).mockResolvedValueOnce(optimisation()).mockImplementationOnce(() => new Promise(resoudre => (fournir = resoudre)))
+    afficher()
+    const carte = await screen.findByRole("listitem", { name: "Meilleur net" })
+    expect(carte.closest("[aria-busy]")).toHaveAttribute("aria-busy", "false")
+
+    await userEvent.click(screen.getByRole("button", { name: "EURL" }))
+    await vi.waitFor(() => expect(window.api.optimiserRemuneration).toHaveBeenCalledTimes(2))
+    const enAttente = screen.getByRole("listitem", { name: "Meilleur net" }).closest("[aria-busy]")
+    expect(enAttente).toHaveAttribute("aria-busy", "true")
+    expect(enAttente).toHaveAttribute("inert")
+
+    fournir(optimisation({ statut: "EURL" }))
+    await vi.waitFor(() => expect(screen.getByRole("listitem", { name: "Meilleur net" }).closest("[aria-busy]")).toHaveAttribute("aria-busy", "false"))
+  })
+
   it("présente en deux cartes le meilleur net, et le meilleur net qui valide 4 trimestres avec ce qu'il coûte", async () => {
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation())
     afficher()
@@ -223,9 +245,10 @@ describe("RemunerationOptimizer", () => {
 
     const retraite = await screen.findByRole("listitem", { name: "Meilleur net avec 4 trimestres" })
     expect(window.api.optimiserRemuneration).not.toHaveBeenCalled()
-    await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer au comparateur" }))
+    // Au meilleur net, le bouton ne change que la colonne de son statut (ici déjà cochée d'office : rien à retenir).
+    await userEvent.click(within(retraite).getByRole("button", { name: "Appliquer à la colonne SASU" }))
 
-    expect(screen.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "en SASU" })).toBeChecked()
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true } }), 2026))
     expect(window.api.optimiserRemuneration).not.toHaveBeenCalled()
   })

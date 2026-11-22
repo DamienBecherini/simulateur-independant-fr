@@ -13,9 +13,12 @@ import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-ki
 import { FlowItem, type FlowChanges } from "./FlowItem"
 import { NewFlowItem, type NewFlowValues } from "./NewFlowItem"
 import { NatureDuChiffreDAffaires } from "./NatureDuChiffreDAffaires"
+import { VersementsRecus } from "./VersementsRecus"
+import type { VersementRecu } from "@/lib/grille-mensuelle"
 import { Depliable } from "./Depliable"
 import { useExtensionDeLaModification } from "../hooks/useExtensionDeLaModification"
 import { useTriAccessible } from "../hooks/useTriAccessible"
+import { useListeAnimee } from "../hooks/useListeAnimee"
 import { anneesDuRaccourci, LIBELLES_PORTEE, LIBELLES_RACCOURCIS_ANNEES, listerAnnees, SEUIL_RACCOURCIS_ANNEES, type ChangementsDeFlux, type PorteeRecurrence, type RaccourciAnnees, type SerieAilleurs } from "@/lib/flux-recurrents"
 import { reglesDeLAnneeAffichee } from "@/lib/regles-affichees"
 import type { ReglesFiscales } from "@/backend/logic/regles"
@@ -54,6 +57,9 @@ interface MonthlyFlowsModalProps {
    * les résultats de l'année. Elle est rappelée dès qu'une rémunération est saisie ou choisie sur la ligne d'ajout.
    */
   limiteDeRemuneration?: number
+  /** Personne : ce que des sociétés lui versent ce mois-là (rémunération, dividendes), à lire seulement ; et leurs couleurs choisies. */
+  recus?: VersementRecu[]
+  couleurs?: Record<string, string>
   /**
    * Crée le flux dans ce mois et, selon la portée choisie, le recopie sur d'autres mois et dans les années cochées ;
    * `annuel` : son montant est annuel, à répartir sur les douze mois (de chaque année cochée aussi), quelle que soit la portée.
@@ -232,7 +238,7 @@ function ReglagesDeLAjout({ annee, autresAnnees, portee, setPortee, aussiEn, set
   )
 }
 
-export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], fluxDeLAnnee = [], fluxDesAutresAnnees = [], limiteDeRemuneration, onCreate, onRecopier, onUpdate, onDelete, serieAilleurs, onEtendre, onRestaurer, onReorder }: MonthlyFlowsModalProps) {
+export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, autresAnnees = [], fluxDeLAnnee = [], fluxDesAutresAnnees = [], limiteDeRemuneration, recus, couleurs, onCreate, onRecopier, onUpdate, onDelete, serieAilleurs, onEtendre, onRestaurer, onReorder }: MonthlyFlowsModalProps) {
   const flowIds = useMemo(() => flows.map(f => f.id), [flows])
   const tri = useTriAccessible(useMemo(() => flows.map(f => ({ id: f.id, nom: f.label || flowTypeLabels[f.type] })), [flows]))
   const allowedTypes = getFlowTypesForEntity(entity)
@@ -272,6 +278,8 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
       onReorder(arrayMove(flows, oldIndex, newIndex))
     }
   }
+  // Un flux ajouté ou retiré : les autres lignes glissent à leur place.
+  const [refDeLaListe, glisser] = useListeAnimee(handleDragEnd, listRef)
 
   const handleClose = () => {
     // Retirer le focus valide la saisie en cours avant que la fenêtre ne soit démontée.
@@ -312,9 +320,10 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
         {/* Conteneur : les lignes de flux suivent la largeur de la fenêtre de saisie (une ligne par flux dès 34 rem, sinon
             deux), pas celle de l'écran : interface agrandie, la fenêtre est bien plus étroite que l'écran ne le laisse croire. */}
         <div className="@container space-y-2 py-2">
+          <VersementsRecus recus={recus ?? []} couleurs={couleurs} />
           {flows.length > 0 && (
-            <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <div ref={listRef} className="max-h-[calc(50vh/var(--zoom,1))] space-y-2 overflow-y-auto">
+            <DndContext {...tri} collisionDetection={closestCenter} {...glisser}>
+              <div ref={refDeLaListe} className="max-h-[calc(50vh/var(--zoom,1))] space-y-2 overflow-y-auto">
                 <SortableContext items={flowIds} strategy={verticalListSortingStrategy}>
                   {flows.map((flow, rang) => (
                     <Fragment key={flow.id}>

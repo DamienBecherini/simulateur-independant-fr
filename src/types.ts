@@ -350,7 +350,12 @@ export const RepartitionBeneficeSchema = z.object({
   /** Répartition personnalisée : part du bénéfice distribuable versée en dividendes (0 à 1), le reste étant conservé. */
   partDistribuee: z.number().min(0).max(1),
   /** Au meilleur net : ne retenir que les rémunérations qui valident 4 trimestres de retraite. Absent : non. */
-  avecRetraite: z.boolean().optional()
+  avecRetraite: z.boolean().optional(),
+  /**
+   * Au meilleur net, le choix des 4 trimestres d'une colonne de société quand il lui est propre (« SASU avec 4
+   * trimestres, EURL au meilleur net ») ; sans choix pour un statut, `avecRetraite` vaut pour lui.
+   */
+  retraiteEn: z.partialRecord(z.enum(STATUTS_SOCIETE), z.boolean()).optional()
 })
 
 /** Postes de frais de fonctionnement d'une activité, hors cotisations et impôts. */

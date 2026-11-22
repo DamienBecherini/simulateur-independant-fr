@@ -50,7 +50,21 @@ const EN_TETE_DE_LIGNE = "sticky left-0 z-10 bg-white px-3 py-1.5 text-left font
 export function ProtectionDesStatuts({ scenarios }: { scenarios: ScenarioStatut[] }) {
   if (scenarios.length === 0) return null
   return (
-    <Depliable titre="Ce que recouvre la note de protection sociale" id="comparateur-note-protection" className="text-sm text-slate-600 dark:text-slate-300">
+    // L'étoile du titre renvoie aux étoiles de la ligne « Protection sociale » du tableau, juste au-dessus ; les lecteurs
+    // d'écran lisent « la note en étoiles ».
+    <Depliable
+      titre={
+        <span>
+          Ce que recouvre la note en{" "}
+          <span aria-hidden="true" className="text-amber-600 dark:text-amber-400">
+            ★
+          </span>
+          <span className="sr-only">étoiles</span> de protection sociale
+        </span>
+      }
+      id="comparateur-note-protection"
+      className="text-sm text-slate-600 dark:text-slate-300"
+    >
       <ZoneDefilante libelle="Tableau de la protection sociale" className="mt-2 rounded-lg border border-slate-200 dark:border-slate-700">
         <table aria-label="Protection sociale selon le statut" className="w-full min-w-[40rem] bg-white text-sm text-slate-800 print:min-w-0 dark:bg-slate-950 dark:text-slate-100">
           <thead className="bg-slate-100 dark:bg-slate-800/80">

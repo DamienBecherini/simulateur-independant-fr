@@ -68,8 +68,9 @@ test("la barre de résumé reprend les chiffres du bilan et du comparateur", asy
   expect(espaces(await barre(page).getByRole("link", { name: /^Prélèvements/ }).textContent())).toContain(taux)
 
   // Le meilleur statut est celui que le tableau du comparateur met en évidence.
-  const enTeteDuMeilleur = page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: /meilleur net/ })
-  const libelle = espaces(await enTeteDuMeilleur.evaluate(th => th.firstChild?.textContent ?? ""))
+  // Son en-tête commence par la pastille « Meilleur net », puis le libellé du statut.
+  const enTeteDuMeilleur = page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: /^Meilleur net/ })
+  const libelle = espaces(await enTeteDuMeilleur.evaluate(th => Array.from(th.childNodes).find(noeud => noeud.nodeType === Node.TEXT_NODE)?.textContent ?? ""))
   expect(espaces(await barre(page).getByRole("link", { name: /^Meilleur/ }).textContent())).toContain(libelle)
   await expect(page.locator("#comparateur-verdict")).toContainText(libelle)
 
@@ -80,7 +81,9 @@ test("la barre de résumé reprend les chiffres du bilan et du comparateur", asy
 
 test("chaque chiffre de la barre mène à son détail, sans qu'il passe sous la barre", async ({ page }) => {
   await ouvrirEnResume(page)
-  for (const [lien, cible] of [[/^Meilleur/, "#comparateur-verdict"], [/^Net du foyer/, "#bilan"], [/^Alertes/, "#resultats-titre"]] as const) {
+  // La démo n'a pas d'alerte : la barre ne montre pas « Alertes 0 ».
+  await expect(barre(page).getByRole("link", { name: /^Alertes/ })).toHaveCount(0)
+  for (const [lien, cible] of [[/^Meilleur/, "#comparateur-verdict"], [/^Net du foyer/, "#bilan"], [/^Prélèvements/, "#bilan"]] as const) {
     await barre(page).getByRole("link", { name: lien }).click()
     await expect(page.locator(cible)).toBeInViewport()
     const [hautDeLaCible, basDeLaBarre] = await Promise.all([page.locator(cible).evaluate(e => e.getBoundingClientRect().top), barre(page).evaluate(e => e.getBoundingClientRect().bottom)])
@@ -169,7 +172,7 @@ test("au clavier : choisir l'affichage, puis parcourir le résumé avec un focus
   }
   expect(arrets.filter(a => !a.indicateur).map(a => a.nom), "Éléments sans indicateur de focus visible").toEqual([])
   const position = (motif: RegExp) => arrets.findIndex(a => motif.test(a.nom))
-  const reperes = [/« Net du foyer/, /« Alertes/, /« \+ Ajouter une personne »/, /« Flux de janvier/, /« Détail du calcul/, /« Voir le détail/, /« Valeurs de la courbe/]
+  const reperes = [/« Net du foyer/, /« Prélèvements/, /« \+ Ajouter une personne »/, /« Flux de janvier/, /« Détail du calcul/, /« Voir le détail/, /« Valeurs de la courbe/]
   const positions = reperes.map(position)
   expect(positions.every(p => p >= 0), `Repères introuvables : ${reperes.filter((_, i) => positions[i] < 0).join(", ")}`).toBe(true)
   expect(positions).toEqual([...positions].sort((a, b) => a - b))
@@ -255,9 +258,13 @@ async function hauteur(page: Page, affichage: "classique" | "resume") {
 // « Portage salarial » (ADR 016, 14 octobre 2026) ajoute environ 300 px sur ordinateur (3 982 → 4 282 px : ses notes,
 // la section repliée de ses conditions, une colonne de plus qui fait passer à la ligne les en-têtes et les écarts de
 // frais) et 530 px sur téléphone (6 609 → 7 139 px : sa carte et ses notes) ; les plafonds suivent, avec la même marge.
+// « Comparer et optimiser » en trois étapes (21 novembre 2026) ajoute environ 320 px sur ordinateur (4 400 → 4 717 px :
+// le titre et la marge de chaque étape, la phrase de l'activité, celle de la société et le rappel de ses colonnes) et
+// 690 px sur téléphone (7 400 → 8 089 px, les mêmes phrases sur plus de lignes) : un écran plus long, mais qui se lit
+// dans l'ordre ; les plafonds suivent.
 for (const [largeur, hauteurEcran, plafond] of [
-  [1440, 900, 4400],
-  [375, 812, 7400]
+  [1440, 900, 4950],
+  [375, 812, 8500]
 ] as const) {
   test.describe(`hauteur de la page à ${largeur} px`, () => {
     test.use({ viewport: { width: largeur, height: hauteurEcran }, hasTouch: largeur < 500, isMobile: largeur < 500 })

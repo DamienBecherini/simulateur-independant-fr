@@ -10,6 +10,7 @@ import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-
 import { AffichageContext } from "../hooks/useAffichage"
 import { ComparatorPanel } from "./ComparatorPanel"
 import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
+import { enTexteBrut } from "@/backend/logic/format"
 
 function scenario(statut: StatutCompare, libelle: string, net: number, overrides: Partial<ScenarioStatut> = {}): ScenarioStatut {
   return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.`, garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
@@ -50,11 +51,11 @@ describe("ComparatorPanel sur plusieurs années", () => {
     const session = deuxAnnees()
     const { rerender } = render(<ComparateurDeTest annee={2025} session={session} />)
 
-    expect(screen.getByText(/^Année 2025\./)).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 3, name: /Résultat 2025 :/ })).toBeInTheDocument()
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.objectContaining({ annees: session.annees }), expect.objectContaining({ remunerationNette: 20000 }), 2025))
 
     rerender(<ComparateurDeTest annee={2026} session={session} />)
-    expect(screen.getByText(/^Année 2026\./)).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 3, name: /Résultat 2026 :/ })).toBeInTheDocument()
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.objectContaining({ annees: session.annees }), expect.objectContaining({ remunerationNette: 30000 }), 2026))
     // Au meilleur net, le comparateur calcule lui-même l'arbitrage rémunération / dividendes : il n'est pas refait à part.
     expect(window.api.optimiserRemuneration).not.toHaveBeenCalled()
@@ -153,6 +154,25 @@ describe("ComparatorPanel et ses réglages enregistrés", () => {
 
     expect(enregistre).toHaveBeenLastCalledWith({ activiteComparee: "company-sasu", reglagesParActivite: { "company-sasu": { statutEtudie: "EURL" } } })
   })
+
+  it("rappelle l'activité comparée sous le titre du résultat, et y ramène pour en changer", async () => {
+    render(<ComparateurDeTest annee={2026} session={deuxActivites()} />)
+    const liste = await screen.findByRole("combobox", { name: "Activité comparée" })
+    // La liste est dans le titre de l'étape 1.
+    expect(liste.closest("section")?.querySelector("h3")).toHaveTextContent(/Activité comparée$/)
+    const resultat = screen.getByRole("heading", { level: 3, name: /^Étape 2 :/ }).closest("section") as HTMLElement
+    expect(within(resultat).getByText(/^Pour « /)).toHaveTextContent(/^Pour « .+ » · changer d'activité ↑$/)
+    liste.scrollIntoView = vi.fn()
+    await userEvent.click(within(resultat).getByRole("button", { name: "changer d'activité ↑" }))
+    expect(liste).toHaveFocus()
+    expect(liste.scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: "center" }))
+  })
+
+  it("sans autre activité à comparer, pas de rappel", async () => {
+    render(<ComparateurDeTest annee={2026} session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} />)
+    await screen.findByRole("combobox", { name: "Activité comparée" })
+    expect(screen.queryByRole("button", { name: "changer d'activité ↑" })).not.toBeInTheDocument()
+  })
 })
 
 describe("ComparatorPanel", () => {
@@ -163,6 +183,51 @@ describe("ComparatorPanel", () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it("suit trois étapes : ce qui est comparé, le résultat, puis les réglages de la société, où mènent les colonnes SASU et EURL", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+
+    const etape = (nom: RegExp) => screen.getByRole("heading", { level: 3, name: nom }).closest("section") as HTMLElement
+    const activite = etape(/^Étape 1 :\s*Activité comparée$/)
+    const resultat = etape(/^Étape 2 :\s*Résultat 2026 : net dans la poche selon le statut$/)
+    // Une micro-entreprise : l'étape 3 la suppose en société.
+    const societe = etape(/^Étape 3 :\s*Et en société \? Régler la SASU et l'EURL$/)
+    expect([...document.querySelectorAll("[data-etape]")]).toEqual([activite, resultat, societe])
+    expect(within(activite).getByRole("combobox", { name: "Activité comparée" })).toBeInTheDocument()
+    expect(within(resultat).getByRole("table", { name: "Comparaison des statuts" })).toBe(table)
+    // Comment lire le tableau : replié, juste au-dessus de lui, et plus sous le titre du comparateur.
+    expect(within(resultat).getByText("Comment lire le tableau").closest("details")).not.toHaveAttribute("open")
+    expect(screen.queryByText(/ce que compare le tableau/)).not.toBeInTheDocument()
+    expect(within(societe).getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" })).toBeInTheDocument()
+    // Sous les réglages du tableau, l'étude d'une société, avec un seul choix SASU / EURL.
+    const approfondir = within(societe).getByRole("region", { name: "Approfondir une société" })
+    expect(within(approfondir).getAllByRole("group", { name: "Société étudiée" })).toHaveLength(1)
+    expect(within(approfondir).getByRole("heading", { level: 5, name: "Rémunération ou dividendes ?" })).toBeInTheDocument()
+
+    // L'étape 3 rappelle le net des colonnes qu'elle règle, et le meilleur net.
+    expect(enTexteBrut(within(societe).getByRole("status", { name: "Colonnes SASU et EURL du tableau" }).textContent)).toBe(`Dans le tableau :SASU ${money(30000)}EURL ${money(28000)}meilleur net : Micro + versement libératoire, ${money(35000)}`)
+    // Les en-têtes SASU et EURL y mènent, et eux seuls.
+    const liens = within(table).getAllByRole("link", { name: /^régler à l'étape 3/ })
+    expect(liens.map(lien => lien.closest("th")?.firstChild?.textContent)).toEqual(["SASU", "EURL"])
+    for (const lien of liens) expect(lien).toHaveAttribute("href", "#comparateur-societe")
+    expect(societe.querySelector("h3")).toHaveAttribute("id", "comparateur-societe")
+    // Un clic y descend en douceur (pas un saut), donne le focus au titre et met l'ancre dans l'adresse.
+    const defiler = vi.spyOn(Element.prototype, "scrollIntoView")
+    await userEvent.click(liens[0])
+    expect(defiler).toHaveBeenCalledWith({ block: "start", behavior: "smooth" })
+    expect(societe.querySelector("h3")).toHaveFocus()
+    expect(window.location.hash).toBe("#comparateur-societe")
+    defiler.mockRestore()
+    window.history.replaceState(null, "", window.location.pathname)
+  })
+
+  it("pour une société, l'étape 3 parle de l'optimiser", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
+    render(<ComparateurDeTest annee={2026} session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} />)
+    expect(await screen.findByRole("heading", { level: 3, name: /^Étape 3 :\s*Optimiser la société : SASU et EURL$/ })).toBeInTheDocument()
+  })
+
   it("compare la première activité et met en évidence le statut actuel et le meilleur net", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)
@@ -170,7 +235,7 @@ describe("ComparatorPanel", () => {
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     expect(window.api.compareStatuts).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ activityId: "micro-atelier", remunerationNette: 0, repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true }, partBncPrestations: 1 }), 2026)
     expect(within(table).getByRole("columnheader", { name: /Micro-entreprise\s*actuel/ })).toBeInTheDocument()
-    expect(within(table).getByRole("columnheader", { name: /versement libératoire\s*meilleur net/ })).toBeInTheDocument()
+    expect(within(table).getByRole("columnheader", { name: /^Meilleur net\s*Micro \+ versement libératoire/ })).toBeInTheDocument()
 
     const ecart = within(table).getByRole("row", { name: /Écart avec votre situation actuelle/ })
     expect(ecart).toHaveTextContent(`+${money(3000)}`)
@@ -184,7 +249,7 @@ describe("ComparatorPanel", () => {
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ portage: { tauxFraisDeGestion: 0.06 } }), 2026)
-    expect(within(table).getByRole("columnheader", { name: /^Portage salarial\s*meilleur net/ })).toBeInTheDocument()
+    expect(within(table).getByRole("columnheader", { name: /^Meilleur net\s*Portage salarial/ })).toBeInTheDocument()
     expect(within(table).getByRole("row", { name: /Protection sociale/ })).toHaveTextContent("★★★★★")
     unmount()
 
@@ -217,8 +282,8 @@ describe("ComparatorPanel", () => {
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
-    const sasu = within(table).getByRole("columnheader", { name: /^SASU/ })
-    expect((sasu.textContent ?? "").replace(/\s/g, " ")).toContain("actuel · meilleur net")
+    const sasu = within(table).getByRole("columnheader", { name: /^Meilleur net\s*SASU/ })
+    expect((sasu.textContent ?? "").replace(/\s/g, " ")).toMatch(/^Meilleur netSASU ?actuel/)
     expect((sasu.textContent ?? "").replace(/\s/g, " ")).toContain(`votre répartition, au meilleur net à moins de ${money(100)} près`)
     expect(sasu).not.toHaveTextContent("rémunération optimale")
     // Ce que coûteraient les 4 trimestres reste dit : le choix se fait en connaissance de cause.
@@ -227,23 +292,30 @@ describe("ComparatorPanel", () => {
     expect(within(ecart).getAllByRole("cell")[scenarios.findIndex(s => s.statut === "SASU")]).toHaveTextContent(/^—$/)
   })
 
-  it("au meilleur net, la case « avec 4 trimestres de retraite », cochée d'office, rejoint décochée les réglages du comparateur", async () => {
+  it("au meilleur net, une case des 4 trimestres par colonne, cochées d'office : décocher la SASU laisse l'EURL avec ses 4 trimestres", async () => {
     const enregistre = vi.fn()
     render(<ComparateurDeTest annee={2026} session={withActivity()} onComparateur={enregistre} />)
 
-    const caseRetraite = await screen.findByRole("checkbox", { name: "Avec 4 trimestres de retraite" })
-    expect(caseRetraite).toBeChecked()
-    await userEvent.click(caseRetraite)
+    const groupe = await screen.findByRole("group", { name: "Exiger 4 trimestres de retraite" })
+    const sasu = within(groupe).getByRole("checkbox", { name: "en SASU" })
+    const eurl = within(groupe).getByRole("checkbox", { name: "en EURL" })
+    expect(sasu).toBeChecked()
+    expect(eurl).toBeChecked()
+    await userEvent.click(sasu)
 
-    expect(caseRetraite).not.toBeChecked()
-    expect(enregistre).toHaveBeenLastCalledWith({ activiteComparee: "micro-atelier", reglagesParActivite: { "micro-atelier": { repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: false } } } })
-    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: false } }), 2026))
-    // Décochée, elle le reste en passant par un autre mode.
+    expect(sasu).not.toBeChecked()
+    expect(eurl).toBeChecked()
+    const repartition = { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true, retraiteEn: { SASU: false } }
+    expect(enregistre).toHaveBeenLastCalledWith({ activiteComparee: "micro-atelier", reglagesParActivite: { "micro-atelier": { repartition } } })
+    await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition }), 2026))
+    expect(document.getElementById("comparateur-mode-choisi")).toHaveTextContent("Chaque société verse la rémunération qui donne le meilleur net, le reste en dividendes ; en EURL, parmi celles qui valident 4 trimestres de retraite.")
+    // Le choix de la colonne le reste en passant par un autre mode.
     await userEvent.click(screen.getByRole("radio", { name: "Tout en rémunération" }))
     await userEvent.click(screen.getByRole("radio", { name: "Meilleur net" }))
-    expect(screen.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).not.toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "en SASU" })).not.toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "en EURL" })).toBeChecked()
     await userEvent.click(screen.getByRole("radio", { name: "Ma rémunération" }))
-    expect(screen.queryByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("group", { name: "Exiger 4 trimestres de retraite" })).not.toBeInTheDocument()
     expect(screen.getByLabelText("Rémunération nette annuelle (SASU, EURL)")).toBeInTheDocument()
   })
 
@@ -420,7 +492,7 @@ describe("ComparatorPanel", () => {
     render(<ComparateurDeTest annee={2026} session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} />)
     await screen.findByLabelText("Activité comparée")
     expect(screen.queryByLabelText(/prestations en BNC/)).not.toBeInTheDocument()
-    expect(screen.getByRole("spinbutton", { name: "Compte bancaire professionnel, SASU" }).closest("details")).toHaveTextContent(/^Frais de fonctionnement\s*\(afficher\)/)
+    expect(screen.getByRole("spinbutton", { name: "Compte bancaire professionnel, SASU" }).closest("details")).toHaveTextContent(/^Frais de fonctionnement\s*toutes les colonnes\s*\(afficher\)/)
   })
 
   it("exporte le tableau de comparaison en CSV, avec les réglages utilisés", async () => {
@@ -446,7 +518,7 @@ describe("ComparatorPanel", () => {
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     expect(within(table).getByRole("columnheader", { name: /versement libératoire/ })).toHaveTextContent("hors plafond · 2 ans au plus")
-    expect(within(table).getByRole("columnheader", { name: /^Micro-entreprise/ })).toHaveTextContent("meilleur net")
+    expect(within(table).getByRole("columnheader", { name: /^Meilleur net\s*Micro-entreprise/ })).toBeInTheDocument()
   })
 
   it("grise une colonne micro hors plafond et écrit dans la cellule de l'écart qu'elle n'est pas retenue (P-14)", async () => {
@@ -502,7 +574,7 @@ describe("ComparatorPanel", () => {
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
-    const entete = within(table).getByRole("columnheader", { name: /^SASU, rémunération optimisée/ })
+    const entete = within(table).getByRole("columnheader", { name: /^Meilleur net\s*SASU, rémunération optimisée/ })
     expect(entete).not.toHaveTextContent("actuel")
     expect(screen.getByText(/^Votre situation telle que saisie \(SASU\)/)).toHaveTextContent(`Votre situation telle que saisie (SASU) : ${money(40000)} de net, comme dans les résultats.`)
     const ecart = within(table).getByRole("row", { name: /Écart avec votre situation actuelle/ })
@@ -518,9 +590,9 @@ describe("ComparatorPanel", () => {
     for (const colonne of [/^Micro-entreprise/, /versement libératoire/]) {
       const entete = within(table).getByRole("columnheader", { name: colonne })
       expect(entete).toHaveTextContent("hors plafond · 2 ans au plus")
-      expect(entete).not.toHaveTextContent("meilleur net")
+      expect(entete).not.toHaveTextContent("Meilleur net")
     }
-    expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent("meilleur net")
+    expect(within(table).getByRole("columnheader", { name: /^Meilleur net\s*SASU/ })).toBeInTheDocument()
   })
 
   it("marque les colonnes micro plus accessibles après la sortie du régime micro", async () => {
@@ -560,7 +632,7 @@ describe("réglages essentiels du comparateur", () => {
 
   it.each(["classique", "resume", "vues"] as const)("affichage %s : l'activité, le partage du bénéfice et la case des 4 trimestres sont visibles sans rien déplier", async affichage => {
     render(dans(affichage))
-    const caseRetraite = await screen.findByRole("checkbox", { name: "Avec 4 trimestres de retraite" })
+    const caseRetraite = await screen.findByRole("checkbox", { name: "en SASU" })
     expect(caseRetraite).toBeChecked()
     expect(caseRetraite.closest("details")).toBeNull()
     expect(screen.getByRole("combobox", { name: "Activité comparée" }).closest("details")).toBeNull()
@@ -577,8 +649,8 @@ describe("réglages essentiels du comparateur", () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(avecCouts())
     render(dans("resume"))
 
-    const caseRetraite = await screen.findByRole("checkbox", { name: "Avec 4 trimestres de retraite" })
-    await vi.waitFor(() => expect(caseRetraite).toHaveAccessibleDescription(/^coût en net : SASU −1\s234\s€$/))
+    const caseRetraite = await screen.findByRole("checkbox", { name: "en SASU" })
+    await vi.waitFor(() => expect(caseRetraite).toHaveAccessibleDescription(/^coût : −1\s234\s€ de net$/))
     const table = screen.getByRole("table", { name: "Comparaison des statuts" })
     expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent(`4 trimestres : −${money(1234)} de net`)
     expect(within(table).getByRole("columnheader", { name: /^EURL/ })).not.toHaveTextContent("4 trimestres :")
@@ -587,9 +659,9 @@ describe("réglages essentiels du comparateur", () => {
   it("ne parle d'aucun coût quand le meilleur net valide déjà 4 trimestres", async () => {
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison())
     render(dans("classique"))
-    const caseRetraite = await screen.findByRole("checkbox", { name: "Avec 4 trimestres de retraite" })
+    const caseRetraite = await screen.findByRole("checkbox", { name: "en SASU" })
     await screen.findByRole("table", { name: "Comparaison des statuts" })
     expect(caseRetraite).not.toHaveAttribute("aria-describedby")
-    expect(screen.queryByText(/coût en net/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^coût :/)).not.toBeInTheDocument()
   })
 })

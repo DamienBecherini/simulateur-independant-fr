@@ -1,22 +1,25 @@
 // src/ui/components/ReglagesDuComparateur.tsx
-// Réglages du comparateur de statuts, visibles dans tous les affichages : l'activité comparée et le partage du
-// bénéfice des sociétés sur une ligne, la phrase du mode choisi, puis selon le mode la case des 4 trimestres de
-// retraite ou la rémunération saisie (champ et curseur). Les frais de fonctionnement, et la part BNC quand elle
-// sert, sont repliés sous une seule section.
+// Réglages du comparateur de statuts, visibles dans tous les affichages, en deux étapes de l'onglet :
+// - ce qui est comparé (étape 1) : l'activité, et repliés les frais de fonctionnement (avec la part BNC quand elle
+//   sert) et les conditions de la société de portage ;
+// - la société (étape 3) : le partage du bénéfice des colonnes SASU et EURL, la phrase du mode choisi, puis selon le
+//   mode la case des 4 trimestres de retraite ou la rémunération saisie (champ et curseur).
 
 import { useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { avecLeMode, avecRemunerationSaisie, defaultFraisFonctionnement, descriptionDuMode, libellesCourtsRepartition, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
-import { coutsDesQuatreTrimestres } from "@/lib/resume"
+import { avecLaRetraiteEn, avecLeMode, avecRemunerationSaisie, defaultFraisFonctionnement, descriptionDuMode, libellesCourtsRepartition, posteFraisLabels, statutsFrais } from "@/lib/comparateur-options"
+import { trimestresExiges } from "@/backend/logic/options-du-comparateur"
 import { ecartSigne, euros, pourcentDeNombre } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
-import type { ComparaisonOptions, ComparaisonResult, Company, FraisFonctionnement, MicroEntreprise, ModeRepartition, PosteFrais, StatutFrais, StatutSociete } from "@/types"
+import { STATUTS_SOCIETE, type ComparaisonOptions, type ComparaisonResult, type Company, type FraisFonctionnement, type MicroEntreprise, type ModeRepartition, type PosteFrais, type ScenarioStatut, type StatutFrais, type StatutSociete } from "@/types"
 import { CurseurDeRemuneration } from "./Curseur"
 import { Depliable } from "./Depliable"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
+import { APPARITION, HauteurAnimee } from "./HauteurAnimee"
 import { ChampNumerique } from "./ChampNumerique"
 import { ConditionsDuPortage } from "./ConditionsDuPortage"
+import { ColonnesTouchees } from "./EtapeDuComparateur"
 import { ZoneDefilante } from "./ZoneDefilante"
 
 const statutFraisLabels: Record<StatutFrais, string> = { SASU: "SASU", EURL: "EURL", EI: "EI au réel", micro: "Micro-entreprise" }
@@ -29,13 +32,13 @@ const MODES = Object.keys(libellesCourtsRepartition) as ModeRepartition[]
  * boutons, puis deux) dont les libellés vont à la ligne au besoin : elle tient aussi avec une police large. La phrase de chaque mode le décrit (aria-describedby) et
  * s'affiche au survol ; celle du mode choisi est écrite sous les boutons.
  */
-function ChoixDeLaRepartition({ mode, avecRetraite, onChange }: { mode: ModeRepartition; avecRetraite: boolean; onChange: (mode: ModeRepartition) => void }) {
+function ChoixDeLaRepartition({ mode, exiges, onChange }: { mode: ModeRepartition; exiges: Record<StatutSociete, boolean>; onChange: (mode: ModeRepartition) => void }) {
   return (
     <fieldset className="min-w-0 max-w-full space-y-1">
       <legend className="mb-1 text-sm font-medium leading-none">Bénéfice de la société (SASU, EURL)</legend>
       <div className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-md border border-slate-300 bg-background p-0.5 min-[22rem]:max-sm:grid min-[22rem]:max-sm:w-full min-[22rem]:max-sm:grid-cols-6 dark:border-slate-600">
         {MODES.map((m, i) => (
-          <label key={m} title={descriptionDuMode(m, avecRetraite)} className={cn("flex min-h-8 flex-auto cursor-pointer items-center justify-center whitespace-nowrap rounded px-2 py-1 text-center text-xs font-medium leading-tight sm:px-3 sm:text-sm pointer-coarse:min-h-11 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--ring)] min-[22rem]:max-sm:whitespace-normal min-[22rem]:max-sm:px-1", i < 3 ? "min-[22rem]:max-sm:col-span-2" : "min-[22rem]:max-sm:col-span-3", m === mode ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 print:hidden")}>
+          <label key={m} title={descriptionDuMode(m, exiges)} className={cn("flex min-h-8 flex-auto cursor-pointer items-center justify-center whitespace-nowrap rounded px-2 py-1 text-center text-xs font-medium leading-tight sm:px-3 sm:text-sm pointer-coarse:min-h-11 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--ring)] min-[22rem]:max-sm:whitespace-normal min-[22rem]:max-sm:px-1", i < 3 ? "min-[22rem]:max-sm:col-span-2" : "min-[22rem]:max-sm:col-span-3", m === mode ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 print:hidden")}>
             <input type="radio" name="comparateur-repartition" value={m} checked={m === mode} aria-describedby={`comparateur-mode-${m}`} onChange={() => onChange(m)} className="sr-only" />
             {libellesCourtsRepartition[m]}
           </label>
@@ -43,7 +46,7 @@ function ChoixDeLaRepartition({ mode, avecRetraite, onChange }: { mode: ModeRepa
       </div>
       {MODES.map(m => (
         <span key={m} id={`comparateur-mode-${m}`} hidden>
-          {descriptionDuMode(m, avecRetraite)}
+          {descriptionDuMode(m, exiges)}
         </span>
       ))}
     </fieldset>
@@ -51,31 +54,55 @@ function ChoixDeLaRepartition({ mode, avecRetraite, onChange }: { mode: ModeRepa
 }
 
 /**
- * Au meilleur net : ne retenir, dans chaque statut de société, que les rémunérations qui valident 4 trimestres de
- * retraite. Cochée d'office ; ce que coûtent les 4 trimestres en net, colonne par colonne, est dit à côté.
+ * Ce que coûtent les 4 trimestres de retraite dans une colonne de société au meilleur net : le net perdu, rien s'ils
+ * sont déjà validés au meilleur net, ou hors d'atteinte quand aucune rémunération ne les valide. Rien tant que la
+ * colonne n'est pas calculée.
  */
-function AvecRetraite({ options, couts, onChange }: { options: ComparaisonOptions; couts: { libelle: string; cout: number }[]; onChange: (changes: Partial<ComparaisonOptions>) => void }) {
+function coutDeLaColonne(scenario: ScenarioStatut | undefined, exige: boolean): string | null {
+  const retenue = scenario?.remunerationOptimale
+  if (!scenario || !retenue) return null
+  if (retenue.coutDesQuatreTrimestres) return `coût : ${ecartSigne(-retenue.coutDesQuatreTrimestres)} de net`
+  if ((exige && retenue.retraiteHorsDAtteinte) || scenario.protectionSociale.trimestres < 4) return "hors d'atteinte : aucune rémunération ne les valide"
+  return "sans coût : le meilleur net les valide déjà"
+}
+
+/**
+ * Au meilleur net : dans chaque colonne de société, ne retenir que les rémunérations qui valident 4 trimestres de
+ * retraite. Une case par colonne, cochée d'office : on peut comparer la SASU avec 4 trimestres à l'EURL au meilleur net.
+ * Ce que coûtent les 4 trimestres en net est dit à côté de chaque case.
+ */
+function RetraiteParColonne({ options, scenarios, onChange }: { options: ComparaisonOptions; scenarios: ScenarioStatut[]; onChange: (changes: Partial<ComparaisonOptions>) => void }) {
+  const exiges = trimestresExiges(options.repartition)
   return (
-    <div className="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-0.5 pointer-coarse:min-h-11">
-      <label className="flex min-h-9 items-center gap-2 text-sm font-medium pointer-coarse:min-h-11">
-        <input type="checkbox" className="size-4 accent-slate-700 dark:accent-slate-300" aria-describedby={couts.length > 0 ? "comparateur-cout-retraite" : undefined} checked={options.repartition.avecRetraite === true} onChange={e => onChange({ repartition: { ...options.repartition, avecRetraite: e.target.checked } })} />
-        Avec 4 trimestres de retraite
-      </label>
-      {couts.length > 0 ? (
-        <span id="comparateur-cout-retraite" className="text-xs text-slate-600 dark:text-slate-400">
-          coût en net : {couts.map(c => `${c.libelle} ${ecartSigne(-c.cout)}`).join(", ")}
-        </span>
-      ) : null}
-    </div>
+    <fieldset className="min-w-0 space-y-0.5">
+      <legend className="mb-1 text-sm font-medium">Exiger 4 trimestres de retraite</legend>
+      {STATUTS_SOCIETE.map(statut => {
+        const cout = coutDeLaColonne(scenarios.find(s => s.statut === statut), exiges[statut])
+        const idDuCout = `comparateur-cout-retraite-${statut}`
+        return (
+          <div key={statut} className="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-0.5 pointer-coarse:min-h-11">
+            <label className="flex min-h-9 items-center gap-2 text-sm pointer-coarse:min-h-11">
+              <input type="checkbox" className="size-4 accent-slate-700 dark:accent-slate-300" aria-describedby={cout ? idDuCout : undefined} checked={exiges[statut]} onChange={e => onChange({ repartition: avecLaRetraiteEn(options.repartition, statut, e.target.checked) })} />
+              en {statut}
+            </label>
+            {cout ? (
+              <span id={idDuCout} className={cn("text-xs text-slate-600 dark:text-slate-400", APPARITION)}>
+                {cout}
+              </span>
+            ) : null}
+          </div>
+        )
+      })}
+    </fieldset>
   )
 }
 
+/** Plus haute rémunération possible sans déficit dans chaque société ; `null` tant qu'elle n'est pas calculée. */
+export type PlafondsDeRemuneration = Record<StatutSociete, number | null>
+
 interface RemunerationSaisieProps {
   remunerationNette: number
-  /** Statut étudié dans « Rémunération ou dividendes ? », dont la rémunération maximale borne le curseur. */
-  statut: StatutSociete
-  /** Plus haute rémunération possible sans déficit dans ce statut ; `null` tant qu'elle n'est pas calculée. */
-  plafond: number | null
+  plafonds: PlafondsDeRemuneration
   onChange: (remunerationNette: number) => void
 }
 
@@ -85,34 +112,64 @@ interface RemunerationSaisieProps {
  * retient au plus ce que sa société peut verser, et une phrase le dit sous le champ, la poignée restant en bout de
  * piste. Sans bénéfice, pas de curseur.
  */
-function RemunerationSaisie({ remunerationNette, statut, plafond, onChange }: RemunerationSaisieProps) {
+/**
+ * Les plafonds connus de chaque société : pendant le calcul de l'un d'eux (`null`), le dernier connu. Le curseur et sa
+ * note ne disparaissent pas un instant, ce qui ferait sauter la page.
+ */
+function useDerniersPlafonds(plafonds: PlafondsDeRemuneration): { statut: StatutSociete; plafond: number }[] {
+  const [connus, setConnus] = useState(plafonds)
+  const fusion = Object.fromEntries(STATUTS_SOCIETE.map(statut => [statut, plafonds[statut] ?? connus[statut]])) as PlafondsDeRemuneration
+  if (STATUTS_SOCIETE.some(statut => fusion[statut] !== connus[statut])) setConnus(fusion)
+  return STATUTS_SOCIETE.flatMap(statut => (fusion[statut] === null ? [] : [{ statut, plafond: fusion[statut] as number }]))
+}
+
+/**
+ * Ce que le comparateur retient quand la rémunération saisie dépasse ce qu'une société peut verser : une phrase pour
+ * toutes les sociétés concernées ; rien sinon.
+ */
+function phraseDesDepassements(remunerationNette: number, plafonds: { statut: StatutSociete; plafond: number }[]): string | null {
+  const depasses = plafonds.filter(p => remunerationNette > p.plafond)
+  if (depasses.length === 0) return null
+  const parties = depasses.map(({ statut, plafond }) => (plafond > 0 ? `en ${statut}, le comparateur retient ${euros(plafond)}, le plus qu'elle peut verser` : `en ${statut}, le comparateur ne retient aucune rémunération`))
+  return `Une société ne verse pas plus qu'elle ne gagne : ${parties.join(" ; ")}.`
+}
+
+/**
+ * Rémunération saisie (SASU, EURL) : un champ, et à côté un curseur de 0 à la plus haute rémunération que l'une des
+ * deux sociétés peut verser sans déficit ; la note dessous donne le plafond de chacune, sans dépendre de la société
+ * étudiée plus bas. Au-delà du plafond d'une société, sa colonne retient ce plafond, et une phrase le dit.
+ */
+function RemunerationSaisie({ remunerationNette, plafonds: demandes, onChange }: RemunerationSaisieProps) {
   // Pendant un glissement, le champ montre la valeur de la poignée ; le comparateur ne recalcule qu'au relâchement.
   const [apercu, setApercu] = useState<number | null>(null)
-  const note = plafond === null ? undefined : "comparateur-remuneration-plafond"
+  const plafonds = useDerniersPlafonds(demandes)
+  const maximum = plafonds.length > 0 ? Math.max(...plafonds.map(p => p.plafond)) : null
+  const note = maximum === null ? undefined : "comparateur-remuneration-plafond"
   const classeDeLaNote = "text-xs text-slate-600 dark:text-slate-400"
+  const depassements = phraseDesDepassements(remunerationNette, plafonds)
   return (
     <div className="space-y-1">
       <Label htmlFor="comparateur-remuneration">Rémunération nette annuelle (SASU, EURL)</Label>
-      {/* Le champ, et le curseur avec son plafond dessous ; sur téléphone, le curseur passe sous le champ. */}
+      {/* Le champ, et le curseur avec ses plafonds dessous ; sur téléphone, le curseur passe sous le champ. */}
       <div className="flex flex-wrap items-start gap-x-4 gap-y-1">
         <ChampNumerique id="comparateur-remuneration" className="mt-1 w-40" classNameChamp="bg-background text-right" min="0" step="1000" quoi="la rémunération" aria-describedby={note} value={apercu ?? remunerationNette} onChange={e => onChange(Math.max(0, Number.parseFloat(e.target.value) || 0))} />
-        {plafond !== null && plafond > 0 ? (
-          <div className="w-full max-w-xs sm:w-72">
-            <CurseurDeRemuneration valeur={remunerationNette} max={plafond} libelle="Régler la rémunération nette annuelle" decritPar={note} onApercu={setApercu} onValider={onChange} />
+        {maximum !== null && maximum > 0 ? (
+          <div className={cn("w-full max-w-xs sm:w-80", APPARITION)}>
+            <CurseurDeRemuneration valeur={remunerationNette} max={maximum} libelle="Régler la rémunération nette annuelle" decritPar={note} onApercu={setApercu} onValider={onChange} />
             <p id={note} className={cn(classeDeLaNote, "-mt-1")}>
-              jusqu'à {euros(plafond)} en {statut} sans déficit
+              jusqu'à {plafonds.map(p => `${euros(p.plafond)} en ${p.statut}`).join(", ")} sans déficit
             </p>
           </div>
         ) : null}
       </div>
-      {plafond === 0 ? (
+      {maximum === 0 ? (
         <p id={note} className={classeDeLaNote}>
-          En {statut}, l'activité ne dégage pas de bénéfice : aucune rémunération possible sans déficit.
+          En {plafonds.map(p => p.statut).join(" et en ")}, l'activité ne dégage pas de bénéfice : aucune rémunération possible sans déficit.
         </p>
       ) : null}
-      {plafond !== null && remunerationNette > plafond ? (
+      {depassements ? (
         <p role="status" className="text-sm text-amber-800 dark:text-amber-200">
-          {plafond > 0 ? `Une société ne verse pas plus qu'elle ne gagne : en ${statut}, le comparateur retient ${euros(plafond)}, le plus qu'elle peut verser.` : `Une société ne verse pas plus qu'elle ne gagne : en ${statut}, le comparateur ne retient aucune rémunération.`}
+          {depassements}
         </p>
       ) : null}
     </div>
@@ -202,7 +259,16 @@ function cfeDeLaComparaison(result: ComparaisonResult | null): CFEDeLAnnee | und
 function FraisEtPartBnc({ options, bncUtile, cfe, onChange }: { options: ComparaisonOptions; bncUtile: boolean; cfe?: CFEDeLAnnee; onChange: (changes: Partial<ComparaisonOptions>) => void }) {
   const [ancienTableauOuvert] = useSectionOuverte("comparateur-frais")
   return (
-    <Depliable titre={bncUtile ? "Frais de fonctionnement et part BNC" : "Frais de fonctionnement"} id="comparateur-plus-de-reglages" ouverteParDefaut={ancienTableauOuvert} className="text-sm">
+    <Depliable
+      titre={
+        <>
+          {bncUtile ? "Frais de fonctionnement et part BNC" : "Frais de fonctionnement"} <ColonnesTouchees>toutes les colonnes</ColonnesTouchees>
+        </>
+      }
+      id="comparateur-plus-de-reglages"
+      ouverteParDefaut={ancienTableauOuvert}
+      className="text-sm"
+    >
       <div className="mt-3 space-y-3">
         {bncUtile ? (
           <div className="space-y-1">
@@ -216,60 +282,83 @@ function FraisEtPartBnc({ options, bncUtile, cfe, onChange }: { options: Compara
   )
 }
 
-export interface ReglagesDuComparateurProps {
-  activities: (Company | MicroEntreprise)[]
-  selected: Company | MicroEntreprise
+/** Identifiant de la liste des activités : le rappel de l'étape 2 y ramène. */
+export const ID_DU_CHOIX_DE_L_ACTIVITE = "comparateur-activite"
+
+/**
+ * La liste des activités, dans le titre de l'étape 1 : le réglage qui change tout le tableau, plus grand que les autres
+ * champs, au trait bleu (le vert est celui du meilleur net). Le titre de l'étape lui sert de libellé visible.
+ */
+export function ChoixDeLActivite({ activities, selected, onSelect }: { activities: (Company | MicroEntreprise)[]; selected: Company | MicroEntreprise; onSelect: (activityId: string) => void }) {
+  return (
+    <Select value={selected.id} onValueChange={onSelect}>
+      <SelectTrigger id={ID_DU_CHOIX_DE_L_ACTIVITE} aria-label="Activité comparée" aria-describedby="comparateur-activite-aide" className="w-72 max-w-full border-2 border-blue-600 bg-background text-base font-semibold shadow-[0_0_0_4px_rgb(37_99_235/0.15)] data-[size=default]:h-11 dark:border-blue-400 dark:bg-background dark:hover:bg-background print:shadow-none">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {activities.map(activity => (
+          <SelectItem key={activity.id} value={activity.id}>
+            {activity.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+export interface ReglagesCommunsProps {
   options: ComparaisonOptions
-  /** Comparaison en cours : au meilleur net, elle dit ce que coûtent les 4 trimestres de retraite dans chaque colonne. */
+  /** Comparaison en cours : elle dit si la CFE de l'année est exonérée ou réduite. */
   result: ComparaisonResult | null
-  /** Statut de société étudié, et la plus haute rémunération qu'il permet sans déficit (`null` en attendant). */
-  statut: StatutSociete
-  plafond: number | null
   /** La part BNC sert-elle pour l'activité comparée ? */
   bncUtile: boolean
-  onSelect: (activityId: string) => void
   onChange: (changes: Partial<ComparaisonOptions>) => void
 }
 
 /**
- * Réglages essentiels de la comparaison, visibles dans tous les affichages : l'activité et le partage du bénéfice
- * sur une ligne (qui passe à la ligne au besoin), la phrase du mode choisi, puis la case des 4 trimestres (au
- * meilleur net) ou la rémunération saisie. Frais de fonctionnement et part BNC sont repliés en une seule section.
+ * Étape 1, sous la liste des activités : ce qu'elle fait, puis, repliées, les hypothèses du calcul (frais de
+ * fonctionnement et part BNC, conditions de la société de portage), chacune avec la puce des colonnes qu'elle change.
  */
-export function ReglagesDuComparateur({ activities, selected, options, result, statut, plafond, bncUtile, onSelect, onChange }: ReglagesDuComparateurProps) {
-  const { mode } = options.repartition
-  const avecRetraite = options.repartition.avecRetraite === true
+export function ReglagesCommuns({ options, result, bncUtile, onChange }: ReglagesCommunsProps) {
   return (
-    <div data-impression="bloc" className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3 sm:p-4 dark:border-slate-700 dark:bg-slate-900/50">
-      <div className="space-y-1.5">
-        <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-          <div className="min-w-0 max-w-full space-y-1">
-            <Label htmlFor="comparateur-activite">Activité comparée</Label>
-            <Select value={selected.id} onValueChange={onSelect}>
-              <SelectTrigger id="comparateur-activite" className="w-64 max-w-full bg-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {activities.map(activity => (
-                  <SelectItem key={activity.id} value={activity.id}>
-                    {activity.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <ChoixDeLaRepartition mode={mode} avecRetraite={avecRetraite} onChange={nouveau => onChange({ repartition: avecLeMode(options.repartition, nouveau) })} />
-        </div>
-        <p id="comparateur-mode-choisi" className="text-sm text-slate-600 dark:text-slate-400">
-          {descriptionDuMode(mode, avecRetraite)}
-        </p>
-      </div>
-
-      {mode === "meilleurNet" ? <AvecRetraite options={options} couts={coutsDesQuatreTrimestres(result?.scenarios ?? [])} onChange={onChange} /> : null}
-      {avecRemunerationSaisie(mode) ? <RemunerationSaisie remunerationNette={options.remunerationNette} statut={statut} plafond={plafond} onChange={remunerationNette => onChange({ remunerationNette })} /> : null}
-
+    <div data-impression="bloc" className="space-y-3">
+      <p id="comparateur-activite-aide" className="max-w-prose text-sm text-slate-600 dark:text-slate-400">
+        Simulée dans chaque statut du tableau ; le reste de votre simulation ne change pas.
+      </p>
       <FraisEtPartBnc options={options} bncUtile={bncUtile} cfe={cfeDeLaComparaison(result)} onChange={onChange} />
       <ConditionsDuPortage conditions={options.portage} onChange={portage => onChange({ portage })} />
+    </div>
+  )
+}
+
+export interface ReglagesDeLaSocieteProps {
+  options: ComparaisonOptions
+  /** Comparaison en cours : au meilleur net, elle dit ce que coûtent les 4 trimestres de retraite dans chaque colonne. */
+  result: ComparaisonResult | null
+  /** Plus haute rémunération possible sans déficit dans chaque société (`null` en attendant). */
+  plafonds: PlafondsDeRemuneration
+  onChange: (changes: Partial<ComparaisonOptions>) => void
+}
+
+/**
+ * Étape 3, la société : le partage du bénéfice des colonnes SASU et EURL, la phrase du mode choisi, puis la case des
+ * 4 trimestres (au meilleur net) ou la rémunération saisie.
+ */
+export function ReglagesDeLaSociete({ options, result, plafonds, onChange }: ReglagesDeLaSocieteProps) {
+  const { mode } = options.repartition
+  const exiges = trimestresExiges(options.repartition)
+  // Chaque mode a sa hauteur, et une partie arrive après son calcul (le curseur, les coûts) : la partie qui dépend du
+  // mode suit sa hauteur en douceur, le contenu dessous glisse.
+  return (
+    <div data-impression="bloc" className="space-y-1.5">
+      <ChoixDeLaRepartition mode={mode} exiges={exiges} onChange={nouveau => onChange({ repartition: avecLeMode(options.repartition, nouveau) })} />
+      <HauteurAnimee className="space-y-3">
+        <p id="comparateur-mode-choisi" className="text-sm text-slate-600 dark:text-slate-400">
+          {descriptionDuMode(mode, exiges)}
+        </p>
+        {mode === "meilleurNet" ? <RetraiteParColonne options={options} scenarios={result?.scenarios ?? []} onChange={onChange} /> : null}
+        {avecRemunerationSaisie(mode) ? <RemunerationSaisie remunerationNette={options.remunerationNette} plafonds={plafonds} onChange={remunerationNette => onChange({ remunerationNette })} /> : null}
+      </HauteurAnimee>
     </div>
   )
 }

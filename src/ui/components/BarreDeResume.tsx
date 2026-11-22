@@ -190,7 +190,8 @@ export function BarreDeResume({ report, annees, annee, onAnnee, comparaison }: B
   const [depliee, setDepliee] = useState(false)
   if (!collee && depliee) setDepliee(false)
   const reduite = collee && !depliee
-  useHauteurReservee(barre, reduite)
+  // Collée, réduite ou dépliée, elle garde dans le flux sa hauteur pleine : dépliée, elle passe par-dessus le contenu.
+  useHauteurReservee(barre, collee)
   // Affichage « Trois vues » : les onglets des vues, collés sous la barre avec elle.
   const vues = useVuesDeLaPage()
 
@@ -224,30 +225,30 @@ function ReponsesDuComparateur({ comparaison, className }: { comparaison: Resume
   )
 }
 
-/**
- * Où mène le lien « Alertes » : à la première alerte affichée (celles de l'année sont sous le titre des résultats, les
- * autres sur les cartes, plus bas) ; sans alerte, au titre des résultats.
- */
-const ancreDesAlertes = (alertes: number) => (alertes > 0 ? ANCRES.premiereAlerte : ANCRES.titreDesResultats)
-
 /** La ligne des chiffres clés ; réduite, sur un téléphone, le taux, les réponses et les alertes attendent le bouton qui la déplie. */
 function ChiffresClesDeLAnnee({ report, annees, annee, onAnnee, comparaison, reduite, detail }: BarreDeResumeProps & { reduite: boolean; detail: ReactNode }) {
   const meilleur = meilleurStatut(comparaison?.result ?? null)
   const alertes = nombreDAlertes(report)
   const masqueSiReduite = reduite ? "max-sm:hidden" : undefined
   return (
-    <div className={cn("flex flex-wrap items-center gap-x-5 gap-y-0.5", reduite && "max-sm:flex-nowrap max-sm:gap-x-3")}>
-      <ChoixDeLAnnee annees={annees} annee={annee} onAnnee={onAnnee} />
-      {report ? (
-        <>
-          <Chiffre vers={ANCRES.bilan} libelle="Net du foyer" libelleCourt="Net" valeur={euros(report.totalNetApresImpots)} className="shrink-0" />
-          <Chiffre vers={ANCRES.bilan} libelle="Prélèvements" libelleCourt="Taux" valeur={tauxDePrelevement(report) ?? "—"} className={masqueSiReduite} />
-        </>
-      ) : null}
-      {meilleur && comparaison?.activite ? <Chiffre vers={ANCRES.verdictDuComparateur} libelle={`Meilleur statut pour « ${comparaison.activite} »`} libelleCourt="Meilleur" valeur={meilleur} icone={reduite ? <Trophy /> : undefined} /> : null}
-      <ReponsesDuComparateur comparaison={comparaison} className={masqueSiReduite} />
-      <Chiffre vers={ancreDesAlertes(alertes)} libelle="Alertes" valeur={alertes} className={cn(alertes > 0 && "text-amber-900 dark:text-amber-200", masqueSiReduite)} />
-      {detail}
+    // « Alertes », quand il y en a, se tient dans l'angle haut droit : les autres chiffres passent à la ligne à sa gauche,
+    // sans qu'il occupe à lui seul une ligne de plus.
+    <div className="flex items-start gap-x-5">
+      <div className={cn("flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-0.5", reduite && "max-sm:flex-nowrap max-sm:gap-x-3")}>
+        <ChoixDeLAnnee annees={annees} annee={annee} onAnnee={onAnnee} />
+        {report ? (
+          <>
+            <Chiffre vers={ANCRES.bilan} libelle="Net du foyer" libelleCourt="Net" valeur={euros(report.totalNetApresImpots)} className="shrink-0" />
+            <Chiffre vers={ANCRES.bilan} libelle="Prélèvements" libelleCourt="Taux" valeur={tauxDePrelevement(report) ?? "—"} className={masqueSiReduite} />
+          </>
+        ) : null}
+        {meilleur && comparaison?.activite ? <Chiffre vers={ANCRES.verdictDuComparateur} libelle={`Meilleur statut pour « ${comparaison.activite} »`} libelleCourt="Meilleur" valeur={meilleur} icone={reduite ? <Trophy /> : undefined} /> : null}
+        <ReponsesDuComparateur comparaison={comparaison} className={masqueSiReduite} />
+        {detail}
+      </div>
+      {/* « Alertes » seulement quand il y en a : « Alertes 0 » ne dit rien. Le lien mène à la première alerte affichée
+          (celles de l'année sont sous le titre des résultats, les autres sur les cartes, plus bas). */}
+      {alertes > 0 ? <Chiffre vers={ANCRES.premiereAlerte} libelle="Alertes" valeur={alertes} className={cn("shrink-0 text-amber-900 dark:text-amber-200", masqueSiReduite)} /> : null}
     </div>
   )
 }

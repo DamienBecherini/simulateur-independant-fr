@@ -12,6 +12,7 @@ import { EntityItem } from "./EntityItem"
 import { SelectEntityTypeModal } from "./SelectEntityTypeModal"
 import { ConfirmationDuChangementDeStatut, type DemandeDeChangement } from "./ConfirmationDuChangementDeStatut"
 import { useTriAccessible } from "../hooks/useTriAccessible"
+import { useListeAnimee } from "../hooks/useListeAnimee"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useActionsSurLesActeurs } from "../hooks/useActionsSurLesActeurs"
 import { LigneActeur } from "./LigneActeur"
@@ -81,6 +82,8 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
       applyChange({ entities: arrayMove(entities, oldIndex, newIndex) })
     }
   }
+  // Un acteur ajouté ou retiré : les autres cartes glissent à leur place.
+  const [refDeLaListe, glisser] = useListeAnimee(handleDragEnd)
 
   const listeVide = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -104,9 +107,10 @@ function EntitiesManager({ session, setSession, annee, onChargerMontage }: Entit
           + Ajouter une activité
         </Button>
       </div>
-      <DndContext {...tri} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext {...tri} collisionDetection={closestCenter} {...glisser}>
         <SortableContext items={entityIds} strategy={verticalListSortingStrategy}>
-          <div className={resume ? "space-y-2" : "space-y-4"}>
+          {/* Une liste par forme de carte : passer au résumé remplace la liste d'un coup, sans animer chaque carte. */}
+          <div key={resume ? "resume" : "complet"} ref={refDeLaListe} className={resume ? "space-y-2" : "space-y-4"}>
             {entities.length === 0 ? listeVide : entities.map(entity => <Acteur key={entity.id} entity={entity} allEntities={entities} relationships={relationships} annee={annee} onUpdate={updateEntity} onDelete={deleteEntity} onToggleLock={toggleLock} onEdit={setEditingEntity} onAddRelationship={addRelationship} onDeleteRelationship={deleteRelationship} />)}
           </div>
         </SortableContext>

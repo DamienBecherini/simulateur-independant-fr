@@ -109,11 +109,11 @@ export const comparerStatuts = definirOutil({
     avecRetraite: z.boolean().optional().describe("Mode meilleurNet : exiger 4 trimestres de retraite."),
     partBncPrestations: z.number().min(0).max(1).optional().describe("Part BNC des prestations si l'activité devient une micro-entreprise, de 0 à 1.")
   }),
-  resultat: z.object({ annee: z.number(), activiteId: z.string(), activite: z.string(), reglages: z.object({ mode: z.string(), remunerationNette: z.number(), partDistribuee: z.number(), avecRetraite: z.boolean(), partBncPrestations: z.number() }), meilleur: z.string().nullable(), situationNet: z.number().nullable(), sousLaSituationNet: SousLaSituationSchema.nullable(), scenarios: z.array(ScenarioSchema), couples: z.array(z.object({ personnes: z.array(z.string()), netActuel: z.number(), netMaries: z.number() })), notes: z.array(z.string()) }),
+  resultat: z.object({ annee: z.number(), activiteId: z.string(), activite: z.string(), reglages: z.object({ mode: z.string(), remunerationNette: z.number(), partDistribuee: z.number(), avecRetraite: z.boolean(), retraiteEn: z.partialRecord(z.enum(STATUTS_SOCIETE), z.boolean()).optional().describe("Choix des 4 trimestres propre à une colonne de société, qui l'emporte sur avecRetraite."), partBncPrestations: z.number() }), meilleur: z.string().nullable(), situationNet: z.number().nullable(), sousLaSituationNet: SousLaSituationSchema.nullable(), scenarios: z.array(ScenarioSchema), couples: z.array(z.object({ personnes: z.array(z.string()), netActuel: z.number(), netMaries: z.number() })), notes: z.array(z.string()) }),
   executer: (session, { activiteId, annee, mode, remunerationNette, partDistribuee, avecRetraite, partBncPrestations }) => {
     const enregistrees = optionsEnregistrees(session, activiteId, annee)
     const base = enregistrees.options
-    const repartition = { ...base.repartition, ...(mode ? { mode } : {}), ...(partDistribuee === undefined ? {} : { partDistribuee }), ...(avecRetraite === undefined ? {} : { avecRetraite }) }
+    const repartition = { ...base.repartition, ...(mode ? { mode } : {}), ...(partDistribuee === undefined ? {} : { partDistribuee }), ...(avecRetraite === undefined ? {} : { avecRetraite, retraiteEn: undefined }) }
     // En mode grille, toutes les sociétés reprennent la rémunération de la grille, comme dans le comparateur.
     const options = avecLaRemunerationDeLaGrille({ ...base, repartition, remunerationNette: remunerationNette ?? base.remunerationNette, partBncPrestations: partBncPrestations ?? base.partBncPrestations }, vueDeLAnnee(session, enregistrees.annee))
     const comparaison = comparerStatutsDeLAnnee(session, options, enregistrees.annee)
@@ -121,7 +121,7 @@ export const comparerStatuts = definirOutil({
       annee: enregistrees.annee,
       activiteId: enregistrees.activite.id,
       activite: enregistrees.activite.name,
-      reglages: { mode: repartition.mode, remunerationNette: arrondir(options.remunerationNette), partDistribuee: repartition.partDistribuee, avecRetraite: repartition.avecRetraite ?? false, partBncPrestations: options.partBncPrestations },
+      reglages: { mode: repartition.mode, remunerationNette: arrondir(options.remunerationNette), partDistribuee: repartition.partDistribuee, avecRetraite: repartition.avecRetraite ?? false, ...(repartition.retraiteEn ? { retraiteEn: repartition.retraiteEn } : {}), partBncPrestations: options.partBncPrestations },
       meilleur: comparaison.meilleur,
       situationNet: comparaison.situationSaisie ? arrondir(comparaison.situationSaisie.netApresImpots) : null,
       sousLaSituationNet: sousLaSituationSaisie(comparaison),

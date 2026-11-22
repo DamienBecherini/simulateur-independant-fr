@@ -26,7 +26,7 @@ describe("cartes des statuts : le portage salarial", () => {
   it("a sa carte, avec ses cinq étoiles, son écart et les frais dont la société de portage se charge ; il peut être le meilleur net", () => {
     const portage = scenario("portage", "Portage salarial", 31000, { protectionSociale: { etoiles: 5, trimestres: 4, resume: "", garanties: GARANTIES_DE_TEST }, ecartDeFrais: { total: -850, postes: { assurance: -850 } } })
     render(<CartesDesStatuts result={avec(portage, "portage")} />)
-    expect(cartes()[0]).toHaveTextContent(/^Portage salarialmeilleur net ·/)
+    expect(cartes()[0]).toHaveTextContent(/^Meilleur netPortage salarial★/)
     expect(within(cartes()[0]).getByText("protection sociale 5 sur 5")).toBeInTheDocument()
     expect(espaces(cartes()[0].textContent)).toContain("dont environ 850 € de frais de fonctionnement en moins qu'en micro-entreprise")
     expect(espaces(cartes()[0].textContent)).toContain("+1 000 €")
@@ -58,7 +58,7 @@ describe("cartes des statuts", () => {
     expect(cartes[0]).toHaveTextContent(/^Micro-entreprisenon retenue : régime micro fermé ·/)
     expect(espaces(cartes[0].textContent)).toContain("dont environ 1 200 € de frais de gestion en moins qu'en EI au réel")
     expect(cartes[1]).toHaveTextContent(/^Micro \+ versement libératoirenon retenue : plafond dépassé ·/)
-    expect(cartes[2]).toHaveTextContent(/^EI au réelactuel · meilleur net ·/)
+    expect(cartes[2]).toHaveTextContent(/^Meilleur netEI au réelactuel ·/)
   })
 })
 

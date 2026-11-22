@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { ArrowUp, ArrowDown } from "lucide-react"
-import type { SegmentDeFlux } from "@/lib/grille-mensuelle"
+import { deNom, fondDuSegment, type SegmentDeFlux } from "@/lib/grille-mensuelle"
 
 interface CellChartDisplayProps {
   gains: SegmentDeFlux[]
@@ -31,7 +31,8 @@ const GAINS_DU_TOTAL = "text-green-800 dark:text-green-300"
 export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, absoluteMaxValue, flowCount, readOnly = false }: CellChartDisplayProps) {
   const resume = useAffichageResume()
   const attenue = readOnly ? ATTENUE_DU_TOTAL : ATTENUE
-  if (flowCount === 0) {
+  // Sans flux saisi ni versement reçu, la case invite à la saisie.
+  if (flowCount === 0 && gains.length === 0) {
     if (readOnly) return <div className={cn("py-3 text-center", attenue)}>—</div>
     // Sur papier, une case vide n'invite plus à la saisie : elle se lit comme un total annuel vide.
     return (
@@ -50,7 +51,7 @@ export function CellChartDisplay({ gains, expenses, totalGains, totalExpenses, a
         const percentage = absoluteMaxValue > 0 ? (segment.amount / absoluteMaxValue) * 100 : 0
         const heightStyle = `max(min(${percentage}%, 100%), ${MIN_HEIGHT_PX}px)`
         return (
-          <div key={index} className="relative w-5 rounded-t-[2px] print:w-auto print:min-w-[3px] print:max-w-5 print:flex-1" style={{ height: heightStyle, backgroundColor: segment.color }}>
+          <div key={index} data-recu={segment.recuDe ? "" : undefined} title={segment.recuDe ? `Reçu ${segment.recuDe.map(deNom).join(", ")}` : undefined} className="relative w-5 rounded-t-[2px] print:w-auto print:min-w-[3px] print:max-w-5 print:flex-1" style={{ height: heightStyle, ...fondDuSegment(segment) }}>
             <div className={cn("absolute bottom-full mb-0.5 w-full text-center text-xs font-bold print:text-[6.5pt]", attenue)}>{segment.number}</div>
           </div>
         )

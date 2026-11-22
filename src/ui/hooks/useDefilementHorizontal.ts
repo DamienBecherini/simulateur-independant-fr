@@ -4,7 +4,7 @@
 // son contenu changent de taille.
 
 import { useCallback, useEffect, useState, type RefObject } from "react"
-import { defilementDUnPas, etatDuDefilement, memeDefilement, SANS_DEFILEMENT, type EtatDuDefilement, type GeometrieDeLaZone } from "@/lib/defilement"
+import { defilementDUnPas, defilementPourMontrer, etatDuDefilement, memeDefilement, SANS_DEFILEMENT, type EtatDuDefilement, type GeometrieDeLaZone } from "@/lib/defilement"
 
 /** Défilement doux, sauf si l'utilisateur a demandé de réduire les animations. */
 export function comportementDuDefilement(): ScrollBehavior {
@@ -61,4 +61,38 @@ export function useDefilementHorizontal(zone: RefObject<HTMLElement | null>): Et
   )
 
   return { ...etat, defiler }
+}
+
+/** Gestes de l'utilisateur dans la zone : après l'un d'eux, elle ne défile plus d'elle-même. */
+const GESTES = ["pointerdown", "wheel", "touchstart", "keydown"] as const
+
+/**
+ * À la première apparition de la zone à l'écran, la fait défiler jusqu'à l'élément désigné (`cible`, un sélecteur :
+ * la colonne au meilleur net) s'il est caché : une seule fois, seulement la zone (jamais la page), et jamais après un
+ * geste de l'utilisateur dans la zone, à qui on ne reprend pas la main. Une zone masquée (une autre vue affichée,
+ * le tableau replié) attend d'apparaître.
+ */
+export function useMontrerAuPremierAffichage(zone: RefObject<HTMLElement | null>, cible: string | undefined) {
+  useEffect(() => {
+    const element = zone.current
+    if (!element || !cible || typeof IntersectionObserver === "undefined") return
+    let observateur: IntersectionObserver | null = null
+    const terminer = () => {
+      observateur?.disconnect()
+      for (const geste of GESTES) element.removeEventListener(geste, terminer)
+    }
+    const montrer = (entrees: IntersectionObserverEntry[]) => {
+      if (!entrees.some(entree => entree.isIntersecting)) return
+      terminer()
+      const colonne = element.querySelector<HTMLElement>(cible)
+      if (!colonne) return
+      const gauche = colonne.getBoundingClientRect().left - element.getBoundingClientRect().left + element.scrollLeft
+      const position = defilementPourMontrer(mesurer(element), { gauche, droite: gauche + colonne.offsetWidth })
+      if (position !== null) element.scrollTo({ left: position, behavior: comportementDuDefilement() })
+    }
+    for (const geste of GESTES) element.addEventListener(geste, terminer, { passive: true })
+    observateur = new IntersectionObserver(montrer, { threshold: 0.2 })
+    observateur.observe(element)
+    return terminer
+  }, [zone, cible])
 }

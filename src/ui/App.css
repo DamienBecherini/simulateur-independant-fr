@@ -24,6 +24,18 @@
 
 @theme {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Colonne au meilleur net du comparateur : son halo s'allume une fois, quand elle le devient (voir ComparatorPanel). */
+  --animate-lueur: lueur 1.6s ease-out 1;
+  @keyframes lueur {
+    0% {
+      box-shadow: none;
+    }
+    50% {
+      box-shadow:
+        -14px 0 24px -8px rgb(16 185 129 / 0.8),
+        14px 0 24px -8px rgb(16 185 129 / 0.8);
+    }
+  }
 }
 
 /* Thème sombre à l'écran seulement : un document imprimé ou enregistré en PDF est toujours en couleurs claires. */

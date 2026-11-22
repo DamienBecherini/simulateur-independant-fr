@@ -182,9 +182,9 @@ function CalculALEnvers(props: CombienFacturerProps) {
   }
   return (
     <section aria-labelledby={ID_DU_TITRE} className={CADRE}>
-      <h3 id={ID_DU_TITRE} className="text-lg font-medium text-slate-800 dark:text-slate-100">
+      <h4 id={ID_DU_TITRE} className="text-lg font-medium text-slate-800 dark:text-slate-100">
         {TITRE}
-      </h3>
+      </h4>
       <ContenuDuCalcul {...props} />
     </section>
   )

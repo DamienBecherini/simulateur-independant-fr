@@ -42,7 +42,8 @@ const VUE_DE_L_ANCRE: Readonly<Record<Ancre, Vue | null>> = {
   [ANCRES.titreDuComparateur]: "comparer",
   // Les réponses de « Comparer et optimiser » : mariage ou Pacs, rémunération ou dividendes.
   [ANCRES.comparaisonDuCouple]: "comparer",
-  [ANCRES.titreDeLOptimisation]: "comparer"
+  [ANCRES.titreDeLOptimisation]: "comparer",
+  [ANCRES.reglageDeLaSociete]: "comparer"
 }
 
 const estUneVue = (nom: string): nom is Vue => VUES.some(v => v.valeur === nom)

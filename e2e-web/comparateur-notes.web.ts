@@ -27,7 +27,8 @@ const noteChoisie = (page: Page) => notes(page).locator('[aria-live="polite"]')
 async function bullePresDeSaPastille(page: Page): Promise<{ dansLEcran: boolean; ecart: number }> {
   return page.evaluate(() => {
     const b = document.querySelector('[role="tooltip"]')!.getBoundingClientRect()
-    const p = document.querySelector('button[aria-expanded="true"]')!.getBoundingClientRect()
+    // La pastille ouverte, dans le contenu : le bouton « Réduire » du bandeau de la démo est lui aussi aria-expanded.
+    const p = document.querySelector('main button[aria-expanded="true"]')!.getBoundingClientRect()
     const dessous = b.top - p.bottom
     const dessus = p.top - b.bottom
     return { dansLEcran: b.left >= 0 && b.top >= 0 && b.right <= document.documentElement.clientWidth && b.bottom <= window.innerHeight, ecart: Math.round(Math.max(dessous, dessus)) }
@@ -83,7 +84,7 @@ test("une note plus haute que la place restante s'ouvre quand même sous sa past
   await page.goto(SITUATION)
   await expect(tableau(page)).toBeVisible()
   // La note 2 de la SASU, la plus longue : les conditions de l'exonération.
-  const pastille = tableau(page).getByRole("columnheader", { name: /^SASU/ }).getByRole("button", { name: "Voir la note 2" })
+  const pastille = tableau(page).getByRole("columnheader", { name: /^(Meilleur net\s*)?SASU/ }).getByRole("button", { name: "Voir la note 2" })
   await pastille.click()
   await expect(bulle(page)).toContainText(/Exonération ZFU-TE appliquée sans vérifier ses conditions/)
   const bas = () => bulle(page).evaluate(element => Math.round(element.getBoundingClientRect().bottom - window.innerHeight))

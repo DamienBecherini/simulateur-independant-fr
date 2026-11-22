@@ -6,7 +6,7 @@ import { VUES } from "./vues"
 
 describe("registre des ancres de la page", () => {
   it("garde les adresses déjà publiées, chacune une seule fois", () => {
-    expect(Object.values(ANCRES).sort()).toEqual(["bilan", "comparaison-du-couple", "comparateur-titre", "comparateur-verdict", "contenu", "optimisation-titre", "premiere-alerte", "resultats-titre"])
+    expect(Object.values(ANCRES).sort()).toEqual(["bilan", "comparaison-du-couple", "comparateur-societe", "comparateur-titre", "comparateur-verdict", "contenu", "optimisation-titre", "premiere-alerte", "resultats-titre"])
     expect(new Set(Object.values(ANCRES)).size).toBe(Object.values(ANCRES).length)
   })
 

@@ -45,3 +45,16 @@ export function defilementDUnPas(g: GeometrieDeLaZone, sens: -1 | 1): number {
   const pas = Math.max(PAS_MINIMAL, (g.largeurVisible - g.colonneFixe) * PART_D_UN_PAS)
   return Math.min(Math.max(g.defilement + sens * pas, 0), Math.max(0, g.largeurTotale - g.largeurVisible))
 }
+
+/**
+ * Défilement qui montre une colonne cachée, en tout ou en partie : elle vient se placer juste à droite de la colonne
+ * fixe (ou au bord gauche s'il n'y en a pas). `null` quand elle est déjà entièrement visible : rien ne bouge.
+ * `gauche` et `droite` sont les bords de la colonne mesurés depuis le début du contenu (comme `offsetLeft`).
+ */
+export function defilementPourMontrer(zone: GeometrieDeLaZone, colonne: { gauche: number; droite: number }): number | null {
+  const debutVisible = zone.defilement + zone.colonneFixe
+  const finVisible = zone.defilement + zone.largeurVisible
+  if (colonne.gauche >= debutVisible - TOLERANCE && colonne.droite <= finVisible + TOLERANCE) return null
+  const maximum = Math.max(0, zone.largeurTotale - zone.largeurVisible)
+  return Math.min(maximum, Math.max(0, colonne.gauche - zone.colonneFixe))
+}

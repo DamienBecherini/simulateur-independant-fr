@@ -54,7 +54,8 @@ describe("barre de résumé réduite au défilement", () => {
     expect(container.querySelector("[data-barre-visible]")).toHaveClass("pointer-events-auto")
     // Réduite, sur un téléphone : le taux et les alertes attendent le bouton (masqués sous 640 px).
     expect(screen.getByRole("link", { name: /Prélèvements/ })).toHaveClass("max-sm:hidden")
-    expect(screen.getByRole("link", { name: /Alertes/ })).toHaveClass("max-sm:hidden")
+    // Sans alerte, pas de lien « Alertes 0 ».
+    expect(screen.queryByRole("link", { name: /Alertes/ })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: /Net du foyer/ })).not.toHaveClass("max-sm:hidden")
 
     const bouton = screen.getByRole("button", { name: "Taux et alertes" })
@@ -62,7 +63,8 @@ describe("barre de résumé réduite au défilement", () => {
     await userEvent.click(bouton)
     expect(bouton).toHaveAttribute("aria-expanded", "true")
     expect(barre).not.toHaveAttribute("data-reduite")
-    expect((barre as HTMLElement).style.height).toBe("")
+    // Dépliée, elle garde aussi sa hauteur pleine dans le flux : elle passe par-dessus le contenu, qui ne bouge pas.
+    expect((barre as HTMLElement).style.height).toMatch(/px$/)
     expect(screen.getByRole("link", { name: /Prélèvements/ })).not.toHaveClass("max-sm:hidden")
     await userEvent.click(bouton)
     expect(barre).toHaveAttribute("data-reduite")
@@ -77,6 +79,11 @@ describe("barre de résumé réduite au défilement", () => {
     afficher(["Règles de 2026 reprises de 2025.", "Autre avertissement."])
     await defiler(-200)
     expect(await screen.findByRole("button", { name: "Taux et alertes (2 alertes)" })).toBeInTheDocument()
+    // Le lien « Alertes » mène à la première ; il attend le bouton sur un téléphone.
+    const lien = screen.getByRole("link", { name: /^Alertes/ })
+    expect(lien).toHaveTextContent(/^Alertes\s*2,/)
+    expect(lien).toHaveAttribute("href", "#premiere-alerte")
+    expect(lien).toHaveClass("max-sm:hidden")
   })
 
   it("mène aux réponses du comparateur quand elles existent : mariage ou Pacs, rémunération optimale", () => {

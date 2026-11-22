@@ -1,6 +1,6 @@
 // src/ui/components/ReglagesDuComparateur.test.tsx
 
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { OptimisationRemuneration, SessionState, StatutSociete } from "@/types"
@@ -36,7 +36,9 @@ describe("modes de partage du bénéfice", () => {
     expect(await screen.findByRole("radio", { name: "Meilleur net" })).toBeChecked()
     expect(phrase()).toHaveTextContent("Chaque société verse la rémunération qui donne le meilleur net parmi celles qui valident 4 trimestres de retraite, le reste en dividendes.")
 
-    await userEvent.click(screen.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" }))
+    await userEvent.click(screen.getByRole("checkbox", { name: "en EURL" }))
+    expect(phrase()).toHaveTextContent(/^Chaque société verse la rémunération qui donne le meilleur net, le reste en dividendes ; en SASU, parmi celles qui valident 4 trimestres de retraite\.$/)
+    await userEvent.click(screen.getByRole("checkbox", { name: "en SASU" }))
     expect(phrase()).toHaveTextContent(/^Chaque société verse la rémunération qui donne le meilleur net, le reste en dividendes\.$/)
 
     await userEvent.click(screen.getByRole("radio", { name: "Ma rémunération" }))
@@ -51,19 +53,32 @@ describe("modes de partage du bénéfice", () => {
 })
 
 describe("curseur de la rémunération saisie", () => {
-  it("va de 0 à la rémunération maximale sans déficit du statut étudié, dite sous le curseur", async () => {
+  it("va de 0 au plus haut des plafonds sans déficit, et dit sous le curseur celui de chaque société", async () => {
     avecPlafonds()
     await enMode("Ma rémunération")
     const poignee = await curseur()
     expect(poignee).toHaveAttribute("aria-valuemin", "0")
-    expect(poignee).toHaveAttribute("aria-valuemax", "41300")
-    expect(poignee).toHaveAccessibleDescription(/^jusqu'à 41\s300\s€ en SASU sans déficit$/)
-    expect(champ()).toHaveAccessibleDescription(/^jusqu'à 41\s300\s€ en SASU sans déficit$/)
+    await vi.waitFor(() => expect(poignee).toHaveAttribute("aria-valuemax", "52800"))
+    expect(poignee).toHaveAccessibleDescription(/^jusqu'à 41\s300\s€ en SASU, 52\s800\s€ en EURL sans déficit$/)
+    expect(champ()).toHaveAccessibleDescription(/^jusqu'à 41\s300\s€ en SASU, 52\s800\s€ en EURL sans déficit$/)
 
-    // Le statut étudié dans « Rémunération ou dividendes ? » change le plafond.
-    await userEvent.click(screen.getAllByRole("button", { name: "EURL", pressed: false })[0])
-    await vi.waitFor(() => expect(screen.getByRole("slider", { name: "Régler la rémunération nette annuelle" })).toHaveAttribute("aria-valuemax", "52800"))
-    expect(document.getElementById("comparateur-remuneration-plafond")).toHaveTextContent(`jusqu'à ${money(52800)} en EURL sans déficit`)
+    // La société étudiée plus bas (« Approfondir une société ») ne change plus rien au curseur.
+    await userEvent.click(within(screen.getByRole("group", { name: "Société étudiée" })).getByRole("button", { name: "EURL" }))
+    await vi.waitFor(() => expect(within(screen.getByRole("group", { name: "Société étudiée" })).getByRole("button", { name: "EURL" })).toHaveAttribute("aria-pressed", "true"))
+    expect(screen.getByRole("slider", { name: "Régler la rémunération nette annuelle" })).toHaveAttribute("aria-valuemax", "52800")
+    expect(document.getElementById("comparateur-remuneration-plafond")).toHaveTextContent(`jusqu'à ${money(41300)} en SASU, ${money(52800)} en EURL sans déficit`)
+  })
+
+  it("au-delà du plafond d'une société, dit ce que sa colonne retient", async () => {
+    avecPlafonds()
+    await enMode("Ma rémunération")
+    await curseur()
+    await userEvent.clear(champ())
+    await userEvent.type(champ(), "45000")
+    expect(await screen.findByRole("status")).toHaveTextContent(`Une société ne verse pas plus qu'elle ne gagne : en SASU, le comparateur retient ${money(41300)}, le plus qu'elle peut verser.`)
+    await userEvent.clear(champ())
+    await userEvent.type(champ(), "60000")
+    expect(screen.getByRole("status")).toHaveTextContent(`en SASU, le comparateur retient ${money(41300)}, le plus qu'elle peut verser ; en EURL, le comparateur retient ${money(52800)}, le plus qu'elle peut verser.`)
   })
 
   it("suit le champ, et le champ le suit au clavier, par pas de 100 € et de 1 000 €", async () => {
@@ -81,7 +96,7 @@ describe("curseur de la rémunération saisie", () => {
     await userEvent.keyboard("{PageDown}")
     expect(champ()).toHaveValue(19100)
     await userEvent.keyboard("{End}")
-    expect(champ()).toHaveValue(41300)
+    expect(champ()).toHaveValue(52800)
     await userEvent.keyboard("{Home}")
     expect(champ()).toHaveValue(0)
     expect(enregistre).toHaveBeenLastCalledWith(expect.objectContaining({ reglagesParActivite: { "company-sasu": expect.objectContaining({ remunerationParAnnee: { "2026": 0 } }) } }))
@@ -94,8 +109,8 @@ describe("curseur de la rémunération saisie", () => {
     await userEvent.clear(champ())
     await userEvent.type(champ(), "60000")
     expect(champ()).toHaveValue(60000)
-    expect(poignee).toHaveAttribute("aria-valuenow", "41300")
-    expect(poignee.getAttribute("aria-valuetext")).toMatch(/^60\s000\s€ de rémunération nette, au-delà des 41\s300\s€ possibles sans déficit$/)
+    await vi.waitFor(() => expect(poignee).toHaveAttribute("aria-valuenow", "52800"))
+    expect(poignee.getAttribute("aria-valuetext")).toMatch(/^60\s000\s€ de rémunération nette, au-delà des 52\s800\s€ possibles sans déficit$/)
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ remunerationNette: 60000 }), 2026))
   })
 
@@ -103,29 +118,30 @@ describe("curseur de la rémunération saisie", () => {
     avecPlafonds()
     const enregistre = await enMode("Ma rémunération")
     const poignee = await curseur()
+    await vi.waitFor(() => expect(poignee).toHaveAttribute("aria-valuemax", "52800"))
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ left: 0, width: 1000, top: 0, height: 44, right: 1000, bottom: 44, x: 0, y: 0, toJSON: () => ({}) })
     enregistre.mockClear()
 
     const piste = poignee.parentElement!
     fireEvent.pointerDown(piste, { button: 0, clientX: 500, pointerId: 1 })
     expect(poignee).toHaveFocus()
-    // La moitié de 41 300 €, au pas de 100 €.
-    expect(champ()).toHaveValue(20700)
+    // La moitié de 52 800 €, au pas de 100 €.
+    expect(champ()).toHaveValue(26400)
     fireEvent.pointerMove(piste, { clientX: 250, pointerId: 1 })
-    expect(champ()).toHaveValue(10300)
-    expect(poignee).toHaveAttribute("aria-valuenow", "10300")
+    expect(champ()).toHaveValue(13200)
+    expect(poignee).toHaveAttribute("aria-valuenow", "13200")
     expect(enregistre).not.toHaveBeenCalled()
 
     fireEvent.pointerUp(piste, { clientX: 250, pointerId: 1 })
     expect(enregistre).toHaveBeenCalledTimes(1)
-    expect(enregistre).toHaveBeenLastCalledWith(expect.objectContaining({ reglagesParActivite: { "company-sasu": expect.objectContaining({ remunerationParAnnee: { "2026": 10300 } }) } }))
-    expect(champ()).toHaveValue(10300)
+    expect(enregistre).toHaveBeenLastCalledWith(expect.objectContaining({ reglagesParActivite: { "company-sasu": expect.objectContaining({ remunerationParAnnee: { "2026": 13200 } }) } }))
+    expect(champ()).toHaveValue(13200)
   })
 
   it("sans bénéfice, n'a pas de curseur et le dit", async () => {
     avecPlafonds({ SASU: 0, EURL: 0 })
     await enMode("Ma rémunération")
-    expect(await screen.findByText("En SASU, l'activité ne dégage pas de bénéfice : aucune rémunération possible sans déficit.")).toBeInTheDocument()
+    expect(await screen.findByText("En SASU et en EURL, l'activité ne dégage pas de bénéfice : aucune rémunération possible sans déficit.")).toBeInTheDocument()
     expect(screen.queryByRole("slider", { name: "Régler la rémunération nette annuelle" })).not.toBeInTheDocument()
     expect(champ()).toBeInTheDocument()
   })

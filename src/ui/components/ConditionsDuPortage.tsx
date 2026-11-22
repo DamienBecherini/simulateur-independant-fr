@@ -10,6 +10,7 @@ import { conditionsPortageRetenues, plancherAuDessusDuPlafond } from "@/backend/
 import type { ConditionsPortage, ConditionsPortageRetenues, EffectifPortage } from "@/types"
 import { ChampNumerique } from "./ChampNumerique"
 import { Depliable } from "./Depliable"
+import { ColonnesTouchees } from "./EtapeDuComparateur"
 
 type Cle = keyof ConditionsPortageRetenues
 
@@ -72,7 +73,15 @@ export function ConditionsDuPortage({ conditions, onChange }: ConditionsDuPortag
   const regler = (cle: Cle, valeur: ConditionsPortage[Cle]) => onChange(Object.fromEntries(Object.entries({ ...conditions, [cle]: valeur }).filter(([, v]) => v !== undefined)) as ConditionsPortage)
   const pourcent = (taux: number) => Math.round(taux * 10000) / 100
   return (
-    <Depliable titre="Conditions de la société de portage" id="comparateur-conditions-portage" className="text-sm">
+    <Depliable
+      titre={
+        <>
+          Conditions de la société de portage <ColonnesTouchees>colonne Portage</ColonnesTouchees>
+        </>
+      }
+      id="comparateur-conditions-portage"
+      className="text-sm"
+    >
       <div className="mt-3 space-y-3 text-slate-700 dark:text-slate-200">
         <p className="text-sm text-slate-600 dark:text-slate-400">
           Pour la colonne « Portage salarial ». Les valeurs par défaut sont typiques, sans source officielle : frais de gestion de 7 % du chiffre d'affaires (souvent de 5 à 10 %), CDI, société de 50 salariés et plus, réduction générale des cotisations gardée par la société, sans mutuelle. Remplacez-les par celles de votre société de portage. La loi et la convention de branche (indemnité d'apport d'affaires, réserve, cotisations) ne se règlent pas.

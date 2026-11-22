@@ -209,6 +209,13 @@ describe("modifier, supprimer, régler le comparateur", () => {
     expect(erreurDe("proposer_reglages_comparateur", session, { activiteId: "person-lea", reglages: {} })).toContain("est une personne")
   })
 
+  it("le choix des 4 trimestres proposé vaut pour les deux colonnes de société, à la place de celui propre à chacune", () => {
+    const session = { ...exemple(), comparateur: { activiteComparee: "company-conseil", reglagesParActivite: { "company-conseil": { repartition: { mode: "meilleurNet" as const, partDistribuee: 1, avecRetraite: true, retraiteEn: { SASU: false } } } } } }
+    expect(appeler<{ reglages: { retraiteEn?: Record<string, boolean> } }>("comparer_statuts", session).reglages.retraiteEn).toEqual({ SASU: false })
+    const apres = appliquer(session, proposer("proposer_reglages_comparateur", session, { activiteId: "company-conseil", reglages: { avecRetraite: true } }).proposition)
+    expect(apres.comparateur?.reglagesParActivite["company-conseil"].repartition).toEqual({ mode: "meilleurNet", partDistribuee: 1, avecRetraite: true })
+  })
+
   it("travaille aussi sur un montage type", () => {
     const session = geler(sessionDUnMontage(MONTAGES_TYPES.find(m => m.id === "sasu-salaire-4-trimestres")!))
     const resultat = proposer("proposer_modification", session, { modifications: [{ cible: "serie", annee: 2026, serie: { acteurId: "s-antoine", typeFlux: "director_remuneration", libelle: "Rémunération" }, montant: 1500 }] })

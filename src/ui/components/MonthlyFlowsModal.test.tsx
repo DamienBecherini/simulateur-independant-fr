@@ -13,12 +13,13 @@ import { makeCompany, makeFlow, makeMicro, makePerson } from "@/ui/testing/fixtu
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import type { FlowChanges } from "./FlowItem"
 import type { NewFlowValues } from "./NewFlowItem"
+import type { VersementRecu } from "@/lib/grille-mensuelle"
 
 /**
  * Rend la fenêtre des flux avec un état local, comme le fait `MonthlyGrid` : les créations, modifications
  * et suppressions sont appliquées à la liste affichée, et chaque appel est espionné.
  */
-function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as Entity, annee = 2026, fluxDeLAnnee = [] as FinancialFlow[], limiteDeRemuneration = undefined as number | undefined } = {}) {
+function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as Entity, annee = 2026, fluxDeLAnnee = [] as FinancialFlow[], limiteDeRemuneration = undefined as number | undefined, recus = undefined as VersementRecu[] | undefined } = {}) {
   const onCreate = vi.fn<(values: NewFlowValues) => void>()
   // Le montant de chaque création est-il annuel (à répartir sur les douze mois) ?
   const annuels = vi.fn<(annuel: boolean) => void>()
@@ -36,6 +37,7 @@ function renderModal({ flows = [] as FinancialFlow[], entity = makePerson() as E
         annee={annee}
         fluxDeLAnnee={fluxDeLAnnee}
         limiteDeRemuneration={limiteDeRemuneration}
+        recus={recus}
         onClose={onClose}
         onCreate={(values, _portee, _aussiEn, annuel) => {
           onCreate(values)
@@ -535,5 +537,22 @@ describe("MonthlyFlowsModal : aide de la fenêtre", () => {
     await user.click(screen.getByText("Aide à la saisie"))
     expect(aide).toHaveAttribute("open")
     expect(aide).toHaveTextContent(`cotisations salariales de ${ANNEE_COURANTE}`)
+  })
+})
+
+describe("MonthlyFlowsModal : versé par une société", () => {
+  it("une personne voit ce que des sociétés lui versent ce mois-là, à lire seulement, et où cela se modifie", () => {
+    const recu = { type: "director_remuneration" as const, amount: 1500, societeId: "s", societe: "Studio" }
+    renderModal({ recus: [recu, recu, { ...recu, type: "dividends_payment", amount: 400 }] })
+    const encart = screen.getByRole("region", { name: "Reçu de sociétés ce mois" })
+    const lignes = within(encart).getAllByRole("listitem").map(ligne => enTexteBrut(ligne.textContent))
+    expect(lignes).toEqual([`Rémunération nette de dirigeant · Studio${enTexteBrut(formatAmount(3000))} €`, `Dividendes bruts · Studio${enTexteBrut(formatAmount(400))} €`])
+    expect(encart).toHaveTextContent("c'est là qu'ils se modifient")
+    expect(within(encart).queryByRole("textbox")).toBeNull()
+  })
+
+  it("rien à montrer sans versement reçu", () => {
+    renderModal()
+    expect(screen.queryByRole("region", { name: "Reçu de sociétés ce mois" })).toBeNull()
   })
 })

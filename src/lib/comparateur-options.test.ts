@@ -79,9 +79,11 @@ describe("appliquerRemuneration", () => {
   const optimisation: OptimisationRemuneration = { statut: "SASU", remunerationMaximale: 30000, points: [], meilleur: point(0, 0), meilleurAvecRetraite: point(5800, 4), warnings: [] }
   const options = (mode: ComparaisonOptions["repartition"]["mode"], avecRetraite?: boolean): ComparaisonOptions => ({ activityId: "s1", remunerationNette: 1000, repartition: { mode, partDistribuee: 1, ...(avecRetraite === undefined ? {} : { avecRetraite }) }, partBncPrestations: 1 })
 
-  it("au meilleur net, coche « 4 trimestres » pour le meilleur point qui les valide, et la décoche pour le meilleur", () => {
-    expect(appliquerRemuneration(options("meilleurNet"), 5800, optimisation)).toEqual(options("meilleurNet", true))
-    expect(appliquerRemuneration(options("meilleurNet", true), 0, optimisation)).toEqual(options("meilleurNet", false))
+  it("au meilleur net, coche « 4 trimestres » de la colonne de l'arbitrage pour le meilleur point qui les valide, et la décoche pour le meilleur ; l'autre colonne garde son choix", () => {
+    const avecLaSasu = (retraiteEn: Partial<Record<"SASU" | "EURL", boolean>>, avecRetraite?: boolean) => ({ ...options("meilleurNet", avecRetraite), repartition: { ...options("meilleurNet", avecRetraite).repartition, retraiteEn } })
+    expect(appliquerRemuneration(options("meilleurNet"), 5800, optimisation)).toEqual(avecLaSasu({ SASU: true }))
+    expect(appliquerRemuneration(options("meilleurNet", true), 0, optimisation)).toEqual(avecLaSasu({ SASU: false }, true))
+    expect(appliquerRemuneration(avecLaSasu({ EURL: false }, true), 0, optimisation)).toEqual(avecLaSasu({ EURL: false, SASU: false }, true))
   })
 
   it("reporte toute autre rémunération, et hors du meilleur net, la rémunération telle quelle", () => {
@@ -212,10 +214,10 @@ describe("modes de partage du bénéfice", () => {
 
   it("décrit chaque mode en une phrase, les 4 trimestres au meilleur net quand ils sont exigés", () => {
     expect(descriptionDuMode("meilleurNet")).toBe("Chaque société verse la rémunération qui donne le meilleur net, le reste en dividendes.")
-    expect(descriptionDuMode("meilleurNet", true)).toBe("Chaque société verse la rémunération qui donne le meilleur net parmi celles qui valident 4 trimestres de retraite, le reste en dividendes.")
+    expect(descriptionDuMode("meilleurNet", { SASU: true, EURL: true })).toBe("Chaque société verse la rémunération qui donne le meilleur net parmi celles qui valident 4 trimestres de retraite, le reste en dividendes.")
     expect(descriptionDuMode("dividendes")).toBe("La rémunération que vous saisissez, tout le reste du bénéfice en dividendes.")
     expect(descriptionDuMode("remuneration")).toBe("La rémunération la plus haute que la société peut verser, sans dividendes.")
-    expect(descriptionDuMode("personnalisee", true)).toBe("Vous réglez la rémunération et la part du bénéfice distribuée ; le reste reste dans la société.")
+    expect(descriptionDuMode("personnalisee", { SASU: true, EURL: true })).toBe("Vous réglez la rémunération et la part du bénéfice distribuée ; le reste reste dans la société.")
     expect(descriptionDuMode("grille")).toBe("Les rémunérations et dividendes saisis dans la grille.")
   })
 

@@ -18,7 +18,7 @@ async function ouvrir(page: Page) {
 }
 
 const tableau = (page: Page) => page.getByRole("table", { name: "Comparaison des statuts" })
-const enTete = (page: Page, statut: string) => tableau(page).getByRole("columnheader", { name: new RegExp(`^${statut}`) })
+const enTete = (page: Page, statut: string) => tableau(page).getByRole("columnheader", { name: new RegExp(`^(Meilleur net\\s*)?${statut}`) })
 /** La rémunération optimale affichée dans l'en-tête d'une colonne, en euros. */
 async function remunerationDe(page: Page, statut: string): Promise<number> {
   const texte = (await enTete(page, statut).textContent()) ?? ""
@@ -50,7 +50,7 @@ test("par défaut, chaque colonne de société affiche sa propre rémunération 
 test("avec 4 trimestres de retraite, la SASU verse la plus petite rémunération qui les valide", async ({ page }) => {
   await ouvrir(page)
 
-  await page.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" }).check()
+  await page.getByRole("checkbox", { name: "en SASU" }).check()
 
   await expect(enTete(page, "SASU")).toContainText(/rémunération optimale : 5\s800\s€ nets/)
   await expect(enTete(page, "SASU")).toContainText("avec 4 trimestres de retraite")
@@ -60,7 +60,7 @@ test("avec 4 trimestres de retraite, la SASU verse la plus petite rémunération
 
 test("le comparateur au meilleur net ne présente aucune violation WCAG, en clair et en sombre", async ({ page }) => {
   await ouvrir(page)
-  await page.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" }).check()
+  await page.getByRole("checkbox", { name: "en SASU" }).check()
   await expect(enTete(page, "SASU")).toContainText("avec 4 trimestres de retraite")
   await auditer(page, "comparateur au meilleur net, thème clair", "section[aria-labelledby=comparateur-titre]")
   await page.getByRole("switch", { name: "Changer de thème" }).click()
@@ -80,4 +80,29 @@ test.describe("sur un téléphone", () => {
       await auditer(page, "comparateur au meilleur net, 375 px", "section[aria-labelledby=comparateur-titre]")
     })
   }
+})
+
+test.describe("dans une fenêtre étroite", () => {
+  test.use({ viewport: { width: 720, height: 900 } })
+
+  test("le tableau montre la colonne au meilleur net à sa première apparition, puis laisse la main", async ({ page }) => {
+    await page.goto("./")
+    const zone = page.getByRole("region", { name: "Tableau de comparaison" })
+    const meilleur = tableau(page).locator("th[data-meilleur]")
+    // Démo : le meilleur net est la colonne « Micro + versement libératoire », la cinquième, hors de la zone au départ.
+    await expect(meilleur).toContainText("Micro + versement libératoire")
+    await zone.scrollIntoViewIfNeeded()
+    await expect.poll(() => zone.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+    const visible = async () => {
+      const [z, m, fixe] = await Promise.all([zone.boundingBox(), meilleur.boundingBox(), tableau(page).locator("thead th").first().boundingBox()])
+      return m!.x >= fixe!.x + fixe!.width - 1 && m!.x + m!.width <= z!.x + z!.width + 1
+    }
+    await expect.poll(visible).toBe(true)
+
+    // Revenue au début par l'utilisateur, la zone y reste.
+    await zone.evaluate(element => element.scrollTo({ left: 0, behavior: "instant" }))
+    await page.mouse.wheel(0, 200)
+    await page.waitForTimeout(500)
+    expect(await zone.evaluate(element => element.scrollLeft)).toBe(0)
+  })
 })

@@ -416,6 +416,8 @@ describe("reglagesDuComparateur", () => {
     expect(reglages).toContainEqual(["Rémunération nette annuelle retenue, EURL", { montant: 25700 }])
     expect(reglages.map(([libelle]) => libelle)).not.toContain("Rémunération nette annuelle retenue, Micro-entreprise")
     expect(reglagesDuComparateur({ ...optionsExemple(), repartition: { mode: "meilleurNet", partDistribuee: 1 } }, "X")).toContainEqual(["4 trimestres de retraite exigés", "non"])
+    // Un choix propre à une colonne : la ligne dit laquelle.
+    expect(reglagesDuComparateur({ ...optionsExemple(), repartition: { mode: "meilleurNet", partDistribuee: 1, avecRetraite: true, retraiteEn: { EURL: false } } }, "X")).toContainEqual(["4 trimestres de retraite exigés", "en SASU seulement"])
   })
 
   it("au meilleur net, donne le net perdu avec 4 trimestres de retraite dans les colonnes où ils coûtent", () => {
