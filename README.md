@@ -11,8 +11,6 @@ Application desktop hors-ligne (Electron / React / TypeScript) conçue comme un 
 
 **[▶ Essayer la démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/)**, sans installation : la même interface, le moteur de calcul tourne dans le navigateur et les simulations restent sur votre poste. Dans Chrome ou Edge, elle s'installe comme une application (« Comment faire ? » dans son bandeau) et fonctionne ensuite hors ligne : c'est la solution quand Windows bloque l'application de bureau, qui n'est pas signée ([pas à pas](./documentation/installation.md#si-windows-bloque-lapplication)).
 
-**Donner son avis :** le bouton « Donner mon avis » de l'application prépare un retour (note de 1 à 5, affichage préféré, avis, bug ou idée, tout facultatif) à envoyer en [ticket GitHub prérempli](https://github.com/DamienBecherini/simulateur-independant-fr/issues/new?template=retour.yml), public et avec un compte GitHub, ou par e-mail. Le badge « avis » ci-dessus affiche la note moyenne et le nombre de notes, recalculés à chaque retour : une seule note par compte GitHub (celle de son ticket le plus récent), sans les tickets marqués `invalide` ou `spam` ; les retours reçus par e-mail n'y entrent pas.
-
 *Projet personnel, né d'un besoin d'entrepreneur. Je le partage pour montrer mes standards de code et ma vision produit, et parce qu'il peut aider d'autres entrepreneurs à y voir plus clair. Ce n'est pas un logiciel de conseil fiscal : les résultats sont indicatifs et n'ont pas été validés par un expert-comptable.*
 
 ## 📥 Télécharger
