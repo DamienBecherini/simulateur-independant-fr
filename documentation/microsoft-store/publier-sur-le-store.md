@@ -9,7 +9,7 @@ Ce qui est déjà prêt dans le dépôt :
 - la construction : `npm run dist:store` en local, et le workflow [« Paquet du Microsoft Store »](../../.github/workflows/store.yml) dans GitHub Actions ;
 - les textes de la fiche, les réponses au questionnaire d'âge, la justification de `runFullTrust` et les notes pour la certification : [fiche-du-store.md](./fiche-du-store.md) ;
 - les captures d'écran : [captures/](./captures/) ;
-- le serveur MCP adapté au paquet ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md)), **à essayer avant la première soumission** (étape 2, `npm run essai:store`).
+- le serveur MCP adapté au paquet ([ADR 013](../adr/013-serveur-mcp-dans-la-version-du-microsoft-store.md)), **à essayer avant une soumission qui touche au serveur ou au paquet** (étape 2, `npm run essai:store`).
 
 L'application est publiée sur le Store (v0.11.0, le 13 octobre 2026) : **ID Store `9PJBJWX5WS72`**, fiche publique <https://apps.microsoft.com/detail/9PJBJWX5WS72>, lien direct `ms-windows-store://pdp/?productid=9PJBJWX5WS72`. Les étapes ci-dessous gardent l'ordre suivi pour la première soumission : créer le compte développeur, réserver le nom, recopier l'identité du paquet, essayer le paquet, soumettre.
 
@@ -46,7 +46,7 @@ L'application est publiée sur le Store (v0.11.0, le 13 octobre 2026) : **ID Sto
 
    Rien de tout cela n'est secret : c'est écrit dans le manifeste de tout paquet publié.
    Valeurs recopiées le 2026-10-11 : `DamienBECHERINI.SimulateurIndpendantFR` (Partner Center a retiré le « é » du nom réservé : c'est bien la valeur à garder), `CN=82BAFE86-DEBC-4123-9C53-FF6F4E086825`, `Damien BECHERINI`. Nom de famille du paquet : `DamienBECHERINI.SimulateurIndpendantFR_r47q8w9e2mv8c` (dossier `%LOCALAPPDATA%\Packages\<nom de famille du paquet>` de l'étape 2).
-3. Noter aussi, pour plus tard, l'**ID Store** (12 caractères, par exemple `9N…`, qui donne le lien `https://apps.microsoft.com/detail/<ID Store>`) et le **nom de famille du paquet** (Package Family Name, `…_xxxxxxxxxxxxx`).
+3. Noter aussi, pour plus tard, l'**ID Store** (12 caractères, ici `9PJBJWX5WS72`, qui donne le lien `https://apps.microsoft.com/detail/<ID Store>`) et le **nom de famille du paquet** (Package Family Name, `…_xxxxxxxxxxxxx`).
 4. Vérifier, puis valider sur une branche et fusionner comme tout autre changement (`integration`, puis `main`) :
 
    ```sh
@@ -168,9 +168,9 @@ Partner Center s'affiche en français ou en anglais, selon le compte et la page 
 
 9. **Submit for certification** (sur la page de la soumission, une fois toutes les pages complètes). Compter quelques heures à trois jours ouvrés. La page de l'application montre alors l'avancement : Submission, Pre-processing, Certification, Publishing. Ne pas cliquer sur **Cancel certification**. En cas de refus, le rapport de certification dit quoi corriger ; corriger, reconstruire si besoin (même version : le Store accepte un nouveau paquet tant que la soumission n'est pas publiée), et resoumettre.
 
-10. Une fois certifiée (le publishing hold est pris en compte : la page indique « Your product will start publishing when you click on Publish now »), cliquer sur **Publish now** sur la page d'état de la certification. La fiche est en ligne sous `https://apps.microsoft.com/detail/<ID Store>`, en général dans l'heure. L'**ID Store** (12 caractères, `9N…`) s'affiche dans **Product management** > **Product Identity** (Identité du produit).
+10. Une fois certifiée (le publishing hold est pris en compte : la page indique « Your product will start publishing when you click on Publish now »), cliquer sur **Publish now** sur la page d'état de la certification. La fiche est en ligne sous `https://apps.microsoft.com/detail/<ID Store>`, en général dans l'heure. L'**ID Store** (12 caractères, ici `9PJBJWX5WS72`) s'affiche dans **Product management** > **Product Identity** (Identité du produit).
 
-11. Ensuite, dans le dépôt : ajouter le lien du Store au README, à [installation.md](../installation.md) (le Store comme moyen recommandé sous Windows) et à la démo web : dans `src/web/ApplicationDeBureau.tsx`, remplacer « Bientôt sur le Microsoft Store » par un lien vers la fiche, en premier sous Windows (il sert à l'aide à l'installation, à la fenêtre « Utiliser avec une IA (MCP) » et à la ligne MCP de la version web installée, qui renvoient aujourd'hui vers l'exécutable GitHub, bloqué par Smart App Control) ; mentionner la version du Store dans [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md) si l'essai de l'étape 2 a demandé des ajustements. Ajouter aussi le lien à la fiche du projet du site becherini-web.
+11. Ensuite, dans le dépôt : le lien du Store dans le README, [installation.md](../installation.md) (le Store comme moyen recommandé sous Windows), [utiliser-avec-une-ia.md](../utiliser-avec-une-ia.md) et la démo web (`src/web/ApplicationDeBureau.tsx` : aide à l'installation, fenêtre « Utiliser avec une IA (MCP) », ligne MCP de la version web installée), et sur la fiche du projet du site becherini-web. Fait pour la v0.11.0.
 
 ## 4. Mises à jour
 

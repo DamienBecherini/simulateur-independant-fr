@@ -53,7 +53,7 @@ Chaque source est désignée par un code (S1, S2, etc.) dans la suite du documen
 
 **Valeurs du PASS utilisées.**
 - 43 992 € (2023), 46 368 € (2024) et 47 100 € (2025) : lues dans S9 et S10.
-- 48 060 € (2026) : S18. Ce montant est déjà dans `src/backend/config.json`.
+- 48 060 € (2026) : S18. Ce montant est déjà dans `src/backend/regles/2026.json`.
 
 ---
 
@@ -234,7 +234,7 @@ Ces règles servent uniquement à l'avertissement affiché dans l'interface (S17
 
 **Texte proposé pour l'interface :** « La déduction n'est qu'un report d'impôt : les sommes déduites seront imposées à la sortie, en capital au barème, ou en rente comme une pension. Le simulateur ne modélise pas la sortie. »
 
-Les prélèvements sociaux s'appliquent aux gains. Le taux de 18,6 % sur certains revenus du capital depuis 2026 est cité dans `config.json` pour les dividendes ; son application aux gains du PER n'a pas été vérifiée : **[à confirmer]**.
+Les prélèvements sociaux s'appliquent aux gains. Le taux de 18,6 % sur certains revenus du capital depuis 2026 est cité dans `src/backend/regles/2026.json` pour les dividendes ; son application aux gains du PER n'a pas été vérifiée : **[à confirmer]**.
 
 ---
 
@@ -256,9 +256,9 @@ Il n'existe aucun code PER, Madelin, 154 bis ou 163 quatervicies. Seule la feuil
 | Élément | Où | Ce qui s'y passe |
 |---|---|---|
 | Base du barème du foyer | `src/backend/logic/impot-du-foyer.ts`, `revenusDuFoyer` | `baseBareme += revenusSalariaux − déduction (10 % ou frais réels) + other_taxable_income + beneficesImposables`, par membre du foyer. Aucune autre charge du revenu global. |
-| Impôt du foyer | même fichier, `calculerFoyer` (vers la l. 585) | Barème sur `baseBareme` ; comparaison du prélèvement forfaitaire et de l'option pour le barème sur les dividendes ; ajout du versement libératoire. |
+| Impôt du foyer | même fichier, `calculerFoyer` (`impot-du-foyer.ts`) | Barème sur `baseBareme` ; comparaison du prélèvement forfaitaire et de l'option pour le barème sur les dividendes ; ajout du versement libératoire. |
 | Barème | `src/backend/logic/calculsIR.ts`, `calculerIR` (l. 32) | Barème par part, plafonnement du quotient familial, décote. |
-| Revenu fiscal de référence | `calculerFoyer` (vers les l. 599-602) | `revenuImposableGlobal + dividendes hors barème + revenusAuVersementLiberatoire`. La feuille de route (l. 169) note que les « déductions PER » ne sont pas calculables. |
+| Revenu fiscal de référence | `calculerFoyer` | `revenuImposableGlobal + dividendes hors barème + revenusAuVersementLiberatoire + beneficesExoneres` (bénéfice exonéré en zone franche, v0.14.0). La feuille de route (l. 169) note que les « déductions PER » ne sont pas calculables. |
 | Contrôle du versement libératoire sur N-2 | `analyserVersementLiberatoire` et `rfrDuTitulaire` (simulation-micro.ts) ; `preparerLAnnee` et `simulerLesAnnees` (`simulation-pluriannuelle.ts`) | Le revenu fiscal de référence de N-2 est pris dans la session (`ContexteDeLAnnee.rfrN2`) s'il y figure, sinon il est saisi. |
 | Déduction de 10 % et frais réels | `abattementSalaires`, `revenusSalariaux` et `fraisProfessionnels` (impot-du-foyer.ts) | Salaires, allocations chômage, rémunération de dirigeant (SASU et EURL). |
 | Assiette des travailleurs non salariés | `src/backend/logic/cotisationsTNS.ts`, `assietteSociale` et `calculerCotisationsTNS` | Revenu avant cotisations moins l'abattement de 26 % (borné). **Rien à changer pour le PER** (section 6). |
@@ -344,7 +344,7 @@ Il n'existe aucun code PER, Madelin, 154 bis ou 163 quatervicies. Seule la feuil
 ## 12. Cas de test proposés
 
 **Hypothèses communes :**
-- Année 2026 du simulateur, barème de `config.json` (tranches 11 600 / 29 579 / 84 577 / 181 917 ; décote 897 €, 1 483 € pour un couple, taux 45,25 %).
+- Année 2026 du simulateur, barème de `src/backend/regles/2026.json` (tranches 11 600 / 29 579 / 84 577 / 181 917 ; décote 897 €, 1 483 € pour un couple, taux 45,25 %).
 - PASS 2025 = 47 100 € pour le plafond 163 quatervicies.
 - PASS 2026 = 48 060 € pour l'article 154 bis.
 - Les montants de bénéfice et de rémunération sont **fiscaux**, cotisations obligatoires déjà déduites, pour isoler l'effet du PER.

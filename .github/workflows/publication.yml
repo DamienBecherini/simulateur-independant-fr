@@ -66,7 +66,7 @@ jobs:
             runner: macos-latest
             script: dist:mac
           - systeme: Linux
-            # Version fixée : ubuntu-latest passe à Ubuntu 26.04 le 19 octobre 2026. Les exécutables ne
+            # Version fixée : ubuntu-latest est passé à Ubuntu 26.04 le 19 octobre 2026. Les exécutables ne
             # dépendent pas de la version du runner (Electron est livré précompilé, sans module natif),
             # mais le paquet deb est construit par fpm, téléchargé par electron-builder avec son propre
             # Ruby : on garde un système connu, à monter de version après un essai.

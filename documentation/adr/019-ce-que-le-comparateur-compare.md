@@ -54,7 +54,7 @@ Ce que l'utilisateur voit :
 - sous le net d'une colonne en perte : « et 20 000 € de perte restée dans la société » ;
 - dans le détail du tableau, la ligne « Net, perte restée dans l'activité déduite », quand une perte est déduite quelque part ;
 - au-dessus du tableau et dans le verdict, la même mention pour la situation saisie ;
-- dans les exports et les outils pour les IA, la perte et le net comparé.
+- dans les exports, la perte et le net comparé ; dans les outils pour les IA, la perte (`perteConservee`, découvert du portage compris), dont le modèle déduit le net comparé.
 
 Sans perte, rien ne change : le net comparé est le net du foyer.
 

@@ -431,7 +431,7 @@ L'[ADR 015](../adr/015-professions-liberales-reglementees.md) a tranché les que
 - France métropolitaine ; pas d'ACRE ; activité sur toute l'année ; pas de conjoint collaborateur ; ni RSA ni prime d'activité.
 - PASS 2026 : 48 060 € ; SMIC horaire au 01/01/2026 : 12,02 €.
 - Pour le réel, l'assiette est le revenu avant cotisations − 26 %. L'abattement est compris entre 845,86 € et 62 478 € : les bornes ne jouent dans aucun cas.
-- Maladie et allocations familiales : barème `maladieMaternite` et `allocationsFamiliales` de `config.json`, déjà sourcés (U-REF).
+- Maladie et allocations familiales : barème `maladieMaternite` et `allocationsFamiliales` de `src/backend/regles/2026.json`, déjà sourcés (U-REF).
 - La colonne « Moteur actuel » reproduit à la main ce que `calculerCotisationsTNS` donne aujourd'hui pour la même saisie.
 - Montants arrondis au centime.
 

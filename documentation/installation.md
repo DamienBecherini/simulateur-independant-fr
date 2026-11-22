@@ -11,7 +11,7 @@ Pour essayer sans rien installer, la [démo en ligne](https://damienbecherini.gi
 | Mac Intel | `Simulateur-Independant-FR-<version>-mac-x64.dmg` |
 | Linux (x64) | `Simulateur-Independant-FR-<version>-linux-x86_64.AppImage` (toutes distributions) ou `Simulateur-Independant-FR-<version>-linux-amd64.deb` (Debian, Ubuntu et dérivées) |
 
-Par exemple, pour la version 0.11.0 sous Windows : `Simulateur-Independant-FR-0.11.0-win-x64.exe`.
+Par exemple, pour la version 0.14.0 sous Windows : `Simulateur-Independant-FR-0.14.0-win-x64.exe`.
 
 Pour savoir si votre Mac est Apple Silicon ou Intel : menu Pomme > « À propos de ce Mac », ligne « Puce » (Apple Silicon) ou « Processeur » (Intel).
 
@@ -56,7 +56,7 @@ La [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/
 **Dans Microsoft Edge**
 
 1. Ouvrez la [démo en ligne](https://damienbecherini.github.io/simulateur-independant-fr/) et attendez que la simulation d'exemple s'affiche.
-2. Cliquez sur l'icône **Application disponible. Installer Simulateur indépendant FR** à droite de la barre d'adresse, ou ouvrez le menu **⋯** (Paramètres et plus) > **Applications** > **Installer ce site en tant qu'application**. Le bouton **Comment faire ?** du bandeau de la démo (réduit, le bandeau se déplie d'un clic sur sa pastille **Démo web** ; ou **Installer le simulateur**, dans le panneau des paramètres) montre ces étapes en images et, quand Edge le permet, propose **Installer maintenant**, qui ouvre la même fenêtre.
+2. Cliquez sur l'icône **L'application est disponible. Installer Simulateur indépendant FR** à droite de la barre d'adresse, ou ouvrez le menu **⋯** (Paramètres et plus) > **Applications** > **Installer ce site en tant qu'application**. Le bouton **Comment faire ?** du bandeau de la démo (réduit, le bandeau se déplie d'un clic sur sa pastille **Démo web** ; ou **Installer le simulateur**, dans le panneau des paramètres) montre ces étapes en images et, quand Edge le permet, propose **Installer maintenant**, qui ouvre la même fenêtre.
 3. Confirmez avec **Installer**. Edge peut ensuite proposer d'épingler l'application à la barre des tâches, au menu Démarrer ou au bureau.
 
 **Dans Google Chrome** : icône d'installation à droite de la barre d'adresse, ou menu **⋮** > **Caster, enregistrer et partager** > **Installer la page en tant qu'application** (selon la version, **Installer Simulateur indépendant FR…** directement dans le menu).
@@ -67,7 +67,7 @@ Pour désinstaller : ouvrez l'application, menu **⋯** de sa barre de titre > *
 
 **Mises à jour.** À chaque publication, la nouvelle version se télécharge en arrière-plan et s'applique à l'ouverture suivante ; en attendant, une notification « Nouvelle version disponible » propose de recharger tout de suite. Vos simulations sont conservées.
 
-**Où sont vos données.** Dans le stockage du navigateur (localStorage), pour ce site et ce profil de navigateur seulement : elles ne quittent pas votre ordinateur et ne sont pas partagées avec l'application de bureau ni avec un autre navigateur. Elles disparaissent si vous effacez les données de navigation du site (cookies et données de sites) ou si vous désinstallez l'application en choisissant d'effacer ses données. À la première sauvegarde et à l'installation, la démo demande au navigateur de ne pas les effacer de lui-même quand l'espace disque manque (stockage persistant) ; cette protection ne vaut pas contre un effacement que vous demandez. Pour garder une copie, exportez vos simulations (panneau des paramètres > Charger une sauvegarde > Exporter) : le fichier s'ouvre aussi dans l'application de bureau.
+**Où sont vos données.** Dans le stockage du navigateur (localStorage), pour ce site et ce profil de navigateur seulement : elles ne quittent pas votre ordinateur et ne sont pas partagées avec l'application de bureau ni avec un autre navigateur. Elles disparaissent si vous effacez les données de navigation du site (cookies et données de sites) ou si vous désinstallez l'application en choisissant d'effacer ses données. À la première sauvegarde et à l'installation, la démo demande au navigateur de ne pas les effacer de lui-même quand l'espace disque manque (stockage persistant) ; cette protection ne vaut pas contre un effacement que vous demandez. Pour garder une copie, exportez vos simulations (panneau des paramètres > Charger une sauvegarde > Exporter cette sauvegarde..., ou Exporter toutes les sauvegardes) : le fichier s'ouvre aussi dans l'application de bureau.
 
 **Ce qui n'existe que dans l'application de bureau** : le serveur MCP local qui relie le simulateur à un client d'IA ([Utiliser le simulateur avec une IA](./utiliser-avec-une-ia.md)), et l'enregistrement direct en PDF (la démo passe par la fenêtre d'impression du navigateur, « Enregistrer au format PDF »).
 
@@ -112,7 +112,7 @@ L'application apparaît ensuite dans le menu des applications (catégorie Bureau
 
 Les simulations, sauvegardes et préférences sont enregistrées dans le dossier de données de l'application, jamais envoyées ailleurs :
 
-- Windows : `%APPDATA%\simulateur-independant-fr`
+- Windows : `%APPDATA%\simulateur-independant-fr` (version du Microsoft Store : `%LOCALAPPDATA%\Packages\<nom du paquet>\LocalCache\Roaming\simulateur-independant-fr`, que Windows supprime avec l'application ; l'application les voit au chemin habituel)
 - macOS : `~/Library/Application Support/simulateur-independant-fr`
 - Linux : `~/.config/simulateur-independant-fr`
 
@@ -120,4 +120,4 @@ Un client d'IA de bureau (Claude Desktop, LM Studio…) peut lire ce dossier par
 
 Une mise à jour de l'application les reprend telles quelles ; les fichiers d'un ancien format sont convertis à l'ouverture, et l'original est copié à côté.
 
-L'application ne se met pas à jour toute seule : pour passer à une nouvelle version, téléchargez-la et installez-la par-dessus l'ancienne.
+Installée depuis le Microsoft Store, l'application se met à jour toute seule. Sinon, pour passer à une nouvelle version, téléchargez-la et installez-la par-dessus l'ancienne.

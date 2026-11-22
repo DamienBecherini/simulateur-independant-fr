@@ -22,13 +22,13 @@ Un simulateur gratuit, hors ligne et open source, pour vous et votre foyer.
 
 ## ▶️ Essayer en ligne
 
-**[Ouvrir la démo](https://damienbecherini.github.io/simulateur-independant-fr/)**, sans installation ni compte. La même interface que l'application : le calcul se fait dans le navigateur et les simulations restent sur votre poste. Dans Chrome ou Edge, elle s'installe comme une application (« Comment faire ? » dans son bandeau) et fonctionne ensuite hors ligne : c'est la solution quand Windows bloque l'application de bureau, qui n'est pas signée ([pas à pas](./documentation/installation.md#si-windows-bloque-lapplication)).
+**[Ouvrir la démo](https://damienbecherini.github.io/simulateur-independant-fr/)**, sans installation ni compte. La même interface que l'application : le calcul se fait dans le navigateur et les simulations restent sur votre poste. Dans Chrome ou Edge, elle s'installe comme une application (« Comment faire ? » dans son bandeau) et fonctionne ensuite hors ligne : c'est la solution quand Windows bloque l'application de bureau téléchargée depuis GitHub, qui n'est pas signée ([pas à pas](./documentation/installation.md#si-windows-bloque-lapplication)).
 
 ## 📥 Télécharger
 
 **Sous Windows, le plus simple : [installer depuis le Microsoft Store](https://apps.microsoft.com/detail/9PJBJWX5WS72)**. Le paquet est signé par Microsoft : il passe le Contrôle intelligent des applications et SmartScreen sans avertissement, et le Store le met à jour.
 
-L'application de bureau pour Windows, macOS (Apple Silicon et Intel) et Linux se télécharge aussi depuis la **[dernière version publiée](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)**. Ces exécutables ne sont pas signés par un certificat d'éditeur : Windows et macOS affichent un avertissement au premier lancement. Le [guide d'installation](./documentation/installation.md) explique comment le passer, système par système. Si le Contrôle intelligent des applications de Windows 11 la bloque, installez plutôt la démo web depuis Edge ou Chrome : voir [Si Windows bloque l'application](./documentation/installation.md#si-windows-bloque-lapplication). Les changements de chaque version sont dans le [journal des modifications](./CHANGELOG.md).
+L'application de bureau pour Windows, macOS (Apple Silicon et Intel) et Linux se télécharge aussi depuis la **[dernière version publiée](https://github.com/DamienBecherini/simulateur-independant-fr/releases/latest)**. Ces exécutables ne sont pas signés par un certificat d'éditeur : Windows et macOS affichent un avertissement au premier lancement. Le [guide d'installation](./documentation/installation.md) explique comment le passer, système par système. Si le Contrôle intelligent des applications de Windows 11 la bloque, installez-la depuis le Microsoft Store, ou la démo web depuis Edge ou Chrome : voir [Si Windows bloque l'application](./documentation/installation.md#si-windows-bloque-lapplication). Les changements de chaque version sont dans le [journal des modifications](./CHANGELOG.md).
 
 ## 🖼️ Aperçu
 
@@ -73,7 +73,7 @@ Le même foyer en union libre : le comparateur dit ce que changerait un mariage 
 - Professions libérales réglementées (CIPAV, CARPIMKO), frais réels et kilométriques, zone franche urbaine.
 - Sauvegardes nommées, annuler et rétablir, sauvegarde automatique.
 - Exports PDF, Excel (CSV), et un rapport à lire ou à confier à une IA.
-- Avec une IA de bureau (une IA locale est recommandée : vos données sont sensibles), qui lit vos factures et propose les montants : vous validez chaque ajout.
+- Avec une IA de bureau (une IA locale est recommandée : vos données sont sensibles), qui lit vos factures et propose les montants : vous validez chaque ajout, ou la laissez modifier directement la simulation (sauf suppression).
 - Thème clair ou sombre, interface agrandissable, utilisable au clavier et avec un lecteur d'écran.
 
 [Toutes les fonctionnalités, en détail](./documentation/fonctionnalites.md)
@@ -178,9 +178,9 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - **Tests de bout en bout** (optionnels) : fichiers `e2e/*.e2e.ts`, où Playwright pilote l'application Electron compilée (création d'entités, saisie dans la grille, résultats, historique, sauvegarde automatique, conversion d'un ancien format, sauvegardes nommées). Chaque test lance l'application sur un dossier de données temporaire (`--user-data-dir`), sans toucher aux vraies données ; aucun navigateur à télécharger. En intégration continue, ils tournent sur `integration`, sur `main` et à la demande.
 - **Démo web** : `e2e-web/*.web.ts` ouvre la version navigateur compilée dans Chromium (simulation d'exemple, calculs, conservation des modifications, retour à l'exemple ; manifeste, installabilité relevée par Chromium, réouverture et calcul hors ligne dans `installable.web.ts`, seul fichier où le service worker n'est pas bloqué). Elle nécessite une fois `npm run installer:chromium`. Les fichiers de mise en page sont aussi joués dans Firefox (`npm run test:web:firefox:mise-en-page`), sur `integration` et `main`. À chaque push sur `main`, la CI la teste puis la publie sur GitHub Pages.
 - **Accessibilité (WCAG 2.2 AA, qui couvre le RGAA)** : audit axe-core de la démo web et de l'application dans les tests de bout en bout (chargement, comparateur déplié, mode sombre, téléphone, fenêtres), bloquant en CI ; tests dédiés des zones cliquables (24 px, 44 px sur écran tactile), des tailles de texte (12 px au moins, 14 px pour les phrases), du parcours au clavier avec focus visible et du curseur.
-- **Couverture** : seuil bloquant de 90 % (instructions, branches, fonctions, lignes) sur `src/backend/logic/` et `src/lib/`.
+- **Couverture** : seuil bloquant de 90 % (instructions, branches, fonctions, lignes) sur la logique pure : `src/backend/logic/`, `src/lib/`, le serveur MCP, le pont de la démo web et les scripts (`vitest.config.ts`).
 - **Complexité** : règle ESLint `complexity` plafonnée à 12 sur `src/`, sans exception.
-- **Mutation** : Stryker sur `src/backend/logic/` (score d'environ 86 %), lancé chaque semaine et à la demande ; nécessite Node.js 22 ou supérieur.
+- **Mutation** : Stryker sur les modules de `src/backend/logic/` (hors sous-dossiers) (score d'environ 86 %), lancé chaque semaine et à la demande ; nécessite Node.js 22 ou supérieur.
 - **Intégration continue** : GitHub Actions exécute lint, vérification des types, tests avec couverture et build à chaque push et pull request.
 - **SonarQube Cloud** (facultatif) : quand le secret `SONAR_TOKEN` est configuré, la CI envoie le code et la couverture à SonarQube Cloud (`sonar-project.properties`) et attend le verdict de la porte qualité : une porte rouge fait échouer le job, exigé sur `main` ; sinon, elle se contente de la détection de code dupliqué.
 - **Captures d'écran** : celles du README et de la fiche du Microsoft Store sont générées par `npm run captures` (Playwright, sur l'application compilée).

@@ -56,3 +56,7 @@ La stack technique suivante a été choisie pour répondre à ces exigences, en 
   - **Taille de l'Application :** Les applications Electron embarquent une version de Chromium, ce qui les rend intrinsèquement plus lourdes (en termes de Mo sur le disque) que des applications natives. C'est le compromis accepté pour la portabilité et la facilité de développement.
   * **Consommation de Mémoire :** De même, la consommation de RAM peut être supérieure à celle d'une application native équivalente. Pour un simulateur dont l'usage est ponctuel et les calculs non-intensifs en continu, ce compromis est jugé tout à fait acceptable.
   * **Complexité de la Chaîne de Build :** L'interaction entre Vite (pour le front) et le processus de transpilation de TypeScript pour le backend Electron (`tsc`) ajoute une légère complexité à la configuration du build par rapport à une application web classique (visible dans les scripts de `package.json`).
+
+## Note (2026-11-22)
+
+Le moteur de calcul (`src/backend/logic/`) n'est plus seulement dans le process principal : il est pur et tourne aussi dans la page (interface, démo web, [ADR 012](./012-demo-web-installable-hors-ligne.md)) et dans le serveur MCP ([ADR 011](./011-serveur-mcp-local-et-boite-aux-propositions.md)). La chaîne de build compte aussi esbuild (serveur MCP empaqueté) et tsc-alias (chemins du process principal).

@@ -64,24 +64,7 @@ Numérotation ([versionnage sémantique](https://semver.org/lang/fr/)) : le dern
    - si possible, télécharger, installer et lancer au moins un exécutable (voir [installation.md](./installation.md)).
 9. **Publier** le brouillon (« Publish release », ou `gh release edit v1.2.0 --draft=false`). Les liens de téléchargement du README pointent vers la dernière version publiée : ils fonctionnent dès cet instant.
 
-### Version 0.9.0 (première publication)
-
-La version de `package.json` est déjà `0.9.0` et le CHANGELOG a sa section `[0.9.0]` : les étapes 2 et 3 sont faites, sur la branche `preparation-0-9-0`. Il reste à la fusionner dans `integration` puis dans `main`, et, comme elle change `electron-builder.json`, à lancer une fois le workflow « Publication des exécutables » à la main sur `main` (« Run workflow ») pour vérifier que les trois systèmes produisent leurs fichiers. Ensuite, une fois l'intégration continue au vert sur `main` :
-
-```sh
-git switch main
-git pull --ff-only
-node -p "require('./package.json').version"   # doit afficher 0.9.0
-git tag -a v0.9.0 -m "Version 0.9.0"
-git push origin v0.9.0
-# Actions > « Publication des exécutables » : attendre le brouillon, puis le relire
-gh release view v0.9.0
-awk '/^## \[0\.9\.0\]/{f=1;next} /^(## )?\[/{f=0} f' CHANGELOG.md > notes-0.9.0.md
-gh release edit v0.9.0 --notes-file notes-0.9.0.md
-gh release edit v0.9.0 --draft=false
-```
-
-`--prerelease` peut s'ajouter à la dernière commande pour marquer la version comme préversion ; elle n'apparaît alors pas comme « Latest », et les liens `releases/latest` du README et d'installation.md ne la trouvent pas. Pour cette première version, publier sans ce drapeau.
+`--prerelease` peut s'ajouter à `gh release edit … --draft=false` pour marquer la version comme préversion ; elle n'apparaît alors pas comme « Latest », et les liens `releases/latest` du README et d'installation.md ne la trouvent pas.
 
 Le workflow peut aussi être lancé à la main (« Run workflow ») : sur une branche, il construit les exécutables et les laisse en téléchargement 14 jours sur la page de l'exécution, sans brouillon de version. C'est la façon de tester un changement de configuration sans créer d'étiquette.
 
@@ -127,7 +110,7 @@ Sur un dossier de données jetable, pour ne pas toucher à ses vraies simulation
 ./dist/linux-unpacked/simulateur-independant-fr --user-data-dir="$(mktemp -d)" --no-sandbox
 ```
 
-La fenêtre principale s'ouvre après l'écran de démarrage, et les résultats s'affichent ; la version figure dans l'aperçu de la fenêtre « Donner mon avis » (barre d'outils). Le serveur MCP empaqueté se lance comme le ferait un client d'IA, avec l'exécutable en mode Node :
+La fenêtre principale s'ouvre après l'écran de démarrage, et les résultats s'affichent ; la version figure dans l'aperçu de la fenêtre « Donner mon avis » (barre d'outils, ou Paramètres). Le serveur MCP empaqueté se lance comme le ferait un client d'IA, avec l'exécutable en mode Node :
 
 ```sh
 ELECTRON_RUN_AS_NODE=1 ./dist/linux-unpacked/simulateur-independant-fr \
@@ -156,5 +139,5 @@ Sous Windows, la voie retenue pour éviter ces avertissements (et le blocage par
 ## Runners et versions des systèmes
 
 - `windows-latest` et `macos-latest` (Apple Silicon) suivent les mises à jour de GitHub sans conséquence connue sur la construction.
-- La construction Linux est fixée sur `ubuntu-24.04` : `ubuntu-latest` passe à Ubuntu 26.04 le 19 octobre 2026. Les exécutables ne dépendent pas de la version du runner (Electron est livré précompilé, l'application n'a pas de module natif), mais le paquet deb est produit par fpm, téléchargé par electron-builder avec son propre interpréteur Ruby, dont la compatibilité avec un système plus récent n'est pas garantie. Pour monter de version : lancer le workflow à la main avec `ubuntu-26.04`, vérifier que l'AppImage et le deb sont produits et s'installent, puis changer la valeur dans le workflow.
+- La construction Linux est fixée sur `ubuntu-24.04` : `ubuntu-latest` est passé à Ubuntu 26.04 le 19 octobre 2026. Les exécutables ne dépendent pas de la version du runner (Electron est livré précompilé, l'application n'a pas de module natif), mais le paquet deb est produit par fpm, téléchargé par electron-builder avec son propre interpréteur Ruby, dont la compatibilité avec un système plus récent n'est pas garantie. Pour monter de version : lancer le workflow à la main avec `ubuntu-26.04`, vérifier que l'AppImage et le deb sont produits et s'installent, puis changer la valeur dans le workflow.
 - Les jobs de vérification et de brouillon restent sur `ubuntu-latest` : ils n'utilisent que Node.js et l'outil `gh`.

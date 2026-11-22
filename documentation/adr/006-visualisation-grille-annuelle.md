@@ -46,3 +46,7 @@ Nous allons transformer chaque cellule de la grille en un mini tableau de bord v
 - Le titre de ce document portait par erreur le numéro « ADR-001 » ; il est corrigé en « ADR-006 ».
 - « Pas de liaison automatique » n'est plus un compromis du calcul : depuis la refonte du moteur, une rémunération ou des dividendes saisis sur une société sont routés vers la personne reliée (Président, Gérant, Associé) par `simulation-engine.ts`, sans flux à saisir sur la personne. La grille montre le flux sur la société seulement.
 - Depuis l'ADR 008, chaque année de la session a sa propre grille.
+
+## Note (2026-11-22)
+
+Le routage de la rémunération et des dividendes vers les personnes est dans `routage-des-flux.ts` (`verserRemuneration`, `verserDividendes`), et depuis l'[ADR 018](./018-regles-de-structure.md) le président d'une SASU ne reçoit de dividendes que s'il est aussi relié par « Associé ». Depuis la 0.14.0, la grille montre ces versements aussi sur la ligne de qui les reçoit, en gain hachuré, selon le même routage (`personnesQui`, `src/lib/grille-mensuelle.ts`) ; la grille n'additionne pas ses lignes, il n'y a donc pas de double compte.

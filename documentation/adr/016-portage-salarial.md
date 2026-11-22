@@ -401,3 +401,12 @@ Le recoupement avec un simulateur public de portage et avec le simulateur de l'U
 **Injoignables ce jour-là** : boss.gouv.fr, urssaf.fr (hors open.urssaf.fr) et web.archive.org. Rien n'en est cité ; voir « À vérifier ».
 
 **Sources non officielles**, écartées de la décision : les sites d'information et commerciaux sur la convention (fourchette des frais de gestion), le tableau de la CAPEB de l'Hérault et la notice Apicil 2026 que citait la version proposée, et une source sur l'accord de formation du 24 février 2025.
+
+## Note (2026-11-22) : numéro de format
+
+Le format est passé à 4 avec l'[ADR 018](./018-regles-de-structure.md). Et une version précédente ne refuse pas un fichier d'un format plus récent : elle le lit avec un avertissement, en ignorant ce qu'elle ne connaît pas (ADR 005, `migrations.ts`). Le raisonnement de « format inchangé » reste juste : il n'y avait rien à convertir.
+
+## Addendum (2026-11-22) : colonne à découvert, zone franche
+
+- Depuis l'[ADR 019](./019-ce-que-le-comparateur-compare.md), une colonne dont les frais dépassent le chiffre d'affaires n'est pas retenue (troisième raison, `aDecouvert`), et son découvert est déduit du net comparé (`perteConservee`).
+- L'exonération d'une activité implantée en zone franche ou en quartier prioritaire ([ADR 017](./017-exoneration-d-impot-sur-les-benefices-en-zone.md)) ne s'applique pas en portage : il n'y a pas de bénéfice, seulement un salaire. La colonne la laisse de côté sans le signaler.

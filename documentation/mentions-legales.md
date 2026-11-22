@@ -59,4 +59,4 @@ Le code source est publié sur [le dépôt GitHub du projet](https://github.com/
 
 ## Mise à jour
 
-Page mise à jour le 6 octobre 2026. Si le simulateur propose un jour des fonctions d'intelligence artificielle, cette page sera mise à jour pour dire quelles données elles utilisent.
+Page mise à jour le 22 novembre 2026. Si le simulateur change ce que deviennent vos données, cette page sera mise à jour.

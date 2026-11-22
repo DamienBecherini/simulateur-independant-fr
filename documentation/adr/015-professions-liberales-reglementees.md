@@ -85,3 +85,7 @@ Six questions ont été posées au propriétaire du produit (dossier, §11).
 ## Complément (2026-10-10) : ajouter une caisse
 
 Depuis la relecture d'octobre 2026 (branche `caisses-exhaustives`), chaque particularité d'une caisse vit dans une table typée par `CaisseLiberale` (`CAISSES_LIBERALES`, `src/types.ts`) : ajouter une caisse à la liste fait échouer la compilation à chaque endroit à compléter, au lieu de la calculer comme une autre. La marche à suivre, avec les erreurs obtenues en ajoutant la CARMF à l'essai et ce que le compilateur ne voit pas (textes des outils pour les IA, limites de l'export Markdown), est dans le [guide du développeur](../GUIDE_DEVELOPPEUR.md#33-ajouter-une-caisse-de-libéraux-exemple--carmf).
+
+## Note (2026-11-22) : numéro de format
+
+Le format est passé à 4 avec l'[ADR 018](./018-regles-de-structure.md). Et une version précédente ne refuse pas un fichier d'un format plus récent : elle le lit avec un avertissement, en ignorant ce qu'elle ne connaît pas (ADR 005, `migrations.ts`). Le raisonnement de « format inchangé » reste juste : il n'y avait rien à convertir.

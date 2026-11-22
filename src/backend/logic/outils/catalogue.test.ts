@@ -54,8 +54,8 @@ describe("catalogue des outils", () => {
       expect(JSON.parse(JSON.stringify(outil.inputSchema))).toEqual(outil.inputSchema)
     }
     // Le catalogue entier est envoyé au modèle à chaque échange : il doit rester léger (55 Ko avec les schémas de
-    // sortie, 31 Ko sans eux, 27,5 Ko depuis le resserrement des descriptions d'octobre 2026, qui laisse une marge
-    // d'environ 11 % : voir l'ADR 010).
+    // sortie, 31 Ko sans eux ; 30,9 Ko à la 0.14.0, soit 143 caractères de marge : toute description allongée doit être
+    // compensée, voir l'ADR 010).
     expect(JSON.stringify(catalogue.map(({ nom, description, inputSchema }) => ({ nom, description, inputSchema }))).length).toBeLessThan(31_000)
   })
 

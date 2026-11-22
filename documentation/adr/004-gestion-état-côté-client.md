@@ -38,5 +38,5 @@ Le point 2 de la décision ne décrit plus le code ; il est gardé pour l'histoi
 
 - Il n'y a pas d'état `sessionForSaving`. La sauvegarde automatique observe `history.present` : annuler ou rétablir enregistre aussi la session affichée (le fichier suit l'écran).
 - Rien n'est enregistré avant la fin du chargement (`isLoaded`), ni pour la session tout juste chargée : la session vierge provisoire ne peut pas remplacer celle du disque (ADR 005, « Robustesse de l'écriture », point 6).
-- À la fermeture de la fenêtre (`beforeunload`), la session et les préférences sont enregistrées de façon synchrone (`saveCurrentSessionSync`), pour ne pas perdre la dernière seconde.
+- À la fermeture de la fenêtre (`beforeunload`), la session est enregistrée de façon synchrone (`saveCurrentSessionSync`), pour ne pas perdre la dernière seconde ; les préférences partent par `saveUserPreferences`, sans attendre (précision du 2026-11-22).
 - Les réglages du comparateur sont dans la session mais hors de l'historique d'annulation (`setComparateur`, ADR 009) ; l'année affichée est un état de l'interface (ADR 008) ; les préférences (zoom, sauvegarde chargée, sections ouvertes) ont leur propre sauvegarde différée (ADR 002).

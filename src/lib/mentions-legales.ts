@@ -30,7 +30,7 @@ export const TITRE_DES_MENTIONS_LEGALES = "Mentions légales et confidentialité
 /** Adresse de la fenêtre dans la démo web : `#mentions-legales`. Ce n'est pas une vue de la page. */
 export const ADRESSE_DES_MENTIONS_LEGALES = "mentions-legales"
 
-export const DATE_DE_MISE_A_JOUR = "6 octobre 2026"
+export const DATE_DE_MISE_A_JOUR = "22 novembre 2026"
 
 export const ADRESSE_DE_LA_LICENCE = `${DEPOT_GITHUB}/blob/main/LICENSE`
 
@@ -115,7 +115,7 @@ export const RUBRIQUES: readonly Rubrique[] = [
   },
   {
     titre: "Mise à jour",
-    blocs: [{ paragraphe: [`Page mise à jour le ${DATE_DE_MISE_A_JOUR}. Si le simulateur propose un jour des fonctions d'intelligence artificielle, cette page sera mise à jour pour dire quelles données elles utilisent.`] }]
+    blocs: [{ paragraphe: [`Page mise à jour le ${DATE_DE_MISE_A_JOUR}. Si le simulateur change ce que deviennent vos données, cette page sera mise à jour.`] }]
   }
 ]
 

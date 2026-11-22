@@ -1,7 +1,7 @@
 # ADR-009: Réglages du comparateur enregistrés avec la session
 
 - **Date :** 2026-10-05
-- **Statut :** Accepté
+- **Statut :** Accepté ; modifié par l'[ADR 019](./019-ce-que-le-comparateur-compare.md) (net comparé, rémunération plafonnée, colonnes non retenues)
 
 ## Contexte
 
@@ -107,3 +107,11 @@ Après l'addendum précédent, trois cas restaient trompeurs :
 - En partage « grille », le net de l'autre société change quand une rémunération différente de celle de la grille avait été réglée dans un autre mode ; les montages types ne changent pas.
 - Le meilleur statut n'est plus présenté comme un gain quand il fait moins bien que la situation saisie.
 - La note sur les charges apparaît aussi pour une micro-entreprise sans dépense saisie : la CFE et l'assurance y restent dues.
+
+## Addendum (2026-11-22) : 4 trimestres colonne par colonne, écart négligeable, champs ajoutés
+
+- **4 trimestres par colonne (0.14.0).** Au meilleur net, chaque colonne SASU ou EURL a son propre choix des 4 trimestres de retraite : `repartition.retraiteEn`, facultatif, sans nouveau format ; sans choix pour un statut, `avecRetraite` s'applique (`exigeLesQuatreTrimestres`, `options-du-comparateur.ts`).
+- **Écart négligeable (0.14.0).** Contrairement au point 3 de l'addendum du 2026-10-10, au meilleur net, la colonne du statut actuel reste la situation saisie (« actuel », sans écart) quand l'arbitrage ne s'en écarte que de moins de 100 € de net (`ECART_NEGLIGEABLE`), sauf s'il valide les 4 trimestres demandés et que la saisie ne les valide pas.
+- **Net comparé.** Les écarts et le verdict se mesurent désormais au net comparé (net du foyer moins la perte restée dans la société), et une colonne peut être « non retenue » : voir l'ADR 019.
+- **Schéma.** Le réglage `comparateur` a gagné depuis `partMiseEnReserve` ([ADR 014](./014-benefice-mis-en-reserve.md)), `portage` ([ADR 016](./016-portage-salarial.md)) et `repartition.retraiteEn`, tous facultatifs.
+- **Format.** Contrairement à ce que dit « Alternatives écartées », un fichier d'un format plus récent n'est pas refusé : il est lu avec un avertissement (ADR 005). Le format 4 a depuis été pris par l'[ADR 018](./018-regles-de-structure.md).

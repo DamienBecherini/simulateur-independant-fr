@@ -187,3 +187,11 @@ Restent ouverts ; tant qu'ils le sont, ils figurent dans les `hypotheses` des r�
 - [BOI-BIC-DECLA-10-40-20, versement libératoire](https://bofip.impots.gouv.fr/bofip/4789-PGP.html/identifiant=BOI-BIC-DECLA-10-40-20-20180601) (BOFiP, 1er juin 2018, version en vigueur)
 - [BOI-BIC-CHAMP-80-10-20-40, portée et calcul des allègements en ZFU](https://bofip.impots.gouv.fr/bofip/9605-PGP.html/identifiant=BOI-BIC-CHAMP-80-10-20-40-20150805) (BOFiP, 5 août 2015, version en vigueur)
 - [Zones franches urbaines : les micro-entrepreneurs au versement libératoire](https://www.bncplus.fr/actualites/zones-franches-urbaines-les-micro-entrepreneurs-ne-peuvent-pas-beneficier-de) (BNC+, sur l'arrêt de la CAA de Douai du 4 mars 2021)
+
+## Addendum (2026-11-22) : mise en œuvre (version 0.14.0)
+
+- **Lots 1 à 5 faits**, et les sept cas de référence prévus (`references/exoneration-de-zone.reference.test.ts`).
+- **Forme des règles** : la rubrique est une liste, `exonerationsDeZone: { regimes: RegimeDeZone[] }`, chaque régime avec `id`, `nom`, sa fenêtre de création, son calendrier, son plafond, `conditionsNonVerifiees` et `liberauxHorsSanteExclus`, plus `description` et les sources de la rubrique. Les trois années (2024 à 2026) portent les deux régimes : c'est le mois de création de l'activité qui choisit le régime.
+- **Où vit le calcul** : le calendrier et le plafond dans `dispositifs.ts` (`regimeDeZone`, `exonerationDeZoneDeLAnnee`, `beneficeExonereEnZone`) ; les notes, avertissements et hypothèses dans `exoneration-de-zone.ts`. La section de la fiche est le composant `ChampImplantationEnZone.tsx`, inclus par `ChampsDeLActeur.tsx`.
+- **Avertissements** : les conditions non vérifiées font un message par activité ; les recettes libérales en QPV en font un second ; le plafond atteint n'est pas un avertissement, il est dit dans la note de l'exonération sur la carte.
+- **Comparateur** : la colonne « Micro + versement libératoire » dit qu'elle n'a pas d'exonération ; la colonne du portage salarial la laisse de côté sans le dire (voir l'ADR 016, addendum du 2026-11-22).

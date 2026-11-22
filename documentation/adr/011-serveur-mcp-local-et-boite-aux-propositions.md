@@ -142,3 +142,7 @@ La revue de sécurité du 19 novembre 2026 relève qu'en mode direct, une modifi
 
 - **Positives :** un chiffre changé par l'IA ne passe plus inaperçu ; la saisie de factures reste fluide.
 - **Négatives ou Compromis :** la notification ne montre que la nouvelle valeur (le résumé de l'opération), pas l'ancienne ; elle peut rester ouverte longtemps si l'utilisateur ne clique pas sur « Vu ».
+
+## Note (2026-11-22)
+
+Le serveur empaqueté (`dist-electron/mcp/serveur-mcp.mjs`) pèse environ 1,1 Mo à la version 0.14.0, et non plus 900 Ko.

@@ -1,5 +1,7 @@
 # Moins d'informations à l'écran (phase 13 ter)
 
+*Note du 22/11/2026 : depuis la 0.13.0, « Trois vues » est l'affichage par défaut (premier du sélecteur, puis « Résumé » et « Classique ») ; depuis la 0.14.0, le comparateur est en trois étapes, les 4 trimestres de retraite se choisissent colonne par colonne, et une colonne de société ne verse jamais plus que ce que la société peut verser sans déficit. Les sections « Décision après essai » et « Retours sur les affichages en place » décrivent l'état d'octobre 2026.*
+
 Étude préalable à la refonte de l'affichage : inventaire de ce que montre l'écran, parcours types mesurés, trois propositions comparées, et plan de mise en œuvre de celle retenue. Aucun code n'est modifié à ce stade.
 
 ## Mesures de départ
