@@ -36,14 +36,34 @@ export function ecartAvecLeChiffreDAffairesSaisi(colonne: ChiffreDAffairesDUnSta
   return colonne.chiffreDAffaires === null || saisi <= 0 ? null : colonne.chiffreDAffaires - saisi
 }
 
+type ColonneAtteinte = ChiffreDAffairesDUnStatut & { chiffreDAffaires: number; netApresImpots: number }
+
+const colonnesAtteintes = (colonnes: ChiffreDAffairesDUnStatut[]) => colonnes.filter((c): c is ColonneAtteinte => c.chiffreDAffaires !== null && c.netApresImpots !== null)
+
+/**
+ * Le net visé est atteint sans chiffre d'affaires dans chaque statut qui peut l'atteindre : le net du foyer avec un
+ * chiffre d'affaires nul (celui du statut actuel, sinon le plus bas), au lieu d'un tableau de « 0 € » ; `null` sinon.
+ */
+export function netDejaAtteint({ colonnes }: ChiffreDAffairesPourUnNet): { net: number; libelle: string; actuel: boolean } | null {
+  const atteints = colonnesAtteintes(colonnes)
+  if (atteints.length === 0 || atteints.some(c => c.chiffreDAffaires > 0)) return null
+  const retenue = atteints.find(c => c.telleQueSaisie) ?? atteints.reduce((a, b) => (b.netApresImpots < a.netApresImpots ? b : a), atteints[0])
+  return { net: retenue.netApresImpots, libelle: retenue.libelle, actuel: retenue.telleQueSaisie }
+}
+
 /**
  * La réponse en une phrase, lue par les lecteurs d'écran quand le calcul arrive : le statut qui demande le moins de
- * chiffre d'affaires, ou le net déjà atteint, ou aucun statut.
+ * chiffre d'affaires, ou le net déjà atteint (partout, avec le net du foyer sans chiffre d'affaires, ou dans certains
+ * statuts, qu'elle nomme), ou aucun statut.
  */
-export function phraseDuCalculALEnvers({ netVise, colonnes }: ChiffreDAffairesPourUnNet): string {
-  const atteints = colonnes.filter((c): c is ChiffreDAffairesDUnStatut & { chiffreDAffaires: number } => c.chiffreDAffaires !== null)
+export function phraseDuCalculALEnvers(resultat: ChiffreDAffairesPourUnNet): string {
+  const { netVise, colonnes } = resultat
+  const atteints = colonnesAtteintes(colonnes)
   if (atteints.length === 0) return `Aucun statut n'atteint ${euros(netVise)} nets par an.`
+  const deja = netDejaAtteint(resultat)
+  if (deja) return `Le foyer atteint déjà ${euros(netVise)} nets par an sans chiffre d'affaires de cette activité : ${euros(deja.net)} nets avec un chiffre d'affaires nul${deja.actuel ? "" : `, en ${deja.libelle}`}.`
+  const sansChiffreDAffaires = atteints.filter(c => c.chiffreDAffaires === 0)
+  if (sansChiffreDAffaires.length > 0) return `Le foyer atteint déjà ${euros(netVise)} nets par an sans chiffre d'affaires de cette activité en ${sansChiffreDAffaires.map(c => c.libelle).join(", ")}.`
   const moins = atteints.reduce((a, b) => (b.chiffreDAffaires < a.chiffreDAffaires ? b : a), atteints[0])
-  if (moins.chiffreDAffaires === 0) return `Le foyer atteint déjà ${euros(netVise)} nets par an sans chiffre d'affaires de cette activité.`
   return `Pour ${euros(netVise)} nets par an, il faut au moins ${euros(moins.chiffreDAffaires)} de chiffre d'affaires par an (${euros(parMois(moins.chiffreDAffaires))} par mois), en ${moins.libelle}.`
 }

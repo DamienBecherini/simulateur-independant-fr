@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import { CHIFFRE_D_AFFAIRES_MAXIMAL } from "@/backend/logic/options-du-comparateur"
 import { euros } from "@/backend/logic/format"
 import type { ChiffreDAffairesDUnStatut, ChiffreDAffairesPourUnNet, StatutCompare } from "@/types"
-import { ecartAvecLeChiffreDAffairesSaisi, lireLeNetVise, parMois, phraseDuCalculALEnvers, raisonHorsDePortee } from "./combien-facturer"
+import { ecartAvecLeChiffreDAffairesSaisi, lireLeNetVise, netDejaAtteint, parMois, phraseDuCalculALEnvers, raisonHorsDePortee } from "./combien-facturer"
 
 const espaces = (texte: string) => texte.replace(/\s/g, " ")
 
@@ -49,8 +49,24 @@ describe("phraseDuCalculALEnvers", () => {
     expect(espaces(phrase)).toBe("Pour 30 000 € nets par an, il faut au moins 39 000 € de chiffre d'affaires par an (3 250 € par mois), en Micro + versement libératoire.")
   })
 
-  it("dit le net déjà atteint, ou qu'aucun statut ne l'atteint", () => {
-    expect(espaces(phraseDuCalculALEnvers(resultat([colonne("EI", "EI au réel", 0), colonne("SASU", "SASU", 0)])))).toBe("Le foyer atteint déjà 30 000 € nets par an sans chiffre d'affaires de cette activité.")
-    expect(espaces(phraseDuCalculALEnvers(resultat([colonne("micro", "Micro-entreprise", null, { horsDePortee: "plafondMicro" })])))).toBe("Aucun statut n'atteint 30 000 € nets par an.")
+  it("dit le net déjà atteint partout, avec le net du foyer sans chiffre d'affaires : celui du statut actuel, sinon le plus bas", () => {
+    const actuel = resultat([colonne("EI", "EI au réel", 0, { netApresImpots: 41000 }), colonne("micro", "Micro-entreprise", 0, { netApresImpots: 42310, telleQueSaisie: true }), colonne("micro-vfl", "Micro + versement libératoire", null, { horsDePortee: "regimeMicroFerme" })])
+    expect(espaces(phraseDuCalculALEnvers(actuel))).toBe("Le foyer atteint déjà 30 000 € nets par an sans chiffre d'affaires de cette activité : 42 310 € nets avec un chiffre d'affaires nul.")
+    expect(netDejaAtteint(actuel)).toEqual({ net: 42310, libelle: "Micro-entreprise", actuel: true })
+
+    const sansLActuel = resultat([colonne("EI", "EI au réel", 0, { netApresImpots: 41000 }), colonne("SASU", "SASU", 0, { netApresImpots: 40500 })])
+    expect(espaces(phraseDuCalculALEnvers(sansLActuel))).toBe("Le foyer atteint déjà 30 000 € nets par an sans chiffre d'affaires de cette activité : 40 500 € nets avec un chiffre d'affaires nul, en SASU.")
+  })
+
+  it("nomme les statuts qui atteignent le net sans chiffre d'affaires quand d'autres en demandent", () => {
+    const melange = resultat([colonne("EI", "EI au réel", 0), colonne("micro", "Micro-entreprise", 0), colonne("SASU", "SASU", 12000)])
+    expect(espaces(phraseDuCalculALEnvers(melange))).toBe("Le foyer atteint déjà 30 000 € nets par an sans chiffre d'affaires de cette activité en EI au réel, Micro-entreprise.")
+    expect(netDejaAtteint(melange)).toBeNull()
+  })
+
+  it("dit qu'aucun statut n'atteint le net", () => {
+    const aucun = resultat([colonne("micro", "Micro-entreprise", null, { horsDePortee: "plafondMicro" })])
+    expect(espaces(phraseDuCalculALEnvers(aucun))).toBe("Aucun statut n'atteint 30 000 € nets par an.")
+    expect(netDejaAtteint(aucun)).toBeNull()
   })
 })

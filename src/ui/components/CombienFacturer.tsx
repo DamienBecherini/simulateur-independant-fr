@@ -5,7 +5,7 @@
 
 import { useCallback, useId, useState } from "react"
 import { Label } from "@/components/ui/label"
-import { ecartAvecLeChiffreDAffairesSaisi, lireLeNetVise, parMois, phraseDuCalculALEnvers, raisonHorsDePortee } from "@/lib/combien-facturer"
+import { ecartAvecLeChiffreDAffairesSaisi, lireLeNetVise, netDejaAtteint, parMois, phraseDuCalculALEnvers, raisonHorsDePortee } from "@/lib/combien-facturer"
 import { ecartSigne, euros } from "@/backend/logic/format"
 import { cn } from "@/lib/utils"
 import { ligneAlternee } from "../lignes-alternees"
@@ -121,12 +121,16 @@ function CartesDuCalcul({ resultat }: { resultat: ChiffreDAffairesPourUnNet }) {
   )
 }
 
-/** Le résultat du calcul, à jour pour le net visé saisi : la phrase de réponse est annoncée par la zone d'état, au-dessus. */
+/**
+ * Le résultat du calcul, à jour pour le net visé saisi : la phrase de réponse est annoncée par la zone d'état, au-dessus.
+ * Un net déjà atteint sans chiffre d'affaires dans chaque statut tient dans cette phrase : pas de tableau de « 0 € ».
+ */
 function ResultatsDuCalcul({ resultat, activityName }: { resultat: ChiffreDAffairesPourUnNet; activityName: string }) {
+  const deja = netDejaAtteint(resultat) !== null
   return (
     <>
-      <CartesDuCalcul resultat={resultat} />
-      <TableauDuCalcul resultat={resultat} activityName={activityName} />
+      {deja ? null : <CartesDuCalcul resultat={resultat} />}
+      {deja ? null : <TableauDuCalcul resultat={resultat} activityName={activityName} />}
       {resultat.warnings.length > 0 ? (
         <ul className="list-inside list-disc text-sm text-amber-800 dark:text-amber-200/90">
           {resultat.warnings.map(w => (
@@ -134,9 +138,11 @@ function ResultatsDuCalcul({ resultat, activityName }: { resultat: ChiffreDAffai
           ))}
         </ul>
       ) : null}
-      <p className="text-sm text-slate-600 dark:text-slate-400">
-        Le chiffre d'affaires saisi est mis à l'échelle avec la même répartition entre les mois et entre ventes et prestations (BIC, BNC) ; charges, autres revenus et réglages du comparateur ne changent pas. Le net ne monte pas toujours régulièrement avec le chiffre d'affaires (fin de l'ACRE, seuils, plafonds) : chaque montant atteint le net visé, et un euro de moins ne l'atteint pas.
-      </p>
+      {deja ? null : (
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Le chiffre d'affaires saisi est mis à l'échelle avec la même répartition entre les mois et entre ventes et prestations (BIC, BNC) ; charges, autres revenus et réglages du comparateur ne changent pas. Le net ne monte pas toujours régulièrement avec le chiffre d'affaires (fin de l'ACRE, seuils, plafonds) : chaque montant atteint le net visé, et un euro de moins ne l'atteint pas.
+        </p>
+      )}
     </>
   )
 }
@@ -206,7 +212,7 @@ function ContenuDuCalcul({ session, annee, options, activityName }: CombienFactu
         <ChampNumerique id={idChamp} className="w-40" min="0" step="1000" quoi="le net visé" placeholder="30000" value={saisie} onChange={e => setSaisie(e.target.value)} aria-describedby={idAide} />
       </div>
       <p id={idAide} className="text-xs text-slate-600 dark:text-slate-400">
-        Net après cotisations et impôts de toute la simulation, comme la ligne « Net dans la poche » du tableau.
+        Net du foyer après cotisations et impôts, autres revenus compris (salaires, autres activités, revenus du conjoint) : comme la ligne « Net dans la poche » du tableau.
       </p>
       {erreur && netVise !== null ? <p className="text-sm text-red-800 dark:text-red-200">{erreur}</p> : null}
       {/* Zone annoncée sans rôle « status » : celui-ci reste au verdict du comparateur, plus haut. */}

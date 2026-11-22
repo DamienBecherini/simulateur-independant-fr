@@ -85,6 +85,26 @@ describe("CombienFacturer", () => {
     expect(vfl.textContent).toBe("Micro + versement libératoire—hors de portée : plafond dépassé")
   })
 
+  it("dit en une phrase un net déjà atteint sans chiffre d'affaires dans chaque statut, sans tableau de « 0 € »", async () => {
+    const deja: ChiffreDAffairesPourUnNet = {
+      ...resultat,
+      colonnes: [
+        { statut: "EI", libelle: "EI au réel", telleQueSaisie: false, chiffreDAffaires: 0, netApresImpots: 41000 },
+        { statut: "micro", libelle: "Micro-entreprise", telleQueSaisie: true, chiffreDAffaires: 0, netApresImpots: 42310 },
+        { statut: "micro-vfl", libelle: "Micro + versement libératoire", telleQueSaisie: false, chiffreDAffaires: null, netApresImpots: null, horsDePortee: "plafondMicro" }
+      ]
+    }
+    vi.mocked(window.api.chiffreDAffairesPourUnNet).mockResolvedValue(deja)
+    afficher()
+    fireEvent.change(champ(), { target: { value: "30000" } })
+    const reponse = await screen.findByText(/atteint déjà/)
+    expect(espaces(reponse.textContent)).toBe("Le foyer atteint déjà 30 000 € nets par an sans chiffre d'affaires de cette activité : 42 310 € nets avec un chiffre d'affaires nul.")
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+    expect(screen.queryByRole("list", { name: "Chiffre d'affaires nécessaire selon le statut" })).not.toBeInTheDocument()
+    expect(screen.queryByText(/mis à l'échelle/)).not.toBeInTheDocument()
+    expect(screen.getByText("Une note du calcul.")).toBeInTheDocument()
+  })
+
   it("dit l'échec du calcul", async () => {
     vi.mocked(window.api.chiffreDAffairesPourUnNet).mockRejectedValue(new Error("chiffreDAffairesPourUnNet : paramètres invalides."))
     afficher()

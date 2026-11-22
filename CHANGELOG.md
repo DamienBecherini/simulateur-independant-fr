@@ -6,9 +6,13 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Modifié
+
+- **« Combien facturer pour un net visé ? » quand le foyer l'atteint déjà.** Si chaque statut atteint le net visé sans chiffre d'affaires de l'activité, une phrase le dit, avec le net du foyer à chiffre d'affaires nul (« 36 978 € nets avec un chiffre d'affaires nul »), au lieu d'un tableau de « 0 € ». Quand seuls certains statuts l'atteignent ainsi, la phrase les nomme. L'aide du champ précise que le net visé est celui du foyer, autres revenus compris (salaires, autres activités, revenus du conjoint).
+
 ### Maintenance
 
-- Intégration continue plus rapide : la suite de la démo web est partagée entre trois machines, et `main` ne relance plus les tests de bout en bout déjà passés sur `integration` pour le même commit (la démo y est seulement compilée et publiée). Une publication passe d'environ 30 à 10 minutes. `npm run verifier` lance en local la vérification complète, Firefox compris.
+- Intégration continue plus rapide : la suite de la démo web est partagée entre trois machines, et `main` ne relance plus les tests de bout en bout déjà passés sur `integration` pour le même commit (la démo y est seulement compilée et publiée). Une publication passe d'environ 30 à 15 minutes. `npm run verifier` lance en local la vérification complète, Firefox compris.
 
 ## [0.14.0] — 2026-11-22
 
