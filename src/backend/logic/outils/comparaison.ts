@@ -30,7 +30,7 @@ function activiteDemandee(session: SessionState, activiteId: string | undefined)
 }
 
 const ParametresVariante = {
-  activiteId: IdentifiantSchema.optional().describe("Identifiant de l'activité ; par défaut, celle ouverte dans le comparateur de l'application."),
+  activiteId: IdentifiantSchema.optional().describe("Identifiant de l'activité ; par défaut, celle du comparateur de l'application."),
   annee: AnneeSchema.optional().describe("Année ; par défaut, la plus récente de la simulation.")
 }
 
@@ -94,9 +94,9 @@ export const comparerStatuts = definirOutil({
   nom: "comparer_statuts",
   titre: "Comparer les statuts d'une activité",
   description: [
-    "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro-entreprise avec et sans versement libératoire, portage salarial), le reste de la simulation inchangé, et désigne le statut au meilleur net après impôts du foyer.",
-    "Utilise les réglages enregistrés du comparateur ; les paramètres essaient une variante sans rien enregistrer (pour l'enregistrer : proposer_reglages_comparateur).",
-    "La colonne telleQueSaisie est la situation saisie : son net est celui de simuler (situationNet). Les frais réels étant dans la grille, les autres colonnes n'ajoutent aux charges que l'écart de frais de fonctionnement supposés avec le statut actuel (ecartDeFrais, négatif si le statut en coûte moins). Une société hors partage grille n'est pas la situation saisie, sauf au meilleur net quand l'arbitrage ne s'en écarte que de moins de 100 € : la colonne reste alors telleQueSaisie, sans gain à annoncer ; si le meilleur statut fait moins bien qu'elle, sousLaSituationNet dit de combien et pourquoi (à reprendre dans la réponse). En partage grille, chaque société reprend la rémunération de la grille. Sans chiffre d'affaires, meilleur est null.",
+    "Simule une activité dans chaque statut (SASU, EURL, EI au réel, micro avec et sans versement libératoire, portage salarial), le reste inchangé, et désigne le meilleur net après impôts du foyer.",
+    "Réglages enregistrés du comparateur ; les paramètres essaient une variante sans l'enregistrer (proposer_reglages_comparateur l'enregistre).",
+    "La colonne telleQueSaisie est la situation saisie (net de simuler : situationNet). Les autres n'ajoutent aux charges que l'écart de frais de fonctionnement supposés avec le statut actuel (ecartDeFrais, négatif s'il en coûte moins). Hors partage grille, une société n'est telleQueSaisie qu'au meilleur net, quand l'arbitrage s'en écarte de moins de 100 € (pas de gain à annoncer). Si le meilleur statut fait moins bien que la situation saisie, sousLaSituationNet dit de combien et pourquoi : reprenez-le. En partage grille, chaque société reprend la rémunération de la grille. Sans chiffre d'affaires, meilleur est null.",
     "Montants annuels en euros, arrondis, pour tous les foyers ; resultatConserveActivite porte sur l'activité seule ; remunerationRetenue est la rémunération nette annuelle du dirigeant.",
     "Pas de colonne micro pour un auxiliaire médical (CARPIMKO) : la raison est dans les avertissements."
   ].join(" "),
@@ -220,8 +220,8 @@ export const optimiserRemuneration = definirOutil({
   titre: "Arbitrer rémunération et dividendes",
   description: [
     "Pour une activité en SASU ou EURL (statut actuel ou étudié), cherche la rémunération nette du dirigeant au meilleur net après impôts du foyer (le reste du bénéfice en dividendes), et la meilleure qui valide 4 trimestres de retraite.",
-    `Rend la rémunération maximale, ces deux points, ${POINTS_DE_LA_COURBE} points de la courbe, et situationActuelle (l'activité telle que saisie), avec ecartAuMeilleur et ecartAuMeilleurAvecRetraite : le net que le foyer gagnerait à chaque point (« vous êtes à X € du meilleur net »). Montants annuels en euros, arrondis ; calcul à 100 € près.`,
-    "situationActuelle a le net de simuler. Dans un autre statut que l'actuel, les points ajoutent aux charges l'écart de frais de fonctionnement supposés avec le statut actuel (ecartDeFrais, négatif s'il en coûte moins, 0 dans le même statut ; noteCFE si la CFE est réduite après une création).",
+    `Rend la rémunération maximale, ces deux points, ${POINTS_DE_LA_COURBE} points de la courbe et situationActuelle (telle que saisie, net de simuler), avec ecartAuMeilleur et ecartAuMeilleurAvecRetraite (le net que le foyer gagnerait). Montants annuels en euros, arrondis ; calcul à 100 € près.`,
+    "Dans un autre statut que l'actuel, les points ajoutent aux charges l'écart de frais de fonctionnement supposés (ecartDeFrais, négatif s'il en coûte moins ; noteCFE si la CFE est réduite après une création).",
     "Les points ne distribuent que le bénéfice de l'année, alors que les dividendes saisis peuvent puiser dans les réserves : un écart négatif peut venir de là.",
     "Ne modifie rien : pour retenir une rémunération, proposez un flux director_remuneration mensuel (montant annuel / 12) et ajustez les dividends_payment ; l'aperçu de la proposition donne le net obtenu."
   ].join(" "),

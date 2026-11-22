@@ -42,6 +42,16 @@ export function zoneDeLActivite(activite: ActiviteEnZone, annee: number, regles:
   return { etat: "applicable", exoneration, partDansLaZone: activite.implantationEnZone.partDuChiffreDAffaires ?? 1, hypotheses: hypothesesDuRegime(exoneration.regime, statutDeLActivite(activite)) }
 }
 
+/**
+ * Ce que dit la colonne du portage salarial d'une activité qui serait exonérée cette année : rien à exonérer, le salarié
+ * porté touchant un salaire, sans bénéfice (ADR 016, addendum du 2026-11-22). `null` sans exonération à perdre.
+ */
+export function noteDuPortageEnZone(activite: ActiviteEnZone, annee: number, regles: ReglesDeZone): string | null {
+  const zone = zoneDeLActivite(activite, annee, regles)
+  if (zone?.etat !== "applicable" || zone.exoneration.partExoneree <= 0) return null
+  return `${zone.exoneration.regime.nom} : aucune exonération d'impôt en portage salarial, qui verse un salaire et n'a pas de bénéfice à exonérer.`
+}
+
 /** Ce qu'un calcul de bénéfice doit connaître de l'exonération : la part réalisée dans la zone, le taux de l'année, le plafond. */
 export interface ParametresDExoneration {
   partDansLaZone: number

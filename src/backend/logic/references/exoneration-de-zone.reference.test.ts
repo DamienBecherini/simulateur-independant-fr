@@ -310,10 +310,11 @@ describe("comparateur : l'exonération suit l'activité d'un statut à l'autre",
     }
   })
 
-  it("micro-entreprise au versement libératoire : pas d'exonération, la colonne le dit ; portage salarial : rien", () => {
+  it("micro-entreprise au versement libératoire et portage salarial : pas d'exonération, la colonne le dit", () => {
     expect(mentionne("micro-vfl", "ZFU-TE : aucune exonération d'impôt avec le versement libératoire")).toBe(true)
     expect(mentionne("micro-vfl", "ZFU-TE : bénéfice exonéré")).toBe(false)
-    expect(colonne("portage").warnings.some(w => w.includes("ZFU-TE"))).toBe(false)
+    expect(mentionne("portage", "ZFU-TE : aucune exonération d'impôt en portage salarial")).toBe(true)
+    expect(mentionne("portage", "ZFU-TE : bénéfice exonéré")).toBe(false)
   })
 
   it("la micro-entreprise exonérée d'impôt fait mieux que la même au versement libératoire", () => {

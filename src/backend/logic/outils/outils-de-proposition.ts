@@ -25,7 +25,7 @@ function proposer(session: SessionState, suiteDe: unknown, operations: (suite: P
  * Fin commune des descriptions des outils de proposition. Ce qu'est `suiteDe` est dit une fois, dans son schéma
  * (`SuiteDeSchema`), que chacun de ces outils publie : la description n'a pas à le répéter.
  */
-const RAPPEL_VALIDATION = "Ne modifie rien : rend une proposition (résumé, avertissements, effet sur le net) à faire valider par l'utilisateur."
+const RAPPEL_VALIDATION = "Ne modifie rien : rend une proposition (résumé, avertissements, effet sur le net) à faire valider."
 
 
 /** Les années de la session une fois appliquées les opérations de `suiteDe` (années ajoutées, supprimées, repartir de zéro). */
@@ -71,7 +71,7 @@ export const proposerFlux = definirOutil({
   nom: "proposer_flux",
   titre: "Proposer des flux",
   description: [
-    "Propose d'ajouter des flux à la grille mensuelle. Chaque élément de « flux » est une série : un montant mensuel répété sur les mois indiqués d'une année ([3] pour une facture de mars). Une année absente est ajoutée si elle suit ou précède celles de la simulation.",
+    "Propose d'ajouter des flux à la grille. Chaque élément de « flux » est une série : un montant mensuel sur les mois indiqués d'une année ([3] : facture de mars). Une année absente est ajoutée si elle est contiguë à celles de la simulation.",
     `Types de flux permis, par acteur (montants mensuels). ${typesExpliquesParGenre()}.`,
     "Indemnités kilométriques et frais réels ne sont pas des flux : l'utilisateur les règle dans l'application.",
     "Si les flux remplacent une estimation déjà saisie (lister_flux), proposez aussi de la supprimer ou de la modifier dans la même proposition (suiteDe), sinon ils s'y ajoutent.",

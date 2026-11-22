@@ -61,7 +61,7 @@ export function propositionValidee(brute: unknown): Proposition {
 
 /** Paramètre commun aux outils de proposition : compléter une proposition précédente plutôt qu'en ouvrir une autre. */
 export const SuiteDeSchema = PropositionRenvoyeeSchema.optional().describe(
-  "Proposition précédente (champ « proposition » d'un résultat proposer_…) à compléter, pour tout faire valider en une fois."
+  "Champ « proposition » d'un résultat proposer_… à compléter : tout se valide en une fois."
 )
 
 const ApercuSchema = z.object({ annee: z.number(), netAvant: z.number().nullable(), netApres: z.number().nullable(), ecart: z.number().nullable(), resultatConserveAvant: z.number().nullable(), resultatConserveApres: z.number().nullable(), erreur: z.string().nullable() })

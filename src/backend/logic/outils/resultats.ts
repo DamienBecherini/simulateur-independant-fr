@@ -73,7 +73,7 @@ export const simuler = definirOutil({
   titre: "Simuler une année",
   description: [
     "Calcule une année avec le moteur du simulateur et en rend le résumé : bilan (chiffre d'affaires, charges, cotisations, impôt sur les sociétés, impôt sur le revenu, prélèvements sociaux, résultat conservé), chaque foyer fiscal (net après impôts, impôt, revenu fiscal de référence), chaque activité et chaque personne.",
-    "Société à l'IS : resultatConserve est ce que ses réserves gagnent dans l'année (négatif si elle est déficitaire, ou si elle distribue plus que son bénéfice de l'année en puisant dans ses réserves) ; reservesALaFin, ses réserves distribuables au 31 décembre, reportées d'une année à l'autre. Portage salarial : resultatConserve reste sur le compte d'activité (réserve d'un CDI).",
+    "Société à l'IS : resultatConserve, ce que ses réserves gagnent dans l'année (négatif si elle perd, ou distribue plus que son bénéfice) ; reservesALaFin, ses réserves distribuables au 31 décembre, reportées d'une année à l'autre. Portage salarial : resultatConserve reste sur le compte d'activité (réserve d'un CDI).",
     "Montants annuels en euros, arrondis. C'est la seule source des chiffres à donner à l'utilisateur : ne les recalculez pas. Pour le détail d'une ligne : expliquer_resultat."
   ].join(" "),
   lecture: true,

@@ -4,6 +4,7 @@ import { estSocieteIS, type ComparaisonOptions, type ConditionsPortageRetenues, 
 import { depassePlafondMicro } from "./calculsAE.js"
 import { estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, chiffreAffairesReuni, microsReunies, prorataDeLEntreprise } from "./dispositifs.js"
+import { noteDuPortageEnZone } from "./exoneration-de-zone.js"
 import { ecartDeFrais } from "./frais-de-fonctionnement.js"
 import { beneficeGarde, perteDeLaSociete } from "./net-compare.js"
 import { conditionsPortageParDefaut, LIBELLES_DES_CONDITIONS_PORTAGE } from "./options-du-comparateur.js"
@@ -140,14 +141,17 @@ function salaireDuPorte(activite: ActiviteDuRapport): { salaireBrutPorte?: numbe
  * Ce que la colonne du portage salarial dit de plus (voir l'ADR 016) : pourquoi elle n'est pas retenue (aucune
  * prestation de services à facturer, des frais supérieurs au chiffre d'affaires, des salariés qu'un salarié porté ne
  * peut pas avoir), les conditions de la société
- * prises à leur valeur typique, une profession réglementée qui perd sa caisse. Rien pour les autres colonnes.
+ * prises à leur valeur typique, une exonération en zone franche qu'il n'y a plus, faute de bénéfice, une profession
+ * réglementée qui perd sa caisse. Rien pour les autres colonnes.
  */
-function colonneDuPortage(statut: StatutCompare, { source, regles }: Pick<ColonneEtudiee, "source" | "regles">, simulation: SimulationDeLaColonne, activite: ActiviteDuRapport): Pick<ScenarioStatut, "portageNonRetenu"> & { notes: string[] } {
+function colonneDuPortage(statut: StatutCompare, { source, regles }: Pick<ColonneEtudiee, "source" | "regles">, annee: number, simulation: SimulationDeLaColonne, activite: ActiviteDuRapport): Pick<ScenarioStatut, "portageNonRetenu"> & { notes: string[] } {
   if (statut !== "portage") return { notes: [] }
   const raison = raisonPortageNonRetenu(source.id, simulation.session, activite?.portage)
   const notes = raison ? [NOTE_PORTAGE_NON_RETENU[raison]] : []
   const typiques = activite?.portage?.valeursTypiques ?? []
   if (typiques.length > 0) notes.push(noteDesValeursTypiques(typiques))
+  const zone = noteDuPortageEnZone(source, annee, regles)
+  if (zone) notes.push(zone)
   if (professionDe(source, regles)) notes.push("Le salarié porté relève du régime général, sans la caisse de sa profession libérale ; ses prestations sont facturées à des entreprises clientes (code du travail, art. L1254-1) : vérifiez que votre profession et votre clientèle s'y prêtent.")
   return { ...(raison ? { portageNonRetenu: raison } : {}), notes }
 }
@@ -230,7 +234,7 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
   const caMicro = chiffreAffairesDeLaMicro(simulation.session.monthlyData, source.id)
   const { horsPlafond, reglesMicro, ...acre } = microDeLaColonne(simulation, source.id, regles, contexte.annee ?? regles.annee)
   const { notes, ...ferme } = regimeFerme(statut, source.id, contexte)
-  const { notes: notesDuPortage, ...portage } = colonneDuPortage(statut, { source, regles }, simulation, activite)
+  const { notes: notesDuPortage, ...portage } = colonneDuPortage(statut, { source, regles }, contexte.annee ?? regles.annee, simulation, activite)
   const { resultatConserveActivite, ...details } = detailsDeLActivite(activite, [...notes, ...notesDuPortage, ...noteDuPlafond(statut, simulation.remunerationPlafonnee)])
   return {
     statut,

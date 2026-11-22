@@ -409,4 +409,4 @@ Le format est passé à 4 avec l'[ADR 018](./018-regles-de-structure.md). Et une
 ## Addendum (2026-11-22) : colonne à découvert, zone franche
 
 - Depuis l'[ADR 019](./019-ce-que-le-comparateur-compare.md), une colonne dont les frais dépassent le chiffre d'affaires n'est pas retenue (troisième raison, `aDecouvert`), et son découvert est déduit du net comparé (`perteConservee`).
-- L'exonération d'une activité implantée en zone franche ou en quartier prioritaire ([ADR 017](./017-exoneration-d-impot-sur-les-benefices-en-zone.md)) ne s'applique pas en portage : il n'y a pas de bénéfice, seulement un salaire. La colonne la laisse de côté sans le signaler.
+- L'exonération d'une activité implantée en zone franche ou en quartier prioritaire ([ADR 017](./017-exoneration-d-impot-sur-les-benefices-en-zone.md)) ne s'applique pas en portage : il n'y a pas de bénéfice, seulement un salaire. La colonne le dit dans une note (« ZFU-TE : aucune exonération d'impôt en portage salarial… »), comme celle du versement libératoire.
