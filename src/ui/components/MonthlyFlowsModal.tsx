@@ -15,7 +15,7 @@ import { NewFlowItem, type NewFlowValues } from "./NewFlowItem"
 import { NatureDuChiffreDAffaires } from "./NatureDuChiffreDAffaires"
 import { VersementsRecus } from "./VersementsRecus"
 import type { VersementRecu } from "@/lib/grille-mensuelle"
-import { Depliable } from "./Depliable"
+import { AideALaSaisie } from "./AideALaSaisie"
 import { useExtensionDeLaModification } from "../hooks/useExtensionDeLaModification"
 import { useTriAccessible } from "../hooks/useTriAccessible"
 import { useListeAnimee } from "../hooks/useListeAnimee"
@@ -310,11 +310,7 @@ export function MonthlyFlowsModal({ onClose, flows, entity, monthName, annee, au
           </DialogTitle>
           {/* Une phrase pour commencer ; le reste du mode d'emploi, replié, ne repousse pas les champs sous l'écran. */}
           <DialogDescription>Modifiez les flux dans la liste ; la dernière ligne en ajoute un (Entrée sur le montant valide et enchaîne).</DialogDescription>
-          <Depliable titre="Aide à la saisie" className="text-sm text-slate-600 dark:text-slate-400">
-            <p className="mt-1">
-              Réorganisez les flux par glisser-déposer. Pour une charge ou un revenu qui revient chaque mois, choisissez « Ajouter à » avant d'ajouter : l'ajout est recopié sur les autres mois.{autresAnnees.length > 0 ? " Cochez d'autres années sous « Aussi en » : les mêmes mois y sont visés (en juillet, « ce mois et les suivants » vise juillet à décembre de chaque année cochée)." : ""} Une modification ou un retrait ne vaut que pour ce mois ; si le même flux (même type et même libellé) existe dans d'autres mois, une barre propose ensuite de faire de même ailleurs. Le bouton de recopie d'un flux le recopie jusqu'en décembre de l'année affichée. Un montant ramené à 0 retire le flux, comme sa corbeille. Pour un salaire, le brut est calculé avec les cotisations salariales de {regles.annee} si vous ne le saisissez pas ; videz-le pour ne compter aucune cotisation.
-            </p>
-          </Depliable>
+          <AideALaSaisie autresAnnees={autresAnnees.length > 0} recopie={!!onRecopier} anneeDesCotisations={entity.type === "person" ? regles.annee : undefined} />
         </DialogHeader>
 
         {/* Conteneur : les lignes de flux suivent la largeur de la fenêtre de saisie (une ligne par flux dès 34 rem, sinon
