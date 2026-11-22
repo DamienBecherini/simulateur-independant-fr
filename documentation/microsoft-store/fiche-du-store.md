@@ -29,7 +29,7 @@ Textes et réponses à recopier dans Partner Center pour la soumission de l'appl
 >
 > Décrivez votre situation : les personnes du foyer, vos activités (micro-entreprise, entreprise individuelle au réel, EURL, SASU) et leurs liens (mariage, PACS, enfants, présidence, gérance). Saisissez vos revenus et charges mois par mois dans une grille annuelle. Le simulateur calcule les cotisations de chaque activité, puis l'impôt sur le revenu du foyer (quotient familial, décote, dividendes au prélèvement forfaitaire ou au barème), et affiche le net dans la poche et le taux global de prélèvement. Tout se recalcule à chaque modification.
 >
-> Comparez les statuts : pour une activité, le net, les prélèvements, les frais de fonctionnement et les trimestres de retraite validés en SASU, EURL, EI au réel et micro-entreprise, avec ou sans versement libératoire. En société, trouvez le partage entre rémunération et dividendes qui donne le meilleur net, avec ou sans l'exigence de valider quatre trimestres de retraite.
+> Comparez les statuts : pour une activité, le net, les prélèvements, les frais de fonctionnement et les trimestres de retraite validés en SASU, EURL, EI au réel, micro-entreprise (avec ou sans versement libératoire) et portage salarial. En société, trouvez le partage entre rémunération et dividendes qui donne le meilleur net, avec ou sans l'exigence de valider quatre trimestres de retraite.
 >
 > Plusieurs années, chacune avec ses règles fiscales (2024 à 2026), des situations types à adapter, des sauvegardes nommées, et des exports CSV, PDF et Markdown.
 >
@@ -46,6 +46,22 @@ Textes et réponses à recopier dans Partner Center pour la soumission de l'appl
 Pour la première soumission (version 0.11.0) : **laisser le champ vide**, comme le demande Partner Center.
 
 Pour les suivantes, reprendre la section de la version dans [CHANGELOG.md](../../CHANGELOG.md), en quelques lignes, du point de vue de l'utilisateur (1 500 caractères au plus).
+
+### Version 0.14.0
+
+```text
+Version 0.14.0
+
+- Zone franche urbaine (ZFU-TE) ou quartier prioritaire (QPV) : une case exonère d'impôt le bénéfice de l'activité, selon sa date de création ; une nouvelle situation type le montre.
+- « Comparer et optimiser » en trois étapes : ce qui est comparé, le résultat avec le meilleur net mis en évidence, puis les réglages de la société (rémunération ou dividendes, 4 trimestres de retraite colonne par colonne).
+- Le comparateur tient compte de la perte ou du bénéfice gardé dans la société, et une société ne verse plus une rémunération qu'elle ne gagne pas ; la saisie rappelle la limite.
+- Protection sociale comparée garantie par garantie, notes et précisions dans des bulles.
+- Grille : la rémunération et les dividendes aussi sur la ligne de qui les reçoit ; ajouts et retraits animés.
+- Saisie d'un mois : « Appliquer à » se choisit après la modification ; l'aide à la saisie devient une liste.
+- Situations types : une recherche et des filtres.
+- Zoom : niveau affiché, retour à 100 % (Ctrl+0), interface lisible de 50 % à 200 %.
+- Corrections : structures impossibles (deux titulaires, deux présidents), plafonds de deux micro-entreprises d'une même personne, fenêtres et barre d'outils sous un zoom.
+```
 
 ### Version 0.13.0
 
@@ -67,19 +83,20 @@ Une par ligne dans Partner Center (vingt au plus) :
 1. Net dans la poche du foyer et taux global de prélèvement, recalculés à chaque modification
 2. Micro-entreprise, entreprise individuelle au réel, EURL et SASU
 3. Impôt sur le revenu calculé par foyer fiscal : quotient familial, décote, dividendes
-4. Comparateur de statuts, portage salarial compris : net, prélèvements, frais et trimestres de retraite
+4. Comparateur de statuts, portage salarial compris : net, prélèvements, frais et protection sociale, garantie par garantie
 5. Rémunération ou dividendes : la répartition qui donne le meilleur net
 6. Combien facturer pour un net visé, statut par statut
 7. Grille annuelle des revenus et charges, mois par mois
 8. Plusieurs années de simulation, chacune avec ses règles fiscales
 9. Situations types préremplies et expliquées, avec leurs sources
 10. Frais réels et barème kilométrique
-11. Sauvegardes nommées, import et export JSON
-12. Exports CSV pour Excel, PDF mis en page et rapport Markdown
-13. Annuler et rétablir, sauvegarde automatique
-14. 100 % hors ligne : aucune donnée ne quitte l'ordinateur
-15. Serveur MCP local pour les assistants d'IA de bureau, avec validation de chaque proposition
-16. Gratuit, sans publicité, open source (licence MIT)
+11. Exonération d'impôt en zone franche urbaine ou en quartier prioritaire
+12. Sauvegardes nommées, import et export JSON
+13. Exports CSV pour Excel, PDF mis en page et rapport Markdown
+14. Annuler et rétablir, sauvegarde automatique, zoom de 50 % à 200 %
+15. 100 % hors ligne : aucune donnée ne quitte l'ordinateur
+16. Serveur MCP local pour les assistants d'IA de bureau, avec validation de chaque proposition
+17. Gratuit, sans publicité, open source (licence MIT)
 
 ## Mots-clés
 
@@ -107,7 +124,7 @@ Dans [captures/](./captures/) : 1366 × 768 pixels (la taille minimale demandée
 | `1-simulation.png` | Personnes et activités du foyer, avec le résumé du net (66 710 €) | Décrivez votre foyer et vos activités, et leurs liens |
 | `2-grille.png` | Grille de saisie annuelle, avec revenus et charges mois par mois | Saisissez vos revenus et charges mois par mois |
 | `3-resultats.png` | Résultats de simulation | Le net dans la poche et le taux global de prélèvement, par foyer et par activité |
-| `4-comparateur.png` | Comparateur de statuts | Comparez SASU, EURL, EI et micro-entreprise sur votre situation |
+| `4-comparateur.png` | Comparateur de statuts, étape 2 : le tableau, meilleur net mis en évidence | Comparez SASU, EURL, EI, micro-entreprise et portage salarial sur votre situation |
 | `5-remuneration-ou-dividendes.png` | Rémunération ou dividendes | Trouvez la rémunération qui donne le meilleur net |
 
 Pistes pour compléter (jusqu'à dix captures) : la grille annuelle avec la fenêtre d'un flux ouverte, les situations types, le mode sombre, l'export PDF. Éviter la fenêtre « Utiliser avec une IA » : elle affiche les chemins réels du poste, donc le nom de l'utilisateur.
