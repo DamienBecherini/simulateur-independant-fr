@@ -78,6 +78,31 @@ describe("Fenêtre des situations types", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
+  it("garde en tête les questions de « Que voulez-vous savoir ? » : une question charge sa situation type", async () => {
+    const { user, onCharger, ouvrirLaFenetre } = ouvrir()
+    await ouvrirLaFenetre()
+
+    const questions = within(fenetre()).getByRole("region", { name: "Que voulez-vous savoir ?" })
+    expect(within(questions).getAllByRole("button").map(b => b.textContent)).toEqual(["Combien me restera-t-il ?", "Société ou micro-entreprise ?", "Mariage ou Pacs ?", "Rémunération ou dividendes ?", "Mes cotisations sont-elles justes ?"])
+    const mariage = within(questions).getByRole("button", { name: "Mariage ou Pacs ?" })
+    expect(mariage).toHaveAccessibleDescription("Un couple en union libre : son impôt s'il était marié ou pacsé.")
+
+    await user.click(mariage)
+    expect(onCharger).toHaveBeenCalledWith(MONTAGES_TYPES.find(m => m.id === "couple-union-libre"))
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  it("une question demande la même confirmation qu'une carte quand la simulation en cours serait perdue", async () => {
+    const { user, onCharger, ouvrirLaFenetre } = ouvrir(true)
+    await ouvrirLaFenetre()
+
+    await user.click(screen.getByRole("button", { name: "Rémunération ou dividendes ?" }))
+    const confirmation = screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
+    await user.click(within(confirmation).getByRole("button", { name: "Annuler" }))
+    expect(onCharger).not.toHaveBeenCalled()
+    expect(screen.getByRole("button", { name: "Rémunération ou dividendes ?" })).toHaveFocus()
+  })
+
   it("se ferme à la touche Échap, puis se rouvre sur la liste", async () => {
     const { user, ouvrirLaFenetre } = ouvrir()
     await ouvrirLaFenetre()

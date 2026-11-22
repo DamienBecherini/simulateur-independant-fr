@@ -6,6 +6,10 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+### Ajouté
+
+- **Les questions de « Que voulez-vous savoir ? » en tête de la fenêtre « Situations types ».** Une fois fermé, l'encart du premier lancement ne revenait plus, et ses questions avec lui : elles restent maintenant en boutons courts au-dessus de la recherche (« Combien me restera-t-il ? », « Société ou micro-entreprise ? », « Mariage ou Pacs ? », « Rémunération ou dividendes ? », « Mes cotisations sont-elles justes ? »). Un clic charge la situation type qui y répond, avec la même confirmation qu'une carte ; la précision de chaque question s'affiche au survol. À l'ouverture, le focus reste sur la recherche.
+
 ### Modifié
 
 - **« Combien facturer pour un net visé ? » devient « Quel chiffre d'affaires pour un net visé ? »**, qui dit mieux ce que la section cherche.

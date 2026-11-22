@@ -4,9 +4,10 @@
 // illustre, ses conditions, ses risques, ses sources), puis son chargement, confirmé quand la simulation en cours
 // serait perdue. Les boutons qui ouvrent la fenêtre parlent de « situation type », ce que l'on vient y chercher ;
 // dans la fenêtre, chacune reste un « montage ». Dans la démo web, chaque carte donne aussi le lien qui ouvre la
-// situation (#situation=…), à copier pour le partager.
+// situation (#situation=…), à copier pour le partager. En tête de la bibliothèque, les questions de l'encart
+// « Que voulez-vous savoir ? » restent à portée, même une fois l'encart fermé.
 
-import { useRef, useState, type ReactNode, type RefObject } from "react"
+import { useId, useRef, useState, type ReactNode, type RefObject } from "react"
 import { Check, ChevronLeft, ExternalLink, LayoutTemplate, Link, Search } from "lucide-react"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +18,7 @@ import { ConfirmationDeRemplacement } from "./ConfirmationDeRemplacement"
 import { ANNEE_DES_MONTAGES } from "@/lib/montages/construction"
 import { AUCUN_CRITERE, criteresActifs, FILTRES_DE_FOYER, FILTRES_DE_STATUT, filtrerLesMontages, type CriteresDesMontages } from "@/lib/montages/filtres"
 import { MONTAGES_TYPES, type MontageType } from "@/lib/montages/montages"
+import { QUESTIONS_DE_DEPART, type QuestionDeDepart } from "@/lib/questions-de-depart"
 
 /** Titre de la fenêtre, repris par le bouton qui l'ouvre dans les paramètres et dans une simulation vide. */
 const TITRE_DE_LA_FENETRE = "Partir d'une situation type"
@@ -209,6 +211,39 @@ function FiltresDesMontages({ criteres, onChange, trouvees }: { criteres: Criter
   )
 }
 
+type QuestionAvecSaSituation = QuestionDeDepart & { montage: MontageType }
+
+/** Les questions de l'encart qui mènent à une situation type (celles qui mènent à une section de la page n'ont rien à faire ici). */
+const QUESTIONS_DE_LA_BIBLIOTHEQUE = QUESTIONS_DE_DEPART.filter((question): question is QuestionAvecSaSituation => "montage" in question)
+
+/**
+ * « Que voulez-vous savoir ? » : les questions de l'encart du premier lancement, en boutons courts. Un clic charge la
+ * situation type de la question, comme son bouton « Charger » ; la précision de chaque question est sa description.
+ */
+function QuestionsDeDepart({ onCharger }: { onCharger: (montage: MontageType) => void }) {
+  const titre = useId()
+  const precision = useId()
+  return (
+    <section aria-labelledby={titre} className="space-y-1.5">
+      <h3 id={titre} className="text-sm font-medium text-slate-800 dark:text-slate-100">
+        Que voulez-vous savoir ?
+      </h3>
+      <ul className="flex flex-wrap gap-2">
+        {QUESTIONS_DE_LA_BIBLIOTHEQUE.map((question, rang) => (
+          <li key={question.question}>
+            <Button type="button" variant="outline" size="sm" className="h-auto min-h-8 py-1 text-left text-sm whitespace-normal pointer-coarse:min-h-11" title={question.precision} aria-describedby={`${precision}-${rang}`} onClick={() => onCharger(question.montage)}>
+              {question.question}
+            </Button>
+            <span id={`${precision}-${rang}`} className="sr-only">
+              {question.precision}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 interface ListeDesMontagesProps {
   onDetails: (montage: MontageType) => void
   onCharger: (montage: MontageType) => void
@@ -227,6 +262,7 @@ function ListeDesMontages({ onDetails, onCharger, montageVu, criteres, onCritere
         <DialogTitle>{TITRE_DE_LA_FENETRE}</DialogTitle>
         <DialogDescription>Des simulations d'une année, préremplies avec des chiffres fictifs, à charger puis à adapter. Chacune explique ce qu'elle illustre, ses conditions et ses risques.</DialogDescription>
       </DialogHeader>
+      <QuestionsDeDepart onCharger={onCharger} />
       <FiltresDesMontages criteres={criteres} onChange={onCriteres} trouvees={montages.length} />
       <ul aria-label="Situations types" className="grid gap-3 sm:grid-cols-2">
         {montages.map(montage => (
@@ -290,12 +326,14 @@ export function FenetreDesMontages({ open, onOpenChange, onCharger, confirmation
         {boutonDOuverture ? <DialogTrigger asChild>{boutonDOuverture}</DialogTrigger> : null}
         <DialogContent
           className="max-h-[calc(90vh/var(--zoom,1))] overflow-y-auto sm:max-w-3xl"
-          // À la souris, le focus va au champ de recherche : on tape tout de suite. Au doigt, il reste sur la fenêtre,
-          // pour ne pas ouvrir le clavier, qui cacherait la moitié des situations.
+          // À la souris, le focus va au champ de recherche, après les questions : on tape tout de suite. Au doigt, il reste
+          // sur la fenêtre, pour ne pas ouvrir le clavier, qui cacherait la moitié des situations.
           onOpenAutoFocus={event => {
-            if (!window.matchMedia?.("(pointer: coarse)").matches) return
             event.preventDefault()
-            if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus()
+            if (!(event.currentTarget instanceof HTMLElement)) return
+            const recherche = event.currentTarget.querySelector<HTMLElement>("input[type=search]")
+            if (window.matchMedia?.("(pointer: coarse)").matches || !recherche) event.currentTarget.focus()
+            else recherche.focus()
           }}
           onCloseAutoFocus={event => {
             if (!declencheurDeLaFenetre?.current) return

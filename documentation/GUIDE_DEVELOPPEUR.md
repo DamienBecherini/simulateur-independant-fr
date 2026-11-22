@@ -492,7 +492,7 @@ Une situation type est une simulation d'un an, préremplie, que l'utilisateur ch
 
 ### 3.12 Ajouter une question de départ
 
-L'encart « Que voulez-vous savoir ? » (`EncartDesQuestions.tsx`) liste les questions de `QUESTIONS_DE_DEPART` (`src/lib/questions-de-depart.ts`), puis « Partir de zéro ». Chaque question mène à une situation type, chargée avec la même confirmation que la fenêtre des situations types, ou, faute de situation adaptée, à une section de la page.
+L'encart « Que voulez-vous savoir ? » (`EncartDesQuestions.tsx`) liste les questions de `QUESTIONS_DE_DEPART` (`src/lib/questions-de-depart.ts`), puis « Partir de zéro ». Chaque question mène à une situation type, chargée avec la même confirmation que la fenêtre des situations types, ou, faute de situation adaptée, à une section de la page. Les questions qui mènent à une situation type sont aussi en tête de la fenêtre des situations types (`QuestionsDeDepart`, dans `MontagesTypes.tsx`) : fermé, l'encart ne revient pas, mais ses questions restent à portée. La fenêtre porte le focus sur la recherche, après elles.
 
 1. **La situation visée** : une situation existante, ou la créer d'abord (§ 3.11).
 2. **L'entrée** : `{ question, precision, montage: situation("identifiant") }`. `situation()` échoue au chargement si l'identifiant n'existe pas. `precision` est la phrase qui décrit la situation sous la question (lue par les lecteurs d'écran comme description du bouton). Pour mener à une section plutôt qu'à une situation : `ancre: ANCRES.…`, une ancre du registre (§ 2.5).
