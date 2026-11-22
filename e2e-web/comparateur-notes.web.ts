@@ -15,7 +15,9 @@ const SITUATION = "./#situation=sasu-en-zone-franche-urbaine"
 const NOTE_DU_PORTAGE = /Portage salarial : Conditions typiques d'une société de portage/
 
 const tableau = (page: Page) => page.getByRole("table", { name: "Comparaison des statuts" })
-const pastilleDuPortage = (page: Page) => tableau(page).getByRole("columnheader", { name: /^Portage salarial/ }).getByRole("button", { name: /^Voir la note/ })
+// La première note du portage (conditions typiques) ; la seconde dit qu'il n'y a pas d'exonération en zone en portage.
+const pastilleDuPortage = (page: Page) => tableau(page).getByRole("columnheader", { name: /^Portage salarial/ }).getByRole("button", { name: /^Voir la note/ }).first()
+const NOTE_DU_PORTAGE_EN_ZONE = /Portage salarial : ZFU-TE : aucune exonération d'impôt en portage salarial/
 const bulle = (page: Page) => page.getByRole("tooltip")
 /** Le bloc des notes sous le tableau : son titre, la ligne de pastilles ou la liste. */
 const notes = (page: Page) => page.getByText(/^Notes sur « SASU de Karim »/).locator("xpath=../..")
@@ -150,11 +152,11 @@ test("affichage « Résumé » : les notes du statut actuel écrites, les autres
   await page.goto(SITUATION)
   await expect(page.getByText(/avec les règles fiscales \d{4}/)).toBeVisible()
   const ligne = notes(page).getByRole("group", { name: "Notes des autres statuts" })
-  // Les deux notes de la SASU, statut actuel, restent écrites ; les six autres sont des pastilles.
+  // Les deux notes de la SASU, statut actuel, restent écrites ; les sept autres sont des pastilles.
   const ecrites = notes(page).locator("ol").first()
   await expect(ecrites.getByRole("listitem")).toHaveText([/^1Note 1\. SASU, .*ZFU-TE : bénéfice exonéré/, /^2Note 2\. SASU.* : Exonération ZFU-TE appliquée sans vérifier ses conditions/])
   await expect(ecrites.getByRole("listitem").last()).toBeVisible()
-  await expect(ligne.getByRole("button")).toHaveCount(6)
+  await expect(ligne.getByRole("button")).toHaveCount(7)
   await expect(noteChoisie(page)).toHaveText("Un clic sur un numéro, ici ou dans le tableau, affiche la note.")
 
   await ligne.getByRole("button", { name: /^Note 8/ }).click()
@@ -167,8 +169,8 @@ test("affichage « Résumé » : les notes du statut actuel écrites, les autres
   await expect(noteChoisie(page)).toContainText(/^3Note 3\. /)
   await auditer(page, "comparateur, une note choisie dans la ligne de pastilles")
 
-  await notes(page).getByRole("button", { name: "Tout afficher (8)" }).click()
-  await expect(notes(page).getByRole("listitem")).toHaveCount(8)
+  await notes(page).getByRole("button", { name: "Tout afficher (9)" }).click()
+  await expect(notes(page).getByRole("listitem")).toHaveCount(9)
   await expect(notes(page).getByRole("listitem").last()).toBeVisible()
   await expect(ligne).toHaveCount(0)
 
@@ -186,10 +188,11 @@ test("à l'impression, toutes les notes sont écrites, même réduites à une li
   await page.emulateMedia({ media: "print" })
   // La liste de l'impression, complète ; celle des notes écrites à l'écran lui laisse la place.
   const imprimees = notes(page).locator("ol").last().getByRole("listitem")
-  await expect(imprimees).toHaveCount(8)
+  await expect(imprimees).toHaveCount(9)
   await expect(imprimees.first()).toBeVisible()
   await expect(imprimees.last()).toBeVisible()
-  await expect(imprimees.last()).toContainText(NOTE_DU_PORTAGE)
+  await expect(imprimees.nth(7)).toContainText(NOTE_DU_PORTAGE)
+  await expect(imprimees.last()).toContainText(NOTE_DU_PORTAGE_EN_ZONE)
   await expect(notes(page).locator("ol").first()).toBeHidden()
   await expect(noteChoisie(page)).toBeHidden()
   await expect(notes(page).getByRole("group", { name: "Notes des autres statuts" })).toBeHidden()
