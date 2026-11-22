@@ -5,6 +5,7 @@
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
+import { attendreLaFinDesAnimations } from "../e2e/support/animations"
 import { choisirLaPolice, POLICES } from "./support/police"
 
 const SASU_SANS_SALAIRE = "SASU sans salaire, tout en dividendes"
@@ -137,6 +138,8 @@ test.describe("sur un téléphone", () => {
       await montages.getByRole("button", { name: "Seul", exact: true }).click()
       await sansDefilementHorizontal(page)
       await montages.getByRole("button", { name: "Tout afficher" }).click()
+      // La carte du couple, retirée par le filtre, s'efface encore quand elle revient : une fois les animations finies, elle est seule.
+      await attendreLaFinDesAnimations(page)
       await montages.getByRole("button", { name: "Détails de la situation « Couple en union libre, puis marié ou pacsé »" }).click()
       await expect(page.getByRole("button", { name: "Charger cette situation" })).toBeVisible()
       await sansDefilementHorizontal(page)

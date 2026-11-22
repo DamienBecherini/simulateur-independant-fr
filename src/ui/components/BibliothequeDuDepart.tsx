@@ -8,7 +8,7 @@
 // Partagée par la fenêtre (MontagesTypes.tsx) et par le bloc affiché dans la page au premier lancement
 // (ParOuCommencer.tsx). Dans la démo web, chaque carte donne aussi le lien qui ouvre la situation (#situation=…).
 
-import { useId, useState, type KeyboardEvent } from "react"
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react"
 import { Check, ChevronLeft, Link, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,7 @@ import type { Ancre } from "@/lib/ancres"
 import { AUCUN_CRITERE, criteresActifs, filtrerLesMontages, filtrerLesQuestions, FILTRES_DE_FOYER, FILTRES_DE_STATUT, questionsDesMontages, type CriteresDesMontages, type QuestionTrouvee } from "@/lib/montages/filtres"
 import { MONTAGES_TYPES, type MontageType } from "@/lib/montages/montages"
 import type { EtatDeLaBibliotheque, OngletDuDepart } from "../depart"
+import { useListeAnimee } from "../hooks/useListeAnimee"
 import { usePlateforme } from "../plateforme"
 
 /**
@@ -59,8 +60,17 @@ interface CarteDuMontageProps {
 }
 
 function CarteDuMontage({ montage, onDetails, onCharger, focusSurLesDetails, miseEnAvant, onCopierLeLien, lienCopie }: CarteDuMontageProps) {
+  const carte = useRef<HTMLLIElement>(null)
+  const charger = useRef<HTMLButtonElement>(null)
+  // Mise en avant : la carte entière défile jusqu'à être visible (un focus seul ne montrerait que « Charger », et
+  // laisserait le titre hors de vue), puis le focus va sur « Charger ».
+  useEffect(() => {
+    if (!miseEnAvant) return
+    carte.current?.scrollIntoView?.({ block: "nearest" })
+    charger.current?.focus({ preventScroll: true })
+  }, [miseEnAvant])
   return (
-    <li className={cn("flex flex-col gap-3 rounded-lg border p-4", FOND_DES_CARTES, miseEnAvant && "border-2 border-blue-500 ring-4 ring-blue-500/20 dark:border-blue-400")}>
+    <li ref={carte} className={cn("flex scroll-my-3 flex-col gap-3 rounded-lg border p-4", FOND_DES_CARTES, miseEnAvant && "border-2 border-blue-500 ring-4 ring-blue-500/20 dark:border-blue-400")}>
       <h3 className="font-semibold">{montage.titre}</h3>
       <p className="text-sm text-slate-700 dark:text-slate-300">{montage.resume}</p>
       <Etiquettes etiquettes={montage.etiquettes} />
@@ -68,7 +78,7 @@ function CarteDuMontage({ montage, onDetails, onCharger, focusSurLesDetails, mis
         <Button variant="outline" size="sm" onClick={onDetails} autoFocus={focusSurLesDetails} aria-label={`Détails de la situation « ${montage.titre} »`}>
           Détails
         </Button>
-        <Button size="sm" onClick={onCharger} autoFocus={miseEnAvant} aria-label={`Charger la situation « ${montage.titre} »`}>
+        <Button ref={charger} size="sm" onClick={onCharger} aria-label={`Charger la situation « ${montage.titre} »`}>
           Charger
         </Button>
         {onCopierLeLien ? (
@@ -242,13 +252,16 @@ export function BibliothequeDuDepart({ etat, onEtat, onCharger, onDetails, liste
   const montages = filtrerLesMontages(MONTAGES_TYPES, criteres)
   const choisir = (suivant: OngletDuDepart) => onEtat({ ...etat, onglet: suivant, questionSuivie: suivant === "questions" ? null : questionSuivie })
   const borne = listeBornee ? "max-h-80 overflow-y-auto pr-1" : undefined
+  // Un filtre ou une recherche qui change : les éléments qui restent glissent à leur place, les autres s'effacent.
+  const [listeDesQuestions] = useListeAnimee<HTMLUListElement>()
+  const [listeDesSituations] = useListeAnimee<HTMLUListElement>()
   return (
     <div className="space-y-3">
       <Onglets id={id} onglet={onglet} onChoisir={choisir} />
       <Filtres onglet={onglet} criteres={criteres} onChange={suivants => onEtat({ ...etat, criteres: suivants })} trouvees={onglet === "questions" ? questions.length : montages.length} />
       <div role="tabpanel" id={`${id}-panneau`} aria-labelledby={`${id}-onglet-${onglet}`} className="space-y-3">
         {onglet === "questions" ? (
-          <ul aria-label="Questions" className={cn("space-y-1.5", borne)}>
+          <ul ref={listeDesQuestions} aria-label="Questions" className={cn("space-y-1.5", borne)}>
             {questions.map(trouvee => (
               <QuestionDeLaListe
                 key={`${trouvee.montage.id}:${trouvee.question.texte}`}
@@ -269,7 +282,7 @@ export function BibliothequeDuDepart({ etat, onEtat, onCharger, onDetails, liste
                 <span>· La situation qui répond à « {questionSuivie.question.texte} »</span>
               </p>
             ) : null}
-            <ul aria-label="Situations types" className={cn("grid gap-3 sm:grid-cols-2", borne)}>
+            <ul ref={listeDesSituations} aria-label="Situations types" className={cn("grid gap-3 sm:grid-cols-2", borne)}>
               {montages.map(montage => {
                 const suivie = questionSuivie?.montage.id === montage.id
                 return (

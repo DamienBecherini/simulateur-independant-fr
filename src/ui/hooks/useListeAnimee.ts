@@ -60,7 +60,7 @@ function glisserAuRedimensionnement(conteneur: HTMLElement): () => void {
 }
 
 /** Désigne l'élément de la liste (hors du hook : le compilateur de React n'y voit pas une modification de ses arguments). */
-function designer(liste: RefObject<HTMLDivElement | null> | undefined, element: HTMLDivElement | null) {
+function designer<T extends HTMLElement>(liste: RefObject<T | null> | undefined, element: T | null) {
   if (liste) liste.current = element
 }
 
@@ -71,10 +71,10 @@ function designer(liste: RefObject<HTMLDivElement | null> | undefined, element: 
  * navigateur), la liste reste simplement sans animation. `suivreLesHauteurs` : les enfants glissent aussi quand l'un
  * d'eux change de hauteur (les cases d'une grille).
  */
-export function useListeAnimee(onDragEnd?: (event: DragEndEvent) => void, liste?: RefObject<HTMLDivElement | null>, suivreLesHauteurs = false) {
+export function useListeAnimee<T extends HTMLElement = HTMLDivElement>(onDragEnd?: (event: DragEndEvent) => void, liste?: RefObject<T | null>, suivreLesHauteurs = false) {
   const controleur = useRef<AnimationController | null>(null)
   const ref = useCallback(
-    (element: HTMLDivElement | null) => {
+    (element: T | null) => {
       designer(liste, element)
       const animation = element && typeof element.animate === "function" ? autoAnimate(element, ANIMATION) : null
       controleur.current = animation

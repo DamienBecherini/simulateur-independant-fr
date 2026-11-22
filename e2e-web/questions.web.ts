@@ -92,6 +92,45 @@ test("le bloc fermé ne revient pas au rechargement ; la fenêtre reste à port�
   await expect(page.getByRole("dialog", { name: "Par où commencer ?" }).getByRole("list", { name: "Questions" }).getByRole("listitem")).toHaveCount(36)
 })
 
+test("un filtre ou une recherche anime la liste : les éléments qui restent glissent, les autres s'effacent", async ({ page }) => {
+  await ouvrir(page)
+  const liste = bloc(page).getByRole("list", { name: "Questions" })
+  const animees = () => liste.evaluate(element => element.getAnimations({ subtree: true }).length)
+  await bloc(page).getByRole("button", { name: "SASU", exact: true }).click()
+  await expect.poll(animees).toBeGreaterThan(0)
+  await expect.poll(animees).toBe(0)
+  await bloc(page).getByRole("searchbox").fill("dividendes")
+  await expect.poll(animees).toBeGreaterThan(0)
+})
+
+for (const ou of ["bloc", "fenêtre"] as const) {
+  test(`le nom d'une situation mène à sa carte, montrée en entier, titre compris (${ou})`, async ({ page }) => {
+    await ouvrir(page)
+    let contenant = bloc(page)
+    if (ou === "fenêtre") {
+      await page.getByRole("button", { name: "Situations types", exact: true }).click()
+      contenant = page.getByRole("dialog", { name: "Par où commencer ?" })
+      await contenant.getByRole("tab", { name: /^Questions/ }).click()
+    }
+    const question = contenant.getByRole("listitem").filter({ hasText: "Que prend en charge l'Assurance maladie sur mes cotisations ?" })
+    await question.getByRole("button", { name: /^Voir la situation/ }).click()
+    const charger = page.locator(":focus")
+    await expect(charger).toHaveAccessibleName(/^Charger la situation/)
+    const titre = charger.locator("xpath=ancestor::li[1]").getByRole("heading", { level: 3 })
+    // Le titre est visible dans chaque zone qui défile autour de lui, et dans la fenêtre du navigateur.
+    const visible = await titre.evaluate(element => {
+      const r = element.getBoundingClientRect()
+      for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+        if (!/auto|scroll/.test(getComputedStyle(parent).overflowY)) continue
+        const c = parent.getBoundingClientRect()
+        if (r.top < c.top || r.bottom > c.bottom) return false
+      }
+      return r.top >= 0 && r.bottom <= window.innerHeight
+    })
+    expect(visible).toBe(true)
+  })
+}
+
 test("« Partir de zéro » remplace l'exemple sans confirmation et porte le focus sur l'ajout d'une personne", async ({ page }) => {
   await ouvrir(page)
   await bloc(page).getByRole("button", { name: "Partir de zéro" }).click()
