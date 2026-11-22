@@ -21,7 +21,9 @@ export const ANCRES = {
   /** Réponse « Mariage ou Pacs ? » du comparateur. */
   comparaisonDuCouple: "comparaison-du-couple",
   /** Réponse « Rémunération ou dividendes ? » du comparateur. */
-  titreDeLOptimisation: "optimisation-titre"
+  titreDeLOptimisation: "optimisation-titre",
+  /** Étape 3 du comparateur, les réglages des colonnes SASU et EURL : les en-têtes de ces colonnes y mènent. */
+  reglageDeLaSociete: "comparateur-societe"
 } as const
 
 export type Ancre = (typeof ANCRES)[keyof typeof ANCRES]

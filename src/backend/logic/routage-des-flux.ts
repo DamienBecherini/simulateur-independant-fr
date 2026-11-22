@@ -4,12 +4,12 @@
 // dividendes, bénéfices, prélèvements) selon les relations de la session. Partagé par les modules du moteur, que
 // simulation-engine.ts enchaîne.
 
-import type { Company, DonneesDeLAnnee, EtatDeLaSociete, FinancialFlow, Relationship, SalarieDeLActivite } from "../../types.js"
+import type { Company, DonneesDeLAnnee, EtatDeLaSociete, FinancialFlow, SalarieDeLActivite } from "../../types.js"
 import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.js"
 import type { Foyer } from "./foyers.js"
 import type { ReglesFiscales } from "./regles.js"
 import type { RegimeMicroDeLAnnee } from "./dispositifs.js"
-import { anomaliesDeStructure, genreDeStructure, rolesQui, type Activite } from "./regles-de-structure.js"
+import { anomaliesDeStructure, personnesQui, type Activite } from "./regles-de-structure.js"
 
 type FlowType = FinancialFlow["type"]
 type FlowTotals = Partial<Record<FlowType, number>>
@@ -122,27 +122,17 @@ export function total(ctx: Contexte, entityId: string, ...types: FlowType[]): nu
 }
 
 /** Personnes reliées à une activité par l'un des types de relation donnés, sans doublon, dans l'ordre des relations. */
-function personnesLiees(ctx: Contexte, entityId: string, types: Relationship["type"][]): string[] {
-  const ids = new Set<string>()
-  for (const rel of ctx.session.relationships) {
-    if (!types.includes(rel.type) || (rel.fromId !== entityId && rel.toId !== entityId)) continue
-    const autre = rel.fromId === entityId ? rel.toId : rel.fromId
-    if (ctx.session.entities.some(e => e.id === autre && e.type === "person")) ids.add(autre)
-  }
-  return [...ids]
-}
-
 /**
  * Qui dirige l'activité (dirigeant d'une société, titulaire), et qui en est associé : les rôles qu'en donne la table
  * des règles de structure, selon la forme de l'activité. Le président d'une SASU ne reçoit donc des dividendes que
  * s'il en est aussi l'associé ; le gérant d'une EURL en est toujours un.
  */
 export function dirigeantsDe(ctx: Contexte, activite: Activite): string[] {
-  return personnesLiees(ctx, activite.id, rolesQui(genreDeStructure(activite), "dirige"))
+  return personnesQui(ctx.session, activite, "dirige")
 }
 
 export function associesDe(ctx: Contexte, societe: Activite): string[] {
-  return personnesLiees(ctx, societe.id, rolesQui(genreDeStructure(societe), "associe"))
+  return personnesQui(ctx.session, societe, "associe")
 }
 
 /** Ce qui, dans les relations de l'activité, contredit les règles de sa forme (sauvegarde ancienne, fichier importé). */

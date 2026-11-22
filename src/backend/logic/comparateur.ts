@@ -6,7 +6,7 @@ import { activiteComparee, estMicro, personnesDeLActivite, statutActuel, type Ac
 import { avecLaCFEDeLAnnee } from "./frais-de-fonctionnement.js"
 import { netCompare } from "./net-compare.js"
 import { optimiserLaColonne } from "./optimisation-remuneration.js"
-import { AUCUNE_CHARGE, avecLaRemunerationDeLaGrille, ECART_NEGLIGEABLE, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
+import { AUCUNE_CHARGE, avecLaRemunerationDeLaGrille, ECART_NEGLIGEABLE, exigeLesQuatreTrimestres, SANS_CHIFFRE_D_AFFAIRES } from "./options-du-comparateur.js"
 import { microInterdite, professionDe, raisonMicroInterdite } from "./professions.js"
 import type { ProfessionReglementee, ReglesFiscales } from "./regles.js"
 import { avecLesReglages, simulerScenario, toutEnDividendes } from "./simulation-d-un-statut.js"
@@ -260,7 +260,7 @@ export function remunerationOptimale(optimisation: OptimisationRemuneration, ave
  */
 function colonneAuMeilleurNet(colonne: ColonneEtudiee, statut: StatutSociete): { scenario: ScenarioStatut; optimisation: OptimisationRemuneration } {
   const optimisation = optimiserLaColonne(colonne, statut)
-  const retenue = remunerationOptimale(optimisation, colonne.options.repartition.avecRetraite === true)
+  const retenue = remunerationOptimale(optimisation, exigeLesQuatreTrimestres(colonne.options.repartition, statut))
   const { scenario } = simulerScenario(avecLesReglages(colonne, toutEnDividendes(retenue.remunerationNette)), statut)
   const repli = retenue.retraiteHorsDAtteinte ? [`Aucune rémunération possible en ${statut} ne valide 4 trimestres de retraite : la colonne retient le meilleur net, sans cette condition.`] : []
   return { scenario: { ...scenario, libelle: libelleDeLaColonne(statut, colonne.source, colonne.options), remunerationOptimale: retenue, warnings: [...scenario.warnings, ...repli] }, optimisation }

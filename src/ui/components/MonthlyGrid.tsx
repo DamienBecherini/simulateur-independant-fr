@@ -1,12 +1,12 @@
 // src/ui/components/MonthlyGrid.tsx
 
 import React, { useState, useMemo, useRef, Dispatch, SetStateAction } from "react"
-import { ANNEE_PAR_DEFAUT, type AnneeSimulee, type Entity, type MonthlyGridData, type FinancialFlow, type SimulationReport, type UserPreferences } from "@/types"
+import { ANNEE_PAR_DEFAUT, type AnneeSimulee, type Entity, type MonthlyGridData, type FinancialFlow, type Relationship, type SimulationReport, type UserPreferences } from "@/types"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import type { FlowChanges } from "./FlowItem"
 import type { NewFlowValues } from "./NewFlowItem"
 import { CellChartDisplay } from "./CellChartDisplay"
-import { deMois, donneesDeLaGrille, MOIS_ABREGES, nombreDeFluxParMois, type LigneDeLaGrille } from "@/lib/grille-mensuelle"
+import { deMois, donneesDeLaGrille, MOIS_ABREGES, nombreDeFluxParMois, versementsRecus, type LigneDeLaGrille } from "@/lib/grille-mensuelle"
 import { MOIS } from "@/lib/export-commun"
 import { createId } from "@/lib/id"
 import { euros } from "@/backend/logic/format"
@@ -18,6 +18,7 @@ import { caseAlternee } from "../lignes-alternees"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useDefilementDeLaGrille } from "../hooks/useDefilementDeLaGrille"
 import { useHautDesBarres } from "../hooks/useHautDesBarres"
+import { useListeAnimee } from "../hooks/useListeAnimee"
 import { BandeDesMois } from "./BandeDesMois"
 import { OmbresDesBords } from "./ReperesDeDefilement"
 import { defilementPourLaPosition, defilementPourLeMois, defilementVoisin } from "@/lib/bande-des-mois"
@@ -29,6 +30,8 @@ import { defilementPourLaPosition, defilementPourLeMois, defilementVoisin } from
  */
 interface MonthlyGridProps {
   entities: Entity[]
+  /** Qui dirige et qui est associé : la ligne de chacun montre ce que lui versent les sociétés. */
+  relationships?: Relationship[]
   monthlyData: MonthlyGridData
   setMonthlyData: Dispatch<SetStateAction<MonthlyGridData>>
   preferences: UserPreferences
@@ -132,7 +135,10 @@ function LigneDeLActeur({ ligne, rang, onOuvrir }: { ligne: LigneDeLaGrille; ran
   )
 }
 
-function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees, onGrilleTouchee, rapport }: MonthlyGridProps) {
+function MonthlyGrid({ entities, relationships, monthlyData, setMonthlyData, preferences, flowTypeToNumberMap, annee, selecteurAnnee, annees, setAnnees, onGrilleTouchee, rapport }: MonthlyGridProps) {
+  // Un acteur ajouté, retiré ou déplacé : les cases de sa ligne apparaissent ou s'effacent, celles des lignes suivantes
+  // glissent à leur place (la grille n'a pas d'élément par ligne : ce sont ses cases qui s'animent).
+  const [refDeLaGrille] = useListeAnimee()
   // Bande des mois et ombres des bords : seulement quand la grille déborde de sa zone et doit défiler.
   const zone = useRef<HTMLDivElement>(null)
   const defilement = useDefilementDeLaGrille(zone, entities.length > 0, annee)
@@ -278,7 +284,7 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
   }
 
   // Barres et échelles de chaque acteur, calculées par src/lib/grille-mensuelle.ts.
-  const gridData = useMemo(() => donneesDeLaGrille(entities, monthlyData, preferences.flowTypeColors, flowTypeToNumberMap), [monthlyData, entities, preferences.flowTypeColors, flowTypeToNumberMap])
+  const gridData = useMemo(() => donneesDeLaGrille(entities, monthlyData, preferences.flowTypeColors, flowTypeToNumberMap, relationships), [monthlyData, entities, preferences.flowTypeColors, flowTypeToNumberMap, relationships])
 
   // ===================================================================================
   // == RENDU JSX DU COMPOSANT
@@ -323,8 +329,10 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
                 className={cn("relative overflow-x-auto print:overflow-visible", defilement.deborde && "[&_[role=button]]:scroll-mt-14")}
               >
                 {/* `w-max` : la grille doit être aussi large que son contenu, sinon la première colonne (sticky) cesse de rester visible une fois la largeur de la fenêtre dépassée.
-                    Sur papier, elle tient dans la largeur de la feuille : les douze mois se partagent la place, en petits caractères, et chaque case empile gains et dépenses. */}
-                <div className="grid w-max min-w-full gap-px [grid-template-columns:minmax(5rem,6rem)_repeat(13,auto)] sm:[grid-template-columns:minmax(8rem,11rem)_repeat(13,auto)] print:w-full print:text-[9pt] print:[grid-template-columns:6.5rem_auto_repeat(12,minmax(0,1fr))]">
+                    Sur papier, elle tient dans la largeur de la feuille : les douze mois se partagent la place, en petits caractères, et chaque case empile gains et dépenses.
+                    `content-start` : quand une ligne s'efface, la hauteur de la grille décroît pas à pas ; les lignes restantes gardent
+                    la leur au lieu de s'étirer pour remplir la place (puis de se rétracter d'un coup à la fin). */}
+                <div ref={refDeLaGrille} className="grid content-start w-max min-w-full gap-px [grid-template-columns:minmax(5rem,6rem)_repeat(13,auto)] sm:[grid-template-columns:minmax(8rem,11rem)_repeat(13,auto)] print:w-full print:text-[9pt] print:[grid-template-columns:6.5rem_auto_repeat(12,minmax(0,1fr))]">
                   {/* En-tête de la grille */}
                   <div data-colonne-fixe className="font-bold sticky left-0 bg-slate-50 dark:bg-gray-950 z-10 p-2 text-sm sm:text-base print:static print:p-1 print:text-[9pt]">Personnes et activités / Montants</div>
                   <div className="font-bold text-center p-2 print:p-1">Total annuel</div>
@@ -361,6 +369,8 @@ function MonthlyGrid({ entities, monthlyData, setMonthlyData, preferences, flowT
           fluxDeLAnnee={monthlyData.flatMap(mois => mois.flows.filter(f => f.entityId === openCell.entityId))}
           fluxDesAutresAnnees={fluxDesAutresAnnees(openCell.entityId)}
           limiteDeRemuneration={limiteDeRemuneration(rapport, openCell.entityId)}
+          recus={versementsRecus(monthlyData[openCell.monthIndex].flows, entities, relationships).get(openCell.entityId)}
+          couleurs={preferences.flowTypeColors}
           onCreate={handleCreateFlow}
           onRecopier={openCell.monthIndex < 11 ? handleRecopierFlux : undefined}
           onUpdate={handleUpdateFlow}

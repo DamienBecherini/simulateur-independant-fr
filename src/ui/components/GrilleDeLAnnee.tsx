@@ -30,6 +30,7 @@ export function GrilleDeLAnnee({ session, setSession, annee, onAnnee, monthlyDat
   return (
     <MonthlyGrid
       entities={session.entities}
+      relationships={session.relationships}
       monthlyData={monthlyData}
       setMonthlyData={newMonthlyDataOrUpdater => {
         setSession(prev => {

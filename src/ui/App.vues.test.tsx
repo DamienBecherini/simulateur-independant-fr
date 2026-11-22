@@ -110,12 +110,15 @@ describe("App : affichage « Trois vues »", () => {
 
   it("un lien de la barre de résumé ouvre la vue de son détail", async () => {
     await renderApp()
-    const alertes = within(screen.getByRole("region", { name: "Résumé de l'année" })).getByRole("link", { name: /^Alertes/ })
-    expect(alertes).toHaveAttribute("href", "#resultats-titre")
-    allerA("/#resultats-titre")
-
+    const prelevements = await within(screen.getByRole("region", { name: "Résumé de l'année" })).findByRole("link", { name: /^Prélèvements/ })
+    expect(prelevements).toHaveAttribute("href", "#bilan")
+    allerA("/#bilan")
     expect(onglet(/résultats/)).toHaveAttribute("aria-selected", "true")
+
     // Le détail reçoit le focus, pour que la tabulation reprenne de là.
+    allerA("/#comparer")
+    allerA("/#resultats-titre")
+    expect(onglet(/résultats/)).toHaveAttribute("aria-selected", "true")
     expect(screen.getByRole("heading", { name: "Résultats de simulation" })).toHaveFocus()
   })
 

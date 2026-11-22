@@ -164,7 +164,8 @@ test.describe("sur un téléphone de 375 px", () => {
     expect(sousLaBarre).toBeNull()
     const resume = page.getByRole("region", { name: "Résumé de l'année" })
     await expect(resume.getByRole("link", { name: /^Taux/ })).toBeHidden()
-    await expect(resume.getByRole("link", { name: /^Alertes/ })).toBeHidden()
+    // La démo n'a pas d'alerte : pas de lien « Alertes », réduite ou dépliée.
+    await expect(resume.getByRole("link", { name: /^Alertes/ })).toHaveCount(0)
     await expect(resume.getByRole("link", { name: /^Net/ })).toBeVisible()
     // Le meilleur statut, coupé à l'écran s'il le faut, garde son libellé entier pour les lecteurs d'écran.
     await expect(resume.getByRole("link", { name: /^Meilleur/ })).toBeVisible()
@@ -176,7 +177,7 @@ test.describe("sur un téléphone de 375 px", () => {
     await toucher(page, bouton)
     await expect(bouton).toHaveAttribute("aria-expanded", "true")
     await expect(resume.getByRole("link", { name: /^Taux/ })).toBeVisible()
-    await expect(resume.getByRole("link", { name: /^Alertes/ })).toBeVisible()
+    await expect(resume.getByRole("link", { name: /^Alertes/ })).toHaveCount(0)
     expect(await positionDuContenu()).toBeCloseTo(avant, 0)
     expect(await defilement()).toBe(position)
     await toucher(page, bouton)

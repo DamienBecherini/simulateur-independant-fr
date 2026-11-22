@@ -1,8 +1,9 @@
 // src/ui/components/ComparatorPanel.tsx
 
-import { useCallback, useEffect, useMemo, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, type MouseEvent, type ReactNode } from "react"
+import { ArrowDown, Crown } from "lucide-react"
 import { useOptimisation } from "../hooks/useOptimisation"
-import { appliquerRemuneration, avecActiviteComparee, avecReglagesDeLActivite, comparableActivities, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
+import { appliquerRemuneration, avecActiviteComparee, avecRemunerationSaisie, avecReglagesDeLActivite, comparableActivities, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { numeroterNotes } from "@/lib/notes"
 import { vueDeLAnnee } from "@/backend/logic/annees"
 import { ECART_NEGLIGEABLE, PART_MISE_EN_RESERVE_PAR_DEFAUT } from "@/backend/logic/options-du-comparateur"
@@ -11,20 +12,23 @@ import { exporterComparaisonCsv } from "../exports-texte"
 import { BoutonExportCsv } from "./BoutonExportCsv"
 import { CombienFacturer } from "./CombienFacturer"
 import { ProtectionDesStatuts } from "./ProtectionDesStatuts"
-import { RemunerationOptimizer } from "./RemunerationOptimizer"
+import { ChoixDuStatut, RemunerationOptimizer } from "./RemunerationOptimizer"
 import { RepartitionDuBenefice } from "./RepartitionBenefice"
 import { SurToutesLesAnnees } from "./SurToutesLesAnnees"
-import { ReglagesDuComparateur } from "./ReglagesDuComparateur"
+import { ChoixDeLActivite, ID_DU_CHOIX_DE_L_ACTIVITE, ReglagesCommuns, ReglagesDeLaSociete, type PlafondsDeRemuneration } from "./ReglagesDuComparateur"
+import { comportementDuDefilement } from "../hooks/useDefilementHorizontal"
+import { ColonnesTouchees, EtapeDuComparateur } from "./EtapeDuComparateur"
 import { ZoneDefilante } from "./ZoneDefilante"
 import { BoutonDuDetail, CartesDesStatuts, EcartDeFraisDeLaColonne, EcartDeRepartitionDeLaColonne, RappelDesFrais, RappelDuBeneficeGarde, ResteDansLActivite, SituationTelleQueSaisie, VerdictDuComparateur } from "./SyntheseDuComparateur"
 import { ReplieEnResume } from "./ReplieEnResume"
+import { Depliable } from "./Depliable"
 import { BullesDesNotes, NotesDuTableau, RenvoisAuxNotes } from "./NotesDuComparateur"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { useCalculDiffere } from "../hooks/useCalculDiffere"
 import { useSectionOuverte } from "../hooks/useSectionOuverte"
-import { ANCRES } from "@/lib/ancres"
+import { ANCRES, lienVers } from "@/lib/ancres"
 import { avecUnePerteConservee, avertissementsSansLeVerdict, ecartAvecLaSituationSaisie, estNonRetenue, libelleDuCoutDesTrimestres, netDeLaSituationSaisie, raisonDeNonRetenue, type ResumeDeLaComparaison } from "@/lib/resume"
-import { estSocieteIS, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type OptimisationRemuneration, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutCompare, type StatutSociete } from "@/types"
+import { estSocieteIS, STATUTS_SOCIETE, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type Comparateur, type Company, type MicroEntreprise, type OptimisationRemuneration, type ReglagesComparateur, type ScenarioStatut, type SessionState, type SimulationAnnuelle, type StatutCompare, type StatutSociete } from "@/types"
 import { COLONNE_FIXE } from "../colonne-fixe"
 import { ligneAlternee } from "../lignes-alternees"
 import { ecartSigne, euros } from "@/backend/logic/format"
@@ -45,6 +49,22 @@ const FOND_DE_L_EN_TETE = "bg-slate-100 dark:bg-[color-mix(in_oklab,var(--color-
  */
 const LARGEUR_DES_LIBELLES = "min-w-36 max-[30rem]:min-w-0 print:min-w-0"
 const LARGEUR_D_UN_STATUT = "min-w-40 max-[30rem]:min-w-34 print:min-w-0"
+
+/**
+ * Colonne au meilleur net : bords émeraude de 2 px et halo sur les côtés (au-dessus des colonnes voisines, sous la
+ * colonne fixe des libellés). Le halo s'allume une fois quand la colonne le devient, sauf si le système demande moins
+ * d'animations ; sur papier, le cadre seul.
+ */
+const CADRE_DU_MEILLEUR = "relative z-[1] border-x-2 border-x-emerald-500 shadow-[-8px_0_14px_-8px_rgb(16_185_129/0.55),8px_0_14px_-8px_rgb(16_185_129/0.55)] motion-safe:animate-lueur dark:border-x-emerald-400 print:shadow-none"
+
+/** Bas du cadre : sur la dernière ligne affichée ; « ecran » quand d'autres lignes la suivent sur papier. */
+type BasDuCadre = "non" | "oui" | "ecran"
+
+/** Cadre d'une cellule de la colonne au meilleur net ; rien pour les autres colonnes. */
+function cadreDuMeilleur(s: ScenarioStatut, meilleur: ComparaisonResult["meilleur"], bas: BasDuCadre = "non"): string | undefined {
+  if (s.statut !== meilleur) return undefined
+  return cn(CADRE_DU_MEILLEUR, bas !== "non" && "border-b-2 border-b-emerald-500 dark:border-b-emerald-400", bas === "ecran" && "print:border-b-0")
+}
 
 /** Libellé d'une ligne, dans la colonne fixe. */
 const LIBELLE_DE_LIGNE = cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left font-normal text-slate-600 dark:text-slate-300")
@@ -166,16 +186,55 @@ function MentionDuDeficit({ scenario }: { scenario: ScenarioStatut }) {
   return <span className="block text-xs font-medium text-amber-800 dark:text-amber-300">société déficitaire</span>
 }
 
+/** Pastille de la colonne au meilleur net, avec une couronne : le seul élément vif de l'onglet, il désigne la réponse. */
+function PastilleDuMeilleur() {
+  return (
+    <span className="mb-1.5 flex justify-end">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-700 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white shadow-[0_0_12px_rgb(16_185_129/0.6)] dark:bg-emerald-400 dark:text-emerald-950 print:shadow-none">
+        <Crown aria-hidden="true" className="size-3.5" />
+        Meilleur net
+      </span>
+    </span>
+  )
+}
+
+/** Dans l'en-tête d'une colonne SASU ou EURL, le lien vers l'étape 3, où se règle le partage de son bénéfice. */
 /**
- * En-tête d'une colonne : le statut, ses mentions (actuel : la situation saisie, au net des résultats ; meilleur net) et
- * les pastilles de ses notes (un clic ouvre la note dans une bulle). Une colonne non retenue est grisée.
+ * Descend en douceur au titre de l'étape 3 (instantané si le système demande moins d'animations), lui donne le focus
+ * et met l'ancre dans l'adresse, comme le lien l'aurait fait. Un clic avec Ctrl, Maj ou la molette garde le
+ * comportement du navigateur (nouvel onglet, nouvelle fenêtre).
+ */
+function descendreAuReglage(evenement: MouseEvent<HTMLAnchorElement>) {
+  const titre = document.getElementById(ANCRES.reglageDeLaSociete)
+  if (!titre || evenement.button !== 0 || evenement.ctrlKey || evenement.metaKey || evenement.shiftKey || evenement.altKey) return
+  evenement.preventDefault()
+  window.history.pushState(window.history.state, "", lienVers(ANCRES.reglageDeLaSociete))
+  titre.scrollIntoView({ block: "start", behavior: comportementDuDefilement() })
+  titre.focus({ preventScroll: true })
+}
+
+function LienVersLeReglage({ statut }: { statut: StatutCompare }) {
+  if (!estSocieteIS(statut)) return null
+  return (
+    <a href={lienVers(ANCRES.reglageDeLaSociete)} onClick={descendreAuReglage} className="mt-1 inline-flex min-h-6 items-center gap-0.5 rounded-sm text-xs font-medium text-blue-700 underline-offset-2 hover:underline pointer-coarse:min-h-11 dark:text-blue-400 print:hidden">
+      <ArrowDown aria-hidden="true" className="size-3" />
+      régler à l'étape 3<span className="sr-only"> : partage du bénéfice en {statut}</span>
+    </a>
+  )
+}
+
+/**
+ * En-tête d'une colonne : la pastille « Meilleur net », le statut, ses mentions (actuel : la situation saisie, au net
+ * des résultats) et les pastilles de ses notes (un clic ouvre la note dans une bulle). Une colonne non retenue est
+ * grisée. Une colonne de société mène à l'étape 3, où se règle le partage de son bénéfice.
  */
 function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioStatut; meilleur: boolean; renvois: number[] }) {
-  // « non retenue » se lit dès l'en-tête, comme « meilleur net » : le fond grisé ne le dit pas à lui seul, en thème
+  // « non retenue » se lit dès l'en-tête, comme « Meilleur net » : le fond grisé ne le dit pas à lui seul, en thème
   // sombre surtout. La cellule de l'écart dit pourquoi.
-  const mentions = [scenario.telleQueSaisie ? "actuel" : null, meilleur ? "meilleur net" : null, estNonRetenue(scenario) ? "non retenue" : null].filter(Boolean).join(" · ")
+  const mentions = [scenario.telleQueSaisie ? "actuel" : null, estNonRetenue(scenario) ? "non retenue" : null].filter(Boolean).join(" · ")
   return (
-    <th scope="col" className={cn(LARGEUR_D_UN_STATUT, "px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "bg-emerald-100 dark:bg-emerald-900/40", estNonRetenue(scenario) && GRISE)}>
+    <th scope="col" data-meilleur={meilleur || undefined} className={cn(LARGEUR_D_UN_STATUT, "px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "border-t-2 border-t-emerald-500 bg-emerald-100 dark:border-t-emerald-400 dark:bg-emerald-900/40", meilleur && CADRE_DU_MEILLEUR, estNonRetenue(scenario) && GRISE)}>
+      {meilleur ? <PastilleDuMeilleur /> : null}
       {scenario.libelle}
       <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{mentions || " "}</span>
       <RemunerationRetenue scenario={scenario} />
@@ -183,6 +242,7 @@ function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioSta
       <MentionDeLaRemunerationLimitee scenario={scenario} />
       <MentionDuDeficit scenario={scenario} />
       <RenvoisAuxNotes colonne={scenario.statut} renvois={renvois} />
+      <LienVersLeReglage statut={scenario.statut} />
     </th>
   )
 }
@@ -197,7 +257,7 @@ function fondDeLaCellule(s: ScenarioStatut, meilleur: ComparaisonResult["meilleu
  * Écart du net de chaque colonne avec la situation telle que saisie (le net des résultats). Une colonne micro non
  * retenue n'est pas colorée : la cellule dit pourquoi elle ne l'est pas.
  */
-function LigneDeLEcart({ result, rang }: { result: ComparaisonResult; rang: number }) {
+function LigneDeLEcart({ result, rang, bas }: { result: ComparaisonResult; rang: number; bas: BasDuCadre }) {
   if (netDeLaSituationSaisie(result) === null) return null
   return (
     <tr className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
@@ -208,7 +268,7 @@ function LigneDeLEcart({ result, rang }: { result: ComparaisonResult; rang: numb
         const ecart = ecartAvecLaSituationSaisie(result, s)
         const raison = raisonDeNonRetenue(s)
         return (
-          <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", ecart !== null && !raison && deltaClass(ecart), fondDeLaCellule(s, result.meilleur))}>
+          <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", ecart !== null && !raison && deltaClass(ecart), fondDeLaCellule(s, result.meilleur), cadreDuMeilleur(s, result.meilleur, bas))}>
             {ecart === null ? "—" : ecartSigne(ecart)}
             <EcartDeRepartitionDeLaColonne result={result} scenario={s} />
             {raison ? <span className="block text-xs font-medium text-slate-700 dark:text-slate-300">{raison}</span> : null}
@@ -231,19 +291,19 @@ interface ComparisonTableProps {
 
 function ComparisonTable({ result, activityName, renvois, reduit = false, detailOuvert = false, className }: ComparisonTableProps) {
   if (result.scenarios.length === 0) return null
-  const fond = (s: ScenarioStatut) => fondDeLaCellule(s, result.meilleur)
+  const fond = (s: ScenarioStatut, bas: BasDuCadre = "non") => cn(fondDeLaCellule(s, result.meilleur), cadreDuMeilleur(s, result.meilleur, bas))
 
   // Rang de chaque ligne dans l'ordre affiché, pour les lignes alternées : l'affichage « Résumé » remonte l'écart et la
   // protection sociale sous la première ligne. Les cases sont alignées en haut : d'une colonne à l'autre, les montants
   // restent sur la même ligne, et la note à déplier d'une colonne (écart de frais de gestion) vient dessous.
   const avecEcart = netDeLaSituationSaisie(result) !== null
-  const ligne = (row: ReturnType<typeof rows>[number], rang: number) => (
+  const ligne = (row: ReturnType<typeof rows>[number], rang: number, bas: BasDuCadre = "non") => (
     <tr key={row.label} className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
       <th scope="row" className={LIBELLE_DE_LIGNE}>
         {row.label}
       </th>
       {result.scenarios.map(s => (
-        <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", row.strong && "font-semibold", fond(s))}>
+        <td key={s.statut} className={cn("px-3 py-2 text-right tabular-nums", row.strong && "font-semibold", fond(s, bas))}>
           {row.value(s)}
           {row.detail?.(s)}
         </td>
@@ -251,13 +311,13 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
     </tr>
   )
   const lignes = rows(activityName, result.situationSaisie?.statut, avecUnePerteConservee(result))
-  const protection = (rang: number) => (
+  const protection = (rang: number, bas: BasDuCadre) => (
     <tr className={cn("border-t border-slate-200 align-top dark:border-slate-700", ligneAlternee(rang))}>
       <th scope="row" className={LIBELLE_DE_LIGNE}>
         Protection sociale
       </th>
       {result.scenarios.map(s => (
-        <td key={s.statut} className={cn("px-3 py-2 text-right", fond(s))} title={s.protectionSociale.resume}>
+        <td key={s.statut} className={cn("px-3 py-2 text-right", fond(s, bas))} title={s.protectionSociale.resume}>
           <span aria-hidden="true" className="tracking-wider text-amber-500">
             {stars(s.protectionSociale.etoiles)}
           </span>
@@ -267,10 +327,13 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
       ))}
     </tr>
   )
-  const ecart = (rang: number) => <LigneDeLEcart result={result} rang={rang} />
+  const ecart = (rang: number, bas: BasDuCadre) => <LigneDeLEcart result={result} rang={rang} bas={bas} />
   const apresLEcart = avecEcart ? 2 : 1
+  const detail = lignes.slice(1)
   return (
-    <ZoneDefilante libelle="Tableau de comparaison" className={cn("rounded-lg border border-slate-200 dark:border-slate-700", className)}>
+    // Dans une fenêtre étroite, la colonne au meilleur net (la réponse) peut être hors de l'écran : la zone la montre à
+    // sa première apparition.
+    <ZoneDefilante libelle="Tableau de comparaison" montrerAuPremierAffichage="[data-meilleur]" className={cn("rounded-lg border border-slate-200 dark:border-slate-700", className)}>
       <table className="w-full min-w-[48rem] text-sm print:min-w-0 print:text-[8pt]" aria-label="Comparaison des statuts">
         <thead className="bg-slate-100 dark:bg-slate-800/80">
           <tr>
@@ -286,18 +349,18 @@ function ComparisonTable({ result, activityName, renvois, reduit = false, detail
           <>
             <tbody>
               {ligne(lignes[0], 0)}
-              {ecart(1)}
-              {protection(apresLEcart)}
+              {ecart(1, "non")}
+              {protection(apresLEcart, detailOuvert ? "non" : "ecran")}
             </tbody>
             <tbody id="comparateur-lignes-detail" className={cn(!detailOuvert && "hidden print:table-row-group")}>
-              {lignes.slice(1).map((row, i) => ligne(row, apresLEcart + 1 + i))}
+              {detail.map((row, i) => ligne(row, apresLEcart + 1 + i, i === detail.length - 1 ? "oui" : "non"))}
             </tbody>
           </>
         ) : (
           <tbody>
             {lignes.map((row, i) => ligne(row, i))}
-            {protection(lignes.length)}
-            {ecart(lignes.length + 1)}
+            {protection(lignes.length, avecEcart ? "non" : "oui")}
+            {ecart(lignes.length + 1, "oui")}
           </tbody>
         )}
       </table>
@@ -320,12 +383,12 @@ function WarningList({ warnings }: { warnings: string[] }) {
  * Les couples en union libre, imposés ensemble comme s'ils étaient mariés ou pacsés. Le titre, où mène la barre de
  * résumé, peut recevoir le focus.
  */
-function CoupleComparison({ couples, personName }: { couples: ComparaisonCouple[]; personName: (id: string) => string }) {
+function CoupleComparison({ couples, personName, Titre = "h3" }: { couples: ComparaisonCouple[]; personName: (id: string) => string; Titre?: "h3" | "h4" }) {
   return (
     <section aria-labelledby={ANCRES.comparaisonDuCouple} className="space-y-2 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-      <h3 id={ANCRES.comparaisonDuCouple} tabIndex={-1} className="text-lg font-medium text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
+      <Titre id={ANCRES.comparaisonDuCouple} tabIndex={-1} className="text-lg font-medium text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
         Et si vous étiez mariés ou pacsés ?
-      </h3>
+      </Titre>
       <p className="text-sm text-slate-600 dark:text-slate-300">Mariage et Pacs ont le même effet sur l'impôt sur le revenu : le couple forme un seul foyer fiscal, imposé en commun.</p>
       {couples.map(couple => {
         const delta = couple.netApresImpotsMaries - couple.netApresImpotsActuel
@@ -404,6 +467,19 @@ function useArbitrage(session: SessionState, options: ComparaisonOptions, annee:
 
 const scenarioDuStatut = (result: ComparaisonResult | null, statut: StatutSociete) => result?.scenarios.find(s => s.statut === statut)
 
+/**
+ * Plus haute rémunération possible sans déficit dans chaque société, pour la note du curseur de la rémunération saisie.
+ * Elle ne dépend pas du mode de partage : la comparaison au meilleur net, quand elle est encore là, a déjà l'arbitrage
+ * des deux sociétés, et le curseur s'affiche aussitôt en passant à « Ma rémunération ». Sinon, celle du statut étudié
+ * vient de son arbitrage, et celle de l'autre est calculée à part, seulement quand la rémunération se saisit.
+ */
+function usePlafonds(session: SessionState, options: ComparaisonOptions, annee: number, selected: ActiviteComparable | undefined, result: ComparaisonResult | null, arbitrage: ReturnType<typeof useArbitrage>): PlafondsDeRemuneration {
+  const autre = STATUTS_SOCIETE.find(statut => statut !== arbitrage.statut) ?? arbitrage.statut
+  const calcul = useOptimisation(session, options, autre, annee, !!selected && avecRemunerationSaisie(options.repartition.mode))
+  const arbitrageDe = (statut: StatutSociete) => result?.optimisations?.[statut] ?? (statut === arbitrage.statut ? arbitrage.resultat : calcul.resultat)
+  return Object.fromEntries(STATUTS_SOCIETE.map(statut => [statut, plafondDeRemuneration(arbitrageDe(statut), statut)])) as PlafondsDeRemuneration
+}
+
 interface OptimiseurProps {
   session: SessionState
   annee: number
@@ -419,7 +495,7 @@ function OptimiseurDeLActivite({ session, annee, selected, options, arbitrage, r
   if (!selected) return null
   // Au meilleur net, la rémunération marquée est celle que le comparateur a retenue pour ce statut.
   const remunerationAppliquee = scenarioDuStatut(result, arbitrage.statut)?.remunerationOptimale?.remunerationNette ?? options.remunerationNette
-  return <RemunerationOptimizer session={session} annee={annee} options={options} remunerationAppliquee={remunerationAppliquee} activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} resultat={arbitrage.resultat} erreur={arbitrage.erreur} onAppliquer={remunerationNette => onChange(appliquerRemuneration(options, remunerationNette, arbitrage.resultat))} />
+  return <RemunerationOptimizer session={session} annee={annee} options={options} remunerationAppliquee={remunerationAppliquee} activityName={selected.name} statut={arbitrage.statut} resultat={arbitrage.resultat} erreur={arbitrage.erreur} onAppliquer={remunerationNette => onChange(appliquerRemuneration(options, remunerationNette, arbitrage.resultat))} />
 }
 
 /**
@@ -461,45 +537,194 @@ function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onCompara
   }, [onComparaison, activite, avecCouples, result, optimisation])
 }
 
-interface ReglagesEtPartageProps {
+/** L'activité comparée est-elle déjà une société à l'IS (SASU, EURL) ? Sinon, l'étape 3 la suppose en société. */
+const estUneSocieteIS = (activite: ActiviteComparable) => activite.type === "company" && estSocieteIS(activite.legalStatus)
+
+/**
+ * En haut de l'étape 3, le net des colonnes SASU et EURL du tableau, et le meilleur net : il suit chaque réglage, sans
+ * remonter au tableau pour en voir l'effet. Rien tant que la comparaison n'est pas calculée.
+ */
+function RappelDesColonnesDeSociete({ result }: { result: ComparaisonResult | null }) {
+  const societes = result?.scenarios.filter(s => estSocieteIS(s.statut)) ?? []
+  if (!result || societes.length === 0) return null
+  const meilleur = result.scenarios.find(s => s.statut === result.meilleur)
+  return (
+    <p role="status" aria-label="Colonnes SASU et EURL du tableau" className="flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-lg border border-slate-200 bg-background px-3 py-2 text-sm dark:border-slate-700">
+      <span className="text-slate-600 dark:text-slate-400">Dans le tableau :</span>
+      {societes.map(s => (
+        <span key={s.statut}>
+          {s.libelle} <span className="whitespace-nowrap font-semibold tabular-nums">{euros(s.netApresImpots)}</span>
+        </span>
+      ))}
+      {meilleur ? (
+        <span className="text-slate-600 dark:text-slate-400">
+          meilleur net : {meilleur.libelle}, <span className="whitespace-nowrap tabular-nums">{euros(meilleur.netApresImpots)}</span>
+        </span>
+      ) : null}
+    </p>
+  )
+}
+
+interface EtapesProps {
+  session: SessionState
   vue: SimulationAnnuelle
   activities: ActiviteComparable[]
   selected: ActiviteComparable
   options: ComparaisonOptions
   result: ComparaisonResult | null
+  error: string | null
   arbitrage: ReturnType<typeof useArbitrage>
+  plafonds: PlafondsDeRemuneration
   onSelect: (activityId: string) => void
   onChange: (options: ComparaisonOptions) => void
 }
 
-/** Réglages de l'activité comparée, avertissements du calcul, et partage du bénéfice dans le statut étudié. */
-function ReglagesEtPartage({ vue, activities, selected, options, result, arbitrage, onSelect, onChange }: ReglagesEtPartageProps) {
+/**
+ * Sous les réglages du tableau, l'étude d'une seule société : un choix SASU / EURL, au-dessus de tout ce qu'il change
+ * (« Rémunération ou dividendes ? » et la barre du partage).
+ */
+function ApprofondirUneSociete({ statut, onStatut, children }: { statut: StatutSociete; onStatut: (statut: StatutSociete) => void; children: ReactNode }) {
+  return (
+    <section aria-labelledby="comparateur-approfondir" className="space-y-4 border-t border-slate-300 pt-4 dark:border-slate-600">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h4 id="comparateur-approfondir" className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+          Approfondir une société
+        </h4>
+        <ChoixDuStatut statut={statut} onChange={onStatut} />
+      </div>
+      {children}
+    </section>
+  )
+}
+
+/** Étape 1 : l'activité comparée, dans le titre, et les hypothèses communes à toutes les colonnes. */
+function EtapeDeLActivite({ vue, activities, selected, options, result, onSelect, onChange }: EtapesProps) {
+  return (
+    <EtapeDuComparateur numero={1} titre="Activité comparée" id="comparateur-etape-activite" genre="reglage" aCote={<ChoixDeLActivite activities={activities} selected={selected} onSelect={onSelect} />}>
+      <ReglagesCommuns options={options} result={result} bncUtile={partBncUtile(vue, selected)} onChange={changes => onChange({ ...options, ...changes })} />
+    </EtapeDuComparateur>
+  )
+}
+
+/** Ramène à la liste des activités, en haut de l'onglet, et lui donne le focus. */
+function allerAuChoixDeLActivite() {
+  const liste = document.getElementById(ID_DU_CHOIX_DE_L_ACTIVITE)
+  if (!liste) return
+  liste.scrollIntoView({ block: "center", behavior: comportementDuDefilement() })
+  liste.focus({ preventScroll: true })
+}
+
+/**
+ * Sous le titre du résultat, l'activité comparée et de quoi en changer sans remonter la chercher ; seulement s'il y a
+ * plusieurs activités à comparer.
+ */
+function RappelDeLActivite({ activities, selected }: { activities: ActiviteComparable[]; selected: ActiviteComparable }) {
+  if (activities.length < 2) return null
+  return (
+    <p className="-mt-1 text-sm text-slate-600 dark:text-slate-400">
+      Pour « {selected.name} » ·{" "}
+      <button type="button" onClick={allerAuChoixDeLActivite} className="inline-flex min-h-6 items-center rounded-sm font-medium text-blue-700 underline-offset-2 hover:underline pointer-coarse:min-h-11 dark:text-blue-400 print:hidden">
+        changer d'activité ↑
+      </button>
+    </p>
+  )
+}
+
+/**
+ * Étape 2 : le résultat. Les avertissements du calcul, le tableau (ou les cartes), ses notes, le calcul à l'envers, la
+ * réponse à « mariage ou Pacs ? », puis les années, qui ne portent que sur l'activité comparée.
+ */
+function EtapeDuResultat({ session, vue, activities, selected, options, result, error, couples, personName, partMiseEnReserve, onPartMiseEnReserve }: EtapesProps & { couples: ComparaisonCouple[]; personName: (id: string) => string; partMiseEnReserve: number; onPartMiseEnReserve: (part: number) => void }) {
+  return (
+    <EtapeDuComparateur numero={2} titre={`Résultat ${vue.annee} : net dans la poche selon le statut`} id="comparateur-etape-resultat" genre="resultat">
+      <RappelDeLActivite activities={activities} selected={selected} />
+      <WarningList warnings={avertissementsSansLeVerdict(result?.warnings ?? [])} />
+      <ErreurDuCalcul erreur={error} />
+      <CommentLireLeTableau />
+      {result ? (
+        <ComparisonResults result={result} activityName={selected.name} onExporter={() => exporterComparaisonCsv(vue, result, options, selected.name)}>
+          {/* Le calcul à l'envers du tableau : les mêmes colonnes, pour un net visé plutôt que pour le chiffre d'affaires saisi. */}
+          <CombienFacturer session={session} annee={vue.annee} options={options} activite={selected} />
+        </ComparisonResults>
+      ) : null}
+      {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} Titre="h4" /> : null}
+      <SurToutesLesAnnees session={session} activityId={selected.id} activityName={selected.name} partMiseEnReserve={partMiseEnReserve} onPartMiseEnReserve={onPartMiseEnReserve} />
+    </EtapeDuComparateur>
+  )
+}
+
+/**
+ * Étape 3 : tout ce qui ne change que les colonnes SASU et EURL. Le rappel de leur net, le partage du bénéfice et sa
+ * rémunération, « Rémunération ou dividendes ? » (cartes et courbe, dont le bouton applique une rémunération), et la
+ * barre du partage. Pour une activité qui n'est pas une société, le titre la suppose en société.
+ */
+function EtapeDeLaSociete({ session, vue, selected, options, result, arbitrage, plafonds, onChange }: EtapesProps) {
+  const societe = estUneSocieteIS(selected)
+  return (
+    <EtapeDuComparateur numero={3} titre={societe ? "Optimiser la société : SASU et EURL" : "Et en société ? Régler la SASU et l'EURL"} id={ANCRES.reglageDeLaSociete} genre="reglage" aCote={<ColonnesTouchees societe>colonnes SASU, EURL</ColonnesTouchees>}>
+      <p className="max-w-prose text-sm text-slate-600 dark:text-slate-400">
+        {societe ? `Comment « ${selected.name} » partage son bénéfice entre rémunération et dividendes.` : `Si « ${selected.name} » passait en société, comment partager le bénéfice entre rémunération et dividendes ?`} Ces réglages ne changent que les colonnes SASU et EURL du tableau.
+      </p>
+      <RappelDesColonnesDeSociete result={result} />
+      <ReglagesDeLaSociete options={options} result={result} plafonds={plafonds} onChange={changes => onChange({ ...options, ...changes })} />
+      <ApprofondirUneSociete statut={arbitrage.statut} onStatut={arbitrage.setStatut}>
+        <OptimiseurDeLActivite session={session} annee={vue.annee} selected={selected} options={options} arbitrage={arbitrage} result={result} onChange={onChange} />
+        {/* Affichage « Résumé » : le partage du bénéfice n'est déplié d'office qu'en répartition personnalisée, où il sert à régler. */}
+        <ReplieEnResume titre={`Partage du bénéfice en ${arbitrage.statut} (barre réglable)`} id="comparateur-partage" className="text-sm" replie={options.repartition.mode !== "personnalisee"}>
+          <RepartitionDuBenefice activityName={selected.name} statut={arbitrage.statut} scenario={scenarioDuStatut(result, arbitrage.statut)} optimisation={arbitrage.resultat} options={options} onChange={onChange} />
+        </ReplieEnResume>
+      </ApprofondirUneSociete>
+    </EtapeDuComparateur>
+  )
+}
+
+/** Titre du comparateur et verdict. */
+function EnTeteDuComparateur({ result, activite }: { result: ComparaisonResult | null; activite: string | undefined }) {
   return (
     <>
-      <ReglagesDuComparateur
-        activities={activities}
-        selected={selected}
-        options={options}
-        result={result}
-        statut={arbitrage.statut}
-        plafond={plafondDeRemuneration(arbitrage.resultat, arbitrage.statut)}
-        bncUtile={partBncUtile(vue, selected)}
-        onSelect={onSelect}
-        onChange={changes => onChange({ ...options, ...changes })}
-      />
-      <WarningList warnings={avertissementsSansLeVerdict(result?.warnings ?? [])} />
-      {/* Affichage « Résumé » : le partage du bénéfice n'est déplié d'office qu'en répartition personnalisée, où il sert à régler. */}
-      <ReplieEnResume titre={`Partage du bénéfice en ${arbitrage.statut} (barre réglable)`} id="comparateur-partage" className="text-sm" replie={options.repartition.mode !== "personnalisee"}>
-        <RepartitionDuBenefice activityName={selected.name} statut={arbitrage.statut} onStatut={arbitrage.setStatut} scenario={scenarioDuStatut(result, arbitrage.statut)} optimisation={arbitrage.resultat} options={options} onChange={onChange} />
-      </ReplieEnResume>
+      {/* Le titre peut recevoir le focus quand un lien mène au comparateur. */}
+      <h2 id={ANCRES.titreDuComparateur} tabIndex={-1} className="text-2xl font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
+        Comparateur de statuts
+      </h2>
+      <VerdictDuComparateur result={result} activite={activite} />
     </>
+  )
+}
+
+/**
+ * Comment lire le tableau : une puce par notion, le mot qu'on cherche dans le tableau en gras, repliée d'office au-dessus
+ * du tableau. Que l'activité soit simulée dans chaque statut, l'étape 1 le dit déjà.
+ */
+function CommentLireLeTableau() {
+  const notion = "font-medium text-slate-800 dark:text-slate-100"
+  return (
+    <Depliable titre="Comment lire le tableau" id="comparateur-explication" className="text-sm">
+      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-400">
+        <li>
+          <span className={notion}>Net dans la poche</span> : celui de tout le foyer, après cotisations et impôts, comme dans « Mes résultats ». Seule la dernière ligne du détail porte sur l'activité comparée seule.
+        </li>
+        <li>
+          <span className={notion}>Colonne « actuel »</span> : votre situation telle que saisie.
+        </li>
+        <li>
+          <span className={notion}>Charges</span> : celles d'une micro-entreprise deviennent déductibles en société et en EI au réel ; en portage salarial, ce sont des frais remboursés.
+        </li>
+        <li>
+          <span className={notion}>Portage salarial</span> : la société de portage facture vos prestations et vous verse un salaire, après ses frais de gestion.
+        </li>
+        <li>
+          <span className={notion}>Frais de gestion</span> : chaque autre statut n'ajoute que l'écart estimé avec ceux de votre statut actuel.
+        </li>
+      </ul>
+    </Depliable>
   )
 }
 
 /**
  * Comparateur de statuts : l'activité choisie est simulée en SASU, EURL, EI au réel, micro-entreprise
  * (avec et sans versement libératoire) et portage salarial, le reste de la simulation restant identique. Les couples en union
- * libre sont aussi comparés avec une imposition commune.
+ * libre sont aussi comparés avec une imposition commune. Avec une activité, l'onglet suit trois étapes : ce qui est
+ * comparé (réglage), le résultat, puis les réglages de la société (SASU, EURL).
  */
 export function ComparatorPanel({ session, annee, onComparateurChange, onComparaison }: ComparatorPanelProps) {
   // Le comparateur porte sur l'année affichée : réglages par défaut tirés de sa grille, exports à son nom.
@@ -509,41 +734,32 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
 
   const { result, error } = useComparison(session, effectiveOptions, vue.annee)
   const arbitrage = useArbitrage(session, effectiveOptions, vue.annee, selected, result, { statutEtudie, setStatutEtudie })
+  const plafonds = usePlafonds(session, effectiveOptions, vue.annee, selected, result, arbitrage)
   const couples = result?.couples ?? []
   useSignalerLaComparaison(onComparaison, selected, result, arbitrage.resultat)
   if (!selected && couples.length === 0) return null
 
   const personName = (id: string) => session.entities.find(e => e.id === id)?.name ?? id
-  // Nom de l'activité comparée dans le tableau et son export ; vide quand seuls des couples sont comparés.
-  const nomDeLActivite = selected?.name ?? ""
 
+  if (!selected) {
+    // Seuls des couples sont comparés : ni activité à régler, ni étapes.
+    return (
+      <section className="mt-12 space-y-4" aria-labelledby={ANCRES.titreDuComparateur}>
+        <EnTeteDuComparateur result={result} activite={undefined} />
+        <ErreurDuCalcul erreur={error} />
+        {result ? <ComparisonResults result={result} activityName="" onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, "")} /> : null}
+        <CoupleComparison couples={couples} personName={personName} />
+      </section>
+    )
+  }
+
+  const etapes: EtapesProps = { session, vue, activities, selected, options: effectiveOptions, result, error, arbitrage, plafonds, onSelect: selectActivity, onChange: setOptions }
   return (
-    <section className="mt-12 space-y-4" aria-labelledby={ANCRES.titreDuComparateur}>
-      <div>
-        {/* Le titre peut recevoir le focus quand un lien mène au comparateur. */}
-        <h2 id={ANCRES.titreDuComparateur} tabIndex={-1} className="text-2xl font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
-          Comparateur de statuts
-        </h2>
-        <ReplieEnResume titre={`Année ${vue.annee} : ce que compare le tableau`} id="comparateur-explication" className="text-sm text-slate-600 dark:text-slate-400">
-          <p className="text-sm text-slate-600 dark:text-slate-400">Année {vue.annee}. L'activité choisie est simulée dans chaque statut ; le reste de la simulation ne change pas. Les montants portent sur toute la simulation, sauf la dernière ligne, propre à l'activité comparée. Les charges d'une micro-entreprise y deviennent déductibles dans les statuts au réel (société, EI), et des frais remboursés en portage salarial, où la société de portage facture les prestations et verse un salaire après ses frais de gestion. La colonne « actuel » est votre situation telle que saisie, au même net que les résultats ; les autres statuts y ajoutent seulement l'écart de frais de gestion estimé avec le vôtre.</p>
-        </ReplieEnResume>
-      </div>
-      <VerdictDuComparateur result={result} activite={selected?.name} />
-
-      {selected ? <ReglagesEtPartage vue={vue} activities={activities} selected={selected} options={effectiveOptions} result={result} arbitrage={arbitrage} onSelect={selectActivity} onChange={setOptions} /> : null}
-
-      <ErreurDuCalcul erreur={error} />
-
-      {result ? (
-        <ComparisonResults result={result} activityName={nomDeLActivite} onExporter={() => exporterComparaisonCsv(vue, result, effectiveOptions, nomDeLActivite)}>
-          {/* Le calcul à l'envers du tableau : les mêmes colonnes, pour un net visé plutôt que pour le chiffre d'affaires saisi. */}
-          <CombienFacturer session={session} annee={vue.annee} options={effectiveOptions} activite={selected} />
-        </ComparisonResults>
-      ) : null}
-      {/* La réponse à « mariage ou Pacs ? » passe avant les années et la courbe, qui ne portent que sur l'activité comparée. */}
-      {couples.length > 0 ? <CoupleComparison couples={couples} personName={personName} /> : null}
-      {selected ? <SurToutesLesAnnees session={session} activityId={selected.id} activityName={selected.name} partMiseEnReserve={partMiseEnReserve} onPartMiseEnReserve={setPartMiseEnReserve} /> : null}
-      <OptimiseurDeLActivite session={session} annee={vue.annee} selected={selected} options={effectiveOptions} arbitrage={arbitrage} result={result} onChange={setOptions} />
+    <section className="mt-12 space-y-5" aria-labelledby={ANCRES.titreDuComparateur}>
+      <EnTeteDuComparateur result={result} activite={selected.name} />
+      <EtapeDeLActivite {...etapes} />
+      <EtapeDuResultat {...etapes} couples={couples} personName={personName} partMiseEnReserve={partMiseEnReserve} onPartMiseEnReserve={setPartMiseEnReserve} />
+      <EtapeDeLaSociete {...etapes} />
     </section>
   )
 }

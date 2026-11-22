@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import { grilleVide, type Entity, type FinancialFlow, type MonthlyGridData } from "@/types"
 import { DEFAULT_FLOW_COLORS } from "./color-constants"
-import { deMois, donneesDeLaGrille, nombreDeFluxParMois, numerosDesTypesDeFlux } from "./grille-mensuelle"
+import { deMois, deNom, donneesDeLaGrille, fondDuSegment, nombreDeFluxParMois, numerosDesTypesDeFlux, regrouperLesRecus, versementsRecus } from "./grille-mensuelle"
 
 const alice: Entity = { id: "alice", type: "person", name: "Alice", fiscalParts: 1, avatar: { type: "initials", value: "A", color: "#000000" }, locked: false }
 const atelier: Entity = { id: "atelier", type: "micro-entreprise", name: "Atelier", beneficieACRE: false, opteVFL: false, avatar: { type: "icon", value: "Store", color: "#000000" }, locked: false }
@@ -100,11 +100,68 @@ describe("données de la grille", () => {
   })
 })
 
+describe("versements reçus d'une société", () => {
+  const bruno: Entity = { ...alice, id: "bruno", name: "Bruno" }
+  const sasu: Entity = { id: "sasu", type: "company", name: "Studio", legalStatus: "SASU", capitalSocial: 1000, avatar: { type: "icon", value: "Store", color: "#000000" }, locked: false }
+  const relations = [
+    { id: "r1", fromId: "alice", toId: "sasu", type: "Président" as const },
+    { id: "r2", fromId: "alice", toId: "sasu", type: "Associé" as const },
+    { id: "r3", fromId: "bruno", toId: "sasu", type: "Associé" as const }
+  ]
+  const grille = grilleAvec({ 0: [flux("sasu", "ca_services", 10000), flux("sasu", "director_remuneration", 3000), flux("sasu", "dividends_payment", 1000)] })
+  const numeros = numerosDesTypesDeFlux(grille)
+
+  it("comme le calcul : la rémunération au dirigeant, les dividendes à parts égales entre les associés", () => {
+    const recus = versementsRecus(grille[0].flows, [alice, bruno, sasu], relations)
+    expect(recus.get("alice")).toEqual([
+      { type: "director_remuneration", amount: 3000, societeId: "sasu", societe: "Studio" },
+      { type: "dividends_payment", amount: 500, societeId: "sasu", societe: "Studio" }
+    ])
+    expect(recus.get("bruno")).toEqual([{ type: "dividends_payment", amount: 500, societeId: "sasu", societe: "Studio" }])
+    expect(recus.has("sasu")).toBe(false)
+  })
+
+  it("une société sans dirigeant ni associé relié ne verse à personne", () => {
+    expect(versementsRecus(grille[0].flows, [alice, sasu], []).size).toBe(0)
+  })
+
+  it("un gain hachuré sur la ligne de qui reçoit, en plus de la dépense sur celle de la société ; le total annuel aussi", () => {
+    const [ligneAlice, ligneBruno, ligneSasu] = donneesDeLaGrille([alice, bruno, sasu], grille, undefined, numeros, relations)
+    expect(ligneSasu.monthlyCellData[0].totalExpenses).toBe(4000)
+    expect(ligneAlice.monthlyCellData[0]).toEqual({
+      gains: [
+        { amount: 3000, color: DEFAULT_FLOW_COLORS.director_remuneration, number: numeros.get("director_remuneration"), recuDe: ["Studio"] },
+        { amount: 500, color: DEFAULT_FLOW_COLORS.dividends_payment, number: numeros.get("dividends_payment"), recuDe: ["Studio"] }
+      ],
+      expenses: [],
+      totalGains: 3500,
+      totalExpenses: 0,
+      // Aucun flux saisi par Alice : ce qu'elle reçoit se saisit sur la ligne de la société.
+      flowCount: 0
+    })
+    expect(ligneBruno.annualCellData.totalGains).toBe(500)
+    // Sans les relations, rien n'est reçu : la grille d'avant.
+    expect(donneesDeLaGrille([alice, sasu], grille, undefined, numeros)[0].monthlyCellData[0].totalGains).toBe(0)
+  })
+
+  it("regroupe les flux d'une même société et d'un même type ; barre pleine ou hachurée", () => {
+    const recu = { type: "director_remuneration" as const, amount: 1000, societeId: "sasu", societe: "Studio" }
+    expect(regrouperLesRecus([recu, recu, { ...recu, type: "dividends_payment" }])).toEqual([{ ...recu, amount: 2000 }, { ...recu, type: "dividends_payment" }])
+    expect(fondDuSegment({ amount: 1, color: "#123456", number: 1 })).toEqual({ backgroundColor: "#123456" })
+    expect(fondDuSegment({ amount: 1, color: "#123456", number: 1, recuDe: ["Studio"] }).backgroundImage).toContain("repeating-linear-gradient")
+  })
+})
+
 describe("élision du nom du mois", () => {
   it("« de » devant une consonne, « d’ » devant une voyelle", () => {
     expect(deMois("Mars")).toBe("de mars")
     expect(deMois("Avril")).toBe("d’avril")
     expect(deMois("Août")).toBe("d’août")
     expect(deMois("Octobre")).toBe("d’octobre")
+  })
+
+  it("le nom d'un acteur garde sa casse : « de Studio », « d’Atelier »", () => {
+    expect(deNom("Studio")).toBe("de Studio")
+    expect(deNom("Atelier")).toBe("d’Atelier")
   })
 })

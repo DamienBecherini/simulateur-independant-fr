@@ -41,11 +41,6 @@ export function remunerationOptimale(optimisation: OptimisationRemuneration | nu
 /** Ce que coûte l'exigence de 4 trimestres de retraite dans une colonne : « 4 trimestres : −1 234 € de net ». */
 export const libelleDuCoutDesTrimestres = (cout: number) => `4 trimestres : ${ecartSigne(-cout)} de net`
 
-/** Au meilleur net, les colonnes de société où exiger 4 trimestres de retraite coûte du net, avec ce coût. */
-export function coutsDesQuatreTrimestres(scenarios: ScenarioStatut[]): { libelle: string; cout: number }[] {
-  return scenarios.flatMap(s => (s.remunerationOptimale?.coutDesQuatreTrimestres ? [{ libelle: s.libelle, cout: s.remunerationOptimale.coutDesQuatreTrimestres }] : []))
-}
-
 /** Nombre d'alertes de l'année : règles reprises d'une autre année, avertissements des foyers et des activités. */
 export function nombreDAlertes(report: SimulationReport | null): number {
   if (!report) return 0

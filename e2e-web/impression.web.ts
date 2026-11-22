@@ -35,7 +35,7 @@ function commandesDeLEcran(page: Page) {
     page.getByRole("button", { name: /^Déplacer « / }).first(),
     page.getByRole("button", { name: "Relation" }).first(),
     page.getByRole("button", { name: "Gérer les couleurs" }),
-    page.getByRole("button", { name: "Appliquer au comparateur" }).first(),
+    page.getByRole("button", { name: /^Appliquer (au comparateur|à la colonne)/ }).first(),
     page.getByText("+ Ajouter", { exact: true }).first(),
     page.getByText("(afficher)").first()
   ]

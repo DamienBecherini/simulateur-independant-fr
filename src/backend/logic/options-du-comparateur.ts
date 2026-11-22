@@ -3,7 +3,7 @@
 // Ils vivent avec le moteur pour servir à la fois l'interface (src/lib/comparateur-options.ts) et les outils des
 // clients d'IA (src/backend/logic/outils, voir l'ADR 010) : les deux comparent avec les mêmes réglages.
 
-import type { ComparaisonOptions, ConditionsPortage, ConditionsPortageRetenues, DonneesDeLAnnee, FinancialFlow, FraisFonctionnement, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle } from "../../types.js"
+import { STATUTS_SOCIETE, type ComparaisonOptions, type ConditionsPortage, type ConditionsPortageRetenues, type DonneesDeLAnnee, type FinancialFlow, type FraisFonctionnement, type ReglagesComparateur, type RepartitionBenefice, type SimulationAnnuelle, type StatutSociete } from "../../types.js"
 
 /**
  * Frais de fonctionnement annuels proposés par défaut : des ordres de grandeur, à ajuster à sa situation.
@@ -112,6 +112,20 @@ export const PART_MISE_EN_RESERVE_PAR_DEFAUT = 0.5
 export function avecLaRetraiteParDefaut(repartition: RepartitionBenefice): RepartitionBenefice {
   if (repartition.mode !== "meilleurNet" || repartition.avecRetraite !== undefined) return repartition
   return { ...repartition, avecRetraite: true }
+}
+
+/**
+ * Au meilleur net, la colonne de ce statut doit-elle valider 4 trimestres de retraite ? Son propre choix s'il y en a
+ * un, sinon le choix commun aux colonnes (absent : non ; les réglages du comparateur le cochent d'office, voir
+ * `avecLaRetraiteParDefaut`).
+ */
+export function exigeLesQuatreTrimestres(repartition: RepartitionBenefice, statut: StatutSociete): boolean {
+  return repartition.retraiteEn?.[statut] ?? repartition.avecRetraite === true
+}
+
+/** Le choix des 4 trimestres de chaque colonne de société, au meilleur net. */
+export function trimestresExiges(repartition: RepartitionBenefice): Record<StatutSociete, boolean> {
+  return Object.fromEntries(STATUTS_SOCIETE.map(statut => [statut, exigeLesQuatreTrimestres(repartition, statut)])) as Record<StatutSociete, boolean>
 }
 
 /** Total de l'année d'un type de flux de l'activité dans la grille. */

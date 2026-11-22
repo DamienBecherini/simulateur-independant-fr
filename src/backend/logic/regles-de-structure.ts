@@ -108,6 +108,22 @@ export function rolesQui(genre: GenreDeStructure, qualite: "dirige" | "associe")
 }
 
 /**
+ * Les personnes qui dirigent l'activité, ou qui en sont associées, selon les rôles de sa forme : sans doublon, dans
+ * l'ordre des relations. Le calcul verse la rémunération au premier dirigeant et partage les dividendes entre les
+ * associés (routage-des-flux.ts) ; la grille montre sur la ligne de chacun ce qu'il reçoit (grille-mensuelle.ts).
+ */
+export function personnesQui(session: { entities: Pick<Entity, "id" | "type">[]; relationships: Relations }, activite: Activite, qualite: "dirige" | "associe"): string[] {
+  const roles: Relationship["type"][] = rolesQui(genreDeStructure(activite), qualite)
+  const ids = new Set<string>()
+  for (const rel of session.relationships) {
+    if (!roles.includes(rel.type) || (rel.fromId !== activite.id && rel.toId !== activite.id)) continue
+    const autre = rel.fromId === activite.id ? rel.toId : rel.fromId
+    if (session.entities.some(e => e.id === autre && e.type === "person")) ids.add(autre)
+  }
+  return [...ids]
+}
+
+/**
  * Les rôles de la personne qui exerce seule une activité de cette forme, donnés à sa création et à son changement de
  * statut : elle la dirige et, en société, en est l'associée. Le président d'une SASU reçoit donc aussi « Associé ».
  */

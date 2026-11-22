@@ -20,8 +20,8 @@ async function ouvrir(page: Page, situation: string) {
 
 test("écart négligeable : 15 € de mieux avec 400 € de salaire ne font pas un conseil, la colonne reste la situation saisie", async ({ page }) => {
   await ouvrir(page, "sasu-en-zone-franche-urbaine")
-  const sasu = colonne(page, /^SASU/)
-  await expect(sasu).toContainText("actuel · meilleur net")
+  const sasu = colonne(page, /^Meilleur net\s*SASU/)
+  await expect(sasu).toContainText(/^Meilleur netSASU\s*actuel/)
   await expect(sasu).toContainText(/votre répartition, au meilleur net à moins de 100\s€ près/)
   await expect(sasu).not.toContainText("rémunération optimale")
   await expect(sasu).not.toContainText("rémunération optimisée")
@@ -35,7 +35,7 @@ test("écart négligeable : 15 € de mieux avec 400 € de salaire ne font pas 
 
 test("écart réel : la bulle de la case dit ce qui distingue la colonne de la situation saisie, poste par poste, sans faire défiler le tableau", async ({ page }) => {
   await ouvrir(page, "sasu-sans-salaire")
-  await expect(colonne(page, /^SASU, rémunération optimisée/)).toContainText(/rémunération optimale : 5\s800\s€ nets/)
+  await expect(colonne(page, /^Meilleur net\s*SASU, rémunération optimisée/)).toContainText(/rémunération optimale : 5\s800\s€ nets/)
   const ecart = ecartDuStatutActuel(page)
   await expect(ecart).toContainText(/−756\s€/)
 

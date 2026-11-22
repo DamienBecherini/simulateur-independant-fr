@@ -13,6 +13,37 @@ const SEUIL = 4.5
 
 const totaux = (page: Page) => page.getByRole("group", { name: /^Total annuel : / })
 
+const personne = (id: string, name: string) => ({ id, type: "person", name, fiscalParts: 1, avatar: { type: "initials", value: name.slice(0, 2), color: "#3b82f6" }, locked: false })
+
+/**
+ * Une société qui verse une rémunération à Alice (barre hachurée sur sa ligne), puis deux personnes sans flux ni
+ * versement : l'une sur une ligne ordinaire, l'autre sur une ligne zébrée, leur total affiche « — ».
+ */
+const SESSION = {
+  formatVersion: 3,
+  name: "Contraste de la grille",
+  entities: [
+    { id: "studio", type: "company", name: "Studio", legalStatus: "SASU", capitalSocial: 1000, avatar: { type: "icon", value: "Store", color: "#d97706" }, locked: false },
+    personne("alice", "Alice"),
+    personne("bruno", "Bruno"),
+    personne("chloe", "Chloé")
+  ],
+  relationships: [{ id: "r1", fromId: "alice", toId: "studio", type: "Président" }],
+  annees: [
+    {
+      annee: 2026,
+      monthlyData: Array.from({ length: 12 }, (_, month) => ({
+        month,
+        flows: [
+          { id: `ca${month}`, entityId: "studio", type: "ca_services", label: "", amount: 6000 },
+          { id: `rem${month}`, entityId: "studio", type: "director_remuneration", label: "", amount: 2000 },
+          { id: `dep${month}`, entityId: "alice", type: "expense", label: "Loyer", amount: 700 }
+        ]
+      }))
+    }
+  ]
+}
+
 async function verifier(page: Page, theme: string) {
   // Aucune case survolée : le survol change le fond d'une case de mois.
   await page.mouse.move(0, 0)
@@ -25,9 +56,10 @@ async function verifier(page: Page, theme: string) {
 }
 
 test("les textes de la grille, « — » du total annuel compris, dépassent 4,5:1 en clair et en sombre, lignes zébrées comprises", async ({ page }) => {
+  await page.addInitScript(session => window.localStorage.setItem("simulateur.session", JSON.stringify(session)), SESSION)
   await page.goto("./")
   await expect(totaux(page).first()).toBeVisible()
-  // L'exemple a des acteurs sans flux sur une ligne ordinaire et sur une ligne zébrée : leur total affiche « — ».
+  // Des acteurs sans flux sur une ligne ordinaire et sur une ligne zébrée : leur total affiche « — ».
   const sansFlux = await totaux(page).evaluateAll(cases => cases.filter(c => c.textContent!.trim() === "—").map(c => c.classList.contains("case-de-bande")))
   expect(sansFlux).toContain(true)
   expect(sansFlux).toContain(false)

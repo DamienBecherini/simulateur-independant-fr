@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
 import { emptyReport } from "@/ui/testing/fixtures"
-import { avecUnBeneficeGarde, avecUnePerteConservee, coutsDesQuatreTrimestres, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, porteurDeLaPremiereAlerte, phraseDuVerdict, netEtReste, raisonDeNonRetenue, referenceDesEcarts, remunerationOptimale, tauxDePrelevement } from "./resume"
+import { avecUnBeneficeGarde, avecUnePerteConservee, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, porteurDeLaPremiereAlerte, phraseDuVerdict, netEtReste, raisonDeNonRetenue, referenceDesEcarts, remunerationOptimale, tauxDePrelevement } from "./resume"
 import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
@@ -169,9 +169,7 @@ describe("verdict du comparateur", () => {
 })
 
 describe("coût des 4 trimestres de retraite", () => {
-  it("donne les colonnes où les exiger coûte du net, avec ce coût", () => {
-    const colonne = (libelle: string, coutDesQuatreTrimestres?: number) => ({ libelle, remunerationOptimale: { remunerationNette: 0, avecRetraite: true, retraiteHorsDAtteinte: false, ...(coutDesQuatreTrimestres ? { coutDesQuatreTrimestres } : {}) } }) as ScenarioStatut
-    expect(coutsDesQuatreTrimestres([colonne("SASU", 1234), colonne("EURL"), { libelle: "EI au réel" } as ScenarioStatut])).toEqual([{ libelle: "SASU", cout: 1234 }])
+  it("écrit ce que coûte leur exigence dans une colonne", () => {
     expect(libelleDuCoutDesTrimestres(1234).replace(/\s/g, " ")).toBe("4 trimestres : −1 234 € de net")
   })
 

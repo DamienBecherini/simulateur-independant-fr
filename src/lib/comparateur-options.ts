@@ -1,9 +1,9 @@
 // src/lib/comparateur-options.ts
 
-import { estEntrepriseOuMicro, STATUTS_FRAIS } from "@/types"
+import { estEntrepriseOuMicro, STATUTS_FRAIS, STATUTS_SOCIETE } from "@/types"
 import type { ComparaisonOptions, Comparateur, Company, ConditionsPortage, ConditionsPortageRetenues, EffectifPortage, FraisFonctionnement, MicroEntreprise, ModeRepartition, OptimisationRemuneration, PosteFrais, DonneesDeLAnnee, ReglagesComparateur, RepartitionBenefice, SimulationAnnuelle, StatutCompare, StatutFrais, StatutSociete } from "@/types"
 import { euros, pourcent } from "@/backend/logic/format"
-import { avecLaRetraiteParDefaut, conditionsPortageRetenues, LIBELLES_DES_CONDITIONS_PORTAGE, optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
+import { avecLaRetraiteParDefaut, conditionsPortageRetenues, exigeLesQuatreTrimestres, LIBELLES_DES_CONDITIONS_PORTAGE, optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
 
 // Réglages proposés par défaut : ils vivent avec le moteur, pour servir aussi aux outils des clients d'IA (ADR 010).
 export { defaultComparisonOptions, defaultFraisFonctionnement } from "@/backend/logic/options-du-comparateur"
@@ -90,12 +90,23 @@ export const libellesCourtsRepartition: Record<ModeRepartition, string> = {
 }
 
 /**
- * Ce que fait un mode de partage, en une phrase, sous les boutons du comparateur. Au meilleur net, la phrase dit
- * si la rémunération retenue doit valider 4 trimestres de retraite.
+ * Au meilleur net, la phrase du mode selon les colonnes qui exigent 4 trimestres de retraite : toutes, aucune, ou
+ * certaines seulement (« en SASU, parmi celles qui valident 4 trimestres de retraite »).
  */
-export function descriptionDuMode(mode: ModeRepartition, avecRetraite = false): string {
+function phraseDuMeilleurNet(exiges: Partial<Record<StatutSociete, boolean>>): string {
+  const avec = STATUTS_SOCIETE.filter(statut => exiges[statut])
+  if (avec.length === STATUTS_SOCIETE.length) return "Chaque société verse la rémunération qui donne le meilleur net parmi celles qui valident 4 trimestres de retraite, le reste en dividendes."
+  if (avec.length === 0) return "Chaque société verse la rémunération qui donne le meilleur net, le reste en dividendes."
+  return `Chaque société verse la rémunération qui donne le meilleur net, le reste en dividendes ; en ${avec.join(" et en ")}, parmi celles qui valident 4 trimestres de retraite.`
+}
+
+/**
+ * Ce que fait un mode de partage, en une phrase, sous les boutons du comparateur. Au meilleur net, la phrase dit
+ * quelles colonnes doivent valider 4 trimestres de retraite (`trimestresExiges`).
+ */
+export function descriptionDuMode(mode: ModeRepartition, exiges: Partial<Record<StatutSociete, boolean>> = {}): string {
   const descriptions: Record<ModeRepartition, string> = {
-    meilleurNet: avecRetraite ? "Chaque société verse la rémunération qui donne le meilleur net parmi celles qui valident 4 trimestres de retraite, le reste en dividendes." : "Chaque société verse la rémunération qui donne le meilleur net, le reste en dividendes.",
+    meilleurNet: phraseDuMeilleurNet(exiges),
     dividendes: "La rémunération que vous saisissez, tout le reste du bénéfice en dividendes.",
     remuneration: "La rémunération la plus haute que la société peut verser, sans dividendes.",
     personnalisee: "Vous réglez la rémunération et la part du bénéfice distribuée ; le reste reste dans la société.",
@@ -134,14 +145,30 @@ export function avecRemuneration(options: ComparaisonOptions, remunerationNette:
 }
 
 /**
- * Reporte dans le comparateur une rémunération de l'arbitrage. Au meilleur net, ses deux meilleurs points y restent :
- * on coche ou décoche seulement « avec 4 trimestres de retraite » ; toute autre rémunération est reportée telle quelle.
+ * Où le meilleur net exige 4 trimestres de retraite, pour les exports : dans toutes les colonnes de société (`true`),
+ * dans aucune (`false`), ou dans certaines seulement (« en SASU seulement »).
+ */
+export function quatreTrimestresExiges(repartition: RepartitionBenefice): boolean | string {
+  const avec = STATUTS_SOCIETE.filter(statut => exigeLesQuatreTrimestres(repartition, statut))
+  if (avec.length === STATUTS_SOCIETE.length) return true
+  return avec.length === 0 ? false : `en ${avec.join(" et en ")} seulement`
+}
+
+/** Le partage du bénéfice avec le choix des 4 trimestres d'une seule colonne de société ; l'autre garde le sien. */
+export function avecLaRetraiteEn(repartition: RepartitionBenefice, statut: StatutSociete, exige: boolean): RepartitionBenefice {
+  return { ...repartition, retraiteEn: { ...repartition.retraiteEn, [statut]: exige } }
+}
+
+/**
+ * Reporte dans le comparateur une rémunération de l'arbitrage d'un statut. Au meilleur net, ses deux meilleurs points y
+ * restent : on coche ou décoche seulement « 4 trimestres de retraite » de la colonne de ce statut, l'autre colonne
+ * gardant son choix ; toute autre rémunération est reportée telle quelle, dans les deux colonnes.
  */
 export function appliquerRemuneration(options: ComparaisonOptions, remunerationNette: number, optimisation: OptimisationRemuneration | null): ComparaisonOptions {
-  const { meilleur, meilleurAvecRetraite } = optimisation ?? {}
-  const auMeilleurNet = options.repartition.mode === "meilleurNet"
-  if (auMeilleurNet && remunerationNette === meilleur?.remunerationNette) return { ...options, repartition: { ...options.repartition, avecRetraite: false } }
-  if (auMeilleurNet && remunerationNette === meilleurAvecRetraite?.remunerationNette) return { ...options, repartition: { ...options.repartition, avecRetraite: true } }
+  if (!optimisation || options.repartition.mode !== "meilleurNet") return avecRemuneration(options, remunerationNette)
+  const { meilleur, meilleurAvecRetraite, statut } = optimisation
+  if (remunerationNette === meilleur?.remunerationNette) return { ...options, repartition: avecLaRetraiteEn(options.repartition, statut, false) }
+  if (remunerationNette === meilleurAvecRetraite?.remunerationNette) return { ...options, repartition: avecLaRetraiteEn(options.repartition, statut, true) }
   return avecRemuneration(options, remunerationNette)
 }
 
@@ -154,8 +181,9 @@ export function comparableActivities(session: DonneesDeLAnnee): (Company | Micro
 }
 
 /**
- * Le partage du bénéfice dans un autre mode. La case « 4 trimestres » ne suit que si elle a été décochée : cochée,
- * c'est la valeur par défaut, qui n'a pas à être enregistrée avec un mode où elle n'a pas de sens.
+ * Le partage du bénéfice dans un autre mode. La case « 4 trimestres » commune ne suit que si elle a été décochée :
+ * cochée, c'est la valeur par défaut, qui n'a pas à être enregistrée avec un mode où elle n'a pas de sens. Le choix
+ * propre à une colonne suit toujours : de retour au meilleur net, on le retrouve.
  */
 export function avecLeMode(repartition: RepartitionBenefice, mode: ModeRepartition): RepartitionBenefice {
   const { avecRetraite, ...reste } = repartition
@@ -178,8 +206,8 @@ export function reglagesDeLActiviteComparee(vue: SimulationAnnuelle, comparateur
   return { activite, options: optionsDuComparateur(vue, activite.id, comparateur?.reglagesParActivite[activite.id]) }
 }
 
-const avecRetraite = (repartition: RepartitionBenefice) => avecLaRetraiteParDefaut(repartition).avecRetraite ?? false
-const memeRepartition = (a: RepartitionBenefice, b: RepartitionBenefice) => a.mode === b.mode && a.partDistribuee === b.partDistribuee && avecRetraite(a) === avecRetraite(b)
+const memesTrimestres = (a: RepartitionBenefice, b: RepartitionBenefice) => STATUTS_SOCIETE.every(statut => exigeLesQuatreTrimestres(avecLaRetraiteParDefaut(a), statut) === exigeLesQuatreTrimestres(avecLaRetraiteParDefaut(b), statut))
+const memeRepartition = (a: RepartitionBenefice, b: RepartitionBenefice) => a.mode === b.mode && a.partDistribuee === b.partDistribuee && memesTrimestres(a, b)
 const memesFrais = (a: FraisFonctionnement | undefined, b: FraisFonctionnement | undefined) => JSON.stringify(a) === JSON.stringify(b)
 
 /**

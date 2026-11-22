@@ -41,7 +41,7 @@ function Verdict({ statut }: { statut: StrategiesDUnStatut }) {
 function TableauDuStatut({ statut }: { statut: StrategiesDUnStatut }) {
   return (
     <div className="space-y-2">
-      <h4 className="text-base font-medium text-slate-800 dark:text-slate-100">En {statut.statut}</h4>
+      <h5 className="text-base font-medium text-slate-800 dark:text-slate-100">En {statut.statut}</h5>
       <Verdict statut={statut} />
       <ZoneDefilante libelle={`Stratégies de distribution en ${statut.statut}`}>
         <table className="w-full min-w-[34rem] text-sm">
@@ -111,9 +111,9 @@ export function SurToutesLesAnnees({ session, activityId, activityName, partMise
   return (
     <section aria-labelledby="toutes-les-annees-titre" className="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
       <div>
-        <h3 id="toutes-les-annees-titre" className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+        <h4 id="toutes-les-annees-titre" className="text-lg font-semibold text-slate-800 dark:text-slate-100">
           Sur toutes les années
-        </h3>
+        </h4>
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Distribuer le bénéfice de « {activityName} » chaque année, ou en garder une part en réserve pour la distribuer plus tard ? Trois façons de faire, en SASU et en EURL, comparées sur le net de tous les foyers cumulé {periode}.
         </p>

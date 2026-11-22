@@ -133,7 +133,6 @@ test("chaque chiffre du résumé mène à son détail, dans sa vue, sous la barr
   for (const [lien, vue, cible] of [
     [/^Net du foyer/, "resultats", "#bilan"],
     [/^Meilleur/, "comparer", "#comparateur-verdict"],
-    [/^Alertes/, "resultats", "#resultats-titre"],
     [/^Prélèvements/, "resultats", "#bilan"]
   ] as const) {
     // Depuis « Ma situation » chaque fois : le lien change de vue.
@@ -297,7 +296,9 @@ async function mesurer(page: Page, affichage: Affichage): Promise<number[]> {
 
 // Estimation de l'étude (docs/conception/allegement-ecran.md) : environ 1 750 px sur ordinateur et 3 000 px sur
 // téléphone pour la vue la plus longue. Chaque vue doit être plus courte que la page de l'affichage « Résumé », la
-// plus courte des pages d'un seul tenant.
+// plus courte des pages d'un seul tenant. « Comparer et optimiser » en trois étapes (21 novembre 2026) allonge surtout
+// la vue du comparateur (titres et marges des étapes, phrases de l'activité et de la société, rappel des colonnes) :
+// à 1 440 px, elle fait 3 178 px pour 7 980 px de page classique (39,8 %), d'où un plafond de 42 % au lieu de 40 %.
 for (const [largeur, hauteurEcran] of [
   [1440, 900],
   [375, 812]
@@ -313,7 +314,7 @@ for (const [largeur, hauteurEcran] of [
       test.info().annotations.push({ type: "hauteur", description: mesure })
       console.log(`Hauteur à ${mesure}`)
       for (const vue of [situation, enResultats, enComparaison]) expect(vue).toBeLessThan(resume)
-      expect(Math.max(situation, enResultats, enComparaison)).toBeLessThan(classique * 0.4)
+      expect(Math.max(situation, enResultats, enComparaison)).toBeLessThan(classique * 0.42)
     })
   })
 }

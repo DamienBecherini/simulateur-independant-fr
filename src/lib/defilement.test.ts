@@ -1,7 +1,7 @@
 // src/lib/defilement.test.ts
 
 import { describe, expect, it } from "vitest"
-import { defilementDUnPas, etatDuDefilement, memeDefilement, type GeometrieDeLaZone } from "./defilement"
+import { defilementDUnPas, defilementPourMontrer, etatDuDefilement, memeDefilement, type GeometrieDeLaZone } from "./defilement"
 
 const zone = (extrait: Partial<GeometrieDeLaZone> = {}): GeometrieDeLaZone => ({ defilement: 0, largeurVisible: 500, largeurTotale: 1200, colonneFixe: 100, ...extrait })
 
@@ -41,5 +41,26 @@ describe("pas d'un clic sur une flèche", () => {
 
   it("avance d'au moins 96 px quand presque rien ne se voit à côté de la colonne fixe", () => {
     expect(defilementDUnPas(zone({ largeurVisible: 160 }), 1)).toBe(96)
+  })
+})
+
+describe("défilement qui montre une colonne", () => {
+  it("ne bouge pas quand la colonne est déjà entièrement visible, à droite de la colonne fixe", () => {
+    expect(defilementPourMontrer(zone(), { gauche: 100, droite: 300 })).toBeNull()
+    expect(defilementPourMontrer(zone({ defilement: 200 }), { gauche: 300, droite: 700 })).toBeNull()
+  })
+
+  it("amène une colonne cachée à droite juste après la colonne fixe", () => {
+    expect(defilementPourMontrer(zone(), { gauche: 700, droite: 850 })).toBe(600)
+    // En partie cachée : elle aussi.
+    expect(defilementPourMontrer(zone(), { gauche: 400, droite: 560 })).toBe(300)
+  })
+
+  it("ramène une colonne passée sous la colonne fixe", () => {
+    expect(defilementPourMontrer(zone({ defilement: 500 }), { gauche: 200, droite: 350 })).toBe(100)
+  })
+
+  it("ne dépasse pas la fin du tableau", () => {
+    expect(defilementPourMontrer(zone(), { gauche: 1050, droite: 1200 })).toBe(700)
   })
 })

@@ -11,7 +11,6 @@ import { ligneAlternee } from "../lignes-alternees"
 import type { ComparaisonOptions, OptimisationRemuneration, PartageDuBenefice, ReservesDeLaSociete, ScenarioStatut, StatutSociete } from "@/types"
 import { clavierDuCurseur, gestesDuCurseur, montantAuPointeur, type Glissement as GlissementDuCurseur } from "../curseur"
 import { PoigneeDeCurseur } from "./Curseur"
-import { ChoixDuStatut } from "./RemunerationOptimizer"
 import { euros, pourcentDeNombre } from "@/backend/logic/format"
 
 const pourcentage = (part: number) => pourcentDeNombre(Math.round(part * 100))
@@ -189,7 +188,6 @@ function Legende({ partage, statut, estimation }: { partage: PartageDuBenefice; 
 interface RepartitionProps {
   activityName: string
   statut: StatutSociete
-  onStatut: (statut: StatutSociete) => void
   /** Colonne du comparateur dans ce statut. */
   scenario: ScenarioStatut | undefined
   /** Arbitrage rémunération / dividendes de ce statut : rémunération maximale et meilleurs nets. */
@@ -257,24 +255,23 @@ function useApercu(partage: PartageDuBenefice | undefined, options: ComparaisonO
  * Partage du bénéfice de l'activité dans un statut de société. En répartition personnalisée, la barre se règle :
  * l'aperçu suit le pointeur, et le comparateur recalcule au relâchement.
  */
-export function RepartitionDuBenefice({ activityName, statut, onStatut, scenario, optimisation, options, onChange }: RepartitionProps) {
+export function RepartitionDuBenefice({ activityName, statut, scenario, optimisation, options, onChange }: RepartitionProps) {
   const { personnalisee, optimisationReglable, remunerationMaximale } = reglageDeLaBarre(options, optimisation, statut)
   const { glissement, setGlissement, remuneration, part, affiche, estimation } = useApercu(scenario?.partage, options, remunerationMaximale)
 
   const valider = ({ poignee, valeur }: Glissement) => onChange(poignee === "remuneration" ? { ...options, remunerationNette: valeur } : { ...options, repartition: { mode: "personnalisee", partDistribuee: valeur } })
 
   return (
-    <section aria-labelledby="repartition-titre" className="space-y-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section aria-labelledby="repartition-titre" className="space-y-3 rounded-lg border border-slate-200 bg-background p-4 dark:border-slate-700">
+      <div>
         <div>
-          <h3 id="repartition-titre" className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+          <h5 id="repartition-titre" className="text-lg font-semibold text-slate-800 dark:text-slate-100">
             Partage du bénéfice en {statut}
-          </h3>
+          </h5>
           <p className="text-sm text-slate-600 dark:text-slate-300">
             {libellesRepartition[options.repartition.mode]}{options.repartition.mode === "meilleurNet" ? ` : la rémunération optimale en ${statut}, tout le reste en dividendes` : ""}. Le bénéfice de « {activityName} » avant rémunération (chiffre d'affaires moins charges et frais), partagé exactement entre ces postes ; l'impôt sur le revenu et les prélèvements sociaux du foyer viennent ensuite.
           </p>
         </div>
-        <ChoixDuStatut statut={statut} onChange={onStatut} />
       </div>
 
       {affiche && affiche.beneficeAvantRemuneration > 0 ? (

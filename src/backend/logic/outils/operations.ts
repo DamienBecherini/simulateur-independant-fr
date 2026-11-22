@@ -330,7 +330,8 @@ function reglerComparateur(c: Chantier, op: OperationDe<"regler_comparateur">): 
   // Seuls les réglages proposés rejoignent ceux de l'activité ; les autres gardent leur valeur, ou restent absents (ADR 009).
   const partage = sansValeursAbsentes({ mode, partDistribuee, avecRetraite })
   const reglages: ReglagesComparateur = { ...avant, ...sansValeursAbsentes(autres) }
-  if (Object.keys(partage).length > 0) reglages.repartition = { mode: "meilleurNet", partDistribuee: 1, ...avant.repartition, ...partage }
+  // Un choix des 4 trimestres proposé vaut pour les deux colonnes de société : il remplace celui propre à chacune.
+  if (Object.keys(partage).length > 0) reglages.repartition = { mode: "meilleurNet", partDistribuee: 1, ...avant.repartition, ...partage, ...(avecRetraite === undefined ? {} : { retraiteEn: undefined }) }
   if (remunerationNette !== undefined) reglages.remunerationParAnnee = { ...avant.remunerationParAnnee, [String(anneeDeLaSession(c.session, op.annee))]: remunerationNette }
   const comparateur: Comparateur = { reglagesParActivite: {}, ...c.session.comparateur, ...(op.comparer ? { activiteComparee: activite.id } : {}) }
   c.session = { ...c.session, comparateur: { ...comparateur, reglagesParActivite: { ...comparateur.reglagesParActivite, [activite.id]: reglages } } }

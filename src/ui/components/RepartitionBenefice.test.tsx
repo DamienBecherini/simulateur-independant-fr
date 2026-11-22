@@ -24,9 +24,8 @@ const options = (mode: ModeRepartition, partDistribuee = 1): ComparaisonOptions 
 
 function afficher({ mode = "personnalisee" as ModeRepartition, part = 1, p = partage(), opt = optimisation(), reserves = undefined as ReservesDeLaSociete | undefined } = {}) {
   const onChange = vi.fn()
-  const onStatut = vi.fn()
-  render(<RepartitionDuBenefice activityName="Ma SASU" statut="SASU" onStatut={onStatut} scenario={scenario(p, reserves)} optimisation={opt} options={options(mode, part)} onChange={onChange} />)
-  return { onChange, onStatut }
+  render(<RepartitionDuBenefice activityName="Ma SASU" statut="SASU" scenario={scenario(p, reserves)} optimisation={opt} options={options(mode, part)} onChange={onChange} />)
+  return { onChange }
 }
 
 afterEach(() => vi.restoreAllMocks())
@@ -166,7 +165,7 @@ describe("RepartitionDuBenefice", () => {
   })
 
   it("signale une société déficitaire, une activité sans bénéfice et un calcul en cours", () => {
-    const { unmount } = render(<RepartitionDuBenefice activityName="Ma SASU" statut="SASU" onStatut={vi.fn()} scenario={scenario(partage({ remunerationNette: 30000, cotisationsRemuneration: 20000, impotSocietes: 0, dividendesNets: 0, resultatConserve: -10000 }))} optimisation={null} options={options("dividendes")} onChange={vi.fn()} />)
+    const { unmount } = render(<RepartitionDuBenefice activityName="Ma SASU" statut="SASU" scenario={scenario(partage({ remunerationNette: 30000, cotisationsRemuneration: 20000, impotSocietes: 0, dividendesNets: 0, resultatConserve: -10000 }))} optimisation={null} options={options("dividendes")} onChange={vi.fn()} />)
     expect(screen.getByText(/dépasse le bénéfice de 10.000 € : la société est déficitaire/)).toBeInTheDocument()
     unmount()
 
@@ -175,14 +174,8 @@ describe("RepartitionDuBenefice", () => {
   })
 
   it("attend le calcul du comparateur", () => {
-    render(<RepartitionDuBenefice activityName="Ma SASU" statut="SASU" onStatut={vi.fn()} scenario={undefined} optimisation={null} options={options("dividendes")} onChange={vi.fn()} />)
+    render(<RepartitionDuBenefice activityName="Ma SASU" statut="SASU" scenario={undefined} optimisation={null} options={options("dividendes")} onChange={vi.fn()} />)
     expect(screen.getByText("Calcul en cours…")).toBeInTheDocument()
-  })
-
-  it("change le statut étudié", async () => {
-    const { onStatut } = afficher()
-    await userEvent.click(screen.getByRole("button", { name: "EURL" }))
-    expect(onStatut).toHaveBeenCalledWith("EURL")
   })
 })
 
@@ -194,7 +187,8 @@ describe("partage du bénéfice dans le comparateur", () => {
     const groupe = await screen.findByRole("group", { name: "Bénéfice de la société (SASU, EURL)" })
     expect(within(groupe).getByRole("radio", { name: "Meilleur net" })).toBeChecked()
     expect(screen.queryByLabelText("Rémunération nette annuelle (SASU, EURL)")).not.toBeInTheDocument()
-    expect(screen.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })).toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "en SASU" })).toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "en EURL" })).toBeChecked()
 
     await userEvent.click(within(groupe).getByRole("radio", { name: "Tout en rémunération" }))
     await vi.waitFor(() => expect(window.api.compareStatuts).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ repartition: { mode: "remuneration", partDistribuee: 1 } }), 2026))

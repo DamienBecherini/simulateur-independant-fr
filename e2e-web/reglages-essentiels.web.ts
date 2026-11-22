@@ -18,10 +18,10 @@ async function ouvrir(page: Page, affichage: Affichage) {
   await page.goto(affichage === "vues" ? "./#comparer" : "./")
   await expect(page.getByRole("heading", { name: "Comparateur de statuts" })).toBeVisible()
   // La comparaison est arrivée (sur téléphone, le tableau laisse la place aux cartes des statuts).
-  await expect(page.locator("#comparateur-cout-retraite")).toBeVisible()
+  await expect(page.locator("#comparateur-cout-retraite-SASU")).toBeVisible()
 }
 
-const caseRetraite = (page: Page) => page.getByRole("checkbox", { name: "Avec 4 trimestres de retraite" })
+const caseRetraite = (page: Page) => page.getByRole("checkbox", { name: "en SASU" })
 const modes = (page: Page) => page.getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" }).locator("label")
 const sectionDesFrais = (page: Page) => page.locator("summary", { hasText: /^Frais de fonctionnement/ })
 const curseur = (page: Page) => page.getByRole("slider", { name: "Régler la rémunération nette annuelle" })
@@ -30,7 +30,7 @@ const champ = (page: Page) => page.getByLabel("Rémunération nette annuelle (SA
 const netSasu = (page: Page) => page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("row", { name: /^Net dans la poche/ }).getByRole("cell").first()
 /** Lignes occupées par les boutons des modes : leurs hauteurs distinctes. */
 const lignesDesModes = (page: Page) => modes(page).evaluateAll(labels => new Set(labels.map(label => Math.round(label.getBoundingClientRect().top))).size)
-const enTete = (page: Page, statut: string) => page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: new RegExp(`^${statut}`) })
+const enTete = (page: Page, statut: string) => page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: new RegExp(`^(Meilleur net\\s*)?${statut}`) })
 const comparateur = "section[aria-labelledby=comparateur-titre]"
 
 for (const affichage of AFFICHAGES) {
@@ -43,7 +43,8 @@ for (const affichage of AFFICHAGES) {
     await expect(caseRetraite(page)).toBeVisible()
     await expect(caseRetraite(page)).toBeChecked()
     // Ce que coûtent les 4 trimestres : près de la case, et dans l'en-tête de la colonne SASU.
-    await expect(caseRetraite(page)).toHaveAccessibleDescription(/^coût en net : SASU −[\d\s]+\s€/)
+    await expect(caseRetraite(page)).toHaveAccessibleDescription(/^coût : −[\d\s]+\s€ de net$/)
+    await expect(page.getByRole("checkbox", { name: "en EURL" })).toBeChecked()
     await expect(enTete(page, "SASU")).toContainText(/4 trimestres : −[\d\s]+\s€ de net/)
   })
 }
@@ -54,7 +55,7 @@ test("décochée, la case des 4 trimestres le reste après rechargement, et la c
   await caseRetraite(page).uncheck()
   await expect(enTete(page, "SASU")).not.toContainText("avec 4 trimestres de retraite")
   // La session est enregistrée dans le navigateur peu après la dernière modification.
-  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("simulateur.session") ?? "")).toContain('"avecRetraite":false')
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("simulateur.session") ?? "")).toContain('"retraiteEn":{"SASU":false}')
 
   await page.reload()
   await expect(enTete(page, "SASU")).toContainText("rémunération optimale")
@@ -79,15 +80,18 @@ for (const affichage of ["classique", "resume"] as const) {
     await auditer(page, `réglages du comparateur, ${affichage}, thème sombre`, comparateur)
   })
 
-  test(`affichage ${affichage} : les modes sont sur la ligne de l'activité, et la phrase suit le mode choisi`, async ({ page }) => {
+  test(`affichage ${affichage} : les modes sont sur une ligne, à l'étape 3 sous le tableau, et la phrase suit le mode choisi`, async ({ page }) => {
     await ouvrir(page, affichage)
     await expect(modes(page)).toHaveText(["Meilleur net", "Ma rémunération", "Tout en rémunération", "Sur mesure", "Selon la grille"])
     expect(await lignesDesModes(page)).toBe(1)
-    // Les boutons et la liste des activités partagent la même ligne.
-    const activite = (await page.getByRole("combobox", { name: "Activité comparée" }).boundingBox())!
+    // Le partage du bénéfice ne change que les colonnes SASU et EURL : il se règle à l'étape 3, après le résultat ;
+    // l'activité comparée, qui change tout le tableau, reste à l'étape 1.
+    const etape = (numero: number) => page.getByRole("region", { name: new RegExp(`^Étape ${numero} :`) })
+    await expect(etape(3).getByRole("group", { name: "Bénéfice de la société (SASU, EURL)" })).toBeVisible()
+    await expect(etape(1).getByRole("combobox", { name: "Activité comparée" })).toBeVisible()
+    const tableau = (await etape(2).boundingBox())!
     const boutons = (await modes(page).first().boundingBox())!
-    expect(boutons.y + boutons.height / 2).toBeGreaterThan(activite.y)
-    expect(boutons.y + boutons.height / 2).toBeLessThan(activite.y + activite.height)
+    expect(boutons.y).toBeGreaterThan(tableau.y + tableau.height)
     await page.getByRole("radio", { name: "Selon la grille" }).check({ force: true })
     await expect(page.locator("#comparateur-mode-choisi")).toHaveText("Les rémunérations et dividendes saisis dans la grille.")
   })
@@ -123,7 +127,7 @@ for (const affichage of ["classique", "resume"] as const) {
     await expect(curseur(page)).toBeVisible()
     const maximum = Number(await curseur(page).getAttribute("aria-valuemax"))
     expect(maximum).toBeGreaterThan(0)
-    await expect(page.locator("#comparateur-remuneration-plafond")).toHaveText(/^jusqu'à [\d\s]+\s€ en SASU sans déficit$/)
+    await expect(page.locator("#comparateur-remuneration-plafond")).toHaveText(/^jusqu'à [\d\s]+\s€ en SASU, [\d\s]+\s€ en EURL sans déficit$/)
     await expect(netSasu(page)).toBeVisible()
     const avant = await netSasu(page).textContent()
 
@@ -144,7 +148,11 @@ for (const affichage of ["classique", "resume"] as const) {
   test(`affichage ${affichage} : une rémunération saisie au-delà du maximum n'est pas versée, la colonne retient le maximum et le dit`, async ({ page }) => {
     await ouvrir(page, affichage)
     await page.getByRole("radio", { name: "Ma rémunération" }).check({ force: true })
-    const maximum = Number(await curseur(page).getAttribute("aria-valuemax"))
+    // Le curseur va jusqu'au plus haut plafond des deux sociétés ; celui de la SASU se lit dans sa note.
+    const note = page.locator("#comparateur-remuneration-plafond")
+    await expect(note).toContainText("en EURL")
+    const finDuCurseur = Number(await curseur(page).getAttribute("aria-valuemax"))
+    const maximum = Number(/([\d\s]+)\s€ en SASU/.exec((await note.textContent()) ?? "")![1].replace(/\s/g, ""))
     const sasu = page.getByRole("table", { name: "Comparaison des statuts" }).getByRole("columnheader", { name: /^SASU/ })
     const limitee = new RegExp(`rémunération limitée à ${maximum.toLocaleString("fr-FR").replace(/\s/g, "\\s")}\\s€`)
 
@@ -154,7 +162,7 @@ for (const affichage of ["classique", "resume"] as const) {
     await expect(sasu).not.toContainText("société déficitaire")
     const plafonne = await netSasu(page).textContent()
     expect(Number(plafonne!.replace(/\s/g, "").match(/^\d+/)![0])).toBeLessThan(1_000_000)
-    await expect(curseur(page)).toHaveAttribute("aria-valuenow", String(maximum))
+    await expect(curseur(page)).toHaveAttribute("aria-valuenow", String(finDuCurseur))
     await expect(curseur(page)).toHaveAttribute("aria-valuetext", /au-delà des/)
     await expect(page.getByText(/^Une société ne verse pas plus qu'elle ne gagne : en SASU, le comparateur retient/)).toBeVisible()
     await expect(champ(page)).toHaveValue("80000000")

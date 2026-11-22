@@ -8,6 +8,7 @@ import { Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ColorSettingsModal } from "./ColorSettingsModal"
 import { couleurDeTexteSur } from "@/lib/contraste"
+import { fondDuSegment } from "@/lib/grille-mensuelle"
 import { cn } from "@/lib/utils"
 import { useAffichageResume } from "../hooks/useAffichage"
 
@@ -84,6 +85,13 @@ export function FlowLegend({ preferences, onPreferencesChange, flowTypeToNumberM
           <div>
             <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-2 border-b pb-1">Gains</h4>
             <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2 print:gap-y-1 print:pt-1">{gainTypes.length > 0 ? gainTypes.map(renderLegendItem) : <p className="text-sm text-slate-600 dark:text-slate-400 italic">Aucun gain ce mois-ci.</p>}</div>
+            {/* Rémunération et dividendes versés par une société : une dépense sur sa ligne, un gain hachuré sur celle de qui les reçoit. */}
+            {usedFlowTypes.includes("director_remuneration") || usedFlowTypes.includes("dividends_payment") ? (
+              <p className="mt-2 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <span aria-hidden="true" className="inline-block h-4 w-4 shrink-0 rounded-sm" style={fondDuSegment({ amount: 0, color: "#64748b", number: 0, recuDe: [] })} />
+                Hachuré : rémunération ou dividendes reçus d'une société, saisis sur la ligne de la société.
+              </p>
+            ) : null}
           </div>
           {/* Section pour les Dépenses */}
           <div>

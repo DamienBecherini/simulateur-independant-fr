@@ -63,7 +63,7 @@ function useLargeur(defaut: number) {
 
 export function ChoixDuStatut({ statut, onChange }: { statut: StatutSociete; onChange: (statut: StatutSociete) => void }) {
   return (
-    <div className="inline-flex rounded-md border border-slate-300 p-0.5 dark:border-slate-600" role="group" aria-label="Statut de la société">
+    <div className="inline-flex rounded-md border border-slate-300 bg-background p-0.5 dark:border-slate-600" role="group" aria-label="Société étudiée">
       {STATUTS_SOCIETE.map(s => (
         <button key={s} type="button" aria-pressed={s === statut} onClick={() => onChange(s)} className={cn("min-h-9 min-w-16 rounded px-3 text-sm font-medium pointer-coarse:min-h-11", s === statut ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 print:hidden")}>
           {s}
@@ -76,6 +76,8 @@ export function ChoixDuStatut({ statut, onChange }: { statut: StatutSociete; onC
 interface ResumeProps {
   resultat: OptimisationRemuneration
   remunerationActuelle: number
+  /** Ce que change le bouton : « au comparateur » (les deux colonnes), ou « à la colonne SASU » au meilleur net. */
+  cible: string
   onAppliquer: (remunerationNette: number) => void
 }
 
@@ -92,6 +94,7 @@ interface CarteDuPointProps {
   /** Ce que coûte ce choix, écrit en clair (le net perdu pour valider 4 trimestres). */
   note?: string
   appliquee: boolean
+  cible: string
   onAppliquer: () => void
 }
 
@@ -100,7 +103,7 @@ interface CarteDuPointProps {
  * à reporter dans la grille ; les trimestres validés ; un bouton pour la reporter dans le comparateur, ou la mention
  * qu'elle y est.
  */
-function CarteDuPoint({ titre, nom, point, couleur, note, appliquee, onAppliquer }: CarteDuPointProps) {
+function CarteDuPoint({ titre, nom, point, couleur, note, appliquee, cible, onAppliquer }: CarteDuPointProps) {
   return (
     <li aria-label={nom} className={cn("flex flex-col gap-2 rounded-lg border p-4", appliquee ? "border-emerald-300 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/30" : "border-slate-200 dark:border-slate-700")}>
       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
@@ -125,11 +128,11 @@ function CarteDuPoint({ titre, nom, point, couleur, note, appliquee, onAppliquer
         {appliquee ? (
           <p className="flex min-h-9 items-center gap-1.5 text-sm font-medium text-emerald-800 dark:text-emerald-300">
             <Check aria-hidden="true" className="size-4" />
-            Appliqué au comparateur
+            Appliqué {cible}
           </p>
         ) : (
           <Button variant="outline" size="sm" className="min-h-9" onClick={onAppliquer}>
-            Appliquer au comparateur
+            Appliquer {cible}
           </Button>
         )}
       </div>
@@ -142,12 +145,12 @@ function CarteDuPoint({ titre, nom, point, couleur, note, appliquee, onAppliquer
  * coût de 4 trimestres de retraite est écrit dans la seconde carte. Une seule carte quand le meilleur net les valide
  * déjà ; à la place de la seconde, une phrase quand aucune rémunération ne les valide.
  */
-function Resume({ resultat, remunerationActuelle, onAppliquer }: ResumeProps) {
+function Resume({ resultat, remunerationActuelle, cible, onAppliquer }: ResumeProps) {
   const { meilleur, meilleurAvecRetraite, statut } = resultat
   if (!meilleur) return null
   const memePoint = meilleurAvecRetraite?.remunerationNette === meilleur.remunerationNette
   const carte = (titre: string, nom: string, point: PointRemuneration, couleur: string, note?: string) => (
-    <CarteDuPoint titre={titre} nom={nom} point={point} couleur={couleur} note={note} appliquee={remunerationActuelle === point.remunerationNette} onAppliquer={() => onAppliquer(point.remunerationNette)} />
+    <CarteDuPoint titre={titre} nom={nom} point={point} couleur={couleur} note={note} appliquee={remunerationActuelle === point.remunerationNette} cible={cible} onAppliquer={() => onAppliquer(point.remunerationNette)} />
   )
 
   // Côte à côte selon la largeur de la section, pas celle de l'écran : interface agrandie, elle est plus étroite qu'il n'y paraît.
@@ -351,38 +354,48 @@ interface RemunerationOptimizerProps {
   /** Rémunération du comparateur dans ce statut, marquée sur la courbe ; par défaut, celle des réglages. */
   remunerationAppliquee?: number
   activityName: string
-  /** Statut étudié, partagé avec la barre de partage du bénéfice du comparateur, et son optimisation (useOptimisation). */
+  /** Statut étudié, choisi au-dessus de la section (« Approfondir une société »), et son optimisation (useOptimisation). */
   statut: StatutSociete
-  onStatut: (statut: StatutSociete) => void
   resultat: OptimisationRemuneration | null
   erreur: string | null
   onAppliquer: (remunerationNette: number) => void
 }
 
-export function RemunerationOptimizer({ session, annee, options, remunerationAppliquee = options.remunerationNette, activityName, statut, onStatut, resultat, erreur, onAppliquer }: RemunerationOptimizerProps) {
-  const aJour = resultat?.statut === statut
+/**
+ * L'arbitrage à afficher : le dernier reçu. Pendant le calcul d'un autre statut, il reste affiché (`aJour` faux, pour le
+ * pâlir) : la section garde sa hauteur, et la page ne remonte pas (près du bas de la page, le navigateur devait
+ * remonter quand elle rétrécissait, et ne redescendait pas).
+ */
+function useDernierArbitrage(resultat: OptimisationRemuneration | null, statut: StatutSociete) {
+  const [affiche, setAffiche] = useState(resultat)
+  if (resultat && resultat !== affiche) setAffiche(resultat)
+  return { affiche, aJour: affiche?.statut === statut }
+}
+
+export function RemunerationOptimizer({ session, annee, options, remunerationAppliquee = options.remunerationNette, activityName, statut, resultat, erreur, onAppliquer }: RemunerationOptimizerProps) {
+  const { affiche, aJour } = useDernierArbitrage(resultat, statut)
 
   return (
-    <section className="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-700" aria-labelledby={ANCRES.titreDeLOptimisation}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          {/* La barre de résumé mène à ce titre (« Rémunération optimale ») : il peut recevoir le focus. */}
-          <h3 id={ANCRES.titreDeLOptimisation} tabIndex={-1} className="text-lg font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
-            Rémunération ou dividendes ?
-          </h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300">« {activityName} » en société, en {annee} : chaque rémunération nette, le reste du bénéfice étant versé en dividendes. Le trait vertical marque la rémunération du comparateur.</p>
-        </div>
-        <ChoixDuStatut statut={statut} onChange={onStatut} />
+    <section className="space-y-4 rounded-lg border border-slate-200 bg-background p-4 dark:border-slate-700" aria-labelledby={ANCRES.titreDeLOptimisation}>
+      <div>
+        {/* La barre de résumé mène à ce titre (« Rémunération optimale ») : il peut recevoir le focus. */}
+        <h5 id={ANCRES.titreDeLOptimisation} tabIndex={-1} className="text-lg font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
+          Rémunération ou dividendes ?
+        </h5>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          « {activityName} » en {statut}, en {annee} : chaque rémunération nette, le reste du bénéfice étant versé en dividendes. Le trait vertical marque la rémunération du comparateur.
+        </p>
       </div>
 
       {erreur ? <p className="text-sm text-red-700 dark:text-red-300">{erreur}</p> : null}
-      {resultat && aJour && resultat.warnings.length > 0 ? <p className="text-sm text-slate-600 dark:text-slate-300">{resultat.warnings.join(" ")}</p> : null}
-      {resultat && aJour && resultat.points.length > 0 ? (
-        <>
-          <Resume resultat={resultat} remunerationActuelle={remunerationAppliquee} onAppliquer={onAppliquer} />
-          <Courbe resultat={resultat} remunerationActuelle={remunerationAppliquee} />
-          <TableDesValeurs resultat={resultat} onExporter={() => exporterCourbeCsv(vueDeLAnnee(session, annee), resultat, activityName)} />
-        </>
+      {affiche && aJour && affiche.warnings.length > 0 ? <p className="text-sm text-slate-600 dark:text-slate-300">{affiche.warnings.join(" ")}</p> : null}
+      {affiche && affiche.points.length > 0 ? (
+        <div aria-busy={!aJour} inert={!aJour} className={cn("space-y-4 motion-safe:transition-opacity", !aJour && "opacity-40")}>
+          {/* Au meilleur net, un bouton ne change que la colonne de son statut (ses 4 trimestres) ; sinon, la rémunération des deux. */}
+          <Resume resultat={affiche} remunerationActuelle={remunerationAppliquee} cible={options.repartition.mode === "meilleurNet" ? `à la colonne ${affiche.statut}` : "au comparateur"} onAppliquer={onAppliquer} />
+          <Courbe resultat={affiche} remunerationActuelle={remunerationAppliquee} />
+          <TableDesValeurs resultat={affiche} onExporter={() => exporterCourbeCsv(vueDeLAnnee(session, annee), affiche, activityName)} />
+        </div>
       ) : null}
     </section>
   )

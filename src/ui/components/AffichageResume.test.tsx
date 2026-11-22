@@ -62,7 +62,8 @@ describe("barre de résumé", () => {
     expect(within(barre).getByRole("link", { name: /Net du foyer.*67.400.€.*voir le détail/ })).toHaveAttribute("href", "#bilan")
     expect(within(barre).getByRole("link", { name: /Prélèvements.*32,6.%/ })).toHaveAttribute("href", "#bilan")
     expect(espaces(within(barre).getByRole("link", { name: /Meilleur statut pour « Mon atelier »/ }).textContent ?? "")).toContain("Micro + versement libératoire, +3 000 €")
-    expect(within(barre).getByRole("link", { name: /Alertes.*0/ })).toHaveAttribute("href", "#resultats-titre")
+    // Sans alerte, pas de « Alertes 0 ».
+    expect(within(barre).queryByRole("link", { name: /Alertes/ })).not.toBeInTheDocument()
     expect(barre).toHaveTextContent("2026")
   })
 

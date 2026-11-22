@@ -5,7 +5,7 @@
 import type { ComparaisonOptions, ComparaisonResult, FoyerFiscalResult, OptimisationRemuneration, PointRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { documentCsv, montant, type CelluleCsv } from "./csv"
 import { dispositifsDesAnnees, exonerationsDeZone, fluxParActeur, fraisProfessionnelsDesPersonnes, issueDuVersementLiberatoire, libelleDeduction, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees } from "./export-commun"
-import { conditionsDuPortageEnPhrase, libellesRepartition, posteFraisLabels, statutsFrais } from "./comparateur-options"
+import { conditionsDuPortageEnPhrase, libellesRepartition, posteFraisLabels, quatreTrimestresExiges, statutsFrais } from "./comparateur-options"
 import { numeroterNotes } from "./notes"
 import { avecUnePerteConservee, netDeLaSituationSaisie, raisonDeNonRetenue, referenceDesEcarts } from "./resume"
 import { netCompare } from "@/backend/logic/net-compare"
@@ -187,13 +187,14 @@ const libellesFrais: Record<(typeof statutsFrais)[number], string> = { SASU: "SA
 
 /** Rémunération nette annuelle des colonnes SASU et EURL, selon la répartition choisie. */
 function lignesDeRemuneration(options: ComparaisonOptions, scenarios: ScenarioStatut[]): [string, CelluleCsv][] {
-  const { mode, avecRetraite } = options.repartition
+  const { mode } = options.repartition
   if (mode === "remuneration") return [["Rémunération nette annuelle (SASU, EURL)", "la plus haute possible"]]
   if (mode !== "meilleurNet") return [["Rémunération nette annuelle (SASU, EURL)", montant(options.remunerationNette)]]
   const retenues = scenarios.flatMap((s): [string, CelluleCsv][] => (s.remunerationOptimale ? [[`Rémunération nette annuelle retenue, ${s.libelle}`, montant(s.remunerationOptimale.remunerationNette)]] : []))
   // Ce que coûtent les 4 trimestres en net du foyer, colonne par colonne, que la case soit cochée ou non.
   const couts = scenarios.flatMap((s): [string, CelluleCsv][] => (s.remunerationOptimale?.coutDesQuatreTrimestres ? [[`Net en moins avec 4 trimestres de retraite, ${s.libelle}`, montant(s.remunerationOptimale.coutDesQuatreTrimestres)]] : []))
-  return [["Rémunération nette annuelle (SASU, EURL)", "au meilleur net de chaque statut"], ["4 trimestres de retraite exigés", ouiNon(avecRetraite === true)], ...retenues, ...couts]
+  const exiges = quatreTrimestresExiges(options.repartition)
+  return [["Rémunération nette annuelle (SASU, EURL)", "au meilleur net de chaque statut"], ["4 trimestres de retraite exigés", typeof exiges === "boolean" ? ouiNon(exiges) : exiges], ...retenues, ...couts]
 }
 
 /** Réglages du comparateur, pour qu'on sache à quoi correspondent les chiffres ; au meilleur net, la rémunération retenue par statut. */

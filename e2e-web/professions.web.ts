@@ -60,7 +60,7 @@ test("choisir « Masseur-kinésithérapeute » : la caisse sur la carte, plus de
 
   // La carte dit la profession et sa caisse ; le comparateur retire les colonnes micro, avec la raison.
   await expect(carteDuCabinet(page)).toContainText("EI au réel · Masseur-kinésithérapeute (CARPIMKO)")
-  await expect(tableau(page).getByRole("columnheader", { name: /^EI au réel/ })).toBeVisible()
+  await expect(tableau(page).getByRole("columnheader", { name: /^(Meilleur net\s*)?EI au réel/ })).toBeVisible()
   await expect(tableau(page).getByRole("columnheader", { name: /^Micro-entreprise/ })).toHaveCount(0)
   await expect(page.getByText(/Micro-entreprise non proposée : elle est interdite aux praticiens et auxiliaires médicaux/).first()).toBeVisible()
   await auditer(page, "comparateur d'un kinésithérapeute")
