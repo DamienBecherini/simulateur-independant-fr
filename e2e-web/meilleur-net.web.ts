@@ -105,4 +105,17 @@ test.describe("dans une fenêtre étroite", () => {
     await page.waitForTimeout(500)
     expect(await zone.evaluate(element => element.scrollLeft)).toBe(0)
   })
+
+  test("arriver au tableau à la molette, le pointeur passant dessus, ne l'empêche pas de montrer le meilleur net", async ({ page }) => {
+    await page.goto("./")
+    const zone = page.getByRole("region", { name: "Tableau de comparaison" })
+    await expect(tableau(page).locator("th[data-meilleur]")).toContainText("Micro + versement libératoire")
+    // Le pointeur au milieu de la fenêtre : en descendant la page, le tableau passe dessous et reçoit la molette.
+    await page.mouse.move(360, 450)
+    for (let tour = 0; tour < 80 && !(await zone.evaluate(element => element.getBoundingClientRect().top < 300)); tour++) {
+      await page.mouse.wheel(0, 150)
+      await page.waitForTimeout(30)
+    }
+    await expect.poll(() => zone.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+  })
 })

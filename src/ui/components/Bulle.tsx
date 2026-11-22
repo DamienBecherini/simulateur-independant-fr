@@ -36,6 +36,16 @@ interface BullePoseeProps {
  * se replace quand un tableau défile de côté. Elle se ferme d'un clic ailleurs, à Échap (le focus revient à l'ancre)
  * et quand la fenêtre change de taille. Faire défiler n'est pas cliquer : cela ne la ferme pas.
  */
+/**
+ * Bas des barres collées en haut de l'écran : la barre d'outils (fixe) et la barre de résumé quand elle est collée
+ * dessous ; plus bas dans la page, cette dernière défile avec le contenu et ne cache rien.
+ */
+function basDesBarres(): number {
+  const outils = document.querySelector("nav[aria-label=\"Barre d'outils\"]")?.getBoundingClientRect().bottom ?? 0
+  const resume = document.querySelector("[data-barre-collante]")?.getBoundingClientRect()
+  return resume && resume.top <= outils + 1 ? Math.max(outils, resume.bottom) : outils
+}
+
 export function BullePosee({ id, ancre, onFermer, teinte, contenuCle, onTexte, children }: BullePoseeProps) {
   const bulle = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null)
@@ -47,7 +57,7 @@ export function BullePosee({ id, ancre, onFermer, teinte, contenuCle, onTexte, c
     if (!bulle.current) return
     const zoom = Number.parseFloat(getComputedStyle(document.body).zoom) || 1
     const cadre = bulle.current.getBoundingClientRect()
-    const place = placerLaBulle(ancre.getBoundingClientRect(), { largeur: cadre.width, hauteur: cadre.height }, { largeur: document.documentElement.clientWidth, hauteur: window.innerHeight }, zoom, cote.current)
+    const place = placerLaBulle(ancre.getBoundingClientRect(), { largeur: cadre.width, hauteur: cadre.height }, { largeur: document.documentElement.clientWidth, hauteur: window.innerHeight, haut: basDesBarres() }, zoom, cote.current)
     cote.current = place.cote
     // Sans arrondir le défilement : deux arrondis de suite décaleraient la bulle de 2 px à l'écran sous un zoom de 200 %.
     const dansLaPage = { left: place.left + window.scrollX / zoom, top: place.top + window.scrollY / zoom }

@@ -19,9 +19,22 @@ describe("place de la bulle d'une note", () => {
     expect(placerLaBulle(pastille(1270, 200), bulle, ecran).left).toBe(1280 - 320 - 8)
   })
 
-  it("passe au-dessus quand la place manque dessous, sauf si elle manque aussi dessus", () => {
+  it("passe au-dessus quand la place manque dessous ; sans place d'aucun côté, remonte dans l'écran sur sa pastille", () => {
     expect(placerLaBulle(pastille(900, 700), bulle, ecran).top).toBe(700 - 6 - 120)
-    expect(placerLaBulle(pastille(900, 60), bulle, { largeur: 1280, hauteur: 150 }).top).toBe(90)
+    // Écran de 150 px : ni dessous (90 + 120 > 142) ni dessus ; ramenée à 150 - 8 - 120 = 22 px, elle tient entière.
+    expect(placerLaBulle(pastille(900, 60), bulle, { largeur: 1280, hauteur: 150 }).top).toBe(22)
+    // Plus haute que l'écran : elle commence en haut, sous la marge.
+    expect(placerLaBulle(pastille(900, 60), { largeur: 320, hauteur: 400 }, { largeur: 1280, hauteur: 150 }).top).toBe(8)
+  })
+
+  it("ne passe pas au-dessus si elle y serait sous les barres collées en haut de l'écran : elle reste dessous", () => {
+    // Pastille à 700 px, bulle de 120 px : au-dessus, elle irait de 574 à 694 px, en partie sous des barres qui finissent à 600 px.
+    // Ni dessous (730 + 120 > 792) : ramenée dans la partie libre, de 672 à 792 px.
+    expect(placerLaBulle(pastille(900, 700), bulle, { ...ecran, haut: 600 })).toEqual({ left: 604, top: 672, cote: "ramenee" })
+    // Plus haute que la partie libre : elle commence juste sous les barres, jamais dessous.
+    expect(placerLaBulle(pastille(900, 700), { largeur: 320, hauteur: 300 }, { ...ecran, haut: 600 }).top).toBe(608)
+    // Des barres moins hautes laissent la place au-dessus.
+    expect(placerLaBulle(pastille(900, 700), bulle, { ...ecran, haut: 400 })).toMatchObject({ top: 574, cote: "dessus" })
   })
 
   it("sous un zoom, donne des coordonnées de la page : celles de l'écran divisées par le zoom", () => {

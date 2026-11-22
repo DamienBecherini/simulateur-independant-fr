@@ -72,7 +72,7 @@ const LIBELLE_DE_LIGNE = cn(COLONNE_FIXE, "bg-background px-3 py-2 text-left fon
 /** Activité que le comparateur peut étudier : une société ou une micro-entreprise. */
 type ActiviteComparable = Company | MicroEntreprise
 
-interface ComparatorPanelProps {
+export interface ComparatorPanelProps {
   session: SessionState
   /** Année comparée : celle qui est affichée. */
   annee: number
@@ -555,15 +555,22 @@ function useReglages(vue: SimulationAnnuelle, comparateur: Comparateur | undefin
   return { selected, effectiveOptions, statutEtudie: reglages?.statutEtudie, setOptions, setStatutEtudie, selectActivity, partMiseEnReserve, setPartMiseEnReserve }
 }
 
+/** L'arbitrage de la société dans sa forme : celui du comparateur, sinon celui affiché s'il porte sur elle. */
+function arbitrageDeLaForme(forme: StatutSociete, result: ComparaisonResult | null, arbitrage: { statut: StatutSociete; resultat: OptimisationRemuneration | null }): OptimisationRemuneration | null {
+  return result?.optimisations?.[forme] ?? (arbitrage.statut === forme ? arbitrage.resultat : null)
+}
+
 /**
  * Transmet l'activité comparée, le résultat et, pour une société à l'IS, son arbitrage rémunération / dividendes à qui
  * le demande ; rien quand il n'y a ni activité ni couple en union libre à comparer. L'arbitrage d'une micro-entreprise
  * ou d'une entreprise individuelle porte sur une société qu'elle n'est pas : la barre de résumé ne le reprend pas.
+ * L'arbitrage est celui de sa forme (une SASU : celui de la SASU), pas celui de la société étudiée sous « Approfondir
+ * une société » : choisir EURL pour comparer ne change pas la rémunération optimale de la SASU dans la barre.
  */
-function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onComparaison"], selected: ActiviteComparable | undefined, result: ComparaisonResult | null, arbitrage: OptimisationRemuneration | null) {
+function useSignalerLaComparaison(onComparaison: ComparatorPanelProps["onComparaison"], selected: ActiviteComparable | undefined, result: ComparaisonResult | null, arbitrage: { statut: StatutSociete; resultat: OptimisationRemuneration | null }) {
   const activite = selected?.name ?? null
   const avecCouples = (result?.couples.length ?? 0) > 0
-  const optimisation = selected?.type === "company" && estSocieteIS(selected.legalStatus) ? arbitrage : null
+  const optimisation = selected?.type === "company" && estSocieteIS(selected.legalStatus) ? arbitrageDeLaForme(selected.legalStatus, result, arbitrage) : null
   useEffect(() => {
     onComparaison?.(activite === null && !avecCouples ? null : { activite, result, optimisation })
   }, [onComparaison, activite, avecCouples, result, optimisation])
@@ -768,7 +775,7 @@ export function ComparatorPanel({ session, annee, onComparateurChange, onCompara
   const arbitrage = useArbitrage(session, effectiveOptions, vue.annee, selected, result, { statutEtudie, setStatutEtudie })
   const plafonds = usePlafonds(session, effectiveOptions, vue.annee, selected, result, arbitrage)
   const couples = result?.couples ?? []
-  useSignalerLaComparaison(onComparaison, selected, result, arbitrage.resultat)
+  useSignalerLaComparaison(onComparaison, selected, result, arbitrage)
   if (!selected && couples.length === 0) return null
 
   const personName = (id: string) => session.entities.find(e => e.id === id)?.name ?? id
