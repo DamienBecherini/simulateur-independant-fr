@@ -24,14 +24,27 @@ const notes = (page: Page) => page.getByText(/^Notes sur « SASU de Karim »/).l
 const noteChoisie = (page: Page) => notes(page).locator('[aria-live="polite"]')
 
 /** La bulle est-elle entièrement dans l'écran, et à quelle distance de sa pastille (6 px de l'écran, dessous ou dessus) ? */
-async function bullePresDeSaPastille(page: Page): Promise<{ dansLEcran: boolean; ecart: number }> {
+/**
+ * Où est la bulle : entière dans l'écran, sous les barres collées en haut (barre d'outils, barre de résumé collée),
+ * à quelle distance de sa pastille, et si elle est posée sur elle (ramenée dans l'écran faute de place d'un côté
+ * comme de l'autre).
+ */
+async function bullePresDeSaPastille(page: Page): Promise<{ dansLEcran: boolean; sousLesBarres: boolean; ecart: number; surSaPastille: boolean }> {
   return page.evaluate(() => {
     const b = document.querySelector('[role="tooltip"]')!.getBoundingClientRect()
     // La pastille ouverte, dans le contenu : le bouton « Réduire » du bandeau de la démo est lui aussi aria-expanded.
     const p = document.querySelector('main button[aria-expanded="true"]')!.getBoundingClientRect()
+    const outils = document.querySelector("nav[aria-label=\"Barre d'outils\"]")?.getBoundingClientRect().bottom ?? 0
+    const resume = document.querySelector("[data-barre-collante]")?.getBoundingClientRect()
+    const barres = resume && resume.top <= outils + 1 ? Math.max(outils, resume.bottom) : outils
     const dessous = b.top - p.bottom
     const dessus = p.top - b.bottom
-    return { dansLEcran: b.left >= 0 && b.top >= 0 && b.right <= document.documentElement.clientWidth && b.bottom <= window.innerHeight, ecart: Math.round(Math.max(dessous, dessus)) }
+    return {
+      dansLEcran: b.left >= 0 && b.top >= 0 && b.right <= document.documentElement.clientWidth && b.bottom <= window.innerHeight,
+      sousLesBarres: b.top >= barres,
+      ecart: Math.round(Math.max(dessous, dessus)),
+      surSaPastille: b.top < p.bottom && b.bottom > p.top
+    }
   })
 }
 
@@ -103,7 +116,7 @@ for (const [largeur, zoom] of [
   [1024, 1.5],
   [390, 1]
 ] as const) {
-  test(`fenêtre de ${largeur} px, zoom demandé de ${zoom * 100} % : la bulle reste dans l'écran, près de sa pastille`, async ({ page }) => {
+  test(`fenêtre de ${largeur} px, zoom demandé de ${zoom * 100} % : la bulle reste dans l'écran, hors des barres du haut, près de sa pastille`, async ({ page }) => {
     await page.setViewportSize({ width: largeur, height: 800 })
     await page.addInitScript(z => window.localStorage.setItem("simulateur.preferences", JSON.stringify({ slotOrder: [], affichage: "resume", zoom: z, sectionsOuvertes: { "comparateur-toutes-les-lignes": true } })), zoom)
     await page.goto(SITUATION)
@@ -118,7 +131,10 @@ for (const [largeur, zoom] of [
       await expect(bulle(page)).toBeVisible()
       const place = await bullePresDeSaPastille(page)
       expect(place.dansLEcran, `pastille ${rang}`).toBe(true)
-      expect(Math.abs(place.ecart - 6), `pastille ${rang}`).toBeLessThanOrEqual(1)
+      // Jamais cachée sous la barre de résumé collée en haut (à 200 %, elle s'y ouvrait au-dessus de sa pastille).
+      expect(place.sousLesBarres, `pastille ${rang}`).toBe(true)
+      // À 6 px de sa pastille, ou posée sur elle quand la place manque d'un côté comme de l'autre.
+      if (!place.surSaPastille) expect(Math.abs(place.ecart - 6), `pastille ${rang}`).toBeLessThanOrEqual(1)
       await page.keyboard.press("Escape")
       await expect(bulle(page)).toHaveCount(0)
     }

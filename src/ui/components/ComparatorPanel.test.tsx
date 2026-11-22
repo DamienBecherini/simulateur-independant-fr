@@ -486,8 +486,14 @@ describe("ComparatorPanel", () => {
     vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(optimisation)
     const onComparaison = vi.fn()
 
-    const { unmount } = render(<ComparatorPanel session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} annee={2026} onComparateurChange={() => {}} onComparaison={onComparaison} />)
+    const { unmount } = render(<ComparateurDeTest session={{ ...emptySession(), entities: [makePerson(), makeCompany()] }} annee={2026} onComparaison={onComparaison} />)
     await vi.waitFor(() => expect(onComparaison).toHaveBeenLastCalledWith(expect.objectContaining({ activite: "Ma SASU", optimisation })))
+    // Étudier l'EURL sous « Approfondir une société » ne change pas l'arbitrage de la SASU transmis à la barre.
+    const eurl = { ...optimisation, statut: "EURL" as const, meilleur: { ...point, remunerationNette: 53400 } }
+    vi.mocked(window.api.optimiserRemuneration).mockResolvedValue(eurl)
+    await userEvent.click(within(await screen.findByRole("group", { name: "Société étudiée" })).getByRole("button", { name: "EURL" }))
+    await vi.waitFor(() => expect(within(screen.getByRole("group", { name: "Société étudiée" })).getByRole("button", { name: "EURL" })).toHaveAttribute("aria-pressed", "true"))
+    expect(onComparaison).toHaveBeenLastCalledWith(expect.objectContaining({ activite: "Ma SASU", optimisation }))
     unmount()
 
     onComparaison.mockClear()

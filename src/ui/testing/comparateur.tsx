@@ -3,22 +3,25 @@
 
 import { useState } from "react"
 import type { Comparateur, SessionState } from "@/types"
-import { ComparatorPanel } from "@/ui/components/ComparatorPanel"
+import { ComparatorPanel, type ComparatorPanelProps } from "@/ui/components/ComparatorPanel"
 
 interface ComparateurDeTestProps {
   session: SessionState
   annee: number
   /** Appelée avec les réglages du comparateur à chaque modification, pour les vérifier. */
   onComparateur?: (comparateur: Comparateur) => void
+  /** Ce que le comparateur transmet à la barre de résumé. */
+  onComparaison?: ComparatorPanelProps["onComparaison"]
 }
 
 /** Le comparateur, avec les réglages qu'il enregistre gardés à côté de la session reçue. */
-export function ComparateurDeTest({ session, annee, onComparateur }: ComparateurDeTestProps) {
+export function ComparateurDeTest({ session, annee, onComparateur, onComparaison }: ComparateurDeTestProps) {
   const [comparateur, setComparateur] = useState<Comparateur | undefined>(session.comparateur)
   return (
     <ComparatorPanel
       session={comparateur ? { ...session, comparateur } : session}
       annee={annee}
+      onComparaison={onComparaison}
       onComparateurChange={modifier =>
         setComparateur(actuel => {
           const nouveau = modifier(actuel)

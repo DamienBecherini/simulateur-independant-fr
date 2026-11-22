@@ -63,8 +63,13 @@ export function useDefilementHorizontal(zone: RefObject<HTMLElement | null>): Et
   return { ...etat, defiler }
 }
 
-/** Gestes de l'utilisateur dans la zone : après l'un d'eux, elle ne défile plus d'elle-même. */
-const GESTES = ["pointerdown", "wheel", "touchstart", "keydown"] as const
+/**
+ * Gestes de l'utilisateur dans la zone : un clic de souris (barre de défilement, flèche, case) ou une touche ; après
+ * l'un d'eux, ou dès qu'elle a défilé de côté sous sa main (doigt, pavé tactile, molette avec Maj), elle ne défile
+ * plus d'elle-même. Faire défiler la page (molette ou doigt au-dessus du tableau) ne compte pas : c'est justement
+ * ainsi qu'on arrive au tableau.
+ */
+const GESTES = ["pointerdown", "keydown"] as const
 
 /**
  * À la première apparition de la zone à l'écran, la fait défiler jusqu'à l'élément désigné (`cible`, un sélecteur :
@@ -77,9 +82,19 @@ export function useMontrerAuPremierAffichage(zone: RefObject<HTMLElement | null>
     const element = zone.current
     if (!element || !cible || typeof IntersectionObserver === "undefined") return
     let observateur: IntersectionObserver | null = null
+    const debut = element.scrollLeft
+    const surGeste = (evenement: Event) => {
+      // Un doigt posé sur le tableau fait souvent défiler la page : seul un défilement de côté compte (surDefilement).
+      if (evenement instanceof PointerEvent && evenement.pointerType !== "mouse") return
+      terminer()
+    }
+    const surDefilement = () => {
+      if (element.scrollLeft !== debut) terminer()
+    }
     const terminer = () => {
       observateur?.disconnect()
-      for (const geste of GESTES) element.removeEventListener(geste, terminer)
+      for (const geste of GESTES) element.removeEventListener(geste, surGeste)
+      element.removeEventListener("scroll", surDefilement)
     }
     const montrer = (entrees: IntersectionObserverEntry[]) => {
       if (!entrees.some(entree => entree.isIntersecting)) return
@@ -90,7 +105,8 @@ export function useMontrerAuPremierAffichage(zone: RefObject<HTMLElement | null>
       const position = defilementPourMontrer(mesurer(element), { gauche, droite: gauche + colonne.offsetWidth })
       if (position !== null) element.scrollTo({ left: position, behavior: comportementDuDefilement() })
     }
-    for (const geste of GESTES) element.addEventListener(geste, terminer, { passive: true })
+    for (const geste of GESTES) element.addEventListener(geste, surGeste, { passive: true })
+    element.addEventListener("scroll", surDefilement, { passive: true })
     observateur = new IntersectionObserver(montrer, { threshold: 0.2 })
     observateur.observe(element)
     return terminer
