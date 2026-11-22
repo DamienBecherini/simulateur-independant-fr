@@ -11,6 +11,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
 import type { SessionState } from "../src/types"
 import { test, expect, deposerAffichage, deposerSession, lireFichier } from "./support/fixtures"
 import { auditerAccessibilite } from "./support/accessibilite"
+import { attendreLaFinDesAnimations } from "./support/animations"
 import { defautsDeLaFenetre, defautsDeLisibilite } from "../e2e-web/support/lisibilite"
 import { valeurDeLigne } from "./support/interface"
 import { ATELIER, sessionMicroBnc } from "./support/sessions"
@@ -239,7 +240,12 @@ test("beaucoup de modifications de l'IA dans une fenêtre basse, interface zoom�
   await expect(notification).toHaveCount(1)
   await expect(notification).toContainText(`L'IA a modifié ${montants.length} éléments déjà saisis`)
   // … au premier plan de la pile, devant les notifications brèves arrivées avec chaque modification.
-  await expect(page.locator("[data-sonner-toast][data-front='true']").locator("[data-notification-ia]")).toBeVisible()
+  const auPremierPlan = page.locator("[data-sonner-toast][data-front='true']")
+  await expect(auPremierPlan.locator("[data-notification-ia]")).toBeVisible()
+  // Elle entre en glissant depuis le haut : sonner la place d'abord à -100 % de sa hauteur, puis lance la transition une
+  // fois montée (data-mounted). Mesurée avant, elle était au-dessus de la fenêtre (y = -348 en CI, de temps en temps).
+  await expect(auPremierPlan).toHaveAttribute("data-mounted", "true")
+  await attendreLaFinDesAnimations(page)
   // La plus récente en premier, et toutes listées.
   const liste = notification.getByRole("list")
   await expect(liste.getByRole("listitem")).toHaveCount(montants.length)
