@@ -14,6 +14,7 @@ import { pourcentDeNombre } from "@/backend/logic/format"
 import { Button } from "@/components/ui/button"
 import { AFFICHAGES } from "@/lib/affichage"
 import { cn } from "@/lib/utils"
+import { ID_DU_MENU_PLUS_D_ACTIONS } from "@/lib/questions-de-depart"
 import { infobulleDuZoom, type EtatDuZoom } from "@/lib/zoom"
 import type { Affichage } from "@/types"
 import { useTheme } from "../hooks/useTheme"
@@ -156,7 +157,7 @@ export function MenuPlusDActions({ affichage, onAffichage, onAvis, onMontages, z
 
   return (
     <div ref={conteneur} className={cn("relative", className)}>
-      <Button ref={bouton} variant="ghost" size="icon" aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? `${id}-menu` : undefined} className="h-10 w-9 pointer-coarse:h-11 pointer-coarse:w-11 [&_svg]:size-6" onClick={() => (ouvert ? fermer(false) : ouvrir("debut"))} onKeyDown={toucheDuBouton}>
+      <Button ref={bouton} id={ID_DU_MENU_PLUS_D_ACTIONS} variant="ghost" size="icon" aria-label="Plus d'actions" aria-haspopup="menu" aria-expanded={ouvert} aria-controls={ouvert ? `${id}-menu` : undefined} className="h-10 w-9 pointer-coarse:h-11 pointer-coarse:w-11 [&_svg]:size-6" onClick={() => (ouvert ? fermer(false) : ouvrir("debut"))} onKeyDown={toucheDuBouton}>
         <EllipsisVertical className="text-slate-600 dark:text-slate-400" />
       </Button>
       {ouvert ? (

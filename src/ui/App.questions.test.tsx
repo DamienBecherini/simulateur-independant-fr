@@ -106,7 +106,7 @@ describe("App : « Par où commencer ? » dans la page", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Nouvelle Simulation" })).toBeInTheDocument()
     expect(within(screen.getByRole("tablist", { name: "Vues de la page" })).getByRole("tab", { name: /situation/i })).toHaveAttribute("aria-selected", "true")
     await vi.waitFor(() => expect(screen.getByRole("button", { name: "+ Ajouter une personne" })).toHaveFocus())
-    // Simulation vide : le bloc reste là, pour choisir une question plus tard.
-    expect(encart()).toBeInTheDocument()
+    // Le choix est fait : le bloc s'efface, sans que sa fermeture soit retenue (il revient au prochain lancement).
+    expect(encart()).toBeNull()
   })
 })

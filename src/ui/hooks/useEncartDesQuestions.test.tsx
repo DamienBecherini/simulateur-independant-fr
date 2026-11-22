@@ -1,14 +1,18 @@
 // src/ui/hooks/useEncartDesQuestions.test.tsx
 
-import { renderHook } from "@testing-library/react"
+import { act, renderHook } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
+import { toast } from "sonner"
 import { ANCRES } from "@/lib/ancres"
+import { ID_DU_BOUTON_DES_SITUATIONS } from "@/lib/questions-de-depart"
 import type { SessionState, UserPreferences } from "@/types"
 import { emptySession, makePerson } from "@/ui/testing/fixtures"
 import { PLATEFORME_DE_BUREAU, PlateformeContext, type Plateforme } from "../plateforme"
 import { useEncartDesQuestions } from "./useEncartDesQuestions"
 import type { Vues } from "./useVues"
+
+vi.mock("sonner", () => ({ toast: { info: vi.fn() } }))
 
 const PREFERENCES: UserPreferences = { slotOrder: [] }
 
@@ -16,7 +20,7 @@ function monter(session: SessionState, { vues = null, plateforme = PLATEFORME_DE
   const actions = { setPreferences: vi.fn(), reinitialiser: vi.fn() }
   const avecLaPlateforme = ({ children }: { children: ReactNode }) => <PlateformeContext value={plateforme}>{children}</PlateformeContext>
   const { result } = renderHook(() => useEncartDesQuestions({ session, sessionChargee: true, preferences, vues, ...actions }), { wrapper: avecLaPlateforme })
-  return { encart: result.current, ...actions }
+  return { encart: result.current, resultat: result, ...actions }
 }
 
 describe("useEncartDesQuestions", () => {
@@ -38,6 +42,22 @@ describe("useEncartDesQuestions", () => {
     const remplie = monter({ ...emptySession(), entities: [makePerson()] })
     remplie.encart.partirDeZero()
     expect(remplie.reinitialiser).toHaveBeenCalledTimes(1)
+  })
+
+  it("« Partir de zéro » efface le bloc sans retenir sa fermeture, et signale le bouton « Situations types » de la barre d'outils", () => {
+    const bouton = document.createElement("button")
+    bouton.id = ID_DU_BOUTON_DES_SITUATIONS
+    document.body.append(bouton)
+    // jsdom ne calcule pas de boîtes : le bouton est réputé affiché.
+    vi.spyOn(bouton, "getClientRects").mockReturnValue({ length: 1 } as DOMRectList)
+    const { resultat, setPreferences } = monter(emptySession())
+
+    act(() => resultat.current.partirDeZero())
+    expect(resultat.current.affiche).toBe(false)
+    expect(setPreferences).not.toHaveBeenCalled()
+    expect(bouton).toHaveAttribute("data-reperee")
+    expect(toast.info).toHaveBeenCalledWith(expect.stringContaining("« Situations types »"))
+    bouton.remove()
   })
 
   it("la fermeture est retenue dans les préférences, et le focus passe au contenu", () => {

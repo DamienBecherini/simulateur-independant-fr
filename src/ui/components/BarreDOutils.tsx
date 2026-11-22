@@ -20,6 +20,7 @@ import type { useZoom } from "../hooks/useZoom"
 import { BoutonDesTests } from "./BoutonDesTests"
 import { DialogueDAvis } from "./DialogueDAvis"
 import { MenuPlusDActions } from "./MenuPlusDActions"
+import { ID_DU_BOUTON_DES_SITUATIONS } from "@/lib/questions-de-depart"
 import { BoutonDesMontages, FenetreDesMontages } from "./MontagesTypes"
 import { SelecteurAffichage } from "./SelecteurAffichage"
 import { ThemeToggle } from "./ThemeToggle"
@@ -135,7 +136,7 @@ export function BarreDOutils({ session, historique, chargement, affichage, onAff
                   <span className={nomDeLAvis.nom}>Donner mon avis</span>
                 </Button>
               )}
-              <BoutonDesMontages variant="outline" size="sm" aria-label="Situations types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 @max-[39rem]:hidden @min-[39rem]:ml-2" onCharger={chargement.onChargerUnMontage} confirmationNecessaire={chargement.confirmationNecessaire} nomDeLaSession={session.name}>
+              <BoutonDesMontages id={ID_DU_BOUTON_DES_SITUATIONS} variant="outline" size="sm" aria-label="Situations types" className="ml-1 h-8 gap-2 pointer-coarse:min-w-11 @max-[39rem]:hidden @min-[39rem]:ml-2" onCharger={chargement.onChargerUnMontage} confirmationNecessaire={chargement.confirmationNecessaire} nomDeLaSession={session.name}>
                 <span className="hidden @min-[47rem]:inline">Situations types</span>
               </BoutonDesMontages>
               {/* En mode développement seulement : scénarios prêts à charger pour vérifier une fonctionnalité. */}

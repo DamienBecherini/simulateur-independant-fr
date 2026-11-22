@@ -195,7 +195,7 @@ export function ConfirmationDuMontage({ montage, nomDeLaSession, onAnnuler, onCo
 }
 
 /** Le bouton « Partir d'une situation type », qui ouvre la fenêtre « Par où commencer ? ». */
-export function BoutonDesMontages({ children, ...props }: Omit<FenetreDesMontagesProps, "open" | "onOpenChange"> & Pick<ButtonProps, "variant" | "size" | "className" | "aria-label"> & { children?: ReactNode }) {
+export function BoutonDesMontages({ children, ...props }: Omit<FenetreDesMontagesProps, "open" | "onOpenChange"> & Pick<ButtonProps, "variant" | "size" | "className" | "aria-label" | "id"> & { children?: ReactNode }) {
   const [ouverte, setOuverte] = useState(false)
   const { onCharger, confirmationNecessaire, nomDeLaSession, ...bouton } = props
   return (

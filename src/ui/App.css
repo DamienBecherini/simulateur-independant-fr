@@ -278,6 +278,11 @@
   border-radius: 8px;
   animation: reperage 2.4s ease-out forwards;
 }
+/* Un bouton de la barre d'outils (« Partir de zéro » montre où retrouver « Par où commencer ? ») : contour plus serré,
+   qui ne sort pas de l'écran au bord droit d'un téléphone. */
+button[data-reperee] {
+  outline-offset: 2px;
+}
 @keyframes reperage {
   0%,
   55% {

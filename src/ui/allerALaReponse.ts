@@ -43,8 +43,13 @@ function seRendreA(ancre: Ancre, element: HTMLElement) {
   // Le focus suit, pour les lecteurs d'écran et le clavier : un titre ne le prend que par programme.
   if (element.tabIndex < 0 && !element.hasAttribute("tabindex")) element.setAttribute("tabindex", "-1")
   element.focus({ preventScroll: true })
-  cadre.setAttribute("data-reperee", "")
-  window.setTimeout(() => cadre.removeAttribute("data-reperee"), DUREE_DU_REPERAGE)
+  signalerUnInstant(cadre)
+}
+
+/** Signale un élément un instant : un contour bleu qui s'efface (`data-reperee`, voir App.css). */
+export function signalerUnInstant(element: HTMLElement) {
+  element.setAttribute("data-reperee", "")
+  window.setTimeout(() => element.removeAttribute("data-reperee"), DUREE_DU_REPERAGE)
 }
 
 /**

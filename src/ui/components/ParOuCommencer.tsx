@@ -3,7 +3,8 @@
 // contenu que la fenêtre (BibliothequeDuDepart.tsx), sur l'onglet des questions, dans la page plutôt qu'une fenêtre :
 // l'encadré de la démo web reste visible. La liste a une hauteur limitée et défile. « Détails » ouvre la fenêtre sur la
 // situation ; une situation chargée depuis une question mène à la zone de la page qui y répond. Le bloc se ferme, et ne
-// revient plus dans la page (préférence de l'utilisateur) : la fenêtre reste à portée par la barre d'outils.
+// revient plus dans la page (préférence de l'utilisateur) : la fenêtre reste à portée par la barre d'outils. « Partir
+// de zéro » l'efface jusqu'au prochain lancement et signale la barre d'outils (useEncartDesQuestions.ts).
 
 import { useId, useState } from "react"
 import { X } from "lucide-react"

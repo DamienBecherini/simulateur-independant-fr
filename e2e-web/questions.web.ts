@@ -131,16 +131,21 @@ for (const ou of ["bloc", "fenêtre"] as const) {
   })
 }
 
-test("« Partir de zéro » remplace l'exemple sans confirmation et porte le focus sur l'ajout d'une personne", async ({ page }) => {
+test("« Partir de zéro » remplace l'exemple sans confirmation, porte le focus sur l'ajout d'une personne, efface le bloc et montre où le retrouver", async ({ page }) => {
   await ouvrir(page)
   await bloc(page).getByRole("button", { name: "Partir de zéro" }).click()
   await expect(page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "+ Ajouter une personne" })).toBeFocused()
   // La page est tout en haut : le focus ne l'a pas fait défiler jusqu'au bouton.
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
-  // Simulation vide : le bloc reste proposé.
-  await expect(bloc(page)).toBeVisible()
   await expect(page.getByRole("button", { name: "Annuler" })).toBeEnabled()
+  // Le choix est fait : le bloc s'efface ; « Situations types », dans la barre d'outils, est signalé et nommé.
+  await expect(bloc(page)).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Situations types", exact: true })).toHaveAttribute("data-reperee", "")
+  await expect(page.getByText("Questions et situations types : bouton « Situations types » de la barre d'outils.")).toBeVisible()
+  // L'effacement n'est pas retenu : au prochain lancement, sur la simulation vide, le bloc revient.
+  await page.reload()
+  await expect(bloc(page)).toBeVisible()
 })
 
 for (const theme of ["clair", "sombre"] as const) {
@@ -170,6 +175,14 @@ test.describe("sur un téléphone", () => {
       await auditer(page, `Par où commencer, 375 px, ${police}`, "#par-ou-commencer")
     })
   }
+
+  test("« Partir de zéro » signale « Plus d'actions », où sont les situations types", async ({ page }) => {
+    await ouvrir(page)
+    await bloc(page).getByRole("button", { name: "Partir de zéro" }).click()
+    await expect(bloc(page)).toHaveCount(0)
+    await expect(page.getByRole("button", { name: "Plus d'actions" })).toHaveAttribute("data-reperee", "")
+    await expect(page.getByText("Questions et situations types : menu « Plus d'actions », puis « Partir d'une situation type ».")).toBeVisible()
+  })
 
   test("les réponses de la barre attendent qu'on la déplie, une fois la page défilée", async ({ page }) => {
     await ouvrir(page)
