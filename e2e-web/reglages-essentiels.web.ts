@@ -77,6 +77,8 @@ for (const affichage of ["classique", "resume"] as const) {
     await expect(page.locator("html")).toHaveClass(/dark/)
     await auditer(page, `réglages du comparateur et curseur, ${affichage}, thème sombre`, comparateur)
     await page.getByRole("radio", { name: "Meilleur net" }).check({ force: true })
+    // Le coût des 4 trimestres arrive après son calcul, en fondu : l'audit attend qu'il soit là, puis la fin du fondu.
+    await expect(page.locator('[id^="comparateur-cout-retraite-"]')).toHaveCount(2)
     await auditer(page, `réglages du comparateur, ${affichage}, thème sombre`, comparateur)
   })
 
