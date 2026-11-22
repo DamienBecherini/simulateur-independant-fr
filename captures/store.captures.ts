@@ -15,7 +15,7 @@ const HAUTEUR = 768
 const capturer = (page: Page, nom: string) => page.screenshot({ path: path.join(DOSSIER, nom), scale: "css" })
 
 /** Fait défiler la page pour que l'élément commence juste sous la barre du haut, qui est fixe. */
-async function amenerSousLaBarre(page: Page, nom: string) {
+async function amenerSousLaBarre(page: Page, nom: string | RegExp) {
   await page.getByRole("heading", { name: nom }).first().evaluate(titre => window.scrollTo(0, titre.getBoundingClientRect().top + window.scrollY - 130))
 }
 
@@ -37,7 +37,8 @@ test("captures de la fiche du Microsoft Store", async ({ dossierDonnees, lancer 
   await capturer(page, "3-resultats.png")
 
   await expect(page.getByRole("region", { name: "Comparateur de statuts" }).getByRole("table", { name: "Comparaison des statuts" })).toBeVisible()
-  await amenerSousLaBarre(page, "Comparateur de statuts")
+  // L'étape 2 du comparateur, son tableau : le net de chaque statut, l'écart et la protection sociale.
+  await amenerSousLaBarre(page, /^Étape 2 : Résultat \d{4}/)
   await capturer(page, "4-comparateur.png")
 
   await expect(page.getByRole("region", { name: "Rémunération ou dividendes ?" }).getByRole("group", { name: /Net du foyer selon la rémunération/ })).toBeVisible()

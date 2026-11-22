@@ -19,6 +19,7 @@ Numérotation ([versionnage sémantique](https://semver.org/lang/fr/)) : le dern
 - [ ] `main` contient tout ce qui doit partir, et l'intégration continue y est au vert : CI (lint, types, tests avec couverture, build), tests de bout en bout, démo web.
 - [ ] `package.json` et `package-lock.json` portent le numéro de la version (`node -p "require('./package.json').version"`).
 - [ ] [CHANGELOG.md](../CHANGELOG.md) a une section `## [X.Y.Z] — AAAA-MM-JJ` datée, une section « Non publié » vide au-dessus, et les liens de comparaison en bas du fichier pointent vers la nouvelle étiquette.
+- [ ] Si l'interface a changé, les captures du README et de la fiche du Store sont régénérées (`npm run captures`) et relues, et la fiche du Store ([microsoft-store/fiche-du-store.md](./microsoft-store/fiche-du-store.md)) dit les nouveautés.
 - [ ] Les noms de fichiers cités dans [installation.md](./installation.md) correspondent à ceux que produit electron-builder (voir le tableau plus bas).
 - [ ] Le workflow « Publication des exécutables » a été lancé à la main sur `main` au moins une fois depuis le dernier changement de `electron-builder.json` ou du workflow, et les trois systèmes ont produit leurs fichiers.
 - [ ] Au moins un exécutable construit a été lancé : la fenêtre s'ouvre, les résultats s'affichent, et le serveur MCP empaqueté répond (voir « Vérifier un exécutable » plus bas).

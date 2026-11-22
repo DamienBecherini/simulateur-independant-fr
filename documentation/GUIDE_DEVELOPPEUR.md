@@ -55,7 +55,7 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm run build` / `npm run build:web` | Compile l'interface (`dist-react/`) ou la démo (`dist-web/`). | Rarement à la main. |
 | `npm run dist:win`, `dist:mac`, `dist:linux`, `dist:store` | Exécutables (electron-builder). | Voir [publication.md](./publication.md). |
 | `npm run essai:store` | Sous Windows : installe une copie signée du paquet du Microsoft Store comme le Store l'installe et vérifie le serveur MCP ; `verifier`, `etat`, `nettoyer`. | Avant une soumission : [publier-sur-le-store.md](./microsoft-store/publier-sur-le-store.md#2-essayer-le-paquet-avant-la-première-soumission). |
-| `npm run captures` | Captures d'écran du README. | Après un changement visible. |
+| `npm run captures` | Captures d'écran du README (`docs/captures/`) et de la fiche du Microsoft Store (`documentation/microsoft-store/captures/`, 1366 × 768), sur la simulation d'exemple de la démo (`captures/*.captures.ts`). | Après un changement visible, et avant chaque version. |
 
 La CI (`.github/workflows/ci.yml`) lance lint, `code-mort`, `typecheck`, `transpile:electron`, `typecheck:tests`, `test:coverage`, `build` et la duplication à chaque push ; `e2e.yml` les tests de bout en bout sur `integration` et `main`, de l'application Electron (`test:e2e`) et de la démo web (`test:web`, et sa mise en page dans Firefox, `test:web:firefox:mise-en-page`) ; `demo-web.yml` teste et publie la démo à chaque push sur `main`.
 
@@ -224,7 +224,7 @@ flowchart TD
 | `migrations.ts`, `data-sanitizer.ts`, `nettoyage-comparateur.ts`, `fichiers-de-donnees.ts`, `sauvegardes-groupees.ts`, `donnees-brutes.ts` | Format de fichier : conversion, nettoyage, lecture et écriture des contenus (`estObjet`, commun, teste un objet JSON encore non validé). | `donnees-de-l-application.ts`, démo, serveur MCP |
 | `baremes.ts`, `format.ts` | Barèmes par tranches et progressifs ; formatage. | calculs |
 
-ADR à lire selon le sujet : persistance 002 et 005 ; IPC 003 ; état de l'interface 004 ; grille 006 ; années de règles 007 ; plusieurs années 008 ; réglages du comparateur 009 ; outils pour les IA 010 et 011 ; démo installable 012 ; Microsoft Store 013 ; réserves 014 ; libéraux réglementés 015 ; portage salarial 016.
+ADR à lire selon le sujet : persistance 002 et 005 ; IPC 003 ; état de l'interface 004 ; grille 006 ; années de règles 007 ; plusieurs années 008 ; réglages du comparateur 009 ; outils pour les IA 010 et 011 ; démo installable 012 ; Microsoft Store 013 ; réserves 014 ; libéraux réglementés 015 ; portage salarial 016 ; exonération en zone franche ou en quartier prioritaire 017 ; règles de structure (rôles permis, entreprises d'un même titulaire) 018 ; ce que le comparateur compare (perte, bénéfice gardé) 019.
 
 ### 2.4 Process principal d'Electron
 
@@ -245,11 +245,12 @@ ADR à lire selon le sujet : persistance 002 et 005 ; IPC 003 ; état de l'inter
 
 Un nouveau canal : sa signature dans `EventPayloadMapping` (`src/globals.d.ts`), son entrée dans `preload.cts` et dans `creerApiNavigateur` (démo web), puis sa déclaration dans le fichier `canaux-*.ts` de son domaine, toujours par `ipcMainHandle`, avec un schéma de `logic/entrees-ipc.ts` pour chaque paramètre.
 
-### 2.5 Interface : ancres de la page et calculs différés
+### 2.5 Interface : ancres de la page, calculs différés et animations
 
 - **Ancres** : tout élément vers lequel mène un lien interne ou une adresse (`#bilan`, `#comparateur-verdict`, `#contenu`…) a son identifiant dans le registre `ANCRES` (`src/lib/ancres.ts`), jamais écrit à la main : l'élément prend `id={ANCRES.bilan}`, le lien `href={lienVers(ANCRES.bilan)}`, une question de départ `ancre: ANCRES.…`. Une ancre ajoutée au registre doit dire sa vue dans `VUE_DE_L_ANCRE` (`src/lib/vues.ts`, table exhaustive) ; `App.ancres.test.tsx` vérifie que chacune est rendue, dans sa vue. Les valeurs sont des adresses publiées : ne les renommez pas.
 - **Adresse d'une situation type** (démo web) : `#situation=<identifiant>` charge une situation type, avec la confirmation de la fenêtre sur une simulation non enregistrée, puis le fragment est retiré (`history.replaceState`). Lecture et liens dans `src/lib/montages/adresse.ts`, comportement dans `SituationParLAdresse.tsx`, actif seulement si la plateforme fournit `lienVersUneSituation` (`plateforme-web.ts`) : l'application de bureau ne lit pas cette adresse. `destinationDeLAdresse` (`vues.ts`) l'écarte, pour qu'elle ne soit pas prise pour la vue « situation ». Les identifiants (`MontageType.id`) sont publics : liste figée par `adresse.test.ts` et publiée dans [liens-vers-les-situations-types.md](./liens-vers-les-situations-types.md).
 - **Calcul différé** : un calcul du moteur relancé après chaque modification passe par `useCalculDiffere` (`src/ui/hooks/useCalculDiffere.ts`) : l'appelant mémorise le calcul avec `useCallback` (ses dépendances sont vérifiées par ESLint chez lui), le hook attend 300 ms, ignore un résultat dépassé et garde le dernier résultat en cas d'échec, sauf `effacerEnCasDEchec` (la simulation des années, `useSimulationDesAnnees`).
+- **Animations** : une liste dont les éléments arrivent ou partent (flux d'un mois, cartes des acteurs, cases de la grille) passe par `useListeAnimee` (`src/ui/hooks/useListeAnimee.ts`, sur `@formkit/auto-animate`) : 200 ms, rien quand le système demande moins d'animations. Le hook rend une ref à poser sur le conteneur et des gestionnaires pour le glisser-déposer de dnd-kit, qui coupent l'animation pendant le geste. Avec `suivreLesHauteurs`, un enfant qui change de hauteur fait glisser ceux du dessous (la grille). Un bloc dont le contenu change de hauteur sans entrer ni sortir passe par `HauteurAnimee` (`src/ui/components/HauteurAnimee.tsx`), qui revient à sa hauteur naturelle au repos. Dans jsdom, qui n'a pas les Web Animations, les deux ne font rien.
 
 ---
 
