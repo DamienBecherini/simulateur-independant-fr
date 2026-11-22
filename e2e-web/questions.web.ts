@@ -1,100 +1,117 @@
 // e2e-web/questions.web.ts
-// Entrée par les questions (parcours utilisateur, P-02 et P-05) : l'encart « Que voulez-vous savoir ? » au-dessus de
-// l'exemple du premier lancement, une question qui charge sa situation type, puis la barre de résumé qui mène à la
-// réponse, y compris dans l'affichage « Trois vues ». Fermeture retenue, téléphone, accessibilité.
+// Entrée par les questions (parcours utilisateur, P-02 et P-05) : « Par où commencer ? » au-dessus de l'exemple du
+// premier lancement, sur l'onglet des questions ; une question qui charge sa situation type puis mène à la zone qui y
+// répond, y compris dans l'affichage « Trois vues » ; le lien vers la situation, les filtres, la barre de résumé.
+// Fermeture retenue, « Partir de zéro », téléphone, accessibilité.
 
 import { test, expect, type Page } from "@playwright/test"
 import { auditerAccessibilite as auditer } from "../e2e/support/accessibilite"
 import { choisirAvantLeChargement } from "./support/affichage"
 import { choisirLaPolice, POLICES } from "./support/police"
 
-const encart = (page: Page) => page.getByRole("region", { name: "Que voulez-vous savoir ?" })
+const bloc = (page: Page) => page.getByRole("region", { name: "Par où commencer ?" })
 const barre = (page: Page) => page.getByRole("region", { name: "Résumé de l'année" })
 
 /** Ouvre la démo à son premier lancement, sur la simulation d'exemple. */
 async function ouvrir(page: Page) {
   await page.goto("./")
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Famille Martin, simulation 2026")
-  await expect(encart(page)).toBeVisible()
+  await expect(bloc(page)).toBeVisible()
 }
 
-/** Choisit une question de l'encart : l'exemple non modifié est remplacé sans confirmation. */
+/** Charge la situation d'une question : l'exemple non modifié est remplacé sans confirmation. */
 async function choisir(page: Page, question: string, situation: string) {
-  await encart(page).getByRole("button", { name: question }).click()
+  await bloc(page).getByRole("button", { name: `Charger la situation qui répond à « ${question} »` }).click()
   await expect(page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).toHaveCount(0)
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(situation)
 }
 
-test("l'encart s'affiche au-dessus de l'exemple ; « Mariage ou Pacs ? » charge le couple, et la barre de résumé mène à la réponse", async ({ page }) => {
+test("le bloc s'affiche au-dessus de l'exemple, sur les questions ; une question charge sa situation et mène à la zone qui y répond", async ({ page }) => {
   await ouvrir(page)
-  // Au-dessus de l'exemple : avant la barre de résumé et le contenu.
-  const avantLeContenu = await encart(page).evaluate(element => Boolean(element.compareDocumentPosition(document.getElementById("contenu")!) & Node.DOCUMENT_POSITION_FOLLOWING))
+  // Au-dessus de l'exemple : avant la barre de résumé et le contenu ; l'encadré de la démo reste visible.
+  const avantLeContenu = await bloc(page).evaluate(element => Boolean(element.compareDocumentPosition(document.getElementById("contenu")!) & Node.DOCUMENT_POSITION_FOLLOWING))
   expect(avantLeContenu).toBe(true)
+  await expect(page.getByRole("complementary", { name: "Démo web" })).toBeInViewport()
+  await expect(bloc(page).getByRole("tab", { name: /^Questions/ })).toHaveAttribute("aria-selected", "true")
 
-  await choisir(page, "Mariage ou Pacs ?", "Couple en union libre, puis marié ou pacsé")
-  // La session n'est plus l'exemple : l'encart s'efface.
-  await expect(encart(page)).toHaveCount(0)
+  await choisir(page, "Le mariage ou le Pacs réduirait-il notre impôt ?", "Couple en union libre, puis marié ou pacsé")
+  // La session n'est plus l'exemple : le bloc s'efface.
+  await expect(bloc(page)).toHaveCount(0)
+  // La zone qui répond : la comparaison du couple, à l'écran, avec le focus, signalée un instant.
+  const zone = page.locator("#comparaison-du-couple")
+  await expect(zone).toBeFocused({ timeout: 10_000 })
+  await expect(zone).toBeInViewport()
+  await expect(page.locator("[data-reperee]")).toHaveCount(1)
+  await expect(page.locator("[data-reperee]")).toHaveCount(0, { timeout: 5000 })
 
+  // La barre de résumé y mène aussi.
   const reponse = barre(page).getByRole("link", { name: /^Mariage ou Pacs/ })
   await expect(reponse).toContainText(/\+\d/)
-  await reponse.click()
-  const couple = page.getByRole("heading", { name: "Et si vous étiez mariés ou pacsés ?" })
-  await expect(couple).toBeInViewport()
-  await expect(page.getByText("Mariage et Pacs ont le même effet sur l'impôt sur le revenu")).toBeVisible()
-  // La comparaison du couple passe avant la courbe de l'activité.
-  const avantLaCourbe = await couple.evaluate(titre => Boolean(titre.compareDocumentPosition(document.getElementById("optimisation-titre")!) & Node.DOCUMENT_POSITION_FOLLOWING))
-  expect(avantLaCourbe).toBe(true)
 })
 
-test("dans l'affichage « Trois vues », la rémunération optimale ouvre « Comparer et optimiser » sur la courbe", async ({ page }) => {
+test("dans l'affichage « Trois vues », une question sur le partage ouvre « Comparer et optimiser » sur « Rémunération ou dividendes ? »", async ({ page }) => {
   await choisirAvantLeChargement(page, "vues")
   await ouvrir(page)
-  await choisir(page, "Rémunération ou dividendes ?", "SASU avec un salaire qui valide 4 trimestres")
+  await choisir(page, "Où se situe le meilleur partage entre rémunération et dividendes ?", "SASU avec un salaire qui valide 4 trimestres")
 
-  const reponse = barre(page).getByRole("link", { name: /^Rémunération optimale/ })
-  await expect(reponse).toBeVisible()
-  await reponse.click()
-  await expect(page.getByRole("tab", { name: /Comparer/ })).toHaveAttribute("aria-selected", "true")
-  await expect(page.getByRole("heading", { name: "Rémunération ou dividendes ?" })).toBeFocused()
-  await expect(page.getByRole("heading", { name: "Rémunération ou dividendes ?" })).toBeInViewport()
+  await expect(page.getByRole("tablist", { name: "Vues de la page" }).getByRole("tab", { name: /Comparer/ })).toHaveAttribute("aria-selected", "true", { timeout: 10_000 })
+  await expect(page.locator("#optimisation-titre")).toBeFocused()
+  await expect(page.locator("#optimisation-titre")).toBeInViewport()
 })
 
-test("« Mes cotisations sont-elles justes ? » charge le kinésithérapeute au réel, dont la carte détaille les cotisations", async ({ page }) => {
+test("le nom de la situation d'une question mène à sa carte, mise en avant ; « Retour aux questions »", async ({ page }) => {
   await ouvrir(page)
-  await choisir(page, "Mes cotisations sont-elles justes ?", "Kinésithérapeute conventionné en entreprise individuelle")
-  await page.getByRole("button", { name: /^Afficher le détail/ }).first().click()
-  await expect(page.getByText("dont retraite complémentaire (CARPIMKO)")).toBeVisible()
+  await bloc(page).getByRole("button", { name: "Voir la situation « Kinésithérapeute conventionné en entreprise individuelle »" }).first().click()
+  await expect(bloc(page).getByRole("tab", { name: /^Situations types/ })).toHaveAttribute("aria-selected", "true")
+  await expect(bloc(page).getByRole("button", { name: "Charger la situation « Kinésithérapeute conventionné en entreprise individuelle »" })).toBeFocused()
+  await bloc(page).getByRole("button", { name: "Retour aux questions" }).click()
+  await expect(bloc(page).getByRole("tab", { name: /^Questions/ })).toHaveAttribute("aria-selected", "true")
 })
 
-test("l'encart fermé ne revient pas au rechargement", async ({ page }) => {
+test("les filtres et la recherche réduisent les questions", async ({ page }) => {
   await ouvrir(page)
-  await encart(page).getByRole("button", { name: "Fermer « Que voulez-vous savoir ? »" }).click()
-  await expect(encart(page)).toHaveCount(0)
+  await bloc(page).getByRole("group", { name: "Foyer" }).getByRole("button", { name: "En couple" }).click()
+  await expect(bloc(page).getByText(/^\d+ questions sur 36$/)).toBeVisible()
+  await bloc(page).getByRole("searchbox", { name: "Rechercher une question" }).fill("kine")
+  await expect(bloc(page).getByText("Aucune question ne correspond.")).toBeVisible()
+  await bloc(page).getByRole("button", { name: "Tout afficher" }).click()
+  await expect(bloc(page).getByRole("list", { name: "Questions" }).getByRole("listitem")).toHaveCount(36)
+})
+
+test("le bloc fermé ne revient pas au rechargement ; la fenêtre reste à portée", async ({ page }) => {
+  await ouvrir(page)
+  await bloc(page).getByRole("button", { name: "Fermer « Par où commencer ? »" }).click()
+  await expect(bloc(page)).toHaveCount(0)
   // Les préférences sont enregistrées peu après chaque changement.
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("simulateur.preferences"))).toContain('"questionsFermees":true')
   await page.reload()
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Famille Martin, simulation 2026")
-  await expect(encart(page)).toHaveCount(0)
+  await expect(bloc(page)).toHaveCount(0)
+  await page.getByRole("button", { name: "Situations types" }).click()
+  await page.getByRole("dialog", { name: "Par où commencer ?" }).getByRole("tab", { name: /^Questions/ }).click()
+  await expect(page.getByRole("dialog", { name: "Par où commencer ?" }).getByRole("list", { name: "Questions" }).getByRole("listitem")).toHaveCount(36)
 })
 
 test("« Partir de zéro » remplace l'exemple sans confirmation et porte le focus sur l'ajout d'une personne", async ({ page }) => {
   await ouvrir(page)
-  await encart(page).getByRole("button", { name: "Partir de zéro" }).click()
+  await bloc(page).getByRole("button", { name: "Partir de zéro" }).click()
   await expect(page.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "+ Ajouter une personne" })).toBeFocused()
-  // Simulation vide : l'encart reste proposé.
-  await expect(encart(page)).toBeVisible()
+  // Simulation vide : le bloc reste proposé.
+  await expect(bloc(page)).toBeVisible()
   await expect(page.getByRole("button", { name: "Annuler" })).toBeEnabled()
 })
 
 for (const theme of ["clair", "sombre"] as const) {
-  test(`l'encart ne présente aucune violation WCAG, thème ${theme}`, async ({ page }) => {
+  test(`le bloc ne présente aucune violation WCAG, thème ${theme}`, async ({ page }) => {
     await ouvrir(page)
     if (theme === "sombre") {
       await page.getByRole("switch", { name: "Changer de thème" }).click()
       await expect(page.locator("html")).toHaveClass(/dark/)
     }
-    await auditer(page, `encart des questions, ${theme}`, "#que-voulez-vous-savoir")
+    await auditer(page, `Par où commencer, questions, ${theme}`, "#par-ou-commencer")
+    await bloc(page).getByRole("tab", { name: /^Situations types/ }).click()
+    await auditer(page, `Par où commencer, situations, ${theme}`, "#par-ou-commencer")
   })
 }
 
@@ -102,24 +119,22 @@ test.describe("sur un téléphone", () => {
   test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true })
 
   for (const police of POLICES) {
-    test(`l'encart tient dans 375 px, sans violation WCAG, ${police}`, async ({ page, context }) => {
+    test(`le bloc tient dans 375 px, sa liste défile, sans violation WCAG, ${police}`, async ({ page, context }) => {
       await choisirLaPolice(context, police)
       await ouvrir(page)
       const debordement = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
       expect(debordement).toBe(false)
-      // Deux colonnes de questions, sans leur précision (lue comme description).
-      const question = encart(page).getByRole("button", { name: "Combien me restera-t-il ?" })
-      await expect(question).toHaveAccessibleDescription("Une micro-entreprise seule : le net après cotisations et impôt.")
-      await expect(encart(page).getByText("Une micro-entreprise seule : le net après cotisations et impôt.")).toBeHidden()
-      await auditer(page, `encart des questions, 375 px, ${police}`, "#que-voulez-vous-savoir")
+      const liste = bloc(page).getByRole("list", { name: "Questions" })
+      expect(await liste.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true)
+      await auditer(page, `Par où commencer, 375 px, ${police}`, "#par-ou-commencer")
     })
   }
 
   test("les réponses de la barre attendent qu'on la déplie, une fois la page défilée", async ({ page }) => {
     await ouvrir(page)
-    await choisir(page, "Mariage ou Pacs ?", "Couple en union libre, puis marié ou pacsé")
+    await choisir(page, "Le mariage ou le Pacs réduirait-il notre impôt ?", "Couple en union libre, puis marié ou pacsé")
     const reponse = barre(page).getByRole("link", { name: /^Mariage ou Pacs/ })
-    await expect(reponse).toBeVisible()
+    await expect(page.locator("#comparaison-du-couple")).toBeFocused({ timeout: 10_000 })
     await page.evaluate(() => window.scrollTo(0, 1500))
     await expect(page.locator("[data-barre-collante]")).toHaveAttribute("data-reduite", "true")
     await expect(reponse).toBeHidden()

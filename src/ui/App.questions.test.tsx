@@ -1,7 +1,7 @@
 // src/ui/App.questions.test.tsx
-// L'encart « Que voulez-vous savoir ? » dans l'application entière : affiché sur une simulation vide ou sur l'exemple
-// du premier lancement, absent ailleurs ; une question remplace l'exemple directement (annulable) ; « Partir de zéro »
-// mène à la saisie, dans sa vue ; la fermeture est retenue dans les préférences.
+// « Par où commencer ? » dans la page, dans l'application entière : affiché sur une simulation vide ou sur l'exemple du
+// premier lancement, absent ailleurs ; une question remplace l'exemple directement (annulable), puis mène à la zone qui
+// y répond ; « Partir de zéro » mène à la saisie, dans sa vue ; la fermeture est retenue dans les préférences.
 
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -34,7 +34,8 @@ async function renderApp(session: SessionState, preferences: UserPreferences = {
   return user
 }
 
-const encart = () => screen.queryByRole("region", { name: "Que voulez-vous savoir ?" })
+const encart = () => screen.queryByRole("region", { name: "Par où commencer ?" })
+const QUESTION_DU_COUPLE = "Charger la situation qui répond à « Le mariage ou le Pacs réduirait-il notre impôt ? »"
 
 /** Préférences enregistrées à la fermeture de la fenêtre. */
 function enregistreesALaFermeture(): UserPreferences {
@@ -42,10 +43,11 @@ function enregistreesALaFermeture(): UserPreferences {
   return vi.mocked(window.api.saveUserPreferences).mock.lastCall![0]
 }
 
-describe("App : encart « Que voulez-vous savoir ? »", () => {
-  it("s'affiche sur une simulation vide, au-dessus du contenu", async () => {
+describe("App : « Par où commencer ? » dans la page", () => {
+  it("s'affiche sur une simulation vide, au-dessus du contenu, sur l'onglet des questions", async () => {
     await renderApp(emptySession())
     expect(encart()).toBeInTheDocument()
+    expect(within(encart()!).getByRole("tab", { name: /^Questions/ })).toHaveAttribute("aria-selected", "true")
     expect(encart()!.compareDocumentPosition(screen.getByRole("main")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
@@ -61,15 +63,15 @@ describe("App : encart « Que voulez-vous savoir ? »", () => {
 
   it("se ferme, rend le focus au contenu et retient sa fermeture", async () => {
     const user = await renderApp(emptySession())
-    await user.click(screen.getByRole("button", { name: "Fermer « Que voulez-vous savoir ? »" }))
+    await user.click(screen.getByRole("button", { name: "Fermer « Par où commencer ? »" }))
     expect(encart()).not.toBeInTheDocument()
     expect(screen.getByRole("main")).toHaveFocus()
     expect(enregistreesALaFermeture()).toMatchObject({ questionsFermees: true })
   })
 
-  it("sur l'exemple de la démo, une question le remplace directement par sa situation type, annulable en une étape, et l'encart s'efface", async () => {
+  it("sur l'exemple de la démo, une question le remplace directement par sa situation type, annulable en une étape, et le bloc s'efface", async () => {
     const user = await renderApp(EXEMPLE, undefined, PLATEFORME_AVEC_EXEMPLE)
-    await user.click(within(encart()!).getByRole("button", { name: "Mariage ou Pacs ?" }))
+    await user.click(within(encart()!).getByRole("button", { name: QUESTION_DU_COUPLE }))
 
     expect(await screen.findByRole("heading", { level: 1, name: "Couple en union libre, puis marié ou pacsé" })).toBeInTheDocument()
     expect(screen.queryByRole("dialog", { name: "Remplacer la simulation en cours ?" })).not.toBeInTheDocument()
@@ -81,10 +83,19 @@ describe("App : encart « Que voulez-vous savoir ? »", () => {
 
   it("sur une simulation vide, une question charge directement sa situation type", async () => {
     const user = await renderApp(emptySession(), undefined, PLATEFORME_AVEC_EXEMPLE)
-    await user.click(within(encart()!).getByRole("button", { name: "Mariage ou Pacs ?" }))
+    await user.click(within(encart()!).getByRole("button", { name: QUESTION_DU_COUPLE }))
 
     expect(await screen.findByRole("heading", { level: 1, name: "Couple en union libre, puis marié ou pacsé" })).toBeInTheDocument()
     expect(screen.queryByRole("dialog", { name: "Remplacer la simulation en cours ?" })).not.toBeInTheDocument()
+  })
+
+  it("après le chargement, mène à la zone qui répond à la question : le titre des résultats, signalé et avec le focus", async () => {
+    const user = await renderApp(emptySession(), undefined, PLATEFORME_AVEC_EXEMPLE)
+    await user.click(within(encart()!).getByRole("button", { name: "Charger la situation qui répond à « Quelles cotisations paie la micro-entreprise ? »" }))
+
+    await screen.findByRole("heading", { level: 1, name: "Salarié avec une micro-entreprise à côté" })
+    await vi.waitFor(() => expect(document.getElementById("resultats-titre")).toHaveFocus(), { timeout: 3000 })
+    expect(document.querySelector("[data-reperee]")).toContainElement(document.getElementById("resultats-titre"))
   })
 
   it("« Partir de zéro » depuis l'exemple, sans confirmation, dans l'affichage « Trois vues » : simulation vierge, vue de la saisie, focus sur l'ajout d'une personne", async () => {
@@ -93,9 +104,9 @@ describe("App : encart « Que voulez-vous savoir ? »", () => {
     await user.click(within(encart()!).getByRole("button", { name: "Partir de zéro" }))
 
     expect(await screen.findByRole("heading", { level: 1, name: "Nouvelle Simulation" })).toBeInTheDocument()
-    expect(screen.getByRole("tab", { name: /situation/i })).toHaveAttribute("aria-selected", "true")
+    expect(within(screen.getByRole("tablist", { name: "Vues de la page" })).getByRole("tab", { name: /situation/i })).toHaveAttribute("aria-selected", "true")
     await vi.waitFor(() => expect(screen.getByRole("button", { name: "+ Ajouter une personne" })).toHaveFocus())
-    // Simulation vide : l'encart reste là, pour choisir une question plus tard.
+    // Simulation vide : le bloc reste là, pour choisir une question plus tard.
     expect(encart()).toBeInTheDocument()
   })
 })

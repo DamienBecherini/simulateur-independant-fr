@@ -108,7 +108,7 @@ describe("App : adresse d'une situation type (#situation=…)", () => {
     expect(adresse()).toBe("/")
 
     await user.click(screen.getByRole("button", { name: "Voir les situations types" }))
-    expect(screen.getByRole("dialog", { name: "Partir d'une situation type" })).toBeInTheDocument()
+    expect(screen.getByRole("dialog", { name: "Par où commencer ?" })).toBeInTheDocument()
     await user.keyboard("{Escape}")
 
     await user.click(screen.getByRole("button", { name: "Fermer le message" }))

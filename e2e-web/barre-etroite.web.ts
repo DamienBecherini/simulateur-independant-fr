@@ -60,7 +60,7 @@ for (const { largeur, avis, montages } of LARGEURS) {
     expect(debordements).toBe(0)
 
     await boutonDesMontages.click()
-    await expect(page.getByRole("dialog", { name: "Partir d'une situation type" })).toBeVisible()
+    await expect(page.getByRole("dialog", { name: "Par où commencer ?" })).toBeVisible()
     await page.keyboard.press("Escape")
     await expect(boutonDesMontages).toBeFocused()
   })

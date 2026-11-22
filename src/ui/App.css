@@ -269,3 +269,26 @@
 [data-radix-popper-content-wrapper] {
   zoom: calc(1 / var(--zoom, 1));
 }
+
+/* La zone qui répond à une question, signalée un instant après le chargement de sa situation (allerALaReponse.ts) :
+   un contour bleu qui s'efface. Sans animation (réglage du système), il reste le temps du signalement. */
+[data-reperee] {
+  outline: 3px solid rgb(59 130 246);
+  outline-offset: 6px;
+  border-radius: 8px;
+  animation: reperage 2.4s ease-out forwards;
+}
+@keyframes reperage {
+  0%,
+  55% {
+    outline-color: rgb(59 130 246);
+  }
+  100% {
+    outline-color: rgb(59 130 246 / 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reperee] {
+    animation: none;
+  }
+}

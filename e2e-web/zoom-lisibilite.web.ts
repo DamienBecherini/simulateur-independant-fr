@@ -116,7 +116,7 @@ for (const cas of CAS) {
       await relever("Paramètres", parametres)
 
       await parametres.getByRole("button", { name: "Partir d'une situation type..." }).click()
-      await relever("Situations types", fenetre("Partir d'une situation type"))
+      await relever("Situations types", fenetre("Par où commencer ?"))
       await page.getByRole("button", { name: "Détails de la situation « SASU sans salaire, tout en dividendes »" }).click()
       const detail = fenetre("SASU sans salaire, tout en dividendes")
       await relever("détail d'une situation type", detail)

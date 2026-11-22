@@ -53,7 +53,7 @@ Le même foyer en union libre : le comparateur dit ce que changerait un mariage 
 - Tout le foyer : couple marié, pacsé ou en union libre, enfants à charge, et les activités de chacun.
 - Les statuts courants : micro-entreprise (avec ou sans versement libératoire), entreprise individuelle au réel, EURL, SASU.
 - Une grille mois par mois pour les revenus et les charges ; un loyer ou un salaire se recopie sur toute l'année en un clic.
-- Des situations types prêtes à adapter (SASU sans salaire, couple, ostéopathe…), expliquées et sourcées.
+- Des situations types prêtes à adapter (SASU sans salaire, couple, ostéopathe…), expliquées et sourcées, à retrouver aussi par la question que vous vous posez.
 
 **Comprendre le résultat**
 

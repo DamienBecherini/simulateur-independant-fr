@@ -28,7 +28,7 @@ test("depuis une première visite, le lien charge la situation à la place de l'
   await expect(confirmation(page)).toHaveCount(0)
   await expect.poll(() => fragment(page)).toBe("")
   // La situation chargée, l'encart des questions de départ s'efface.
-  await expect(page.getByRole("region", { name: "Que voulez-vous savoir ?" })).toHaveCount(0)
+  await expect(page.getByRole("region", { name: "Par où commencer ?" })).toHaveCount(0)
 
   // Un rechargement garde la situation, sans la recharger (le fragment n'est plus là).
   await page.reload()
@@ -81,7 +81,7 @@ test("un identifiant inconnu ne change rien et le dit discrètement, avec l'acc�
   await auditer(page, "situation introuvable", "[role=status]")
 
   await message.getByRole("button", { name: "Voir les situations types" }).click()
-  const fenetre = page.getByRole("dialog", { name: "Partir d'une situation type" })
+  const fenetre = page.getByRole("dialog", { name: "Par où commencer ?" })
   await expect(fenetre).toBeVisible()
   await page.keyboard.press("Escape")
   await expect(fenetre).toBeHidden()
@@ -96,7 +96,7 @@ test("« Copier le lien » d'une situation donne l'adresse de la démo suivie de
   await expect(titre(page)).toHaveText(EXEMPLE)
   await page.getByRole("button", { name: "Paramètres" }).click()
   await page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: "Partir d'une situation type..." }).click()
-  const fenetre = page.getByRole("dialog", { name: "Partir d'une situation type" })
+  const fenetre = page.getByRole("dialog", { name: "Par où commencer ?" })
 
   const bouton = fenetre.getByRole("button", { name: `Copier le lien de la situation « ${UNION_LIBRE} »` })
   await bouton.click()

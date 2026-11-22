@@ -7,7 +7,7 @@
 // et la recherche se combinent (« SASU », « En couple » et « retraite » : les situations qui répondent aux trois).
 
 import type { ContenuDuMontage } from "./construction"
-import type { MontageType } from "./montages"
+import type { MontageType, QuestionDUneSituation } from "./montages"
 
 export type StatutDeMontage = "micro" | "SASU" | "EURL" | "EI"
 export type FoyerDeMontage = "seul" | "couple"
@@ -77,19 +77,50 @@ function ficheDuMontage(montage: MontageType): Fiche {
   let fiche = fiches.get(montage.id)
   if (!fiche) {
     const contenu = montage.contenu()
-    fiche = { statuts: statutsDuContenu(contenu), foyer: foyerDuContenu(contenu), texte: sansAccent([montage.titre, montage.resume, ...montage.etiquettes, ...montage.questions].join(" ")) }
+    fiche = { statuts: statutsDuContenu(contenu), foyer: foyerDuContenu(contenu), texte: sansAccent([montage.titre, montage.resume, ...montage.etiquettes, ...montage.questions.map(question => question.texte)].join(" ")) }
     fiches.set(montage.id, fiche)
   }
   return fiche
 }
 
+const motsDeLaRecherche = (recherche: string) => sansAccent(recherche).split(/\s+/).filter(Boolean)
+
+/** La situation répond-elle aux filtres de statut et de foyer ? */
+function dansLesFiltres(fiche: Fiche, criteres: CriteresDesMontages): boolean {
+  if (criteres.statuts.length > 0 && !criteres.statuts.some(statut => fiche.statuts.includes(statut))) return false
+  return criteres.foyers.length === 0 || criteres.foyers.includes(fiche.foyer)
+}
+
 /** Les situations qui répondent aux critères, dans l'ordre de la bibliothèque. Chaque mot de la recherche doit s'y trouver. */
 export function filtrerLesMontages(montages: MontageType[], criteres: CriteresDesMontages): MontageType[] {
-  const mots = sansAccent(criteres.recherche).split(/\s+/).filter(Boolean)
+  const mots = motsDeLaRecherche(criteres.recherche)
   return montages.filter(montage => {
     const fiche = ficheDuMontage(montage)
-    if (criteres.statuts.length > 0 && !criteres.statuts.some(statut => fiche.statuts.includes(statut))) return false
-    if (criteres.foyers.length > 0 && !criteres.foyers.includes(fiche.foyer)) return false
-    return mots.every(mot => fiche.texte.includes(mot))
+    return dansLesFiltres(fiche, criteres) && mots.every(mot => fiche.texte.includes(mot))
+  })
+}
+
+/** Une question de la bibliothèque, avec la situation qui y répond. */
+export interface QuestionTrouvee {
+  question: QuestionDUneSituation
+  montage: MontageType
+}
+
+/** Toutes les questions des situations, dans l'ordre de la bibliothèque puis de chaque situation. */
+export function questionsDesMontages(montages: MontageType[]): QuestionTrouvee[] {
+  return montages.flatMap(montage => montage.questions.map(question => ({ question, montage })))
+}
+
+/**
+ * Les questions qui répondent aux critères : leur situation passe les filtres de statut et de foyer, et chaque mot de
+ * la recherche se trouve dans la question, ou dans le titre et les mots-clés de sa situation (« kine » trouve les
+ * questions du kinésithérapeute).
+ */
+export function filtrerLesQuestions(montages: MontageType[], criteres: CriteresDesMontages): QuestionTrouvee[] {
+  const mots = motsDeLaRecherche(criteres.recherche)
+  return questionsDesMontages(montages).filter(({ question, montage }) => {
+    if (!dansLesFiltres(ficheDuMontage(montage), criteres)) return false
+    const texte = sansAccent([question.texte, montage.titre, ...montage.etiquettes].join(" "))
+    return mots.every(mot => texte.includes(mot))
   })
 }

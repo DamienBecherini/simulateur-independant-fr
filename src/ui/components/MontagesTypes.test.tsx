@@ -16,7 +16,7 @@ function ouvrir(confirmationNecessaire = false) {
   return { user, onCharger, ouvrirLaFenetre: () => user.click(screen.getByRole("button", { name: "Partir d'une situation type..." })) }
 }
 
-const fenetre = () => screen.getByRole("dialog", { name: "Partir d'une situation type" })
+const fenetre = () => screen.getByRole("dialog", { name: "Par où commencer ?" })
 
 describe("Fenêtre des situations types", () => {
   it("liste chaque montage en carte : titre, résumé et mots-clés", async () => {
@@ -78,29 +78,65 @@ describe("Fenêtre des situations types", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  it("garde en tête les questions de « Que voulez-vous savoir ? » : une question charge sa situation type", async () => {
-    const { user, onCharger, ouvrirLaFenetre } = ouvrir()
+  it("s'ouvre sur l'onglet « Situations types » ; l'onglet « Questions » liste les questions de chaque situation", async () => {
+    const { user, ouvrirLaFenetre } = ouvrir()
     await ouvrirLaFenetre()
 
-    const questions = within(fenetre()).getByRole("region", { name: "Que voulez-vous savoir ?" })
-    expect(within(questions).getAllByRole("button").map(b => b.textContent)).toEqual(["Combien me restera-t-il ?", "Société ou micro-entreprise ?", "Mariage ou Pacs ?", "Rémunération ou dividendes ?", "Mes cotisations sont-elles justes ?"])
-    const mariage = within(questions).getByRole("button", { name: "Mariage ou Pacs ?" })
-    expect(mariage).toHaveAccessibleDescription("Un couple en union libre : son impôt s'il était marié ou pacsé.")
+    expect(within(fenetre()).getByRole("tab", { name: /^Situations types/ })).toHaveAttribute("aria-selected", "true")
+    await user.click(within(fenetre()).getByRole("tab", { name: /^Questions/ }))
+    const questions = within(within(fenetre()).getByRole("list", { name: "Questions" })).getAllByRole("listitem")
+    expect(questions).toHaveLength(MONTAGES_TYPES.flatMap(montage => montage.questions).length)
+    expect(questions[0]).toHaveTextContent("Combien me reste-t-il après cotisations et impôt ?Situation type : Micro-entreprise seule (BNC)")
+  })
 
-    await user.click(mariage)
+  it("les onglets se parcourent aux flèches du clavier", async () => {
+    const { user, ouvrirLaFenetre } = ouvrir()
+    await ouvrirLaFenetre()
+
+    within(fenetre()).getByRole("tab", { name: /^Situations types/ }).focus()
+    await user.keyboard("{ArrowRight}")
+    expect(within(fenetre()).getByRole("tab", { name: /^Questions/ })).toHaveFocus()
+    expect(within(fenetre()).getByRole("tab", { name: /^Questions/ })).toHaveAttribute("aria-selected", "true")
+  })
+
+  it("une question mène à sa situation : l'onglet change, sa carte est mise en avant avec le focus sur « Charger », puis « Retour aux questions »", async () => {
+    const { user, onCharger, ouvrirLaFenetre } = ouvrir()
+    await ouvrirLaFenetre()
+    await user.click(within(fenetre()).getByRole("tab", { name: /^Questions/ }))
+
+    await user.click(within(fenetre()).getAllByRole("button", { name: "Voir la situation « Couple en union libre, puis marié ou pacsé »" })[0])
+    expect(within(fenetre()).getByRole("tab", { name: /^Situations types/ })).toHaveAttribute("aria-selected", "true")
+    expect(within(fenetre()).getByText(/La situation qui répond à « Le mariage ou le Pacs réduirait-il notre impôt \? »/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Charger la situation « Couple en union libre, puis marié ou pacsé »" })).toHaveFocus()
+
+    await user.click(within(fenetre()).getByRole("button", { name: "Retour aux questions" }))
+    expect(within(fenetre()).getByRole("tab", { name: /^Questions/ })).toHaveAttribute("aria-selected", "true")
+    expect(onCharger).not.toHaveBeenCalled()
+  })
+
+  it("« Charger » d'une question charge sa situation et ferme la fenêtre, après confirmation si la simulation en cours serait perdue", async () => {
+    const { user, onCharger, ouvrirLaFenetre } = ouvrir(true)
+    await ouvrirLaFenetre()
+    await user.click(within(fenetre()).getByRole("tab", { name: /^Questions/ }))
+
+    await user.click(screen.getByRole("button", { name: "Charger la situation qui répond à « Le mariage ou le Pacs réduirait-il notre impôt ? »" }))
+    const confirmation = screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
+    await user.click(within(confirmation).getByRole("button", { name: "Remplacer" }))
     expect(onCharger).toHaveBeenCalledWith(MONTAGES_TYPES.find(m => m.id === "couple-union-libre"))
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  it("une question demande la même confirmation qu'une carte quand la simulation en cours serait perdue", async () => {
-    const { user, onCharger, ouvrirLaFenetre } = ouvrir(true)
+  it("la recherche et les filtres valent pour les questions : « En couple » n'en garde que celles des couples", async () => {
+    const { user, ouvrirLaFenetre } = ouvrir()
     await ouvrirLaFenetre()
+    await user.click(within(fenetre()).getByRole("tab", { name: /^Questions/ }))
 
-    await user.click(screen.getByRole("button", { name: "Rémunération ou dividendes ?" }))
-    const confirmation = screen.getByRole("dialog", { name: "Remplacer la simulation en cours ?" })
-    await user.click(within(confirmation).getByRole("button", { name: "Annuler" }))
-    expect(onCharger).not.toHaveBeenCalled()
-    expect(screen.getByRole("button", { name: "Rémunération ou dividendes ?" })).toHaveFocus()
+    await user.click(within(within(fenetre()).getByRole("group", { name: "Foyer" })).getByRole("button", { name: "En couple" }))
+    expect(within(fenetre()).getByText(/^\d+ questions sur 36$/)).toBeInTheDocument()
+    await user.type(screen.getByRole("searchbox", { name: "Rechercher une question" }), "pacs")
+    const questions = within(within(fenetre()).getByRole("list", { name: "Questions" })).getAllByRole("listitem")
+    // « pacs » se trouve dans une question, et dans le titre de sa situation : ses trois questions restent.
+    expect(questions.map(q => q.querySelector("p")?.textContent)).toEqual(["Le mariage ou le Pacs réduirait-il notre impôt ?", "Combien chacun paie-t-il aujourd'hui ?", "Le versement libératoire reste-t-il possible après un mariage ?"])
   })
 
   it("se ferme à la touche Échap, puis se rouvre sur la liste", async () => {

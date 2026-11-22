@@ -171,7 +171,7 @@ describe("BarreDOutils", () => {
     const { user } = afficher()
     await user.click(bouton("Plus d'actions"))
     await user.click(screen.getByRole("menuitem", { name: "Partir d'une situation type" }))
-    expect(screen.getByRole("dialog", { name: "Partir d'une situation type" })).toBeInTheDocument()
+    expect(screen.getByRole("dialog", { name: "Par où commencer ?" })).toBeInTheDocument()
 
     await user.keyboard("{Escape}")
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()

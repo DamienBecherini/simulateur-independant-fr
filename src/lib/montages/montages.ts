@@ -9,6 +9,7 @@ import { euros, pourcent } from "@/backend/logic/format"
 import { hypothesesDuRegime } from "@/backend/logic/exoneration-de-zone"
 import { reglesPubliees } from "@/backend/logic/regles"
 import type { SessionState } from "@/types"
+import { ANCRES, type Ancre } from "../ancres"
 import { SOINS_EXONERES_DE_TVA } from "../professions"
 import { ANNEE_DES_MONTAGES, comparateurAuMeilleurNet, exercant, microEntreprise, personne, relation, sessionDuMontage, societe, type ContenuDuMontage, type FluxDuMontage } from "./construction"
 
@@ -24,6 +25,15 @@ interface SourceOfficielle {
   url: string
 }
 
+/**
+ * Une question à laquelle une situation type répond, et la zone de la page où se lit la réponse : après le chargement
+ * de la situation depuis la question, la page s'y rend (voir src/ui/allerALaReponse.ts).
+ */
+export interface QuestionDUneSituation {
+  texte: string
+  reponse: Ancre
+}
+
 export interface MontageType {
   /**
    * Identifiant public : il figure dans l'adresse de la situation dans la démo web (`#situation=<id>`) et dans les liens
@@ -35,8 +45,8 @@ export interface MontageType {
   resume: string
   /** Mots-clés affichés sur la carte : « Micro », « SASU », « Couple »… */
   etiquettes: string[]
-  /** Questions auxquelles le montage aide à répondre. */
-  questions: string[]
+  /** Questions auxquelles le montage aide à répondre, chacune avec la zone de la page qui y répond. */
+  questions: QuestionDUneSituation[]
   /** Ce que le montage illustre, et où le voir dans le simulateur. */
   illustre: string[]
   /** Conditions à remplir pour que le montage soit possible. */
@@ -173,7 +183,11 @@ const microSeule: MontageType = {
   titre: "Micro-entreprise seule (BNC)",
   resume: "Sophie, célibataire, facture 3 000 € de prestations intellectuelles par mois en micro-entreprise, au versement libératoire.",
   etiquettes: ["Micro", "BNC", "Versement libératoire"],
-  questions: ["Combien me reste-t-il après cotisations et impôt ?", "Le versement libératoire est-il avantageux pour moi ?", "À partir de quel chiffre d'affaires une société devient-elle intéressante ?"],
+  questions: [
+    { texte: "Combien me reste-t-il après cotisations et impôt ?", reponse: ANCRES.bilan },
+    { texte: "Le versement libératoire est-il avantageux pour moi ?", reponse: ANCRES.titreDuComparateur },
+    { texte: "À partir de quel chiffre d'affaires une société devient-elle intéressante ?", reponse: ANCRES.titreDuComparateur }
+  ],
   illustre: [
     `Les cotisations calculées en pourcentage du chiffre d'affaires (${pourcent(MICRO.cotisations.servicesBnc)} pour une activité libérale non réglementée en ${ANNEE_DES_MONTAGES}, plus ${pourcent(MICRO.formationProfessionnelle.servicesBnc)} de contribution à la formation professionnelle), sans charges déductibles.`,
     `L'impôt payé avec les cotisations au versement libératoire (${pourcent(MICRO.versementLiberatoire.taux.servicesBnc)} du chiffre d'affaires en BNC), au lieu du barème après l'abattement forfaitaire de ${pourcent(MICRO.abattement.servicesBnc)}.`,
@@ -218,7 +232,11 @@ const sasuSansSalaire: MontageType = {
   titre: "SASU sans salaire, tout en dividendes",
   resume: "Thomas préside seul une SASU qui facture 84 000 € par an ; il ne se verse aucune rémunération et distribue tout le bénéfice en dividendes.",
   etiquettes: ["SASU", "Dividendes", "Retraite"],
-  questions: ["Que reste-t-il si je ne me paie qu'en dividendes ?", "Combien coûte la validation de 4 trimestres de retraite ?", "Les dividendes sont-ils mieux imposés au prélèvement forfaitaire ou au barème ?"],
+  questions: [
+    { texte: "Que reste-t-il si je ne me paie qu'en dividendes ?", reponse: ANCRES.bilan },
+    { texte: "Combien coûte la validation de 4 trimestres de retraite ?", reponse: ANCRES.reglageDeLaSociete },
+    { texte: "Les dividendes sont-ils mieux imposés au prélèvement forfaitaire ou au barème ?", reponse: ANCRES.titreDesResultats }
+  ],
   illustre: [
     `Sans rémunération, le président ne paie pas de cotisations sociales : le bénéfice supporte l'impôt sur les sociétés, puis les dividendes le prélèvement forfaitaire de ${pourcent(DIVIDENDES.tauxIrForfaitaire + DIVIDENDES.prelevementsSociaux)} (${pourcent(DIVIDENDES.tauxIrForfaitaire)} d'impôt et ${pourcent(DIVIDENDES.prelevementsSociaux)} de prélèvements sociaux) ou, sur option, le barème après un abattement de ${pourcent(DIVIDENDES.abattementBareme)}.`,
     "Le comparateur est réglé au meilleur net parmi les rémunérations qui valident 4 trimestres de retraite : il montre ce que coûte cette exigence, à comparer avec la situation « SASU avec un salaire qui valide 4 trimestres ».",
@@ -240,7 +258,11 @@ const sasuAvecSalaire: MontageType = {
   titre: "SASU avec un salaire qui valide 4 trimestres",
   resume: "Antoine préside une SASU qui facture 84 000 € par an ; il se verse 1 000 € nets par mois, puis le reste du bénéfice en dividendes.",
   etiquettes: ["SASU", "Rémunération", "Dividendes", "Retraite"],
-  questions: ["Combien faut-il se verser pour valider 4 trimestres de retraite ?", "Que coûte ce salaire par rapport aux dividendes seuls ?", "Où se situe le meilleur partage entre rémunération et dividendes ?"],
+  questions: [
+    { texte: "Combien faut-il se verser pour valider 4 trimestres de retraite ?", reponse: ANCRES.reglageDeLaSociete },
+    { texte: "Que coûte ce salaire par rapport aux dividendes seuls ?", reponse: ANCRES.titreDeLOptimisation },
+    { texte: "Où se situe le meilleur partage entre rémunération et dividendes ?", reponse: ANCRES.titreDeLOptimisation }
+  ],
   illustre: [
     `Une rémunération modeste, assez haute pour valider 4 trimestres (150 heures au SMIC par trimestre, soit ${euros(REGLES.protectionSociale.revenuParTrimestre)} soumis à cotisations en ${ANNEE_DES_MONTAGES}, 4 au plus par an), et le reste du bénéfice en dividendes.`,
     "Les cotisations du président, assimilé salarié : parts salariale et patronale, sans assurance chômage.",
@@ -277,7 +299,11 @@ const sasuEnZoneFrancheUrbaine: MontageType = {
   titre: "SASU en zone franche urbaine (ZFU-TE)",
   resume: `Karim préside seul une SASU créée en ${moisDesRegles(CREATION_EN_ZONE)} dans une zone franche urbaine ; elle facture 84 000 € par an, et son bénéfice est exonéré d'impôt sur les sociétés jusqu'à ${euros(ZFU_TE.plafondAnnuel ?? 0)} par an.`,
   etiquettes: ["SASU", "Zone franche", "Dividendes"],
-  questions: ["Combien d'impôt sur les sociétés l'implantation en zone franche urbaine fait-elle économiser ?", "Jusqu'à quand l'exonération dure-t-elle, et que devient-elle ensuite ?", "Une activité créée depuis 2026 dans un quartier prioritaire y a-t-elle droit ?"],
+  questions: [
+    { texte: "Combien d'impôt sur les sociétés l'implantation en zone franche urbaine fait-elle économiser ?", reponse: ANCRES.titreDesResultats },
+    { texte: "Jusqu'à quand l'exonération dure-t-elle, et que devient-elle ensuite ?", reponse: ANCRES.titreDesResultats },
+    { texte: "Une activité créée depuis 2026 dans un quartier prioritaire y a-t-elle droit ?", reponse: ANCRES.titreDesResultats }
+  ],
   illustre: [
     "Dans la fiche de la société, section « Aides liées au lieu d'implantation », la case « Activité implantée en zone franche urbaine (ZFU-TE) ou en quartier prioritaire (QPV) » est cochée : le régime et le taux de chaque année se déduisent de la date de création.",
     `Régime ZFU-TE : le bénéfice est exonéré d'impôt en totalité pendant ${ZFU_TE.moisExonerationTotale} mois, puis à ${ZFU_TE.partsExonereesEnsuite.map(part => pourcent(part)).join(", ")} par périodes de douze mois, dans la limite de ${euros(ZFU_TE.plafondAnnuel ?? 0)} par an. Sur 78 000 € de bénéfice, 50 000 € sont exonérés et 28 000 € imposés : la carte de la société le dit, avec le calendrier.`,
@@ -309,7 +335,11 @@ const eurlIS: MontageType = {
   titre: "EURL à l'IS avec rémunération du gérant",
   resume: "Nicolas, gérant associé unique d'une EURL à l'impôt sur les sociétés, se verse 2 500 € nets par mois et laisse le reste du bénéfice dans la société.",
   etiquettes: ["EURL", "Rémunération", "TNS"],
-  questions: ["Combien coûtent les cotisations d'un gérant non salarié ?", "Pourquoi les dividendes d'EURL sont-ils peu distribués ?", "EURL ou SASU pour la même activité ?"],
+  questions: [
+    { texte: "Combien coûtent les cotisations d'un gérant non salarié ?", reponse: ANCRES.titreDesResultats },
+    { texte: "Pourquoi les dividendes d'EURL sont-ils peu distribués ?", reponse: ANCRES.titreDeLOptimisation },
+    { texte: "EURL ou SASU pour la même activité ?", reponse: ANCRES.titreDuComparateur }
+  ],
   illustre: [
     "Les cotisations du travailleur non salarié, calculées sur sa rémunération : en général moins lourdes que celles d'un président de SASU pour le même net.",
     `Les dividendes du gérant majoritaire supportent les cotisations sociales pour leur part au-delà de ${pourcent(REGLES.EURL.seuilDividendesPartDuCapital)} du capital social : avec ${euros(CAPITAL_DE_L_EURL)} de capital, seuls ${euros(CAPITAL_DE_L_EURL * REGLES.EURL.seuilDividendesPartDuCapital)} de dividendes y échappent.`,
@@ -342,7 +372,11 @@ const sasuEtConjointSalarieAilleurs: MontageType = {
   titre: "SASU avec un conjoint salarié ailleurs",
   resume: "Thomas préside une SASU qui facture 8 000 € par mois ; Nadia, son épouse, est salariée d'un autre employeur à 2 700 € nets par mois.",
   etiquettes: ["SASU", "Salarié", "Couple", "Marié"],
-  questions: ["Combien reste-t-il au foyer, avec le salaire du conjoint ?", "Le salaire du conjoint change-t-il le meilleur partage entre rémunération et dividendes ?", "Prélèvement forfaitaire ou barème pour les dividendes ?"],
+  questions: [
+    { texte: "Combien reste-t-il au foyer, avec le salaire du conjoint ?", reponse: ANCRES.bilan },
+    { texte: "Le salaire du conjoint change-t-il le meilleur partage entre rémunération et dividendes ?", reponse: ANCRES.titreDeLOptimisation },
+    { texte: "Prélèvement forfaitaire ou barème pour les dividendes ?", reponse: ANCRES.titreDesResultats }
+  ],
   illustre: [
     "Le salaire de Nadia et les revenus que Thomas tire de sa SASU sont imposés ensemble : un foyer fiscal marié, sur deux parts.",
     "Le salaire du conjoint relève le taux marginal du foyer : il pèse sur le choix entre rémunération et dividendes, et entre prélèvement forfaitaire et barème, que le simulateur fait pour le foyer entier.",
@@ -380,7 +414,11 @@ const microEtSasuDuConjoint: MontageType = {
   titre: "Micro-entreprise et SASU du conjoint",
   resume: "Claire, en micro-entreprise BNC (2 500 € par mois), est mariée à Marc, président d'une SASU qui lui verse 2 000 € nets par mois et des dividendes.",
   etiquettes: ["Micro", "SASU", "Couple", "Marié"],
-  questions: ["Combien reste-t-il au foyer, une fois tout payé ?", "Le versement libératoire vaut-il le coup avec les revenus du conjoint ?", "Quelle activité gagnerait à changer de statut ?"],
+  questions: [
+    { texte: "Combien reste-t-il au foyer, une fois tout payé ?", reponse: ANCRES.bilan },
+    { texte: "Le versement libératoire vaut-il le coup avec les revenus du conjoint ?", reponse: ANCRES.titreDuComparateur },
+    { texte: "Quelle activité gagnerait à changer de statut ?", reponse: ANCRES.titreDuComparateur }
+  ],
   illustre: [
     "Un foyer fiscal unique pour deux activités : les revenus du couple marié sont imposés ensemble, sur deux parts.",
     "Le versement libératoire de Claire dépend du revenu fiscal de référence du foyer, et non du sien seul : le comparateur dit s'il serait avantageux.",
@@ -418,7 +456,11 @@ const conjointSalarie: MontageType = {
   titre: "Conjoint salarié de la SASU",
   resume: "Paul préside une SASU qui facture 9 000 € par mois ; Julie, son épouse, y est salariée à 1 500 € nets par mois.",
   etiquettes: ["SASU", "Salarié", "Couple", "Marié"],
-  questions: ["Que coûte à la société le salaire du conjoint ?", "Que gagne le foyer à salarier le conjoint plutôt qu'à verser des dividendes ?", "Quels droits ouvre ce salaire ?"],
+  questions: [
+    { texte: "Que coûte à la société le salaire du conjoint ?", reponse: ANCRES.titreDesResultats },
+    { texte: "Que gagne le foyer à salarier le conjoint plutôt qu'à verser des dividendes ?", reponse: ANCRES.bilan },
+    { texte: "Quels droits ouvre ce salaire ?", reponse: ANCRES.titreDesResultats }
+  ],
   illustre: [
     "La relation « Salarié » fait supporter à la SASU le coût employeur du salaire de Julie, réduction générale des cotisations patronales comprise.",
     "Le salaire réduit le bénéfice, donc l'impôt sur les sociétés et les dividendes de Paul ; le foyer, marié, est imposé sur l'ensemble.",
@@ -453,7 +495,11 @@ const unionLibre: MontageType = {
   titre: "Couple en union libre, puis marié ou pacsé",
   resume: "Hugo, salarié à 3 500 € nets par mois, vit en union libre avec Emma, en micro-entreprise BNC à 1 000 € par mois : que changerait un mariage ou un Pacs ?",
   etiquettes: ["Micro", "Salarié", "Couple", "Union libre"],
-  questions: ["Le mariage ou le Pacs réduirait-il notre impôt ?", "Combien chacun paie-t-il aujourd'hui ?", "Le versement libératoire reste-t-il possible après un mariage ?"],
+  questions: [
+    { texte: "Le mariage ou le Pacs réduirait-il notre impôt ?", reponse: ANCRES.comparaisonDuCouple },
+    { texte: "Combien chacun paie-t-il aujourd'hui ?", reponse: ANCRES.titreDesResultats },
+    { texte: "Le versement libératoire reste-t-il possible après un mariage ?", reponse: ANCRES.comparaisonDuCouple }
+  ],
   illustre: [
     "En union libre, chacun déclare ses revenus seul : deux foyers fiscaux.",
     "Le comparateur calcule l'impôt du couple s'il était marié ou pacsé : avec des revenus très inégaux, l'imposition commune réduit souvent l'impôt total.",
@@ -485,7 +531,11 @@ const salariePlusMicro: MontageType = {
   titre: "Salarié avec une micro-entreprise à côté",
   resume: "Lucas, salarié à 2 200 € nets par mois, réalise aussi 800 € de missions par mois en micro-entreprise BNC.",
   etiquettes: ["Micro", "Salarié", "Cumul"],
-  questions: ["Combien me rapporte vraiment mon activité à côté ?", "Le versement libératoire est-il intéressant avec mon salaire ?", "Quelles cotisations paie la micro-entreprise ?"],
+  questions: [
+    { texte: "Combien me rapporte vraiment mon activité à côté ?", reponse: ANCRES.titreDesResultats },
+    { texte: "Le versement libératoire est-il intéressant avec mon salaire ?", reponse: ANCRES.titreDuComparateur },
+    { texte: "Quelles cotisations paie la micro-entreprise ?", reponse: ANCRES.titreDesResultats }
+  ],
   illustre: [
     "Le salaire et le bénéfice de la micro-entreprise s'additionnent dans le même foyer fiscal : l'activité à côté est imposée au taux marginal du foyer.",
     "Les cotisations de la micro-entreprise restent dues en pourcentage du chiffre d'affaires, même avec un salaire qui couvre déjà la protection sociale.",
@@ -517,7 +567,11 @@ const osteopatheMicro: MontageType = {
   titre: "Ostéopathe en micro-entreprise",
   resume: "Léa, ostéopathe célibataire, encaisse 3 100 € d'honoraires par mois en micro-entreprise, sans versement libératoire, et loue un cabinet partagé 400 € par mois.",
   etiquettes: ["Micro", "BNC", "Profession libérale", "CIPAV"],
-  questions: ["Combien me reste-t-il après cotisations et impôt comme ostéopathe ?", "Pourquoi mes cotisations ne sont-elles pas celles des autres libéraux en micro-entreprise ?", "Le versement libératoire, ou le régime réel avec mon loyer, serait-il plus intéressant ?"],
+  questions: [
+    { texte: "Combien me reste-t-il après cotisations et impôt comme ostéopathe ?", reponse: ANCRES.bilan },
+    { texte: "Pourquoi mes cotisations ne sont-elles pas celles des autres libéraux en micro-entreprise ?", reponse: ANCRES.titreDesResultats },
+    { texte: "Le versement libératoire, ou le régime réel avec mon loyer, serait-il plus intéressant ?", reponse: ANCRES.titreDuComparateur }
+  ],
   illustre: [
     `L'ostéopathe relève de la CIPAV : la profession choisie sur la fiche de l'activité fixe ses cotisations à ${pourcent(CIPAV.microEntreprise.cotisations)} du chiffre d'affaires en ${ANNEE_DES_MONTAGES}, au lieu de ${pourcent(MICRO.cotisations.servicesBnc)} pour une activité libérale non réglementée, plus ${pourcent(MICRO.formationProfessionnelle.servicesBnc)} de contribution à la formation professionnelle.`,
     `Sans versement libératoire, le bénéfice imposé au barème est le chiffre d'affaires après l'abattement forfaitaire de ${pourcent(MICRO.abattement.servicesBnc)} : le loyer et les autres charges réelles ne se déduisent pas.`,
@@ -551,7 +605,11 @@ const kinesitherapeuteEI: MontageType = {
   titre: "Kinésithérapeute conventionné en entreprise individuelle",
   resume: "Julien, masseur-kinésithérapeute conventionné, célibataire, encaisse 6 500 € d'honoraires par mois en entreprise individuelle au réel et déduit le loyer, le matériel et les déplacements de son cabinet.",
   etiquettes: ["EI", "Réel", "Profession libérale", "CARPIMKO", "Santé"],
-  questions: ["Combien me reste-t-il après les cotisations de la CARPIMKO et l'impôt ?", "Que prend en charge l'Assurance maladie sur mes cotisations ?", "Pourquoi pas la micro-entreprise, et une société serait-elle plus intéressante ?"],
+  questions: [
+    { texte: "Combien me reste-t-il après les cotisations de la CARPIMKO et l'impôt ?", reponse: ANCRES.bilan },
+    { texte: "Que prend en charge l'Assurance maladie sur mes cotisations ?", reponse: ANCRES.titreDesResultats },
+    { texte: "Pourquoi pas la micro-entreprise, et une société serait-elle plus intéressante ?", reponse: ANCRES.titreDuComparateur }
+  ],
   illustre: [
     "La micro-entreprise est fermée aux praticiens et auxiliaires médicaux : l'entreprise individuelle au réel est le statut le plus simple du kinésithérapeute, et ses charges réelles (loyer, matériel, comptable, déplacements au barème kilométrique) se déduisent de son bénéfice.",
     `Les cotisations, ligne par ligne sur la carte de l'activité : maladie, allocations familiales et CSG-CRDS à l'Urssaf, retraite de base des professions libérales, complémentaire de la CARPIMKO (${pourcent(CARPIMKO.retraiteComplementaire.taux)} du revenu), invalidité-décès forfaitaire de ${euros(CARPIMKO.invaliditeDeces.forfait)}, avantage social vieillesse (ASV) et contribution aux unions régionales des professionnels de santé (${pourcent(LIBERAUX.curps.taux)}).`,

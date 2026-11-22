@@ -124,7 +124,7 @@ test.describe("sur un téléphone de 375 px", () => {
 
     await plusDActions(page).click()
     await menu(page).getByRole("menuitem", { name: "Partir d'une situation type" }).click()
-    await expect(page.getByRole("dialog", { name: "Partir d'une situation type" })).toBeVisible()
+    await expect(page.getByRole("dialog", { name: "Par où commencer ?" })).toBeVisible()
     await page.keyboard.press("Escape")
     await expect(plusDActions(page)).toBeFocused()
 

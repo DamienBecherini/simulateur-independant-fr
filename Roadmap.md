@@ -330,6 +330,18 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 ---
 
+### **Phase 19 : Prise en main [En cours 🚧, points 1 et 2 ✅]**
+
+- **Objectif :** qu'une personne qui découvre le simulateur trouve vite la réponse à sa question, puis comprenne dans quel ordre s'en servir. Décidé le 22 novembre 2026 avec le propriétaire, sur maquettes.
+
+1.  **« Par où commencer ? » [✅] :** la fenêtre des situations types devient « Par où commencer ? », en deux onglets : « Questions » (les questions auxquelles répond chaque situation type, trois par situation, filtrées et cherchées comme les situations) et « Situations types » (la bibliothèque actuelle). Une question montre sa situation, en lien (l'onglet change et la carte est mise en évidence), et un bouton « Charger ». « Partir de zéro » en haut, quel que soit l'onglet. Au premier lancement, ou sur une simulation vide, le même contenu s'affiche dans la page, sur l'onglet des questions, à la place de l'encart « Que voulez-vous savoir ? » : l'encadré de la démo web reste visible ; la liste a une hauteur limitée et défile. Fermé, le bloc ne revient pas dans la page, mais reste à portée par le bouton de la barre d'outils.
+2.  **Guidage vers la réponse [✅] :** une question mène aussi à la zone de la page qui y répond (bilan du foyer, résultats, comparateur, « Rémunération ou dividendes ? », réglages de la société, « Et si vous étiez mariés ou pacsés ? ») : après le chargement, la page attend que la zone soit affichée, ouvre les sections repliées qui la contiennent, change de vue en « Trois vues », y porte le focus et la signale un instant. **Plus tard :** une zone plus fine pour certaines questions (le détail des cotisations d'une activité, les hypothèses de la zone franche dans sa fiche).
+3.  **Visite guidée [Planifié 🗓️] :** une visite courte, de six à huit étapes, sur la simulation d'exemple, dans l'ordre logique d'usage (personnes et activités, grille, résultats du foyer, comparateur, « Rémunération ou dividendes ? », « Quel chiffre d'affaires pour un net visé ? », sauvegardes et exports) : chaque zone mise en surbrillance avec une bulle qui l'explique, Précédent et Suivant, arrêt à tout moment (croix, Échap). Lancée depuis « Par où commencer ? » et depuis les paramètres. **Bibliothèque pressentie :** [Driver.js](https://driverjs.com/) (licence MIT, environ 5 Ko, sans dépendance, hors ligne). Écartées : Intro.js (AGPL ou licence commerciale), Shepherd.js (licence à vérifier) et les services en ligne (Appcues, Pendo, Userpilot), qui envoient des données à un serveur et mesurent l'usage, ce que le simulateur exclut. **Points de vigilance :** les deux affichages (« Résumé » et « Trois vues », où il faut changer de vue entre deux étapes), le téléphone, le zoom de 50 à 200 % et le thème sombre (bulles lisibles et dans l'écran), l'accessibilité (focus dans la bulle, lecteurs d'écran, retour du focus), les tests de bout en bout. Effort estimé : trois à cinq jours.
+
+- **Ordre conseillé :** 1 et 2 ensemble, puis 3.
+
+---
+
 ### **Travaux transverses [À faire 🧰]**
 
 Tâches sans phase attitrée, à traiter entre deux fonctionnalités.

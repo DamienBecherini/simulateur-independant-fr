@@ -11,7 +11,8 @@ import { SettingsSheet } from "./components/SettingsSheet"
 import { sessionDUnMontage, type MontageType } from "@/lib/montages/montages"
 import { useSessionManager } from "./hooks/useSessionManager"
 import * as SessionService from "@/lib/session-service"
-import { EncartDesQuestions } from "./components/EncartDesQuestions"
+import { ParOuCommencer } from "./components/ParOuCommencer"
+import { PartirDeZeroContext } from "./depart"
 import { SituationParLAdresse } from "./components/SituationParLAdresse"
 import type { Affichage, SaveSlot, SessionState } from "@/types"
 import { anneeExistante, anneesDeLaSession, vueDeLAnnee } from "@/backend/logic/annees"
@@ -155,7 +156,7 @@ function App() {
   // sur une simulation vide ou sur l'exemple du premier lancement (règle commune aux trois entrées).
   const confirmationNecessaire = confirmationDuMontageNecessaire(currentSession, SessionService.modificationsNonEnregistrees(currentSession, allSaveSlots, loadedSlotId), plateforme.estLaSessionDExemple)
 
-  // L'encart des questions de départ, sur une simulation vide ou sur l'exemple du premier lancement.
+  // « Par où commencer ? » dans la page, sur une simulation vide ou sur l'exemple du premier lancement ; « Partir de zéro ».
   const questions = useEncartDesQuestions({ session: currentSession, sessionChargee, preferences: userPreferences, setPreferences: setUserPreferences, reinitialiser: handleResetSession, vues })
 
   // La légende et la grille numérotent les types de flux de la grille affichée, celle de l'année choisie.
@@ -165,6 +166,7 @@ function App() {
     <AffichageContext.Provider value={affichage}>
     <MemoireDesSectionsContext.Provider value={memoireDesSections}>
     <VuesContext.Provider value={vues}>
+    <PartirDeZeroContext.Provider value={questions.partirDeZero}>
       <div className="container mx-auto px-4 py-8 sm:p-8 min-h-screen flex flex-col print:min-h-0 print:max-w-none print:p-0">
         {/* Lien d'évitement : invisible tant qu'il n'a pas le focus, il mène au contenu sans traverser la barre d'outils. */}
         <a href={lienVers(ANCRES.contenu)} className="print:hidden sr-only z-[60] rounded-md bg-background px-4 py-2 font-medium shadow-md focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
@@ -193,10 +195,10 @@ function App() {
           {plateforme.Bandeau && <plateforme.Bandeau />}
         </header>
 
-        {/* Démo web : l'adresse #situation=… ouvre une situation type ; une fois chargée, l'encart des questions n'a plus lieu d'être. */}
+        {/* Démo web : l'adresse #situation=… ouvre une situation type ; une fois chargée, « Par où commencer ? » n'a plus lieu d'être dans la page. */}
         <SituationParLAdresse session={currentSession} sessionChargee={sessionChargee} confirmationNecessaire={confirmationNecessaire} onCharger={chargerUnMontage} />
 
-        {questions.affiche ? <EncartDesQuestions onCharger={chargerUnMontage} onPartirDeZero={questions.partirDeZero} onFermer={questions.fermer} confirmationNecessaire={confirmationNecessaire} nomDeLaSession={currentSession.name} /> : null}
+        {questions.affiche ? <ParOuCommencer onCharger={chargerUnMontage} onFermer={questions.fermer} confirmationNecessaire={confirmationNecessaire} nomDeLaSession={currentSession.name} /> : null}
 
         {resume ? <BarreDeResume report={simulationReport} annees={anneesDeLaSession(currentSession)} annee={annee} onAnnee={setAnneeChoisie} comparaison={comparaison} /> : null}
 
@@ -271,6 +273,7 @@ function App() {
           modificationDirecte={{ active: iaModifieDirectement, onChange: laisserLIAModifier }}
         />
       </div>
+    </PartirDeZeroContext.Provider>
     </VuesContext.Provider>
     </MemoireDesSectionsContext.Provider>
     </AffichageContext.Provider>

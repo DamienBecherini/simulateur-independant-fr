@@ -21,7 +21,7 @@ async function ouvrirLesMontages(page: Page, retoucher = false) {
   }
   await page.getByRole("button", { name: "Paramètres" }).click()
   await page.getByRole("dialog", { name: "Configuration" }).getByRole("button", { name: "Partir d'une situation type..." }).click()
-  const montages = page.getByRole("dialog", { name: "Partir d'une situation type" })
+  const montages = page.getByRole("dialog", { name: "Par où commencer ?" })
   await expect(montages).toBeVisible()
   return montages
 }

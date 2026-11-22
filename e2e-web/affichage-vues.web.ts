@@ -263,8 +263,16 @@ test.describe("sur un téléphone", () => {
   })
 })
 
+/** Le bloc « Par où commencer ? » du premier lancement n'est pas la page de la simulation : il est fermé avant la mesure. */
+async function sansLeDepart(page: Page) {
+  const fermer = page.getByRole("button", { name: "Fermer « Par où commencer ? »" })
+  if (await fermer.count()) await fermer.click()
+  await expect(page.getByRole("region", { name: "Par où commencer ?" })).toHaveCount(0)
+}
+
 /**
- * Hauteur de la page au chargement, sections repliées ; pour les trois vues, la hauteur de chacune. La page est fermée
+ * Hauteur de la page au chargement, sections repliées, sans le bloc « Par où commencer ? » ; pour les trois vues, la
+ * hauteur de chacune. La page est fermée
  * après la mesure : les pages d'un même contexte partagent leur stockage, et une page restée ouverte pourrait réécrire
  * ses préférences, donc son affichage, pendant que la suivante se charge.
  */
@@ -281,10 +289,12 @@ async function mesurer(page: Page, affichage: Affichage): Promise<number[]> {
   if (affichage !== "vues") {
     await page.goto("./")
     await expect(page.getByRole("group", { name: /Net du foyer selon la rémunération nette/ })).toBeVisible()
+    await sansLeDepart(page)
     return [await page.evaluate(() => document.documentElement.scrollHeight)]
   }
   const resultat: number[] = []
   await ouvrirEnVues(page)
+  await sansLeDepart(page)
   for (const [nom, vue] of [[SITUATION, "situation"], [RESULTATS, "resultats"], [COMPARER, "comparer"]] as const) {
     await onglet(page, nom).click()
     await attendreLaVue(page, vue)
