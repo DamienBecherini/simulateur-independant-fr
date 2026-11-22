@@ -8,7 +8,7 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ### Modifié
 
-- **« Combien facturer pour un net visé ? » quand le foyer l'atteint déjà.** Si chaque statut atteint le net visé sans chiffre d'affaires de l'activité, une phrase le dit, avec le net du foyer à chiffre d'affaires nul (« 36 978 € nets avec un chiffre d'affaires nul »), au lieu d'un tableau de « 0 € ». Quand seuls certains statuts l'atteignent ainsi, la phrase les nomme. L'aide du champ précise que le net visé est celui du foyer, autres revenus compris (salaires, autres activités, revenus du conjoint).
+- **« Combien facturer pour un net visé ? » quand le foyer l'atteint déjà.** Si chaque statut atteint le net visé sans chiffre d'affaires de l'activité, une phrase le dit, avec le net du foyer à chiffre d'affaires nul (« 36 978 € nets avec un chiffre d'affaires nul »), au lieu d'un tableau de « 0 € ». Quand seuls certains statuts l'atteignent ainsi, la phrase les nomme. L'aide du champ précise que le net visé est celui du foyer, autres revenus compris.
 - **Zone franche urbaine (ZFU-TE) : une hypothèse de moins.** Pour une entreprise individuelle au réel, les cotisations sociales restent calculées sur le bénéfice entier, exonération comprise : l'Urssaf le confirme (notice de la déclaration de revenus 2026 des indépendants, qui cite l'article 44 octies A parmi les exonérations à ne pas déduire). La phrase « ce point n'a pas été confirmé » disparaît de la fiche de l'activité ; pour le régime QPV, que l'Urssaf ne cite pas encore, elle est reformulée ([ADR 017](./documentation/adr/017-exoneration-d-impot-sur-les-benefices-en-zone.md), addendum du 22 novembre).
 
 ### Corrigé

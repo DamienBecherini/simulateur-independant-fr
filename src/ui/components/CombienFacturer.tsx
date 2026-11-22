@@ -212,7 +212,7 @@ function ContenuDuCalcul({ session, annee, options, activityName }: CombienFactu
         <ChampNumerique id={idChamp} className="w-40" min="0" step="1000" quoi="le net visé" placeholder="30000" value={saisie} onChange={e => setSaisie(e.target.value)} aria-describedby={idAide} />
       </div>
       <p id={idAide} className="text-xs text-slate-600 dark:text-slate-400">
-        Net du foyer après cotisations et impôts, autres revenus compris (salaires, autres activités, revenus du conjoint) : comme la ligne « Net dans la poche » du tableau.
+        Net du foyer après cotisations et impôts, autres revenus compris, comme la ligne « Net dans la poche » du tableau.
       </p>
       {erreur && netVise !== null ? <p className="text-sm text-red-800 dark:text-red-200">{erreur}</p> : null}
       {/* Zone annoncée sans rôle « status » : celui-ci reste au verdict du comparateur, plus haut. */}
