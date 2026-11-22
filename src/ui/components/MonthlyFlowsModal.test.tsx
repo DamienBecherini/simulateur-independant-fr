@@ -334,7 +334,7 @@ describe("MonthlyFlowsModal : salaires", () => {
     await user.type(net, "2000{Enter}")
 
     expect(onCreate).toHaveBeenCalledWith({ type: "salary", label: "Salaire (emploi tiers)", amount: 2000, grossAmount: brutCalcule(2000, reglesPubliees(annee)) })
-    expect(screen.getByRole("dialog")).toHaveTextContent(`le brut est calculé avec les cotisations salariales de ${annee}`)
+    expect(screen.getByRole("dialog")).toHaveTextContent(`il est calculé avec les cotisations salariales de ${annee}`)
   })
 
   it("calcule le net avec les cotisations de l'année quand seul le brut est saisi", async () => {

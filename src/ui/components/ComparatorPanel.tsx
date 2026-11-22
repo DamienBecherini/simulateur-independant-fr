@@ -1,7 +1,7 @@
 // src/ui/components/ComparatorPanel.tsx
 
 import { useCallback, useEffect, useMemo, type MouseEvent, type ReactNode } from "react"
-import { ArrowDown, Crown } from "lucide-react"
+import { ArrowDown, Crown, HeartHandshake } from "lucide-react"
 import { useOptimisation } from "../hooks/useOptimisation"
 import { appliquerRemuneration, avecActiviteComparee, avecRemunerationSaisie, avecReglagesDeLActivite, comparableActivities, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { numeroterNotes } from "@/lib/notes"
@@ -379,25 +379,57 @@ function WarningList({ warnings }: { warnings: string[] }) {
   )
 }
 
+const PASTILLE_D_IMPOT = "rounded-full border border-slate-200 bg-card px-2.5 py-0.5 font-mono text-xs tabular-nums text-slate-800 dark:border-slate-700 dark:text-slate-100"
+
 /**
- * Les couples en union libre, imposés ensemble comme s'ils étaient mariés ou pacsés. Le titre, où mène la barre de
- * résumé, peut recevoir le focus.
+ * Un couple : le gain (ou la perte) d'une imposition commune en grand, puis les deux impôts. Une perte reste en gris :
+ * une information, pas une alarme ; jamais en vert.
+ */
+function GainDuCouple({ couple, personName }: { couple: ComparaisonCouple; personName: (id: string) => string }) {
+  const delta = couple.netApresImpotsMaries - couple.netApresImpotsActuel
+  const suite = delta > 0 ? "de net après impôts par an" : delta < 0 ? "par an : l'union libre est plus avantageuse" : "par an : aucun écart"
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-lg border border-violet-200 bg-card px-4 py-3 dark:border-violet-900">
+        <p className="w-full text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">{couple.personIds.map(personName).join(" et ")}</p>
+        <p className="flex flex-wrap items-baseline gap-x-3">
+          <span className={cn("font-mono font-bold tabular-nums", delta > 0 ? "text-2xl text-emerald-700 dark:text-emerald-400" : "text-xl text-slate-600 dark:text-slate-300")}>{ecartSigne(delta)}</span>
+          <span className="text-sm text-slate-600 dark:text-slate-400">{suite}</span>
+        </p>
+      </div>
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600 dark:text-slate-300">
+        Impôt sur le revenu :<span className={PASTILLE_D_IMPOT}>{euros(couple.impotSurLeRevenuActuel)}</span>en union libre
+        <span aria-hidden="true">→</span>
+        <span className="sr-only">,</span>
+        <span className={PASTILLE_D_IMPOT}>{euros(couple.impotSurLeRevenuMaries)}</span>imposés ensemble
+      </p>
+    </div>
+  )
+}
+
+/**
+ * Les couples en union libre, imposés ensemble comme s'ils étaient mariés ou pacsés : une carte teintée de violet (ni
+ * le vert du meilleur net ni l'ambre des avertissements), qui se détache du tableau sans passer pour un statut. Le
+ * titre, où mène la barre de résumé, peut recevoir le focus.
  */
 function CoupleComparison({ couples, personName, Titre = "h3" }: { couples: ComparaisonCouple[]; personName: (id: string) => string; Titre?: "h3" | "h4" }) {
   return (
-    <section aria-labelledby={ANCRES.comparaisonDuCouple} className="space-y-2 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-      <Titre id={ANCRES.comparaisonDuCouple} tabIndex={-1} className="text-lg font-medium text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
-        Et si vous étiez mariés ou pacsés ?
-      </Titre>
-      <p className="text-sm text-slate-600 dark:text-slate-300">Mariage et Pacs ont le même effet sur l'impôt sur le revenu : le couple forme un seul foyer fiscal, imposé en commun.</p>
-      {couples.map(couple => {
-        const delta = couple.netApresImpotsMaries - couple.netApresImpotsActuel
-        return (
-          <p key={couple.personIds.join("-")} className="text-sm text-slate-600 dark:text-slate-300">
-            {couple.personIds.map(personName).join(" et ")} : impôt sur le revenu de {euros(couple.impotSurLeRevenuActuel)} en union libre, {euros(couple.impotSurLeRevenuMaries)} avec une imposition commune, soit <span className={cn("font-semibold", deltaClass(delta))}>{ecartSigne(delta)}</span> sur le net après impôts.
-          </p>
-        )
-      })}
+    <section aria-labelledby={ANCRES.comparaisonDuCouple} className="space-y-3 rounded-xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-900 dark:bg-violet-950/40">
+      <div className="flex items-center gap-3">
+        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full border border-violet-200 bg-card text-violet-700 dark:border-violet-800 dark:text-violet-300">
+          <HeartHandshake className="size-5" />
+        </span>
+        <div>
+          <Titre id={ANCRES.comparaisonDuCouple} tabIndex={-1} className="text-lg font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-slate-100">
+            Et si vous étiez mariés ou pacsés ?
+          </Titre>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Le couple formerait un seul foyer fiscal, imposé en commun.</p>
+        </div>
+      </div>
+      {couples.map(couple => (
+        <GainDuCouple key={couple.personIds.join("-")} couple={couple} personName={personName} />
+      ))}
+      <p className="text-xs text-slate-600 dark:text-slate-400">Mariage et Pacs ont le même effet sur l'impôt sur le revenu. Le reste (succession, protection du conjoint) n'est pas simulé.</p>
     </section>
   )
 }

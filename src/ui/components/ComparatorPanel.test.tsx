@@ -445,15 +445,28 @@ describe("ComparatorPanel", () => {
     const session = { ...emptySession(), entities: [makePerson(), makePerson({ id: "person-bob", name: "Bob Durand" })] }
     render(<ComparateurDeTest annee={2026} session={session} />)
 
-    const phrase = await screen.findByText(/Alice Martin et Bob Durand/)
-    expect(phrase).toHaveTextContent(`${money(6500)} en union libre, ${money(2950)} avec une imposition commune`)
-    expect(phrase).toHaveTextContent(`+${money(3550)}`)
+    // Le gain en grand, sous les noms du couple ; puis les deux impôts.
+    expect(await screen.findByText("Alice Martin et Bob Durand")).toBeInTheDocument()
+    const gain = screen.getByText(`+${money(3550)}`)
+    expect(gain).toHaveClass("text-emerald-700")
+    expect(gain.parentElement).toHaveTextContent(`+${money(3550)}de net après impôts par an`)
+    expect(enTexteBrut(screen.getByText(/^Impôt sur le revenu :/).textContent)).toBe(enTexteBrut(`Impôt sur le revenu :${money(6500)}en union libre→,${money(2950)}imposés ensemble`))
     expect(screen.queryByText("Choisissez une activité à comparer.")).not.toBeInTheDocument()
     expect(screen.queryByLabelText("Activité comparée")).not.toBeInTheDocument()
     // Mariage et Pacs ne sont pas distingués : la section dit pourquoi.
     const section = screen.getByRole("region", { name: "Et si vous étiez mariés ou pacsés ?" })
-    expect(section).toHaveTextContent("Mariage et Pacs ont le même effet sur l'impôt sur le revenu : le couple forme un seul foyer fiscal, imposé en commun.")
+    expect(section).toHaveTextContent("Le couple formerait un seul foyer fiscal, imposé en commun.")
+    expect(section).toHaveTextContent("Mariage et Pacs ont le même effet sur l'impôt sur le revenu.")
     expect(within(section).getByRole("heading", { level: 3 })).toHaveAttribute("id", "comparaison-du-couple")
+  })
+
+  it("un couple qui perdrait à être imposé ensemble : le montant en gris, jamais en vert", async () => {
+    vi.mocked(window.api.compareStatuts).mockResolvedValue({ scenarios: [], meilleur: null, couples: [{ personIds: ["person-alice", "person-bob"], netApresImpotsActuel: 48500, impotSurLeRevenuActuel: 6120, netApresImpotsMaries: 48080, impotSurLeRevenuMaries: 6540 }], warnings: [] })
+    const session = { ...emptySession(), entities: [makePerson(), makePerson({ id: "person-bob", name: "Bob Durand" })] }
+    render(<ComparateurDeTest annee={2026} session={session} />)
+    const perte = await screen.findByText(`−${money(420)}`)
+    expect(perte).not.toHaveClass("text-emerald-700")
+    expect(perte.parentElement).toHaveTextContent("par an : l'union libre est plus avantageuse")
   })
 
   it("place la comparaison du couple avant la courbe « Rémunération ou dividendes ? » de l'activité comparée", async () => {
