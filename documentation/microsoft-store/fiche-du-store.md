@@ -78,25 +78,25 @@ Version 0.13.0
 
 ## Fonctionnalités du produit
 
-Une par ligne dans Partner Center (vingt au plus) :
+Une par ligne dans Partner Center (vingt au plus), dans l'ordre où elles y sont : Partner Center ne permet pas de les déplacer, une nouvelle ligne s'ajoute à la fin (*Add more*).
 
 1. Net dans la poche du foyer et taux global de prélèvement, recalculés à chaque modification
 2. Micro-entreprise, entreprise individuelle au réel, EURL et SASU
 3. Impôt sur le revenu calculé par foyer fiscal : quotient familial, décote, dividendes
 4. Comparateur de statuts, portage salarial compris : net, prélèvements, frais et protection sociale, garantie par garantie
 5. Rémunération ou dividendes : la répartition qui donne le meilleur net
-6. Combien facturer pour un net visé, statut par statut
-7. Grille annuelle des revenus et charges, mois par mois
-8. Plusieurs années de simulation, chacune avec ses règles fiscales
-9. Situations types préremplies et expliquées, avec leurs sources
-10. Frais réels et barème kilométrique
-11. Exonération d'impôt en zone franche urbaine ou en quartier prioritaire
-12. Sauvegardes nommées, import et export JSON
-13. Exports CSV pour Excel, PDF mis en page et rapport Markdown
-14. Annuler et rétablir, sauvegarde automatique, zoom de 50 % à 200 %
-15. 100 % hors ligne : aucune donnée ne quitte l'ordinateur
-16. Serveur MCP local pour les assistants d'IA de bureau, avec validation de chaque proposition
-17. Gratuit, sans publicité, open source (licence MIT)
+6. Grille annuelle des revenus et charges, mois par mois
+7. Plusieurs années de simulation, chacune avec ses règles fiscales
+8. Situations types préremplies et expliquées, avec leurs sources
+9. Frais réels et barème kilométrique
+10. Sauvegardes nommées, import et export JSON
+11. Exports CSV pour Excel, PDF mis en page et rapport Markdown
+12. Annuler et rétablir, sauvegarde automatique, zoom de 50 % à 200 %
+13. 100 % hors ligne : aucune donnée ne quitte l'ordinateur
+14. Serveur MCP local pour les assistants d'IA de bureau, avec validation de chaque proposition
+15. Gratuit, sans publicité, open source (licence MIT)
+16. Combien facturer pour un net visé, statut par statut
+17. Exonération d'impôt en zone franche urbaine ou en quartier prioritaire
 
 ## Mots-clés
 
