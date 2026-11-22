@@ -211,7 +211,8 @@ function CarteDeStatut({ scenario, result, meilleur }: { scenario: ScenarioStatu
         {frais ? <p className="text-xs text-slate-600 dark:text-slate-400">{frais}</p> : null}
         {repartition ? <p className="text-xs text-slate-600 dark:text-slate-400">{repartition.resume}</p> : null}
       </div>
-      <p className="shrink-0 text-right tabular-nums">
+      {/* Au plus 45 % de la carte : « et 3 660 € gardés sur le compte d'activité » passe à la ligne au lieu de déborder (téléphone, interface agrandie). */}
+      <p className="max-w-[45%] shrink-0 text-right tabular-nums">
         <span className="block font-semibold">{euros(scenario.netApresImpots)}</span>
         <ResteDansLActivite scenario={scenario} />
         {ecart !== null ? <span className={cn("block text-xs", !nonRetenue && couleurDeLEcart(ecart))}>{ecartSigne(ecart)}</span> : null}
