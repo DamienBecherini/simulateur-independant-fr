@@ -155,4 +155,57 @@ casDeReference("Cas de référence 2026 : président de SASU", () => {
       expect(brut).toBeCloseTo(48059.99, 1)
     })
   })
+
+  describe("président de deux SASU, 40 000 € nets dans chacune : le plafond est réparti entre elles", () => {
+    // Article L242-3 du code de la sécurité sociale ; BOSS, « Assiette générale », § 960 et 1130 (cumul de mandats) :
+    // chaque société n'applique que sa part du PASS, au prorata des rémunérations. Bruts égaux : 48 060 / 2 = 24 030 €.
+    // Au-delà du plafond P : net = 0,8020975 x B - 0,0119 x P ; patronales 0,3731 x B + 0,0009 x P.
+    // Brut : (40 000 + 0,0119 x 24 030) / 0,8020975 = 40 285,96 / 0,8020975 = 50 225,76 € ;
+    // patronales 0,3731 x 50 225,76 + 21,63 = 18 760,86 € ; cotisations de la société 50 225,76 + 18 760,86 - 40 000 = 28 986,62 €.
+    // Avec un plafond entier dans chacune : brut 50 582,27 €, cotisations 29 497,77 € ; la répartition en retire 511,15 €
+    // par société : la vieillesse plafonnée n'est due que sur 24 030 €, mais l'Agirc-Arrco de la tranche 2, plus cher,
+    // commence plus tôt.
+    const bob = personne("bob")
+    const report = simuler(
+      [bob, societe("a", "SASU"), societe("b", "SASU")],
+      [relation("bob", "a", "Président"), relation("bob", "b", "Président")],
+      [
+        ["a", "ca_services", 120000],
+        ["a", "director_remuneration", 40000],
+        ["b", "ca_services", 120000],
+        ["b", "director_remuneration", 40000]
+      ]
+    )
+
+    it("chaque société applique la moitié du plafond", () => {
+      for (const id of ["a", "b"]) {
+        const bulletin = activite(report, id).cotisationsPresident
+        expect(bulletin?.brut).toBeCloseTo(50225.76, 1)
+        expect(bulletin?.totalSalarial).toBeCloseTo(10225.76, 1)
+        expect(bulletin?.totalPatronal).toBeCloseTo(18760.86, 1)
+        expect(activite(report, id).cotisationsSociales).toBe(28987)
+      }
+      verifierIdentiteDuBilan(report)
+    })
+
+    it("la carte de chaque société le dit", () => {
+      expect(activite(report, "a").warnings.map(texte => texte.replace(/\s/g, " "))).toContain(
+        "Président rémunéré aussi par « b » : la société n'applique que 50 % du plafond de la sécurité sociale à sa rémunération, au prorata des rémunérations versées (article L242-3 du code de la sécurité sociale)."
+      )
+    })
+
+    it("un président qui n'est rémunéré que par une société garde le plafond entier", () => {
+      const seul = simuler(
+        [bob, societe("a", "SASU"), societe("b", "SASU")],
+        [relation("bob", "a", "Président"), relation("bob", "b", "Président")],
+        [
+          ["a", "ca_services", 120000],
+          ["a", "director_remuneration", 40000],
+          ["b", "ca_services", 120000]
+        ]
+      )
+      expect(activite(seul, "a").cotisationsPresident?.brut).toBeCloseTo(50582.27, 1)
+      expect(activite(seul, "a").warnings.some(w => w.includes("plafond de la sécurité sociale"))).toBe(false)
+    })
+  })
 })

@@ -136,12 +136,9 @@ Une micro-entreprise et une entreprise individuelle au réel du même titulaire 
 - La rémunération de plusieurs gérants : elle va au premier, avec l'avertissement existant.
 - Un président personne morale ; un directeur général de SAS.
 - L'entreprise individuelle unique d'une personne titulaire d'une micro-entreprise et d'une entreprise au réel : les deux sont calculées côte à côte, avec un avertissement.
-- Le plafond de la sécurité sociale partagé entre plusieurs employeurs : le président de deux SASU cotise société par société, ce qui majore un peu ses cotisations plafonnées (environ 1 000 € pour deux rémunérations de 40 000 €, mesuré le 2026-11-20).
 
 ## À vérifier
 
-- Le numéro exact de l'alinéa de l'article L311-3 du code de la sécurité sociale qui vise le gérant non associé d'une EURL : la fiche de service-public.fr est citée à sa place.
-- La règle du plafond de la sécurité sociale pour un dirigeant rémunéré par plusieurs sociétés (article L242-3 du code de la sécurité sociale, non relu).
 - Le texte qui pose qu'une personne physique n'a qu'une entreprise individuelle : Bpifrance Création le dit (un seul numéro SIREN) ; la page d'economie.gouv.fr sur les activités multiples n'a pas pu être relue (accès refusé).
 
 ## Sources consultées le 2026-11-20
@@ -151,3 +148,12 @@ Une micro-entreprise et une entreprise individuelle au réel du même titulaire 
 - [Cotisations sociales d'une EURL](https://entreprendre.service-public.gouv.fr/vosdroits/F36239) (service-public.fr).
 - [Micro-entrepreneur : peut-on cumuler plusieurs activités indépendantes ?](https://entreprendre.service-public.gouv.fr/vosdroits/F33339) (service-public.fr, vérifié le 21 février 2026) : seuil global de chiffre d'affaires pour l'ensemble des activités, seuils de TVA sur le montant global.
 - [Le cumul d'activités avec une micro-entreprise](https://bpifrance-creation.fr/encyclopedie/micro-entreprise-regime-auto-entrepreneur/lessentiel-ce-regime/cumul-dactivites-micro) (Bpifrance Création) : une personne ne peut pas avoir deux micro-entreprises.
+
+## Addendum (2026-11-22) : points vérifiés
+
+- **Alinéa de l'article L311-3 du code de la sécurité sociale** ([version en vigueur](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000046805349)) : le **11°** rattache au régime général les gérants de SARL qui « ne possèdent pas ensemble plus de la moitié du capital social » ; le gérant non associé d'une EURL, qui n'en détient rien, en relève donc, comme les gérants minoritaires ou égalitaires d'une SARL. Le **23°** vise les présidents et dirigeants de SAS et de SASU. Le gérant associé unique d'une EURL, exclu du 11° par la condition de capital, est travailleur indépendant (article L611-1, 1°). La condition de rémunération ne figure pas dans ces alinéas : elle vient de la fiche de service-public.fr (F36239). Le code (`regles-de-structure.ts`) cite désormais l'alinéa.
+- **Plafond de la sécurité sociale d'un président rémunéré par plusieurs SASU : calculé.** L'article [L242-3](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000031686588) du code de la sécurité sociale répartit les cotisations d'une personne qui travaille pour plusieurs employeurs « au prorata des rémunérations qu'ils ont respectivement versées », et le BOSS (« Assiette générale », § 960 et 1130) l'applique aux mandataires sociaux, y compris au cumul de plusieurs mandats ; la méthode du temps partiel ne s'applique pas à eux. La répartition suppose que le président déclare à chaque société le total de ses rémunérations (article R242-3) ; sans cela, il peut se faire rembourser par l'Urssaf les cotisations versées en trop, dans les trois ans (L243-6). Sur l'année, le net est le même : le simulateur applique donc la répartition.
+  - Chaque SASU applique à son président la part du plafond qui correspond à son brut dans le total de ses bruts (`plafond-entre-mandats.ts`, `partsDuPlafond`) ; les tranches de l'Agirc-Arrco suivent, la tranche 2 allant jusqu'à huit fois le plafond réparti (circulaire Agirc-Arrco 2019-1-DRJ, fiche 3). Le brut dépend lui-même du plafond : la répartition part de bruts calculés avec un plafond entier, puis deux passes l'ajustent.
+  - Effet : 511 € de cotisations en moins par société pour deux rémunérations de 40 000 € nets (cas de référence dans `references/president-sasu.reference.test.ts`). La vieillesse plafonnée n'est due que sur la moitié du plafond, mais la tranche 2 de l'Agirc-Arrco, plus chère, commence plus tôt : l'écart est bien plus petit que la vieillesse plafonnée économisée.
+  - La carte de chaque société le dit : « Président rémunéré aussi par « … » : la société n'applique que 50 % du plafond de la sécurité sociale à sa rémunération, au prorata des rémunérations versées (article L242-3 du code de la sécurité sociale). »
+  - Non modélisé : un salaire versé par un autre employeur (relation « Salarié », ou salaire saisi d'un employeur hors de la simulation), qui partagerait aussi le plafond.

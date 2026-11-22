@@ -9,7 +9,8 @@ import { calculerEURL, type EntreesEURL } from "./calculsEURL.js"
 import { calculerSASU } from "./calculsSASU.js"
 import { etatSansReserves, type ResultatSociete } from "./calculsSociete.js"
 import type { ReglesFiscales } from "./regles.js"
-import { euros } from "./format.js"
+import { euros, pourcentDeNombre } from "./format.js"
+import { partsDuPlafond } from "./plafond-entre-mandats.js"
 import { remunerationMaximale } from "./remuneration-maximale.js"
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementsDeLaProfession, parametresDeLaCaisse, professionDe } from "./professions.js"
@@ -70,11 +71,34 @@ function limiteEtAlerte(demandee: boolean, entrees: EntreesEURL & { etat: EtatDe
   return { limite, alerte: depassee ? alerteDeRemuneration(entrees.remunerationNette, beneficeAvantIS, limite, entrees.etat.reserves) : [] }
 }
 
+/**
+ * La part du plafond de la sécurité sociale qu'une SASU applique à son président, quand d'autres SASU qu'il préside le
+ * rémunèrent aussi (plafond-entre-mandats.ts), et la phrase qui le dit ; rien avec un seul mandat rémunéré.
+ */
+function plafondDuPresident(ctx: Contexte, societe: Company): { partDuPlafond: number; note: string } | undefined {
+  const [president] = dirigeantsDe(ctx, societe)
+  const remuneration = (id: string) => total(ctx, id, "director_remuneration")
+  if (!president || remuneration(societe.id) <= 0) return undefined
+  const mandats = ctx.session.entities.filter((e): e is Company => e.type === "company" && e.legalStatus === "SASU" && dirigeantsDe(ctx, e)[0] === president && remuneration(e.id) > 0)
+  if (mandats.length < 2) return undefined
+  const parts = partsDuPlafond(
+    mandats.map(m => remuneration(m.id)),
+    ctx.regles.regimeGeneral
+  )
+  const partDuPlafond = parts[mandats.findIndex(m => m.id === societe.id)]
+  const autres = mandats.filter(m => m.id !== societe.id).map(m => `« ${m.name} »`)
+  return {
+    partDuPlafond,
+    note: `Président rémunéré aussi par ${autres.join(", ")} : la société n'applique que ${pourcentDeNombre(partDuPlafond * 100)} du plafond de la sécurité sociale à sa rémunération, au prorata des rémunérations versées (article L242-3 du code de la sécurité sociale).`
+  }
+}
+
 function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete): ActivityResult {
   const masse = masseSalariale(ctx, societe.id)
   const deplacements = deplacementsProfessionnels(ctx, societe)
   const zone = zoneDeLActivite(societe, anneeSimulee(ctx), ctx.regles)
   const exonerationDeZone = parametresDExoneration(zone)
+  const plafond = statut === "SASU" ? plafondDuPresident(ctx, societe) : undefined
   const entrees = {
     chiffreAffaires: total(ctx, societe.id, "ca_services", "ca_vente"),
     chargesDeductibles: total(ctx, societe.id, "deductible_expense") + masse.cout + deplacements,
@@ -82,12 +106,13 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
     dividendesDemandes: total(ctx, societe.id, "dividends_payment"),
     capitalSocial: societe.capitalSocial,
     etat: ctx.annee.etatsDesSocietes?.[societe.id] ?? etatAuDebutDeLaSimulation(societe, anneeSimulee(ctx), ctx.regles),
-    ...(exonerationDeZone ? { exonerationDeZone } : {})
+    ...(exonerationDeZone ? { exonerationDeZone } : {}),
+    ...(plafond ? { partDuPlafond: plafond.partDuPlafond } : {})
   }
   const resultat = CALCUL_DES_SOCIETES[statut](entrees, ctx, societe)
   const profession = professionDe(societe, ctx.regles)
   const { limite, alerte } = limiteEtAlerte(ctx.annee.limitesDeRemuneration === true, entrees, resultat.beneficeAvantIS, remunerationNette => CALCUL_DES_SOCIETES[statut]({ ...entrees, remunerationNette, dividendesDemandes: 0 }, ctx, societe).beneficeAvantIS)
-  const warnings = [...alerte, ...resultat.warnings, ...avertissementsDeLaProfession(profession, statut), ...anomaliesDeLActivite(ctx, societe)]
+  const warnings = [...alerte, ...resultat.warnings, ...(plafond ? [plafond.note] : []), ...avertissementsDeLaProfession(profession, statut), ...anomaliesDeLActivite(ctx, societe)]
 
   verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable, cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
   attribuerResultatSociete(ctx, societe, resultat)

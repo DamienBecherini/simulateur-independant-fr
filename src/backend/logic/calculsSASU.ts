@@ -2,6 +2,7 @@
 
 import { calculerResultatSociete, type EntreesSociete, type ResultatSociete } from "./calculsSociete.js"
 import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.js"
+import { avecUnePartDuPlafond } from "./plafond-entre-mandats.js"
 import type { ReglesFiscales } from "./regles.js"
 
 /**
@@ -9,10 +10,12 @@ import type { ReglesFiscales } from "./regles.js"
  * est le net, puis ses cotisations salariales et patronales, ligne à ligne (sans assurance chômage ni réduction
  * générale). La société paie le brut et les cotisations patronales : ses cotisations sociales sont ce coût moins le
  * net versé. Le net, augmenté de la CSG non déductible et de la CRDS, est imposé comme un salaire.
- * Les dividendes supportent les prélèvements sociaux, jamais de cotisations.
+ * Les dividendes supportent les prélèvements sociaux, jamais de cotisations. Un président rémunéré par plusieurs SASU
+ * n'a, dans chacune, que sa part du plafond de la sécurité sociale (`partDuPlafond`).
  */
 export function calculerSASU(entrees: EntreesSociete, regles: ReglesFiscales): ResultatSociete {
-  const president = calculerCotisationsSalarie(brutPourUnNet(entrees.remunerationNette, "president", regles.regimeGeneral), "president", regles.regimeGeneral)
+  const regimeGeneral = avecUnePartDuPlafond(regles.regimeGeneral, entrees.partDuPlafond ?? 1)
+  const president = calculerCotisationsSalarie(brutPourUnNet(entrees.remunerationNette, "president", regimeGeneral), "president", regimeGeneral)
   const resultat = calculerResultatSociete(entrees, president.coutEmployeur - president.net, regles)
   return { ...resultat, remunerationImposable: resultat.remunerationNette + president.partNonDeductible, cotisationsPresident: president }
 }

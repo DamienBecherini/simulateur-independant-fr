@@ -20,6 +20,11 @@ export interface EntreesSociete {
   etat?: EtatDeLaSociete
   /** Société implantée en zone (ZFU-TE, QPV) dont l'exonération joue cette année (voir l'ADR 017). Absent : aucune. */
   exonerationDeZone?: ParametresDExoneration
+  /**
+   * Part du plafond de la sécurité sociale que la société applique à son président, rémunéré aussi par d'autres SASU
+   * (plafond-entre-mandats.ts). Absent : le plafond entier.
+   */
+  partDuPlafond?: number
 }
 
 /** Résultat annuel d'une société à l'IS, avant toute imposition personnelle des bénéficiaires. */

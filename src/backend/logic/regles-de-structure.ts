@@ -44,8 +44,10 @@ const UN_SEUL_TITULAIRE = "une activité exercée en son nom propre n'a qu'un ti
 
 /**
  * Sources : article L227-6 du Code de commerce (la SAS est représentée par un président) ; article L223-18 (la SARL est
- * gérée par une ou plusieurs personnes physiques, qui peuvent être choisies en dehors des associés) ; service-public.fr,
- * F36239 (le gérant non associé d'une EURL, rémunéré, est assimilé salarié). Voir l'ADR 018.
+ * gérée par une ou plusieurs personnes physiques, qui peuvent être choisies en dehors des associés) ; article L311-3,
+ * 11°, du code de la sécurité sociale (les gérants de SARL qui ne détiennent pas ensemble plus de la moitié du capital,
+ * donc le gérant non associé d'une EURL, sont assimilés salariés ; service-public.fr, F36239, ajoute : s'il est
+ * rémunéré). Voir l'ADR 018.
  */
 export const REGLES_DE_STRUCTURE: Record<GenreDeStructure, RegleDeStructure> = {
   SASU: {
