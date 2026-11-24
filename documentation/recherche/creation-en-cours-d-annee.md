@@ -1,6 +1,6 @@
 # Recherche : une activité créée en cours d'année
 
-Préparation du point 1 de la phase 15 de la feuille de route (« Prorata temporis : activité démarrée en cours d'année »). Ce document rassemble les règles **sourcées** de l'année de création, décrit ce que le moteur calcule aujourd'hui et propose une conception. Il ne contient **aucun code** et ne décide rien : la dernière section liste ce qui est à trancher.
+Préparation du point 1 de la phase 15 de la feuille de route (« Prorata temporis : activité démarrée en cours d'année »). Ce document rassemble les règles **sourcées** de l'année de création, décrit ce que le moteur calcule aujourd'hui et propose une conception. Il ne contient **aucun code**. Les décisions du propriétaire sont à la section 11, les cas calculés à la main à la section 12, le plan à la section 13.
 
 - **Date de consultation des sources :** 23 novembre 2026. Le site de l'Urssaf refuse les lectures automatiques : les règles des indépendants viennent de Légifrance, du BOFiP, de la Cnav et de la CNBF, et quelques points de sources secondaires, signalés.
 - **Exemples :** valeurs 2026 (PASS 48 060 €, PMSS 4 005 €, SMIC horaire 12,02 €). Une création « au 1er avril » compte 275 jours d'activité en 2026, « au 15 septembre » 108 jours (premier jour compté, comme les exemples du BOFiP).
@@ -18,7 +18,9 @@ Préparation du point 1 de la phase 15 de la feuille de route (« Prorata tempor
 8. [Proposition de conception](#8-proposition-de-conception)
 9. [Cas de référence proposés](#9-cas-de-référence-proposés)
 10. [Points incertains](#10-points-incertains)
-11. [À trancher par le propriétaire](#11-à-trancher-par-le-propriétaire)
+11. [Décisions du propriétaire](#11-décisions-du-propriétaire-24-novembre-2026)
+12. [Cas calculés à la main](#12-cas-calculés-à-la-main)
+13. [Plan de réalisation](#13-plan-de-réalisation)
 
 ---
 
@@ -172,10 +174,79 @@ Aucun prorata : barème, quotient familial et décote sont annuels. La déductio
 
 ---
 
-## 11. À trancher par le propriétaire
+## 11. Décisions du propriétaire (24 novembre 2026)
 
-1. **Périmètre** : indépendants au réel, président et salariés, impôt sur les sociétés et TVA de la micro ensemble, ou en deux temps (cotisations d'abord, IS et TVA ensuite) ?
-2. **Flux saisis avant la création** : comptés avec un avertissement et un repère dans la grille (proposé), ou ignorés ?
-3. **Premier exercice de plus de 12 mois** : écarté (exercice = année civile, note dans les limites du modèle), ou à modéliser plus tard ?
-4. **Date de fin d'activité** (cessation, même mécanique en fin d'année) : dans ce point, ou plus tard ?
-5. **Points incertains 2 et 3** : trancher sur la lecture du texte (prorata), ou attendre une confirmation de l'Urssaf ?
+1. **Périmètre :** tout en une fois : indépendants au réel, président et salariés, impôt sur les sociétés, franchise de TVA de la micro.
+2. **Flux saisis avant la création :** comptés, avec un avertissement dans les résultats et les mois marqués dans la grille.
+3. **Premier exercice de plus de 12 mois :** écarté ; l'exercice reste l'année civile, avec une note dans les limites du modèle.
+4. **Date de fin d'activité :** plus tard (même mécanique).
+5. **Points incertains 2 et 3 :** on suit la lecture du texte (R613-17) : minimums des indemnités journalières et de l'invalidité-décès, et bornes de l'abattement de 26 %, au prorata du PASS ; écrit comme une hypothèse dans les explications et dans l'ADR. La formation professionnelle reste pleine. Unité du prorata : les mois (point incertain 1).
+
+---
+
+## 12. Cas calculés à la main
+
+Calculés le 24/11/2026 avec les barèmes de `2026.json`, par une réimplémentation des formules indépendante du code du simulateur (barème progressif de la maladie et des allocations familiales, tranches en PASS, minimums), selon les décisions ci-dessus. Ils deviendront les cas de référence (`references/creation-en-cours-d-annee.reference.test.ts`).
+
+**Cas 1 : EI au réel, revenu avant cotisations 30 000 €, créée le 1er avril 2026** (9 mois, 275 jours). PASS au prorata : 48 060 × 9/12 = 36 045 €. Abattement : 26 % × 30 000 = 7 800 € (entre 1,76 % et 130 % du PASS au prorata) ; assiette 22 200 € dans les deux cas.
+
+| Ligne | Année pleine | Au prorata |
+|---|---|---|
+| Maladie-maternité (taux progressif) | 504,84 € | **905,65 €** |
+| Indemnités journalières | 111,00 € | 111,00 € |
+| Retraite de base | 3 967,14 € | 3 967,14 € |
+| Retraite complémentaire | 1 798,20 € | 1 798,20 € |
+| Invalidité-décès | 288,60 € | 288,60 € |
+| Allocations familiales | 0 € | 0 € |
+| CSG-CRDS | 2 153,40 € | 2 153,40 € |
+| Formation professionnelle | 120,15 € | 120,15 € |
+| **Total** | 8 943,33 € | **9 344,14 €** |
+
+**À retenir :** le prorata **augmente** les cotisations. Le même revenu, gagné en 9 mois, correspond à un revenu annuel plus élevé : l'assiette pèse 61,6 % du PASS au prorata au lieu de 46,2 %, et le taux progressif de la maladie monte (4,08 % au lieu de 2,27 %). L'explication doit le dire.
+
+**Cas 2 : EURL, gérant non rémunéré (revenu 0).**
+
+| | Année pleine | Créée en octobre (3 mois, 92 jours) | Créée en novembre (2 mois, 61 jours) |
+|---|---|---|---|
+| Indemnités journalières (minimum 40 % du PASS) | 96,12 € | 24,03 € | 16,02 € |
+| Retraite de base (minimum 450 h de SMIC) | 966,59 € | 966,59 € | **0 €** (moins de 90 jours) |
+| Invalidité-décès (minimum 11,5 % du PASS) | 71,85 € | 17,96 € | 11,98 € |
+| Formation professionnelle | 120,15 € | 120,15 € | 120,15 € |
+| **Total** | 1 254,71 € | 1 128,73 € | **148,15 €** |
+
+**Cas 3 : SASU créée en avril 2026, président payé 5 000 € brut par mois d'avril à décembre** (brut 45 000 €). Plafond : 9 × 4 005 = 36 045 € au lieu de 48 060 €.
+
+| | Plafond annuel | Plafond au prorata |
+|---|---|---|
+| Cotisations salariales (CSG-CRDS comprises) | 9 378,11 € | 9 334,55 € |
+| Cotisations patronales | 16 735,50 € | 16 821,94 € |
+| **Total** | 26 113,61 € | **26 156,49 €** |
+| Net avant impôt | 35 621,89 € | **35 665,45 €** |
+
+La part du brut au-dessus du plafond (8 955 €) passe en tranche 2 (retraite complémentaire, contributions d'équilibre générale et technique) et sort de la vieillesse plafonnée.
+
+**Cas 4 : SASU créée en septembre 2026, bénéfice imposable 40 000 €.** Limite du taux réduit : 42 500 × 4/12 = 14 166,67 €. IS : 14 166,67 × 15 % + 25 833,33 × 25 % = **8 583,33 €**, au lieu de 6 000 € avec la limite pleine.
+
+**Cas 5 : micro-entreprise de services créée le 1er septembre 2026** (122 jours), 15 000 € de CA. Seuil majoré de l'année : 41 250 × 122/365 = **13 787,67 €**, dépassé : avertissement (TVA due dès le dépassement). Seuil de base pour 2027 : 37 500 × 122/365 = 12 534,25 €, dépassé aussi : pas de franchise au 1er janvier 2027.
+
+**Cas 6 : flux avant la création.** Micro créée en mars 2026 avec 2 000 € de CA saisis en janvier et en février : avertissement « 4 000 € saisis avant la création (janvier, février) », montants comptés.
+
+---
+
+## 13. Plan de réalisation
+
+Une branche, dans cet ordre ; chaque étape garde la vérification complète verte.
+
+1. **ADR 020** « Une activité créée en cours d'année » : les décisions de la section 11, les hypothèses (unité en mois, minimums au prorata, début du mandat au mois de création), ce qui est écarté (premier exercice long, cessation, date au jour près).
+2. **Les mois d'activité** (`dispositifs.ts`) : `moisDActivite(creation, annee)` (12, mois de création à décembre, ou 0) et les jours d'affiliation (seuil de 90 jours) ; tests unitaires.
+3. **Indépendants** (`cotisationsTNS.ts`, `cotisations-liberales.ts`, `calculsEI.ts`, `calculsEURL.ts`) : règles TNS au prorata (`avecLePassAuProrata`, sur le modèle d'`avecUnePartDuPlafond`) et minimums selon la section 11 ; seuil des 90 jours dans les règles de chaque année (indépendants et libéraux) ; cas 1 et 2.
+4. **Président et salariés** (`cotisationsSalarie.ts`, `plafond-entre-mandats.ts`, `simulation-au-reel.ts`, `routage-des-flux.ts`) : plafond × mois / 12, combiné avec la part entre mandats (ADR 018) ; SMIC de la réduction générale × mois / 12 ; cas 3.
+5. **Impôt sur les sociétés** (`calculsSociete.ts`) : limite au prorata l'année de création ; cas 4.
+6. **Franchise de TVA de la micro** (`calculsAE.ts`) : seuils au prorata des jours (même calcul que les plafonds) ; avertissement pour N+1 ; cas 5.
+7. **Année avant la création** : l'activité ne produit ni cotisation ni impôt ; note.
+8. **Flux avant la création** : avertissement dans les résultats ; mois marqués dans la grille ; cas 6.
+9. **Explications** : notes de la fiche de l'activité (plafond et limites au prorata, mois d'activité, minimum de retraite non dû, cotisations plus fortes qu'en année pleine), texte d'aide du champ « Date de création » complété pour les sociétés et l'EI, limites du modèle (premier exercice long), exports CSV et Markdown, outils des IA.
+10. **Comparateur et optimiseur** : les colonnes reprennent les mois d'activité (vérifier que la date suit chaque statut converti, y compris le portage, qui la perd aujourd'hui).
+11. **Documentation** : guide (carte du moteur, glossaire), `fonctionnalites.md`, CHANGELOG, Roadmap (phase 15 point 1 ✅, cessation en « plus tard »).
+
+**Maquettes à valider avant le code :** la grille avec les mois avant la création (étape 8), et la fiche d'une activité créée en cours d'année avec ses explications (étape 9).
