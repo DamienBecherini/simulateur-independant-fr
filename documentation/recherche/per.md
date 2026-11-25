@@ -1,6 +1,6 @@
 # Recherche : le plan d'épargne retraite (PER)
 
-Préparation du point 1 de la phase 17 de la feuille de route (« PER »). Ce document rassemble les règles **sourcées** pour les revenus 2024, 2025 et 2026, décrit ce que le moteur calcule aujourd'hui et propose où brancher le PER. Il ne contient **aucun code** et ne décide rien : la dernière section est un brouillon de décision à trancher.
+Préparation du point 1 de la phase 17 de la feuille de route (« PER »). Ce document rassemble les règles **sourcées** pour les revenus 2024, 2025 et 2026, décrit ce que le moteur calcule aujourd'hui et propose où brancher le PER. Il ne contient **aucun code**. Les décisions du propriétaire et le plan de réalisation sont aux sections 15 et 16.
 
 - **Date de consultation des sources :** 8 octobre 2026, sauf mention contraire.
 - **Convention d'année :** celle de l'ADR 007. « Versements 2026 » désigne les sommes versées sur le PER pendant 2026, déduites des revenus de 2026 et donc imposées en 2027.
@@ -22,7 +22,7 @@ Préparation du point 1 de la phase 17 de la feuille de route (« PER »). Ce do
 12. [Cas de test proposés](#12-cas-de-test-proposés)
 13. [Points incertains](#13-points-incertains)
 14. [Brouillon de décision](#14-brouillon-de-décision)
-15. [Décisions du propriétaire](#15-décisions-du-propriétaire-25-novembre-2026)
+15. [Décisions](#15-décisions-25-et-26-novembre-2026)
 16. [Plan de réalisation](#16-plan-de-réalisation)
 
 ---
@@ -52,6 +52,10 @@ Chaque source est désignée par un code (S1, S2, etc.) dans la suite du documen
 | S17 | BOI-ANNX-000513 : synthèse du régime fiscal des PER | 10/08/2026 | https://bofip.impots.gouv.fr/bofip/14911-PGP.html/identifiant%3DBOI-ANNX-000513-20260810 |
 | S18 | Urssaf, plafonds de la sécurité sociale (PASS 2026 : 48 060 €) | 2026 | https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/plafonds-securite-sociale.html |
 | S19 | Loi n° 2026-103 du 19/02/2026 de finances pour 2026, art. 9 | JO du 20/02/2026 | https://www.legifrance.gouv.fr/jorf/article_jo/JORFARTI000053508199 |
+| S20 | BOI-IR-BASE-20-50-30 : mutualisation, report de la limite non utilisée, obligations déclaratives | 10/08/2026, lu le 26/11/2026 | https://bofip.impots.gouv.fr/bofip/1117-PGP.html/identifiant=BOI-IR-BASE-20-50-30-20260810 |
+| S21 | impots.gouv.fr, « Que signifie la somme imprimée dans la rubrique « Plafond épargne retraite » de mon avis d'impôt sur le revenu ? » | modifié le 07/07/2026, lu le 26/11/2026 | https://www.impots.gouv.fr/particulier/questions/que-signifie-la-somme-imprimee-dans-la-rubrique-plafond-epargne-retraite-de |
+
+**Relecture du 26 novembre 2026.** S1, S3, S4, S5, S6, S8, S9, S12 et S17 ont été relus en entier dans un navigateur, S20 et S21 lus pour la première fois. Ce que la relecture change est résumé à la section 15.
 
 **Valeurs du PASS utilisées.**
 - 43 992 € (2023), 46 368 € (2024) et 47 100 € (2025) : lues dans S9 et S10.
@@ -86,11 +90,12 @@ Chaque source est désignée par un code (S1, S2, etc.) dans la suite du documen
    - **Qui peut la demander :** un couple marié ou pacsé imposé en commun, sur demande expresse (case **6QR**) (S9, S3).
    - **Effet :** les plafonds des deux conjoints et leurs versements sont additionnés en un seul plafond pour le foyer (S9).
    - **Ordre d'imputation :** d'abord le plafond de l'année, puis les reliquats des années précédentes (S9).
-   - **Doctrine récente (non lue) :** le BOFiP du 10/08/2026 traiterait la mutualisation au-delà de 70 ans. Aucune page officielle n'a été lue sur ce point, ce qui est sans effet pour le simulateur aujourd'hui (pas d'âge).
+   - **Qui garde le reste :** chacun épuise d'abord son propre plafond ; l'excédent de l'un se prend sur ce qui reste à l'autre, qui garde le solde (exemple de S9, repris au cas 6).
+   - **Au-delà de 70 ans :** la mutualisation devient « sans objet » l'année qui suit celle où l'un des deux atteint 70 ans (S20 § 30). Sans effet pour le simulateur aujourd'hui (pas d'âge).
 9. **Plafond communiqué au contribuable :**
    - Il est **calculé par l'administration et imprimé sur la déclaration de revenus** de l'année suivante. S9 : « Le plafond de déduction des cotisations d'épargne retraite calculé lors de l'imposition des revenus de 2024 est imprimé sur la déclaration des revenus 2025. »
    - S'il est erroné, on le corrige en lignes 6PS, 6PT et 6PU (S9).
-   - Sa présence **sur l'avis d'impôt** est une pratique connue, mais elle n'a pas été relue sur une source officielle : **[à confirmer]**.
+   - Il figure aussi **sur l'avis d'impôt**, rubrique « Plafond épargne retraite » : l'avis de 2026 (revenus de 2025) donne le « plafond total 2024 », qui valait pour les versements de 2025, et le « **plafond pour les cotisations versées en 2026** », somme du plafond calculé sur les revenus de 2025 et des plafonds non utilisés des trois années précédentes (S21) **[sourcé]**. C'est cette ligne que le simulateur demande.
 10. **70 ans :** les versements effectués **à partir du 1er janvier 2026** par un titulaire âgé de **70 ans ou plus** ne sont plus déductibles (loi de finances pour 2026, art. 9 ; S2, S4 § 115, S19).
 11. **Option pour la non-déduction :** chaque versement peut être fait sans déduction, en échange d'une fiscalité allégée à la sortie (S11, S17 ; article L224-20 du code monétaire et financier).
 12. **Primo-arrivants :** une personne qui s'installe en France a droit à un plafond spécifique et à un plafond complémentaire triple (S1, S9, case 6QW). Ce cas est hors périmètre du simulateur.
@@ -142,10 +147,11 @@ Tout le calendrier est **[calculé]** à partir de S1, S2 et S11.
 Précisions :
 - **Bénéfice à retenir :** le bénéfice imposable **avant déduction** des cotisations et primes facultatives elles-mêmes (S6, qui cite l'article 41 DN bis de l'annexe III ; S7 à relire). Sont exclus les plus-values à long terme, les déficits reportés et certains abattements (S6).
 - **PASS à retenir :** celui de **l'année de clôture de l'exercice**, donc de l'année du bénéfice (S6). S9 et S10 le confirment : pour les bénéfices 2024, la fraction se situe « entre 46 368 et 370 944 », et pour les bénéfices 2025 « entre 47 100 et 376 800 ».
-- **Gérant majoritaire :** l'assiette exacte n'est pas écrite noir sur blanc dans S8.
-  - **Hypothèse retenue :** la rémunération imposable (nette des cotisations obligatoires) avant la déduction des versements facultatifs.
-  - La déduction de 10 % ou les frais réels s'appliquent **après** (S8 § 220-260).
+- **Gérant majoritaire :** l'assiette exacte n'est pas écrite noir sur blanc dans S8, qui renvoie aux règles des BIC et des BNC (§ 190).
+  - **Ordre des déductions [sourcé] :** le versement se retranche de la rémunération **avant** la déduction de 10 % ou les frais réels, calculés sur ce qui reste (S8 § 10, § 110 et § 220 ; S3 § 140). Un versement déduit de la rémunération ne réduit donc le revenu imposable que de 90 % de son montant, tant que la déduction de 10 % n'est ni à son minimum ni à son maximum.
+  - **Assiette de la limite, hypothèse prudente (révisée le 26/11/2026) :** la rémunération imposable **après** la déduction de 10 % ou les frais réels, avant le versement. L'étude retenait d'abord « avant la déduction de 10 % », assiette plus haute ; faute de source, on prend la plus basse.
   - **[à confirmer]**
+- **Exercice de moins de douze mois :** le plafond de la sécurité sociale est réduit au prorata du temps pour calculer la limite et son minimum (S6 § 60 ; exemple : exercice de 7 mois, 35 352 × 7/12). Une activité créée en cours d'année suit donc, pour l'article 154 bis, le même plafond réduit que pour ses cotisations (ADR 020).
 - **Plafond propre à la retraite :** la limite porte sur la retraite. La prévoyance et la perte d'emploi ont leurs propres plafonds (S6). Le simulateur ne s'occupe que de la retraite.
 
 ### Montants par année (bénéfice de l'année N, PASS de N)
@@ -163,12 +169,13 @@ Exemple officiel (S6) : bénéfice de 150 000 €, PASS de 35 352 € : 15 000 +
 1. **Choisir le cadre de déduction.** Un même versement est déduit **soit** du bénéfice ou de la rémunération (article 154 bis), **soit** du revenu global (article 163 quatervicies), jamais des deux.
    - S9 : les lignes 6NS, 6NT et 6NU, qui portent les versements déduits du revenu global, ne sont permises que si « les cotisations n'ont pas été déduites des revenus catégoriels BIC, BNC, BA, rémunérations article 62 ».
    - S17 présente les deux régimes côte à côte.
-   - **Choix du travailleur non salarié : [à confirmer].** Le texte le laisse ouvert, versement par versement, mais aucune phrase officielle lue ne décrit ce choix comme une option formelle.
+   - **Choix du travailleur non salarié [sourcé] :** le revenu global accueille les versements « qui ne sont pas déduits en application des articles 154 bis ou 154 bis-0 A » (S1, I-1-d ; S4 § 110). Le contribuable choisit donc par sa déclaration, et peut partager un versement entre les deux cadres : ce qui dépasse la limite de l'un se déduit dans l'autre, tant que son plafond le permet.
 2. **Réduction du plafond de l'année suivante.** Les sommes déduites en N au titre de l'article 154 bis **réduisent le plafond 163 quatervicies de N+1**. Cette réduction **ne compte pas** la part de 15 % entre 1 et 8 PASS (S3 § 330-350, S9 ; c'est le « second terme »).
    - Exemple officiel (S9, revenus 2024) : bénéfice de 50 000 €, Madelin de 4 000 €. Le plafond 154 bis est de 5 545 €. La part qui s'impute est 4 000 − 545 = 3 455 €. Le plafond 163 quatervicies restant est donc 5 000 − 3 455 = 1 545 €.
-3. **Revenu retenu pour le premier terme de N+1 :** le bénéfice **après** déduction des versements 154 bis, puisque c'est son « montant imposable » (S3 § 150).
-   - Les exemples officiels (S3 § 410, S9) n'emploient qu'un seul chiffre de bénéfice et ne tranchent pas explicitement.
-   - **[à confirmer]**
+3. **Revenu retenu pour le premier terme de N+1 [sourcé] :** le bénéfice **après** déduction des versements 154 bis. La remarque de S3 § 150 l'écrit : le plafond se calcule sur les BIC et BNC imposables « sous déduction notamment des cotisations ou primes mentionnées à l'article 154 bis », « contrairement à la règle » de la limite de l'article 154 bis elle-même (article 41 DN bis de l'annexe III).
+   - **La part de 15 % du second terme** se calcule elle aussi sur le bénéfice après déduction (S3 § 340, remarque).
+   - Les exemples officiels (S3 § 410, S9) n'emploient qu'un seul chiffre de bénéfice : celui d'après déduction, d'après ces remarques.
+   - **Revenus de plusieurs catégories :** somme algébrique, déficits compris (S3 § 260).
 
 ---
 
@@ -275,6 +282,8 @@ Il n'existe aucun code PER, Madelin, 154 bis ou 163 quatervicies. Seule la feuil
 
 ## 11. Où brancher le PER (conception)
 
+Première esquisse, d'avant les décisions : en cas d'écart (cadre de déduction, réglage de mutualisation, sort de l'excédent), les sections 15 et 16 font foi.
+
 ### 11.1 Saisie
 
 - **Flux de versement.** Nouveau type de flux sur la personne, par exemple `versement_per`. C'est un montant versé dans le mois, sorti de la trésorerie du foyer, comme `expense`.
@@ -363,44 +372,55 @@ Il n'existe aucun code PER, Madelin, 154 bis ou 163 quatervicies. Seule la feuil
 | 40 290 | 1 977,69 + 10 711 × 30 % | 5 191 |
 | 36 000 | 1 977,69 + 6 421 × 30 % | 3 904 |
 | 32 400 | 1 977,69 + 2 821 × 30 % | 2 824 |
+| 32 000 | 1 977,69 + 2 421 × 30 % | 2 704 |
 | 33 000 | 1 977,69 + 3 421 × 30 % | 3 004 |
 | 28 290 | 16 690 × 11 % = 1 835,90, moins la décote (897 − 0,4525 × 1 835,90 = 66,26) | 1 770 |
 
-### Cas 1 : EI au réel, 60 000 € de bénéfice, 6 000 € versés au titre de l'article 154 bis
+Les cas 1, 1 bis et 2 ont été recalculés le 26/11/2026 (section 15) : ordre « revenu global d'abord », premier terme et part de 15 % sur le bénéfice **après** déduction. Un script indépendant du simulateur a redonné tous les montants de la section.
 
-**Données :** célibataire ; bénéfice imposable 2026 avant versement : 60 000 € ; versement PER 2026 : 6 000 €.
+### Cas 1 : EI au réel, 60 000 € de bénéfice, 6 000 € versés, plafond du revenu global non saisi
 
-1. **Plafond 154 bis :** 10 % × 60 000 + 15 % × (60 000 − 48 060) = 6 000 + 1 791 = **7 791 €** (au moins le plancher de 4 806 €). Le versement de 6 000 € est entièrement déductible du bénéfice (S5, S6).
-2. **Bénéfice imposable :** 54 000 €.
-3. **Impôt :** 11 104 € sans versement, **9 304 €** avec. L'économie est de **1 800 €**, soit 30 % × 6 000.
-4. **Cotisations : inchangées** (section 6).
-5. **Revenu fiscal de référence :** 60 000 → **54 000 €**, car la déduction 154 bis n'est pas réintégrée (S12).
-6. **Plafond 163 quatervicies pour 2027 :**
-   - premier terme : 10 % × 54 000 = 5 400 € (bénéfice après déduction, voir la section 3, point 3 [à confirmer]) ;
-   - second terme : 6 000 − 15 % × (60 000 − 48 060) = 6 000 − 1 791 = 4 209 € ;
-   - **plafond 2027 = 1 191 €** (S3 § 330-350, S9).
-   - **Variante à trancher :** avec un bénéfice de 60 000 € au premier terme, le plafond serait de 1 791 €.
+**Données :** célibataire ; bénéfice imposable 2026 avant versement : 60 000 € ; versement PER 2026 : 6 000 € ; aucun plafond saisi, année 2025 hors de la session : le simulateur retient le minimum, 4 710 €.
 
-### Cas 1 bis : même EI, versement déduit du revenu global (163 quatervicies)
+1. **Revenu global d'abord :** 4 710 € déduits du revenu global (plafond épuisé).
+2. **Excédent sur le bénéfice :** 1 290 €, sous la limite de l'article 154 bis : 10 % × 60 000 + 15 % × (60 000 − 48 060) = 6 000 + 1 791 = **7 791 €**, calculée sur le bénéfice avant le versement (S6 § 10). Rien n'est perdu.
+3. **Bénéfice imposable :** 60 000 − 1 290 = 58 710 €. **Base du barème :** 58 710 − 4 710 = 54 000 €.
+4. **Impôt :** 11 104 € sans versement, **9 304 €** avec. L'économie est de **1 800 €**, soit 30 % × 6 000.
+5. **Cotisations : inchangées** (section 6).
+6. **Revenu fiscal de référence :** 54 000 + 4 710 = **58 710 €** : seule la part déduite du revenu global est rajoutée (S12).
+7. **Plafond calculé sur les revenus de 2026 (pour 2027) :**
+   - premier terme : 10 % × 58 710 = 5 871 €, sur le bénéfice après déduction (S3 § 150) ;
+   - second terme : 1 290 − 15 % × (58 710 − 48 060) = 1 290 − 1 597,50, retenu pour 0 € : la part déduite du bénéfice tient dans la tranche de 15 % (S3 § 340) ;
+   - **plafond = 5 871 €.**
 
-**Donnée supplémentaire :** bénéfice 2025 de 60 000 €, sans PER en 2025.
+**Variante écartée, tout sur le bénéfice (154 bis d'abord) :** même impôt (9 304 €), revenu fiscal de référence de 54 000 €. Mais le plafond calculé sur 2026 tombe à 10 % × 54 000 − [6 000 − 15 % × (54 000 − 48 060)] = 5 400 − 5 109 = **291 €** ; avec les 4 710 € de 2026 restés inutilisés, 5 001 € disponibles en 2027 au lieu de 5 871 €.
 
-1. **Plafond 2026 :** max(6 000 ; 4 710) = **6 000 €**, sous le maximum de 37 680 €.
-2. **Revenu global :** 60 000 − 6 000 = 54 000 €. **Impôt : 9 304 €**, la même économie de 1 800 €.
-3. **Revenu fiscal de référence : 60 000 €**, la déduction étant réintégrée.
+### Cas 1 bis : même EI, plafond de 6 000 €
 
-**Ce que le cas montre :** l'impôt est le même, mais pas le revenu fiscal de référence. Le plafond 2027 diffère aussi : 10 % × 60 000 = 6 000 €, sans second terme.
+**Donnée supplémentaire :** bénéfice 2025 de 60 000 €, sans versement en 2025 ; plafond saisi ou calculé : max(6 000 ; 4 710) = **6 000 €**, sous le maximum de 37 680 €.
 
-### Cas 2 : gérant majoritaire d'EURL à l'IS, 4 000 € versés au titre de l'article 154 bis
+1. **Revenu global :** les 6 000 € s'y déduisent en entier. Base : 54 000 €. **Impôt : 9 304 €.**
+2. **Revenu fiscal de référence : 60 000 €**, la déduction étant rajoutée.
+3. **Plafond calculé sur 2026 :** 10 % × 60 000 = 6 000 €, sans second terme.
 
-**Données :** célibataire ; rémunération imposable (article 62, avant la déduction de 10 %) : 40 000 € ; versement PER : 4 000 €.
+### Cas 2 : gérant majoritaire d'EURL à l'IS, 4 000 € versés
 
-1. **Plafond 154 bis :** max(10 % × 40 000 = 4 000 ; 10 % × 48 060 = 4 806) = **4 806 €**. La rémunération est sous 1 PASS, il n'y a donc pas de supplément de 15 %. Le versement est entièrement déductible (S8 § 190).
-2. **Rémunération après versement :** 36 000 €. Déduction de 10 % : 3 600 €. **Net imposable : 32 400 €.**
-3. **Sans versement :** 40 000 − 4 000 = 36 000 €.
-4. **Impôt :** 3 904 € sans versement, **2 824 €** avec. L'économie est de **1 080 €**, soit 30 % × 4 000 × 0,9 : le versement réduit aussi la déduction de 10 %.
-5. **Cotisations : inchangées.** La rémunération brute est déclarée à l'Urssaf sans déduire le PER (S14, p. 41).
-6. **Revenu fiscal de référence :** 36 000 → **32 400 €**.
+**Données :** célibataire ; rémunération imposable (article 62, avant la déduction de 10 %) : 40 000 € ; versement PER : 4 000 € ; plafond du revenu global non saisi : minimum de 4 710 €.
+
+1. **Revenu global :** les 4 000 € s'y déduisent en entier.
+2. **Base du barème :** 40 000 − 4 000 (déduction de 10 %) − 4 000 = 32 000 €.
+3. **Impôt :** 3 904 € sans versement, **2 704 €** avec (1 977,69 + 2 421 × 30 %). L'économie est de **1 200 €**, soit 30 % × 4 000.
+4. **Cotisations : inchangées.** La rémunération brute est déclarée à l'Urssaf sans déduire le PER (S14, p. 41).
+5. **Revenu fiscal de référence :** 36 000 €, inchangé.
+
+**Variante écartée, tout sur la rémunération (154 bis) :** (40 000 − 4 000) × 0,9 = 32 400 € ; impôt 2 824 € ; économie de **1 080 €** seulement : le versement se déduit avant la déduction de 10 %, qu'il réduit d'autant (S8 § 220). C'est la raison de l'ordre retenu.
+
+### Cas 2 bis : même gérant, 8 000 € versés
+
+1. **Revenu global :** 4 710 €. **Excédent sur la rémunération :** 3 290 €, sous la limite de 4 806 € (le minimum, que l'assiette soit prise avant ou après la déduction de 10 %).
+2. **Base du barème :** (40 000 − 3 290) × 0,9 − 4 710 = 33 039 − 4 710 = 28 329 €.
+3. **Impôt :** (28 329 − 11 600) × 11 % = 1 840,19 €, moins la décote (897 − 0,4525 × 1 840,19 = 64,31) : **1 776 €**. Économie : 2 128 €.
+4. **Revenu fiscal de référence :** 28 329 + 4 710 = 33 039 €.
 
 ### Cas 3 : président de SASU, 5 000 € versés, plafond dépassé
 
@@ -448,8 +468,8 @@ Il n'existe aucun code PER, Madelin, 154 bis ou 163 quatervicies. Seule la feuil
 3. **Sans versement :** 2 × 6 603,99 = **13 208 €**.
 4. **Gain de la mutualisation :** 900 €, soit 30 % × 3 000.
 5. **Revenu fiscal de référence :** 90 000 € dans les trois cas, la déduction étant réintégrée.
-6. **Reliquat de 1 710 €** (13 710 − 12 000) : à quel conjoint l'attribuer pour le report ? **[à confirmer]** dans le BOI-IR-BASE-20-50-30, non lu.
-   - Dans l'exemple de S9 avec mutualisation, c'est le reliquat « de Monsieur » qui reste reportable : le plafond de Madame, plus petit et versé en totalité, a été consommé en premier.
+6. **Reliquat de 1 710 €** (13 710 − 12 000) : il reste à **Madame**. Chacun épuise d'abord son propre plafond ; l'excédent de Monsieur (3 000 €) se prend sur ce qui reste à Madame (4 710 − 3 000).
+   - **[sourcé par l'exemple]** de S9 : Madame dépasse son plafond de 563 €, pris sur celui de Monsieur, à qui il reste 1 337 − 563 = 774 € reportables. Le BOI-IR-BASE-20-50-30 (S20), lu le 26/11/2026, ne dit rien de plus que l'addition des plafonds et des versements.
 
 ### Cas 7 : reports et passage de 3 à 5 ans (salarié, 1 part)
 
@@ -469,23 +489,27 @@ Il n'existe aucun code PER, Madelin, 154 bis ou 163 quatervicies. Seule la feuil
 
 ## 13. Points incertains
 
-1. **Durée du report affichée par la brochure IR 2026** (3 ans) contre la loi, le BOFiP et service-public (5 ans à partir des revenus 2026). On retient 5 ans.
-2. **Revenu du premier terme 163 quatervicies pour un travailleur non salarié qui a déduit au titre de l'article 154 bis :** bénéfice après déduction (lecture de S3 § 150) ou avant ? Cela change le plafond N+1 au cas 1.
-3. **Assiette de l'article 154 bis pour le gérant de l'article 62 :** rémunération nette des cotisations obligatoires, avant les versements facultatifs et avant la déduction de 10 % ? (S8 renvoie aux règles BIC et BNC sans détailler.)
-4. **Choix du cadre pour un travailleur non salarié** (154 bis ou 163 quatervicies) et **sort de l'excédent** au-delà du plafond 154 bis : peut-il basculer en 163 quatervicies ?
-5. **Exclusion explicite du micro-entrepreneur** de l'article 154 bis : logique, mais aucune phrase officielle relue.
+État au 26/11/2026, après la relecture des sources (section 15).
+
+1. **Durée du report affichée par la brochure IR 2026** (3 ans) contre la loi, le BOFiP et service-public (5 ans à partir des revenus 2026). On retient 5 ans. **Confirmé** par S20 § 40 et § 80, qui donne le calendrier année par année (en 2027 : reliquats 2024, 2025 et 2026 ; en 2031 : 2026 à 2030).
+2. ~~Revenu du premier terme pour un travailleur non salarié qui a déduit au titre de l'article 154 bis.~~ **Levé [sourcé] :** le bénéfice **après** déduction (S3 § 150, remarque : « sous déduction notamment des cotisations ou primes mentionnées à l'article 154 bis »). La part de 15 % du second terme se calcule aussi sur le bénéfice après déduction (S3 § 340, remarque). La limite de l'article 154 bis, elle, se calcule sur le bénéfice avant déduction (S6 § 10).
+3. **Assiette de l'article 154 bis pour le gérant de l'article 62 : toujours incertaine.** S8 § 190 renvoie aux « mêmes conditions et limites » que les BIC et BNC, sans dire si la rémunération se prend avant ou après la déduction de 10 %. Aucune source officielle trouvée. **Hypothèse prudente retenue :** après la déduction de 10 % (ou les frais réels), avant le versement ; c'est l'assiette la plus basse. L'écart ne joue qu'au-dessus du plafond de la sécurité sociale (cas 2 bis : aucune différence).
+4. ~~Choix du cadre et sort de l'excédent.~~ **Levé [sourcé] :** le revenu global accueille les versements « qui ne sont pas déduits en application des articles 154 bis ou 154 bis-0 A » (S1, I-1-d ; S4 § 110). Ce qui n'est pas déduit du bénéfice peut donc l'être du revenu global, dans la limite de son plafond, et inversement ; le contribuable choisit par sa déclaration (lignes 6NS ou 6OS, S9).
+5. **Exclusion du micro-entrepreneur** de l'article 154 bis : déduite des textes (S5 ne vise que la détermination du bénéfice réel ; l'abattement du régime micro couvre toutes les charges), sans phrase officielle explicite.
 6. **Ligne BK de la 2035** (revenu brut social 2025) : sa lecture comme « charges sociales personnelles, dont facultatives Madelin et PER » est rendue incertaine par la mise en page du PDF. La conclusion de la section 6 tient tout de même grâce à S14 p. 41 (gérant), S13 (2024) et S15.
-7. **Plafond sur l'avis d'impôt :** il est sourcé sur la déclaration (S9), pas relu pour l'avis.
-8. **Article 41 DN bis de l'annexe III :** lu seulement à travers S6 et un résumé de recherche.
-9. **Attribution du reliquat en cas de mutualisation** (cas 6).
+7. ~~Plafond sur l'avis d'impôt.~~ **Levé [sourcé] :** la rubrique « Plafond épargne retraite » de l'avis porte la ligne « plafond pour les cotisations versées en 2026 », somme du plafond calculé sur les revenus de 2025 et des plafonds non utilisés des trois années précédentes (S21).
+8. **Article 41 DN bis de l'annexe III :** lu seulement à travers S3 et S6, qui le citent tous deux dans le même sens.
+9. ~~Attribution du reliquat en cas de mutualisation.~~ **Levé [sourcé par l'exemple]** de S9 (cas 6).
 10. **Loi de finances pour 2025 :** aucun changement trouvé, à confirmer par une lecture de son sommaire.
 11. **Prélèvements sociaux sur les gains à la sortie** : le taux n'a pas été vérifié. Sans effet sur le moteur, qui ne modélise pas la sortie.
+12. **Plafond et versement sans effet (nouveau).** La loi reporte la différence entre la limite et les cotisations « mentionnées au 1 » (S1, I-2-b) ; le BOFiP dit « versées et effectivement déduites » (S20 § 40). Quand la déduction ne réduit rien (revenu global nul), le plafond est-il consommé ? **Hypothèse prudente :** oui.
+13. **Ordre d'imputation dans l'exemple de S9 (nouveau).** L'exemple du couple dit le reliquat de 2024 « utilisé en totalité » avant le plafond de l'année, à rebours de la règle écrite (S20 § 50 : l'année d'abord, puis les plus anciens). Le total restant est le même ; on suit la règle écrite.
 
 ---
 
 ## 14. Brouillon de décision
 
-Ce brouillon est à relire et à trancher par le propriétaire. Il ne crée pas d'ADR.
+Ce brouillon est à relire et à trancher par le propriétaire. Il ne crée pas d'ADR. Il est gardé pour mémoire : les décisions prises, et ce que la relecture du 26/11/2026 y a changé, sont à la section 15.
 
 **Contexte.** La phase 17, point 1, demande un PER statut par statut. La recherche montre que :
 - le PER **ne touche pas** aux cotisations des indépendants ;
@@ -537,79 +561,105 @@ Ce brouillon est à relire et à trancher par le propriétaire. Il ne crée pas 
 
 ---
 
-## 15. Décisions du propriétaire (25 novembre 2026)
+## 15. Décisions (25 et 26 novembre 2026)
 
-Le propriétaire suit les recommandations :
+- **25 novembre :** le propriétaire suit les six recommandations du brouillon (section 14).
+- **26 novembre :** à sa demande, l'analyse est reprise depuis les sources (section 1, « Relecture »), et il suit les recommandations qui en sortent. Deux décisions changent, une s'ajoute, les autres restent.
 
-1. **Plafond saisi :** un total seulement dans la première version ; le détail par année d'origine viendra plus tard.
-2. **Cadre pour un travailleur non salarié :** 154 bis automatique pour l'EI au réel et le gérant d'EURL ; 163 quatervicies pour les autres.
-3. **Mutualisation :** réglage porté par la relation de couple.
-4. **Comparateur :** un mode « maximum déductible » ; l'épargne retraite constituée s'affiche à part du net disponible.
-5. **TMI :** affichée, présentée comme indicative.
-6. **Ordre :** le 163 quatervicies d'abord ; le 154 bis ensuite, avec une hypothèse prudente écrite pour les points 2 à 4 de la section 13.
+### Ce que la relecture corrige dans l'étude
 
-Prochaine étape : le plan de réalisation et les maquettes, après l'activité créée en cours d'année.
+| Point | Avant | Après | Source |
+|---|---|---|---|
+| Versement au-delà de la limite de l'article 154 bis | Perdu, par prudence | Déductible du revenu global, dans la limite de son plafond (et inversement) | S1, I-1-d ; S4 § 110 |
+| Revenu du premier terme, l'année qui suit une déduction 154 bis | Bénéfice après déduction, à confirmer | Bénéfice après déduction, écrit en toutes lettres | S3 § 150 |
+| Part de 15 % retirée du second terme | Calculée sur le bénéfice avant déduction | Calculée sur le bénéfice après déduction | S3 § 340 |
+| Plafond de 2027 du cas 1 (tout sur le bénéfice) | 1 191 € | 291 € | Calcul refait |
+| Versement déduit de la rémunération d'un gérant | Traité comme celui d'une EI | Ne vaut que 90 % de son montant : il se déduit avant la déduction de 10 % | S8 § 220 ; S3 § 140 |
+| Assiette de la limite du gérant | Avant la déduction de 10 % | Après (assiette la plus basse), faute de source | Hypothèse |
+| Plafond sur l'avis d'impôt | À confirmer | Ligne « plafond pour les cotisations versées en N » | S21 |
+| Reste du plafond d'un couple qui met ses plafonds en commun | À confirmer | Il reste à celui dont le plafond n'est pas épuisé | S9, exemple |
+| Activité créée en cours d'année | Non vu | Plafond de la sécurité sociale réduit au prorata pour la limite de l'article 154 bis | S6 § 60 |
+| Calendrier des reports | Calculé | Écrit année par année | S20 § 80 |
+
+### Décisions
+
+1. **Plafond du revenu global (inchangée, précisée).** Un seul montant saisi, pour la première année de la session : la ligne « Plafond pour les cotisations versées en N » de l'avis d'impôt. Sans saisie, le plafond se calcule sur l'année précédente si elle est dans la session ; sinon le simulateur retient le minimum légal et le dit. Le détail par année d'origine viendra plus tard.
+2. **Ordre de déduction (remplace « 154 bis automatique »).** Pour tout le monde, le versement se déduit **d'abord du revenu global**, dans la limite du plafond. Pour l'EI au réel et le gérant d'EURL, **ce qui dépasse** se déduit du bénéfice ou de la rémunération, dans la limite de l'article 154 bis. Ce qui dépasse encore n'est pas déduit. Le simulateur dit où va chaque part.
+3. **Plafonds du couple marié ou pacsé (remplace le réglage sur la relation).** La mise en commun est **automatique** : l'excédent de l'un se prend sur ce qui reste à l'autre, et la carte du foyer dit de cocher la case 6QR de la déclaration. Le simulateur fait déjà de même pour l'option des dividendes au barème : il retient le choix favorable et le nomme.
+4. **Comparateur (inchangée).** Trois réglages : « comme dans la simulation », « aucun versement », « maximum déductible, statut par statut ». L'épargne retraite s'affiche à part sous le net ; le classement reste fait sur le net, épargne comprise.
+5. **Tranche marginale (inchangée).** Affichée comme indicative ; l'économie d'impôt se calcule par différence.
+6. **Ordre des livraisons (inchangée).** Le revenu global d'abord, l'article 154 bis ensuite, le comparateur en dernier.
+7. **Versement sans effet (nouvelle).** Quand le versement ne réduit pas l'impôt (versement libératoire sans autre revenu au barème, foyer non imposable), la carte l'avertit et rappelle l'option pour la non-déduction, à prendre lors du versement (S4 § 120) : les sommes non déduites ne sont pas imposées à la sortie (S17).
+
+### Pourquoi « le revenu global d'abord »
+
+| | Revenu global d'abord (retenu) | Bénéfice ou rémunération d'abord (écarté) |
+|---|---|---|
+| Impôt de l'année, EI | Identique | Identique |
+| Impôt de l'année, gérant d'EURL | Déduction entière (cas 2 : 1 200 € d'économie) | Déduction de 90 % (1 080 €) |
+| Plafond de l'année suivante | Préservé : la part passée sur le bénéfice tient souvent dans la tranche de 15 % (cas 1 : 5 871 € en 2027) | Réduit d'autant (cas 1 : 291 €, plus 4 710 € restés inutilisés) |
+| Plafonds anciens près d'expirer | Utilisés dès que le versement dépasse le plafond de l'année | Laissés de côté |
+| Revenu fiscal de référence | Inchangé pour la part du revenu global | Réduit |
+| Donnée nécessaire | Le plafond de l'avis d'impôt (sinon le minimum légal) | Aucune pour la limite du bénéfice |
+| Règle à expliquer | Une seule, la même pour tous | Une par statut |
+| Livraisons | La deuxième ajoute une possibilité, sans rien changer aux simulations déjà faites | L'EI et le gérant changent de cadre entre deux versions |
+
+Ce que l'ordre retenu coûte : le revenu fiscal de référence baisse moins, et le résultat dépend du plafond saisi. Sans saisie, le minimum légal peut être trop haut pour qui a déduit, l'année d'avant, des cotisations de retraite de ses revenus professionnels (Madelin, PER déduit du bénéfice, retraite supplémentaire d'entreprise) ; la précision affichée le dit.
+
+### Hypothèses, à écrire dans l'ADR
+
+1. **Reste du plafond saisi.** On ne connaît qu'un total, pas l'année d'origine de chaque reliquat. Ce qui n'est pas utilisé la première année **n'est pas reporté** sur les années suivantes de la session. Si un versement d'une année suivante dépasse alors le plafond calculé, l'avertissement donne le montant écarté et sa raison.
+2. **Versement de l'année** : la somme des flux « Versement PER » de l'année, quel que soit le mois.
+3. **Assiette de la limite du gérant** : rémunération imposable après la déduction de 10 % ou les frais réels, avant le versement.
+4. **Versement sans effet** : le plafond est consommé quand même.
+5. **Deux activités éligibles** pour une même personne : l'excédent va sur celle qui a le plus grand bénéfice (cas rare, dit dans les limites).
+6. **Revenus d'activité professionnelle** retenus pour le plafond : salaires, allocations de chômage et rémunérations de dirigeant après la déduction de 10 % ou les frais réels (S9), bénéfices imposables après déduction, bénéfices exonérés en zone rajoutés (S1, II), chiffre d'affaires de la micro après abattement ; en somme algébrique, déficits compris. Les « autres revenus » saisis, de nature inconnue, n'y entrent pas, ni les dividendes.
+7. **Net après impôts** : il garde le versement, qui reste au foyer sous forme d'épargne ; une ligne le montre, bloqué jusqu'à la retraite. La sortie, imposée, reste hors du modèle.
 
 ---
 
 ## 16. Plan de réalisation
 
-Rédigé le 25/11/2026, **à valider avec les maquettes** avant le code.
+Révisé le 26/11/2026, **à valider avec les maquettes** avant le code.
 
-Trois livraisons, chacune sur sa branche et fusionnée seule dans `main` ; chaque étape garde la vérification complète verte. L'ordre suit la décision 6 : le revenu global d'abord, le cadre des indépendants ensuite, le comparateur en dernier.
+Trois livraisons, chacune sur sa branche et fusionnée seule dans `main` ; chaque étape garde la vérification complète verte.
 
-### Recommandations pour les points que les décisions laissent ouverts
+### Livraison 1 : déduction du revenu global, pour toutes les personnes
 
-À valider avec le plan ; chacune est écrite dans l'ADR.
-
-1. **Reste du plafond saisi.** On ne connaît qu'un total (décision 1), pas l'année d'origine de chaque reliquat. La part non utilisée la première année **n'est pas reportée** sur les années suivantes de la session : hypothèse prudente, qui ne promet jamais une déduction perdue. Les années suivantes, le plafond se calcule sur les revenus de l'année précédente, plus les reliquats nés dans la session. Le détail par année d'origine lèvera cette limite.
-2. **Option pour la non-déduction** : hors de la première version. Un versement non déduit ne change rien dans l'année ; il suffit de ne pas le saisir comme versement PER.
-3. **Versement de l'année** : la somme des flux « Versement PER » de l'année, quel que soit le mois.
-4. **Pendant la livraison 1**, l'EI et le gérant d'EURL déduisent aussi du revenu global, ce que la loi leur permet. La livraison 2 les fait passer à l'article 154 bis ; le CHANGELOG le dira.
-5. **Net après impôts** : il garde le versement, qui reste au foyer sous forme d'épargne ; une ligne « dont épargne retraite (PER) » le montre, bloqué jusqu'à la retraite. Le comparateur classe ses colonnes sur ce même net, épargne comprise, et l'affiche à part sous le net (décision 4). La sortie, imposée, reste hors du modèle, comme le dit la limite.
-6. **Hypothèses prudentes de la livraison 2** (décision 6, points 2 à 4 de la section 13) :
-   - plafond 163 quatervicies de N+1 : premier terme sur le bénéfice **après** la déduction 154 bis (lecture de S3 § 150 ; plafond plus bas) ;
-   - assiette 154 bis du gérant : rémunération imposable de l'article 62, cotisations obligatoires déduites, **avant** la déduction de 10 % ;
-   - versement au-delà du plafond 154 bis : **perdu**, avec un avertissement, sans bascule vers le revenu global.
-   - Une personne avec deux activités éligibles déduit de celle qui a le plus grand bénéfice (cas rare, signalé dans les limites).
-
-### Livraison 1 : déduction du revenu global (163 quatervicies), pour toutes les personnes
-
-1. **ADR 021 « Épargne retraite (PER) »** : décisions de la section 15, recommandations ci-dessus, ce qui est écarté (sortie, 70 ans faute de date de naissance, primo-arrivants, épargne salariale et abondement, détail du plafond par année).
-2. **Règles par année** : bloc `IR.epargneRetraite` dans les trois fichiers (part des revenus 10 %, maximum 8 PASS, plancher 10 % du PASS, report 3 ans en 2024 et 2025, 5 ans en 2026, `passAnneePrecedente`) ; `testing/regles-de-test.ts`, `outils/lecture.ts` (`reglesCles`), test de forme.
+1. **ADR 021 « Épargne retraite (PER) »** : décisions et hypothèses de la section 15, ce qui est écarté (sortie, option pour la non-déduction, 70 ans faute de date de naissance, primo-arrivants, épargne salariale et abondement, détail du plafond par année).
+2. **Règles par année** : bloc `IR.epargneRetraite` dans les trois fichiers (part des revenus 10 %, maximum 8 PASS, minimum 10 % du PASS, `passAnneePrecedente`, durée du report du plafond né dans l'année : 3 ans en 2024 et 2025, 5 ans en 2026) ; `testing/regles-de-test.ts`, `outils/lecture.ts` (`reglesCles`), test de forme.
 3. **Saisie et format de fichier** :
    - flux `versement_per` sur la personne, sortant, comme une dépense (libellés, couleurs, `flowTypesByEntityType`, `outgoingFlowTypes`) ;
-   - `PersonSchema.plafondEpargneRetraite` (facultatif, ≥ 0) : le total imprimé sur la déclaration de revenus, pour la première année de la session ;
-   - `RelationshipSchema.plafondsEpargneRetraiteMutualises` (facultatif), permis seulement sur « Marié(e) » et « PACSé(e) » ;
+   - `PersonSchema.plafondEpargneRetraite` (facultatif, ≥ 0), pour la première année de la session ;
    - format suivant avec une migration vide (ADR 005) ;
    - outils des IA : `TYPES_DE_FLUX`, `SENS_DES_TYPES`, `TYPES_PERMIS.personne`, `proposerFlux`, réglages proposables.
 4. **Moteur** (nouveau module `epargne-retraite.ts`, branché dans `calculerFoyer`) :
-   - plafond de l'année par déclarant : saisi, sinon calculé sur N-1 dans la session, sinon le plancher avec un avertissement ;
-   - imputation sur le plafond de l'année, puis sur les reliquats du plus ancien au plus récent ; mise en commun des plafonds du couple ;
-   - déduction de la base du barème sans descendre sous zéro ; réintégration au revenu fiscal de référence ;
+   - plafond de l'année par personne : saisi, sinon calculé sur N-1 dans la session, sinon le minimum légal ;
+   - imputation sur le plafond de l'année, puis sur les reliquats du plus ancien au plus récent ; pour un couple marié ou pacsé, l'excédent de l'un sur ce qui reste à l'autre ;
+   - déduction de la base du barème sans descendre sous zéro ; rajout au revenu fiscal de référence ;
    - économie d'impôt par différence (impôt du foyer recalculé sans la déduction) ; tranche marginale indicative (petite fonction de `calculsIR.ts`) ;
-   - résultats : par personne (versé, déduit, plafond et son origine, non déductible, plafond pour N+1, reliquats) et par foyer (déduit, réintégré, économie, tranche marginale).
-5. **Chaînage des années** (`simulerLesAnnees`, `ContexteDeLAnnee`) : revenus d'activité professionnelle de N-1 par personne (salaires et rémunérations après la déduction de 10 % ou les frais réels, bénéfices imposables, micro après abattement, au versement libératoire compris), reliquats par année d'origine, expiration à 3 ou 5 ans.
-6. **Avertissements** : versement au-delà du plafond (ni déduit ni reportable) ; versement sans effet faute de revenu au barème (micro au versement libératoire, cas 5) ; plafond non saisi, plancher retenu.
-7. **Interface** (maquettes 1 à 3) : type de flux dans la grille, champ de la fiche de la personne, case de la relation de couple, bloc « Épargne retraite » de la carte du foyer, précision du revenu fiscal de référence, « dont épargne retraite » sous le net.
+   - résultats : par personne (versé, déduit, plafond et son origine, part prise sur le plafond du conjoint, non déduit, plafond calculé sur l'année, reliquats) et par foyer (déduit, rajouté au revenu fiscal de référence, économie, tranche marginale).
+5. **Chaînage des années** (`simulerLesAnnees`, `ContexteDeLAnnee`) : revenus d'activité professionnelle de N-1 par personne (hypothèse 6), reliquats par année d'origine, expiration à 3 ou 5 ans.
+6. **Avertissements et précisions** : versement au-delà du plafond (non déduit, sans report) ; versement sans effet (décision 7) ; plafond non saisi, minimum retenu ; case 6QR à cocher ; reliquats d'avant la session écartés (hypothèse 1).
+7. **Interface** (maquettes 1 à 4) : type de flux dans la grille, champ de la fiche de la personne, bloc « Épargne retraite » de la carte du foyer, précision du revenu fiscal de référence, « dont épargne retraite » sous le net.
 8. **Exports et IA** : section « Épargne retraite » du CSV (sur le modèle des frais professionnels), sous-section du rapport Markdown, `resumeDuFoyer` et `expliquerPersonne`, fixture `session-maximale.ts`.
-9. **Cas de référence** (`references/epargne-retraite.reference.test.ts`) : cas 1 bis, 3, 4, 5, 6 et 7 de la section 12, recalculés par un script indépendant ; un cas sur deux années pour le chaînage.
+9. **Cas de référence** (`references/epargne-retraite.reference.test.ts`) : cas 1 bis, 2, 3, 4, 5, 6 et 7 de la section 12 ; un cas sur deux années pour le chaînage.
 10. **Documentation** : limites du modèle (sortie, 70 ans, primo-arrivants, épargne salariale, reste du plafond saisi), guide (carte du moteur, glossaire), `fonctionnalites.md`, CHANGELOG, Roadmap (phase 17 point 1, en partie).
 
-### Livraison 2 : plafond des indépendants (154 bis), EI au réel et gérant d'EURL
+### Livraison 2 : l'excédent sur le bénéfice ou la rémunération (article 154 bis)
 
-1. **ADR 021 complété** avec les hypothèses prudentes (recommandation 6).
-2. **Règles** : bloc `article154bis` (10 %, 15 % entre 1 et 8 PASS, plancher 10 % du PASS).
-3. **Moteur** : déduction du bénéfice de l'EI (`simulerEntrepriseIndividuelle`) et de la rémunération du gérant (avant la déduction de 10 %), dans la limite de l'article 154 bis ; cotisations inchangées (test) ; pas de réintégration au revenu fiscal de référence ; second terme du plafond 163 quatervicies de N+1.
-4. **Interface** (maquette 4) : ligne « Versement PER déduit (article 154 bis) » dans la carte de l'activité ; le bloc du foyer dit le cadre.
-5. **Cas de référence** : cas 1 et 2 ; cas 1 bis gardé pour comparer les deux cadres.
-6. **Exports, IA, documentation, CHANGELOG** (l'EI et le gérant changent de cadre).
+1. **ADR 021 complété** (hypothèses 3 et 5).
+2. **Règles** : bloc `article154bis` (10 %, 15 % entre 1 et 8 PASS, minimum 10 % du PASS).
+3. **Moteur** : pour l'EI au réel et le gérant d'EURL, l'excédent du revenu global se déduit du bénéfice ou de la rémunération (avant la déduction de 10 %), dans la limite calculée sur le bénéfice avant versement ; plafond de la sécurité sociale réduit l'année de création (ADR 020) ; cotisations inchangées (test) ; pas de rajout au revenu fiscal de référence ; second terme du plafond de l'année suivante, part de 15 % calculée sur le bénéfice après déduction.
+4. **Interface** (maquette 5) : ligne « Versement PER déduit du bénéfice » dans la carte de l'activité ; le bloc du foyer détaille les deux parts.
+5. **Cas de référence** : cas 1, 2 bis, et un gérant au-dessus du plafond de la sécurité sociale.
+6. **Exports, IA, documentation, CHANGELOG.**
 
 ### Livraison 3 : comparateur et optimiseur
 
-1. **Réglage par activité** (`ReglagesComparateurSchema.epargneRetraite`) : « comme dans la simulation » (par défaut), « aucun versement », « maximum déductible » ; le maximum se calcule par colonne, dans le cadre du statut (154 bis pour l'EI et l'EURL, revenu global pour la SASU et la micro ; zéro sans revenu au barème).
+1. **Réglage par activité** (`ReglagesComparateurSchema.epargneRetraite`) : « comme dans la simulation » (par défaut), « aucun versement », « maximum déductible » ; le maximum se calcule par colonne : plafond du revenu global, plus la limite de l'article 154 bis pour l'EI et l'EURL ; zéro sans revenu au barème.
 2. **Colonnes** : versement placé sur la personne dirigeante (`sessionConvertie`) ; sous le net, « dont X € d'épargne retraite » ; une ligne « Épargne retraite versée » avec l'économie d'impôt.
-3. **Optimiseur** : le mode choisi s'applique à chaque point, sans nouvelle dimension de recherche.
+3. **Optimiseur** : le réglage choisi s'applique à chaque point, sans nouvelle dimension de recherche.
 4. **Exports** des réglages, notes du comparateur, outils des IA, documentation.
 
-**Maquettes à valider avant le code :** (1) la fiche de la personne et sa relation de couple ; (2) la carte du foyer avec un versement au revenu global ; (3) la même avec un versement sans effet ; (4) la carte d'une EI avec un versement 154 bis ; (5) le réglage et les lignes du comparateur.
+**Maquettes à valider avant le code** (https://claude.ai/artifact/RGWhTVcUN8za392UbCEHAq) : (1) la fiche de la personne ; (2) la carte du foyer avec un versement en partie non déduit ; (3) la carte d'un couple dont les plafonds sont mis en commun ; (4) la carte d'un versement sans effet ; (5) une EI dont l'excédent passe sur le bénéfice ; (6) le réglage et les lignes du comparateur.
