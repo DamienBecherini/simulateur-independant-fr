@@ -100,8 +100,8 @@ function reperesDeCreation(entity: Entity, annee: number | undefined): ReperesDe
   return { avant: moisAvantLaCreation(entity.dateDeCreation, annee), moisDeCreation: creation.annee === annee && creation.mois > 1 ? creation.mois - 1 : null, mention: `créée en ${libelleDuMois(creation)}` }
 }
 
-/** Hachures d'un mois avant la création : la case reste ouverte à la saisie, mais se distingue. */
-const AVANT_LA_CREATION = "[background-image:repeating-linear-gradient(135deg,rgb(148_163_184/0.25)_0_6px,transparent_6px_12px)]"
+/** Hachures d'un mois avant la création (utilitaire de App.css) : la case reste ouverte à la saisie, mais se distingue. */
+const AVANT_LA_CREATION = "case-avant-la-creation"
 
 /**
  * Les montants saisis avant la création d'une activité, au-dessus de la grille : ils sont comptés quand même (décision

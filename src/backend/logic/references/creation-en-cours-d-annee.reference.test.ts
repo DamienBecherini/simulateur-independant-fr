@@ -171,7 +171,7 @@ casDeReference("Cas de référence 2026 : activité créée en cours d'année", 
     for (const mois of [0, 1]) donnees.monthlyData[mois].flows.push({ id: `ca-${mois}`, label: "ca", amount: 2000, entityId: "m1", type: "ca_micro_services_bnc" })
     const r = activite(runMetaSimulation(donnees, REGLES_DES_CAS, { annee: 2026 }), "m1")
     expect(r.chiffreAffaires).toBe(4000)
-    expect(r.warnings.map(w => w.replace(/\s/g, " "))).toContain("Activité créée en mars 2026 : 4 000 € de chiffre d'affaires saisis avant la création (janvier, février 2026), comptés quand même. Corrigez la date de création, ou déplacez ces montants.")
+    expect(r.warnings.map(w => w.replace(/\s/g, " "))).toContain("Montants saisis avant la création (janvier, février 2026) : 4 000 € de chiffre d'affaires, comptés quand même. L'activité n'est créée qu'en mars 2026 : corrigez sa date de création, ou déplacez ces montants.")
   })
 
   it("une année avant la création : ni minimums ni forfait", () => {

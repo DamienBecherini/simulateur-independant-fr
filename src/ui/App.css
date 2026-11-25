@@ -130,6 +130,15 @@
 @utility case-de-bande {
   background-image: linear-gradient(var(--fond-bande), var(--fond-bande));
 }
+/* Mois d'une activité avant sa création, dans la grille (ADR 020) : des hachures, par-dessus la teinte de la ligne quand
+   elle en a une (deux classes : la règle l'emporte sur `case-de-bande`). */
+@utility case-avant-la-creation {
+  --hachures: repeating-linear-gradient(135deg, rgb(148 163 184 / 0.3) 0 6px, transparent 6px 12px);
+  background-image: var(--hachures);
+  &.case-de-bande {
+    background-image: var(--hachures), linear-gradient(var(--fond-bande), var(--fond-bande));
+  }
+}
 
 @theme inline {
   --color-background: var(--background);

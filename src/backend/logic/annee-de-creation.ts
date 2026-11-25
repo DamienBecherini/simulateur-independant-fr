@@ -217,9 +217,10 @@ function saisiAvantLaCreation(monthlyData: MonthlyGridData, entityId: string, da
 function avertissementSaisiAvantLaCreation(saisi: SaisiAvantLaCreation, creation: MoisCivil, annee: number, nom?: string): string {
   const mois = saisi.mois.map(m => libelleDuMois({ annee, mois: m + 1 }, false)).join(", ")
   const montants = saisi.montants.map(({ nature, montant }) => `${euros(montant)} ${nature}`).join(", ")
-  // Sur la carte de l'activité, son nom est déjà là ; au-dessus de la grille, il dit de quelle activité il s'agit.
-  const qui = nom === undefined ? "Activité créée" : `« ${nom} » est créée`
-  return `${qui} en ${libelleDuMois(creation)} : ${montants} saisis avant la création (${mois} ${annee}), comptés quand même. Corrigez la date de création, ou déplacez ces montants.`
+  // Au-dessus de la grille, la phrase dit de quelle activité il s'agit. Sur la carte de l'activité, son nom est déjà là :
+  // elle commence par ce qui ne va pas, que la carte garde seul quand l'alerte est repliée.
+  if (nom !== undefined) return `« ${nom} » est créée en ${libelleDuMois(creation)} : ${montants} saisis avant la création (${mois} ${annee}), comptés quand même. Corrigez la date de création, ou déplacez ces montants.`
+  return `Montants saisis avant la création (${mois} ${annee}) : ${montants}, comptés quand même. L'activité n'est créée qu'en ${libelleDuMois(creation)} : corrigez sa date de création, ou déplacez ces montants.`
 }
 
 /** L'avertissement de l'activité, quand des montants sont saisis avant sa création cette année ; rien sinon. */
