@@ -36,7 +36,7 @@ export function anneeDeCreation(dateDeCreation: string | undefined, annee: numbe
 }
 
 /** Le mois de création, quand il est postérieur à l'année `annee` ; `null` sinon. */
-export function creationApres(dateDeCreation: string | undefined, annee: number): MoisCivil | null {
+function creationApres(dateDeCreation: string | undefined, annee: number): MoisCivil | null {
   const creation = lireMois(dateDeCreation)
   return creation !== null && creation.annee > annee ? creation : null
 }
@@ -88,7 +88,7 @@ const sansForfait = (bareme: BaremeInvaliditeDecesLiberal): BaremeInvaliditeDece
  * Les règles d'une année avant la création : l'activité n'est pas affiliée, elle ne doit ni cotisation minimale ni
  * forfait (formation professionnelle, forfaits des caisses de libéraux). Ce qui y est saisi est calculé sans eux.
  */
-export function reglesAvantLaCreation(regles: ReglesFiscales): ReglesFiscales {
+function reglesAvantLaCreation(regles: ReglesFiscales): ReglesFiscales {
   const { TNS, liberauxReglementes } = regles
   const { CIPAV, CARPIMKO, commun } = liberauxReglementes
   return {
@@ -123,7 +123,7 @@ export function reglesDeLaPeriode(regles: ReglesFiscales, periode: PeriodeDeLAct
 
 
 /** « avril 2026, 9 mois d'activité ». */
-export function periodeEnClair({ creation, mois }: AnneeDeCreation): string {
+function periodeEnClair({ creation, mois }: AnneeDeCreation): string {
   return `${libelleDuMois(creation)}, ${mois} mois d'activité`
 }
 
@@ -173,7 +173,7 @@ export function noteAvantLaCreation(creation: MoisCivil, annee: number): string 
 // --- Montants saisis avant la création ---
 
 /** Les montants qu'une activité a saisis, cette année, avant son mois de création : les mois concernés et leur total par nature. */
-export interface SaisiAvantLaCreation {
+interface SaisiAvantLaCreation {
   /** Mois concernés (0 pour janvier). */
   mois: number[]
   /** Totaux par nature, dans l'ordre de `NATURES` : « 4 000 € de chiffre d'affaires ». */
@@ -200,7 +200,7 @@ export function moisAvantLaCreation(dateDeCreation: string | undefined, annee: n
 }
 
 /** Ce qu'une activité a saisi avant sa création cette année ; `null` si rien. Les montants de la personne n'en sont pas. */
-export function saisiAvantLaCreation(monthlyData: MonthlyGridData, entityId: string, dateDeCreation: string | undefined, annee: number): SaisiAvantLaCreation | null {
+function saisiAvantLaCreation(monthlyData: MonthlyGridData, entityId: string, dateDeCreation: string | undefined, annee: number): SaisiAvantLaCreation | null {
   const avant = moisAvantLaCreation(dateDeCreation, annee)
   if (avant.length === 0) return null
   const flux = monthlyData.filter(m => avant.includes(m.month)).flatMap(m => m.flows.filter(f => f.entityId === entityId && f.amount !== 0).map(f => ({ ...f, month: m.month })))
@@ -214,7 +214,7 @@ export function saisiAvantLaCreation(monthlyData: MonthlyGridData, entityId: str
 }
 
 /** L'avertissement des montants saisis avant la création : ils sont comptés quand même (décision du 2026-11-24). */
-export function avertissementSaisiAvantLaCreation(saisi: SaisiAvantLaCreation, creation: MoisCivil, annee: number, nom?: string): string {
+function avertissementSaisiAvantLaCreation(saisi: SaisiAvantLaCreation, creation: MoisCivil, annee: number, nom?: string): string {
   const mois = saisi.mois.map(m => libelleDuMois({ annee, mois: m + 1 }, false)).join(", ")
   const montants = saisi.montants.map(({ nature, montant }) => `${euros(montant)} ${nature}`).join(", ")
   // Sur la carte de l'activité, son nom est déjà là ; au-dessus de la grille, il dit de quelle activité il s'agit.
