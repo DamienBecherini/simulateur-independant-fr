@@ -79,6 +79,11 @@ casDeReference("Cas de référence 2026 : activité créée en cours d'année", 
       expect(note).toMatch(/^Année de création \(avril 2026, 9 mois d'activité\) : .* réduit aux mois d'activité, 36 045 €\. Elles coûtent 401 € de plus qu'en année pleine/)
       expect(creee.warnings).toEqual([])
     })
+
+    it("le résultat garde le plafond réduit, que le détail de la carte rappelle", () => {
+      expect(creee.anneeDeCreation).toEqual({ creation: "2026-04", mois: 9, plafondSecuriteSociale: 36045 })
+      expect(pleine.anneeDeCreation).toBeUndefined()
+    })
   })
 
   describe("cas 2 : sans revenu, les minimums", () => {
@@ -133,6 +138,10 @@ casDeReference("Cas de référence 2026 : activité créée en cours d'année", 
         "Année de création (avril 2026, 9 mois d'activité) : plafond de la sécurité sociale du président de 36 045 € (4 005 € × 9 mois de mandat) ; taux réduit d'impôt sur les sociétés (15 %) jusqu'à 31 875 € de bénéfice (42 500 € réduits à 9 mois). Le premier exercice est compté sur l'année civile ; une société peut aussi clore son premier exercice l'année suivante, ce que le simulateur ne modélise pas."
       )
       verifierIdentiteDuBilan(report)
+    })
+
+    it("le résultat garde le plafond du président et la limite du taux réduit", () => {
+      expect(s1.anneeDeCreation).toEqual({ creation: "2026-04", mois: 9, plafondSecuriteSociale: 36045, plafondTauxReduitIS: 31875 })
     })
   })
 

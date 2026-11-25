@@ -168,12 +168,29 @@ export function detailDesCotisations(activite: ActivityResult): LigneDuDetail[] 
   return lignes.length > 1 ? lignes : []
 }
 
+/** L'année de création : le plafond de la sécurité sociale réduit aux mois d'activité (ADR 020) ; `null` sinon. */
+function plafondDeLAnneeDeCreation(activite: ActivityResult): string | null {
+  const creation = activite.anneeDeCreation
+  if (creation?.plafondSecuriteSociale === undefined) return null
+  return `plafond de la sécurité sociale réduit à ${creation.mois} mois : ${euros(creation.plafondSecuriteSociale)}`
+}
+
 /**
  * Ce qui précise le total des cotisations d'un travailleur non salarié : l'assiette, et l'écart possible avec l'appel
- * de l'Urssaf, qui demande d'abord des acomptes provisionnels puis régularise ; `null` pour les autres statuts.
+ * de l'Urssaf, qui demande d'abord des acomptes provisionnels puis régularise. L'année de création, au réel, le plafond
+ * réduit s'y ajoute (président de SASU compris) ; `null` quand il n'y a rien à préciser.
  */
 export function precisionDesCotisations(activite: ActivityResult): string | null {
   const tns = activite.cotisationsTNS
-  if (!tns) return null
-  return `assiette de ${euros(tns.assiette)} (${euros(tns.revenuAvantCotisations)} de revenu avant cotisations, après l'abattement forfaitaire) ; montant définitif de l'année, que l'Urssaf appelle d'abord en acomptes provisionnels puis régularise`
+  const plafond = plafondDeLAnneeDeCreation(activite)
+  if (!tns) return plafond
+  const precision = `assiette de ${euros(tns.assiette)} (${euros(tns.revenuAvantCotisations)} de revenu avant cotisations, après l'abattement forfaitaire) ; montant définitif de l'année, que l'Urssaf appelle d'abord en acomptes provisionnels puis régularise`
+  return plafond ? `${precision} ; ${plafond}` : precision
+}
+
+/** L'année de création d'une société : la limite du taux réduit d'impôt sur les sociétés, réduite aux mois d'activité ; `null` sinon. */
+export function precisionDeLImpotSurLesSocietes(activite: ActivityResult): string | null {
+  const creation = activite.anneeDeCreation
+  if (creation?.plafondTauxReduitIS === undefined) return null
+  return `taux réduit jusqu'à ${euros(creation.plafondTauxReduitIS)} de bénéfice, limite réduite à ${creation.mois} mois ; taux normal au-delà`
 }

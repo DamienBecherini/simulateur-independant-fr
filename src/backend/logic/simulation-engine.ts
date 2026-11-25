@@ -31,10 +31,13 @@ function simulerActivite(ctx: Contexte, activite: Company | MicroEntreprise | Po
   return avecLAnneeDeCreation(SIMULATION_PAR_STATUT[activite.legalStatus](ctx, activite), activite.dateDeCreation, anneeSimulee(ctx))
 }
 
-/** Le résultat d'une activité, avec son année de création quand l'année simulée l'est (ADR 020). */
+/**
+ * Le résultat d'une activité, avec son année de création quand l'année simulée l'est (ADR 020). Les limites réduites,
+ * propres au statut, sont celles que le calcul de l'activité y a déjà mises (simulation-au-reel.ts).
+ */
 function avecLAnneeDeCreation(resultat: ActivityResult, dateDeCreation: string | undefined, annee: number): ActivityResult {
   const creation = anneeDeCreation(dateDeCreation, annee)
-  return creation ? { ...resultat, anneeDeCreation: { creation: ecrireMois(creation.creation), mois: creation.mois } } : resultat
+  return creation ? { ...resultat, anneeDeCreation: { ...resultat.anneeDeCreation, creation: ecrireMois(creation.creation), mois: creation.mois } } : resultat
 }
 
 function arrondirActivite(activite: ActivityResult): ActivityResult {

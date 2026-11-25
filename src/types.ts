@@ -569,9 +569,11 @@ export interface ActivityResult {
   dispositifs?: string[]
   /**
    * L'année de création de l'activité, quand elle ne compte pas douze mois : son mois de création (« AAAA-MM ») et ses
-   * mois d'activité (voir l'ADR 020). Absente une année entière.
+   * mois d'activité (voir l'ADR 020). Absente une année entière. Au réel, les limites réduites que le détail de la carte
+   * rappelle : le plafond de la sécurité sociale des cotisations (absent pour un président dont le plafond est aussi
+   * partagé entre plusieurs mandats, que la carte dit à part), et la limite du taux réduit d'impôt sur les sociétés.
    */
-  anneeDeCreation?: { creation: string; mois: number }
+  anneeDeCreation?: { creation: string; mois: number; plafondSecuriteSociale?: number; plafondTauxReduitIS?: number }
   /** Activité déclarée implantée en zone (ZFU-TE, QPV) : son exonération d'impôt sur les bénéfices cette année (voir l'ADR 017). */
   exonerationDeZone?: ExonerationDeZoneDeLActivite
   /** Profession libérale réglementée de l'activité (voir l'ADR 015). */

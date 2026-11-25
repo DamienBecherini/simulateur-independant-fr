@@ -5,7 +5,7 @@ import { ANNEE_COURANTE } from "@/backend/logic/regles"
 import { simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
 import { grilleVide, type ActivityResult, type Company, type FinancialFlow, type MicroEntreprise, type Relationship, type SessionState } from "@/types"
 import { makeCompany, makeMicro, makePerson } from "@/ui/testing/fixtures"
-import { arrondiesAuTotal, detailDesCotisations, lignesAvantArrondi, precisionDesCotisations } from "./detail-des-cotisations"
+import { arrondiesAuTotal, detailDesCotisations, lignesAvantArrondi, precisionDeLImpotSurLesSocietes, precisionDesCotisations } from "./detail-des-cotisations"
 
 const somme = (lignes: { montant: number }[]) => lignes.reduce((total, l) => total + l.montant, 0)
 
@@ -113,6 +113,18 @@ describe("detailDesCotisations : le détail somme exactement au total", () => {
     expect(detail.map(l => l.libelle)).toEqual(["dont maladie", "dont retraite de base", "dont retraite complémentaire (Agirc-Arrco)", "dont allocations familiales", "dont CSG et CRDS", "dont autres contributions"])
     expect(detail[0].precision).toMatch(/^[\d\s]+\s€ salariales, [\d\s]+\s€ patronales$/)
     expect(precisionDesCotisations(activite)).toBeNull()
+  })
+
+  it("année de création : le plafond réduit s'ajoute à la précision des cotisations, la limite du taux réduit précise l'impôt sur les sociétés", () => {
+    const enEI = activiteSimulee(situation("EI non réglementée, 54000"))
+    const creee = { ...enEI, anneeDeCreation: { creation: "2026-04", mois: 9, plafondSecuriteSociale: 36045 } }
+    expect(precisionDesCotisations(creee)?.replace(/\s/g, " ")).toMatch(/régularise ; plafond de la sécurité sociale réduit à 9 mois : 36 045 €$/)
+    expect(precisionDeLImpotSurLesSocietes(creee)).toBeNull()
+
+    const president = { ...activiteSimulee(situation("SASU, rémunération")), anneeDeCreation: { creation: "2026-09", mois: 4, plafondSecuriteSociale: 16020, plafondTauxReduitIS: 14166.67 } }
+    expect(precisionDesCotisations(president)?.replace(/\s/g, " ")).toBe("plafond de la sécurité sociale réduit à 4 mois : 16 020 €")
+    expect(precisionDeLImpotSurLesSocietes(president)?.replace(/\s/g, " ")).toBe("taux réduit jusqu'à 14 167 € de bénéfice, limite réduite à 4 mois ; taux normal au-delà")
+    expect(precisionDeLImpotSurLesSocietes(enEI)).toBeNull()
   })
 
   it("salariés : leurs cotisations patronales, réduction générale déduite", () => {

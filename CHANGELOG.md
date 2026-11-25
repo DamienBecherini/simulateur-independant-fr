@@ -17,7 +17,7 @@ La section « Non publié » recueille les changements en attente de la prochain
   - société : tranche d'impôt sur les sociétés à 15 % réduite aux mois d'activité (le premier exercice reste l'année civile) ;
   - micro-entreprise : seuils de franchise de TVA au prorata des jours d'activité, comme les plafonds du régime ;
   - une année avant la création, l'activité ne doit ni cotisation minimale ni forfait.
-  La fiche de l'activité dit combien de mois compte l'année affichée. La grille hachure les mois avant la création, marque le mois de création et signale les montants saisis avant, qui restent comptés ; les résultats le redisent. Le comparateur et le calcul « Quel chiffre d'affaires pour un net visé ? » n'inscrivent plus rien avant la création.
+  La fiche de l'activité dit combien de mois compte l'année affichée. La grille hachure les mois avant la création, marque le mois de création et signale les montants saisis avant, qui restent comptés ; les résultats le redisent. Dans le détail de la carte, la ligne des cotisations rappelle le plafond réduit, et celle de l'impôt sur les sociétés la limite réduite du taux réduit. Le comparateur et le calcul « Quel chiffre d'affaires pour un net visé ? » n'inscrivent plus rien avant la création.
 
 ### Modifié
 

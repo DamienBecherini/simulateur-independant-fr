@@ -14,7 +14,7 @@ import { partsDuPlafond } from "./plafond-entre-mandats.js"
 import { remunerationMaximale } from "./remuneration-maximale.js"
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementsDeLaProfession, parametresDeLaCaisse, professionDe } from "./professions.js"
-import { lireMois, noteSortie } from "./dispositifs.js"
+import { ecrireMois, lireMois, noteSortie } from "./dispositifs.js"
 import { avertissementsAvantLaCreation, noteAvantLaCreation, noteDeCreationIndependant, noteDeCreationSociete, periodeDeLActivite, reglesDeLaPeriode, type PeriodeDeLActivite } from "./annee-de-creation.js"
 import { avecLaZone, beneficeExonereDeLActivite, detailDeLaZone, parametresDExoneration, zoneDeLActivite } from "./exoneration-de-zone.js"
 import { anneeSimulee, anomaliesDeLActivite, associesDe, attribuerResultatSociete, dirigeantsDe, revenusDe, total, verserDividendes, verserRemuneration, type Contexte } from "./routage-des-flux.js"
@@ -40,6 +40,22 @@ function reglesDeLActivite(ctx: Contexte, activite: Company): { periode: Periode
 /** La note d'une année avant la création ; rien pour une année entière ou l'année de création (sa note est propre au statut). */
 function noteDeLaPeriode(periode: PeriodeDeLActivite, annee: number): string[] {
   return periode.cas === "avant" ? [noteAvantLaCreation(periode.creation, annee)] : []
+}
+
+/**
+ * Les limites d'une société l'année de sa création : celle du taux réduit d'IS, et le plafond des cotisations du gérant
+ * d'EURL, ou du président rémunéré qui n'a qu'un mandat (un plafond aussi partagé entre mandats, `plafondPartage`, a sa
+ * note à part).
+ */
+function limitesDeLaSociete(statut: StatutSociete, regles: ReglesFiscales, remunerationNette: number, plafondPartage: boolean): { plafondSecuriteSociale?: number; plafondTauxReduitIS: number } {
+  const presidentSeul = remunerationNette > 0 && !plafondPartage
+  const plafond = statut === "EURL" ? regles.TNS.plafondSecuriteSociale : presidentSeul ? regles.regimeGeneral.plafondSecuriteSociale : undefined
+  return { plafondTauxReduitIS: regles.IS.plafondTauxReduit, ...(plafond === undefined ? {} : { plafondSecuriteSociale: plafond }) }
+}
+
+/** L'année de création et ses limites réduites, que le détail de la carte rappelle sous les montants ; rien sinon. */
+function limitesDeLAnneeDeCreation(periode: PeriodeDeLActivite, limites: { plafondSecuriteSociale?: number; plafondTauxReduitIS?: number }): Pick<ActivityResult, "anneeDeCreation"> {
+  return periode.cas === "creation" ? { anneeDeCreation: { creation: ecrireMois(periode.creation), mois: periode.mois, ...limites } } : {}
 }
 
 /**
@@ -170,6 +186,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
     ...(limite === undefined ? {} : { limiteDeRemuneration: limite }),
     ...detailProfession(profession, ctx.regles, false),
     ...(notes.length > 0 ? { dispositifs: notes } : {}),
+    ...limitesDeLAnneeDeCreation(periode, limitesDeLaSociete(statut, regles, resultat.remunerationNette, plafond !== undefined)),
     warnings
   }
   return avecLaZone(activite, detailDeLaZone(zone, anneeSimulee(ctx), ctx.regles, { beneficeExonere: resultat.beneficeExonere, recettesLiberales: recettesLiberalesHorsSante(profession) }))
@@ -269,6 +286,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     ...detailDeplacements(entreprise, deplacements, true),
     ...sortie,
     ...(dispositifs.length > 0 ? { dispositifs } : {}),
+    ...limitesDeLAnneeDeCreation(periode, { plafondSecuriteSociale: regles.TNS.plafondSecuriteSociale }),
     ...detailProfession(profession, ctx.regles, false),
     warnings
   }

@@ -3,7 +3,7 @@
 import type { ActivityResult, FoyerFiscalResult, FraisProfessionnelsResult, PersonResult, SalarieDeLActivite, SimulationReport, VersementLiberatoireInfo } from "@/types"
 import { ANCRES } from "@/lib/ancres"
 import { libelleDeduction } from "@/lib/export-commun"
-import { detailDesCotisations, precisionDesCotisations } from "@/lib/detail-des-cotisations"
+import { detailDesCotisations, precisionDeLImpotSurLesSocietes, precisionDesCotisations } from "@/lib/detail-des-cotisations"
 import { LIMITES, TITRE_DES_LIMITES } from "@/lib/limites-du-modele"
 import { statutEtProfession } from "@/lib/professions"
 import { lectureDesReserves } from "@/lib/reserves"
@@ -508,7 +508,7 @@ function LignesDeLActivite({ activity, className }: { activity: ActivityResult; 
       {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={euros(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${euros(activity.cotisationsPresident.brut)} bruts`} className={className} /> : null}
       {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} className={className} /> : null}
       <BeneficeExonereRow exoneration={activity.exonerationDeZone} className={className} />
-      {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${euros(activity.impotSocietes)}`} className={className} /> : null}
+      {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${euros(activity.impotSocietes)}`} hint={precisionDeLImpotSurLesSocietes(activity)} className={className} /> : null}
       {activity.reserves ? <MouvementsDesReserves activity={activity} className={className} /> : null}
     </>
   )
