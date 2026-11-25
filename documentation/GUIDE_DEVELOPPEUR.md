@@ -201,6 +201,7 @@ flowchart TD
 | `calculsIR.ts`, `foyers.ts` | Impôt sur le revenu (quotient familial, décote) ; regroupement des foyers fiscaux. | moteur |
 | `frais-kilometriques.ts` | Barème kilométrique, frais réels. | moteur |
 | `dispositifs.ts` | ACRE, CFE de création, sortie du régime micro, prorata des plafonds. | moteur, `simulation-pluriannuelle.ts` |
+| `annee-de-creation.ts` | Année de création d'une activité (ADR 020) : sa période (`periodeDeLActivite` : entière, création, avant), les règles ramenées aux mois d'activité (`reglesDeLAnneeDeCreation`, `reglesAvantLaCreation`, `reglesDeLaPeriode`), les notes et les montants saisis avant la création (`saisiAvantLaCreation`, `avertissementsAvantLaCreation`). Les calculs ne changent pas : ils reçoivent ces règles. | `simulation-au-reel.ts`, `simulation-micro.ts`, `routage-des-flux.ts` (salariés), `simulation-engine.ts`, comparateur, grille, `ChampDateDeCreation.tsx` |
 | `protection-sociale.ts` | Trimestres de retraite, couverture par régime (note du comparateur ; salarié porté avec l'assurance chômage). | comparateur |
 | `conversion-de-statut.ts` | `convertirLActivite` : une activité dans un autre statut (entité, relations, flux), sans rien ajouter, ou en portage salarial avec les conditions du comparateur ; `activiteComparee`, `statutActuel`, `relationDuDirigeant` (Titulaire, Président, Gérant selon le statut). | comparateur, `simulation-pluriannuelle.ts` (micro sortie du régime), stratégies, `changement-de-statut.ts` |
 | `changement-de-statut.ts` | `changerLeStatut` : le statut choisi dans la fiche d'une activité, appliqué à toute la session (flux de chaque année convertis comme dans le comparateur, relations modifiées sur place, rémunération et dividendes gardés d'une société à l'IS à l'autre), avec ce qui a été converti ou retiré ; `refusDuChangement` (micro-entreprise interdite à la profession). Les phrases de la confirmation et les libellés des flux sont dans `src/lib/changement-de-statut.ts`. | `src/lib`, interface (fiche d'une activité) |
@@ -581,6 +582,7 @@ Une valeur qu'aucune source ne donne n'est **pas** estimée en silence : on repr
 | RFR | Revenu fiscal de référence du foyer ; celui de N-2 décide du VFL de l'année N. | `revenuFiscalDeReference`, `rfrN2` |
 | ACRE | Aide à la création : cotisations réduites pendant les premiers trimestres. | `beneficieACRE`, `dateDeCreation`, `acre` |
 | CFE | Cotisation foncière des entreprises ; non due l'année de création, réduite l'année suivante. | `CFE`, frais de fonctionnement `cfe` |
+| Année de création | Année où l'activité commence après janvier : plafonds et limites réduits à ses mois d'activité (ADR 020). | `anneeDeCreation`, `periodeDeLActivite`, `ActivityResult.anneeDeCreation` |
 | BIC / BNC | Bénéfices industriels et commerciaux / non commerciaux (professions libérales) : catégories d'impôt et de taux micro. | `ca_micro_services_bic`, `servicesBnc` |
 | IS | Impôt sur les sociétés (taux réduit puis normal). | `calculerIS`, `IS` |
 | IR | Impôt sur le revenu, calculé une fois par foyer fiscal (quotient familial, plafonnement, décote). | `calculsIR.ts`, `IR`, `impotSurLeRevenu` |

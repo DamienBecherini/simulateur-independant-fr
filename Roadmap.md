@@ -265,7 +265,7 @@ Le socle (graphe d'entités, grille visuelle, persistance validée par Zod), les
 
 - **Objectif :** compléter le modèle pour les situations moins courantes, puis distribuer l'application.
 
-1.  **Prorata temporis :** activité démarrée en cours d'année.
+1.  **Prorata temporis [✅ pour la création, ADR 020] :** l'année de création d'une activité compte ses mois d'activité : plafond de la sécurité sociale des indépendants, du président et des salariés, minimums des indépendants (retraite de base après 90 jours, invalidité-décès au prorata), limite du taux réduit d'IS, seuils de TVA de la micro ; rien avant la création ; montants saisis avant signalés dans la grille et les résultats. **Reste :** la date de cessation (même mécanique), un premier exercice de société de plus de douze mois.
 2.  **ACRE [✅ pour la micro-entreprise, voir phase 13 point 6] :** la réduction de 50 % et celle de 25 % (micro-entreprises créées à partir du 01/07/2026) sont distinguées. **Reste :** l'ACRE des indépendants hors micro et des dirigeants de société.
 3.  **Répartition du capital :** part de chaque associé dans une société à plusieurs associés. Aujourd'hui, les dividendes, l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales.
 4.  **Compte courant d'associé :** solde par société, flux d'apport et de remboursement (non imposés), intérêts versés (déductibles pour la société dans une limite, imposés chez l'associé), et prise en compte du solde dans le seuil des 10 % du capital des EURL.

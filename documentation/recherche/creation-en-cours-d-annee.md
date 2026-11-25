@@ -242,6 +242,8 @@ La part du brut au-dessus du plafond (8 955 €) passe en tranche 2 (retraite co
 
 Une branche, dans cet ordre ; chaque étape garde la vérification complète verte.
 
+**Réalisé le 25/11/2026** (branche `activite-creee-en-cours-d-annee`) : étapes 1 à 11. La note sous la date de création, la grille et les résultats suivent les maquettes validées ; dans la grille, les repères sont sur la ligne de l'activité (chaque activité a sa date), pas dans l'en-tête des mois.
+
 1. **ADR 020** « Une activité créée en cours d'année » : les décisions de la section 11, les hypothèses (unité en mois, minimum d'invalidité-décès et bornes de l'abattement au prorata, début du mandat au mois de création), le minimum des indemnités journalières plein (Urssaf), ce qui est écarté (premier exercice long, cessation, date au jour près).
 2. **Les mois d'activité** (`dispositifs.ts`) : `moisDActivite(creation, annee)` (12, mois de création à décembre, ou 0) et les jours d'affiliation (seuil de 90 jours) ; tests unitaires.
 3. **Indépendants** (`cotisationsTNS.ts`, `cotisations-liberales.ts`, `calculsEI.ts`, `calculsEURL.ts`) : règles TNS au prorata (`avecLePassAuProrata`, sur le modèle d'`avecUnePartDuPlafond`) et minimums selon la section 11 ; seuil des 90 jours dans les règles de chaque année (indépendants et libéraux) ; cas 1 et 2.
