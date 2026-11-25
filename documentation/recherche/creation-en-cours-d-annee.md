@@ -2,7 +2,7 @@
 
 Préparation du point 1 de la phase 15 de la feuille de route (« Prorata temporis : activité démarrée en cours d'année »). Ce document rassemble les règles **sourcées** de l'année de création, décrit ce que le moteur calcule aujourd'hui et propose une conception. Il ne contient **aucun code**. Les décisions du propriétaire sont à la section 11, les cas calculés à la main à la section 12, le plan à la section 13.
 
-- **Date de consultation des sources :** 23 novembre 2026. Le site de l'Urssaf refuse les lectures automatiques : les règles des indépendants viennent de Légifrance, du BOFiP, de la Cnav et de la CNBF, et quelques points de sources secondaires, signalés.
+- **Date de consultation des sources :** 23 novembre 2026. Le site de l'Urssaf refuse les lectures automatiques : les règles des indépendants viennent de Légifrance, du BOFiP, de la Cnav et de la CNBF, et quelques points de sources secondaires, signalés. Le 25 novembre, l'Urssaf a été lue dans un navigateur (pages [Comprendre vos cotisations](https://www.urssaf.fr/accueil/independant/comprendre-payer-cotisations/comprendre-vos-cotisations.html), encadré « Vos cotisations en début d'activité », et [Taux de cotisations des artisans, commerçants et libéraux non réglementés](https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-ac-plnr.html)) : elle tranche les indemnités journalières et la formation professionnelle (section 3).
 - **Exemples :** valeurs 2026 (PASS 48 060 €, PMSS 4 005 €, SMIC horaire 12,02 €). Une création « au 1er avril » compte 275 jours d'activité en 2026, « au 15 septembre » 108 jours (premier jour compté, comme les exemples du BOFiP).
 - **Légende :** **[sourcé]** lu sur la source citée ; **[secondaire]** lu seulement sur une source non officielle ; **[à confirmer]** source officielle muette, ambiguë ou contradictoire.
 
@@ -76,9 +76,9 @@ Préparation du point 1 de la phase 15 de la feuille de route (« Prorata tempor
 | Minimum | Année de création | Source |
 |---|---|---|
 | Retraite de base : 450 × SMIC horaire (5 409 €) | **Pas de prorata**, « qu'il s'agisse d'une année complète d'activité ou non », mais **seulement si l'affiliation dure au moins 90 jours** dans l'année. Création au 15 octobre (78 jours) : pas de minimum. | [sourcé] [D633-2](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000041966730) ; [circulaire Cnav 2024-24](https://legislation.lassuranceretraite.fr/Pdf/circulaire_cnav_2024_24_26072024.pdf) ; libéraux : [D642-4](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000048838321) (« n'est pas réduite au prorata ») |
-| Indemnités journalières : 40 % du PASS | **[à confirmer]** Par R613-17, le PASS au prorata réduirait ce minimum ; une source secondaire dit le contraire. | [D621-3](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000049904537) ; [secondaire] Aesio |
-| Invalidité-décès : 11,5 % du PASS | **[à confirmer]** Même question. | D632-1 |
-| Formation professionnelle : 0,25 % du PASS (120 €) | **[secondaire]** Pas de prorata. | L6331-48 code du travail ; Aesio |
+| Indemnités journalières : 40 % du PASS | **Pas de prorata.** L'Urssaf : les premières cotisations « sont proratisées selon la date de début d'activité, sauf pour la cotisation aux indemnités journalières et la contribution à la formation professionnelle » ; son barème de première année garde l'assiette de 19 224 € (40 % du PASS). | [sourcé] [Urssaf, Comprendre vos cotisations](https://www.urssaf.fr/accueil/independant/comprendre-payer-cotisations/comprendre-vos-cotisations.html) (lu le 25/11/2026) ; [D621-3](https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000049904537) |
+| Invalidité-décès : 11,5 % du PASS | **[à confirmer]** L'Urssaf proratise la cotisation provisionnelle (base de 19 % du PASS) mais ne dit rien du minimum définitif. Hypothèse : au prorata, par R613-17. | D632-1 ; R613-17 |
+| Formation professionnelle : 0,25 % du PASS (120 €) | **Pas de prorata** (« forfaitaire » pour l'Urssaf). | [sourcé] Urssaf, mêmes pages ; L6331-48 code du travail |
 
 **Autres points.**
 
@@ -121,8 +121,9 @@ Aucun prorata : barème, quotient familial et décote sont annuels. La déductio
 | Versement libératoire, abattement minimum | non | — | sans objet |
 | Tranches en PASS des indépendants | oui | durée d'affiliation (unité à confirmer) | non |
 | Minimum de retraite de base des indépendants | non, mais rien sous 90 jours d'affiliation | — | non (minimum toujours appliqué) |
-| Minimums indemnités journalières et invalidité-décès | à confirmer | PASS au prorata ? | non |
-| Formation professionnelle des indépendants | non (secondaire) | — | sans objet |
+| Minimum des indemnités journalières | non (Urssaf) | — | sans objet |
+| Minimum d'invalidité-décès | à confirmer (hypothèse : oui) | PASS au prorata | non |
+| Formation professionnelle des indépendants | non (Urssaf) | — | sans objet |
 | Plafond de la Sécurité sociale (président, salariés) | oui | mois de la période d'emploi | non |
 | SMIC de la réduction générale (salariés) | oui | période d'emploi | non |
 | Limite de 42 500 € à 15 % | oui | mois de l'exercice / 12 | non |
@@ -166,8 +167,8 @@ Aucun prorata : barème, quotient familial et décote sont annuels. La déductio
 ## 10. Points incertains
 
 1. **Unité du prorata de R613-17** (jours ou mois). Proposition : les mois, faute de date au jour près, avec une note.
-2. **Minimums indemnités journalières et invalidité-décès** : au prorata (lecture de R613-17) ou pleins (source secondaire) ? À vérifier sur une notice de l'Urssaf ou auprès d'elle.
-3. **Bornes de l'abattement de 26 %** (en part du PASS) : au prorata ?
+2. **Minimums indemnités journalières et invalidité-décès** : au prorata (lecture de R613-17) ou pleins (source secondaire) ? **Tranché le 25/11 pour les indemnités journalières** : pleines (Urssaf). Reste l'invalidité-décès.
+3. **Bornes de l'abattement de 26 %** (en part du PASS) : au prorata ? La page de l'Urssaf sur la réforme de l'assiette n'en dit rien (lue le 25/11).
 4. **Début du mandat du président** : le mois de création de la société, ou un champ à part ?
 5. **Seuil de 90 jours** : apprécié sur l'année civile de création (une création au 1er octobre donne 92 jours : le minimum s'applique).
 6. **Limite à 15 % d'un premier exercice de plus de 12 mois** (hors périmètre si le premier exercice long est écarté).
@@ -181,6 +182,8 @@ Aucun prorata : barème, quotient familial et décote sont annuels. La déductio
 3. **Premier exercice de plus de 12 mois :** écarté ; l'exercice reste l'année civile, avec une note dans les limites du modèle.
 4. **Date de fin d'activité :** plus tard (même mécanique).
 5. **Points incertains 2 et 3 :** on suit la lecture du texte (R613-17) : minimums des indemnités journalières et de l'invalidité-décès, et bornes de l'abattement de 26 %, au prorata du PASS ; écrit comme une hypothèse dans les explications et dans l'ADR. La formation professionnelle reste pleine. Unité du prorata : les mois (point incertain 1).
+   **Corrigé le 25/11 :** l'Urssaf exclut les indemnités journalières du prorata ; leur minimum reste plein. L'hypothèse ne vaut plus que pour le minimum d'invalidité-décès et les bornes de l'abattement.
+6. **Maquettes** validées le 25/11.
 
 ---
 
@@ -208,11 +211,13 @@ Calculés le 24/11/2026 avec les barèmes de `2026.json`, par une réimplémenta
 
 | | Année pleine | Créée en octobre (3 mois, 92 jours) | Créée en novembre (2 mois, 61 jours) |
 |---|---|---|---|
-| Indemnités journalières (minimum 40 % du PASS) | 96,12 € | 24,03 € | 16,02 € |
+| Indemnités journalières (minimum 40 % du PASS, plein) | 96,12 € | 96,12 € | 96,12 € |
 | Retraite de base (minimum 450 h de SMIC) | 966,59 € | 966,59 € | **0 €** (moins de 90 jours) |
-| Invalidité-décès (minimum 11,5 % du PASS) | 71,85 € | 17,96 € | 11,98 € |
+| Invalidité-décès (minimum 11,5 % du PASS, au prorata) | 71,85 € | 17,96 € | 11,98 € |
 | Formation professionnelle | 120,15 € | 120,15 € | 120,15 € |
-| **Total** | 1 254,71 € | 1 128,73 € | **148,15 €** |
+| **Total** | 1 254,71 € | 1 200,82 € | **228,25 €** |
+
+Recalculé le 25/11 avec le minimum des indemnités journalières plein (avant : 1 128,73 € et 148,15 €).
 
 **Cas 3 : SASU créée en avril 2026, président payé 5 000 € brut par mois d'avril à décembre** (brut 45 000 €). Plafond : 9 × 4 005 = 36 045 € au lieu de 48 060 €.
 
@@ -237,7 +242,7 @@ La part du brut au-dessus du plafond (8 955 €) passe en tranche 2 (retraite co
 
 Une branche, dans cet ordre ; chaque étape garde la vérification complète verte.
 
-1. **ADR 020** « Une activité créée en cours d'année » : les décisions de la section 11, les hypothèses (unité en mois, minimums au prorata, début du mandat au mois de création), ce qui est écarté (premier exercice long, cessation, date au jour près).
+1. **ADR 020** « Une activité créée en cours d'année » : les décisions de la section 11, les hypothèses (unité en mois, minimum d'invalidité-décès et bornes de l'abattement au prorata, début du mandat au mois de création), le minimum des indemnités journalières plein (Urssaf), ce qui est écarté (premier exercice long, cessation, date au jour près).
 2. **Les mois d'activité** (`dispositifs.ts`) : `moisDActivite(creation, annee)` (12, mois de création à décembre, ou 0) et les jours d'affiliation (seuil de 90 jours) ; tests unitaires.
 3. **Indépendants** (`cotisationsTNS.ts`, `cotisations-liberales.ts`, `calculsEI.ts`, `calculsEURL.ts`) : règles TNS au prorata (`avecLePassAuProrata`, sur le modèle d'`avecUnePartDuPlafond`) et minimums selon la section 11 ; seuil des 90 jours dans les règles de chaque année (indépendants et libéraux) ; cas 1 et 2.
 4. **Président et salariés** (`cotisationsSalarie.ts`, `plafond-entre-mandats.ts`, `simulation-au-reel.ts`, `routage-des-flux.ts`) : plafond × mois / 12, combiné avec la part entre mandats (ADR 018) ; SMIC de la réduction générale × mois / 12 ; cas 3.
