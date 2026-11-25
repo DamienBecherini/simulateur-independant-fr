@@ -565,8 +565,13 @@ export interface ActivityResult {
   portage?: DetailPortage
   /** Micro-entreprise à l'ACRE dont la date de création est connue : l'aide de l'année, mois par mois. */
   acre?: ACREDeLAnnee
-  /** Dispositifs limités dans le temps qui jouent cette année (sortie du régime micro, ACRE, plafonds au prorata, exonération de zone). */
+  /** Dispositifs limités dans le temps qui jouent cette année (sortie du régime micro, ACRE, plafonds au prorata, exonération de zone, année de création). */
   dispositifs?: string[]
+  /**
+   * L'année de création de l'activité, quand elle ne compte pas douze mois : son mois de création (« AAAA-MM ») et ses
+   * mois d'activité (voir l'ADR 020). Absente une année entière.
+   */
+  anneeDeCreation?: { creation: string; mois: number }
   /** Activité déclarée implantée en zone (ZFU-TE, QPV) : son exonération d'impôt sur les bénéfices cette année (voir l'ADR 017). */
   exonerationDeZone?: ExonerationDeZoneDeLActivite
   /** Profession libérale réglementée de l'activité (voir l'ADR 015). */

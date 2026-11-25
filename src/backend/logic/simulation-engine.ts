@@ -7,7 +7,9 @@
 import type { ActivityResult, Company, DonneesDeLAnnee, MicroEntreprise, Person, Portage, SimulationReport } from "../../types.js"
 import { buildFoyers } from "./foyers.js"
 import type { ReglesFiscales } from "./regles.js"
-import { aggregateAnnualFlowsByEntity, bulletinsDesSalaries, cotisationsSalarialesParPersonne, somme, type Contexte, type ContexteDeLAnnee } from "./routage-des-flux.js"
+import { aggregateAnnualFlowsByEntity, anneeSimulee, bulletinsDesSalaries, cotisationsSalarialesParPersonne, somme, type Contexte, type ContexteDeLAnnee } from "./routage-des-flux.js"
+import { anneeDeCreation } from "./annee-de-creation.js"
+import { ecrireMois } from "./dispositifs.js"
 import { SIMULATION_PAR_STATUT } from "./simulation-au-reel.js"
 import { simulerMicroEntreprise } from "./simulation-micro.js"
 import { simulerPortage } from "./simulation-portage.js"
@@ -24,9 +26,15 @@ export type { ContexteDeLAnnee } from "./routage-des-flux.js"
  */
 
 function simulerActivite(ctx: Contexte, activite: Company | MicroEntreprise | Portage): ActivityResult {
-  if (activite.type === "micro-entreprise") return simulerMicroEntreprise(ctx, activite)
+  if (activite.type === "micro-entreprise") return avecLAnneeDeCreation(simulerMicroEntreprise(ctx, activite), activite.dateDeCreation, anneeSimulee(ctx))
   if (activite.type === "portage") return simulerPortage(ctx, activite)
-  return SIMULATION_PAR_STATUT[activite.legalStatus](ctx, activite)
+  return avecLAnneeDeCreation(SIMULATION_PAR_STATUT[activite.legalStatus](ctx, activite), activite.dateDeCreation, anneeSimulee(ctx))
+}
+
+/** Le résultat d'une activité, avec son année de création quand l'année simulée l'est (ADR 020). */
+function avecLAnneeDeCreation(resultat: ActivityResult, dateDeCreation: string | undefined, annee: number): ActivityResult {
+  const creation = anneeDeCreation(dateDeCreation, annee)
+  return creation ? { ...resultat, anneeDeCreation: { creation: ecrireMois(creation.creation), mois: creation.mois } } : resultat
 }
 
 function arrondirActivite(activite: ActivityResult): ActivityResult {

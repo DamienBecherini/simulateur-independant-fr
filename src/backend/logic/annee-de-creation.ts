@@ -214,15 +214,17 @@ export function saisiAvantLaCreation(monthlyData: MonthlyGridData, entityId: str
 }
 
 /** L'avertissement des montants saisis avant la création : ils sont comptés quand même (décision du 2026-11-24). */
-export function avertissementSaisiAvantLaCreation(saisi: SaisiAvantLaCreation, creation: MoisCivil, annee: number): string {
+export function avertissementSaisiAvantLaCreation(saisi: SaisiAvantLaCreation, creation: MoisCivil, annee: number, nom?: string): string {
   const mois = saisi.mois.map(m => libelleDuMois({ annee, mois: m + 1 }, false)).join(", ")
   const montants = saisi.montants.map(({ nature, montant }) => `${euros(montant)} ${nature}`).join(", ")
-  return `Activité créée en ${libelleDuMois(creation)} : ${montants} saisis avant la création (${mois} ${annee}), comptés quand même. Corrigez la date de création, ou déplacez ces montants.`
+  // Sur la carte de l'activité, son nom est déjà là ; au-dessus de la grille, il dit de quelle activité il s'agit.
+  const qui = nom === undefined ? "Activité créée" : `« ${nom} » est créée`
+  return `${qui} en ${libelleDuMois(creation)} : ${montants} saisis avant la création (${mois} ${annee}), comptés quand même. Corrigez la date de création, ou déplacez ces montants.`
 }
 
 /** L'avertissement de l'activité, quand des montants sont saisis avant sa création cette année ; rien sinon. */
-export function avertissementsAvantLaCreation(monthlyData: MonthlyGridData, activite: { id: string; dateDeCreation?: string }, annee: number): string[] {
+export function avertissementsAvantLaCreation(monthlyData: MonthlyGridData, activite: { id: string; dateDeCreation?: string }, annee: number, nom?: string): string[] {
   const creation = lireMois(activite.dateDeCreation)
   const saisi = saisiAvantLaCreation(monthlyData, activite.id, activite.dateDeCreation, annee)
-  return creation && saisi ? [avertissementSaisiAvantLaCreation(saisi, creation, annee)] : []
+  return creation && saisi ? [avertissementSaisiAvantLaCreation(saisi, creation, annee, nom)] : []
 }

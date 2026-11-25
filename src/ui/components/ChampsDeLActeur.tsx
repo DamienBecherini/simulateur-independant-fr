@@ -174,7 +174,7 @@ function StatusSpecificFields({ entity, onChange, anneesSimulees = [], annee }: 
           </div>
         </div>
       )}
-      {estEntrepriseOuMicro(entity) && <ChampDateDeCreation activite={entity} onChange={onChange} />}
+      {estEntrepriseOuMicro(entity) && <ChampDateDeCreation activite={entity} onChange={onChange} annee={annee} />}
       {entity.type === "micro-entreprise" && <ChampHorsPlafondAnneePrecedente activite={entity} onChange={onChange} />}
       {entity.type === "company" && estSocieteIS(entity.legalStatus) && <ChampsDeLaSociete societe={entity} onChange={onChange} regles={reglesDeLAnneeAffichee(annee)} />}
     </>

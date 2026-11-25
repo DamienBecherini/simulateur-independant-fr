@@ -390,6 +390,17 @@ describe("ResultsPanel", () => {
     expect(within(card).getByRole("list", { name: "Dispositifs de l'année" })).toHaveTextContent(sortie)
   })
 
+  it("l'année de création : la date et les mois d'activité sous le nom, la note avec les dispositifs", () => {
+    const report = makeReport()
+    const note = "Année de création (avril 2026, 9 mois d'activité) : les cotisations se calculent sur un plafond de la sécurité sociale réduit aux mois d'activité."
+    report.activities = [{ ...report.activities[0], name: "Conseil de Sophie", statut: "EI au réel", anneeDeCreation: { creation: "2026-04", mois: 9 }, dispositifs: [note], warnings: [] }]
+    render(<ResultsPanel report={report} error={null} />)
+
+    const card = screen.getAllByRole("article").find(article => within(article).queryByText("Conseil de Sophie"))!
+    expect(within(card).getByText("EI au réel · créée en avril 2026, 9 mois d'activité")).toBeInTheDocument()
+    expect(within(card).getByRole("list", { name: "Dispositifs de l'année" })).toHaveTextContent(note)
+  })
+
   it("exonération en zone : l'avertissement des conditions tient en une phrase, « Voir les conditions » déplie le reste et le texte officiel", async () => {
     const user = userEvent.setup()
     const resume = "Exonération ZFU-TE appliquée sans vérifier ses conditions"

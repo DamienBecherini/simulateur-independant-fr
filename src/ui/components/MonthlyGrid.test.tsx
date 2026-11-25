@@ -437,3 +437,30 @@ describe("MonthlyGrid, sur un écran tactile", () => {
     expect(screen.queryByText("Touchez une case pour saisir un montant.")).toBeNull()
   })
 })
+
+describe("MonthlyGrid, activité créée en cours d'année", () => {
+  /** La micro-entreprise « Mon atelier », créée en mars 2026, avec 2 000 € de chiffre d'affaires saisis en janvier et en février. */
+  function afficherLAtelier(annee: number | undefined) {
+    const grille = grilleVide()
+    for (const mois of [0, 1]) grille[mois].flows.push({ id: `ca-${mois}`, label: "Ventes", amount: 2000, entityId: "micro-atelier", type: "ca_micro_services_bnc" })
+    render(<MonthlyGrid entities={[makeMicro({ dateDeCreation: "2026-03" })]} monthlyData={grille} setMonthlyData={() => {}} preferences={{ slotOrder: [] }} flowTypeToNumberMap={new Map()} annee={annee} />)
+  }
+
+  it("marque les mois avant la création et le mois de création, et signale les montants saisis avant", () => {
+    afficherLAtelier(2026)
+    expect(screen.getByText("créée en mars 2026")).toBeInTheDocument()
+    const janvier = screen.getByRole("button", { name: "Flux de janvier : Mon atelier (avant la création)" })
+    expect(janvier).toHaveAttribute("data-avant-la-creation")
+    expect(janvier.className).toContain("outline-dashed")
+    expect(screen.getByRole("button", { name: "Flux de mars : Mon atelier (mois de création)" })).toHaveAttribute("data-mois-de-creation")
+    expect(screen.getByRole("button", { name: /^Flux d.avril : Mon atelier$/ })).not.toHaveAttribute("data-avant-la-creation")
+    expect(screen.getByRole("status")).toHaveTextContent("« Mon atelier » est créée en mars 2026 : 4 000 € de chiffre d'affaires saisis avant la création (janvier, février 2026), comptés quand même.")
+  })
+
+  it("ne marque rien l'année suivante", () => {
+    afficherLAtelier(2027)
+    expect(screen.queryByText(/créée en/)).toBeNull()
+    expect(screen.getByRole("button", { name: "Flux de janvier : Mon atelier" })).not.toHaveAttribute("data-avant-la-creation")
+    expect(screen.queryByRole("status")).toBeNull()
+  })
+})

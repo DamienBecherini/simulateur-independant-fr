@@ -1,7 +1,7 @@
 // src/ui/components/MonthlyGrid.tsx
 
 import React, { useState, useMemo, useRef, Dispatch, SetStateAction } from "react"
-import { ANNEE_PAR_DEFAUT, type AnneeSimulee, type Entity, type MonthlyGridData, type FinancialFlow, type Relationship, type SimulationReport, type UserPreferences } from "@/types"
+import { ANNEE_PAR_DEFAUT, estEntrepriseOuMicro, type AnneeSimulee, type Entity, type MonthlyGridData, type FinancialFlow, type Relationship, type SimulationReport, type UserPreferences } from "@/types"
 import { MonthlyFlowsModal } from "./MonthlyFlowsModal"
 import type { FlowChanges } from "./FlowItem"
 import type { NewFlowValues } from "./NewFlowItem"
@@ -10,6 +10,9 @@ import { deMois, donneesDeLaGrille, MOIS_ABREGES, nombreDeFluxParMois, versement
 import { MOIS } from "@/lib/export-commun"
 import { createId } from "@/lib/id"
 import { euros } from "@/backend/logic/format"
+import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
+import { avertissementsAvantLaCreation, moisAvantLaCreation } from "@/backend/logic/annee-de-creation"
+import { TriangleAlert } from "lucide-react"
 import { ajouterDansLesAnnees, modifierDansLesAnnees, modifierSerie, recopierFlux, repartirDansLesAnnees, repartirSurLAnnee, resumerMoisTouches, serieAilleurs, supprimerDansLesAnnees, supprimerSerie, type ChangementsDeFlux, type CibleDansLesAnnees, type MoisTouches, type PorteeRecurrence } from "@/lib/flux-recurrents"
 import { toast } from "sonner"
 import { AvatarDisplay } from "./AvatarDisplay"
@@ -78,12 +81,55 @@ function autresAnneesQue(annees: AnneeSimulee[] | undefined, annee: number | und
   return annees.map(a => a.annee).filter(a => a !== annee)
 }
 
+/** Ce que la date de création d'une activité marque sur sa ligne, l'année affichée (voir l'ADR 020). */
+interface ReperesDeCreation {
+  /** Mois avant la création (0 pour janvier) : hachurés. */
+  avant: number[]
+  /** Mois de création, quand ce n'est pas janvier de l'année affichée : un trait bleu le marque. */
+  moisDeCreation: number | null
+  /** « créée en mars 2026 », sous le nom, l'année de création et avant. */
+  mention: string | null
+}
+
+const SANS_REPERE: ReperesDeCreation = { avant: [], moisDeCreation: null, mention: null }
+
+function reperesDeCreation(entity: Entity, annee: number | undefined): ReperesDeCreation {
+  if (annee === undefined || !estEntrepriseOuMicro(entity)) return SANS_REPERE
+  const creation = lireMois(entity.dateDeCreation)
+  if (!creation || creation.annee < annee) return SANS_REPERE
+  return { avant: moisAvantLaCreation(entity.dateDeCreation, annee), moisDeCreation: creation.annee === annee && creation.mois > 1 ? creation.mois - 1 : null, mention: `créée en ${libelleDuMois(creation)}` }
+}
+
+/** Hachures d'un mois avant la création : la case reste ouverte à la saisie, mais se distingue. */
+const AVANT_LA_CREATION = "[background-image:repeating-linear-gradient(135deg,rgb(148_163_184/0.25)_0_6px,transparent_6px_12px)]"
+
+/**
+ * Les montants saisis avant la création d'une activité, au-dessus de la grille : ils sont comptés quand même (décision
+ * du 2026-11-24), la phrase dit comment corriger. Rien sans date de création ni année connue.
+ */
+function AlerteAvantLaCreation({ entities, monthlyData, annee }: { entities: Entity[]; monthlyData: MonthlyGridData; annee: number | undefined }) {
+  if (annee === undefined) return null
+  const alertes = entities.filter(estEntrepriseOuMicro).flatMap(e => avertissementsAvantLaCreation(monthlyData, e, annee, e.name))
+  if (alertes.length === 0) return null
+  return (
+    <div role="status" className="mb-3 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-50 print:hidden">
+      <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+      <ul className="space-y-1">
+        {alertes.map(alerte => (
+          <li key={alerte}>{alerte}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 /**
  * La ligne d'un acteur : son nom, son total annuel et ses douze mois, chaque mois ouvrant la fenêtre de ses flux. Son
  * rang donne les lignes alternées : chaque case, nom compris, reçoit la teinte de la bande.
  */
-function LigneDeLActeur({ ligne, rang, onOuvrir }: { ligne: LigneDeLaGrille; rang: number; onOuvrir: (monthIndex: number) => void }) {
+function LigneDeLActeur({ ligne, rang, annee, onOuvrir }: { ligne: LigneDeLaGrille; rang: number; annee: number | undefined; onOuvrir: (monthIndex: number) => void }) {
   const { entity, monthlyScale, monthlyCellData, annualCellData, annualScale } = ligne
+  const reperes = reperesDeCreation(entity, annee)
   const bande = caseAlternee(rang)
   // Affichage « Résumé » : lignes plus basses, avatar en petit à côté du nom.
   const resume = useAffichageResume()
@@ -94,7 +140,10 @@ function LigneDeLActeur({ ligne, rang, onOuvrir }: { ligne: LigneDeLaGrille; ran
         <div className={cn("flex items-center gap-2 py-1 mx-0 text-sm sm:mx-3 sm:text-base print:mx-0 print:gap-1 print:text-[9pt]", resume ? "max-sm:flex-col" : "flex-col")}>
           <AvatarDisplay avatar={entity.avatar} size={resume ? "sm" : "md"} />
           {/* Un nom long passe à la ligne ; un mot plus large que la colonne est coupé. */}
-          <span className="text-center [overflow-wrap:anywhere]">{entity.name}</span>
+          <span className="text-center [overflow-wrap:anywhere]">
+            {entity.name}
+            {reperes.mention ? <span className="block text-xs font-medium text-slate-600 dark:text-slate-400">{reperes.mention}</span> : null}
+          </span>
         </div>
       </div>
 
@@ -112,13 +161,28 @@ function LigneDeLActeur({ ligne, rang, onOuvrir }: { ligne: LigneDeLaGrille; ran
       </div>
 
       {/* Colonnes 3 à 14 : Les 12 mois */}
-      {monthlyCellData.map((cellData, monthIndex) => (
+      {monthlyCellData.map((cellData, monthIndex) => {
+        const avant = reperes.avant.includes(monthIndex)
+        const creation = reperes.moisDeCreation === monthIndex
+        const precision = avant ? " (avant la création)" : creation ? " (mois de création)" : ""
+        return (
         <div
           key={monthIndex}
-          className={cn("bg-slate-100 dark:bg-gray-800 p-2 group transition-colors cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 active:bg-slate-300 dark:active:bg-gray-600 flex flex-col justify-start print:min-h-0 print:p-1", resume ? "min-h-12" : "min-h-[80px]", BORD_DE_CASE, bande)}
+          data-avant-la-creation={avant || undefined}
+          data-mois-de-creation={creation || undefined}
+          className={cn(
+            "bg-slate-100 dark:bg-gray-800 p-2 group transition-colors cursor-pointer focus-visible:-outline-offset-4 hover:bg-slate-200 dark:hover:bg-gray-700 active:bg-slate-300 dark:active:bg-gray-600 flex flex-col justify-start print:min-h-0 print:p-1",
+            resume ? "min-h-12" : "min-h-[80px]",
+            BORD_DE_CASE,
+            bande,
+            avant && AVANT_LA_CREATION,
+            // Un montant saisi avant la création : contour ambre pointillé, comme l'alerte au-dessus de la grille.
+            avant && cellData.flowCount > 0 && "outline-1 outline-dashed -outline-offset-4 outline-amber-500",
+            creation && "border-l-2 border-l-blue-500"
+          )}
           role="button"
           tabIndex={0}
-          aria-label={`Flux ${deMois(MOIS[monthIndex])} : ${entity.name}`}
+          aria-label={`Flux ${deMois(MOIS[monthIndex])} : ${entity.name}${precision}`}
           onClick={() => onOuvrir(monthIndex)}
           onKeyDown={event => {
             // Une case s'ouvre aussi au clavier, comme un bouton.
@@ -130,7 +194,8 @@ function LigneDeLActeur({ ligne, rang, onOuvrir }: { ligne: LigneDeLaGrille; ran
         >
           <CellChartDisplay gains={cellData.gains} expenses={cellData.expenses} totalGains={cellData.totalGains} totalExpenses={cellData.totalExpenses} absoluteMaxValue={monthlyScale} flowCount={cellData.flowCount} />
         </div>
-      ))}
+        )
+      })}
     </>
   )
 }
@@ -307,6 +372,7 @@ function MonthlyGrid({ entities, relationships, monthlyData, setMonthlyData, pre
           // La bande des mois reste collée sous les barres du haut tant que la grille est en vue : elle s'arrête au bas de ce bloc.
           <div>
             <AideTactile grilleTouchee={preferences.grilleTouchee} />
+            <AlerteAvantLaCreation entities={entities} monthlyData={monthlyData} annee={annee} />
             {defilement.deborde ? (
               <BandeDesMois
                 libelles={MOIS_ABREGES}
@@ -346,7 +412,7 @@ function MonthlyGrid({ entities, relationships, monthlyData, setMonthlyData, pre
                   {gridData.map((ligne, rang) => (
                     // Un fragment par acteur, sans élément englobant : `position: sticky` de la première colonne en dépend.
                     <React.Fragment key={ligne.entity.id}>
-                      <LigneDeLActeur ligne={ligne} rang={rang} onOuvrir={monthIndex => ouvrirLaCase(ligne.entity.id, monthIndex)} />
+                      <LigneDeLActeur ligne={ligne} rang={rang} annee={annee} onOuvrir={monthIndex => ouvrirLaCase(ligne.entity.id, monthIndex)} />
                     </React.Fragment>
                   ))}
                 </div>

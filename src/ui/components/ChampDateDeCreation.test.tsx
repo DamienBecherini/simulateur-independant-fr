@@ -57,6 +57,16 @@ describe("date de création d'une activité", () => {
     expect(screen.getByRole("combobox", { name: "Année de création" })).toHaveTextContent("2026")
   })
 
+  it("dit ce que vaut l'année affichée : mois d'activité l'année de création, rien d'affilié avant, rien une année entière", async () => {
+    const { user } = ouvrir(makeCompany({ legalStatus: "SASU", dateDeCreation: "2026-04" }))
+    expect(screen.getByRole("status")).toHaveTextContent("En 2026 : 9 mois d'activité (avril à décembre).")
+    expect(screen.getByRole("group", { name: "Date de création" })).toHaveAccessibleDescription(/plafond de la sécurité sociale réduit aux mois d'activité, comme la tranche d'impôt sur les sociétés à 15 %/)
+    await choisir(user, "Année de création", "2027")
+    expect(screen.getByRole("status")).toHaveTextContent("En 2026 : avant la création. L'activité n'est pas encore affiliée")
+    await choisir(user, "Année de création", "2025")
+    expect(screen.queryByRole("status")).toBeNull()
+  })
+
   it("n'existe pas pour une personne", () => {
     ouvrir(makePerson())
     expect(screen.queryByRole("group", { name: "Date de création" })).not.toBeInTheDocument()

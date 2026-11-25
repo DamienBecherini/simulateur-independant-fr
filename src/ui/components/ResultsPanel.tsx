@@ -18,6 +18,7 @@ import { Depliable } from "./Depliable"
 import { BoutonAjouterUnConjoint, type AjoutDuConjoint } from "./AjouterUnConjoint"
 import { ReplieEnResume } from "./ReplieEnResume"
 import { euros, pourcentDeNombre } from "@/backend/logic/format"
+import { libelleDuMois, lireMois } from "@/backend/logic/dispositifs"
 
 type ResultsPanelProps = {
   report: SimulationReport | null
@@ -416,10 +417,16 @@ function NotesDesDispositifs({ notes, className }: { notes: string[] | undefined
   )
 }
 
-/** Statut affiché sous le nom : celui de l'année, et la sortie du régime micro quand elle a eu lieu. */
+/**
+ * Statut affiché sous le nom : celui de l'année, la sortie du régime micro quand elle a eu lieu, et l'année de création
+ * quand elle ne compte pas douze mois (« créée en avril 2026, 9 mois d'activité »).
+ */
 function statutAffiche(activity: ActivityResult): string {
   const statut = statutEtProfession(activity)
-  return activity.sortieDuRegimeMicro ? `${statut} · sortie du régime micro au 1er janvier ${activity.sortieDuRegimeMicro.depuis}` : statut
+  const sortie = activity.sortieDuRegimeMicro ? ` · sortie du régime micro au 1er janvier ${activity.sortieDuRegimeMicro.depuis}` : ""
+  const creation = activity.anneeDeCreation ? lireMois(activity.anneeDeCreation.creation) : null
+  const creee = creation && activity.anneeDeCreation ? ` · créée en ${libelleDuMois(creation)}, ${activity.anneeDeCreation.mois} mois d'activité` : ""
+  return `${statut}${sortie}${creee}`
 }
 
 /**
