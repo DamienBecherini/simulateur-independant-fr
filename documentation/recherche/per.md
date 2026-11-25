@@ -620,7 +620,7 @@ Ce que l'ordre retenu coûte : le revenu fiscal de référence baisse moins, et 
 
 ## 16. Plan de réalisation
 
-Révisé le 26/11/2026, **à valider avec les maquettes** avant le code.
+Révisé le 26/11/2026. Les maquettes ont été validées le même jour ; la décision est écrite dans l'ADR 021 (`documentation/adr/021-epargne-retraite.md`).
 
 Trois livraisons, chacune sur sa branche et fusionnée seule dans `main` ; chaque étape garde la vérification complète verte.
 
@@ -662,4 +662,4 @@ Trois livraisons, chacune sur sa branche et fusionnée seule dans `main` ; chaqu
 3. **Optimiseur** : le réglage choisi s'applique à chaque point, sans nouvelle dimension de recherche.
 4. **Exports** des réglages, notes du comparateur, outils des IA, documentation.
 
-**Maquettes à valider avant le code** (https://claude.ai/artifact/RGWhTVcUN8za392UbCEHAq) : (1) la fiche de la personne ; (2) la carte du foyer avec un versement en partie non déduit ; (3) la carte d'un couple dont les plafonds sont mis en commun ; (4) la carte d'un versement sans effet ; (5) une EI dont l'excédent passe sur le bénéfice ; (6) le réglage et les lignes du comparateur.
+**Maquettes validées le 26/11/2026** (https://claude.ai/artifact/RGWhTVcUN8za392UbCEHAq) : (1) la fiche de la personne ; (2) la carte du foyer avec un versement en partie non déduit ; (3) la carte d'un couple dont les plafonds sont mis en commun ; (4) la carte d'un versement sans effet ; (5) une EI dont l'excédent passe sur le bénéfice ; (6) le réglage et les lignes du comparateur.
