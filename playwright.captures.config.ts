@@ -1,6 +1,6 @@
 // playwright.captures.config.ts
-// Captures d'écran du README et de la fiche du Microsoft Store, sur une simulation fictive : « npm run captures »
-// (application compilée au préalable).
+// Captures d'écran du README, de la fiche du Microsoft Store et du site damien.becherini.fr, sur une simulation
+// fictive : « npm run captures » (application compilée au préalable).
 
 import { defineConfig } from "@playwright/test"
 

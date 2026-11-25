@@ -186,7 +186,7 @@ npm run test:mutation -- --mutate src/backend/logic/calculsIR.ts  # tests de mut
 - **Mutation** : Stryker sur les modules de `src/backend/logic/` (hors sous-dossiers), jugés par les seuls tests du moteur (score de 83 % sur 6 671 mutants), lancé chaque semaine et à la demande, en douze lots ; nécessite Node.js 22 ou supérieur.
 - **Intégration continue** : GitHub Actions exécute lint, vérification des types, tests avec couverture et build à chaque push et pull request.
 - **SonarQube Cloud** (facultatif) : quand le secret `SONAR_TOKEN` est configuré, la CI envoie le code et la couverture à SonarQube Cloud (`sonar-project.properties`) et attend le verdict de la porte qualité : une porte rouge fait échouer le job, exigé sur `main` ; sinon, elle se contente de la détection de code dupliqué.
-- **Captures d'écran** : celles du README et de la fiche du Microsoft Store sont générées par `npm run captures` (Playwright, sur l'application compilée).
+- **Captures d'écran** : celles du README, de la fiche du Microsoft Store et du site damien.becherini.fr sont générées par `npm run captures` (Playwright, sur l'application compilée).
 
 ### 🤖 Développement assisté par IA
 
