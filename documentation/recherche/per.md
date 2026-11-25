@@ -22,6 +22,8 @@ Préparation du point 1 de la phase 17 de la feuille de route (« PER »). Ce do
 12. [Cas de test proposés](#12-cas-de-test-proposés)
 13. [Points incertains](#13-points-incertains)
 14. [Brouillon de décision](#14-brouillon-de-décision)
+15. [Décisions du propriétaire](#15-décisions-du-propriétaire-25-novembre-2026)
+16. [Plan de réalisation](#16-plan-de-réalisation)
 
 ---
 
@@ -547,3 +549,67 @@ Le propriétaire suit les recommandations :
 6. **Ordre :** le 163 quatervicies d'abord ; le 154 bis ensuite, avec une hypothèse prudente écrite pour les points 2 à 4 de la section 13.
 
 Prochaine étape : le plan de réalisation et les maquettes, après l'activité créée en cours d'année.
+
+---
+
+## 16. Plan de réalisation
+
+Rédigé le 25/11/2026, **à valider avec les maquettes** avant le code.
+
+Trois livraisons, chacune sur sa branche et fusionnée seule dans `main` ; chaque étape garde la vérification complète verte. L'ordre suit la décision 6 : le revenu global d'abord, le cadre des indépendants ensuite, le comparateur en dernier.
+
+### Recommandations pour les points que les décisions laissent ouverts
+
+À valider avec le plan ; chacune est écrite dans l'ADR.
+
+1. **Reste du plafond saisi.** On ne connaît qu'un total (décision 1), pas l'année d'origine de chaque reliquat. La part non utilisée la première année **n'est pas reportée** sur les années suivantes de la session : hypothèse prudente, qui ne promet jamais une déduction perdue. Les années suivantes, le plafond se calcule sur les revenus de l'année précédente, plus les reliquats nés dans la session. Le détail par année d'origine lèvera cette limite.
+2. **Option pour la non-déduction** : hors de la première version. Un versement non déduit ne change rien dans l'année ; il suffit de ne pas le saisir comme versement PER.
+3. **Versement de l'année** : la somme des flux « Versement PER » de l'année, quel que soit le mois.
+4. **Pendant la livraison 1**, l'EI et le gérant d'EURL déduisent aussi du revenu global, ce que la loi leur permet. La livraison 2 les fait passer à l'article 154 bis ; le CHANGELOG le dira.
+5. **Net après impôts** : il garde le versement, qui reste au foyer sous forme d'épargne ; une ligne « dont épargne retraite (PER) » le montre, bloqué jusqu'à la retraite. Le comparateur classe ses colonnes sur ce même net, épargne comprise, et l'affiche à part sous le net (décision 4). La sortie, imposée, reste hors du modèle, comme le dit la limite.
+6. **Hypothèses prudentes de la livraison 2** (décision 6, points 2 à 4 de la section 13) :
+   - plafond 163 quatervicies de N+1 : premier terme sur le bénéfice **après** la déduction 154 bis (lecture de S3 § 150 ; plafond plus bas) ;
+   - assiette 154 bis du gérant : rémunération imposable de l'article 62, cotisations obligatoires déduites, **avant** la déduction de 10 % ;
+   - versement au-delà du plafond 154 bis : **perdu**, avec un avertissement, sans bascule vers le revenu global.
+   - Une personne avec deux activités éligibles déduit de celle qui a le plus grand bénéfice (cas rare, signalé dans les limites).
+
+### Livraison 1 : déduction du revenu global (163 quatervicies), pour toutes les personnes
+
+1. **ADR 021 « Épargne retraite (PER) »** : décisions de la section 15, recommandations ci-dessus, ce qui est écarté (sortie, 70 ans faute de date de naissance, primo-arrivants, épargne salariale et abondement, détail du plafond par année).
+2. **Règles par année** : bloc `IR.epargneRetraite` dans les trois fichiers (part des revenus 10 %, maximum 8 PASS, plancher 10 % du PASS, report 3 ans en 2024 et 2025, 5 ans en 2026, `passAnneePrecedente`) ; `testing/regles-de-test.ts`, `outils/lecture.ts` (`reglesCles`), test de forme.
+3. **Saisie et format de fichier** :
+   - flux `versement_per` sur la personne, sortant, comme une dépense (libellés, couleurs, `flowTypesByEntityType`, `outgoingFlowTypes`) ;
+   - `PersonSchema.plafondEpargneRetraite` (facultatif, ≥ 0) : le total imprimé sur la déclaration de revenus, pour la première année de la session ;
+   - `RelationshipSchema.plafondsEpargneRetraiteMutualises` (facultatif), permis seulement sur « Marié(e) » et « PACSé(e) » ;
+   - format suivant avec une migration vide (ADR 005) ;
+   - outils des IA : `TYPES_DE_FLUX`, `SENS_DES_TYPES`, `TYPES_PERMIS.personne`, `proposerFlux`, réglages proposables.
+4. **Moteur** (nouveau module `epargne-retraite.ts`, branché dans `calculerFoyer`) :
+   - plafond de l'année par déclarant : saisi, sinon calculé sur N-1 dans la session, sinon le plancher avec un avertissement ;
+   - imputation sur le plafond de l'année, puis sur les reliquats du plus ancien au plus récent ; mise en commun des plafonds du couple ;
+   - déduction de la base du barème sans descendre sous zéro ; réintégration au revenu fiscal de référence ;
+   - économie d'impôt par différence (impôt du foyer recalculé sans la déduction) ; tranche marginale indicative (petite fonction de `calculsIR.ts`) ;
+   - résultats : par personne (versé, déduit, plafond et son origine, non déductible, plafond pour N+1, reliquats) et par foyer (déduit, réintégré, économie, tranche marginale).
+5. **Chaînage des années** (`simulerLesAnnees`, `ContexteDeLAnnee`) : revenus d'activité professionnelle de N-1 par personne (salaires et rémunérations après la déduction de 10 % ou les frais réels, bénéfices imposables, micro après abattement, au versement libératoire compris), reliquats par année d'origine, expiration à 3 ou 5 ans.
+6. **Avertissements** : versement au-delà du plafond (ni déduit ni reportable) ; versement sans effet faute de revenu au barème (micro au versement libératoire, cas 5) ; plafond non saisi, plancher retenu.
+7. **Interface** (maquettes 1 à 3) : type de flux dans la grille, champ de la fiche de la personne, case de la relation de couple, bloc « Épargne retraite » de la carte du foyer, précision du revenu fiscal de référence, « dont épargne retraite » sous le net.
+8. **Exports et IA** : section « Épargne retraite » du CSV (sur le modèle des frais professionnels), sous-section du rapport Markdown, `resumeDuFoyer` et `expliquerPersonne`, fixture `session-maximale.ts`.
+9. **Cas de référence** (`references/epargne-retraite.reference.test.ts`) : cas 1 bis, 3, 4, 5, 6 et 7 de la section 12, recalculés par un script indépendant ; un cas sur deux années pour le chaînage.
+10. **Documentation** : limites du modèle (sortie, 70 ans, primo-arrivants, épargne salariale, reste du plafond saisi), guide (carte du moteur, glossaire), `fonctionnalites.md`, CHANGELOG, Roadmap (phase 17 point 1, en partie).
+
+### Livraison 2 : plafond des indépendants (154 bis), EI au réel et gérant d'EURL
+
+1. **ADR 021 complété** avec les hypothèses prudentes (recommandation 6).
+2. **Règles** : bloc `article154bis` (10 %, 15 % entre 1 et 8 PASS, plancher 10 % du PASS).
+3. **Moteur** : déduction du bénéfice de l'EI (`simulerEntrepriseIndividuelle`) et de la rémunération du gérant (avant la déduction de 10 %), dans la limite de l'article 154 bis ; cotisations inchangées (test) ; pas de réintégration au revenu fiscal de référence ; second terme du plafond 163 quatervicies de N+1.
+4. **Interface** (maquette 4) : ligne « Versement PER déduit (article 154 bis) » dans la carte de l'activité ; le bloc du foyer dit le cadre.
+5. **Cas de référence** : cas 1 et 2 ; cas 1 bis gardé pour comparer les deux cadres.
+6. **Exports, IA, documentation, CHANGELOG** (l'EI et le gérant changent de cadre).
+
+### Livraison 3 : comparateur et optimiseur
+
+1. **Réglage par activité** (`ReglagesComparateurSchema.epargneRetraite`) : « comme dans la simulation » (par défaut), « aucun versement », « maximum déductible » ; le maximum se calcule par colonne, dans le cadre du statut (154 bis pour l'EI et l'EURL, revenu global pour la SASU et la micro ; zéro sans revenu au barème).
+2. **Colonnes** : versement placé sur la personne dirigeante (`sessionConvertie`) ; sous le net, « dont X € d'épargne retraite » ; une ligne « Épargne retraite versée » avec l'économie d'impôt.
+3. **Optimiseur** : le mode choisi s'applique à chaque point, sans nouvelle dimension de recherche.
+4. **Exports** des réglages, notes du comparateur, outils des IA, documentation.
+
+**Maquettes à valider avant le code :** (1) la fiche de la personne et sa relation de couple ; (2) la carte du foyer avec un versement au revenu global ; (3) la même avec un versement sans effet ; (4) la carte d'une EI avec un versement 154 bis ; (5) le réglage et les lignes du comparateur.
