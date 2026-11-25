@@ -11,6 +11,7 @@ import { conditionsPortageParDefaut, LIBELLES_DES_CONDITIONS_PORTAGE } from "./o
 import { euros, pourcent } from "./format.js"
 import { professionDe, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
+import { periodeDeLActivite, reglesDeLaPeriode } from "./annee-de-creation.js"
 import type { ReglesFiscales } from "./regles.js"
 import type { ContexteDeLAnnee } from "./simulation-engine.js"
 import { LIBELLE_DU_PORTAGE, LIBELLES_DES_STATUTS } from "./statuts.js"
@@ -242,7 +243,8 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
     actuel: statut === statutActuel(source),
     telleQueSaisie: estTelleQueSaisie(statut, source, options),
     ecartDeFrais: ecartDeFrais(statut, statutActuel(source), options),
-    protectionSociale: evaluerProtectionSociale(statut, { ...assiettesDeProtection(activite), chiffreAffairesMicro: caMicro, ...acre }, estMicro(statut) ? reglesMicro : regles),
+    // Au réel, les règles de la période de l'activité : sans minimum de retraite de base sous 90 jours d'activité (ADR 020).
+    protectionSociale: evaluerProtectionSociale(statut, { ...assiettesDeProtection(activite), chiffreAffairesMicro: caMicro, ...acre }, estMicro(statut) ? reglesMicro : reglesDeLaPeriode(regles, periodeDeLActivite(source.dateDeCreation, contexte.annee ?? regles.annee))),
     ...montantsDuBilan(simulation.report),
     resultatConserveActivite,
     horsPlafond,

@@ -6,6 +6,7 @@ import { avertissementsDeLActivite, chiffreDAffaires, colonneDuComparateur, colo
 import { estMicro, type Activite } from "./conversion-de-statut.js"
 import { CHIFFRE_D_AFFAIRES_MAXIMAL, CHIFFRE_D_AFFAIRES_REPARTI } from "./options-du-comparateur.js"
 import { professionDe } from "./professions.js"
+import { moisAvantLaCreation } from "./annee-de-creation.js"
 import type { ReglesFiscales } from "./regles.js"
 import type { ContexteDeLAnnee } from "./simulation-engine.js"
 
@@ -51,22 +52,24 @@ function typeParDefaut(source: Activite): FinancialFlow["type"] {
 
 /**
  * Les données de l'année avec ce chiffre d'affaires annuel pour l'activité : celui de la grille mis à l'échelle (mêmes
- * mois, mêmes natures), ou, sans chiffre d'affaires saisi, réparti également sur les mois. Rien d'autre ne change.
+ * mois, mêmes natures), ou, sans chiffre d'affaires saisi, réparti également sur les mois d'activité : tous, ou ceux qui
+ * suivent la création d'une activité créée dans l'année `annee` (ADR 020). Rien d'autre ne change.
  */
-export function avecUnChiffreDAffaires(donnees: DonneesDeLAnnee, source: Activite, montant: number): DonneesDeLAnnee {
+export function avecUnChiffreDAffaires(donnees: DonneesDeLAnnee, source: Activite, montant: number, annee?: number): DonneesDeLAnnee {
   const estDuChiffreDAffaires = (flux: FinancialFlow) => flux.entityId === source.id && TYPES_DE_CHIFFRE_D_AFFAIRES.has(flux.type)
   const saisi = chiffreDAffaires(donnees, source.id)
   if (saisi > 0) {
     const facteur = montant / saisi
     return { ...donnees, monthlyData: donnees.monthlyData.map(mois => ({ ...mois, flows: mois.flows.map(flux => (estDuChiffreDAffaires(flux) ? { ...flux, amount: flux.amount * facteur } : flux)) })) }
   }
-  const parMois = montant / donnees.monthlyData.length
+  const avant = annee === undefined ? 0 : moisAvantLaCreation(source.dateDeCreation, annee).length % 12
+  const parMois = montant / (donnees.monthlyData.length - avant)
   const type = typeParDefaut(source)
   return {
     ...donnees,
     monthlyData: donnees.monthlyData.map(mois => ({
       ...mois,
-      flows: [...mois.flows.filter(flux => !estDuChiffreDAffaires(flux)), { id: `calcul-a-l-envers-${source.id}-${mois.month}`, label: "Chiffre d'affaires (calcul à l'envers)", amount: parMois, entityId: source.id, type }]
+      flows: [...mois.flows.filter(flux => !estDuChiffreDAffaires(flux)), ...(mois.month < avant ? [] : [{ id: `calcul-a-l-envers-${source.id}-${mois.month}`, label: "Chiffre d'affaires (calcul à l'envers)", amount: parMois, entityId: source.id, type }])]
     }))
   }
 }
@@ -86,7 +89,7 @@ function essayeur(colonne: ColonneEtudiee, statut: StatutCompare, netVise: numbe
   let essais = 0
   const essayer = (montant: number): Essai => {
     essais++
-    const { scenario } = colonneDuStatut({ ...colonne, donnees: avecUnChiffreDAffaires(colonne.donnees, colonne.source, montant) }, statut)
+    const { scenario } = colonneDuStatut({ ...colonne, donnees: avecUnChiffreDAffaires(colonne.donnees, colonne.source, montant, colonne.contexte.annee ?? colonne.regles.annee) }, statut)
     return { chiffreDAffaires: montant, scenario, ecart: scenario.netApresImpots - netVise }
   }
   return { essayer, epuise: () => essais >= ESSAIS_MAXIMUM }

@@ -2,6 +2,8 @@
 
 import { describe, expect, it } from "vitest"
 import type { Company, Entity, MicroEntreprise, Relationship } from "../../../types.js"
+import { avecUnChiffreDAffaires } from "../chiffre-d-affaires-pour-un-net.js"
+import { comparerStatuts } from "../comparateur.js"
 import { runMetaSimulation } from "../simulation-engine.js"
 import { activite, casDeReference, REGLES_DES_CAS, verifierIdentiteDuBilan } from "../testing/cas-de-reference.js"
 import { exercant, micro, personne, relation, session, societe, type Flux } from "../testing/session-de-test.js"
@@ -178,6 +180,29 @@ casDeReference("Cas de référence 2026 : activité créée en cours d'année", 
     const u1 = activite(simulerEn(0, [alice, eurl], exercant("alice", "u1", "EURL"), []), "u1")
     expect(u1.cotisationsSociales).toBe(0)
     expect(u1.dispositifs).toEqual(["Activité créée en mars 2027 : en 2026, elle n'est pas encore affiliée, et ne doit ni cotisation minimale ni forfait."])
+  })
+
+  describe("comparateur : société créée en septembre", () => {
+    // 40 000 € de chiffre d'affaires saisis en septembre ; aucune rémunération : le bénéfice est celui du cas 4.
+    const sasu: Company = { ...societe("s1", "SASU"), dateDeCreation: "2026-09" }
+    const donnees = session([alice, sasu], exercant("alice", "s1", "SASU"), [["s1", "ca_services", 40000]])
+    donnees.monthlyData[SEPTEMBRE].flows = donnees.monthlyData[0].flows
+    donnees.monthlyData[0].flows = []
+    const options = { activityId: "s1", remunerationNette: 0, repartition: { mode: "dividendes" as const, partDistribuee: 0 }, partBncPrestations: 1 }
+
+    it("les colonnes de société gardent la date : limite du taux réduit sur 4 mois, rien de saisi avant la création", () => {
+      const colonnes = comparerStatuts(donnees, options, REGLES_DES_CAS, { annee: 2026 }).scenarios
+      const enSASU = colonnes.find(c => c.statut === "SASU")
+      expect(enSASU?.impotSocietes).toBe(8583)
+      for (const c of colonnes) expect(c.warnings.some(w => w.includes("saisis avant la création"))).toBe(false)
+    })
+
+    it("le calcul à l'envers répartit le chiffre d'affaires sur les mois d'activité", () => {
+      const vide = session([alice, sasu], exercant("alice", "s1", "SASU"))
+      const reparti = avecUnChiffreDAffaires(vide, sasu, 40000, 2026)
+      expect(reparti.monthlyData.slice(0, SEPTEMBRE).every(m => m.flows.length === 0)).toBe(true)
+      expect(reparti.monthlyData.slice(SEPTEMBRE).map(m => m.flows[0]?.amount)).toEqual([10000, 10000, 10000, 10000])
+    })
   })
 
   it("un salarié d'une société créée en septembre : plafond et SMIC de la réduction générale sur 4 mois", () => {

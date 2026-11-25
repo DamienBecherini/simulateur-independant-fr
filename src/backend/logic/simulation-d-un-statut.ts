@@ -5,6 +5,7 @@ import { scenarioDeLaColonne, type ColonneEtudiee, type SimulationDeLaColonne } 
 import { convertirLActivite, estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { ecartDeFrais } from "./frais-de-fonctionnement.js"
 import { montantBaremeKilometrique } from "./frais-kilometriques.js"
+import { moisAvantLaCreation } from "./annee-de-creation.js"
 import type { ReglesFiscales } from "./regles.js"
 import { PRECISION_REMUNERATION, remunerationMaximale } from "./remuneration-maximale.js"
 import { runMetaSimulation } from "./simulation-engine.js"
@@ -73,11 +74,13 @@ function deplacementsRembourses(source: Activite, statut: StatutCompare, regles:
  * dividendes et l'écart de frais avec son statut actuel ; `dividendes` à `null` garde ceux de la grille. En portage
  * salarial, l'activité prend les conditions de société de portage des réglages.
  */
-export function sessionConvertie({ donnees, source, options, regles }: Pick<ColonneEtudiee, "donnees" | "source" | "options" | "regles">, statut: StatutCompare, dividendes: number | null): DonneesDeLAnnee {
+export function sessionConvertie({ donnees, source, options, regles, contexte }: Pick<ColonneEtudiee, "donnees" | "source" | "options" | "regles"> & Partial<Pick<ColonneEtudiee, "contexte">>, statut: StatutCompare, dividendes: number | null): DonneesDeLAnnee {
   const convertie = convertirLActivite(donnees, source, statut, options.partBncPrestations, dividendes === null, options.portage)
   const monthlyData = [...convertie.monthlyData]
-  // La rémunération et les dividendes calculés sont saisis sur janvier : seuls les totaux annuels comptent.
-  monthlyData[0] = { ...monthlyData[0], flows: [...monthlyData[0].flows, ...fluxAjoutes(source, statut, options, dividendes), ...deplacementsRembourses(source, statut, regles)] }
+  // La rémunération et les dividendes calculés sont saisis sur un seul mois : seuls les totaux annuels comptent. C'est
+  // janvier, ou le mois de création d'une activité créée dans l'année, pour ne rien saisir avant elle (ADR 020).
+  const mois = moisAvantLaCreation(source.dateDeCreation, contexte?.annee ?? regles.annee).length % 12
+  monthlyData[mois] = { ...monthlyData[mois], flows: [...monthlyData[mois].flows, ...fluxAjoutes(source, statut, options, dividendes), ...deplacementsRembourses(source, statut, regles)] }
   return { ...convertie, monthlyData }
 }
 
