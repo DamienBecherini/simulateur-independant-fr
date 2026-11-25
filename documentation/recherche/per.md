@@ -532,3 +532,18 @@ Ce brouillon est à relire et à trancher par le propriétaire. Il ne crée pas 
 4. Comparateur : faut-il un mode « plafond » automatique ? Et comment présenter l'épargne bloquée dans « Net dans la poche » ?
 5. Faut-il afficher la TMI, puisque l'économie d'impôt sera calculée par différence de toute façon ?
 6. Faut-il lever d'abord les points 2 à 4 de la section 13, par exemple auprès d'un expert-comptable, avant de coder l'article 154 bis ?
+
+---
+
+## 15. Décisions du propriétaire (25 novembre 2026)
+
+Le propriétaire suit les recommandations :
+
+1. **Plafond saisi :** un total seulement dans la première version ; le détail par année d'origine viendra plus tard.
+2. **Cadre pour un travailleur non salarié :** 154 bis automatique pour l'EI au réel et le gérant d'EURL ; 163 quatervicies pour les autres.
+3. **Mutualisation :** réglage porté par la relation de couple.
+4. **Comparateur :** un mode « maximum déductible » ; l'épargne retraite constituée s'affiche à part du net disponible.
+5. **TMI :** affichée, présentée comme indicative.
+6. **Ordre :** le 163 quatervicies d'abord ; le 154 bis ensuite, avec une hypothèse prudente écrite pour les points 2 à 4 de la section 13.
+
+Prochaine étape : le plan de réalisation et les maquettes, après l'activité créée en cours d'année.
