@@ -420,11 +420,12 @@
       "tauxSurPlafond": 0.0025
     },
     "cotisationsMinimales": {
-      "description": "Assiettes minimales, par risque, sur lesquelles le travailleur non salarié cotise même sans revenu : 19 224 € (40 % du PASS) pour les indemnités journalières (96 €), 5 409 € (450 heures au SMIC horaire) pour la retraite de base (967 €, 3 trimestres validés), 5 527 € (11,5 % du PASS) pour l'invalidité-décès (72 €). Avec la formation professionnelle (120 €), 1 255 € par an au minimum.",
+      "description": "Assiettes minimales, par risque, sur lesquelles le travailleur non salarié cotise même sans revenu : 19 224 € (40 % du PASS) pour les indemnités journalières (96 €), 5 409 € (450 heures au SMIC horaire) pour la retraite de base (967 €, 3 trimestres validés), 5 527 € (11,5 % du PASS) pour l'invalidité-décès (72 €). Avec la formation professionnelle (120 €), 1 255 € par an au minimum. Le minimum de retraite de base n'est dû qu'après 90 jours d'affiliation dans l'année (article D633-2 du code de la sécurité sociale) : une activité créée en novembre ou en décembre ne le doit pas.",
       "source": "https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-ac-plnr.html",
       "indemnitesJournalieres": 19224,
       "retraiteDeBase": 5409,
-      "invaliditeDeces": 5527
+      "invaliditeDeces": 5527,
+      "joursDAffiliationMinimumRetraiteDeBase": 90
     }
   },
   "liberauxReglementes": {
@@ -496,7 +497,8 @@
         "description": "Assiettes minimales des libéraux réglementés : 19 224 € (40 % du PASS) pour les indemnités journalières (58 €), 5 409 € (450 heures au SMIC horaire, article D642-4 du code de la sécurité sociale) pour la retraite de base (573 €, 3 trimestres validés), due par les affiliés d'au moins 90 jours dans l'année. Les minimums propres à chaque caisse (complémentaire de la CARPIMKO, invalidité-décès de la CIPAV) sont dans leur barème.",
         "source": "https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-plr-cipav.html",
         "indemnitesJournalieres": 19224,
-        "retraiteDeBase": 5409
+        "retraiteDeBase": 5409,
+        "joursDAffiliationMinimumRetraiteDeBase": 90
       },
       "curps": {
         "description": "Contribution aux unions régionales des professionnels de santé (CURPS) des auxiliaires médicaux : 0,10 % du revenu d'activité non salarié, dans la limite de 240 € en 2026, soit 0,5 % du PASS (article L4031-4 du code de la santé publique). Le simulateur la calcule sur l'assiette des cotisations.",

@@ -15,6 +15,7 @@ import { remunerationMaximale } from "./remuneration-maximale.js"
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementsDeLaProfession, parametresDeLaCaisse, professionDe } from "./professions.js"
 import { lireMois, noteSortie } from "./dispositifs.js"
+import { avertissementsAvantLaCreation, noteAvantLaCreation, noteDeCreationIndependant, noteDeCreationSociete, periodeDeLActivite, reglesDeLaPeriode, type PeriodeDeLActivite } from "./annee-de-creation.js"
 import { avecLaZone, beneficeExonereDeLActivite, detailDeLaZone, parametresDExoneration, zoneDeLActivite } from "./exoneration-de-zone.js"
 import { anneeSimulee, anomaliesDeLActivite, associesDe, attribuerResultatSociete, dirigeantsDe, revenusDe, total, verserDividendes, verserRemuneration, type Contexte } from "./routage-des-flux.js"
 import { deplacementsProfessionnels, detailDeplacements, detailProfession, detailSalaries, masseSalariale } from "./details-des-activites.js"
@@ -22,11 +23,23 @@ import { deplacementsProfessionnels, detailDeplacements, detailProfession, detai
 /**
  * Calcul de la société à l'IS de chaque statut de société : le président de SASU est assimilé salarié et reste au
  * régime général ; le gérant d'EURL est travailleur non salarié et cotise à la caisse de sa profession, y compris sur
- * ses dividendes au-delà de 10 % du capital. Un nouveau statut à l'IS doit y dire quel calcul est le sien.
+ * ses dividendes au-delà de 10 % du capital. Un nouveau statut à l'IS doit y dire quel calcul est le sien. Les règles
+ * sont celles de la société pour l'année : réduites l'année de sa création (voir l'ADR 020).
  */
-const CALCUL_DES_SOCIETES: Record<StatutSociete, (entrees: EntreesEURL, ctx: Contexte, societe: Company) => ResultatSociete> = {
-  SASU: (entrees, ctx) => calculerSASU(entrees, ctx.regles),
-  EURL: (entrees, ctx, societe) => calculerEURL(entrees, ctx.regles, caisseDeLActivite(ctx, societe))
+const CALCUL_DES_SOCIETES: Record<StatutSociete, (entrees: EntreesEURL, regles: ReglesFiscales, caisse: ParametresDeLaCaisse | undefined) => ResultatSociete> = {
+  SASU: (entrees, regles) => calculerSASU(entrees, regles),
+  EURL: (entrees, regles, caisse) => calculerEURL(entrees, regles, caisse)
+}
+
+/** Les règles d'une activité pour l'année simulée, d'après sa date de création, et la période qu'elles décrivent. */
+function reglesDeLActivite(ctx: Contexte, activite: Company): { periode: PeriodeDeLActivite; regles: ReglesFiscales } {
+  const periode = periodeDeLActivite(activite.dateDeCreation, anneeSimulee(ctx))
+  return { periode, regles: reglesDeLaPeriode(ctx.regles, periode) }
+}
+
+/** La note d'une année avant la création ; rien pour une année entière ou l'année de création (sa note est propre au statut). */
+function noteDeLaPeriode(periode: PeriodeDeLActivite, annee: number): string[] {
+  return periode.cas === "avant" ? [noteAvantLaCreation(periode.creation, annee)] : []
 }
 
 /**
@@ -75,15 +88,16 @@ function limiteEtAlerte(demandee: boolean, entrees: EntreesEURL & { etat: EtatDe
  * La part du plafond de la sécurité sociale qu'une SASU applique à son président, quand d'autres SASU qu'il préside le
  * rémunèrent aussi (plafond-entre-mandats.ts), et la phrase qui le dit ; rien avec un seul mandat rémunéré.
  */
-function plafondDuPresident(ctx: Contexte, societe: Company): { partDuPlafond: number; note: string } | undefined {
+function plafondDuPresident(ctx: Contexte, societe: Company, regles: ReglesFiscales): { partDuPlafond: number; note: string } | undefined {
   const [president] = dirigeantsDe(ctx, societe)
   const remuneration = (id: string) => total(ctx, id, "director_remuneration")
   if (!president || remuneration(societe.id) <= 0) return undefined
   const mandats = ctx.session.entities.filter((e): e is Company => e.type === "company" && e.legalStatus === "SASU" && dirigeantsDe(ctx, e)[0] === president && remuneration(e.id) > 0)
   if (mandats.length < 2) return undefined
+  // Le plafond de la société, réduit l'année de sa création, est ensuite partagé entre les mandats (ADR 018 et 020).
   const parts = partsDuPlafond(
     mandats.map(m => remuneration(m.id)),
-    ctx.regles.regimeGeneral
+    regles.regimeGeneral
   )
   const partDuPlafond = parts[mandats.findIndex(m => m.id === societe.id)]
   const autres = mandats.filter(m => m.id !== societe.id).map(m => `« ${m.name} »`)
@@ -93,12 +107,26 @@ function plafondDuPresident(ctx: Contexte, societe: Company): { partDuPlafond: n
   }
 }
 
+/**
+ * La note de l'année de création d'une société : pour une EURL, celle d'un indépendant (plafond réduit, écart avec une
+ * année pleine) suivie de la limite de l'impôt sur les sociétés ; pour une SASU, le plafond du président et cette limite.
+ */
+function notesDeCreationDeLaSociete(periode: PeriodeDeLActivite, statut: StatutSociete, ctx: Contexte, resultat: ResultatSociete, enAnneePleine: () => ResultatSociete): string[] {
+  if (periode.cas !== "creation") return noteDeLaPeriode(periode, anneeSimulee(ctx))
+  if (statut === "SASU") return [noteDeCreationSociete(periode, ctx.regles, resultat.remunerationNette > 0)]
+  const ecart = resultat.cotisationsSociales - enAnneePleine().cotisationsSociales
+  return [noteDeCreationIndependant(periode, ctx.regles, ecart, (resultat.cotisationsTNS?.supplementMinimum ?? 0) > 0, true)]
+}
+
 function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete): ActivityResult {
+  const { periode, regles } = reglesDeLActivite(ctx, societe)
+  const caisse = caisseDeLActivite(ctx, societe, regles)
+  const calculer = (e: EntreesEURL) => CALCUL_DES_SOCIETES[statut](e, regles, caisse)
   const masse = masseSalariale(ctx, societe.id)
   const deplacements = deplacementsProfessionnels(ctx, societe)
   const zone = zoneDeLActivite(societe, anneeSimulee(ctx), ctx.regles)
   const exonerationDeZone = parametresDExoneration(zone)
-  const plafond = statut === "SASU" ? plafondDuPresident(ctx, societe) : undefined
+  const plafond = statut === "SASU" ? plafondDuPresident(ctx, societe, regles) : undefined
   const entrees = {
     chiffreAffaires: total(ctx, societe.id, "ca_services", "ca_vente"),
     chargesDeductibles: total(ctx, societe.id, "deductible_expense") + masse.cout + deplacements,
@@ -109,10 +137,11 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
     ...(exonerationDeZone ? { exonerationDeZone } : {}),
     ...(plafond ? { partDuPlafond: plafond.partDuPlafond } : {})
   }
-  const resultat = CALCUL_DES_SOCIETES[statut](entrees, ctx, societe)
+  const resultat = calculer(entrees)
   const profession = professionDe(societe, ctx.regles)
-  const { limite, alerte } = limiteEtAlerte(ctx.annee.limitesDeRemuneration === true, entrees, resultat.beneficeAvantIS, remunerationNette => CALCUL_DES_SOCIETES[statut]({ ...entrees, remunerationNette, dividendesDemandes: 0 }, ctx, societe).beneficeAvantIS)
-  const warnings = [...alerte, ...resultat.warnings, ...(plafond ? [plafond.note] : []), ...avertissementsDeLaProfession(profession, statut), ...anomaliesDeLActivite(ctx, societe)]
+  const { limite, alerte } = limiteEtAlerte(ctx.annee.limitesDeRemuneration === true, entrees, resultat.beneficeAvantIS, remunerationNette => calculer({ ...entrees, remunerationNette, dividendesDemandes: 0 }).beneficeAvantIS)
+  const warnings = [...alerte, ...resultat.warnings, ...(plafond ? [plafond.note] : []), ...avertissementsDeLaProfession(profession, statut), ...anomaliesDeLActivite(ctx, societe), ...avertissementsAvantLaCreation(ctx.session.monthlyData, societe, anneeSimulee(ctx))]
+  const notes = notesDeCreationDeLaSociete(periode, statut, ctx, resultat, () => CALCUL_DES_SOCIETES[statut](entrees, ctx.regles, caisseDeLActivite(ctx, societe, ctx.regles)))
 
   verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable, cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
   attribuerResultatSociete(ctx, societe, resultat)
@@ -140,6 +169,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
     reserves: resultat.reserves,
     ...(limite === undefined ? {} : { limiteDeRemuneration: limite }),
     ...detailProfession(profession, ctx.regles, false),
+    ...(notes.length > 0 ? { dispositifs: notes } : {}),
     warnings
   }
   return avecLaZone(activite, detailDeLaZone(zone, anneeSimulee(ctx), ctx.regles, { beneficeExonere: resultat.beneficeExonere, recettesLiberales: recettesLiberalesHorsSante(profession) }))
@@ -157,8 +187,8 @@ function recettesLiberalesHorsSante(profession: ReturnType<typeof professionDe>)
  * Paramètres de la caisse de l'activité pour l'année, avec, pour la CARPIMKO, son assiette de l'année précédente quand
  * celle-ci est dans la session (ADR 015) ; `undefined` sans profession réglementée dont le simulateur connaît la caisse.
  */
-function caisseDeLActivite(ctx: Contexte, activite: Company | MicroEntreprise): ParametresDeLaCaisse | undefined {
-  return parametresDeLaCaisse(activite, ctx.regles, anneeSimulee(ctx), ctx.annee.assiettesAnneePrecedente?.parActivite[activite.id])
+function caisseDeLActivite(ctx: Contexte, activite: Company | MicroEntreprise, regles: ReglesFiscales): ParametresDeLaCaisse | undefined {
+  return parametresDeLaCaisse(activite, regles, anneeSimulee(ctx), ctx.annee.assiettesAnneePrecedente?.parActivite[activite.id])
 }
 
 /**
@@ -187,11 +217,19 @@ function partageDuBenefice(resultat: ResultatSociete): PartageDuBenefice {
 }
 
 function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): ActivityResult {
+  const { periode, regles } = reglesDeLActivite(ctx, entreprise)
   const masse = masseSalariale(ctx, entreprise.id)
   const deplacements = deplacementsProfessionnels(ctx, entreprise)
-  const resultat = calculerEI({ chiffreAffaires: total(ctx, entreprise.id, "ca_services", "ca_vente"), chargesDeductibles: total(ctx, entreprise.id, "deductible_expense") + masse.cout + deplacements }, ctx.regles, caisseDeLActivite(ctx, entreprise))
+  const entrees = { chiffreAffaires: total(ctx, entreprise.id, "ca_services", "ca_vente"), chargesDeductibles: total(ctx, entreprise.id, "deductible_expense") + masse.cout + deplacements }
+  const resultat = calculerEI(entrees, regles, caisseDeLActivite(ctx, entreprise, regles))
   const profession = professionDe(entreprise, ctx.regles)
-  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, "EI"), ...anomaliesDeLActivite(ctx, entreprise)]
+  const warnings = [...resultat.warnings, ...avertissementsDeLaProfession(profession, "EI"), ...anomaliesDeLActivite(ctx, entreprise), ...avertissementsAvantLaCreation(ctx.session.monthlyData, entreprise, anneeSimulee(ctx))]
+  const notes =
+    periode.cas === "creation"
+      ? [noteDeCreationIndependant(periode, ctx.regles, resultat.cotisationsSociales - calculerEI(entrees, ctx.regles, caisseDeLActivite(ctx, entreprise, ctx.regles)).cotisationsSociales, resultat.cotisationsTNS.supplementMinimum > 0, false)]
+      : noteDeLaPeriode(periode, anneeSimulee(ctx))
+  const sortie = detailSortieDuRegimeMicro(ctx, entreprise.id)
+  const dispositifs = [...(sortie.dispositifs ?? []), ...notes]
 
   if (total(ctx, entreprise.id, "director_remuneration", "dividends_payment") > 0) {
     warnings.push("Une entreprise individuelle ne verse ni rémunération de dirigeant ni dividendes : ces flux sont ignorés, tout le bénéfice revient à l'entrepreneur.")
@@ -229,7 +267,8 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     cotisationsTNS: resultat.cotisationsTNS,
     ...detailSalaries(masse),
     ...detailDeplacements(entreprise, deplacements, true),
-    ...detailSortieDuRegimeMicro(ctx, entreprise.id),
+    ...sortie,
+    ...(dispositifs.length > 0 ? { dispositifs } : {}),
     ...detailProfession(profession, ctx.regles, false),
     warnings
   }

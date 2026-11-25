@@ -9,6 +9,7 @@ import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.
 import type { Foyer } from "./foyers.js"
 import type { ReglesFiscales } from "./regles.js"
 import type { RegimeMicroDeLAnnee } from "./dispositifs.js"
+import { anneeDeCreation, reglesDeLAnneeDeCreation } from "./annee-de-creation.js"
 import { anomaliesDeStructure, personnesQui, type Activite } from "./regles-de-structure.js"
 
 type FlowType = FinancialFlow["type"]
@@ -90,10 +91,12 @@ function aggregateSalaryContributions(session: DonneesDeLAnnee): Map<string, num
  * Salariés des activités de la simulation. Le salaire reste saisi, net, sur la personne ; une relation « Salarié »
  * vers une activité fait supporter à celle-ci le coût employeur de tous ses salaires. Le brut est celui saisi s'il
  * l'est pour chaque salaire, sinon il est retrouvé à partir du net par dichotomie. Sans relation, rien ne change :
- * le salaire est un revenu venu de l'extérieur de la simulation.
+ * le salaire est un revenu venu de l'extérieur de la simulation. L'année de création de l'employeur, le plafond et le
+ * SMIC de la réduction générale sont réduits aux mois d'activité : l'emploi est supposé commencer avec elle (ADR 020).
  */
-export function bulletinsDesSalaries(session: DonneesDeLAnnee, flux: Map<string, FlowTotals>, regles: ReglesFiscales): Contexte["salaries"] {
+export function bulletinsDesSalaries(session: DonneesDeLAnnee, flux: Map<string, FlowTotals>, reglesDeLAnnee: ReglesFiscales, annee: number): Contexte["salaries"] {
   const typeDe = new Map(session.entities.map(e => [e.id, e.type]))
+  const creationDe = new Map(session.entities.map(e => [e.id, "dateDeCreation" in e ? e.dateDeCreation : undefined]))
   const bulletins: Contexte["salaries"] = new Map()
   for (const rel of session.relationships.filter(r => r.type === "Salarié")) {
     // La relation peut avoir été créée depuis la carte de la personne comme depuis celle de l'activité.
@@ -101,6 +104,8 @@ export function bulletinsDesSalaries(session: DonneesDeLAnnee, flux: Map<string,
     const net = flux.get(personId)?.salary ?? 0
     // Un seul employeur par personne : tous ses salaires viennent de la première activité qui l'emploie.
     if (typeDe.get(personId) !== "person" || [undefined, "person", "portage"].includes(typeDe.get(employeurId)) || bulletins.has(personId) || net <= 0) continue
+    const creation = anneeDeCreation(creationDe.get(employeurId), annee)
+    const regles = creation ? reglesDeLAnneeDeCreation(reglesDeLAnnee, creation) : reglesDeLAnnee
     const salaires = session.monthlyData.flatMap(mois => mois.flows).filter(f => f.entityId === personId && f.type === "salary")
     const brut = salaires.every(f => f.grossAmount !== undefined) ? salaires.reduce((cumul, f) => cumul + (f.grossAmount ?? 0), 0) : brutPourUnNet(net, "salarie", regles.regimeGeneral)
     bulletins.set(personId, { employeurId, bulletin: { ...calculerCotisationsSalarie(brut, "salarie", regles.regimeGeneral), personId } })

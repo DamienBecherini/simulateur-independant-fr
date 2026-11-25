@@ -163,7 +163,7 @@ export const reglesDeTest: ReglesFiscales = {
     // Formation professionnelle : 100 €.
     formationProfessionnelle: { tauxSurPlafond: 0.0025 },
     // Sans revenu : 160 € (IJ) + 1 200 € (retraite de base, 3 trimestres) + 40 € (invalidité-décès) + 100 € = 1 500 €.
-    cotisationsMinimales: { indemnitesJournalieres: 16000, retraiteDeBase: 6000, invaliditeDeces: 4000 }
+    cotisationsMinimales: { indemnitesJournalieres: 16000, retraiteDeBase: 6000, invaliditeDeces: 4000, joursDAffiliationMinimumRetraiteDeBase: 90 }
   },
   // Les professions libérales réglementées gardent les règles réelles de 2026, nommément (et non celles de l'année en
   // cours) : leurs tests portent sur les montants des cas de référence, qui restent ceux de 2026.

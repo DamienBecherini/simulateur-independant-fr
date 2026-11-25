@@ -10,6 +10,7 @@ import type { ReglesFiscales } from "./regles.js"
 import { avertissementsDeLaProfession, professionDe, reglesDeLaMicro } from "./professions.js"
 import { acreDeLAnnee, ecrireMois, economieACRE, lireMois, microsReunies, noteACRE, noteAnnonce, noteProrata, noteRetour, prorataDeLEntreprise, prorataDesPlafonds, type ACREDuneAnnee } from "./dispositifs.js"
 import { avecLaZone, beneficeExonereDeLActivite, detailDeLaZone, zoneDeLActivite } from "./exoneration-de-zone.js"
+import { avertissementsAvantLaCreation } from "./annee-de-creation.js"
 import { anneeSimulee, anomaliesDeLActivite, dirigeantsDe, revenusDe, total, type Contexte } from "./routage-des-flux.js"
 import { deplacementsProfessionnels, detailDeplacements, detailProfession, detailSalaries, masseSalariale } from "./details-des-activites.js"
 
@@ -116,7 +117,7 @@ export function simulerMicroEntreprise(ctx: Contexte, micro: MicroEntreprise): A
     },
     reglesMicro
   )
-  const warnings = [...resultat.warnings, ...avertissementsVersementLiberatoire(micro, vfl), ...avertissementsDeLaProfession(profession, "micro"), ...anomaliesDeLActivite(ctx, micro)]
+  const warnings = [...resultat.warnings, ...avertissementsVersementLiberatoire(micro, vfl), ...avertissementsDeLaProfession(profession, "micro"), ...anomaliesDeLActivite(ctx, micro), ...avertissementsAvantLaCreation(ctx.session.monthlyData, micro, anneeSimulee(ctx))]
   // Au régime micro, les dépenses réelles ne réduisent ni les cotisations ni l'impôt : elles ne pèsent que sur la trésorerie.
   // Il en va de même du coût des salariés et des déplacements professionnels.
   const masse = masseSalariale(ctx, micro.id)

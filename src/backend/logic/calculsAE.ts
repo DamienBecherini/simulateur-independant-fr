@@ -102,9 +102,13 @@ function verifierPlafonds(ca: ChiffreAffairesMicro, plafonds: ReglesMicro["plafo
  * le seuil de base seulement l'année suivante. La TVA n'est pas calculée : les montants saisis sont hors taxe.
  * Les soins exonérés ne comptent pas (BOI-TVA-DECLA-40-10-10, § 230) : pour une profession dont les soins le sont, les
  * prestations BNC sont tenues pour des soins, et seules les ventes et les prestations BIC sont comparées aux seuils
- * (`ca` les exclut déjà).
+ * (`ca` les exclut déjà). L'année de création, les deux seuils sont réduits au prorata des jours d'activité, comme les
+ * plafonds du régime (article 293 B du CGI ; BOI-TVA-DECLA-40-10-10, § 285 à 295) : le seuil majoré pour l'année, le
+ * seuil de base pour juger de la franchise au 1er janvier suivant.
  */
-function verifierFranchiseTVA(ca: ChiffreAffairesMicro, seuils: ReglesFiscales["TVA"]): string[] {
+function verifierFranchiseTVA(ca: ChiffreAffairesMicro, seuilsDeLAnnee: ReglesFiscales["TVA"], prorata: number): string[] {
+  const auProrata = (s: ReglesFiscales["TVA"]["vente"]) => ({ ...s, franchiseBase: s.franchiseBase * prorata, seuilMajore: s.seuilMajore * prorata })
+  const seuils = prorata < 1 ? { ...seuilsDeLAnnee, vente: auProrata(seuilsDeLAnnee.vente), services: auProrata(seuilsDeLAnnee.services) } : seuilsDeLAnnee
   const caServices = ca.caServicesBic + ca.caServicesBnc
   const caTotal = ca.caVente + caServices
   const depasse = (seuil: "franchiseBase" | "seuilMajore") => {
@@ -114,10 +118,11 @@ function verifierFranchiseTVA(ca: ChiffreAffairesMicro, seuils: ReglesFiscales["
     return depassements.join(" ; ")
   }
   const nonCalculee = "Le simulateur ne calcule pas la TVA : il considère les montants saisis comme hors taxe."
+  const creation = prorata < 1 ? " Année de création : seuils réduits au prorata des jours d'activité." : ""
   const majore = depasse("seuilMajore")
-  if (majore) return [`Franchise en base de TVA perdue (${majore}) : la TVA est due dès le jour du dépassement. ${nonCalculee}`]
+  if (majore) return [`Franchise en base de TVA perdue (${majore}) : la TVA est due dès le jour du dépassement.${creation} ${nonCalculee}`]
   const base = depasse("franchiseBase")
-  if (base) return [`Seuil de franchise en base de TVA dépassé (${base}) : la TVA sera due à partir du 1er janvier suivant. ${nonCalculee}`]
+  if (base) return [`Seuil de franchise en base de TVA dépassé (${base}) : la TVA sera due à partir du 1er janvier suivant.${creation} ${nonCalculee}`]
   return []
 }
 
@@ -128,7 +133,8 @@ function verifierFranchiseTVA(ca: ChiffreAffairesMicro, seuils: ReglesFiscales["
 function verifierLesSeuils(entrees: EntreesMicro, regles: ReglesFiscales): string[] {
   const { entreprise } = entrees
   const soumisALaTVA = entreprise?.chiffreAffairesSoumisALaTVA ?? { ...entrees, caServicesBnc: entrees.soinsExoneresDeTVA ? 0 : entrees.caServicesBnc }
-  const avertissements = [...verifierPlafonds(entreprise?.chiffreAffaires ?? entrees, plafondsAuProrata(regles.microEntreprise.plafonds, entrees.prorataPlafonds ?? 1)), ...verifierFranchiseTVA(soumisALaTVA, regles.TVA)]
+  const prorata = entrees.prorataPlafonds ?? 1
+  const avertissements = [...verifierPlafonds(entreprise?.chiffreAffaires ?? entrees, plafondsAuProrata(regles.microEntreprise.plafonds, prorata)), ...verifierFranchiseTVA(soumisALaTVA, regles.TVA, prorata)]
   if (!entreprise) return avertissements
   const reunies = `Chiffre d'affaires réuni de ${entreprise.activites.map(nom => `« ${nom} »`).join(" et ")}, micro-entreprises du même titulaire.`
   return avertissements.map(avertissement => `${avertissement} ${reunies}`)

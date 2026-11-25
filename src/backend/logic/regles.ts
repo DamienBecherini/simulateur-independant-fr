@@ -48,10 +48,17 @@ export interface ReglesTNS {
   invaliditeDeces: { tranches: TrancheCotisation[] }
   /** Taux de CSG et de CRDS, appliqués à la même assiette que les cotisations. */
   csgCrds: { csgDeductible: number; csgNonDeductible: number; crds: number }
-  /** Contribution à la formation professionnelle : forfait égal à un taux du plafond. */
-  formationProfessionnelle: { tauxSurPlafond: number }
-  /** Assiettes minimales (en euros) des risques qui en ont une : la cotisation est due au moins sur ce montant. */
-  cotisationsMinimales: { indemnitesJournalieres: number; retraiteDeBase: number; invaliditeDeces: number }
+  /**
+   * Contribution à la formation professionnelle : forfait égal à un taux du plafond. `plafondEntier` n'est jamais dans
+   * un fichier de règles : l'année de création, le plafond est réduit mais le forfait reste calculé sur le plafond
+   * entier (voir l'ADR 020).
+   */
+  formationProfessionnelle: { tauxSurPlafond: number; plafondEntier?: number }
+  /**
+   * Assiettes minimales (en euros) des risques qui en ont une : la cotisation est due au moins sur ce montant. Celle de
+   * la retraite de base n'est due qu'après `joursDAffiliationMinimumRetraiteDeBase` jours d'affiliation dans l'année.
+   */
+  cotisationsMinimales: { indemnitesJournalieres: number; retraiteDeBase: number; invaliditeDeces: number; joursDAffiliationMinimumRetraiteDeBase: number }
 }
 
 /**
@@ -124,8 +131,8 @@ export interface ReglesLiberauxReglementes extends Record<CaisseLiberale, object
     maladieMaternite: BaremeProgressif
     indemnitesJournalieres: { tranches: TrancheCotisation[] }
     retraiteDeBase: { tranches: TrancheCotisation[] }
-    /** Assiettes minimales, en euros. */
-    cotisationsMinimales: { indemnitesJournalieres: number; retraiteDeBase: number }
+    /** Assiettes minimales, en euros ; celle de la retraite de base après un nombre de jours d'affiliation dans l'année. */
+    cotisationsMinimales: { indemnitesJournalieres: number; retraiteDeBase: number; joursDAffiliationMinimumRetraiteDeBase: number }
     curps: { taux: number; plafondPartDuPlafond: number }
   }
   CIPAV: {

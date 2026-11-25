@@ -44,7 +44,7 @@ function arrondirActivite(activite: ActivityResult): ActivityResult {
 export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): SimulationReport {
   const foyersFiscaux = buildFoyers(session, regles.IR.partsParEnfant)
   const flux = aggregateAnnualFlowsByEntity(session)
-  const salaries = bulletinsDesSalaries(session, flux, regles)
+  const salaries = bulletinsDesSalaries(session, flux, regles, contexte.annee ?? regles.annee)
   const ctx: Contexte = { session, regles, annee: contexte, foyers: foyersFiscaux, flux, cotisationsSalariales: cotisationsSalarialesParPersonne(session, flux, salaries), salaries, revenus: new Map(), nonRattache: 0 }
 
   // Les activités d'abord : elles alimentent les revenus des personnes, dont dépend l'impôt des foyers.

@@ -418,11 +418,12 @@
       "tauxSurPlafond": 0.0025
     },
     "cotisationsMinimales": {
-      "description": "Assiettes minimales, par risque, sur lesquelles le travailleur non salarié cotise même sans revenu : 18 547 € (40 % du PASS) pour les indemnités journalières (93 €), 5 243 € (450 heures au SMIC horaire de 11,65 €, article D633-2 du code de la sécurité sociale) pour la retraite de base (931 €), 5 332 € (11,5 % du PASS) pour l'invalidité-décès (69 €). Avec la formation professionnelle (116 €), 1 209 € par an au minimum.",
+      "description": "Assiettes minimales, par risque, sur lesquelles le travailleur non salarié cotise même sans revenu : 18 547 € (40 % du PASS) pour les indemnités journalières (93 €), 5 243 € (450 heures au SMIC horaire de 11,65 €, article D633-2 du code de la sécurité sociale) pour la retraite de base (931 €), 5 332 € (11,5 % du PASS) pour l'invalidité-décès (69 €). Avec la formation professionnelle (116 €), 1 209 € par an au minimum. Le minimum de retraite de base n'est dû qu'après 90 jours d'affiliation dans l'année (article D633-2 du code de la sécurité sociale) : une activité créée en novembre ou en décembre ne le doit pas.",
       "source": "https://web.archive.org/web/20240704223556/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-ac-plnr.html",
       "indemnitesJournalieres": 18547,
       "retraiteDeBase": 5243,
-      "invaliditeDeces": 5332
+      "invaliditeDeces": 5332,
+      "joursDAffiliationMinimumRetraiteDeBase": 90
     }
   },
   "liberauxReglementes": {
@@ -491,7 +492,8 @@
         "description": "Assiettes minimales des libéraux réglementés : 18 547 € (40 % du PASS) pour les indemnités journalières (56 €), 5 243 € (450 heures au SMIC horaire, article D642-4 du code de la sécurité sociale) pour la retraite de base (529 €, 3 trimestres validés), due par les affiliés d'au moins 90 jours dans l'année. Les minimums propres à chaque caisse (complémentaire de la CARPIMKO, invalidité-décès de la CIPAV) sont dans leur barème.",
         "source": "https://web.archive.org/web/20250220162136/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-plr-hors-cipav.html",
         "indemnitesJournalieres": 18547,
-        "retraiteDeBase": 5243
+        "retraiteDeBase": 5243,
+        "joursDAffiliationMinimumRetraiteDeBase": 90
       },
       "curps": {
         "description": "Contribution aux unions régionales des professionnels de santé (CURPS) des auxiliaires médicaux : 0,10 % du revenu d'activité non salarié, dans la limite de 232 € en 2024, soit 0,5 % du PASS (article L4031-4 du code de la santé publique). Le simulateur la calcule sur l'assiette des cotisations.",

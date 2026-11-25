@@ -30,16 +30,18 @@ import { exercant, micro, personne, societe, type Flux } from "../testing/sessio
 
 const EN_ZONE = { implantationEnZone: {} }
 
-function grille(flux: Flux[]) {
+/** Les flux de l'année, tous dans le même mois (`mois` : 0 pour janvier). */
+function grille(flux: Flux[], mois: number) {
   const monthlyData = grilleVide()
-  flux.forEach(([entityId, type, amount], i) => monthlyData[0].flows.push({ id: `flux-${i}`, label: type, amount, entityId, type }))
+  flux.forEach(([entityId, type, amount], i) => monthlyData[mois].flows.push({ id: `flux-${i}`, label: type, amount, entityId, type }))
   return monthlyData
 }
 
-function session(activite: Company | MicroEntreprise, annees: Record<number, Flux[]>): SessionState {
+/** Une session ; les flux en janvier, ou dans le mois donné (pour une activité créée en cours d'année, après sa création). */
+function session(activite: Company | MicroEntreprise, annees: Record<number, Flux[]>, mois = 0): SessionState {
   const statut = activite.type === "company" ? activite.legalStatus : "micro"
   const entities: Entity[] = [personne("alice"), activite]
-  return { name: "Zone", entities, relationships: exercant("alice", activite.id, statut), annees: Object.entries(annees).map(([annee, flux]) => ({ annee: Number(annee), monthlyData: grille(flux) })) }
+  return { name: "Zone", entities, relationships: exercant("alice", activite.id, statut), annees: Object.entries(annees).map(([annee, flux]) => ({ annee: Number(annee), monthlyData: grille(flux, mois) })) }
 }
 
 const rapportDe = (s: SessionState, annee = 2026) => simulerLesAnnees(s).annees.find(a => a.annee === annee)!.report!
@@ -159,10 +161,12 @@ describe("SASU en ZFU-TE créée en mars 2021 : la sortie progressive, d'une ann
 
 describe("SASU en QPV créée en juillet 2026", () => {
   const sasu: Company = { ...societe("a1"), dateDeCreation: "2026-07", ...EN_ZONE }
+  // Le chiffre d'affaires est saisi après la création.
+  const JUILLET = 6
 
   it("exonération entière, sans plafond annuel", () => {
     // 120 000 € de bénéfice : hors zone, 6 375 + 77 500 x 25 % = 25 750 € d'IS ; en QPV, rien.
-    const resultat = activiteDe(session(sasu, { 2026: [["a1", "ca_services", 120000]] }))
+    const resultat = activiteDe(session(sasu, { 2026: [["a1", "ca_services", 120000]] }, JUILLET))
     expect(resultat.impotSocietes).toBe(0)
     expect(resultat.exonerationDeZone).toMatchObject({ regime: "qpv", nom: "QPV", beneficeExonere: 120000, plafondAtteint: false, finExonerationTotale: "2031-06", fin: "2034-06" })
     expect(resultat.exonerationDeZone).not.toHaveProperty("plafond")
@@ -172,9 +176,10 @@ describe("SASU en QPV créée en juillet 2026", () => {
   })
 
   it("avec 60 % du chiffre d'affaires dans le quartier", () => {
-    // 72 000 € exonérés ; IS sur 48 000 € : 6 375 + 5 500 x 25 % = 7 750 €.
+    // 72 000 € exonérés ; IS sur 48 000 €, avec la limite du taux réduit de l'année de création (six mois, ADR 020) :
+    // 42 500 x 6/12 = 21 250 € à 15 % (3 187,50 €), et 26 750 € à 25 % (6 687,50 €), soit 9 875 €.
     const partielle: Company = { ...sasu, implantationEnZone: { partDuChiffreDAffaires: 0.6 } }
-    expect(activiteDe(session(partielle, { 2026: [["a1", "ca_services", 120000]] }))).toMatchObject({ impotSocietes: 7750, exonerationDeZone: { beneficeExonere: 72000 } })
+    expect(activiteDe(session(partielle, { 2026: [["a1", "ca_services", 120000]] }, JUILLET))).toMatchObject({ impotSocietes: 9875, exonerationDeZone: { beneficeExonere: 72000 } })
   })
 })
 

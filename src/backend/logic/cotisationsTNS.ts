@@ -71,7 +71,8 @@ export function calculerCotisationsTNS(revenuAvantCotisations: number, regles: R
     allocationsFamiliales: progressive(assiette, regles.allocationsFamiliales, pass),
     csgDeductible: assiette * csgDeductible,
     csgNonDeductibleEtCrds: assiette * (csgNonDeductible + crds),
-    formationProfessionnelle: pass * regles.formationProfessionnelle.tauxSurPlafond
+    // Un forfait sur le plafond entier, même l'année de création (ADR 020).
+    formationProfessionnelle: (regles.formationProfessionnelle.plafondEntier ?? pass) * regles.formationProfessionnelle.tauxSurPlafond
   }
   const detailDeLaCaisse = propres.detail
   const enPlus = detailDeLaCaisse ? detailDeLaCaisse.asv + detailDeLaCaisse.curps : 0

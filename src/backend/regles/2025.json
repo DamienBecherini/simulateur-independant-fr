@@ -420,11 +420,12 @@
       "tauxSurPlafond": 0.0025
     },
     "cotisationsMinimales": {
-      "description": "Assiettes minimales, par risque, sur lesquelles le travailleur non salarié cotise même sans revenu : 18 840 € (40 % du PASS) pour les indemnités journalières (94 €), 5 346 € (450 heures au SMIC horaire de 11,88 €) pour la retraite de base (955 € au taux de 17,87 %, calcul du simulateur : la page de l'Urssaf, antérieure à la régularisation, indique 949 € au taux de 17,75 %), 5 417 € (11,5 % du PASS) pour l'invalidité-décès (70 €). Avec la formation professionnelle (118 €), 1 237 € par an au minimum.",
+      "description": "Assiettes minimales, par risque, sur lesquelles le travailleur non salarié cotise même sans revenu : 18 840 € (40 % du PASS) pour les indemnités journalières (94 €), 5 346 € (450 heures au SMIC horaire de 11,88 €) pour la retraite de base (955 € au taux de 17,87 %, calcul du simulateur : la page de l'Urssaf, antérieure à la régularisation, indique 949 € au taux de 17,75 %), 5 417 € (11,5 % du PASS) pour l'invalidité-décès (70 €). Avec la formation professionnelle (118 €), 1 237 € par an au minimum. Le minimum de retraite de base n'est dû qu'après 90 jours d'affiliation dans l'année (article D633-2 du code de la sécurité sociale) : une activité créée en novembre ou en décembre ne le doit pas.",
       "source": "https://web.archive.org/web/20250513033412/https://www.urssaf.fr/accueil/outils-documentation/taux-baremes/taux-cotisations-ac-plnr.html",
       "indemnitesJournalieres": 18840,
       "retraiteDeBase": 5346,
-      "invaliditeDeces": 5417
+      "invaliditeDeces": 5417,
+      "joursDAffiliationMinimumRetraiteDeBase": 90
     }
   },
   "liberauxReglementes": {
@@ -496,7 +497,8 @@
         "description": "Assiettes minimales des libéraux réglementés : 18 840 € (40 % du PASS) pour les indemnités journalières (57 €), 5 346 € (450 heures au SMIC horaire, article D642-4 du code de la sécurité sociale ; guide de la CNAVPL 2025) pour la retraite de base, due par les affiliés d'au moins 90 jours dans l'année : 567 € au taux de régularisation de 10,60 %, montant NON SOURCÉ (le guide de la CNAVPL donne 540 € au taux des acomptes, 10,10 %). Les minimums propres à chaque caisse (complémentaire de la CARPIMKO, invalidité-décès de la CIPAV) sont dans leur barème.",
         "source": "https://www.cnavpl.fr/wp-content/uploads/2025/07/Guide-2025.pdf",
         "indemnitesJournalieres": 18840,
-        "retraiteDeBase": 5346
+        "retraiteDeBase": 5346,
+        "joursDAffiliationMinimumRetraiteDeBase": 90
       },
       "curps": {
         "description": "Contribution aux unions régionales des professionnels de santé (CURPS) des auxiliaires médicaux : 0,10 % du revenu d'activité non salarié, dans la limite de 0,5 % du PASS (article L4031-4 du code de la santé publique), soit 236 €. Aucune page 2025 de l'Urssaf n'a été trouvée : le taux est celui de 2024 et de 2026, le plafond celui de la loi. Le simulateur la calcule sur l'assiette des cotisations.",
