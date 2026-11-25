@@ -174,6 +174,17 @@ casDeReference("Cas de référence 2026 : activité créée en cours d'année", 
     expect(r.warnings.map(w => w.replace(/\s/g, " "))).toContain("Montants saisis avant la création (janvier, février 2026) : 4 000 € de chiffre d'affaires, comptés quand même. L'activité n'est créée qu'en mars 2026 : corrigez sa date de création, ou déplacez ces montants.")
   })
 
+  it("les mois saisis avant la création se disent en plage, ou « toute l'année »", () => {
+    const avecDuChiffreDAffaires = (dateDeCreation: string, mois: number[]) => {
+      const m: MicroEntreprise = { ...micro("m1"), dateDeCreation }
+      const donnees = session([alice, m], exercant("alice", "m1", "micro"))
+      for (const i of mois) donnees.monthlyData[i].flows.push({ id: `ca-${i}`, label: "ca", amount: 1000, entityId: "m1", type: "ca_micro_services_bnc" })
+      return activite(runMetaSimulation(donnees, REGLES_DES_CAS, { annee: 2026 }), "m1").warnings.find(w => w.startsWith("Montants saisis"))
+    }
+    expect(avecDuChiffreDAffaires("2026-06", [0, 1, 2, 3, 4])).toMatch(/^Montants saisis avant la création \(de janvier à mai 2026\)/)
+    expect(avecDuChiffreDAffaires("2027-06", Array.from({ length: 12 }, (_, i) => i))).toMatch(/^Montants saisis avant la création \(toute l'année 2026\)/)
+  })
+
   it("une année avant la création : ni minimums ni forfait", () => {
     // EURL créée en mars 2027, simulée en 2026 sans rien saisir : elle n'est pas affiliée.
     const eurl: Company = { ...societe("u1", "EURL"), dateDeCreation: "2027-03" }

@@ -30,7 +30,7 @@ function effetDeLaDate(activite: Company | MicroEntreprise): string {
 }
 
 /** L'année affichée pour l'activité : année de création (mois d'activité) ou année d'avant ; rien pour une année entière. */
-function AnneeAffichee({ dateDeCreation, annee }: { dateDeCreation: string | undefined; annee: number }) {
+function AnneeAffichee({ dateDeCreation, annee, micro }: { dateDeCreation: string | undefined; annee: number; micro: boolean }) {
   const periode = periodeDeLActivite(dateDeCreation, annee)
   if (periode.cas === "entiere") return null
   const texte =
@@ -43,7 +43,8 @@ function AnneeAffichee({ dateDeCreation, annee }: { dateDeCreation: string | und
       </>
     ) : (
       <>
-        <strong className="font-semibold">En {annee} : avant la création.</strong> L'activité n'est pas encore affiliée : ni cotisation minimale ni forfait.
+        <strong className="font-semibold">En {annee} : avant la création.</strong>{" "}
+        {micro ? "Les montants saisis cette année sont signalés." : "L'activité n'est pas encore affiliée : ni cotisation minimale ni forfait."}
       </>
     )
   return (
@@ -103,7 +104,7 @@ export function ChampDateDeCreation<T extends Company | MicroEntreprise>({ activ
             </SelectContent>
           </Select>
         </div>
-        <AnneeAffichee dateDeCreation={activite.dateDeCreation} annee={anneeAffichee} />
+        <AnneeAffichee dateDeCreation={activite.dateDeCreation} annee={anneeAffichee} micro={activite.type === "micro-entreprise"} />
         <p id="date-de-creation-aide" className={aide}>
           Début d'activité déclaré. {effetDeLaDate(activite)} Sans date, l'activité compte toute l'année.
         </p>
