@@ -135,7 +135,7 @@
 /* Colonne du comparateur jamais désignée meilleur statut : des hachures par-dessus son fond gris, pour qu'elle se
    distingue d'un coup d'œil des colonnes retenues, dans les deux thèmes (le gris seul se lisait mal en thème sombre). */
 @utility colonne-non-retenue {
-  --hachures: repeating-linear-gradient(135deg, rgb(148 163 184 / 0.26) 0 6px, transparent 6px 12px);
+  --hachures: repeating-linear-gradient(135deg, rgb(148 163 184 / 0.16) 0 6px, transparent 6px 12px);
   background-image: var(--hachures);
   /* Sur une ligne alternée, les hachures passent par-dessus la teinte de la ligne au lieu d'être remplacées par elle. */
   .ligne-de-bande > & {
