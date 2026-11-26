@@ -11,6 +11,7 @@ import { avecUnePerteConservee, netDeLaSituationSaisie, raisonDeNonRetenue, refe
 import { netCompare } from "@/backend/logic/net-compare"
 import { statutEtProfession } from "./professions"
 import { enTexteBrut } from "@/backend/logic/format"
+import { CHAMPS_DU_FOYER, champsDuFoyerMontres, nombreDuFoyer, type ChampDuFoyer } from "@/backend/logic/champs-du-foyer"
 
 type Ligne = CelluleCsv[]
 
@@ -61,10 +62,15 @@ function lignesDesPersonnes(report: SimulationReport): Ligne[] {
 
 const optionsDividendes: Record<NonNullable<FoyerFiscalResult["optionDividendes"]>, string> = { pfu: "Prélèvement forfaitaire unique", bareme: "Barème progressif" }
 
+/** Les foyers, avec les champs de la table commune (`CHAMPS_DU_FOYER`) que le CSV montre : tous. */
 function lignesDesFoyers(session: SimulationAnnuelle, report: SimulationReport): Ligne[] {
-  const entete: Ligne = ["Foyer fiscal", "Parts", "Revenus encaissés", "Revenu imposable", "Revenu fiscal de référence", "Impôt sur le revenu", "Prélèvements sociaux", "Imposition des dividendes", "Net après impôts", "Revenus avant prélèvements", "Total des prélèvements", "Résultat conservé", "Dépenses"]
-  const lignes = report.foyers.map((f): Ligne => [nomDuFoyer(session, f), f.totalParts, montant(f.revenusEncaisses), montant(f.revenuImposableGlobal), montant(f.revenuFiscalDeReference), montant(f.impotSurLeRevenu), montant(f.prelevementsSociaux), f.optionDividendes ? optionsDividendes[f.optionDividendes] : "", montant(f.netApresImpots), montant(f.revenusAvantPrelevements), montant(f.totalPrelevements), montant(f.resultatConserve), montant(f.depenses)])
-  return [entete, ...lignes]
+  const champs = champsDuFoyerMontres("csv", report.foyers)
+  const cellule = (f: FoyerFiscalResult, champ: ChampDuFoyer): CelluleCsv => {
+    if (champ === "optionDividendes") return f.optionDividendes ? optionsDividendes[f.optionDividendes] : ""
+    return champ === "totalParts" ? f.totalParts : montant(nombreDuFoyer(f, champ))
+  }
+  const entete: Ligne = ["Foyer fiscal", ...champs.map(champ => CHAMPS_DU_FOYER[champ].libelle)]
+  return [entete, ...report.foyers.map((f): Ligne => [nomDuFoyer(session, f), ...champs.map(champ => cellule(f, champ))])]
 }
 
 /** Un tableau précédé d'une ligne vide, ou rien s'il n'a aucune ligne sous son en-tête. */

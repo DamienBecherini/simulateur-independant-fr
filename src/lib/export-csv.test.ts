@@ -96,6 +96,16 @@ describe("csvResultats", () => {
     expect(foyers[0]).toContain(";Barème progressif;")
     expect(foyers[1]).toContain(";0,00;;24999,50;")
   })
+
+  it("ajoute la part de l'impôt payée au versement libératoire et le bénéfice exonéré en zone, quand un foyer en a, après le montant qui les contient", () => {
+    const rapport = rapportExemple()
+    rapport.foyers = [{ ...rapport.foyers[0], versementLiberatoire: 792, beneficesExoneres: 12400 }, rapport.foyers[0]]
+    const [entete, avec, sans] = lignes(csvResultats(sessionExemple(), rapport)).slice(-3)
+    expect(entete).toBe("Foyer fiscal;Parts;Revenus encaissés;Revenu imposable;Revenu fiscal de référence;dont bénéfice exonéré en zone;Impôt sur le revenu;dont versement libératoire;Prélèvements sociaux;Imposition des dividendes;Net après impôts;Revenus avant prélèvements;Total des prélèvements;Résultat conservé;Dépenses")
+    expect(avec).toContain(";19500,00;12400,00;1500,00;792,00;0,00;")
+    // Le foyer qui n'en a pas y lit 0.
+    expect(sans).toContain(";19500,00;0,00;1500,00;0,00;0,00;")
+  })
 })
 
 describe("csvResultats avec des frais au barème kilométrique et le versement libératoire", () => {

@@ -30,7 +30,7 @@ const Montants = z.record(z.string(), z.number())
 // == simuler
 // ===================================================================================
 
-const FoyerSchema = z.object({ personnes: z.array(z.string()), parts: z.number(), revenusEncaisses: z.number(), revenuImposable: z.number(), revenuFiscalDeReference: z.number(), impotSurLeRevenu: z.number(), prelevementsSociaux: z.number(), optionDividendes: z.enum(["pfu", "bareme"]).nullable(), netApresImpots: z.number(), resultatConserve: z.number(), avertissements: z.array(z.string()) })
+const FoyerSchema = z.object({ personnes: z.array(z.string()), parts: z.number(), revenusEncaisses: z.number(), revenuImposable: z.number(), revenuFiscalDeReference: z.number(), beneficesExoneres: z.number().describe("Bénéfices exonérés en zone, compris dans revenuFiscalDeReference ; 0 sans exonération."), impotSurLeRevenu: z.number(), versementLiberatoire: z.number().describe("Part de impotSurLeRevenu payée avec les cotisations des micro-entreprises au versement libératoire ; 0 sans versement libératoire."), prelevementsSociaux: z.number(), optionDividendes: z.enum(["pfu", "bareme"]).nullable(), netApresImpots: z.number(), resultatConserve: z.number(), avertissements: z.array(z.string()) })
 
 function resumeDuFoyer(session: SessionState, foyer: FoyerFiscalResult): z.infer<typeof FoyerSchema> {
   return {
@@ -39,7 +39,9 @@ function resumeDuFoyer(session: SessionState, foyer: FoyerFiscalResult): z.infer
     revenusEncaisses: arrondir(foyer.revenusEncaisses),
     revenuImposable: arrondir(foyer.revenuImposableGlobal),
     revenuFiscalDeReference: arrondir(foyer.revenuFiscalDeReference),
+    beneficesExoneres: arrondir(foyer.beneficesExoneres ?? 0),
     impotSurLeRevenu: arrondir(foyer.impotSurLeRevenu),
+    versementLiberatoire: arrondir(foyer.versementLiberatoire ?? 0),
     prelevementsSociaux: arrondir(foyer.prelevementsSociaux),
     optionDividendes: foyer.optionDividendes,
     netApresImpots: arrondir(foyer.netApresImpots),

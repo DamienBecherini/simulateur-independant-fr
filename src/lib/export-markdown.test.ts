@@ -317,6 +317,16 @@ Une ligne par année de la session, avec les mêmes acteurs et la grille de chaq
     expect(rapport).toContain("- CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié.\n- Votre situation telle que saisie (SASU) : 20 000 € de net, comme dans les résultats\n\n| Indicateur |")
   })
 
+  it("par foyer : les champs de la table commune, et la part payée au versement libératoire ou le bénéfice exonéré en zone quand un foyer en a", () => {
+    const sans = rapportComplet()
+    expect(sans).toContain("| Foyer (membres) | Parts | Revenus encaissés | Revenu imposable | Revenu fiscal de référence | Impôt sur le revenu | Prélèvements sociaux | Imposition des dividendes | Net après impôts |")
+    const report = rapportExemple()
+    report.foyers = [{ ...report.foyers[0], versementLiberatoire: 792, beneficesExoneres: 12400 }]
+    const avec = rapportComplet({ report })
+    expect(avec).toContain("| Revenu fiscal de référence | dont bénéfice exonéré en zone | Impôt sur le revenu | dont versement libératoire | Prélèvements sociaux |")
+    expect(avec).toMatch(/\| 19 500 € \| 12 400 € \| 1 500 € \| 792 € \| 0 € \| prélèvement forfaitaire unique \| \*\*25 000 €\*\* \|/)
+  })
+
   it("dans le comparateur, dit pourquoi la SASU d'une profession en société d'exercice libéral n'est pas retenue", () => {
     const resultat = comparaisonExemple()
     resultat.scenarios = resultat.scenarios.map(s => (s.statut === "SASU" ? { ...s, nonRetenue: "societeExerciceLiberal" as const } : s))

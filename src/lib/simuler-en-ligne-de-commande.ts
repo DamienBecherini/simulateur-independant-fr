@@ -9,6 +9,7 @@ import { lireLaSession } from "@/backend/logic/fichiers-de-donnees"
 import { simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
 import { eurosEnTexteBrut } from "@/backend/logic/format"
 import type { ActivityResult, Entity, FoyerFiscalResult, ResultatAnnee, SanitizationReport, SessionState, SimulationReport } from "@/types"
+import { CHAMPS_DU_FOYER, champsDuFoyerMontres, nombreDuFoyer } from "@/backend/logic/champs-du-foyer"
 
 export const AIDE = `Usage : npm run simuler -- <fichier.json> [--annee AAAA] [--acteur NOM] [--json]
 
@@ -94,21 +95,17 @@ function lignesDeLActivite(activite: ActivityResult): string[] {
   return [...lignes, ...(activite.dispositifs ?? []).map(d => `    · ${d}`), ...avertissements(activite.warnings, "    ")]
 }
 
+/** Un foyer, avec les champs de la table commune (`CHAMPS_DU_FOYER`) ; les parts sont dans son titre. */
 function lignesDuFoyer(foyer: FoyerFiscalResult, report: SimulationReport): string[] {
   const noms = foyer.personIds.map(id => report.persons.find(p => p.entityId === id)?.name ?? id)
   const parts = `${foyer.totalParts.toLocaleString("fr-FR")} part${foyer.totalParts > 1 ? "s" : ""}`
   const dividendes = { pfu: "prélèvement forfaitaire", bareme: "barème" } as const
-  return [
-    `  ${noms.join(", ")} (${parts})`,
-    ligne("Revenus encaissés", foyer.revenusEncaisses),
-    ligne("Revenu imposable", foyer.revenuImposableGlobal),
-    ligne("Revenu fiscal de référence", foyer.revenuFiscalDeReference),
-    ligne("Impôt sur le revenu", foyer.impotSurLeRevenu),
-    ligne("Prélèvements sociaux", foyer.prelevementsSociaux),
-    ...(foyer.optionDividendes ? [ligne("Dividendes imposés au", dividendes[foyer.optionDividendes])] : []),
-    ligne("Net après impôts", foyer.netApresImpots),
-    ...avertissements(foyer.warnings, "    ")
-  ]
+  const lignes = champsDuFoyerMontres("ligneDeCommande", [foyer]).flatMap(champ => {
+    const { libelle } = CHAMPS_DU_FOYER[champ]
+    if (champ === "optionDividendes") return foyer.optionDividendes ? [ligne(libelle, dividendes[foyer.optionDividendes])] : []
+    return [ligne(libelle, nombreDuFoyer(foyer, champ))]
+  })
+  return [`  ${noms.join(", ")} (${parts})`, ...lignes, ...avertissements(foyer.warnings, "    ")]
 }
 
 function lignesDuBilan(report: SimulationReport): string[] {

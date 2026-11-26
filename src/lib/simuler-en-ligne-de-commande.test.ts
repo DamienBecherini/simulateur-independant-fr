@@ -58,6 +58,16 @@ describe("executerSimuler", () => {
     expect(texte).not.toContain("Nettoyage")
   })
 
+  it("un foyer : les lignes de la table commune, avec la part de l'impôt payée au versement libératoire quand il en a", () => {
+    const { texte } = simuler(maximale)
+    const foyer = rapports[rapports.length - 1].report!.foyers.find(f => f.versementLiberatoire !== undefined)!
+    const ligne = (libelle: string, montant: number) => `    ${libelle.padEnd(30)}${euros(montant).padStart(14)}`
+    expect(texte).toContain(ligne("Impôt sur le revenu", foyer.impotSurLeRevenu))
+    expect(texte).toContain(ligne("dont versement libératoire", foyer.versementLiberatoire!))
+    expect(texte).toContain(ligne("Net après impôts", foyer.netApresImpots))
+    expect(texte).not.toContain("Parts")
+  })
+
   it("--annee : seulement cette année, calculée avec ce qu'elle hérite des précédentes", () => {
     const { texte } = simuler(maximale, "--annee", "2025")
     expect(texte).toContain("== 2025 (règles de 2025) ==")

@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest"
 import type { SessionState } from "@/types"
 import { vueDeLAnnee } from "@/backend/logic/annees"
+import { CHAMPS_DU_FOYER_POUR_LES_IA } from "@/backend/logic/champs-du-foyer"
 import { optionsDuComparateur } from "@/backend/logic/options-du-comparateur"
 import { ANNEE_COURANTE } from "@/backend/logic/regles"
 import { chiffreDAffairesPourUnNetDeLAnnee, comparerStatutsDeLAnnee, optimiserRemunerationDeLAnnee, simulerLesAnnees } from "@/backend/logic/simulation-pluriannuelle"
@@ -89,6 +90,15 @@ describe("simuler et synthese_des_annees", () => {
 
     const synthese = appeler<{ annees: { annee: number; totalNetApresImpots: number }[] }>("synthese_des_annees", session)
     expect(synthese.annees).toEqual([expect.objectContaining({ annee: 2026, erreur: null, totalNetApresImpots: resultat.totalNetApresImpots })])
+  })
+
+  it("simuler rend d'un foyer les champs que dit la table commune, dont la part de l'impôt payée au versement libératoire", () => {
+    const microSeule = appeler<{ foyers: Record<string, unknown>[] }>("simuler", montage("micro-bnc-seule")).foyers[0]
+    expect(Object.keys(microSeule).sort()).toEqual([...CHAMPS_DU_FOYER_POUR_LES_IA, "personnes", "avertissements"].sort())
+    // 36 000 € au versement libératoire de 2,2 % : tout l'impôt du foyer est payé avec les cotisations.
+    expect(microSeule).toMatchObject({ impotSurLeRevenu: 792, versementLiberatoire: 792, beneficesExoneres: 0 })
+    // Sans versement libératoire, le champ vaut 0 : il est toujours là.
+    expect(appeler<{ foyers: { versementLiberatoire: number }[] }>("simuler", montage("sasu-sans-salaire")).foyers[0].versementLiberatoire).toBe(0)
   })
 
   it("rendent l'erreur d'une année que le simulateur ne sait pas calculer", () => {

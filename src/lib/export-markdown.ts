@@ -2,7 +2,7 @@
 // Rapport Markdown de la simulation, à lire tel quel ou à confier à une IA pour l'analyser : hypothèses et limites,
 // acteurs et relations, flux saisis, résultats, comparateur de statuts et avertissements.
 
-import { estSocieteIS, type ComparaisonOptions, type ComparaisonResult, type Company, type DeplacementsProfessionnels, type Entity, type FraisProfessionnelsResult, type MicroEntreprise, type ModeRepartition, type Person, type Relationship, type ScenarioStatut, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport } from "@/types"
+import { estSocieteIS, type ComparaisonOptions, type ComparaisonResult, type Company, type DeplacementsProfessionnels, type Entity, type FoyerFiscalResult, type FraisProfessionnelsResult, type MicroEntreprise, type ModeRepartition, type Person, type Relationship, type ScenarioStatut, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport } from "@/types"
 import { conditionsDuPortageEnPhrase, defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, quatreTrimestresExiges, statutsFrais } from "./comparateur-options"
 import { dateDeCreationLisible, dispositifsDesAnnees, exonerationsDeZone, fluxParActeur, fraisProfessionnelsDesPersonnes, hypothesesDesExonerationsDeZone, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
 import { LIMITES, TITRE_DES_LIMITES } from "./limites-du-modele"
@@ -12,6 +12,7 @@ import { netCompare } from "@/backend/logic/net-compare"
 import { professionDeLaFiche, statutEtProfession } from "./professions"
 import { reglesDeLAnneeAffichee } from "./regles-affichees"
 import { enTexteBrut, eurosEnTexteBrut, pourcentDeNombre } from "@/backend/logic/format"
+import { CHAMPS_DU_FOYER, champsDuFoyerMontres, nombreDuFoyer, type ChampDuFoyer } from "@/backend/logic/champs-du-foyer"
 
 /** Comparaison calculée à l'export pour l'activité choisie dans le comparateur, ou la raison de son absence. */
 export type ComparaisonDuRapport = { nomActivite: string; options: ComparaisonOptions; resultat: ComparaisonResult } | { nomActivite: string; erreur: string }
@@ -184,10 +185,20 @@ function sousSectionActivites(session: SimulationAnnuelle, report: SimulationRep
 
 const imposition = { pfu: "prélèvement forfaitaire unique", bareme: "barème progressif" }
 
+/** Les foyers, avec les champs de la table commune (`CHAMPS_DU_FOYER`) que le rapport montre ; le net en gras. */
 function sousSectionFoyers(session: SimulationAnnuelle, report: SimulationReport): string {
   if (report.foyers.length === 0) return "### Par foyer fiscal\n\nAucun foyer fiscal."
-  const lignes = report.foyers.map(f => [echapper(nomDuFoyer(session, f)), f.totalParts.toLocaleString("fr-FR"), eurosEnTexteBrut(f.revenusEncaisses), eurosEnTexteBrut(f.revenuImposableGlobal), eurosEnTexteBrut(f.revenuFiscalDeReference), eurosEnTexteBrut(f.impotSurLeRevenu), eurosEnTexteBrut(f.prelevementsSociaux), f.optionDividendes ? imposition[f.optionDividendes] : "—", `**${eurosEnTexteBrut(f.netApresImpots)}**`])
-  return `### Par foyer fiscal\n\n${tableau(["Foyer (membres)", "Parts", "Revenus encaissés", "Revenu imposable", "Revenu fiscal de référence", "Impôt sur le revenu", "Prélèvements sociaux", "Imposition des dividendes", "Net après impôts"], lignes, [1, 2, 3, 4, 5, 6, 8])}`
+  const champs = champsDuFoyerMontres("markdown", report.foyers)
+  const cellule = (f: FoyerFiscalResult, champ: ChampDuFoyer): string => {
+    if (champ === "optionDividendes") return f.optionDividendes ? imposition[f.optionDividendes] : "—"
+    if (champ === "totalParts") return f.totalParts.toLocaleString("fr-FR")
+    const montant = eurosEnTexteBrut(nombreDuFoyer(f, champ))
+    return champ === "netApresImpots" ? `**${montant}**` : montant
+  }
+  const lignes = report.foyers.map(f => [echapper(nomDuFoyer(session, f)), ...champs.map(champ => cellule(f, champ))])
+  // Tout s'aligne à droite, sauf le nom du foyer et le texte de l'imposition des dividendes.
+  const aDroite = champs.flatMap((champ, i) => (champ === "optionDividendes" ? [] : [i + 1]))
+  return `### Par foyer fiscal\n\n${tableau(["Foyer (membres)", ...champs.map(champ => CHAMPS_DU_FOYER[champ].libelle)], lignes, aDroite)}`
 }
 
 function sectionResultats(session: SimulationAnnuelle, report: SimulationReport | null): string {
