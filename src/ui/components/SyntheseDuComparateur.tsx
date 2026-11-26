@@ -190,7 +190,7 @@ function CarteDeStatut({ scenario, result, meilleur }: { scenario: ScenarioStatu
   const mentions = [scenario.telleQueSaisie ? "actuel" : null, nonRetenue].filter(Boolean).join(" · ")
   const frais = result.situationSaisie ? phraseDeLEcartDeFrais(scenario.ecartDeFrais.total, result.situationSaisie.statut, scenario.statut) : null
   return (
-    <li className={cn("flex items-center justify-between gap-3 rounded-lg border px-3 py-2", meilleur ? "border-2 border-emerald-500 bg-emerald-50 shadow-[0_0_0_4px_rgb(16_185_129/0.2),0_0_18px_rgb(16_185_129/0.35)] dark:border-emerald-400 dark:bg-emerald-950/40" : "border-slate-200 dark:border-slate-700", nonRetenue && "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400")}>
+    <li className={cn("flex items-center justify-between gap-3 rounded-lg border px-3 py-2", meilleur ? "border-2 border-emerald-500 bg-emerald-50 shadow-[0_0_0_4px_rgb(16_185_129/0.2),0_0_18px_rgb(16_185_129/0.35)] dark:border-emerald-400 dark:bg-emerald-950/40" : "border-slate-200 dark:border-slate-700", nonRetenue && "colonne-non-retenue bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400")}>
       <div className="min-w-0">
         {meilleur ? (
           <span className="mb-1 flex">

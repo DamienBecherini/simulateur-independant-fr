@@ -70,7 +70,7 @@ test("2028 sous le régime réel, annoncé dans les résultats, la synthèse et 
 
   // Le comparateur de 2028 : les colonnes micro ne sont plus accessibles, l'EI au réel est le statut actuel.
   const tableau = page.getByRole("table", { name: "Comparaison des statuts" })
-  for (const colonne of [/^Micro-entreprise/, /^Micro \+ versement libératoire/]) await expect(tableau.getByRole("columnheader", { name: colonne })).toContainText("plus accessible · sortie au 1er janvier 2028")
+  for (const colonne of [/^non retenue\s*Micro-entreprise/, /^non retenue\s*Micro \+ versement libératoire/]) await expect(tableau.getByRole("columnheader", { name: colonne })).toContainText("plus accessible · sortie au 1er janvier 2028")
   await expect(tableau.getByRole("columnheader", { name: /^EI au réel/ })).toContainText("actuel")
   await auditer(page, "année de sortie du régime micro")
 

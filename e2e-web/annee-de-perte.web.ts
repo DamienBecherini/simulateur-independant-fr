@@ -71,7 +71,7 @@ test("une année de perte : la perte restée dans la société est déduite pour
   const retenues = compares.slice(0, 5)
   const meilleure = retenues.indexOf(Math.max(...retenues))
   await expect(table(page).getByRole("columnheader").nth(meilleure + 1)).toContainText("meilleur net")
-  await expect(table(page).getByRole("columnheader", { name: /^Portage salarial/ })).not.toContainText("meilleur net")
+  await expect(table(page).getByRole("columnheader", { name: /^non retenue\s*Portage salarial/ })).not.toContainText("meilleur net")
 })
 
 /** Le détail de l'alerte sur la rémunération du dirigeant, ouvert dans sa bulle : la limite y est donnée. */
@@ -98,7 +98,7 @@ test("la grille verse au dirigeant plus que la société ne gagne : l'alerte dit
 
   // Le comparateur, selon la grille : la colonne garde les montants saisis, et n'est pas le meilleur statut.
   await page.getByRole("radio", { name: "Selon la grille" }).check({ force: true })
-  const sasu = table(page).getByRole("columnheader", { name: /^SASU/ })
+  const sasu = table(page).getByRole("columnheader", { name: /^non retenue\s*SASU/ })
   await expect(sasu).toContainText("société déficitaire")
   await expect(sasu).not.toContainText("meilleur net")
   await expect(ligne(page, /^Écart avec votre situation actuelle/)).toContainText("non retenue : rémunération supérieure au bénéfice")
@@ -107,8 +107,10 @@ test("la grille verse au dirigeant plus que la société ne gagne : l'alerte dit
   // « Ma rémunération » : la même somme, choisie dans les réglages, est ramenée à ce que la société peut verser.
   await page.getByRole("radio", { name: "Ma rémunération" }).check({ force: true })
   await page.getByLabel("Rémunération nette annuelle (SASU, EURL)").fill("200000")
-  await expect(sasu).toContainText(/rémunération limitée à/)
-  await expect(sasu).not.toContainText("société déficitaire")
+  // La colonne redevient retenue : son en-tête ne commence plus par la pastille « non retenue ».
+  const retenue = table(page).getByRole("columnheader", { name: /^SASU/ })
+  await expect(retenue).toContainText(/rémunération limitée à/)
+  await expect(retenue).not.toContainText("société déficitaire")
 })
 
 test("la limite annoncée par l'alerte est la bonne : à ce montant, la société n'est plus déficitaire", async ({ page }) => {

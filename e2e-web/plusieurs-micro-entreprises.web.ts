@@ -54,7 +54,7 @@ test("deux micro-entreprises d'une même personne : la carte de chacune le dit, 
   // Le comparateur ne désigne pas une colonne micro : la micro-entreprise comparée dépasse le plafond avec l'autre.
   const table = page.getByRole("table", { name: "Comparaison des statuts" })
   await expect(table.getByRole("row", { name: /^Écart avec votre situation actuelle/ })).toContainText("non retenue : plafond dépassé")
-  await expect(table.getByRole("columnheader", { name: /^Micro-entreprise/ })).not.toContainText("meilleur net")
+  await expect(table.getByRole("columnheader", { name: /^non retenue\s*Micro-entreprise/ })).not.toContainText("meilleur net")
 })
 
 test("deux micro-entreprises de deux personnes : rien n'est réuni", async ({ page }) => {

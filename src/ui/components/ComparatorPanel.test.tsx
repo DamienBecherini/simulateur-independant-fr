@@ -370,7 +370,7 @@ describe("ComparatorPanel", () => {
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     expect(within(table).getByRole("row", { name: /^Écart avec votre situation actuelle/ })).toHaveTextContent("non retenue : rémunération supérieure au bénéfice")
     // L'en-tête le dit aussi, comme « meilleur net » : le fond grisé ne suffit pas à le faire lire.
-    expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent("non retenue")
+    expect(within(table).getByRole("columnheader", { name: /^non retenue\s*SASU/ })).toHaveTextContent("non retenue")
     expect(within(table).getByRole("columnheader", { name: /^EI/ })).not.toHaveTextContent("non retenue")
   })
 
@@ -384,8 +384,8 @@ describe("ComparatorPanel", () => {
     expect(cellules[0]).toHaveTextContent("non retenue : société d'exercice libéral")
     expect(cellules[1]).toHaveTextContent("non retenue : société d'exercice libéral")
     expect(cellules[2]).not.toHaveTextContent("non retenue")
-    expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent("non retenue")
-    expect(within(table).getByRole("columnheader", { name: /^EURL/ })).toHaveTextContent("non retenue")
+    expect(within(table).getByRole("columnheader", { name: /^non retenue\s*SASU/ })).toHaveTextContent("non retenue")
+    expect(within(table).getByRole("columnheader", { name: /^non retenue\s*EURL/ })).toHaveTextContent("non retenue")
     expect(within(table).getByRole("columnheader", { name: /^EI/ })).not.toHaveTextContent("non retenue")
   })
 
@@ -622,7 +622,7 @@ describe("ComparatorPanel", () => {
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
-    for (const colonne of [/^Micro-entreprise/, /versement libératoire/]) {
+    for (const colonne of [/^non retenue\s*Micro-entreprise/, /^non retenue\s*Micro \+ versement libératoire/]) {
       const entete = within(table).getByRole("columnheader", { name: colonne })
       expect(entete).toHaveTextContent("hors plafond · 2 ans au plus")
       expect(entete).not.toHaveTextContent("Meilleur net")
@@ -637,7 +637,7 @@ describe("ComparatorPanel", () => {
     render(<ComparateurDeTest annee={2028} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
-    for (const colonne of [/^Micro-entreprise/, /versement libératoire/]) {
+    for (const colonne of [/^non retenue\s*Micro-entreprise/, /^non retenue\s*Micro \+ versement libératoire/]) {
       const entete = within(table).getByRole("columnheader", { name: colonne })
       expect(entete).toHaveTextContent("plus accessible · sortie au 1er janvier 2028")
       expect(entete).not.toHaveTextContent("hors plafond")

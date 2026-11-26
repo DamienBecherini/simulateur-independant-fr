@@ -1,7 +1,7 @@
 // src/ui/components/ComparatorPanel.tsx
 
 import { useCallback, useEffect, useMemo, type MouseEvent, type ReactNode } from "react"
-import { ArrowDown, Crown, HeartHandshake } from "lucide-react"
+import { ArrowDown, Ban, Crown, HeartHandshake } from "lucide-react"
 import { useOptimisation } from "../hooks/useOptimisation"
 import { appliquerRemuneration, avecActiviteComparee, avecRemunerationSaisie, avecReglagesDeLActivite, comparableActivities, partBncUtile, plafondDeRemuneration, reglagesDeLActiviteComparee, retenirLesReglages } from "@/lib/comparateur-options"
 import { numeroterNotes } from "@/lib/notes"
@@ -34,8 +34,8 @@ import { ligneAlternee } from "../lignes-alternees"
 import { ecartSigne, euros } from "@/backend/logic/format"
 import { netCompare } from "@/backend/logic/net-compare"
 
-/** Colonne micro non retenue (plafond dépassé, régime fermé) : grisée, la cellule de l'écart dit pourquoi. */
-const GRISE = "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
+/** Colonne non retenue : grisée et hachurée (`colonne-non-retenue`, App.css), la cellule de l'écart dit pourquoi. */
+const GRISE = "colonne-non-retenue bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
 
 /** Fond de l'en-tête du tableau, rendu opaque pour sa première cellule, fixe : le gris translucide sur le fond de la page. */
 const FOND_DE_L_EN_TETE = "bg-slate-100 dark:bg-[color-mix(in_oklab,var(--color-slate-800)_80%,var(--background))]"
@@ -198,6 +198,18 @@ function PastilleDuMeilleur() {
   )
 }
 
+/** La pastille d'une colonne jamais désignée meilleur statut, à la place de « Meilleur net » : elle se lit avant le montant. */
+function PastilleNonRetenue() {
+  return (
+    <span className="mb-1.5 flex justify-end">
+      <span className="inline-flex items-center gap-1 rounded-full border border-slate-500 bg-slate-200 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-800 dark:border-slate-400 dark:bg-slate-700 dark:text-slate-100">
+        <Ban aria-hidden="true" className="size-3.5" />
+        non retenue
+      </span>
+    </span>
+  )
+}
+
 /** Dans l'en-tête d'une colonne SASU ou EURL, le lien vers l'étape 3, où se règle le partage de son bénéfice. */
 /**
  * Descend en douceur au titre de l'étape 3 (instantané si le système demande moins d'animations), lui donne le focus
@@ -229,12 +241,13 @@ function LienVersLeReglage({ statut }: { statut: StatutCompare }) {
  * grisée. Une colonne de société mène à l'étape 3, où se règle le partage de son bénéfice.
  */
 function EnTeteDeStatut({ scenario, meilleur, renvois }: { scenario: ScenarioStatut; meilleur: boolean; renvois: number[] }) {
-  // « non retenue » se lit dès l'en-tête, comme « Meilleur net » : le fond grisé ne le dit pas à lui seul, en thème
-  // sombre surtout. La cellule de l'écart dit pourquoi.
-  const mentions = [scenario.telleQueSaisie ? "actuel" : null, estNonRetenue(scenario) ? "non retenue" : null].filter(Boolean).join(" · ")
+  // « non retenue » se lit dès l'en-tête, dans une pastille, comme « Meilleur net » : le fond grisé et hachuré ne le
+  // dit pas à lui seul. La cellule de l'écart dit pourquoi.
+  const mentions = scenario.telleQueSaisie ? "actuel" : ""
   return (
     <th scope="col" data-meilleur={meilleur || undefined} className={cn(LARGEUR_D_UN_STATUT, "px-3 py-2 text-right align-top font-medium text-slate-700 dark:text-slate-200", meilleur && "border-t-2 border-t-emerald-500 bg-emerald-100 dark:border-t-emerald-400 dark:bg-emerald-900/40", meilleur && CADRE_DU_MEILLEUR, estNonRetenue(scenario) && GRISE)}>
       {meilleur ? <PastilleDuMeilleur /> : null}
+      {!meilleur && estNonRetenue(scenario) ? <PastilleNonRetenue /> : null}
       {scenario.libelle}
       <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{mentions || " "}</span>
       <RemunerationRetenue scenario={scenario} />
