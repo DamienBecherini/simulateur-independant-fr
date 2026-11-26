@@ -163,6 +163,13 @@ export const PersonSchema = z.object({
   name: z.string().min(1, "Le nom ne peut être vide").default("Nouvelle Personne"),
   fiscalParts: z.number().positive().default(1),
   fraisReels: FraisReelsSchema.optional(),
+  /**
+   * Plafond de déduction de ses versements d'épargne retraite pour la première année de la session, en euros : la ligne
+   * « Plafond pour les cotisations versées en N » de son avis d'impôt (voir l'ADR 021). Facultatif : absent, le
+   * simulateur retient le minimum légal. Les années suivantes, le plafond se calcule sur l'année d'avant. Une valeur
+   * invalide est écartée seule, sans faire perdre la personne.
+   */
+  plafondEpargneRetraite: z.number().min(0).optional().catch(undefined),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
 })
@@ -300,6 +307,8 @@ export const FinancialFlowSchema = z.object({
     "are",
     "salary",
     "other_taxable_income",
+    // Versement sur un plan d'épargne retraite (PER) : une sortie d'argent, déductible du revenu imposable (ADR 021).
+    "versement_per",
     // Company
     "ca_services",
     "ca_vente",
@@ -911,19 +920,97 @@ export interface FraisProfessionnelsResult {
   deduction: number
 }
 
+/**
+ * Plafond d'épargne retraite reporté : la part inutilisée du plafond des versements d'une année, utilisable quelques
+ * années encore (article 163 quatervicies du CGI, voir l'ADR 021).
+ */
+export interface PlafondReporte {
+  /** Année des versements auxquels ce plafond s'appliquait. */
+  annee: number
+  montant: number
+  /** Dernière année où il peut encore servir. */
+  utilisableJusquEn: number
+}
+
+/**
+ * D'où vient le plafond d'épargne retraite d'une personne pour l'année : saisi dans sa fiche (première année de la
+ * session), calculé sur ses revenus de l'année précédente quand elle est dans la session, ou le minimum légal, faute de
+ * saisie la première année ou faute d'année précédente ensuite.
+ */
+export type OrigineDuPlafondEpargneRetraite = "saisi" | "calcule" | "minimumFauteDeSaisie" | "minimumFauteDAnneePrecedente"
+
+/** Épargne retraite d'une personne sur l'année : ses versements, ses plafonds, et ce que l'année laisse à la suivante. */
+export interface EpargneRetraiteDeLaPersonne {
+  personId: string
+  /** Versements de l'année sur un plan d'épargne retraite, à l'euro. */
+  verse: number
+  /** Plafond des versements de l'année, hors plafonds reportés. Saisi, il les contient déjà. */
+  plafond: number
+  originePlafond: OrigineDuPlafondEpargneRetraite
+  /** Plafonds inutilisés des années précédentes de la session, encore utilisables cette année, du plus ancien au plus récent. */
+  plafondsReportes: PlafondReporte[]
+  /** Part de ses versements imputée sur son plafond de l'année, puis sur ses plafonds reportés. */
+  imputeSurSesPlafonds: number
+  /** Part imputée sur ce qui restait à son conjoint : les plafonds d'un couple marié ou pacsé sont mis en commun. */
+  imputeSurLeConjoint: number
+  /** Ce que son conjoint a pris sur ses plafonds à elle, pour ses propres versements. */
+  preteAuConjoint: number
+  /** Part au-delà des plafonds : ni déduite, ni reportée. */
+  nonDeduit: number
+  /** Ce qui reste de ses plafonds après les versements du foyer, utilisable les années suivantes, du plus ancien au plus récent. */
+  plafondsRestants: PlafondReporte[]
+  /**
+   * Reste du plafond saisi pour la première année de la session, tant qu'il pourrait encore servir : le simulateur ne
+   * le reporte pas, faute de connaître l'année d'origine de chaque part (ADR 021, hypothèse 1).
+   */
+  resteNonReporte?: PlafondReporte
+  /** Revenus d'activité professionnelle de l'année, dont dépend le plafond des versements de l'année suivante. */
+  revenusProfessionnels: number
+  /** Plafond calculé sur ces revenus, pour les versements de l'année suivante. */
+  plafondCalcule: number
+  /** Ce qui fixe ce plafond : la part des revenus, son minimum légal ou son maximum. */
+  baseDuPlafondCalcule: "revenus" | "minimum" | "maximum"
+}
+
+/** Épargne retraite d'un foyer : ce qui ne tient pas dans un montant (ceux-ci sont des champs du foyer lui-même). */
+export interface EpargneRetraiteDuFoyer {
+  /**
+   * Taux de la tranche du barème où tombe le revenu imposable du foyer avant la déduction (0,3 pour 30 %). Indicatif :
+   * la décote, le quotient familial ou un changement de tranche font que l'impôt économisé n'est pas toujours le
+   * versement multiplié par ce taux.
+   */
+  trancheMarginale: number
+  /** Part des revenus d'activité professionnelle qui fait le plafond de l'année suivante (0,1 pour 10 %), pour les textes qui la citent. */
+  partDesRevenus: number
+  /**
+   * Couple marié ou pacsé dont l'un dépasse ses plafonds : ce qui est pris sur ceux de l'autre, et l'impôt en plus si
+   * la case 6QR de la déclaration n'était pas cochée. Absent quand personne ne dépasse, ou sans rien à prendre.
+   */
+  miseEnCommun?: { montant: number; impotEnPlusSansElle: number }
+  /** Chaque membre du foyer, déclarants puis enfants rattachés, qu'il ait versé ou non. */
+  personnes: EpargneRetraiteDeLaPersonne[]
+}
+
 export interface FoyerFiscalResult {
   /** Déclarants puis enfants rattachés. */
   personIds: string[]
   totalParts: number
   /** Tout ce que le foyer encaisse sur l'année, avant impôt sur le revenu. */
   revenusEncaisses: number
-  /** Base soumise au barème, après abattements. */
+  /** Base soumise au barème, après abattements et après la déduction des versements d'épargne retraite. */
   revenuImposableGlobal: number
+  /**
+   * Versements d'épargne retraite (PER) déduits du revenu imposable au barème (article 163 quatervicies du CGI, voir
+   * l'ADR 021) : `revenuImposableGlobal` en est déjà diminué, et `revenuFiscalDeReference` les contient de nouveau.
+   * Absent quand le foyer n'a rien versé.
+   */
+  deductionEpargneRetraite?: number
   /**
    * Revenu fiscal de référence (article 1417 IV du CGI), tel que le simulateur peut le calculer : revenu imposable au
    * barème, plus les dividendes imposés au prélèvement forfaitaire (montant brut) ou l'abattement de 40 % s'ils sont
    * imposés au barème, plus le chiffre d'affaires après abattement des micro-entreprises au versement libératoire, plus
-   * les bénéfices exonérés d'impôt sur le revenu des activités implantées en zone (1°, b du même IV ; voir l'ADR 017).
+   * les bénéfices exonérés d'impôt sur le revenu des activités implantées en zone (1°, b du même IV ; voir l'ADR 017),
+   * plus les versements d'épargne retraite déduits du revenu global (1°, a du même IV ; voir l'ADR 021).
    */
   revenuFiscalDeReference: number
   /** Bénéfices des activités implantées en zone exonérés d'impôt sur le revenu, compris dans `revenuFiscalDeReference` ; absent quand il n'y en a pas. */
@@ -935,11 +1022,22 @@ export interface FoyerFiscalResult {
    * dans `impotSurLeRevenu` ; absente quand il n'y en a pas.
    */
   versementLiberatoire?: number
+  /**
+   * Impôt sur le revenu économisé par la déduction des versements d'épargne retraite : l'impôt du foyer recalculé sans
+   * elle, moins `impotSurLeRevenu`. Absent quand le foyer n'a rien versé.
+   */
+  impotEconomiseEpargneRetraite?: number
   /** Prélèvements sociaux sur les dividendes. */
   prelevementsSociaux: number
   /** Imposition des dividendes la plus favorable au foyer ; `null` s'il n'en reçoit pas. */
   optionDividendes: "pfu" | "bareme" | null
+  /** Ce qui reste au foyer après l'impôt. Les versements d'épargne retraite y sont : la somme lui reste, bloquée. */
   netApresImpots: number
+  /**
+   * Versements d'épargne retraite (PER) de l'année, compris dans `netApresImpots` : l'argent reste au foyer, bloqué
+   * jusqu'à la retraite, et sa sortie sera imposée. Absent quand le foyer n'a rien versé.
+   */
+  versementsEpargneRetraite?: number
   /**
    * Part du foyer dans ce que produisent ses activités (chiffre d'affaires moins charges), plus ses revenus directs.
    * Dans une société à plusieurs associés, l'impôt sur les sociétés et le bénéfice conservé sont partagés à parts égales.
@@ -951,6 +1049,11 @@ export interface FoyerFiscalResult {
   resultatConserve: number
   /** Dépenses personnelles saisies : elles ne réduisent pas l'impôt. */
   depenses: number
+  /**
+   * Épargne retraite de chaque membre du foyer (ADR 021) : plafonds, imputation des versements, et ce que l'année laisse
+   * à la suivante. Toujours présent, même sans versement : le plafond de l'année suivante se calcule sur cette année.
+   */
+  epargneRetraite: EpargneRetraiteDuFoyer
   warnings: string[]
 }
 

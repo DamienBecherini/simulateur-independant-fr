@@ -3,8 +3,9 @@
 import { describe, expect, it } from "vitest"
 import type { FoyerFiscalResult } from "../../types.js"
 import { CHAMPS_DU_FOYER, CHAMPS_DU_FOYER_POUR_LES_IA, champsDuFoyerMontres, nombreDuFoyer } from "./champs-du-foyer.js"
+import { SANS_EPARGNE_RETRAITE } from "./testing/foyer-de-test.js"
 
-const foyer = (autres: Partial<FoyerFiscalResult> = {}): FoyerFiscalResult => ({ personIds: ["p1"], totalParts: 1, revenusEncaisses: 30000, revenuImposableGlobal: 20000, revenuFiscalDeReference: 20000, impotSurLeRevenu: 1000, prelevementsSociaux: 0, optionDividendes: null, netApresImpots: 29000, revenusAvantPrelevements: 40000, totalPrelevements: 11000, resultatConserve: 0, depenses: 0, warnings: [], ...autres })
+const foyer = (autres: Partial<FoyerFiscalResult> = {}): FoyerFiscalResult => ({ personIds: ["p1"], totalParts: 1, revenusEncaisses: 30000, revenuImposableGlobal: 20000, revenuFiscalDeReference: 20000, impotSurLeRevenu: 1000, prelevementsSociaux: 0, optionDividendes: null, netApresImpots: 29000, revenusAvantPrelevements: 40000, totalPrelevements: 11000, resultatConserve: 0, depenses: 0, epargneRetraite: SANS_EPARGNE_RETRAITE, warnings: [], ...autres })
 
 describe("champs d'un foyer dans les sorties", () => {
   it("chaque champ a un libellé, et le CSV, l'export complet, les montre tous", () => {

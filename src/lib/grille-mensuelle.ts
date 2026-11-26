@@ -6,6 +6,7 @@
 // qui les reçoit (hachuré : ils se saisissent sur la ligne de la société).
 
 import type { Entity, FinancialFlow, MonthlyGridData } from "@/types"
+import { deNom as deNomDuMoteur } from "@/backend/logic/format"
 import { personnesQui, type Activite, type Relations } from "@/backend/logic/regles-de-structure"
 import { DEFAULT_FLOW_COLORS } from "./color-constants"
 import { isOutgoingFlowType } from "./flow-constants"
@@ -64,9 +65,9 @@ export function deMois(mois: string): string {
   return deNom(mois.toLowerCase())
 }
 
-/** « de Studio », mais « d’Atelier » : l'élision devant une voyelle, le nom gardé tel quel. */
+/** « de Studio », mais « d’Atelier » : l'élision du moteur (`format.ts`), avec l'apostrophe typographique de la grille. */
 export function deNom(nom: string): string {
-  return /^[aeiouâéèêîôû]/i.test(nom) ? `d’${nom}` : `de ${nom}`
+  return deNomDuMoteur(nom, "’")
 }
 
 /**

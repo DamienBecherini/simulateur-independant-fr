@@ -13,6 +13,7 @@ import { chiffreDAffairesPourUnNet } from "./chiffre-d-affaires-pour-un-net.js"
 import { comparerStatuts, situationActuelle, type SituationActuelle } from "./comparateur.js"
 import { activiteComparee, convertirLActivite, statutActuel } from "./conversion-de-statut.js"
 import { regimesMicroDesAnnees, type RegimeMicroDeLAnnee } from "./dispositifs.js"
+import { plafondsLaissesALAnneeSuivante } from "./epargne-retraite.js"
 import { avecLaCFEDeLAnnee, ecartDeFrais } from "./frais-de-fonctionnement.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
 import { reglesDeLAnnee, type ReglesFiscales } from "./regles.js"
@@ -29,6 +30,18 @@ function rfrParPersonne(report: SimulationReport): Record<string, number> {
 /** Assiette sociale de chaque activité au réel (entreprise individuelle, gérant d'EURL), d'après le rapport d'une année. */
 function assiettesParActivite(report: SimulationReport): Record<string, number> {
   return Object.fromEntries(report.activities.flatMap(a => (a.cotisationsTNS ? [[a.entityId, a.cotisationsTNS.assiette]] : [])))
+}
+
+/**
+ * Épargne retraite : ce que chaque personne reçoit de l'année précédente, d'après son rapport (plafond calculé sur ses
+ * revenus, plafonds restants). La première année de la session n'en reçoit rien : le plafond saisi s'y applique. Une
+ * année suivante dont la précédente manque ou n'a pas pu être simulée retient le minimum légal (ADR 021).
+ */
+function epargneRetraiteHeritee(session: SessionState, annee: number, reportN1: SimulationReport | null): Pick<ContexteDeLAnnee, "epargneRetraite"> {
+  if (annee === session.annees[0].annee) return {}
+  if (!reportN1) return { epargneRetraite: { parPersonne: null } }
+  const personnes = reportN1.foyers.flatMap(foyer => foyer.epargneRetraite.personnes)
+  return { epargneRetraite: { parPersonne: Object.fromEntries(personnes.map(personne => [personne.personId, plafondsLaissesALAnneeSuivante(personne)])) } }
 }
 
 /** Ce qu'une année reçoit des années précédentes de la session. */
@@ -54,7 +67,8 @@ function preparerLAnnee(session: SessionState, annee: number, heritage: Heritage
     ...(reportN2 ? { rfrN2: { annee: annee - 2, parPersonne: rfrParPersonne(reportN2) } } : {}),
     ...(Object.keys(assiettes).length > 0 ? { assiettesAnneePrecedente: { annee: annee - 1, parActivite: assiettes } } : {}),
     ...(regimeMicro ? { regimeMicro } : {}),
-    ...(Object.keys(etatsDesSocietes).length > 0 ? { etatsDesSocietes } : {})
+    ...(Object.keys(etatsDesSocietes).length > 0 ? { etatsDesSocietes } : {}),
+    ...epargneRetraiteHeritee(session, annee, reportN1)
   }
   return { donnees: auRegimeReel(donneesDeLAnnee(session, annee), regimeMicro), regles: regles.regles, contexte }
 }

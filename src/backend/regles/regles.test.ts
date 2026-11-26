@@ -64,6 +64,8 @@ function taux(r: ReglesFiscales): [string, number][] {
     ...r.IR.bareme.map(({ taux }, i): [string, number] => [`IR.bareme.${i}`, taux]),
     ["IR.decote.taux", r.IR.decote.taux],
     ["IR.abattementSalaires.taux", r.IR.abattementSalaires.taux],
+    ["IR.epargneRetraite.partDesRevenus", r.IR.epargneRetraite.partDesRevenus],
+    ["IR.epargneRetraite.minimumPartDuPlafond", r.IR.epargneRetraite.minimumPartDuPlafond],
     ["baremeKilometrique.majorationElectrique", r.baremeKilometrique.majorationElectrique],
     ...Object.entries(r.baremeKilometrique.voitures).flatMap(([cv, tranches]) => tranches.map(({ taux }, i): [string, number] => [`baremeKilometrique.voitures.${cv}.${i}`, taux])),
     ["IS.tauxReduit", r.IS.tauxReduit],
@@ -227,6 +229,15 @@ describe("règles par année", () => {
       expect(decote.forfaitCouple).toBeGreaterThan(decote.forfaitSeul)
       expect(abattementSalaires.maximum).toBeGreaterThan(abattementSalaires.minimum)
       expect(plafonnementQuotientFamilial.avantageMaxParDemiPart).toBeGreaterThan(0)
+    })
+
+    it("a un plafond d'épargne retraite assis sur le plafond de la sécurité sociale de l'année précédente, plus bas que celui de l'année", () => {
+      const { revenusRetenusEnPlafonds, plafondSecuriteSocialeAnneePrecedente, anneesDeReport } = regles.IR.epargneRetraite
+      expect(revenusRetenusEnPlafonds).toBeGreaterThanOrEqual(1)
+      expect(plafondSecuriteSocialeAnneePrecedente).toBeGreaterThan(0)
+      expect(plafondSecuriteSocialeAnneePrecedente).toBeLessThan(regles.regimeGeneral.plafondSecuriteSociale)
+      expect(Number.isInteger(anneesDeReport)).toBe(true)
+      expect(anneesDeReport).toBeGreaterThanOrEqual(1)
     })
 
     it("a un barème kilométrique des voitures de 3 à 7 CV, en trois tranches (5 000 km, 20 000 km, au-delà)", () => {
@@ -467,6 +478,11 @@ describe("règles par année", () => {
       expect(b.IR.decote.forfaitCouple).toBeGreaterThanOrEqual(a.IR.decote.forfaitCouple)
       expect(b.IR.abattementSalaires.minimum).toBeGreaterThanOrEqual(a.IR.abattementSalaires.minimum)
       expect(b.IR.abattementSalaires.maximum).toBeGreaterThanOrEqual(a.IR.abattementSalaires.maximum)
+    })
+
+    it("donne à l'épargne retraite le plafond de la sécurité sociale de l'année d'avant, et n'en raccourcit jamais le report", () => {
+      expect(b.IR.epargneRetraite.plafondSecuriteSocialeAnneePrecedente).toBe(a.regimeGeneral.plafondSecuriteSociale)
+      expect(b.IR.epargneRetraite.anneesDeReport).toBeGreaterThanOrEqual(a.IR.epargneRetraite.anneesDeReport)
     })
 
     it("fait croître le plafond de revenu fiscal de référence du versement libératoire", () => {

@@ -232,6 +232,54 @@
     "foyers": [
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-paul",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2026,
+           "montant": 4710,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 22377,
+         "verse": 0
+        },
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-julie",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2026,
+           "montant": 4710,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 16783,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0.11
+      },
       "impotSurLeRevenu": 3511,
       "netApresImpots": 62909,
       "optionDividendes": "bareme",

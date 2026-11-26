@@ -25,7 +25,8 @@ const FLUX_PAR_ACTEUR: [FinancialFlow["entityId"], FinancialFlow["type"], number
   ["m-bnc", "ca_micro_services_bnc", 1800],
   ["m-bnc", "ca_micro_vente", 600],
   ["po-dan", "ca_services", 6500],
-  ["po-dan", "deductible_expense", 180]
+  ["po-dan", "deductible_expense", 180],
+  ["p-alice", "versement_per", 450]
 ]
 
 function grilleDeLAnnee(annee: number, facteur: number): AnneeSimulee {
@@ -69,6 +70,7 @@ export function sessionMaximale(): SessionState {
           ],
           autresFrais: 640
         },
+        plafondEpargneRetraite: 1650.5,
         avatar: initiales("AM", "#3b82f6"),
         locked: true
       },

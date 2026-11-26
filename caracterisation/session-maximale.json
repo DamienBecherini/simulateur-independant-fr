@@ -525,7 +525,56 @@
     },
     "foyers": [
      {
+      "deductionEpargneRetraite": 1620,
       "depenses": 144,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 1620,
+         "nonDeduit": 0,
+         "originePlafond": "saisi",
+         "personId": "p-alice",
+         "plafond": 1651,
+         "plafondCalcule": 4637,
+         "plafondsReportes": [],
+         "plafondsRestants": [],
+         "preteAuConjoint": 0,
+         "resteNonReporte": {
+          "annee": 2024,
+          "montant": 31,
+          "utilisableJusquEn": 2027
+         },
+         "revenusProfessionnels": 12990,
+         "verse": 1620
+        },
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-bob",
+         "plafond": 4399,
+         "plafondCalcule": 4637,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": -763,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0
+      },
+      "impotEconomiseEpargneRetraite": 0,
       "impotSurLeRevenu": 135,
       "netApresImpots": 26041,
       "optionDividendes": null,
@@ -536,16 +585,67 @@
       "prelevementsSociaux": 0,
       "resultatConserve": -1601,
       "revenuFiscalDeReference": 13307,
-      "revenuImposableGlobal": 9347,
+      "revenuImposableGlobal": 7727,
       "revenusAvantPrelevements": 34981,
       "revenusEncaisses": 26175,
       "totalParts": 2.5,
       "totalPrelevements": 10542,
       "versementLiberatoire": 135,
-      "warnings": []
+      "versementsEpargneRetraite": 1620,
+      "warnings": [
+       "Versement PER sans effet sur l'impôt : le foyer ne paie pas d'impôt au barème, avec ou sans la déduction de 1 620 €. Elle consomme le plafond sans rien économiser. L'option pour la non-déduction, à demander à l'assureur lors du versement, évite au moins l'impôt sur ces sommes à la sortie."
+      ]
      },
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-chloe",
+         "plafond": 4399,
+         "plafondCalcule": 4637,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 0,
+         "verse": 0
+        },
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-dan",
+         "plafond": 4399,
+         "plafondCalcule": 4637,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 13079,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0
+      },
       "impotSurLeRevenu": 0,
       "netApresImpots": 14013,
       "optionDividendes": null,
@@ -1212,7 +1312,73 @@
     },
     "foyers": [
      {
+      "deductionEpargneRetraite": 1800,
       "depenses": 160,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 1800,
+         "nonDeduit": 0,
+         "originePlafond": "calcule",
+         "personId": "p-alice",
+         "plafond": 4637,
+         "plafondCalcule": 4710,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2025,
+           "montant": 2837,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "preteAuConjoint": 0,
+         "resteNonReporte": {
+          "annee": 2024,
+          "montant": 31,
+          "utilisableJusquEn": 2027
+         },
+         "revenusProfessionnels": 15666,
+         "verse": 1800
+        },
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "calcule",
+         "personId": "p-bob",
+         "plafond": 4637,
+         "plafondCalcule": 4710,
+         "plafondsReportes": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          }
+         ],
+         "plafondsRestants": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          },
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": -5059,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0
+      },
+      "impotEconomiseEpargneRetraite": 0,
       "impotSurLeRevenu": 150,
       "netApresImpots": 24741,
       "optionDividendes": null,
@@ -1223,16 +1389,89 @@
       "prelevementsSociaux": 0,
       "resultatConserve": -1640,
       "revenuFiscalDeReference": 11807,
-      "revenuImposableGlobal": 7407,
+      "revenuImposableGlobal": 5607,
       "revenusAvantPrelevements": 39110,
       "revenusEncaisses": 24890,
       "totalParts": 2.5,
       "totalPrelevements": 16009,
       "versementLiberatoire": 150,
-      "warnings": []
+      "versementsEpargneRetraite": 1800,
+      "warnings": [
+       "Versement PER sans effet sur l'impôt : le foyer ne paie pas d'impôt au barème, avec ou sans la déduction de 1 800 €. Elle consomme le plafond sans rien économiser. L'option pour la non-déduction, à demander à l'assureur lors du versement, évite au moins l'impôt sur ces sommes à la sortie."
+      ]
      },
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "calcule",
+         "personId": "p-chloe",
+         "plafond": 4637,
+         "plafondCalcule": 4710,
+         "plafondsReportes": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          }
+         ],
+         "plafondsRestants": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          },
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 0,
+         "verse": 0
+        },
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "calcule",
+         "personId": "p-dan",
+         "plafond": 4637,
+         "plafondCalcule": 4710,
+         "plafondsReportes": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          }
+         ],
+         "plafondsRestants": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          },
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 14550,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0
+      },
       "impotSurLeRevenu": 0,
       "netApresImpots": 15589,
       "optionDividendes": null,
@@ -1913,7 +2152,94 @@
     },
     "foyers": [
      {
+      "deductionEpargneRetraite": 1980,
       "depenses": 176,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 1980,
+         "nonDeduit": 0,
+         "originePlafond": "calcule",
+         "personId": "p-alice",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [
+          {
+           "annee": 2025,
+           "montant": 2837,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "plafondsRestants": [
+          {
+           "annee": 2025,
+           "montant": 2837,
+           "utilisableJusquEn": 2028
+          },
+          {
+           "annee": 2026,
+           "montant": 2730,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "resteNonReporte": {
+          "annee": 2024,
+          "montant": 31,
+          "utilisableJusquEn": 2027
+         },
+         "revenusProfessionnels": 18342,
+         "verse": 1980
+        },
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "calcule",
+         "personId": "p-bob",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          },
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "plafondsRestants": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          },
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          },
+          {
+           "annee": 2026,
+           "montant": 4710,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": -4851,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0
+      },
+      "impotEconomiseEpargneRetraite": 0,
       "impotSurLeRevenu": 165,
       "netApresImpots": 28201,
       "optionDividendes": null,
@@ -1924,16 +2250,109 @@
       "prelevementsSociaux": 0,
       "resultatConserve": -1657,
       "revenuFiscalDeReference": 14811,
-      "revenuImposableGlobal": 9971,
+      "revenuImposableGlobal": 7991,
       "revenusAvantPrelevements": 43272,
       "revenusEncaisses": 28366,
       "totalParts": 2.5,
       "totalPrelevements": 16728,
       "versementLiberatoire": 165,
-      "warnings": []
+      "versementsEpargneRetraite": 1980,
+      "warnings": [
+       "Versement PER sans effet sur l'impôt : le foyer ne paie pas d'impôt au barème, avec ou sans la déduction de 1 980 €. Elle consomme le plafond sans rien économiser. L'option pour la non-déduction, à demander à l'assureur lors du versement, évite au moins l'impôt sur ces sommes à la sortie."
+      ]
      },
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "calcule",
+         "personId": "p-chloe",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          },
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "plafondsRestants": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          },
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          },
+          {
+           "annee": 2026,
+           "montant": 4710,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 0,
+         "verse": 0
+        },
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "calcule",
+         "personId": "p-dan",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          },
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "plafondsRestants": [
+          {
+           "annee": 2024,
+           "montant": 4399,
+           "utilisableJusquEn": 2027
+          },
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          },
+          {
+           "annee": 2026,
+           "montant": 4710,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 16619,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0
+      },
       "impotSurLeRevenu": 0,
       "netApresImpots": 17807,
       "optionDividendes": null,

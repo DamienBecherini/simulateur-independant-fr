@@ -276,6 +276,28 @@ export interface RegimeDeZone {
 }
 
 /**
+ * Versements sur un plan d'épargne retraite déduits du revenu global (article 163 quatervicies du CGI, ADR 021). Le
+ * plafond des versements d'une année se calcule sur les revenus d'activité professionnelle de l'année précédente : les
+ * règles d'une année servent donc deux fois, pour le plafond minimal de ses propres versements et pour le plafond
+ * qu'elle prépare à l'année suivante.
+ */
+export interface ReglesEpargneRetraite {
+  /** Part des revenus d'activité professionnelle d'une année qui fait le plafond des versements de la suivante (taux entre 0 et 1). */
+  partDesRevenus: number
+  /** Limite de ces revenus, en nombre de plafonds de la sécurité sociale de leur année. */
+  revenusRetenusEnPlafonds: number
+  /** Plafond minimal, en part du plafond de la sécurité sociale de l'année des revenus (taux entre 0 et 1). */
+  minimumPartDuPlafond: number
+  /**
+   * Plafond de la sécurité sociale de l'année précédente, en euros : il donne le plafond minimal des versements de
+   * l'année quand les revenus de l'année précédente ne sont pas dans la session.
+   */
+  plafondSecuriteSocialeAnneePrecedente: number
+  /** Nombre d'années, après celle-ci, où la part inutilisée du plafond de l'année reste utilisable. */
+  anneesDeReport: number
+}
+
+/**
  * Les règles fiscales et sociales d'une année, lues par le moteur. Elles vivent dans `src/backend/regles/<année>.json`
  * (liste dans `src/backend/regles/index.ts`) : ajouter une année ne demande qu'un fichier et une ligne de cette liste.
  */
@@ -287,6 +309,7 @@ export interface ReglesFiscales {
     decote: { taux: number; forfaitSeul: number; forfaitCouple: number }
     abattementSalaires: { taux: number; minimum: number; maximum: number }
     partsParEnfant: { deuxPremiers: number; suivants: number }
+    epargneRetraite: ReglesEpargneRetraite
   }
   baremeKilometrique: BaremeKilometrique
   IS: {

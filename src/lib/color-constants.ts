@@ -27,6 +27,9 @@ export const DEFAULT_FLOW_COLORS: Record<FinancialFlow["type"], string> = {
   deductible_expense: "#b91c1c", // red-700
   expense: "#f43f5e", // rose-500
 
+  // --- Épargne retraite : une sortie d'argent qui reste au foyer, un rose pâle à l'écart des dépenses ---
+  versement_per: "#f9a8d4", // pink-300
+
   // --- Rémunération du dirigeant et dividendes : deux violets bien séparés ---
   director_remuneration: "#7e22ce", // purple-700
   dividends_payment: "#a78bfa", // violet-400

@@ -83,6 +83,33 @@
     "foyers": [
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "revenus",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-test",
+         "plafond": 4637,
+         "plafondCalcule": 4773,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 47734,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0.3
+      },
       "impotSurLeRevenu": 7424,
       "netApresImpots": 39022,
       "optionDividendes": null,
@@ -204,6 +231,44 @@
     "foyers": [
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "calcule",
+         "personId": "p-test",
+         "plafond": 4773,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "plafondsRestants": [
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          },
+          {
+           "annee": 2026,
+           "montant": 4773,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 46752,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0.3
+      },
       "impotSurLeRevenu": 7130,
       "netApresImpots": 38335,
       "optionDividendes": null,

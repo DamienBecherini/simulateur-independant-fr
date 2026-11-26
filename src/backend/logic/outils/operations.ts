@@ -26,6 +26,7 @@ export const SerieSchema = z.strictObject({
 /** Réglages d'un acteur qu'une proposition peut fixer ; chacun ne vaut que pour certains genres d'acteur. */
 export const ReglagesActeurSchema = z.strictObject({
   partsFiscales: z.number().min(0.5).max(20).optional().describe("Personne : parts fiscales propres (1 par adulte ; enfants : relation Enfant)."),
+  plafondEpargneRetraite: MontantSchema.optional().describe("Personne : plafond épargne retraite de l'avis d'impôt, pour la première année."),
   capitalSocial: MontantSchema.optional().describe("SASU, EURL : capital social, en euros."),
   dateDeCreation: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, `Date de création : « AAAA-MM », par exemple ${ANNEE_COURANTE}-03.`).optional().describe("Activité : mois de création, « AAAA-MM »."),
   beneficieACRE: z.boolean().optional().describe("Micro : bénéficie de l'ACRE."),
@@ -48,6 +49,7 @@ type ReglagesActeur = z.infer<typeof ReglagesActeurSchema>
  */
 const REGLAGE_PAR_GENRE: Record<keyof ReglagesActeur, GenreDActeur[]> = {
   partsFiscales: ["personne"],
+  plafondEpargneRetraite: ["personne"],
   capitalSocial: [...STATUTS_SOCIETE],
   dateDeCreation: [...STATUTS_JURIDIQUES, "micro-entreprise"],
   beneficieACRE: ["micro-entreprise"],

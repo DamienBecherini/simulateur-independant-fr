@@ -17,6 +17,7 @@ export const flowTypeLabels: Record<FlowType, string> = {
   are: "Allocation chômage (ARE)",
   salary: "Salaire (emploi tiers)",
   other_taxable_income: "Autre revenu imposable",
+  versement_per: "Versement PER (épargne retraite)",
   // Société
   ca_services: "CA - Prestation de services",
   ca_vente: "CA - Vente de marchandises",
@@ -63,6 +64,7 @@ export const flowTypeShortLabels: Record<FlowType, string> = {
   are: "ARE",
   salary: "Salaire",
   other_taxable_income: "Autre Revenu",
+  versement_per: "Versement PER",
   ca_services: "CA Services",
   ca_vente: "CA Vente",
   deductible_expense: "Charge déductible",
@@ -93,6 +95,7 @@ const EST_UNE_SORTIE: Record<FlowType, boolean> = {
   income: false,
   deductible_expense: true,
   expense: true,
+  versement_per: true,
   director_remuneration: true,
   dividends_payment: true
 }

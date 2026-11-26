@@ -39,7 +39,7 @@ describe("decrire_simulation", () => {
   it("détaille les trajets d'une personne seulement sur demande", () => {
     const session = geler({ ...sessionExemple(), entities: sessionExemple().entities.map(e => (e.id === "person-julien" ? { ...e, fraisReels: { trajets: [{ libelle: "Client", kmParTrajet: 30, joursTravailles: 200, puissanceFiscale: "5" as const, electrique: false, distanceJustifiee: false }], autresFrais: 100 } } : e)) })
     const reglagesDeJulien = (detaille: boolean) => appeler<{ acteurs: { id: string; reglages: Record<string, unknown> }[] }>("decrire_simulation", session, { detaille }).acteurs.find(a => a.id === "person-julien")!.reglages
-    expect(reglagesDeJulien(false)).toEqual({ partsFiscales: 1, fraisReels: "1 trajet(s), 100 € d'autres frais" })
+    expect(reglagesDeJulien(false)).toEqual({ partsFiscales: 1, plafondEpargneRetraite: null, fraisReels: "1 trajet(s), 100 € d'autres frais" })
     expect(reglagesDeJulien(true).trajets).toContain("Client")
   })
 })

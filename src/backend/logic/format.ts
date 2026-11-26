@@ -10,6 +10,14 @@ export function enTexteBrut(texte: string): string {
   return texte.replace(/[\u00A0\u202F]/g, " ")
 }
 
+/**
+ * « de Studio », mais « d'Atelier » : l'élision devant une voyelle, le nom gardé tel quel. L'apostrophe est droite dans
+ * les messages du moteur ; l'interface passe la sienne là où elle écrit des apostrophes typographiques.
+ */
+export function deNom(nom: string, apostrophe = "'"): string {
+  return /^[aeiouâéèêîôû]/i.test(nom) ? `d${apostrophe}${nom}` : `de ${nom}`
+}
+
 /** Montant arrondi à l'euro, séparateur de milliers français : « 12 345 € ». Jamais « -0 € ». */
 export function euros(montant: number): string {
   return `${(Math.round(montant) || 0).toLocaleString("fr-FR")}${ESPACE_INSECABLE}€`

@@ -244,6 +244,30 @@ describe("runMetaSimulation", () => {
         totalPrelevements: 30910,
         resultatConserve: 21350,
         depenses: 0,
+        // Épargne retraite, sans versement : le minimum légal faute de plafond saisi (10 % de 39 000 €), reportable 3 ans ;
+        // 10 % des 22 599 € de rémunération imposable ne donnent que 2 260 €, le plafond calculé est donc le minimum
+        // (10 % de 40 000 €). Les dividendes n'y entrent pas. Tranche marginale : 33 199 € sont dans la tranche à 30 %.
+        epargneRetraite: {
+          trancheMarginale: 0.3,
+          partDesRevenus: 0.1,
+          personnes: [
+            {
+              personId: "alice",
+              verse: 0,
+              plafond: 3900,
+              originePlafond: "minimumFauteDeSaisie",
+              plafondsReportes: [],
+              imputeSurSesPlafonds: 0,
+              imputeSurLeConjoint: 0,
+              preteAuConjoint: 0,
+              nonDeduit: 0,
+              plafondsRestants: [{ annee: 2000, montant: 3900, utilisableJusquEn: 2003 }],
+              revenusProfessionnels: 22599,
+              plafondCalcule: 4000,
+              baseDuPlafondCalcule: "minimum"
+            }
+          ]
+        },
         warnings: []
       })
       expect(report.totalNetApresImpots).toBe(37740)

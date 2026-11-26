@@ -1,7 +1,7 @@
 // src/backend/logic/calculsIR.test.ts
 
 import { describe, expect, it } from "vitest"
-import { calculerIR, impotPourUnePart } from "./calculsIR.js"
+import { calculerIR, impotPourUnePart, trancheMarginale } from "./calculsIR.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 
 // Barème de test : 0 % jusqu'à 10 000 €, 10 % jusqu'à 30 000 €, 30 % jusqu'à 80 000 €, 40 % au-delà.
@@ -82,4 +82,36 @@ describe("calculerIR", () => {
     })
   })
 
+})
+
+describe("trancheMarginale", () => {
+  const tranche = (revenu: number, parts = 1, declarants: 1 | 2 = 1) => trancheMarginale({ revenuNetGlobalImposable: revenu, partsFiscales: parts, nombreDeclarants: declarants }, regles)
+
+  it("est le taux de la tranche où tombe le revenu par part", () => {
+    expect(tranche(8000)).toBe(0)
+    expect(tranche(20000)).toBe(0.1)
+    expect(tranche(45000)).toBe(0.3)
+    expect(tranche(100000)).toBe(0.4)
+    // 80 000 € pour 2 parts : 40 000 € par part.
+    expect(tranche(80000, 2, 2)).toBe(0.3)
+  })
+
+  it("reste dans la tranche du dessous à la limite exacte : le dernier euro y est encore imposé", () => {
+    expect(tranche(30000)).toBe(0.1)
+    expect(tranche(30001)).toBe(0.3)
+  })
+
+  it("vaut 0 pour un revenu nul, négatif ou des parts invalides", () => {
+    expect(tranche(0)).toBe(0)
+    expect(tranche(-5000)).toBe(0)
+    expect(tranche(50000, 0)).toBe(0)
+  })
+
+  it("se lit sur les seules parts des déclarants quand l'avantage du quotient familial est plafonné", () => {
+    // Parent seul, 1,5 part, 100 000 € : 66 667 € par part (30 %), mais l'avantage de la demi-part est plafonné
+    // (19 500 € contre 25 000 - 1 500 = 23 500 €) : l'impôt se calcule sur 1 part, dans la tranche à 40 %.
+    expect(tranche(100000, 1.5)).toBe(0.4)
+    // Couple, 3 parts, 66 000 € : 3 600 € d'impôt contre 5 800 - 3 000 = 2 800 € : l'avantage n'est pas plafonné.
+    expect(tranche(66000, 3, 2)).toBe(0.1)
+  })
 })

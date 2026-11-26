@@ -19,7 +19,10 @@ export const reglesDeTest: ReglesFiscales = {
     plafonnementQuotientFamilial: { avantageMaxParDemiPart: 1500 },
     decote: { taux: 0.5, forfaitSeul: 800, forfaitCouple: 1400 },
     abattementSalaires: { taux: 0.1, minimum: 500, maximum: 14000 },
-    partsParEnfant: { deuxPremiers: 0.5, suivants: 1 }
+    partsParEnfant: { deuxPremiers: 0.5, suivants: 1 },
+    // Épargne retraite : 10 % des revenus, retenus jusqu'à 8 plafonds de la sécurité sociale ; minimum de 10 % du
+    // plafond (4 000 € sur le plafond de l'année, 40 000 € ; 3 900 € sur celui de l'année précédente) ; report de 3 ans.
+    epargneRetraite: { partDesRevenus: 0.1, revenusRetenusEnPlafonds: 8, minimumPartDuPlafond: 0.1, plafondSecuriteSocialeAnneePrecedente: 39000, anneesDeReport: 3 }
   },
   // Barème kilométrique continu : de 3 à 4 CV, 0,5 €/km jusqu'à 5 000 km (2 500 €), 0,3 €/km + 1 000 € jusqu'à
   // 20 000 km (7 000 €), 0,35 €/km au-delà ; de 5 à 7 CV, 0,6 €/km (3 000 €), 0,4 €/km + 1 000 € (9 000 €), 0,45 €/km.

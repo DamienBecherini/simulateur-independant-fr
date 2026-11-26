@@ -6,6 +6,7 @@
 
 import type { Company, DonneesDeLAnnee, EtatDeLaSociete, FinancialFlow, SalarieDeLActivite } from "../../types.js"
 import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.js"
+import type { PlafondsHerites } from "./epargne-retraite.js"
 import type { Foyer } from "./foyers.js"
 import type { ReglesFiscales } from "./regles.js"
 import type { RegimeMicroDeLAnnee } from "./dispositifs.js"
@@ -246,6 +247,13 @@ export interface ContexteDeLAnnee {
    * y assoit la retraite complémentaire et l'ASV de l'année (voir l'ADR 015). Une activité absente part de son année.
    */
   assiettesAnneePrecedente?: { annee: number; parActivite: Record<string, number> }
+  /**
+   * Épargne retraite (voir l'ADR 021) : ce que chaque personne reçoit de l'année précédente, son plafond calculé et ses
+   * plafonds reportés. Absent : c'est la première année de la session, ou une simulation d'un an, et le plafond saisi
+   * dans la fiche de chaque personne s'applique. `parPersonne` vaut `null` quand l'année précédente n'est pas dans la
+   * session ou n'a pas pu être simulée : le minimum légal s'applique.
+   */
+  epargneRetraite?: { parPersonne: Record<string, PlafondsHerites> | null }
   /**
    * Chercher aussi, pour chaque société à l'IS, la plus haute rémunération du dirigeant sans déficit
    * (`limiteDeRemuneration` du résultat) : pour les résultats de l'année, pas pour les colonnes du comparateur.

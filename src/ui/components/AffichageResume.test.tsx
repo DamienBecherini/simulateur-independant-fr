@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 import type { Affichage, ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare } from "@/types"
+import { SANS_EPARGNE_RETRAITE } from "@/backend/logic/testing/foyer-de-test"
 import { emptyReport, emptySession, makeMicro, makePerson } from "@/ui/testing/fixtures"
 import { ComparateurDeTest } from "@/ui/testing/comparateur"
 import { AffichageContext } from "../hooks/useAffichage"
@@ -35,7 +36,7 @@ function comparaison(): ComparaisonResult {
 
 function report(): SimulationReport {
   const vide = emptyReport()
-  const foyer = { personIds: ["person-alice"], totalParts: 1, revenusEncaisses: 80000, revenuImposableGlobal: 70000, revenuFiscalDeReference: 70000, impotSurLeRevenu: 12600, prelevementsSociaux: 0, optionDividendes: null, netApresImpots: 67400, revenusAvantPrelevements: 100000, totalPrelevements: 32600, resultatConserve: 0, depenses: 0, warnings: [] }
+  const foyer = { personIds: ["person-alice"], totalParts: 1, revenusEncaisses: 80000, revenuImposableGlobal: 70000, revenuFiscalDeReference: 70000, impotSurLeRevenu: 12600, prelevementsSociaux: 0, optionDividendes: null, netApresImpots: 67400, revenusAvantPrelevements: 100000, totalPrelevements: 32600, resultatConserve: 0, depenses: 0, epargneRetraite: SANS_EPARGNE_RETRAITE, warnings: [] }
   return { ...vide, annee: 2026, foyers: [foyer], bilan: { ...vide.bilan, chiffreAffaires: 100000, revenusAvantPrelevements: 100000, cotisationsSociales: 20000, impotSurLeRevenu: 12600, totalPrelevements: 32600 }, totalNetApresImpots: 67400 }
 }
 

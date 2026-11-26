@@ -26,6 +26,7 @@ it("l'année fictive est bien l'année en cours pendant ce test", () => {
 })
 
 await import("./comparateur.reference.test.js")
+await import("./epargne-retraite.reference.test.js")
 await import("./foyers.reference.test.js")
 await import("./frais-reels.reference.test.js")
 await import("./liberaux.reference.test.js")

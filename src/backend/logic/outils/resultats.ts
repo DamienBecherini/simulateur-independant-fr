@@ -4,7 +4,8 @@
 
 import { z } from "zod"
 import type { ActivityResult, CotisationPortage, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, DetailPortage, FoyerFiscalResult, PersonResult, ReservesDeLaSociete, SessionState, SimulationReport } from "../../../types.js"
-import { pourcent, pourcentDeNombre } from "../format.js"
+import { baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, origineDuPlafondEnClair, TITRE_DE_LA_MISE_EN_COMMUN } from "../epargne-retraite.js"
+import { enTexteBrut, pourcent, pourcentDeNombre } from "../format.js"
 import { LIBELLES_DES_COTISATIONS_TNS } from "../libelles-des-cotisations.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
 import { anneeDeLaSession, arrondir, ErreurOutil, genreDe, nomDe, trouverActeur } from "./commun.js"
@@ -30,7 +31,7 @@ const Montants = z.record(z.string(), z.number())
 // == simuler
 // ===================================================================================
 
-const FoyerSchema = z.object({ personnes: z.array(z.string()), parts: z.number(), revenusEncaisses: z.number(), revenuImposable: z.number(), revenuFiscalDeReference: z.number(), beneficesExoneres: z.number().describe("Bénéfices exonérés en zone, compris dans revenuFiscalDeReference ; 0 sans exonération."), impotSurLeRevenu: z.number(), versementLiberatoire: z.number().describe("Part de impotSurLeRevenu payée avec les cotisations des micro-entreprises au versement libératoire ; 0 sans versement libératoire."), prelevementsSociaux: z.number(), optionDividendes: z.enum(["pfu", "bareme"]).nullable(), netApresImpots: z.number(), resultatConserve: z.number(), avertissements: z.array(z.string()) })
+const FoyerSchema = z.object({ personnes: z.array(z.string()), parts: z.number(), revenusEncaisses: z.number(), revenuImposable: z.number(), deductionEpargneRetraite: z.number().describe("Versements PER déduits du revenu imposable, déjà retirés de revenuImposable et compris dans revenuFiscalDeReference ; 0 sans versement."), revenuFiscalDeReference: z.number(), beneficesExoneres: z.number().describe("Bénéfices exonérés en zone, compris dans revenuFiscalDeReference ; 0 sans exonération."), impotSurLeRevenu: z.number(), versementLiberatoire: z.number().describe("Part de impotSurLeRevenu payée avec les cotisations des micro-entreprises au versement libératoire ; 0 sans versement libératoire."), impotEconomiseEpargneRetraite: z.number().describe("Impôt économisé par la déduction des versements PER : l'impôt recalculé sans elle, moins impotSurLeRevenu."), prelevementsSociaux: z.number(), optionDividendes: z.enum(["pfu", "bareme"]).nullable(), netApresImpots: z.number(), versementsEpargneRetraite: z.number().describe("Versements PER de l'année, compris dans netApresImpots : épargne bloquée jusqu'à la retraite. Le détail par personne est dans expliquer_resultat."), resultatConserve: z.number(), avertissements: z.array(z.string()) })
 
 function resumeDuFoyer(session: SessionState, foyer: FoyerFiscalResult): z.infer<typeof FoyerSchema> {
   return {
@@ -38,13 +39,16 @@ function resumeDuFoyer(session: SessionState, foyer: FoyerFiscalResult): z.infer
     parts: foyer.totalParts,
     revenusEncaisses: arrondir(foyer.revenusEncaisses),
     revenuImposable: arrondir(foyer.revenuImposableGlobal),
+    deductionEpargneRetraite: arrondir(foyer.deductionEpargneRetraite ?? 0),
     revenuFiscalDeReference: arrondir(foyer.revenuFiscalDeReference),
     beneficesExoneres: arrondir(foyer.beneficesExoneres ?? 0),
     impotSurLeRevenu: arrondir(foyer.impotSurLeRevenu),
     versementLiberatoire: arrondir(foyer.versementLiberatoire ?? 0),
+    impotEconomiseEpargneRetraite: arrondir(foyer.impotEconomiseEpargneRetraite ?? 0),
     prelevementsSociaux: arrondir(foyer.prelevementsSociaux),
     optionDividendes: foyer.optionDividendes,
     netApresImpots: arrondir(foyer.netApresImpots),
+    versementsEpargneRetraite: arrondir(foyer.versementsEpargneRetraite ?? 0),
     resultatConserve: arrondir(foyer.resultatConserve),
     avertissements: foyer.warnings
   }
@@ -261,6 +265,31 @@ function expliquerActivite(session: SessionState, a: ActivityResult) {
   }
 }
 
+/**
+ * L'épargne retraite d'une personne : son plafond de l'année et celui que l'année prépare, toujours ; ses versements, et
+ * ce que la déduction change pour son foyer, quand le foyer a versé (voir l'ADR 021).
+ */
+function epargneRetraiteDeLaPersonne(session: SessionState, rapport: SimulationReport, foyer: FoyerFiscalResult, personId: string): { lignes: Ligne[]; informations: string[] } {
+  const epargne = foyer.epargneRetraite
+  const p = epargne.personnes.find(personne => personne.personId === personId)
+  if (!p) return { lignes: [], informations: [] }
+  const { annee } = rapport
+  const reportes = p.plafondsReportes.reduce((cumul, plafond) => cumul + plafond.montant, 0)
+  const versements = p.verse > 0 ? [ligne("Épargne retraite : versements PER de l'année", p.verse, [composante("Imputés sur son plafond de l'année et ses plafonds reportés", p.imputeSurSesPlafonds), composante("Imputés sur le plafond de son conjoint", p.imputeSurLeConjoint), composante("Non déduits, au-delà des plafonds", p.nonDeduit)])] : []
+  const aVerse = (foyer.versementsEpargneRetraite ?? 0) > 0
+  const duFoyer = aVerse ? [ligne("Foyer : versements PER déduits du revenu imposable", foyer.deductionEpargneRetraite ?? 0), ligne("Foyer : impôt économisé par cette déduction", foyer.impotEconomiseEpargneRetraite ?? 0)] : []
+  const consigne = consigneDeLaMiseEnCommun(epargne, id => nomDe(session, id))
+  return {
+    lignes: [
+      ...versements,
+      ligne(`Épargne retraite : plafond des versements de ${annee} (${origineDuPlafondEnClair(p, annee)})`, p.plafond + reportes, [composante("Plafond de l'année", p.plafond), composante("Plafonds reportés des années précédentes", reportes)]),
+      ligne(enTexteBrut(`Épargne retraite : plafond calculé sur ${annee}, pour les versements de ${annee + 1} (${baseDuPlafondCalculeEnClair(p, annee, epargne.partDesRevenus)})`), p.plafondCalcule),
+      ...duFoyer
+    ],
+    informations: aVerse ? [enTexteBrut(`Tranche marginale du foyer avant la déduction des versements PER : ${pourcent(epargne.trancheMarginale)}. Indicatif : l'impôt économisé est celui de la ligne du foyer, recalculé sans les versements.`), ...(consigne ? [enTexteBrut(`${TITRE_DE_LA_MISE_EN_COMMUN} ${consigne}`)] : [])] : []
+  }
+}
+
 function expliquerPersonne(session: SessionState, rapport: SimulationReport, p: PersonResult) {
   const d = p.detail
   const revenus = ligne("Revenus de l'année, nets de cotisations", p.revenusDirects + p.revenusActivites, [composante("Salaires", d.salaires), composante("Allocations chômage", d.allocationsChomage), composante("Autres revenus", d.autresRevenus), composante("Rémunérations de dirigeant", d.remunerationsDirigeant), composante("Dividendes", d.dividendes), composante("Bénéfices", d.benefices), ...(d.salairesPortage ? [composante("Salaire en portage salarial", d.salairesPortage)] : [])])
@@ -268,9 +297,10 @@ function expliquerPersonne(session: SessionState, rapport: SimulationReport, p: 
   const frais = f ? [ligne(`Frais professionnels retenus (${f.retenue === "reels" ? "frais réels" : `déduction forfaitaire de ${pourcent(f.tauxDeductionForfaitaire)}`})`, f.deduction, [composante("Déduction forfaitaire", f.deductionForfaitaire), composante("Frais réels", f.fraisReels), composante("dont trajets domicile-travail", f.fraisDeTrajet)])] : []
   const foyer = rapport.foyers.find(fo => fo.personIds.includes(p.entityId))
   const lignesFoyer = foyer ? [ligne(`Foyer fiscal (${foyer.personIds.map(id => nomDe(session, id)).join(", ")}, ${foyer.totalParts} ${foyer.totalParts > 1 ? "parts" : "part"}) : revenu imposable`, foyer.revenuImposableGlobal), ligne("Foyer : impôt sur le revenu", foyer.impotSurLeRevenu), ligne("Foyer : prélèvements sociaux", foyer.prelevementsSociaux), ligne("Foyer : net après impôts", foyer.netApresImpots)] : []
+  const epargne = foyer ? epargneRetraiteDeLaPersonne(session, rapport, foyer, p.entityId) : { lignes: [], informations: [] }
   return {
-    lignes: [revenus, ligne("Cotisations salariales", p.cotisationsSalariales), ligne("Dépenses personnelles", p.depenses), ...frais, ...lignesFoyer],
-    informations: foyer?.optionDividendes ? [`Dividendes imposés ${foyer.optionDividendes === "pfu" ? "au prélèvement forfaitaire unique" : "au barème"}, l'option la plus favorable au foyer.`] : [],
+    lignes: [revenus, ligne("Cotisations salariales", p.cotisationsSalariales), ligne("Dépenses personnelles", p.depenses), ...frais, ...lignesFoyer, ...epargne.lignes],
+    informations: [...(foyer?.optionDividendes ? [`Dividendes imposés ${foyer.optionDividendes === "pfu" ? "au prélèvement forfaitaire unique" : "au barème"}, l'option la plus favorable au foyer.`] : []), ...epargne.informations],
     avertissements: foyer?.warnings ?? []
   }
 }
@@ -281,7 +311,7 @@ export const expliquerResultat = definirOutil({
   description: [
     "Détaille le résultat calculé par le moteur pour un acteur et une année.",
     "Activité : chiffre d'affaires, charges, cotisations ligne à ligne (caisse d'un libéral réglementé comprise), impôt sur les sociétés, partage du bénéfice, portage salarial pas à pas, versement libératoire, ACRE, avertissements.",
-    "Personne : revenus par nature, cotisations salariales, frais professionnels retenus, et l'impôt de son foyer fiscal.",
+    "Personne : revenus par nature, cotisations salariales, frais professionnels retenus, épargne retraite (plafonds, versements PER déduits), et l'impôt de son foyer fiscal.",
     "Montants annuels en euros, arrondis. Pour répondre à « pourquoi ce montant ? » sans refaire le calcul."
   ].join(" "),
   lecture: true,

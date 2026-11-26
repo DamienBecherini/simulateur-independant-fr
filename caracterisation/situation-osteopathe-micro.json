@@ -58,6 +58,33 @@
     "foyers": [
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-lea",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2026,
+           "montant": 4710,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 24552,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0.11
+      },
       "impotSurLeRevenu": 1172,
       "netApresImpots": 21803,
       "optionDividendes": null,

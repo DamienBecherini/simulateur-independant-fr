@@ -35,6 +35,15 @@
       "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2705",
       "deuxPremiers": 0.5,
       "suivants": 1
+    },
+    "epargneRetraite": {
+      "description": "Versements sur un plan d'épargne retraite (PER) déduits du revenu global (article 163 quatervicies du CGI). Le plafond des versements d'une année vaut 10 % des revenus d'activité professionnelle de l'année précédente, retenus dans la limite de 8 plafonds de la sécurité sociale de cette année-là, avec un minimum de 10 % de ce plafond. Pour les versements de 2026 : plafond de la sécurité sociale de 2025 (47 100 €), soit un minimum de 4 710 € et un maximum de 37 680 €. La part inutilisée du plafond de 2026 se reporte sur les 5 années suivantes (loi de finances pour 2026, article 10 ; 3 ans pour les plafonds de 2024 et de 2025). La brochure pratique de 2026 écrit encore 3 ans : la loi et le BOFiP priment, à revérifier sur celle de 2027.",
+      "source": "https://bofip.impots.gouv.fr/bofip/1124-PGP.html",
+      "partDesRevenus": 0.1,
+      "revenusRetenusEnPlafonds": 8,
+      "minimumPartDuPlafond": 0.1,
+      "plafondSecuriteSocialeAnneePrecedente": 47100,
+      "anneesDeReport": 5
     }
   },
   "baremeKilometrique": {

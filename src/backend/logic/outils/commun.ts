@@ -64,7 +64,7 @@ export function anneeDeLaSession(session: Pick<SessionState, "annees">, annee?: 
 // ===================================================================================
 
 /** Types de flux qu'un outil peut écrire (le type « income », réservé aux tests, en est exclu). */
-export const TYPES_DE_FLUX = ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment", "ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "salary", "are", "other_taxable_income", "expense"] as const satisfies readonly FinancialFlow["type"][]
+export const TYPES_DE_FLUX = ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment", "ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "salary", "are", "other_taxable_income", "expense", "versement_per"] as const satisfies readonly FinancialFlow["type"][]
 export type TypeDeFlux = (typeof TYPES_DE_FLUX)[number]
 
 /**
@@ -85,6 +85,7 @@ export const SENS_DES_TYPES: Record<FinancialFlow["type"], string> = {
   are: "allocation chômage",
   other_taxable_income: "autre revenu net imposable, ajouté tel quel au barème, sans l'abattement",
   expense: "dépense non déductible, TVA comprise : personnelle, ou charge d'une micro-entreprise comme un loyer ; réduit le net encaissé, pas les cotisations ni l'impôt",
+  versement_per: "versement sur un plan d'épargne retraite (PER), déduit du revenu imposable dans la limite du plafond",
   income: "type réservé aux tests"
 }
 

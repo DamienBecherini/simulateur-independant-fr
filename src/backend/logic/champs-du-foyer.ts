@@ -5,8 +5,11 @@
 
 import type { FoyerFiscalResult } from "../../types.js"
 
-/** Les champs d'un foyer qu'une sortie peut montrer : tous, sauf ses membres et ses avertissements, écrits à part. */
-export type ChampDuFoyer = Exclude<keyof FoyerFiscalResult, "personIds" | "warnings">
+/**
+ * Les champs d'un foyer qu'une sortie peut montrer : tous, sauf ses membres, ses avertissements et le détail de son
+ * épargne retraite personne par personne, écrits à part.
+ */
+export type ChampDuFoyer = Exclude<keyof FoyerFiscalResult, "personIds" | "warnings" | "epargneRetraite">
 
 /** Les champs qui sont des nombres : des montants en euros, et le nombre de parts. */
 export type ChampNumeriqueDuFoyer = Exclude<ChampDuFoyer, "optionDividendes">
@@ -32,13 +35,16 @@ export const CHAMPS_DU_FOYER: Record<ChampDuFoyer, DescriptionDuChamp> = {
   totalParts: { libelle: "Parts", sorties: ["csv", "markdown"], pourLesIA: "parts" },
   revenusEncaisses: { libelle: "Revenus encaissés", sorties: PARTOUT, pourLesIA: "revenusEncaisses" },
   revenuImposableGlobal: { libelle: "Revenu imposable", sorties: PARTOUT, pourLesIA: "revenuImposable" },
+  deductionEpargneRetraite: { libelle: "Versements PER déduits", sorties: PARTOUT, pourLesIA: "deductionEpargneRetraite", siPresent: true },
   revenuFiscalDeReference: { libelle: "Revenu fiscal de référence", sorties: PARTOUT, pourLesIA: "revenuFiscalDeReference" },
   beneficesExoneres: { libelle: "dont bénéfice exonéré en zone", sorties: PARTOUT, pourLesIA: "beneficesExoneres", siPresent: true },
   impotSurLeRevenu: { libelle: "Impôt sur le revenu", sorties: PARTOUT, pourLesIA: "impotSurLeRevenu" },
   versementLiberatoire: { libelle: "dont versement libératoire", sorties: PARTOUT, pourLesIA: "versementLiberatoire", siPresent: true },
+  impotEconomiseEpargneRetraite: { libelle: "Impôt économisé par les versements PER", sorties: PARTOUT, pourLesIA: "impotEconomiseEpargneRetraite", siPresent: true },
   prelevementsSociaux: { libelle: "Prélèvements sociaux", sorties: PARTOUT, pourLesIA: "prelevementsSociaux" },
   optionDividendes: { libelle: "Imposition des dividendes", sorties: PARTOUT, pourLesIA: "optionDividendes" },
   netApresImpots: { libelle: "Net après impôts", sorties: PARTOUT, pourLesIA: "netApresImpots" },
+  versementsEpargneRetraite: { libelle: "dont épargne retraite (PER)", sorties: PARTOUT, pourLesIA: "versementsEpargneRetraite", siPresent: true },
   revenusAvantPrelevements: { libelle: "Revenus avant prélèvements", sorties: ["csv"], pourLesIA: null },
   totalPrelevements: { libelle: "Total des prélèvements", sorties: ["csv"], pourLesIA: null },
   resultatConserve: { libelle: "Résultat conservé", sorties: ["csv"], pourLesIA: "resultatConserve" },

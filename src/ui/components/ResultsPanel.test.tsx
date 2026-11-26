@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Affichage, FoyerFiscalResult, PersonResult, SalarieDeLActivite, SimulationReport, UserPreferences } from "@/types"
+import { SANS_EPARGNE_RETRAITE } from "@/backend/logic/testing/foyer-de-test"
 import { LIMITES } from "@/lib/limites-du-modele"
 import { emptyReport } from "@/ui/testing/fixtures"
 import { AffichageContext } from "../hooks/useAffichage"
@@ -47,6 +48,7 @@ function makeFoyer(personId: string, overrides: Partial<FoyerFiscalResult> = {})
     totalPrelevements: 12000,
     resultatConserve: 0,
     depenses: 0,
+    epargneRetraite: SANS_EPARGNE_RETRAITE,
     warnings: [],
     ...overrides
   }

@@ -21,7 +21,8 @@ const D_UNE_SOCIETE = ["ca_services", "ca_vente", "deductible_expense", "directo
 
 /**
  * Types de flux de chaque genre d'acteur, dans l'ordre où la saisie les propose.
- * - Personne : ses revenus hors de ses activités, et ses dépenses, non déductibles.
+ * - Personne : ses revenus hors de ses activités, ses dépenses, non déductibles, et ses versements sur un plan
+ *   d'épargne retraite, déductibles de son revenu imposable (ADR 021).
  * - Société (SASU, EURL) : chiffre d'affaires, charges déductibles, rémunération du dirigeant et dividendes.
  * - Entreprise individuelle au réel : comme une société, sans rémunération de dirigeant ni dividendes, qui ne se
  *   versent que dans une société à l'IS.
@@ -31,7 +32,7 @@ const D_UNE_SOCIETE = ["ca_services", "ca_vente", "deductible_expense", "directo
  * - Portage salarial : des prestations de services seulement, et les frais professionnels remboursés (ADR 016).
  */
 export const FLUX_PERMIS: Record<GenreDActeur, readonly TypeDeFluxSaisi[]> = {
-  personne: ["are", "salary", "other_taxable_income", "expense"],
+  personne: ["are", "salary", "other_taxable_income", "expense", "versement_per"],
   SASU: D_UNE_SOCIETE,
   EURL: D_UNE_SOCIETE,
   EI: ["ca_services", "ca_vente", "deductible_expense"],

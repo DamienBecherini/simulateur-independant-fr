@@ -71,6 +71,33 @@
     "foyers": [
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-test",
+         "plafond": 4637,
+         "plafondCalcule": 4710,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 0,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0
+      },
       "impotSurLeRevenu": 0,
       "netApresImpots": 0,
       "optionDividendes": null,
@@ -178,6 +205,44 @@
     "foyers": [
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "calcule",
+         "personId": "p-test",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          }
+         ],
+         "plafondsRestants": [
+          {
+           "annee": 2025,
+           "montant": 4637,
+           "utilisableJusquEn": 2028
+          },
+          {
+           "annee": 2026,
+           "montant": 4710,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 0,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0
+      },
       "impotSurLeRevenu": 0,
       "netApresImpots": 0,
       "optionDividendes": null,

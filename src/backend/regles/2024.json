@@ -35,6 +35,15 @@
       "source": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2705",
       "deuxPremiers": 0.5,
       "suivants": 1
+    },
+    "epargneRetraite": {
+      "description": "Versements sur un plan d'épargne retraite (PER) déduits du revenu global (article 163 quatervicies du CGI). Le plafond des versements d'une année vaut 10 % des revenus d'activité professionnelle de l'année précédente, retenus dans la limite de 8 plafonds de la sécurité sociale de cette année-là, avec un minimum de 10 % de ce plafond. Pour les versements de 2024 : plafond de la sécurité sociale de 2023 (43 992 €), soit un minimum de 4 399 € et un maximum de 35 194 € (brochure pratique de l'impôt sur le revenu de 2025). La part inutilisée du plafond de 2024 se reporte sur les 3 années suivantes.",
+      "source": "https://www.impots.gouv.fr/www2/fichiers/documentation/brochure/ir_2025/pdf_som/12-charges_ded_rev_215a226.pdf",
+      "partDesRevenus": 0.1,
+      "revenusRetenusEnPlafonds": 8,
+      "minimumPartDuPlafond": 0.1,
+      "plafondSecuriteSocialeAnneePrecedente": 43992,
+      "anneesDeReport": 3
     }
   },
   "baremeKilometrique": {

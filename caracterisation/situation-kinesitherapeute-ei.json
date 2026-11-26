@@ -88,6 +88,33 @@
     "foyers": [
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-julien",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2026,
+           "montant": 4710,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 47102,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0.3
+      },
       "impotSurLeRevenu": 7235,
       "netApresImpots": 38570,
       "optionDividendes": null,

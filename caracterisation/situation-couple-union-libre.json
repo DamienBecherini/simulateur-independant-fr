@@ -52,6 +52,33 @@
     "foyers": [
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-hugo",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2026,
+           "montant": 4710,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 37800,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0.3
+      },
       "impotSurLeRevenu": 4444,
       "netApresImpots": 37556,
       "optionDividendes": null,
@@ -70,6 +97,33 @@
      },
      {
       "depenses": 0,
+      "epargneRetraite": {
+       "partDesRevenus": 0.1,
+       "personnes": [
+        {
+         "baseDuPlafondCalcule": "minimum",
+         "imputeSurLeConjoint": 0,
+         "imputeSurSesPlafonds": 0,
+         "nonDeduit": 0,
+         "originePlafond": "minimumFauteDeSaisie",
+         "personId": "p-emma",
+         "plafond": 4710,
+         "plafondCalcule": 4806,
+         "plafondsReportes": [],
+         "plafondsRestants": [
+          {
+           "annee": 2026,
+           "montant": 4710,
+           "utilisableJusquEn": 2031
+          }
+         ],
+         "preteAuConjoint": 0,
+         "revenusProfessionnels": 7920,
+         "verse": 0
+        }
+       ],
+       "trancheMarginale": 0
+      },
       "impotSurLeRevenu": 0,
       "netApresImpots": 8404,
       "optionDividendes": null,

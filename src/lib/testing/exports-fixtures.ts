@@ -5,6 +5,7 @@ import type { ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, S
 import { defaultFraisFonctionnement } from "@/lib/comparateur-options"
 import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
 import { avecSaRaison } from "@/backend/logic/testing/colonne-de-test"
+import { SANS_EPARGNE_RETRAITE } from "@/backend/logic/testing/foyer-de-test"
 
 const avatar = { type: "initials" as const, value: "A", color: "#000000" }
 
@@ -83,6 +84,7 @@ export function rapportExemple(): SimulationReport {
         totalPrelevements: 10500,
         resultatConserve: 400,
         depenses: 0,
+        epargneRetraite: SANS_EPARGNE_RETRAITE,
         warnings: ["Vérifier les parts."]
       }
     ],

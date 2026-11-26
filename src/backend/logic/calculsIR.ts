@@ -25,6 +25,26 @@ export function impotPourUnePart(revenuParPart: number, bareme: TrancheIR[]): nu
   return impot
 }
 
+/** Taux de la tranche du barème où tombe un revenu par part ; 0 pour un revenu nul ou négatif. */
+function tauxDeLaTranche(revenuParPart: number, bareme: TrancheIR[]): number {
+  if (!(revenuParPart > 0)) return 0
+  return bareme.find(({ trancheJusqua }) => revenuParPart <= (trancheJusqua ?? Infinity))?.taux ?? 0
+}
+
+/**
+ * Tranche marginale d'un foyer : le taux du barème auquel son dernier euro de revenu est imposé. Quand l'avantage du
+ * quotient familial est plafonné, c'est la tranche du revenu divisé par les seules parts des déclarants, puisque
+ * l'impôt se calcule alors sur elles. Indicatif : la décote, qui ajoute ses propres effets de seuil, n'y est pas.
+ */
+export function trancheMarginale({ revenuNetGlobalImposable, partsFiscales, nombreDeclarants }: EntreesIR, regles: ReglesIR): number {
+  if (revenuNetGlobalImposable <= 0 || !(partsFiscales > 0)) return 0
+  const partsDeBase = Math.min(partsFiscales, nombreDeclarants)
+  const impot = partsFiscales * impotPourUnePart(revenuNetGlobalImposable / partsFiscales, regles.bareme)
+  const avantageMax = regles.plafonnementQuotientFamilial.avantageMaxParDemiPart * (partsFiscales - partsDeBase) * 2
+  const plafonne = partsFiscales > partsDeBase && partsDeBase * impotPourUnePart(revenuNetGlobalImposable / partsDeBase, regles.bareme) - avantageMax > impot
+  return tauxDeLaTranche(revenuNetGlobalImposable / (plafonne ? partsDeBase : partsFiscales), regles.bareme)
+}
+
 /**
  * Impôt sur le revenu d'un foyer : barème par part, plafonnement de l'avantage du quotient familial,
  * puis décote. Les réductions et crédits d'impôt ne sont pas modélisés.
