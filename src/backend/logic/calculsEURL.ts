@@ -3,7 +3,7 @@
 import { calculerResultatSociete, type EntreesSociete, type ResultatSociete } from "./calculsSociete.js"
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
 import { avertissementCotisationsMinimales, calculerCotisationsTNS, revenuAvantCotisationsPourUnNet } from "./cotisationsTNS.js"
-import type { ReglesFiscales } from "./regles.js"
+import type { ReglesApplicables } from "./regles.js"
 
 export interface EntreesEURL extends EntreesSociete {
   capitalSocial: number
@@ -26,14 +26,14 @@ export interface EntreesEURL extends EntreesSociete {
  * La rémunération est imposée comme un salaire ; la CSG non déductible et la CRDS, payées par la société,
  * s'ajoutent à la rémunération nette imposable.
  */
-export function calculerEURL(entrees: EntreesEURL, regles: ReglesFiscales, caisse?: ParametresDeLaCaisse): ResultatSociete {
-  const surRemuneration = calculerCotisationsTNS(revenuAvantCotisationsPourUnNet(entrees.remunerationNette, regles.TNS, caisse), regles.TNS, caisse)
+export function calculerEURL(entrees: EntreesEURL, regles: ReglesApplicables, caisse?: ParametresDeLaCaisse): ResultatSociete {
+  const surRemuneration = calculerCotisationsTNS(revenuAvantCotisationsPourUnNet(entrees.remunerationNette, regles, caisse), regles, caisse)
   const resultat = calculerResultatSociete(entrees, surRemuneration.total, regles)
 
   const seuil = entrees.capitalSocial * regles.EURL.seuilDividendesPartDuCapital
   const dividendesSoumisPS = Math.min(resultat.dividendesVerses, seuil)
   const dividendesSoumisCotisations = resultat.dividendesVerses - dividendesSoumisPS
-  const cotisationsTNS = calculerCotisationsTNS(surRemuneration.revenuAvantCotisations + dividendesSoumisCotisations, regles.TNS, caisse)
+  const cotisationsTNS = calculerCotisationsTNS(surRemuneration.revenuAvantCotisations + dividendesSoumisCotisations, regles, caisse)
   const cotisationsSurDividendes = cotisationsTNS.total - surRemuneration.total
 
   return {

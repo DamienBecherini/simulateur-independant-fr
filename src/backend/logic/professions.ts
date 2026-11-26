@@ -2,7 +2,7 @@
 
 import { CAISSES_LIBERALES, estSocieteIS, type CaisseLiberale, type Company, type MicroEntreprise, type ProfessionDeLActivite, type StatutJuridique, type StatutSociete } from "../../types.js"
 import type { ParametresDeLaCaisse } from "./cotisations-liberales.js"
-import { reglesDesAnneesConnues, type MicroEntrepriseLiberale, type ProfessionReglementee, type ReglesFiscales, type ReglesLiberauxReglementes } from "./regles.js"
+import { reglesDeLAnneeEntiere, reglesDesAnneesConnues, type MicroEntrepriseLiberale, type ProfessionReglementee, type ReglesApplicables, type ReglesFiscales, type ReglesLiberauxReglementes } from "./regles.js"
 
 /*
  * Professions libérales réglementées (voir l'ADR 015) : une activité BNC enregistre sa profession, jamais sa caisse.
@@ -72,8 +72,10 @@ export function partConventionneeDe(activite: Pick<Company | MicroEntreprise, "p
  * réglementée ou d'une caisse que le simulateur ne calcule pas (calcul des indépendants). `assietteAnneePrecedente` :
  * l'assiette de l'activité l'année précédente, quand cette année est dans la session (CARPIMKO, ADR 015).
  */
-export function parametresDeLaCaisse(activite: Pick<Company | MicroEntreprise, "profession" | "partConventionnee">, regles: ReglesFiscales, annee: number, assietteAnneePrecedente?: number): ParametresDeLaCaisse | undefined {
-  const profession = professionDe(activite, regles)
+export function parametresDeLaCaisse(activite: Pick<Company | MicroEntreprise, "profession" | "partConventionnee">, regles: ReglesApplicables, annee: number, assietteAnneePrecedente?: number): ParametresDeLaCaisse | undefined {
+  // La profession se lit dans les règles de l'année ; les barèmes de sa caisse sont ceux de la période de l'activité
+  // (ni minimum ni forfait avant la création, pas de minimum de retraite sous le seuil de jours : ADR 020).
+  const profession = professionDe(activite, reglesDeLAnneeEntiere(regles))
   const caisse = caisseDe(profession)
   if (!profession || !caisse) return undefined
   const precedente = PARTICULARITES_DES_CAISSES[caisse].assietteDeLAnneePrecedente && assietteAnneePrecedente !== undefined ? { anneePrecedente: { annee: annee - 1, assiette: assietteAnneePrecedente } } : {}

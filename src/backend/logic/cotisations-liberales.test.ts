@@ -110,7 +110,7 @@ describe("cotisations d'un libéral réglementé au réel", () => {
   })
 
   it("sans revenu : minimums de la CNAVPL (indemnités journalières, retraite de base) et de la caisse, signalés", () => {
-    const tns = calculerCotisationsTNS(0, regles2026.TNS, parametresDeLaCaisse({ profession: "osteopathe" }, regles2026, 2026))
+    const tns = calculerCotisationsTNS(0, regles2026, parametresDeLaCaisse({ profession: "osteopathe" }, regles2026, 2026))
     expect(tns.cotisations.retraiteDeBase).toBeCloseTo(0.106 * 5409, 6)
     expect(tns.cotisations.indemnitesJournalieres).toBeCloseTo(0.003 * 19224, 6)
     expect(tns.cotisations.invaliditeDeces).toBeCloseTo(0.005 * 0.37 * pass, 6)
@@ -120,15 +120,15 @@ describe("cotisations d'un libéral réglementé au réel", () => {
 
   it("2024 : barème maladie propre aux libéraux réglementés (6,5 % au-delà de 110 % du PASS)", () => {
     const regles2024 = reglesPubliees(2024)
-    const tns = calculerCotisationsTNS(100000, regles2024.TNS, parametresDeLaCaisse({ profession: "architecte" }, regles2024, 2024))
+    const tns = calculerCotisationsTNS(100000, regles2024, parametresDeLaCaisse({ profession: "architecte" }, regles2024, 2024))
     expect(tns.cotisations.maladieMaternite).toBeCloseTo(0.065 * tns.assiette, 6)
     expect(tns.cotisations.retraiteComplementaire).toBeCloseTo(0.09 * 46368 + 0.22 * (tns.assiette - 46368), 6)
   })
 
   it("le revenu avant cotisations d'un gérant libéral redonne le net demandé", () => {
     const caisse = parametresDeLaCaisse(kine, regles2026, 2026)
-    const brut = revenuAvantCotisationsPourUnNet(30000, regles2026.TNS, caisse)
-    expect(brut - calculerCotisationsTNS(brut, regles2026.TNS, caisse).total).toBeCloseTo(30000, 4)
+    const brut = revenuAvantCotisationsPourUnNet(30000, regles2026, caisse)
+    expect(brut - calculerCotisationsTNS(brut, regles2026, caisse).total).toBeCloseTo(30000, 4)
   })
 })
 

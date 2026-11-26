@@ -14,7 +14,7 @@ import { reglesDeTest } from "./testing/regles-de-test.js"
  * assiettes minimales : 16 000 € (indemnités journalières), 6 000 € (retraite de base), 4 000 € (invalidité-décès).
  */
 const TNS = reglesDeTest.TNS
-const cotisations = (revenu: number) => calculerCotisationsTNS(revenu, TNS)
+const cotisations = (revenu: number) => calculerCotisationsTNS(revenu, reglesDeTest)
 
 /** Montants attendus, à l'arrondi des calculs en virgule flottante près. */
 const environ = (montants: Record<string, number>) => Object.fromEntries(Object.entries(montants).map(([cle, montant]) => [cle, expect.closeTo(montant, 6)]))
@@ -105,24 +105,24 @@ describe("calculerCotisationsTNS", () => {
 
 describe("revenuAvantCotisationsPourUnNet", () => {
   it("retrouve le revenu dont le net est le reste après cotisations", () => {
-    expect(revenuAvantCotisationsPourUnNet(27300, TNS)).toBeCloseTo(40000, 6)
-    expect(revenuAvantCotisationsPourUnNet(141500, TNS)).toBeCloseTo(200000, 6)
+    expect(revenuAvantCotisationsPourUnNet(27300, reglesDeTest)).toBeCloseTo(40000, 6)
+    expect(revenuAvantCotisationsPourUnNet(141500, reglesDeTest)).toBeCloseTo(200000, 6)
   })
 
   it("inclut dans le revenu les cotisations minimales payées sans rémunération", () => {
     // Revenu R sous 3 200 € : assiette R - 800 ; cotisations 1 500 + 18 % x (R - 800) = 1 356 + 0,18 R = R, soit R = 1 356 / 0,82.
-    expect(revenuAvantCotisationsPourUnNet(0, TNS)).toBeCloseTo(1356 / 0.82, 6)
+    expect(revenuAvantCotisationsPourUnNet(0, reglesDeTest)).toBeCloseTo(1356 / 0.82, 6)
   })
 
   it("accepte un net négatif", () => {
     // Revenu nul : 1 500 € de cotisations minimales, net de - 1 500 €.
-    expect(revenuAvantCotisationsPourUnNet(-1500, TNS)).toBeCloseTo(0, 6)
+    expect(revenuAvantCotisationsPourUnNet(-1500, reglesDeTest)).toBeCloseTo(0, 6)
   })
 
   it.each([0, 5000, 30000, 80000, 300000])("vérifie revenu - cotisations = net pour %i € avec les règles en vigueur", net => {
-    const revenu = revenuAvantCotisationsPourUnNet(net, reglesPubliees(2026).TNS)
+    const revenu = revenuAvantCotisationsPourUnNet(net, reglesPubliees(2026))
 
-    expect(revenu - calculerCotisationsTNS(revenu, reglesPubliees(2026).TNS).total).toBeCloseTo(net, 6)
+    expect(revenu - calculerCotisationsTNS(revenu, reglesPubliees(2026)).total).toBeCloseTo(net, 6)
   })
 })
 
@@ -143,7 +143,7 @@ describe("avertissementCotisationsMinimales", () => {
 
     const regles2026 = reglesPubliees(2026)
     const attendus = Math.floor(regles2026.TNS.cotisationsMinimales.retraiteDeBase / regles2026.protectionSociale.revenuParTrimestre)
-    expect(avertissementCotisationsMinimales(calculerCotisationsTNS(0, regles2026.TNS), "des indépendants", regles2026)[0]).toContain(`valident ${attendus} trimestres`)
+    expect(avertissementCotisationsMinimales(calculerCotisationsTNS(0, regles2026), "des indépendants", regles2026)[0]).toContain(`valident ${attendus} trimestres`)
   })
 
   it("prend l'assiette minimale des libéraux pour une caisse de libéraux", () => {

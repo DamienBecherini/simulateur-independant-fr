@@ -17,7 +17,7 @@
 import type { FinancialFlow, MonthlyGridData } from "../../types.js"
 import { joursDActivite, libelleDuMois, lireMois, type MoisCivil } from "./dispositifs.js"
 import { euros } from "./format.js"
-import type { BaremeInvaliditeDecesLiberal, ReglesFiscales } from "./regles.js"
+import type { BaremeInvaliditeDecesLiberal, ReglesDeLaPeriode, ReglesFiscales } from "./regles.js"
 
 /** L'année de création d'une activité, quand elle ne compte pas douze mois d'activité. */
 export interface AnneeDeCreation {
@@ -56,16 +56,27 @@ function sansMinimumDeRetraiteSousLeSeuil<M extends { retraiteDeBase: number; jo
   return jours < minimums.joursDAffiliationMinimumRetraiteDeBase ? { ...minimums, retraiteDeBase: 0 } : minimums
 }
 
-/** Les règles de l'année de création : plafonds et limites au prorata des mois d'activité (tableau de l'ADR 020). */
-export function reglesDeLAnneeDeCreation(regles: ReglesFiscales, { mois, jours }: AnneeDeCreation): ReglesFiscales {
+/**
+ * Des règles de période : `regles`, tirées de celles de l'année entière, qu'elles gardent sous la main. C'est ici, et
+ * nulle part ailleurs, que des règles reçoivent la marque que le compilateur leur demande (voir `ReglesDeLaPeriode`).
+ */
+function pourLaPeriode(regles: ReglesFiscales, anneeEntiere: ReglesFiscales): ReglesDeLaPeriode {
+  // Par « unknown » : la marque n'existe pas à l'exécution, aucune conversion directe ne peut donc la poser.
+  return { ...regles, anneeEntiere } as unknown as ReglesDeLaPeriode
+}
+
+/**
+ * Les règles de l'année de création : plafonds et limites au prorata des mois d'activité (tableau de l'ADR 020). La
+ * formation professionnelle, forfait sur le plafond entier, lit celui de l'année entière (cotisationsTNS.ts).
+ */
+export function reglesDeLAnneeDeCreation(regles: ReglesFiscales, { mois, jours }: AnneeDeCreation): ReglesDeLaPeriode {
   const part = mois / 12
   const { TNS, liberauxReglementes, regimeGeneral, IS } = regles
-  return {
+  const reduites: ReglesFiscales = {
     ...regles,
     TNS: {
       ...TNS,
       plafondSecuriteSociale: TNS.plafondSecuriteSociale * part,
-      formationProfessionnelle: { ...TNS.formationProfessionnelle, plafondEntier: TNS.formationProfessionnelle.plafondEntier ?? TNS.plafondSecuriteSociale },
       cotisationsMinimales: sansMinimumDeRetraiteSousLeSeuil({ ...TNS.cotisationsMinimales, invaliditeDeces: TNS.cotisationsMinimales.invaliditeDeces * part }, jours)
     },
     liberauxReglementes: {
@@ -79,6 +90,7 @@ export function reglesDeLAnneeDeCreation(regles: ReglesFiscales, { mois, jours }
     },
     IS: { ...IS, plafondTauxReduit: IS.plafondTauxReduit * part }
   }
+  return pourLaPeriode(reduites, regles)
 }
 
 /** Une invalidité-décès de caisse sans forfait ni assiette minimale. */
@@ -88,10 +100,10 @@ const sansForfait = (bareme: BaremeInvaliditeDecesLiberal): BaremeInvaliditeDece
  * Les règles d'une année avant la création : l'activité n'est pas affiliée, elle ne doit ni cotisation minimale ni
  * forfait (formation professionnelle, forfaits des caisses de libéraux). Ce qui y est saisi est calculé sans eux.
  */
-function reglesAvantLaCreation(regles: ReglesFiscales): ReglesFiscales {
+function reglesAvantLaCreation(regles: ReglesFiscales): ReglesDeLaPeriode {
   const { TNS, liberauxReglementes } = regles
   const { CIPAV, CARPIMKO, commun } = liberauxReglementes
-  return {
+  const sansMinimumNiForfait: ReglesFiscales = {
     ...regles,
     TNS: {
       ...TNS,
@@ -110,13 +122,14 @@ function reglesAvantLaCreation(regles: ReglesFiscales): ReglesFiscales {
       }
     }
   }
+  return pourLaPeriode(sansMinimumNiForfait, regles)
 }
 
-/** Les règles qu'applique une activité pour l'année, d'après sa période. */
-export function reglesDeLaPeriode(regles: ReglesFiscales, periode: PeriodeDeLActivite): ReglesFiscales {
+/** Les règles qu'applique une activité pour l'année, d'après sa période : celles de l'année, pour une année entière. */
+export function reglesDeLaPeriode(regles: ReglesFiscales, periode: PeriodeDeLActivite): ReglesDeLaPeriode {
   if (periode.cas === "creation") return reglesDeLAnneeDeCreation(regles, periode)
   if (periode.cas === "avant") return reglesAvantLaCreation(regles)
-  return regles
+  return pourLaPeriode(regles, regles)
 }
 
 // --- Ce que les résultats en disent ---

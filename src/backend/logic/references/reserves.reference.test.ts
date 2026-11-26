@@ -213,7 +213,7 @@ describe("une EURL distribue ses réserves en 2026 : le seuil de 10 % du capital
     expect(en2026.foyers[0].prelevementsSociaux).toBe(186)
     // Le revenu avant cotisations du gérant : celui de sa rémunération (nulle, mais il doit les cotisations minimales),
     // plus les dividendes au-delà du seuil.
-    expect(eurl.cotisationsTNS!.revenuAvantCotisations - revenuAvantCotisationsPourUnNet(0, reglesPubliees(2026).TNS)).toBeCloseTo(5000, 6)
+    expect(eurl.cotisationsTNS!.revenuAvantCotisations - revenuAvantCotisationsPourUnNet(0, reglesPubliees(2026))).toBeCloseTo(5000, 6)
     expect(eurl.partage?.cotisationsSurDividendes).toBeGreaterThan(0)
   })
 })

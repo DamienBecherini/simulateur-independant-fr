@@ -49,11 +49,10 @@ export interface ReglesTNS {
   /** Taux de CSG et de CRDS, appliqués à la même assiette que les cotisations. */
   csgCrds: { csgDeductible: number; csgNonDeductible: number; crds: number }
   /**
-   * Contribution à la formation professionnelle : forfait égal à un taux du plafond. `plafondEntier` n'est jamais dans
-   * un fichier de règles : l'année de création, le plafond est réduit mais le forfait reste calculé sur le plafond
-   * entier (voir l'ADR 020).
+   * Contribution à la formation professionnelle : forfait égal à un taux du plafond de l'année entière, même l'année de
+   * création, où les cotisations se calculent sur un plafond réduit (voir l'ADR 020 et `reglesDeLAnneeEntiere`).
    */
-  formationProfessionnelle: { tauxSurPlafond: number; plafondEntier?: number }
+  formationProfessionnelle: { tauxSurPlafond: number }
   /**
    * Assiettes minimales (en euros) des risques qui en ont une : la cotisation est due au moins sur ce montant. Celle de
    * la retraite de base n'est due qu'après `joursDAffiliationMinimumRetraiteDeBase` jours d'affiliation dans l'année.
@@ -297,6 +296,9 @@ export interface ReglesEpargneRetraite {
   anneesDeReport: number
 }
 
+/** Marque des règles d'une période (`ReglesDeLaPeriode`). Elle n'existe qu'à la compilation : aucun objet ne porte cette clé. */
+declare const PERIODE: unique symbol
+
 /**
  * Les règles fiscales et sociales d'une année, lues par le moteur. Elles vivent dans `src/backend/regles/<année>.json`
  * (liste dans `src/backend/regles/index.ts`) : ajouter une année ne demande qu'un fichier et une ligne de cette liste.
@@ -359,6 +361,31 @@ export interface ReglesFiscales {
     abattement: TauxMicro & { minimum: number }
     versementLiberatoire: { plafondRfrParPart: number; taux: TauxMicro }
   }
+  /** Jamais présente : les règles d'une année entière ne portent pas la marque de celles d'une période (ci-dessous). */
+  readonly [PERIODE]?: never
+}
+
+/**
+ * Les règles qu'une activité applique pour sa période d'activité dans l'année : celles de l'année, avec, l'année de sa
+ * création, des plafonds et des limites réduits aux mois d'activité, et avant sa création, ni minimum ni forfait
+ * (annee-de-creation.ts, ADR 020). Elles ont la forme des règles de l'année, mais le compilateur les en distingue :
+ *   - un calcul de cotisations ou de société les accepte (`ReglesApplicables`) ;
+ *   - une fonction qui veut les montants de l'année entière (épargne retraite, notes, profession, zone) demande des
+ *     `ReglesFiscales` et les refuse : lui passer un plafond de la sécurité sociale réduit ne compile pas.
+ * Qui tient des règles de période et veut l'année entière passe par `reglesDeLAnneeEntiere`.
+ */
+export type ReglesDeLaPeriode = Omit<ReglesFiscales, typeof PERIODE> & {
+  readonly [PERIODE]: true
+  /** Les règles de l'année entière, dont celles-ci sont tirées. */
+  readonly anneeEntiere: ReglesFiscales
+}
+
+/** Les règles que reçoit un calcul qui vaut pour une année entière comme pour une période : il les applique sans les juger. */
+export type ReglesApplicables = ReglesFiscales | ReglesDeLaPeriode
+
+/** Les règles de l'année entière : celles dont des règles de période sont tirées, ou les règles elles-mêmes. */
+export function reglesDeLAnneeEntiere(regles: ReglesApplicables): ReglesFiscales {
+  return "anneeEntiere" in regles ? regles.anneeEntiere : regles
 }
 
 /*

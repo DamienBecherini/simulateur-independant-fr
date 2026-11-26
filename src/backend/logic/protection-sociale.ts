@@ -1,7 +1,7 @@
 // src/backend/logic/protection-sociale.ts
 
 import type { CaisseLiberale, GarantieSociale, NiveauDeGarantie, ProtectionSociale, StatutCompare } from "../../types.js"
-import type { ReglesFiscales, TauxMicro } from "./regles.js"
+import type { ReglesApplicables, TauxMicro } from "./regles.js"
 
 /*
  * Note qualitative de protection sociale, sur 5 étoiles, pour le comparateur. Elle combine le régime
@@ -63,7 +63,7 @@ const GARANTIES_TNS: Record<CaisseLiberale | "SSI", Garanties> = {
 }
 const GARANTIES_MICRO: Garanties = { retraite: FAIBLE, arretMaladie: FAIBLE, invaliditeDeces: FAIBLE, accidentDuTravail: NON, chomage: NON }
 
-function trimestresValides(revenuCotise: number, regles: ReglesFiscales): number {
+function trimestresValides(revenuCotise: number, regles: ReglesApplicables): number {
   return Math.max(0, Math.min(4, Math.floor(revenuCotise / regles.protectionSociale.revenuParTrimestre)))
 }
 
@@ -72,7 +72,7 @@ function texteTrimestres(trimestres: number): string {
 }
 
 /** Président de SASU : tout dépend de sa rémunération brute, sur laquelle il cotise à la retraite de base. */
-function protectionSASU(remunerationBrute: number, regles: ReglesFiscales): ProtectionSociale {
+function protectionSASU(remunerationBrute: number, regles: ReglesApplicables): ProtectionSociale {
   if (remunerationBrute <= 0) {
     return { etoiles: 1, trimestres: 0, resume: "Sans rémunération, aucune couverture liée au mandat : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni prévoyance.", garanties: SANS_GARANTIE }
   }
@@ -86,7 +86,7 @@ function protectionSASU(remunerationBrute: number, regles: ReglesFiscales): Prot
  * étoile du salarié classique quand son salaire valide 4 trimestres. Ses droits suivent le salaire versé : une année
  * sans mission n'en ouvre aucun.
  */
-function protectionPortage(salaireBrut: number, regles: ReglesFiscales): ProtectionSociale {
+function protectionPortage(salaireBrut: number, regles: ReglesApplicables): ProtectionSociale {
   if (salaireBrut <= 0) {
     return { etoiles: 1, trimestres: 0, resume: "Sans salaire versé par la société de portage, aucune couverture liée à l'activité : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni droits au chômage.", garanties: SANS_GARANTIE }
   }
@@ -99,7 +99,7 @@ function protectionPortage(salaireBrut: number, regles: ReglesFiscales): Protect
  * Gérant d'EURL ou entrepreneur individuel au réel : régime des indépendants. La retraite de base est cotisée
  * sur l'assiette sociale, au moins sur son assiette minimale, qui garantit un plancher de trimestres.
  */
-function protectionTNS(assiette: number, regles: ReglesFiscales, caisse?: CaisseLiberale): ProtectionSociale {
+function protectionTNS(assiette: number, regles: ReglesApplicables, caisse?: CaisseLiberale): ProtectionSociale {
   // Un libéral réglementé a l'assiette minimale de la CNAVPL (450 heures au SMIC horaire, comme les indépendants).
   const assietteMinimale = caisse ? regles.liberauxReglementes.commun.cotisationsMinimales.retraiteDeBase : regles.TNS.cotisationsMinimales.retraiteDeBase
   const trimestres = trimestresValides(Math.max(assiette, assietteMinimale), regles)
@@ -112,7 +112,7 @@ function protectionTNS(assiette: number, regles: ReglesFiscales, caisse?: Caisse
 }
 
 /** Micro-entrepreneur : mêmes droits que les indépendants, mais proportionnels au chiffre d'affaires, sans aucun minimum. */
-function protectionMicro({ chiffreAffairesMicro: ca, beneficieACRE = false, acre, retraiteBnc }: DonneesProtection, regles: ReglesFiscales): ProtectionSociale {
+function protectionMicro({ chiffreAffairesMicro: ca, beneficieACRE = false, acre, retraiteBnc }: DonneesProtection, regles: ReglesApplicables): ProtectionSociale {
   const taux: TauxMicro = regles.microEntreprise.cotisations
   const part = regles.protectionSociale.partRetraiteDeBaseMicro
   const tauxRetraite = regles.protectionSociale.tauxRetraiteDeBase
@@ -139,7 +139,7 @@ function protectionMicro({ chiffreAffairesMicro: ca, beneficieACRE = false, acre
  * d'affaires ; le salarié porté est un salarié du régime général, avec l'assurance chômage. Un nouveau statut doit y dire
  * quel régime est le sien.
  */
-const PROTECTION_PAR_STATUT: Record<StatutCompare, (donnees: DonneesProtection, regles: ReglesFiscales) => ProtectionSociale> = {
+const PROTECTION_PAR_STATUT: Record<StatutCompare, (donnees: DonneesProtection, regles: ReglesApplicables) => ProtectionSociale> = {
   SASU: (donnees, regles) => protectionSASU(donnees.remunerationBrute, regles),
   EURL: (donnees, regles) => protectionTNS(donnees.assietteTNS, regles, donnees.caisse),
   EI: (donnees, regles) => protectionTNS(donnees.assietteTNS, regles, donnees.caisse),
@@ -148,6 +148,6 @@ const PROTECTION_PAR_STATUT: Record<StatutCompare, (donnees: DonneesProtection, 
   portage: (donnees, regles) => protectionPortage(donnees.salaireBrutPorte ?? 0, regles)
 }
 
-export function evaluerProtectionSociale(statut: StatutCompare, donnees: DonneesProtection, regles: ReglesFiscales): ProtectionSociale {
+export function evaluerProtectionSociale(statut: StatutCompare, donnees: DonneesProtection, regles: ReglesApplicables): ProtectionSociale {
   return PROTECTION_PAR_STATUT[statut](donnees, regles)
 }

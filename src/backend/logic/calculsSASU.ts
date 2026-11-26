@@ -3,7 +3,7 @@
 import { calculerResultatSociete, type EntreesSociete, type ResultatSociete } from "./calculsSociete.js"
 import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.js"
 import { avecUnePartDuPlafond } from "./plafond-entre-mandats.js"
-import type { ReglesFiscales } from "./regles.js"
+import type { ReglesApplicables } from "./regles.js"
 
 /**
  * SASU à l'IS : le président est assimilé salarié. Sa rémunération saisie est nette : on retrouve le brut dont elle
@@ -13,7 +13,7 @@ import type { ReglesFiscales } from "./regles.js"
  * Les dividendes supportent les prélèvements sociaux, jamais de cotisations. Un président rémunéré par plusieurs SASU
  * n'a, dans chacune, que sa part du plafond de la sécurité sociale (`partDuPlafond`).
  */
-export function calculerSASU(entrees: EntreesSociete, regles: ReglesFiscales): ResultatSociete {
+export function calculerSASU(entrees: EntreesSociete, regles: ReglesApplicables): ResultatSociete {
   const regimeGeneral = avecUnePartDuPlafond(regles.regimeGeneral, entrees.partDuPlafond ?? 1)
   const president = calculerCotisationsSalarie(brutPourUnNet(entrees.remunerationNette, "president", regimeGeneral), "president", regimeGeneral)
   const resultat = calculerResultatSociete(entrees, president.coutEmployeur - president.net, regles)

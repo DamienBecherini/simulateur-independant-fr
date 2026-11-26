@@ -43,7 +43,7 @@ Le simulateur ne connaît que le mois de création : l'activité commence le 1er
 
 | Bloc | Au prorata | Reste entier |
 |---|---|---|
-| Indépendants (`TNS`) | PASS × mois / 12 : tranches, barèmes progressifs, bornes de l'abattement ; minimum d'invalidité-décès × mois / 12 | minimum des indemnités journalières ; formation professionnelle (sur le PASS entier, `formationProfessionnelle.plafondEntier`) ; minimum de retraite de base, sauf moins de 90 jours d'activité (alors aucun) |
+| Indépendants (`TNS`) | PASS × mois / 12 : tranches, barèmes progressifs, bornes de l'abattement ; minimum d'invalidité-décès × mois / 12 | minimum des indemnités journalières ; formation professionnelle (sur le PASS de l'année entière, que les règles de la période gardent sous la main : `reglesDeLAnneeEntiere`) ; minimum de retraite de base, sauf moins de 90 jours d'activité (alors aucun) |
 | Libéraux réglementés (`liberauxReglementes.commun`) | barèmes en part du PASS, par le PASS des indépendants | minimum des indemnités journalières ; minimum de retraite de base, sauf moins de 90 jours |
 | Régime général (`regimeGeneral`) | plafond × mois / 12 (un PMSS par mois de mandat ou d'emploi) ; SMIC annuel de la réduction générale × mois / 12 | taux |
 | Impôt sur les sociétés (`IS`) | limite du taux réduit × mois / 12 | taux |

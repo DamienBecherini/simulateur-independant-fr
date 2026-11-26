@@ -4,7 +4,7 @@ import type { CotisationTNS, DetailCotisationsTNS } from "../../types.js"
 import { euros } from "./format.js"
 import { parTranches, progressive } from "./baremes.js"
 import { cotisationsDeLaCaisse, type CotisationsDeLaCaisse, type ParametresDeLaCaisse } from "./cotisations-liberales.js"
-import type { ReglesFiscales, ReglesTNS, TrancheCotisation } from "./regles.js"
+import { reglesDeLAnneeEntiere, type ReglesApplicables, type ReglesTNS, type TrancheCotisation } from "./regles.js"
 
 export { parTranches } from "./baremes.js"
 
@@ -58,9 +58,11 @@ function cotisationsDesIndependants(assiette: number, regles: ReglesTNS): Omit<C
  * Toutes les cotisations et contributions d'une année, à partir du revenu professionnel avant cotisations. Avec une
  * caisse de libéraux réglementés (voir cotisations-liberales.ts), ses barèmes remplacent ceux des indépendants pour la
  * maladie, les indemnités journalières, la retraite et l'invalidité-décès, et l'ASV et la CURPS s'ajoutent au total ;
- * les allocations familiales, la CSG-CRDS et la formation professionnelle restent celles du bloc TNS.
+ * les allocations familiales, la CSG-CRDS et la formation professionnelle restent celles du bloc TNS. Les règles sont
+ * celles de l'année ou celles de la période d'activité (plafond réduit l'année de création, ADR 020).
  */
-export function calculerCotisationsTNS(revenuAvantCotisations: number, regles: ReglesTNS, caisse?: ParametresDeLaCaisse): CotisationsTNS {
+export function calculerCotisationsTNS(revenuAvantCotisations: number, reglesApplicables: ReglesApplicables, caisse?: ParametresDeLaCaisse): CotisationsTNS {
+  const regles = reglesApplicables.TNS
   const pass = regles.plafondSecuriteSociale
   const assiette = assietteSociale(revenuAvantCotisations, regles)
   const { csgDeductible, csgNonDeductible, crds } = regles.csgCrds
@@ -71,8 +73,8 @@ export function calculerCotisationsTNS(revenuAvantCotisations: number, regles: R
     allocationsFamiliales: progressive(assiette, regles.allocationsFamiliales, pass),
     csgDeductible: assiette * csgDeductible,
     csgNonDeductibleEtCrds: assiette * (csgNonDeductible + crds),
-    // Un forfait sur le plafond entier, même l'année de création (ADR 020).
-    formationProfessionnelle: (regles.formationProfessionnelle.plafondEntier ?? pass) * regles.formationProfessionnelle.tauxSurPlafond
+    // Un forfait sur le plafond de l'année entière, même l'année de création (ADR 020).
+    formationProfessionnelle: reglesDeLAnneeEntiere(reglesApplicables).TNS.plafondSecuriteSociale * regles.formationProfessionnelle.tauxSurPlafond
   }
   const detailDeLaCaisse = propres.detail
   const enPlus = detailDeLaCaisse ? detailDeLaCaisse.asv + detailDeLaCaisse.curps : 0
@@ -98,7 +100,7 @@ export function calculerCotisationsTNS(revenuAvantCotisations: number, regles: R
  * sont positives) et `net + écart`, l'écart doublant jusqu'à couvrir les cotisations ; l'intervalle est ensuite
  * divisé par deux à chaque tour, jusqu'à une précision bien inférieure au centime.
  */
-export function revenuAvantCotisationsPourUnNet(net: number, regles: ReglesTNS, caisse?: ParametresDeLaCaisse): number {
+export function revenuAvantCotisationsPourUnNet(net: number, regles: ReglesApplicables, caisse?: ParametresDeLaCaisse): number {
   const netDe = (revenu: number) => revenu - calculerCotisationsTNS(revenu, regles, caisse).total
   let ecart = Math.max(1, Math.abs(net))
   while (netDe(net + ecart) < net) ecart *= 2
@@ -117,7 +119,7 @@ export function revenuAvantCotisationsPourUnNet(net: number, regles: ReglesTNS, 
  * Avertissement quand l'assiette minimale de la retraite de base s'applique, avec le supplément qu'elles coûtent et les
  * trimestres qu'elle valide (assiette minimale de l'année, celle des libéraux pour une caisse de libéraux).
  */
-export function avertissementCotisationsMinimales(cotisations: CotisationsTNS, qui: string, regles: ReglesFiscales, caisse?: ParametresDeLaCaisse): string[] {
+export function avertissementCotisationsMinimales(cotisations: CotisationsTNS, qui: string, regles: ReglesApplicables, caisse?: ParametresDeLaCaisse): string[] {
   if (!cotisations.minimumRetraiteApplique) return []
   const assietteMinimale = (caisse ? caisse.regles.commun : regles.TNS).cotisationsMinimales.retraiteDeBase
   const trimestres = Math.min(4, Math.floor(assietteMinimale / regles.protectionSociale.revenuParTrimestre))
