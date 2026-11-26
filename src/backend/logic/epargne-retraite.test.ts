@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import type { EpargneRetraiteDeLaPersonne, PlafondReporte } from "../../types.js"
-import { avertissementsEpargneRetraite, consigneDeLaMiseEnCommun, epargneRetraiteDesMembres, plafondCalculeSurLAnnee, plafondMinimalDeLAnnee, plafondsLaissesALAnneeSuivante, type LectureDeLaDeduction, type MembreDuFoyer, type PlafondsHerites } from "./epargne-retraite.js"
+import { avertissementsEpargneRetraite, baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, epargneRetraiteDesMembres, origineDuPlafondEnClair, plafondCalculeSurLAnnee, plafondMinimalDeLAnnee, plafondsLaissesALAnneeSuivante, type LectureDeLaDeduction, type MembreDuFoyer, type PlafondsHerites } from "./epargne-retraite.js"
 import { enTexteBrut } from "./format.js"
 import { reglesDeTest } from "./testing/regles-de-test.js"
 
@@ -292,5 +292,38 @@ describe("consigne de la mise en commun", () => {
 
   it("n'existe pas quand personne ne prend sur le plafond de l'autre", () => {
     expect(consigneDeLaMiseEnCommun({ trancheMarginale: 0.3, partDesRevenus: 0.1, personnes }, nomDe)).toBeNull()
+  })
+})
+
+describe("origine du plafond, en clair", () => {
+  it("dit d'où vient le plafond de l'année, avec l'année précédente quand elle compte", () => {
+    expect(origineDuPlafondEnClair({ originePlafond: "saisi" }, 2026)).toBe("saisi dans la fiche")
+    expect(origineDuPlafondEnClair({ originePlafond: "calcule" }, 2026)).toBe("calculé sur les revenus de 2025")
+    expect(origineDuPlafondEnClair({ originePlafond: "minimumFauteDeSaisie" }, 2026)).toBe("le minimum légal, faute de plafond saisi dans la fiche")
+    expect(origineDuPlafondEnClair({ originePlafond: "minimumFauteDAnneePrecedente" }, 2026)).toBe("le minimum légal, 2025 n'étant pas dans la simulation")
+  })
+
+  it("nomme la fiche de la personne quand son nom est donné, avec l'élision", () => {
+    expect(origineDuPlafondEnClair({ originePlafond: "saisi" }, 2026, "Sophie")).toBe("saisi dans la fiche de Sophie")
+    expect(origineDuPlafondEnClair({ originePlafond: "minimumFauteDeSaisie" }, 2026, "Anne")).toBe("le minimum légal, faute de plafond saisi dans la fiche d'Anne")
+    expect(origineDuPlafondEnClair({ originePlafond: "calcule" }, 2026, "Sophie")).toBe("calculé sur les revenus de 2025")
+  })
+})
+
+describe("base du plafond calculé, en clair", () => {
+  const base = (baseDuPlafondCalcule: "revenus" | "minimum" | "maximum", revenusProfessionnels: number) => enTexteBrut(baseDuPlafondCalculeEnClair({ baseDuPlafondCalcule, revenusProfessionnels }, 2026, 0.1))
+
+  it("cite la part des revenus d'activité professionnelle, et leur montant", () => {
+    expect(base("revenus", 60000)).toBe("10 % des revenus d'activité professionnelle de 2026 (60 000 €)")
+  })
+
+  it("dit ce que cette part aurait donné quand le minimum légal l'emporte, sauf sans revenu", () => {
+    expect(base("minimum", 45000)).toBe("le minimum légal (10 % des revenus d'activité professionnelle de 2026 ne donnent que 4 500 €)")
+    expect(base("minimum", 0)).toBe("le minimum légal")
+    expect(base("minimum", -5000)).toBe("le minimum légal")
+  })
+
+  it("dit que le maximum légal est atteint", () => {
+    expect(base("maximum", 500000)).toBe("le maximum légal")
   })
 })

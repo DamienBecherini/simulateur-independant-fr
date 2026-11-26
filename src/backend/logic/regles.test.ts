@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest"
 import fichier2024 from "../regles/2024.json" with { type: "json" }
 import fichier2025 from "../regles/2025.json" with { type: "json" }
 import fichier2026 from "../regles/2026.json" with { type: "json" }
-import { ANNEE_COURANTE, PREMIERE_ANNEE_DES_REGLES, reglesDeLAnnee, reglesPubliees } from "./regles.js"
+import { ANNEE_COURANTE, PREMIERE_ANNEE_DES_REGLES, premiereAnneeSimulable, reglesDeLAnnee, reglesPubliees } from "./regles.js"
 
 describe("reglesDeLAnnee", () => {
   it("connaît les règles de 2024 à l'année en cours, 2026 au moins", () => {
@@ -49,5 +49,20 @@ describe("reglesPubliees", () => {
     const future = ANNEE_COURANTE + 2
 
     expect(() => reglesPubliees(future)).toThrow(`Aucun fichier de règles pour l'année ${future}.`)
+  })
+})
+
+describe("premiereAnneeSimulable", () => {
+  it("donne la plus ancienne année que le simulateur sait simuler, quel que soit l'ordre", () => {
+    expect(premiereAnneeSimulable([2026, 2024, 2025])).toBe(2024)
+    expect(premiereAnneeSimulable([2026])).toBe(2026)
+    // Une année au-delà des dernières règles se simule, avec les dernières connues.
+    expect(premiereAnneeSimulable([ANNEE_COURANTE + 3])).toBe(ANNEE_COURANTE + 3)
+  })
+
+  it("écarte les années d'avant les premières règles, qui ne sont pas simulées", () => {
+    expect(premiereAnneeSimulable([PREMIERE_ANNEE_DES_REGLES - 2, PREMIERE_ANNEE_DES_REGLES - 1, PREMIERE_ANNEE_DES_REGLES, PREMIERE_ANNEE_DES_REGLES + 1])).toBe(PREMIERE_ANNEE_DES_REGLES)
+    expect(premiereAnneeSimulable([PREMIERE_ANNEE_DES_REGLES - 1])).toBeUndefined()
+    expect(premiereAnneeSimulable([])).toBeUndefined()
   })
 })
