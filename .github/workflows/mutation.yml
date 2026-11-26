@@ -83,12 +83,19 @@ jobs:
           pattern: rapport-mutation-lot-*
           path: reports/mutation
 
-      - name: Écrire le score d'ensemble dans le résumé du run
+      - name: Écrire le score d'ensemble dans le résumé du run, et échouer sous le seuil
+        # « shell: bash » explicite : GitHub y ajoute pipefail, sans quoi « tee » cacherait l'échec du script.
+        shell: bash
         env:
           PARTIEL: ${{ needs.stryker.result != 'success' && '--partiel' || '' }}
-        run: node scripts/bilan-mutation.mjs reports/mutation $PARTIEL | tee -a "$GITHUB_STEP_SUMMARY"
+          # Score d'ensemble exigé, en pourcents (83,56 % le 26 novembre 2026). Il porte sur tous les lots réunis :
+          # « thresholds.break » de stryker.config.json, qui jugerait chaque lot à part, reste vide.
+          SEUIL: 80
+        run: node scripts/bilan-mutation.mjs reports/mutation --seuil "$SEUIL" $PARTIEL | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Publier le rapport
+        # Sous le seuil aussi : c'est alors qu'on veut lire les mutants survivants.
+        if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rapport-mutation

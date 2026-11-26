@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { bilanEnMarkdown, compterLesStatuts, lireLesRapports, scoreDeMutation } from "./bilan-mutation.mjs"
+import { bilanEnMarkdown, compterLesStatuts, lireLaCommande, lireLesRapports, scoreDeMutation, seuilAtteint } from "./bilan-mutation.mjs"
 
 const rapport = (...statuts) => ({ files: { "src/backend/logic/module.ts": { mutants: statuts.map((status) => ({ status })) } } })
 
@@ -62,6 +62,46 @@ describe("bilanEnMarkdown", () => {
 
   it("le dit quand aucun rapport n'est arrivé", () => {
     expect(bilanEnMarkdown([], { partiel: true })).toContain("Score : **aucun mutant valide** (0 mutants, 0 lot).")
+  })
+
+  it("dit si le seuil exigé est atteint, juste après le score, et n'en parle pas sans seuil", () => {
+    // LOT_1 : 80 % exactement.
+    expect(bilanEnMarkdown([LOT_1], { seuil: 80 })).toContain("Score : **80,00 %** (5 mutants, 1 lot).\n\nSeuil de 80 % atteint.\n\n| Tués |")
+    expect(bilanEnMarkdown([LOT_1], { seuil: 80.5 })).toContain("\n\n**Seuil de 80,5 % non atteint : le run échoue.**\n\n| Tués |")
+    expect(bilanEnMarkdown([], { seuil: 0 })).toContain("**Seuil de 0 % non atteint : le run échoue.**")
+    expect(bilanEnMarkdown([LOT_1])).not.toContain("Seuil")
+  })
+})
+
+describe("seuilAtteint", () => {
+  it("compare le score au seuil, bornes comprises", () => {
+    expect(seuilAtteint(83.56, 80)).toBe(true)
+    expect(seuilAtteint(80, 80)).toBe(true)
+    expect(seuilAtteint(79.99, 80)).toBe(false)
+  })
+
+  it("n'est jamais atteint sans mutant valide : rien n'a été mesuré", () => {
+    expect(seuilAtteint(null, 0)).toBe(false)
+  })
+})
+
+describe("lireLaCommande", () => {
+  it("lit le dossier, « --partiel » et « --seuil », dans n'importe quel ordre", () => {
+    expect(lireLaCommande(["rapports", "--seuil", "80", "--partiel"])).toEqual({ dossier: "rapports", partiel: true, seuil: 80 })
+    expect(lireLaCommande(["--seuil", "82.5", "rapports"])).toEqual({ dossier: "rapports", partiel: false, seuil: 82.5 })
+    expect(lireLaCommande(["rapports", "--partiel"])).toEqual({ dossier: "rapports", partiel: true, seuil: undefined })
+  })
+
+  it("prend reports/mutation sans dossier, et ne confond pas la valeur du seuil avec lui", () => {
+    expect(lireLaCommande([])).toEqual({ dossier: "reports/mutation", partiel: false, seuil: undefined })
+    expect(lireLaCommande(["--seuil", "80"])).toEqual({ dossier: "reports/mutation", partiel: false, seuil: 80 })
+  })
+
+  it("refuse un seuil absent, illisible ou hors de 0 à 100", () => {
+    expect(() => lireLaCommande(["rapports", "--seuil"])).toThrow("« --seuil » attend un nombre de 0 à 100, reçu : undefined")
+    expect(() => lireLaCommande(["--seuil", "--partiel"])).toThrow("reçu : --partiel")
+    expect(() => lireLaCommande(["--seuil", "120"])).toThrow("reçu : 120")
+    expect(() => lireLaCommande(["--seuil", "-1"])).toThrow("reçu : -1")
   })
 })
 
