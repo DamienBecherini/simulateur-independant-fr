@@ -170,7 +170,7 @@ npm run test:all       # tout : tests avec couverture, puis tests de bout en bou
 npm run verifier       # avant une fusion : ce que vérifie la CI, en 6 à 10 minutes sur un poste récent
 npm run lint           # ESLint, dont la complexité cyclomatique
 npm run duplication    # détection de code dupliqué (jscpd)
-npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutation/
+npm run test:mutation -- --mutate src/backend/logic/calculsIR.ts  # tests de mutation (Stryker) d'un module, rapport dans reports/mutation/
 ```
 
 - **Tests** : fichiers `*.test.ts` placés à côté du code testé ; le moteur est testé avec des règles fictives aux chiffres ronds (`src/backend/logic/testing/`), pour que les montants attendus se vérifient de tête et ne dépendent pas du barème de l'année.
@@ -182,7 +182,7 @@ npm run test:mutation  # tests de mutation (Stryker), rapport dans reports/mutat
 - **Accessibilité (WCAG 2.2 AA, qui couvre le RGAA)** : audit axe-core de la démo web et de l'application dans les tests de bout en bout (chargement, comparateur déplié, mode sombre, téléphone, fenêtres), bloquant en CI ; tests dédiés des zones cliquables (24 px, 44 px sur écran tactile), des tailles de texte (12 px au moins, 14 px pour les phrases), du parcours au clavier avec focus visible et du curseur.
 - **Couverture** : seuil bloquant de 90 % (instructions, branches, fonctions, lignes) sur la logique pure : `src/backend/logic/`, `src/lib/`, le serveur MCP, le pont de la démo web et les scripts (`vitest.config.ts`).
 - **Complexité** : règle ESLint `complexity` plafonnée à 12 sur `src/`, sans exception.
-- **Mutation** : Stryker sur les modules de `src/backend/logic/` (hors sous-dossiers) (score d'environ 86 %), lancé chaque semaine et à la demande ; nécessite Node.js 22 ou supérieur.
+- **Mutation** : Stryker sur les modules de `src/backend/logic/` (hors sous-dossiers), jugés par les seuls tests du moteur (score de 83 % sur 6 671 mutants), lancé chaque semaine et à la demande, en douze lots ; nécessite Node.js 22 ou supérieur.
 - **Intégration continue** : GitHub Actions exécute lint, vérification des types, tests avec couverture et build à chaque push et pull request.
 - **SonarQube Cloud** (facultatif) : quand le secret `SONAR_TOKEN` est configuré, la CI envoie le code et la couverture à SonarQube Cloud (`sonar-project.properties`) et attend le verdict de la porte qualité : une porte rouge fait échouer le job, exigé sur `main` ; sinon, elle se contente de la détection de code dupliqué.
 - **Captures d'écran** : celles du README et de la fiche du Microsoft Store sont générées par `npm run captures` (Playwright, sur l'application compilée).
