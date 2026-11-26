@@ -10,7 +10,7 @@ import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
 import { createContext, useContext, useId, useState, type ReactNode } from "react"
 import { cleDeLActivite, cleDuFoyer, porteurDeLaPremiereAlerte } from "@/lib/resume"
-import { blocEpargneRetraite, mentionDeLEpargneDansLeNet, precisionDuRevenuFiscalDeReference, type BlocEpargneRetraite } from "@/lib/epargne-retraite"
+import { blocEpargneRetraite, mentionDeLEpargneDansLeNet, precisionDuRevenuFiscalDeReference, resteApresDepenses, type BlocEpargneRetraite } from "@/lib/epargne-retraite"
 import { TITRE_DE_LA_MISE_EN_COMMUN } from "@/backend/logic/epargne-retraite"
 import { AlerteCourte } from "./AlerteCourte"
 import { useAffichageResume } from "../hooks/useAffichage"
@@ -295,8 +295,9 @@ function BlocDeLEpargneRetraite({ bloc, cache, sansLImpotEconomise = false, clas
     <section aria-label="Épargne retraite (PER)" className={cn("mt-3 space-y-2 border-t border-slate-100 pt-2 dark:border-slate-800", className)}>
       <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Épargne retraite (PER)</p>
       <dl className="space-y-1 text-sm">
-        {lignes.map(ligne => (
-          <Row key={ligne.libelle} label={ligne.libelle} value={ligne.valeur} hint={ligne.precision} gain={ligne.nature === "economie"} className={ligne.nature === "economie" ? undefined : cache?.ligne} />
+        {/* Clé par rang : deux personnes peuvent porter le même nom, et leurs libellés seraient alors identiques. */}
+        {lignes.map((ligne, rang) => (
+          <Row key={rang} label={ligne.libelle} value={ligne.valeur} hint={ligne.precision} gain={ligne.nature === "economie"} className={ligne.nature === "economie" ? undefined : cache?.ligne} />
         ))}
       </dl>
       {bloc.consigne ? (
@@ -310,6 +311,7 @@ function BlocDeLEpargneRetraite({ bloc, cache, sansLImpotEconomise = false, clas
 
 /** Lignes et compléments d'une carte de foyer ; `cache`, les classes des lignes de détail dans l'affichage classique. */
 function piecesDuFoyer(foyer: FoyerFiscalResult, members: PersonResult[], showRates: boolean, cache: string | undefined, annee: number) {
+  const reste = resteApresDepenses(foyer)
   return {
     epargneRetraite: blocEpargneRetraite(foyer, annee, id => members.find(m => m.entityId === id)?.name ?? id),
     revenus: (
@@ -323,7 +325,7 @@ function piecesDuFoyer(foyer: FoyerFiscalResult, members: PersonResult[], showRa
     impot: <LignesDeLImpot foyer={foyer} />,
     prelevementsSociaux: foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${euros(foyer.prelevementsSociaux)}`} className={cache} /> : null,
     rfr: <Row label="Revenu fiscal de référence" value={euros(foyer.revenuFiscalDeReference)} hint={precisionDuRevenuFiscalDeReference(foyer)} />,
-    reste: foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={euros(foyer.netApresImpots - foyer.depenses)} hint={`${euros(foyer.depenses)} de dépenses`} className={cache} /> : null,
+    reste: reste ? <Row label={reste.libelle} value={euros(reste.montant)} hint={reste.precision} className={cache} /> : null,
     complements: (
       <>
         {showRates ? <FoyerRates foyer={foyer} /> : null}

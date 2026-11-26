@@ -3,7 +3,7 @@
 // et Firefox (qui ne laisse pas styler ses flèches), en thème clair comme sombre, avec de l'air entre le nombre et
 // les boutons, et des cibles de 24 px au lieu de flèches minuscules.
 
-import type { ComponentProps } from "react"
+import type { ComponentProps, KeyboardEvent } from "react"
 import { Minus, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -28,14 +28,23 @@ function saisir(champ: HTMLInputElement, valeur: number) {
  * Les boutons ne prennent pas le focus : au clavier, les flèches haut et bas du champ font la même chose, sans deux
  * arrêts de tabulation de plus par champ. Sur un écran tactile, ils s'effacent comme les flèches du navigateur :
  * le clavier numérique suffit.
+ *
+ * Un champ sans pas imposé (`step="any"`, pour qu'une valeur quelconque s'enregistre) qui donne un pas à ses boutons
+ * (`pas`) le garde au clavier : le navigateur, lui, avancerait de 1. Sans `pas`, les flèches restent au navigateur.
  */
-export function ChampNumerique({ className, classNameChamp, pas = 1, quoi, step, min, max, ...props }: ChampNumeriqueProps) {
-  const pasEffectif = pasDuChamp(step, pas)
+export function ChampNumerique({ className, classNameChamp, pas, quoi, step, min, max, onKeyDown, ...props }: ChampNumeriqueProps) {
+  const pasEffectif = pasDuChamp(step, pas ?? 1)
   const nom = quoi ?? (props["aria-label"] as string | undefined) ?? "la valeur"
-  const pousser = (sens: 1 | -1, bouton: HTMLButtonElement) => {
-    const champ = bouton.closest("[data-champ-nombre]")?.querySelector("input")
+  const avancer = (champ: HTMLInputElement | null | undefined, sens: 1 | -1) => {
     if (!champ || champ.disabled || champ.readOnly) return
     saisir(champ, valeurApresUnPas(Number.parseFloat(champ.value), pasEffectif, sens, min === undefined ? undefined : Number(min), max === undefined ? undefined : Number(max)))
+  }
+  const pousser = (sens: 1 | -1, bouton: HTMLButtonElement) => avancer(bouton.closest("[data-champ-nombre]")?.querySelector("input"), sens)
+  const auClavier = (evenement: KeyboardEvent<HTMLInputElement>) => {
+    onKeyDown?.(evenement)
+    if (evenement.defaultPrevented || step !== "any" || pas === undefined || (evenement.key !== "ArrowUp" && evenement.key !== "ArrowDown")) return
+    evenement.preventDefault()
+    avancer(evenement.currentTarget, evenement.key === "ArrowUp" ? 1 : -1)
   }
   const bouton = "flex size-6 items-center justify-center rounded text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 pointer-coarse:hidden print:hidden"
   return (
@@ -46,6 +55,7 @@ export function ChampNumerique({ className, classNameChamp, pas = 1, quoi, step,
         min={min}
         max={max}
         className={cn("w-full pr-16 pointer-coarse:pr-3 print:pr-3 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none", props.disabled && "pr-3", classNameChamp)}
+        onKeyDown={auClavier}
         {...props}
       />
       <div className="absolute inset-y-0 right-1.5 flex items-center gap-1">

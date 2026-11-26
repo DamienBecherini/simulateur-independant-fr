@@ -48,6 +48,20 @@ describe("réglages d'une société à l'IS", () => {
     expect(screen.getByText(enTexteBrut(`Les dividendes au-delà de ${pourcent(r.EURL.seuilDividendesPartDuCapital)} du capital supportent les cotisations sociales du gérant. ${pourcent(r.reserveLegale.partDuBenefice)} du bénéfice vont à la réserve légale, non distribuable, jusqu'à ce qu'elle atteigne ${pourcent(r.reserveLegale.plafondPartDuCapital)} du capital.`))).toBeInTheDocument()
   })
 
+  it("le capital, les réserves et le revenu fiscal de référence s'enregistrent à l'euro près, sans pas imposé", async () => {
+    // Avec un pas de 100, le navigateur refusait d'enregistrer un capital de 1 €, ou un montant lu sur un avis d'impôt.
+    const { onSave, user } = ouvrir(makeCompany({ legalStatus: "SASU" }))
+    const capital = screen.getByLabelText<HTMLInputElement>("Capital social")
+    const reserves = screen.getByLabelText<HTMLInputElement>("Réserves au début")
+    await user.clear(capital)
+    await user.type(capital, "1")
+    await user.type(reserves, "12345")
+
+    expect([capital.validity.valid, reserves.validity.valid]).toEqual([true, true])
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }))
+    expect(onSave.mock.calls[0][0]).toMatchObject({ capitalSocial: 1, reservesInitiales: 12345 })
+  })
+
   it("une entreprise individuelle n'a ni capital ni réserves", () => {
     ouvrir(makeCompany({ legalStatus: "EI" }))
 
@@ -76,18 +90,22 @@ describe("plafond d'épargne retraite d'une personne", () => {
     ouvrirLaPersonne(makePerson(), [2025, 2026])
     const champ = screen.getByLabelText("Plafond épargne retraite 2025")
     // Versements de 2025 : 10 % du plafond de la sécurité sociale de 2024, lu dans les règles de 2025.
-    const minimum = plafondMinimalDeLAnnee(reglesPubliees(2025).IR.epargneRetraite)
+    const minimum = plafondMinimalDeLAnnee(2025, reglesPubliees(2025))
 
     expect(minimum).toBe(4637)
     expect(champ).toHaveValue(null)
     expect(champ).toHaveAccessibleDescription(new RegExp(`« Plafond pour les cotisations versées en 2025 » de l'avis d'impôt reçu en 2025\\. Vide : le minimum légal est retenu \\(4\\s637\\s€\\)\\. Les années suivantes, il est calculé sur les revenus de l'année précédente\\.`))
   })
 
-  it("enregistre le plafond saisi, et le retire quand le champ est vidé", async () => {
+  it("enregistre le plafond saisi, à l'euro près : un montant d'avis d'impôt n'est pas un multiple de 100", async () => {
     const { onSave, user } = ouvrirLaPersonne(makePerson(), [2026])
-    await user.type(screen.getByLabelText("Plafond épargne retraite 2026"), "12500")
+    const champ = screen.getByLabelText<HTMLInputElement>("Plafond épargne retraite 2026")
+    await user.type(champ, "13906")
+
+    // Le navigateur refuse d'envoyer un formulaire dont un champ ne respecte pas son pas : aucun pas n'est imposé.
+    expect(champ.validity.valid).toBe(true)
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
-    expect(onSave.mock.calls[0][0]).toMatchObject({ plafondEpargneRetraite: 12500 })
+    expect(onSave.mock.calls[0][0]).toMatchObject({ plafondEpargneRetraite: 13906 })
   })
 
   it("vider le champ retire le plafond : le minimum légal s'applique de nouveau", async () => {

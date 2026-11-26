@@ -70,7 +70,7 @@ export function ChampImplantationEnZone<T extends Company | MicroEntreprise>({ a
               </p>
               <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[auto_8rem]">
                 <Label htmlFor={`${id}-part`}>Part du chiffre d'affaires réalisée dans la zone (%)</Label>
-                <ChampNumerique id={`${id}-part`} min="0" max="100" step="5" quoi="la part du chiffre d'affaires réalisée dans la zone" aria-describedby={`${id}-part-aide`} value={saisie} onChange={e => changerLaPart(e.target.value)} />
+                <ChampNumerique id={`${id}-part`} min="0" max="100" step="any" pas={5} quoi="la part du chiffre d'affaires réalisée dans la zone" aria-describedby={`${id}-part-aide`} value={saisie} onChange={e => changerLaPart(e.target.value)} />
               </div>
               <p id={`${id}-part-aide`} className={aide}>
                 Seul le bénéfice réalisé dans la zone est exonéré.

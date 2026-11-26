@@ -8,7 +8,7 @@ import { enTexteBrut } from "@/backend/logic/format"
 import { reglesPubliees } from "@/backend/logic/regles"
 import { runMetaSimulation, type ContexteDeLAnnee } from "@/backend/logic/simulation-engine"
 import { micro, personne, relation, session, type Flux } from "@/backend/logic/testing/session-de-test"
-import { blocEpargneRetraite, mentionDeLEpargneDansLeNet, precisionDuRevenuFiscalDeReference, texteDuPlafondSaisi } from "./epargne-retraite"
+import { blocEpargneRetraite, mentionDeLEpargneDansLeNet, precisionDuRevenuFiscalDeReference, resteApresDepenses, texteDuPlafondSaisi } from "./epargne-retraite"
 import { csvResultats } from "./export-csv"
 import { rapportMarkdown } from "./export-markdown"
 
@@ -128,24 +128,49 @@ describe("mentions de la carte du foyer", () => {
   })
 })
 
+describe("reste après les dépenses saisies", () => {
+  it("retire aussi l'épargne retraite, que le net contient mais qui n'est pas disponible", () => {
+    const reste = resteApresDepenses({ netApresImpots: 30000, depenses: 20000, versementsEpargneRetraite: 6000 })!
+
+    expect(reste.libelle).toBe("Reste après dépenses et épargne retraite")
+    expect(reste.montant).toBe(4000)
+    expect(enTexteBrut(reste.precision)).toBe("20 000 € de dépenses, 6 000 € d'épargne retraite")
+  })
+
+  it("ne change pas sans versement, et n'existe pas sans dépense saisie", () => {
+    expect(resteApresDepenses({ netApresImpots: 30000, depenses: 20000 })).toMatchObject({ libelle: "Reste après dépenses saisies", montant: 10000 })
+    expect(resteApresDepenses({ netApresImpots: 30000, depenses: 0, versementsEpargneRetraite: 6000 })).toBeNull()
+  })
+})
+
 describe("champ du plafond dans la fiche d'une personne", () => {
   it("nomme la première année de la simulation, la ligne de l'avis d'impôt et le minimum retenu sans saisie", () => {
-    const { libelle, aide } = texteDuPlafondSaisi([2026], 4710)
+    const { libelle, aide } = texteDuPlafondSaisi([2026])
 
     expect(libelle).toBe("Plafond épargne retraite 2026")
+    // 10 % du plafond de la sécurité sociale de 2025, lu dans les règles de 2026.
     expect(enTexteBrut(aide)).toBe("La ligne « Plafond pour les cotisations versées en 2026 » de l'avis d'impôt reçu en 2026. Vide : le minimum légal est retenu (4 710 €). Les versements se saisissent dans la grille, avec le type « Versement PER ». Marié ou pacsé : chacun saisit le sien.")
   })
 
   it("dit que les années suivantes sont calculées, quand la simulation en compte plusieurs", () => {
-    const { libelle, aide } = texteDuPlafondSaisi([2026, 2024, 2025], 4399)
+    const { libelle, aide } = texteDuPlafondSaisi([2026, 2024, 2025])
 
     expect(libelle).toBe("Plafond épargne retraite 2024")
-    expect(aide).toContain("versées en 2024")
+    expect(enTexteBrut(aide)).toContain("versées en 2024 » de l'avis d'impôt reçu en 2024. Vide : le minimum légal est retenu (4 399 €).")
     expect(aide).toContain("Les années suivantes, il est calculé sur les revenus de l'année précédente.")
   })
 
-  it("reste lisible sans année", () => {
-    expect(texteDuPlafondSaisi([], 0).libelle).toBe("Plafond épargne retraite")
+  it("nomme la première année que le simulateur sait simuler : une année d'avant les premières règles ne compte pas", () => {
+    const { libelle, aide } = texteDuPlafondSaisi([2022, 2023, 2024, 2025])
+
+    expect(libelle).toBe("Plafond épargne retraite 2024")
+    expect(aide).toContain("Les années suivantes")
+    expect(texteDuPlafondSaisi([2023, 2024]).aide).not.toContain("Les années suivantes")
+  })
+
+  it("reste lisible sans année, ou sans année que le simulateur sache simuler", () => {
+    expect(texteDuPlafondSaisi([]).libelle).toBe("Plafond épargne retraite")
+    expect(texteDuPlafondSaisi([2020]).libelle).toBe("Plafond épargne retraite")
   })
 })
 

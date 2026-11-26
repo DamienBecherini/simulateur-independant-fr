@@ -41,12 +41,12 @@ test("un versement PER au-delà du plafond : la part déduite, l'impôt économi
   // Le net garde le versement : le bilan dit la part d'épargne bloquée.
   await expect(page.locator("#bilan")).toContainText(/dont 6\s000\s€ d'épargne retraite \(PER\), bloqués jusqu'à la retraite/)
 
-  // Le plafond de l'avis d'impôt, 8 000 € : tout est déduit, 30 % de 6 000 €.
+  // Le plafond de l'avis d'impôt, 8 137 € (un montant à l'euro près s'enregistre) : tout est déduit, 30 % de 6 000 €.
   await foyer(page).scrollIntoViewIfNeeded()
   await page.getByRole("button", { name: "Modifier les autres réglages" }).first().click()
   const fiche = page.getByRole("dialog", { name: "Modifier : Julien" })
   await expect(fiche.getByLabel("Plafond épargne retraite 2026")).toHaveAccessibleDescription(/« Plafond pour les cotisations versées en 2026 » de l'avis d'impôt reçu en 2026\. Vide : le minimum légal est retenu \(4\s710\s€\)\./)
-  await fiche.getByLabel("Plafond épargne retraite 2026").fill("8000")
+  await fiche.getByLabel("Plafond épargne retraite 2026").fill("8137")
   await fiche.getByRole("button", { name: "Enregistrer" }).click()
   await expect(fiche).toBeHidden()
 
@@ -58,8 +58,8 @@ test("un versement PER au-delà du plafond : la part déduite, l'impôt économi
   await foyer(page).getByRole("button", { name: /^Afficher le détail/ }).click()
   const bloc = foyer(page).getByRole("region", { name: "Épargne retraite (PER)" })
   await expect(ligne(bloc, "Versé en 2026")).toContainText(/6\s000\s€/)
-  await expect(ligne(bloc, "Déduit du revenu")).toContainText(/− 6\s000\s€plafond pour les versements de 2026 : 8\s000\s€, saisi dans la fiche de Julien/)
-  await expect(ligne(bloc, "Reste du plafond")).toContainText(/2\s000\s€du plafond saisi ; non reporté sur les années suivantes/)
+  await expect(ligne(bloc, "Déduit du revenu")).toContainText(/− 6\s000\s€plafond pour les versements de 2026 : 8\s137\s€, saisi dans la fiche de Julien/)
+  await expect(ligne(bloc, "Reste du plafond")).toContainText(/2\s137\s€du plafond saisi ; non reporté sur les années suivantes/)
   await expect(ligne(foyer(page), "Revenu fiscal de référence")).toContainText("versement PER déduit, puis rajouté ; pour le versement libératoire dans deux ans")
   await auditerAccessibilite(page, "cartes des résultats, avec le bloc de l'épargne retraite", "article")
 })

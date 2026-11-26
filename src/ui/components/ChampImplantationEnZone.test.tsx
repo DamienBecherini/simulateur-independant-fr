@@ -105,9 +105,11 @@ describe("aides liées au lieu d'implantation", () => {
     expect(part).toHaveValue(100)
     expect(part).toHaveAccessibleDescription("Seul le bénéfice réalisé dans la zone est exonéré.")
     await user.clear(part)
-    await user.type(part, "60")
+    // Aucun pas imposé : 62 % s'enregistre comme 60 %, le navigateur ne refuse pas le formulaire.
+    await user.type(part, "62")
+    expect((part as HTMLInputElement).validity.valid).toBe(true)
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
-    expect(onSave.mock.calls[0][0].implantationEnZone).toEqual({ partDuChiffreDAffaires: 0.6 })
+    expect(onSave.mock.calls[0][0].implantationEnZone).toEqual({ partDuChiffreDAffaires: 0.62 })
   })
 
   it("décocher retire le champ, la phrase et les hypothèses, sans refermer la section", async () => {

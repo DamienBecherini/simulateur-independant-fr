@@ -78,7 +78,8 @@ function ChampPartConventionnee<T extends Company | MicroEntreprise>({ activite,
           name="partConventionnee"
           min="0"
           max="100"
-          step="5"
+          step="any"
+          pas={5}
           quoi="la part conventionnée"
           aria-describedby="part-conventionnee-aide"
           placeholder="100"

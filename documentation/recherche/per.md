@@ -55,6 +55,8 @@ Chaque source est désignée par un code (S1, S2, etc.) dans la suite du documen
 | S20 | BOI-IR-BASE-20-50-30 : mutualisation, report de la limite non utilisée, obligations déclaratives | 10/08/2026, lu le 26/11/2026 | https://bofip.impots.gouv.fr/bofip/1117-PGP.html/identifiant=BOI-IR-BASE-20-50-30-20260810 |
 | S21 | impots.gouv.fr, « Que signifie la somme imprimée dans la rubrique « Plafond épargne retraite » de mon avis d'impôt sur le revenu ? » | modifié le 07/07/2026, lu le 26/11/2026 | https://www.impots.gouv.fr/particulier/questions/que-signifie-la-somme-imprimee-dans-la-rubrique-plafond-epargne-retraite-de |
 
+| S22 | Document 2041 GX « Épargne retraite », pour remplir la déclaration des revenus de 2025, p. 5-6 | 2026, lu le 26/11/2026 | https://www.impots.gouv.fr/sites/default/files/formulaires/2041-gx/2026/2041-gx_5466.pdf |
+
 **Relecture du 26 novembre 2026.** S1, S3, S4, S5, S6, S8, S9, S12 et S17 ont été relus en entier dans un navigateur, S20 et S21 lus pour la première fois. Ce que la relecture change est résumé à la section 15.
 
 **Valeurs du PASS utilisées.**
@@ -81,6 +83,7 @@ Chaque source est désignée par un code (S1, S2, etc.) dans la suite du documen
    - **BIC, BNC et BA professionnels :** **montant imposable** (S3 § 150), y compris les bénéfices exonérés au titre des articles 44 sexies et suivants (S3 § 170). Les plus-values à long terme sont exclues (S3 § 200).
    - **Micro-entrepreneur au versement libératoire :** montant **diminué de l'abattement** de l'article 50-0 ou 102 ter (S3 § 190). Voir la section 4.
    - **Dividendes :** ce ne sont pas des revenus d'activité professionnelle. Ils ne figurent pas dans la liste de S1 II.
+   - **Confirmé par S22 (vérifié à la réalisation, 26/11/2026) [sourcé] :** pour les salariés, le premier terme retient « l'ensemble des revenus déclarés dans la rubrique « traitements et salaires » de la déclaration n° 2042 », où figurent les allocations de chômage, pour leur montant « net de frais professionnels » ; pour les non-salariés, les bénéfices au réel ou au régime micro (« bénéfice, déficit »), les revenus des micro-entrepreneurs au versement libératoire et les bénéfices exonérés des articles 44 sexies à 44 septdecies.
 5. **Report :** la part non utilisée du plafond d'une année « peut être utilisée au cours de l'une des **cinq** années suivantes » (S1, rédaction en vigueur depuis la loi de finances pour 2026).
    - **Entrée en vigueur : à partir de l'imposition des revenus de 2026** (S2).
    - Les plafonds non utilisés **de 2024 et de 2025 restent reportables 3 ans** ; celui de 2026 et des années suivantes l'est 5 ans (S11 : « la part non utilisée des plafonds des années 2024 et 2025 peut être utilisée uniquement dans un délai de 3 ans »).

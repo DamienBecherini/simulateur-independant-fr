@@ -16,7 +16,7 @@ import { regimesMicroDesAnnees, type RegimeMicroDeLAnnee } from "./dispositifs.j
 import { plafondsLaissesALAnneeSuivante } from "./epargne-retraite.js"
 import { avecLaCFEDeLAnnee, ecartDeFrais } from "./frais-de-fonctionnement.js"
 import { optimiserRemuneration } from "./optimisation-remuneration.js"
-import { reglesDeLAnnee, type ReglesFiscales } from "./regles.js"
+import { premiereAnneeSimulable, reglesDeLAnnee, type ReglesFiscales } from "./regles.js"
 import { runMetaSimulation, type ContexteDeLAnnee } from "./simulation-engine.js"
 
 /** Tout ce qu'il faut pour simuler une année : ses données, ses règles et son contexte ; ou l'erreur qui l'en empêche. */
@@ -34,11 +34,12 @@ function assiettesParActivite(report: SimulationReport): Record<string, number> 
 
 /**
  * Épargne retraite : ce que chaque personne reçoit de l'année précédente, d'après son rapport (plafond calculé sur ses
- * revenus, plafonds restants). La première année de la session n'en reçoit rien : le plafond saisi s'y applique. Une
- * année suivante dont la précédente manque ou n'a pas pu être simulée retient le minimum légal (ADR 021).
+ * revenus, plafonds restants). La première année simulée de la session n'en reçoit rien : le plafond saisi s'y applique
+ * (une année d'avant les premières règles n'est pas simulée, et ne compte donc pas). Une année suivante dont la
+ * précédente manque à la session retient le minimum légal (ADR 021).
  */
 function epargneRetraiteHeritee(session: SessionState, annee: number, reportN1: SimulationReport | null): Pick<ContexteDeLAnnee, "epargneRetraite"> {
-  if (annee === session.annees[0].annee) return {}
+  if (annee === premiereAnneeSimulable(session.annees.map(a => a.annee))) return {}
   if (!reportN1) return { epargneRetraite: { parPersonne: null } }
   const personnes = reportN1.foyers.flatMap(foyer => foyer.epargneRetraite.personnes)
   return { epargneRetraite: { parPersonne: Object.fromEntries(personnes.map(personne => [personne.personId, plafondsLaissesALAnneeSuivante(personne)])) } }

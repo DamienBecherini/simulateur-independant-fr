@@ -389,6 +389,15 @@ export function reglesPubliees(annee: number): ReglesFiscales {
   return regles
 }
 
+/**
+ * La plus ancienne des années données que le simulateur sait simuler : une année d'avant les premières règles connues
+ * ne l'est pas. `undefined` quand aucune ne l'est.
+ */
+export function premiereAnneeSimulable(annees: number[]): number | undefined {
+  const simulables = annees.filter(annee => annee >= PREMIERE_ANNEE_DES_REGLES)
+  return simulables.length > 0 ? Math.min(...simulables) : undefined
+}
+
 /** Les règles qui s'appliquent à une année, ou la raison pour laquelle l'année ne peut pas être simulée. */
 export type ReglesDeLAnnee = { regles: ReglesFiscales; avertissement: string | null } | { regles: null; erreur: string }
 

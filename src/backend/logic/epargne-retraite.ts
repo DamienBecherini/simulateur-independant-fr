@@ -7,7 +7,7 @@
 
 import type { EpargneRetraiteDeLaPersonne, EpargneRetraiteDuFoyer, OrigineDuPlafondEpargneRetraite, PlafondReporte } from "../../types.js"
 import { deNom, euros, pourcent } from "./format.js"
-import type { ReglesEpargneRetraite } from "./regles.js"
+import type { ReglesEpargneRetraite, ReglesFiscales } from "./regles.js"
 
 /** Ce qu'une personne reçoit de l'année précédente de la session. */
 export interface PlafondsHerites {
@@ -26,11 +26,11 @@ export interface MembreDuFoyer {
   enCouple: boolean
   /** Versements de l'année sur un plan d'épargne retraite. */
   verse: number
-  /** Plafond saisi dans sa fiche, pour la première année de la session. */
+  /** Plafond saisi dans sa fiche, pour la première année simulée de la session. */
   plafondSaisi: number | undefined
   /**
    * Ce qu'il reçoit de l'année précédente ; `null` quand elle n'est pas dans la session ; `undefined` la première
-   * année de la session, la seule où le plafond saisi s'applique.
+   * année simulée de la session, la seule où le plafond saisi s'applique.
    */
   herites: PlafondsHerites | null | undefined
   /** Ses revenus d'activité professionnelle de l'année. */
@@ -51,19 +51,25 @@ export function plafondCalculeSurLAnnee(revenusProfessionnels: number, plafondSe
   return { plafondCalcule: Math.round(surLesRevenus), baseDuPlafondCalcule: "revenus" }
 }
 
-/** Plafond minimal des versements de l'année : le minimum légal, assis sur le plafond de la sécurité sociale de l'année précédente. */
-export function plafondMinimalDeLAnnee(regles: ReglesEpargneRetraite): number {
-  return Math.round(regles.minimumPartDuPlafond * regles.plafondSecuriteSocialeAnneePrecedente)
+/**
+ * Plafond minimal des versements de l'année : le minimum légal, assis sur le plafond de la sécurité sociale de l'année
+ * précédente. Une année au-delà des dernières règles connues est simulée avec elles : le plafond de la sécurité sociale
+ * de l'année d'avant est alors le dernier connu, celui de ces règles, et non celui de l'année qui les précède.
+ */
+export function plafondMinimalDeLAnnee(annee: number, regles: ReglesFiscales): number {
+  const epargne = regles.IR.epargneRetraite
+  const plafondPrecedent = annee > regles.annee ? regles.regimeGeneral.plafondSecuriteSociale : epargne.plafondSecuriteSocialeAnneePrecedente
+  return Math.round(epargne.minimumPartDuPlafond * plafondPrecedent)
 }
 
 /** Le plafond d'une personne pour l'année, son origine et les plafonds reportés encore utilisables. */
-function plafondsDeLAnnee(membre: MembreDuFoyer, annee: number, regles: ReglesEpargneRetraite): { plafond: number; originePlafond: OrigineDuPlafondEpargneRetraite; plafondsReportes: PlafondReporte[] } {
+function plafondsDeLAnnee(membre: MembreDuFoyer, annee: number, regles: ReglesFiscales): { plafond: number; originePlafond: OrigineDuPlafondEpargneRetraite; plafondsReportes: PlafondReporte[] } {
   if (membre.herites === undefined) {
     // Première année de la session : le plafond de l'avis d'impôt, qui contient déjà les plafonds reportés.
     if (membre.plafondSaisi !== undefined) return { plafond: Math.round(membre.plafondSaisi), originePlafond: "saisi", plafondsReportes: [] }
-    return { plafond: plafondMinimalDeLAnnee(regles), originePlafond: "minimumFauteDeSaisie", plafondsReportes: [] }
+    return { plafond: plafondMinimalDeLAnnee(annee, regles), originePlafond: "minimumFauteDeSaisie", plafondsReportes: [] }
   }
-  if (membre.herites === null) return { plafond: plafondMinimalDeLAnnee(regles), originePlafond: "minimumFauteDAnneePrecedente", plafondsReportes: [] }
+  if (membre.herites === null) return { plafond: plafondMinimalDeLAnnee(annee, regles), originePlafond: "minimumFauteDAnneePrecedente", plafondsReportes: [] }
   const plafondsReportes = membre.herites.plafondsRestants.filter(reporte => reporte.montant > 0 && reporte.utilisableJusquEn >= annee).sort((a, b) => a.annee - b.annee)
   return { plafond: membre.herites.plafondCalcule, originePlafond: "calcule", plafondsReportes }
 }
@@ -100,10 +106,11 @@ function encoreUtilisableEn(reste: PlafondReporte | undefined, annee: number): P
  * L'imputation ne dépend pas de l'impôt : un versement qui ne réduit rien consomme son plafond quand même (hypothèse 3
  * de l'ADR 021). Les montants sont à l'euro, comme sur la déclaration.
  */
-export function epargneRetraiteDesMembres(membres: MembreDuFoyer[], annee: number, plafondSecuriteSociale: number, regles: ReglesEpargneRetraite): EpargneRetraiteDeLaPersonne[] {
+export function epargneRetraiteDesMembres(membres: MembreDuFoyer[], annee: number, regles: ReglesFiscales): EpargneRetraiteDeLaPersonne[] {
+  const epargne = regles.IR.epargneRetraite
   const etats = membres.map(membre => {
     const plafonds = plafondsDeLAnnee(membre, annee, regles)
-    const deLAnnee: Disponible = { plafond: { annee, montant: plafonds.plafond, utilisableJusquEn: annee + regles.anneesDeReport }, reste: plafonds.plafond }
+    const deLAnnee: Disponible = { plafond: { annee, montant: plafonds.plafond, utilisableJusquEn: annee + epargne.anneesDeReport }, reste: plafonds.plafond }
     const disponibles = [deLAnnee, ...plafonds.plafondsReportes.map((plafond): Disponible => ({ plafond, reste: plafond.montant }))]
     const verse = Math.max(0, Math.round(membre.verse))
     return { membre, plafonds, deLAnnee, disponibles, verse, imputeSurSesPlafonds: imputer(verse, disponibles), imputeSurLeConjoint: 0, preteAuConjoint: 0 }
@@ -134,7 +141,7 @@ export function epargneRetraiteDesMembres(membres: MembreDuFoyer[], annee: numbe
       plafondsRestants: aReporter.map(d => ({ ...d.plafond, montant: d.reste })),
       ...(resteNonReporte ? { resteNonReporte } : {}),
       revenusProfessionnels: Math.round(membre.revenusProfessionnels),
-      ...plafondCalculeSurLAnnee(membre.revenusProfessionnels, plafondSecuriteSociale, regles)
+      ...plafondCalculeSurLAnnee(membre.revenusProfessionnels, regles.regimeGeneral.plafondSecuriteSociale, epargne)
     }
   })
 }

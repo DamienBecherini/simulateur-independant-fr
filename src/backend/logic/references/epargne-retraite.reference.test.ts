@@ -256,6 +256,16 @@ casDeReference("épargne retraite sur plusieurs années : plafond saisi, année 
     expect(epargneDe(annees[2026], "alice")).toMatchObject({ plafond: 5400, originePlafond: "calcule" })
   })
 
+  it("applique le plafond saisi à la première année que le simulateur sait simuler", () => {
+    // 2023 est dans la session, mais d'avant les premières règles : elle n'est pas simulée, et 2024 est la première.
+    const session = troisAnnees({ 2024: 6000 }, avecPlafond("alice", 12000), [2023, 2024])
+    const [en2023, en2024] = simulerLesAnnees(session).annees
+
+    expect(en2023.report).toBeNull()
+    expect(epargneDe(en2024.report!, "alice")).toMatchObject({ plafond: 12000, originePlafond: "saisi", imputeSurSesPlafonds: 6000, nonDeduit: 0 })
+    expect(foyerDe(en2024.report!, "alice").warnings).toEqual([])
+  })
+
   it("retient le minimum légal quand l'année précédente n'est pas dans la session", () => {
     const annees = rapports(troisAnnees({ 2026: 5000 }, avecPlafond("alice", 10000), [2024, 2026]))
 

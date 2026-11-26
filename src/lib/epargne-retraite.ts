@@ -4,8 +4,10 @@
 // viennent du moteur ; ce module ne fait que les nommer.
 
 import type { EpargneRetraiteDeLaPersonne, FoyerFiscalResult, PlafondReporte, SimulationReport } from "@/types"
-import { baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, origineDuPlafondEnClair } from "@/backend/logic/epargne-retraite"
+import { baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, origineDuPlafondEnClair, plafondMinimalDeLAnnee } from "@/backend/logic/epargne-retraite"
 import { deNom, euros, pourcent } from "@/backend/logic/format"
+import { premiereAnneeSimulable } from "@/backend/logic/regles"
+import { reglesDeLAnneeAffichee } from "./regles-affichees"
 
 /** Une ligne du bloc « Épargne retraite (PER) » d'un foyer. */
 interface LigneEpargneRetraite {
@@ -118,12 +120,14 @@ export function epargneRetraiteDesFoyers(report: SimulationReport, nomDe: NomDe)
 
 /**
  * Le libellé (« Plafond épargne retraite 2026 ») et l'aide du champ de la fiche d'une personne. Le plafond saisi vaut
- * pour la première année de la simulation ; `minimum` est celui que le simulateur retient cette année-là sans saisie.
+ * pour la première année simulée de la session (une année d'avant les premières règles ne l'est pas) ; l'aide cite le
+ * minimum que le simulateur retient cette année-là sans saisie, d'après ses règles.
  */
-export function texteDuPlafondSaisi(annees: number[], minimum: number): { libelle: string; aide: string } {
-  if (annees.length === 0) return { libelle: "Plafond épargne retraite", aide: "Le plafond de déduction des versements sur un PER, sur votre avis d'impôt, rubrique « Plafond épargne retraite »." }
-  const premiere = Math.min(...annees)
-  const ensuite = annees.length > 1 ? " Les années suivantes, il est calculé sur les revenus de l'année précédente." : ""
+export function texteDuPlafondSaisi(annees: number[]): { libelle: string; aide: string } {
+  const premiere = premiereAnneeSimulable(annees)
+  if (premiere === undefined) return { libelle: "Plafond épargne retraite", aide: "Le plafond de déduction des versements sur un PER, sur votre avis d'impôt, rubrique « Plafond épargne retraite »." }
+  const minimum = plafondMinimalDeLAnnee(premiere, reglesDeLAnneeAffichee(premiere))
+  const ensuite = annees.some(annee => annee > premiere) ? " Les années suivantes, il est calculé sur les revenus de l'année précédente." : ""
   return {
     libelle: `Plafond épargne retraite ${premiere}`,
     aide: `La ligne « Plafond pour les cotisations versées en ${premiere} » de l'avis d'impôt reçu en ${premiere}. Vide : le minimum légal est retenu (${euros(minimum)}).${ensuite} Les versements se saisissent dans la grille, avec le type « Versement PER ». Marié ou pacsé : chacun saisit le sien.`
@@ -133,6 +137,17 @@ export function texteDuPlafondSaisi(annees: number[], minimum: number): { libell
 /** Sous le net après impôts : la part qui est de l'épargne retraite, bloquée ; `null` sans versement. */
 export function mentionDeLEpargneDansLeNet(versements: number | undefined): string | null {
   return versements ? `dont ${euros(versements)} d'épargne retraite (PER), bloqués jusqu'à la retraite` : null
+}
+
+/**
+ * Ce qui reste au foyer après ses dépenses saisies. L'épargne retraite, comprise dans le net après impôts, n'est pas
+ * disponible : elle en est retirée aussi, et la ligne le dit. `null` quand aucune dépense n'est saisie.
+ */
+export function resteApresDepenses(foyer: Pick<FoyerFiscalResult, "netApresImpots" | "depenses" | "versementsEpargneRetraite">): { libelle: string; montant: number; precision: string } | null {
+  if (foyer.depenses <= 0) return null
+  const epargne = foyer.versementsEpargneRetraite ?? 0
+  if (epargne === 0) return { libelle: "Reste après dépenses saisies", montant: foyer.netApresImpots - foyer.depenses, precision: `${euros(foyer.depenses)} de dépenses` }
+  return { libelle: "Reste après dépenses et épargne retraite", montant: foyer.netApresImpots - foyer.depenses - epargne, precision: `${euros(foyer.depenses)} de dépenses, ${euros(epargne)} d'épargne retraite` }
 }
 
 /** Ce que la ligne du revenu fiscal de référence précise : ce qu'il contient en plus du revenu imposable, et à quoi il sert. */

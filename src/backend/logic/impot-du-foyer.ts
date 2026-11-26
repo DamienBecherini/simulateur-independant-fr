@@ -146,7 +146,7 @@ function epargneRetraiteDuFoyer(ctx: Contexte, foyer: Foyer, revenusProfessionne
     herites: anneePrecedente === undefined ? undefined : (anneePrecedente.parPersonne?.[personId] ?? null),
     revenusProfessionnels: revenusProfessionnels.get(personId) ?? 0
   }))
-  return epargneRetraiteDesMembres(membres, anneeSimulee(ctx), ctx.regles.regimeGeneral.plafondSecuriteSociale, ctx.regles.IR.epargneRetraite)
+  return epargneRetraiteDesMembres(membres, anneeSimulee(ctx), ctx.regles)
 }
 
 /** Une déduction d'épargne retraite sur un revenu imposable : elle ne le rend jamais négatif (pas de déficit global). */

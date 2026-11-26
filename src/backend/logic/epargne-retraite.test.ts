@@ -16,7 +16,7 @@ const ANNEE = 2000
 const membre = (personId: string, autres: Partial<MembreDuFoyer> = {}): MembreDuFoyer => ({ personId, enCouple: false, verse: 0, plafondSaisi: undefined, herites: undefined, revenusProfessionnels: 0, ...autres })
 const reporte = (annee: number, montant: number, utilisableJusquEn = annee + 3): PlafondReporte => ({ annee, montant, utilisableJusquEn })
 const herites = (plafondCalcule: number, plafondsRestants: PlafondReporte[] = [], resteNonReporte?: PlafondReporte): PlafondsHerites => ({ plafondCalcule, plafondsRestants, ...(resteNonReporte ? { resteNonReporte } : {}) })
-const epargne = (...membres: MembreDuFoyer[]) => epargneRetraiteDesMembres(membres, ANNEE, PASS, regles)
+const epargne = (...membres: MembreDuFoyer[]) => epargneRetraiteDesMembres(membres, ANNEE, reglesDeTest)
 const seul = (autres: Partial<MembreDuFoyer>) => epargne(membre("a", autres))[0]
 
 describe("plafond calculé sur les revenus d'une année", () => {
@@ -42,7 +42,14 @@ describe("plafond calculé sur les revenus d'une année", () => {
   })
 
   it("donne pour minimum des versements de l'année 10 % du plafond de la sécurité sociale de l'année précédente", () => {
-    expect(plafondMinimalDeLAnnee(regles)).toBe(3900)
+    expect(plafondMinimalDeLAnnee(ANNEE, reglesDeTest)).toBe(3900)
+  })
+
+  it("au-delà des dernières règles connues, l'année précédente est celle de ces règles : son plafond donne le minimum", () => {
+    // 2001 et 2002 sont simulées avec les règles de 2000 : le dernier plafond de la sécurité sociale connu est le leur.
+    expect(plafondMinimalDeLAnnee(ANNEE + 1, reglesDeTest)).toBe(4000)
+    expect(plafondMinimalDeLAnnee(ANNEE + 2, reglesDeTest)).toBe(4000)
+    expect(epargneRetraiteDesMembres([membre("a", { verse: 5000 })], ANNEE + 1, reglesDeTest)[0]).toMatchObject({ plafond: 4000, originePlafond: "minimumFauteDeSaisie", nonDeduit: 1000 })
   })
 })
 
@@ -123,8 +130,8 @@ describe("plafond d'une année suivante", () => {
     const reste = reporte(1998, 6000, 2001)
 
     expect(seul({ herites: herites(4000, [], reste) }).resteNonReporte).toEqual(reste)
-    expect(epargneRetraiteDesMembres([membre("a", { herites: herites(4000, [], reste) })], 2001, PASS, regles)[0].resteNonReporte).toEqual(reste)
-    expect(epargneRetraiteDesMembres([membre("a", { herites: herites(4000, [], reste) })], 2002, PASS, regles)[0].resteNonReporte).toBeUndefined()
+    expect(epargneRetraiteDesMembres([membre("a", { herites: herites(4000, [], reste) })], 2001, reglesDeTest)[0].resteNonReporte).toEqual(reste)
+    expect(epargneRetraiteDesMembres([membre("a", { herites: herites(4000, [], reste) })], 2002, reglesDeTest)[0].resteNonReporte).toBeUndefined()
   })
 })
 

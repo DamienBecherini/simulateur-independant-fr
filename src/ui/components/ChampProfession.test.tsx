@@ -55,9 +55,11 @@ describe("profession d'une activité BNC", () => {
     expect(part).toHaveAttribute("placeholder", "100")
     expect(part).toHaveAccessibleDescription(/nettes de dépassements d'honoraires/)
     await user.clear(part)
-    await user.type(part, "80")
+    // Aucun pas imposé : 83 % s'enregistre comme 80 %, le navigateur ne refuse pas le formulaire.
+    await user.type(part, "83")
+    expect((part as HTMLInputElement).validity.valid).toBe(true)
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
-    expect(onSave.mock.calls[0][0]).toMatchObject({ profession: "masseur-kinesitherapeute", partConventionnee: 0.8 })
+    expect(onSave.mock.calls[0][0]).toMatchObject({ profession: "masseur-kinesitherapeute", partConventionnee: 0.83 })
   })
 
   it("revenir à « Non réglementée » retire la profession et la part conventionnée", async () => {

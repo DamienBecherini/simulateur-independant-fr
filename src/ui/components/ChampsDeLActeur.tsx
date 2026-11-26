@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { estEntrepriseOuMicro, estSocieteIS, type Avatar, type Company, type Entity, type MicroEntreprise, type Person, type StatutSociete } from "@/types"
 import { statutDeLActivite, type StatutDUneActivite } from "@/backend/logic/changement-de-statut"
-import { plafondMinimalDeLAnnee } from "@/backend/logic/epargne-retraite"
 import { texteDuPlafondSaisi } from "@/lib/epargne-retraite"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
@@ -115,13 +114,11 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee, 
 
 /**
  * Le plafond de déduction des versements d'épargne retraite d'une personne (PER, ADR 021), tel que son avis d'impôt le
- * donne pour la première année de la simulation. Facultatif : vide, le simulateur retient le minimum légal, que l'aide
- * cite d'après les règles de cette année-là.
+ * donne pour la première année simulée. Facultatif : vide, le simulateur retient le minimum légal, que l'aide cite
+ * d'après les règles de cette année-là. Aucun pas imposé : un montant d'avis d'impôt s'enregistre à l'euro près.
  */
 function ChampPlafondEpargneRetraite({ personne, onChange, anneesSimulees }: { personne: Person; onChange: (entity: Entity) => void; anneesSimulees: number[] }) {
-  const premiere = anneesSimulees.length > 0 ? Math.min(...anneesSimulees) : undefined
-  const minimum = premiere === undefined ? 0 : plafondMinimalDeLAnnee(reglesDeLAnneeAffichee(premiere).IR.epargneRetraite)
-  const texte = texteDuPlafondSaisi(anneesSimulees, minimum)
+  const texte = texteDuPlafondSaisi(anneesSimulees)
   return (
     <div className="grid grid-cols-4 items-start gap-4">
       <Label htmlFor="plafondEpargneRetraite" className="pt-2 text-right leading-snug">
@@ -132,7 +129,7 @@ function ChampPlafondEpargneRetraite({ personne, onChange, anneesSimulees }: { p
           id="plafondEpargneRetraite"
           name="plafondEpargneRetraite"
           min="0"
-          step="100"
+          step="any" pas={100}
           quoi="le plafond épargne retraite"
           placeholder="Non renseigné"
           aria-describedby="plafondEpargneRetraite-aide"
@@ -198,7 +195,7 @@ function StatusSpecificFields({ entity, onChange, anneesSimulees = [], annee }: 
               id="rfrN2"
               name="rfrN2"
               min="0"
-              step="100"
+              step="any" pas={100}
               quoi="le revenu fiscal de référence"
               placeholder="Non renseigné"
               aria-describedby="rfrN2-aide"
@@ -245,7 +242,7 @@ function ChampsDeLaSociete({ societe, onChange, regles }: { societe: Company; on
           Capital social
         </Label>
         <div className="col-span-3">
-          <ChampNumerique id="capitalSocial" name="capitalSocial" min="0" step="100" quoi="le capital social" value={societe.capitalSocial} onChange={e => onChange({ ...societe, capitalSocial: Math.max(0, Number.parseFloat(e.target.value) || 0) })} />
+          <ChampNumerique id="capitalSocial" name="capitalSocial" min="0" step="any" pas={100} quoi="le capital social" value={societe.capitalSocial} onChange={e => onChange({ ...societe, capitalSocial: Math.max(0, Number.parseFloat(e.target.value) || 0) })} />
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{aideCapital}{reserveLegale}</p>
         </div>
       </div>
@@ -258,7 +255,7 @@ function ChampsDeLaSociete({ societe, onChange, regles }: { societe: Company; on
             id="reservesInitiales"
             name="reservesInitiales"
             min="0"
-            step="100"
+            step="any" pas={100}
             quoi="les réserves au début de la simulation"
             placeholder="Aucune"
             value={societe.reservesInitiales ?? ""}
