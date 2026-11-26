@@ -1,0 +1,770 @@
+{
+ "annees": [
+  {
+   "annee": 2026,
+   "erreur": null,
+   "report": {
+    "activities": [
+     {
+      "beneficiaireIds": [
+       "p-karim"
+      ],
+      "charges": 6000,
+      "chiffreAffaires": 84000,
+      "cotisationsSociales": 0,
+      "dispositifs": [
+       "ZFU-TE : bénéfice exonéré d'impôt à 100 % en 2026, soit 50 000 € : plafond de 50 000 € atteint. Exonération totale jusqu'à fin décembre 2028, puis dégressive (60 %, 40 %, 20 %) jusqu'à fin décembre 2031."
+      ],
+      "entityId": "s-karim",
+      "exonerationDeZone": {
+       "beneficeExonere": 50000,
+       "conditionsNonVerifiees": {
+        "avertissement": "Exonération ZFU-TE appliquée sans vérifier ses conditions : moins de 50 salariés, chiffre d'affaires ou bilan de 10 M€ au plus, activité hors des secteurs exclus, clause d'emploi local à partir du deuxième salarié, plafond européen des aides de minimis ; la majoration du plafond de 5 000 € par salarié embauché n'est pas comptée. Hypothèses du calcul dans la fiche de l'activité.",
+        "resume": "Exonération ZFU-TE appliquée sans vérifier ses conditions",
+        "source": "https://bofip.impots.gouv.fr/bofip/5903-PGP.html/identifiant=BOI-BIC-CHAMP-80-10-30-20250702"
+       },
+       "fin": "2031-12",
+       "finExonerationTotale": "2028-12",
+       "hypotheses": [
+        "Une année à cheval sur deux taux d'exonération est répartie également entre ses mois : aucun texte officiel ne fixe cette répartition."
+       ],
+       "nom": "ZFU-TE",
+       "partDansLaZone": 1,
+       "partExoneree": 1,
+       "plafond": 50000,
+       "plafondAtteint": true,
+       "regime": "zfuTe"
+      },
+      "impotSocietes": 4200,
+      "limiteDeRemuneration": 44900,
+      "name": "SASU de Karim",
+      "partage": {
+       "beneficeAvantRemuneration": 78000,
+       "cotisationsRemuneration": 0,
+       "cotisationsSurDividendes": 0,
+       "dividendesNets": 73800,
+       "impotSocietes": 4200,
+       "remunerationNette": 0,
+       "resultatConserve": 0
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 73800,
+       "deficitImpute": 0,
+       "distribuable": 73800,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": 0,
+      "revenuVerse": 73800,
+      "statut": "SASU",
+      "type": "company",
+      "warnings": [
+       "Exonération ZFU-TE appliquée sans vérifier ses conditions : moins de 50 salariés, chiffre d'affaires ou bilan de 10 M€ au plus, activité hors des secteurs exclus, clause d'emploi local à partir du deuxième salarié, plafond européen des aides de minimis ; la majoration du plafond de 5 000 € par salarié embauché n'est pas comptée. Hypothèses du calcul dans la fiche de l'activité."
+      ]
+     }
+    ],
+    "annee": 2026,
+    "anneeDesRegles": 2026,
+    "avertissements": [],
+    "bilan": {
+     "charges": 6000,
+     "chiffreAffaires": 84000,
+     "cotisationsSalariales": 0,
+     "cotisationsSociales": 0,
+     "impotSocietes": 4200,
+     "impotSurLeRevenu": 4882,
+     "nonRattache": 0,
+     "prelevementsSociaux": 13727,
+     "resultatConserve": 0,
+     "revenusAvantPrelevements": 78000,
+     "revenusDirects": 0,
+     "totalPrelevements": 22809
+    },
+    "foyers": [
+     {
+      "depenses": 0,
+      "impotSurLeRevenu": 4882,
+      "netApresImpots": 55191,
+      "optionDividendes": "bareme",
+      "personIds": [
+       "p-karim"
+      ],
+      "prelevementsSociaux": 13727,
+      "resultatConserve": 0,
+      "revenuFiscalDeReference": 68782,
+      "revenuImposableGlobal": 39262,
+      "revenusAvantPrelevements": 78000,
+      "revenusEncaisses": 73800,
+      "totalParts": 1,
+      "totalPrelevements": 22809,
+      "warnings": []
+     }
+    ],
+    "persons": [
+     {
+      "cotisationsSalariales": 0,
+      "depenses": 0,
+      "detail": {
+       "allocationsChomage": 0,
+       "autresRevenus": 0,
+       "benefices": 0,
+       "dividendes": 73800,
+       "remunerationsDirigeant": 0,
+       "salaires": 0
+      },
+      "entityId": "p-karim",
+      "name": "Karim",
+      "revenusActivites": 73800,
+      "revenusDirects": 0
+     }
+    ],
+    "totalNetApresImpots": 55191
+   }
+  }
+ ],
+ "comparaisons": [
+  {
+   "activite": "s-karim",
+   "annee": 2026,
+   "resultat": {
+    "couples": [],
+    "meilleur": "SASU",
+    "optimisations": {
+     "EURL": {
+      "meilleur": {
+       "cotisationsSociales": 24463,
+       "dividendes": 31667,
+       "impotSocietes": 0,
+       "impotSurLeRevenu": 6018,
+       "netApresImpots": 47500,
+       "prelevementsSociaux": 19,
+       "remunerationNette": 31800,
+       "trimestres": 4
+      },
+      "meilleurAvecRetraite": {
+       "cotisationsSociales": 24463,
+       "dividendes": 31667,
+       "impotSocietes": 0,
+       "impotSurLeRevenu": 6018,
+       "netApresImpots": 47500,
+       "prelevementsSociaux": 19,
+       "remunerationNette": 31800,
+       "trimestres": 4
+      },
+      "nombreDePoints": 80,
+      "remunerationMaximale": 53500,
+      "statut": "EURL",
+      "unPointSurDix": [
+       {
+        "cotisationsSociales": 23251,
+        "dividendes": 72658,
+        "impotSocietes": 3999,
+        "impotSurLeRevenu": 6180,
+        "netApresImpots": 44551,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 0,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 23762,
+        "dividendes": 63016,
+        "impotSocietes": 2297,
+        "impotSurLeRevenu": 6948,
+        "netApresImpots": 44975,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 9000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 24345,
+        "dividendes": 52168,
+        "impotSocietes": 383,
+        "impotSurLeRevenu": 6677,
+        "netApresImpots": 46576,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 18000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 24463,
+        "dividendes": 38867,
+        "impotSocietes": 0,
+        "impotSurLeRevenu": 6228,
+        "netApresImpots": 47290,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 27000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 24463,
+        "dividendes": 32572,
+        "impotSocietes": 0,
+        "impotSurLeRevenu": 6045,
+        "netApresImpots": 47473,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 31200,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 24463,
+        "dividendes": 31063,
+        "impotSocietes": 0,
+        "impotSurLeRevenu": 6046,
+        "netApresImpots": 47472,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 32200,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 24463,
+        "dividendes": 23917,
+        "impotSocietes": 0,
+        "impotSurLeRevenu": 6441,
+        "netApresImpots": 47077,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 36900,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 24463,
+        "dividendes": 10498,
+        "impotSocietes": 0,
+        "impotSurLeRevenu": 7232,
+        "netApresImpots": 46286,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 45900,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 24491,
+        "dividendes": 9,
+        "impotSocietes": 0,
+        "impotSurLeRevenu": 8002,
+        "netApresImpots": 45505,
+        "prelevementsSociaux": 2,
+        "remunerationNette": 53500,
+        "trimestres": 4
+       }
+      ],
+      "warnings": []
+     },
+     "SASU": {
+      "meilleur": {
+       "cotisationsSociales": 293,
+       "dividendes": 73211,
+       "impotSocietes": 4096,
+       "impotSurLeRevenu": 4788,
+       "netApresImpots": 55206,
+       "prelevementsSociaux": 13617,
+       "remunerationNette": 400,
+       "trimestres": 0
+      },
+      "meilleurAvecRetraite": {
+       "cotisationsSociales": 4252,
+       "dividendes": 65256,
+       "impotSocietes": 2692,
+       "impotSurLeRevenu": 5141,
+       "netApresImpots": 53777,
+       "prelevementsSociaux": 12138,
+       "remunerationNette": 5800,
+       "trimestres": 4
+      },
+      "nombreDePoints": 80,
+      "remunerationMaximale": 44900,
+      "statut": "SASU",
+      "unPointSurDix": [
+       {
+        "cotisationsSociales": 0,
+        "dividendes": 73800,
+        "impotSocietes": 4200,
+        "impotSurLeRevenu": 4882,
+        "netApresImpots": 55191,
+        "prelevementsSociaux": 13727,
+        "remunerationNette": 0,
+        "trimestres": 0
+       },
+       {
+        "cotisationsSociales": 1759,
+        "dividendes": 70265,
+        "impotSocietes": 3576,
+        "impotSurLeRevenu": 4911,
+        "netApresImpots": 54684,
+        "prelevementsSociaux": 13069,
+        "remunerationNette": 2400,
+        "trimestres": 1
+       },
+       {
+        "cotisationsSociales": 4105,
+        "dividendes": 65551,
+        "impotSocietes": 2744,
+        "impotSurLeRevenu": 5132,
+        "netApresImpots": 53826,
+        "prelevementsSociaux": 12192,
+        "remunerationNette": 5600,
+        "trimestres": 3
+       },
+       {
+        "cotisationsSociales": 4838,
+        "dividendes": 64077,
+        "impotSocietes": 2484,
+        "impotSurLeRevenu": 5177,
+        "netApresImpots": 53582,
+        "prelevementsSociaux": 11918,
+        "remunerationNette": 6600,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 10556,
+        "dividendes": 52587,
+        "impotSocietes": 457,
+        "impotSurLeRevenu": 5525,
+        "netApresImpots": 51681,
+        "prelevementsSociaux": 9781,
+        "remunerationNette": 14400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 16421,
+        "dividendes": 39179,
+        "impotSocietes": 0,
+        "impotSurLeRevenu": 5602,
+        "netApresImpots": 48690,
+        "prelevementsSociaux": 7287,
+        "remunerationNette": 22400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 22286,
+        "dividendes": 25314,
+        "impotSocietes": 0,
+        "impotSurLeRevenu": 5018,
+        "netApresImpots": 45988,
+        "prelevementsSociaux": 4708,
+        "remunerationNette": 30400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 28359,
+        "dividendes": 11241,
+        "impotSocietes": 0,
+        "impotSurLeRevenu": 5285,
+        "netApresImpots": 42265,
+        "prelevementsSociaux": 2091,
+        "remunerationNette": 38400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 32986,
+        "dividendes": 114,
+        "impotSocietes": 0,
+        "impotSurLeRevenu": 5678,
+        "netApresImpots": 39315,
+        "prelevementsSociaux": 21,
+        "remunerationNette": 44900,
+        "trimestres": 4
+       }
+      ],
+      "warnings": []
+     }
+    },
+    "scenarios": [
+     {
+      "actuel": true,
+      "cotisationsSociales": 0,
+      "ecartDeFrais": {
+       "postes": {},
+       "total": 0
+      },
+      "horsPlafond": false,
+      "impotSocietes": 4200,
+      "impotSurLeRevenu": 4882,
+      "libelle": "SASU",
+      "netApresImpots": 55191,
+      "nonRetenue": null,
+      "partage": {
+       "beneficeAvantRemuneration": 78000,
+       "cotisationsRemuneration": 0,
+       "cotisationsSurDividendes": 0,
+       "dividendesNets": 73800,
+       "impotSocietes": 4200,
+       "remunerationNette": 0,
+       "resultatConserve": 0
+      },
+      "prelevementsSociaux": 13727,
+      "protectionSociale": {
+       "etoiles": 1,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "non"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "non"
+        },
+        "retraite": {
+         "niveau": "non"
+        }
+       },
+       "resume": "Sans rémunération, aucune couverture liée au mandat : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni prévoyance.",
+       "trimestres": 0
+      },
+      "remunerationOptimale": {
+       "avecRetraite": false,
+       "coutDesQuatreTrimestres": 1429,
+       "remunerationNette": 0,
+       "retraiteHorsDAtteinte": false
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 73800,
+       "deficitImpute": 0,
+       "distribuable": 73800,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 78000,
+      "saisieAuMeilleurNet": true,
+      "statut": "SASU",
+      "telleQueSaisie": true,
+      "totalPrelevements": 22809,
+      "warnings": [
+       "ZFU-TE : bénéfice exonéré d'impôt à 100 % en 2026, soit 50 000 € : plafond de 50 000 € atteint. Exonération totale jusqu'à fin décembre 2028, puis dégressive (60 %, 40 %, 20 %) jusqu'à fin décembre 2031.",
+       "Exonération ZFU-TE appliquée sans vérifier ses conditions : moins de 50 salariés, chiffre d'affaires ou bilan de 10 M€ au plus, activité hors des secteurs exclus, clause d'emploi local à partir du deuxième salarié, plafond européen des aides de minimis ; la majoration du plafond de 5 000 € par salarié embauché n'est pas comptée. Hypothèses du calcul dans la fiche de l'activité."
+      ]
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 24463,
+      "ecartDeFrais": {
+       "postes": {},
+       "total": 0
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 6018,
+      "libelle": "EURL",
+      "netApresImpots": 47500,
+      "nonRetenue": null,
+      "partage": {
+       "beneficeAvantRemuneration": 78000,
+       "cotisationsRemuneration": 14533.22,
+       "cotisationsSurDividendes": 9930.02,
+       "dividendesNets": 21736.76,
+       "impotSocietes": 0,
+       "remunerationNette": 31800,
+       "resultatConserve": 0
+      },
+      "prelevementsSociaux": 19,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "limite",
+         "precision": "après 1 an"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Régime des indépendants : retraite de base et complémentaire, indemnités journalières après un an d'affiliation, invalidité-décès ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "remunerationOptimale": {
+       "avecRetraite": false,
+       "remunerationNette": 31800,
+       "retraiteHorsDAtteinte": false
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 31666.78,
+       "deficitImpute": 0,
+       "distribuable": 31666.78,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 78000,
+      "statut": "EURL",
+      "telleQueSaisie": false,
+      "totalPrelevements": 30500,
+      "warnings": [
+       "ZFU-TE : bénéfice exonéré d'impôt à 100 % en 2026, soit 31 667 €. Exonération totale jusqu'à fin décembre 2028, puis dégressive (60 %, 40 %, 20 %) jusqu'à fin décembre 2031.",
+       "Exonération ZFU-TE appliquée sans vérifier ses conditions : moins de 50 salariés, chiffre d'affaires ou bilan de 10 M€ au plus, activité hors des secteurs exclus, clause d'emploi local à partir du deuxième salarié, plafond européen des aides de minimis ; la majoration du plafond de 5 000 € par salarié embauché n'est pas comptée. Hypothèses du calcul dans la fiche de l'activité."
+      ]
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 24757,
+      "ecartDeFrais": {
+       "postes": {
+        "banque": -50,
+        "expertComptable": -800
+       },
+       "total": -850
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 0,
+      "libelle": "EI au réel",
+      "netApresImpots": 54093,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "limite",
+         "precision": "après 1 an"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Régime des indépendants : retraite de base et complémentaire, indemnités journalières après un an d'affiliation, invalidité-décès ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 78850,
+      "statut": "EI",
+      "telleQueSaisie": false,
+      "totalPrelevements": 24757,
+      "warnings": [
+       "ZFU-TE : bénéfice exonéré d'impôt à 100 % en 2026, soit 50 000 € : plafond de 50 000 € atteint. Exonération totale jusqu'à fin décembre 2028, puis dégressive (60 %, 40 %, 20 %) jusqu'à fin décembre 2031.",
+       "Exonération ZFU-TE appliquée sans vérifier ses conditions : moins de 50 salariés, chiffre d'affaires ou bilan de 10 M€ au plus, activité hors des secteurs exclus, clause d'emploi local à partir du deuxième salarié, plafond européen des aides de minimis ; la majoration du plafond de 5 000 € par salarié embauché n'est pas comptée. Hypothèses du calcul dans la fiche de l'activité."
+      ]
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 21672,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": 100,
+        "banque": -100,
+        "expertComptable": -2000,
+        "logiciel": -50
+       },
+       "total": -2050
+      },
+      "horsPlafond": true,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 0,
+      "libelle": "Micro-entreprise",
+      "netApresImpots": 58378,
+      "nonRetenue": "plafondDepasse",
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 2,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "faible"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "faible"
+        },
+        "retraite": {
+         "niveau": "faible"
+        }
+       },
+       "resume": "Régime des indépendants, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 80050,
+      "statut": "micro",
+      "telleQueSaisie": false,
+      "totalPrelevements": 21672,
+      "warnings": [
+       "ZFU-TE : bénéfice exonéré d'impôt à 100 % en 2026, soit 50 000 € : plafond de 50 000 € atteint. Exonération totale jusqu'à fin décembre 2028, puis dégressive (60 %, 40 %, 20 %) jusqu'à fin décembre 2031.",
+       "Plafond du régime micro dépassé (prestations de services 84 000 € pour un plafond de 83 600 €) : le régime n'est conservé que si le dépassement ne se répète pas deux années de suite.",
+       "Franchise en base de TVA perdue (prestations de services 84 000 € pour un seuil de 41 250 €) : la TVA est due dès le jour du dépassement. Le simulateur ne calcule pas la TVA : il considère les montants saisis comme hors taxe.",
+       "Exonération ZFU-TE appliquée sans vérifier ses conditions : moins de 50 salariés, chiffre d'affaires ou bilan de 10 M€ au plus, activité hors des secteurs exclus, clause d'emploi local à partir du deuxième salarié, plafond européen des aides de minimis ; la majoration du plafond de 5 000 € par salarié embauché n'est pas comptée. Hypothèses du calcul dans la fiche de l'activité."
+      ]
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 21672,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": 100,
+        "banque": -100,
+        "expertComptable": -2000,
+        "logiciel": -50
+       },
+       "total": -2050
+      },
+      "horsPlafond": true,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 1848,
+      "libelle": "Micro + versement libératoire",
+      "netApresImpots": 56530,
+      "nonRetenue": "plafondDepasse",
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 2,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "faible"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "faible"
+        },
+        "retraite": {
+         "niveau": "faible"
+        }
+       },
+       "resume": "Régime des indépendants, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 80050,
+      "statut": "micro-vfl",
+      "telleQueSaisie": false,
+      "totalPrelevements": 23520,
+      "warnings": [
+       "Plafond du régime micro dépassé (prestations de services 84 000 € pour un plafond de 83 600 €) : le régime n'est conservé que si le dépassement ne se répète pas deux années de suite.",
+       "Franchise en base de TVA perdue (prestations de services 84 000 € pour un seuil de 41 250 €) : la TVA est due dès le jour du dépassement. Le simulateur ne calcule pas la TVA : il considère les montants saisis comme hors taxe.",
+       "Versement libératoire : il n'est ouvert que si le revenu fiscal de référence 2024 du foyer ne dépasse pas 29 315 € pour 1 part(s). Ajoutez l'année 2024 à la simulation pour qu'il soit calculé, ou renseignez-le dans la fiche de la micro-entreprise.",
+       "ZFU-TE : aucune exonération d'impôt avec le versement libératoire, qui porte sur le chiffre d'affaires et non sur un bénéfice. Pour en bénéficier, renoncez au versement libératoire jusqu'à fin décembre 2031."
+      ]
+     },
+     {
+      "actuel": false,
+      "beneficeGarde": 3549,
+      "cotisationsSociales": 34206,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": -250,
+        "banque": -200,
+        "cfe": -300,
+        "expertComptable": -2000,
+        "logiciel": -150
+       },
+       "total": -2900
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 3534,
+      "libelle": "Portage salarial",
+      "netApresImpots": 33731,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 5,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "oui"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "oui"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Salarié cadre du régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance des cadres, assurance chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 3549,
+      "resultatConserveActivite": 3549,
+      "revenusAvantPrelevements": 75020,
+      "statut": "portage",
+      "telleQueSaisie": false,
+      "totalPrelevements": 37740,
+      "warnings": [
+       "Conditions typiques d'une société de portage (frais de gestion de 7 %, CDI) : à remplacer par celles de la vôtre.",
+       "ZFU-TE : aucune exonération d'impôt en portage salarial, qui verse un salaire et n'a pas de bénéfice à exonérer."
+      ]
+     }
+    ],
+    "situationSaisie": {
+     "libelle": "SASU",
+     "netApresImpots": 55191,
+     "repartition": {
+      "dividendes": 73800,
+      "impotSurLeRevenu": 4882,
+      "prelevementsSociaux": 13727,
+      "remunerationNette": 0,
+      "resultatConserve": 0
+     },
+     "statut": "SASU"
+    },
+    "warnings": []
+   }
+  }
+ ]
+}

@@ -1,0 +1,1211 @@
+{
+ "annees": [
+  {
+   "annee": 2025,
+   "erreur": null,
+   "report": {
+    "activities": [
+     {
+      "beneficiaireIds": [
+       "p-test"
+      ],
+      "charges": 0,
+      "chiffreAffaires": 60000,
+      "cotisationsSociales": 0,
+      "entityId": "s-test",
+      "impotSocietes": 10750,
+      "limiteDeRemuneration": 34600,
+      "name": "SASU de test",
+      "partage": {
+       "beneficeAvantRemuneration": 60000,
+       "cotisationsRemuneration": 0,
+       "cotisationsSurDividendes": 0,
+       "dividendesNets": 0,
+       "impotSocietes": 10750,
+       "remunerationNette": 0,
+       "resultatConserve": 49250
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 500,
+        "reserves": 48750
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 0,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 48750,
+       "deficitImpute": 0,
+       "distribuable": 48750,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 500
+      },
+      "resultatConserve": 49250,
+      "revenuVerse": 0,
+      "statut": "SASU",
+      "type": "company",
+      "warnings": []
+     }
+    ],
+    "annee": 2025,
+    "anneeDesRegles": 2025,
+    "avertissements": [],
+    "bilan": {
+     "charges": 0,
+     "chiffreAffaires": 60000,
+     "cotisationsSalariales": 0,
+     "cotisationsSociales": 0,
+     "impotSocietes": 10750,
+     "impotSurLeRevenu": 0,
+     "nonRattache": 0,
+     "prelevementsSociaux": 0,
+     "resultatConserve": 49250,
+     "revenusAvantPrelevements": 60000,
+     "revenusDirects": 0,
+     "totalPrelevements": 10750
+    },
+    "foyers": [
+     {
+      "depenses": 0,
+      "impotSurLeRevenu": 0,
+      "netApresImpots": 0,
+      "optionDividendes": null,
+      "personIds": [
+       "p-test"
+      ],
+      "prelevementsSociaux": 0,
+      "resultatConserve": 49250,
+      "revenuFiscalDeReference": 0,
+      "revenuImposableGlobal": 0,
+      "revenusAvantPrelevements": 60000,
+      "revenusEncaisses": 0,
+      "totalParts": 1,
+      "totalPrelevements": 10750,
+      "warnings": []
+     }
+    ],
+    "persons": [
+     {
+      "cotisationsSalariales": 0,
+      "depenses": 0,
+      "detail": {
+       "allocationsChomage": 0,
+       "autresRevenus": 0,
+       "benefices": 0,
+       "dividendes": 0,
+       "remunerationsDirigeant": 0,
+       "salaires": 0
+      },
+      "entityId": "p-test",
+      "name": "Camille",
+      "revenusActivites": 0,
+      "revenusDirects": 0
+     }
+    ],
+    "totalNetApresImpots": 0
+   }
+  },
+  {
+   "annee": 2026,
+   "erreur": null,
+   "report": {
+    "activities": [
+     {
+      "beneficiaireIds": [
+       "p-test"
+      ],
+      "charges": 0,
+      "chiffreAffaires": 36000,
+      "cotisationsSociales": 0,
+      "entityId": "s-test",
+      "impotSocietes": 5400,
+      "limiteDeRemuneration": 20700,
+      "name": "SASU de test",
+      "partage": {
+       "beneficeAvantRemuneration": 36000,
+       "cotisationsRemuneration": 0,
+       "cotisationsSurDividendes": 0,
+       "dividendesNets": 50000,
+       "impotSocietes": 5400,
+       "remunerationNette": 0,
+       "resultatConserve": -19400
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 500,
+        "reserves": 29350
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 500,
+        "reserves": 48750
+       },
+       "beneficeDistribuableDeLAnnee": 30600,
+       "deficitImpute": 0,
+       "distribuable": 79350,
+       "dividendesPrisSurLesReserves": 19400,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": -19400,
+      "revenuVerse": 50000,
+      "statut": "SASU",
+      "type": "company",
+      "warnings": []
+     }
+    ],
+    "annee": 2026,
+    "anneeDesRegles": 2026,
+    "avertissements": [],
+    "bilan": {
+     "charges": 0,
+     "chiffreAffaires": 36000,
+     "cotisationsSalariales": 0,
+     "cotisationsSociales": 0,
+     "impotSocietes": 5400,
+     "impotSurLeRevenu": 1500,
+     "nonRattache": 0,
+     "prelevementsSociaux": 9300,
+     "resultatConserve": -19400,
+     "revenusAvantPrelevements": 36000,
+     "revenusDirects": 0,
+     "totalPrelevements": 16200
+    },
+    "foyers": [
+     {
+      "depenses": 0,
+      "impotSurLeRevenu": 1500,
+      "netApresImpots": 39200,
+      "optionDividendes": "bareme",
+      "personIds": [
+       "p-test"
+      ],
+      "prelevementsSociaux": 9300,
+      "resultatConserve": -19400,
+      "revenuFiscalDeReference": 46600,
+      "revenuImposableGlobal": 26600,
+      "revenusAvantPrelevements": 36000,
+      "revenusEncaisses": 50000,
+      "totalParts": 1,
+      "totalPrelevements": 16200,
+      "warnings": []
+     }
+    ],
+    "persons": [
+     {
+      "cotisationsSalariales": 0,
+      "depenses": 0,
+      "detail": {
+       "allocationsChomage": 0,
+       "autresRevenus": 0,
+       "benefices": 0,
+       "dividendes": 50000,
+       "remunerationsDirigeant": 0,
+       "salaires": 0
+      },
+      "entityId": "p-test",
+      "name": "Camille",
+      "revenusActivites": 50000,
+      "revenusDirects": 0
+     }
+    ],
+    "totalNetApresImpots": 39200
+   }
+  }
+ ],
+ "comparaisons": [
+  {
+   "activite": "s-test",
+   "annee": 2025,
+   "resultat": {
+    "couples": [],
+    "meilleur": "micro-vfl",
+    "noteCFE": "CFE exonérée l'année de création (2025) : le poste CFE des frais de fonctionnement n'est pas compté.",
+    "optimisations": {
+     "EURL": {
+      "meilleur": {
+       "cotisationsSociales": 19071,
+       "dividendes": 511,
+       "impotSocietes": 95,
+       "impotSurLeRevenu": 4394,
+       "netApresImpots": 36327,
+       "prelevementsSociaux": 86,
+       "remunerationNette": 40300,
+       "trimestres": 4
+      },
+      "meilleurAvecRetraite": {
+       "cotisationsSociales": 19071,
+       "dividendes": 511,
+       "impotSocietes": 95,
+       "impotSurLeRevenu": 4394,
+       "netApresImpots": 36327,
+       "prelevementsSociaux": 86,
+       "remunerationNette": 40300,
+       "trimestres": 4
+      },
+      "nombreDePoints": 72,
+      "remunerationMaximale": 40700,
+      "statut": "EURL",
+      "unPointSurDix": [
+       {
+        "cotisationsSociales": 15320,
+        "dividendes": 47755,
+        "impotSocietes": 10418,
+        "impotSurLeRevenu": 1822,
+        "netApresImpots": 31854,
+        "prelevementsSociaux": 86,
+        "remunerationNette": 0,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 16056,
+        "dividendes": 41304,
+        "impotSocietes": 8268,
+        "impotSurLeRevenu": 2476,
+        "netApresImpots": 32614,
+        "prelevementsSociaux": 86,
+        "remunerationNette": 7000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 16825,
+        "dividendes": 33729,
+        "impotSocietes": 6040,
+        "impotSurLeRevenu": 3059,
+        "netApresImpots": 33490,
+        "prelevementsSociaux": 86,
+        "remunerationNette": 14000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 17357,
+        "dividendes": 25042,
+        "impotSocietes": 4507,
+        "impotSurLeRevenu": 3445,
+        "netApresImpots": 34105,
+        "prelevementsSociaux": 86,
+        "remunerationNette": 21000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 17917,
+        "dividendes": 15947,
+        "impotSocietes": 2902,
+        "impotSurLeRevenu": 3442,
+        "netApresImpots": 35153,
+        "prelevementsSociaux": 86,
+        "remunerationNette": 28000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 18518,
+        "dividendes": 7085,
+        "impotSocietes": 1316,
+        "impotSurLeRevenu": 3758,
+        "netApresImpots": 35949,
+        "prelevementsSociaux": 86,
+        "remunerationNette": 35000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 18997,
+        "dividendes": 1385,
+        "impotSocietes": 257,
+        "impotSurLeRevenu": 4311,
+        "netApresImpots": 36275,
+        "prelevementsSociaux": 86,
+        "remunerationNette": 39600,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 19231,
+        "dividendes": 136,
+        "impotSocietes": 25,
+        "impotSurLeRevenu": 4430,
+        "netApresImpots": 36282,
+        "prelevementsSociaux": 23,
+        "remunerationNette": 40600,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 19286,
+        "dividendes": 11,
+        "impotSocietes": 2,
+        "impotSurLeRevenu": 4442,
+        "netApresImpots": 36267,
+        "prelevementsSociaux": 2,
+        "remunerationNette": 40700,
+        "trimestres": 4
+       }
+      ],
+      "warnings": []
+     },
+     "SASU": {
+      "meilleur": {
+       "cotisationsSociales": 366,
+       "dividendes": 48101,
+       "impotSocietes": 10534,
+       "impotSurLeRevenu": 1340,
+       "netApresImpots": 38987,
+       "prelevementsSociaux": 8273,
+       "remunerationNette": 500,
+       "trimestres": 0
+      },
+      "meilleurAvecRetraite": {
+       "cotisationsSociales": 4172,
+       "dividendes": 41346,
+       "impotSocietes": 8282,
+       "impotSurLeRevenu": 1613,
+       "netApresImpots": 38321,
+       "prelevementsSociaux": 7112,
+       "remunerationNette": 5700,
+       "trimestres": 4
+      },
+      "nombreDePoints": 80,
+      "remunerationMaximale": 34600,
+      "statut": "SASU",
+      "unPointSurDix": [
+       {
+        "cotisationsSociales": 0,
+        "dividendes": 48750,
+        "impotSocietes": 10750,
+        "impotSurLeRevenu": 1393,
+        "netApresImpots": 38972,
+        "prelevementsSociaux": 8385,
+        "remunerationNette": 0,
+        "trimestres": 0
+       },
+       {
+        "cotisationsSociales": 732,
+        "dividendes": 47451,
+        "impotSocietes": 10317,
+        "impotSurLeRevenu": 1367,
+        "netApresImpots": 38922,
+        "prelevementsSociaux": 8162,
+        "remunerationNette": 1000,
+        "trimestres": 0
+       },
+       {
+        "cotisationsSociales": 3806,
+        "dividendes": 41995,
+        "impotSocietes": 8498,
+        "impotSurLeRevenu": 1594,
+        "netApresImpots": 38378,
+        "prelevementsSociaux": 7223,
+        "remunerationNette": 5200,
+        "trimestres": 3
+       },
+       {
+        "cotisationsSociales": 4538,
+        "dividendes": 40696,
+        "impotSocietes": 8065,
+        "impotSurLeRevenu": 1632,
+        "netApresImpots": 38265,
+        "prelevementsSociaux": 7000,
+        "remunerationNette": 6200,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 8344,
+        "dividendes": 33717,
+        "impotSocietes": 6038,
+        "impotSurLeRevenu": 1814,
+        "netApresImpots": 37504,
+        "prelevementsSociaux": 5799,
+        "remunerationNette": 11400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 12736,
+        "dividendes": 24885,
+        "impotSocietes": 4480,
+        "impotSurLeRevenu": 1957,
+        "netApresImpots": 36047,
+        "prelevementsSociaux": 4280,
+        "remunerationNette": 17400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 17127,
+        "dividendes": 16052,
+        "impotSocietes": 2921,
+        "impotSurLeRevenu": 2211,
+        "netApresImpots": 34480,
+        "prelevementsSociaux": 2761,
+        "remunerationNette": 23400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 21519,
+        "dividendes": 7333,
+        "impotSocietes": 1362,
+        "impotSurLeRevenu": 2498,
+        "netApresImpots": 32974,
+        "prelevementsSociaux": 1261,
+        "remunerationNette": 29400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 25325,
+        "dividendes": 60,
+        "impotSocietes": 11,
+        "impotSurLeRevenu": 2790,
+        "netApresImpots": 31860,
+        "prelevementsSociaux": 10,
+        "remunerationNette": 34600,
+        "trimestres": 4
+       }
+      ],
+      "warnings": []
+     }
+    },
+    "partCFE": 0,
+    "scenarios": [
+     {
+      "actuel": true,
+      "cotisationsSociales": 4172,
+      "ecartDeFrais": {
+       "postes": {},
+       "total": 0
+      },
+      "horsPlafond": false,
+      "impotSocietes": 8282,
+      "impotSurLeRevenu": 1613,
+      "libelle": "SASU, rémunération optimisée",
+      "netApresImpots": 38321,
+      "nonRetenue": null,
+      "partage": {
+       "beneficeAvantRemuneration": 60000,
+       "cotisationsRemuneration": 4172.06,
+       "cotisationsSurDividendes": 0,
+       "dividendesNets": 41345.95,
+       "impotSocietes": 8281.98,
+       "remunerationNette": 5700,
+       "resultatConserve": 500
+      },
+      "prelevementsSociaux": 7112,
+      "protectionSociale": {
+       "etoiles": 4,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "oui"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance ; pas d'assurance chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "remunerationOptimale": {
+       "avecRetraite": true,
+       "coutDesQuatreTrimestres": 666,
+       "remunerationNette": 5700,
+       "retraiteHorsDAtteinte": false
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 500,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 0,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 41345.95,
+       "deficitImpute": 0,
+       "distribuable": 41345.95,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 500
+      },
+      "resultatConserve": 500,
+      "resultatConserveActivite": 500,
+      "revenusAvantPrelevements": 60000,
+      "statut": "SASU",
+      "telleQueSaisie": false,
+      "totalPrelevements": 21179,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 19071,
+      "ecartDeFrais": {
+       "postes": {},
+       "total": 0
+      },
+      "horsPlafond": false,
+      "impotSocietes": 95,
+      "impotSurLeRevenu": 4394,
+      "libelle": "EURL",
+      "netApresImpots": 36327,
+      "nonRetenue": null,
+      "partage": {
+       "beneficeAvantRemuneration": 60000,
+       "cotisationsRemuneration": 19067.07,
+       "cotisationsSurDividendes": 3.92,
+       "dividendesNets": 507.17,
+       "impotSocietes": 94.94,
+       "remunerationNette": 40300,
+       "resultatConserve": 26.9
+      },
+      "prelevementsSociaux": 86,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "limite",
+         "precision": "après 1 an"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Régime des indépendants : retraite de base et complémentaire, indemnités journalières après un an d'affiliation, invalidité-décès ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "remunerationOptimale": {
+       "avecRetraite": true,
+       "remunerationNette": 40300,
+       "retraiteHorsDAtteinte": false
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 26.9,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 0,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 511.09,
+       "deficitImpute": 0,
+       "distribuable": 511.09,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 26.9
+      },
+      "resultatConserve": 27,
+      "resultatConserveActivite": 27,
+      "revenusAvantPrelevements": 60000,
+      "statut": "EURL",
+      "telleQueSaisie": false,
+      "totalPrelevements": 23646,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 19593,
+      "ecartDeFrais": {
+       "postes": {
+        "banque": -50,
+        "expertComptable": -800
+       },
+       "total": -850
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 5873,
+      "libelle": "EI au réel",
+      "netApresImpots": 35384,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "limite",
+         "precision": "après 1 an"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Régime des indépendants : retraite de base et complémentaire, indemnités journalières après un an d'affiliation, invalidité-décès ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 60850,
+      "statut": "EI",
+      "telleQueSaisie": false,
+      "totalPrelevements": 25466,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 14880,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": 100,
+        "banque": -100,
+        "expertComptable": -2000,
+        "logiciel": -50
+       },
+       "total": -2050
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 4984,
+      "libelle": "Micro-entreprise",
+      "netApresImpots": 42186,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 2,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "faible"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "faible"
+        },
+        "retraite": {
+         "niveau": "faible"
+        }
+       },
+       "resume": "Régime des indépendants, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 62050,
+      "statut": "micro",
+      "telleQueSaisie": false,
+      "totalPrelevements": 19864,
+      "warnings": [
+       "Franchise en base de TVA perdue (prestations de services 60 000 € pour un seuil de 41 250 €) : la TVA est due dès le jour du dépassement. Le simulateur ne calcule pas la TVA : il considère les montants saisis comme hors taxe."
+      ]
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 14880,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": 100,
+        "banque": -100,
+        "expertComptable": -2000,
+        "logiciel": -50
+       },
+       "total": -2050
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 1320,
+      "libelle": "Micro + versement libératoire",
+      "netApresImpots": 45850,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 2,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "faible"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "faible"
+        },
+        "retraite": {
+         "niveau": "faible"
+        }
+       },
+       "resume": "Régime des indépendants, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 62050,
+      "statut": "micro-vfl",
+      "telleQueSaisie": false,
+      "totalPrelevements": 16200,
+      "warnings": [
+       "Franchise en base de TVA perdue (prestations de services 60 000 € pour un seuil de 41 250 €) : la TVA est due dès le jour du dépassement. Le simulateur ne calcule pas la TVA : il considère les montants saisis comme hors taxe.",
+       "Versement libératoire : il n'est ouvert que si le revenu fiscal de référence 2023 du foyer ne dépasse pas 28 797 € pour 1 part(s). Ajoutez l'année 2023 à la simulation pour qu'il soit calculé, ou renseignez-le dans la fiche de la micro-entreprise."
+      ]
+     },
+     {
+      "actuel": false,
+      "beneficeGarde": 2767,
+      "cotisationsSociales": 26580,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": -250,
+        "banque": -200,
+        "expertComptable": -2000,
+        "logiciel": -150
+       },
+       "total": -2600
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 1580,
+      "libelle": "Portage salarial",
+      "netApresImpots": 27473,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 5,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "oui"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "oui"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Salarié cadre du régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance des cadres, assurance chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 2767,
+      "resultatConserveActivite": 2767,
+      "revenusAvantPrelevements": 58400,
+      "statut": "portage",
+      "telleQueSaisie": false,
+      "totalPrelevements": 28160,
+      "warnings": [
+       "Conditions typiques d'une société de portage (frais de gestion de 7 %, CDI) : à remplacer par celles de la vôtre."
+      ]
+     }
+    ],
+    "situationSaisie": {
+     "beneficeGarde": 49250,
+     "libelle": "SASU",
+     "netApresImpots": 0,
+     "repartition": {
+      "dividendes": 0,
+      "impotSurLeRevenu": 0,
+      "prelevementsSociaux": 0,
+      "remunerationNette": 0,
+      "resultatConserve": 49250
+     },
+     "statut": "SASU"
+    },
+    "warnings": [
+     "Aucune charge saisie pour cette activité : pensez à la CFE, à l'assurance, à la banque. Sans elles, un statut aux frais de gestion estimés plus bas que le vôtre paraît plus avantageux de toute l'économie de frais estimée."
+    ]
+   }
+  },
+  {
+   "activite": "s-test",
+   "annee": 2026,
+   "resultat": {
+    "couples": [],
+    "meilleur": "SASU",
+    "noteCFE": "CFE de 2026, l'année qui suit la création : base d'imposition réduite de moitié, le poste CFE des frais de fonctionnement est compté pour 50 %.",
+    "partCFE": 0.5,
+    "scenarios": [
+     {
+      "actuel": true,
+      "cotisationsSociales": 0,
+      "ecartDeFrais": {
+       "postes": {},
+       "total": 0
+      },
+      "horsPlafond": false,
+      "impotSocietes": 5400,
+      "impotSurLeRevenu": 1500,
+      "libelle": "SASU",
+      "netApresImpots": 39200,
+      "nonRetenue": null,
+      "partage": {
+       "beneficeAvantRemuneration": 36000,
+       "cotisationsRemuneration": 0,
+       "cotisationsSurDividendes": 0,
+       "dividendesNets": 50000,
+       "impotSocietes": 5400,
+       "remunerationNette": 0,
+       "resultatConserve": -19400
+      },
+      "prelevementsSociaux": 9300,
+      "protectionSociale": {
+       "etoiles": 1,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "non"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "non"
+        },
+        "retraite": {
+         "niveau": "non"
+        }
+       },
+       "resume": "Sans rémunération, aucune couverture liée au mandat : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni prévoyance.",
+       "trimestres": 0
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 500,
+        "reserves": 29350
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 500,
+        "reserves": 48750
+       },
+       "beneficeDistribuableDeLAnnee": 30600,
+       "deficitImpute": 0,
+       "distribuable": 79350,
+       "dividendesPrisSurLesReserves": 19400,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": -19400,
+      "resultatConserveActivite": -19400,
+      "revenusAvantPrelevements": 36000,
+      "statut": "SASU",
+      "telleQueSaisie": true,
+      "totalPrelevements": 16200,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 16067,
+      "ecartDeFrais": {
+       "postes": {},
+       "total": 0
+      },
+      "horsPlafond": false,
+      "impotSocietes": 5199,
+      "impotSurLeRevenu": 2094,
+      "libelle": "EURL",
+      "netApresImpots": 33089,
+      "nonRetenue": null,
+      "partage": {
+       "beneficeAvantRemuneration": 36000,
+       "cotisationsRemuneration": 1343.24,
+       "cotisationsSurDividendes": 14723.57,
+       "dividendesNets": 35276.43,
+       "impotSocietes": 5198.51,
+       "remunerationNette": 0,
+       "resultatConserve": -20541.76
+      },
+      "prelevementsSociaux": 93,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "limite",
+         "precision": "après 1 an"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Régime des indépendants : retraite de base et complémentaire, indemnités journalières après un an d'affiliation, invalidité-décès ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 500,
+        "reserves": 28208.24
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 500,
+        "reserves": 48750
+       },
+       "beneficeDistribuableDeLAnnee": 29458.24,
+       "deficitImpute": 0,
+       "distribuable": 78208.24,
+       "dividendesPrisSurLesReserves": 20541.76,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": -20542,
+      "resultatConserveActivite": -20542,
+      "revenusAvantPrelevements": 36000,
+      "statut": "EURL",
+      "telleQueSaisie": false,
+      "totalPrelevements": 23453,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 11317,
+      "ecartDeFrais": {
+       "postes": {
+        "banque": -50,
+        "expertComptable": -800
+       },
+       "total": -850
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 1455,
+      "libelle": "EI au réel",
+      "netApresImpots": 24078,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "limite",
+         "precision": "après 1 an"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Régime des indépendants : retraite de base et complémentaire, indemnités journalières après un an d'affiliation, invalidité-décès ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 36850,
+      "statut": "EI",
+      "telleQueSaisie": false,
+      "totalPrelevements": 12772,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 9288,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": 100,
+        "banque": -100,
+        "expertComptable": -2000,
+        "logiciel": -50
+       },
+       "total": -2050
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 1046,
+      "libelle": "Micro-entreprise",
+      "netApresImpots": 27716,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 2,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "faible"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "faible"
+        },
+        "retraite": {
+         "niveau": "faible"
+        }
+       },
+       "resume": "Régime des indépendants, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 38050,
+      "statut": "micro",
+      "telleQueSaisie": false,
+      "totalPrelevements": 10334,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 9288,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": 100,
+        "banque": -100,
+        "expertComptable": -2000,
+        "logiciel": -50
+       },
+       "total": -2050
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 792,
+      "libelle": "Micro + versement libératoire",
+      "netApresImpots": 27970,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 2,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "faible"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "faible"
+        },
+        "retraite": {
+         "niveau": "faible"
+        }
+       },
+       "resume": "Régime des indépendants, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 38050,
+      "statut": "micro-vfl",
+      "telleQueSaisie": false,
+      "totalPrelevements": 10080,
+      "warnings": [
+       "Versement libératoire : il n'est ouvert que si le revenu fiscal de référence 2024 du foyer ne dépasse pas 29 315 € pour 1 part(s). Ajoutez l'année 2024 à la simulation pour qu'il soit calculé, ou renseignez-le dans la fiche de la micro-entreprise."
+      ]
+     },
+     {
+      "actuel": false,
+      "beneficeGarde": 1716,
+      "cotisationsSociales": 16495,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": -250,
+        "banque": -200,
+        "cfe": -150,
+        "expertComptable": -2000,
+        "logiciel": -150
+       },
+       "total": -2750
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 0,
+      "libelle": "Portage salarial",
+      "netApresImpots": 18019,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 5,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "oui"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "oui"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Salarié cadre du régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance des cadres, assurance chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 1716,
+      "resultatConserveActivite": 1716,
+      "revenusAvantPrelevements": 36230,
+      "statut": "portage",
+      "telleQueSaisie": false,
+      "totalPrelevements": 16495,
+      "warnings": [
+       "Conditions typiques d'une société de portage (frais de gestion de 7 %, CDI) : à remplacer par celles de la vôtre.",
+       "Salaire de base de 1 810 € par mois en moyenne, sous le minimum conventionnel d'un temps plein (2 256 € ; 2 779 € pour le niveau expert). La convention le compte au jour ou à l'heure travaillés, que le simulateur ne connaît pas : vérifiez-le avec votre société de portage."
+      ]
+     }
+    ],
+    "situationSaisie": {
+     "libelle": "SASU",
+     "netApresImpots": 39200,
+     "repartition": {
+      "dividendes": 50000,
+      "impotSurLeRevenu": 1500,
+      "prelevementsSociaux": 9300,
+      "remunerationNette": 0,
+      "resultatConserve": -19400
+     },
+     "statut": "SASU"
+    },
+    "warnings": [
+     "Aucune charge saisie pour cette activité : pensez à la CFE, à l'assurance, à la banque. Sans elles, un statut aux frais de gestion estimés plus bas que le vôtre paraît plus avantageux de toute l'économie de frais estimée."
+    ]
+   }
+  }
+ ]
+}

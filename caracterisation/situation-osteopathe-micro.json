@@ -1,0 +1,688 @@
+{
+ "annees": [
+  {
+   "annee": 2026,
+   "erreur": null,
+   "report": {
+    "activities": [
+     {
+      "beneficiaireIds": [
+       "p-lea"
+      ],
+      "charges": 5520,
+      "chiffreAffaires": 37200,
+      "cotisationsSociales": 8705,
+      "entityId": "m-lea",
+      "formationProfessionnelle": 74,
+      "impotSocietes": 0,
+      "name": "Cabinet d'ostéopathie de Léa",
+      "profession": {
+       "caisse": "CIPAV",
+       "id": "osteopathe",
+       "libelle": "Ostéopathe",
+       "tauxMicro": 0.23
+      },
+      "resultatConserve": 0,
+      "revenuVerse": 22975,
+      "statut": "Micro-entreprise",
+      "type": "micro-entreprise",
+      "versementLiberatoire": {
+       "anneeRfr": 2024,
+       "applique": false,
+       "eligible": true,
+       "origineRfr": "saisi",
+       "partsFiscales": 1,
+       "plafondRfr": 29315,
+       "rfrN2": 22000
+      },
+      "warnings": []
+     }
+    ],
+    "annee": 2026,
+    "anneeDesRegles": 2026,
+    "avertissements": [],
+    "bilan": {
+     "charges": 5520,
+     "chiffreAffaires": 37200,
+     "cotisationsSalariales": 0,
+     "cotisationsSociales": 8705,
+     "impotSocietes": 0,
+     "impotSurLeRevenu": 1172,
+     "nonRattache": 0,
+     "prelevementsSociaux": 0,
+     "resultatConserve": 0,
+     "revenusAvantPrelevements": 31680,
+     "revenusDirects": 0,
+     "totalPrelevements": 9877
+    },
+    "foyers": [
+     {
+      "depenses": 0,
+      "impotSurLeRevenu": 1172,
+      "netApresImpots": 21803,
+      "optionDividendes": null,
+      "personIds": [
+       "p-lea"
+      ],
+      "prelevementsSociaux": 0,
+      "resultatConserve": 0,
+      "revenuFiscalDeReference": 24552,
+      "revenuImposableGlobal": 24552,
+      "revenusAvantPrelevements": 31680,
+      "revenusEncaisses": 22975,
+      "totalParts": 1,
+      "totalPrelevements": 9877,
+      "warnings": []
+     }
+    ],
+    "persons": [
+     {
+      "cotisationsSalariales": 0,
+      "depenses": 0,
+      "detail": {
+       "allocationsChomage": 0,
+       "autresRevenus": 0,
+       "benefices": 22975,
+       "dividendes": 0,
+       "remunerationsDirigeant": 0,
+       "salaires": 0
+      },
+      "entityId": "p-lea",
+      "name": "Léa",
+      "revenusActivites": 22975,
+      "revenusDirects": 0
+     }
+    ],
+    "totalNetApresImpots": 21803
+   }
+  }
+ ],
+ "comparaisons": [
+  {
+   "activite": "m-lea",
+   "annee": 2026,
+   "resultat": {
+    "couples": [],
+    "meilleur": "micro-vfl",
+    "optimisations": {
+     "EURL": {
+      "meilleur": {
+       "cotisationsSociales": 7606,
+       "dividendes": 107,
+       "impotSocietes": 19,
+       "impotSurLeRevenu": 499,
+       "netApresImpots": 21487,
+       "prelevementsSociaux": 19,
+       "remunerationNette": 21900,
+       "trimestres": 4
+      },
+      "meilleurAvecRetraite": {
+       "cotisationsSociales": 7606,
+       "dividendes": 107,
+       "impotSocietes": 19,
+       "impotSurLeRevenu": 499,
+       "netApresImpots": 21487,
+       "prelevementsSociaux": 19,
+       "remunerationNette": 21900,
+       "trimestres": 4
+      },
+      "nombreDePoints": 59,
+      "remunerationMaximale": 21900,
+      "statut": "EURL",
+      "unPointSurDix": [
+       {
+        "cotisationsSociales": 6374,
+        "dividendes": 24471,
+        "impotSocietes": 4318,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 18919,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 0,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 6570,
+        "dividendes": 20327,
+        "impotSocietes": 3587,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 19454,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 4000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 6786,
+        "dividendes": 16041,
+        "impotSocietes": 2831,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 19995,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 8000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 7014,
+        "dividendes": 11570,
+        "impotSocietes": 2042,
+        "impotSurLeRevenu": 133,
+        "netApresImpots": 20423,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 12000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 7248,
+        "dividendes": 7022,
+        "impotSocietes": 1239,
+        "impotSurLeRevenu": 288,
+        "netApresImpots": 20837,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 16000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 7488,
+        "dividendes": 2388,
+        "impotSocietes": 421,
+        "impotSurLeRevenu": 436,
+        "netApresImpots": 21267,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 20000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 7606,
+        "dividendes": 107,
+        "impotSocietes": 19,
+        "impotSurLeRevenu": 499,
+        "netApresImpots": 21487,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 21900,
+        "trimestres": 4
+       }
+      ],
+      "warnings": []
+     },
+     "SASU": {
+      "meilleur": {
+       "cotisationsSociales": 0,
+       "dividendes": 25186,
+       "impotSocietes": 4445,
+       "impotSurLeRevenu": 0,
+       "netApresImpots": 20501,
+       "prelevementsSociaux": 4685,
+       "remunerationNette": 0,
+       "trimestres": 0
+      },
+      "meilleurAvecRetraite": {
+       "cotisationsSociales": 4252,
+       "dividendes": 16641,
+       "impotSocietes": 2937,
+       "impotSurLeRevenu": 0,
+       "netApresImpots": 19346,
+       "prelevementsSociaux": 3095,
+       "remunerationNette": 5800,
+       "trimestres": 4
+      },
+      "nombreDePoints": 65,
+      "remunerationMaximale": 17000,
+      "statut": "SASU",
+      "unPointSurDix": [
+       {
+        "cotisationsSociales": 0,
+        "dividendes": 25186,
+        "impotSocietes": 4445,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 20501,
+        "prelevementsSociaux": 4685,
+        "remunerationNette": 0,
+        "trimestres": 0
+       },
+       {
+        "cotisationsSociales": 1759,
+        "dividendes": 21650,
+        "impotSocietes": 3821,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 20023,
+        "prelevementsSociaux": 4027,
+        "remunerationNette": 2400,
+        "trimestres": 1
+       },
+       {
+        "cotisationsSociales": 3959,
+        "dividendes": 17231,
+        "impotSocietes": 3041,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 19426,
+        "prelevementsSociaux": 3205,
+        "remunerationNette": 5400,
+        "trimestres": 3
+       },
+       {
+        "cotisationsSociales": 5058,
+        "dividendes": 15021,
+        "impotSocietes": 2651,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 19127,
+        "prelevementsSociaux": 2794,
+        "remunerationNette": 6900,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 7257,
+        "dividendes": 10602,
+        "impotSocietes": 1871,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 18530,
+        "prelevementsSociaux": 1972,
+        "remunerationNette": 9900,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 9457,
+        "dividendes": 6182,
+        "impotSocietes": 1091,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 17932,
+        "prelevementsSociaux": 1150,
+        "remunerationNette": 12900,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 11656,
+        "dividendes": 1763,
+        "impotSocietes": 311,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 17335,
+        "prelevementsSociaux": 328,
+        "remunerationNette": 15900,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 12462,
+        "dividendes": 143,
+        "impotSocietes": 25,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 17116,
+        "prelevementsSociaux": 27,
+        "remunerationNette": 17000,
+        "trimestres": 4
+       }
+      ],
+      "warnings": []
+     }
+    },
+    "scenarios": [
+     {
+      "actuel": false,
+      "cotisationsSociales": 4252,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": -100,
+        "banque": 100,
+        "expertComptable": 2000,
+        "logiciel": 50
+       },
+       "total": 2050
+      },
+      "horsPlafond": false,
+      "impotSocietes": 2937,
+      "impotSurLeRevenu": 0,
+      "libelle": "SASU",
+      "netApresImpots": 19346,
+      "nonRetenue": "societeExerciceLiberal",
+      "partage": {
+       "beneficeAvantRemuneration": 29630,
+       "cotisationsRemuneration": 4251.85,
+       "cotisationsSurDividendes": 0,
+       "dividendesNets": 16641.43,
+       "impotSocietes": 2936.72,
+       "remunerationNette": 5800,
+       "resultatConserve": 0
+      },
+      "prelevementsSociaux": 3095,
+      "protectionSociale": {
+       "etoiles": 4,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "oui"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance ; pas d'assurance chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "remunerationOptimale": {
+       "avecRetraite": true,
+       "coutDesQuatreTrimestres": 1155,
+       "remunerationNette": 5800,
+       "retraiteHorsDAtteinte": false
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 16641.43,
+       "deficitImpute": 0,
+       "distribuable": 16641.43,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 29630,
+      "statut": "SASU",
+      "telleQueSaisie": false,
+      "totalPrelevements": 10284,
+      "warnings": [
+       "Ostéopathe en SASU : cette profession exerce en principe en société d'exercice libéral (SELARL, SELAS…). La rémunération de son activité y relève alors des bénéfices non commerciaux et de sa caisse, y compris pour un président de SELAS, dont seul le mandat social relève du régime général. Le président est calculé comme un assimilé salarié du régime général, et cette rémunération n'est pas encore modélisée : l'écart n'est pas chiffré. Aucun texte consulté n'autorise ni n'interdit en toutes lettres l'EURL ou la SASU classique à cette profession."
+      ]
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 7606,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": -100,
+        "banque": 100,
+        "expertComptable": 2000,
+        "logiciel": 50
+       },
+       "total": 2050
+      },
+      "horsPlafond": false,
+      "impotSocietes": 19,
+      "impotSurLeRevenu": 499,
+      "libelle": "EURL",
+      "netApresImpots": 21487,
+      "nonRetenue": "societeExerciceLiberal",
+      "partage": {
+       "beneficeAvantRemuneration": 29630,
+       "cotisationsRemuneration": 7604.25,
+       "cotisationsSurDividendes": 2.04,
+       "dividendesNets": 104.85,
+       "impotSocietes": 18.86,
+       "remunerationNette": 21900,
+       "resultatConserve": 0
+      },
+      "prelevementsSociaux": 19,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "limite",
+         "precision": "du 4e au 90e jour"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "limite",
+         "precision": "selon le revenu"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Profession libérale de la CIPAV : retraite de base des libéraux (CNAVPL) et complémentaire de la CIPAV, invalidité-décès proportionnelle au revenu, indemnités journalières de l'Assurance maladie (du 4e au 90e jour, depuis 2021) ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "remunerationOptimale": {
+       "avecRetraite": true,
+       "remunerationNette": 21900,
+       "retraiteHorsDAtteinte": false
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 106.89,
+       "deficitImpute": 0,
+       "distribuable": 106.89,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 29630,
+      "statut": "EURL",
+      "telleQueSaisie": false,
+      "totalPrelevements": 8143,
+      "warnings": [
+       "Ostéopathe en EURL : cette profession exerce en principe en société d'exercice libéral (SELARL, SELAS…). La rémunération de son activité y relève alors des bénéfices non commerciaux et de sa caisse, y compris pour un président de SELAS, dont seul le mandat social relève du régime général. Les cotisations du gérant sont calculées avec celles de sa caisse, mais cette rémunération n'est pas encore modélisée : l'écart n'est pas chiffré. Aucun texte consulté n'autorise ni n'interdit en toutes lettres l'EURL ou la SASU classique à cette profession."
+      ]
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 7894,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": -100,
+        "banque": 50,
+        "expertComptable": 1200,
+        "logiciel": 50
+       },
+       "total": 1200
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 963,
+      "libelle": "EI au réel",
+      "netApresImpots": 21623,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "limite",
+         "precision": "du 4e au 90e jour"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "limite",
+         "precision": "selon le revenu"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Profession libérale de la CIPAV : retraite de base des libéraux (CNAVPL) et complémentaire de la CIPAV, invalidité-décès proportionnelle au revenu, indemnités journalières de l'Assurance maladie (du 4e au 90e jour, depuis 2021) ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 30480,
+      "statut": "EI",
+      "telleQueSaisie": false,
+      "totalPrelevements": 8857,
+      "warnings": []
+     },
+     {
+      "actuel": true,
+      "cotisationsSociales": 8705,
+      "ecartDeFrais": {
+       "postes": {},
+       "total": 0
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 1172,
+      "libelle": "Micro-entreprise",
+      "netApresImpots": 21803,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 2,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "faible"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "faible"
+        },
+        "retraite": {
+         "niveau": "faible"
+        }
+       },
+       "resume": "Profession libérale de la CIPAV, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 31680,
+      "statut": "micro",
+      "telleQueSaisie": true,
+      "totalPrelevements": 9877,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 8705,
+      "ecartDeFrais": {
+       "postes": {},
+       "total": 0
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 818,
+      "libelle": "Micro + versement libératoire",
+      "netApresImpots": 22157,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 2,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "faible"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "faible"
+        },
+        "retraite": {
+         "niveau": "faible"
+        }
+       },
+       "resume": "Profession libérale de la CIPAV, avec des droits proportionnels au chiffre d'affaires et aucun minimum : retraite et indemnités journalières faibles, voire nulles, à faible chiffre d'affaires ; pas de couverture accidents du travail ni de chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 31680,
+      "statut": "micro-vfl",
+      "telleQueSaisie": false,
+      "totalPrelevements": 9523,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "beneficeGarde": 1417,
+      "cotisationsSociales": 13625,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": -350,
+        "banque": -100,
+        "cfe": -300,
+        "logiciel": -100
+       },
+       "total": -850
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 0,
+      "libelle": "Portage salarial",
+      "netApresImpots": 14884,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 5,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "oui"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "oui"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Salarié cadre du régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance des cadres, assurance chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 1417,
+      "resultatConserveActivite": 1417,
+      "revenusAvantPrelevements": 29926,
+      "statut": "portage",
+      "telleQueSaisie": false,
+      "totalPrelevements": 13625,
+      "warnings": [
+       "Conditions typiques d'une société de portage (frais de gestion de 7 %, CDI) : à remplacer par celles de la vôtre.",
+       "Le salarié porté relève du régime général, sans la caisse de sa profession libérale ; ses prestations sont facturées à des entreprises clientes (code du travail, art. L1254-1) : vérifiez que votre profession et votre clientèle s'y prêtent.",
+       "Salaire de base de 1 495 € par mois en moyenne, sous le minimum conventionnel d'un temps plein (2 256 € ; 2 779 € pour le niveau expert). La convention le compte au jour ou à l'heure travaillés, que le simulateur ne connaît pas : vérifiez-le avec votre société de portage."
+      ]
+     }
+    ],
+    "situationSaisie": {
+     "libelle": "Micro-entreprise",
+     "netApresImpots": 21803,
+     "statut": "micro"
+    },
+    "warnings": [
+     "Ostéopathe : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut, cette profession exerçant en principe en société d'exercice libéral, dont la rémunération n'est pas encore modélisée. Leurs colonnes restent indicatives."
+    ]
+   }
+  }
+ ]
+}

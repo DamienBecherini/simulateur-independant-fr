@@ -26,6 +26,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "caracterisation:figer": "vitest run src/lib/caracterisation.test.ts -u",
     "test:e2e": "npm run transpile:electron && tsc-alias -p src/backend/tsconfig.json && npm run build && playwright test",
     "test:e2e:visible": "cross-env E2E_VISIBLE=1 npm run test:e2e",
     "test:web": "vite build --mode web && playwright test --config playwright.web.config.ts",

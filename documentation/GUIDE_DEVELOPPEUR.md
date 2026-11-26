@@ -40,6 +40,7 @@ npm run installer:chromium            # une fois : le Chromium des tests de la d
 | `npm test` | Tests Vitest (logique sous Node, composants sous jsdom, scripts sous Node), sans couverture. | En continu. |
 | `npx vitest run <fichiers>` | Seulement ces fichiers. Ajoutez `--reporter=verbose` pour voir les `console.log` d'un test qui réussit. | Après chaque petite modification. |
 | `npm run simuler -- <fichier.json>` | Passe une session dans le moteur et affiche, année par année, les montants clés de chaque activité et de chaque foyer, les avertissements et l'année des règles. Options `--annee`, `--acteur`, `--json` (§ 3.7). | Déboguer un calcul. |
+| `npm run caracterisation:figer` | Réécrit les résultats figés du test de caractérisation (`caracterisation/*.json`, voir § 3.15). | Après un changement voulu d'un résultat ; relire le diff avant de commiter. |
 | `npm run test:coverage` | Tous les tests, avec la couverture (seuil bloquant : 90 % sur la logique pure : moteur, serveur MCP, `src/lib`, `src/web`, scripts ; liste dans `vitest.config.ts`). Rapport dans `coverage/`. | Avant de commiter. |
 | `npx tsc -b` | Types de l'interface, de `src/lib`, de `src/web` et des tests de bout en bout (pas `tsc -p .`, qui ne vérifie rien : `tsconfig.json` ne fait que référencer les projets). | Avant de commiter. |
 | `npm run transpile:electron` | Types et compilation de `src/backend` (process principal, moteur, serveur MCP), puis empaquetage du serveur MCP. | Avant de commiter si `src/backend` a changé. |
@@ -79,6 +80,7 @@ La CI (`.github/workflows/ci.yml`) lance lint, `code-mort`, `typecheck`, `transp
 | `src/web/` | La démo web : `api-navigateur.ts` remplace le process principal (même `window.api`), `stockage-navigateur.ts` le disque ; `main.tsx` est sa racine de composition (plateforme de la démo : `plateforme-web.ts`) ; `pwa/` la rend installable (ADR 012). |
 | `src/globals.d.ts` | `EventPayloadMapping` : le contrat de `window.api`, commun à Electron et à la démo. |
 | `e2e/`, `e2e-web/` | Tests de bout en bout (application de bureau, démo web). |
+| `caracterisation/` | Résultats complets figés du test de caractérisation (`src/lib/caracterisation.test.ts`, § 3.15) : un fichier JSON par situation type, par scénario de test, et un pour la session maximale. Hors de `src` : ni SonarQube ni la mesure de duplication ne les lisent. |
 | `documentation/` | Ce guide, les ADR, la publication, les dossiers de recherche (`recherche/`), la relecture d'octobre 2026. |
 | `scripts/` | Empaquetage du serveur MCP, paquet du Microsoft Store et son essai (`essai-paquet-store.mjs`, logique dans `essai-paquet-store-logique.mjs`), commande `npm run simuler` (`simuler.mjs`, logique dans `src/lib/simuler-en-ligne-de-commande.ts`), scripts des retours des utilisateurs (`scripts/retours/`). |
 
@@ -528,6 +530,20 @@ Pour une profession de la CARPIMKO ou de la CIPAV (une nouvelle caisse : § 3.3)
 5. **Ce que le compilateur ne voit pas** : un cas de référence si la profession a des montants propres (`references/liberaux.reference.test.ts`, § 3.6) ; la liste exposée aux IA (`regles_de_l_annee`, `outils/lecture.ts`) se lit dans les règles, sans rien à écrire ; `README.md` et `CHANGELOG.md`.
 
 **Vérification :** `npx vitest run src/backend/regles src/lib/professions.test.ts src/backend/logic/references`, puis la vérification complète.
+
+### 3.15 Figer de nouveau les résultats (test de caractérisation)
+
+`src/lib/caracterisation.test.ts` compare ce que le moteur produit à ce qu'il produisait : le rapport entier de chaque année (2024 à 2026) et la comparaison des statuts de chaque activité, pour les 12 situations types, les scénarios de test et la session maximale. Il ne dit pas si un montant est juste (les cas de référence le font, § 3.6) : il dit qu'un montant a changé. C'est le filet d'une refonte « à résultats inchangés ».
+
+**Quand il échoue :**
+
+1. **Sans changement voulu** (refonte, rangement) : c'est une régression. Le message donne le fichier et le champ ; corriger le code.
+2. **Après un changement voulu** (règle corrigée, champ ajouté ou renommé, libellé d'un avertissement, barème d'une année mis à jour) : `npm run caracterisation:figer`, puis **relire le diff** de `caracterisation/` (`git diff --stat caracterisation`, puis les fichiers touchés). Seuls les champs attendus doivent bouger ; le commit les emporte avec le code.
+3. **Une situation type ou un scénario ajouté, renommé ou retiré** : la même commande écrit le nouveau fichier ; supprimer à la main celui qui n'a plus de cas (le test « un fichier figé par cas, et aucun autre » le réclame).
+
+**Ce qui est figé :** montants arrondis au centime, clés triées (l'ordre d'écriture d'un objet ne compte pas). De la courbe de l'optimiseur, un point sur dix. Les années dont les règles ne sont pas publiées n'y sont pas (`ANNEES_FIGEES`, à étendre quand une année paraît).
+
+**Vérification :** `npx vitest run src/lib/caracterisation.test.ts`. En CI, un fichier figé manquant fait échouer le test au lieu de l'écrire.
 
 ---
 

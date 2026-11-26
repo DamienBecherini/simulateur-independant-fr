@@ -1,0 +1,595 @@
+{
+ "annees": [
+  {
+   "annee": 2026,
+   "erreur": null,
+   "report": {
+    "activities": [
+     {
+      "beneficiaireIds": [
+       "p-test"
+      ],
+      "charges": 0,
+      "chiffreAffaires": 20000,
+      "cotisationsSociales": 6572,
+      "cotisationsTNS": {
+       "assiette": 14800,
+       "caisse": {
+        "asv": 247.68,
+        "baseDesCotisationsDeLAnneePrecedente": {
+         "annee": 2026,
+         "anneePrecedenteConnue": false,
+         "assiette": 14800
+        },
+        "caisse": "CARPIMKO",
+        "curps": 14.8,
+        "libelleProfession": "Infirmier ou infirmière",
+        "partConventionnee": 1,
+        "priseEnCharge": {
+         "asv": 482.52,
+         "maladie": 105.02
+        },
+        "profession": "infirmier"
+       },
+       "cotisations": {
+        "allocationsFamiliales": 0,
+        "csgDeductible": 1006.4,
+        "csgNonDeductibleEtCrds": 429.2,
+        "formationProfessionnelle": 120.15,
+        "indemnitesJournalieres": 57.67,
+        "invaliditeDeces": 1022,
+        "maladieMaternite": 14.8,
+        "retraiteComplementaire": 2090.61,
+        "retraiteDeBase": 1568.8
+       },
+       "minimumRetraiteApplique": false,
+       "partNonDeductible": 429.2,
+       "revenuAvantCotisations": 20000,
+       "supplementMinimum": 13.27,
+       "total": 6572.11
+      },
+      "entityId": "a-test",
+      "impotSocietes": 0,
+      "name": "Cabinet infirmier",
+      "profession": {
+       "caisse": "CARPIMKO",
+       "id": "infirmier",
+       "libelle": "Infirmier ou infirmière"
+      },
+      "resultatConserve": 0,
+      "revenuVerse": 13428,
+      "statut": "EI au réel",
+      "type": "company",
+      "warnings": []
+     }
+    ],
+    "annee": 2026,
+    "anneeDesRegles": 2026,
+    "avertissements": [],
+    "bilan": {
+     "charges": 0,
+     "chiffreAffaires": 20000,
+     "cotisationsSalariales": 0,
+     "cotisationsSociales": 6572,
+     "impotSocietes": 0,
+     "impotSurLeRevenu": 0,
+     "nonRattache": 0,
+     "prelevementsSociaux": 0,
+     "resultatConserve": 0,
+     "revenusAvantPrelevements": 20000,
+     "revenusDirects": 0,
+     "totalPrelevements": 6572
+    },
+    "foyers": [
+     {
+      "depenses": 0,
+      "impotSurLeRevenu": 0,
+      "netApresImpots": 13428,
+      "optionDividendes": null,
+      "personIds": [
+       "p-test"
+      ],
+      "prelevementsSociaux": 0,
+      "resultatConserve": 0,
+      "revenuFiscalDeReference": 13857,
+      "revenuImposableGlobal": 13857,
+      "revenusAvantPrelevements": 20000,
+      "revenusEncaisses": 13428,
+      "totalParts": 1,
+      "totalPrelevements": 6572,
+      "warnings": []
+     }
+    ],
+    "persons": [
+     {
+      "cotisationsSalariales": 0,
+      "depenses": 0,
+      "detail": {
+       "allocationsChomage": 0,
+       "autresRevenus": 0,
+       "benefices": 13428,
+       "dividendes": 0,
+       "remunerationsDirigeant": 0,
+       "salaires": 0
+      },
+      "entityId": "p-test",
+      "name": "Camille",
+      "revenusActivites": 13428,
+      "revenusDirects": 0
+     }
+    ],
+    "totalNetApresImpots": 13428
+   }
+  }
+ ],
+ "comparaisons": [
+  {
+   "activite": "a-test",
+   "annee": 2026,
+   "resultat": {
+    "couples": [],
+    "meilleur": "EI",
+    "optimisations": {
+     "EURL": {
+      "meilleur": {
+       "cotisationsSociales": 6441,
+       "dividendes": 8,
+       "impotSocietes": 1,
+       "impotSurLeRevenu": 0,
+       "netApresImpots": 12706,
+       "prelevementsSociaux": 1,
+       "remunerationNette": 12700,
+       "trimestres": 4
+      },
+      "meilleurAvecRetraite": {
+       "cotisationsSociales": 6441,
+       "dividendes": 8,
+       "impotSocietes": 1,
+       "impotSurLeRevenu": 0,
+       "netApresImpots": 12706,
+       "prelevementsSociaux": 1,
+       "remunerationNette": 12700,
+       "trimestres": 4
+      },
+      "nombreDePoints": 46,
+      "remunerationMaximale": 12700,
+      "statut": "EURL",
+      "unPointSurDix": [
+       {
+        "cotisationsSociales": 6089,
+        "dividendes": 12526,
+        "impotSocietes": 2211,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 10832,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 0,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 6164,
+        "dividendes": 9747,
+        "impotSocietes": 1720,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 11247,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 3000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 6245,
+        "dividendes": 6739,
+        "impotSocietes": 1189,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 11697,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 6000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 6326,
+        "dividendes": 3720,
+        "impotSocietes": 657,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 12148,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 9000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 6408,
+        "dividendes": 710,
+        "impotSocietes": 125,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 12598,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 12000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 6441,
+        "dividendes": 8,
+        "impotSocietes": 1,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 12706,
+        "prelevementsSociaux": 1,
+        "remunerationNette": 12700,
+        "trimestres": 4
+       }
+      ],
+      "warnings": []
+     },
+     "SASU": {
+      "meilleur": {
+       "cotisationsSociales": 0,
+       "dividendes": 16278,
+       "impotSocietes": 2873,
+       "impotSurLeRevenu": 0,
+       "netApresImpots": 13250,
+       "prelevementsSociaux": 3028,
+       "remunerationNette": 0,
+       "trimestres": 0
+      },
+      "meilleurAvecRetraite": {
+       "cotisationsSociales": 4252,
+       "dividendes": 7733,
+       "impotSocietes": 1365,
+       "impotSurLeRevenu": 0,
+       "netApresImpots": 12095,
+       "prelevementsSociaux": 1438,
+       "remunerationNette": 5800,
+       "trimestres": 4
+      },
+      "nombreDePoints": 59,
+      "remunerationMaximale": 11000,
+      "statut": "SASU",
+      "unPointSurDix": [
+       {
+        "cotisationsSociales": 0,
+        "dividendes": 16278,
+        "impotSocietes": 2873,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 13250,
+        "prelevementsSociaux": 3028,
+        "remunerationNette": 0,
+        "trimestres": 0
+       },
+       {
+        "cotisationsSociales": 1320,
+        "dividendes": 13626,
+        "impotSocietes": 2405,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 12891,
+        "prelevementsSociaux": 2534,
+        "remunerationNette": 1800,
+        "trimestres": 1
+       },
+       {
+        "cotisationsSociales": 2786,
+        "dividendes": 10680,
+        "impotSocietes": 1885,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 12493,
+        "prelevementsSociaux": 1986,
+        "remunerationNette": 3800,
+        "trimestres": 2
+       },
+       {
+        "cotisationsSociales": 4179,
+        "dividendes": 7881,
+        "impotSocietes": 1391,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 12115,
+        "prelevementsSociaux": 1466,
+        "remunerationNette": 5700,
+        "trimestres": 3
+       },
+       {
+        "cotisationsSociales": 5425,
+        "dividendes": 5376,
+        "impotSocietes": 949,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 11776,
+        "prelevementsSociaux": 1000,
+        "remunerationNette": 7400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 6891,
+        "dividendes": 2430,
+        "impotSocietes": 429,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 11378,
+        "prelevementsSociaux": 452,
+        "remunerationNette": 9400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 8064,
+        "dividendes": 73,
+        "impotSocietes": 13,
+        "impotSurLeRevenu": 0,
+        "netApresImpots": 11060,
+        "prelevementsSociaux": 14,
+        "remunerationNette": 11000,
+        "trimestres": 4
+       }
+      ],
+      "warnings": []
+     }
+    },
+    "scenarios": [
+     {
+      "actuel": false,
+      "cotisationsSociales": 0,
+      "ecartDeFrais": {
+       "postes": {
+        "banque": 50,
+        "expertComptable": 800
+       },
+       "total": 850
+      },
+      "horsPlafond": false,
+      "impotSocietes": 2873,
+      "impotSurLeRevenu": 0,
+      "libelle": "SASU",
+      "netApresImpots": 13250,
+      "nonRetenue": "societeExerciceLiberal",
+      "partage": {
+       "beneficeAvantRemuneration": 19150,
+       "cotisationsRemuneration": 0,
+       "cotisationsSurDividendes": 0,
+       "dividendesNets": 16277.5,
+       "impotSocietes": 2872.5,
+       "remunerationNette": 0,
+       "resultatConserve": 0
+      },
+      "prelevementsSociaux": 3028,
+      "protectionSociale": {
+       "etoiles": 1,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "non"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "non"
+        },
+        "retraite": {
+         "niveau": "non"
+        }
+       },
+       "resume": "Sans rémunération, aucune couverture liée au mandat : frais de santé par la protection universelle maladie, mais ni trimestre de retraite, ni indemnités journalières, ni prévoyance.",
+       "trimestres": 0
+      },
+      "remunerationOptimale": {
+       "avecRetraite": false,
+       "coutDesQuatreTrimestres": 1155,
+       "remunerationNette": 0,
+       "retraiteHorsDAtteinte": false
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 16277.5,
+       "deficitImpute": 0,
+       "distribuable": 16277.5,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 19150,
+      "statut": "SASU",
+      "telleQueSaisie": false,
+      "totalPrelevements": 5901,
+      "warnings": [
+       "Infirmier ou infirmière en SASU : cette profession exerce en principe en société d'exercice libéral (SELARL, SELAS…). La rémunération de son activité y relève alors des bénéfices non commerciaux et de sa caisse, y compris pour un président de SELAS, dont seul le mandat social relève du régime général. Le président est calculé comme un assimilé salarié du régime général, et cette rémunération n'est pas encore modélisée : l'écart n'est pas chiffré. Aucun texte consulté n'autorise ni n'interdit en toutes lettres l'EURL ou la SASU classique à cette profession."
+      ]
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 6441,
+      "ecartDeFrais": {
+       "postes": {
+        "banque": 50,
+        "expertComptable": 800
+       },
+       "total": 850
+      },
+      "horsPlafond": false,
+      "impotSocietes": 1,
+      "impotSurLeRevenu": 0,
+      "libelle": "EURL",
+      "netApresImpots": 12706,
+      "nonRetenue": "societeExerciceLiberal",
+      "partage": {
+       "beneficeAvantRemuneration": 19150,
+       "cotisationsRemuneration": 6440.75,
+       "cotisationsSurDividendes": 0,
+       "dividendesNets": 7.87,
+       "impotSocietes": 1.39,
+       "remunerationNette": 12700,
+       "resultatConserve": 0
+      },
+      "prelevementsSociaux": 1,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "limite",
+         "precision": "rente forfaitaire"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Auxiliaire médical de la CARPIMKO : retraite de base des libéraux (CNAVPL), complémentaire et, conventionné, avantage social vieillesse ; indemnités journalières de l'Assurance maladie du 4e au 90e jour, puis de la CARPIMKO ; rente d'invalidité forfaitaire ; pas de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "remunerationOptimale": {
+       "avecRetraite": false,
+       "remunerationNette": 12700,
+       "retraiteHorsDAtteinte": false
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 7.87,
+       "deficitImpute": 0,
+       "distribuable": 7.87,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 19150,
+      "statut": "EURL",
+      "telleQueSaisie": false,
+      "totalPrelevements": 6443,
+      "warnings": [
+       "Infirmier ou infirmière en EURL : cette profession exerce en principe en société d'exercice libéral (SELARL, SELAS…). La rémunération de son activité y relève alors des bénéfices non commerciaux et de sa caisse, y compris pour un président de SELAS, dont seul le mandat social relève du régime général. Les cotisations du gérant sont calculées avec celles de sa caisse, mais cette rémunération n'est pas encore modélisée : l'écart n'est pas chiffré. Aucun texte consulté n'autorise ni n'interdit en toutes lettres l'EURL ou la SASU classique à cette profession."
+      ]
+     },
+     {
+      "actuel": true,
+      "cotisationsSociales": 6572,
+      "ecartDeFrais": {
+       "postes": {},
+       "total": 0
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 0,
+      "libelle": "EI au réel",
+      "netApresImpots": 13428,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "limite",
+         "precision": "rente forfaitaire"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Auxiliaire médical de la CARPIMKO : retraite de base des libéraux (CNAVPL), complémentaire et, conventionné, avantage social vieillesse ; indemnités journalières de l'Assurance maladie du 4e au 90e jour, puis de la CARPIMKO ; rente d'invalidité forfaitaire ; pas de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 20000,
+      "statut": "EI",
+      "telleQueSaisie": true,
+      "totalPrelevements": 6572,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 9402,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": -250,
+        "banque": -150,
+        "cfe": -300,
+        "expertComptable": -1200,
+        "logiciel": -150
+       },
+       "total": -2050
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 0,
+      "libelle": "Portage salarial",
+      "netApresImpots": 10270,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 5,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "oui"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "oui"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Salarié cadre du régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance des cadres, assurance chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 978,
+      "resultatConserveActivite": 978,
+      "revenusAvantPrelevements": 20650,
+      "statut": "portage",
+      "telleQueSaisie": false,
+      "totalPrelevements": 9402,
+      "warnings": [
+       "Conditions typiques d'une société de portage (frais de gestion de 7 %, CDI) : à remplacer par celles de la vôtre.",
+       "Le salarié porté relève du régime général, sans la caisse de sa profession libérale ; ses prestations sont facturées à des entreprises clientes (code du travail, art. L1254-1) : vérifiez que votre profession et votre clientèle s'y prêtent."
+      ]
+     }
+    ],
+    "situationSaisie": {
+     "libelle": "EI au réel",
+     "netApresImpots": 13428,
+     "statut": "EI"
+    },
+    "warnings": [
+     "Micro-entreprise non proposée : elle est interdite aux praticiens et auxiliaires médicaux (« En tant que praticien ou auxiliaire médical vous ne pouvez pas être auto-entrepreneur », Urssaf). Infirmier ou infirmière : régime réel seulement.",
+     "Infirmier ou infirmière : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut, cette profession exerçant en principe en société d'exercice libéral, dont la rémunération n'est pas encore modélisée. Leurs colonnes restent indicatives.",
+     "Aucune charge saisie pour cette activité : pensez à la CFE, à l'assurance, à la banque. Sans elles, un statut aux frais de gestion estimés plus bas que le vôtre paraît plus avantageux de toute l'économie de frais estimée."
+    ]
+   }
+  }
+ ]
+}

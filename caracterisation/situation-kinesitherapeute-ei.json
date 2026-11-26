@@ -1,0 +1,640 @@
+{
+ "annees": [
+  {
+   "annee": 2026,
+   "erreur": null,
+   "report": {
+    "activities": [
+     {
+      "beneficiaireIds": [
+       "p-julien"
+      ],
+      "charges": 17564,
+      "chiffreAffaires": 78000,
+      "cotisationsSociales": 14631,
+      "cotisationsTNS": {
+       "assiette": 44722.64,
+       "caisse": {
+        "asv": 295.56,
+        "baseDesCotisationsDeLAnneePrecedente": {
+         "annee": 2026,
+         "anneePrecedenteConnue": false,
+         "assiette": 44722.64
+        },
+        "caisse": "CARPIMKO",
+        "curps": 44.72,
+        "libelleProfession": "Masseur-kinésithérapeute",
+        "partConventionnee": 1,
+        "priseEnCharge": {
+         "asv": 554.33,
+         "maladie": 2483.36
+        },
+        "profession": "masseur-kinesitherapeute"
+       },
+       "cotisations": {
+        "allocationsFamiliales": 0,
+        "csgDeductible": 3041.14,
+        "csgNonDeductibleEtCrds": 1296.96,
+        "formationProfessionnelle": 120.15,
+        "indemnitesJournalieres": 134.17,
+        "invaliditeDeces": 1022,
+        "maladieMaternite": 44.72,
+        "retraiteComplementaire": 3890.87,
+        "retraiteDeBase": 4740.6
+       },
+       "minimumRetraiteApplique": false,
+       "partNonDeductible": 1296.96,
+       "revenuAvantCotisations": 60436,
+       "supplementMinimum": 0,
+       "total": 14630.89
+      },
+      "entityId": "ei-julien",
+      "fraisDeDeplacement": {
+       "deductible": true,
+       "kilometres": 4000,
+       "montant": 2544
+      },
+      "impotSocietes": 0,
+      "name": "Cabinet de kinésithérapie de Julien",
+      "profession": {
+       "caisse": "CARPIMKO",
+       "id": "masseur-kinesitherapeute",
+       "libelle": "Masseur-kinésithérapeute"
+      },
+      "resultatConserve": 0,
+      "revenuVerse": 45805,
+      "statut": "EI au réel",
+      "type": "company",
+      "warnings": []
+     }
+    ],
+    "annee": 2026,
+    "anneeDesRegles": 2026,
+    "avertissements": [],
+    "bilan": {
+     "charges": 17564,
+     "chiffreAffaires": 78000,
+     "cotisationsSalariales": 0,
+     "cotisationsSociales": 14631,
+     "impotSocietes": 0,
+     "impotSurLeRevenu": 7235,
+     "nonRattache": 0,
+     "prelevementsSociaux": 0,
+     "resultatConserve": 0,
+     "revenusAvantPrelevements": 60436,
+     "revenusDirects": 0,
+     "totalPrelevements": 21866
+    },
+    "foyers": [
+     {
+      "depenses": 0,
+      "impotSurLeRevenu": 7235,
+      "netApresImpots": 38570,
+      "optionDividendes": null,
+      "personIds": [
+       "p-julien"
+      ],
+      "prelevementsSociaux": 0,
+      "resultatConserve": 0,
+      "revenuFiscalDeReference": 47102,
+      "revenuImposableGlobal": 47102,
+      "revenusAvantPrelevements": 60436,
+      "revenusEncaisses": 45805,
+      "totalParts": 1,
+      "totalPrelevements": 21866,
+      "warnings": []
+     }
+    ],
+    "persons": [
+     {
+      "cotisationsSalariales": 0,
+      "depenses": 0,
+      "detail": {
+       "allocationsChomage": 0,
+       "autresRevenus": 0,
+       "benefices": 45805,
+       "dividendes": 0,
+       "remunerationsDirigeant": 0,
+       "salaires": 0
+      },
+      "entityId": "p-julien",
+      "name": "Julien",
+      "revenusActivites": 45805,
+      "revenusDirects": 0
+     }
+    ],
+    "totalNetApresImpots": 38570
+   }
+  }
+ ],
+ "comparaisons": [
+  {
+   "activite": "ei-julien",
+   "annee": 2026,
+   "resultat": {
+    "couples": [],
+    "meilleur": "EI",
+    "optimisations": {
+     "EURL": {
+      "meilleur": {
+       "cotisationsSociales": 14416,
+       "dividendes": 154,
+       "impotSocietes": 27,
+       "impotSurLeRevenu": 5618,
+       "netApresImpots": 39506,
+       "prelevementsSociaux": 19,
+       "remunerationNette": 45000,
+       "trimestres": 4
+      },
+      "meilleurAvecRetraite": {
+       "cotisationsSociales": 14416,
+       "dividendes": 154,
+       "impotSocietes": 27,
+       "impotSurLeRevenu": 5618,
+       "netApresImpots": 39506,
+       "prelevementsSociaux": 19,
+       "remunerationNette": 45000,
+       "trimestres": 4
+      },
+      "nombreDePoints": 66,
+      "remunerationMaximale": 45100,
+      "statut": "EURL",
+      "unPointSurDix": [
+       {
+        "cotisationsSociales": 12328,
+        "dividendes": 45630,
+        "impotSocietes": 9543,
+        "impotSurLeRevenu": 1623,
+        "netApresImpots": 36073,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 0,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 12831,
+        "dividendes": 38748,
+        "impotSocietes": 7249,
+        "impotSurLeRevenu": 2315,
+        "netApresImpots": 37172,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 8000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 13219,
+        "dividendes": 31067,
+        "impotSocietes": 5482,
+        "impotSurLeRevenu": 3148,
+        "netApresImpots": 37718,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 16000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 13531,
+        "dividendes": 23024,
+        "impotSocietes": 4063,
+        "impotSurLeRevenu": 3748,
+        "netApresImpots": 38226,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 24000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 13868,
+        "dividendes": 14312,
+        "impotSocietes": 2526,
+        "impotSurLeRevenu": 3824,
+        "netApresImpots": 39350,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 32000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 14205,
+        "dividendes": 5599,
+        "impotSocietes": 988,
+        "impotSurLeRevenu": 4928,
+        "netApresImpots": 39446,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 40000,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 14400,
+        "dividendes": 590,
+        "impotSocietes": 104,
+        "impotSurLeRevenu": 5563,
+        "netApresImpots": 39501,
+        "prelevementsSociaux": 19,
+        "remunerationNette": 44600,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 14433,
+        "dividendes": 45,
+        "impotSocietes": 8,
+        "impotSurLeRevenu": 5632,
+        "netApresImpots": 39505,
+        "prelevementsSociaux": 8,
+        "remunerationNette": 45100,
+        "trimestres": 4
+       }
+      ],
+      "warnings": []
+     },
+     "SASU": {
+      "meilleur": {
+       "cotisationsSociales": 367,
+       "dividendes": 48290,
+       "impotSocietes": 10430,
+       "impotSurLeRevenu": 1356,
+       "netApresImpots": 38452,
+       "prelevementsSociaux": 8982,
+       "remunerationNette": 500,
+       "trimestres": 0
+      },
+      "meilleurAvecRetraite": {
+       "cotisationsSociales": 4252,
+       "dividendes": 41401,
+       "impotSocietes": 8134,
+       "impotSurLeRevenu": 1633,
+       "netApresImpots": 37867,
+       "prelevementsSociaux": 7701,
+       "remunerationNette": 5800,
+       "trimestres": 4
+      },
+      "nombreDePoints": 80,
+      "remunerationMaximale": 34300,
+      "statut": "SASU",
+      "unPointSurDix": [
+       {
+        "cotisationsSociales": 0,
+        "dividendes": 48940,
+        "impotSocietes": 10647,
+        "impotSurLeRevenu": 1409,
+        "netApresImpots": 38428,
+        "prelevementsSociaux": 9103,
+        "remunerationNette": 0,
+        "trimestres": 0
+       },
+       {
+        "cotisationsSociales": 733,
+        "dividendes": 47640,
+        "impotSocietes": 10213,
+        "impotSurLeRevenu": 1383,
+        "netApresImpots": 38396,
+        "prelevementsSociaux": 8861,
+        "remunerationNette": 1000,
+        "trimestres": 0
+       },
+       {
+        "cotisationsSociales": 3885,
+        "dividendes": 42051,
+        "impotSocietes": 8350,
+        "impotSurLeRevenu": 1613,
+        "netApresImpots": 37916,
+        "prelevementsSociaux": 7821,
+        "remunerationNette": 5300,
+        "trimestres": 3
+       },
+       {
+        "cotisationsSociales": 4618,
+        "dividendes": 40751,
+        "impotSocietes": 7917,
+        "impotSurLeRevenu": 1652,
+        "netApresImpots": 37819,
+        "prelevementsSociaux": 7580,
+        "remunerationNette": 6300,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 8357,
+        "dividendes": 33855,
+        "impotSocietes": 5974,
+        "impotSurLeRevenu": 1826,
+        "netApresImpots": 37132,
+        "prelevementsSociaux": 6297,
+        "remunerationNette": 11400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 12756,
+        "dividendes": 25016,
+        "impotSocietes": 4415,
+        "impotSurLeRevenu": 1968,
+        "netApresImpots": 35795,
+        "prelevementsSociaux": 4653,
+        "remunerationNette": 17400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 17154,
+        "dividendes": 16177,
+        "impotSocietes": 2855,
+        "impotSurLeRevenu": 2231,
+        "netApresImpots": 34337,
+        "prelevementsSociaux": 3009,
+        "remunerationNette": 23400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 21552,
+        "dividendes": 7338,
+        "impotSocietes": 1295,
+        "impotSurLeRevenu": 2499,
+        "netApresImpots": 32875,
+        "prelevementsSociaux": 1365,
+        "remunerationNette": 29400,
+        "trimestres": 4
+       },
+       {
+        "cotisationsSociales": 25145,
+        "dividendes": 120,
+        "impotSocietes": 21,
+        "impotSurLeRevenu": 2713,
+        "netApresImpots": 31684,
+        "prelevementsSociaux": 22,
+        "remunerationNette": 34300,
+        "trimestres": 4
+       }
+      ],
+      "warnings": []
+     }
+    },
+    "scenarios": [
+     {
+      "actuel": false,
+      "cotisationsSociales": 4252,
+      "ecartDeFrais": {
+       "postes": {
+        "banque": 50,
+        "expertComptable": 800
+       },
+       "total": 850
+      },
+      "horsPlafond": false,
+      "impotSocietes": 8134,
+      "impotSurLeRevenu": 1633,
+      "libelle": "SASU",
+      "netApresImpots": 37867,
+      "nonRetenue": "societeExerciceLiberal",
+      "partage": {
+       "beneficeAvantRemuneration": 59586,
+       "cotisationsRemuneration": 4251.85,
+       "cotisationsSurDividendes": 0,
+       "dividendesNets": 41400.61,
+       "impotSocietes": 8133.54,
+       "remunerationNette": 5800,
+       "resultatConserve": 0
+      },
+      "prelevementsSociaux": 7701,
+      "protectionSociale": {
+       "etoiles": 4,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "oui"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance ; pas d'assurance chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "remunerationOptimale": {
+       "avecRetraite": true,
+       "coutDesQuatreTrimestres": 585,
+       "remunerationNette": 5800,
+       "retraiteHorsDAtteinte": false
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 41400.61,
+       "deficitImpute": 0,
+       "distribuable": 41400.61,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 59586,
+      "statut": "SASU",
+      "telleQueSaisie": false,
+      "totalPrelevements": 21720,
+      "warnings": [
+       "Masseur-kinésithérapeute en SASU : cette profession exerce en principe en société d'exercice libéral (SELARL, SELAS…). La rémunération de son activité y relève alors des bénéfices non commerciaux et de sa caisse, y compris pour un président de SELAS, dont seul le mandat social relève du régime général. Le président est calculé comme un assimilé salarié du régime général, et cette rémunération n'est pas encore modélisée : l'écart n'est pas chiffré. Aucun texte consulté n'autorise ni n'interdit en toutes lettres l'EURL ou la SASU classique à cette profession."
+      ]
+     },
+     {
+      "actuel": false,
+      "cotisationsSociales": 14416,
+      "ecartDeFrais": {
+       "postes": {
+        "banque": 50,
+        "expertComptable": 800
+       },
+       "total": 850
+      },
+      "horsPlafond": false,
+      "impotSocietes": 27,
+      "impotSurLeRevenu": 5618,
+      "libelle": "EURL",
+      "netApresImpots": 39506,
+      "nonRetenue": "societeExerciceLiberal",
+      "partage": {
+       "beneficeAvantRemuneration": 59586,
+       "cotisationsRemuneration": 14404.48,
+       "cotisationsSurDividendes": 11.92,
+       "dividendesNets": 142.37,
+       "impotSocietes": 27.23,
+       "remunerationNette": 45000,
+       "resultatConserve": 0
+      },
+      "prelevementsSociaux": 19,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "limite",
+         "precision": "rente forfaitaire"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Auxiliaire médical de la CARPIMKO : retraite de base des libéraux (CNAVPL), complémentaire et, conventionné, avantage social vieillesse ; indemnités journalières de l'Assurance maladie du 4e au 90e jour, puis de la CARPIMKO ; rente d'invalidité forfaitaire ; pas de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "remunerationOptimale": {
+       "avecRetraite": true,
+       "remunerationNette": 45000,
+       "retraiteHorsDAtteinte": false
+      },
+      "reserves": {
+       "aLaFin": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "auDebut": {
+        "deficitReportable": 0,
+        "reserveLegale": 100,
+        "reserves": 0
+       },
+       "beneficeDistribuableDeLAnnee": 154.29,
+       "deficitImpute": 0,
+       "distribuable": 154.29,
+       "dividendesPrisSurLesReserves": 0,
+       "dotationReserveLegale": 0
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 59586,
+      "statut": "EURL",
+      "telleQueSaisie": false,
+      "totalPrelevements": 20080,
+      "warnings": [
+       "Masseur-kinésithérapeute en EURL : cette profession exerce en principe en société d'exercice libéral (SELARL, SELAS…). La rémunération de son activité y relève alors des bénéfices non commerciaux et de sa caisse, y compris pour un président de SELAS, dont seul le mandat social relève du régime général. Les cotisations du gérant sont calculées avec celles de sa caisse, mais cette rémunération n'est pas encore modélisée : l'écart n'est pas chiffré. Aucun texte consulté n'autorise ni n'interdit en toutes lettres l'EURL ou la SASU classique à cette profession."
+      ]
+     },
+     {
+      "actuel": true,
+      "cotisationsSociales": 14631,
+      "ecartDeFrais": {
+       "postes": {},
+       "total": 0
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 7235,
+      "libelle": "EI au réel",
+      "netApresImpots": 38570,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 3,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "non"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "non"
+        },
+        "invaliditeDeces": {
+         "niveau": "limite",
+         "precision": "rente forfaitaire"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Auxiliaire médical de la CARPIMKO : retraite de base des libéraux (CNAVPL), complémentaire et, conventionné, avantage social vieillesse ; indemnités journalières de l'Assurance maladie du 4e au 90e jour, puis de la CARPIMKO ; rente d'invalidité forfaitaire ; pas de chômage. 4 trimestres de retraite validés sur 4 (3 au minimum grâce aux cotisations minimales).",
+       "trimestres": 4
+      },
+      "resultatConserve": 0,
+      "resultatConserveActivite": 0,
+      "revenusAvantPrelevements": 60436,
+      "statut": "EI",
+      "telleQueSaisie": true,
+      "totalPrelevements": 21866,
+      "warnings": []
+     },
+     {
+      "actuel": false,
+      "beneficeGarde": 2701,
+      "cotisationsSociales": 25963,
+      "ecartDeFrais": {
+       "postes": {
+        "assurance": -250,
+        "banque": -150,
+        "cfe": -300,
+        "expertComptable": -1200,
+        "logiciel": -150
+       },
+       "total": -2050
+      },
+      "horsPlafond": false,
+      "impotSocietes": 0,
+      "impotSurLeRevenu": 1477,
+      "libelle": "Portage salarial",
+      "netApresImpots": 26885,
+      "nonRetenue": null,
+      "prelevementsSociaux": 0,
+      "protectionSociale": {
+       "etoiles": 5,
+       "garanties": {
+        "accidentDuTravail": {
+         "niveau": "oui"
+        },
+        "arretMaladie": {
+         "niveau": "oui"
+        },
+        "chomage": {
+         "niveau": "oui"
+        },
+        "invaliditeDeces": {
+         "niveau": "oui"
+        },
+        "retraite": {
+         "niveau": "oui"
+        }
+       },
+       "resume": "Salarié cadre du régime général : maladie, accidents du travail, retraite de base et complémentaire, prévoyance des cadres, assurance chômage. 4 trimestres de retraite validés sur 4.",
+       "trimestres": 4
+      },
+      "resultatConserve": 2701,
+      "resultatConserveActivite": 2701,
+      "revenusAvantPrelevements": 57026,
+      "statut": "portage",
+      "telleQueSaisie": false,
+      "totalPrelevements": 27440,
+      "warnings": [
+       "Conditions typiques d'une société de portage (frais de gestion de 7 %, CDI) : à remplacer par celles de la vôtre.",
+       "Le salarié porté relève du régime général, sans la caisse de sa profession libérale ; ses prestations sont facturées à des entreprises clientes (code du travail, art. L1254-1) : vérifiez que votre profession et votre clientèle s'y prêtent."
+      ]
+     }
+    ],
+    "situationSaisie": {
+     "libelle": "EI au réel",
+     "netApresImpots": 38570,
+     "statut": "EI"
+    },
+    "warnings": [
+     "Micro-entreprise non proposée : elle est interdite aux praticiens et auxiliaires médicaux (« En tant que praticien ou auxiliaire médical vous ne pouvez pas être auto-entrepreneur », Urssaf). Masseur-kinésithérapeute : régime réel seulement.",
+     "Masseur-kinésithérapeute : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut, cette profession exerçant en principe en société d'exercice libéral, dont la rémunération n'est pas encore modélisée. Leurs colonnes restent indicatives."
+    ]
+   }
+  }
+ ]
+}
