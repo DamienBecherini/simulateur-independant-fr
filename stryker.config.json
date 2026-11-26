@@ -9,6 +9,8 @@
     "!src/backend/logic/*.test.ts"
   ],
   "coverageAnalysis": "perTest",
+  "timeoutFactor": 4,
+  "timeoutMS": 60000,
   "reporters": [
     "clear-text",
     "progress",
