@@ -10,6 +10,7 @@ import { numeroterNotes } from "./notes"
 import { avecUnePerteConservee, netDeLaSituationSaisie, raisonDeNonRetenue, referenceDesEcarts } from "./resume"
 import { netCompare } from "@/backend/logic/net-compare"
 import { statutEtProfession } from "./professions"
+import { origineDuPlafondEnClair } from "@/backend/logic/epargne-retraite"
 import { enTexteBrut } from "@/backend/logic/format"
 import { CHAMPS_DU_FOYER, champsDuFoyerMontres, nombreDuFoyer, type ChampDuFoyer } from "@/backend/logic/champs-du-foyer"
 
@@ -112,6 +113,38 @@ function lignesDesDeplacements(report: SimulationReport): Ligne[] {
   return tableauFacultatif(entete, lignes)
 }
 
+/**
+ * Épargne retraite (PER) : une ligne par membre des foyers qui ont versé dans l'année, avec son plafond, ce qui est
+ * imputé et ce qui reste. Ce que le foyer déduit et économise est dans le tableau des foyers.
+ */
+function lignesDeLEpargneRetraite(session: SimulationAnnuelle, report: SimulationReport): Ligne[] {
+  const entete: Ligne = ["Épargne retraite (PER)", "Foyer fiscal", "Versé", "Plafond de l'année", "Origine du plafond", "Plafonds reportés", "Imputé sur ses plafonds", "Imputé sur le plafond du conjoint", "Pris par le conjoint sur ses plafonds", "Non déduit", "Reste reportable", "Reste non reporté", "Revenus d'activité professionnelle", "Plafond calculé pour l'année suivante", "Tranche marginale du foyer (%)"]
+  const somme = (plafonds: { montant: number }[]) => plafonds.reduce((cumul, plafond) => cumul + plafond.montant, 0)
+  const lignes = report.foyers
+    .filter(foyer => foyer.versementsEpargneRetraite)
+    .flatMap(foyer =>
+      foyer.epargneRetraite.personnes.map((p): Ligne => [
+        nomDeLActeur(session, p.personId),
+        nomDuFoyer(session, foyer),
+        montant(p.verse),
+        montant(p.plafond),
+        origineDuPlafondEnClair(p, report.annee),
+        montant(somme(p.plafondsReportes)),
+        montant(p.imputeSurSesPlafonds),
+        montant(p.imputeSurLeConjoint),
+        montant(p.preteAuConjoint),
+        montant(p.nonDeduit),
+        montant(somme(p.plafondsRestants)),
+        // Le reste d'un plafond saisi, que le simulateur ne reporte pas ; les années suivantes, il n'est que rappelé.
+        montant(p.originePlafond === "saisi" ? (p.resteNonReporte?.montant ?? 0) : 0),
+        montant(p.revenusProfessionnels),
+        montant(p.plafondCalcule),
+        Math.round(foyer.epargneRetraite.trancheMarginale * 1000) / 10
+      ])
+    )
+  return tableauFacultatif(entete, lignes)
+}
+
 /** Frais professionnels des personnes qui ont saisi des frais réels, puis leurs trajets au barème, voiture par voiture. */
 function lignesDesFraisProfessionnels(report: SimulationReport): Ligne[] {
   const personnes = fraisProfessionnelsDesPersonnes(report)
@@ -125,11 +158,12 @@ function lignesDesFraisProfessionnels(report: SimulationReport): Ligne[] {
 
 /**
  * Bilan, activités, personnes et foyers fiscaux, séparés par une ligne vide ; puis, quand la simulation en contient,
- * le versement libératoire, les bénéfices exonérés en zone, les déplacements professionnels et les frais professionnels.
+ * le versement libératoire, les bénéfices exonérés en zone, les déplacements professionnels, l'épargne retraite et les
+ * frais professionnels.
  */
 export function csvResultats(session: SimulationAnnuelle, report: SimulationReport): string {
   const tableaux = [...lignesDuBilan(report), [], ...lignesDesActivites(session, report), [], ...lignesDesPersonnes(report), [], ...lignesDesFoyers(session, report)]
-  return documentCsv([...tableaux, ...lignesDesCaisses(report), ...lignesDesReserves(report), ...lignesDuVersementLiberatoire(report), ...lignesDesExonerationsDeZone(report), ...lignesDesDeplacements(report), ...lignesDesFraisProfessionnels(report)])
+  return documentCsv([...tableaux, ...lignesDesCaisses(report), ...lignesDesReserves(report), ...lignesDuVersementLiberatoire(report), ...lignesDesExonerationsDeZone(report), ...lignesDesDeplacements(report), ...lignesDeLEpargneRetraite(session, report), ...lignesDesFraisProfessionnels(report)])
 }
 
 // --- Toutes les années ---

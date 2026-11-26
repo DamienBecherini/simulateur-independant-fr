@@ -5,8 +5,10 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { estEntrepriseOuMicro, estSocieteIS, type Avatar, type Company, type Entity, type MicroEntreprise, type StatutSociete } from "@/types"
+import { estEntrepriseOuMicro, estSocieteIS, type Avatar, type Company, type Entity, type MicroEntreprise, type Person, type StatutSociete } from "@/types"
 import { statutDeLActivite, type StatutDUneActivite } from "@/backend/logic/changement-de-statut"
+import { plafondMinimalDeLAnnee } from "@/backend/logic/epargne-retraite"
+import { texteDuPlafondSaisi } from "@/lib/epargne-retraite"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 import { ChampNumerique } from "./ChampNumerique"
@@ -76,6 +78,7 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee, 
           </div>
         </div>
       )}
+      {entity.type === "person" && <ChampPlafondEpargneRetraite personne={entity} onChange={onChange} anneesSimulees={anneesSimulees} />}
       {estEntrepriseOuMicro(entity) && <ChampDuStatut activite={entity} onChangerDeStatut={onChangerDeStatut} />}
       <StatusSpecificFields entity={entity} onChange={onChange} anneesSimulees={anneesSimulees} annee={annee} />
       <div className="grid grid-cols-4 items-center gap-4">
@@ -107,6 +110,43 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee, 
       {/* Dispositif de niche (ADR 017) : en dernier, replié, sans rien montrer tant que sa case n'est pas cochée. */}
       {estEntrepriseOuMicro(entity) && <ChampImplantationEnZone activite={entity} onChange={onChange} annee={annee} regles={reglesDeLAnneeAffichee(annee)} />}
     </>
+  )
+}
+
+/**
+ * Le plafond de déduction des versements d'épargne retraite d'une personne (PER, ADR 021), tel que son avis d'impôt le
+ * donne pour la première année de la simulation. Facultatif : vide, le simulateur retient le minimum légal, que l'aide
+ * cite d'après les règles de cette année-là.
+ */
+function ChampPlafondEpargneRetraite({ personne, onChange, anneesSimulees }: { personne: Person; onChange: (entity: Entity) => void; anneesSimulees: number[] }) {
+  const premiere = anneesSimulees.length > 0 ? Math.min(...anneesSimulees) : undefined
+  const minimum = premiere === undefined ? 0 : plafondMinimalDeLAnnee(reglesDeLAnneeAffichee(premiere).IR.epargneRetraite)
+  const texte = texteDuPlafondSaisi(anneesSimulees, minimum)
+  return (
+    <div className="grid grid-cols-4 items-start gap-4">
+      <Label htmlFor="plafondEpargneRetraite" className="pt-2 text-right leading-snug">
+        {texte.libelle}
+      </Label>
+      <div className="col-span-3">
+        <ChampNumerique
+          id="plafondEpargneRetraite"
+          name="plafondEpargneRetraite"
+          min="0"
+          step="100"
+          quoi="le plafond épargne retraite"
+          placeholder="Non renseigné"
+          aria-describedby="plafondEpargneRetraite-aide"
+          value={personne.plafondEpargneRetraite ?? ""}
+          onChange={e => {
+            const value = Number.parseFloat(e.target.value)
+            onChange({ ...personne, plafondEpargneRetraite: Number.isFinite(value) && value >= 0 ? value : undefined })
+          }}
+        />
+        <p id="plafondEpargneRetraite-aide" className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+          {texte.aide}
+        </p>
+      </div>
+    </div>
   )
 }
 

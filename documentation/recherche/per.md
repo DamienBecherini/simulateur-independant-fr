@@ -288,7 +288,7 @@ Première esquisse, d'avant les décisions : en cas d'écart (cadre de déductio
 
 - **Flux de versement.** Nouveau type de flux sur la personne, par exemple `versement_per`. C'est un montant versé dans le mois, sorti de la trésorerie du foyer, comme `expense`.
   - **Fichiers à compléter :** `flow-constants.ts` (libellés, `flowTypesByEntityType.person`, `outgoingFlowTypes`), `color-constants.ts`, `outils/commun.ts` (`TYPES_DE_FLUX`, `SENS_DES_TYPES`, `TYPES_PERMIS.personne`).
-  - **Format de fichier :** une ancienne version de l'application écarterait ce flux inconnu (`keepValidFlows`). Il faut donc le **format suivant** avec migration (ADR 005), même si la migration elle-même est vide.
+  - **Format de fichier :** une ancienne version de l'application écarterait ce flux inconnu (`keepValidFlows`). Il faut donc le **format suivant** avec migration (ADR 005), même si la migration elle-même est vide. **Corrigé à la réalisation (26/11/2026) :** l'ADR 005 ne demande pas de nouveau numéro pour un nouveau type de flux ; la version précédente signale le flux écarté.
 - **Réglages PER de la personne.** Nouveau champ facultatif de `PersonSchema`, commun à toutes les années comme `fraisReels`. Il contient :
   - `cadre` : `"revenu_global"` (163 quatervicies) ou `"professionnel"` (154 bis, proposé seulement si la personne est titulaire d'une EI au réel ou gérante d'EURL) ;
   - `nonDeductible` : option pour la non-déduction, booléen ;
@@ -626,12 +626,14 @@ Trois livraisons, chacune sur sa branche et fusionnée seule dans `main` ; chaqu
 
 ### Livraison 1 : déduction du revenu global, pour toutes les personnes
 
+**Réalisée le 26/11/2026.** Un écart avec le plan ci-dessous : le format de fichier ne change pas de numéro (point 3). L'ADR 005 le dit pour un nouveau type de flux et un champ facultatif : une version précédente écarte le flux et le signale. L'ADR 021, section « Réalisation de la livraison 1 », consigne ce que le code a précisé.
+
 1. **ADR 021 « Épargne retraite (PER) »** : décisions et hypothèses de la section 15, ce qui est écarté (sortie, option pour la non-déduction, 70 ans faute de date de naissance, primo-arrivants, épargne salariale et abondement, détail du plafond par année).
 2. **Règles par année** : bloc `IR.epargneRetraite` dans les trois fichiers (part des revenus 10 %, maximum 8 PASS, minimum 10 % du PASS, `passAnneePrecedente`, durée du report du plafond né dans l'année : 3 ans en 2024 et 2025, 5 ans en 2026) ; `testing/regles-de-test.ts`, `outils/lecture.ts` (`reglesCles`), test de forme.
 3. **Saisie et format de fichier** :
    - flux `versement_per` sur la personne, sortant, comme une dépense (libellés, couleurs, `flowTypesByEntityType`, `outgoingFlowTypes`) ;
    - `PersonSchema.plafondEpargneRetraite` (facultatif, ≥ 0), pour la première année de la session ;
-   - format suivant avec une migration vide (ADR 005) ;
+   - ~~format suivant avec une migration vide (ADR 005)~~ : pas de nouveau numéro de format, d'après l'ADR 005 ;
    - outils des IA : `TYPES_DE_FLUX`, `SENS_DES_TYPES`, `TYPES_PERMIS.personne`, `proposerFlux`, réglages proposables.
 4. **Moteur** (nouveau module `epargne-retraite.ts`, branché dans `calculerFoyer`) :
    - plafond de l'année par personne : saisi, sinon calculé sur N-1 dans la session, sinon le minimum légal ;

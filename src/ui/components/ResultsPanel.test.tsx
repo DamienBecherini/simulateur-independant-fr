@@ -5,7 +5,10 @@ import { useState, type ReactNode } from "react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { Affichage, FoyerFiscalResult, PersonResult, SalarieDeLActivite, SimulationReport, UserPreferences } from "@/types"
+import { reglesPubliees } from "@/backend/logic/regles"
+import { runMetaSimulation } from "@/backend/logic/simulation-engine"
 import { SANS_EPARGNE_RETRAITE } from "@/backend/logic/testing/foyer-de-test"
+import { micro, personne, relation, session, type Flux } from "@/backend/logic/testing/session-de-test"
 import { LIMITES } from "@/lib/limites-du-modele"
 import { emptyReport } from "@/ui/testing/fixtures"
 import { AffichageContext } from "../hooks/useAffichage"
@@ -570,5 +573,76 @@ describe("retrouverLaPosition", () => {
     retrouverLaPosition({ element: bouton, haut: 300 })
     expect(scrollBy).not.toHaveBeenCalled()
     bouton.remove()
+  })
+})
+
+describe("épargne retraite (PER) sur la carte du foyer", () => {
+  // Le couple de la maquette 3 (ADR 021), calculé par le moteur avec les règles de 2026 : Paul verse 12 000 €, dont
+  // 3 000 € pris sur le plafond de Sophie ; 3 600 € d'impôt économisé.
+  const nommee = (id: string, name: string, plafondEpargneRetraite: number) => ({ ...personne(id), name, plafondEpargneRetraite })
+  const couple = (versement: number) => runMetaSimulation(session([nommee("p", "Paul", 9000), nommee("s", "Sophie", 4710)], [relation("p", "s", "Marié(e)")], [["p", "salary", 100000], ...(versement > 0 ? [["p", "versement_per", versement] satisfies Flux] : [])]), reglesPubliees(2026), { annee: 2026 })
+  const afficher = (affichage: Affichage, report: SimulationReport) => render(<AffichageContext.Provider value={affichage}><ResultsPanel report={report} error={null} /></AffichageContext.Provider>)
+  const carte = () => screen.getAllByRole("article").find(article => within(article).queryByText("Paul, Sophie"))!
+  const bloc = () => within(carte()).getByRole("region", { name: "Épargne retraite (PER)" })
+  const masquee = (conteneur: HTMLElement, libelle: string) => within(conteneur).getByText(libelle, { selector: "dt" }).closest(".hidden") !== null
+
+  it("sans versement, la carte ne dit rien de l'épargne retraite", () => {
+    afficher("classique", couple(0))
+
+    expect(within(carte()).queryByRole("region", { name: "Épargne retraite (PER)" })).toBeNull()
+    expect(carte()).not.toHaveTextContent("épargne retraite")
+    expect(rowValue(carte(), "Revenu fiscal de référence")).toHaveTextContent(`${money(90000)}pour le versement libératoire dans deux ans`)
+  })
+
+  it("affichage classique : le net dit sa part d'épargne bloquée, le revenu fiscal de référence que la déduction y est rajoutée, et le bloc détaille le versement", () => {
+    afficher("classique", couple(12000))
+
+    expect(normalize(rowValue(carte(), "Net après impôts").textContent!)).toBe(`${money(100000 - 9608)}dont ${money(12000)} d'épargne retraite (PER), bloqués jusqu'à la retraite`)
+    expect(normalize(rowValue(carte(), "Revenu fiscal de référence").textContent!)).toBe(`${money(90000)}versement PER déduit, puis rajouté ; pour le versement libératoire dans deux ans`)
+    expect(normalize(rowValue(carte(), "Impôt sur le revenu").textContent!)).toBe(`− ${money(9608)}sur ${money(78000)} imposables au barème`)
+
+    expect(within(bloc()).getAllByRole("term").map(terme => terme.textContent)).toEqual(["Versé en 2026 par Paul", "Déduit du revenu", "Impôt économisé", "Reste à Sophie", "Plafonds calculés sur 2026"])
+    expect(normalize(rowValue(bloc(), "Déduit du revenu").textContent!)).toBe(`− ${money(12000)}${money(9000)} sur le plafond de Paul, ${money(3000)} sur celui de Sophie`)
+    expect(normalize(rowValue(bloc(), "Impôt économisé").textContent!)).toBe(`${money(3600)}impôt recalculé sans le versement ; tranche marginale : 30 % (indicatif)`)
+    expect(normalize(within(bloc()).getByRole("note").textContent!)).toBe(`Plafonds mis en commun. Pour déduire les ${money(3000)} pris sur le plafond de Sophie, cochez la case 6QR de la déclaration de revenus. Sans elle, ils ne seraient pas déduits : ${money(900)} d'impôt en plus.`)
+  })
+
+  it("le bilan dit sous le net la part d'épargne retraite de tous les foyers", () => {
+    afficher("classique", couple(12000))
+
+    expect(normalize(document.getElementById("bilan")!.textContent!)).toContain(`dont ${money(12000)} d'épargne retraite (PER), bloqués jusqu'à la retraite`)
+  })
+
+  it("affichage classique, détail fermé : l'impôt économisé reste affiché, le reste du bloc et la consigne se masquent", async () => {
+    afficher("classique", couple(12000))
+    await userEvent.click(within(carte()).getByRole("button", { name: /le détail/ }))
+
+    expect(masquee(bloc(), "Impôt économisé")).toBe(false)
+    for (const libelle of ["Versé en 2026 par Paul", "Déduit du revenu", "Reste à Sophie", "Plafonds calculés sur 2026"]) expect(masquee(bloc(), libelle)).toBe(true)
+    expect(within(bloc()).getByRole("note")).toHaveClass("hidden")
+  })
+
+  it("affichage « Résumé » : l'impôt économisé suit le revenu fiscal de référence, le reste du bloc est dans le détail", async () => {
+    afficher("resume", couple(12000))
+
+    expect(masquee(carte(), "Impôt économisé (versement PER)")).toBe(false)
+    expect(rowValue(carte(), "Impôt économisé (versement PER)")).toHaveTextContent(money(3600))
+    expect(masquee(carte(), "Versé en 2026 par Paul")).toBe(true)
+    // La ligne du bloc n'y est pas répétée.
+    expect(within(bloc()).queryByText("Impôt économisé", { selector: "dt" })).toBeNull()
+
+    await userEvent.click(within(carte()).getByRole("button", { name: /le détail/ }))
+    expect(masquee(carte(), "Versé en 2026 par Paul")).toBe(false)
+    expect(within(bloc()).getByRole("note")).toBeVisible()
+  })
+
+  it("un versement sans effet est annoncé parmi les avertissements de la carte", () => {
+    const atelier = { ...micro("m1", { opteVFL: true }), rfrN2: 20000 }
+    const report = runMetaSimulation(session([{ ...personne("k"), name: "Karim", plafondEpargneRetraite: 4710 }, atelier], [relation("k", "m1", "Titulaire")], [["m1", "ca_micro_services_bnc", 50000], ["k", "versement_per", 4710]]), reglesPubliees(2026), { annee: 2026 })
+    afficher("classique", report)
+    const karim = screen.getAllByRole("article").find(article => within(article).queryByText("Karim"))!
+
+    expect(karim).toHaveTextContent("Versement PER sans effet sur l'impôt : avec le versement libératoire, le foyer n'a aucun revenu au barème dont le déduire.")
+    expect(normalize(rowValue(karim, "Déduit du revenu").textContent!)).toBe(`${money(0)}aucun revenu imposable au barème`)
   })
 })

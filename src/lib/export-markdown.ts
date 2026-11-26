@@ -5,6 +5,8 @@
 import { estSocieteIS, type ComparaisonOptions, type ComparaisonResult, type Company, type DeplacementsProfessionnels, type Entity, type FoyerFiscalResult, type FraisProfessionnelsResult, type MicroEntreprise, type ModeRepartition, type Person, type Relationship, type ScenarioStatut, type SimulationAnnuelle, type SimulationPluriannuelle, type SimulationReport } from "@/types"
 import { conditionsDuPortageEnPhrase, defaultFraisFonctionnement, libellesRepartition, posteFraisLabels, quatreTrimestresExiges, statutsFrais } from "./comparateur-options"
 import { dateDeCreationLisible, dispositifsDesAnnees, exonerationsDeZone, fluxParActeur, fraisProfessionnelsDesPersonnes, hypothesesDesExonerationsDeZone, issueDuVersementLiberatoire, libelleDeduction, libellePuissance, libelleRetenue, libelleVoiture, MOIS, lignesDesCotisations, natureActeur, nomDeLActeur, nomDuFoyer, origineDuRfr, reservesDeLAnnee, reservesDesAnnees, rfrDesAnnees, type LigneDeFlux } from "./export-commun"
+import { epargneRetraiteDesFoyers, INTRODUCTION_DE_L_EPARGNE_RETRAITE } from "./epargne-retraite"
+import { TITRE_DE_LA_MISE_EN_COMMUN } from "@/backend/logic/epargne-retraite"
 import { LIMITES, TITRE_DES_LIMITES } from "./limites-du-modele"
 import { numeroterNotes } from "./notes"
 import { avecUnePerteConservee, ecartAvecLaSituationSaisie, raisonDeNonRetenue } from "./resume"
@@ -65,8 +67,13 @@ function detailDesDeplacements(deplacements: DeplacementsProfessionnels | undefi
   return deplacements ? ` ; déplacements professionnels : ${kilometres(deplacements.kmParAn)} par an, ${libelleVoiture(deplacements)}` : ""
 }
 
+/** Plafond d'épargne retraite saisi dans la fiche d'une personne : il vaut pour la première année de la simulation. */
+function detailDuPlafondEpargneRetraite(person: Person): string {
+  return person.plafondEpargneRetraite === undefined ? "" : ` ; plafond d'épargne retraite saisi pour la première année : ${eurosEnTexteBrut(person.plafondEpargneRetraite)}`
+}
+
 function detailDeLActeur(entity: Entity, annee: number): string {
-  if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}${detailDesFraisReels(entity)}`
+  if (entity.type === "person") return `${entity.fiscalParts.toLocaleString("fr-FR")} part${entity.fiscalParts > 1 ? "s" : ""} fiscale${entity.fiscalParts > 1 ? "s" : ""}${detailDuPlafondEpargneRetraite(entity)}${detailDesFraisReels(entity)}`
   if (entity.type === "portage") return "Prestations facturées par une société de portage, qui verse le salaire"
   const creee = detailCommunDesActivites(entity, annee)
   if (entity.type === "company") return `${natureDeLaSociete(entity)}${creee}`
@@ -213,6 +220,7 @@ function sectionResultats(session: SimulationAnnuelle, report: SimulationReport 
     sousSectionDispositifs(report),
     sousSectionExonerationsDeZone(report),
     sousSectionFoyers(session, report),
+    sousSectionEpargneRetraite(session, report),
     sousSectionFraisProfessionnels(report)
   ].filter(Boolean)
   return `## Résultats ${report.annee} (règles fiscales ${report.anneeDesRegles})\n\nMontants annuels, avant les éventuelles dépenses personnelles.\n\n${sousSections.join("\n\n")}`
@@ -269,6 +277,19 @@ function sousSectionVersementLiberatoire(report: SimulationReport): string {
 /** Trajets au barème kilométrique d'une personne, voiture par voiture : « 5 CV : 6 800 km, 3 720 € ». */
 function trajetsAuBareme(frais: FraisProfessionnelsResult): string {
   return frais.voitures.map(v => `${libelleVoiture(v)} : ${kilometres(v.distance)}, ${eurosEnTexteBrut(v.montant)}`).join(" ; ") || "—"
+}
+
+/**
+ * Épargne retraite (PER) des foyers qui ont versé dans l'année : les lignes du bloc de leur carte, et la consigne de la
+ * case 6QR d'un couple dont les plafonds sont mis en commun ; rien quand aucun foyer n'a versé.
+ */
+function sousSectionEpargneRetraite(session: SimulationAnnuelle, report: SimulationReport): string {
+  const foyers = epargneRetraiteDesFoyers(report, id => nomDeLActeur(session, id))
+  if (foyers.length === 0) return ""
+  const lignes = foyers.flatMap(({ foyer, bloc }) => bloc.lignes.map(ligne => [echapper(nomDuFoyer(session, foyer)), echapper(ligne.libelle), ligne.nature === "economie" ? `**${enTexteBrut(ligne.valeur)}**` : enTexteBrut(ligne.valeur), ligne.precision ? echapper(enTexteBrut(ligne.precision)) : "—"]))
+  const consignes = foyers.flatMap(({ foyer, bloc }) => (bloc.consigne ? [`- ${echapper(nomDuFoyer(session, foyer))} : **${TITRE_DE_LA_MISE_EN_COMMUN}** ${echapper(enTexteBrut(bloc.consigne))}`] : []))
+  const blocConsignes = consignes.length > 0 ? `\n\n${consignes.join("\n")}` : ""
+  return `### Épargne retraite (PER)\n\n${INTRODUCTION_DE_L_EPARGNE_RETRAITE}\n\n${tableau(["Foyer (membres)", "Ligne", "Montant", "Précision"], lignes, [2])}${blocConsignes}`
 }
 
 /** Frais réels des personnes qui en ont saisi, face à la déduction forfaitaire ; rien quand aucune n'en a. */

@@ -10,6 +10,8 @@ import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
 import { createContext, useContext, useId, useState, type ReactNode } from "react"
 import { cleDeLActivite, cleDuFoyer, porteurDeLaPremiereAlerte } from "@/lib/resume"
+import { blocEpargneRetraite, mentionDeLEpargneDansLeNet, precisionDuRevenuFiscalDeReference, type BlocEpargneRetraite } from "@/lib/epargne-retraite"
+import { TITRE_DE_LA_MISE_EN_COMMUN } from "@/backend/logic/epargne-retraite"
 import { AlerteCourte } from "./AlerteCourte"
 import { useAffichageResume } from "../hooks/useAffichage"
 import { classeDuDetail, useDetailDesCartes } from "../hooks/useDetailsDesCartes"
@@ -53,6 +55,7 @@ function BilanCard({ report }: { report: SimulationReport }) {
   const base = bilan.revenusAvantPrelevements
   const percent = (amount: number) => (base > 0 ? (amount / base).toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 }) : null)
   const amounts = { net: report.totalNetApresImpots, conserve: bilan.resultatConserve, prelevements: bilan.totalPrelevements, nonRattache: bilan.nonRattache }
+  const epargneRetraite = mentionDeLEpargneDansLeNet(report.foyers.reduce((cumul, foyer) => cumul + (foyer.versementsEpargneRetraite ?? 0), 0))
   const origin = [`chiffre d'affaires ${euros(bilan.chiffreAffaires)}`, bilan.charges > 0 ? `charges ${euros(bilan.charges)}` : null, bilan.revenusDirects > 0 ? `salaires et autres revenus ${euros(bilan.revenusDirects + bilan.cotisationsSalariales)}` : null].filter(Boolean).join(" · ")
 
   return (
@@ -64,6 +67,8 @@ function BilanCard({ report }: { report: SimulationReport }) {
             {euros(amounts.net)}
             {percent(amounts.net) ? <span className="ml-2 text-base font-semibold text-emerald-700 dark:text-emerald-400">{percent(amounts.net)} des revenus</span> : null}
           </p>
+          {/* Les versements d'épargne retraite restent dans le net : la somme est au foyer, mais bloquée (ADR 021). */}
+          {epargneRetraite ? <p className="text-xs text-slate-600 dark:text-slate-400">{epargneRetraite}</p> : null}
         </div>
         <div className="text-right">
           <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Taux global de prélèvement</p>
@@ -112,16 +117,17 @@ const dividendOptionLabels: Record<NonNullable<FoyerFiscalResult["optionDividend
   bareme: "Dividendes imposés au barème après abattement, plus favorable ici que le prélèvement forfaitaire."
 }
 
-/** Une ligne « libellé — montant » d'une carte de résultats. */
-function Row({ label, value, hint, strong = false, pastille, className }: { label: string; value: string; hint?: string | null; strong?: boolean; pastille?: string; className?: string }) {
+/** Une ligne « libellé — montant » d'une carte de résultats ; `gain` met le seul montant en vert (un impôt économisé). */
+function Row({ label, value, hint, strong = false, gain = false, pastille, className }: { label: string; value: string; hint?: string | null; strong?: boolean; gain?: boolean; pastille?: string; className?: string }) {
   return (
     <div className={cn("flex justify-between gap-2", className)}>
-      <dt className={cn("flex items-start gap-2", strong ? "font-medium text-slate-800 dark:text-slate-100" : "text-slate-600 dark:text-slate-400")}>
+      {/* Largeur minimale : une précision longue, en face, n'écrase pas le libellé à un mot par ligne. */}
+      <dt className={cn("flex min-w-[40%] items-start gap-2", strong ? "font-medium text-slate-800 dark:text-slate-100" : "text-slate-600 dark:text-slate-400")}>
         {/* Pastille de la couleur de la part dans la barre de répartition. */}
         {pastille ? <span aria-hidden="true" className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", pastille)} /> : null}
         {label}
       </dt>
-      <dd className={`text-right tabular-nums ${strong ? "font-semibold text-emerald-700 dark:text-emerald-400" : "font-medium"}`}>
+      <dd className={`text-right tabular-nums ${strong || gain ? "font-semibold text-emerald-700 dark:text-emerald-400" : "font-medium"}`}>
         <span className="whitespace-nowrap">{value}</span>
         {hint ? <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">{hint}</span> : null}
       </dd>
@@ -276,9 +282,36 @@ function membresDuFoyer(foyer: FoyerFiscalResult, persons: PersonResult[]): Pers
   return foyer.personIds.map(id => persons.find(p => p.entityId === id)).filter((p): p is PersonResult => p !== undefined)
 }
 
+const NOTE_BLEUE = "rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-950 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100"
+
+/**
+ * Le bloc « Épargne retraite (PER) » d'un foyer qui a versé dans l'année (ADR 021). L'impôt économisé reste toujours
+ * visible ; les autres lignes et la consigne de la case 6QR sont du détail : `cache` les masque quand il est fermé, et
+ * `sansLImpotEconomise` retire cette ligne quand la carte la montre déjà plus haut (affichage « Résumé »).
+ */
+function BlocDeLEpargneRetraite({ bloc, cache, sansLImpotEconomise = false, className }: { bloc: BlocEpargneRetraite; cache?: { ligne: string | undefined; bloc: string | undefined }; sansLImpotEconomise?: boolean; className?: string }) {
+  const lignes = bloc.lignes.filter(ligne => !(sansLImpotEconomise && ligne.nature === "economie"))
+  return (
+    <section aria-label="Épargne retraite (PER)" className={cn("mt-3 space-y-2 border-t border-slate-100 pt-2 dark:border-slate-800", className)}>
+      <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Épargne retraite (PER)</p>
+      <dl className="space-y-1 text-sm">
+        {lignes.map(ligne => (
+          <Row key={ligne.libelle} label={ligne.libelle} value={ligne.valeur} hint={ligne.precision} gain={ligne.nature === "economie"} className={ligne.nature === "economie" ? undefined : cache?.ligne} />
+        ))}
+      </dl>
+      {bloc.consigne ? (
+        <p role="note" className={cn(NOTE_BLEUE, cache?.bloc)}>
+          <strong className="font-semibold">{TITRE_DE_LA_MISE_EN_COMMUN}</strong> {bloc.consigne}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
 /** Lignes et compléments d'une carte de foyer ; `cache`, les classes des lignes de détail dans l'affichage classique. */
-function piecesDuFoyer(foyer: FoyerFiscalResult, members: PersonResult[], showRates: boolean, cache: string | undefined) {
+function piecesDuFoyer(foyer: FoyerFiscalResult, members: PersonResult[], showRates: boolean, cache: string | undefined, annee: number) {
   return {
+    epargneRetraite: blocEpargneRetraite(foyer, annee, id => members.find(m => m.entityId === id)?.name ?? id),
     revenus: (
       <div className="mb-2 space-y-2 border-b border-slate-100 pb-2 empty:hidden dark:border-slate-800">
         {members.map(person => (
@@ -289,7 +322,7 @@ function piecesDuFoyer(foyer: FoyerFiscalResult, members: PersonResult[], showRa
     encaisse: <Row label="Total encaissé" value={euros(foyer.revenusEncaisses)} className={cache} />,
     impot: <LignesDeLImpot foyer={foyer} />,
     prelevementsSociaux: foyer.prelevementsSociaux > 0 ? <Row label="Prélèvements sociaux sur dividendes" value={`− ${euros(foyer.prelevementsSociaux)}`} className={cache} /> : null,
-    rfr: <Row label="Revenu fiscal de référence" value={euros(foyer.revenuFiscalDeReference)} hint={foyer.beneficesExoneres ? `dont ${euros(foyer.beneficesExoneres)} de bénéfice exonéré en zone ; pour le versement libératoire dans deux ans` : "pour le versement libératoire dans deux ans"} />,
+    rfr: <Row label="Revenu fiscal de référence" value={euros(foyer.revenuFiscalDeReference)} hint={precisionDuRevenuFiscalDeReference(foyer)} />,
     reste: foyer.depenses > 0 ? <Row label="Reste après dépenses saisies" value={euros(foyer.netApresImpots - foyer.depenses)} hint={`${euros(foyer.depenses)} de dépenses`} className={cache} /> : null,
     complements: (
       <>
@@ -303,6 +336,8 @@ function piecesDuFoyer(foyer: FoyerFiscalResult, members: PersonResult[], showRa
 interface FoyerCardProps {
   foyer: FoyerFiscalResult
   persons: PersonResult[]
+  /** Année du rapport : le bloc de l'épargne retraite la nomme (« Versé en 2026 »). */
+  annee: number
   showRates: boolean
   /** Nombre de foyers : le bouton du détail les ouvre ou les ferme tous. */
   nombre: number
@@ -316,14 +351,14 @@ function seulSansConjoint(members: PersonResult[], conjoint: AjoutDuConjoint | u
   return declarants.length === 1 ? declarants[0] : null
 }
 
-function FoyerCard({ foyer, persons, showRates, nombre, conjoint }: FoyerCardProps) {
+function FoyerCard({ foyer, persons, annee, showRates, nombre, conjoint }: FoyerCardProps) {
   const resume = useAffichageResume()
   const { ouvert } = useDetailDesCartes()
   const idDuDetail = useId()
   const members = membresDuFoyer(foyer, persons)
   const parts = foyer.totalParts.toLocaleString("fr-FR")
   // Affichage classique : chaque ligne de détail se masque à sa place ; ailleurs, tout le détail, sous le bouton.
-  const p = piecesDuFoyer(foyer, members, showRates, resume ? undefined : classeDuDetail(ouvert, "flex"))
+  const p = piecesDuFoyer(foyer, members, showRates, resume ? undefined : classeDuDetail(ouvert, "flex"), annee)
   const bouton = <BoutonDuDetailDesCartes nombre={nombre} controle={idDuDetail} className="mt-2" />
   const seul = seulSansConjoint(members, conjoint)
   const ajoutDuConjoint = seul && conjoint ? <BoutonAjouterUnConjoint personneId={seul.entityId} nomDeLaPersonne={seul.name} ajout={conjoint} /> : null
@@ -337,6 +372,8 @@ function FoyerCard({ foyer, persons, showRates, nombre, conjoint }: FoyerCardPro
           <dl className="space-y-1 text-sm">
             {p.impot}
             {p.rfr}
+            {/* L'impôt économisé par un versement PER reste visible ; le reste du bloc est dans le détail. */}
+            {foyer.versementsEpargneRetraite ? <Row label="Impôt économisé (versement PER)" value={euros(foyer.impotEconomiseEpargneRetraite ?? 0)} gain /> : null}
           </dl>
           {bouton}
           <div id={idDuDetail} className={cn("text-sm", classeDuDetail(ouvert))}>
@@ -346,6 +383,7 @@ function FoyerCard({ foyer, persons, showRates, nombre, conjoint }: FoyerCardPro
               {p.prelevementsSociaux}
               {p.reste}
             </dl>
+            {p.epargneRetraite ? <BlocDeLEpargneRetraite bloc={p.epargneRetraite} sansLImpotEconomise /> : null}
             {p.complements}
           </div>
           {ajoutDuConjoint}
@@ -358,10 +396,11 @@ function FoyerCard({ foyer, persons, showRates, nombre, conjoint }: FoyerCardPro
               {p.encaisse}
               {p.impot}
               {p.prelevementsSociaux}
-              <Row label="Net après impôts" value={euros(foyer.netApresImpots)} strong className={classeDuDetail(ouvert, "flex")} />
+              <Row label="Net après impôts" value={euros(foyer.netApresImpots)} hint={mentionDeLEpargneDansLeNet(foyer.versementsEpargneRetraite)} strong className={classeDuDetail(ouvert, "flex")} />
               {p.rfr}
               {p.reste}
             </dl>
+            {p.epargneRetraite ? <BlocDeLEpargneRetraite bloc={p.epargneRetraite} cache={{ ligne: classeDuDetail(ouvert, "flex"), bloc: classeDuDetail(ouvert) }} /> : null}
             <div className={classeDuDetail(ouvert)}>{p.complements}</div>
           </div>
           {bouton}
@@ -597,7 +636,7 @@ function NoteDesAssocies({ sharedCompanies }: { sharedCompanies: ActivityResult[
 
 /** Les cartes des foyers fiscaux ; le bouton du détail de chacune compte toutes les cartes de la page. */
 function cartesDesFoyers(report: SimulationReport, conjoint: AjoutDuConjoint | undefined) {
-  return report.foyers.map(foyer => <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} showRates={report.foyers.length > 1} nombre={report.foyers.length + report.activities.length} conjoint={conjoint} />)
+  return report.foyers.map(foyer => <FoyerCard key={foyer.personIds.join("-")} foyer={foyer} persons={report.persons} annee={report.annee} showRates={report.foyers.length > 1} nombre={report.foyers.length + report.activities.length} conjoint={conjoint} />)
 }
 
 /** Les cartes des activités. */

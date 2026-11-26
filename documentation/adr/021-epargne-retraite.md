@@ -1,7 +1,7 @@
 # ADR-021: Épargne retraite (PER)
 
 - **Date :** 2026-11-26
-- **Statut :** Accepté (2026-11-26). Réalisation en trois livraisons, aucune n'est encore faite.
+- **Statut :** Accepté (2026-11-26). Réalisation en trois livraisons : la première (revenu global) est faite le 2026-11-26, voir « Réalisation de la livraison 1 » ; les deux autres restent à faire.
 
 ## Contexte
 
@@ -123,6 +123,21 @@ L'épargne versée s'affiche à part sous le net. Le classement reste fait sur l
 - **L'épargne salariale** (PERECO, PERO) et l'abondement de l'employeur, qui réduisent le plafond de l'année suivante.
 - **Le détail du plafond par année d'origine**, tel qu'il figure sur l'avis d'impôt.
 - **Les anciens contrats** (PERP, Préfon, Madelin) : ils n'ont pas de saisie propre.
+
+## Réalisation de la livraison 1 (2026-11-26)
+
+Ce que le code a précisé, au-delà de la décision :
+
+- **Format de fichier : pas de nouveau numéro.** Le plan prévoyait le format suivant avec une migration vide. L'ADR 005 dit l'inverse pour ce cas : un nouveau type de flux et un champ facultatif ne changent pas le numéro ; une version précédente écarte les flux « Versement PER » et le signale, et ignore le plafond saisi.
+- **Montants à l'euro.** Les versements de l'année et les plafonds sont arrondis à l'euro, comme sur la déclaration et l'avis d'impôt.
+- **Dividendes.** Au prélèvement forfaitaire, les dividendes ne sont pas dans le revenu global : la déduction ne porte que sur les autres revenus. Avec l'option pour le barème, elle porte aussi sur eux. Le simulateur retient, comme avant, l'imposition des dividendes la plus favorable, déduction comprise.
+- **Revenu imposable plus faible que la déduction.** La déduction s'arrête au revenu imposable au barème. La part en trop n'est ni déduite ni reportée, le plafond est consommé (hypothèse 3), et le foyer est averti. Seule la part réellement déduite est rajoutée au revenu fiscal de référence.
+- **Enfant rattaché.** Il a son propre plafond, sans mise en commun ; ses versements se déduisent du revenu du foyer.
+- **Année manquante.** Quand l'année précédente n'est pas dans la session (ou n'a pas pu être simulée), une année autre que la première retient le minimum légal ; ce qui restait des années plus anciennes n'est pas repris, faute de savoir ce qui s'est passé entre-temps.
+- **Reste du plafond saisi (hypothèse 1).** Il est affiché la première année, et rappelé dans l'avertissement d'un dépassement des années suivantes tant qu'il pourrait encore servir.
+- **Plafond par défaut.** Le minimum légal retenu faute de saisie n'est signalé que s'il sert : la personne a versé, ou son conjoint a pris sur son plafond.
+- **Comparateur, en attendant la livraison 3.** Chaque colonne garde les versements saisis sur la personne : c'est le réglage « comme dans la simulation ».
+- **Résultat du moteur.** Trois montants du foyer, présents quand il a versé (`versementsEpargneRetraite`, `deductionEpargneRetraite`, `impotEconomiseEpargneRetraite`), que les exports et l'outil `simuler` montrent par la table des champs du foyer ; et `epargneRetraite`, toujours présent, qui porte pour chaque membre son plafond, l'imputation de ses versements, ce qui reste et le plafond calculé sur l'année : c'est ce que l'année suivante en reçoit.
 
 ## Conséquences
 

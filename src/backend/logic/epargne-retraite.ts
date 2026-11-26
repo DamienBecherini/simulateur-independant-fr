@@ -223,12 +223,16 @@ export function avertissementsEpargneRetraite(lecture: LectureDeLaDeduction): st
   ]
 }
 
-/** D'où vient le plafond d'une personne pour l'année, en quelques mots : « saisi dans la fiche », « calculé sur les revenus de 2025 ». */
-export function origineDuPlafondEnClair(personne: Pick<EpargneRetraiteDeLaPersonne, "originePlafond">, annee: number): string {
+/**
+ * D'où vient le plafond d'une personne pour l'année, en quelques mots : « saisi dans la fiche », « calculé sur les
+ * revenus de 2025 ». Avec son nom, la fiche est nommée : « saisi dans la fiche de Sophie ».
+ */
+export function origineDuPlafondEnClair(personne: Pick<EpargneRetraiteDeLaPersonne, "originePlafond">, annee: number, nom?: string): string {
+  const fiche = nom ? `la fiche ${deNom(nom)}` : "la fiche"
   const origines: Record<OrigineDuPlafondEpargneRetraite, string> = {
-    saisi: "saisi dans la fiche",
+    saisi: `saisi dans ${fiche}`,
     calcule: `calculé sur les revenus de ${annee - 1}`,
-    minimumFauteDeSaisie: "le minimum légal, faute de plafond saisi dans la fiche",
+    minimumFauteDeSaisie: `le minimum légal, faute de plafond saisi dans ${fiche}`,
     minimumFauteDAnneePrecedente: `le minimum légal, ${annee - 1} n'étant pas dans la simulation`
   }
   return origines[personne.originePlafond]

@@ -40,7 +40,7 @@ export const CHAMPS_DU_FOYER: Record<ChampDuFoyer, DescriptionDuChamp> = {
   beneficesExoneres: { libelle: "dont bénéfice exonéré en zone", sorties: PARTOUT, pourLesIA: "beneficesExoneres", siPresent: true },
   impotSurLeRevenu: { libelle: "Impôt sur le revenu", sorties: PARTOUT, pourLesIA: "impotSurLeRevenu" },
   versementLiberatoire: { libelle: "dont versement libératoire", sorties: PARTOUT, pourLesIA: "versementLiberatoire", siPresent: true },
-  impotEconomiseEpargneRetraite: { libelle: "Impôt économisé par les versements PER", sorties: PARTOUT, pourLesIA: "impotEconomiseEpargneRetraite", siPresent: true },
+  impotEconomiseEpargneRetraite: { libelle: "Impôt économisé grâce au PER", sorties: PARTOUT, pourLesIA: "impotEconomiseEpargneRetraite", siPresent: true },
   prelevementsSociaux: { libelle: "Prélèvements sociaux", sorties: PARTOUT, pourLesIA: "prelevementsSociaux" },
   optionDividendes: { libelle: "Imposition des dividendes", sorties: PARTOUT, pourLesIA: "optionDividendes" },
   netApresImpots: { libelle: "Net après impôts", sorties: PARTOUT, pourLesIA: "netApresImpots" },
