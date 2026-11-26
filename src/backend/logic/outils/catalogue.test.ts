@@ -83,7 +83,7 @@ describe("catalogue des outils", () => {
     for (const type of TYPES_DE_FLUX) expect(description.split(`${type} (${SENS_DES_TYPES[type]})`)).toHaveLength(2)
     expect(description).toContain("SASU, EURL : ca_services (")
     expect(description).toContain("EI : ca_services, ca_vente, deductible_expense.")
-    expect(description).toContain("micro-entreprise : ca_micro_services_bic (")
+    expect(description).toContain("micro-entreprise : ca_micro_services_bnc (")
   })
 
   it("valide les paramètres avec les mêmes schémas que ceux publiés", () => {

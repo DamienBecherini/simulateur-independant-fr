@@ -103,7 +103,7 @@ describe("proposer puis appliquer des flux", () => {
   })
 
   it("refuse un type de flux qui ne convient pas à l'acteur, ou un brut hors salaire", () => {
-    expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, acteurId: "micro-atelier" }] })).toBe("Opération 1 (ajouter_flux « Loyer du bureau » 2026) : Le type de flux « deductible_expense » ne convient pas à « Atelier de Camille » (micro-entreprise). Types possibles : ca_micro_services_bic, ca_micro_services_bnc, ca_micro_vente, expense.")
+    expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, acteurId: "micro-atelier" }] })).toBe("Opération 1 (ajouter_flux « Loyer du bureau » 2026) : Le type de flux « deductible_expense » ne convient pas à « Atelier de Camille » (micro-entreprise). Types possibles : ca_micro_services_bnc, ca_micro_services_bic, ca_micro_vente, expense.")
     expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, montantBrut: 1000 }] })).toContain("montantBrut ne s'applique qu'à un salaire")
     expect(erreurDe("proposer_flux", exemple(), { flux: [{ ...loyer, acteurId: "person-lea", typeFlux: "salary", montant: 1000, montantBrut: 900 }] })).toContain("inférieur au net")
     const salaire = proposer("proposer_flux", exemple(), { flux: [{ ...loyer, acteurId: "person-lea", typeFlux: "salary", libelle: "Job d'été", montant: 1000, montantBrut: 1300, mois: [7, 8] }] })

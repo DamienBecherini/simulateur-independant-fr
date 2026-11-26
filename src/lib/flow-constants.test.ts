@@ -2,7 +2,8 @@
 
 import { describe, expect, it } from "vitest"
 import { DEFAULT_FLOW_COLORS } from "@/lib/color-constants"
-import { estLibelleParDefaut, flowTypeLabels, flowTypeShortLabels, flowTypesByEntityType, getFlowTypesForEntity, isOutgoingFlowType, libelleDuType } from "@/lib/flow-constants"
+import { FLUX_PERMIS, genreDe } from "@/backend/logic/flux-permis"
+import { estLibelleParDefaut, flowTypeLabels, flowTypeShortLabels, getFlowTypesForEntity, isOutgoingFlowType, libelleDuType } from "@/lib/flow-constants"
 import { createCompany, createMicroEntreprise, createPerson } from "@/lib/entity-factory"
 import { cn } from "@/lib/utils"
 import { FinancialFlowSchema } from "@/types"
@@ -57,25 +58,10 @@ describe("classement des types de flux", () => {
     expect(isOutgoingFlowType("salary")).toBe(false)
   })
 
-  it("ne propose à chaque type d'entité que des types de flux du schéma, sans doublon", () => {
-    for (const types of Object.values(flowTypesByEntityType)) {
-      expect(types.length).toBeGreaterThan(0)
-      expect(new Set(types).size).toBe(types.length)
-      expect(types.every(type => typesDeFlux.includes(type))).toBe(true)
-    }
-  })
-
-  it("ne propose ni rémunération de dirigeant ni dividendes à une entreprise individuelle", () => {
+  it("propose à la saisie les types de la table du moteur, la même que celle des propositions des IA", () => {
+    const acteurs = [createPerson(), createCompany("SASU"), createCompany("EURL"), createCompany("EI"), createMicroEntreprise()]
+    for (const acteur of acteurs) expect(getFlowTypesForEntity(acteur)).toBe(FLUX_PERMIS[genreDe(acteur)])
     expect(getFlowTypesForEntity(createCompany("EI"))).toEqual(["ca_services", "ca_vente", "deductible_expense"])
-    expect(getFlowTypesForEntity(createCompany("SASU"))).toBe(flowTypesByEntityType.company)
-    expect(getFlowTypesForEntity(createMicroEntreprise())).toBe(flowTypesByEntityType["micro-entreprise"])
-    expect(getFlowTypesForEntity(createPerson())).toBe(flowTypesByEntityType.person)
-  })
-
-  it("réserve les charges déductibles aux sociétés", () => {
-    expect(flowTypesByEntityType.company).toContain("deductible_expense")
-    expect(flowTypesByEntityType.person).not.toContain("deductible_expense")
-    expect(flowTypesByEntityType["micro-entreprise"]).not.toContain("deductible_expense")
   })
 })
 
@@ -107,6 +93,6 @@ describe("libellés qui dépendent de l'acteur", () => {
   })
 
   it("propose les prestations libérales en tête des types d'une micro-entreprise", () => {
-    expect(flowTypesByEntityType["micro-entreprise"][0]).toBe("ca_micro_services_bnc")
+    expect(getFlowTypesForEntity(createMicroEntreprise())[0]).toBe("ca_micro_services_bnc")
   })
 })

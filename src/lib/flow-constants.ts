@@ -1,6 +1,7 @@
 // src/lib/flow-constants.ts
 
-import { estSocieteIS, type Entity, type FinancialFlow } from "@/types"
+import { fluxPermis } from "@/backend/logic/flux-permis"
+import type { Entity, FinancialFlow } from "@/types"
 
 export type FlowType = FinancialFlow["type"]
 
@@ -80,32 +81,29 @@ export const flowTypeShortLabels: Record<FlowType, string> = {
  * affichée à la saisie, et le côté « dépenses » de la grille annuelle et de la légende :
  * la rémunération sort de la caisse de la société qui la verse.
  */
-const outgoingFlowTypes: ReadonlyArray<FlowType> = ["deductible_expense", "expense", "director_remuneration", "dividends_payment"]
-
-export const isOutgoingFlowType = (type: FlowType): boolean => outgoingFlowTypes.includes(type)
-
-/**
- * Types de flux proposés à la saisie selon le type d'entité.
- * - Personne : revenus classiques et dépenses non déductibles.
- * - Société (SASU/EURL) : les dépenses sont des charges déductibles.
- * - Entreprise individuelle au réel : comme une société, sans rémunération de dirigeant ni dividendes.
- * - Micro-entreprise (régime forfaitaire) : les dépenses ne sont pas déductibles. Les prestations libérales viennent en
- *   tête : c'est la nature proposée d'office tant que l'activité n'a pas de chiffre d'affaires dans l'année (voir
- *   typeProposeDOffice, src/lib/nature-de-l-activite.ts).
- */
-export const flowTypesByEntityType: Record<Entity["type"], ReadonlyArray<FlowType>> = {
-  person: ["are", "salary", "other_taxable_income", "expense"],
-  company: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
-  "micro-entreprise": ["ca_micro_services_bnc", "ca_micro_services_bic", "ca_micro_vente", "expense"],
-  // Portage salarial : des prestations de services seulement, et les frais professionnels remboursés (voir l'ADR 016).
-  portage: ["ca_services", "deductible_expense"]
+const EST_UNE_SORTIE: Record<FlowType, boolean> = {
+  are: false,
+  salary: false,
+  other_taxable_income: false,
+  ca_services: false,
+  ca_vente: false,
+  ca_micro_services_bic: false,
+  ca_micro_services_bnc: false,
+  ca_micro_vente: false,
+  income: false,
+  deductible_expense: true,
+  expense: true,
+  director_remuneration: true,
+  dividends_payment: true
 }
 
-const individualBusinessFlowTypes: ReadonlyArray<FlowType> = ["ca_services", "ca_vente", "deductible_expense"]
+export const isOutgoingFlowType = (type: FlowType): boolean => EST_UNE_SORTIE[type]
 
-/** Types de flux proposés à la saisie pour une entité donnée, selon son type et son statut juridique. */
+/**
+ * Types de flux proposés à la saisie pour une entité, selon son type et son statut juridique, dans l'ordre de la
+ * liste : la table du moteur (`FLUX_PERMIS`, src/backend/logic/flux-permis.ts), la même que celle des propositions
+ * des IA.
+ */
 export function getFlowTypesForEntity(entity: Entity): ReadonlyArray<FlowType> {
-  // Rémunération et dividendes ne se versent que dans une société à l'IS : une entreprise individuelle au réel ne les a pas.
-  if (entity.type === "company" && !estSocieteIS(entity.legalStatus)) return individualBusinessFlowTypes
-  return flowTypesByEntityType[entity.type]
+  return fluxPermis(entity)
 }

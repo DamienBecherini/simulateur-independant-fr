@@ -3,6 +3,7 @@
 // des relations, et empreinte d'une session (pour refuser une proposition construite sur une session qui a changé).
 
 import { STATUTS_JURIDIQUES, type Entity, type FinancialFlow, type Relationship, type SessionState } from "../../../types.js"
+import { FLUX_PERMIS, genreDe } from "../flux-permis.js"
 import { obstacleAuRole, phraseDeLObstacle } from "../regles-de-structure.js"
 
 /** Erreur prévue, dont le message en français dit au modèle ce qui ne va pas et comment s'y prendre autrement. */
@@ -37,11 +38,7 @@ export type GenreCreable = (typeof GENRES_CREABLES)[number]
 export const GENRES_D_ACTEUR = [...GENRES_CREABLES, "portage"] as const
 export type GenreDActeur = (typeof GENRES_D_ACTEUR)[number]
 
-export function genreDe(acteur: Entity): GenreDActeur {
-  if (acteur.type === "person") return "personne"
-  if (acteur.type === "micro-entreprise" || acteur.type === "portage") return acteur.type
-  return acteur.legalStatus
-}
+export { genreDe }
 
 export function trouverActeur(session: Pick<SessionState, "entities">, id: string): Entity {
   const acteur = session.entities.find(e => e.id === id)
@@ -91,15 +88,8 @@ export const SENS_DES_TYPES: Record<FinancialFlow["type"], string> = {
   income: "type réservé aux tests"
 }
 
-/** Types de flux que porte chaque genre d'acteur. */
-const TYPES_PERMIS: Record<GenreDActeur, readonly TypeDeFlux[]> = {
-  personne: ["salary", "are", "other_taxable_income", "expense"],
-  SASU: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
-  EURL: ["ca_services", "ca_vente", "deductible_expense", "director_remuneration", "dividends_payment"],
-  EI: ["ca_services", "ca_vente", "deductible_expense"],
-  "micro-entreprise": ["ca_micro_services_bic", "ca_micro_services_bnc", "ca_micro_vente", "expense"],
-  portage: ["ca_services", "deductible_expense"]
-}
+/** Types de flux que porte chaque genre d'acteur : la table du moteur, la même que celle de la saisie. */
+const TYPES_PERMIS: Record<GenreDActeur, readonly TypeDeFlux[]> = FLUX_PERMIS
 
 /**
  * Les types de flux permis à chaque genre d'acteur, ceux qui ont les mêmes réunis, chaque type expliqué la première
