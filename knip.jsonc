@@ -21,6 +21,9 @@
     // Chargé dans Electron par les tests de bout en bout (option --require), son chemin est construit dans fixtures.ts.
     "e2e/support/neutraliser-dialogues.cjs"
   ],
+  // Vitest a deux configurations : celle de tous les tests, et celle des tests de mutation, que seul stryker.config.json
+  // désigne (le plugin Stryker de knip ne la suit pas).
+  "vitest": { "config": ["vitest.config.ts", "vitest.mutation.config.ts"] },
   // Pièces du kit shadcn/ui : on garde le kit complet, comme son modèle, plutôt que de retirer une pièce à la fois.
   "ignoreIssues": { "src/components/ui/**": ["exports"] },
   // Programme de Windows lancé par scripts/essai-paquet-store.mjs (ouvrir l'application installée par shell:AppsFolder), pas un paquet npm.

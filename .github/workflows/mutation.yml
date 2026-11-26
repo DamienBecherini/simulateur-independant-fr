@@ -15,9 +15,18 @@ permissions:
 
 jobs:
   stryker:
-    name: Stryker (moteur fiscal)
+    name: Stryker (moteur fiscal, lot ${{ matrix.lot }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
+    strategy:
+      # Un lot en échec n'interrompt pas les autres : leurs rapports restent publiés.
+      fail-fast: false
+      matrix:
+        # Les modules du moteur sont répartis en lots, un par machine. Deux raisons : Stryker ne se partage pas lui-même
+        # entre plusieurs machines, et un lot n'instrumente que ses modules, ce qui garde les tests rapides (un mutant
+        # exécuté dès le corps d'un describe rejoue tous les tests liés à son module). Pour changer le nombre de lots,
+        # il suffit d'allonger ou de raccourcir cette liste.
+        lot: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     steps:
       - name: Récupérer le code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,11 +40,55 @@ jobs:
       - name: Installer les dépendances
         run: npm ci --ignore-scripts
 
-      - name: Lancer les tests de mutation
-        run: npm run test:mutation
+      - name: Lancer les tests de mutation du lot
+        env:
+          RANG: ${{ strategy.job-index }}
+          LOTS: ${{ strategy.job-total }}
+        # Les modules de src/backend/logic (hors sous-dossiers, comme « mutate » dans stryker.config.json), du plus gros
+        # au plus petit, distribués à tour de rôle : aucun n'est oublié, et les lots se valent à peu près.
+        run: |
+          fichiers=$(ls -S src/backend/logic/*.ts | grep -v '\.test\.ts$' | awk -v rang="$RANG" -v lots="$LOTS" 'NR % lots == rang' | paste -sd, -)
+          echo "Modules du lot : $fichiers"
+          npm run test:mutation -- --mutate "$fichiers"
+
+      - name: Publier le rapport du lot
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rapport-mutation-lot-${{ matrix.lot }}
+          path: reports/mutation
+          if-no-files-found: warn
+          retention-days: 1
+
+  bilan:
+    name: Bilan (score d'ensemble et rapport)
+    # Même si un lot a échoué : le bilan porte sur les lots arrivés, et le dit.
+    if: always()
+    needs: stryker
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Installer Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      # Un sous-dossier par lot (rapport-mutation-lot-1…), avec son mutation.html et son mutation.json.
+      - name: Récupérer les rapports des lots
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: rapport-mutation-lot-*
+          path: reports/mutation
+
+      - name: Écrire le score d'ensemble dans le résumé du run
+        env:
+          PARTIEL: ${{ needs.stryker.result != 'success' && '--partiel' || '' }}
+        run: node scripts/bilan-mutation.mjs reports/mutation $PARTIEL | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Publier le rapport
-        if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rapport-mutation
