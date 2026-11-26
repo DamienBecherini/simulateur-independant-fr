@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from "vitest"
 import type { SimulationAnnuelle } from "@/types"
+import { avecSaRaison } from "@/backend/logic/testing/colonne-de-test"
 import { BOM } from "./csv"
 import { nomDuFoyer } from "./export-commun"
 import { csvComparaison, csvCourbeRemuneration, csvGrilleMensuelle, csvResultats, csvSyntheseDesAnnees, reglagesDuComparateur } from "./export-csv"
@@ -313,7 +314,7 @@ describe("csvComparaison", () => {
   it("signale une colonne du portage salarial non retenue, et pourquoi", () => {
     const result = comparaisonExemple()
     const [sasu] = result.scenarios
-    result.scenarios = [...result.scenarios, { ...sasu, statut: "portage", libelle: "Portage salarial", actuel: false, telleQueSaisie: false, portageNonRetenu: "sansPrestations" }]
+    result.scenarios = [...result.scenarios, avecSaRaison({ ...sasu, nonRetenue: undefined, statut: "portage", libelle: "Portage salarial", actuel: false, telleQueSaisie: false, portageNonRetenu: "sansPrestations" })]
     const csv = lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))
     expect(csv[0]).toBe("Indicateur;SASU;Micro-entreprise;Portage salarial")
     expect(csv).toContain("Portage salarial non retenu;;;non retenue : aucune prestation à facturer")
@@ -321,7 +322,7 @@ describe("csvComparaison", () => {
 
   it("signale les colonnes micro plus accessibles après la sortie du régime, et la CFE de l'année de création", () => {
     const result = comparaisonExemple()
-    result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? { ...s, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] } } : s))
+    result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? avecSaRaison({ ...s, nonRetenue: undefined, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] } }) : s))
     result.noteCFE = "CFE exonérée l'année de création (2026)."
     const csv = lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))
     expect(csv.slice(1, 5)).toEqual(["Statut actuel;oui;non", "Situation telle que saisie;oui;non", "Meilleur net;non;oui", "Régime plus accessible;non;oui"])
@@ -330,7 +331,7 @@ describe("csvComparaison", () => {
 
   it("signale une société non retenue pour sa rémunération, et une rémunération limitée à ce que la société peut verser", () => {
     const nonCouverte = comparaisonExemple()
-    nonCouverte.scenarios = nonCouverte.scenarios.map(s => (s.statut === "SASU" ? { ...s, remunerationNonCouverte: true as const } : s))
+    nonCouverte.scenarios = nonCouverte.scenarios.map(s => (s.statut === "SASU" ? avecSaRaison({ ...s, nonRetenue: undefined, remunerationNonCouverte: true }) : s))
     expect(lignes(csvComparaison(nonCouverte, optionsExemple(), "Ma SASU"))).toContain("Non retenue : rémunération supérieure au bénéfice;oui;non")
 
     const plafonnee = comparaisonExemple()
@@ -367,8 +368,15 @@ describe("csvComparaison", () => {
 
   it("signale une colonne micro non retenue, plafond dépassé", () => {
     const result = comparaisonExemple()
-    result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? { ...s, horsPlafond: true } : s))
+    result.scenarios = result.scenarios.map(s => (s.statut === "micro" ? avecSaRaison({ ...s, nonRetenue: undefined, horsPlafond: true }) : s))
     expect(lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))).toContain("Non retenue : plafond dépassé;non;oui")
+  })
+
+  it("signale la SASU d'une profession en société d'exercice libéral, et rien sans elle", () => {
+    const result = comparaisonExemple()
+    expect(lignes(csvComparaison(result, optionsExemple(), "Ma SASU")).join("\n")).not.toContain("société d'exercice libéral")
+    result.scenarios = result.scenarios.map(s => (s.statut === "SASU" ? { ...s, nonRetenue: "societeExerciceLiberal" as const } : s))
+    expect(lignes(csvComparaison(result, optionsExemple(), "Ma SASU"))).toContain("Non retenue : société d'exercice libéral;oui;non")
   })
 
   it("explique un meilleur statut qui fait moins bien que la situation saisie, comme le verdict", () => {

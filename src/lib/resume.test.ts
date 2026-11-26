@@ -5,11 +5,12 @@ import type { ComparaisonResult, ScenarioStatut, SimulationReport, StatutCompare
 import { emptyReport } from "@/ui/testing/fixtures"
 import { avecUnBeneficeGarde, avecUnePerteConservee, ecartAvecLaSituationSaisie, estNonRetenue, gainDuMariageOuDuPacs, libelleDuCoutDesTrimestres, meilleurStatut, netDeLaSituationSaisie, nombreDAlertes, porteurDeLaPremiereAlerte, phraseDuVerdict, netEtReste, raisonDeNonRetenue, referenceDesEcarts, remunerationOptimale, tauxDePrelevement } from "./resume"
 import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
+import { avecSaRaison } from "@/backend/logic/testing/colonne-de-test"
 
 const espaces = (texte: string | null) => texte?.replace(/\s/g, " ") ?? null
 
 function scenario(statut: StatutCompare, libelle: string, net: number, actuel = false): ScenarioStatut {
-  return { statut, libelle, actuel, telleQueSaisie: actuel, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 2, trimestres: 4, resume: "", garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [] }
+  return avecSaRaison({ statut, libelle, actuel, telleQueSaisie: actuel, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 2, trimestres: 4, resume: "", garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [] })
 }
 
 function comparaison(meilleur: StatutCompare): ComparaisonResult {
@@ -136,7 +137,7 @@ describe("verdict du comparateur", () => {
   })
 
   it("ne cite pas derrière le statut actuel une colonne micro qui n'est plus accessible", () => {
-    const result = { ...comparaison("micro"), scenarios: comparaison("micro").scenarios.map(s => (s.statut === "micro-vfl" ? { ...s, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] as [number, number] } } : s)) }
+    const result = { ...comparaison("micro"), scenarios: comparaison("micro").scenarios.map(s => (s.statut === "micro-vfl" ? { ...s, nonRetenue: "regimeMicroFerme" as const, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] as [number, number] } } : s)) }
     expect(espaces(phraseDuVerdict(result, "Atelier"))).toBe("Pour « Atelier », le statut actuel, Micro-entreprise, donne le meilleur net : 32 000 €. Juste derrière : SASU, −2 000 €.")
   })
 
@@ -146,21 +147,30 @@ describe("verdict du comparateur", () => {
     expect(espaces(phraseDuVerdict(gagnant, "Atelier"))).toBe("Pour « Atelier », Portage salarial donnerait le meilleur net : 35 000 €, soit +3 000 € par rapport à votre situation telle que saisie (Micro-entreprise, 32 000 €).")
     expect(espaces(meilleurStatut(gagnant))).toBe("Portage salarial, +3 000 €")
 
-    const nonRetenu = { ...portage, netApresImpots: 31500, portageNonRetenu: "sansPrestations" as const }
+    const nonRetenu = { ...portage, netApresImpots: 31500, nonRetenue: "portageSansPrestations" as const }
     expect(estNonRetenue(nonRetenu)).toBe(true)
     expect(raisonDeNonRetenue(nonRetenu)).toBe("non retenue : aucune prestation à facturer")
-    expect(raisonDeNonRetenue({ ...nonRetenu, portageNonRetenu: "salaries" })).toBe("non retenue : salariés de l'activité")
+    expect(raisonDeNonRetenue({ nonRetenue: "portageSalaries" })).toBe("non retenue : salariés de l'activité")
     expect(espaces(phraseDuVerdict({ ...comparaison("micro"), scenarios: [...comparaison("micro").scenarios, nonRetenu] }, "Atelier"))).toContain("Juste derrière : Micro + versement libératoire")
   })
 
   it("une société dont la grille verse plus que son bénéfice n'est pas retenue, et sa cellule dit pourquoi", () => {
-    const societe = { ...scenario("SASU", "SASU", 40000), remunerationNonCouverte: true as const }
+    const societe = { ...scenario("SASU", "SASU", 40000), nonRetenue: "remunerationNonCouverte" as const }
     expect(estNonRetenue(societe)).toBe(true)
     expect(raisonDeNonRetenue(societe)).toBe("non retenue : rémunération supérieure au bénéfice")
     // Une rémunération choisie ramenée à ce que la société peut verser reste une colonne retenue.
     const plafonnee = { ...scenario("SASU", "SASU", 30000), remunerationPlafonnee: { demandee: 80000000, retenue: 38000 } }
     expect(estNonRetenue(plafonnee)).toBe(false)
     expect(raisonDeNonRetenue(plafonnee)).toBeNull()
+  })
+
+  it("la SASU d'une profession en société d'exercice libéral n'est pas citée derrière le statut actuel, même avec un net supérieur", () => {
+    const ei = { ...scenario("EI", "EI au réel", 63137, true) }
+    const sasu = { ...scenario("SASU", "SASU", 68228), nonRetenue: "societeExerciceLiberal" as const }
+    const micro = scenario("micro", "Micro-entreprise", 60000)
+    const result: ComparaisonResult = { scenarios: [sasu, ei, micro], meilleur: "EI", situationSaisie: { statut: "EI", libelle: "EI au réel", netApresImpots: 63137 }, couples: [], warnings: [] }
+    expect(raisonDeNonRetenue(sasu)).toBe("non retenue : société d'exercice libéral")
+    expect(espaces(phraseDuVerdict(result, "Cabinet"))).toBe("Pour « Cabinet », le statut actuel, EI au réel, donne le meilleur net : 63 137 €. Juste derrière : Micro-entreprise, −3 137 €.")
   })
 
   it("seul en tête, le statut actuel n'a personne derrière lui", () => {

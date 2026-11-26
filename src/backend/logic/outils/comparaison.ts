@@ -4,7 +4,7 @@
 // l'outil compare ce que l'utilisateur voit à l'écran, sauf réglages passés en paramètres pour essayer une variante.
 
 import { z } from "zod"
-import { estEntrepriseOuMicro, MODES_REPARTITION, STATUTS_SOCIETE, type ChiffreDAffairesDUnStatut, type ComparaisonOptions, type ComparaisonResult, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
+import { estEntrepriseOuMicro, MODES_REPARTITION, RAISONS_DE_NON_RETENUE, STATUTS_SOCIETE, type ChiffreDAffairesDUnStatut, type ComparaisonOptions, type ComparaisonResult, type Entity, type PointRemuneration, type ScenarioStatut, type SessionState } from "../../../types.js"
 import { vueDeLAnnee } from "../annees.js"
 import { enTexteBrut } from "../format.js"
 import { avecLaRemunerationDeLaGrille, optionsDuComparateur } from "../options-du-comparateur.js"
@@ -59,6 +59,7 @@ const ScenarioSchema = z.object({
   prelevementsSociaux: z.number(),
   resultatConserveActivite: z.number(),
   ecartDeFrais: z.number(),
+  nonRetenue: z.enum(RAISONS_DE_NON_RETENUE).nullable().describe("Pourquoi la colonne n'est jamais désignée meilleur statut ; null si elle peut l'être."),
   horsPlafond: z.boolean(),
   remunerationDemandee: z.number().nullable().describe("SASU, EURL : la rémunération demandée, quand elle dépassait ce que la société peut verser sans déficit ; remunerationRetenue est alors ce maximum."),
   remunerationNonCouverte: z.boolean().describe("SASU, EURL : la grille verse une rémunération supérieure au bénéfice ; colonne jamais désignée meilleur statut."),
@@ -74,6 +75,7 @@ const resumeDuScenario = (s: ScenarioStatut): z.infer<typeof ScenarioSchema> => 
   actuel: s.actuel,
   telleQueSaisie: s.telleQueSaisie,
   ...arrondirTout({ netApresImpots: s.netApresImpots, totalPrelevements: s.totalPrelevements, cotisationsSociales: s.cotisationsSociales, impotSocietes: s.impotSocietes, impotSurLeRevenu: s.impotSurLeRevenu, prelevementsSociaux: s.prelevementsSociaux, resultatConserveActivite: s.resultatConserveActivite, ecartDeFrais: s.ecartDeFrais.total }),
+  nonRetenue: s.nonRetenue,
   horsPlafond: s.horsPlafond,
   remunerationDemandee: s.remunerationPlafonnee ? arrondir(s.remunerationPlafonnee.demandee) : null,
   remunerationNonCouverte: s.remunerationNonCouverte === true,

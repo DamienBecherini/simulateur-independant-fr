@@ -1,6 +1,6 @@
 // src/backend/logic/colonne-du-comparateur.ts
 
-import { estSocieteIS, type ComparaisonOptions, type ConditionsPortageRetenues, type DetailPortage, type DonneesDeLAnnee, type MicroEntreprise, type ModeRepartition, type PartageDuBenefice, type RaisonPortageNonRetenu, type RemunerationPlafonnee, type ScenarioStatut, type SimulationReport, type StatutCompare } from "../../types.js"
+import { estSocieteIS, type ComparaisonOptions, type ConditionsPortageRetenues, type DetailPortage, type DonneesDeLAnnee, type MicroEntreprise, type ModeRepartition, type PartageDuBenefice, type RaisonDeNonRetenue, type RaisonPortageNonRetenu, type RemunerationPlafonnee, type ScenarioStatut, type SimulationReport, type StatutCompare } from "../../types.js"
 import { depassePlafondMicro } from "./calculsAE.js"
 import { estMicro, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { acreDeLAnnee, chiffreAffairesDeLaMicro, chiffreAffairesReuni, microsReunies, prorataDeLEntreprise } from "./dispositifs.js"
@@ -12,7 +12,7 @@ import { euros, pourcent } from "./format.js"
 import { professionDe, reglesDeLaMicro, retraiteMicroDeLaProfession } from "./professions.js"
 import { evaluerProtectionSociale } from "./protection-sociale.js"
 import { periodeDeLActivite, reglesDeLaPeriode } from "./annee-de-creation.js"
-import type { ReglesFiscales } from "./regles.js"
+import type { ProfessionReglementee, ReglesFiscales } from "./regles.js"
 import type { ContexteDeLAnnee } from "./simulation-engine.js"
 import { LIBELLE_DU_PORTAGE, LIBELLES_DES_STATUTS } from "./statuts.js"
 
@@ -229,6 +229,29 @@ function perteConservee(statut: StatutCompare, activite: ActiviteDuRapport): num
   return perteDeLaSociete(activite?.partage)
 }
 
+const RAISON_DU_PORTAGE: Record<RaisonPortageNonRetenu, RaisonDeNonRetenue> = { sansPrestations: "portageSansPrestations", aDecouvert: "portageADecouvert", salaries: "portageSalaries" }
+
+/** Ce que la colonne dit d'elle-même, et dont dépend qu'elle soit retenue ou non. */
+type FaitsDeLaColonne = Pick<ScenarioStatut, "statut" | "horsPlafond" | "regimeMicroFerme" | "portageNonRetenu" | "remunerationNonCouverte">
+
+/**
+ * Pourquoi la colonne n'est jamais désignée meilleur statut ; `null` si elle peut l'être. C'est le seul endroit qui le
+ * décide : le meilleur statut, le verdict, l'écran et les exports lisent `ScenarioStatut.nonRetenue`.
+ * - Une micro-entreprise hors plafond ne tient que deux ans, et un régime fermé n'est plus accessible.
+ * - Une colonne du portage salarial sans prestations à facturer, à découvert ou avec des salariés ne tient pas lieu de
+ *   l'activité (ADR 016).
+ * - Une société dont la grille verse une rémunération qu'elle ne gagne pas : ce net ne vient pas de l'activité.
+ * - Une profession qui exerce en principe en société d'exercice libéral n'a pas de SASU ou d'EURL classique à désigner :
+ *   leurs colonnes restent, indicatives (ADR 015).
+ */
+export function raisonDeNonRetenue(colonne: FaitsDeLaColonne, profession: ProfessionReglementee | null): RaisonDeNonRetenue | null {
+  if (colonne.portageNonRetenu) return RAISON_DU_PORTAGE[colonne.portageNonRetenu]
+  if (colonne.regimeMicroFerme) return "regimeMicroFerme"
+  if (colonne.horsPlafond) return "plafondDepasse"
+  if (colonne.remunerationNonCouverte) return "remunerationNonCouverte"
+  return profession?.societeExerciceLiberal === true && estSocieteIS(colonne.statut) ? "societeExerciceLiberal" : null
+}
+
 /** La colonne du statut, d'après la simulation de l'activité dans ce statut. */
 export function scenarioDeLaColonne({ source, options, regles, contexte }: ColonneEtudiee, statut: StatutCompare, simulation: SimulationDeLaColonne): ScenarioStatut {
   const activite = simulation.report.activities.find(a => a.entityId === source.id)
@@ -237,8 +260,10 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
   const { notes, ...ferme } = regimeFerme(statut, source.id, contexte)
   const { notes: notesDuPortage, ...portage } = colonneDuPortage(statut, { source, regles }, contexte.annee ?? regles.annee, simulation, activite)
   const { resultatConserveActivite, ...details } = detailsDeLActivite(activite, [...notes, ...notesDuPortage, ...noteDuPlafond(statut, simulation.remunerationPlafonnee)])
+  const nonCouverte = remunerationNonCouverte(activite?.partage) ? { remunerationNonCouverte: true as const } : {}
   return {
     statut,
+    nonRetenue: raisonDeNonRetenue({ statut, horsPlafond, ...ferme, ...portage, ...nonCouverte }, professionDe(source, regles)),
     libelle: libelleDeLaColonne(statut, source, options),
     actuel: statut === statutActuel(source),
     telleQueSaisie: estTelleQueSaisie(statut, source, options),
@@ -251,7 +276,7 @@ export function scenarioDeLaColonne({ source, options, regles, contexte }: Colon
     ...ferme,
     ...portage,
     ...(simulation.remunerationPlafonnee ? { remunerationPlafonnee: simulation.remunerationPlafonnee } : {}),
-    ...(remunerationNonCouverte(activite?.partage) ? { remunerationNonCouverte: true as const } : {}),
+    ...nonCouverte,
     ...(perteConservee(statut, activite) >= 0.5 ? { perteConservee: perteConservee(statut, activite) } : {}),
     ...(beneficeGarde(resultatConserveActivite) === undefined ? {} : { beneficeGarde: resultatConserveActivite }),
     ...details

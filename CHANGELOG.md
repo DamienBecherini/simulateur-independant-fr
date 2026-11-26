@@ -27,10 +27,12 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ### Corrigé
 
+- **Comparateur, profession exercée en société d'exercice libéral (ostéopathe, architecte, infirmier…) : le verdict ne cite plus la SASU ou l'EURL « juste derrière » le statut actuel.** Ces deux colonnes n'étaient déjà jamais désignées meilleur statut, mais la phrase du verdict pouvait écrire « Juste derrière : SASU, +5 091 € » après avoir désigné le statut actuel. Elles sont maintenant traitées comme les autres colonnes non retenues : grisées, « non retenue » dans l'en-tête, et « non retenue : société d'exercice libéral » dans la cellule de l'écart, dans les cartes, dans le rapport Markdown et dans le CSV (ligne « Non retenue : société d'exercice libéral »). Quand le statut actuel est une activité en portage salarial non retenue, l'explication du verdict en donne aussi la raison.
 - **Président de plusieurs SASU : le plafond de la sécurité sociale est réparti entre elles.** Chaque société n'applique à sa rémunération que sa part du plafond, au prorata des rémunérations versées (article L242-3 du code de la sécurité sociale, que le BOSS applique aux mandataires sociaux), tranches de la retraite complémentaire comprises. Chacune comptait un plafond entier : pour deux rémunérations de 40 000 € nets, 511 € de cotisations en trop dans chaque société. La carte de chaque société le dit ([ADR 018](./documentation/adr/018-regles-de-structure.md), addendum du 22 novembre).
 
 ### Maintenance
 
+- Comparateur : la raison pour laquelle une colonne n'est jamais désignée meilleur statut est décidée une seule fois par le moteur (`ScenarioStatut.nonRetenue`, une liste fermée de sept raisons). Le meilleur statut, le verdict, l'écran et les exports la lisent au lieu de refaire le test chacun de leur côté ; l'outil `comparer_statuts` des clients d'IA la rend dans chaque colonne (`nonRetenue`). Premier chantier de l'audit de qualité du 26 novembre 2026 (`documentation/recherche/audit-qualite-du-code.md`, constat C1).
 - Intégration continue plus rapide : la suite de la démo web est partagée entre trois machines, et `main` ne relance plus les tests de bout en bout déjà passés sur `integration` pour le même commit (la démo y est seulement compilée et publiée). Une publication passe d'environ 30 à 15 minutes. `npm run verifier` lance en local la vérification complète, Firefox compris.
 
 ## [0.14.0] — 2026-11-22

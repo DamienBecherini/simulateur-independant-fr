@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import { reglesPubliees } from "@/backend/logic/regles"
 import type { ComparaisonOptions, SimulationAnnuelle } from "@/types"
 import { eurosEnTexteBrut as euros } from "@/backend/logic/format"
+import { avecSaRaison } from "@/backend/logic/testing/colonne-de-test"
 import { echapper, LIMITES, rapportMarkdown, repartition, type DonneesDuRapport } from "./export-markdown"
 import { comparaisonExemple, optionsExemple, pluriannuelleExemple, rapportAvecFrais, rapportAvecReserves, rapportExemple, sessionAvecFrais, sessionExemple } from "./testing/exports-fixtures"
 
@@ -309,11 +310,18 @@ Une ligne par année de la session, avec les mêmes acteurs et la grille de chaq
 
   it("dans le comparateur, signale les colonnes plus accessibles et la CFE de l'année", () => {
     const resultat = comparaisonExemple()
-    resultat.scenarios = resultat.scenarios.map(s => (s.statut === "micro" ? { ...s, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] } } : s))
+    resultat.scenarios = resultat.scenarios.map(s => (s.statut === "micro" ? avecSaRaison({ ...s, nonRetenue: undefined, regimeMicroFerme: { depuis: 2028, depassements: [2026, 2027] } }) : s))
     resultat.noteCFE = "CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié."
     const rapport = rapportComplet({ comparaison: { nomActivite: "Ma SASU", options: optionsExemple(), resultat } })
     expect(rapport).toContain("| Indicateur | SASU (actuel) | Micro-entreprise (meilleur net, plus accessible) |")
     expect(rapport).toContain("- CFE de 2027, l'année qui suit la création : base d'imposition réduite de moitié.\n- Votre situation telle que saisie (SASU) : 20 000 € de net, comme dans les résultats\n\n| Indicateur |")
+  })
+
+  it("dans le comparateur, dit pourquoi la SASU d'une profession en société d'exercice libéral n'est pas retenue", () => {
+    const resultat = comparaisonExemple()
+    resultat.scenarios = resultat.scenarios.map(s => (s.statut === "SASU" ? { ...s, nonRetenue: "societeExerciceLiberal" as const } : s))
+    const rapport = rapportComplet({ comparaison: { nomActivite: "Ma SASU", options: optionsExemple(), resultat } })
+    expect(rapport).toContain("| Indicateur | SASU (actuel, non retenue : société d'exercice libéral) | Micro-entreprise (meilleur net) |")
   })
 
   it("gère un rapport sans revenus, sans activité ni foyer", () => {

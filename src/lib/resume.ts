@@ -1,7 +1,7 @@
 // src/lib/resume.ts
 // Chiffres clés de la barre de résumé (affichage « Résumé ») : tirés des résultats de l'année et du comparateur.
 
-import type { ComparaisonResult, OptimisationRemuneration, RaisonPortageNonRetenu, RaisonSousLaSituationSaisie, ScenarioStatut, SimulationReport } from "@/types"
+import type { ComparaisonResult, OptimisationRemuneration, RaisonDeNonRetenue, RaisonSousLaSituationSaisie, ScenarioStatut, SimulationReport } from "@/types"
 import { ecartSigne, euros } from "@/backend/logic/format"
 import { netCompare } from "@/backend/logic/net-compare"
 import { AUCUNE_CHARGE, SANS_CHIFFRE_D_AFFAIRES } from "@/backend/logic/options-du-comparateur"
@@ -120,26 +120,23 @@ export function netEtReste(colonne: { statut: ScenarioStatut["statut"]; netApres
   return garde > 0 ? `${euros(colonne.netApresImpots)} (et ${euros(garde)} gardés ${lieuDuReste(colonne.statut)})` : euros(colonne.netApresImpots)
 }
 
-/**
- * Une colonne micro hors plafond ou au régime fermé, une colonne du portage salarial sans prestations ou avec des
- * salariés, une société dont la grille verse une rémunération supérieure à son bénéfice : jamais retenue comme
- * meilleur statut.
- */
-export const estNonRetenue = (s: ScenarioStatut) => s.horsPlafond || s.regimeMicroFerme !== undefined || s.portageNonRetenu !== undefined || s.remunerationNonCouverte === true
+/** La colonne n'est jamais désignée meilleur statut : le moteur en porte la raison (`ScenarioStatut.nonRetenue`). */
+export const estNonRetenue = (s: Pick<ScenarioStatut, "nonRetenue">) => s.nonRetenue !== null
 
-/** Ce que dit la cellule d'une colonne du portage salarial non retenue. */
-const PORTAGE_NON_RETENU: Record<RaisonPortageNonRetenu, string> = {
-  sansPrestations: "non retenue : aucune prestation à facturer",
-  aDecouvert: "non retenue : frais supérieurs au chiffre d'affaires",
-  salaries: "non retenue : salariés de l'activité"
+/** Ce que dit la cellule d'une colonne non retenue, raison par raison. */
+const RAISONS_ECRITES: Record<RaisonDeNonRetenue, string> = {
+  regimeMicroFerme: "non retenue : régime micro fermé",
+  plafondDepasse: "non retenue : plafond dépassé",
+  portageSansPrestations: "non retenue : aucune prestation à facturer",
+  portageADecouvert: "non retenue : frais supérieurs au chiffre d'affaires",
+  portageSalaries: "non retenue : salariés de l'activité",
+  remunerationNonCouverte: "non retenue : rémunération supérieure au bénéfice",
+  societeExerciceLiberal: "non retenue : société d'exercice libéral"
 }
 
 /** Pourquoi une colonne n'est jamais retenue, écrit dans la cellule : la couleur seule ne le dit pas. */
-export function raisonDeNonRetenue(scenario: ScenarioStatut): string | null {
-  if (scenario.portageNonRetenu) return PORTAGE_NON_RETENU[scenario.portageNonRetenu]
-  if (scenario.regimeMicroFerme) return "non retenue : régime micro fermé"
-  if (scenario.remunerationNonCouverte) return "non retenue : rémunération supérieure au bénéfice"
-  return scenario.horsPlafond ? "non retenue : plafond dépassé" : null
+export function raisonDeNonRetenue(scenario: Pick<ScenarioStatut, "nonRetenue">): string | null {
+  return scenario.nonRetenue ? RAISONS_ECRITES[scenario.nonRetenue] : null
 }
 
 /**

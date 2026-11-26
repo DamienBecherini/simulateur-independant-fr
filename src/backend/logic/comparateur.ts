@@ -1,6 +1,6 @@
 // src/backend/logic/comparateur.ts
 
-import { estSocieteIS, STATUTS_COMPARES, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type DonneesDeLAnnee, type FinancialFlow, type OptimisationRemuneration, type RemunerationOptimale, type ScenarioStatut, type SimulationReport, type StatutCompare, type StatutSociete } from "../../types.js"
+import { estSocieteIS, STATUTS_COMPARES, type ComparaisonCouple, type ComparaisonOptions, type ComparaisonResult, type DonneesDeLAnnee, type FinancialFlow, type OptimisationRemuneration, type RaisonDeNonRetenue, type RemunerationOptimale, type ScenarioStatut, type SimulationReport, type StatutCompare, type StatutSociete } from "../../types.js"
 import { estTelleQueSaisie, libelleDeLaColonne, libelleDuStatut, scenarioDeLaColonne, type ColonneEtudiee } from "./colonne-du-comparateur.js"
 import { activiteComparee, estMicro, personnesDeLActivite, statutActuel, type Activite } from "./conversion-de-statut.js"
 import { avecLaCFEDeLAnnee } from "./frais-de-fonctionnement.js"
@@ -70,21 +70,18 @@ export function statutsDeLaComparaison(profession: ProfessionReglementee | null)
 }
 
 /**
- * Le statut au meilleur net, parmi les colonnes tenables : une micro-entreprise hors plafond ne l'est que deux ans, et
- * une profession qui exerce en principe en société d'exercice libéral n'a pas de SASU ou d'EURL classique à désigner ;
- * leurs colonnes restent, avec leur avertissement, mais le meilleur net se choisit ailleurs (ADR 015). Une colonne du
- * portage salarial sans prestations à facturer, ou avec des salariés, n'est pas tenable non plus (ADR 016), ni une
- * société dont la grille verse une rémunération qu'elle ne gagne pas : ce net ne vient pas de l'activité. Les
- * colonnes se comparent sur leur net une fois déduite la perte restée dans la société (voir net-compare.ts).
+ * Le statut au meilleur net, parmi les colonnes retenues : celles qui ne portent aucune raison de ne pas l'être (voir
+ * `raisonDeNonRetenue`, colonne-du-comparateur.ts). Les colonnes non retenues restent, avec leur avertissement, mais le
+ * meilleur net se choisit ailleurs. Les colonnes se comparent sur leur net une fois déduite la perte restée dans la
+ * société (voir net-compare.ts).
  */
 function meilleurStatut(scenarios: ScenarioStatut[], profession: ProfessionReglementee | null): { meilleur: StatutCompare; warnings: string[] } {
-  const sansSocieteClassique = profession?.societeExerciceLiberal === true
+  // L'avertissement vaut pour la profession, quelle que soit la raison que porte chaque colonne de société.
   const warnings =
-    sansSocieteClassique && scenarios.some(s => estSocieteIS(s.statut))
-      ? [`${profession.libelle} : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut, cette profession exerçant en principe en société d'exercice libéral, dont la rémunération n'est pas encore modélisée. Leurs colonnes restent indicatives.`]
+    profession?.societeExerciceLiberal === true && scenarios.some(s => estSocieteIS(s.statut))
+      ?[`${profession.libelle} : la SASU et l'EURL classiques ne sont pas désignées comme meilleur statut, cette profession exerçant en principe en société d'exercice libéral, dont la rémunération n'est pas encore modélisée. Leurs colonnes restent indicatives.`]
       : []
-  const ecartee = (s: ScenarioStatut) => s.horsPlafond || s.regimeMicroFerme !== undefined || s.portageNonRetenu !== undefined || s.remunerationNonCouverte === true
-  const tenables = scenarios.filter(s => !ecartee(s) && !(sansSocieteClassique && estSocieteIS(s.statut)))
+  const tenables = scenarios.filter(s => s.nonRetenue === null)
   const candidats = tenables.length > 0 ? tenables : scenarios
   return { meilleur: candidats.reduce((a, b) => (netCompare(b) > netCompare(a) ? b : a), candidats[0]).statut, warnings }
 }
@@ -103,18 +100,22 @@ function aDesCharges(donnees: DonneesDeLAnnee, activiteId: string): boolean {
   return donnees.monthlyData.some(mois => mois.flows.some(f => f.entityId === activiteId && TYPES_DE_CHARGES.has(f.type) && f.amount !== 0))
 }
 
-/** Pourquoi la colonne du statut actuel n'est pas retenue comme meilleur statut (voir `meilleurStatut`) ; `null` si elle peut l'être. */
-function motifNonRetenu(actuel: ScenarioStatut | undefined, profession: ProfessionReglementee | null): string | null {
-  if (actuel?.regimeMicroFerme) return "régime micro fermé"
-  if (actuel?.horsPlafond) return "plafond de la micro-entreprise dépassé"
-  if (actuel?.remunerationNonCouverte) return "la société verse une rémunération supérieure à son bénéfice"
-  return actuel && profession?.societeExerciceLiberal === true && estSocieteIS(actuel.statut) ? "profession exercée en principe en société d'exercice libéral" : null
+/** Pourquoi le statut actuel n'est pas retenu comme meilleur statut, dit dans l'explication d'un meilleur statut qui fait moins bien que la saisie. */
+const MOTIFS_DE_NON_RETENUE: Record<RaisonDeNonRetenue, string> = {
+  regimeMicroFerme: "régime micro fermé",
+  plafondDepasse: "plafond de la micro-entreprise dépassé",
+  portageSansPrestations: "aucune prestation de services à facturer en portage salarial",
+  portageADecouvert: "frais supérieurs au chiffre d'affaires en portage salarial",
+  portageSalaries: "un salarié porté ne peut pas avoir de salariés",
+  remunerationNonCouverte: "la société verse une rémunération supérieure à son bénéfice",
+  societeExerciceLiberal: "profession exercée en principe en société d'exercice libéral"
 }
 
 /** La situation saisie, pour expliquer un meilleur statut qui fait moins bien qu'elle : son net, ses trimestres, son statut retenu ou non. */
-function referenceDeLaSaisie(colonne: ColonneEtudiee, scenarios: ScenarioStatut[], report: SimulationReport, profession: ProfessionReglementee | null): ReferenceDeLaSituationSaisie {
+function referenceDeLaSaisie(colonne: ColonneEtudiee, scenarios: ScenarioStatut[], report: SimulationReport): ReferenceDeLaSituationSaisie {
   const saisie = scenarios.find(s => s.telleQueSaisie) ?? colonneTelleQueSaisie(colonne, report)
-  return { netCompare: report.totalNetApresImpots - (saisie.perteConservee ?? 0), trimestres: saisie.protectionSociale.trimestres, motifNonRetenu: motifNonRetenu(scenarios.find(s => s.actuel), profession) }
+  const raison = scenarios.find(s => s.actuel)?.nonRetenue ?? null
+  return { netCompare: report.totalNetApresImpots - (saisie.perteConservee ?? 0), trimestres: saisie.protectionSociale.trimestres, motifNonRetenu: raison ? MOTIFS_DE_NON_RETENUE[raison] : null }
 }
 
 /**
@@ -207,7 +208,7 @@ export function comparerStatuts(session: DonneesDeLAnnee, optionsSaisies: Compar
   }
   const { meilleur, warnings } = meilleurStatut(colonnes.scenarios, profession)
   // Un meilleur statut qui fait moins bien que la situation saisie reste désigné : l'écart est expliqué.
-  const sous = sousLaSituationSaisie(colonnes.scenarios.find(s => s.statut === meilleur), referenceDeLaSaisie(colonne, colonnes.scenarios, reportActuel, profession))
+  const sous = sousLaSituationSaisie(colonnes.scenarios.find(s => s.statut === meilleur), referenceDeLaSaisie(colonne, colonnes.scenarios, reportActuel))
   const sansCharges = aDesCharges(session, source.id) ? [] : [AUCUNE_CHARGE]
   return { ...colonnes, meilleur, situationSaisie, ...(sous ? { sousLaSituationSaisie: sous } : {}), couples, warnings: [...avertissements, ...warnings, ...sansCharges], ...cfe }
 }

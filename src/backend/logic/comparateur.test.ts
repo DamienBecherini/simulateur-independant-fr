@@ -1,6 +1,7 @@
 // src/backend/logic/comparateur.test.ts
 
 import { describe, expect, it } from "vitest"
+import { raisonDeNonRetenue } from "./colonne-du-comparateur.js"
 import { comparerStatuts, coutDesQuatreTrimestres, remunerationOptimale } from "./comparateur.js"
 import { statutActuel } from "./conversion-de-statut.js"
 import { BENEFICE_GARDE_NOTABLE, beneficeGarde, netCompare, perteDeLaSociete } from "./net-compare.js"
@@ -780,5 +781,36 @@ describe("les colonnes se comparent sur le net, perte restée dans la société 
     // Tout en dividendes : la société ne garde que sa dotation à la réserve légale.
     const resultat = comparer(sasu, liens, [["s1", "ca_services", 60000]], options("s1", { remunerationNette: 20000 }))
     expect(colonne(resultat, "SASU").beneficeGarde).toBeUndefined()
+  })
+})
+
+describe("raison de non-retenue d'une colonne", () => {
+  const titulaire = [relation("alice", "m1", "Titulaire")]
+  const raisons = (resultat: ComparaisonResult) => Object.fromEntries(resultat.scenarios.map(s => [s.statut, s.nonRetenue]))
+
+  it("chaque colonne porte sa raison, ou aucune ; le meilleur statut se choisit parmi celles qui n'en ont pas", () => {
+    const resultat = comparer([personne("alice"), micro("m1")], titulaire, [["m1", "ca_micro_services_bnc", 150000]], options("m1"))
+    expect(raisons(resultat)).toEqual({ SASU: null, EURL: null, EI: null, micro: "plafondDepasse", "micro-vfl": "plafondDepasse", portage: null })
+    expect(colonne(resultat, resultat.meilleur!).nonRetenue).toBeNull()
+  })
+
+  it("profession exercée en société d'exercice libéral : la SASU et l'EURL classiques ne sont pas retenues, les autres le restent", () => {
+    const osteopathe = { ...micro("m1"), profession: "osteopathe" }
+    const resultat = comparer([personne("alice"), osteopathe], titulaire, [["m1", "ca_micro_services_bnc", 48000]], options("m1"))
+    expect(raisons(resultat)).toMatchObject({ SASU: "societeExerciceLiberal", EURL: "societeExerciceLiberal", EI: null, micro: null, "micro-vfl": null })
+    expect(["SASU", "EURL"]).not.toContain(resultat.meilleur)
+    expect(resultat.warnings).toContainEqual(expect.stringContaining("ne sont pas désignées comme meilleur statut"))
+  })
+
+  it("une seule raison par colonne, dans un ordre fixe : portage, régime fermé, plafond, rémunération non couverte, société d'exercice libéral", () => {
+    const osteopathe = reglesDeTest.liberauxReglementes.professions.liste.find(p => p.id === "osteopathe")!
+    const sortie = { depuis: 2028, depassements: [2026, 2027] as [number, number] }
+    expect(raisonDeNonRetenue({ statut: "SASU", horsPlafond: false }, null)).toBeNull()
+    expect(raisonDeNonRetenue({ statut: "SASU", horsPlafond: false }, osteopathe)).toBe("societeExerciceLiberal")
+    expect(raisonDeNonRetenue({ statut: "EI", horsPlafond: false }, osteopathe)).toBeNull()
+    expect(raisonDeNonRetenue({ statut: "EURL", horsPlafond: false, remunerationNonCouverte: true }, osteopathe)).toBe("remunerationNonCouverte")
+    expect(raisonDeNonRetenue({ statut: "micro", horsPlafond: true }, osteopathe)).toBe("plafondDepasse")
+    expect(raisonDeNonRetenue({ statut: "micro", horsPlafond: true, regimeMicroFerme: sortie }, null)).toBe("regimeMicroFerme")
+    expect(raisonDeNonRetenue({ statut: "portage", horsPlafond: false, portageNonRetenu: "aDecouvert" }, null)).toBe("portageADecouvert")
   })
 })

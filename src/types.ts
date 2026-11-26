@@ -1137,6 +1137,13 @@ export interface RemunerationPlafonnee {
 /** Pourquoi la colonne du portage salarial n'est pas retenue (voir `ScenarioStatut.portageNonRetenu`). */
 export type RaisonPortageNonRetenu = "sansPrestations" | "aDecouvert" | "salaries"
 
+/**
+ * Pourquoi une colonne du comparateur n'est jamais désignée meilleur statut (voir `ScenarioStatut.nonRetenue`). La
+ * liste est fermée : chaque libellé (cellule de l'écran, verdict, exports) vient d'une table qui les porte toutes.
+ */
+export const RAISONS_DE_NON_RETENUE = ["regimeMicroFerme", "plafondDepasse", "portageSansPrestations", "portageADecouvert", "portageSalaries", "remunerationNonCouverte", "societeExerciceLiberal"] as const
+export type RaisonDeNonRetenue = (typeof RAISONS_DE_NON_RETENUE)[number]
+
 export interface ScenarioStatut {
   statut: StatutCompare
   libelle: string
@@ -1151,6 +1158,12 @@ export interface ScenarioStatut {
   ecartDeFrais: EcartDeFrais
   /** Bénéfice laissé dans l'activité comparée (négatif si elle est déficitaire) ; les autres montants portent sur toute la simulation. */
   resultatConserveActivite: number
+  /**
+   * Pourquoi la colonne n'est jamais désignée meilleur statut ; `null` si elle peut l'être. Le moteur le décide une
+   * seule fois (`raisonDeNonRetenue`, colonne-du-comparateur.ts), d'après les champs ci-dessous et la profession de
+   * l'activité : rien d'autre ne refait ce choix.
+   */
+  nonRetenue: RaisonDeNonRetenue | null
   /** Micro-entreprise au-delà des plafonds de chiffre d'affaires : régime tenable deux ans au plus, jamais désigné meilleur net. */
   horsPlafond: boolean
   /** Colonne micro d'une activité sortie du régime micro cette année-là : régime plus accessible, jamais désigné meilleur net. */

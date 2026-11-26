@@ -15,6 +15,7 @@ import EntitiesManager from "./EntitiesManager"
 import { ResultsPanel } from "./ResultsPanel"
 import { SelecteurAffichage } from "./SelecteurAffichage"
 import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
+import { avecSaRaison } from "@/backend/logic/testing/colonne-de-test"
 
 const espaces = (texte: string) => texte.replace(/\s/g, " ")
 
@@ -23,7 +24,7 @@ function dans(affichage: Affichage, contenu: ReactNode) {
 }
 
 function scenario(statut: StatutCompare, libelle: string, net: number, autres: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.`, garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...autres }
+  return avecSaRaison({ statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.`, garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...autres })
 }
 
 /** La micro actuelle est la situation saisie ; la SASU compte 2 050 € de frais de gestion en plus ; le versement libératoire donne le meilleur net. */

@@ -4,6 +4,7 @@
 import type { ComparaisonOptions, ComparaisonResult, OptimisationRemuneration, ScenarioStatut, SimulationAnnuelle, SimulationPluriannuelle, SimulationReport } from "@/types"
 import { defaultFraisFonctionnement } from "@/lib/comparateur-options"
 import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
+import { avecSaRaison } from "@/backend/logic/testing/colonne-de-test"
 
 const avatar = { type: "initials" as const, value: "A", color: "#000000" }
 
@@ -167,7 +168,7 @@ export function rapportAvecReserves(): SimulationReport {
 }
 
 function scenario(statut: ScenarioStatut["statut"], libelle: string, net: number, changements: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return {
+  return avecSaRaison({
     statut,
     libelle,
     actuel: false,
@@ -186,7 +187,7 @@ function scenario(statut: ScenarioStatut["statut"], libelle: string, net: number
     resultatConserve: 0,
     warnings: [],
     ...changements
-  }
+  })
 }
 
 export function comparaisonExemple(): ComparaisonResult {

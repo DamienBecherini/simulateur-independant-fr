@@ -9,6 +9,7 @@ import type { ComparaisonResult, ScenarioStatut, SimulationReport } from "@/type
 import { emptyReport } from "@/ui/testing/fixtures"
 import { BarreDeResume } from "./BarreDeResume"
 import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
+import { avecSaRaison } from "@/backend/logic/testing/colonne-de-test"
 
 const MEILLEUR = "Micro + versement libératoire (actuel)"
 
@@ -19,7 +20,7 @@ function report(avertissements: string[] = []): SimulationReport {
 
 /** Une comparaison dont le meilleur statut, la situation saisie, a un long libellé. */
 function comparaison(): ComparaisonResult {
-  const vfl: ScenarioStatut = { statut: "micro-vfl", libelle: "Micro + versement libératoire", actuel: true, telleQueSaisie: true, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: "", garanties: GARANTIES_DE_TEST }, netApresImpots: 50000, revenusAvantPrelevements: 80000, totalPrelevements: 30000, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [] }
+  const vfl: ScenarioStatut = avecSaRaison({ statut: "micro-vfl", libelle: "Micro + versement libératoire", actuel: true, telleQueSaisie: true, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: "", garanties: GARANTIES_DE_TEST }, netApresImpots: 50000, revenusAvantPrelevements: 80000, totalPrelevements: 30000, cotisationsSociales: 0, impotSocietes: 0, impotSurLeRevenu: 0, prelevementsSociaux: 0, resultatConserve: 0, warnings: [] })
   return { scenarios: [vfl], meilleur: "micro-vfl", situationSaisie: { statut: "micro-vfl", libelle: vfl.libelle, netApresImpots: 50000 }, couples: [], warnings: [] }
 }
 

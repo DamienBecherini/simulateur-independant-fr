@@ -4,11 +4,12 @@ import { describe, expect, it } from "vitest"
 import type { ComparaisonResult, PartageDuBenefice, RepartitionSaisie, ScenarioStatut } from "@/types"
 import { ecartDeRepartition } from "./ecart-de-repartition"
 import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
+import { avecSaRaison } from "@/backend/logic/testing/colonne-de-test"
 
 const partage = (remunerationNette: number, dividendesNets: number, resultatConserve = 0): PartageDuBenefice => ({ beneficeAvantRemuneration: 78000, remunerationNette, cotisationsRemuneration: 0, impotSocietes: 0, dividendesNets, cotisationsSurDividendes: 0, resultatConserve })
 
 function colonne(net: number, autres: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return {
+  return avecSaRaison({
     statut: "SASU",
     libelle: "SASU, rémunération optimisée",
     actuel: true,
@@ -27,7 +28,7 @@ function colonne(net: number, autres: Partial<ScenarioStatut> = {}): ScenarioSta
     resultatConserve: 0,
     warnings: [],
     ...autres
-  }
+  })
 }
 
 const comparaison = (scenario: ScenarioStatut, net: number, repartition?: RepartitionSaisie): ComparaisonResult => ({

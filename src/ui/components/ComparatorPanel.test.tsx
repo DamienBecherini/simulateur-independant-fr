@@ -11,9 +11,10 @@ import { AffichageContext } from "../hooks/useAffichage"
 import { ComparatorPanel } from "./ComparatorPanel"
 import { GARANTIES_DE_TEST } from "@/backend/logic/testing/garanties-de-test"
 import { enTexteBrut } from "@/backend/logic/format"
+import { avecSaRaison } from "@/backend/logic/testing/colonne-de-test"
 
 function scenario(statut: StatutCompare, libelle: string, net: number, overrides: Partial<ScenarioStatut> = {}): ScenarioStatut {
-  return { statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.`, garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides }
+  return avecSaRaison({ statut, libelle, actuel: false, telleQueSaisie: false, ecartDeFrais: { total: 0, postes: {} }, resultatConserveActivite: 0, horsPlafond: false, protectionSociale: { etoiles: 3, trimestres: 4, resume: `Couverture ${libelle}.`, garanties: GARANTIES_DE_TEST }, netApresImpots: net, revenusAvantPrelevements: 50000, totalPrelevements: 50000 - net, cotisationsSociales: 10000, impotSocietes: 0, impotSurLeRevenu: 1000, prelevementsSociaux: 0, resultatConserve: 0, warnings: [], ...overrides })
 }
 
 function comparison(overrides: Partial<ComparaisonResult> = {}): ComparaisonResult {
@@ -253,7 +254,7 @@ describe("ComparatorPanel", () => {
     expect(within(table).getByRole("row", { name: /Protection sociale/ })).toHaveTextContent("★★★★★")
     unmount()
 
-    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: [...comparison().scenarios, { ...portage, netApresImpots: 20000, portageNonRetenu: "salaries" }] }))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: [...comparison().scenarios, avecSaRaison({ ...portage, nonRetenue: undefined, netApresImpots: 20000, portageNonRetenu: "salaries" })] }))
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)
     const ecart = within(await screen.findByRole("table", { name: "Comparaison des statuts" })).getByRole("row", { name: /Écart avec votre situation actuelle/ })
     expect(ecart).toHaveTextContent("non retenue : salariés de l'activité")
@@ -363,13 +364,28 @@ describe("ComparatorPanel", () => {
   })
 
   it("grise une société dont la grille verse plus que le bénéfice, et écrit pourquoi elle n'est pas retenue", async () => {
-    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "SASU" ? { ...s, remunerationNonCouverte: true as const } : s)) }))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "SASU" ? avecSaRaison({ ...s, nonRetenue: undefined, remunerationNonCouverte: true }) : s)) }))
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
     expect(within(table).getByRole("row", { name: /^Écart avec votre situation actuelle/ })).toHaveTextContent("non retenue : rémunération supérieure au bénéfice")
     // L'en-tête le dit aussi, comme « meilleur net » : le fond grisé ne suffit pas à le faire lire.
     expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent("non retenue")
+    expect(within(table).getByRole("columnheader", { name: /^EI/ })).not.toHaveTextContent("non retenue")
+  })
+
+  it("grise la SASU et l'EURL d'une profession en société d'exercice libéral, et écrit pourquoi elles ne sont pas retenues", async () => {
+    const societes = comparison().scenarios.map(s => (s.statut === "SASU" || s.statut === "EURL" ? { ...s, nonRetenue: "societeExerciceLiberal" as const } : s))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: societes }))
+    render(<ComparateurDeTest annee={2026} session={withActivity()} />)
+
+    const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
+    const cellules = within(within(table).getByRole("row", { name: /^Écart avec votre situation actuelle/ })).getAllByRole("cell")
+    expect(cellules[0]).toHaveTextContent("non retenue : société d'exercice libéral")
+    expect(cellules[1]).toHaveTextContent("non retenue : société d'exercice libéral")
+    expect(cellules[2]).not.toHaveTextContent("non retenue")
+    expect(within(table).getByRole("columnheader", { name: /^SASU/ })).toHaveTextContent("non retenue")
+    expect(within(table).getByRole("columnheader", { name: /^EURL/ })).toHaveTextContent("non retenue")
     expect(within(table).getByRole("columnheader", { name: /^EI/ })).not.toHaveTextContent("non retenue")
   })
 
@@ -532,7 +548,7 @@ describe("ComparatorPanel", () => {
   })
 
   it("signale dans l'en-tête une colonne micro hors plafond", async () => {
-    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "micro-vfl" ? { ...s, horsPlafond: true } : s)), meilleur: "micro" }))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "micro-vfl" ? avecSaRaison({ ...s, nonRetenue: undefined, horsPlafond: true }) : s)), meilleur: "micro" }))
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
@@ -541,7 +557,7 @@ describe("ComparatorPanel", () => {
   })
 
   it("grise une colonne micro hors plafond et écrit dans la cellule de l'écart qu'elle n'est pas retenue (P-14)", async () => {
-    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "micro-vfl" ? { ...s, horsPlafond: true } : s)), meilleur: "micro" }))
+    vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: comparison().scenarios.map(s => (s.statut === "micro-vfl" ? avecSaRaison({ ...s, nonRetenue: undefined, horsPlafond: true }) : s)), meilleur: "micro" }))
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
     const table = await screen.findByRole("table", { name: "Comparaison des statuts" })
@@ -601,7 +617,7 @@ describe("ComparatorPanel", () => {
   })
 
   it("signale les deux colonnes micro hors plafond, et met en évidence le meilleur statut tenable", async () => {
-    const horsPlafond = comparison().scenarios.map(s => (s.statut === "micro" || s.statut === "micro-vfl" ? { ...s, horsPlafond: true } : s))
+    const horsPlafond = comparison().scenarios.map(s => (s.statut === "micro" || s.statut === "micro-vfl" ? avecSaRaison({ ...s, nonRetenue: undefined, horsPlafond: true }) : s))
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: horsPlafond, meilleur: "SASU" }))
     render(<ComparateurDeTest annee={2026} session={withActivity()} />)
 
@@ -616,7 +632,7 @@ describe("ComparatorPanel", () => {
 
   it("marque les colonnes micro plus accessibles après la sortie du régime micro", async () => {
     const sortie = { depuis: 2028, depassements: [2026, 2027] as [number, number] }
-    const fermees = comparison().scenarios.map(s => (s.statut === "micro" || s.statut === "micro-vfl" ? { ...s, actuel: false, telleQueSaisie: false, horsPlafond: true, regimeMicroFerme: sortie } : { ...s, actuel: s.statut === "EI", telleQueSaisie: s.statut === "EI" }))
+    const fermees = comparison().scenarios.map(s => (s.statut === "micro" || s.statut === "micro-vfl" ? avecSaRaison({ ...s, nonRetenue: undefined, actuel: false, telleQueSaisie: false, horsPlafond: true, regimeMicroFerme: sortie }) : { ...s, actuel: s.statut === "EI", telleQueSaisie: s.statut === "EI" }))
     vi.mocked(window.api.compareStatuts).mockResolvedValue(comparison({ scenarios: fermees, meilleur: "SASU", situationSaisie: { statut: "EI", libelle: "EI au réel", netApresImpots: 27000 } }))
     render(<ComparateurDeTest annee={2028} session={withActivity()} />)
 
