@@ -3,8 +3,8 @@
 // « Épargne retraite (PER) », la mention sous le net et la précision du revenu fiscal de référence. Les montants
 // viennent du moteur ; ce module ne fait que les nommer.
 
-import type { DeductionDuRevenuProfessionnel, EpargneRetraiteDeLaPersonne, FoyerFiscalResult, PlafondReporte, SimulationReport } from "@/types"
-import { baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, DU_REVENU_PROFESSIONNEL, duRevenuProfessionnelEnClair, effetSurLePlafondCalculeEnClair, limiteDuRevenuProfessionnelEnClair, origineDuPlafondEnClair, plafondMinimalDeLAnnee } from "@/backend/logic/epargne-retraite"
+import type { DeductionDuRevenuProfessionnel, EpargneRetraiteDeLaPersonne, FoyerFiscalResult, Person, PlafondReporte, SimulationReport } from "@/types"
+import { anneeDuPlafondASaisir, baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, DU_REVENU_PROFESSIONNEL, duRevenuProfessionnelEnClair, effetSurLePlafondCalculeEnClair, limiteDuRevenuProfessionnelEnClair, origineDuPlafondEnClair, plafondMinimalDeLAnnee } from "@/backend/logic/epargne-retraite"
 import { deNom, euros, pourcent } from "@/backend/logic/format"
 import { premiereAnneeSimulable } from "@/backend/logic/regles"
 import { reglesDeLAnneeAffichee } from "./regles-affichees"
@@ -91,13 +91,16 @@ function ligneDesPlafondsCalcules(concernes: EpargneRetraiteDeLaPersonne[], anne
  * revenu global. La limite est dite ; pour un gérant, que le versement se déduit avant la déduction pour frais.
  */
 function ligneDuRevenuProfessionnel(personne: EpargneRetraiteDeLaPersonne & { deduitDuRevenuProfessionnel: DeductionDuRevenuProfessionnel }, plusieurs: boolean, nomDe: NomDe): LigneEpargneRetraite {
-  const { cadre, montant, limite } = personne.deduitDuRevenuProfessionnel
+  const { cadre, montant, limite, revenuAvantDeduction } = personne.deduitDuRevenuProfessionnel
   const avantLesFrais = cadre === "remuneration" ? "avant la déduction pour frais ; " : ""
+  // Une rémunération plus faible que la limite arrête la déduction avant elle : elle est déduite en entier.
+  const toute = cadre === "remuneration" && montant < limite && montant >= Math.floor(revenuAvantDeduction)
+  const borne = toute ? `toute la rémunération imposable, sous la limite de ${euros(limite)}` : `${montant < limite ? "sous" : "à"} sa limite de ${euros(limite)}`
   return {
     nature: "deduitDuRevenuProfessionnel",
     libelle: `Déduit ${DU_REVENU_PROFESSIONNEL[cadre]}${plusieurs ? ` ${deNom(nomDe(personne.personId))}` : ""}`,
     valeur: `− ${euros(montant)}`,
-    precision: `${avantLesFrais}${montant < limite ? "sous" : "à"} sa limite de ${euros(limite)}`
+    precision: `${avantLesFrais}${borne}`
   }
 }
 
@@ -160,10 +163,20 @@ export function epargneRetraiteDesFoyers(report: SimulationReport, nomDe: NomDe)
 }
 
 /**
- * Le libellé (« Plafond épargne retraite 2026 ») et l'aide du champ de la fiche d'une personne. Le plafond vaut pour
- * l'année enregistrée avec lui (`anneeEnregistree`) ; vide, il le sera pour la première année simulée de la session (une
- * année d'avant les premières règles ne l'est pas). L'aide cite le minimum que le simulateur retient cette année-là sans
- * saisie, d'après ses règles, et ce qu'il en est des années d'avant et d'après.
+ * L'année que le champ du plafond d'une personne nomme : celle enregistrée avec son plafond, même absente de la session
+ * (l'aide le dit) ; sans plafond, celle pour laquelle un plafond saisi s'enregistrera (`anneeDuPlafondASaisir`). Pour un
+ * plafond d'un fichier d'avant cet enregistrement, la première année simulée de la session.
+ */
+export function anneeDuChampDuPlafond(personne: Pick<Person, "plafondEpargneRetraite" | "anneeDuPlafondEpargneRetraite">, annees: number[]): number | undefined {
+  if (personne.plafondEpargneRetraite === undefined) return anneeDuPlafondASaisir(personne.anneeDuPlafondEpargneRetraite, annees)
+  return personne.anneeDuPlafondEpargneRetraite ?? premiereAnneeSimulable(annees)
+}
+
+/**
+ * Le libellé (« Plafond épargne retraite 2026 ») et l'aide du champ de la fiche d'une personne, pour l'année que le
+ * champ nomme (`anneeDuChampDuPlafond`) ; sans elle, la première année simulée de la session (une année d'avant les
+ * premières règles ne l'est pas). L'aide cite le minimum que le simulateur retient cette année-là sans saisie, d'après
+ * ses règles, et ce qu'il en est des années d'avant et d'après.
  */
 export function texteDuPlafondSaisi(annees: number[], anneeEnregistree?: number): { libelle: string; aide: string } {
   const premiere = premiereAnneeSimulable(annees)

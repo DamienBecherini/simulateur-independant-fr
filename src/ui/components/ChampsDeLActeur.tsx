@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { estEntrepriseOuMicro, estSocieteIS, type Avatar, type Company, type Entity, type MicroEntreprise, type Person, type StatutSociete } from "@/types"
 import { statutDeLActivite, type StatutDUneActivite } from "@/backend/logic/changement-de-statut"
 import { avecLePlafondEpargneRetraite } from "@/backend/logic/epargne-retraite"
-import { texteDuPlafondSaisi } from "@/lib/epargne-retraite"
+import { anneeDuChampDuPlafond, texteDuPlafondSaisi } from "@/lib/epargne-retraite"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
 import { ChampNumerique } from "./ChampNumerique"
@@ -120,7 +120,7 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee, 
  */
 function ChampPlafondEpargneRetraite({ personne, onChange, anneesSimulees }: { personne: Person; onChange: (entity: Entity) => void; anneesSimulees: number[] }) {
   // Le libellé nomme l'année du plafond : celle enregistrée avec lui, ou celle où il le sera à la saisie.
-  const texte = texteDuPlafondSaisi(anneesSimulees, personne.plafondEpargneRetraite === undefined ? undefined : personne.anneeDuPlafondEpargneRetraite)
+  const texte = texteDuPlafondSaisi(anneesSimulees, anneeDuChampDuPlafond(personne, anneesSimulees))
   return (
     <div className="grid grid-cols-4 items-start gap-4">
       <Label htmlFor="plafondEpargneRetraite" className="pt-2 text-right leading-snug">

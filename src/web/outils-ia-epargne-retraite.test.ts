@@ -52,6 +52,19 @@ describe("plafond d'épargne retraite d'une personne", () => {
 
     expect(erreurDe("proposer_modification", exemple(), { modifications: [{ cible: "acteur", acteurId: "ei-julien", reglages: { plafondEpargneRetraite: 5000 } }] })).toContain("« plafondEpargneRetraite » ne s'applique pas à un acteur « EI »")
   })
+
+  it("s'enregistre pour la première année, comme le réglage le dit, même quand la fiche en gardait une autre", () => {
+    const annee = Math.min(...exemple().annees.map(a => a.annee))
+    const reglagesDe = (session: SessionState) => appeler<{ acteurs: { id: string; reglages: Record<string, unknown> }[] }>("decrire_simulation", session).acteurs.find(a => a.id === "p-julien")!.reglages
+    // Une année restée de la fiche, sans plafond : decrire_simulation ne la donne pas.
+    const avecUneAnneeSeule = geler({ ...exemple(), entities: exemple().entities.map(e => (e.id === "p-julien" ? { ...e, anneeDuPlafondEpargneRetraite: annee + 4 } : e)) })
+    expect(reglagesDe(avecUneAnneeSeule)).toMatchObject({ plafondEpargneRetraite: null, anneeDuPlafondEpargneRetraite: null })
+
+    const { proposition } = appeler<ResultatProposition>("proposer_modification", avecUneAnneeSeule, { modifications: [{ cible: "acteur", acteurId: "p-julien", reglages: { plafondEpargneRetraite: 12500 } }] })
+    const apres = appliquer(avecUneAnneeSeule, proposition)
+    expect(apres.entities.find(e => e.id === "p-julien")).toMatchObject({ plafondEpargneRetraite: 12500, anneeDuPlafondEpargneRetraite: annee })
+    expect(reglagesDe(apres)).toMatchObject({ plafondEpargneRetraite: 12500, anneeDuPlafondEpargneRetraite: annee })
+  })
 })
 
 describe("simuler et expliquer_resultat avec un versement PER", () => {

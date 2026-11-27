@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest"
 import type { DeductionDuRevenuProfessionnel, EpargneRetraiteDeLaPersonne, PlafondReporte } from "../../types.js"
 import {
+  anneeDuPlafondASaisir,
   avecLePlafondEpargneRetraite,
   avertissementsEpargneRetraite,
   baseDuPlafondCalculeEnClair,
@@ -382,11 +383,19 @@ describe("plafond saisi et son année", () => {
     expect(saisi).toMatchObject({ plafondEpargneRetraite: 4637, anneeDuPlafondEpargneRetraite: 2026 })
     // Une année ajoutée avant ne déplace pas l'année d'un plafond qu'on corrige.
     expect(avecLePlafondEpargneRetraite(saisi, 5000, [2025, 2026, 2027])).toMatchObject({ plafondEpargneRetraite: 5000, anneeDuPlafondEpargneRetraite: 2026 })
-    // Effacé, il emporte son année ; saisi de nouveau, il prend la première année d'alors.
+    // Effacé, il laisse son année : saisi de nouveau, même en deux temps dans le champ, il vaut pour elle.
     const efface = avecLePlafondEpargneRetraite(saisi, undefined, [2025, 2026])
     expect(efface).not.toHaveProperty("plafondEpargneRetraite")
-    expect(efface).not.toHaveProperty("anneeDuPlafondEpargneRetraite")
-    expect(avecLePlafondEpargneRetraite(efface, 4000, [2025, 2026])).toMatchObject({ anneeDuPlafondEpargneRetraite: 2025 })
+    expect(efface).toMatchObject({ anneeDuPlafondEpargneRetraite: 2026 })
+    expect(avecLePlafondEpargneRetraite(efface, 4000, [2025, 2026])).toMatchObject({ plafondEpargneRetraite: 4000, anneeDuPlafondEpargneRetraite: 2026 })
+  })
+
+  it("prend la première année simulable quand son année n'est plus dans la session : un plafond corrigé y sert de nouveau", () => {
+    const pour2025 = { ...personne("s"), plafondEpargneRetraite: 4000, anneeDuPlafondEpargneRetraite: 2025 }
+
+    expect(anneeDuPlafondASaisir(2025, [2026, 2027])).toBe(2026)
+    expect(anneeDuPlafondASaisir(2025, [2025, 2026])).toBe(2025)
+    expect(avecLePlafondEpargneRetraite(pour2025, 4500, [2026, 2027])).toMatchObject({ plafondEpargneRetraite: 4500, anneeDuPlafondEpargneRetraite: 2026 })
   })
 
   it("prend la première année simulable pour un plafond d'un fichier d'avant, sans année, et reste sans année sans année simulable", () => {
@@ -611,10 +620,12 @@ describe("la déduction du bénéfice ou de la rémunération, en clair", () => 
   })
 
   it("dit ce qu'elle retire du plafond calculé sur l'année", () => {
-    expect(effetSurLePlafondCalculeEnClair({})).toBeNull()
-    expect(effetSurLePlafondCalculeEnClair({ deduitDuRevenuProfessionnel: deduction({ montant: 1290 }) })).toBe("la part déduite du bénéfice ne le réduit pas ici")
-    expect(enTexteBrut(effetSurLePlafondCalculeEnClair({ deduitDuRevenuProfessionnel: deduction({ cadre: "remuneration", montant: 3290 }), reductionDuPlafondCalcule: 3290 })!)).toBe("diminué des 3 290 € déduits de la rémunération")
-    expect(enTexteBrut(effetSurLePlafondCalculeEnClair({ deduitDuRevenuProfessionnel: deduction({ montant: 10000 }), reductionDuPlafondCalcule: 5059 })!)).toBe("diminué de 5 059 € sur les 10 000 € déduits du bénéfice")
+    expect(effetSurLePlafondCalculeEnClair({ plafondCalcule: 4000 })).toBeNull()
+    expect(effetSurLePlafondCalculeEnClair({ deduitDuRevenuProfessionnel: deduction({ montant: 1290 }), plafondCalcule: 5871 })).toBe("la part déduite du bénéfice ne le réduit pas ici")
+    expect(enTexteBrut(effetSurLePlafondCalculeEnClair({ deduitDuRevenuProfessionnel: deduction({ cadre: "remuneration", montant: 3290 }), reductionDuPlafondCalcule: 3290, plafondCalcule: 1516 })!)).toBe("diminué des 3 290 € déduits de la rémunération")
+    expect(enTexteBrut(effetSurLePlafondCalculeEnClair({ deduitDuRevenuProfessionnel: deduction({ montant: 10000 }), reductionDuPlafondCalcule: 5059, plafondCalcule: 3041 })!)).toBe("diminué de 5 059 € sur les 10 000 € déduits du bénéfice")
+    // Une réduction plus forte que le plafond (7 439 € sur 5 041 €) : il tombe à zéro, sans que 7 439 € soient retirés.
+    expect(enTexteBrut(effetSurLePlafondCalculeEnClair({ deduitDuRevenuProfessionnel: deduction({ montant: 9593 }), reductionDuPlafondCalcule: 7439, plafondCalcule: 0 })!)).toBe("ramené à zéro par les 9 593 € déduits du bénéfice")
   })
 
   it("nomme le bénéfice, la rémunération, ou les deux", () => {

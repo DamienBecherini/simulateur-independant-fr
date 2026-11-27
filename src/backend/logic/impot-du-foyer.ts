@@ -5,7 +5,7 @@
 
 import type { DeductionDuRevenuProfessionnel, EpargneRetraiteDeLaPersonne, EpargneRetraiteDuFoyer, FoyerFiscalResult, FraisProfessionnelsResult, Person, PersonResult } from "../../types.js"
 import { calculerIR, trancheMarginale } from "./calculsIR.js"
-import { avertissementsEpargneRetraite, deductionDuRevenuProfessionnel, epargneRetraiteDesMembres, excedentsSurLesPlafonds, plafondSaisiDeLAnnee, type MembreDuFoyer, type RevenuProfessionnelDeLActivite, type VersantDuFoyer } from "./epargne-retraite.js"
+import { avertissementsEpargneRetraite, deductionDuRevenuProfessionnel, epargneRetraiteDesMembres, excedentsSurLesPlafonds, plafondSaisiDeLAnnee, type MembreDuFoyer, type RevenuDeductible, type RevenuProfessionnelDeLActivite, type VersantDuFoyer } from "./epargne-retraite.js"
 import type { Foyer } from "./foyers.js"
 import { fraisReelsDeLaPersonne } from "./frais-kilometriques.js"
 import type { ReglesFiscales } from "./regles.js"
@@ -169,12 +169,16 @@ export function deductionsDuRevenuProfessionnel(ctx: Contexte): Map<string, Dedu
   const deductions = new Map<string, DeductionDuRevenuProfessionnel>()
   for (const foyer of ctx.foyers) {
     for (const [personId, excedent] of excedentsSurLesPlafonds(versantsDuFoyer(ctx, foyer), anneeSimulee(ctx), ctx.regles)) {
-      const candidats = ctx.revenusProfessionnelsDeductibles.filter(revenu => revenu.personId === personId).map(revenu => ({ ...revenu, revenuDeLaLimite: revenuDeLaLimite(ctx, revenu, revenu.revenuAvantDeduction) }))
-      const deduction = deductionDuRevenuProfessionnel(excedent, candidats, regles)
+      const deduction = deductionDuRevenuProfessionnel(excedent, candidatsDe(ctx, personId), regles)
       if (deduction) deductions.set(deduction.activiteId, deduction)
     }
   }
   return deductions
+}
+
+/** Les bénéfices et rémunérations dont une personne peut déduire, avec le revenu de leur limite, d'après le calcul des activités de `ctx`. */
+function candidatsDe(ctx: Contexte, personId: string): RevenuDeductible[] {
+  return ctx.revenusProfessionnelsDeductibles.filter(revenu => revenu.personId === personId).map(revenu => ({ ...revenu, revenuDeLaLimite: revenuDeLaLimite(ctx, revenu, revenu.revenuAvantDeduction) }))
 }
 
 /**
@@ -194,13 +198,19 @@ function epargneRetraiteDuFoyer(ctx: Contexte, foyer: Foyer, revenusProfessionne
 
 /**
  * La mise en commun des plafonds d'un couple : ce qui est pris sur le plafond du conjoint, et l'impôt en plus sans la
- * case 6QR. Quand celui qui prend sur le plafond de son conjoint peut aussi déduire de son bénéfice ou de sa rémunération,
- * ces versements ne seraient pas perdus sans la case : cet impôt en plus, calculé comme s'ils l'étaient, est un maximum.
+ * case 6QR. Quand celui qui prend sur le plafond de son conjoint pourrait encore déduire de son bénéfice ou de sa
+ * rémunération (sa limite n'est pas atteinte), ces versements ne seraient pas tous perdus sans la case : cet impôt en
+ * plus, calculé comme s'ils l'étaient, n'est qu'un maximum. La limite se lit sur le calcul des activités sans déduction.
  */
-function miseEnCommun(ctx: Contexte, personnes: EpargneRetraiteDeLaPersonne[], montant: number, impotEnPlusSansElle: number): NonNullable<EpargneRetraiteDuFoyer["miseEnCommun"]> {
-  const preneurs = personnes.filter(personne => personne.imputeSurLeConjoint > 0).map(personne => personne.personId)
-  const deductible = ctx.revenusProfessionnelsDeductibles.find(revenu => preneurs.includes(revenu.personId) && (revenu.cadre === "benefice" || revenu.revenuAvantDeduction > 0))
-  return { montant, impotEnPlusSansElle, ...(deductible ? { deductibleDuRevenuProfessionnel: deductible.cadre } : {}) }
+function miseEnCommun(avantDeduction: Contexte, personnes: EpargneRetraiteDeLaPersonne[], montant: number, impotEnPlusSansElle: number): NonNullable<EpargneRetraiteDuFoyer["miseEnCommun"]> {
+  const regles = avantDeduction.regles.IR.epargneRetraite.deductionDuRevenuProfessionnel
+  const marge = (personne: EpargneRetraiteDeLaPersonne) => {
+    // Le plus que permettrait sa limite (ou sa rémunération), face à ce qu'il en déduit déjà.
+    const maximum = deductionDuRevenuProfessionnel(Number.MAX_SAFE_INTEGER, candidatsDe(avantDeduction, personne.personId), regles)
+    return maximum && maximum.montant > (personne.deduitDuRevenuProfessionnel?.montant ?? 0) ? maximum.cadre : undefined
+  }
+  const cadre = personnes.filter(personne => personne.imputeSurLeConjoint > 0).map(marge).find(c => c !== undefined)
+  return { montant, impotEnPlusSansElle, ...(cadre ? { deductibleDuRevenuProfessionnel: cadre } : {}) }
 }
 
 /**
@@ -274,7 +284,7 @@ export function calculerFoyer(ctx: Contexte, foyer: Foyer, avantDeduction: Conte
   const epargneRetraite: EpargneRetraiteDuFoyer = {
     trancheMarginale: trancheMarginale({ revenuNetGlobalImposable: sansVersement.revenuAvantDeduction, ...quotient }, IR),
     partDesRevenus: IR.epargneRetraite.partDesRevenus,
-    ...(prisSurLeConjoint > 0 ? { miseEnCommun: miseEnCommun(ctx, personnes, prisSurLeConjoint, Math.round(imposer(ctx, foyer, revenus, impute - prisSurLeConjoint).impot - retenu.impot)) } : {}),
+    ...(prisSurLeConjoint > 0 ? { miseEnCommun: miseEnCommun(avantDeduction, personnes, prisSurLeConjoint, Math.round(imposer(ctx, foyer, revenus, impute - prisSurLeConjoint).impot - retenu.impot)) } : {}),
     personnes
   }
   const avertissements = avertissementsEpargneRetraite({

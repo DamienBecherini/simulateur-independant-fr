@@ -58,16 +58,25 @@ export function plafondSaisiDeLAnnee(personne: Pick<Person, "plafondEpargneRetra
 }
 
 /**
- * La personne avec ce plafond d'épargne retraite saisi, et l'année pour laquelle il vaut : celle déjà enregistrée avec
- * le plafond, ou la première année que le simulateur sait simuler parmi `annees`. Sans plafond, ni l'un ni l'autre.
- * La saisie dans la fiche et les propositions des clients d'IA passent par elle.
+ * L'année pour laquelle un plafond saisi maintenant s'enregistre : celle déjà enregistrée avec la personne, tant qu'elle
+ * est dans la session ; sinon la première année que le simulateur sait simuler parmi `annees`.
+ */
+export function anneeDuPlafondASaisir(anneeEnregistree: number | undefined, annees: number[]): number | undefined {
+  return anneeEnregistree !== undefined && annees.includes(anneeEnregistree) ? anneeEnregistree : premiereAnneeSimulable(annees)
+}
+
+/**
+ * La personne avec ce plafond d'épargne retraite saisi, enregistré pour l'année que donne `anneeDuPlafondASaisir`. Vidé,
+ * le plafond laisse son année : saisi de nouveau, il vaut pour elle, comme le libellé du champ le dit pendant la
+ * saisie ; le moteur ignore une année sans plafond. La saisie dans la fiche passe par elle.
  */
 export function avecLePlafondEpargneRetraite(personne: Person, plafond: number | undefined, annees: number[]): Person {
-  const { plafondEpargneRetraite: ancien, anneeDuPlafondEpargneRetraite: anneeEnregistree, ...sansPlafond } = personne
-  if (plafond === undefined) return sansPlafond
-  // Une année seule, sans plafond (fichier modifié à la main), ne compte pas.
-  const annee = (ancien === undefined ? undefined : anneeEnregistree) ?? premiereAnneeSimulable(annees)
-  return { ...sansPlafond, plafondEpargneRetraite: plafond, ...(annee === undefined ? {} : { anneeDuPlafondEpargneRetraite: annee }) }
+  const modifiee: Person = { ...personne }
+  delete modifiee.plafondEpargneRetraite
+  if (plafond === undefined) return modifiee
+  const annee = anneeDuPlafondASaisir(personne.anneeDuPlafondEpargneRetraite, annees)
+  delete modifiee.anneeDuPlafondEpargneRetraite
+  return { ...modifiee, plafondEpargneRetraite: plafond, ...(annee === undefined ? {} : { anneeDuPlafondEpargneRetraite: annee }) }
 }
 
 /** Un membre du foyer, avec en plus ce que ses revenus de l'année donnent : son plafond de l'année suivante. */
@@ -456,12 +465,14 @@ export function limiteDuRevenuProfessionnelEnClair(deduction: DeductionDuRevenuP
  * Ce que la déduction du bénéfice ou de la rémunération change au plafond calculé sur l'année, en quelques mots ;
  * `null` pour qui n'en a pas.
  */
-export function effetSurLePlafondCalculeEnClair(personne: Pick<EpargneRetraiteDeLaPersonne, "deduitDuRevenuProfessionnel" | "reductionDuPlafondCalcule">): string | null {
+export function effetSurLePlafondCalculeEnClair(personne: Pick<EpargneRetraiteDeLaPersonne, "deduitDuRevenuProfessionnel" | "reductionDuPlafondCalcule" | "plafondCalcule">): string | null {
   const deduit = personne.deduitDuRevenuProfessionnel
   if (!deduit) return null
   const duRevenu = DU_REVENU_PROFESSIONNEL[deduit.cadre]
   const reduction = personne.reductionDuPlafondCalcule ?? 0
   if (reduction === 0) return `la part déduite ${duRevenu} ne le réduit pas ici`
+  // Une réduction plus forte que le plafond ne le fait pas passer sous zéro : dire qu'il y tombe, sans donner un montant qui n'est pas retiré en entier.
+  if (personne.plafondCalcule === 0) return `ramené à zéro par les ${euros(deduit.montant)} déduits ${duRevenu}`
   if (reduction === deduit.montant) return `diminué des ${euros(reduction)} déduits ${duRevenu}`
   return `diminué de ${euros(reduction)} sur les ${euros(deduit.montant)} déduits ${duRevenu}`
 }

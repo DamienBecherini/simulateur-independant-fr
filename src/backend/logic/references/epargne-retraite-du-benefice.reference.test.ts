@@ -220,6 +220,16 @@ casDeReference("épargne retraite : couple marié, la mise en commun passe avant
     expect(foyerDe(avec, "paul")).toMatchObject({ revenuImposableGlobal: 48000, deductionEpargneRetraite: 8710, impotSurLeRevenu: 2479, impotEconomiseEpargneRetraite: 1729, revenuFiscalDeReference: 56710 })
   })
 
+  it("chiffre de nouveau la case 6QR quand la limite du bénéfice est déjà pleine : sans elle, ces versements seraient perdus", () => {
+    // 30 000 € versés : 4 000 + 4 710 € sur les plafonds, 7 791 € sur le bénéfice (sa limite), 13 499 € non déduits.
+    const tropVerse = simuler(acteurs, relations, [...flux, ["paul", "versement_per", 30000]])
+    const epargne = foyerDe(tropVerse, "paul").epargneRetraite
+
+    expect(epargneDe(tropVerse, "paul")).toMatchObject({ imputeSurLeConjoint: 4710, deduitDuRevenuProfessionnel: { montant: 7791, limite: 7791 }, nonDeduit: 13499 })
+    expect(epargne.miseEnCommun).not.toHaveProperty("deductibleDuRevenuProfessionnel")
+    expect(enTexteBrut(consigneDeLaMiseEnCommun(epargne, id => (id === "paul" ? "Paul" : "Sophie"))!)).toMatch(/^Pour déduire les 4 710 € pris sur le plafond de Sophie, cochez la case 6QR de la déclaration de revenus\. Sans elle, ils ne seraient pas déduits : [\d ]+ € d'impôt en plus\.$/)
+  })
+
   it("rappelle la case 6QR sans chiffrer son effet : sans elle, les 4 710 € se déduiraient du bénéfice", () => {
     const epargne = foyerDe(avec, "paul").epargneRetraite
     expect(epargne.miseEnCommun).toMatchObject({ montant: 4710, deductibleDuRevenuProfessionnel: "benefice" })

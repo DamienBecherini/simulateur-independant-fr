@@ -4,7 +4,7 @@
 // proposition, avec un message qui dit quelle opération et pourquoi.
 
 import { z } from "zod"
-import { CAPITAL_SOCIAL_PAR_DEFAUT, estEntrepriseOuMicro, grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, SessionStateSchema, STATUTS_FRAIS, STATUTS_JURIDIQUES, STATUTS_SOCIETE, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type ReglagesComparateur, type SessionState } from "../../../types.js"
+import { CAPITAL_SOCIAL_PAR_DEFAUT, estEntrepriseOuMicro, grilleVide, MODES_REPARTITION, POSTES_FRAIS, RelationshipSchema, SessionStateSchema, STATUTS_FRAIS, STATUTS_JURIDIQUES, STATUTS_SOCIETE, type Avatar, type Comparateur, type Entity, type FinancialFlow, type MonthlyGridData, type Person, type ReglagesComparateur, type SessionState } from "../../../types.js"
 import { anneesDeLaSession, NOMBRE_MAX_ANNEES, peutSupprimerAnnee, supprimerAnnee, transformerLesGrilles } from "../annees.js"
 import { avecLePlafondEpargneRetraite } from "../epargne-retraite.js"
 import { professionDe, professionsConnues } from "../professions.js"
@@ -27,7 +27,7 @@ export const SerieSchema = z.strictObject({
 /** Réglages d'un acteur qu'une proposition peut fixer ; chacun ne vaut que pour certains genres d'acteur. */
 export const ReglagesActeurSchema = z.strictObject({
   partsFiscales: z.number().min(0.5).max(20).optional().describe("Personne : parts fiscales propres (1 par adulte ; enfants : relation Enfant)."),
-  // Il s'enregistre pour la première année, ou pour celle déjà enregistrée avec lui : decrire_simulation la donne.
+  // Il s'enregistre pour la première année simulable de la session (avecLAnneeDuPlafond) : decrire_simulation la donne.
   plafondEpargneRetraite: MontantSchema.optional().describe("Personne : plafond épargne retraite de l'avis d'impôt, pour la première année."),
   capitalSocial: MontantSchema.optional().describe("SASU, EURL : capital social, en euros."),
   dateDeCreation: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, `Date de création : « AAAA-MM », par exemple ${ANNEE_COURANTE}-03.`).optional().describe("Activité : mois de création, « AAAA-MM »."),
@@ -193,10 +193,15 @@ function ajouterActeur(c: Chantier, op: OperationDe<"ajouter_acteur">): void {
   c.session = { ...c.session, entities: [...c.session.entities, nouvel] }
 }
 
-/** Le plafond d'épargne retraite proposé pour une personne s'enregistre avec son année, comme à la saisie dans sa fiche. */
+/**
+ * Le plafond d'épargne retraite proposé pour une personne vaut, comme le réglage le dit au client d'IA, pour la première
+ * année de la simulation : il s'enregistre avec elle, même si la fiche gardait une autre année.
+ */
 function avecLAnneeDuPlafond(c: Chantier, acteur: Entity, reglages: ReglagesActeur): Entity {
   if (acteur.type !== "person" || reglages.plafondEpargneRetraite === undefined) return acteur
-  return avecLePlafondEpargneRetraite(acteur, reglages.plafondEpargneRetraite, c.session.annees.map(a => a.annee))
+  const sansAnnee: Person = { ...acteur }
+  delete sansAnnee.anneeDuPlafondEpargneRetraite
+  return avecLePlafondEpargneRetraite(sansAnnee, reglages.plafondEpargneRetraite, c.session.annees.map(a => a.annee))
 }
 
 function modifierActeur(c: Chantier, op: OperationDe<"modifier_acteur">): void {
@@ -204,8 +209,7 @@ function modifierActeur(c: Chantier, op: OperationDe<"modifier_acteur">): void {
   if (acteur.locked) throw new ErreurOutil(`« ${acteur.name} » est verrouillé par l'utilisateur : il ne peut pas être modifié par une proposition.`)
   if (op.nom === undefined && Object.keys(sansValeursAbsentes(op.reglages)).length === 0) throw new ErreurOutil("Rien à modifier : indiquez un nom ou des réglages.")
   verifierReglages(genreDe(acteur), op.reglages)
-  // L'année d'un plafond déjà saisi se garde : avecLePlafondEpargneRetraite la lit sur l'acteur d'avant la modification.
-  const modifie: Entity = avecLAnneeDuPlafond(c, { ...acteur, ...(op.nom ? { name: op.nom } : {}), ...champsDeLActeur({ ...op.reglages, plafondEpargneRetraite: undefined }) }, op.reglages)
+  const modifie: Entity = avecLAnneeDuPlafond(c, { ...acteur, ...(op.nom ? { name: op.nom } : {}), ...champsDeLActeur(op.reglages) }, op.reglages)
   verifierProfession(modifie)
   c.session = { ...c.session, entities: c.session.entities.map(e => (e.id === acteur.id ? modifie : e)) }
 }

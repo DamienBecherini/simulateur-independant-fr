@@ -7,7 +7,7 @@ import type { Entity, MicroEntreprise, Person, Relationship, SimulationReport } 
 import { enTexteBrut } from "@/backend/logic/format"
 import { reglesPubliees } from "@/backend/logic/regles"
 import { runMetaSimulation, type ContexteDeLAnnee } from "@/backend/logic/simulation-engine"
-import { chiffreDAffairesPour } from "@/backend/logic/testing/revenus-exacts"
+import { chiffreDAffairesPour, remunerationNettePour } from "@/backend/logic/testing/revenus-exacts"
 import { exercant, micro, personne, relation, session, societe, type Flux } from "@/backend/logic/testing/session-de-test"
 import { blocEpargneRetraite, ligneDEpargneRetraiteDeLActivite, mentionDeLEpargneDansLeNet, precisionDuRevenuFiscalDeReference, resteApresDepenses, texteDuPlafondSaisi } from "./epargne-retraite"
 import { csvResultats } from "./export-csv"
@@ -138,7 +138,7 @@ describe("bloc d'un entrepreneur individuel qui déduit aussi de son bénéfice 
     expect(lignes[2]).toEqual(["Déduit du bénéfice", "− 7 791 €", "à sa limite de 7 791 €"])
     expect(lignes[3]).toEqual(["Non déduit", "2 499 €", "au-delà du plafond et de ce qui se déduit du bénéfice, sans report"])
     // 10 % de 52 209 € = 5 221 €, moins 7 791 - 15 % x (52 209 - 48 060) = 7 169 € : rien.
-    expect(lignes[5]).toEqual(["Plafond calculé sur 2026", "0 €", "pour les versements de 2027 : 10 % des revenus d'activité professionnelle de 2026 (52 209 €) ; diminué de 7 169 € sur les 7 791 € déduits du bénéfice"])
+    expect(lignes[5]).toEqual(["Plafond calculé sur 2026", "0 €", "pour les versements de 2027 : 10 % des revenus d'activité professionnelle de 2026 (52 209 €) ; ramené à zéro par les 7 791 € déduits du bénéfice"])
   })
 
   it("précise que seule la part du revenu global revient dans le revenu fiscal de référence", () => {
@@ -156,6 +156,15 @@ describe("bloc d'un entrepreneur individuel qui déduit aussi de son bénéfice 
     ])
     const duGerant = ligneDEpargneRetraiteDeLActivite({ ...deduction, cadre: "remuneration", montant: 3290, limite: 4806, baseDeLaLimite: "minimum" }, 2026)
     expect([duGerant.libelle, enTexteBrut(duGerant.precision)]).toEqual(["Versement PER déduit de la rémunération", "au-delà du plafond du revenu global, avant la déduction pour frais ; limite de 4 806 € : le minimum, 10 % du plafond de la sécurité sociale. Seul le revenu imposable baisse : ni les cotisations ni ce que l'activité verse ne changent"])
+  })
+
+  it("dit qu'un gérant dont la rémunération est sous la limite la déduit en entier", () => {
+    // 3 000 € de rémunération imposable : la limite minimale de 4 806 € ne joue pas, la rémunération arrête la déduction.
+    const eurl = { ...societe("s1", "EURL"), name: "Atelier" }
+    const flux: Flux[] = [["s1", "ca_services", 40000], ["s1", "director_remuneration", remunerationNettePour(3000, reglesPubliees(2026))], ["g", "versement_per", 10000]]
+    const { lignes } = bloc(simuler([nommee("g", "Gaël"), eurl], exercant("g", "s1", "EURL"), flux), { g: "Gaël" })
+
+    expect(lignes[2]).toEqual(["Déduit de la rémunération", "− 3 000 €", "avant la déduction pour frais ; toute la rémunération imposable, sous la limite de 4 806 €"])
   })
 
   it("nomme celui qui déduit dans un couple, et donne la consigne de la case 6QR sans la chiffrer", () => {
