@@ -115,8 +115,9 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee, 
 
 /**
  * Le plafond de déduction des versements d'épargne retraite d'une personne (PER, ADR 021), tel que son avis d'impôt le
- * donne pour la première année simulée. Facultatif : vide, le simulateur retient le minimum légal, que l'aide cite
- * d'après les règles de cette année-là. Aucun pas imposé : un montant d'avis d'impôt s'enregistre à l'euro près.
+ * donne pour l'année que le champ nomme. Facultatif : vide, le simulateur retient le plafond calculé sur l'année
+ * précédente si elle est simulée, sinon le minimum légal, et l'aide le dit (`texteDuPlafondSaisi`). Aucun pas imposé :
+ * un montant d'avis d'impôt s'enregistre à l'euro près.
  */
 function ChampPlafondEpargneRetraite({ personne, onChange, anneesSimulees }: { personne: Person; onChange: (entity: Entity) => void; anneesSimulees: number[] }) {
   // Le libellé nomme l'année du plafond : celle enregistrée avec lui, ou celle où il le sera à la saisie.

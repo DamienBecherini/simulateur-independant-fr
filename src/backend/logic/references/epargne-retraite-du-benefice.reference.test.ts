@@ -14,7 +14,8 @@ import { exercant, personne, relation, session, societe, type Flux } from "../te
 
 /*
  * Cas de référence de l'épargne retraite déduite du bénéfice ou de la rémunération, article 154 bis du CGI (ADR 021,
- * livraison 2), dérivés à la main dans documentation/recherche/per.md, § 12, avec les règles réelles.
+ * livraison 2), dérivés à la main avec les règles réelles : les cas 1 et 2 bis dans documentation/recherche/per.md, § 12 ;
+ * les autres dans les commentaires et les titres de chaque cas.
  *
  * Règles de 2026 utilisées (src/backend/regles/2026.json) :
  * - barème par part : 0 % jusqu'à 11 600 €, 11 % jusqu'à 29 579 €, 30 % jusqu'à 84 577 €, 41 % au-delà ; la tranche
@@ -227,13 +228,93 @@ casDeReference("épargne retraite : couple marié, la mise en commun passe avant
 
     expect(epargneDe(tropVerse, "paul")).toMatchObject({ imputeSurLeConjoint: 4710, deduitDuRevenuProfessionnel: { montant: 7791, limite: 7791 }, nonDeduit: 13499 })
     expect(epargne.miseEnCommun).not.toHaveProperty("deductibleDuRevenuProfessionnel")
-    expect(enTexteBrut(consigneDeLaMiseEnCommun(epargne, id => (id === "paul" ? "Paul" : "Sophie"))!)).toMatch(/^Pour déduire les 4 710 € pris sur le plafond de Sophie, cochez la case 6QR de la déclaration de revenus\. Sans elle, ils ne seraient pas déduits : [\d ]+ € d'impôt en plus\.$/)
+    // 43 499 € imposables pour 2 parts : 2 x 10 149,5 x 11 % = 2 232,89 €, moins la décote de 1 483 - 45,25 % x 2 232,89,
+    // soit 1 760,27 €. Sans la case, 48 209 € : 2 750,99 € moins 238,18 €, soit 2 512,81 €. Écart : 753 €.
+    expect(foyerDe(tropVerse, "paul")).toMatchObject({ revenuImposableGlobal: 43499, impotSurLeRevenu: 1760 })
+    expect(enTexteBrut(consigneDeLaMiseEnCommun(epargne, id => (id === "paul" ? "Paul" : "Sophie"))!)).toBe("Pour déduire les 4 710 € pris sur le plafond de Sophie, cochez la case 6QR de la déclaration de revenus. Sans elle, ils ne seraient pas déduits : 753 € d'impôt en plus.")
+  })
+
+  it("rappelle la case 6QR à qui ne déduit encore rien de son bénéfice : sa limite pourrait prendre le relais", () => {
+    // 8 000 € versés : 4 000 € sur le plafond de Paul, 4 000 € sur celui de Sophie ; rien au-delà, rien sur le bénéfice.
+    const sansExcedent = simuler(acteurs, relations, [...flux, ["paul", "versement_per", 8000]])
+    const epargne = foyerDe(sansExcedent, "paul").epargneRetraite
+
+    expect(epargneDe(sansExcedent, "paul")).toMatchObject({ imputeSurSesPlafonds: 4000, imputeSurLeConjoint: 4000, nonDeduit: 0 })
+    expect(epargneDe(sansExcedent, "paul")).not.toHaveProperty("deduitDuRevenuProfessionnel")
+    expect(activite(sansExcedent, "ei")).not.toHaveProperty("epargneRetraite")
+    expect(epargne.miseEnCommun).toMatchObject({ montant: 4000, deductibleDuRevenuProfessionnel: "benefice" })
   })
 
   it("rappelle la case 6QR sans chiffrer son effet : sans elle, les 4 710 € se déduiraient du bénéfice", () => {
     const epargne = foyerDe(avec, "paul").epargneRetraite
     expect(epargne.miseEnCommun).toMatchObject({ montant: 4710, deductibleDuRevenuProfessionnel: "benefice" })
     expect(enTexteBrut(consigneDeLaMiseEnCommun(epargne, id => (id === "paul" ? "Paul" : "Sophie"))!)).toBe("Pour déduire les 4 710 € pris sur le plafond de Sophie, cochez la case 6QR de la déclaration de revenus. Sans elle, ils ne se déduiraient que du bénéfice, dans la limite de l'année.")
+  })
+})
+
+casDeReference("épargne retraite : couple marié, chacun déduit de son bénéfice ce qui dépasse son plafond", () => {
+  // Paul et Sophie : 60 000 € de bénéfice chacun, plafonds non saisis (4 710 €), 6 000 € versés chacun. Aucun n'a de
+  // reste à prêter : chacun déduit 1 290 € de son bénéfice, sous sa limite de 7 791 €.
+  const acteurs = [personne("paul"), personne("sophie"), conseil(), { ...societe("ei2", "EI"), name: "Atelier de Paul" }]
+  const relations: Relationship[] = [...exercant("sophie", "ei", "EI"), ...exercant("paul", "ei2", "EI"), relation("paul", "sophie", "Marié(e)")]
+  const flux: Flux[] = [["ei", "ca_services", chiffreDAffairesPour(60000)], ["ei2", "ca_services", chiffreDAffairesPour(60000)]]
+  const avec = simuler(acteurs, relations, [...flux, ["paul", "versement_per", 6000], ["sophie", "versement_per", 6000]])
+
+  it("porte une déduction de 1 290 € sur chaque entreprise, sans mise en commun", () => {
+    expect(activite(avec, "ei").epargneRetraite).toMatchObject({ personId: "sophie", montant: 1290, limite: 7791 })
+    expect(activite(avec, "ei2").epargneRetraite).toMatchObject({ personId: "paul", montant: 1290, limite: 7791 })
+    expect(foyerDe(avec, "paul").epargneRetraite).not.toHaveProperty("miseEnCommun")
+  })
+
+  it("2 x (60 000 - 1 290) - 2 x 4 710 = 108 000 € imposables, RFR de 117 420 € ; 30 % des 12 000 € versés économisés", () => {
+    // Pour 2 parts : 2 x (1 977,69 + 24 421 x 30 %) = 18 608 €, contre 2 x (1 977,69 + 30 421 x 30 %) = 22 208 € sans versement.
+    expect(foyerDe(avec, "paul")).toMatchObject({ revenuImposableGlobal: 108000, deductionEpargneRetraite: 9420, revenuFiscalDeReference: 117420, impotSurLeRevenu: 18608, impotEconomiseEpargneRetraite: 3600 })
+    // Rien d'autre que les deux plafonds retenus par défaut.
+    expect(avertissements(avec, "paul").map(a => a.replace(/^Épargne retraite d[e'] ?\w+ : /, ""))).toEqual(Array(2).fill(expect.stringMatching(/^le plafond de 2026 n'est pas saisi, le minimum légal est retenu \(4 710 €\)/)))
+  })
+})
+
+casDeReference("épargne retraite : une personne en entreprise individuelle et gérante d'EURL, une seule activité porte la déduction", () => {
+  // Sophie : 60 000 € de bénéfice, et 40 000 € de rémunération imposable de gérante (36 000 € après la déduction de
+  // 10 %) ; 10 000 € versés, plafond non saisi : 5 290 € au-delà des 4 710 €. Limites : 7 791 € sur le bénéfice, le
+  // minimum de 4 806 € sur la rémunération (10 % de 36 000 € n'en donnent que 3 600) : le bénéfice les prend en entier.
+  const acteurs: Entity[] = [personne("sophie"), conseil(), societe("s1", "EURL")]
+  const relations = [...exercant("sophie", "ei", "EI"), ...exercant("sophie", "s1", "EURL")]
+  const flux: Flux[] = [["ei", "ca_services", chiffreDAffairesPour(60000)], ["s1", "ca_services", 80000], ["s1", "director_remuneration", remunerationNettePour(40000)]]
+  const avec = simuler(acteurs, relations, [...flux, ["sophie", "versement_per", 10000]])
+
+  it("déduit les 5 290 € du seul bénéfice", () => {
+    expect(activite(avec, "ei").epargneRetraite).toMatchObject({ cadre: "benefice", montant: 5290, limite: 7791 })
+    expect(activite(avec, "s1")).not.toHaveProperty("epargneRetraite")
+  })
+
+  it("54 710 + 36 000 - 4 710 = 86 000 € imposables ; 10 000 € économisés à 41 % : 4 100 €", () => {
+    // 1 977,69 + 54 998 x 30 % + 1 423 x 41 % = 19 061 €, contre 23 161 € sur 96 000 € sans versement.
+    expect(foyerDe(avec, "sophie")).toMatchObject({ revenuImposableGlobal: 86000, impotSurLeRevenu: 19061, impotEconomiseEpargneRetraite: 4100, revenuFiscalDeReference: 90710 })
+  })
+
+  it("plafond de 2027 : 10 % de 90 710 €, moins 5 290 - 15 % x (54 710 - 48 060) = 4 293 €, soit 4 778 €", () => {
+    expect(epargneDe(avec, "sophie")).toMatchObject({ revenusProfessionnels: 90710, reductionDuPlafondCalcule: 4293, plafondCalcule: 4778 })
+  })
+})
+
+casDeReference("épargne retraite : entrepreneur individuel en zone, exonéré en entier, la déduction du bénéfice ne change pas l'impôt", () => {
+  // ZFU-TE, créée en janvier 2024 : 2026 est la troisième année, le bénéfice est exonéré en entier (40 000 € sous le
+  // plafond de 50 000 €). Plafond saisi à 0 : les 3 000 € versés vont tous sur le bénéfice, déjà hors du barème.
+  const acteurs = [avecPlafond("sophie", 0), conseil({ dateDeCreation: "2024-01", implantationEnZone: {} })]
+  const relations = exercant("sophie", "ei", "EI")
+  const avec = simuler(acteurs, relations, [["ei", "ca_services", chiffreDAffairesPour(40000)], ["sophie", "versement_per", 3000]])
+
+  it("déduit les 3 000 € du bénéfice exonéré, sans rien changer au revenu imposable ni à l'impôt", () => {
+    expect(activite(avec, "ei").epargneRetraite).toMatchObject({ montant: 3000 })
+    expect(foyerDe(avec, "sophie")).toMatchObject({ beneficesExoneres: 37000, revenuImposableGlobal: 0, impotEconomiseEpargneRetraite: 0 })
+  })
+
+  it("le dit, et qu'elle diminue le plafond de l'année suivante ; ne prétend pas que le foyer ne paie pas d'impôt « avec ou sans » elle", () => {
+    expect(epargneDe(avec, "sophie").reductionDuPlafondCalcule).toBe(3000)
+    expect(avertissements(avec, "sophie")).toEqual([
+      "Versement PER déduit du bénéfice sans effet sur l'impôt : les 3 000 € déduits du bénéfice de « Conseil de Sophie » ne changent pas le revenu imposable au barème du foyer (bénéfice exonéré, ou foyer déjà sans revenu au barème). Ils diminuent pourtant le plafond calculé pour l'année suivante. L'option pour la non-déduction, à demander à l'assureur lors du versement, évite au moins l'impôt sur ces sommes à la sortie."
+    ])
   })
 })
 

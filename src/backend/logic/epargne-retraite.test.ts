@@ -8,6 +8,7 @@ import {
   avertissementsEpargneRetraite,
   baseDuPlafondCalculeEnClair,
   consigneDeLaMiseEnCommun,
+  deductionDeTouteLaRemuneration,
   deductionDuRevenuProfessionnel,
   duRevenuProfessionnelEnClair,
   effetSurLePlafondCalculeEnClair,
@@ -232,7 +233,7 @@ describe("avertissements", () => {
   const NOMS: Record<string, string> = { a: "Anne", paul: "Paul", sophie: "Sophie" }
   const lecture = (personnes: EpargneRetraiteDeLaPersonne[], autres: Partial<LectureDeLaDeduction> = {}): LectureDeLaDeduction => {
     const impute = personnes.reduce((cumul, p) => cumul + p.imputeSurSesPlafonds + p.imputeSurLeConjoint, 0)
-    return { annee: ANNEE, personnes, nomDe: id => NOMS[id] ?? id, nomDeLActivite: id => `Atelier ${id}`, deduction: impute, revenuAvantDeduction: 50000, impotEconomise: 1000, auVersementLiberatoire: false, ...autres }
+    return { annee: ANNEE, personnes, nomDe: id => NOMS[id] ?? id, nomDeLActivite: id => `Atelier ${id}`, deduction: impute, revenuAvantDeduction: 50000, revenuSansAucuneDeduction: 50000, impotEconomise: 1000, auVersementLiberatoire: false, ...autres }
   }
   const messages = (personnes: EpargneRetraiteDeLaPersonne[], autres: Partial<LectureDeLaDeduction> = {}) => avertissementsEpargneRetraite(lecture(personnes, autres)).map(enTexteBrut)
 
@@ -408,7 +409,7 @@ describe("plafond saisi et son année", () => {
 
     expect(a).toMatchObject({ plafond: 3900, originePlafond: "minimumFauteDeSaisie", plafondSaisiPour: 2026 })
     expect(origineDuPlafondEnClair(a, ANNEE, "Anne")).toBe("le minimum légal, celui saisi dans la fiche d'Anne valant pour 2026")
-    expect(avertissementsEpargneRetraite({ annee: ANNEE, personnes: [a], nomDe: id => id, nomDeLActivite: id => id, deduction: 1000, revenuAvantDeduction: 50000, impotEconomise: 300, auVersementLiberatoire: false }).map(enTexteBrut)).toEqual([
+    expect(avertissementsEpargneRetraite({ annee: ANNEE, personnes: [a], nomDe: id => id, nomDeLActivite: id => id, deduction: 1000, revenuAvantDeduction: 50000, revenuSansAucuneDeduction: 50000, impotEconomise: 300, auVersementLiberatoire: false }).map(enTexteBrut)).toEqual([
       "Épargne retraite : le plafond saisi dans la fiche vaut pour 2026 ; pour 2000, le minimum légal est retenu (3 900 €)."
     ])
   })
@@ -475,12 +476,34 @@ describe("déduction du bénéfice ou de la rémunération", () => {
     expect(deductionDuRevenuProfessionnel(10000, [candidat()], regles154bis)?.montant).toBe(7791)
   })
 
-  it("va sur l'activité au plus grand revenu, quelle que soit leur place (hypothèse 4 de l'ADR 021)", () => {
+  it("va, à montant égal, sur l'activité au plus grand revenu, quelle que soit leur place (hypothèse 4 de l'ADR 021)", () => {
     const petite = candidat({ activiteId: "petite", revenuAvantDeduction: 20000, revenuDeLaLimite: 20000 })
     const grande = candidat({ activiteId: "grande" })
 
     expect(deductionDuRevenuProfessionnel(1000, [petite, grande], regles154bis)?.activiteId).toBe("grande")
     expect(deductionDuRevenuProfessionnel(1000, [grande, petite], regles154bis)?.activiteId).toBe("grande")
+  })
+
+  it("va sur l'activité où la déduction est la plus grande : une entreprise créée dans l'année peut avoir la limite la plus haute avec un revenu plus petit", () => {
+    // Pleine année : 10 % de 60 000 + 15 % de 11 940 = 7 791 €. Créée en octobre, plafond réduit à 12 015 € :
+    // 10 % de 50 000 + 15 % de 37 985 = 10 698 €.
+    const pleineAnnee = candidat({ activiteId: "pleine" })
+    const creeeEnOctobre = candidat({ activiteId: "octobre", revenuAvantDeduction: 50000, revenuDeLaLimite: 50000, plafondSecuriteSociale: 12015 })
+
+    expect(deductionDuRevenuProfessionnel(9000, [pleineAnnee, creeeEnOctobre], regles154bis)).toMatchObject({ activiteId: "octobre", montant: 9000, limite: 10698 })
+    expect(deductionDuRevenuProfessionnel(9000, [creeeEnOctobre, pleineAnnee], regles154bis)).toMatchObject({ activiteId: "octobre", montant: 9000 })
+    // Une rémunération plus faible que sa limite arrête la déduction : un bénéfice plus petit la prend en entier.
+    const gerantPeuPaye = candidat({ activiteId: "eurl", cadre: "remuneration", revenuAvantDeduction: 2000, revenuDeLaLimite: 70000 })
+    expect(deductionDuRevenuProfessionnel(3000, [gerantPeuPaye, candidat({ revenuAvantDeduction: 30000, revenuDeLaLimite: 30000 })], regles154bis)).toMatchObject({ activiteId: "ei", montant: 3000 })
+  })
+
+  it("préfère, à montant égal, un bénéfice à une rémunération, dont la déduction pour frais reprend une part", () => {
+    // Deux limites au minimum (4 806 €) : l'EI, 30 000 € de bénéfice, et l'EURL, 45 000 € de rémunération après frais.
+    const ei = candidat({ revenuAvantDeduction: 30000, revenuDeLaLimite: 30000 })
+    const eurl = candidat({ activiteId: "eurl", cadre: "remuneration", revenuAvantDeduction: 50000, revenuDeLaLimite: 45000 })
+
+    expect(deductionDuRevenuProfessionnel(3000, [eurl, ei], regles154bis)).toMatchObject({ activiteId: "ei", cadre: "benefice" })
+    expect(deductionDuRevenuProfessionnel(3000, [ei, eurl], regles154bis)).toMatchObject({ activiteId: "ei", cadre: "benefice" })
   })
 
   it("peut creuser le déficit d'une entreprise individuelle, dans la limite minimale", () => {
@@ -562,14 +585,16 @@ describe("ce qui dépasse les plafonds du revenu global", () => {
     const membres = [versant("paul", { enCouple: true, plafondSaisi: 9000, verse: 15000 }), versant("sophie", { enCouple: true, plafondSaisi: 4710, verse: 1000 })]
     const complet = epargneRetraiteDesMembres(membres, ANNEE, reglesDeTest)
 
-    expect([...excedentsSurLesPlafonds(membres, ANNEE, reglesDeTest).values()]).toEqual(complet.map(p => p.nonDeduit))
+    // Paul : 15 000 - 9 000 - (4 710 - 1 000 restés à Sophie) = 2 290 €.
+    expect([...excedentsSurLesPlafonds(membres, ANNEE, reglesDeTest).values()]).toEqual([2290, 0])
+    expect(complet.map(p => p.nonDeduit)).toEqual([2290, 0])
   })
 })
 
 describe("avertissements d'une déduction du bénéfice ou de la rémunération", () => {
   const lecture = (personnes: EpargneRetraiteDeLaPersonne[], autres: Partial<LectureDeLaDeduction> = {}): LectureDeLaDeduction => {
     const impute = personnes.reduce((cumul, p) => cumul + p.imputeSurSesPlafonds + p.imputeSurLeConjoint, 0)
-    return { annee: ANNEE, personnes, nomDe: id => id, nomDeLActivite: id => (id === "ei" ? "Conseil de Sophie" : id), deduction: impute, revenuAvantDeduction: 50000, impotEconomise: 1000, auVersementLiberatoire: false, ...autres }
+    return { annee: ANNEE, personnes, nomDe: id => id, nomDeLActivite: id => (id === "ei" ? "Conseil de Sophie" : id), deduction: impute, revenuAvantDeduction: 50000, revenuSansAucuneDeduction: 52000, impotEconomise: 1000, auVersementLiberatoire: false, ...autres }
   }
   const messages = (personnes: EpargneRetraiteDeLaPersonne[], autres: Partial<LectureDeLaDeduction> = {}) => avertissementsEpargneRetraite(lecture(personnes, autres)).map(enTexteBrut)
   const avecDeduction = (verse: number, montant: number, autres: Partial<DeductionDuRevenuProfessionnel> = {}) => epargne(membre("a", { verse, plafondSaisi: 4000, duRevenuProfessionnel: { deduction: deduction({ montant, ...autres }), revenuApresDeduction: 50000 - montant } }))
@@ -584,8 +609,27 @@ describe("avertissements d'une déduction du bénéfice ou de la rémunération"
   })
 
   it("préviennent que la part du revenu global n'est pas déduite quand la déduction du bénéfice n'a rien laissé au barème", () => {
-    expect(messages(avecDeduction(6000, 2000), { deduction: 0, revenuAvantDeduction: 0, impotEconomise: 300 })).toEqual([
-      "Versement PER déduit en partie : après la déduction du bénéfice, le foyer n'a plus de revenu imposable au barème. 4 000 € ne sont pas déduits, et ne le seront pas les années suivantes. L'option pour la non-déduction, à demander à l'assureur lors du versement, évite au moins l'impôt sur ces sommes à la sortie."
+    expect(messages(avecDeduction(6000, 2000), { deduction: 0, revenuAvantDeduction: 0, revenuSansAucuneDeduction: 2000, impotEconomise: 300 })).toEqual([
+      "Versement PER déduit en partie : après ce qui est déduit du bénéfice, le foyer n'a plus de revenu imposable au barème. 4 000 € ne sont pas déduits, et ne le seront pas les années suivantes. L'option pour la non-déduction, à demander à l'assureur lors du versement, évite au moins l'impôt sur ces sommes à la sortie."
+    ])
+  })
+
+  it("préviennent qu'une déduction du bénéfice qui ne retire rien du barème est sans effet, et qu'elle diminue le plafond suivant", () => {
+    // Un bénéfice exonéré en zone, ou un foyer déjà sans revenu au barème : le revenu imposable ne bouge pas.
+    const [reduite] = avecDeduction(6000, 2000)
+    const personne = { ...reduite }
+    delete personne.reductionDuPlafondCalcule
+    expect(reduite.reductionDuPlafondCalcule).toBeGreaterThan(0)
+    const sansEffet = "Versement PER déduit du bénéfice sans effet sur l'impôt : les 2 000 € déduits du bénéfice de « Conseil de Sophie » ne changent pas le revenu imposable au barème du foyer (bénéfice exonéré, ou foyer déjà sans revenu au barème)."
+    const option = "L'option pour la non-déduction, à demander à l'assureur lors du versement, évite au moins l'impôt sur ces sommes à la sortie."
+
+    // La part du revenu global, elle, a réduit l'impôt : seule celle du bénéfice est signalée.
+    expect(messages([reduite], { revenuAvantDeduction: 30000, revenuSansAucuneDeduction: 30000, impotEconomise: 1200 })).toEqual([`${sansEffet} Ils diminuent pourtant le plafond calculé pour l'année suivante. ${option}`])
+    expect(messages([personne], { revenuAvantDeduction: 30000, revenuSansAucuneDeduction: 30000, impotEconomise: 1200 })).toEqual([`${sansEffet} ${option}`])
+    // Un déficit sans autre revenu : rien au barème, ni avant ni après ; la cause n'est pas la déduction du bénéfice.
+    expect(messages([reduite], { deduction: 0, revenuAvantDeduction: 0, revenuSansAucuneDeduction: 0, impotEconomise: 0 })).toEqual([
+      `Versement PER sans effet sur l'impôt : le foyer n'a aucun revenu au barème dont le déduire. Les 4 000 € ne sont pas déduits, et ne le seront pas les années suivantes. ${option}`,
+      `${sansEffet} Ils diminuent pourtant le plafond calculé pour l'année suivante. ${option}`
     ])
   })
 
@@ -611,12 +655,33 @@ describe("consigne de la mise en commun, quand le bénéfice ou la rémunératio
 
 describe("la déduction du bénéfice ou de la rémunération, en clair", () => {
   it("dit la limite et ce qui la fixe", () => {
-    const enClair = (autres: Partial<DeductionDuRevenuProfessionnel>) => enTexteBrut(limiteDuRevenuProfessionnelEnClair(deduction(autres), regles154bis))
+    const enClair = (autres: Partial<DeductionDuRevenuProfessionnel>, plafondDeLAnnee = 48060) => enTexteBrut(limiteDuRevenuProfessionnelEnClair(deduction({ revenuAvantDeduction: 100000, ...autres }), regles154bis, plafondDeLAnnee))
 
     expect(enClair({ limite: 7791, revenuDeLaLimite: 60000, plafondSecuriteSociale: 48060 })).toBe("limite de 7 791 € : 10 % du bénéfice, plus 15 % de sa part au-delà du plafond de la sécurité sociale")
-    expect(enClair({ limite: 5000, revenuDeLaLimite: 50000, plafondSecuriteSociale: 60000 })).toBe("limite de 5 000 € : 10 % du bénéfice")
-    expect(enClair({ limite: 4806, baseDeLaLimite: "minimum" })).toBe("limite de 4 806 € : le minimum, 10 % du plafond de la sécurité sociale")
+    expect(enClair({ limite: 5000, revenuDeLaLimite: 50000, plafondSecuriteSociale: 60000 }, 60000)).toBe("limite de 5 000 € : 10 % du bénéfice")
+    expect(enClair({ limite: 4806, baseDeLaLimite: "minimum", plafondSecuriteSociale: 48060 })).toBe("limite de 4 806 € : le minimum, 10 % du plafond de la sécurité sociale")
     expect(enClair({ cadre: "remuneration", limite: 15291, revenuDeLaLimite: 90000, plafondSecuriteSociale: 48060 })).toBe("limite de 15 291 € : 10 % de la rémunération après la déduction pour frais, plus 15 % de sa part au-delà du plafond de la sécurité sociale")
+  })
+
+  it("dit le plafond de la sécurité sociale réduit à la durée d'activité, et le revenu retenu dans la limite de 8 plafonds", () => {
+    const enClair = (autres: Partial<DeductionDuRevenuProfessionnel>) => enTexteBrut(limiteDuRevenuProfessionnelEnClair(deduction({ revenuAvantDeduction: 100000, ...autres }), regles154bis, 48060))
+
+    // Créée en juillet : 10 % de 24 030 €, et non de 48 060 €.
+    expect(enClair({ limite: 2403, baseDeLaLimite: "minimum", plafondSecuriteSociale: 24030 })).toBe("limite de 2 403 € : le minimum, 10 % du plafond de la sécurité sociale, réduit à 24 030 € pour la durée d'activité")
+    // 10 % de 60 000 + 15 % de 35 970 = 11 396 €.
+    expect(enClair({ limite: 11396, revenuDeLaLimite: 60000, plafondSecuriteSociale: 24030 })).toBe("limite de 11 396 € : 10 % du bénéfice, plus 15 % de sa part au-delà du plafond de la sécurité sociale, réduit à 24 030 € pour la durée d'activité")
+    // Au-delà de 8 plafonds (384 480 €), le bénéfice n'est retenu que jusque-là.
+    expect(enClair({ limite: 88911, revenuDeLaLimite: 500000, plafondSecuriteSociale: 48060 })).toBe("limite de 88 911 € : 10 % du bénéfice, retenu dans la limite de 8 fois le plafond, plus 15 % de sa part au-delà du plafond de la sécurité sociale")
+  })
+
+  it("dit d'une rémunération plus faible que sa limite qu'elle est déduite en entier, à l'euro près", () => {
+    // 2 592,6 € imposables, arrondis à 2 593 € ; la déduction en prend 2 592 €.
+    const remuneration = deduction({ cadre: "remuneration", montant: 2592, limite: 4806, baseDeLaLimite: "minimum", revenuAvantDeduction: 2593, plafondSecuriteSociale: 48060 })
+    expect(deductionDeTouteLaRemuneration(remuneration)).toBe(true)
+    expect(enTexteBrut(limiteDuRevenuProfessionnelEnClair(remuneration, regles154bis, 48060))).toBe("toute la rémunération imposable, sous la limite de 4 806 € : le minimum, 10 % du plafond de la sécurité sociale")
+    expect(deductionDeTouteLaRemuneration({ ...remuneration, montant: 2000 })).toBe(false)
+    expect(deductionDeTouteLaRemuneration({ ...remuneration, cadre: "benefice" })).toBe(false)
+    expect(deductionDeTouteLaRemuneration({ ...remuneration, montant: 4806, revenuAvantDeduction: 4806 })).toBe(false)
   })
 
   it("dit ce qu'elle retire du plafond calculé sur l'année", () => {

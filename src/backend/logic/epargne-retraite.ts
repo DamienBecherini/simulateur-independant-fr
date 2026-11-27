@@ -133,17 +133,28 @@ export function limiteDuRevenuProfessionnel(revenu: number, plafondSecuriteSocia
 
 /**
  * Ce qu'une personne déduit de son revenu professionnel : ce qui dépasse ses plafonds du revenu global (`excedent`),
- * dans la limite de l'année. Avec plusieurs activités qui le permettent, une seule porte la déduction, celle dont le
- * revenu est le plus grand, donc la limite la plus haute (hypothèse 4 de l'ADR 021). La rémunération d'un gérant ne
- * devient pas négative ; un bénéfice peut devenir un déficit, que le minimum de la limite permet. Rien à déduire :
- * `undefined`.
+ * dans la limite de l'année. Avec plusieurs activités qui le permettent, une seule porte la déduction : celle où elle
+ * est la plus grande (la limite la plus haute, sauf une rémunération qui l'arrête plus tôt) ; à montant égal, un
+ * bénéfice plutôt qu'une rémunération, puis le plus grand revenu (hypothèse 4 de l'ADR 021). La rémunération d'un gérant ne devient pas
+ * négative ; un bénéfice peut devenir un déficit, que le minimum de la limite permet. Rien à déduire : `undefined`.
  */
 export function deductionDuRevenuProfessionnel(excedent: number, candidats: RevenuDeductible[], regles: ReglesDeductionDuRevenuProfessionnel): DeductionDuRevenuProfessionnel | undefined {
   if (excedent <= 0 || candidats.length === 0) return undefined
-  const retenu = candidats.reduce((meilleur, candidat) => (candidat.revenuDeLaLimite > meilleur.revenuDeLaLimite ? candidat : meilleur))
-  const { limite, baseDeLaLimite } = limiteDuRevenuProfessionnel(retenu.revenuDeLaLimite, retenu.plafondSecuriteSociale, regles)
-  const deductible = retenu.cadre === "remuneration" ? Math.min(limite, Math.max(0, Math.floor(retenu.revenuAvantDeduction))) : limite
-  const montant = Math.min(Math.round(excedent), deductible)
+  const possibles = candidats.map(candidat => {
+    const { limite, baseDeLaLimite } = limiteDuRevenuProfessionnel(candidat.revenuDeLaLimite, candidat.plafondSecuriteSociale, regles)
+    const deductible = candidat.cadre === "remuneration" ? Math.min(limite, Math.max(0, Math.floor(candidat.revenuAvantDeduction))) : limite
+    return { candidat, limite, baseDeLaLimite, montant: Math.min(Math.round(excedent), deductible) }
+  })
+  // À montant égal, le bénéfice : il baisse du montant entier, quand la déduction pour frais de 10 % d'une
+  // rémunération baisse avec elle et en reprend une part. Puis le plus grand revenu : sa part de 15 % est plus grande,
+  // et le plafond de l'année suivante en est moins réduit.
+  const rang = ({ montant, candidat }: (typeof possibles)[number]) => [montant, candidat.cadre === "benefice" ? 1 : 0, candidat.revenuDeLaLimite]
+  const meilleure = (a: (typeof possibles)[number], b: (typeof possibles)[number]) => {
+    const [ra, rb] = [rang(a), rang(b)]
+    const ecart = ra.findIndex((valeur, i) => valeur !== rb[i])
+    return ecart !== -1 && rb[ecart] > ra[ecart]
+  }
+  const { candidat: retenu, limite, baseDeLaLimite, montant } = possibles.reduce((retenue, possible) => (meilleure(retenue, possible) ? possible : retenue))
   if (montant <= 0) return undefined
   return {
     activiteId: retenu.activiteId,
@@ -335,6 +346,11 @@ export interface LectureDeLaDeduction {
   deduction: number
   /** Revenu imposable au barème du foyer avant cette déduction. */
   revenuAvantDeduction: number
+  /**
+   * Revenu imposable au barème du foyer sans aucune déduction d'épargne retraite, ni du revenu global ni du bénéfice ou
+   * de la rémunération : il dit ce que cette dernière a retiré du barème.
+   */
+  revenuSansAucuneDeduction: number
   /** Impôt économisé par la déduction, à l'euro. */
   impotEconomise: number
   /** Le foyer a des revenus de micro-entreprise au versement libératoire, que le barème ne voit pas. */
@@ -370,17 +386,31 @@ function avertissementDeDepassement(personne: EpargneRetraiteDeLaPersonne, annee
   return `Versement PER${sujet} : ${euros(personne.nonDeduit)} ${depassement}. Ils ${JAMAIS_DEDUITS}${resteEcarte}`
 }
 
-/** Une déduction que le revenu imposable ne permet pas, en tout ou partie, ou qui ne réduit pas l'impôt (décision 7 de l'ADR 021). */
-function avertissementDeDeductionSansEffet({ personnes, deduction, revenuAvantDeduction, impotEconomise, auVersementLiberatoire }: LectureDeLaDeduction): string[] {
+/**
+ * Une déduction que le revenu imposable ne permet pas, en tout ou partie, ou qui ne réduit pas l'impôt (décision 7 de
+ * l'ADR 021). Celle du bénéfice ou de la rémunération ne compte que si elle a retiré quelque chose du barème : un
+ * bénéfice exonéré en zone, ou un foyer déjà sans revenu au barème, la laisse sans effet, et elle a son propre message.
+ */
+function avertissementDeDeductionSansEffet(lecture: LectureDeLaDeduction): string[] {
+  const deductions = lecture.personnes.flatMap(personne => personne.deduitDuRevenuProfessionnel ?? [])
+  const sansEffetSurLeBareme = deductions.length > 0 && Math.round(lecture.revenuSansAucuneDeduction - lecture.revenuAvantDeduction) <= 0
+  return [...avertissementDuRevenuGlobal(lecture, sansEffetSurLeBareme ? [] : deductions), ...(sansEffetSurLeBareme ? [avertissementDuRevenuProfessionnelSansEffet(lecture, deductions)] : [])]
+}
+
+/**
+ * Une déduction du revenu global que le revenu imposable ne permet pas, en tout ou partie, ou qui ne réduit pas
+ * l'impôt ; avec, pour la cause et le montant, les déductions du bénéfice ou de la rémunération qui ont retiré quelque
+ * chose du barème (`deductions`).
+ */
+function avertissementDuRevenuGlobal({ personnes, deduction, revenuAvantDeduction, impotEconomise, auVersementLiberatoire }: LectureDeLaDeduction, deductions: DeductionDuRevenuProfessionnel[]): string[] {
   const total = personnes.reduce((cumul, personne) => cumul + impute(personne), 0)
-  const deductions = personnes.flatMap(personne => personne.deduitDuRevenuProfessionnel ?? [])
   const duRevenuProfessionnel = deductions.reduce((cumul, d) => cumul + d.montant, 0)
   if (total > 0 && Math.round(deduction) === 0 && duRevenuProfessionnel === 0) {
     return [`Versement PER sans effet sur l'impôt : ${auVersementLiberatoire ? "avec le versement libératoire, " : ""}le foyer n'a aucun revenu au barème dont le déduire. Les ${euros(total)} ${JAMAIS_DEDUITS} ${OPTION_POUR_LA_NON_DEDUCTION}`]
   }
   if (Math.round(deduction) < total) {
     // Une déduction du bénéfice ou de la rémunération a pu ne rien laisser au barème.
-    const apres = duRevenuProfessionnel > 0 ? `après la déduction ${duRevenuProfessionnelEnClair(deductions)}, ` : ""
+    const apres = duRevenuProfessionnel > 0 ? `après ce qui est déduit ${duRevenuProfessionnelEnClair(deductions)}, ` : ""
     const revenu = revenuAvantDeduction > 0 ? `n'a que ${euros(revenuAvantDeduction)} de revenu imposable au barème` : "n'a plus de revenu imposable au barème"
     return [`Versement PER déduit en partie : ${apres}le foyer ${revenu}. ${euros(total - deduction)} ${JAMAIS_DEDUITS} ${OPTION_POUR_LA_NON_DEDUCTION}`]
   }
@@ -390,6 +420,16 @@ function avertissementDeDeductionSansEffet({ personnes, deduction, revenuAvantDe
     return [`Versement PER sans effet sur l'impôt : le foyer ne paie pas d'impôt au barème, avec ou sans la déduction de ${euros(deduction + duRevenuProfessionnel)}.${plafondConsomme} ${OPTION_POUR_LA_NON_DEDUCTION}`]
   }
   return []
+}
+
+/**
+ * Une déduction du bénéfice ou de la rémunération qui ne retire rien du revenu imposable au barème : elle n'économise
+ * pas d'impôt cette année, mais diminue d'ordinaire le plafond de l'année suivante.
+ */
+function avertissementDuRevenuProfessionnelSansEffet({ personnes, nomDeLActivite }: LectureDeLaDeduction, deductions: DeductionDuRevenuProfessionnel[]): string {
+  const deduits = deductions.map(d => `les ${euros(d.montant)} déduits ${DU_REVENU_PROFESSIONNEL[d.cadre]} de « ${nomDeLActivite(d.activiteId)} »`)
+  const plafondReduit = personnes.some(personne => (personne.reductionDuPlafondCalcule ?? 0) > 0) ? " Ils diminuent pourtant le plafond calculé pour l'année suivante." : ""
+  return `Versement PER déduit ${duRevenuProfessionnelEnClair(deductions)} sans effet sur l'impôt : ${deduits.join(" et ")} ne changent pas le revenu imposable au barème du foyer (bénéfice exonéré, ou foyer déjà sans revenu au barème).${plafondReduit} ${OPTION_POUR_LA_NON_DEDUCTION}`
 }
 
 /** Un plafond qui sert sans avoir été saisi ni calculé : le minimum légal, qui peut ne pas être le bon. */
@@ -451,14 +491,25 @@ export function baseDuPlafondCalculeEnClair(personne: Pick<EpargneRetraiteDeLaPe
 
 /**
  * La limite de ce qui se déduit d'un bénéfice ou d'une rémunération, en quelques mots : son montant et ce qui le fixe.
- * « limite de 7 791 € : 10 % du bénéfice, plus 15 % de sa part au-delà du plafond de la sécurité sociale ».
+ * « limite de 7 791 € : 10 % du bénéfice, plus 15 % de sa part au-delà du plafond de la sécurité sociale ». Un plafond
+ * de la sécurité sociale réduit à la durée d'activité (sous `plafondDeLAnnee`, celui de l'année entière) est chiffré.
  */
-export function limiteDuRevenuProfessionnelEnClair(deduction: DeductionDuRevenuProfessionnel, regles: ReglesDeductionDuRevenuProfessionnel): string {
-  const limite = `limite de ${euros(deduction.limite)}`
-  if (deduction.baseDeLaLimite === "minimum") return `${limite} : le minimum, ${pourcent(regles.minimumPartDuPlafond)} du plafond de la sécurité sociale`
+export function limiteDuRevenuProfessionnelEnClair(deduction: DeductionDuRevenuProfessionnel, regles: ReglesDeductionDuRevenuProfessionnel, plafondDeLAnnee: number): string {
+  const limite = `${deductionDeTouteLaRemuneration(deduction) ?"toute la rémunération imposable, sous la " : ""}limite de ${euros(deduction.limite)}`
+  const pss = deduction.plafondSecuriteSociale < Math.round(plafondDeLAnnee) ? `plafond de la sécurité sociale, réduit à ${euros(deduction.plafondSecuriteSociale)} pour la durée d'activité` : "plafond de la sécurité sociale"
+  if (deduction.baseDeLaLimite === "minimum") return `${limite} : le minimum, ${pourcent(regles.minimumPartDuPlafond)} du ${pss}`
   const revenu = deduction.cadre === "benefice" ? "du bénéfice" : "de la rémunération après la déduction pour frais"
-  const auDela = deduction.revenuDeLaLimite > deduction.plafondSecuriteSociale ? `, plus ${pourcent(regles.partAuDelaDUnPlafond)} de sa part au-delà du plafond de la sécurité sociale` : ""
-  return `${limite} : ${pourcent(regles.partDuRevenu)} ${revenu}${auDela}`
+  const retenu = deduction.revenuDeLaLimite > regles.revenuRetenuEnPlafonds * deduction.plafondSecuriteSociale ? `, retenu dans la limite de ${regles.revenuRetenuEnPlafonds} fois le plafond` : ""
+  const auDela = deduction.revenuDeLaLimite > deduction.plafondSecuriteSociale ? `, plus ${pourcent(regles.partAuDelaDUnPlafond)} de sa part au-delà du ${pss}` : ""
+  return `${limite} : ${pourcent(regles.partDuRevenu)} ${revenu}${retenu}${auDela}`
+}
+
+/**
+ * Une rémunération de gérant plus faible que la limite arrête la déduction avant elle : elle est déduite en entier.
+ * À l'euro près : la rémunération est arrondie, la déduction prise à l'euro inférieur.
+ */
+export function deductionDeTouteLaRemuneration(deduction: Pick<DeductionDuRevenuProfessionnel, "cadre" | "montant" | "limite" | "revenuAvantDeduction">): boolean {
+  return deduction.cadre === "remuneration" && deduction.montant < deduction.limite && deduction.montant >= deduction.revenuAvantDeduction - 1
 }
 
 /**

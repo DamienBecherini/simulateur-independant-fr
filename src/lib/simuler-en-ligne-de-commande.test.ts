@@ -8,7 +8,7 @@ import { MONTAGES_TYPES, sessionDUnMontage } from "@/lib/montages/montages"
 import { AIDE, executerSimuler, lireLesArguments, messageDErreurDuFichier } from "@/lib/simuler-en-ligne-de-commande"
 import { sessionMaximale } from "@/lib/testing/session-maximale"
 import { reglesPubliees } from "@/backend/logic/regles"
-import { chiffreDAffairesPour } from "@/backend/logic/testing/revenus-exacts"
+import { chiffreDAffairesPour, remunerationNettePour } from "@/backend/logic/testing/revenus-exacts"
 import { exercant, personne, session as sessionDeTest, societe } from "@/backend/logic/testing/session-de-test"
 import type { SessionState } from "@/types"
 
@@ -83,6 +83,19 @@ describe("executerSimuler", () => {
 
     expect(texte).toContain(`    ${"PER déduit du bénéfice".padEnd(30)}${euros(1290).padStart(14)}`)
     expect(texte).toContain(`    ${"PER déduit du revenu global".padEnd(30)}${euros(4710).padStart(14)}`)
+  })
+
+  it("une EURL dit ce qui se déduit de la rémunération de son gérant", () => {
+    // Cas 2 bis de l'étude : 40 000 € de rémunération imposable, 8 000 € versés ; 3 290 € sur la rémunération.
+    const session: SessionState = {
+      name: "Paul",
+      entities: [{ ...personne("p"), name: "Paul" }, { ...societe("s1", "EURL"), name: "Atelier" }],
+      relationships: exercant("p", "s1", "EURL"),
+      annees: [{ annee: 2026, monthlyData: sessionDeTest([], [], [["s1", "ca_services", 80000], ["s1", "director_remuneration", remunerationNettePour(40000, reglesPubliees(2026))], ["p", "versement_per", 8000]]).monthlyData }]
+    }
+    const { texte } = simuler(contenuDuFichier(session))
+
+    expect(texte).toContain(`    ${"PER déduit de la rémunération".padEnd(30)}${euros(3290).padStart(14)}`)
   })
 
   it("--annee : seulement cette année, calculée avec ce qu'elle hérite des précédentes", () => {

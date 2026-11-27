@@ -4,7 +4,7 @@
 
 import { z } from "zod"
 import type { ActivityResult, CotisationPortage, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, DetailPortage, FoyerFiscalResult, PersonResult, ReservesDeLaSociete, SessionState, SimulationReport } from "../../../types.js"
-import { baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, DU_REVENU_PROFESSIONNEL, effetSurLePlafondCalculeEnClair, origineDuPlafondEnClair, TITRE_DE_LA_MISE_EN_COMMUN } from "../epargne-retraite.js"
+import { baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, deductionDeTouteLaRemuneration, DU_REVENU_PROFESSIONNEL, effetSurLePlafondCalculeEnClair, origineDuPlafondEnClair, TITRE_DE_LA_MISE_EN_COMMUN } from "../epargne-retraite.js"
 import { enTexteBrut, euros, pourcent, pourcentDeNombre } from "../format.js"
 import { LIBELLES_DES_COTISATIONS_TNS } from "../libelles-des-cotisations.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
@@ -251,7 +251,8 @@ function epargneRetraiteDeLActivite(session: SessionState, a: ActivityResult): L
   const d = a.epargneRetraite
   if (!d) return []
   const avantLesFrais = d.cadre === "remuneration" ? ", avant la déduction pour frais professionnels" : ""
-  return [ligne(enTexteBrut(`Versement PER de ${nomDe(session, d.personId)} déduit ${DU_REVENU_PROFESSIONNEL[d.cadre]}${avantLesFrais} (limite de l'année : ${euros(d.limite)}, article 154 bis du CGI) : seul son revenu imposable baisse`), d.montant)]
+  const borne = deductionDeTouteLaRemuneration(d) ? `toute la rémunération imposable, sous la limite de l'année de ${euros(d.limite)}` : `limite de l'année : ${euros(d.limite)}`
+  return [ligne(enTexteBrut(`Versement PER de ${nomDe(session, d.personId)} déduit ${DU_REVENU_PROFESSIONNEL[d.cadre]}${avantLesFrais} (${borne}, article 154 bis du CGI) : seul son revenu imposable baisse`), d.montant)]
 }
 
 /** Le bénéfice exonéré d'impôt d'une activité implantée en zone, avec son régime et son taux ; rien quand il est nul. */
@@ -289,8 +290,10 @@ function epargneRetraiteDeLaPersonne(session: SessionState, rapport: SimulationR
   const { annee } = rapport
   const reportes = p.plafondsReportes.reduce((cumul, plafond) => cumul + plafond.montant, 0)
   // Ce qui dépasse ses plafonds et se déduit de son bénéfice ou de sa rémunération (article 154 bis) : seulement s'il y en a.
-  const duRevenu = p.deduitDuRevenuProfessionnel ? [composante(`Déduits ${DU_REVENU_PROFESSIONNEL[p.deduitDuRevenuProfessionnel.cadre]} de « ${nomDe(session, p.deduitDuRevenuProfessionnel.activiteId)} », au-delà des plafonds`, p.deduitDuRevenuProfessionnel.montant)] : []
-  const versements = p.verse > 0 ? [ligne("Épargne retraite : versements PER de l'année", p.verse, [composante("Imputés sur son plafond de l'année et ses plafonds reportés", p.imputeSurSesPlafonds), composante("Imputés sur le plafond de son conjoint", p.imputeSurLeConjoint), ...duRevenu, composante("Non déduits, au-delà des plafonds", p.nonDeduit)])] : []
+  const deduit = p.deduitDuRevenuProfessionnel
+  const duRevenu = deduit ? [composante(`Déduits ${DU_REVENU_PROFESSIONNEL[deduit.cadre]} de « ${nomDe(session, deduit.activiteId)} », au-delà des plafonds`, deduit.montant)] : []
+  const nonDeduits = deduit ? `Non déduits, au-delà des plafonds et de ce qui se déduit ${DU_REVENU_PROFESSIONNEL[deduit.cadre]}` : "Non déduits, au-delà des plafonds"
+  const versements = p.verse > 0 ? [ligne("Épargne retraite : versements PER de l'année", p.verse, [composante("Imputés sur son plafond de l'année et ses plafonds reportés", p.imputeSurSesPlafonds), composante("Imputés sur le plafond de son conjoint", p.imputeSurLeConjoint), ...duRevenu, composante(nonDeduits, p.nonDeduit)])] : []
   const aVerse = (foyer.versementsEpargneRetraite ?? 0) > 0
   const duFoyer = aVerse ? [ligne("Foyer : versements PER déduits du revenu global", foyer.deductionEpargneRetraite ?? 0), ligne("Foyer : impôt économisé par les versements PER", foyer.impotEconomiseEpargneRetraite ?? 0)] : []
   const consigne = consigneDeLaMiseEnCommun(epargne, id => nomDe(session, id))

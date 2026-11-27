@@ -167,6 +167,26 @@ describe("bloc d'un entrepreneur individuel qui déduit aussi de son bénéfice 
     expect(lignes[2]).toEqual(["Déduit de la rémunération", "− 3 000 €", "avant la déduction pour frais ; toute la rémunération imposable, sous la limite de 4 806 €"])
   })
 
+  it("le dit aussi d'une rémunération qui ne tombe pas sur un euro rond", () => {
+    // 2 500 € nets : 2 592,x € imposables, arrondis à 2 593 € ; la déduction en prend 2 592 €.
+    const eurl = { ...societe("s1", "EURL"), name: "Atelier" }
+    const report = simuler([nommee("g", "Gaël"), eurl], exercant("g", "s1", "EURL"), [["s1", "ca_services", 40000], ["s1", "director_remuneration", 2500], ["g", "versement_per", 10000]])
+
+    expect(bloc(report, { g: "Gaël" }).lignes[2]).toEqual(["Déduit de la rémunération", "− 2 592 €", "avant la déduction pour frais ; toute la rémunération imposable, sous la limite de 4 806 €"])
+    expect(enTexteBrut(ligneDEpargneRetraiteDeLActivite(report.activities.find(a => a.entityId === "s1")!.epargneRetraite!, 2026).precision)).toContain("avant la déduction pour frais ; toute la rémunération imposable, sous la limite de 4 806 € : le minimum")
+  })
+
+  it("dans un couple, ne rattache pas à la limite du bénéfice ce que le conjoint sans entreprise ne déduit pas", () => {
+    // Paul, en EI, et Sophie, salariée : plafonds de 4 000 € chacun, 9 000 € versés chacun. Paul déduit 5 000 € de son
+    // bénéfice, sous sa limite ; Sophie, sans entreprise, ne déduit pas ses 5 000 € au-delà de son plafond.
+    const acteurs = [nommee("p", "Paul", 4000), nommee("s", "Sophie", 4000), { ...conseil, name: "Atelier de Paul" }]
+    const report = simuler(acteurs, [...exercant("p", "ei", "EI"), relation("p", "s", "Marié(e)")], [chiffreDAffaires, ["s", "salary", 30000], ["p", "versement_per", 9000], ["s", "versement_per", 9000]])
+    const lignes = bloc(report, { p: "Paul", s: "Sophie" }).lignes
+
+    expect(lignes.find(l => l[0] === "Déduit du bénéfice de Paul")).toEqual(["Déduit du bénéfice de Paul", "− 5 000 €", "sous sa limite de 7 791 €"])
+    expect(lignes.find(l => l[0] === "Non déduit")).toEqual(["Non déduit", "5 000 €", "au-delà du plafond, sans report"])
+  })
+
   it("nomme celui qui déduit dans un couple, et donne la consigne de la case 6QR sans la chiffrer", () => {
     const acteurs = [nommee("p", "Paul", 4000), nommee("s", "Sophie", 4710), { ...conseil, name: "Atelier de Paul" }]
     const report = simuler(acteurs, [...exercant("p", "ei", "EI"), relation("p", "s", "Marié(e)")], [chiffreDAffaires, ["p", "versement_per", 12000]])
@@ -245,14 +265,20 @@ describe("champ du plafond dans la fiche d'une personne", () => {
     const { libelle, aide } = texteDuPlafondSaisi([2025, 2026, 2027], 2026)
 
     expect(libelle).toBe("Plafond épargne retraite 2026")
-    expect(enTexteBrut(aide)).toContain("versées en 2026 » de l'avis d'impôt reçu en 2026. Vide : le minimum légal est retenu (4 710 €). Les années suivantes, il est calculé sur les revenus de l'année précédente. En 2025, première année de la simulation, le minimum légal est retenu.")
+    // Vide, le plafond de 2026 est celui que le moteur calcule sur 2025, pas le minimum.
+    expect(enTexteBrut(aide)).toContain("versées en 2026 » de l'avis d'impôt reçu en 2026. Vide : il est calculé sur les revenus de 2025. Les années suivantes, il est calculé sur les revenus de l'année précédente. En 2025, première année de la simulation, le minimum légal est retenu.")
   })
 
-  it("dit qu'un plafond enregistré pour une année absente de la simulation ne sert pas", () => {
+  it("retient le minimum, vide, pour une année dont la précédente manque", () => {
+    expect(enTexteBrut(texteDuPlafondSaisi([2024, 2026], 2026).aide)).toContain("Vide : le minimum légal est retenu (4 710 €).")
+  })
+
+  it("dit qu'un plafond enregistré pour une année absente de la simulation ne sert pas, sans parler du champ vide", () => {
     const { libelle, aide } = texteDuPlafondSaisi([2026], 2025)
 
     expect(libelle).toBe("Plafond épargne retraite 2025")
     expect(aide).toContain("2025 n'est pas dans la simulation : ce plafond ne sert pas.")
+    expect(aide).not.toContain("Vide")
   })
 
   it("reste lisible sans année, ou sans année que le simulateur sache simuler", () => {
@@ -291,7 +317,10 @@ describe("épargne retraite dans les exports", () => {
     const rapport = rapportMarkdown({ session: donnees, report, comparaison: null, date: new Date(2026, 10, 26) })
 
     expect(rapport).toContain("### Épargne retraite (PER)")
-    expect(rapport).toContain("Versements sur un plan d'épargne retraite déduits du revenu imposable, dans la limite du plafond de chaque personne.")
+    expect(rapport).toContain("Versements sur un plan d'épargne retraite déduits du revenu imposable, dans la limite du plafond de chaque personne ; au-delà, du bénéfice d'une entreprise individuelle au réel ou de la rémunération d'un gérant d'EURL, dans une limite de l'année.")
+    expect(rapport).toContain("| Paul | Personne | 1 part fiscale ; plafond d'épargne retraite saisi pour la première année : 9 000 € |")
+    const avecAnnee = { ...donnees, entities: donnees.entities.map(e => (e.id === "p" ? { ...e, anneeDuPlafondEpargneRetraite: 2026 } : e)) }
+    expect(rapportMarkdown({ session: avecAnnee, report, comparaison: null, date: new Date(2026, 10, 26) })).toContain("| Paul | Personne | 1 part fiscale ; plafond d'épargne retraite saisi pour 2026 : 9 000 € |")
     expect(rapport).toContain("| Paul, Sophie | Versé en 2026 par Paul | 12 000 € | — |")
     expect(rapport).toContain("| Paul, Sophie | Déduit du revenu | − 12 000 € | 9 000 € sur le plafond de Paul, 3 000 € sur celui de Sophie |")
     expect(rapport).toContain("| Paul, Sophie | Impôt économisé | **3 600 €** | impôt recalculé sans le versement ; tranche marginale : 30 % (indicatif) |")
@@ -300,6 +329,25 @@ describe("épargne retraite dans les exports", () => {
     const entete = rapport.split("\n").find(ligne => ligne.startsWith("| Foyer (membres) |"))!
     expect(entete).toContain("| Revenu imposable | PER déduit du revenu global |")
     expect(entete).toContain("| Net après impôts | dont épargne retraite (PER) |")
+  })
+
+  it("le CSV donne la déduction de la rémunération d'un gérant, son activité, sa limite et ce qu'elle retire du plafond suivant", () => {
+    // Cas 2 bis de l'étude : 40 000 € de rémunération imposable, 8 000 € versés ; 3 290 € sur la rémunération, sous la
+    // limite minimale de 4 806 € ; plafond de 2027 de 4 806 - 3 290 = 1 516 €.
+    const gerant = session([nommee("g", "Gaël"), { ...societe("s1", "EURL"), name: "Atelier" }], exercant("g", "s1", "EURL"), [["s1", "ca_services", 80000], ["s1", "director_remuneration", remunerationNettePour(40000, reglesPubliees(2026))], ["g", "versement_per", 8000]])
+    const lignes = lignesDuCsv(csvResultats(gerant, runMetaSimulation(gerant, reglesPubliees(2026), { annee: 2026 })))
+    const epargne = lignes.findIndex(ligne => ligne.startsWith("Épargne retraite (PER);"))
+    const entete = lignes[epargne].split(";")
+    const valeurs = lignes[epargne + 1].split(";")
+    const valeur = (colonne: string) => valeurs[entete.indexOf(colonne)]
+
+    expect(entete).toHaveLength(valeurs.length)
+    expect(valeur("Déduit du bénéfice ou de la rémunération")).toBe("3290,00")
+    expect(valeur("Activité de cette déduction")).toBe("Atelier")
+    expect(valeur("Limite de cette déduction")).toBe("4806,00")
+    expect(valeur("Non déduit")).toBe("0,00")
+    expect(valeur("Réduction du plafond calculé")).toBe("3290,00")
+    expect(valeur("Plafond calculé pour l'année suivante")).toBe("1516,00")
   })
 
   it("rien de plus sans versement : ni colonnes, ni tableau, ni sous-section", () => {

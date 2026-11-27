@@ -5,7 +5,7 @@
 // l'hôte (application, serveur MCP) l'enregistre comme une seule étape d'annulation, une fois l'utilisateur d'accord.
 
 import { z } from "zod"
-import { SessionStateSchema, type FinancialFlow, type SessionState, type SimulationReport } from "../../../types.js"
+import { SessionStateSchema, type FinancialFlow, type Person, type SessionState, type SimulationReport } from "../../../types.js"
 import { anneesDeLaSession } from "../annees.js"
 import { rapportAvecCorrections, sanitizeStateAndFillDefaults } from "../data-sanitizer.js"
 import { eurosEnTexteBrut } from "../format.js"
@@ -132,6 +132,20 @@ function fluxDeLaSerie(session: SessionState, annee: number, serie: { acteurId: 
 /** « : mode → meilleurNet » après le nom d'un acteur ajouté, ou rien s'il est ajouté sans réglages. */
 const reglagesDeLAjout = (reglages: Record<string, unknown>) => (Object.keys(reglages).length > 0 ? ` : ${changements(reglages)}` : "")
 
+/**
+ * L'année pour laquelle un plafond d'épargne retraite proposé s'enregistre (la première de la simulation), et celle du
+ * plafond qu'il remplace quand elle diffère : « (pour 2025, au lieu de 2026) ». Rien sans plafond proposé.
+ */
+function anneeDuPlafondPropose(etat: SessionState, apres: SessionState, acteurId: string, reglages: Record<string, unknown>): string {
+  if (reglages.plafondEpargneRetraite === undefined) return ""
+  const personne = (session: SessionState) => session.entities.find((e): e is Person => e.id === acteurId && e.type === "person")
+  const pour = personne(apres)?.anneeDuPlafondEpargneRetraite
+  if (pour === undefined) return ""
+  const avant = personne(etat)
+  const remplacee = avant?.plafondEpargneRetraite !== undefined ? avant.anneeDuPlafondEpargneRetraite : undefined
+  return remplacee !== undefined && remplacee !== pour ? ` (pour ${pour}, au lieu de ${remplacee})` : ` (pour ${pour})`
+}
+
 /** La relation supprimée, en phrase si elle existe dans la session de départ, sinon son identifiant. */
 function relationSupprimee(avant: SessionState, relationId: string): string {
   const relation = avant.relationships.find(r => r.id === relationId)
@@ -234,9 +248,9 @@ function resumer(etat: SessionState, apres: SessionState, op: Operation): string
     case "ajouter_annee":
       return `Ajouter l'année ${op.annee}, avec une grille vide.`
     case "ajouter_acteur":
-      return `Ajouter l'acteur « ${op.nom} » (${op.genre}, identifiant ${op.id})${reglagesDeLAjout(op.reglages)}.`
+      return `Ajouter l'acteur « ${op.nom} » (${op.genre}, identifiant ${op.id})${reglagesDeLAjout(op.reglages)}${anneeDuPlafondPropose(etat, apres, op.id, op.reglages)}.`
     case "modifier_acteur":
-      return `Modifier ${nom(op.acteurId)} : ${changements({ nom: op.nom, ...op.reglages })}.`
+      return `Modifier ${nom(op.acteurId)} : ${changements({ nom: op.nom, ...op.reglages })}${anneeDuPlafondPropose(etat, apres, op.acteurId, op.reglages)}.`
     case "ajouter_relation":
       return `Ajouter la relation ${phraseDeLaRelation(apres, { id: op.id, fromId: op.deId, toId: op.versId, type: op.typeRelation })}.`
     case "ajouter_flux":

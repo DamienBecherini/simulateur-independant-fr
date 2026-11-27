@@ -60,10 +60,16 @@ describe("plafond d'épargne retraite d'une personne", () => {
     const avecUneAnneeSeule = geler({ ...exemple(), entities: exemple().entities.map(e => (e.id === "p-julien" ? { ...e, anneeDuPlafondEpargneRetraite: annee + 4 } : e)) })
     expect(reglagesDe(avecUneAnneeSeule)).toMatchObject({ plafondEpargneRetraite: null, anneeDuPlafondEpargneRetraite: null })
 
-    const { proposition } = appeler<ResultatProposition>("proposer_modification", avecUneAnneeSeule, { modifications: [{ cible: "acteur", acteurId: "p-julien", reglages: { plafondEpargneRetraite: 12500 } }] })
+    const { proposition, resume } = appeler<ResultatProposition>("proposer_modification", avecUneAnneeSeule, { modifications: [{ cible: "acteur", acteurId: "p-julien", reglages: { plafondEpargneRetraite: 12500 } }] })
+    // Le résumé soumis à l'utilisateur dit l'année.
+    expect(resume).toEqual([`Modifier « Julien » : plafondEpargneRetraite → 12500 (pour ${annee}).`])
     const apres = appliquer(avecUneAnneeSeule, proposition)
     expect(apres.entities.find(e => e.id === "p-julien")).toMatchObject({ plafondEpargneRetraite: 12500, anneeDuPlafondEpargneRetraite: annee })
     expect(reglagesDe(apres)).toMatchObject({ plafondEpargneRetraite: 12500, anneeDuPlafondEpargneRetraite: annee })
+
+    // Un plafond saisi pour une autre année est remplacé : le résumé le dit.
+    const avecUnAutrePlafond = geler({ ...exemple(), entities: exemple().entities.map(e => (e.id === "p-julien" ? { ...e, plafondEpargneRetraite: 9000, anneeDuPlafondEpargneRetraite: annee + 1 } : e)) })
+    expect(appeler<ResultatProposition>("proposer_modification", avecUnAutrePlafond, { modifications: [{ cible: "acteur", acteurId: "p-julien", reglages: { plafondEpargneRetraite: 12500 } }] }).resume).toEqual([`Modifier « Julien » : plafondEpargneRetraite → 12500 (pour ${annee}, au lieu de ${annee + 1}).`])
   })
 })
 
@@ -108,12 +114,14 @@ describe("simuler et expliquer_resultat avec un versement PER", () => {
     expect(appeler<{ activites: Record<string, unknown>[] }>("simuler", exemple()).activites.find(a => a.id === "ei-julien")).not.toHaveProperty("versementPerDeduit")
 
     const explicationDeLActivite = appeler<Explication>("expliquer_resultat", session, { acteurId: "ei-julien" })
-    expect(explicationDeLActivite.lignes.find(l => l.libelle.startsWith("Versement PER de Julien déduit du bénéfice"))).toEqual({ libelle: `Versement PER de Julien déduit du bénéfice (limite de l'année : ${enTexteBrut(new Intl.NumberFormat("fr-FR").format(deduction.limite))} €, article 154 bis du CGI) : seul son revenu imposable baisse`, montant: 3690 })
+    // Bénéfice sous 48 060 € : la limite est le minimum, 10 % du plafond de la sécurité sociale.
+    expect(deduction.limite).toBe(4806)
+    expect(explicationDeLActivite.lignes.find(l => l.libelle.startsWith("Versement PER de Julien déduit du bénéfice"))).toEqual({ libelle: "Versement PER de Julien déduit du bénéfice (limite de l'année : 4 806 €, article 154 bis du CGI) : seul son revenu imposable baisse", montant: 3690 })
 
     const { lignes } = appeler<Explication>("expliquer_resultat", session, { acteurId: "p-julien" })
     expect(lignes.find(l => l.libelle === "Épargne retraite : versements PER de l'année")).toMatchObject({
       montant: 8400,
-      composantes: [{ montant: 4710 }, { montant: 0 }, { libelle: "Déduits du bénéfice de « Cabinet de kinésithérapie de Julien », au-delà des plafonds", montant: 3690 }, { montant: 0 }]
+      composantes: [{ montant: 4710 }, { montant: 0 }, { libelle: "Déduits du bénéfice de « Cabinet de kinésithérapie de Julien », au-delà des plafonds", montant: 3690 }, { libelle: "Non déduits, au-delà des plafonds et de ce qui se déduit du bénéfice", montant: 0 }]
     })
   })
 

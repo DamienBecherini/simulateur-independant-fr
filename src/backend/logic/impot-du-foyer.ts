@@ -294,6 +294,7 @@ export function calculerFoyer(ctx: Contexte, foyer: Foyer, avantDeduction: Conte
     nomDeLActivite: activiteId => ctx.session.entities.find(e => e.id === activiteId)?.name ?? activiteId,
     deduction: retenu.deduction,
     revenuAvantDeduction: Math.max(0, retenu.revenuAvantDeduction),
+    revenuSansAucuneDeduction: Math.max(0, sansVersement.revenuAvantDeduction),
     impotEconomise,
     auVersementLiberatoire: revenus.revenusAuVersementLiberatoire > 0
   })

@@ -4,7 +4,7 @@
 // viennent du moteur ; ce module ne fait que les nommer.
 
 import type { DeductionDuRevenuProfessionnel, EpargneRetraiteDeLaPersonne, FoyerFiscalResult, Person, PlafondReporte, SimulationReport } from "@/types"
-import { anneeDuPlafondASaisir, baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, DU_REVENU_PROFESSIONNEL, duRevenuProfessionnelEnClair, effetSurLePlafondCalculeEnClair, limiteDuRevenuProfessionnelEnClair, origineDuPlafondEnClair, plafondMinimalDeLAnnee } from "@/backend/logic/epargne-retraite"
+import { anneeDuPlafondASaisir, baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, deductionDeTouteLaRemuneration, DU_REVENU_PROFESSIONNEL, duRevenuProfessionnelEnClair, effetSurLePlafondCalculeEnClair, limiteDuRevenuProfessionnelEnClair, origineDuPlafondEnClair, plafondMinimalDeLAnnee } from "@/backend/logic/epargne-retraite"
 import { deNom, euros, pourcent } from "@/backend/logic/format"
 import { premiereAnneeSimulable } from "@/backend/logic/regles"
 import { reglesDeLAnneeAffichee } from "./regles-affichees"
@@ -87,15 +87,26 @@ function ligneDesPlafondsCalcules(concernes: EpargneRetraiteDeLaPersonne[], anne
 }
 
 /**
+ * La précision de « Non déduit » : au-delà de quoi. Ce qui se déduit du bénéfice ou de la rémunération n'est cité que pour
+ * qui en déduit et garde un reste ; dans un couple où un seul est dans ce cas, il est nommé.
+ */
+function auDelaDeCeQuiSeDeduit(personnes: EpargneRetraiteDeLaPersonne[], nomDe: NomDe): string {
+  const nonDeduits = personnes.filter(personne => personne.nonDeduit > 0)
+  const aLeurLimite = nonDeduits.filter(personne => personne.deduitDuRevenuProfessionnel !== undefined)
+  if (aLeurLimite.length === 0) return "au-delà du plafond, sans report"
+  const deQuoi = `de ce qui se déduit ${duRevenuProfessionnelEnClair(aLeurLimite.flatMap(personne => personne.deduitDuRevenuProfessionnel ?? []))}`
+  if (aLeurLimite.length === nonDeduits.length) return `au-delà du plafond et ${deQuoi}, sans report`
+  return `au-delà du plafond et, pour ${enumeration(aLeurLimite.map(personne => nomDe(personne.personId)))}, ${deQuoi}, sans report`
+}
+
+/**
  * Ce qu'une personne déduit de son bénéfice ou de sa rémunération (article 154 bis) : une ligne du bloc, après celle du
  * revenu global. La limite est dite ; pour un gérant, que le versement se déduit avant la déduction pour frais.
  */
 function ligneDuRevenuProfessionnel(personne: EpargneRetraiteDeLaPersonne & { deduitDuRevenuProfessionnel: DeductionDuRevenuProfessionnel }, plusieurs: boolean, nomDe: NomDe): LigneEpargneRetraite {
-  const { cadre, montant, limite, revenuAvantDeduction } = personne.deduitDuRevenuProfessionnel
+  const { cadre, montant, limite } = personne.deduitDuRevenuProfessionnel
   const avantLesFrais = cadre === "remuneration" ? "avant la déduction pour frais ; " : ""
-  // Une rémunération plus faible que la limite arrête la déduction avant elle : elle est déduite en entier.
-  const toute = cadre === "remuneration" && montant < limite && montant >= Math.floor(revenuAvantDeduction)
-  const borne = toute ? `toute la rémunération imposable, sous la limite de ${euros(limite)}` : `${montant < limite ? "sous" : "à"} sa limite de ${euros(limite)}`
+  const borne = deductionDeTouteLaRemuneration(personne.deduitDuRevenuProfessionnel) ? `toute la rémunération imposable, sous la limite de ${euros(limite)}` : `${montant < limite ? "sous" : "à"} sa limite de ${euros(limite)}`
   return {
     nature: "deduitDuRevenuProfessionnel",
     libelle: `Déduit ${DU_REVENU_PROFESSIONNEL[cadre]}${plusieurs ? ` ${deNom(nomDe(personne.personId))}` : ""}`,
@@ -120,7 +131,7 @@ export function blocEpargneRetraite(foyer: FoyerFiscalResult, annee: number, nom
   // Ceux qui déduisent aussi de leur bénéfice ou de leur rémunération (article 154 bis).
   const duRevenuProfessionnel = personnes.filter((personne): personne is typeof personne & { deduitDuRevenuProfessionnel: DeductionDuRevenuProfessionnel } => personne.deduitDuRevenuProfessionnel !== undefined)
   const deductions = duRevenuProfessionnel.map(personne => personne.deduitDuRevenuProfessionnel)
-  const auDela = deductions.length > 0 ? `au-delà du plafond et de ce qui se déduit ${duRevenuProfessionnelEnClair(deductions)}, sans report` : "au-delà du plafond, sans report"
+  const auDela = auDelaDeCeQuiSeDeduit(personnes, nomDe)
   return {
     lignes: [
       ...personnes.filter(personne => personne.verse > 0).map((personne): LigneEpargneRetraite => ({ nature: "verse", libelle: plusieurs ? `Versé en ${annee} par ${nomDe(personne.personId)}` : `Versé en ${annee}`, valeur: euros(personne.verse) })),
@@ -142,17 +153,17 @@ export function blocEpargneRetraite(foyer: FoyerFiscalResult, annee: number, nom
  * de ce que l'activité verse : seul le revenu imposable de la personne baisse. Les règles de l'année donnent les taux.
  */
 export function ligneDEpargneRetraiteDeLActivite(deduction: DeductionDuRevenuProfessionnel, annee: number): { libelle: string; valeur: string; precision: string } {
-  const regles = reglesDeLAnneeAffichee(annee).IR.epargneRetraite.deductionDuRevenuProfessionnel
+  const regles = reglesDeLAnneeAffichee(annee)
   const avantLesFrais = deduction.cadre === "remuneration" ? ", avant la déduction pour frais" : ""
   return {
     libelle: `Versement PER déduit ${DU_REVENU_PROFESSIONNEL[deduction.cadre]}`,
     valeur: euros(deduction.montant),
-    precision: `au-delà du plafond du revenu global${avantLesFrais} ; ${limiteDuRevenuProfessionnelEnClair(deduction, regles)}. Seul le revenu imposable baisse : ni les cotisations ni ce que l'activité verse ne changent`
+    precision: `au-delà du plafond du revenu global${avantLesFrais} ; ${limiteDuRevenuProfessionnelEnClair(deduction, regles.IR.epargneRetraite.deductionDuRevenuProfessionnel, regles.TNS.plafondSecuriteSociale)}. Seul le revenu imposable baisse : ni les cotisations ni ce que l'activité verse ne changent`
   }
 }
 
 /** Ce que les exports disent en tête de leur partie sur l'épargne retraite. */
-export const INTRODUCTION_DE_L_EPARGNE_RETRAITE = "Versements sur un plan d'épargne retraite déduits du revenu imposable, dans la limite du plafond de chaque personne. La somme versée reste dans le net après impôts : elle est au foyer, bloquée jusqu'à la retraite, et sa sortie sera imposée."
+export const INTRODUCTION_DE_L_EPARGNE_RETRAITE = "Versements sur un plan d'épargne retraite déduits du revenu imposable, dans la limite du plafond de chaque personne ; au-delà, du bénéfice d'une entreprise individuelle au réel ou de la rémunération d'un gérant d'EURL, dans une limite de l'année. La somme versée reste dans le net après impôts : elle est au foyer, bloquée jusqu'à la retraite, et sa sortie sera imposée."
 
 /** Les foyers qui ont versé sur un plan d'épargne retraite dans l'année, chacun avec son bloc. */
 export function epargneRetraiteDesFoyers(report: SimulationReport, nomDe: NomDe): { foyer: FoyerFiscalResult; bloc: BlocEpargneRetraite }[] {
@@ -182,12 +193,22 @@ export function texteDuPlafondSaisi(annees: number[], anneeEnregistree?: number)
   const premiere = premiereAnneeSimulable(annees)
   const annee = anneeEnregistree ?? premiere
   if (annee === undefined) return { libelle: "Plafond épargne retraite", aide: "Le plafond de déduction des versements sur un PER, sur votre avis d'impôt, rubrique « Plafond épargne retraite »." }
-  const minimum = plafondMinimalDeLAnnee(annee, reglesDeLAnneeAffichee(annee))
   const ensuite = annees.some(a => a > annee) ? " Les années suivantes, il est calculé sur les revenus de l'année précédente." : ""
   return {
     libelle: `Plafond épargne retraite ${annee}`,
-    aide: `La ligne « Plafond pour les cotisations versées en ${annee} » de l'avis d'impôt reçu en ${annee}. Vide : le minimum légal est retenu (${euros(minimum)}).${ensuite}${avantOuHors(annees, annee, premiere)} Les versements se saisissent dans la grille, avec le type « Versement PER ». Marié ou pacsé : chacun saisit le sien.`
+    aide: `La ligne « Plafond pour les cotisations versées en ${annee} » de l'avis d'impôt reçu en ${annee}.${siVide(annees, annee, premiere)}${ensuite}${avantOuHors(annees, annee, premiere)} Les versements se saisissent dans la grille, avec le type « Versement PER ». Marié ou pacsé : chacun saisit le sien.`
   }
+}
+
+/**
+ * Ce que le simulateur retient pour l'année du champ quand il est vide, comme le moteur : le plafond calculé sur l'année
+ * précédente si elle est simulée, sinon le minimum légal. Rien pour une année absente de la session : vidé, le champ
+ * passe à la première année.
+ */
+function siVide(annees: number[], annee: number, premiere: number | undefined): string {
+  if (!annees.includes(annee)) return ""
+  if (premiere !== undefined && annee > premiere && annees.includes(annee - 1)) return ` Vide : il est calculé sur les revenus de ${annee - 1}.`
+  return ` Vide : le minimum légal est retenu (${euros(plafondMinimalDeLAnnee(annee, reglesDeLAnneeAffichee(annee)))}).`
 }
 
 /** Ce que l'aide du champ dit d'un plafond enregistré pour une autre année que la première, ou pour une année absente. */
