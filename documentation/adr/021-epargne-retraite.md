@@ -1,7 +1,7 @@
 # ADR-021: Épargne retraite (PER)
 
 - **Date :** 2026-11-26
-- **Statut :** Accepté (2026-11-26). Réalisation en trois livraisons : la première (revenu global) est faite le 2026-11-26, voir « Réalisation de la livraison 1 » ; les deux autres restent à faire.
+- **Statut :** Accepté (2026-11-26). Réalisation en trois livraisons : la première (revenu global) est faite le 2026-11-26, la deuxième (bénéfice ou rémunération) le 2026-11-27, voir « Réalisation de la livraison 1 » et « … de la livraison 2 » ; la troisième (comparateur) reste à faire.
 
 ## Contexte
 
@@ -32,13 +32,13 @@ La recherche est dans `documentation/recherche/per.md` : les règles et leurs so
 ### La saisie
 
 - **Le versement** est un flux de la personne, de type « Versement PER », sortant comme une dépense. Le versement de l'année est la somme de ces flux, quel que soit le mois.
-- **Le plafond** est un champ facultatif de la fiche de la personne. Il vaut pour la première année de la session.
+- **Le plafond** est un champ facultatif de la fiche de la personne. Il vaut pour la première année de la session ; depuis la livraison 2, cette année est enregistrée avec lui à la saisie.
 
 ### Le plafond du revenu global
 
 Le plafond d'une personne pour l'année N est retenu dans cet ordre :
 
-1. le montant saisi, si N est la première année de la session ;
+1. le montant saisi, si N est l'année enregistrée avec lui (pour un fichier d'avant cet enregistrement, la première année de la session) ;
 2. sinon le plafond calculé sur l'année N-1, si elle est dans la session, plus les reliquats nés dans la session et non expirés ;
 3. sinon le minimum légal (10 % du plafond de la sécurité sociale de N-1), et le simulateur le dit.
 
@@ -113,6 +113,8 @@ L'épargne versée s'affiche à part sous le net. Le classement reste fait sur l
    - en somme algébrique, déficits compris.
 
    Les « autres revenus » saisis, de nature inconnue, n'y entrent pas, ni les dividendes.
+6. **Bénéfice en zone** (livraison 2) : la limite de l'article 154 bis se calcule sur le bénéfice avant l'exonération de zone (ZFU-TE, QPV) ; l'exonération porte ensuite sur le bénéfice diminué du versement. Lecture de l'article 41 DN bis de l'annexe III à travers le BOFiP (« compte non tenu » de certains abattements), à vérifier sur BOI-BIC-CHG-40-50-40-20 : le site refuse les lectures automatiques.
+7. **Part de 15 % qui ne réduit pas le plafond suivant** (livraison 2) : elle se calcule avec le même plafond de la sécurité sociale que la limite, réduit au prorata l'année de création. La loi parle du « montant annuel » du plafond, comme l'article 154 bis lui-même, que le BOFiP réduit pourtant au prorata pour un exercice de moins de douze mois (§ 60) : c'est la même part.
 
 ## Ce qui est écarté
 
@@ -133,7 +135,7 @@ Ce que le code a précisé, au-delà de la décision :
 - **Dividendes.** Au prélèvement forfaitaire, les dividendes ne sont pas dans le revenu global : la déduction ne porte que sur les autres revenus. Avec l'option pour le barème, elle porte aussi sur eux. Le simulateur retient, comme avant, l'imposition des dividendes la plus favorable, déduction comprise.
 - **Revenu imposable plus faible que la déduction.** La déduction s'arrête au revenu imposable au barème. La part en trop n'est ni déduite ni reportée, le plafond est consommé (hypothèse 3), et le foyer est averti. Seule la part réellement déduite est rajoutée au revenu fiscal de référence.
 - **Enfant rattaché.** Il a son propre plafond, sans mise en commun ; ses versements se déduisent du revenu du foyer.
-- **Première année.** Le plafond saisi vaut pour la première année que le simulateur sait simuler : une année d'avant les premières règles connues, qui n'est pas simulée, ne compte pas. Si l'on ajoute ensuite une année avant elle, le plafond saisi vaut pour cette nouvelle première année, et le libellé du champ le dit ; il en va déjà ainsi du revenu fiscal de référence saisi d'une micro-entreprise. Enregistrer l'année avec le montant éviterait ce glissement : c'est une évolution possible, non retenue ici.
+- **Première année.** Le plafond saisi vaut pour la première année que le simulateur sait simuler : une année d'avant les premières règles connues, qui n'est pas simulée, ne compte pas. Si l'on ajoute ensuite une année avant elle, le plafond saisi vaut pour cette nouvelle première année, et le libellé du champ le dit ; il en va déjà ainsi du revenu fiscal de référence saisi d'une micro-entreprise. Enregistrer l'année avec le montant éviterait ce glissement : c'est une évolution possible, non retenue ici. Faite à la livraison 2, décision du propriétaire du 2026-11-26 (voir plus bas).
 - **Année manquante.** Quand l'année précédente n'est pas dans la session, une année autre que la première retient le minimum légal ; ce qui restait des années plus anciennes n'est pas repris, faute de savoir ce qui s'est passé entre-temps.
 - **Année au-delà des dernières règles.** Elle est simulée avec les dernières règles connues ; son minimum légal se calcule alors sur le plafond de la sécurité sociale de ces règles, le dernier connu, et non sur celui de l'année qui les précède.
 - **Revenus d'activité professionnelle (hypothèse 5).** Vérifiés à la réalisation sur le document 2041 GX de l'administration : pour les salariés, toute la rubrique « traitements et salaires » de la déclaration, allocations de chômage comprises, nette de frais professionnels.
@@ -142,6 +144,20 @@ Ce que le code a précisé, au-delà de la décision :
 - **Plafond par défaut.** Le minimum légal retenu faute de saisie n'est signalé que s'il sert : la personne a versé, ou son conjoint a pris sur son plafond.
 - **Comparateur, en attendant la livraison 3.** Chaque colonne garde les versements saisis sur la personne : c'est le réglage « comme dans la simulation ».
 - **Résultat du moteur.** Trois montants du foyer, présents quand il a versé (`versementsEpargneRetraite`, `deductionEpargneRetraite`, `impotEconomiseEpargneRetraite`), que les exports et l'outil `simuler` montrent par la table des champs du foyer ; et `epargneRetraite`, toujours présent, qui porte pour chaque membre son plafond, l'imputation de ses versements, ce qui reste et le plafond calculé sur l'année : c'est ce que l'année suivante en reçoit.
+
+## Réalisation de la livraison 2 (2026-11-27)
+
+Ce que le code a précisé, au-delà de la décision :
+
+- **Deux calculs des activités.** Ce qui dépasse les plafonds du revenu global est connu avant tout calcul de revenu : l'imputation ne dépend ni des revenus de l'année ni de l'impôt (hypothèse 3). La limite, elle, se calcule sur le bénéfice ou la rémunération. Le moteur calcule donc les activités une première fois pour les mesurer, décide de chaque déduction, puis les calcule une seconde fois avec elle (`simulation-engine.ts`). La déduction ne change ni les cotisations ni ce qui est versé, seulement le revenu imposable : le second calcul ne déplace pas la limite. Sans versement au-delà des plafonds, un seul calcul.
+- **Limite.** Elle se calcule avec le plafond de la sécurité sociale de la période d'activité (ADR 020) : réduit l'année de création, il donne une limite plus haute au-delà d'un plafond, puisque la part de 15 % commence plus tôt. Une activité pas encore créée dans l'année ne porte aucune déduction.
+- **Gérant.** La limite se calcule sur sa rémunération moins sa part de la déduction pour frais, au prorata de ses revenus imposés comme des salaires (hypothèse 2) ; le versement se déduit avant cette déduction, qui baisse d'autant. Sa rémunération imposable ne devient jamais négative. Le bénéfice d'une entreprise individuelle, si : la limite a un minimum même sans bénéfice, et la déduction peut creuser un déficit.
+- **Activité retenue** (hypothèse 4) : celle dont le revenu de la limite est le plus grand, donc la limite la plus haute. Une gérance sans rémunération n'en est pas une.
+- **Plafond de l'année suivante.** Calculé sur les revenus après la déduction, puis diminué de la déduction moins sa part de 15 %, calculée sur le revenu après déduction : pour un gérant, sa rémunération après le versement et la déduction pour frais. Il ne devient jamais négatif.
+- **Impôt économisé.** Il compte les deux déductions : l'impôt est recalculé sans aucun versement, sur les revenus du premier calcul des activités.
+- **Case 6QR.** Quand celui qui prend sur le plafond de son conjoint pourrait aussi déduire de son bénéfice ou de sa rémunération, ces versements ne seraient pas perdus sans la case : la consigne le dit, sans chiffrer un impôt en plus qui supposerait le contraire.
+- **Ce que les résultats montrent.** La carte de l'activité porte une ligne « Versement PER déduit du bénéfice » (ou « de la rémunération »), sans signe moins, comme le bénéfice exonéré en zone : elle ne change pas ce que l'activité verse. Le bloc du foyer distingue « Déduit du revenu global » et « Déduit du bénéfice » ; la précision du revenu fiscal de référence dit que seule la première part y est rajoutée. Le champ du foyer des exports s'appelle « PER déduit du revenu global » ; le CSV de l'épargne retraite gagne la part déduite du bénéfice ou de la rémunération, son activité, sa limite et la réduction du plafond calculé ; l'outil `simuler` des clients d'IA rend `versementPerDeduit` pour l'activité.
+- **Année du plafond saisi** (décision du 2026-11-26). Le champ `anneeDuPlafondEpargneRetraite` de la personne s'enregistre avec le plafond, à la saisie dans la fiche comme par une proposition d'un client d'IA : la première année simulée de la session à ce moment-là, ou celle déjà enregistrée quand le montant est corrigé. Le plafond saisi l'emporte alors sur le plafond calculé et les restes des années d'avant, puisqu'il les contient. Une année ajoutée avant la sienne retient le minimum légal, et le simulateur dit pourquoi ; une année enregistrée absente de la session ne sert à aucune. Vider le champ efface l'année : le libellé nomme de nouveau la première année, et un montant saisi ensuite vaut pour elle. Un fichier sans année se lit comme avant. Pas de nouveau numéro de format (ADR 005, champ facultatif). Le revenu fiscal de référence saisi d'une micro-entreprise glisse de la même façon ; il n'est pas touché ici.
 
 ## Conséquences
 
@@ -152,7 +168,7 @@ Ce que le code a précisé, au-delà de la décision :
   - Sur plusieurs années, le plafond et les reliquats se calculent seuls.
 - **Négatives ou compromis :**
   - Le résultat dépend du plafond saisi. Sans saisie, le minimum légal peut être trop haut pour qui a déduit, l'année d'avant, des cotisations de retraite de ses revenus professionnels.
-  - Entre la première et la deuxième livraison, l'EI et le gérant ne déduisent que dans la limite du plafond du revenu global : le simulateur sous-estime leur déduction, et le dit.
+  - Quand une déduction du bénéfice ou de la rémunération existe, les activités de l'année sont calculées deux fois. Le chantier 6 de l'audit de qualité (mémoriser les dichotomies) doit l'alléger avant la livraison 3, où le réglage « maximum déductible » la demandera dans chaque colonne du comparateur.
   - Le revenu fiscal de référence baisse moins qu'avec une déduction du bénéfice.
   - Les reliquats d'avant la session ne servent que la première année (hypothèse 1).
   - Le net après impôts contient une épargne bloquée, dont la sortie sera imposée : deux colonnes du comparateur au même net ne se valent pas si l'une contient plus d'épargne. L'affichage à part le montre.

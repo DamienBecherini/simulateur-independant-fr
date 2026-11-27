@@ -67,9 +67,11 @@ function detailDesDeplacements(deplacements: DeplacementsProfessionnels | undefi
   return deplacements ? ` ; déplacements professionnels : ${kilometres(deplacements.kmParAn)} par an, ${libelleVoiture(deplacements)}` : ""
 }
 
-/** Plafond d'épargne retraite saisi dans la fiche d'une personne : il vaut pour la première année de la simulation. */
+/** Plafond d'épargne retraite saisi dans la fiche d'une personne, avec l'année pour laquelle il vaut (la première de la simulation, sans année enregistrée). */
 function detailDuPlafondEpargneRetraite(person: Person): string {
-  return person.plafondEpargneRetraite === undefined ? "" : ` ; plafond d'épargne retraite saisi pour la première année : ${eurosEnTexteBrut(person.plafondEpargneRetraite)}`
+  if (person.plafondEpargneRetraite === undefined) return ""
+  const pour = person.anneeDuPlafondEpargneRetraite === undefined ? "la première année" : String(person.anneeDuPlafondEpargneRetraite)
+  return ` ; plafond d'épargne retraite saisi pour ${pour} : ${eurosEnTexteBrut(person.plafondEpargneRetraite)}`
 }
 
 function detailDeLActeur(entity: Entity, annee: number): string {

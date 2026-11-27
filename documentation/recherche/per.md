@@ -507,6 +507,8 @@ Les cas 1, 1 bis et 2 ont été recalculés le 26/11/2026 (section 15) : ordre �
 11. **Prélèvements sociaux sur les gains à la sortie** : le taux n'a pas été vérifié. Sans effet sur le moteur, qui ne modélise pas la sortie.
 12. **Plafond et versement sans effet (nouveau).** La loi reporte la différence entre la limite et les cotisations « mentionnées au 1 » (S1, I-2-b) ; le BOFiP dit « versées et effectivement déduites » (S20 § 40). Quand la déduction ne réduit rien (revenu global nul), le plafond est-il consommé ? **Hypothèse prudente :** oui.
 13. **Ordre d'imputation dans l'exemple de S9 (nouveau).** L'exemple du couple dit le reliquat de 2024 « utilisé en totalité » avant le plafond de l'année, à rebours de la règle écrite (S20 § 50 : l'année d'abord, puis les plus anciens). Le total restant est le même ; on suit la règle écrite.
+14. **Bénéfice en zone et limite de l'article 154 bis (27/11/2026).** S6 dit le bénéfice retenu « compte non tenu » de certains abattements (article 41 DN bis de l'annexe III, S7, toujours à relire) : on en lit que la limite se calcule sur le bénéfice avant l'exonération de zone. Hypothèse 6 de l'ADR 021, à vérifier : S6 et S7 n'ont pas pu être relus le 27/11 (le BOFiP refuse les lectures automatiques).
+15. **Plafond de la sécurité sociale de la part de 15 % retirée du plafond suivant (27/11/2026).** L'article 163 quatervicies parle du « montant annuel » du plafond ; S6 § 60 réduit au prorata celui de la limite elle-même pour un exercice de moins de douze mois. On retient le même plafond que la limite (hypothèse 7 de l'ADR 021). Ne joue que l'année de création, au-delà d'un plafond réduit.
 
 ---
 
@@ -652,6 +654,8 @@ Trois livraisons, chacune sur sa branche et fusionnée seule dans `main` ; chaqu
 10. **Documentation** : limites du modèle (sortie, 70 ans, primo-arrivants, épargne salariale, reste du plafond saisi), guide (carte du moteur, glossaire), `fonctionnalites.md`, CHANGELOG, Roadmap (phase 17 point 1, en partie).
 
 ### Livraison 2 : l'excédent sur le bénéfice ou la rémunération (article 154 bis)
+
+**Réalisée le 27/11/2026.** Écarts avec le plan ci-dessous : le bloc de règles s'appelle `IR.epargneRetraite.deductionDuRevenuProfessionnel` ; l'année du plafond saisi, décidée le 26/11, s'y ajoute ; la ligne de la carte de l'activité n'a pas de signe moins, puisqu'elle ne change pas ce que l'activité verse ; les cas de référence ajoutent l'année de création, la zone, le couple, le président de SASU, l'activité pas encore créée et deux années (`references/epargne-retraite-du-benefice.reference.test.ts`). L'ADR 021, section « Réalisation de la livraison 2 », consigne ce que le code a précisé ; les points 14 et 15 de la section 13 restent à vérifier.
 
 1. **ADR 021 complété** (hypothèses 3 et 5).
 2. **Règles** : bloc `article154bis` (10 %, 15 % entre 1 et 8 PASS, minimum 10 % du PASS).

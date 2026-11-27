@@ -1,7 +1,7 @@
 // src/ui/components/ChampsDeLActeur.test.tsx
 // Fenêtre de réglages d'une société à l'IS : capital social et réserves au début de la simulation.
 
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { enTexteBrut, pourcent } from "@/backend/logic/format"
@@ -105,17 +105,39 @@ describe("plafond d'épargne retraite d'une personne", () => {
     // Le navigateur refuse d'envoyer un formulaire dont un champ ne respecte pas son pas : aucun pas n'est imposé.
     expect(champ.validity.valid).toBe(true)
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
-    expect(onSave.mock.calls[0][0]).toMatchObject({ plafondEpargneRetraite: 13906 })
+    // L'année du plafond s'enregistre avec lui : il ne glissera pas si la simulation gagne une année avant 2026.
+    expect(onSave.mock.calls[0][0]).toMatchObject({ plafondEpargneRetraite: 13906, anneeDuPlafondEpargneRetraite: 2026 })
   })
 
-  it("vider le champ retire le plafond : le minimum légal s'applique de nouveau", async () => {
-    const { onSave, user } = ouvrirLaPersonne(makePerson({ plafondEpargneRetraite: 9000 }), [2026])
+  it("vider le champ retire le plafond et son année : le minimum légal s'applique de nouveau", async () => {
+    const { onSave, user } = ouvrirLaPersonne(makePerson({ plafondEpargneRetraite: 9000, anneeDuPlafondEpargneRetraite: 2026 }), [2026])
     const champ = screen.getByLabelText("Plafond épargne retraite 2026")
     expect(champ).toHaveValue(9000)
 
     await user.clear(champ)
     await user.click(screen.getByRole("button", { name: "Enregistrer" }))
     expect(onSave.mock.calls[0][0].plafondEpargneRetraite).toBeUndefined()
+    expect(onSave.mock.calls[0][0].anneeDuPlafondEpargneRetraite).toBeUndefined()
+  })
+
+  it("garde l'année du plafond quand une année est ajoutée avant elle, le dit, et la garde quand le montant est corrigé", async () => {
+    const { onSave, user } = ouvrirLaPersonne(makePerson({ plafondEpargneRetraite: 9000, anneeDuPlafondEpargneRetraite: 2026 }), [2025, 2026])
+    const champ = screen.getByLabelText("Plafond épargne retraite 2026")
+
+    expect(champ).toHaveAccessibleDescription(/En 2025, première année de la simulation, le minimum légal est retenu\./)
+    // Le montant remplacé d'un coup, sans que le champ passe par le vide.
+    fireEvent.change(champ, { target: { value: "9500" } })
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }))
+    expect(onSave.mock.calls[0][0]).toMatchObject({ plafondEpargneRetraite: 9500, anneeDuPlafondEpargneRetraite: 2026 })
+  })
+
+  it("vidé, le champ nomme de nouveau la première année : un montant saisi ensuite vaut pour elle", async () => {
+    const { onSave, user } = ouvrirLaPersonne(makePerson({ plafondEpargneRetraite: 9000, anneeDuPlafondEpargneRetraite: 2026 }), [2025, 2026])
+
+    await user.clear(screen.getByLabelText("Plafond épargne retraite 2026"))
+    await user.type(screen.getByLabelText("Plafond épargne retraite 2025"), "4637")
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }))
+    expect(onSave.mock.calls[0][0]).toMatchObject({ plafondEpargneRetraite: 4637, anneeDuPlafondEpargneRetraite: 2025 })
   })
 
   it("une activité n'a pas ce champ", () => {

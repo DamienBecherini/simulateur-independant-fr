@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { estEntrepriseOuMicro, estSocieteIS, type Avatar, type Company, type Entity, type MicroEntreprise, type Person, type StatutSociete } from "@/types"
 import { statutDeLActivite, type StatutDUneActivite } from "@/backend/logic/changement-de-statut"
+import { avecLePlafondEpargneRetraite } from "@/backend/logic/epargne-retraite"
 import { texteDuPlafondSaisi } from "@/lib/epargne-retraite"
 import { availableIconsSmall } from "@/lib/avatar-constants"
 import { ChampsDeplacements, ChampsFraisReels } from "./ChampsFrais"
@@ -118,7 +119,8 @@ export function ChampsDeLActeur({ entity, onChange, anneesSimulees = [], annee, 
  * d'après les règles de cette année-là. Aucun pas imposé : un montant d'avis d'impôt s'enregistre à l'euro près.
  */
 function ChampPlafondEpargneRetraite({ personne, onChange, anneesSimulees }: { personne: Person; onChange: (entity: Entity) => void; anneesSimulees: number[] }) {
-  const texte = texteDuPlafondSaisi(anneesSimulees)
+  // Le libellé nomme l'année du plafond : celle enregistrée avec lui, ou celle où il le sera à la saisie.
+  const texte = texteDuPlafondSaisi(anneesSimulees, personne.plafondEpargneRetraite === undefined ? undefined : personne.anneeDuPlafondEpargneRetraite)
   return (
     <div className="grid grid-cols-4 items-start gap-4">
       <Label htmlFor="plafondEpargneRetraite" className="pt-2 text-right leading-snug">
@@ -136,7 +138,7 @@ function ChampPlafondEpargneRetraite({ personne, onChange, anneesSimulees }: { p
           value={personne.plafondEpargneRetraite ?? ""}
           onChange={e => {
             const value = Number.parseFloat(e.target.value)
-            onChange({ ...personne, plafondEpargneRetraite: Number.isFinite(value) && value >= 0 ? value : undefined })
+            onChange(avecLePlafondEpargneRetraite(personne, Number.isFinite(value) && value >= 0 ? value : undefined, anneesSimulees))
           }}
         />
         <p id="plafondEpargneRetraite-aide" className="mt-1 text-sm text-slate-600 dark:text-slate-400">

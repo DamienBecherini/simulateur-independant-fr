@@ -13,8 +13,9 @@ import { ecrireMois } from "./dispositifs.js"
 import { SIMULATION_PAR_STATUT } from "./simulation-au-reel.js"
 import { simulerMicroEntreprise } from "./simulation-micro.js"
 import { simulerPortage } from "./simulation-portage.js"
-import { calculerFoyer, resultatPersonne } from "./impot-du-foyer.js"
+import { calculerFoyer, deductionsDuRevenuProfessionnel, resultatPersonne } from "./impot-du-foyer.js"
 import { calculerBilan } from "./bilan-de-la-simulation.js"
+import type { DeductionDuRevenuProfessionnel } from "../../types.js"
 
 export type { ContexteDeLAnnee } from "./routage-des-flux.js"
 
@@ -23,6 +24,11 @@ export type { ContexteDeLAnnee } from "./routage-des-flux.js"
  *   1. chaque activité calcule son résultat annuel et ce qu'elle verse aux personnes ;
  *   2. ces versements sont inscrits sur le compte de chaque personne ;
  *   3. l'impôt sur le revenu est calculé une seule fois par foyer, sur l'ensemble de ses revenus.
+ * Une exception, l'épargne retraite (ADR 021) : ce qui dépasse les plafonds du revenu global d'une personne se déduit
+ * du bénéfice de son entreprise individuelle au réel ou de sa rémunération de gérant d'EURL, dans une limite calculée sur
+ * ce bénéfice ou cette rémunération. Un premier calcul des activités les mesure ; s'il y a une déduction, les activités
+ * sont calculées une seconde fois avec elle. Elle ne change ni les cotisations ni ce qui est versé, seulement le revenu
+ * imposable : le second calcul ne déplace donc pas la limite.
  */
 
 function simulerActivite(ctx: Contexte, activite: Company | MicroEntreprise | Portage): ActivityResult {
@@ -52,16 +58,28 @@ function arrondirActivite(activite: ActivityResult): ActivityResult {
   }
 }
 
+/** Le calcul de chaque activité de la session, qui inscrit sur le compte des personnes ce qu'elle leur verse. */
+function simulerLesActivites(ctx: Contexte): ActivityResult[] {
+  return ctx.session.entities.filter((e): e is Company | MicroEntreprise | Portage => e.type !== "person").map(activite => arrondirActivite(simulerActivite(ctx, activite)))
+}
+
 export function runMetaSimulation(session: DonneesDeLAnnee, regles: ReglesFiscales, contexte: ContexteDeLAnnee = {}): SimulationReport {
   const foyersFiscaux = buildFoyers(session, regles.IR.partsParEnfant)
   const flux = aggregateAnnualFlowsByEntity(session)
   const salaries = bulletinsDesSalaries(session, flux, regles, contexte.annee ?? regles.annee)
-  const ctx: Contexte = { session, regles, annee: contexte, foyers: foyersFiscaux, flux, cotisationsSalariales: cotisationsSalarialesParPersonne(session, flux, salaries), salaries, revenus: new Map(), nonRattache: 0 }
+  const cotisationsSalariales = cotisationsSalarialesParPersonne(session, flux, salaries)
+  /** Un contexte neuf, aucun revenu encore inscrit, pour un calcul des activités avec ces déductions d'épargne retraite. */
+  const nouveauContexte = (deductionsDuRevenuProfessionnel: ReadonlyMap<string, DeductionDuRevenuProfessionnel>): Contexte => ({ session, regles, annee: contexte, foyers: foyersFiscaux, flux, cotisationsSalariales, salaries, revenus: new Map(), nonRattache: 0, deductionsDuRevenuProfessionnel, revenusProfessionnelsDeductibles: [] })
 
   // Les activités d'abord : elles alimentent les revenus des personnes, dont dépend l'impôt des foyers.
-  const activities = session.entities.filter((e): e is Company | MicroEntreprise | Portage => e.type !== "person").map(activite => arrondirActivite(simulerActivite(ctx, activite)))
+  const sansDeduction = nouveauContexte(new Map())
+  const calculees = simulerLesActivites(sansDeduction)
+  // Puis, s'il y a lieu, une seconde fois avec ce qui se déduit du bénéfice ou de la rémunération (voir plus haut).
+  const deductions = deductionsDuRevenuProfessionnel(sansDeduction)
+  const ctx = deductions.size > 0 ? nouveauContexte(deductions) : sansDeduction
+  const activities = ctx === sansDeduction ? calculees : simulerLesActivites(ctx)
   const persons = session.entities.filter((e): e is Person => e.type === "person").map(personne => resultatPersonne(ctx, personne))
-  const foyers = foyersFiscaux.map(foyer => calculerFoyer(ctx, foyer))
+  const foyers = foyersFiscaux.map(foyer => calculerFoyer(ctx, foyer, sansDeduction))
 
   return {
     annee: contexte.annee ?? regles.annee,

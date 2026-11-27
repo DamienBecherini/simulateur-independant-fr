@@ -4,9 +4,9 @@
 // dividendes, bénéfices, prélèvements) selon les relations de la session. Partagé par les modules du moteur, que
 // simulation-engine.ts enchaîne.
 
-import type { Company, DonneesDeLAnnee, EtatDeLaSociete, FinancialFlow, SalarieDeLActivite } from "../../types.js"
+import type { Company, DeductionDuRevenuProfessionnel, DonneesDeLAnnee, EtatDeLaSociete, FinancialFlow, SalarieDeLActivite } from "../../types.js"
 import { brutPourUnNet, calculerCotisationsSalarie } from "./cotisationsSalarie.js"
-import type { PlafondsHerites } from "./epargne-retraite.js"
+import type { PlafondsHerites, RevenuProfessionnelDeLActivite } from "./epargne-retraite.js"
 import type { Foyer } from "./foyers.js"
 import type { ReglesFiscales } from "./regles.js"
 import type { RegimeMicroDeLAnnee } from "./dispositifs.js"
@@ -64,6 +64,14 @@ export interface Contexte {
   salaries: Map<string, { employeurId: string; bulletin: SalarieDeLActivite }>
   /** Revenus versés par des activités qu'aucune relation ne rattache à une personne. */
   nonRattache: number
+  /**
+   * Épargne retraite (ADR 021) : ce que chaque entreprise individuelle au réel ou EURL déduit du bénéfice ou de la
+   * rémunération de son titulaire ou de son gérant, par identifiant de l'activité. Vide au premier calcul des activités,
+   * qui sert à mesurer ces revenus ; rempli au second, s'il y a lieu (simulation-engine.ts).
+   */
+  deductionsDuRevenuProfessionnel: ReadonlyMap<string, DeductionDuRevenuProfessionnel>
+  /** Les bénéfices et rémunérations dont une personne peut déduire ses versements d'épargne retraite, inscrits par le calcul des activités. */
+  revenusProfessionnelsDeductibles: RevenuProfessionnelDeLActivite[]
 }
 
 

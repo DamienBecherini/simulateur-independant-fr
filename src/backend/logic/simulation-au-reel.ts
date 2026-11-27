@@ -3,7 +3,8 @@
 // CALCUL_DES_SOCIETES), qui versent rémunération et dividendes et gardent des réserves, et entreprise individuelle,
 // dont le bénéfice revient à son titulaire. Les versements sont inscrits sur le compte des personnes (routage-des-flux.ts).
 
-import type { ActivityResult, Company, EtatDeLaSociete, MicroEntreprise, PartageDuBenefice, StatutJuridique, StatutSociete } from "../../types.js"
+import type { ActivityResult, Company, DeductionDuRevenuProfessionnel, EtatDeLaSociete, MicroEntreprise, PartageDuBenefice, StatutJuridique, StatutSociete } from "../../types.js"
+import type { RevenuProfessionnelDeLActivite } from "./epargne-retraite.js"
 import { calculerEI } from "./calculsEI.js"
 import { calculerEURL, type EntreesEURL } from "./calculsEURL.js"
 import { calculerSASU } from "./calculsSASU.js"
@@ -40,6 +41,36 @@ const CALCUL_DES_SOCIETES: Record<StatutSociete, (entrees: EntreesEURL, regles: 
 function reglesDeLActivite(ctx: Contexte, activite: Company): { periode: PeriodeDeLActivite; deLaPeriode: ReglesDeLaPeriode; deLAnnee: ReglesFiscales } {
   const periode = periodeDeLActivite(activite.dateDeCreation, anneeSimulee(ctx))
   return { periode, deLaPeriode: reglesDeLaPeriode(ctx.regles, periode), deLAnnee: ctx.regles }
+}
+
+/**
+ * Le bénéfice d'une entreprise individuelle au réel ou la rémunération d'un gérant d'EURL, inscrit comme revenu dont le
+ * titulaire ou le gérant peut déduire ce qui dépasse ses plafonds d'épargne retraite (article 154 bis, ADR 021), avec
+ * le plafond de la sécurité sociale de la période d'activité, réduit l'année de création. Rend ce qui en est déduit
+ * cette année : rien au premier calcul des activités (simulation-engine.ts), ni avant la création de l'activité, qui
+ * n'a pas encore d'exercice.
+ */
+function epargneRetraiteDeLActivite(ctx: Contexte, revenu: Omit<RevenuProfessionnelDeLActivite, "plafondSecuriteSociale">, periode: PeriodeDeLActivite, deLaPeriode: ReglesDeLaPeriode): DeductionDuRevenuProfessionnel | undefined {
+  if (periode.cas === "avant") return undefined
+  ctx.revenusProfessionnelsDeductibles.push({ ...revenu, plafondSecuriteSociale: deLaPeriode.TNS.plafondSecuriteSociale })
+  return ctx.deductionsDuRevenuProfessionnel.get(revenu.activiteId)
+}
+
+/** Ce qu'une déduction d'épargne retraite retire du revenu imposable : son montant, 0 sans déduction. */
+const montantDeduit = (deduction: DeductionDuRevenuProfessionnel | undefined): number => deduction?.montant ?? 0
+
+/** La déduction d'épargne retraite que le résultat de l'activité montre, quand il y en a une. */
+const avecLEpargneRetraite = (deduction: DeductionDuRevenuProfessionnel | undefined): Pick<ActivityResult, "epargneRetraite"> => (deduction ? { epargneRetraite: deduction } : {})
+
+/**
+ * EURL : la rémunération de son gérant, travailleur non salarié, dont il peut déduire ses versements d'épargne retraite
+ * au-delà de ses plafonds ; rien pour une SASU, dont le président est assimilé salarié, ni sans rémunération versée.
+ */
+function epargneRetraiteDuGerant(ctx: Contexte, societe: Company, statut: StatutSociete, resultat: ResultatSociete, { periode, deLaPeriode }: { periode: PeriodeDeLActivite; deLaPeriode: ReglesDeLaPeriode }): DeductionDuRevenuProfessionnel | undefined {
+  // Comme verserRemuneration : la rémunération va au premier dirigeant.
+  const gerant = dirigeantsDe(ctx, societe)[0]
+  if (statut !== "EURL" || gerant === undefined || resultat.remunerationNette <= 0) return undefined
+  return epargneRetraiteDeLActivite(ctx, { activiteId: societe.id, personId: gerant, cadre: "remuneration", revenuAvantDeduction: resultat.remunerationImposable }, periode, deLaPeriode)
 }
 
 /** La note d'une année avant la création ; rien pour une année entière ou l'année de création (sa note est propre au statut). */
@@ -163,8 +194,10 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
   const { limite, alerte } = limiteEtAlerte(ctx.annee.limitesDeRemuneration === true, entrees, resultat.beneficeAvantIS, remunerationNette => calculer({ ...entrees, remunerationNette, dividendesDemandes: 0 }).beneficeAvantIS)
   const warnings = [...alerte, ...resultat.warnings, ...(plafond ? [plafond.note] : []), ...avertissementsDeLaProfession(profession, statut), ...anomaliesDeLActivite(ctx, societe), ...avertissementsAvantLaCreation(ctx.session.monthlyData, societe, anneeSimulee(ctx))]
   const notes = notesDeCreationDeLaSociete(periode, statut, ctx, deLAnnee, resultat, () => CALCUL_DES_SOCIETES[statut](entrees, deLAnnee, caisseDeLActivite(ctx, societe, deLAnnee)))
+  // Le versement se déduit de la rémunération imposable, avant la déduction pour frais : ni les cotisations ni le net versé ne changent.
+  const epargneRetraite = epargneRetraiteDuGerant(ctx, societe, statut, resultat, { periode, deLaPeriode })
 
-  verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable, cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
+  verserRemuneration(ctx, societe, { nette: resultat.remunerationNette, imposable: resultat.remunerationImposable - montantDeduit(epargneRetraite), cotisations: resultat.cotisationsSociales - resultat.cotisationsSurDividendes }, warnings)
   attribuerResultatSociete(ctx, societe, resultat)
   verserDividendes(ctx, societe, { verses: resultat.dividendesVerses, soumisPS: resultat.dividendesSoumisPS, cotisations: resultat.cotisationsSurDividendes }, warnings)
 
@@ -192,6 +225,7 @@ function simulerSocieteIS(ctx: Contexte, societe: Company, statut: StatutSociete
     ...detailProfession(profession, deLAnnee, false),
     ...(notes.length > 0 ? { dispositifs: notes } : {}),
     ...limitesDeLAnneeDeCreation(periode, limitesDeLaSociete(statut, deLaPeriode, resultat.remunerationNette, plafond !== undefined)),
+    ...avecLEpargneRetraite(epargneRetraite),
     warnings
   }
   return avecLaZone(activite, detailDeLaZone(zone, anneeSimulee(ctx), deLAnnee, { beneficeExonere: resultat.beneficeExonere, recettesLiberales: recettesLiberalesHorsSante(profession) }))
@@ -257,15 +291,20 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     warnings.push("Une entreprise individuelle ne verse ni rémunération de dirigeant ni dividendes : ces flux sont ignorés, tout le bénéfice revient à l'entrepreneur.")
   }
 
+  const exploitant = dirigeantsDe(ctx, entreprise)[0]
+  // Les versements d'épargne retraite au-delà des plafonds du titulaire se déduisent du bénéfice imposable : ni les
+  // cotisations ni le bénéfice encaissé ne changent.
+  const epargneRetraite = exploitant === undefined ? undefined : epargneRetraiteDeLActivite(ctx, { activiteId: entreprise.id, personId: exploitant, cadre: "benefice", revenuAvantDeduction: resultat.revenuImposable }, periode, deLaPeriode)
+  const beneficeImposable = resultat.revenuImposable - montantDeduit(epargneRetraite)
+
   // Implantée en zone : une part du bénéfice imposable est exonérée d'impôt sur le revenu, sans changer les cotisations.
   const zone = zoneDeLActivite(entreprise, anneeSimulee(ctx), deLAnnee)
-  const beneficeExonere = beneficeExonereDeLActivite(zone, resultat.revenuImposable)
+  const beneficeExonere = beneficeExonereDeLActivite(zone, beneficeImposable)
 
-  const exploitant = dirigeantsDe(ctx, entreprise)[0]
   if (exploitant) {
     const revenus = revenusDe(ctx, exploitant)
     // Un déficit d'entreprise individuelle au réel s'impute sur les autres revenus du foyer (article 156 du CGI).
-    revenus.beneficesImposables += resultat.revenuImposable - beneficeExonere
+    revenus.beneficesImposables += beneficeImposable - beneficeExonere
     revenus.beneficesExoneres += beneficeExonere
     revenus.beneficesEncaisses += resultat.revenuNet
     revenus.prelevementsActivites += resultat.cotisationsSociales
@@ -293,6 +332,7 @@ function simulerEntrepriseIndividuelle(ctx: Contexte, entreprise: Company): Acti
     ...(dispositifs.length > 0 ? { dispositifs } : {}),
     ...limitesDeLAnneeDeCreation(periode, { plafondSecuriteSociale: deLaPeriode.TNS.plafondSecuriteSociale }),
     ...detailProfession(profession, deLAnnee, false),
+    ...avecLEpargneRetraite(epargneRetraite),
     warnings
   }
   return avecLaZone(activite, detailDeLaZone(zone, anneeSimulee(ctx), deLAnnee, { beneficeExonere, recettesLiberales: recettesLiberalesHorsSante(profession) }))

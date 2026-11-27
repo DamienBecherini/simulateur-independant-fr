@@ -66,6 +66,9 @@ function taux(r: ReglesFiscales): [string, number][] {
     ["IR.abattementSalaires.taux", r.IR.abattementSalaires.taux],
     ["IR.epargneRetraite.partDesRevenus", r.IR.epargneRetraite.partDesRevenus],
     ["IR.epargneRetraite.minimumPartDuPlafond", r.IR.epargneRetraite.minimumPartDuPlafond],
+    ["IR.epargneRetraite.deductionDuRevenuProfessionnel.partDuRevenu", r.IR.epargneRetraite.deductionDuRevenuProfessionnel.partDuRevenu],
+    ["IR.epargneRetraite.deductionDuRevenuProfessionnel.partAuDelaDUnPlafond", r.IR.epargneRetraite.deductionDuRevenuProfessionnel.partAuDelaDUnPlafond],
+    ["IR.epargneRetraite.deductionDuRevenuProfessionnel.minimumPartDuPlafond", r.IR.epargneRetraite.deductionDuRevenuProfessionnel.minimumPartDuPlafond],
     ["baremeKilometrique.majorationElectrique", r.baremeKilometrique.majorationElectrique],
     ...Object.entries(r.baremeKilometrique.voitures).flatMap(([cv, tranches]) => tranches.map(({ taux }, i): [string, number] => [`baremeKilometrique.voitures.${cv}.${i}`, taux])),
     ["IS.tauxReduit", r.IS.tauxReduit],
@@ -238,6 +241,12 @@ describe("règles par année", () => {
       expect(plafondSecuriteSocialeAnneePrecedente).toBeLessThan(regles.regimeGeneral.plafondSecuriteSociale)
       expect(Number.isInteger(anneesDeReport)).toBe(true)
       expect(anneesDeReport).toBeGreaterThanOrEqual(1)
+    })
+
+    it("limite la déduction du bénéfice à 10 % de 8 plafonds plus 15 % de 7 plafonds, soit 1,85 plafond, et au moins 10 % d'un plafond", () => {
+      const { partDuRevenu, revenuRetenuEnPlafonds, partAuDelaDUnPlafond, minimumPartDuPlafond } = regles.IR.epargneRetraite.deductionDuRevenuProfessionnel
+      expect(partDuRevenu * revenuRetenuEnPlafonds + partAuDelaDUnPlafond * (revenuRetenuEnPlafonds - 1)).toBeCloseTo(1.85, 10)
+      expect(minimumPartDuPlafond).toBe(0.1)
     })
 
     it("a un barème kilométrique des voitures de 3 à 7 CV, en trois tranches (5 000 km, 20 000 km, au-delà)", () => {

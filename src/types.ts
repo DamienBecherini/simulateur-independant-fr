@@ -164,12 +164,18 @@ export const PersonSchema = z.object({
   fiscalParts: z.number().positive().default(1),
   fraisReels: FraisReelsSchema.optional(),
   /**
-   * Plafond de déduction de ses versements d'épargne retraite pour la première année de la session, en euros : la ligne
-   * « Plafond pour les cotisations versées en N » de son avis d'impôt (voir l'ADR 021). Facultatif : absent, le
-   * simulateur retient le minimum légal. Les années suivantes, le plafond se calcule sur l'année d'avant. Une valeur
-   * invalide est écartée seule, sans faire perdre la personne.
+   * Plafond de déduction de ses versements d'épargne retraite pour une année, en euros : la ligne « Plafond pour les
+   * cotisations versées en N » de son avis d'impôt (voir l'ADR 021). Facultatif : absent, le simulateur retient le
+   * minimum légal. Les années suivantes, le plafond se calcule sur l'année d'avant. Une valeur invalide est écartée
+   * seule, sans faire perdre la personne.
    */
   plafondEpargneRetraite: z.number().min(0).optional().catch(undefined),
+  /**
+   * Année pour laquelle vaut `plafondEpargneRetraite`, enregistrée avec lui à la saisie (la première année simulée de la
+   * session à ce moment-là) : il ne glisse pas sur une autre année quand la session en gagne une avant la sienne.
+   * Absente (fichier d'avant cet enregistrement), il vaut pour la première année simulée de la session.
+   */
+  anneeDuPlafondEpargneRetraite: z.number().int().optional().catch(undefined),
   avatar: AvatarSchema,
   locked: z.boolean().default(false)
 })
@@ -587,7 +593,40 @@ export interface ActivityResult {
   exonerationDeZone?: ExonerationDeZoneDeLActivite
   /** Profession libérale réglementée de l'activité (voir l'ADR 015). */
   profession?: ProfessionDeLActivite
+  /**
+   * Entreprise individuelle au réel et EURL : la part des versements d'épargne retraite de son titulaire ou de son
+   * gérant déduite du bénéfice ou de la rémunération (article 154 bis du CGI, voir l'ADR 021). Absente quand rien ne
+   * dépasse les plafonds du revenu global. Les cotisations sociales n'en dépendent pas.
+   */
+  epargneRetraite?: DeductionDuRevenuProfessionnel
   warnings: string[]
+}
+
+/**
+ * Versements d'épargne retraite d'une personne déduits du bénéfice de son entreprise individuelle au réel ou de sa
+ * rémunération de gérant d'EURL (article 154 bis du CGI, voir l'ADR 021) : ce qui dépasse ses plafonds du revenu global,
+ * dans la limite de l'année. Montants à l'euro.
+ */
+export interface DeductionDuRevenuProfessionnel {
+  /** L'activité dont le bénéfice ou la rémunération est diminué. */
+  activiteId: string
+  personId: string
+  cadre: "benefice" | "remuneration"
+  /** Montant déduit. */
+  montant: number
+  /** Limite de la déduction pour l'année. */
+  limite: number
+  /** Ce qui fixe cette limite : une part du revenu ci-dessous, ou son minimum légal, une part du plafond de la sécurité sociale. */
+  baseDeLaLimite: "revenu" | "minimum"
+  /**
+   * Revenu sur lequel la limite est calculée : le bénéfice imposable avant versement, ou la rémunération imposable du
+   * gérant après la déduction pour frais professionnels, avant versement (hypothèse 2 de l'ADR 021).
+   */
+  revenuDeLaLimite: number
+  /** Bénéfice imposable, ou rémunération imposable avant la déduction pour frais, dont le versement se déduit. */
+  revenuAvantDeduction: number
+  /** Plafond de la sécurité sociale retenu pour la limite : celui de la période d'activité, réduit l'année de création (ADR 020). */
+  plafondSecuriteSociale: number
 }
 
 /**
@@ -947,6 +986,11 @@ export interface EpargneRetraiteDeLaPersonne {
   /** Plafond des versements de l'année, hors plafonds reportés. Saisi, il les contient déjà. */
   plafond: number
   originePlafond: OrigineDuPlafondEpargneRetraite
+  /**
+   * Minimum légal retenu faute de saisie la première année simulée, alors que la fiche porte un plafond pour une autre
+   * année : celle-ci. Absente sinon.
+   */
+  plafondSaisiPour?: number
   /** Plafonds inutilisés des années précédentes de la session, encore utilisables cette année, du plus ancien au plus récent. */
   plafondsReportes: PlafondReporte[]
   /** Part de ses versements imputée sur son plafond de l'année, puis sur ses plafonds reportés. */
@@ -955,7 +999,12 @@ export interface EpargneRetraiteDeLaPersonne {
   imputeSurLeConjoint: number
   /** Ce que son conjoint a pris sur ses plafonds à elle, pour ses propres versements. */
   preteAuConjoint: number
-  /** Part au-delà des plafonds : ni déduite, ni reportée. */
+  /**
+   * Part au-delà de ses plafonds déduite du bénéfice de son entreprise individuelle au réel ou de sa rémunération de
+   * gérant d'EURL (article 154 bis du CGI). Absente sans activité qui le permette, ou sans rien qui dépasse.
+   */
+  deduitDuRevenuProfessionnel?: DeductionDuRevenuProfessionnel
+  /** Part au-delà des plafonds et de cette limite : ni déduite, ni reportée. */
   nonDeduit: number
   /** Ce qui reste de ses plafonds après les versements du foyer, utilisable les années suivantes, du plus ancien au plus récent. */
   plafondsRestants: PlafondReporte[]
@@ -966,10 +1015,15 @@ export interface EpargneRetraiteDeLaPersonne {
   resteNonReporte?: PlafondReporte
   /** Revenus d'activité professionnelle de l'année, dont dépend le plafond des versements de l'année suivante. */
   revenusProfessionnels: number
-  /** Plafond calculé sur ces revenus, pour les versements de l'année suivante. */
+  /** Plafond calculé sur ces revenus, pour les versements de l'année suivante, après la réduction ci-dessous. */
   plafondCalcule: number
-  /** Ce qui fixe ce plafond : la part des revenus, son minimum légal ou son maximum. */
+  /** Ce qui fixe ce plafond avant réduction : la part des revenus, son minimum légal ou son maximum. */
   baseDuPlafondCalcule: "revenus" | "minimum" | "maximum"
+  /**
+   * Ce que la déduction du bénéfice ou de la rémunération retire de ce plafond : son montant, moins la part de 15 % du
+   * revenu au-delà d'un plafond de la sécurité sociale (article 163 quatervicies, I-2-a du CGI). Absente quand elle est nulle.
+   */
+  reductionDuPlafondCalcule?: number
 }
 
 /** Épargne retraite d'un foyer : ce qui ne tient pas dans un montant (ceux-ci sont des champs du foyer lui-même). */
@@ -985,8 +1039,11 @@ export interface EpargneRetraiteDuFoyer {
   /**
    * Couple marié ou pacsé dont l'un dépasse ses plafonds : ce qui est pris sur ceux de l'autre, et l'impôt en plus si
    * la case 6QR de la déclaration n'était pas cochée. Absent quand personne ne dépasse, ou sans rien à prendre.
+   * `deductibleDuRevenuProfessionnel` : celui qui prend sur le plafond de son conjoint pourrait aussi déduire de son
+   * bénéfice ou de sa rémunération (article 154 bis), selon le cas ; sans la case, ces versements ne seraient donc pas
+   * perdus, et l'impôt en plus, calculé comme s'ils l'étaient, n'est qu'un maximum, que la consigne ne donne pas.
    */
-  miseEnCommun?: { montant: number; impotEnPlusSansElle: number }
+  miseEnCommun?: { montant: number; impotEnPlusSansElle: number; deductibleDuRevenuProfessionnel?: DeductionDuRevenuProfessionnel["cadre"] }
   /** Chaque membre du foyer, déclarants puis enfants rattachés, qu'il ait versé ou non. */
   personnes: EpargneRetraiteDeLaPersonne[]
 }

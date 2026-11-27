@@ -71,6 +71,7 @@ export function sessionMaximale(): SessionState {
           autresFrais: 640
         },
         plafondEpargneRetraite: 1650.5,
+        anneeDuPlafondEpargneRetraite: 2024,
         avatar: initiales("AM", "#3b82f6"),
         locked: true
       },

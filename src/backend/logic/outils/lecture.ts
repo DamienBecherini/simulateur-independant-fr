@@ -26,10 +26,13 @@ function reglagesDeLActeur(acteur: Entity, detaille: boolean): Reglages {
 
 type Reglages = Record<string, z.infer<typeof ValeurDeReglage>>
 
-/** Parts fiscales, plafond d'épargne retraite saisi (`null` sans saisie) et frais réels ; le détail des trajets seulement si `detaille`. */
+/**
+ * Parts fiscales, plafond d'épargne retraite saisi et l'année pour laquelle il vaut (`null` sans saisie ; une année
+ * `null` avec un plafond : la première de la simulation) et frais réels ; le détail des trajets seulement si `detaille`.
+ */
 function reglagesDUnePersonne(acteur: Person, detaille: boolean): Reglages {
   const frais = acteur.fraisReels
-  const resume = { partsFiscales: acteur.fiscalParts, plafondEpargneRetraite: acteur.plafondEpargneRetraite ?? null, fraisReels: frais ? `${frais.trajets.length} trajet(s), ${auCentime(frais.autresFrais)} € d'autres frais` : null }
+  const resume = { partsFiscales: acteur.fiscalParts, plafondEpargneRetraite: acteur.plafondEpargneRetraite ?? null, anneeDuPlafondEpargneRetraite: acteur.anneeDuPlafondEpargneRetraite ?? null, fraisReels: frais ? `${frais.trajets.length} trajet(s), ${auCentime(frais.autresFrais)} € d'autres frais` : null }
   return detaille && frais ? { ...resume, trajets: JSON.stringify(frais.trajets) } : resume
 }
 

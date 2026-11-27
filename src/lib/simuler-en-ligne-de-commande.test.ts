@@ -7,6 +7,9 @@ import { eurosEnTexteBrut as euros } from "@/backend/logic/format"
 import { MONTAGES_TYPES, sessionDUnMontage } from "@/lib/montages/montages"
 import { AIDE, executerSimuler, lireLesArguments, messageDErreurDuFichier } from "@/lib/simuler-en-ligne-de-commande"
 import { sessionMaximale } from "@/lib/testing/session-maximale"
+import { reglesPubliees } from "@/backend/logic/regles"
+import { chiffreDAffairesPour } from "@/backend/logic/testing/revenus-exacts"
+import { exercant, personne, session as sessionDeTest, societe } from "@/backend/logic/testing/session-de-test"
 import type { SessionState } from "@/types"
 
 /** La commande sur un fichier en mémoire, nommé « session.json ». */
@@ -66,6 +69,20 @@ describe("executerSimuler", () => {
     expect(texte).toContain(ligne("dont versement libératoire", foyer.versementLiberatoire!))
     expect(texte).toContain(ligne("Net après impôts", foyer.netApresImpots))
     expect(texte).not.toContain("Parts")
+  })
+
+  it("une activité dit ce qui se déduit de son bénéfice au titre de l'épargne retraite de son titulaire", () => {
+    // Cas 1 de l'étude : 60 000 € de bénéfice imposable, 6 000 € versés, 1 290 € au-delà du minimum légal de 4 710 €.
+    const session: SessionState = {
+      name: "Sophie",
+      entities: [{ ...personne("s"), name: "Sophie" }, { ...societe("ei", "EI"), name: "Conseil de Sophie" }],
+      relationships: exercant("s", "ei", "EI"),
+      annees: [{ annee: 2026, monthlyData: sessionDeTest([], [], [["ei", "ca_services", chiffreDAffairesPour(60000, reglesPubliees(2026))], ["s", "versement_per", 6000]]).monthlyData }]
+    }
+    const { texte } = simuler(contenuDuFichier(session))
+
+    expect(texte).toContain(`    ${"PER déduit du bénéfice".padEnd(30)}${euros(1290).padStart(14)}`)
+    expect(texte).toContain(`    ${"PER déduit du revenu global".padEnd(30)}${euros(4710).padStart(14)}`)
   })
 
   it("--annee : seulement cette année, calculée avec ce qu'elle hérite des précédentes", () => {

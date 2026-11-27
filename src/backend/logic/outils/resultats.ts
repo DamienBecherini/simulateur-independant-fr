@@ -4,8 +4,8 @@
 
 import { z } from "zod"
 import type { ActivityResult, CotisationPortage, CotisationSalarie, CotisationTNS, DetailCotisationsSalarie, DetailCotisationsTNS, DetailPortage, FoyerFiscalResult, PersonResult, ReservesDeLaSociete, SessionState, SimulationReport } from "../../../types.js"
-import { baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, origineDuPlafondEnClair, TITRE_DE_LA_MISE_EN_COMMUN } from "../epargne-retraite.js"
-import { enTexteBrut, pourcent, pourcentDeNombre } from "../format.js"
+import { baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, DU_REVENU_PROFESSIONNEL, effetSurLePlafondCalculeEnClair, origineDuPlafondEnClair, TITRE_DE_LA_MISE_EN_COMMUN } from "../epargne-retraite.js"
+import { enTexteBrut, euros, pourcent, pourcentDeNombre } from "../format.js"
 import { LIBELLES_DES_COTISATIONS_TNS } from "../libelles-des-cotisations.js"
 import { simulerLesAnnees } from "../simulation-pluriannuelle.js"
 import { anneeDeLaSession, arrondir, ErreurOutil, genreDe, nomDe, trouverActeur } from "./commun.js"
@@ -31,7 +31,7 @@ const Montants = z.record(z.string(), z.number())
 // == simuler
 // ===================================================================================
 
-const FoyerSchema = z.object({ personnes: z.array(z.string()), parts: z.number(), revenusEncaisses: z.number(), revenuImposable: z.number(), deductionEpargneRetraite: z.number().describe("Versements PER déduits du revenu imposable, déjà retirés de revenuImposable et compris dans revenuFiscalDeReference ; 0 sans versement."), revenuFiscalDeReference: z.number(), beneficesExoneres: z.number().describe("Bénéfices exonérés en zone, compris dans revenuFiscalDeReference ; 0 sans exonération."), impotSurLeRevenu: z.number(), versementLiberatoire: z.number().describe("Part de impotSurLeRevenu payée avec les cotisations des micro-entreprises au versement libératoire ; 0 sans versement libératoire."), impotEconomiseEpargneRetraite: z.number().describe("Impôt économisé par la déduction des versements PER : l'impôt recalculé sans elle, moins impotSurLeRevenu."), prelevementsSociaux: z.number(), optionDividendes: z.enum(["pfu", "bareme"]).nullable(), netApresImpots: z.number(), versementsEpargneRetraite: z.number().describe("Versements PER de l'année, compris dans netApresImpots : épargne bloquée jusqu'à la retraite. Le détail par personne est dans expliquer_resultat."), resultatConserve: z.number(), avertissements: z.array(z.string()) })
+const FoyerSchema = z.object({ personnes: z.array(z.string()), parts: z.number(), revenusEncaisses: z.number(), revenuImposable: z.number(), deductionEpargneRetraite: z.number().describe("Versements PER déduits du revenu global, déjà retirés de revenuImposable et compris dans revenuFiscalDeReference ; 0 sans versement. Ce qui dépasse les plafonds d'un entrepreneur individuel au réel ou d'un gérant d'EURL se déduit de son bénéfice ou de sa rémunération : versementPerDeduit de l'activité."), revenuFiscalDeReference: z.number(), beneficesExoneres: z.number().describe("Bénéfices exonérés en zone, compris dans revenuFiscalDeReference ; 0 sans exonération."), impotSurLeRevenu: z.number(), versementLiberatoire: z.number().describe("Part de impotSurLeRevenu payée avec les cotisations des micro-entreprises au versement libératoire ; 0 sans versement libératoire."), impotEconomiseEpargneRetraite: z.number().describe("Impôt économisé par la déduction des versements PER : l'impôt recalculé sans elle, moins impotSurLeRevenu."), prelevementsSociaux: z.number(), optionDividendes: z.enum(["pfu", "bareme"]).nullable(), netApresImpots: z.number(), versementsEpargneRetraite: z.number().describe("Versements PER de l'année, compris dans netApresImpots : épargne bloquée jusqu'à la retraite. Le détail par personne est dans expliquer_resultat."), resultatConserve: z.number(), avertissements: z.array(z.string()) })
 
 function resumeDuFoyer(session: SessionState, foyer: FoyerFiscalResult): z.infer<typeof FoyerSchema> {
   return {
@@ -54,7 +54,7 @@ function resumeDuFoyer(session: SessionState, foyer: FoyerFiscalResult): z.infer
   }
 }
 
-const ActiviteSchema = z.object({ id: z.string(), nom: z.string(), statut: z.string(), chiffreAffaires: z.number(), charges: z.number(), cotisationsSociales: z.number(), impotSocietes: z.number(), revenuVerse: z.number(), resultatConserve: z.number(), reservesALaFin: z.number().optional(), limiteDeRemuneration: z.number().optional().describe("Société à l'IS : rémunération nette annuelle du dirigeant la plus haute sans déficit sur l'année, réserves non comptées."), beneficeExonereEnZone: z.number().optional(), dispositifs: z.array(z.string()), avertissements: z.array(z.string()) })
+const ActiviteSchema = z.object({ id: z.string(), nom: z.string(), statut: z.string(), chiffreAffaires: z.number(), charges: z.number(), cotisationsSociales: z.number(), impotSocietes: z.number(), revenuVerse: z.number(), resultatConserve: z.number(), reservesALaFin: z.number().optional(), limiteDeRemuneration: z.number().optional().describe("Société à l'IS : rémunération nette annuelle du dirigeant la plus haute sans déficit sur l'année, réserves non comptées."), beneficeExonereEnZone: z.number().optional(), versementPerDeduit: z.number().optional().describe("Entreprise individuelle au réel ou EURL : versements PER de son titulaire ou de son gérant déduits du bénéfice ou de la rémunération, au-delà de ses plafonds du revenu global. Seul son revenu imposable baisse : ni les cotisations ni revenuVerse ne changent."), dispositifs: z.array(z.string()), avertissements: z.array(z.string()) })
 
 const resumeDeLActivite = (a: ActivityResult): z.infer<typeof ActiviteSchema> => ({
   id: a.entityId,
@@ -66,6 +66,8 @@ const resumeDeLActivite = (a: ActivityResult): z.infer<typeof ActiviteSchema> =>
   ...(a.limiteDeRemuneration === undefined ? {} : { limiteDeRemuneration: a.limiteDeRemuneration }),
   // Activité implantée en zone (ZFU-TE, QPV) : son bénéfice exonéré d'impôt cette année (voir l'ADR 017).
   ...(a.exonerationDeZone && a.exonerationDeZone.beneficeExonere > 0 ? { beneficeExonereEnZone: arrondir(a.exonerationDeZone.beneficeExonere) } : {}),
+  // Épargne retraite au-delà des plafonds du titulaire ou du gérant, déduite du bénéfice ou de la rémunération (ADR 021).
+  ...(a.epargneRetraite ? { versementPerDeduit: a.epargneRetraite.montant } : {}),
   dispositifs: a.dispositifs ?? [],
   avertissements: a.warnings
 })
@@ -241,6 +243,17 @@ function informationsDeLActivite(session: SessionState, a: ActivityResult): stri
   return [...informationsDeLaProfession(a), ...infos, ...(a.dispositifs ?? []), ...hypothesesDeLaZone(a)]
 }
 
+/**
+ * Ce que le titulaire d'une entreprise individuelle au réel ou le gérant d'une EURL déduit de son bénéfice ou de sa
+ * rémunération, au-delà de ses plafonds d'épargne retraite, avec la limite de l'année ; rien sans déduction.
+ */
+function epargneRetraiteDeLActivite(session: SessionState, a: ActivityResult): Ligne[] {
+  const d = a.epargneRetraite
+  if (!d) return []
+  const avantLesFrais = d.cadre === "remuneration" ? ", avant la déduction pour frais professionnels" : ""
+  return [ligne(enTexteBrut(`Versement PER de ${nomDe(session, d.personId)} déduit ${DU_REVENU_PROFESSIONNEL[d.cadre]}${avantLesFrais} (limite de l'année : ${euros(d.limite)}, article 154 bis du CGI) : seul son revenu imposable baisse`), d.montant)]
+}
+
 /** Le bénéfice exonéré d'impôt d'une activité implantée en zone, avec son régime et son taux ; rien quand il est nul. */
 function beneficeExonereEnZone(a: ActivityResult): Ligne[] {
   const e = a.exonerationDeZone
@@ -259,7 +272,7 @@ function expliquerActivite(session: SessionState, a: ActivityResult) {
   const p = a.partage
   const partage = p ? [ligne("Partage du bénéfice avant rémunération", p.beneficeAvantRemuneration, [composante("Rémunération nette", p.remunerationNette), composante("Cotisations sur la rémunération", p.cotisationsRemuneration), composante("Impôt sur les sociétés", p.impotSocietes), composante("Dividendes nets", p.dividendesNets), composante("Cotisations sur les dividendes", p.cotisationsSurDividendes), composante("Ajouté aux réserves (négatif : pris sur les réserves ou déficit)", p.resultatConserve)])] : []
   return {
-    lignes: [ligne("Chiffre d'affaires", a.chiffreAffaires), ligne("Charges", a.charges), ligne("Cotisations sociales", a.cotisationsSociales), ...cotisations, ...beneficeExonereEnZone(a), ligne("Impôt sur les sociétés", a.impotSocietes), ligne("Revenu versé aux personnes, avant impôt sur le revenu", a.revenuVerse), ligne("Résultat conservé dans l'activité", a.resultatConserve), ...partage],
+    lignes: [ligne("Chiffre d'affaires", a.chiffreAffaires), ligne("Charges", a.charges), ligne("Cotisations sociales", a.cotisationsSociales), ...cotisations, ...beneficeExonereEnZone(a), ...epargneRetraiteDeLActivite(session, a), ligne("Impôt sur les sociétés", a.impotSocietes), ligne("Revenu versé aux personnes, avant impôt sur le revenu", a.revenuVerse), ligne("Résultat conservé dans l'activité", a.resultatConserve), ...partage],
     informations: informationsDeLActivite(session, a),
     avertissements: a.warnings
   }
@@ -275,15 +288,18 @@ function epargneRetraiteDeLaPersonne(session: SessionState, rapport: SimulationR
   if (!p) return { lignes: [], informations: [] }
   const { annee } = rapport
   const reportes = p.plafondsReportes.reduce((cumul, plafond) => cumul + plafond.montant, 0)
-  const versements = p.verse > 0 ? [ligne("Épargne retraite : versements PER de l'année", p.verse, [composante("Imputés sur son plafond de l'année et ses plafonds reportés", p.imputeSurSesPlafonds), composante("Imputés sur le plafond de son conjoint", p.imputeSurLeConjoint), composante("Non déduits, au-delà des plafonds", p.nonDeduit)])] : []
+  // Ce qui dépasse ses plafonds et se déduit de son bénéfice ou de sa rémunération (article 154 bis) : seulement s'il y en a.
+  const duRevenu = p.deduitDuRevenuProfessionnel ? [composante(`Déduits ${DU_REVENU_PROFESSIONNEL[p.deduitDuRevenuProfessionnel.cadre]} de « ${nomDe(session, p.deduitDuRevenuProfessionnel.activiteId)} », au-delà des plafonds`, p.deduitDuRevenuProfessionnel.montant)] : []
+  const versements = p.verse > 0 ? [ligne("Épargne retraite : versements PER de l'année", p.verse, [composante("Imputés sur son plafond de l'année et ses plafonds reportés", p.imputeSurSesPlafonds), composante("Imputés sur le plafond de son conjoint", p.imputeSurLeConjoint), ...duRevenu, composante("Non déduits, au-delà des plafonds", p.nonDeduit)])] : []
   const aVerse = (foyer.versementsEpargneRetraite ?? 0) > 0
-  const duFoyer = aVerse ? [ligne("Foyer : versements PER déduits du revenu imposable", foyer.deductionEpargneRetraite ?? 0), ligne("Foyer : impôt économisé par cette déduction", foyer.impotEconomiseEpargneRetraite ?? 0)] : []
+  const duFoyer = aVerse ? [ligne("Foyer : versements PER déduits du revenu global", foyer.deductionEpargneRetraite ?? 0), ligne("Foyer : impôt économisé par les versements PER", foyer.impotEconomiseEpargneRetraite ?? 0)] : []
   const consigne = consigneDeLaMiseEnCommun(epargne, id => nomDe(session, id))
+  const effet = effetSurLePlafondCalculeEnClair(p)
   return {
     lignes: [
       ...versements,
       ligne(`Épargne retraite : plafond des versements de ${annee} (${origineDuPlafondEnClair(p, annee)})`, p.plafond + reportes, [composante("Plafond de l'année", p.plafond), composante("Plafonds reportés des années précédentes", reportes)]),
-      ligne(enTexteBrut(`Épargne retraite : plafond calculé sur ${annee}, pour les versements de ${annee + 1} (${baseDuPlafondCalculeEnClair(p, annee, epargne.partDesRevenus)})`), p.plafondCalcule),
+      ligne(enTexteBrut(`Épargne retraite : plafond calculé sur ${annee}, pour les versements de ${annee + 1} (${baseDuPlafondCalculeEnClair(p, annee, epargne.partDesRevenus)}${effet ? ` ; ${effet}` : ""})`), p.plafondCalcule),
       ...duFoyer
     ],
     informations: aVerse ? [enTexteBrut(`Tranche marginale du foyer avant la déduction des versements PER : ${pourcent(epargne.trancheMarginale)}. Indicatif : l'impôt économisé est celui de la ligne du foyer, recalculé sans les versements.`), ...(consigne ? [enTexteBrut(`${TITRE_DE_LA_MISE_EN_COMMUN} ${consigne}`)] : [])] : []

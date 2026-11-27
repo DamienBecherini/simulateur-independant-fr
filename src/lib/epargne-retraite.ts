@@ -3,8 +3,8 @@
 // « Épargne retraite (PER) », la mention sous le net et la précision du revenu fiscal de référence. Les montants
 // viennent du moteur ; ce module ne fait que les nommer.
 
-import type { EpargneRetraiteDeLaPersonne, FoyerFiscalResult, PlafondReporte, SimulationReport } from "@/types"
-import { baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, origineDuPlafondEnClair, plafondMinimalDeLAnnee } from "@/backend/logic/epargne-retraite"
+import type { DeductionDuRevenuProfessionnel, EpargneRetraiteDeLaPersonne, FoyerFiscalResult, PlafondReporte, SimulationReport } from "@/types"
+import { baseDuPlafondCalculeEnClair, consigneDeLaMiseEnCommun, DU_REVENU_PROFESSIONNEL, duRevenuProfessionnelEnClair, effetSurLePlafondCalculeEnClair, limiteDuRevenuProfessionnelEnClair, origineDuPlafondEnClair, plafondMinimalDeLAnnee } from "@/backend/logic/epargne-retraite"
 import { deNom, euros, pourcent } from "@/backend/logic/format"
 import { premiereAnneeSimulable } from "@/backend/logic/regles"
 import { reglesDeLAnneeAffichee } from "./regles-affichees"
@@ -12,7 +12,7 @@ import { reglesDeLAnneeAffichee } from "./regles-affichees"
 /** Une ligne du bloc « Épargne retraite (PER) » d'un foyer. */
 interface LigneEpargneRetraite {
   /** Ce que la ligne dit, pour la retrouver : l'écran met en valeur l'impôt économisé et replie le reste en affichage « Résumé ». */
-  nature: "verse" | "deduit" | "nonDeduit" | "economie" | "reste" | "plafondCalcule"
+  nature: "verse" | "deduit" | "deduitDuRevenuProfessionnel" | "nonDeduit" | "economie" | "reste" | "plafondCalcule"
   libelle: string
   /** Montant ou montants mis en forme : « 4 710 € », « 9 000 € et 4 806 € ». */
   valeur: string
@@ -73,12 +73,32 @@ function ligneDuReste(personne: EpargneRetraiteDeLaPersonne, plusieurs: boolean,
   return [{ nature: "reste", libelle, valeur: euros(sommeDesPlafonds(restants)), precision }]
 }
 
-/** Le plafond que l'année prépare à la suivante, pour ceux que les versements du foyer concernent. */
+/** Le plafond que l'année prépare à la suivante, pour ceux que les versements du foyer concernent, et ce que la déduction du bénéfice ou de la rémunération en retire. */
 function ligneDesPlafondsCalcules(concernes: EpargneRetraiteDeLaPersonne[], annee: number, partDesRevenus: number, nomDe: NomDe): LigneEpargneRetraite {
   if (concernes.length === 1) {
-    return { nature: "plafondCalcule", libelle: `Plafond calculé sur ${annee}`, valeur: euros(concernes[0].plafondCalcule), precision: `pour les versements de ${annee + 1} : ${baseDuPlafondCalculeEnClair(concernes[0], annee, partDesRevenus)}` }
+    const effet = effetSurLePlafondCalculeEnClair(concernes[0])
+    return { nature: "plafondCalcule", libelle: `Plafond calculé sur ${annee}`, valeur: euros(concernes[0].plafondCalcule), precision: `pour les versements de ${annee + 1} : ${baseDuPlafondCalculeEnClair(concernes[0], annee, partDesRevenus)}${effet ? ` ; ${effet}` : ""}` }
   }
-  return { nature: "plafondCalcule", libelle: `Plafonds calculés sur ${annee}`, valeur: enumeration(concernes.map(personne => euros(personne.plafondCalcule))), precision: `${enumeration(concernes.map(personne => nomDe(personne.personId)))}, pour les versements de ${annee + 1}` }
+  const effets = concernes.flatMap(personne => {
+    const effet = effetSurLePlafondCalculeEnClair(personne)
+    return effet ? [`celui ${deNom(nomDe(personne.personId))} : ${effet}`] : []
+  })
+  return { nature: "plafondCalcule", libelle: `Plafonds calculés sur ${annee}`, valeur: enumeration(concernes.map(personne => euros(personne.plafondCalcule))), precision: [`${enumeration(concernes.map(personne => nomDe(personne.personId)))}, pour les versements de ${annee + 1}`, ...effets].join(" ; ") }
+}
+
+/**
+ * Ce qu'une personne déduit de son bénéfice ou de sa rémunération (article 154 bis) : une ligne du bloc, après celle du
+ * revenu global. La limite est dite ; pour un gérant, que le versement se déduit avant la déduction pour frais.
+ */
+function ligneDuRevenuProfessionnel(personne: EpargneRetraiteDeLaPersonne & { deduitDuRevenuProfessionnel: DeductionDuRevenuProfessionnel }, plusieurs: boolean, nomDe: NomDe): LigneEpargneRetraite {
+  const { cadre, montant, limite } = personne.deduitDuRevenuProfessionnel
+  const avantLesFrais = cadre === "remuneration" ? "avant la déduction pour frais ; " : ""
+  return {
+    nature: "deduitDuRevenuProfessionnel",
+    libelle: `Déduit ${DU_REVENU_PROFESSIONNEL[cadre]}${plusieurs ? ` ${deNom(nomDe(personne.personId))}` : ""}`,
+    valeur: `− ${euros(montant)}`,
+    precision: `${avantLesFrais}${montant < limite ? "sous" : "à"} sa limite de ${euros(limite)}`
+  }
 }
 
 /**
@@ -94,16 +114,37 @@ export function blocEpargneRetraite(foyer: FoyerFiscalResult, annee: number, nom
   const nonDeduit = total(personnes, personne => personne.nonDeduit)
   // Ceux que les versements concernent : qui a versé, et qui a prêté de son plafond.
   const concernes = personnes.filter(personne => personne.verse > 0 || personne.preteAuConjoint > 0)
+  // Ceux qui déduisent aussi de leur bénéfice ou de leur rémunération (article 154 bis).
+  const duRevenuProfessionnel = personnes.filter((personne): personne is typeof personne & { deduitDuRevenuProfessionnel: DeductionDuRevenuProfessionnel } => personne.deduitDuRevenuProfessionnel !== undefined)
+  const deductions = duRevenuProfessionnel.map(personne => personne.deduitDuRevenuProfessionnel)
+  const auDela = deductions.length > 0 ? `au-delà du plafond et de ce qui se déduit ${duRevenuProfessionnelEnClair(deductions)}, sans report` : "au-delà du plafond, sans report"
   return {
     lignes: [
       ...personnes.filter(personne => personne.verse > 0).map((personne): LigneEpargneRetraite => ({ nature: "verse", libelle: plusieurs ? `Versé en ${annee} par ${nomDe(personne.personId)}` : `Versé en ${annee}`, valeur: euros(personne.verse) })),
-      { nature: "deduit", libelle: "Déduit du revenu", valeur: deduction > 0 ? `− ${euros(deduction)}` : euros(0), precision: precisionDeLaDeduction(foyer, annee, nomDe) },
-      ...(nonDeduit > 0 ? [{ nature: "nonDeduit", libelle: "Non déduit", valeur: euros(nonDeduit), precision: "au-delà du plafond, sans report" } satisfies LigneEpargneRetraite] : []),
-      { nature: "economie", libelle: "Impôt économisé", valeur: euros(foyer.impotEconomiseEpargneRetraite ?? 0), ...(deduction > 0 ? { precision: `impôt recalculé sans le versement ; tranche marginale : ${pourcent(trancheMarginale)} (indicatif)` } : {}) },
+      // À côté d'une déduction du bénéfice ou de la rémunération, celle-ci se nomme : le revenu global.
+      { nature: "deduit", libelle: deductions.length > 0 ? "Déduit du revenu global" : "Déduit du revenu", valeur: deduction > 0 ? `− ${euros(deduction)}` : euros(0), precision: precisionDeLaDeduction(foyer, annee, nomDe) },
+      ...duRevenuProfessionnel.map(personne => ligneDuRevenuProfessionnel(personne, plusieurs, nomDe)),
+      ...(nonDeduit > 0 ? [{ nature: "nonDeduit", libelle: "Non déduit", valeur: euros(nonDeduit), precision: auDela } satisfies LigneEpargneRetraite] : []),
+      { nature: "economie", libelle: "Impôt économisé", valeur: euros(foyer.impotEconomiseEpargneRetraite ?? 0), ...(deduction + deductions.reduce((cumul, d) => cumul + d.montant, 0) > 0 ? { precision: `impôt recalculé sans le versement ; tranche marginale : ${pourcent(trancheMarginale)} (indicatif)` } : {}) },
       ...concernes.flatMap(personne => ligneDuReste(personne, plusieurs, nomDe)),
       ligneDesPlafondsCalcules(concernes, annee, partDesRevenus, nomDe)
     ],
     consigne: consigneDeLaMiseEnCommun(foyer.epargneRetraite, nomDe)
+  }
+}
+
+/**
+ * La ligne de la carte d'une entreprise individuelle au réel ou d'une EURL qui porte une déduction d'épargne retraite
+ * (article 154 bis) : ce qui est déduit du bénéfice ou de la rémunération, et sa limite. Elle n'entre pas dans le calcul
+ * de ce que l'activité verse : seul le revenu imposable de la personne baisse. Les règles de l'année donnent les taux.
+ */
+export function ligneDEpargneRetraiteDeLActivite(deduction: DeductionDuRevenuProfessionnel, annee: number): { libelle: string; valeur: string; precision: string } {
+  const regles = reglesDeLAnneeAffichee(annee).IR.epargneRetraite.deductionDuRevenuProfessionnel
+  const avantLesFrais = deduction.cadre === "remuneration" ? ", avant la déduction pour frais" : ""
+  return {
+    libelle: `Versement PER déduit ${DU_REVENU_PROFESSIONNEL[deduction.cadre]}`,
+    valeur: euros(deduction.montant),
+    precision: `au-delà du plafond du revenu global${avantLesFrais} ; ${limiteDuRevenuProfessionnelEnClair(deduction, regles)}. Seul le revenu imposable baisse : ni les cotisations ni ce que l'activité verse ne changent`
   }
 }
 
@@ -119,19 +160,27 @@ export function epargneRetraiteDesFoyers(report: SimulationReport, nomDe: NomDe)
 }
 
 /**
- * Le libellé (« Plafond épargne retraite 2026 ») et l'aide du champ de la fiche d'une personne. Le plafond saisi vaut
- * pour la première année simulée de la session (une année d'avant les premières règles ne l'est pas) ; l'aide cite le
- * minimum que le simulateur retient cette année-là sans saisie, d'après ses règles.
+ * Le libellé (« Plafond épargne retraite 2026 ») et l'aide du champ de la fiche d'une personne. Le plafond vaut pour
+ * l'année enregistrée avec lui (`anneeEnregistree`) ; vide, il le sera pour la première année simulée de la session (une
+ * année d'avant les premières règles ne l'est pas). L'aide cite le minimum que le simulateur retient cette année-là sans
+ * saisie, d'après ses règles, et ce qu'il en est des années d'avant et d'après.
  */
-export function texteDuPlafondSaisi(annees: number[]): { libelle: string; aide: string } {
+export function texteDuPlafondSaisi(annees: number[], anneeEnregistree?: number): { libelle: string; aide: string } {
   const premiere = premiereAnneeSimulable(annees)
-  if (premiere === undefined) return { libelle: "Plafond épargne retraite", aide: "Le plafond de déduction des versements sur un PER, sur votre avis d'impôt, rubrique « Plafond épargne retraite »." }
-  const minimum = plafondMinimalDeLAnnee(premiere, reglesDeLAnneeAffichee(premiere))
-  const ensuite = annees.some(annee => annee > premiere) ? " Les années suivantes, il est calculé sur les revenus de l'année précédente." : ""
+  const annee = anneeEnregistree ?? premiere
+  if (annee === undefined) return { libelle: "Plafond épargne retraite", aide: "Le plafond de déduction des versements sur un PER, sur votre avis d'impôt, rubrique « Plafond épargne retraite »." }
+  const minimum = plafondMinimalDeLAnnee(annee, reglesDeLAnneeAffichee(annee))
+  const ensuite = annees.some(a => a > annee) ? " Les années suivantes, il est calculé sur les revenus de l'année précédente." : ""
   return {
-    libelle: `Plafond épargne retraite ${premiere}`,
-    aide: `La ligne « Plafond pour les cotisations versées en ${premiere} » de l'avis d'impôt reçu en ${premiere}. Vide : le minimum légal est retenu (${euros(minimum)}).${ensuite} Les versements se saisissent dans la grille, avec le type « Versement PER ». Marié ou pacsé : chacun saisit le sien.`
+    libelle: `Plafond épargne retraite ${annee}`,
+    aide: `La ligne « Plafond pour les cotisations versées en ${annee} » de l'avis d'impôt reçu en ${annee}. Vide : le minimum légal est retenu (${euros(minimum)}).${ensuite}${avantOuHors(annees, annee, premiere)} Les versements se saisissent dans la grille, avec le type « Versement PER ». Marié ou pacsé : chacun saisit le sien.`
   }
+}
+
+/** Ce que l'aide du champ dit d'un plafond enregistré pour une autre année que la première, ou pour une année absente. */
+function avantOuHors(annees: number[], annee: number, premiere: number | undefined): string {
+  if (!annees.includes(annee)) return ` ${annee} n'est pas dans la simulation : ce plafond ne sert pas.`
+  return premiere !== undefined && premiere < annee ? ` En ${premiere}, première année de la simulation, le minimum légal est retenu.` : ""
 }
 
 /** Sous le net après impôts : la part qui est de l'épargne retraite, bloquée ; `null` sans versement. */
@@ -151,6 +200,17 @@ export function resteApresDepenses(foyer: Pick<FoyerFiscalResult, "netApresImpot
 }
 
 /** Ce que la ligne du revenu fiscal de référence précise : ce qu'il contient en plus du revenu imposable, et à quoi il sert. */
-export function precisionDuRevenuFiscalDeReference(foyer: Pick<FoyerFiscalResult, "beneficesExoneres" | "deductionEpargneRetraite">): string {
-  return [foyer.beneficesExoneres ? `dont ${euros(foyer.beneficesExoneres)} de bénéfice exonéré en zone` : null, foyer.deductionEpargneRetraite ? "versement PER déduit, puis rajouté" : null, "pour le versement libératoire dans deux ans"].filter(Boolean).join(" ; ")
+export function precisionDuRevenuFiscalDeReference(foyer: Pick<FoyerFiscalResult, "beneficesExoneres" | "deductionEpargneRetraite"> & { epargneRetraite?: Pick<FoyerFiscalResult["epargneRetraite"], "personnes"> }): string {
+  return [foyer.beneficesExoneres ? `dont ${euros(foyer.beneficesExoneres)} de bénéfice exonéré en zone` : null, precisionDeLEpargneRetraite(foyer), "pour le versement libératoire dans deux ans"].filter(Boolean).join(" ; ")
+}
+
+/**
+ * Ce que le revenu fiscal de référence fait des versements d'épargne retraite : la part déduite du revenu global y est
+ * rajoutée (article 1417, IV, 1°, a du CGI), celle déduite du bénéfice ou de la rémunération ne l'est pas.
+ */
+function precisionDeLEpargneRetraite(foyer: Pick<FoyerFiscalResult, "deductionEpargneRetraite"> & { epargneRetraite?: Pick<FoyerFiscalResult["epargneRetraite"], "personnes"> }): string | null {
+  const deductions = (foyer.epargneRetraite?.personnes ?? []).flatMap(personne => personne.deduitDuRevenuProfessionnel ?? [])
+  const duRevenuGlobal = foyer.deductionEpargneRetraite ? (deductions.length > 0 ? "versement PER déduit du revenu global, puis rajouté" : "versement PER déduit, puis rajouté") : null
+  const duRevenuProfessionnel = deductions.length > 0 ? `versement PER déduit ${duRevenuProfessionnelEnClair(deductions)}, non rajouté` : null
+  return [duRevenuGlobal, duRevenuProfessionnel].filter(Boolean).join(" ; ") || null
 }

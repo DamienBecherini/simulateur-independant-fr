@@ -118,29 +118,57 @@ function lignesDesDeplacements(report: SimulationReport): Ligne[] {
  * imputé et ce qui reste. Ce que le foyer déduit et économise est dans le tableau des foyers.
  */
 function lignesDeLEpargneRetraite(session: SimulationAnnuelle, report: SimulationReport): Ligne[] {
-  const entete: Ligne = ["Épargne retraite (PER)", "Foyer fiscal", "Versé", "Plafond de l'année", "Origine du plafond", "Plafonds reportés", "Imputé sur ses plafonds", "Imputé sur le plafond du conjoint", "Pris par le conjoint sur ses plafonds", "Non déduit", "Reste reportable", "Reste non reporté", "Revenus d'activité professionnelle", "Plafond calculé pour l'année suivante", "Tranche marginale du foyer (%)"]
+  const entete: Ligne = [
+    "Épargne retraite (PER)",
+    "Foyer fiscal",
+    "Versé",
+    "Plafond de l'année",
+    "Origine du plafond",
+    "Plafonds reportés",
+    "Imputé sur ses plafonds",
+    "Imputé sur le plafond du conjoint",
+    "Pris par le conjoint sur ses plafonds",
+    "Déduit du bénéfice ou de la rémunération",
+    "Activité de cette déduction",
+    "Limite de cette déduction",
+    "Non déduit",
+    "Reste reportable",
+    "Reste non reporté",
+    "Revenus d'activité professionnelle",
+    "Réduction du plafond calculé",
+    "Plafond calculé pour l'année suivante",
+    "Tranche marginale du foyer (%)"
+  ]
   const somme = (plafonds: { montant: number }[]) => plafonds.reduce((cumul, plafond) => cumul + plafond.montant, 0)
   const lignes = report.foyers
     .filter(foyer => foyer.versementsEpargneRetraite)
     .flatMap(foyer =>
-      foyer.epargneRetraite.personnes.map((p): Ligne => [
-        nomDeLActeur(session, p.personId),
-        nomDuFoyer(session, foyer),
-        montant(p.verse),
-        montant(p.plafond),
-        origineDuPlafondEnClair(p, report.annee),
-        montant(somme(p.plafondsReportes)),
-        montant(p.imputeSurSesPlafonds),
-        montant(p.imputeSurLeConjoint),
-        montant(p.preteAuConjoint),
-        montant(p.nonDeduit),
-        montant(somme(p.plafondsRestants)),
-        // Le reste d'un plafond saisi, que le simulateur ne reporte pas ; les années suivantes, il n'est que rappelé.
-        montant(p.originePlafond === "saisi" ? (p.resteNonReporte?.montant ?? 0) : 0),
-        montant(p.revenusProfessionnels),
-        montant(p.plafondCalcule),
-        Math.round(foyer.epargneRetraite.trancheMarginale * 1000) / 10
-      ])
+      foyer.epargneRetraite.personnes.map((p): Ligne => {
+        // Ce qui dépasse les plafonds du revenu global et se déduit du bénéfice ou de la rémunération (article 154 bis).
+        const duRevenu = p.deduitDuRevenuProfessionnel
+        return [
+          nomDeLActeur(session, p.personId),
+          nomDuFoyer(session, foyer),
+          montant(p.verse),
+          montant(p.plafond),
+          origineDuPlafondEnClair(p, report.annee),
+          montant(somme(p.plafondsReportes)),
+          montant(p.imputeSurSesPlafonds),
+          montant(p.imputeSurLeConjoint),
+          montant(p.preteAuConjoint),
+          montant(duRevenu?.montant ?? 0),
+          duRevenu ? nomDeLActeur(session, duRevenu.activiteId) : "",
+          duRevenu ? montant(duRevenu.limite) : null,
+          montant(p.nonDeduit),
+          montant(somme(p.plafondsRestants)),
+          // Le reste d'un plafond saisi, que le simulateur ne reporte pas ; les années suivantes, il n'est que rappelé.
+          montant(p.originePlafond === "saisi" ? (p.resteNonReporte?.montant ?? 0) : 0),
+          montant(p.revenusProfessionnels),
+          montant(p.reductionDuPlafondCalcule ?? 0),
+          montant(p.plafondCalcule),
+          Math.round(foyer.epargneRetraite.trancheMarginale * 1000) / 10
+        ]
+      })
     )
   return tableauFacultatif(entete, lignes)
 }

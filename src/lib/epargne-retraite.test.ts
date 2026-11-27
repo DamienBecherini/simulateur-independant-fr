@@ -7,8 +7,9 @@ import type { Entity, MicroEntreprise, Person, Relationship, SimulationReport } 
 import { enTexteBrut } from "@/backend/logic/format"
 import { reglesPubliees } from "@/backend/logic/regles"
 import { runMetaSimulation, type ContexteDeLAnnee } from "@/backend/logic/simulation-engine"
-import { micro, personne, relation, session, type Flux } from "@/backend/logic/testing/session-de-test"
-import { blocEpargneRetraite, mentionDeLEpargneDansLeNet, precisionDuRevenuFiscalDeReference, resteApresDepenses, texteDuPlafondSaisi } from "./epargne-retraite"
+import { chiffreDAffairesPour } from "@/backend/logic/testing/revenus-exacts"
+import { exercant, micro, personne, relation, session, societe, type Flux } from "@/backend/logic/testing/session-de-test"
+import { blocEpargneRetraite, ligneDEpargneRetraiteDeLActivite, mentionDeLEpargneDansLeNet, precisionDuRevenuFiscalDeReference, resteApresDepenses, texteDuPlafondSaisi } from "./epargne-retraite"
 import { csvResultats } from "./export-csv"
 import { rapportMarkdown } from "./export-markdown"
 
@@ -112,6 +113,69 @@ describe("bloc « Épargne retraite (PER) » d'un foyer", () => {
   })
 })
 
+describe("bloc d'un entrepreneur individuel qui déduit aussi de son bénéfice (maquette 5)", () => {
+  // Cas 1 de l'étude : 60 000 € de bénéfice imposable, plafond non saisi (4 710 €).
+  const conseil = { ...societe("ei", "EI"), name: "Conseil de Sophie" }
+  const chiffreDAffaires: Flux = ["ei", "ca_services", chiffreDAffairesPour(60000, reglesPubliees(2026))]
+  const sophie = (verse: number) => simuler([nommee("s", "Sophie"), conseil], exercant("s", "ei", "EI"), [chiffreDAffaires, ["s", "versement_per", verse]])
+
+  it("détaille les deux déductions, et ce que celle du bénéfice fait au plafond suivant", () => {
+    expect(bloc(sophie(6000), { s: "Sophie" })).toEqual({
+      lignes: [
+        ["Versé en 2026", "6 000 €", null],
+        ["Déduit du revenu global", "− 4 710 €", "plafond pour les versements de 2026 : 4 710 €, le minimum légal, faute de plafond saisi dans la fiche de Sophie"],
+        ["Déduit du bénéfice", "− 1 290 €", "sous sa limite de 7 791 €"],
+        ["Impôt économisé", "1 800 €", "impôt recalculé sans le versement ; tranche marginale : 30 % (indicatif)"],
+        ["Plafond calculé sur 2026", "5 871 €", "pour les versements de 2027 : 10 % des revenus d'activité professionnelle de 2026 (58 710 €) ; la part déduite du bénéfice ne le réduit pas ici"]
+      ],
+      consigne: null
+    })
+  })
+
+  it("dit ce qui dépasse aussi la limite du bénéfice, et la réduction du plafond suivant", () => {
+    const { lignes } = bloc(sophie(15000), { s: "Sophie" })
+
+    expect(lignes[2]).toEqual(["Déduit du bénéfice", "− 7 791 €", "à sa limite de 7 791 €"])
+    expect(lignes[3]).toEqual(["Non déduit", "2 499 €", "au-delà du plafond et de ce qui se déduit du bénéfice, sans report"])
+    // 10 % de 52 209 € = 5 221 €, moins 7 791 - 15 % x (52 209 - 48 060) = 7 169 € : rien.
+    expect(lignes[5]).toEqual(["Plafond calculé sur 2026", "0 €", "pour les versements de 2027 : 10 % des revenus d'activité professionnelle de 2026 (52 209 €) ; diminué de 7 169 € sur les 7 791 € déduits du bénéfice"])
+  })
+
+  it("précise que seule la part du revenu global revient dans le revenu fiscal de référence", () => {
+    expect(precisionDuRevenuFiscalDeReference(sophie(6000).foyers[0])).toBe("versement PER déduit du revenu global, puis rajouté ; versement PER déduit du bénéfice, non rajouté ; pour le versement libératoire dans deux ans")
+  })
+
+  it("donne la ligne de la carte de l'activité : sans signe moins, elle ne change pas ce qui est versé", () => {
+    const deduction = sophie(6000).activities.find(a => a.entityId === "ei")!.epargneRetraite!
+    const ligne = ligneDEpargneRetraiteDeLActivite(deduction, 2026)
+
+    expect([ligne.libelle, enTexteBrut(ligne.valeur), enTexteBrut(ligne.precision)]).toEqual([
+      "Versement PER déduit du bénéfice",
+      "1 290 €",
+      "au-delà du plafond du revenu global ; limite de 7 791 € : 10 % du bénéfice, plus 15 % de sa part au-delà du plafond de la sécurité sociale. Seul le revenu imposable baisse : ni les cotisations ni ce que l'activité verse ne changent"
+    ])
+    const duGerant = ligneDEpargneRetraiteDeLActivite({ ...deduction, cadre: "remuneration", montant: 3290, limite: 4806, baseDeLaLimite: "minimum" }, 2026)
+    expect([duGerant.libelle, enTexteBrut(duGerant.precision)]).toEqual(["Versement PER déduit de la rémunération", "au-delà du plafond du revenu global, avant la déduction pour frais ; limite de 4 806 € : le minimum, 10 % du plafond de la sécurité sociale. Seul le revenu imposable baisse : ni les cotisations ni ce que l'activité verse ne changent"])
+  })
+
+  it("nomme celui qui déduit dans un couple, et donne la consigne de la case 6QR sans la chiffrer", () => {
+    const acteurs = [nommee("p", "Paul", 4000), nommee("s", "Sophie", 4710), { ...conseil, name: "Atelier de Paul" }]
+    const report = simuler(acteurs, [...exercant("p", "ei", "EI"), relation("p", "s", "Marié(e)")], [chiffreDAffaires, ["p", "versement_per", 12000]])
+
+    expect(bloc(report, { p: "Paul", s: "Sophie" })).toEqual({
+      lignes: [
+        ["Versé en 2026 par Paul", "12 000 €", null],
+        ["Déduit du revenu global", "− 8 710 €", "4 000 € sur le plafond de Paul, 4 710 € sur celui de Sophie"],
+        ["Déduit du bénéfice de Paul", "− 3 290 €", "sous sa limite de 7 791 €"],
+        ["Impôt économisé", "1 729 €", "impôt recalculé sans le versement ; tranche marginale : 30 % (indicatif)"],
+        // Paul : 10 % de 56 710 € = 5 671 €, moins 3 290 - 15 % x (56 710 - 48 060) = 1 993 €.
+        ["Plafonds calculés sur 2026", "3 678 € et 4 806 €", "Paul et Sophie, pour les versements de 2027 ; celui de Paul : diminué de 1 993 € sur les 3 290 € déduits du bénéfice"]
+      ],
+      consigne: "Pour déduire les 4 710 € pris sur le plafond de Sophie, cochez la case 6QR de la déclaration de revenus. Sans elle, ils ne se déduiraient que du bénéfice, dans la limite de l'année."
+    })
+  })
+})
+
 describe("mentions de la carte du foyer", () => {
   it("dit sous le net la part d'épargne retraite, bloquée", () => {
     expect(enTexteBrut(mentionDeLEpargneDansLeNet(5000)!)).toBe("dont 5 000 € d'épargne retraite (PER), bloqués jusqu'à la retraite")
@@ -168,6 +232,20 @@ describe("champ du plafond dans la fiche d'une personne", () => {
     expect(texteDuPlafondSaisi([2023, 2024]).aide).not.toContain("Les années suivantes")
   })
 
+  it("nomme l'année enregistrée avec le plafond, et dit ce qu'il en est de la première année quand elle est avant", () => {
+    const { libelle, aide } = texteDuPlafondSaisi([2025, 2026, 2027], 2026)
+
+    expect(libelle).toBe("Plafond épargne retraite 2026")
+    expect(enTexteBrut(aide)).toContain("versées en 2026 » de l'avis d'impôt reçu en 2026. Vide : le minimum légal est retenu (4 710 €). Les années suivantes, il est calculé sur les revenus de l'année précédente. En 2025, première année de la simulation, le minimum légal est retenu.")
+  })
+
+  it("dit qu'un plafond enregistré pour une année absente de la simulation ne sert pas", () => {
+    const { libelle, aide } = texteDuPlafondSaisi([2026], 2025)
+
+    expect(libelle).toBe("Plafond épargne retraite 2025")
+    expect(aide).toContain("2025 n'est pas dans la simulation : ce plafond ne sert pas.")
+  })
+
   it("reste lisible sans année, ou sans année que le simulateur sache simuler", () => {
     expect(texteDuPlafondSaisi([]).libelle).toBe("Plafond épargne retraite")
     expect(texteDuPlafondSaisi([2020]).libelle).toBe("Plafond épargne retraite")
@@ -188,14 +266,16 @@ describe("épargne retraite dans les exports", () => {
     const valeurs = lignes[foyers + 1].split(";")
     const valeur = (colonne: string) => valeurs[entete.indexOf(colonne)]
 
-    expect(valeur("Versements PER déduits")).toBe("12000,00")
+    expect(valeur("PER déduit du revenu global")).toBe("12000,00")
     expect(valeur("Impôt économisé grâce au PER")).toBe("3600,00")
     expect(valeur("dont épargne retraite (PER)")).toBe("12000,00")
 
     const epargne = lignes.findIndex(ligne => ligne.startsWith("Épargne retraite (PER);"))
-    expect(lignes[epargne]).toBe("Épargne retraite (PER);Foyer fiscal;Versé;Plafond de l'année;Origine du plafond;Plafonds reportés;Imputé sur ses plafonds;Imputé sur le plafond du conjoint;Pris par le conjoint sur ses plafonds;Non déduit;Reste reportable;Reste non reporté;Revenus d'activité professionnelle;Plafond calculé pour l'année suivante;Tranche marginale du foyer (%)")
-    expect(lignes[epargne + 1]).toBe("Paul;Paul, Sophie;12000,00;9000,00;saisi dans la fiche;0,00;9000,00;3000,00;0,00;0,00;0,00;0,00;90000,00;9000,00;30")
-    expect(lignes[epargne + 2]).toBe("Sophie;Paul, Sophie;0,00;4710,00;saisi dans la fiche;0,00;0,00;0,00;3000,00;0,00;0,00;1710,00;0,00;4806,00;30")
+    expect(lignes[epargne]).toBe(
+      "Épargne retraite (PER);Foyer fiscal;Versé;Plafond de l'année;Origine du plafond;Plafonds reportés;Imputé sur ses plafonds;Imputé sur le plafond du conjoint;Pris par le conjoint sur ses plafonds;Déduit du bénéfice ou de la rémunération;Activité de cette déduction;Limite de cette déduction;Non déduit;Reste reportable;Reste non reporté;Revenus d'activité professionnelle;Réduction du plafond calculé;Plafond calculé pour l'année suivante;Tranche marginale du foyer (%)"
+    )
+    expect(lignes[epargne + 1]).toBe("Paul;Paul, Sophie;12000,00;9000,00;saisi dans la fiche;0,00;9000,00;3000,00;0,00;0,00;;;0,00;0,00;0,00;90000,00;0,00;9000,00;30")
+    expect(lignes[epargne + 2]).toBe("Sophie;Paul, Sophie;0,00;4710,00;saisi dans la fiche;0,00;0,00;0,00;3000,00;0,00;;;0,00;0,00;1710,00;0,00;0,00;4806,00;30")
   })
 
   it("le rapport Markdown reprend les lignes de la carte et la consigne de la case 6QR", () => {
@@ -209,7 +289,7 @@ describe("épargne retraite dans les exports", () => {
     expect(rapport).toContain("- Paul, Sophie : **Plafonds mis en commun.** Pour déduire les 3 000 € pris sur le plafond de Sophie, cochez la case 6QR de la déclaration de revenus. Sans elle, ils ne seraient pas déduits : 900 € d'impôt en plus.")
     // Le tableau des foyers porte les trois montants, à leur place.
     const entete = rapport.split("\n").find(ligne => ligne.startsWith("| Foyer (membres) |"))!
-    expect(entete).toContain("| Revenu imposable | Versements PER déduits |")
+    expect(entete).toContain("| Revenu imposable | PER déduit du revenu global |")
     expect(entete).toContain("| Net après impôts | dont épargne retraite (PER) |")
   })
 

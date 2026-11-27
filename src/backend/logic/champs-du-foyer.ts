@@ -35,7 +35,8 @@ export const CHAMPS_DU_FOYER: Record<ChampDuFoyer, DescriptionDuChamp> = {
   totalParts: { libelle: "Parts", sorties: ["csv", "markdown"], pourLesIA: "parts" },
   revenusEncaisses: { libelle: "Revenus encaissés", sorties: PARTOUT, pourLesIA: "revenusEncaisses" },
   revenuImposableGlobal: { libelle: "Revenu imposable", sorties: PARTOUT, pourLesIA: "revenuImposable" },
-  deductionEpargneRetraite: { libelle: "Versements PER déduits", sorties: PARTOUT, pourLesIA: "deductionEpargneRetraite", siPresent: true },
+  // La part déduite du bénéfice ou de la rémunération est dans le revenu imposable, et dans le détail de l'activité.
+  deductionEpargneRetraite: { libelle: "PER déduit du revenu global", sorties: PARTOUT, pourLesIA: "deductionEpargneRetraite", siPresent: true },
   revenuFiscalDeReference: { libelle: "Revenu fiscal de référence", sorties: PARTOUT, pourLesIA: "revenuFiscalDeReference" },
   beneficesExoneres: { libelle: "dont bénéfice exonéré en zone", sorties: PARTOUT, pourLesIA: "beneficesExoneres", siPresent: true },
   impotSurLeRevenu: { libelle: "Impôt sur le revenu", sorties: PARTOUT, pourLesIA: "impotSurLeRevenu" },

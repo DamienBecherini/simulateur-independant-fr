@@ -294,6 +294,23 @@ export interface ReglesEpargneRetraite {
   plafondSecuriteSocialeAnneePrecedente: number
   /** Nombre d'années, après celle-ci, où la part inutilisée du plafond de l'année reste utilisable. */
   anneesDeReport: number
+  deductionDuRevenuProfessionnel: ReglesDeductionDuRevenuProfessionnel
+}
+
+/**
+ * Versements d'épargne retraite déduits du bénéfice d'un entrepreneur individuel au réel ou de la rémunération d'un
+ * gérant majoritaire (article 154 bis du CGI, voir l'ADR 021) : la limite de l'année, calculée sur ce bénéfice ou cette
+ * rémunération et sur le plafond de la sécurité sociale de la période d'activité.
+ */
+export interface ReglesDeductionDuRevenuProfessionnel {
+  /** Part du revenu professionnel qui fait la limite (taux entre 0 et 1). */
+  partDuRevenu: number
+  /** Limite de ce revenu, en nombre de plafonds de la sécurité sociale. */
+  revenuRetenuEnPlafonds: number
+  /** Part ajoutée sur la fraction du revenu comprise entre un plafond et cette limite (taux entre 0 et 1). */
+  partAuDelaDUnPlafond: number
+  /** Limite minimale, en part du plafond de la sécurité sociale (taux entre 0 et 1). */
+  minimumPartDuPlafond: number
 }
 
 /** Marque des règles d'une période (`ReglesDeLaPeriode`). Elle n'existe qu'à la compilation : aucun objet ne porte cette clé. */

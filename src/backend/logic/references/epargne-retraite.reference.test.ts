@@ -266,6 +266,24 @@ casDeReference("épargne retraite sur plusieurs années : plafond saisi, année 
     expect(foyerDe(en2024.report!, "alice").warnings).toEqual([])
   })
 
+  it("garde son année quand la session en gagne une avant : la nouvelle première année retient le minimum légal, et le dit", () => {
+    const alice: Person = { ...avecPlafond("alice", 12000), anneeDuPlafondEpargneRetraite: 2026 }
+    const annees = rapports(troisAnnees({ 2025: 1000, 2026: 6000 }, alice, [2025, 2026]))
+
+    // 2025 : 10 % du plafond de la sécurité sociale de 2024 (46 368 €) = 4 637 €.
+    expect(epargneDe(annees[2025], "alice")).toMatchObject({ plafond: 4637, originePlafond: "minimumFauteDeSaisie", plafondSaisiPour: 2026, imputeSurSesPlafonds: 1000 })
+    expect(avertissements(annees[2025], "alice")).toEqual(["Épargne retraite : le plafond saisi dans la fiche vaut pour 2026 ; pour 2025, le minimum légal est retenu (4 637 €)."])
+    // 2026 : le plafond de l'avis d'impôt, qui contient déjà les restes et l'emporte sur le plafond calculé sur 2025.
+    expect(epargneDe(annees[2026], "alice")).toMatchObject({ plafond: 12000, originePlafond: "saisi", plafondsReportes: [], imputeSurSesPlafonds: 6000, nonDeduit: 0 })
+  })
+
+  it("ne sert à aucune année quand la sienne n'est plus dans la session", () => {
+    const alice: Person = { ...avecPlafond("alice", 12000), anneeDuPlafondEpargneRetraite: 2025 }
+    const annees = rapports(troisAnnees({ 2026: 6000 }, alice, [2026]))
+
+    expect(epargneDe(annees[2026], "alice")).toMatchObject({ plafond: 4710, originePlafond: "minimumFauteDeSaisie", plafondSaisiPour: 2025, imputeSurSesPlafonds: 4710, nonDeduit: 1290 })
+  })
+
   it("retient le minimum légal quand l'année précédente n'est pas dans la session", () => {
     const annees = rapports(troisAnnees({ 2026: 5000 }, avecPlafond("alice", 10000), [2024, 2026]))
 

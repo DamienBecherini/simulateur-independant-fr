@@ -74,13 +74,34 @@ describe("simuler et expliquer_resultat avec un versement PER", () => {
     expect(ligne("Épargne retraite : versements PER de l'année")).toMatchObject({ montant: 3600, composantes: [{ montant: 3600 }, { montant: 0 }, { montant: 0 }] })
     expect(ligne("Épargne retraite : plafond des versements de 2026")).toMatchObject({ libelle: "Épargne retraite : plafond des versements de 2026 (le minimum légal, faute de plafond saisi dans la fiche)", montant: 4710 })
     expect(ligne("Épargne retraite : plafond calculé sur 2026, pour les versements de 2027").montant).toBe(julien.plafondCalcule)
-    expect(ligne("Foyer : versements PER déduits du revenu imposable").montant).toBe(foyer.deductionEpargneRetraite)
-    expect(ligne("Foyer : impôt économisé par cette déduction").montant).toBe(foyer.impotEconomiseEpargneRetraite)
+    expect(ligne("Foyer : versements PER déduits du revenu global").montant).toBe(foyer.deductionEpargneRetraite)
+    expect(ligne("Foyer : impôt économisé par les versements PER").montant).toBe(foyer.impotEconomiseEpargneRetraite)
     expect(informations.join("\n")).toContain("Tranche marginale du foyer avant la déduction des versements PER")
     expect(avertissements.join("\n")).toContain("le plafond de 2026 n'est pas saisi, le minimum légal est retenu")
     // Un texte destiné à un modèle n'a pas d'espace insécable.
     const textes = [...lignes.map(l => l.libelle), ...informations].join("")
     expect(enTexteBrut(textes)).toBe(textes)
+  })
+
+  it("au-delà du plafond, la part déduite du bénéfice de l'entreprise individuelle se lit dans simuler et expliquer_resultat", () => {
+    // 700 € par mois : 8 400 € dans l'année, dont 3 690 € au-delà du minimum légal de 4 710 €, sous la limite du bénéfice.
+    const session = appliquer(exemple(), appeler<ResultatProposition>("proposer_flux", exemple(), { flux: [{ ...versement, montant: 700 }] }).proposition)
+    const rapport = simulerLesAnnees(session).annees.find(a => a.annee === 2026)!.report!
+    const deduction = rapport.activities.find(a => a.entityId === "ei-julien")!.epargneRetraite!
+    expect(deduction).toMatchObject({ personId: "p-julien", cadre: "benefice", montant: 3690 })
+
+    const activite = appeler<{ activites: Record<string, unknown>[] }>("simuler", session).activites.find(a => a.id === "ei-julien")!
+    expect(activite.versementPerDeduit).toBe(3690)
+    expect(appeler<{ activites: Record<string, unknown>[] }>("simuler", exemple()).activites.find(a => a.id === "ei-julien")).not.toHaveProperty("versementPerDeduit")
+
+    const explicationDeLActivite = appeler<Explication>("expliquer_resultat", session, { acteurId: "ei-julien" })
+    expect(explicationDeLActivite.lignes.find(l => l.libelle.startsWith("Versement PER de Julien déduit du bénéfice"))).toEqual({ libelle: `Versement PER de Julien déduit du bénéfice (limite de l'année : ${enTexteBrut(new Intl.NumberFormat("fr-FR").format(deduction.limite))} €, article 154 bis du CGI) : seul son revenu imposable baisse`, montant: 3690 })
+
+    const { lignes } = appeler<Explication>("expliquer_resultat", session, { acteurId: "p-julien" })
+    expect(lignes.find(l => l.libelle === "Épargne retraite : versements PER de l'année")).toMatchObject({
+      montant: 8400,
+      composantes: [{ montant: 4710 }, { montant: 0 }, { libelle: "Déduits du bénéfice de « Cabinet de kinésithérapie de Julien », au-delà des plafonds", montant: 3690 }, { montant: 0 }]
+    })
   })
 
   it("expliquer_resultat donne les plafonds d'une personne qui ne verse rien, sans lignes de versement", () => {

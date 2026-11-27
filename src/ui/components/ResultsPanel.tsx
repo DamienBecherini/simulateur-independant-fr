@@ -10,7 +10,7 @@ import { lectureDesReserves } from "@/lib/reserves"
 import { cn } from "@/lib/utils"
 import { createContext, useContext, useId, useState, type ReactNode } from "react"
 import { cleDeLActivite, cleDuFoyer, porteurDeLaPremiereAlerte } from "@/lib/resume"
-import { blocEpargneRetraite, mentionDeLEpargneDansLeNet, precisionDuRevenuFiscalDeReference, resteApresDepenses, type BlocEpargneRetraite } from "@/lib/epargne-retraite"
+import { blocEpargneRetraite, ligneDEpargneRetraiteDeLActivite, mentionDeLEpargneDansLeNet, precisionDuRevenuFiscalDeReference, resteApresDepenses, type BlocEpargneRetraite } from "@/lib/epargne-retraite"
 import { TITRE_DE_LA_MISE_EN_COMMUN } from "@/backend/logic/epargne-retraite"
 import { AlerteCourte } from "./AlerteCourte"
 import { useAffichageResume } from "../hooks/useAffichage"
@@ -484,7 +484,7 @@ function DetailDesCotisations({ activity, className }: { activity: ActivityResul
   )
 }
 
-function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: number }) {
+function ActivityCard({ activity, annee, nombre }: { activity: ActivityResult; annee: number; nombre: number }) {
   const resume = useAffichageResume()
   const { ouvert } = useDetailDesCartes()
   const idDuDetail = useId()
@@ -505,7 +505,7 @@ function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: 
           {bouton}
           <div id={idDuDetail} className={classeDuDetail(ouvert)}>
             <dl className="mt-2 space-y-1 text-sm">
-              <LignesDeLActivite activity={activity} />
+              <LignesDeLActivite activity={activity} annee={annee} />
             </dl>
             {versementLiberatoire}
           </div>
@@ -515,7 +515,7 @@ function ActivityCard({ activity, nombre }: { activity: ActivityResult; nombre: 
         <>
           <div id={idDuDetail}>
             <dl className="space-y-1 text-sm">
-              <LignesDeLActivite activity={activity} className={classeDuDetail(ouvert, "flex")} />
+              <LignesDeLActivite activity={activity} annee={annee} className={classeDuDetail(ouvert, "flex")} />
               {verse}
               <ReservesALaFin activity={activity} />
             </dl>
@@ -536,8 +536,19 @@ function BeneficeExonereRow({ exoneration, className }: { exoneration: ActivityR
   return <Row label="Bénéfice exonéré d'impôt" value={euros(exoneration.beneficeExonere)} hint={precision} className={className} />
 }
 
+/**
+ * Ce que le titulaire de l'entreprise individuelle ou le gérant de l'EURL déduit de son bénéfice ou de sa rémunération,
+ * au-delà de ses plafonds d'épargne retraite (ADR 021) : une ligne d'information, comme le bénéfice exonéré, sans signe
+ * moins, car elle ne change pas ce que l'activité verse.
+ */
+function EpargneRetraiteRow({ deduction, annee, className }: { deduction: ActivityResult["epargneRetraite"]; annee: number; className?: string }) {
+  if (!deduction) return null
+  const ligne = ligneDEpargneRetraiteDeLActivite(deduction, annee)
+  return <Row label={ligne.libelle} value={ligne.valeur} hint={ligne.precision} className={className} />
+}
+
 /** Du chiffre d'affaires au résultat conservé : le calcul de ce que l'activité verse. */
-function LignesDeLActivite({ activity, className }: { activity: ActivityResult; className?: string }) {
+function LignesDeLActivite({ activity, annee, className }: { activity: ActivityResult; annee: number; className?: string }) {
   const isMicro = activity.type === "micro-entreprise"
   return (
     <>
@@ -549,6 +560,7 @@ function LignesDeLActivite({ activity, className }: { activity: ActivityResult; 
       {activity.cotisationsPresident ? <Row label="Coût de la rémunération du président" value={euros(activity.cotisationsPresident.coutEmployeur)} hint={`dont ${euros(activity.cotisationsPresident.brut)} bruts`} className={className} /> : null}
       {activity.salaries?.length ? <EmployerCost salaries={activity.salaries} className={className} /> : null}
       <BeneficeExonereRow exoneration={activity.exonerationDeZone} className={className} />
+      <EpargneRetraiteRow deduction={activity.epargneRetraite} annee={annee} className={className} />
       {activity.impotSocietes > 0 ? <Row label="Impôt sur les sociétés" value={`− ${euros(activity.impotSocietes)}`} hint={precisionDeLImpotSurLesSocietes(activity)} className={className} /> : null}
       {activity.reserves ? <MouvementsDesReserves activity={activity} className={className} /> : null}
     </>
@@ -643,7 +655,7 @@ function cartesDesFoyers(report: SimulationReport, conjoint: AjoutDuConjoint | u
 
 /** Les cartes des activités. */
 function cartesDesActivites(report: SimulationReport) {
-  return report.activities.map(activity => <ActivityCard key={activity.entityId} activity={activity} nombre={report.foyers.length + report.activities.length} />)
+  return report.activities.map(activity => <ActivityCard key={activity.entityId} activity={activity} annee={report.annee} nombre={report.foyers.length + report.activities.length} />)
 }
 
 // Le nombre de colonnes suit la largeur de la section (requêtes de conteneur), pas celle de la fenêtre : interface

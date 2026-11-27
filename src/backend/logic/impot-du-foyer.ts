@@ -3,9 +3,9 @@
 // professionnels, forfaitaire ou aux frais réels), puis impôt de chaque foyer sur l'ensemble des revenus de ses membres
 // (barème, dividendes au prélèvement forfaitaire ou au barème, versement libératoire, revenu fiscal de référence).
 
-import type { EpargneRetraiteDeLaPersonne, EpargneRetraiteDuFoyer, FoyerFiscalResult, FraisProfessionnelsResult, Person, PersonResult } from "../../types.js"
+import type { DeductionDuRevenuProfessionnel, EpargneRetraiteDeLaPersonne, EpargneRetraiteDuFoyer, FoyerFiscalResult, FraisProfessionnelsResult, Person, PersonResult } from "../../types.js"
 import { calculerIR, trancheMarginale } from "./calculsIR.js"
-import { avertissementsEpargneRetraite, epargneRetraiteDesMembres, type MembreDuFoyer } from "./epargne-retraite.js"
+import { avertissementsEpargneRetraite, deductionDuRevenuProfessionnel, epargneRetraiteDesMembres, excedentsSurLesPlafonds, plafondSaisiDeLAnnee, type MembreDuFoyer, type RevenuProfessionnelDeLActivite, type VersantDuFoyer } from "./epargne-retraite.js"
 import type { Foyer } from "./foyers.js"
 import { fraisReelsDeLaPersonne } from "./frais-kilometriques.js"
 import type { ReglesFiscales } from "./regles.js"
@@ -134,19 +134,82 @@ function revenusDuFoyer(ctx: Contexte, foyer: Foyer) {
   return { ...cumul, professionnels }
 }
 
-/** L'épargne retraite de chaque membre du foyer : ses versements de l'année, son plafond saisi, et ce qu'il reçoit de l'année précédente. */
-function epargneRetraiteDuFoyer(ctx: Contexte, foyer: Foyer, revenusProfessionnels: Map<string, number>): EpargneRetraiteDeLaPersonne[] {
+/** Chaque membre du foyer : ses versements d'épargne retraite de l'année, son plafond saisi, et ce qu'il reçoit de l'année précédente. */
+function versantsDuFoyer(ctx: Contexte, foyer: Foyer): VersantDuFoyer[] {
   const anneePrecedente = ctx.annee.epargneRetraite
   const enCouple = foyer.declarantIds.length >= 2
-  const membres = [...foyer.declarantIds, ...foyer.enfantIds].map((personId): MembreDuFoyer => ({
+  return [...foyer.declarantIds, ...foyer.enfantIds].map(personId => ({
     personId,
     enCouple: enCouple && foyer.declarantIds.includes(personId),
     verse: total(ctx, personId, "versement_per"),
-    plafondSaisi: personneDe(ctx, personId)?.plafondEpargneRetraite,
-    herites: anneePrecedente === undefined ? undefined : (anneePrecedente.parPersonne?.[personId] ?? null),
-    revenusProfessionnels: revenusProfessionnels.get(personId) ?? 0
+    // Sans contexte d'épargne retraite, l'année est la première de la session (ou la seule simulée).
+    ...plafondSaisiDeLAnnee(personneDe(ctx, personId), anneeSimulee(ctx), anneePrecedente === undefined),
+    herites: anneePrecedente === undefined ? undefined : (anneePrecedente.parPersonne?.[personId] ?? null)
   }))
+}
+
+/**
+ * Le revenu d'une activité sur lequel se calcule la limite de ce qui s'en déduit (article 154 bis) : le bénéfice ; pour
+ * un gérant, sa rémunération moins sa part de la déduction pour frais professionnels, qui porte sur tous ses revenus
+ * imposés comme des salaires (hypothèse 2 de l'ADR 021).
+ */
+function revenuDeLaLimite(ctx: Contexte, { personId, cadre }: Pick<RevenuProfessionnelDeLActivite, "personId" | "cadre">, revenu: number): number {
+  if (cadre === "benefice") return revenu
+  const frais = fraisProfessionnels(ctx, personId)
+  return frais.revenusSalariaux > 0 ? revenu - (frais.deduction * revenu) / frais.revenusSalariaux : revenu
+}
+
+/**
+ * Ce que chaque personne déduit de son bénéfice ou de sa rémunération (article 154 bis du CGI, ADR 021) : ce qui dépasse
+ * ses plafonds du revenu global, mise en commun d'un couple comprise, dans la limite de l'année. D'après un calcul des
+ * activités sans cette déduction (`ctx`) : ses revenus en donnent la limite. Par identifiant de l'activité qui la porte.
+ */
+export function deductionsDuRevenuProfessionnel(ctx: Contexte): Map<string, DeductionDuRevenuProfessionnel> {
+  const regles = ctx.regles.IR.epargneRetraite.deductionDuRevenuProfessionnel
+  const deductions = new Map<string, DeductionDuRevenuProfessionnel>()
+  for (const foyer of ctx.foyers) {
+    for (const [personId, excedent] of excedentsSurLesPlafonds(versantsDuFoyer(ctx, foyer), anneeSimulee(ctx), ctx.regles)) {
+      const candidats = ctx.revenusProfessionnelsDeductibles.filter(revenu => revenu.personId === personId).map(revenu => ({ ...revenu, revenuDeLaLimite: revenuDeLaLimite(ctx, revenu, revenu.revenuAvantDeduction) }))
+      const deduction = deductionDuRevenuProfessionnel(excedent, candidats, regles)
+      if (deduction) deductions.set(deduction.activiteId, deduction)
+    }
+  }
+  return deductions
+}
+
+/**
+ * L'épargne retraite de chaque membre du foyer : l'imputation de ses versements, ce qui se déduit de son bénéfice ou de
+ * sa rémunération avec le revenu qui en reste, et ses revenus d'activité professionnelle, pour le plafond suivant.
+ */
+function epargneRetraiteDuFoyer(ctx: Contexte, foyer: Foyer, revenusProfessionnels: Map<string, number>): EpargneRetraiteDeLaPersonne[] {
+  const deductions = [...ctx.deductionsDuRevenuProfessionnel.values()]
+  const membres = versantsDuFoyer(ctx, foyer).map((versant): MembreDuFoyer => {
+    const deduction = deductions.find(d => d.personId === versant.personId)
+    // Ce qui reste du revenu après la déduction, sur la même base que la limite : la part de 15 % s'y calcule.
+    const duRevenuProfessionnel = deduction ? { deduction, revenuApresDeduction: revenuDeLaLimite(ctx, deduction, deduction.revenuAvantDeduction - deduction.montant) } : undefined
+    return { ...versant, revenusProfessionnels: revenusProfessionnels.get(versant.personId) ?? 0, ...(duRevenuProfessionnel ? { duRevenuProfessionnel } : {}) }
+  })
   return epargneRetraiteDesMembres(membres, anneeSimulee(ctx), ctx.regles)
+}
+
+/**
+ * La mise en commun des plafonds d'un couple : ce qui est pris sur le plafond du conjoint, et l'impôt en plus sans la
+ * case 6QR. Quand celui qui prend sur le plafond de son conjoint peut aussi déduire de son bénéfice ou de sa rémunération,
+ * ces versements ne seraient pas perdus sans la case : cet impôt en plus, calculé comme s'ils l'étaient, est un maximum.
+ */
+function miseEnCommun(ctx: Contexte, personnes: EpargneRetraiteDeLaPersonne[], montant: number, impotEnPlusSansElle: number): NonNullable<EpargneRetraiteDuFoyer["miseEnCommun"]> {
+  const preneurs = personnes.filter(personne => personne.imputeSurLeConjoint > 0).map(personne => personne.personId)
+  const deductible = ctx.revenusProfessionnelsDeductibles.find(revenu => preneurs.includes(revenu.personId) && (revenu.cadre === "benefice" || revenu.revenuAvantDeduction > 0))
+  return { montant, impotEnPlusSansElle, ...(deductible ? { deductibleDuRevenuProfessionnel: deductible.cadre } : {}) }
+}
+
+/**
+ * L'impôt du foyer sans aucun versement d'épargne retraite : sans la déduction du revenu global et, quand une part se
+ * déduit du bénéfice ou de la rémunération, sur les revenus d'avant cette déduction.
+ */
+function sansAucunVersement(ctx: Contexte, foyer: Foyer, calcul: { revenus: RevenusDuFoyer; impute: number; duRevenuProfessionnel: number; retenu: ReturnType<typeof imposer>; avantDeduction: Contexte }) {
+  if (calcul.duRevenuProfessionnel > 0) return imposer(calcul.avantDeduction, foyer, revenusDuFoyer(calcul.avantDeduction, foyer), 0)
+  return calcul.impute > 0 ? imposer(ctx, foyer, calcul.revenus, 0) : calcul.retenu
 }
 
 /** Une déduction d'épargne retraite sur un revenu imposable : elle ne le rend jamais négatif (pas de déficit global). */
@@ -155,38 +218,46 @@ function deduire(impute: number, revenuAvantDeduction: number) {
   return { revenuAvantDeduction, deduction, revenuImposable: revenuAvantDeduction - deduction }
 }
 
+/** Les revenus du foyer, tels que `revenusDuFoyer` les additionne. */
+type RevenusDuFoyer = ReturnType<typeof revenusDuFoyer>
+
 /**
- * Impôt du foyer. Les dividendes sont imposés de la façon la plus favorable entre le prélèvement
- * forfaitaire et l'option pour le barème (abattement, CSG en partie déductible) ; les prélèvements
- * sociaux sont dus dans les deux cas. Les versements d'épargne retraite imputés sur les plafonds se déduisent du
- * revenu imposable au barème (ADR 021) : l'impôt est recalculé sans eux pour dire ce qu'ils économisent, et sans la
- * mise en commun des plafonds d'un couple pour dire ce qu'elle rapporte.
+ * L'impôt au barème et sur les dividendes d'un foyer, pour un montant de versements d'épargne retraite imputé sur les
+ * plafonds du revenu global. Les dividendes sont imposés de la façon la plus favorable entre le prélèvement forfaitaire
+ * et l'option pour le barème (abattement, CSG en partie déductible). Au prélèvement forfaitaire, ils ne sont pas dans le
+ * revenu global : la déduction ne porte que sur les autres revenus.
  */
-export function calculerFoyer(ctx: Contexte, foyer: Foyer): FoyerFiscalResult {
+function imposer(ctx: Contexte, foyer: Foyer, revenus: RevenusDuFoyer, impute: number) {
+  const { IR, dividendes: reglesDividendes } = ctx.regles
+  const quotient = { partsFiscales: foyer.totalParts, nombreDeclarants: foyer.nombreDeclarants }
+  const baseAvecDividendes = revenus.baseBareme + revenus.dividendes * (1 - reglesDividendes.abattementBareme) - revenus.dividendesSoumisPS * reglesDividendes.csgDeductible
+  const auForfait = deduire(impute, revenus.baseBareme)
+  const auBareme = deduire(impute, baseAvecDividendes)
+  const impotForfaitaire = calculerIR({ revenuNetGlobalImposable: auForfait.revenuImposable, ...quotient }, IR) + revenus.dividendes * reglesDividendes.tauxIrForfaitaire
+  const impotAuBareme = calculerIR({ revenuNetGlobalImposable: auBareme.revenuImposable, ...quotient }, IR)
+  const optionBareme = revenus.dividendes > 0 && impotAuBareme < impotForfaitaire
+  return optionBareme ? { optionBareme, impot: impotAuBareme, ...auBareme } : { optionBareme, impot: impotForfaitaire, ...auForfait }
+}
+
+/**
+ * Impôt du foyer ; les prélèvements sociaux sur les dividendes sont dus quelle que soit leur imposition. Les versements
+ * d'épargne retraite imputés sur les plafonds se déduisent du revenu imposable au barème, et ce qui les dépasse, du
+ * bénéfice ou de la rémunération, déjà dans les revenus de `ctx` (ADR 021). Pour dire ce qu'ils économisent, l'impôt est
+ * recalculé sans aucun versement, sur les revenus d'avant cette seconde déduction (`avantDeduction`, le premier calcul
+ * des activités) ; et sans la mise en commun des plafonds d'un couple, pour dire ce qu'elle rapporte.
+ */
+export function calculerFoyer(ctx: Contexte, foyer: Foyer, avantDeduction: Contexte = ctx): FoyerFiscalResult {
   const { IR, dividendes: reglesDividendes } = ctx.regles
   const revenus = revenusDuFoyer(ctx, foyer)
   const quotient = { partsFiscales: foyer.totalParts, nombreDeclarants: foyer.nombreDeclarants }
-  const baseAvecDividendes = revenus.baseBareme + revenus.dividendes * (1 - reglesDividendes.abattementBareme) - revenus.dividendesSoumisPS * reglesDividendes.csgDeductible
-
-  /**
-   * L'impôt au barème et sur les dividendes pour un montant de versements imputé sur les plafonds. Au prélèvement
-   * forfaitaire, les dividendes ne sont pas dans le revenu global : la déduction ne porte que sur les autres revenus.
-   */
-  const imposer = (impute: number) => {
-    const auForfait = deduire(impute, revenus.baseBareme)
-    const auBareme = deduire(impute, baseAvecDividendes)
-    const impotForfaitaire = calculerIR({ revenuNetGlobalImposable: auForfait.revenuImposable, ...quotient }, IR) + revenus.dividendes * reglesDividendes.tauxIrForfaitaire
-    const impotAuBareme = calculerIR({ revenuNetGlobalImposable: auBareme.revenuImposable, ...quotient }, IR)
-    const optionBareme = revenus.dividendes > 0 && impotAuBareme < impotForfaitaire
-    return optionBareme ? { optionBareme, impot: impotAuBareme, ...auBareme } : { optionBareme, impot: impotForfaitaire, ...auForfait }
-  }
 
   const personnes = epargneRetraiteDuFoyer(ctx, foyer, revenus.professionnels)
   const verse = somme(personnes, personne => personne.verse)
   const prisSurLeConjoint = somme(personnes, personne => personne.imputeSurLeConjoint)
   const impute = somme(personnes, personne => personne.imputeSurSesPlafonds) + prisSurLeConjoint
-  const retenu = imposer(impute)
-  const sansVersement = impute > 0 ? imposer(0) : retenu
+  const duRevenuProfessionnel = somme(personnes, personne => personne.deduitDuRevenuProfessionnel?.montant ?? 0)
+  const retenu = imposer(ctx, foyer, revenus, impute)
+  const sansVersement = sansAucunVersement(ctx, foyer, { revenus, impute, duRevenuProfessionnel, retenu, avantDeduction })
   const impotEconomise = Math.round(sansVersement.impot - retenu.impot)
 
   const impotSurLeRevenu = retenu.impot + revenus.versementLiberatoire
@@ -203,13 +274,14 @@ export function calculerFoyer(ctx: Contexte, foyer: Foyer): FoyerFiscalResult {
   const epargneRetraite: EpargneRetraiteDuFoyer = {
     trancheMarginale: trancheMarginale({ revenuNetGlobalImposable: sansVersement.revenuAvantDeduction, ...quotient }, IR),
     partDesRevenus: IR.epargneRetraite.partDesRevenus,
-    ...(prisSurLeConjoint > 0 ? { miseEnCommun: { montant: prisSurLeConjoint, impotEnPlusSansElle: Math.round(imposer(impute - prisSurLeConjoint).impot - retenu.impot) } } : {}),
+    ...(prisSurLeConjoint > 0 ? { miseEnCommun: miseEnCommun(ctx, personnes, prisSurLeConjoint, Math.round(imposer(ctx, foyer, revenus, impute - prisSurLeConjoint).impot - retenu.impot)) } : {}),
     personnes
   }
   const avertissements = avertissementsEpargneRetraite({
     annee: anneeSimulee(ctx),
     personnes,
     nomDe: personId => personneDe(ctx, personId)?.name ?? personId,
+    nomDeLActivite: activiteId => ctx.session.entities.find(e => e.id === activiteId)?.name ?? activiteId,
     deduction: retenu.deduction,
     revenuAvantDeduction: Math.max(0, retenu.revenuAvantDeduction),
     impotEconomise,

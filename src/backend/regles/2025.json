@@ -43,7 +43,15 @@
       "revenusRetenusEnPlafonds": 8,
       "minimumPartDuPlafond": 0.1,
       "plafondSecuriteSocialeAnneePrecedente": 46368,
-      "anneesDeReport": 3
+      "anneesDeReport": 3,
+      "deductionDuRevenuProfessionnel": {
+        "description": "Versements sur un plan d'épargne retraite déduits du bénéfice d'un entrepreneur individuel au réel ou de la rémunération d'un gérant majoritaire (article 154 bis du CGI). Limite de l'année : 10 % du bénéfice imposable, retenu dans la limite de 8 plafonds de la sécurité sociale, plus 15 % de la part de ce bénéfice comprise entre 1 et 8 plafonds ; au moins 10 % du plafond. Avec le plafond de 2025 (47 100 €) : au moins 4 710 €, au plus 87 135 €. Le plafond est réduit au prorata pour un exercice de moins de douze mois (BOI-BIC-CHG-40-50-40-20, § 60). La limite ne se reporte pas. Ce qui est déduit ainsi réduit le plafond du revenu global de l'année suivante, sauf pour la part de 15 %.",
+        "source": "https://bofip.impots.gouv.fr/bofip/6566-PGP.html",
+        "partDuRevenu": 0.1,
+        "revenuRetenuEnPlafonds": 8,
+        "partAuDelaDUnPlafond": 0.15,
+        "minimumPartDuPlafond": 0.1
+      }
     }
   },
   "baremeKilometrique": {

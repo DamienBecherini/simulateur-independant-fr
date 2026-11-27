@@ -91,6 +91,8 @@ function lignesDeLActivite(activite: ActivityResult): string[] {
   if (societeALIS) lignes.push(ligne("Impôt sur les sociétés", activite.impotSocietes))
   lignes.push(ligne("Revenu versé", activite.revenuVerse))
   if (societeALIS) lignes.push(ligne("Résultat conservé", activite.resultatConserve))
+  // Épargne retraite du titulaire ou du gérant au-delà de ses plafonds : son revenu imposable, pas ce qui est versé.
+  if (activite.epargneRetraite) lignes.push(ligne(activite.epargneRetraite.cadre === "benefice" ? "PER déduit du bénéfice" : "PER déduit de la rémunération", activite.epargneRetraite.montant))
   if (activite.versementLiberatoire) lignes.push(ligne("Versement libératoire", activite.versementLiberatoire.applique ? "appliqué" : "non appliqué"))
   return [...lignes, ...(activite.dispositifs ?? []).map(d => `    · ${d}`), ...avertissements(activite.warnings, "    ")]
 }

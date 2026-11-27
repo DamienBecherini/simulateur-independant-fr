@@ -8,7 +8,8 @@ import type { Affichage, FoyerFiscalResult, PersonResult, SalarieDeLActivite, Si
 import { reglesPubliees } from "@/backend/logic/regles"
 import { runMetaSimulation } from "@/backend/logic/simulation-engine"
 import { SANS_EPARGNE_RETRAITE } from "@/backend/logic/testing/foyer-de-test"
-import { micro, personne, relation, session, type Flux } from "@/backend/logic/testing/session-de-test"
+import { chiffreDAffairesPour } from "@/backend/logic/testing/revenus-exacts"
+import { exercant, micro, personne, relation, session, societe, type Flux } from "@/backend/logic/testing/session-de-test"
 import { LIMITES } from "@/lib/limites-du-modele"
 import { emptyReport } from "@/ui/testing/fixtures"
 import { AffichageContext } from "../hooks/useAffichage"
@@ -634,6 +635,28 @@ describe("épargne retraite (PER) sur la carte du foyer", () => {
     await userEvent.click(within(carte()).getByRole("button", { name: /le détail/ }))
     expect(masquee(carte(), "Versé en 2026 par Paul")).toBe(false)
     expect(within(bloc()).getByRole("note")).toBeVisible()
+  })
+
+  it("au-delà du plafond, une entreprise individuelle porte la déduction de son bénéfice, sans changer ce qu'elle verse (maquette 5)", async () => {
+    // Cas 1 de l'étude : 60 000 € de bénéfice imposable, 6 000 € versés, 4 710 € sur le revenu global, 1 290 € sur le bénéfice.
+    const conseil = { ...societe("ei", "EI"), name: "Conseil de Sophie" }
+    const sophie = { ...personne("s"), name: "Sophie" }
+    const flux: Flux[] = [["ei", "ca_services", chiffreDAffairesPour(60000, reglesPubliees(2026))], ["s", "versement_per", 6000]]
+    afficher("classique", runMetaSimulation(session([sophie, conseil], exercant("s", "ei", "EI"), flux), reglesPubliees(2026), { annee: 2026 }))
+    const activite = screen.getAllByRole("article").find(article => within(article).queryByText("Conseil de Sophie"))!
+    const foyer = screen.getAllByRole("article").find(article => within(article).queryByText("Foyer fiscal · 1 part"))!
+
+    expect(normalize(rowValue(activite, "Versement PER déduit du bénéfice").textContent!)).toBe(
+      `${money(1290)}au-delà du plafond du revenu global ; limite de ${money(7791)} : 10 % du bénéfice, plus 15 % de sa part au-delà du plafond de la sécurité sociale. Seul le revenu imposable baisse : ni les cotisations ni ce que l'activité verse ne changent`
+    )
+    const epargne = within(foyer).getByRole("region", { name: "Épargne retraite (PER)" })
+    expect(within(epargne).getAllByRole("term").map(terme => terme.textContent)).toEqual(["Versé en 2026", "Déduit du revenu global", "Déduit du bénéfice", "Impôt économisé", "Plafond calculé sur 2026"])
+    expect(normalize(rowValue(epargne, "Déduit du bénéfice").textContent!)).toBe(`− ${money(1290)}sous sa limite de ${money(7791)}`)
+    expect(normalize(rowValue(foyer, "Revenu fiscal de référence").textContent!)).toBe(`${money(58710)}versement PER déduit du revenu global, puis rajouté ; versement PER déduit du bénéfice, non rajouté ; pour le versement libératoire dans deux ans`)
+
+    // Détail fermé : la ligne de l'activité se masque avec le calcul, comme les autres.
+    await userEvent.click(within(activite).getByRole("button", { name: /le détail/ }))
+    expect(masquee(activite, "Versement PER déduit du bénéfice")).toBe(true)
   })
 
   it("un versement sans effet est annoncé parmi les avertissements de la carte", () => {
