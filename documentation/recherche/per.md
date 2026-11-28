@@ -39,7 +39,7 @@ Chaque source est désignée par un code (S1, S2, etc.) dans la suite du documen
 | S4 | BOI-IR-BASE-20-50-10 : cotisations d'épargne retraite déductibles | 10/08/2026 | https://bofip.impots.gouv.fr/bofip/1068-PGP.html/identifiant=BOI-IR-BASE-20-50-10-20260810 |
 | S5 | Article 154 bis du CGI (Légifrance) | en vigueur depuis le 11/03/2023 | https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047288764 |
 | S6 | BOI-BIC-CHG-40-50-40-20 : limites de déduction, article 154 bis | 12/09/2012, version toujours en ligne | https://bofip.impots.gouv.fr/bofip/6566-PGP.html |
-| S7 | Article 41 DN bis de l'annexe III au CGI | lu seulement à travers un résumé de moteur de recherche : **texte à relire** | https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006297950 |
+| S7 | Article 41 DN bis de l'annexe III au CGI | en vigueur depuis le 01/01/2005, lu le 28/11/2026 | https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006297950 |
 | S8 | BOI-RSA-GER-20 : rémunérations des gérants (article 62) | 12/09/2012 | https://bofip.impots.gouv.fr/bofip/6347-PGP.html |
 | S9 | Brochure pratique IR 2026 (revenus 2025), « Charges à déduire du revenu », p. 225-236 | 2026 | https://www.impots.gouv.fr/www2/fichiers/documentation/brochure/ir_2026/pdf_som/12-charges_ded_rev_225a236.pdf |
 | S10 | Brochure pratique IR 2025 (revenus 2024), même chapitre, p. 215-226 | 2025 | https://www.impots.gouv.fr/www2/fichiers/documentation/brochure/ir_2025/pdf_som/12-charges_ded_rev_215a226.pdf |
@@ -148,7 +148,7 @@ Tout le calendrier est **[calculé]** à partir de S1, S2 et S11.
 > - **b)** 10 % du PASS.
 
 Précisions :
-- **Bénéfice à retenir :** le bénéfice imposable **avant déduction** des cotisations et primes facultatives elles-mêmes (S6, qui cite l'article 41 DN bis de l'annexe III ; S7 à relire). Sont exclus les plus-values à long terme, les déficits reportés et certains abattements (S6).
+- **Bénéfice à retenir :** le bénéfice imposable **avant déduction** des cotisations et primes facultatives elles-mêmes (S7 ; S6 § 10). Sont exclus les plus-values à long terme, les déficits reportés et les abattements des articles 44 sexies à 44 decies, dont ceux de la ZFU-TE (44 octies A) et du QPV (44 octies B) : le bénéfice se prend avant eux (S6 § 10, relu le 28/11/2026 ; S7 ne parle que des cotisations).
 - **PASS à retenir :** celui de **l'année de clôture de l'exercice**, donc de l'année du bénéfice (S6). S9 et S10 le confirment : pour les bénéfices 2024, la fraction se situe « entre 46 368 et 370 944 », et pour les bénéfices 2025 « entre 47 100 et 376 800 ».
 - **Gérant majoritaire :** l'assiette exacte n'est pas écrite noir sur blanc dans S8, qui renvoie aux règles des BIC et des BNC (§ 190).
   - **Ordre des déductions [sourcé] :** le versement se retranche de la rémunération **avant** la déduction de 10 % ou les frais réels, calculés sur ce qui reste (S8 § 10, § 110 et § 220 ; S3 § 140). Un versement déduit de la rémunération ne réduit donc le revenu imposable que de 90 % de son montant, tant que la déduction de 10 % n'est ni à son minimum ni à son maximum.
@@ -501,14 +501,14 @@ Les cas 1, 1 bis et 2 ont été recalculés le 26/11/2026 (section 15) : ordre �
 5. **Exclusion du micro-entrepreneur** de l'article 154 bis : déduite des textes (S5 ne vise que la détermination du bénéfice réel ; l'abattement du régime micro couvre toutes les charges), sans phrase officielle explicite.
 6. **Ligne BK de la 2035** (revenu brut social 2025) : sa lecture comme « charges sociales personnelles, dont facultatives Madelin et PER » est rendue incertaine par la mise en page du PDF. La conclusion de la section 6 tient tout de même grâce à S14 p. 41 (gérant), S13 (2024) et S15.
 7. ~~Plafond sur l'avis d'impôt.~~ **Levé [sourcé] :** la rubrique « Plafond épargne retraite » de l'avis porte la ligne « plafond pour les cotisations versées en 2026 », somme du plafond calculé sur les revenus de 2025 et des plafonds non utilisés des trois années précédentes (S21).
-8. **Article 41 DN bis de l'annexe III :** lu seulement à travers S3 et S6, qui le citent tous deux dans le même sens.
+8. ~~Article 41 DN bis de l'annexe III.~~ **Levé (28/11/2026) :** S7 relu sur Légifrance. Il dit le bénéfice retenu pour la limite « avant déduction de ces mêmes cotisations ou primes », dans le sens où S3 et S6 le citent.
 9. ~~Attribution du reliquat en cas de mutualisation.~~ **Levé [sourcé par l'exemple]** de S9 (cas 6).
 10. **Loi de finances pour 2025 :** aucun changement trouvé, à confirmer par une lecture de son sommaire.
 11. **Prélèvements sociaux sur les gains à la sortie** : le taux n'a pas été vérifié. Sans effet sur le moteur, qui ne modélise pas la sortie.
 12. **Plafond et versement sans effet (nouveau).** La loi reporte la différence entre la limite et les cotisations « mentionnées au 1 » (S1, I-2-b) ; le BOFiP dit « versées et effectivement déduites » (S20 § 40). Quand la déduction ne réduit rien (revenu global nul), le plafond est-il consommé ? **Hypothèse prudente :** oui.
 13. **Ordre d'imputation dans l'exemple de S9 (nouveau).** L'exemple du couple dit le reliquat de 2024 « utilisé en totalité » avant le plafond de l'année, à rebours de la règle écrite (S20 § 50 : l'année d'abord, puis les plus anciens). Le total restant est le même ; on suit la règle écrite.
-14. **Bénéfice en zone et limite de l'article 154 bis (27/11/2026).** S6 dit le bénéfice retenu « compte non tenu » de certains abattements (article 41 DN bis de l'annexe III, S7, toujours à relire) : on en lit que la limite se calcule sur le bénéfice avant l'exonération de zone. Hypothèse 6 de l'ADR 021, à vérifier : S6 et S7 n'ont pas pu être relus le 27/11 (le BOFiP refuse les lectures automatiques).
-15. **Plafond de la sécurité sociale de la part de 15 % retirée du plafond suivant (27/11/2026).** L'article 163 quatervicies parle du « montant annuel » du plafond ; S6 § 60 réduit au prorata celui de la limite elle-même pour un exercice de moins de douze mois. On retient le même plafond que la limite (hypothèse 7 de l'ADR 021). Ne joue que l'année de création, au-delà d'un plafond réduit.
+14. ~~Bénéfice en zone et limite de l'article 154 bis (27/11/2026).~~ **Levé [sourcé] (28/11/2026) :** S6 § 10, relu dans un navigateur, retient le bénéfice « avant, le cas échéant, prise en compte des abattements prévus aux articles 44 sexies à 44 decies ». La ZFU-TE (44 octies A) et le QPV (44 octies B) en sont : la limite se calcule sur le bénéfice avant l'exonération de zone (hypothèse 6 de l'ADR 021, vérifiée). S7 ne dit rien des abattements ; la précision vient du BOFiP.
+15. **Plafond de la sécurité sociale de la part de 15 % retirée du plafond suivant (27/11/2026).** L'article 163 quatervicies parle du « montant annuel » du plafond ; S6 § 60 réduit au prorata celui de la limite elle-même pour un exercice de moins de douze mois. On retient le même plafond que la limite (hypothèse 7 de l'ADR 021). Ne joue que l'année de création, au-delà d'un plafond réduit. **Relu le 28/11/2026 :** S3 § 340 à 410 ne parle que du plafond annuel, sans cas d'exercice de moins de douze mois ; aucune source ne tranche, l'hypothèse reste.
 
 ---
 
