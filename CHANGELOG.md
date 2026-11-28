@@ -6,6 +6,8 @@ La section « Non publié » recueille les changements en attente de la prochain
 
 ## [Non publié]
 
+## [0.15.0] — 2026-11-28
+
 ### Ajouté
 
 - **Épargne retraite (PER) : les versements se déduisent du revenu imposable.** Deux premières des trois livraisons de l'[ADR 021](./documentation/adr/021-epargne-retraite.md) :
@@ -354,7 +356,8 @@ Première version publiée : ces notes décrivent ce que contient l'application.
 - Calculs : abattement minimum de la micro-entreprise appliqué séparément à chaque nature d'activité, réduction générale éteinte à exactement 3 SMIC, micro-entreprise au-delà des plafonds jamais désignée meilleur net.
 - Sauvegardes : validation avant écriture, rien de perdu à la fermeture, copie importée numérotée au lieu d'empiler « (importée) ».
 
-[Non publié]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.14.0...HEAD
+[Non publié]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/DamienBecherini/simulateur-independant-fr/compare/v0.11.0...v0.12.0

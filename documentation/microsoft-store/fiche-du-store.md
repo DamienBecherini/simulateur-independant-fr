@@ -27,7 +27,7 @@ Textes et réponses à recopier dans Partner Center pour la soumission de l'appl
 
 > Simulateur Indépendant FR aide les indépendants français à y voir clair : combien il reste vraiment dans la poche du foyer selon le statut juridique, la rémunération et les dividendes.
 >
-> Décrivez votre situation : les personnes du foyer, vos activités (micro-entreprise, entreprise individuelle au réel, EURL, SASU) et leurs liens (mariage, PACS, enfants, présidence, gérance). Saisissez vos revenus et charges mois par mois dans une grille annuelle. Le simulateur calcule les cotisations de chaque activité, puis l'impôt sur le revenu du foyer (quotient familial, décote, dividendes au prélèvement forfaitaire ou au barème), et affiche le net dans la poche et le taux global de prélèvement. Tout se recalcule à chaque modification.
+> Décrivez votre situation : les personnes du foyer, vos activités (micro-entreprise, entreprise individuelle au réel, EURL, SASU) et leurs liens (mariage, PACS, enfants, présidence, gérance). Saisissez vos revenus et charges mois par mois dans une grille annuelle. Le simulateur calcule les cotisations de chaque activité, puis l'impôt sur le revenu du foyer (quotient familial, décote, dividendes au prélèvement forfaitaire ou au barème, versements sur un plan d'épargne retraite), et affiche le net dans la poche et le taux global de prélèvement. Tout se recalcule à chaque modification.
 >
 > Comparez les statuts : pour une activité, le net, les prélèvements, les frais de fonctionnement et les trimestres de retraite validés en SASU, EURL, EI au réel, micro-entreprise (avec ou sans versement libératoire) et portage salarial. En société, trouvez le partage entre rémunération et dividendes qui donne le meilleur net, avec ou sans l'exigence de valider quatre trimestres de retraite.
 >
@@ -46,6 +46,20 @@ Textes et réponses à recopier dans Partner Center pour la soumission de l'appl
 Pour la première soumission (version 0.11.0) : **laisser le champ vide**, comme le demande Partner Center.
 
 Pour les suivantes, reprendre la section de la version dans [CHANGELOG.md](../../CHANGELOG.md), en quelques lignes, du point de vue de l'utilisateur (1 500 caractères au plus).
+
+### Version 0.15.0
+
+```text
+Version 0.15.0
+
+- Épargne retraite (PER) : un versement se déduit du revenu imposable, dans la limite du plafond de votre avis d'impôt ; en couple marié ou pacsé, ce qui dépasse se prend sur le plafond du conjoint. En entreprise individuelle au réel ou en EURL, le reste se déduit du bénéfice ou de la rémunération. La carte du foyer donne l'impôt économisé et le plafond de l'année suivante.
+- Activité créée en cours d'année : l'année de création ne compte que les mois d'activité (plafond de la sécurité sociale, seuils, impôt sur les sociétés).
+- « Par où commencer ? » : les 36 questions auxquelles répondent les situations types ; une question mène à la partie des résultats qui y répond.
+- Comparateur : les colonnes jamais retenues comme meilleur statut sont hachurées et le disent.
+- Président de plusieurs SASU : le plafond de la sécurité sociale se répartit entre elles.
+- Exports : le versement libératoire et le bénéfice exonéré en zone, quand le foyer en a.
+- Corrections : montants de la fiche d'un acteur qui ne s'enregistraient pas, verdict du comparateur pour une profession en société d'exercice libéral.
+```
 
 ### Version 0.14.0
 
@@ -97,6 +111,8 @@ Une par ligne dans Partner Center (vingt au plus), dans l'ordre où elles y sont
 15. Gratuit, sans publicité, open source (licence MIT)
 16. Quel chiffre d'affaires pour un net visé, statut par statut
 17. Exonération d'impôt en zone franche urbaine ou en quartier prioritaire
+18. Épargne retraite (PER) : versements déduits du revenu imposable, du bénéfice ou de la rémunération
+19. Activité créée en cours d'année, calculée sur ses mois d'activité
 
 ## Mots-clés
 
