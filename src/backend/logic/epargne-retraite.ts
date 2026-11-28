@@ -139,23 +139,25 @@ export function limiteDuRevenuProfessionnel(revenu: number, plafondSecuriteSocia
  * négative ; un bénéfice peut devenir un déficit, que le minimum de la limite permet. Rien à déduire : `undefined`.
  */
 export function deductionDuRevenuProfessionnel(excedent: number, candidats: RevenuDeductible[], regles: ReglesDeductionDuRevenuProfessionnel): DeductionDuRevenuProfessionnel | undefined {
-  if (excedent <= 0 || candidats.length === 0) return undefined
+  if (excedent <= 0) return undefined
   const possibles = candidats.map(candidat => {
     const { limite, baseDeLaLimite } = limiteDuRevenuProfessionnel(candidat.revenuDeLaLimite, candidat.plafondSecuriteSociale, regles)
     const deductible = candidat.cadre === "remuneration" ? Math.min(limite, Math.max(0, Math.floor(candidat.revenuAvantDeduction))) : limite
     return { candidat, limite, baseDeLaLimite, montant: Math.min(Math.round(excedent), deductible) }
   })
+  type Possible = (typeof possibles)[number]
   // À montant égal, le bénéfice : il baisse du montant entier, quand la déduction pour frais de 10 % d'une
   // rémunération baisse avec elle et en reprend une part. Puis le plus grand revenu : sa part de 15 % est plus grande,
   // et le plafond de l'année suivante en est moins réduit.
-  const rang = ({ montant, candidat }: (typeof possibles)[number]) => [montant, candidat.cadre === "benefice" ? 1 : 0, candidat.revenuDeLaLimite]
-  const meilleure = (a: (typeof possibles)[number], b: (typeof possibles)[number]) => {
+  const rang = ({ montant, candidat }: Possible) => [montant, candidat.cadre === "benefice" ? 1 : 0, candidat.revenuDeLaLimite]
+  const meilleure = (a: Possible, b: Possible) => {
     const [ra, rb] = [rang(a), rang(b)]
     const ecart = ra.findIndex((valeur, i) => valeur !== rb[i])
     return ecart !== -1 && rb[ecart] > ra[ecart]
   }
-  const { candidat: retenu, limite, baseDeLaLimite, montant } = possibles.reduce((retenue, possible) => (meilleure(retenue, possible) ? possible : retenue))
-  if (montant <= 0) return undefined
+  const choisie = possibles.reduce<Possible | undefined>((retenue, possible) => (retenue === undefined || meilleure(retenue, possible) ? possible : retenue), undefined)
+  if (choisie === undefined || choisie.montant <= 0) return undefined
+  const { candidat: retenu, limite, baseDeLaLimite, montant } = choisie
   return {
     activiteId: retenu.activiteId,
     personId: retenu.personId,
